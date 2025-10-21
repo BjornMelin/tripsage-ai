@@ -1,29 +1,67 @@
-"""Session Management and Security Monitoring Service.
+"""Session management and security monitoring primitives.
 
-This service provides comprehensive session management, security event logging,
-and user activity monitoring for TripSage authentication system.
+Works with the Supabase-backed `DatabaseService`.
+The service focuses on session lifecycle management, security event logging,
+and lightweight risk scoring needed by the rest of the TripSage stack.
 """
+
+from __future__ import annotations
 
 import hashlib
 import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 from ipaddress import AddressValueError, ip_address as parse_ip_address
-from typing import Any
+from typing import Any, Protocol
 
 from pydantic import Field, field_validator
 
-from tripsage_core.exceptions import (
-    CoreSecurityError,
-)
+from tripsage_core.exceptions import CoreSecurityError
 from tripsage_core.models.base_core_model import TripSageModel
 
 
 logger = logging.getLogger(__name__)
 
 
+class DatabaseServiceProtocol(Protocol):
+    """Minimal async database contract needed by this service."""
+
+    async def select(
+        self,
+        table: str,
+        columns: str = "*",
+        *,
+        filters: dict[str, Any] | None = None,
+        order_by: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Select rows from a table."""
+        ...
+
+    async def insert(
+        self,
+        table: str,
+        data: dict[str, Any] | list[dict[str, Any]],
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Insert one or more rows."""
+        ...
+
+    async def update(
+        self,
+        table: str,
+        data: dict[str, Any],
+        filters: dict[str, Any],
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Update rows matching *filters*."""
+        ...
+
+
 class UserSession(TripSageModel):
-    """User session model with enhanced security validation."""
+    """User session model with strict validation."""
 
     id: str = Field(..., description="Session ID")
     user_id: str = Field(..., description="User ID")
@@ -44,56 +82,41 @@ class UserSession(TripSageModel):
 
     @field_validator("id")
     @classmethod
-    def validate_session_id(cls, v: str) -> str:
+    def validate_session_id(cls, value: str) -> str:
         """Validate session ID format and security."""
-        if not v or not isinstance(v, str):
+        if not value or not isinstance(value, str):
             raise ValueError("Session ID must be a non-empty string")
-
-        if len(v) < 8:
+        if len(value) < 8:
             raise ValueError("Session ID must be at least 8 characters")
-
-        if len(v) > 128:
+        if len(value) > 128:
             raise ValueError("Session ID must not exceed 128 characters")
-
-        # Check for basic security patterns
-        if any(char in v for char in ["\x00", "\n", "\r", "\t"]):
+        if any(char in value for char in ["\x00", "\n", "\r", "\t"]):
             raise ValueError("Session ID contains invalid characters")
-
-        return v
+        return value
 
     @field_validator("user_id")
     @classmethod
-    def validate_user_id(cls, v: str) -> str:
+    def validate_user_id(cls, value: str) -> str:
         """Validate user ID format and security."""
-        if not v or not isinstance(v, str):
+        if not value or not isinstance(value, str):
             raise ValueError("User ID must be a non-empty string")
-
-        if len(v) > 255:
+        if len(value) > 255:
             raise ValueError("User ID must not exceed 255 characters")
-
-        # Check for control characters that might cause issues
-        if any(ord(char) < 32 for char in v if char not in ["\t"]):
+        if any(ord(char) < 32 for char in value if char != "\t"):
             raise ValueError("User ID contains invalid control characters")
-
-        return v
+        return value
 
     @field_validator("ip_address")
     @classmethod
-    def validate_ip_address(cls, v: str | None) -> str | None:
+    def validate_ip_address(cls, value: str | None) -> str | None:
         """Validate IP address format and security."""
-        if v is None or v == "":
+        if value is None or value == "":
             return None
-
-        if not isinstance(v, str):
-            raise ValueError("IP address must be a string")
-
-        # Sanitize and validate
-        cleaned_ip = v.strip().replace("\x00", "")
-
-        if len(cleaned_ip) > 45:  # IPv6 max is 39 characters
+        if not isinstance(value, str):
+            raise TypeError("IP address must be a string")
+        cleaned_ip = value.strip().replace("\x00", "")
+        if len(cleaned_ip) > 45:
             raise ValueError("IP address is too long")
-
-        # Check for malicious patterns
         malicious_patterns = [
             "../",
             "..\\",
@@ -105,51 +128,36 @@ class UserSession(TripSageModel):
             "eval(",
             "exec(",
         ]
-
         for pattern in malicious_patterns:
             if pattern.lower() in cleaned_ip.lower():
                 raise ValueError(f"IP address contains suspicious pattern: {pattern}")
-
-        # Optional: Validate IP format (but allow invalid IPs to be stored for analysis)
-        # This is a security vs. usability tradeoff
-
         return cleaned_ip
 
     @field_validator("user_agent")
     @classmethod
-    def validate_user_agent(cls, v: str | None) -> str | None:
+    def validate_user_agent(cls, value: str | None) -> str | None:
         """Validate user agent string."""
-        if v is None:
+        if value is None:
             return None
-
-        if not isinstance(v, str):
-            raise ValueError("User agent must be a string")
-
-        # Limit length to prevent abuse
-        if len(v) > 2048:
+        if not isinstance(value, str):
+            raise TypeError("User agent must be a string")
+        if len(value) > 2048:
             raise ValueError("User agent string is too long")
-
-        # Remove null bytes and other problematic characters
-        return v.replace("\x00", "").replace("\r", "").replace("\n", " ")
+        return value.replace("\x00", "").replace("\r", "").replace("\n", " ")
 
     @field_validator("session_token")
     @classmethod
-    def validate_session_token(cls, v: str) -> str:
+    def validate_session_token(cls, value: str) -> str:
         """Validate session token hash."""
-        if not v or not isinstance(v, str):
+        if not value or not isinstance(value, str):
             raise ValueError("Session token must be a non-empty string")
-
-        # For SHA256 hashes, expect 64 characters
-        if len(v) != 64:
+        if len(value) != 64:
             raise ValueError("Session token must be a valid hash (64 characters)")
-
-        # Validate hex format
         try:
-            int(v, 16)
-        except ValueError as e:
-            raise ValueError("Session token must be a valid hexadecimal hash") from e
-
-        return v
+            int(value, 16)
+        except ValueError as exc:
+            raise ValueError("Session token must be a valid hexadecimal hash") from exc
+        return value
 
 
 class SecurityEvent(TripSageModel):
@@ -158,18 +166,18 @@ class SecurityEvent(TripSageModel):
     id: str | None = Field(None, description="Event ID")
     user_id: str | None = Field(None, description="User ID")
     event_type: str = Field(..., description="Event type")
-    event_category: str = Field(default="authentication", description="Event category")
+    event_category: str = Field(default="authentication", description="Category")
     severity: str = Field(default="info", description="Event severity")
     ip_address: str | None = Field(None, description="IP address")
     user_agent: str | None = Field(None, description="User agent")
-    details: dict[str, Any] = Field(default_factory=dict, description="Event details")
+    details: dict[str, Any] = Field(default_factory=dict, description="Details")
     risk_score: int = Field(default=0, description="Risk score (0-100)")
     is_blocked: bool = Field(default=False, description="Whether action was blocked")
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @field_validator("event_type")
     @classmethod
-    def validate_event_type(cls, v: str) -> str:
+    def validate_event_type(cls, value: str) -> str:
         """Validate event type."""
         allowed_types = {
             "login_success",
@@ -186,40 +194,40 @@ class SecurityEvent(TripSageModel):
             "session_expired",
             "invalid_token",
         }
-        if v not in allowed_types:
-            raise ValueError(f"Invalid event type: {v}")
-        return v
+        if value not in allowed_types:
+            raise ValueError(f"Invalid event type: {value}")
+        return value
 
     @field_validator("severity")
     @classmethod
-    def validate_severity(cls, v: str) -> str:
+    def validate_severity(cls, value: str) -> str:
         """Validate severity level."""
         allowed_severities = {"info", "warning", "error", "critical"}
-        if v not in allowed_severities:
-            raise ValueError(f"Invalid severity: {v}")
-        return v
+        if value not in allowed_severities:
+            raise ValueError(f"Invalid severity: {value}")
+        return value
 
     @field_validator("risk_score")
     @classmethod
-    def validate_risk_score(cls, v: int) -> int:
+    def validate_risk_score(cls, value: int) -> int:
         """Validate risk score."""
-        if not 0 <= v <= 100:
+        if not 0 <= value <= 100:
             raise ValueError("Risk score must be between 0 and 100")
-        return v
+        return value
 
 
 class SessionSecurityMetrics(TripSageModel):
-    """Security metrics for a user."""
+    """Aggregated security metrics for a user."""
 
     user_id: str = Field(..., description="User ID")
-    active_sessions: int = Field(default=0, description="Number of active sessions")
+    active_sessions: int = Field(default=0, description="Active sessions")
     failed_login_attempts_24h: int = Field(
-        default=0, description="Failed logins in 24h"
+        default=0, description="Failed logins in 24 hours"
     )
     successful_logins_24h: int = Field(
-        default=0, description="Successful logins in 24h"
+        default=0, description="Successful logins in 24 hours"
     )
-    security_events_7d: int = Field(default=0, description="Security events in 7 days")
+    security_events_7d: int = Field(default=0, description="Events in 7 days")
     risk_score: int = Field(default=0, description="Overall risk score")
     last_login_at: datetime | None = Field(None, description="Last login time")
     password_changed_at: datetime | None = Field(
@@ -228,87 +236,53 @@ class SessionSecurityMetrics(TripSageModel):
 
 
 class SessionSecurityService:
-    """Comprehensive session management and security monitoring service.
-
-    This service provides:
-    - Session lifecycle management
-    - Security event logging and analysis
-    - Risk assessment and anomaly detection
-    - User activity monitoring
-    - Device and location tracking
-    """
+    """Session lifecycle, auditing, and lightweight risk assessment."""
 
     def __init__(
         self,
-        database_service=None,
+        database_service: DatabaseServiceProtocol,
+        *,
         session_duration_hours: int = 24,
         max_sessions_per_user: int = 5,
         rate_limit_window_minutes: int = 15,
-        max_failed_attempts: int = 5,
     ):
-        """Initialize the session security service.
-
-        Args:
-            database_service: Database service for persistence
-            session_duration_hours: Default session duration
-            max_sessions_per_user: Maximum concurrent sessions per user
-            rate_limit_window_minutes: Rate limiting window
-            max_failed_attempts: Max failed attempts before blocking
-        """
-        # Import here to avoid circular imports
+        """Configure the service with the injected database backend."""
         if database_service is None:
-            from tripsage_core.services.infrastructure import get_database_service
-
-            database_service = get_database_service()
+            raise ValueError("database_service is required")
+        if session_duration_hours <= 0:
+            raise ValueError("session_duration_hours must be positive")
+        if max_sessions_per_user <= 0:
+            raise ValueError("max_sessions_per_user must be positive")
+        if rate_limit_window_minutes <= 0:
+            raise ValueError("rate_limit_window_minutes must be positive")
 
         self.db = database_service
         self.session_duration = timedelta(hours=session_duration_hours)
         self.max_sessions_per_user = max_sessions_per_user
         self.rate_limit_window = timedelta(minutes=rate_limit_window_minutes)
-        self.max_failed_attempts = max_failed_attempts
-
-        # In-memory cache for rate limiting (use Redis in production)
-        self._rate_limit_cache: dict[str, list[float]] = {}
-        self._risk_scores: dict[str, int] = {}
 
     async def create_session(
         self,
         user_id: str,
+        *,
         ip_address: str | None = None,
         user_agent: str | None = None,
         device_info: dict[str, Any] | None = None,
         location_info: dict[str, Any] | None = None,
     ) -> UserSession:
-        """Create a new user session.
-
-        Args:
-            user_id: User identifier
-            ip_address: Client IP address
-            user_agent: User agent string
-            device_info: Device information
-            location_info: Location information
-
-        Returns:
-            Created session object
-
-        Raises:
-            CoreSecurityError: If session creation fails security checks
-        """
+        """Create a new user session and log the security event."""
         try:
-            # Check for too many active sessions
             active_sessions = await self.get_active_sessions(user_id)
             if len(active_sessions) >= self.max_sessions_per_user:
-                # Terminate oldest session
-                oldest_session = min(active_sessions, key=lambda s: s.created_at)
+                oldest_session = min(active_sessions, key=lambda item: item.created_at)
                 await self.terminate_session(
-                    oldest_session.id, reason="max_sessions_exceeded"
+                    oldest_session.id,
+                    reason="max_sessions_exceeded",
+                    user_id=user_id,
                 )
 
-            # Generate secure session token
             session_token = secrets.token_urlsafe(32)
             session_token_hash = hashlib.sha256(session_token.encode()).hexdigest()
-
-            # Create session
             now = datetime.now(UTC)
             session = UserSession(
                 id=secrets.token_urlsafe(16),
@@ -318,227 +292,170 @@ class SessionSecurityService:
                 user_agent=user_agent,
                 device_info=device_info or {},
                 location_info=location_info or {},
+                is_active=True,
                 expires_at=now + self.session_duration,
+                ended_at=None,
             )
 
-            # Store in database
-            session_data = session.model_dump()
-            session_data["created_at"] = session.created_at.isoformat()
-            session_data["expires_at"] = session.expires_at.isoformat()
-            session_data["last_activity_at"] = session.last_activity_at.isoformat()
+            await self.db.insert("user_sessions", self._serialize_session(session))
 
-            await self.db.insert("user_sessions", session_data)
-
-            # Log security event
+            recent_failures = await self._count_recent_failed_logins(user_id)
+            risk_score = self._calculate_login_risk_score(
+                recent_failures, ip_address, user_id
+            )
             await self.log_security_event(
-                user_id=user_id,
                 event_type="login_success",
+                user_id=user_id,
                 ip_address=ip_address,
                 user_agent=user_agent,
                 details={"session_id": session.id},
-                risk_score=self._calculate_login_risk_score(user_id, ip_address),
+                risk_score=risk_score,
             )
 
             logger.info(
-                "Session created",
-                extra={
-                    "user_id": user_id,
-                    "session_id": session.id,
-                    "ip_address": ip_address,
-                },
+                "Session created for user %s", user_id, extra={"session_id": session.id}
             )
-
             return session
-
-        except Exception as e:
+        except Exception as exc:  # pylint: disable=broad-except
             logger.exception(
                 "Failed to create session",
-                extra={"user_id": user_id, "error": str(e)},
+                extra={"user_id": user_id, "error": str(exc)},
             )
             raise CoreSecurityError(
                 message="Failed to create session",
                 code="SESSION_CREATION_FAILED",
-            ) from e
+            ) from exc
 
     async def validate_session(
         self,
         session_token: str,
+        *,
         ip_address: str | None = None,
         user_agent: str | None = None,
     ) -> UserSession | None:
-        """Validate and refresh a session.
-
-        Args:
-            session_token: Session token to validate
-            ip_address: Current IP address
-            user_agent: Current user agent
-
-        Returns:
-            Valid session or None if invalid
-        """
+        """Validate an existing session and refresh activity metadata."""
         try:
             session_token_hash = hashlib.sha256(session_token.encode()).hexdigest()
-
-            # Get session from database
             result = await self.db.select(
                 "user_sessions",
                 "*",
-                {
-                    "session_token": session_token_hash,
-                    "is_active": True,
-                },
+                filters={"session_token": session_token_hash, "is_active": True},
+                limit=1,
             )
-
             if not result:
                 return None
 
-            session_data = result[0]
-            session = UserSession(**session_data)
-
-            # Check if session is expired
+            session = UserSession(**result[0])
             now = datetime.now(UTC)
             if session.expires_at <= now:
                 await self.terminate_session(session.id, reason="expired")
                 return None
 
-            # Update last activity
             await self.db.update(
                 "user_sessions",
-                {"id": session.id},
                 {
                     "last_activity_at": now.isoformat(),
                     "ip_address": ip_address,
                     "user_agent": user_agent,
                 },
+                {"id": session.id},
             )
 
-            # Check for suspicious activity
+            session.last_activity_at = now
+            session.ip_address = ip_address
+            session.user_agent = user_agent
+
             risk_score = self._calculate_activity_risk_score(
                 session, ip_address, user_agent
             )
-            if risk_score > 70:  # High risk threshold
+            if risk_score > 70:
                 await self.log_security_event(
-                    user_id=session.user_id,
                     event_type="suspicious_activity",
+                    user_id=session.user_id,
                     ip_address=ip_address,
                     user_agent=user_agent,
-                    details={
-                        "session_id": session.id,
-                        "risk_factors": "IP or user agent change",
-                    },
+                    details={"session_id": session.id},
                     risk_score=risk_score,
                     severity="warning",
                 )
 
             return session
-
-        except Exception as e:
-            logger.exception(
-                "Session validation failed",
-                extra={"error": str(e)},
-            )
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.exception("Session validation failed", extra={"error": str(exc)})
             return None
 
     async def terminate_session(
         self,
         session_id: str,
+        *,
         reason: str = "user_logout",
         user_id: str | None = None,
     ) -> bool:
-        """Terminate a user session.
-
-        Args:
-            session_id: Session ID to terminate
-            reason: Termination reason
-            user_id: User ID for authorization
-
-        Returns:
-            True if session was terminated
-        """
+        """Terminate a user session and optionally log the event."""
         try:
-            # Build query conditions
-            conditions = {"id": session_id}
+            filters: dict[str, Any] = {"id": session_id}
             if user_id:
-                conditions["user_id"] = user_id
+                filters["user_id"] = user_id
 
-            # Update session
             now = datetime.now(UTC)
-            result = await self.db.update(
+            updated_rows = await self.db.update(
                 "user_sessions",
-                conditions,
-                {
-                    "is_active": False,
-                    "ended_at": now.isoformat(),
-                },
+                {"is_active": False, "ended_at": now.isoformat()},
+                filters,
             )
 
-            if result:
-                # Log security event
-                if user_id:
-                    await self.log_security_event(
-                        user_id=user_id,
-                        event_type="logout",
-                        details={"session_id": session_id, "reason": reason},
-                    )
-
-                logger.info(
-                    "Session terminated",
-                    extra={
-                        "session_id": session_id,
-                        "reason": reason,
-                        "user_id": user_id,
-                    },
+            if updated_rows and user_id:
+                await self.log_security_event(
+                    event_type="logout",
+                    user_id=user_id,
+                    details={"session_id": session_id, "reason": reason},
                 )
 
-            return bool(result)
-
-        except Exception as e:
+            logger.info(
+                "Session terminated",
+                extra={
+                    "session_id": session_id,
+                    "reason": reason,
+                    "user_id": user_id,
+                },
+            )
+            return bool(updated_rows)
+        except Exception as exc:  # pylint: disable=broad-except
             logger.exception(
                 "Failed to terminate session",
-                extra={"session_id": session_id, "error": str(e)},
+                extra={"session_id": session_id, "error": str(exc)},
             )
             return False
 
     async def get_active_sessions(self, user_id: str) -> list[UserSession]:
-        """Get all active sessions for a user.
-
-        Args:
-            user_id: User identifier
-
-        Returns:
-            List of active sessions
-        """
+        """Return all non-expired active sessions for *user_id*."""
         try:
             results = await self.db.select(
                 "user_sessions",
                 "*",
-                {"user_id": user_id, "is_active": True},
+                filters={"user_id": user_id, "is_active": True},
             )
-
-            sessions = []
             now = datetime.now(UTC)
-
-            for result in results:
-                session = UserSession(**result)
-
-                # Check if session is expired
+            active_sessions: list[UserSession] = []
+            for row in results:
+                session = UserSession(**row)
                 if session.expires_at <= now:
-                    await self.terminate_session(session.id, reason="expired")
+                    await self.terminate_session(
+                        session.id, reason="expired", user_id=session.user_id
+                    )
                     continue
-
-                sessions.append(session)
-
-            return sessions
-
-        except Exception as e:
+                active_sessions.append(session)
+            return active_sessions
+        except Exception as exc:  # pylint: disable=broad-except
             logger.exception(
                 "Failed to get active sessions",
-                extra={"user_id": user_id, "error": str(e)},
+                extra={"user_id": user_id, "error": str(exc)},
             )
             return []
 
     async def log_security_event(
         self,
+        *,
         event_type: str,
         user_id: str | None = None,
         ip_address: str | None = None,
@@ -548,39 +465,24 @@ class SessionSecurityService:
         severity: str = "info",
         event_category: str = "authentication",
     ) -> SecurityEvent:
-        """Log a security event.
-
-        Args:
-            event_type: Type of security event
-            user_id: User ID (if applicable)
-            ip_address: IP address
-            user_agent: User agent
-            details: Additional event details
-            risk_score: Risk score (0-100)
-            severity: Event severity
-            event_category: Event category
-
-        Returns:
-            Created security event
-        """
+        """Persist a security event. Errors during persistence are logged only."""
+        event = SecurityEvent(
+            id=None,
+            user_id=user_id,
+            event_type=event_type,
+            event_category=event_category,
+            severity=severity,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            details=details or {},
+            risk_score=risk_score,
+        )
         try:
-            event = SecurityEvent(
-                user_id=user_id,
-                event_type=event_type,
-                event_category=event_category,
-                severity=severity,
-                ip_address=ip_address,
-                user_agent=user_agent,
-                details=details or {},
-                risk_score=risk_score,
+            rows = await self.db.insert(
+                "security_events", self._serialize_security_event(event)
             )
-
-            # Store in database
-            event_data = event.model_dump()
-            event_data["created_at"] = event.created_at.isoformat()
-
-            result = await self.db.insert("security_events", event_data)
-            event.id = str(result["id"])
+            if rows:
+                event.id = str(rows[0].get("id", event.id))
 
             logger.info(
                 "Security event logged",
@@ -591,144 +493,147 @@ class SessionSecurityService:
                     "severity": severity,
                 },
             )
-
-            return event
-
-        except Exception as e:
+        except Exception as exc:  # pylint: disable=broad-except
             logger.exception(
                 "Failed to log security event",
-                extra={"event_type": event_type, "error": str(e)},
+                extra={"event_type": event_type, "error": str(exc)},
             )
-            # Don't raise exception for logging failures
-            return event
+        return event
 
     async def get_security_metrics(self, user_id: str) -> SessionSecurityMetrics:
-        """Get security metrics for a user.
-
-        Args:
-            user_id: User identifier
-
-        Returns:
-            Security metrics
-        """
+        """Load aggregate metrics for *user_id*."""
         try:
-            # Get active sessions count
             active_sessions = await self.get_active_sessions(user_id)
-
-            # Get recent events
             now = datetime.now(UTC)
             day_ago = now - timedelta(days=1)
             week_ago = now - timedelta(days=7)
 
-            # Failed logins in 24h
             failed_logins = await self.db.select(
                 "security_events",
-                "COUNT(*) as count",
-                {
+                "id",
+                filters={
                     "user_id": user_id,
                     "event_type": "login_failure",
-                    "created_at__gte": day_ago.isoformat(),
+                    "created_at": {"gte": day_ago.isoformat()},
                 },
             )
-
-            # Successful logins in 24h
             successful_logins = await self.db.select(
                 "security_events",
-                "COUNT(*) as count",
-                {
+                "id",
+                filters={
                     "user_id": user_id,
                     "event_type": "login_success",
-                    "created_at__gte": day_ago.isoformat(),
+                    "created_at": {"gte": day_ago.isoformat()},
                 },
             )
-
-            # Security events in 7 days
             security_events = await self.db.select(
                 "security_events",
-                "COUNT(*) as count",
-                {
+                "id",
+                filters={
                     "user_id": user_id,
-                    "created_at__gte": week_ago.isoformat(),
+                    "created_at": {"gte": week_ago.isoformat()},
                 },
             )
-
-            # Get last login
-            last_login = await self.db.select(
+            last_login_rows = await self.db.select(
                 "security_events",
                 "created_at",
-                {"user_id": user_id, "event_type": "login_success"},
-                order_by="created_at DESC",
+                filters={"user_id": user_id, "event_type": "login_success"},
+                order_by="-created_at",
                 limit=1,
             )
+            last_login = (
+                self._parse_datetime(last_login_rows[0].get("created_at"))
+                if last_login_rows
+                else None
+            )
 
-            # Calculate overall risk score
             risk_score = self._calculate_user_risk_score(
-                user_id,
                 {
-                    "failed_logins": failed_logins[0]["count"] if failed_logins else 0,
+                    "failed_logins": len(failed_logins),
                     "active_sessions": len(active_sessions),
-                    "security_events": security_events[0]["count"]
-                    if security_events
-                    else 0,
-                },
+                    "security_events": len(security_events),
+                }
             )
 
             return SessionSecurityMetrics(
                 user_id=user_id,
                 active_sessions=len(active_sessions),
-                failed_login_attempts_24h=failed_logins[0]["count"]
-                if failed_logins
-                else 0,
-                successful_logins_24h=successful_logins[0]["count"]
-                if successful_logins
-                else 0,
-                security_events_7d=security_events[0]["count"]
-                if security_events
-                else 0,
+                failed_login_attempts_24h=len(failed_logins),
+                successful_logins_24h=len(successful_logins),
+                security_events_7d=len(security_events),
                 risk_score=risk_score,
-                last_login_at=datetime.fromisoformat(last_login[0]["created_at"])
-                if last_login
-                else None,
+                last_login_at=last_login,
+                password_changed_at=None,
             )
-
-        except Exception as e:
+        except Exception as exc:  # pylint: disable=broad-except
             logger.exception(
                 "Failed to get security metrics",
-                extra={"user_id": user_id, "error": str(e)},
+                extra={"user_id": user_id, "error": str(exc)},
             )
-            return SessionSecurityMetrics(user_id=user_id)
+            return SessionSecurityMetrics(
+                user_id=user_id,
+                last_login_at=None,
+                password_changed_at=None,
+            )
 
-    def _calculate_login_risk_score(self, user_id: str, ip_address: str | None) -> int:
-        """Calculate risk score for login attempt."""
+    async def cleanup_expired_sessions(self) -> int:
+        """Terminate expired active sessions."""
+        try:
+            now = datetime.now(UTC)
+            expired_sessions = await self.db.select(
+                "user_sessions",
+                "*",
+                filters={
+                    "is_active": True,
+                    "expires_at": {"lt": now.isoformat()},
+                },
+            )
+            cleanup_count = 0
+            for session_data in expired_sessions:
+                success = await self.terminate_session(
+                    session_data["id"],
+                    reason="expired",
+                    user_id=session_data.get("user_id"),
+                )
+                if success:
+                    cleanup_count += 1
+            if cleanup_count > 0:
+                logger.info("Cleaned up %s expired sessions", cleanup_count)
+            return cleanup_count
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.exception("Failed to cleanup expired sessions", exc_info=exc)
+            return 0
+
+    async def _count_recent_failed_logins(self, user_id: str) -> int:
+        """Count failed login events within the rate limit window."""
+        window_start = datetime.now(UTC) - self.rate_limit_window
+        failures = await self.db.select(
+            "security_events",
+            "id",
+            filters={
+                "user_id": user_id,
+                "event_type": "login_failure",
+                "created_at": {"gte": window_start.isoformat()},
+            },
+        )
+        return len(failures)
+
+    def _calculate_login_risk_score(
+        self, recent_failures: int, ip_address: str | None, user_id: str
+    ) -> int:
+        """Calculate login risk score based on recent failures and IP quality."""
         risk_score = 0
-
-        # Check recent failed attempts
-        recent_failures = self._get_recent_failures(user_id)
         if recent_failures > 2:
             risk_score += min(recent_failures * 10, 40)
-
-        # Check IP reputation with enhanced validation
         if ip_address:
-            ip_risk = self._validate_and_score_ip(ip_address, user_id)
-            risk_score += ip_risk
-
+            risk_score += self._validate_and_score_ip(ip_address, user_id)
         return min(risk_score, 100)
 
     def _validate_and_score_ip(self, ip_address: str, user_id: str) -> int:
-        """Validate IP address and calculate risk score with enhanced security.
-
-        Args:
-            ip_address: IP address to validate
-            user_id: User ID for logging context
-
-        Returns:
-            Risk score based on IP validation (0-50)
-        """
+        """Validate IP address and calculate a risk score (0-50)."""
+        risk_score = 0
         try:
-            # Sanitize input - remove leading/trailing whitespace and null bytes
             cleaned_ip = ip_address.strip().replace("\x00", "")
-
-            # Check for obvious malicious patterns
             malicious_patterns = [
                 "../",
                 "..\\",
@@ -741,94 +646,64 @@ class SessionSecurityService:
                 "eval(",
                 "exec(",
             ]
-
             for pattern in malicious_patterns:
                 if pattern.lower() in cleaned_ip.lower():
                     logger.warning(
                         "Malicious pattern detected in IP address",
-                        extra={
-                            "ip_address": cleaned_ip[:100],  # Limit log size
-                            "user_id": user_id,
-                            "pattern": pattern,
-                        },
+                        extra={"ip_address": cleaned_ip[:100], "user_id": user_id},
                     )
-                    return 50  # Maximum IP risk score
+                    risk_score = 50
+                    break
 
-            # Validate IP length to prevent buffer overflow attempts
-            if len(cleaned_ip) > 45:  # IPv6 max length is 39, add buffer for edge cases
-                logger.warning(
-                    "Excessively long IP address provided",
-                    extra={
-                        "ip_length": len(cleaned_ip),
-                        "ip_address": cleaned_ip[:50] + "...",
-                        "user_id": user_id,
-                    },
-                )
-                return 40
-
-            # Validate empty or None IP
-            if not cleaned_ip:
-                logger.info("Empty IP address provided", extra={"user_id": user_id})
-                return 10  # Low risk for missing IP
-
-            # Parse and validate IP address
-            try:
-                ip_obj = parse_ip_address(cleaned_ip)
-
-                # Calculate risk based on IP type
-                if ip_obj.is_private:
-                    return 5  # Private IPs are slightly more risky
-                elif ip_obj.is_loopback:
-                    return 15  # Loopback IPs are suspicious for remote auth
-                elif ip_obj.is_reserved or ip_obj.is_multicast:
-                    return 25  # Reserved/multicast IPs are highly suspicious
-                elif ip_obj.is_link_local:
-                    return 20  # Link-local IPs are suspicious
-                elif not ip_obj.is_global:
-                    return 15  # Non-global IPs are moderately risky
+            if not risk_score:
+                if len(cleaned_ip) > 45:
+                    logger.warning(
+                        "Excessively long IP address provided",
+                        extra={"ip_length": len(cleaned_ip), "user_id": user_id},
+                    )
+                    risk_score = 40
+                elif not cleaned_ip:
+                    logger.info("Empty IP address provided", extra={"user_id": user_id})
+                    risk_score = 10
                 else:
-                    return 0  # Global IPs are lowest risk
-
-            except AddressValueError as e:
-                # Handle invalid IP format with detailed logging
-                logger.warning(
-                    "Invalid IP address format detected",
-                    extra={
-                        "ip_address": cleaned_ip[:100],  # Limit log size
-                        "user_id": user_id,
-                        "error": str(e),
-                        "error_type": "AddressValueError",
-                    },
-                )
-                return 30  # Moderate risk for invalid IP format
-
-            except ValueError as e:
-                # Handle other parsing errors
-                logger.warning(
-                    "IP address parsing error",
-                    extra={
-                        "ip_address": cleaned_ip[:100],  # Limit log size
-                        "user_id": user_id,
-                        "error": str(e),
-                        "error_type": "ValueError",
-                    },
-                )
-                return 25  # Moderate risk for parsing errors
-
-        except Exception as e:
-            # Handle any unexpected errors gracefully
+                    try:
+                        ip_obj = parse_ip_address(cleaned_ip)
+                        if ip_obj.is_private:
+                            risk_score = 5
+                        elif ip_obj.is_loopback:
+                            risk_score = 15
+                        elif ip_obj.is_reserved or ip_obj.is_multicast:
+                            risk_score = 25
+                        elif ip_obj.is_link_local:
+                            risk_score = 20
+                        elif not ip_obj.is_global:
+                            risk_score = 15
+                        else:
+                            risk_score = 0
+                    except AddressValueError as exc:
+                        logger.warning(
+                            "Invalid IP address format detected",
+                            extra={"ip_address": cleaned_ip[:100], "user_id": user_id},
+                        )
+                        logger.debug(
+                            "AddressValueError during IP parsing", exc_info=exc
+                        )
+                        risk_score = 30
+                    except ValueError as exc:
+                        logger.warning(
+                            "IP address parsing error",
+                            extra={"ip_address": cleaned_ip[:100], "user_id": user_id},
+                        )
+                        logger.debug("ValueError during IP parsing", exc_info=exc)
+                        risk_score = 25
+        except Exception as exc:  # pylint: disable=broad-except
             logger.exception(
                 "Unexpected error during IP validation",
-                extra={
-                    "ip_address": str(ip_address)[:100] if ip_address else "None",
-                    "user_id": user_id,
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                },
+                extra={"ip_address": str(ip_address)[:100], "user_id": user_id},
             )
-            return 35  # Higher risk for unexpected errors
-
-        return 0  # Default to no additional risk
+            logger.debug("Unexpected error details", exc_info=exc)
+            risk_score = 35
+        return risk_score
 
     def _calculate_activity_risk_score(
         self,
@@ -836,96 +711,68 @@ class SessionSecurityService:
         current_ip: str | None,
         current_user_agent: str | None,
     ) -> int:
-        """Calculate risk score for activity."""
+        """Calculate risk score for session activity changes."""
         risk_score = 0
-
-        # IP address change
         if session.ip_address and current_ip and session.ip_address != current_ip:
             risk_score += 30
-
-        # User agent change
         if (
             session.user_agent
             and current_user_agent
             and session.user_agent != current_user_agent
         ):
             risk_score += 20
-
         return min(risk_score, 100)
 
-    def _calculate_user_risk_score(self, user_id: str, metrics: dict[str, Any]) -> int:
-        """Calculate overall user risk score."""
+    def _calculate_user_risk_score(self, metrics: dict[str, Any]) -> int:
+        """Calculate overall user risk score from aggregate metrics."""
         risk_score = 0
-
-        # Failed login attempts
         failed_logins = metrics.get("failed_logins", 0)
         if failed_logins > 0:
             risk_score += min(failed_logins * 5, 25)
-
-        # Too many active sessions
         active_sessions = metrics.get("active_sessions", 0)
         if active_sessions > 3:
             risk_score += (active_sessions - 3) * 5
-
-        # High security event count
         security_events = metrics.get("security_events", 0)
         if security_events > 10:
             risk_score += min((security_events - 10) * 2, 20)
-
         return min(risk_score, 100)
 
-    def _get_recent_failures(self, user_id: str) -> int:
-        """Get recent failed login attempts (simplified)."""
-        # In a real implementation, this would query the database
-        # For now, return the count of failures from cache
-        failures_list = self._rate_limit_cache.get(f"failures_{user_id}", [])
-        return len(failures_list) if isinstance(failures_list, list) else 0
+    @staticmethod
+    def _serialize_session(session: UserSession) -> dict[str, Any]:
+        """Convert a session model into database-friendly payload."""
+        payload = session.model_dump()
+        payload["created_at"] = session.created_at.isoformat()
+        payload["expires_at"] = session.expires_at.isoformat()
+        payload["last_activity_at"] = session.last_activity_at.isoformat()
+        payload["ended_at"] = session.ended_at.isoformat() if session.ended_at else None
+        return payload
 
-    async def cleanup_expired_sessions(self) -> int:
-        """Clean up expired sessions.
+    @staticmethod
+    def _serialize_security_event(event: SecurityEvent) -> dict[str, Any]:
+        """Convert a security event model into database-friendly payload."""
+        payload = event.model_dump()
+        payload["created_at"] = event.created_at.isoformat()
+        return payload
 
-        Returns:
-            Number of sessions cleaned up
-        """
+    @staticmethod
+    def _parse_datetime(value: datetime | str | None) -> datetime | None:
+        """Parse ISO datetime strings safely."""
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.astimezone(UTC)
+        normalized = value.replace("Z", "+00:00") if isinstance(value, str) else value
         try:
-            now = datetime.now(UTC)
-
-            # Find expired sessions
-            expired_sessions = await self.db.select(
-                "user_sessions",
-                "*",
-                {
-                    "is_active": True,
-                    "expires_at__lt": now.isoformat(),
-                },
-            )
-
-            # Terminate expired sessions
-            cleanup_count = 0
-            for session_data in expired_sessions:
-                success = await self.terminate_session(
-                    session_data["id"],
-                    reason="expired",
-                    user_id=session_data["user_id"],
-                )
-                if success:
-                    cleanup_count += 1
-
-            if cleanup_count > 0:
-                logger.info("Cleaned up %s expired sessions", cleanup_count)
-
-            return cleanup_count
-
-        except Exception:
-            logger.exception("Failed to cleanup expired sessions")
-            return 0
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            logger.debug("Failed to parse datetime: %s", value)
+            return None
+        return parsed.astimezone(UTC)
 
 
-# Dependency function for FastAPI
 async def get_session_security_service() -> SessionSecurityService:
-    """Get session security service instance for dependency injection.
+    """FastAPI dependency factory for the session security service."""
+    from tripsage_core.services.infrastructure import get_database_service
 
-    Returns:
-        SessionSecurityService instance
-    """
-    return SessionSecurityService()
+    database_service = await get_database_service()
+    return SessionSecurityService(database_service=database_service)
