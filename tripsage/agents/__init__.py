@@ -4,10 +4,9 @@ This module provides factory functions for creating various specialized agents
 for the TripSage application.
 """
 
-from typing import Optional
-
 from tripsage.agents.base import BaseAgent
 from tripsage.agents.chat import ChatAgent
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage_core.config import get_settings
 
 
@@ -16,7 +15,7 @@ settings = get_settings()
 
 def create_agent(
     agent_type: str,
-    service_registry=None,
+    service_registry: ServiceRegistry | None = None,
     name: str | None = None,
     model: str | None = None,
     temperature: float | None = None,
@@ -43,6 +42,9 @@ def create_agent(
     temperature = temperature or settings.model_temperature
 
     # Create the appropriate agent type
+    if not service_registry:
+        raise ValueError("service_registry is required")
+
     if agent_type == "base":
         return BaseAgent(
             name=name or "TripSage Assistant",
@@ -50,8 +52,6 @@ def create_agent(
             **kwargs,
         )
     elif agent_type == "chat":
-        if not service_registry:
-            raise ValueError("service_registry is required for chat agent")
         return ChatAgent(service_registry)
     else:
         raise ValueError(f"Unknown agent type: {agent_type}")

@@ -219,7 +219,7 @@ class Settings(BaseSettings):
     @property
     def is_testing(self) -> bool:
         """Check if running in test environment."""
-        return self.environment == "test"
+        return self.environment in ("test", "testing")
 
     @property
     def ENABLE_WEBSOCKETS(self) -> bool:

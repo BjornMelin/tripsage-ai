@@ -29,8 +29,8 @@ class TestSimpleTools:
     """Test the simple tool implementations."""
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_manager")
-    async def test_search_flights_tool(self, mock_mcp_manager):
+    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    async def test_search_flights_tool(self, mock_mcp_service):
         """Test the search_flights tool function."""
         # Mock MCP manager response
         mock_result = {
@@ -38,7 +38,7 @@ class TestSimpleTools:
                 {"airline": "Delta", "price": 299, "departure": "2024-03-15 10:00"}
             ]
         }
-        mock_mcp_manager.invoke = AsyncMock(return_value=mock_result)
+        mock_mcp_service.invoke = AsyncMock(return_value=mock_result)
 
         # Test the tool
         result = await search_flights.ainvoke(
@@ -58,15 +58,15 @@ class TestSimpleTools:
         assert parsed_result["flights"][0]["airline"] == "Delta"
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_manager")
-    async def test_search_accommodations_tool(self, mock_mcp_manager):
+    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    async def test_search_accommodations_tool(self, mock_mcp_service):
         """Test the search_accommodations tool function."""
         mock_result = {
             "accommodations": [
                 {"name": "Hotel California", "price": 150, "rating": 4.5}
             ]
         }
-        mock_mcp_manager.invoke = AsyncMock(return_value=mock_result)
+        mock_mcp_service.invoke = AsyncMock(return_value=mock_result)
 
         result = await search_accommodations.ainvoke(
             {
@@ -82,15 +82,15 @@ class TestSimpleTools:
         assert parsed_result["accommodations"][0]["name"] == "Hotel California"
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_manager")
-    async def test_geocode_location_tool(self, mock_mcp_manager):
+    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    async def test_geocode_location_tool(self, mock_mcp_service):
         """Test the geocode_location tool function."""
         mock_result = {
             "latitude": 37.7749,
             "longitude": -122.4194,
             "address": "San Francisco, CA",
         }
-        mock_mcp_manager.invoke = AsyncMock(return_value=mock_result)
+        mock_mcp_service.invoke = AsyncMock(return_value=mock_result)
 
         result = await geocode_location.ainvoke({"location": "San Francisco"})
 
@@ -99,11 +99,11 @@ class TestSimpleTools:
         assert parsed_result["longitude"] == -122.4194
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_manager")
-    async def test_get_weather_tool(self, mock_mcp_manager):
+    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    async def test_get_weather_tool(self, mock_mcp_service):
         """Test the get_weather tool function."""
         mock_result = {"temperature": 68, "condition": "Sunny", "humidity": 45}
-        mock_mcp_manager.invoke = AsyncMock(return_value=mock_result)
+        mock_mcp_service.invoke = AsyncMock(return_value=mock_result)
 
         result = await get_weather.ainvoke({"location": "San Francisco"})
 
@@ -112,13 +112,13 @@ class TestSimpleTools:
         assert parsed_result["condition"] == "Sunny"
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_manager")
-    async def test_web_search_tool(self, mock_mcp_manager):
+    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    async def test_web_search_tool(self, mock_mcp_service):
         """Test the web_search tool function."""
         mock_result = {
             "results": [{"title": "Best time to visit Paris", "url": "example.com"}]
         }
-        mock_mcp_manager.invoke = AsyncMock(return_value=mock_result)
+        mock_mcp_service.invoke = AsyncMock(return_value=mock_result)
 
         result = await web_search.ainvoke(
             {"query": "best time to visit Paris", "location": "Paris"}
@@ -129,13 +129,22 @@ class TestSimpleTools:
         assert len(parsed_result["results"]) == 1
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_manager")
-    async def test_memory_tools(self, mock_mcp_manager):
+    @patch("tripsage.orchestration.tools.simple_tools._search_user_memories")
+    @patch("tripsage.orchestration.tools.simple_tools._add_conversation_memory")
+    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    async def test_memory_tools(
+        self,
+        mock_mcp_service,
+        mock_add_conversation_memory,
+        mock_search_user_memories,
+    ):
         """Test the memory add and search tools."""
         # Test add_memory
-        mock_mcp_manager.invoke = AsyncMock(
-            return_value={"success": True, "id": "mem_123"}
-        )
+        mock_mcp_service.health_check = AsyncMock(return_value={"status": "healthy"})
+        mock_add_conversation_memory.return_value = {
+            "success": True,
+            "id": "mem_123",
+        }
 
         result = await add_memory.ainvoke(
             {"content": "User prefers window seats", "category": "preferences"}
@@ -145,26 +154,22 @@ class TestSimpleTools:
         assert parsed_result["success"] is True
 
         # Test search_memories
-        mock_mcp_manager.invoke = AsyncMock(
-            return_value={
-                "memories": [
-                    {"content": "User prefers window seats", "category": "preferences"}
-                ]
-            }
-        )
+        mock_search_user_memories.return_value = [
+            {"content": "User prefers window seats", "category": "preferences"}
+        ]
 
         result = await search_memories.ainvoke({"content": "seat preferences"})
 
         parsed_result = json.loads(result)
-        assert "memories" in parsed_result
-        assert len(parsed_result["memories"]) == 1
+        assert "results" in parsed_result
+        assert len(parsed_result["results"]) == 1
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_manager")
-    async def test_tool_error_handling(self, mock_mcp_manager):
+    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    async def test_tool_error_handling(self, mock_mcp_service):
         """Test tool error handling."""
         # Mock MCP manager to raise an exception
-        mock_mcp_manager.invoke = AsyncMock(
+        mock_mcp_service.invoke = AsyncMock(
             side_effect=Exception("Service unavailable")
         )
 
@@ -227,11 +232,13 @@ class TestSimpleTools:
         assert search_memories in AGENT_TOOLS["memory_update"]
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_manager")
-    async def test_health_check(self, mock_mcp_manager):
+    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    async def test_health_check(self, mock_mcp_service):
         """Test the health check function."""
         # Mock successful health check
-        mock_mcp_manager.invoke = AsyncMock(return_value={"status": "healthy"})
+        mock_mcp_service.health_check = AsyncMock(
+            return_value={"status": "healthy", "service": "airbnb"}
+        )
 
         result = await health_check()
 
@@ -241,16 +248,18 @@ class TestSimpleTools:
         assert "timestamp" in result
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_manager")
-    async def test_health_check_failure(self, mock_mcp_manager):
+    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    async def test_health_check_failure(self, mock_mcp_service):
         """Test health check when service is unavailable."""
-        mock_mcp_manager.invoke = AsyncMock(side_effect=Exception("Connection failed"))
+        mock_mcp_service.health_check = AsyncMock(
+            return_value={"status": "error", "error": "Connection failed"}
+        )
 
         result = await health_check()
 
         assert len(result["unhealthy"]) > 0
-        assert result["unhealthy"][0]["service"] == "mcp_manager"
-        assert "Connection failed" in result["unhealthy"][0]["error"]
+        assert result["unhealthy"][0]["service"] == "airbnb_mcp"
+        assert result["unhealthy"][0]["error"]["error"] == "Connection failed"
 
 
 class TestToolSchemaValidation:
@@ -300,8 +309,8 @@ class TestToolIntegration:
     """Integration tests for tool functionality."""
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_manager")
-    async def test_tool_chain_execution(self, mock_mcp_manager):
+    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    async def test_tool_chain_execution(self, mock_mcp_service):
         """Test chaining multiple tools together."""
         # Mock responses for different tools
         mock_responses = {
@@ -313,7 +322,7 @@ class TestToolIntegration:
         def mock_invoke(method_name, params):
             return mock_responses.get(method_name, {})
 
-        mock_mcp_manager.invoke = AsyncMock(side_effect=mock_invoke)
+        mock_mcp_service.invoke = AsyncMock(side_effect=mock_invoke)
 
         # Execute a chain of tools
         # 1. Geocode location

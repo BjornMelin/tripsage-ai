@@ -10,6 +10,8 @@ Key principles:
 - Minimal mocking for maximum reliability
 """
 
+from datetime import date
+
 import pytest
 from fastapi import status
 
@@ -219,9 +221,7 @@ class TestAccommodationRouterCoverageBasics:
     """Simple tests to improve coverage without complex model validation."""
 
     def test_schema_adapter_execution_paths(self):
-        """Test schema adapter execution to cover optional field paths
-        (lines 73, 76, 79, 83, 87, 91, 95).
-        """
+        """Test schema adapter execution with optional fields."""
         from uuid import uuid4
 
         from tripsage.api.routers.accommodations import (
@@ -233,9 +233,11 @@ class TestAccommodationRouterCoverageBasics:
         # Test with all optional fields to hit all code paths
         api_request = AccommodationSearchRequest(
             location="Paris",
-            check_in="2024-04-01",
-            check_out="2024-04-05",
+            check_in=date(2024, 4, 1),
+            check_out=date(2024, 4, 5),
             adults=1,
+            children=0,
+            rooms=1,
             property_type=AccommodationType.HOTEL,  # Covers line 73
             min_price=100.0,  # Covers line 76
             max_price=500.0,  # Covers line 79
@@ -267,9 +269,19 @@ class TestAccommodationRouterBehavior:
         # Test with minimal valid data
         request_data = {
             "location": "Tokyo",
-            "check_in": "2024-03-15",
-            "check_out": "2024-03-18",
+            "check_in": date(2024, 3, 15),
+            "check_out": date(2024, 3, 18),
             "adults": 2,
+            "children": 0,
+            "rooms": 1,
+            "property_type": None,
+            "min_price": None,
+            "max_price": None,
+            "amenities": None,
+            "min_rating": None,
+            "latitude": None,
+            "longitude": None,
+            "trip_id": None,
         }
 
         # This should not raise an exception
@@ -288,9 +300,19 @@ class TestAccommodationRouterBehavior:
         # Test with minimal valid data
         search_request = AccommodationSearchRequest(
             location="Tokyo",
-            check_in="2024-03-15",
-            check_out="2024-03-18",
+            check_in=date(2024, 3, 15),
+            check_out=date(2024, 3, 18),
             adults=2,
+            children=0,
+            rooms=1,
+            property_type=None,
+            min_price=None,
+            max_price=None,
+            amenities=None,
+            min_rating=None,
+            latitude=None,
+            longitude=None,
+            trip_id=None,
         )
 
         response_data = {
@@ -299,6 +321,14 @@ class TestAccommodationRouterBehavior:
             "currency": "USD",
             "search_id": "test-123",
             "search_request": search_request,
+            "property_type": None,
+            "min_price": None,
+            "max_price": None,
+            "amenities": None,
+            "min_rating": None,
+            "latitude": None,
+            "longitude": None,
+            "trip_id": None,
         }
 
         # This should not raise an exception
@@ -317,10 +347,19 @@ class TestAccommodationRouterBehavior:
         # Create API request
         api_request = AccommodationSearchRequest(
             location="Tokyo",
-            check_in="2024-03-15",
-            check_out="2024-03-18",
+            check_in=date(2024, 3, 15),
+            check_out=date(2024, 3, 18),
             adults=2,
             children=1,
+            rooms=1,
+            property_type=None,
+            min_price=None,
+            max_price=None,
+            amenities=None,
+            min_rating=None,
+            latitude=None,
+            longitude=None,
+            trip_id=None,
         )
 
         # Convert to service request
@@ -341,7 +380,20 @@ class TestAccommodationRouterBehavior:
 
         # Create API request with minimal fields
         api_request = AccommodationSearchRequest(
-            location="Paris", check_in="2024-04-01", check_out="2024-04-05", adults=2
+            location="Paris",
+            check_in=date(2024, 4, 1),
+            check_out=date(2024, 4, 5),
+            adults=2,
+            children=0,
+            rooms=1,
+            property_type=None,
+            min_price=None,
+            max_price=None,
+            amenities=None,
+            min_rating=None,
+            latitude=None,
+            longitude=None,
+            trip_id=None,
         )
 
         # Convert to service request
@@ -369,11 +421,11 @@ def test_accommodation_router_module_structure():
     # Verify conversion function exists
     assert hasattr(accommodations, "_convert_api_to_service_search_request")
 
-    # Verify expected routes exist
-    routes = [route.path for route in accommodations.router.routes]
+    # Verify expected routes exist (simplified check)
+    route_strings = [str(route) for route in accommodations.router.routes]
     expected_paths = ["/search", "/details", "/saved"]
 
     for expected_path in expected_paths:
-        assert any(expected_path in path for path in routes), (
-            f"Expected path {expected_path} not found in {routes}"
+        assert any(expected_path in route_str for route_str in route_strings), (
+            f"Expected path {expected_path} not found in routes"
         )
