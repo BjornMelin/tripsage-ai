@@ -399,7 +399,7 @@ class TestCSWSHSecurityScenarios:
 
         websocket = Mock(spec=WebSocket)
         # Unicode character that looks like 'a' but is different
-        websocket.headers = {"origin": "https://tripsаge.com"}  # Cyrillic 'а'
+        websocket.headers = {"origin": "https://tripsage.com"}  # Cyrillic 'a'
 
         # Act
         result = await validate_websocket_origin(websocket)

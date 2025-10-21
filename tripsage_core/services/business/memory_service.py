@@ -13,12 +13,13 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import Field, field_validator
+# Pylint may resolve type-checking before uv virtual env loads optional deps.
+# pydantic is a runtime dependency and present in application runs.
+from pydantic import Field, field_validator  # pylint: disable=import-error
 
-from tripsage_core.exceptions import (
-    CoreServiceError as ServiceError,
-)
+from tripsage_core.exceptions import CoreServiceError as ServiceError
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.observability.otel import record_histogram, trace_span
 from tripsage_core.utils.connection_utils import (
     DatabaseURLParser,
     DatabaseURLParsingError,
@@ -27,6 +28,17 @@ from tripsage_core.utils.connection_utils import (
 
 
 logger = logging.getLogger(__name__)
+
+RECOVERABLE_ERRORS = (
+    ServiceError,
+    ConnectionError,
+    RuntimeError,
+    ValueError,
+    asyncio.TimeoutError,
+    OSError,
+    KeyError,
+    TypeError,
+)
 
 
 class MemorySearchResult(TripSageModel):
@@ -131,6 +143,7 @@ class MemoryService:
     def __init__(
         self,
         database_service=None,
+        *,
         memory_backend_config: dict[str, Any] | None = None,
         cache_ttl: int = 300,
         connection_max_retries: int = 3,
@@ -149,7 +162,12 @@ class MemoryService:
         if database_service is None:
             from tripsage_core.services.infrastructure import get_database_service
 
-            database_service = get_database_service()
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            database_service = loop.run_until_complete(get_database_service())
 
         self.db = database_service
         self.cache_ttl = cache_ttl
@@ -157,6 +175,7 @@ class MemoryService:
         # Connection manager removed; rely on SQLAlchemy ping in engine init
 
         # Initialize memory backend
+        self.memory: Any | None = None
         self._initialize_memory_backend(memory_backend_config)
 
         # In-memory cache for search results
@@ -185,19 +204,12 @@ class MemoryService:
         except ImportError:
             logger.warning("Mem0 not available, using fallback memory implementation")
             self.memory = None
-        except Exception:
+        except RECOVERABLE_ERRORS:
             logger.exception("Failed to initialize memory backend")
             self.memory = None
 
     def _get_default_config(self) -> dict[str, Any]:
-        """Get default Mem0 configuration optimized for TripSage with secure URL parsing.
-
-        Returns:
-            Mem0 configuration dictionary
-
-        Raises:
-            ServiceError: If database URL parsing or validation fails
-        """
+        """Get default Mem0 configuration with secure URL parsing."""
         # Get settings for API keys
         from tripsage_core.config import get_settings
 
@@ -258,11 +270,13 @@ class MemoryService:
             error_msg = f"Failed to parse database URL: {e}"
             logger.exception(error_msg)
             raise ServiceError(error_msg) from e
-        except Exception as e:
-            error_msg = f"Failed to create Mem0 configuration: {e}"
+        except RECOVERABLE_ERRORS as error:
+            error_msg = f"Failed to create Mem0 configuration: {error}"
             logger.exception(error_msg)
-            raise ServiceError(error_msg) from e
+            raise ServiceError(error_msg) from error
 
+    @trace_span("service.memory.connect")
+    @record_histogram("tripsage.service.memory.connect.seconds")
     async def connect(self) -> None:
         """Initialize service connection with comprehensive validation and retry logic.
 
@@ -275,7 +289,8 @@ class MemoryService:
         Raises:
             ServiceError: If connection cannot be established after retries
         """
-        if self._connected or not self.memory:
+        memory = self.memory
+        if self._connected or not memory:
             return
 
         try:
@@ -285,15 +300,12 @@ class MemoryService:
             get_settings()
 
             # Test Mem0 memory backend with retry logic
-            async def test_memory_operation():
-                return await asyncio.to_thread(
-                    self.memory.search,
-                    query="health_check_test",
-                    user_id="health_check_user",
-                    limit=1,
-                )
-
-            await test_memory_operation()
+            await asyncio.to_thread(
+                memory.search,
+                query="health_check_test",
+                user_id="health_check_user",
+                limit=1,
+            )
 
             self._connected = True
             logger.info("Memory service connected and validated successfully")
@@ -302,11 +314,13 @@ class MemoryService:
             error_msg = f"Database connection validation failed: {e}"
             logger.exception(error_msg)
             raise ServiceError(error_msg) from e
-        except Exception as e:
-            error_msg = f"Failed to connect memory service: {e}"
+        except RECOVERABLE_ERRORS as error:
+            error_msg = f"Failed to connect memory service: {error}"
             logger.exception(error_msg)
-            raise ServiceError(error_msg) from e
+            raise ServiceError(error_msg) from error
 
+    @trace_span("service.memory.close")
+    @record_histogram("tripsage.service.memory.close.seconds")
     async def close(self) -> None:
         """Close service connection."""
         if not self._connected:
@@ -317,9 +331,11 @@ class MemoryService:
             self._cache.clear()
             logger.info("Memory service closed successfully")
 
-        except Exception:
+        except RECOVERABLE_ERRORS:
             logger.exception("Error closing memory service")
 
+    @trace_span("service.memory.add_conversation")
+    @record_histogram("tripsage.service.memory.add_conversation.seconds")
     async def add_conversation_memory(
         self, user_id: str, memory_request: ConversationMemoryRequest
     ) -> dict[str, Any]:
@@ -348,9 +364,14 @@ class MemoryService:
             if memory_request.metadata:
                 enhanced_metadata.update(memory_request.metadata)
 
+            # Resolve backend
+            memory = self.memory
+            if memory is None:
+                return {"results": [], "error": "Memory service not available"}
+
             # Use Mem0's automatic extraction
             result = await asyncio.to_thread(
-                self.memory.add,
+                memory.add,
                 messages=memory_request.messages,
                 user_id=user_id,
                 metadata=enhanced_metadata,
@@ -375,12 +396,15 @@ class MemoryService:
 
             return result
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
-                "Memory extraction failed", extra={"user_id": user_id, "error": str(e)}
+                "Memory extraction failed",
+                extra={"user_id": user_id, "error": str(error)},
             )
-            return {"results": [], "error": str(e)}
+            return {"results": [], "error": str(error)}
 
+    @trace_span("service.memory.search")
+    @record_histogram("tripsage.service.memory.search.seconds")
     async def search_memories(
         self, user_id: str, search_request: MemorySearchRequest
     ) -> list[MemorySearchResult]:
@@ -404,8 +428,11 @@ class MemoryService:
 
         try:
             # Direct Mem0 search
+            memory = self.memory
+            if memory is None:
+                return []
             results = await asyncio.to_thread(
-                self.memory.search,
+                memory.search,
                 query=search_request.query,
                 user_id=user_id,
                 limit=search_request.limit,
@@ -449,7 +476,7 @@ class MemoryService:
 
             return enriched_results
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as e:
             logger.exception(
                 "Memory search failed",
                 extra={
@@ -460,6 +487,8 @@ class MemoryService:
             )
             return []
 
+    @trace_span("service.memory.user_context")
+    @record_histogram("tripsage.service.memory.user_context.seconds")
     async def get_user_context(
         self, user_id: str, context_type: str | None = None
     ) -> UserContextResponse:
@@ -477,8 +506,11 @@ class MemoryService:
 
         try:
             # Retrieve all user memories
+            memory = self.memory
+            if memory is None:
+                return UserContextResponse()
             all_memories = await asyncio.to_thread(
-                self.memory.get_all, user_id=user_id, limit=100
+                memory.get_all, user_id=user_id, limit=100
             )
 
             context_keys = [
@@ -549,13 +581,15 @@ class MemoryService:
                 summary=summary,
             )
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as e:
             logger.exception(
                 "Failed to get user context",
                 extra={"user_id": user_id, "error": str(e)},
             )
             return UserContextResponse(summary="Error retrieving user context")
 
+    @trace_span("service.memory.update_preferences")
+    @record_histogram("tripsage.service.memory.update_preferences.seconds")
     async def update_user_preferences(
         self, user_id: str, preferences_request: PreferencesUpdateRequest
     ) -> dict[str, Any]:
@@ -592,6 +626,8 @@ class MemoryService:
 
             memory_request = ConversationMemoryRequest(
                 messages=preference_messages,
+                session_id=None,
+                trip_id=None,
                 metadata={
                     "type": "preferences_update",
                     "category": preferences_request.category or "travel_preferences",
@@ -611,13 +647,15 @@ class MemoryService:
 
             return result
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as e:
             logger.exception(
                 "Failed to update user preferences",
                 extra={"user_id": user_id, "error": str(e)},
             )
             return {"error": str(e)}
 
+    @trace_span("service.memory.delete_user_memories")
+    @record_histogram("tripsage.service.memory.delete_user_memories.seconds")
     async def delete_user_memories(
         self, user_id: str, memory_ids: list[str] | None = None
     ) -> dict[str, Any]:
@@ -640,25 +678,29 @@ class MemoryService:
                 # Delete specific memories
                 for memory_id in memory_ids:
                     try:
-                        await asyncio.to_thread(self.memory.delete, memory_id=memory_id)
+                        memory = self.memory
+                        if memory is None:
+                            continue
+                        await asyncio.to_thread(memory.delete, memory_id=memory_id)
                         deleted_count += 1
-                    except Exception as e:
+                    except RECOVERABLE_ERRORS as e:
                         logger.warning("Failed to delete memory %s: %s", memory_id, e)
             else:
                 # Delete all user memories
+                memory = self.memory
+                if memory is None:
+                    return {"error": "Memory service not available"}
                 all_memories = await asyncio.to_thread(
-                    self.memory.get_all,
-                    user_id=user_id,
-                    limit=1000,
+                    memory.get_all, user_id=user_id, limit=1000
                 )
 
                 for memory in all_memories.get("results", []):
                     try:
                         await asyncio.to_thread(
-                            self.memory.delete, memory_id=memory.get("id")
+                            memory.delete, memory_id=memory.get("id")
                         )
                         deleted_count += 1
-                    except Exception as e:
+                    except RECOVERABLE_ERRORS as e:
                         logger.warning(
                             "Failed to delete memory %s: %s", memory.get("id"), e
                         )
@@ -673,7 +715,7 @@ class MemoryService:
 
             return {"deleted_count": deleted_count, "success": True}
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as e:
             logger.exception(
                 "Failed to delete user memories",
                 extra={"user_id": user_id, "error": str(e)},
@@ -688,20 +730,47 @@ class MemoryService:
         if not self._connected:
             try:
                 await self.connect()
-            except Exception:
+            except RECOVERABLE_ERRORS:
                 return False
 
         return self._connected
 
+    @trace_span("service.memory.health_check")
+    @record_histogram("tripsage.service.memory.health_check.seconds")
+    async def health_check(self) -> bool:
+        """Return True if the memory backend responds to a tiny search.
+
+        This avoids adding a separate health RPC and reuses the minimal
+        search used in `connect()`. Exceptions are swallowed into a False
+        result to align with other services' health semantics.
+        """
+        try:
+            if not await self._ensure_connected():
+                return False
+            memory = self.memory
+            if memory is None:
+                return False
+            await asyncio.to_thread(
+                memory.search, query="health_check", user_id="health", limit=1
+            )
+            return True
+        except RECOVERABLE_ERRORS:
+            logger.exception("MemoryService health check failed")
+            return False
+
     def _generate_cache_key(
         self, user_id: str, search_request: MemorySearchRequest
     ) -> str:
-        """Generate cache key for search request."""
+        """Generate cache key for search request.
+
+        Prefix with the user_id so we can invalidate per-user entries reliably.
+        """
         key_data = (
             f"{user_id}:{search_request.query}:{search_request.limit}:"
             f"{hash(str(search_request.filters))}"
         )
-        return hashlib.sha256(key_data.encode()).hexdigest()[:16]
+        digest = hashlib.sha256(key_data.encode()).hexdigest()[:16]
+        return f"{user_id}:{digest}"
 
     def _get_cached_result(self, cache_key: str) -> list[MemorySearchResult] | None:
         """Get cached search result if still valid."""
@@ -709,8 +778,7 @@ class MemoryService:
             result, timestamp = self._cache[cache_key]
             if time.time() - timestamp < self.cache_ttl:
                 return result
-            else:
-                del self._cache[cache_key]
+            del self._cache[cache_key]
         return None
 
     def _cache_result(self, cache_key: str, result: list[MemorySearchResult]) -> None:
@@ -726,11 +794,7 @@ class MemoryService:
 
     def _invalidate_user_cache(self, user_id: str) -> None:
         """Invalidate cache entries for a specific user."""
-        keys_to_remove = [
-            key
-            for key in self._cache
-            if any(cached_user_id == user_id for cached_user_id, *_ in [key.split(":")])
-        ]
+        keys_to_remove = [key for key in self._cache if key.startswith(f"{user_id}:")]
         for key in keys_to_remove:
             del self._cache[key]
 
@@ -738,7 +802,7 @@ class MemoryService:
         """Parse datetime string safely."""
         try:
             return datetime.fromisoformat(dt_string)
-        except Exception:
+        except ValueError:
             return datetime.now(UTC)
 
     async def _enrich_travel_memories(

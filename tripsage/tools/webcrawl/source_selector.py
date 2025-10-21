@@ -4,6 +4,8 @@ This module handles content type optimization for the direct Crawl4AI SDK,
 focusing on performance and specialized extraction patterns.
 """
 
+from typing import ClassVar
+
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -19,7 +21,7 @@ class WebCrawlSourceSelector:
     """
 
     # Content type specific optimization settings
-    CONTENT_TYPE_CONFIG: dict[str, dict[str, bool]] = {
+    CONTENT_TYPE_CONFIG: ClassVar[dict[str, dict[str, bool]]] = {
         "travel_blog": {
             "javascript_enabled": False,  # Most blogs are static
             "extract_markdown": True,
