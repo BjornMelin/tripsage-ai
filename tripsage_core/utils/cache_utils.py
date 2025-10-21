@@ -143,14 +143,28 @@ async def set_cache(
     return True
 
 
+async def delete_cache(key: str, *, namespace: str | None = None) -> bool:
+    """Delete a cached value by key.
+
+    Args:
+        key: Cache key (without namespace prefix)
+        namespace: Optional namespace to prefix
+
+    Returns:
+        True on success.
+    """
+    await _cache.delete(_ns_key(key, namespace))
+    return True
+
+
 async def batch_cache_get(
     keys: Iterable[str], *, namespace: str | None = None
 ) -> dict[str, Any]:
-    """Get multiple keys in one call (best-effort)."""
-    results: dict[str, Any] = {}
-    for key in keys:
-        results[key] = await _cache.get(_ns_key(key, namespace))
-    return results
+    """Get multiple keys concurrently (best-effort)."""
+    tasks = {
+        key: asyncio.create_task(_cache.get(_ns_key(key, namespace))) for key in keys
+    }
+    return {key: await task for key, task in tasks.items()}
 
 
 async def prefetch_cache_keys(
@@ -258,6 +272,7 @@ __all__ = [
     "batch_cache_get",
     "cache_lock",
     "cached",
+    "delete_cache",
     "determine_content_type",
     "generate_cache_key",
     "get_cache",
