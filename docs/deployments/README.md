@@ -2,29 +2,15 @@
 
 ## High-Level Architecture
 
-```text
-             +------------------+            +-----------------+
-             |  Next.js Frontend|  (Edge)    |  Vercel Hosting |
-             |   (App Router)   |<---------->|  (Prod / Prev)  |
-             +------------------+            +-----------------+
-                      |  API / Auth Requests (HTTPS)
-                      v
-             +------------------+            +-----------------+
-             |  Vercel Edge     |  (middleware, headers, auth state)
-             |  Middleware      |------------|  Supabase Auth   |
-             +------------------+            +-----------------+
-                      |
-                      v
-             +------------------+           +------------------+
-             |  FastAPI Backend |<--------->|  Supabase Postgres|
-             |  (Railway/Render)|           +------------------+
-             +------------------+           +------------------+
-                      |                             ^
-                      v                             |
-             +------------------+                   |
-             |  Redis Cloud     |<------------------+
-             |  (Vercel integ.) |
-             +------------------+
+```mermaid
+graph TD
+    NextJS["Next.js Frontend<br/>(App Router)"] <-->|Edge| Vercel["Vercel Hosting<br/>(Prod / Prev)"]
+    NextJS -->|"API / Auth Requests (HTTPS)"| EdgeMW["Vercel Edge<br/>Middleware"]
+    EdgeMW -->|"middleware, headers, auth state"| SupaAuth["Supabase Auth"]
+    EdgeMW --> FastAPI["FastAPI Backend<br/>(Railway/Render)"]
+    FastAPI <--> SupaDB["Supabase Postgres"]
+    FastAPI --> Redis["Redis Cloud<br/>(Vercel integ.)"]
+    Redis --> SupaDB
 ```
 
 - **Next.js frontend** deployed on Vercel (Preview + Production environments).
