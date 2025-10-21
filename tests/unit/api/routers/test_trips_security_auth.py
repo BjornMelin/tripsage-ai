@@ -14,9 +14,9 @@ from fastapi import HTTPException
 
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.trips import CreateTripRequest, UpdateTripRequest
-from tripsage_core.exceptions import (
-    CoreAuthorizationError as PermissionError,
-    CoreResourceNotFoundError as NotFoundError,
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthorizationError,
+    CoreResourceNotFoundError,
 )
 from tripsage_core.models.schemas_common.travel import TripDestination
 from tripsage_core.services.business.trip_service import TripService, TripVisibility
@@ -105,6 +105,10 @@ class TestTripsSecurityAuthentication:
                     name="Secure Location",
                     country="Security Country",
                     city="Secure City",
+                    coordinates=None,
+                    arrival_date=None,
+                    departure_date=None,
+                    duration_days=None,
                 )
             ],
         )
@@ -141,14 +145,20 @@ class TestTripsSecurityAuthentication:
             end_date=date(2024, 6, 10),
             destinations=[
                 TripDestination(
-                    name="Unauthorized Location", country="None", city="None"
+                    name="Unauthorized Location",
+                    country="None",
+                    city="None",
+                    coordinates=None,
+                    arrival_date=None,
+                    departure_date=None,
+                    duration_days=None,
                 )
             ],
         )
 
         # Test would typically fail at middleware level, but testing router behavior
         with pytest.raises(AttributeError):  # Principal is None
-            await create_trip(trip_request, None, secure_trip_service)
+            await create_trip(trip_request, None, secure_trip_service)  # type: ignore[arg-type]
 
     async def test_invalid_principal_trip_access(
         self, invalid_principal, secure_trip_service
@@ -174,7 +184,7 @@ class TestTripsSecurityAuthentication:
         from tripsage.api.routers.trips import create_trip
 
         # Mock authentication expired scenario
-        secure_trip_service.create_trip.side_effect = PermissionError(
+        secure_trip_service.create_trip.side_effect = CoreAuthorizationError(
             "Authentication expired"
         )
 
@@ -215,7 +225,7 @@ class TestTripsSecurityAuthentication:
         )
 
         # Service should reject unauthorized modification
-        secure_trip_service.update_trip.side_effect = PermissionError(
+        secure_trip_service.update_trip.side_effect = CoreAuthorizationError(
             "No permission to edit this trip"
         )
 
@@ -235,7 +245,7 @@ class TestTripsSecurityAuthentication:
         trip_id = uuid4()
 
         # Service should reject unauthorized deletion
-        secure_trip_service.delete_trip.side_effect = PermissionError(
+        secure_trip_service.delete_trip.side_effect = CoreAuthorizationError(
             "Only trip owner can delete the trip"
         )
 
@@ -289,8 +299,8 @@ class TestTripsSecurityAuthentication:
         )
 
         # Should return empty results, not cause errors
-        assert result["total"] == 0
-        assert len(result["items"]) == 0
+        assert result.total == 0
+        assert len(result.items) == 0
 
         # Verify service received the malicious query as-is
         # (should be handled by service)
@@ -315,6 +325,10 @@ class TestTripsSecurityAuthentication:
                     name="<script>alert('XSS')</script>Malicious Location",
                     country="<script>alert('XSS')</script>",
                     city="<script>alert('XSS')</script>",
+                    coordinates=None,
+                    arrival_date=None,
+                    departure_date=None,
+                    duration_days=None,
                 )
             ],
         )
@@ -331,7 +345,8 @@ class TestTripsSecurityAuthentication:
         # Data should be preserved as-is
         # (sanitization should happen at presentation layer)
         assert "<script>" in result.title
-        assert "<img" in result.description
+        # description may be optional; coerce to string for check
+        assert (result.description or "").find("<img") != -1
 
     async def test_path_traversal_prevention(
         self, valid_principal, secure_trip_service
@@ -378,7 +393,15 @@ class TestTripsSecurityAuthentication:
                 start_date=date(2024, 6, 1),
                 end_date=date(2024, 6, 10),
                 destinations=[
-                    TripDestination(name="Location", country="Country", city="City")
+                    TripDestination(
+                        name="Location",
+                        country="Country",
+                        city="City",
+                        coordinates=None,
+                        arrival_date=None,
+                        departure_date=None,
+                        duration_days=None,
+                    )
                 ],
             )
 
@@ -394,7 +417,15 @@ class TestTripsSecurityAuthentication:
                 start_date=date(2024, 6, 10),
                 end_date=date(2024, 6, 1),  # Before start date
                 destinations=[
-                    TripDestination(name="Location", country="Country", city="City")
+                    TripDestination(
+                        name="Location",
+                        country="Country",
+                        city="City",
+                        coordinates=None,
+                        arrival_date=None,
+                        departure_date=None,
+                        duration_days=None,
+                    )
                 ],
             )
 
@@ -416,7 +447,7 @@ class TestTripsSecurityAuthentication:
         )
 
         # If it reaches here, service should handle it gracefully
-        assert result["total"] == 0
+        assert result.total == 0
 
     # ===== SESSION AND TOKEN SECURITY TESTS =====
 
@@ -490,7 +521,13 @@ class TestTripsSecurityAuthentication:
                 end_date=date(2024, 6, 10),
                 destinations=[
                     TripDestination(
-                        name=f"Location {i}", country="Country", city="City"
+                        name=f"Location {i}",
+                        country="Country",
+                        city="City",
+                        coordinates=None,
+                        arrival_date=None,
+                        departure_date=None,
+                        duration_days=None,
                     )
                 ],
             )
@@ -520,7 +557,7 @@ class TestTripsSecurityAuthentication:
         )
 
         # Should handle large query gracefully
-        assert result["total"] == 0
+        assert result.total == 0
 
     # ===== DATA LEAKAGE PREVENTION TESTS =====
 
@@ -554,7 +591,7 @@ class TestTripsSecurityAuthentication:
 
         # Data should be returned as-is
         # (sanitization should happen at presentation layer)
-        assert "SSN" in result.description
+        assert "SSN" in (result.description or "")
         # Service layer should handle sensitive data filtering
 
     async def test_error_message_information_disclosure(
@@ -568,11 +605,15 @@ class TestTripsSecurityAuthentication:
         # Different error scenarios
         error_scenarios = [
             (
-                NotFoundError("Trip with ID 12345 not found in database table trips"),
+                CoreResourceNotFoundError(
+                    "Trip with ID 12345 not found in database table trips"
+                ),
                 500,
             ),
             (
-                PermissionError("User malicious_user_001 denied access to trip 12345"),
+                CoreAuthorizationError(
+                    "User malicious_user_001 denied access to trip 12345"
+                ),
                 500,
             ),
             (
@@ -675,7 +716,15 @@ class TestTripsSecurityAuthentication:
             start_date=date(2024, 6, 1),
             end_date=date(2024, 6, 10),
             destinations=[
-                TripDestination(name="Location", country="Country", city="City")
+                TripDestination(
+                    name="Location",
+                    country="Country",
+                    city="City",
+                    coordinates=None,
+                    arrival_date=None,
+                    departure_date=None,
+                    duration_days=None,
+                )
             ],
         )
 
@@ -725,7 +774,7 @@ class TestTripsSecurityAuthentication:
         created_trip = await create_trip(
             sample_trip_data, valid_principal, secure_trip_service
         )
-        trip_id = UUID(created_trip.id)
+        trip_id = UUID(str(created_trip.id))
 
         # Step 2: Valid user can access their trip
         secure_trip_service.get_trip.return_value = sample_trip_response
@@ -740,14 +789,18 @@ class TestTripsSecurityAuthentication:
 
         # Step 4: Malicious user cannot update the trip
         malicious_update = UpdateTripRequest(title="Hacked Trip")
-        secure_trip_service.update_trip.side_effect = PermissionError("Access denied")
+        secure_trip_service.update_trip.side_effect = CoreAuthorizationError(
+            "Access denied"
+        )
         with pytest.raises(HTTPException):
             await update_trip(
                 trip_id, malicious_update, malicious_principal, secure_trip_service
             )
 
         # Step 5: Malicious user cannot delete the trip
-        secure_trip_service.delete_trip.side_effect = PermissionError("Access denied")
+        secure_trip_service.delete_trip.side_effect = CoreAuthorizationError(
+            "Access denied"
+        )
         with pytest.raises(HTTPException):
             await delete_trip(trip_id, malicious_principal, secure_trip_service)
 
@@ -811,4 +864,4 @@ class TestTripsSecurityAuthentication:
                 principal=valid_principal,
                 trip_service=secure_trip_service,
             )
-            assert result["total"] == 0
+            assert result.total == 0
