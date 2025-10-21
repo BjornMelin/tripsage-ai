@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ADR-0012 documenting canonical flights DTOs and provider convergence.
 - Dashboard regression coverages: async unit tests for `DashboardService`, refreshed HTTP router tests,
   and an integration harness exercising the new schema.
+- Async unit tests for accommodation tools covering search/detail/booking flows via `ToolContext` mocks.
 
 ### Changed
 
@@ -22,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation (developers/operators/architecture) updated to “Duffel API v2 via thin provider,” headers and env var usage modernized, and examples aligned to canonical mapping.
 - Dashboard analytics stack simplified: `DashboardService` emits only modern dataclasses, FastAPI routers consume the `metrics/services/top_users`
   schema directly, and rate limiting now tolerates missing infrastructure dependencies.
+- `tripsage.tools.accommodations_tools` now accepts `ToolContext` inputs, validates registry dependencies, and exposes tool wrappers alongside plain coroutine helpers.
+- Web search tooling replaced ad-hoc fallbacks with strict Agents SDK usage and literal-typed context sizing; batch helper now guards cache failures.
+- Web crawl helpers simplified to use `WebCrawlService` exclusively, centralizing error normalization and metrics recording.
+- OTEL decorators use overload-friendly typing so async/sync instrumentation survives pyright + pylint enforcement.
 
 ### Deprecated
 
