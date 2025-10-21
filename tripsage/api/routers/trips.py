@@ -44,6 +44,7 @@ from tripsage_core.models.trip import (
     EnhancedBudget,
     TripPreferences as CoreTripPreferences,
 )
+from tripsage_core.observability.otel import record_histogram, trace_span
 
 # Import audit logging
 from tripsage_core.services.business.audit_logging_service import (
@@ -212,6 +213,12 @@ async def _record_trip_audit_event(
 
 
 @router.post("/", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
+@trace_span(name="api.trips.create")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {"http.route": "/api/trips/", "http.method": "POST"},
+)
 async def create_trip(
     trip_request: CreateTripRequest,
     principal: Principal = Depends(require_principal),
@@ -274,7 +281,7 @@ async def create_trip(
         )
 
         # Extract budget from preferences if available
-        budget = default_budget
+        budget: EnhancedBudget = default_budget
         pref_budget = (
             trip_request.preferences.budget
             if trip_request.preferences and hasattr(trip_request.preferences, "budget")
@@ -294,11 +301,11 @@ async def create_trip(
                     ),
                 )
             elif hasattr(pref_budget, "total"):
-                # This is already an EnhancedBudget
-                budget = pref_budget
+                # Coerce to EnhancedBudget using model validation
+                budget = EnhancedBudget.model_validate(cast(Any, pref_budget))
             else:
-                # Try to convert from dict
-                budget = EnhancedBudget(**pref_budget)
+                # Try to convert from dict safely
+                budget = EnhancedBudget.model_validate(cast(Any, pref_budget))
 
         # Create core trip create request with all required fields
         core_request = TripCreateRequest(
@@ -384,6 +391,12 @@ async def create_trip(
 
 
 @router.get("/{trip_id}", response_model=TripResponse)
+@trace_span(name="api.trips.get")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {"http.route": "/api/trips/{trip_id}", "http.method": "GET"},
+)
 async def get_trip(
     trip_id: UUID,
     principal: Principal = Depends(require_principal),
@@ -425,6 +438,12 @@ async def get_trip(
 
 
 @router.get("/", response_model=TripListResponse)
+@trace_span(name="api.trips.list")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {"http.route": "/api/trips/", "http.method": "GET"},
+)
 async def list_trips(
     skip: int = Query(default=0, ge=0, description="Number of trips to skip"),
     limit: int = Query(
@@ -485,6 +504,12 @@ async def list_trips(
 
 
 @router.put("/{trip_id}", response_model=TripResponse)
+@trace_span(name="api.trips.update")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {"http.route": "/api/trips/{trip_id}", "http.method": "PUT"},
+)
 async def update_trip(
     trip_id: UUID,
     trip_request: UpdateTripRequest,
@@ -543,10 +568,13 @@ async def update_trip(
                 trip_locations.append(trip_location)
             updates["destinations"] = trip_locations
 
+        # Build core update request model
+        core_update = CoreTripUpdateRequest(**updates)
+
         trip_response = await trip_service.update_trip(
-            user_id=principal.user_id,
             trip_id=str(trip_id),
-            request=updates,
+            user_id=principal.user_id,
+            update_data=core_update,
         )
 
         if not trip_response:
@@ -578,6 +606,15 @@ async def update_trip(
 
 
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
+@trace_span(name="api.trips.delete")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {
+        "http.route": "/api/trips/{trip_id}",
+        "http.method": "DELETE",
+    },
+)
 async def delete_trip(
     trip_id: UUID,
     principal: Principal = Depends(require_principal),
@@ -763,7 +800,9 @@ async def update_trip_preferences(
         # Update preferences via the core service update_trip method
         preference_payload = preferences_request.model_dump(exclude_none=True)
         core_preferences = CoreTripPreferences(**preference_payload)
-        core_update_request = CoreTripUpdateRequest(preferences=core_preferences)
+        core_update_request = CoreTripUpdateRequest.model_validate(
+            {"preferences": core_preferences}
+        )
 
         trip_response = await trip_service.update_trip(
             trip_id=str(trip_id),
@@ -976,7 +1015,10 @@ async def get_trip_itinerary(
                 ItinerarySearchRequest,
             )
 
-            search_request = ItinerarySearchRequest(trip_id=str(trip_id), limit=1)
+            # Search request lacks trip_id; fall back to query
+            search_request = ItinerarySearchRequest.model_validate(
+                {"query": str(trip_id), "limit": 1}
+            )
 
             itineraries = await itinerary_service.search_itineraries(
                 user_id=principal.user_id, search_request=search_request
@@ -987,21 +1029,33 @@ async def get_trip_itinerary(
 
                 items: list[_ItineraryItem] = [
                     _ItineraryItem(
-                        id=str(item.id) if getattr(item, "id", None) else None,
-                        name=item.name,
-                        description=item.description,
+                        id=(str(item.id) if getattr(item, "id", None) else None),
+                        name=str(getattr(item, "name", "")),
+                        description=getattr(item, "description", None),
                         start_time=(
-                            f"{day.date}T{item.start_time}:00Z"
-                            if item.start_time
+                            (
+                                f"{getattr(day, 'date', '')}T"
+                                f"{getattr(item, 'start_time', '')}:00Z"
+                            )
+                            if getattr(item, "start_time", None)
                             else None
                         ),
                         end_time=(
-                            f"{day.date}T{item.end_time}:00Z" if item.end_time else None
+                            (
+                                f"{getattr(day, 'date', '')}T"
+                                f"{getattr(item, 'end_time', '')}:00Z"
+                            )
+                            if getattr(item, "end_time", None)
+                            else None
                         ),
-                        location=item.location,
+                        location=(
+                            str(getattr(item, "location", ""))
+                            if getattr(item, "location", None)
+                            else None
+                        ),
                     )
-                    for day in itinerary_data.days
-                    for item in day.items
+                    for day in getattr(itinerary_data, "days", [])
+                    for item in getattr(day, "items", [])
                 ]
 
                 itinerary = _ItineraryResponse(
@@ -1266,6 +1320,7 @@ async def get_trip_suggestions(
         memory_search = MemorySearchRequest(
             query="travel preferences destinations budget",
             limit=10,
+            filters=None,
         )
         user_memories = await memory_service.search_memories(
             user_id=principal.user_id,
@@ -1322,6 +1377,7 @@ def _adapt_trip_response(
             coordinates = Coordinates(
                 latitude=float(coordinates_dict.get("lat", 0.0)),
                 longitude=float(coordinates_dict.get("lng", 0.0)),
+                altitude=None,
             )
         api_destinations.append(
             TripDestination(
@@ -1329,6 +1385,9 @@ def _adapt_trip_response(
                 country=getattr(location, "country", None),
                 city=getattr(location, "city", None),
                 coordinates=coordinates,
+                arrival_date=None,
+                departure_date=None,
+                duration_days=None,
             )
         )
 
@@ -1504,9 +1563,10 @@ async def list_trip_collaborators(
                 detail="Trip not found",
             )
 
-        # Get collaborators via service (mock-friendly)
-        collaborator_records = await trip_service.get_trip_collaborators(
-            trip_id=str(trip_id), user_id=principal.user_id
+        # Get collaborators via database service (TripService doesn't expose directly)
+        database_service = cast(Any, trip_service.db)
+        collaborator_records = await database_service.get_trip_collaborators(
+            str(trip_id)
         )
 
         response_collaborators: list[TripCollaboratorResponse] = []

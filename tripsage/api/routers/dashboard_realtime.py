@@ -10,6 +10,7 @@ This module provides real-time monitoring capabilities for the dashboard:
 import asyncio
 import json
 import logging
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any
 
@@ -18,9 +19,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import CacheDep, DatabaseDep
-from tripsage_core.services.business.dashboard_service import (
-    ApiKeyMonitoringService,
-)  # Compatibility adapter for BJO-211
+from tripsage_core.services.business.dashboard_service import DashboardService
 
 
 logger = logging.getLogger(__name__)
@@ -70,6 +69,7 @@ class DashboardConnectionManager:
     """Manages WebSocket connections for dashboard clients."""
 
     def __init__(self) -> None:
+        """Initialize DashboardConnectionManager."""
         self.active_connections: list[WebSocket] = []
         self.connection_metadata: dict[WebSocket, dict[str, Any]] = {}
 
@@ -172,9 +172,10 @@ async def dashboard_websocket_endpoint(
     """
     await dashboard_manager.connect(websocket, user_id, "dashboard")
 
+    metrics_task: asyncio.Task[Any] | None = None
     try:
         # Initialize monitoring service
-        monitoring_service = ApiKeyMonitoringService(
+        monitoring_service = DashboardService(
             cache_service=cache_service,
             database_service=db_service,
         )
@@ -212,7 +213,7 @@ async def dashboard_websocket_endpoint(
     except Exception:
         logger.exception("Dashboard WebSocket error")
     finally:
-        if "metrics_task" in locals():
+        if metrics_task is not None:
             metrics_task.cancel()
         dashboard_manager.disconnect(websocket)
 
@@ -229,9 +230,9 @@ async def dashboard_events_stream(
     to WebSockets for clients that prefer HTTP-based streaming.
     """
 
-    async def event_stream() -> Any:
+    async def event_stream() -> AsyncIterator[str]:
         """Generate server-sent events."""
-        monitoring_service = ApiKeyMonitoringService(
+        monitoring_service = DashboardService(
             cache_service=cache_service,
             database_service=db_service,
         )
@@ -254,12 +255,12 @@ async def dashboard_events_stream(
                             top_users_limit=5,
                         )
 
+                        metrics_snapshot = dashboard_data.metrics
                         metrics = RealtimeMetrics(
-                            requests_per_second=(
-                                dashboard_data.total_requests / 3600.0
-                            ),  # Simplified
-                            errors_per_second=dashboard_data.total_errors / 3600.0,
-                            success_rate=dashboard_data.overall_success_rate,
+                            requests_per_second=metrics_snapshot.total_requests
+                            / 3600.0,
+                            errors_per_second=metrics_snapshot.total_errors / 3600.0,
+                            success_rate=metrics_snapshot.success_rate,
                             avg_latency_ms=150.0,  # Simplified
                             active_connections=len(
                                 dashboard_manager.active_connections
@@ -286,7 +287,7 @@ async def dashboard_events_stream(
                             severity=alert.severity,
                             message=alert.message,
                             service=alert.service,
-                            key_id=alert.key_id,
+                            key_id=alert.api_key_id,
                             details=alert.details,
                         )
 
@@ -412,7 +413,7 @@ async def get_active_connections() -> dict[str, Any]:
 
 
 async def _send_periodic_metrics(
-    websocket: WebSocket, monitoring_service: ApiKeyMonitoringService
+    websocket: WebSocket, monitoring_service: DashboardService
 ) -> None:
     """Send periodic metrics updates to a WebSocket connection."""
     try:
@@ -425,12 +426,11 @@ async def _send_periodic_metrics(
                 )
 
                 # Create real-time metrics
+                metrics_snapshot = dashboard_data.metrics
                 metrics = RealtimeMetrics(
-                    requests_per_second=(
-                        dashboard_data.total_requests / 3600.0
-                    ),  # Simplified
-                    errors_per_second=dashboard_data.total_errors / 3600.0,
-                    success_rate=dashboard_data.overall_success_rate,
+                    requests_per_second=metrics_snapshot.total_requests / 3600.0,
+                    errors_per_second=metrics_snapshot.total_errors / 3600.0,
+                    success_rate=metrics_snapshot.success_rate,
                     avg_latency_ms=150.0,  # Would be calculated from actual data
                     active_connections=len(dashboard_manager.active_connections),
                     cache_hit_rate=0.85,  # Would be retrieved from cache service
@@ -461,7 +461,7 @@ async def _send_periodic_metrics(
 async def _handle_subscription(
     websocket: WebSocket,
     message: dict[str, Any],
-    monitoring_service: ApiKeyMonitoringService,
+    monitoring_service: DashboardService,
 ) -> None:
     """Handle client subscription requests."""
     try:
@@ -477,7 +477,7 @@ async def _handle_subscription(
                         severity=alert.severity,
                         message=alert.message,
                         service=alert.service,
-                        key_id=alert.key_id,
+                        key_id=alert.api_key_id,
                         details=alert.details,
                     )
 
@@ -495,10 +495,11 @@ async def _handle_subscription(
                 top_users_limit=5,
             )
 
+            metrics_snapshot = dashboard_data.metrics
             metrics = RealtimeMetrics(
-                requests_per_second=dashboard_data.total_requests / 3600.0,
-                errors_per_second=dashboard_data.total_errors / 3600.0,
-                success_rate=dashboard_data.overall_success_rate,
+                requests_per_second=metrics_snapshot.total_requests / 3600.0,
+                errors_per_second=metrics_snapshot.total_errors / 3600.0,
+                success_rate=metrics_snapshot.success_rate,
                 avg_latency_ms=150.0,
                 active_connections=len(dashboard_manager.active_connections),
                 cache_hit_rate=0.85,

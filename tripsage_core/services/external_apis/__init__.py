@@ -14,7 +14,6 @@ from .document_analyzer import (
     close_document_analyzer,
     get_document_analyzer,
 )
-from .duffel_http_client import DuffelHTTPClient, close_duffel_client, get_duffel_client
 from .google_maps_service import (
     GoogleMapsService,
     close_google_maps_service,
@@ -37,7 +36,6 @@ from .webcrawl_service import (
 __all__ = [
     "DocumentAnalyzer",
     # Service classes
-    "DuffelHTTPClient",
     "GoogleCalendarService",
     "GoogleMapsService",
     "PlaywrightService",
@@ -47,7 +45,6 @@ __all__ = [
     "close_calendar_service",
     "close_document_analyzer",
     # Service closers
-    "close_duffel_client",
     "close_google_maps_service",
     "close_playwright_service",
     "close_time_service",
@@ -56,7 +53,6 @@ __all__ = [
     "get_calendar_service",
     "get_document_analyzer",
     # Global service getters
-    "get_duffel_client",
     "get_google_maps_service",
     "get_playwright_service",
     "get_time_service",
