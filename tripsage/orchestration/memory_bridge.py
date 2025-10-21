@@ -410,15 +410,3 @@ class SessionMemoryBridge:
 
         except Exception:
             logger.exception("Failed to store checkpoint reference")
-
-
-# Global bridge instance
-_global_memory_bridge: SessionMemoryBridge | None = None
-
-
-def get_memory_bridge() -> SessionMemoryBridge:
-    """Get the global session memory bridge instance."""
-    global _global_memory_bridge  # pylint: disable=global-statement
-    if _global_memory_bridge is None:
-        _global_memory_bridge = SessionMemoryBridge()
-    return _global_memory_bridge

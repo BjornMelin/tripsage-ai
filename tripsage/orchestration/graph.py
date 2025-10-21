@@ -15,13 +15,11 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
 from tripsage.agents.service_registry import ServiceRegistry
-from tripsage.orchestration.checkpoint_manager import get_checkpoint_manager
 from tripsage.orchestration.config import get_default_config
 from tripsage.orchestration.handoff_coordinator import (
     HandoffTrigger,
     get_handoff_coordinator,
 )
-from tripsage.orchestration.memory_bridge import get_memory_bridge
 from tripsage.orchestration.nodes.accommodation_agent import AccommodationAgentNode
 from tripsage.orchestration.nodes.budget_agent import BudgetAgentNode
 from tripsage.orchestration.nodes.destination_research_agent import (
@@ -87,8 +85,9 @@ class TripSageOrchestrator:
         """
         self.service_registry = service_registry or ServiceRegistry()
         self.config = config or get_default_config()
-        self.checkpointer = checkpointer or MemorySaver()
-        self.memory_bridge = get_memory_bridge()
+        self.checkpoint_manager = self.service_registry.get_checkpoint_manager()
+        self.checkpointer = checkpointer
+        self.memory_bridge = self.service_registry.get_memory_bridge()
         self.handoff_coordinator = get_handoff_coordinator()
         self.graph = self._build_graph()
         self.compiled_graph = None  # Will be set in async initialize
@@ -102,8 +101,9 @@ class TripSageOrchestrator:
         # Initialize checkpointer if using PostgreSQL
         if self.checkpointer is None or isinstance(self.checkpointer, MemorySaver):
             try:
-                checkpoint_manager = get_checkpoint_manager()
-                self.checkpointer = await checkpoint_manager.get_async_checkpointer()
+                self.checkpointer = (
+                    await self.checkpoint_manager.get_async_checkpointer()
+                )
                 logger.info("Initialized PostgreSQL checkpointer")
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
