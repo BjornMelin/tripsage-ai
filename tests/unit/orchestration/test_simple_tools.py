@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from tripsage.orchestration.tools import (
+from tripsage.orchestration.tools.simple_tools import (
     AGENT_TOOLS,
     ALL_TOOLS,
     add_memory,

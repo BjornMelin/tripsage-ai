@@ -1,17 +1,22 @@
 """Session Memory Bridge for LangGraph integration.
 
-Reads user context via MemoryService and maps it into the
-LangGraph state. Legacy utils-based session functions have been removed.
+Reads user context via MemoryService and maps it into the LangGraph state.
+Legacy utils-based session functions have been removed.
 """
 
+from __future__ import annotations
+
+import json
 import logging
+from collections.abc import Awaitable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.services.business.memory_service import (
     ConversationMemoryRequest,
     MemoryService,
+    UserContextResponse,
 )
 
 
@@ -35,7 +40,7 @@ class SessionMemoryBridge:
         """Get or create a MemoryService instance (lazy)."""
         if self._memory_service is None:
             self._memory_service = MemoryService()
-        await self._memory_service.connect()
+        await cast(Awaitable[None], self._memory_service.connect())
         return self._memory_service
 
     async def hydrate_state(self, state: TravelPlanningState) -> TravelPlanningState:
@@ -55,9 +60,11 @@ class SessionMemoryBridge:
         try:
             logger.debug("Hydrating state for user: %s", user_id)
             svc = await self._get_service()
-            context = await svc.get_user_context(user_id)
+            context = await cast(
+                Awaitable[UserContextResponse], svc.get_user_context(user_id)
+            )
 
-            state = await self._map_user_context_to_state(state, context.model_dump())
+            state = self._map_user_context_to_state(state, context.model_dump())
             logger.info("Successfully hydrated state for user %s", user_id)
 
         except Exception:
@@ -66,7 +73,7 @@ class SessionMemoryBridge:
 
         return state
 
-    async def _map_user_context_to_state(
+    def _map_user_context_to_state(
         self, state: TravelPlanningState, context: dict[str, Any]
     ) -> TravelPlanningState:
         """Map MemoryService user context response to state."""
@@ -97,65 +104,6 @@ class SessionMemoryBridge:
             state["conversation_summary"] = summary
         return state
 
-    def _extract_favorite_destinations(self, trips: list[dict[str, Any]]) -> list[str]:
-        """Extract frequently visited destinations."""
-        destination_counts = {}
-        for trip in trips:
-            dest = trip.get("destination")
-            if dest:
-                destination_counts[dest] = destination_counts.get(dest, 0) + 1
-
-        # Return destinations visited more than once, sorted by frequency
-        return [
-            dest
-            for dest, count in sorted(
-                destination_counts.items(), key=lambda x: x[1], reverse=True
-            )
-            if count > 1
-        ]
-
-    def _calculate_typical_budget_range(
-        self, budget_history: list[dict[str, Any]]
-    ) -> dict[str, float]:
-        """Calculate typical budget range from history."""
-        budgets = [
-            b.get("total_budget", 0) for b in budget_history if b.get("total_budget")
-        ]
-        if not budgets:
-            return {}
-
-        budgets.sort()
-        return {
-            "min": min(budgets),
-            "max": max(budgets),
-            "median": budgets[len(budgets) // 2],
-            "average": sum(budgets) / len(budgets),
-        }
-
-    def _analyze_spending_patterns(
-        self, budget_history: list[dict[str, Any]]
-    ) -> dict[str, Any]:
-        """Analyze spending patterns from budget history."""
-        patterns = {
-            "accommodation_percentage": [],
-            "transportation_percentage": [],
-            "food_percentage": [],
-            "activities_percentage": [],
-        }
-
-        for budget in budget_history:
-            total = budget.get("total_budget", 0)
-            if total > 0:
-                for category in patterns:
-                    category_amount = budget.get(category.replace("_percentage", ""), 0)
-                    patterns[category].append((category_amount / total) * 100)
-
-        # Calculate averages
-        return {
-            category: sum(values) / len(values) if values else 0
-            for category, values in patterns.items()
-        }
-
     async def extract_and_persist_insights(
         self, state: TravelPlanningState
     ) -> dict[str, Any]:
@@ -176,7 +124,7 @@ class SessionMemoryBridge:
             logger.debug("Extracting insights for user: %s", user_id)
 
             # Extract insights from current state
-            insights = await self._extract_insights_from_state(state)
+            insights = self._extract_insights_from_state(state)
 
             if insights:
                 # Persist insights via MemoryService as a structured note
@@ -187,13 +135,19 @@ class SessionMemoryBridge:
                             "role": "system",
                             "content": "Store state insights for personalization.",
                         },
-                        {"role": "user", "content": str(insights)},
+                        {
+                            "role": "user",
+                            "content": json.dumps(insights, sort_keys=True),
+                        },
                     ],
                     session_id=state.get("session_id"),
                     trip_id=None,
                     metadata={"type": "state_insights"},
                 )
-                result = await svc.add_conversation_memory(user_id, payload)
+                result = await cast(
+                    Awaitable[dict[str, Any]],
+                    svc.add_conversation_memory(user_id, payload),
+                )
                 logger.info("Successfully persisted insights for user %s", user_id)
                 return result
             logger.debug("No new insights to persist for user %s", user_id)
@@ -203,7 +157,7 @@ class SessionMemoryBridge:
             logger.exception("Failed to persist insights for user %s", user_id)
             return {"error": str(e)}
 
-    async def _extract_insights_from_state(
+    def _extract_insights_from_state(
         self, state: TravelPlanningState
     ) -> dict[str, Any]:
         """Extract insights from LangGraph state.
@@ -395,13 +349,19 @@ class SessionMemoryBridge:
                         "role": "system",
                         "content": "Store checkpoint reference",
                     },
-                    {"role": "user", "content": str(checkpoint_ref)},
+                    {
+                        "role": "user",
+                        "content": json.dumps(checkpoint_ref, sort_keys=True),
+                    },
                 ],
                 session_id=session_id,
                 trip_id=None,
                 metadata={"type": "checkpoint_reference"},
             )
-            await svc.add_conversation_memory(user_id, payload)
+            await cast(
+                Awaitable[dict[str, Any]],
+                svc.add_conversation_memory(user_id, payload),
+            )
 
             logger.debug(
                 "Stored checkpoint reference %s for user %s", checkpoint_id, user_id

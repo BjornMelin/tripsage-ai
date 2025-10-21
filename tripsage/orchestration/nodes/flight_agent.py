@@ -16,7 +16,10 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.orchestration.tools import get_tools_for_agent
+from tripsage.orchestration.tools.simple_tools import (
+    get_tools_for_agent,
+    search_flights,
+)
 from tripsage.orchestration.utils.structured import StructuredExtractor, model_to_dict
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
@@ -189,11 +192,8 @@ class FlightAgentNode(BaseAgentNode):
             Flight search results
         """
         try:
-            # Import and use the search_flights tool directly
-            from tripsage.orchestration.tools import search_flights
-
-            # Execute flight search using the simple tool
-            result_str = search_flights.invoke(search_params)
+            # Execute flight search using the async LangChain tool interface
+            result_str = await search_flights.ainvoke(search_params)
             result = json.loads(result_str)
 
             flights_count = (

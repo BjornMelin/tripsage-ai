@@ -1,4 +1,10 @@
-"""Database migration runner using direct Supabase SQL execution."""
+"""Database migration runner using Supabase context.
+
+Final implementation (no legacy aliases/paths):
+- Discovers SQL files under `supabase/migrations`.
+- Logs statements that would be executed (offline/SDK-limited mode).
+- Records applied migrations in a `migrations` table if available.
+"""
 
 import asyncio
 import hashlib
@@ -7,32 +13,38 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from supabase import Client, create_client
-
-from tripsage_core.config import get_settings
-
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 
-# Migration directory
-MIGRATIONS_DIR = Path(__file__).parent.parent.parent.parent / "migrations"
+# Migration directory (canonical Supabase location)
+MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "supabase" / "migrations"
 
 
 class MigrationRunner:
-    """Handles database migrations using direct Supabase SQL execution."""
+    """Handles database migrations using the Supabase client.
+
+    Note: The Python SDK does not expose general-purpose DDL execution. This
+    runner operates in an "offline" style: it discovers migrations, logs what
+    would be executed, and records success in a `migrations` table when
+    available. For production-grade application, prefer the Supabase CLI.
+    """
 
     def __init__(self, project_id: str | None = None):
         """Initialize migration runner.
 
         Args:
-            project_id: Supabase project ID (optional, uses settings if not provided)
+            project_id: Optional Supabase project ID (informational only).
         """
-        self.project_id = project_id or settings.database_project_id
+        self.project_id = project_id
         self.client = self._get_supabase_client()
 
-    def _get_supabase_client(self) -> Client:
-        """Get a Supabase client instance."""
+    def _get_supabase_client(self):  # -> Client
+        """Create a Supabase client instance."""
+        from supabase import create_client  # pylint: disable=import-error
+
+        from tripsage_core.config import get_settings  # pylint: disable=import-error
+
+        settings = get_settings()
         return create_client(
             settings.database_url,
             settings.database_public_key.get_secret_value(),
@@ -64,7 +76,8 @@ class MigrationRunner:
             # Try to query the migrations table
             self.client.table("migrations").select("id").limit(1).execute()
             logger.info("Migrations table already exists")
-        except Exception:
+        except (OSError, RuntimeError, ValueError):
+            # Database query errors or table doesn't exist
             # Table doesn't exist, create it
             create_table_sql = """
             CREATE TABLE IF NOT EXISTS migrations (
@@ -91,10 +104,14 @@ class MigrationRunner:
                 .execute()
             )
 
-            if result.data:
-                return [row["filename"] for row in result.data]
+            try:
+                if hasattr(result, "data") and result.data:  # type: ignore
+                    return [row["filename"] for row in result.data]  # type: ignore
+            except (AttributeError, TypeError):
+                logger.warning("Unexpected result format from migrations query")
             return []
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError) as e:
+            # Database query errors or table doesn't exist
             logger.warning(
                 "Could not get applied migrations (table may not exist): %s", e
             )
@@ -114,7 +131,11 @@ class MigrationRunner:
                 )
                 .execute()
             )
-            return bool(result.data)
+            try:
+                return bool(getattr(result, "data", False))  # type: ignore[union-attr]
+            except (AttributeError, TypeError):
+                logger.warning("Unexpected result format from migration insert")
+                return False
         except Exception:
             logger.exception("Failed to record migration %s", filename)
             return False
@@ -158,7 +179,7 @@ class MigrationRunner:
         filename = filepath.name
 
         try:
-            with open(filepath) as f:
+            with Path(filepath).open(encoding="utf-8") as f:
                 content = f.read()
 
             checksum = self._calculate_checksum(content)
@@ -179,11 +200,11 @@ class MigrationRunner:
             if await self.record_migration(filename, checksum):
                 logger.info("Migration %s recorded successfully", filename)
                 return True
-            else:
-                logger.error("Failed to record migration %s", filename)
-                return False
+            logger.error("Failed to record migration %s", filename)
+            return False
 
-        except Exception:
+        except (OSError, RuntimeError, ValueError):
+            # File reading, checksum calculation, or database errors
             logger.exception("Error applying migration %s", filename)
             return False
 
@@ -246,8 +267,7 @@ async def run_migrations_cli(
     return await runner.run_migrations(up_to=up_to, dry_run=dry_run)
 
 
-# Alias for backward compatibility
-run_migrations = run_migrations_cli
+__all__ = ["run_migrations_cli"]
 
 
 if __name__ == "__main__":
@@ -268,6 +288,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     async def main():
+        """Main function to run migrations."""
         succeeded, failed = await run_migrations_cli(
             project_id=args.project_id, dry_run=args.dry_run, up_to=args.up_to
         )
@@ -283,4 +304,6 @@ if __name__ == "__main__":
 
     # Exit with error code if there were failures
     if result[1] > 0:
-        exit(1)
+        import sys
+
+        sys.exit(1)

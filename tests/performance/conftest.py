@@ -4,6 +4,7 @@ This module provides common fixtures and utilities used across all test suites.
 """
 
 import asyncio
+import importlib
 import os
 import sys
 from pathlib import Path
@@ -130,7 +131,11 @@ def mock_mcp_registry():
 
     registry.get_wrapper_class.side_effect = get_wrapper_class_side_effect
 
-    with patch("tripsage.mcp_abstraction.registry.registry", registry):
+    try:
+        importlib.import_module("tripsage.mcp_abstraction.registry")
+        with patch("tripsage.mcp_abstraction.registry.registry", registry):
+            yield registry
+    except ImportError:
         yield registry
 
 
