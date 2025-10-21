@@ -6,6 +6,7 @@ and improved recovery strategies.
 """
 
 from datetime import UTC, datetime
+from typing import cast
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import ErrorInfo, HandoffContext, TravelPlanningState
@@ -42,7 +43,10 @@ class ErrorRecoveryNode(BaseAgentNode):
         """
         # Get error info from enhanced state structure
         error_info = ErrorInfo.model_validate(state.get("error_info", {}))
-        current_agent = state.get("current_agent", "")
+        current_agent_value = state.get("current_agent")
+        current_agent = (
+            cast(str, current_agent_value) if current_agent_value else "router"
+        )
 
         logger.info(
             "Processing error recovery: count=%s, agent=%s, last_error=%s",
@@ -54,10 +58,9 @@ class ErrorRecoveryNode(BaseAgentNode):
         # Determine recovery strategy based on error severity and patterns
         if error_info.error_count < self.max_retries:
             return await self._attempt_retry(state, error_info)
-        elif error_info.error_count < self.escalation_threshold:
+        if error_info.error_count < self.escalation_threshold:
             return await self._attempt_fallback(state, error_info)
-        else:
-            return await self._escalate_to_human(state, error_info)
+        return await self._escalate_to_human(state, error_info)
 
     async def _attempt_retry(
         self, state: TravelPlanningState, error_info: ErrorInfo
@@ -71,7 +74,10 @@ class ErrorRecoveryNode(BaseAgentNode):
         Returns:
             State configured for retry attempt
         """
-        current_agent = state.get("current_agent", "")
+        current_agent_value = state.get("current_agent")
+        current_agent = (
+            cast(str, current_agent_value) if current_agent_value else "router"
+        )
         retry_count = error_info.retry_attempts.get(current_agent, 0)
 
         logger.info("Attempting retry #%s for %s", retry_count + 1, current_agent)
@@ -133,17 +139,21 @@ class ErrorRecoveryNode(BaseAgentNode):
         return state
 
     async def _attempt_fallback(
-        self, state: TravelPlanningState
+        self, state: TravelPlanningState, error_info: ErrorInfo
     ) -> TravelPlanningState:
         """Use fallback strategies when retries aren't working.
 
         Args:
             state: Current state with persistent errors
+            error_info: Structured error information
 
         Returns:
             State with fallback approach
         """
-        current_agent = state.get("current_agent", "")
+        current_agent_value = state.get("current_agent")
+        current_agent = (
+            cast(str, current_agent_value) if current_agent_value else "router"
+        )
 
         logger.info("Attempting fallback strategy for %s", current_agent)
 
@@ -163,30 +173,39 @@ class ErrorRecoveryNode(BaseAgentNode):
         state["current_agent"] = fallback_agent
 
         # Add fallback context
-        state["handoff_context"] = {
-            "fallback_context": {
+        fallback_context = HandoffContext(
+            from_agent="error_recovery",
+            to_agent=fallback_agent,
+            routing_confidence=0.6,
+            routing_reasoning=(
+                f"Fallback after {error_info.error_count} errors in {current_agent}"
+            ),
+            timestamp=datetime.now(UTC).isoformat(),
+            message_analyzed="Error recovery fallback",
+            additional_context={
                 "original_agent": current_agent,
-                "fallback_agent": fallback_agent,
-                "reason": "Multiple errors in original agent",
+                "fallback_reason": "Multiple errors in original agent",
             },
-            "timestamp": datetime.now(UTC).isoformat(),
-        }
-
+        )
+        state["handoff_context"] = fallback_context.model_dump()
         return state
 
     async def _escalate_to_human(
-        self, state: TravelPlanningState
+        self, state: TravelPlanningState, error_info: ErrorInfo
     ) -> TravelPlanningState:
         """Escalate to human support for complex issues.
 
         Args:
             state: State with persistent errors requiring human intervention
+            error_info: Structured error information
 
         Returns:
             State with escalation information
         """
         logger.warning(
-            "Escalating to human support for session %s", state.get("session_id")
+            "Escalating to human support for session %s after %s errors",
+            state.get("session_id"),
+            error_info.error_count,
         )
 
         escalation_message = {
@@ -205,7 +224,7 @@ class ErrorRecoveryNode(BaseAgentNode):
         state["handoff_context"] = {
             "escalation": {
                 "reason": "Multiple error recovery attempts failed",
-                "error_count": state.get("error_info", {}).get("error_count", 0),
+                "error_count": error_info.error_count,
                 "session_id": state.get("session_id"),
                 "user_id": state.get("user_id"),
                 "timestamp": datetime.now(UTC).isoformat(),
@@ -225,14 +244,15 @@ class ErrorRecoveryNode(BaseAgentNode):
         """
         # Define fallback hierarchy
         fallback_mapping = {
-            "flight_agent": "travel_agent",
-            "accommodation_agent": "travel_agent",
-            "budget_agent": "travel_agent",
-            "itinerary_agent": "destination_agent",
-            "destination_agent": "travel_agent",
+            "flight_agent": "general_agent",
+            "accommodation_agent": "general_agent",
+            "budget_agent": "general_agent",
+            "itinerary_agent": "destination_research_agent",
+            "destination_research_agent": "general_agent",
+            "general_agent": "error_recovery",
         }
 
-        return fallback_mapping.get(failed_agent, "travel_agent")
+        return fallback_mapping.get(failed_agent, "general_agent")
 
     def _generate_fallback_message(
         self, original_agent: str, fallback_agent: str
@@ -251,8 +271,9 @@ class ErrorRecoveryNode(BaseAgentNode):
             "accommodation_agent": "accommodation search",
             "budget_agent": "budget planning",
             "itinerary_agent": "itinerary planning",
-            "destination_agent": "destination research",
-            "travel_agent": "general travel assistance",
+            "destination_research_agent": "destination research",
+            "general_agent": "general travel assistance",
+            "error_recovery": "error recovery support",
         }
 
         original_desc = agent_descriptions.get(original_agent, "that service")
@@ -295,7 +316,7 @@ class ErrorRecoveryNode(BaseAgentNode):
         Args:
             state: Current state with error information
         """
-        {
+        escalation_data = {
             "session_id": state.get("session_id"),
             "user_id": state.get("user_id"),
             "error_count": state.get("error_info", {}).get("error_count", 0),
@@ -306,7 +327,8 @@ class ErrorRecoveryNode(BaseAgentNode):
             "conversation_length": len(state.get("messages", [])),
         }
 
-        logger.exception("ESCALATION")
+        logger.exception("ESCALATION: %s", escalation_data)
 
-        # TODO: Integrate with support ticketing system
+        # NOTE: Integrate with support ticketing system once the
+        # escalation workflow is finalized.
         # await support_system.create_ticket(escalation_data)

@@ -8,12 +8,14 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from langgraph.graph import add_messages
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import TypedDict
 
 
 class UserPreferences(BaseModel):
     """User travel preferences and constraints."""
+
+    model_config = ConfigDict(extra="forbid")
 
     budget_total: float | None = None
     budget_currency: str = "USD"
@@ -28,6 +30,8 @@ class UserPreferences(BaseModel):
 class TravelDates(BaseModel):
     """Travel date information."""
 
+    model_config = ConfigDict(extra="forbid")
+
     departure_date: str | None = None  # YYYY-MM-DD format
     return_date: str | None = None  # YYYY-MM-DD format
     flexible_dates: bool = False
@@ -36,6 +40,8 @@ class TravelDates(BaseModel):
 
 class DestinationInfo(BaseModel):
     """Destination information and context."""
+
+    model_config = ConfigDict(extra="forbid")
 
     origin: str | None = None
     destination: str | None = None
@@ -48,6 +54,8 @@ class DestinationInfo(BaseModel):
 
 class SearchResult(BaseModel):
     """Generic search result structure."""
+
+    model_config = ConfigDict(extra="forbid")
 
     search_id: str
     timestamp: str
@@ -62,6 +70,8 @@ class SearchResult(BaseModel):
 class BookingProgress(BaseModel):
     """Booking progress tracking."""
 
+    model_config = ConfigDict(extra="forbid")
+
     flight_booking: dict[str, Any] | None = None
     accommodation_booking: dict[str, Any] | None = None
     activity_bookings: list[dict[str, Any]] = Field(default_factory=list)
@@ -75,6 +85,8 @@ class BookingProgress(BaseModel):
 class HandoffContext(BaseModel):
     """Agent handoff context information."""
 
+    model_config = ConfigDict(extra="forbid")
+
     from_agent: str
     to_agent: str
     routing_confidence: float
@@ -87,6 +99,8 @@ class HandoffContext(BaseModel):
 class ErrorInfo(BaseModel):
     """Error tracking information."""
 
+    model_config = ConfigDict(extra="forbid")
+
     error_count: int = 0
     last_error: str | None = None
     retry_attempts: dict[str, int] = Field(default_factory=dict)
@@ -95,6 +109,8 @@ class ErrorInfo(BaseModel):
 
 class ToolCallInfo(BaseModel):
     """Tool call tracking information."""
+
+    model_config = ConfigDict(extra="forbid")
 
     tool_name: str
     timestamp: str

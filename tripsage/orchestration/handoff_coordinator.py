@@ -8,9 +8,10 @@ between specialized agents.
 import logging
 from datetime import UTC, datetime
 from enum import Enum
+from functools import lru_cache
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from tripsage.orchestration.state import TravelPlanningState
 
@@ -44,6 +45,8 @@ class AgentCapability(str, Enum):
 class HandoffRule(BaseModel):
     """Configuration for agent handoff rules."""
 
+    model_config = ConfigDict(extra="forbid")
+
     from_agent: str = Field(description="Source agent name")
     to_agent: str = Field(description="Target agent name")
     trigger: HandoffTrigger = Field(description="Handoff trigger type")
@@ -58,6 +61,8 @@ class HandoffRule(BaseModel):
 
 class HandoffContext(BaseModel):
     """Context information for agent handoffs."""
+
+    model_config = ConfigDict(extra="forbid")
 
     from_agent: str = Field(description="Source agent")
     to_agent: str = Field(description="Target agent")
@@ -92,7 +97,7 @@ class AgentHandoffCoordinator:
         default_rules = [
             # Flight-related handoffs
             HandoffRule(
-                from_agent="general",
+                from_agent="general_agent",
                 to_agent="flight_agent",
                 trigger=HandoffTrigger.USER_REQUEST,
                 conditions={
@@ -115,7 +120,7 @@ class AgentHandoffCoordinator:
             ),
             # Accommodation handoffs
             HandoffRule(
-                from_agent="general",
+                from_agent="general_agent",
                 to_agent="accommodation_agent",
                 trigger=HandoffTrigger.USER_REQUEST,
                 conditions={
@@ -161,7 +166,7 @@ class AgentHandoffCoordinator:
             ),
             # Destination research handoffs
             HandoffRule(
-                from_agent="general",
+                from_agent="general_agent",
                 to_agent="destination_research_agent",
                 trigger=HandoffTrigger.USER_REQUEST,
                 conditions={
@@ -199,7 +204,7 @@ class AgentHandoffCoordinator:
             # Error recovery handoffs
             HandoffRule(
                 from_agent="*",
-                to_agent="general",
+                to_agent="general_agent",
                 trigger=HandoffTrigger.ERROR_RECOVERY,
                 conditions={"error_count": {">=": 3}},
                 priority=15,
@@ -228,7 +233,7 @@ class AgentHandoffCoordinator:
             "itinerary_agent": {
                 AgentCapability.ITINERARY_PLANNING,
             },
-            "general": {
+            "general_agent": {
                 AgentCapability.GENERAL_ASSISTANCE,
                 AgentCapability.ERROR_HANDLING,
             },
@@ -302,7 +307,7 @@ class AgentHandoffCoordinator:
             True if rule matches
         """
         # Check agent match
-        if rule.from_agent != "*" and rule.from_agent != current_agent:
+        if rule.from_agent not in {"*", current_agent}:
             return False
 
         # Check trigger match
@@ -325,47 +330,51 @@ class AgentHandoffCoordinator:
             True if all conditions are met
         """
         for condition_key, condition_value in conditions.items():
-            if condition_key == "keywords":
-                # Check if any keywords appear in recent messages
-                if not self._has_keywords(condition_value, state):
-                    return False
-
-            elif condition_key == "has_flights":
-                flight_selections = state.get("flight_selections", [])
-                if (condition_value and not flight_selections) or (
-                    not condition_value and flight_selections
-                ):
-                    return False
-
-            elif condition_key == "has_accommodation":
-                accommodation_selections = state.get("accommodation_selections", [])
-                if (condition_value and not accommodation_selections) or (
-                    not condition_value and accommodation_selections
-                ):
-                    return False
-
-            elif condition_key == "error_count":
-                error_history = state.get("error_history", [])
-                error_count = len(error_history)
-
-                if isinstance(condition_value, dict):
-                    for operator, threshold in condition_value.items():
-                        if (
-                            (operator == ">=" and error_count < threshold)
-                            or (operator == "<=" and error_count > threshold)
-                            or (operator == "==" and error_count != threshold)
-                        ):
-                            return False
-                else:
-                    if error_count != condition_value:
-                        return False
-
-            elif condition_key in state:
-                # Direct state value comparison
-                if state[condition_key] != condition_value:
-                    return False
-
+            if not self._condition_matches(condition_key, condition_value, state):
+                return False
         return True
+
+    def _condition_matches(
+        self, condition_key: str, condition_value: Any, state: TravelPlanningState
+    ) -> bool:
+        """Return True when a handoff condition is satisfied."""
+        result = True
+
+        if condition_key == "keywords":
+            result = self._has_keywords(condition_value, state)
+
+        elif condition_key == "has_flights":
+            has_flights = bool(state.get("flight_selections", []))
+            if bool(condition_value) != has_flights:
+                result = False
+
+        elif condition_key == "has_accommodation":
+            has_accommodation = bool(state.get("accommodation_selections", []))
+            if bool(condition_value) != has_accommodation:
+                result = False
+
+        elif condition_key == "error_count":
+            error_history = state.get("error_history", [])
+            error_count = len(error_history)
+
+            if isinstance(condition_value, dict):
+                for operator, threshold in condition_value.items():
+                    if operator == ">=" and error_count < threshold:
+                        result = False
+                        break
+                    if operator == "<=" and error_count > threshold:
+                        result = False
+                        break
+                    if operator == "==" and error_count != threshold:
+                        result = False
+                        break
+            else:
+                result = error_count == condition_value
+
+        elif condition_key in state:
+            result = state[condition_key] == condition_value
+
+        return result
 
     def _has_keywords(self, keywords: list[str], state: TravelPlanningState) -> bool:
         """Check if any keywords appear in recent messages.
@@ -440,21 +449,31 @@ class AgentHandoffCoordinator:
         self, rule: HandoffRule, trigger: HandoffTrigger, state: TravelPlanningState
     ) -> str:
         """Generate human-readable handoff reason."""
-        if trigger == HandoffTrigger.USER_REQUEST:
-            return f"User request requires {rule.to_agent} capabilities"
-        elif trigger == HandoffTrigger.TASK_COMPLETION:
-            return f"Task completed, transitioning to {rule.to_agent} for next phase"
-        elif trigger == HandoffTrigger.MISSING_CAPABILITY:
-            return (
-                f"Current agent lacks required capability, "
+        reasons = {
+            HandoffTrigger.USER_REQUEST: (
+                f"User request requires {rule.to_agent} capabilities"
+            ),
+            HandoffTrigger.TASK_COMPLETION: (
+                f"Task completed, transitioning to {rule.to_agent} for next phase"
+            ),
+            HandoffTrigger.MISSING_CAPABILITY: (
+                "Current agent lacks required capability, "
                 f"transferring to {rule.to_agent}"
-            )
-        elif trigger == HandoffTrigger.ERROR_RECOVERY:
-            return f"Error recovery required, transferring to {rule.to_agent}"
-        elif trigger == HandoffTrigger.TIMEOUT:
-            return f"Operation timeout, transferring to {rule.to_agent}"
-        else:
-            return f"Handoff to {rule.to_agent} triggered by {trigger}"
+            ),
+            HandoffTrigger.ERROR_RECOVERY: (
+                f"Error recovery required, transferring to {rule.to_agent}"
+            ),
+            HandoffTrigger.TIMEOUT: (
+                f"Operation timeout, transferring to {rule.to_agent}"
+            ),
+            HandoffTrigger.QUALITY_THRESHOLD: (
+                f"Quality threshold unmet, handing off to {rule.to_agent}"
+            ),
+        }
+
+        return reasons.get(
+            trigger, f"Handoff to {rule.to_agent} triggered by {trigger}"
+        )
 
     async def execute_handoff(
         self, handoff_context: HandoffContext, state: TravelPlanningState
@@ -476,15 +495,7 @@ class AgentHandoffCoordinator:
 
         # Update state with handoff information
         agent_history = state.get("agent_history", [])
-        agent_history.append(
-            {
-                "agent": handoff_context.from_agent,
-                "handoff_to": handoff_context.to_agent,
-                "timestamp": handoff_context.timestamp,
-                "trigger": handoff_context.trigger,
-                "reason": handoff_context.reason,
-            }
-        )
+        agent_history.append(handoff_context.to_agent)
         state["agent_history"] = agent_history
 
         # Set current agent
@@ -529,13 +540,7 @@ class AgentHandoffCoordinator:
         logger.info("Handoff history cleared")
 
 
-# Global coordinator instance
-_global_handoff_coordinator: AgentHandoffCoordinator | None = None
-
-
+@lru_cache(maxsize=1)
 def get_handoff_coordinator() -> AgentHandoffCoordinator:
-    """Get the global handoff coordinator instance."""
-    global _global_handoff_coordinator
-    if _global_handoff_coordinator is None:
-        _global_handoff_coordinator = AgentHandoffCoordinator()
-    return _global_handoff_coordinator
+    """Return a cached handoff coordinator instance."""
+    return AgentHandoffCoordinator()
