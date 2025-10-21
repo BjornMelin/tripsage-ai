@@ -15,6 +15,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import CacheDep, DatabaseDep, SettingsDep
+from tripsage_core.observability.otel import record_histogram, trace_span
 
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,8 @@ class ReadinessCheck(BaseModel):
 
 
 @router.get("/health", response_model=SystemHealth)
+@trace_span(name="api.health")
+@record_histogram("api.op.duration", unit="s")
 async def comprehensive_health_check(
     settings: SettingsDep,
     db_service: DatabaseDep,
@@ -82,8 +85,8 @@ async def comprehensive_health_check(
     # 3. Cache health
     cache_health = await _check_cache_health(cache_service)
     components.append(cache_health)
-    if cache_health.status != "healthy":
-        overall_status = "degraded" if overall_status == "healthy" else overall_status
+    if cache_health.status != "healthy" and overall_status == "healthy":
+        overall_status = "degraded"
 
     return SystemHealth(
         status=overall_status,
@@ -93,6 +96,8 @@ async def comprehensive_health_check(
 
 
 @router.get("/health/liveness")
+@trace_span(name="api.health.liveness")
+@record_histogram("api.op.duration", unit="s")
 async def liveness_check():
     """Basic liveness check for container orchestration.
 
@@ -106,6 +111,8 @@ async def liveness_check():
 
 
 @router.get("/health/readiness", response_model=ReadinessCheck)
+@trace_span(name="api.health.readiness")
+@record_histogram("api.op.duration", unit="s")
 async def readiness_check(
     db_service: DatabaseDep,
     cache_service: CacheDep,
@@ -130,7 +137,7 @@ async def readiness_check(
     except TimeoutError:
         checks["database"] = False
         details["database"] = "Database check timed out"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         checks["database"] = False
         details["database"] = f"Database check failed: {e!s}"
 
@@ -146,13 +153,12 @@ async def readiness_check(
     except TimeoutError:
         checks["cache"] = False
         details["cache"] = "Cache check timed out"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         checks["cache"] = False
         details["cache"] = f"Cache check failed: {e!s}"
 
     # Determine overall readiness
     ready = all(checks.values())
-
     return ReadinessCheck(
         ready=ready,
         checks=checks,
@@ -161,6 +167,8 @@ async def readiness_check(
 
 
 @router.get("/health/database")
+@trace_span(name="api.health.database")
+@record_histogram("api.op.duration", unit="s")
 async def database_health_check(db_service: DatabaseDep):
     """Detailed database health check.
 
@@ -172,17 +180,25 @@ async def database_health_check(db_service: DatabaseDep):
     health = await _check_database_health(db_service)
 
     # Add more detailed database metrics if available
-    if hasattr(db_service, "get_pool_stats"):
-        try:
-            pool_stats = await db_service.get_pool_stats()
-            health.details.update(pool_stats)
-        except Exception as e:
-            logger.warning("Failed to get pool stats: %s", e)
+    try:
+        get_stats = getattr(db_service, "get_pool_stats", None)
+        if callable(get_stats):
+            _maybe = get_stats()  # type: ignore[no-any-return]
+            if asyncio.iscoroutine(_maybe):
+                pool_stats = await _maybe
+            else:
+                pool_stats = _maybe
+            if isinstance(pool_stats, dict):
+                health.details.update(pool_stats)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Failed to get pool stats: %s", e)
 
     return health
 
 
 @router.get("/health/cache")
+@trace_span(name="api.health.cache")
+@record_histogram("api.op.duration", unit="s")
 async def cache_health_check(cache_service: CacheDep):
     """Detailed cache (DragonflyDB) health check.
 
@@ -204,7 +220,7 @@ async def cache_health_check(cache_service: CacheDep):
                     "total_commands_processed": info.get("total_commands_processed"),
                 }
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to get cache info: %s", e)
 
     return health
@@ -236,7 +252,7 @@ async def _check_database_health(db_service) -> ComponentHealth:
                 message="Database query returned no results",
             )
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
         return ComponentHealth(
@@ -280,7 +296,7 @@ async def _check_cache_health(cache_service) -> ComponentHealth:
                 message="Cache ping failed",
             )
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
         return ComponentHealth(
