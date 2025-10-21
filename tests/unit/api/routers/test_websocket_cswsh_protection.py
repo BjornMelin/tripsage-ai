@@ -265,7 +265,6 @@ class TestWebSocketEndpointCSWSHIntegration:
         from tripsage.api.routers.websocket import chat_websocket
 
         session_id = uuid4()
-        mock_db = Mock()
         mock_chat_service = Mock()
         mock_validate_origin.return_value = False
 
@@ -273,7 +272,6 @@ class TestWebSocketEndpointCSWSHIntegration:
         await chat_websocket(
             websocket=mock_websocket,
             session_id=session_id,
-            db=mock_db,
             chat_service=mock_chat_service,
         )
 
@@ -315,7 +313,6 @@ class TestWebSocketEndpointCSWSHIntegration:
         from tripsage.api.routers.websocket import chat_websocket
 
         session_id = uuid4()
-        mock_db = Mock()
         mock_chat_service = Mock()
         mock_validate_origin.return_value = False
 
@@ -323,7 +320,6 @@ class TestWebSocketEndpointCSWSHIntegration:
         await chat_websocket(
             websocket=mock_websocket,
             session_id=session_id,
-            db=mock_db,
             chat_service=mock_chat_service,
         )
 
@@ -345,7 +341,6 @@ class TestWebSocketEndpointCSWSHIntegration:
         await chat_websocket(
             websocket=mock_websocket,
             session_id=session_id,
-            db=mock_db,
             chat_service=mock_chat_service,
         )
 
@@ -399,7 +394,7 @@ class TestCSWSHSecurityScenarios:
 
         websocket = Mock(spec=WebSocket)
         # Unicode character that looks like 'a' but is different
-        websocket.headers = {"origin": "https://tripsage.com"}  # Cyrillic 'a'
+        websocket.headers = {"origin": "https://tr\u0456psage.com"}  # Unicode \u0456
 
         # Act
         result = await validate_websocket_origin(websocket)

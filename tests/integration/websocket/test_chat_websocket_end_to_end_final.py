@@ -92,7 +92,10 @@ async def test_chat_auth_and_message_flow(client: TestClient) -> None:
         # Use FastAPI dependency overrides to avoid DB and provide chat service
         from tripsage.api.routers import websocket as ws_mod
 
-        app.dependency_overrides[ws_mod.get_core_chat_service] = lambda: chat_service
+        async def _chat_service_override():
+            return chat_service
+
+        app.dependency_overrides[ws_mod.get_core_chat_service] = _chat_service_override
         try:
             session_id = str(uuid4())
             url = f"/api/ws/chat/{session_id}"
@@ -145,7 +148,10 @@ async def test_chat_ping_pong(client: TestClient) -> None:
     ):
         from tripsage.api.routers import websocket as ws_mod
 
-        app.dependency_overrides[ws_mod.get_core_chat_service] = MagicMock()
+        async def _chat_service_override():
+            return MagicMock()
+
+        app.dependency_overrides[ws_mod.get_core_chat_service] = _chat_service_override
         try:
             session_id = str(uuid4())
             url = f"/api/ws/chat/{session_id}"

@@ -90,7 +90,7 @@ The BYOK system allows users to provide their own API keys for external services
 # Listed here for reference only:
 
 # Flight APIs
-# - DUFFEL_API_KEY (user-provided)
+# - DUFFEL_ACCESS_TOKEN (user-provided, if you implement per-user Duffel access)
 
 # Map/Location APIs  
 # - GOOGLE_MAPS_API_KEY (user-provided)
@@ -109,13 +109,16 @@ The BYOK system allows users to provide their own API keys for external services
 
 ## External Service SDKs
 
-### Flight Service (Duffel SDK)
+### Flight Service (Duffel API v2)
 
 ```bash
-# Duffel SDK Configuration
-DUFFEL_BASE_URL=https://api.duffel.com
-DUFFEL_TIMEOUT=30
-DUFFEL_RATE_LIMIT=100  # requests per minute
+# Provider configuration (used by the built-in DuffelProvider)
+DUFFEL_ACCESS_TOKEN=your_duffel_access_token
+# Optional legacy alias also supported by the DI factory:
+# DUFFEL_API_TOKEN=your_duffel_access_token
+# Base URL and timeouts are sensible defaults; override only if needed.
+# DUFFEL_BASE_URL=https://api.duffel.com
+# DUFFEL_TIMEOUT=30
 ```
 
 ### Google Services SDK
@@ -238,7 +241,7 @@ SUPABASE_ANON_KEY=your-test-anon-key
 DRAGONFLY_URL=redis://localhost:6379/1  # Different database
 
 # Mock API Keys for Testing
-TEST_DUFFEL_API_KEY=test_key_123
+TEST_DUFFEL_ACCESS_TOKEN=test_access_token_123
 TEST_GOOGLE_MAPS_API_KEY=test_key_456
 TEST_OPENWEATHERMAP_API_KEY=test_key_789
 ```
