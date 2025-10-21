@@ -1,5 +1,7 @@
 """Optimized web crawling tools backed by the WebCrawlService."""
 
+# pylint: disable=duplicate-code
+
 from __future__ import annotations
 
 import time
@@ -33,6 +35,25 @@ def _build_params(
         use_cache=use_cache,
         screenshot=False,
         pdf=False,
+    )
+
+
+def _build_error_result(url: str, exc: Exception) -> UnifiedCrawlResult:
+    """Create a normalized error response for crawl failures."""
+    metadata = {
+        "source_crawler": "crawl4ai_direct",
+        "crawl4ai_error": type(exc).__name__,
+    }
+    return UnifiedCrawlResult(
+        url=url,
+        title=None,
+        main_content_markdown=None,
+        main_content_text=None,
+        html_content=None,
+        structured_data=None,
+        status="error",
+        error_message=f"Crawl4AI crawl failed: {exc!s}",
+        crawl_metadata=metadata,
     )
 
 
@@ -70,20 +91,7 @@ async def crawl_website_content(
         duration_ms = (time.perf_counter() - start) * 1000
         record_webcrawl_request(duration_ms, False)
         logger.exception("Crawl4AI crawl failed for %s", url)
-        return UnifiedCrawlResult(
-            url=url,
-            title=None,
-            main_content_markdown=None,
-            main_content_text=None,
-            html_content=None,
-            structured_data=None,
-            status="error",
-            error_message=f"Crawl4AI crawl failed: {exc!s}",
-            crawl_metadata={
-                "source_crawler": "crawl4ai_direct",
-                "crawl4ai_error": type(exc).__name__,
-            },
-        )
+        return _build_error_result(url, exc)
 
 
 @with_error_handling()

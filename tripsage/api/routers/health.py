@@ -231,8 +231,8 @@ async def _check_database_health(db_service) -> ComponentHealth:
     start_time = datetime.now(UTC)
 
     try:
-        # Perform a simple query to check connectivity
-        result = await db_service.execute_query("SELECT 1 as health_check")
+        # Perform a simple query to check connectivity via RPC wrapper
+        result = await db_service.execute_sql("SELECT 1 as health_check")
 
         latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 

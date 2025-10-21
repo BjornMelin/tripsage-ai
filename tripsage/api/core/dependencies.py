@@ -9,6 +9,7 @@ from typing import Annotated
 from fastapi import Depends, Request
 
 from tripsage.api.core.config import Settings, get_settings
+from tripsage.api.core.protocols import ApiKeyServiceProto, ChatServiceProto
 from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
 from tripsage_core.services.business.accommodation_service import (
@@ -16,7 +17,7 @@ from tripsage_core.services.business.accommodation_service import (
     get_accommodation_service,
 )
 from tripsage_core.services.business.api_key_service import ApiKeyService
-from tripsage_core.services.business.chat_service import ChatService, get_chat_service
+from tripsage_core.services.business.chat_service import get_chat_service
 from tripsage_core.services.business.destination_service import (
     DestinationService,
     get_destination_service,
@@ -41,8 +42,8 @@ from tripsage_core.services.infrastructure.database_service import (
     get_database_service,
 )
 from tripsage_core.services.simple_mcp_service import (
-    SimpleMCPService as MCPManager,
-    mcp_manager,
+    SimpleMCPService,
+    default_mcp_service,
 )
 from tripsage_core.utils.session_utils import SessionMemory
 
@@ -131,7 +132,7 @@ def get_principal_id(principal: Principal) -> str:
 async def verify_service_access(
     principal: Principal,
     service: str = "openai",
-    key_service: ApiKeyService = None,
+    key_service: ApiKeyService | None = None,
 ) -> bool:
     """Verify that the principal has access to a specific service."""
     # Agents with API keys already have service access
@@ -148,10 +149,10 @@ async def verify_service_access(
             key_service = ApiKeyService(db=db, cache=cache, settings=settings)
 
         try:
-            keys = await key_service.get_user_api_keys(principal.id)
+            keys = await key_service.list_user_keys(principal.id)
             service_key = next((k for k in keys if k.service.value == service), None)
             return service_key is not None
-        except Exception:
+        except (OSError, ValueError, TypeError):
             return False
 
     return False
@@ -163,10 +164,10 @@ async def get_cache_service_dep():
     return await get_cache_service()
 
 
-# MCP Manager dependency
-def get_mcp_manager() -> MCPManager:
-    """Get the MCP Manager instance."""
-    return mcp_manager
+# MCP service dependency
+def get_mcp_service() -> SimpleMCPService:
+    """Get the default MCP service instance."""
+    return default_mcp_service
 
 
 # API Key service dependency
@@ -183,7 +184,7 @@ SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]
 DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
 CacheDep = Annotated[CacheService, Depends(get_cache_service_dep)]
 SessionMemoryDep = Annotated[SessionMemory, Depends(get_session_memory)]
-MCPManagerDep = Annotated[MCPManager, Depends(get_mcp_manager)]
+MCPServiceDep = Annotated[SimpleMCPService, Depends(get_mcp_service)]
 
 # Principal-based authentication dependencies
 CurrentPrincipalDep = Annotated[Principal | None, Depends(get_current_principal)]
@@ -195,11 +196,11 @@ AgentPrincipalDep = Annotated[Principal, Depends(require_agent_principal)]
 AccommodationServiceDep = Annotated[
     AccommodationService, Depends(get_accommodation_service)
 ]
-ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
+ChatServiceDep = Annotated[ChatServiceProto, Depends(get_chat_service)]
 DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
 FlightServiceDep = Annotated[FlightService, Depends(get_flight_service)]
 ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)]
-ApiKeyServiceDep = Annotated[ApiKeyService, Depends(get_api_key_service)]
+ApiKeyServiceDep = Annotated[ApiKeyServiceProto, Depends(get_api_key_service)]
 MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
 TripServiceDep = Annotated[TripService, Depends(get_trip_service)]
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]

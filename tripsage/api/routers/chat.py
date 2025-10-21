@@ -14,7 +14,12 @@ from tripsage.api.core.dependencies import (
     RequiredPrincipalDep,
     get_principal_id,
 )
-from tripsage.api.schemas.chat import ChatRequest, ChatResponse
+from tripsage.api.schemas.chat import (
+    ChatRequest,
+    ChatResponse,
+    CreateMessageRequest,
+    SessionCreateRequest,
+)
 from tripsage_core.observability.otel import record_histogram, trace_span
 
 
@@ -24,7 +29,11 @@ router = APIRouter()
 
 @router.post("/", response_model=ChatResponse)
 @trace_span(name="api.chat.completion")
-@record_histogram("api.op.duration", unit="s")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {"http.route": "/api/chat/", "http.method": "POST"},
+)
 async def chat(
     request: ChatRequest,
     principal: RequiredPrincipalDep,
@@ -44,7 +53,7 @@ async def chat(
         user_id = get_principal_id(principal)
 
         # Delegate to unified chat service
-        return chat_service.chat_completion(user_id, request)
+        return await chat_service.chat_completion(user_id, request)
 
     except Exception as e:
         logger.exception("Chat request failed")
@@ -56,9 +65,16 @@ async def chat(
 
 @router.post("/sessions", response_model=dict)
 @trace_span(name="api.chat.sessions.create")
-@record_histogram("api.op.duration", unit="s")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {
+        "http.route": "/api/chat/sessions",
+        "http.method": "POST",
+    },
+)
 async def create_session(
-    title: str,
+    body: SessionCreateRequest,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
 ):
@@ -71,6 +87,9 @@ async def create_session(
 
     Returns:
         Created session information
+
+    Args:
+        body: Session creation request body
     """
     try:
         user_id = get_principal_id(principal)
@@ -81,7 +100,7 @@ async def create_session(
 
         # Convert API request to core request
         session_request = ChatSessionCreateRequest(
-            title=title, metadata=None, trip_id=None
+            title=body.title, metadata=body.metadata, trip_id=None
         )
 
         return await chat_service.create_session(user_id, session_request)
@@ -96,7 +115,14 @@ async def create_session(
 
 @router.get("/sessions", response_model=list[dict])
 @trace_span(name="api.chat.sessions.list")
-@record_histogram("api.op.duration", unit="s")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {
+        "http.route": "/api/chat/sessions",
+        "http.method": "GET",
+    },
+)
 async def list_sessions(
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
@@ -124,7 +150,14 @@ async def list_sessions(
 
 @router.get("/sessions/{session_id}", response_model=dict)
 @trace_span(name="api.chat.sessions.get")
-@record_histogram("api.op.duration", unit="s")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {
+        "http.route": "/api/chat/sessions/{session_id}",
+        "http.method": "GET",
+    },
+)
 async def get_session(
     session_id: UUID,
     principal: RequiredPrincipalDep,
@@ -163,7 +196,14 @@ async def get_session(
 
 @router.get("/sessions/{session_id}/messages", response_model=list[dict])
 @trace_span(name="api.chat.messages.list")
-@record_histogram("api.op.duration", unit="s")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {
+        "http.route": "/api/chat/sessions/{session_id}/messages",
+        "http.method": "GET",
+    },
+)
 async def get_session_messages(
     session_id: UUID,
     principal: RequiredPrincipalDep,
@@ -195,13 +235,19 @@ async def get_session_messages(
 
 @router.post("/sessions/{session_id}/messages", response_model=dict)
 @trace_span(name="api.chat.messages.create")
-@record_histogram("api.op.duration", unit="s")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {
+        "http.route": "/api/chat/sessions/{session_id}/messages",
+        "http.method": "POST",
+    },
+)
 async def create_message(
     session_id: UUID,
-    content: str,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
-    role: str = "user",
+    body: CreateMessageRequest,
 ):
     """Create a new message in a session.
 
@@ -214,13 +260,14 @@ async def create_message(
 
     Returns:
         Created message
+
+    Args:
+        body: Message creation request body
     """
     try:
         user_id = get_principal_id(principal)
 
-        from tripsage.api.schemas.chat import CreateMessageRequest
-
-        message_request = CreateMessageRequest(content=content, role=role)
+        message_request = CreateMessageRequest(content=body.content, role=body.role)
 
         return await chat_service.create_message(
             user_id, str(session_id), message_request

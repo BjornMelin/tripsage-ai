@@ -22,8 +22,9 @@ class TestDestinationsRouter:
 
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
-        assert "destinations" in payload
-        assert payload["count"] == len(payload["destinations"])
+        assert payload["total_results"] == len(payload["destinations"])
+        assert payload["search_id"]
+        assert payload["cached"] in (True, False)
 
     def test_get_destination_details_success(
         self, api_test_client, valid_destination_details
@@ -71,6 +72,7 @@ class TestDestinationsRouter:
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
         assert isinstance(payload, list)
+        assert payload[0]["match_score"] >= 0
 
     # === VALIDATION ===
 
@@ -98,6 +100,8 @@ class TestDestinationsRouter:
             "destination_id": "dest-1",
             "notes": "test",
             "priority": 2,
+            "planned_visit_date": None,
+            "duration_days": None,
         }
 
         response = api_test_client.post("/api/destinations/saved", json=payload)
@@ -139,7 +143,8 @@ class TestDestinationsRouter:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_list_saved_destinations_unauthorized(
-        self, unauthenticated_test_client,
+        self,
+        unauthenticated_test_client,
     ):
         """Listing saved destinations requires authentication."""
         response = unauthenticated_test_client.get("/api/destinations/saved")

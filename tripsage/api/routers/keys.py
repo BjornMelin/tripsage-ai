@@ -22,6 +22,7 @@ from tripsage.api.schemas.api_keys import (
     ApiKeyValidateRequest,
     ApiKeyValidateResponse,
 )
+from tripsage_core.observability.otel import record_histogram, trace_span
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     get_key_health_metrics,
@@ -41,6 +42,12 @@ def get_monitoring_service() -> KeyMonitoringService:
     "",
     response_model=list[ApiKeyResponse],
     summary="List API keys",
+)
+@trace_span(name="api.keys.list")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {"http.route": "/api/keys", "http.method": "GET"},
 )
 async def list_keys(
     key_service: ApiKeyServiceDep,
@@ -64,6 +71,12 @@ async def list_keys(
     response_model=ApiKeyResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new API key",
+)
+@trace_span(name="api.keys.create")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {"http.route": "/api/keys", "http.method": "POST"},
 )
 async def create_key(
     key_data: ApiKeyCreate,
@@ -109,6 +122,15 @@ async def create_key(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete an API key",
 )
+@trace_span(name="api.keys.delete")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {
+        "http.route": "/api/keys/{key_id}",
+        "http.method": "DELETE",
+    },
+)
 async def delete_key(
     key_service: ApiKeyServiceDep,
     principal: Principal = Depends(require_principal),
@@ -117,8 +139,9 @@ async def delete_key(
     """Delete an API key.
 
     Args:
-        key_id: The API key ID
+        key_service: Injected key service
         principal: Current authenticated principal
+        key_id: The API key ID
 
     Raises:
         HTTPException: If the key is not found or does not belong to the user
@@ -148,6 +171,12 @@ async def delete_key(
     response_model=ApiKeyValidateResponse,
     summary="Validate an API key",
 )
+@trace_span(name="api.keys.validate")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {"http.route": "/api/keys/validate", "http.method": "POST"},
+)
 async def validate_key(
     key_data: ApiKeyValidateRequest,
     key_service: ApiKeyServiceDep,
@@ -158,6 +187,7 @@ async def validate_key(
     Args:
         key_data: API key data
         principal: Current authenticated principal
+        key_service: Injected key service
 
     Returns:
         Validation result
@@ -171,6 +201,15 @@ async def validate_key(
     response_model=ApiKeyResponse,
     summary="Rotate an API key",
 )
+@trace_span(name="api.keys.rotate")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {
+        "http.route": "/api/keys/{key_id}/rotate",
+        "http.method": "POST",
+    },
+)
 async def rotate_key(
     key_data: ApiKeyRotateRequest,
     key_service: ApiKeyServiceDep,
@@ -183,6 +222,7 @@ async def rotate_key(
         key_data: New API key data
         key_id: The API key ID
         principal: Current authenticated principal
+        key_service: Injected key service
 
     Returns:
         The updated API key
@@ -226,6 +266,12 @@ async def rotate_key(
     response_model=dict[str, Any],
     summary="Get API key metrics",
 )
+@trace_span(name="api.keys.metrics")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {"http.route": "/api/keys/metrics", "http.method": "GET"},
+)
 async def get_metrics(
     principal: Principal = Depends(require_principal),
 ):
@@ -247,6 +293,12 @@ async def get_metrics(
     response_model=list[dict[str, Any]],
     summary="Get API key audit log",
 )
+@trace_span(name="api.keys.audit")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {"http.route": "/api/keys/audit", "http.method": "GET"},
+)
 async def get_audit_log(
     principal: Principal = Depends(require_principal),
     limit: int = Query(100, ge=1, le=1000),
@@ -257,6 +309,7 @@ async def get_audit_log(
     Args:
         principal: Current authenticated principal
         limit: Maximum number of entries to return
+        monitoring_service: Key monitoring service
 
     Returns:
         List of audit log entries

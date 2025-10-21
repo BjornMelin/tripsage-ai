@@ -98,7 +98,7 @@ class DatabaseMonitoringConfig(BaseModel):
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
     enable_monitoring: bool = True
-    enable_metrics: bool = True
+    enable_metrics: bool = False
     enable_query_tracking: bool = True
     slow_query_threshold: float = Field(default=1.0, gt=0.0, le=60.0)
 
@@ -865,7 +865,7 @@ class DatabaseService:
             try:
                 query = self.client.table(table).upsert(data)
                 if on_conflict and hasattr(query, "on_conflict"):
-                    query = query.on_conflict(on_conflict)  # type: ignore[call-arg]
+                    query = query.on_conflict(on_conflict)  # type: ignore[call-arg]  # pylint: disable=no-member
                 result: Any = await asyncio.to_thread(query.execute)
                 if self.enable_audit_logging:
                     self._log_audit_event(
@@ -1350,6 +1350,36 @@ class DatabaseService:
         result = await self.insert("chat_sessions", session_data, user_id)
         return result[0] if result else {}
 
+    async def create_chat_message(
+        self, message_data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
+        """Create a chat message row.
+
+        Args:
+            message_data: Message payload.
+            user_id: Optional user attribution.
+
+        Returns:
+            The created message.
+        """
+        result = await self.insert("chat_messages", message_data, user_id)
+        return result[0] if result else {}
+
+    async def update_session_timestamp(self, session_id: str) -> bool:
+        """Update ``updated_at`` timestamp for a chat session.
+
+        Args:
+            session_id: Chat session identifier.
+
+        Returns:
+            True if any row was updated.
+        """
+        now = datetime.now(UTC).isoformat()
+        result = await self.update(
+            "chat_sessions", {"updated_at": now}, {"id": session_id}
+        )
+        return len(result) > 0
+
     async def save_chat_message(
         self, message_data: dict[str, Any], user_id: str | None = None
     ) -> dict[str, Any]:
@@ -1386,6 +1416,100 @@ class DatabaseService:
             limit=limit,
             user_id=user_id,
         )
+
+    # --- Additional chat helpers used by ChatService ---
+
+    async def get_user_chat_sessions(
+        self, user_id: str, limit: int = 10, include_ended: bool = False
+    ) -> list[dict[str, Any]]:
+        """List chat sessions for a user.
+
+        Args:
+            user_id: User identifier.
+            limit: Maximum number of sessions.
+            include_ended: Include sessions with ``ended_at`` set.
+
+        Returns:
+            List of session rows.
+        """
+        filters: dict[str, Any] = {"user_id": user_id}
+        if not include_ended:
+            filters["ended_at"] = {"is_": "null"}
+        return await self.select(
+            "chat_sessions",
+            "*",
+            filters=filters,
+            order_by="-updated_at",
+            limit=limit,
+            user_id=user_id,
+        )
+
+    async def get_chat_session(
+        self, session_id: str, user_id: str
+    ) -> dict[str, Any] | None:
+        """Fetch a chat session by id for a user."""
+        rows = await self.select(
+            "chat_sessions",
+            "*",
+            filters={"id": session_id, "user_id": user_id},
+            limit=1,
+            user_id=user_id,
+        )
+        return rows[0] if rows else None
+
+    async def get_session_stats(self, session_id: str) -> dict[str, Any]:
+        """Return message count and last message timestamp for a session."""
+        count = await self.count("chat_messages", {"session_id": session_id})
+        last_rows = await self.select(
+            "chat_messages",
+            "created_at",
+            filters={"session_id": session_id},
+            order_by="-created_at",
+            limit=1,
+        )
+        last_message_at = last_rows[0]["created_at"] if last_rows else None
+        return {"message_count": count, "last_message_at": last_message_at}
+
+    async def get_session_messages(
+        self, session_id: str, limit: int | None = None, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        """List messages for a chat session ordered by creation time."""
+        return await self.select(
+            "chat_messages",
+            "*",
+            filters={"session_id": session_id},
+            order_by="created_at",
+            limit=limit or 100,
+            offset=offset,
+        )
+
+    async def get_message_tool_calls(self, message_id: str) -> list[dict[str, Any]]:
+        """List tool calls attached to a message."""
+        return await self.select(
+            "chat_tool_calls", "*", filters={"message_id": message_id}
+        )
+
+    async def create_tool_call(self, tool_call_data: dict[str, Any]) -> dict[str, Any]:
+        """Create a tool call row."""
+        result = await self.insert("chat_tool_calls", tool_call_data)
+        return result[0] if result else {}
+
+    async def update_tool_call(
+        self, tool_call_id: str, update_data: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Update a tool call by id and return the updated row if any."""
+        rows = await self.update(
+            "chat_tool_calls", update_data, filters={"id": tool_call_id}
+        )
+        return rows[0] if rows else None
+
+    async def end_chat_session(self, session_id: str) -> bool:
+        """Mark a chat session as ended."""
+        now = datetime.now(UTC).isoformat()
+        rows = await self.update(
+            "chat_sessions", {"ended_at": now, "updated_at": now}, {"id": session_id}
+        )
+        return len(rows) > 0
 
     async def get_user_api_keys(self, user_id: str) -> list[dict[str, Any]]:
         """List API keys for a user.

@@ -114,6 +114,7 @@ class AirbnbMCPClient:
 
     async def search_accommodations(
         self,
+        *,
         location: str,
         checkin: str | None = None,
         checkout: str | None = None,
@@ -174,6 +175,7 @@ class AirbnbMCPClient:
 
     async def get_listing_details(
         self,
+        *,
         listing_id: str,
         checkin: str | None = None,
         checkout: str | None = None,
