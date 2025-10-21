@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl, field_validator
 
 
 class EventVisibility(str, Enum):
@@ -297,6 +297,12 @@ class CalendarList(BaseModel):
     items: list[CalendarListEntry] = Field(default_factory=list)
 
 
+class FreeBusyCalendarItem(BaseModel):
+    """Calendar item for free/busy queries."""
+
+    id: str = Field(..., description="Calendar ID")
+
+
 class FreeBusyRequest(BaseModel):
     """Request model for free/busy queries."""
 
@@ -307,7 +313,9 @@ class FreeBusyRequest(BaseModel):
     time_zone: str | None = Field(None, alias="timeZone")
     group_expansion_max: int = Field(50, alias="groupExpansionMax", ge=1, le=100)
     calendar_expansion_max: int = Field(50, alias="calendarExpansionMax", ge=1, le=50)
-    items: list[dict[str, str]] = Field(..., description="List of calendars to query")
+    items: list[FreeBusyCalendarItem] = Field(
+        ..., description="List of calendars to query"
+    )
 
 
 class FreeBusyResponse(BaseModel):
@@ -358,14 +366,74 @@ class EventsListResponse(BaseModel):
 
     kind: str = "calendar#events"
     etag: str | None = None
-    summary: str
+    summary: str | None = None
     description: str | None = None
-    updated: datetime
-    time_zone: str = Field(..., alias="timeZone")
-    access_role: str = Field(..., alias="accessRole")
+    updated: datetime | None = None
+    time_zone: str | None = Field(None, alias="timeZone")
+    access_role: str | None = Field(None, alias="accessRole")
     default_reminders: list[EventReminder] = Field(
         default_factory=list, alias="defaultReminders"
     )
     next_page_token: str | None = Field(None, alias="nextPageToken")
     next_sync_token: str | None = Field(None, alias="nextSyncToken")
     items: list[CalendarEvent] = Field(default_factory=list)
+
+
+class TravelEventRequest(BaseModel):
+    """Request model for creating travel-specific calendar events."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    calendar_id: str = Field(..., description="Calendar ID to create event in")
+    title: str = Field(..., min_length=1, max_length=1024, description="Event title")
+    start: datetime = Field(..., description="Event start datetime")
+    end: datetime = Field(..., description="Event end datetime")
+
+    location: str | None = Field(
+        None, max_length=1024, description="Location/destination"
+    )
+    description: str | None = Field(
+        None, max_length=8192, description="Event description"
+    )
+
+    travel_type: str = Field(
+        "flight",
+        description="Type of travel",
+        pattern="^(flight|hotel|activity|transportation)$",
+    )
+    booking_reference: str | None = Field(
+        None, max_length=256, description="Booking/confirmation number"
+    )
+    attendees: list[EmailStr] = Field(
+        default_factory=list, description="List of attendee email addresses"
+    )
+
+    def to_create_event_request(self) -> CreateEventRequest:
+        """Convert to a CreateEventRequest with travel metadata."""
+        # Build travel metadata
+        travel_metadata = {
+            "type": self.travel_type,
+            "booking_reference": self.booking_reference,
+            "created_by": "tripsage-core",
+            "created_at": datetime.now().isoformat(),
+        }
+
+        event_payload = {
+            "summary": self.title,
+            "description": self.description or "",
+            "location": self.location,
+            "start": {
+                "dateTime": self.start.isoformat(),
+                "timeZone": "UTC",
+            },
+            "end": {
+                "dateTime": self.end.isoformat(),
+                "timeZone": "UTC",
+            },
+            "timeZone": "UTC",
+            "conferenceDataVersion": None,
+            "attendees": [{"email": email} for email in self.attendees],
+            "travel_metadata": travel_metadata,
+        }
+
+        return CreateEventRequest.model_validate(event_payload)

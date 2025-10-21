@@ -1,6 +1,6 @@
 """Dashboard Service - Production-ready Analytics Implementation.
 
-This service provides comprehensive dashboard analytics and monitoring functionality
+This service provides dashboard analytics and monitoring functionality
 using real-time data aggregation from the unified ApiKeyService and database.
 
 Features:
@@ -12,12 +12,14 @@ Features:
 - Rate limiting status from live cache data
 """
 
+from __future__ import annotations
+
 import asyncio
 import enum
 import logging
 import statistics
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -210,21 +212,11 @@ class AlertData(BaseModel):
 
         return base_score
 
-    @property
-    def anomaly_type(self):
-        """Compatibility property for legacy code."""
-
-        class AnomalyTypeCompat:
-            def __init__(self, value: str):
-                self.value = value
-
-        return AnomalyTypeCompat(self.alert_type.value)
-
 
 class DashboardData(BaseModel):
-    """Comprehensive dashboard data from real analytics."""
+    """Comprehensive dashboard data derived from real analytics."""
 
-    metrics: RealTimeMetrics = Field(description="Real-time system metrics")
+    metrics: RealTimeMetrics = Field(description="Aggregated real-time metrics")
     services: list[ServiceAnalytics] = Field(description="Per-service analytics")
     top_users: list[UserActivityData] = Field(description="Top active users")
     recent_alerts: list[AlertData] = Field(
@@ -234,22 +226,7 @@ class DashboardData(BaseModel):
         default_factory=list, description="Historical trend data"
     )
     cache_stats: dict[str, Any] = Field(
-        default_factory=dict, description="Cache performance stats"
-    )
-
-    # Legacy compatibility fields
-    total_requests: int = Field(description="Legacy compatibility field")
-    total_errors: int = Field(description="Legacy compatibility field")
-    overall_success_rate: float = Field(description="Legacy compatibility field")
-    active_keys: int = Field(description="Legacy compatibility field")
-    top_users_legacy: list[dict[str, Any]] = Field(
-        default_factory=list, description="Legacy format top users", alias="top_users"
-    )
-    services_status: dict[str, str] = Field(
-        default_factory=dict, description="Legacy services status"
-    )
-    usage_by_service: dict[str, int] = Field(
-        default_factory=dict, description="Legacy usage by service"
+        default_factory=dict, description="Cache performance statistics"
     )
 
     @computed_field
@@ -308,21 +285,23 @@ class DashboardService:
 
     def __init__(
         self,
-        cache_service: Optional["CacheService"] = None,
-        database_service: Optional["DatabaseService"] = None,
-        settings=None,
+        cache_service: CacheService | None = None,
+        database_service: DatabaseService | None = None,
+        settings: Any | None = None,
     ):
         """Initialize dashboard service with dependencies."""
         self.cache = cache_service
         self.db = database_service
         self.settings = settings
 
-        # Initialize API key service for health checks and validation
-        self.api_key_service = ApiKeyService(
-            db=database_service,
-            cache=cache_service,
-            settings=settings,
-        )
+        # Initialize API key service for health checks and validation when possible
+        self.api_key_service: ApiKeyService | None = None
+        if database_service is not None:
+            self.api_key_service = ApiKeyService(
+                db=database_service,
+                cache=cache_service,
+                settings=settings,
+            )
 
         # Active alerts storage (in production, this would be in database/cache)
         self._active_alerts: dict[str, AlertData] = {}
@@ -363,24 +342,6 @@ class DashboardService:
                 cache_stats_task,
             )
 
-            # Build legacy compatibility fields
-            legacy_services_status = {
-                service.service_name: service.health_status.value
-                for service in services
-            }
-
-            legacy_usage_by_service = {
-                service.service_name: service.total_requests for service in services
-            }
-
-            legacy_top_users = [
-                {
-                    "user_id": user.user_id,
-                    "request_count": user.request_count,
-                }
-                for user in top_users
-            ]
-
             return DashboardData(
                 metrics=metrics,
                 services=services,
@@ -388,21 +349,12 @@ class DashboardService:
                 recent_alerts=alerts,
                 usage_trend=trends,
                 cache_stats=cache_stats,
-                # Legacy compatibility
-                total_requests=metrics.total_requests,
-                total_errors=metrics.total_errors,
-                overall_success_rate=metrics.success_rate,
-                active_keys=metrics.active_keys_count,
-                top_users_legacy=legacy_top_users,
-                services_status=legacy_services_status,
-                usage_by_service=legacy_usage_by_service,
             )
 
         except Exception:
             logger.exception("Failed to get dashboard data")
             # Return minimal data on error
-            now = datetime.now(UTC)
-            return await self._get_fallback_dashboard_data(now, time_range_hours)
+            return await self._get_fallback_dashboard_data(time_range_hours)
 
     async def get_rate_limit_status(
         self, key_id: str, window_minutes: int = 60
@@ -440,9 +392,9 @@ class DashboardService:
                     else 0,
                     "is_throttled": current_usage >= limit_value,
                 }
-            else:
-                # No cached data, return defaults
-                return self._get_default_rate_limit_status(key_id, window_minutes)
+
+            # No cached data, return defaults
+            return self._get_default_rate_limit_status(key_id, window_minutes)
 
         except Exception:
             logger.exception("Failed to get rate limit status for %s", key_id)
@@ -540,6 +492,9 @@ class DashboardService:
     ) -> list[ServiceAnalytics]:
         """Get per-service analytics from real data."""
         try:
+            if self.api_key_service is None:
+                return self._get_default_service_analytics()
+
             # Get health checks for all services
             health_checks = await self.api_key_service.check_all_services_health()
 
@@ -867,7 +822,7 @@ class DashboardService:
         ]
 
     async def _get_fallback_dashboard_data(
-        self, timestamp: datetime, time_range_hours: int
+        self, time_range_hours: int
     ) -> DashboardData:
         """Get fallback dashboard data when queries fail."""
         metrics = self._get_default_metrics(time_range_hours)
@@ -880,17 +835,14 @@ class DashboardService:
             recent_alerts=[],
             usage_trend=[],
             cache_stats={},
-            # Legacy compatibility
-            total_requests=metrics.total_requests,
-            total_errors=metrics.total_errors,
-            overall_success_rate=metrics.success_rate,
-            active_keys=metrics.active_keys_count,
-            top_users_legacy=[],
-            services_status={s.service_name: s.health_status.value for s in services},
-            usage_by_service={s.service_name: s.total_requests for s in services},
         )
 
     # Alert management methods
+    @property
+    def active_alerts(self) -> dict[str, AlertData]:
+        """Expose active alerts for external consumers."""
+        return self._active_alerts
+
     async def create_alert(
         self,
         alert_type: AlertType,
@@ -946,32 +898,3 @@ class DashboardService:
             return True
 
         return False
-
-
-# Legacy compatibility aliases
-ApiKeyMonitoringService = DashboardService
-
-
-class ApiKeyValidator:
-    """Compatibility wrapper for ApiKeyService validation."""
-
-    def __init__(self, settings=None):
-        self.settings = settings
-
-    async def __aenter__(self):
-        """Async context manager entry."""
-        self.api_key_service = ApiKeyService(
-            db=None,
-            cache=None,
-            settings=self.settings,
-        )
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        if hasattr(self.api_key_service, "__aexit__"):
-            await self.api_key_service.__aexit__(exc_type, exc_val, exc_tb)
-
-    async def check_all_services_health(self):
-        """Check health of all services."""
-        return await self.api_key_service.check_all_services_health()
