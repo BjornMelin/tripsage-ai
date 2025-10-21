@@ -32,9 +32,7 @@ class TestFlightsRouter:
         assert payload["id"] == offer_id
         assert payload["bookable"] is True
 
-    def test_book_flight_success(
-        self, api_test_client, valid_flight_booking_request
-    ):
+    def test_book_flight_success(self, api_test_client, valid_flight_booking_request):
         """Booking endpoint returns 201 with booking payload."""
         response = api_test_client.post(
             "/api/flights/bookings",

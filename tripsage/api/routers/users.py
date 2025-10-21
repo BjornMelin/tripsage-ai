@@ -20,7 +20,14 @@ logger = logging.getLogger(__name__)
 
 @router.get("/preferences", response_model=UserPreferencesResponse)
 @trace_span(name="api.users.preferences.get")
-@record_histogram("api.op.duration", unit="s")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {
+        "http.route": "/api/users/preferences",
+        "http.method": "GET",
+    },
+)
 async def get_user_preferences(
     principal=Depends(require_principal),
     user_service: UserService = Depends(get_user_service),
@@ -64,7 +71,14 @@ async def get_user_preferences(
 
 @router.put("/preferences", response_model=UserPreferencesResponse)
 @trace_span(name="api.users.preferences.update")
-@record_histogram("api.op.duration", unit="s")
+@record_histogram(
+    "api.op.duration",
+    unit="s",
+    attr_fn=lambda _a, _k: {
+        "http.route": "/api/users/preferences",
+        "http.method": "PUT",
+    },
+)
 async def update_user_preferences(
     preferences_request: UserPreferencesRequest,
     principal=Depends(require_principal),

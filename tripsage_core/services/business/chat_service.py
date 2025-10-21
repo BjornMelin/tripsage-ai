@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Chat service for managing chat sessions and messages.
 
 This service consolidates chat-related business logic including session management,
@@ -25,6 +26,7 @@ from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.observability.otel import record_histogram, trace_span
 
 
 logger = logging.getLogger(__name__)
@@ -225,7 +227,7 @@ class ChatService:
 
     def __init__(
         self,
-        database_service=None,
+        database_service,
         rate_limiter: RateLimiter | None = None,
         chars_per_token: int = 4,
     ):
@@ -236,19 +238,7 @@ class ChatService:
             rate_limiter: Rate limiter instance
             chars_per_token: Characters per token for estimation
         """
-        # Import here to avoid circular imports
-        if database_service is None:
-            import asyncio
-
-            from tripsage_core.services.infrastructure import get_database_service
-
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            database_service = loop.run_until_complete(get_database_service())
-
+        # DatabaseService is injected by the FastAPI dependency factory.
         self.db = database_service
         self.rate_limiter = rate_limiter or RateLimiter()
         self.chars_per_token = chars_per_token
@@ -449,8 +439,6 @@ class ChatService:
                 estimated_tokens=self._estimate_tokens(content),
             )
 
-        except (ValidationError, NotFoundError, AuthPermissionError):
-            raise
         except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to add message",
@@ -569,8 +557,6 @@ class ChatService:
 
             return success
 
-        except (NotFoundError, ValidationError):
-            raise
         except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to end session",
@@ -752,11 +738,25 @@ class ChatService:
             arguments=result["arguments"],
             status=result["status"],
             created_at=datetime.fromisoformat(result["created_at"]),
+            result=None,
+            completed_at=None,
+            error_message=None,
         )
+
+    async def _create_tool_call(
+        self, message_id: str, tool_call_data: dict[str, Any]
+    ) -> ToolCallResponse:
+        """Backward-compatible wrapper to create a tool call record."""
+        return await self.add_tool_call(message_id, tool_call_data)
 
     # ===== Router Compatibility Methods =====
     # These methods provide compatibility with the router's expected interface
 
+    @trace_span(
+        name="svc.chat.completion",
+        attrs=lambda a, k: {"user_id": a[1] if len(a) > 1 else "unknown"},
+    )
+    @record_histogram("svc.op.duration", unit="s")
     async def chat_completion(self, user_id: str, request) -> dict[str, Any]:
         """Handle chat completion requests (main chat endpoint).
 
@@ -792,8 +792,8 @@ class ChatService:
             llm = ChatOpenAI(
                 model=model_name,
                 temperature=temperature,
-                max_tokens=max_tokens,
-                api_key=settings.openai_api_key.get_secret_value(),
+                api_key=settings.openai_api_key,
+                model_kwargs={"max_tokens": max_tokens},
             )
 
             # Convert request messages to LangChain format
@@ -836,8 +836,10 @@ class ChatService:
                         session_data = ChatSessionCreateRequest(
                             title="Chat with TripSage AI",
                             metadata={"model": model_name},
+                            trip_id=None,
                         )
-                        await self.create_session(user_id, session_data)
+                        new_session = await self.create_session(user_id, session_data)
+                        session_id = new_session.id
 
                     # Add user message to session
                     if request.messages:
@@ -846,14 +848,17 @@ class ChatService:
                             user_msg_data = MessageCreateRequest(
                                 role="user",
                                 content=last_user_msg.get("content", ""),
+                                metadata=None,
+                                tool_calls=None,
                             )
                             await self.add_message(session_id, user_id, user_msg_data)
 
                     # Add AI response to session
                     ai_msg_data = MessageCreateRequest(
                         role="assistant",
-                        content=response.content,
+                        content=str(response.content),
                         metadata={"model": model_name, "usage": token_usage},
+                        tool_calls=None,
                     )
                     await self.add_message(session_id, user_id, ai_msg_data)
 
@@ -912,6 +917,8 @@ class ChatService:
         service_request = MessageCreateRequest(
             role=message_request.role,
             content=message_request.content,
+            metadata=None,
+            tool_calls=None,
         )
 
         message = await self.add_message(session_id, user_id, service_request)
@@ -1049,4 +1056,7 @@ async def get_chat_service() -> ChatService:
     Returns:
         ChatService instance
     """
-    return ChatService()
+    from tripsage_core.services.infrastructure import get_database_service
+
+    db = await get_database_service()
+    return ChatService(database_service=db)

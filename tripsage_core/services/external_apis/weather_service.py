@@ -16,6 +16,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError as CoreAPIError,
     CoreServiceError,
 )
+from tripsage_core.infrastructure.retry_policies import httpx_block_retry
 
 
 logger = logging.getLogger(__name__)
@@ -133,28 +134,32 @@ class WeatherService:
             params = {}
         params["appid"] = self.api_key
 
-        try:
-            response = await self._client.get(url, params=params)
-            response.raise_for_status()
-            return response.json()
-
-        except httpx.HTTPStatusError as e:
-            error_data = {}
-            try:
-                error_data = e.response.json() if e.response.content else {}
-            except ValueError as parse_error:
-                logger.debug(
-                    "Failed to parse weather API error response: %s",
-                    parse_error,
-                )
-
-            raise WeatherServiceError(
-                f"OpenWeatherMap API error: {error_data.get('message', str(e))}",
-                original_error=e,
-            ) from e
-
-        except Exception as e:
-            raise WeatherServiceError(f"Request failed: {e!s}", original_error=e) from e
+        # Retry transient network errors with jittered backoff.
+        async for attempt in httpx_block_retry(attempts=3, max_delay=10.0):
+            with attempt:
+                try:
+                    response = await self._client.get(url, params=params)
+                    response.raise_for_status()
+                    return response.json()
+                except httpx.HTTPStatusError as e:
+                    error_data = {}
+                    try:
+                        error_data = e.response.json() if e.response.content else {}
+                    except ValueError as parse_error:
+                        logger.debug(
+                            "Failed to parse weather API error response: %s",
+                            parse_error,
+                        )
+                    # Do not retry non-network status errors by default.
+                    raise WeatherServiceError(
+                        (
+                            "OpenWeatherMap API error: "
+                            f"{error_data.get('message', str(e))}"
+                        ),
+                        original_error=e,
+                    ) from e
+        # Should not reach here; explicit return satisfies linters.
+        return {"error": "unreachable"}
 
     async def get_current_weather(
         self,

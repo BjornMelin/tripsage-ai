@@ -47,7 +47,7 @@ class MigrationRunner:
         settings = get_settings()
         return create_client(
             settings.database_url,
-            settings.database_public_key.get_secret_value(),
+            settings.database_public_key.get_secret_value(),  # pylint: disable=no-member
         )
 
     def _calculate_checksum(self, content: str) -> str:
