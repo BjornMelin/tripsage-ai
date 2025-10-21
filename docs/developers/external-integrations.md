@@ -327,21 +327,11 @@ class TravelContentService:
         extraction_results = []
         for url in search_urls[:5]:  # Limit to top 5 sources
             try:
-                result = await self.crawl_client.crawl_url(
-                    url=url,
-                    extraction_strategy="intelligent",
-                    content_type="travel_information",
-                    schema={
-                        "attractions": "list of tourist attractions",
-                        "restaurants": "recommended dining options",
-                        "activities": "things to do and experiences",
-                        "transportation": "local transportation options",
-                        "tips": "travel tips and local insights"
-                    }
-                )
-                extraction_results.append(result)
-            except Exception as e:
-                logger.warning(f"Content extraction failed for {url}: {str(e)}")
+                crawl_output = await self.crawl_client.scrape_url(url)
+                if crawl_output["success"]:
+                    extraction_results.extend(crawl_output["items"])
+            except Exception as exc:
+                logger.warning("Content extraction failed for %s: %s", url, exc)
         
         return DestinationContent(
             destination=destination,
@@ -498,7 +488,7 @@ TripSage integrates with Airbnb through the OpenBnB MCP Server, providing access
 #### Integration Architecture - Airbnb Integration (MCP Server)
 
 ```python
-from tripsage.mcp_abstraction.wrappers.airbnb_wrapper import AirbnbWrapper
+from tripsage_core.services.simple_mcp_service import default_mcp_service
 
 class AccommodationService:
     """Unified accommodation service with multi-provider support."""
