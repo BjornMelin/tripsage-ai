@@ -43,9 +43,11 @@ We will delete legacy workflows (backend-ci, frontend-ci, security-ci, utilities
 ## Alternatives Considered
 
 ### Split workflows per domain and keep utilities
+
 Retain backend/front-end workflows and composite actions for reuse. Rejected: preserves fragmentation, higher upkeep, and continued noise.
 
 ### Single ci.yml but keep utilities for labels/comments
+
 Partial simplification with some utility steps. Rejected: still adds maintenance and comment noise without hard requirements.
 
 ## References
