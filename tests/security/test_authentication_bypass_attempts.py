@@ -10,6 +10,7 @@ best practices for API authentication systems.
 """
 
 import base64
+import contextlib
 import json
 import time
 from unittest.mock import AsyncMock, Mock, patch
@@ -123,11 +124,8 @@ class TestJWTBypassAttempts:
         }
 
         # Create token with RS256 algorithm but using HMAC
-        try:
+        with contextlib.suppress(ValueError, TypeError):
             malicious_token = jwt.encode(payload, valid_jwt_secret, algorithm="RS256")
-        except Exception:
-            # Expected - should not be able to create RS256 with string key
-            pass
 
         # Try HS512 instead of HS256
         malicious_token = jwt.encode(payload, valid_jwt_secret, algorithm="HS512")

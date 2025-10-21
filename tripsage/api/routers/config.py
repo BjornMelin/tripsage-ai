@@ -31,13 +31,16 @@ class ConfigurationWebSocketManager:
     """Manages WebSocket connections for real-time configuration updates."""
 
     def __init__(self):
+        """Initialize Config."""
         self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
+        """Accept and track WebSocket connection."""
         await websocket.accept()
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
+        """Remove WebSocket from tracking."""
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
 
@@ -46,7 +49,8 @@ class ConfigurationWebSocketManager:
         for connection in self.active_connections.copy():
             try:
                 await connection.send_json(message.model_dump())
-            except Exception:
+            except (OSError, RuntimeError):
+                # Network/connection errors during WebSocket send
                 self.disconnect(connection)
 
 
