@@ -175,9 +175,20 @@ def comprehensive_service_registry():
     registry.get_required_service = MagicMock(
         side_effect=lambda name: services.get(name, MagicMock())
     )
-    registry.get_optional_service = MagicMock(
-        side_effect=lambda name: services.get(name)
+    registry.get_optional_service = MagicMock(side_effect=services.get)
+    memory_bridge = MagicMock()
+
+    def hydrate_identity(state):  # type: ignore
+        return state
+
+    memory_bridge.hydrate_state = AsyncMock(side_effect=hydrate_identity)
+    memory_bridge.extract_and_persist_insights = AsyncMock(
+        return_value={"insights": "test"}
     )
+    registry.get_memory_bridge.return_value = memory_bridge
+    checkpoint_manager = MagicMock()
+    checkpoint_manager.get_async_checkpointer = AsyncMock(return_value=MemorySaver())
+    registry.get_checkpoint_manager.return_value = checkpoint_manager
 
     return registry
 
@@ -223,11 +234,9 @@ def optimized_orchestrator(
     Returns:
         TripSageOrchestrator instance for testing
     """
+    comprehensive_service_registry.get_memory_bridge.return_value = mock_memory_bridge
+
     with (
-        patch(
-            "tripsage.orchestration.graph.get_memory_bridge",
-            return_value=mock_memory_bridge,
-        ),
         patch(
             "tripsage.orchestration.graph.get_handoff_coordinator",
             return_value=mock_handoff_coordinator,
@@ -529,34 +538,27 @@ class TestTripSageOrchestratorOptimized:
         Args:
             comprehensive_service_registry: Mock service registry
         """
-        with patch("tripsage.orchestration.graph.get_memory_bridge"):
-            with patch("tripsage.orchestration.graph.get_handoff_coordinator"):
-                with patch("tripsage.orchestration.graph.get_default_config"):
-                    # Test with minimal configuration - provide service registry
-                    # to avoid initialization errors
-                    orchestrator1 = TripSageOrchestrator(
-                        service_registry=comprehensive_service_registry
-                    )
-                    assert orchestrator1 is not None
-                    assert (
-                        orchestrator1.service_registry == comprehensive_service_registry
-                    )
+        with (
+            patch("tripsage.orchestration.graph.get_handoff_coordinator"),
+            patch("tripsage.orchestration.graph.get_default_config"),
+        ):
+            orchestrator1 = TripSageOrchestrator(
+                service_registry=comprehensive_service_registry
+            )
+            assert orchestrator1 is not None
+            assert orchestrator1.service_registry == comprehensive_service_registry
 
-                    # Test with service registry explicitly
-                    orchestrator2 = TripSageOrchestrator(
-                        service_registry=comprehensive_service_registry
-                    )
-                    assert (
-                        orchestrator2.service_registry == comprehensive_service_registry
-                    )
+            orchestrator2 = TripSageOrchestrator(
+                service_registry=comprehensive_service_registry
+            )
+            assert orchestrator2.service_registry == comprehensive_service_registry
 
-                    # Test with custom checkpointer
-                    custom_checkpointer = MemorySaver()
-                    orchestrator3 = TripSageOrchestrator(
-                        service_registry=comprehensive_service_registry,
-                        checkpointer=custom_checkpointer,
-                    )
-                    assert orchestrator3.checkpointer == custom_checkpointer
+            custom_checkpointer = MemorySaver()
+            orchestrator3 = TripSageOrchestrator(
+                service_registry=comprehensive_service_registry,
+                checkpointer=custom_checkpointer,
+            )
+            assert orchestrator3.checkpointer == custom_checkpointer
 
     @pytest.mark.asyncio
     async def test_async_initialization_robustness(self, optimized_orchestrator):
@@ -586,30 +588,29 @@ class TestTripSageOrchestratorOptimized:
         optimized_orchestrator.checkpointer = None
 
         # Test successful PostgreSQL initialization
-        with patch("tripsage.orchestration.graph.get_checkpoint_manager") as mock_cm:
-            mock_checkpointer = AsyncMock()
-            mock_cm.return_value.get_async_checkpointer = AsyncMock(
-                return_value=mock_checkpointer
-            )
+        mock_checkpointer = AsyncMock()
+        optimized_orchestrator.checkpoint_manager = MagicMock()
+        optimized_orchestrator.checkpoint_manager.get_async_checkpointer = AsyncMock(
+            return_value=mock_checkpointer
+        )
 
-            await optimized_orchestrator.initialize()
+        await optimized_orchestrator.initialize()
 
-            assert optimized_orchestrator.checkpointer == mock_checkpointer
-            mock_cm.assert_called_once()
+        assert optimized_orchestrator.checkpointer == mock_checkpointer
 
         # Reset for fallback test
         optimized_orchestrator._initialized = False
         optimized_orchestrator.checkpointer = None
 
         # Test fallback to MemorySaver
-        with patch("tripsage.orchestration.graph.get_checkpoint_manager") as mock_cm:
-            mock_cm.return_value.get_async_checkpointer = AsyncMock(
-                side_effect=Exception("PostgreSQL unavailable")
-            )
+        optimized_orchestrator.checkpoint_manager = MagicMock()
+        optimized_orchestrator.checkpoint_manager.get_async_checkpointer = AsyncMock(
+            side_effect=Exception("PostgreSQL unavailable")
+        )
 
-            await optimized_orchestrator.initialize()
+        await optimized_orchestrator.initialize()
 
-            assert isinstance(optimized_orchestrator.checkpointer, MemorySaver)
+        assert isinstance(optimized_orchestrator.checkpointer, MemorySaver)
 
     def test_routing_decision_matrix(self, optimized_orchestrator):
         """Test comprehensive routing decision matrix.
