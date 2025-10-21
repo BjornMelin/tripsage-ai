@@ -1,4 +1,4 @@
-# pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods,no-name-in-module,global-statement
+# pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods,no-name-in-module,global-statement,import-error
 """Supabase-only Database Service (FINAL-ONLY).
 
 This module provides a single modern DatabaseService that uses the Supabase
@@ -27,10 +27,8 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from postgrest.types import CountMethod
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from supabase import Client, create_client
-from supabase.lib.client_options import SyncClientOptions
 
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
@@ -485,14 +483,7 @@ class DatabaseService:
                 raise CoreDatabaseError(
                     message="Invalid Supabase API key", code="INVALID_DATABASE_KEY"
                 )
-            options = SyncClientOptions(
-                auto_refresh_token=True,
-                persist_session=True,
-                postgrest_client_timeout=self.pool_timeout,
-            )
-            self._supabase_client = create_client(
-                supabase_url, supabase_key, options=options
-            )
+            self._supabase_client = create_client(supabase_url, supabase_key)
         except Exception:
             logger.exception("Failed to initialize Supabase client")
             raise
@@ -571,12 +562,10 @@ class DatabaseService:
         start_time = time.time()
         self._check_circuit_breaker()
         await self._check_rate_limit(user_id)
-        otel_span = None
+        span_ctx = contextlib.nullcontext()
         if self._otel_tracer:
-            with contextlib.suppress(
-                Exception
-            ):  # pragma: no cover - environment dependent
-                otel_span = self._otel_tracer.start_span(
+            with contextlib.suppress(Exception):  # pragma: no cover
+                span_ctx = self._otel_tracer.start_as_current_span(
                     name=f"db.{query_type.value.lower()}",
                     attributes={
                         "db.system": "postgresql",
@@ -587,11 +576,12 @@ class DatabaseService:
                     },
                 )
         try:
-            yield
+            with span_ctx as _span:  # type: ignore[assignment]
+                yield
             duration = time.time() - start_time
-            if otel_span is not None:
+            if _span is not None:
                 with contextlib.suppress(Exception):  # pragma: no cover
-                    otel_span.set_attribute("db.duration_sec", duration)
+                    _span.set_attribute("db.duration_sec", duration)
             if self.enable_query_tracking:
                 self._query_metrics.append(
                     QueryMetrics(
@@ -621,10 +611,10 @@ class DatabaseService:
             self._record_circuit_breaker_success()
         except Exception:
             duration = time.time() - start_time
-            if otel_span is not None:
-                with contextlib.suppress(Exception):  # pragma: no cover
-                    otel_span.set_attribute("db.duration_sec", duration)
-                    otel_span.record_exception(Exception("query_failed"))
+            with contextlib.suppress(Exception):  # pragma: no cover
+                if "_span" in locals() and _span is not None:
+                    _span.set_attribute("db.duration_sec", duration)
+                    _span.record_exception(Exception("query_failed"))
             if self.enable_query_tracking:
                 self._query_metrics.append(
                     QueryMetrics(
@@ -644,9 +634,7 @@ class DatabaseService:
             self._record_circuit_breaker_failure()
             raise
         finally:
-            if otel_span is not None:
-                with contextlib.suppress(Exception):  # pragma: no cover
-                    otel_span.end()
+            pass
 
     # ---- circuit breaker & rate limiting ----
 
@@ -954,7 +942,7 @@ class DatabaseService:
         await self.ensure_connected()
         async with self._monitor_query(QueryType.COUNT, table, user_id):
             try:
-                query = self.client.table(table).select("*", count=CountMethod.exact)
+                query = self.client.table(table).select("*", count="exact")  # type: ignore[arg-type]
                 if filters:
                     for k, v in filters.items():
                         query = query.eq(k, v)

@@ -25,10 +25,11 @@ class WeatherServiceError(CoreAPIError):
     """Exception raised for weather service errors."""
 
     def __init__(self, message: str, original_error: Exception | None = None):
+        """Initialize the WeatherServiceError."""
         super().__init__(
             message=message,
             code="WEATHER_API_ERROR",
-            service="WeatherService",
+            api_service="WeatherService",
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
@@ -122,6 +123,7 @@ class WeatherService:
             WeatherServiceError: If the request fails
         """
         await self.ensure_connected()
+        assert self._client is not None
 
         base_url = self.base_url_v3 if use_v3 else self.base_url
         url = f"{base_url}/{endpoint}"
@@ -209,7 +211,9 @@ class WeatherService:
             "lon": longitude,
             "units": units,
             "lang": lang,
-            "exclude": "minutely,alerts" if not include_hourly else "minutely,alerts",
+            "exclude": (
+                "minutely,alerts" if include_hourly else "minutely,hourly,alerts"
+            ),
         }
 
         return await self._make_request("onecall", params, use_v3=True)
@@ -792,7 +796,7 @@ async def get_weather_service() -> WeatherService:
     Returns:
         WeatherService instance
     """
-    global _weather_service
+    global _weather_service  # pylint: disable=global-statement
 
     if _weather_service is None:
         _weather_service = WeatherService()
@@ -803,7 +807,7 @@ async def get_weather_service() -> WeatherService:
 
 async def close_weather_service() -> None:
     """Close the global weather service instance."""
-    global _weather_service
+    global _weather_service  # pylint: disable=global-statement
 
     if _weather_service:
         await _weather_service.close()

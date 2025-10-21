@@ -23,10 +23,11 @@ class WebCrawlServiceError(CoreAPIError):
     """Exception raised for web crawl service errors."""
 
     def __init__(self, message: str, original_error: Exception | None = None):
+        """Initialize the WebCrawlServiceError."""
         super().__init__(
             message=message,
             code="WEBCRAWL_SERVICE_ERROR",
-            service="WebCrawlService",
+            api_service="WebCrawlService",
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
@@ -172,6 +173,7 @@ class WebCrawlService:
                 run_config = self._build_crawler_config(params)
 
                 # Perform the crawl
+                assert self._browser_config is not None
                 async with AsyncWebCrawler(config=self._browser_config) as crawler:
                     result = await crawler.arun(url=url, config=run_config)
 
@@ -478,7 +480,7 @@ async def get_webcrawl_service() -> WebCrawlService:
     Returns:
         WebCrawlService instance
     """
-    global _webcrawl_service
+    global _webcrawl_service  # pylint: disable=global-statement
 
     if _webcrawl_service is None:
         _webcrawl_service = WebCrawlService()
@@ -489,7 +491,7 @@ async def get_webcrawl_service() -> WebCrawlService:
 
 async def close_webcrawl_service() -> None:
     """Close the global WebCrawl service instance."""
-    global _webcrawl_service
+    global _webcrawl_service  # pylint: disable=global-statement
 
     if _webcrawl_service:
         await _webcrawl_service.close()
