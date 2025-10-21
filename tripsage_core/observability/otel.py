@@ -238,8 +238,8 @@ def trace_span(
     """
 
     def _decorator(
-        func: Callable[_P, _T | Awaitable[_T]],
-    ) -> Callable[_P, _T | Awaitable[_T]]:
+        func: Callable[_P, _T] | Callable[_P, Awaitable[_T]],
+    ) -> Callable[_P, _T] | Callable[_P, Awaitable[_T]]:
         tracer = get_tracer(func.__module__)
         span_name = name or func.__qualname__
 
@@ -258,7 +258,7 @@ def trace_span(
                     raise
 
         @wraps(func)
-        async def _async(*args: _P.args, **kwargs: _P.kwargs) -> _T:  # type: ignore[misc]
+        async def _async(*args: _P.args, **kwargs: _P.kwargs) -> _T:
             with tracer.start_as_current_span(span_name) as span:
                 if attrs:
                     a = attrs(args, kwargs) if callable(attrs) else attrs
@@ -270,7 +270,9 @@ def trace_span(
                     span.record_exception(e)
                     raise
 
-        return _async if _is_coroutine(func) else _sync
+        if _is_coroutine(func):
+            return cast(Callable[_P, Awaitable[_T]], _async)
+        return cast(Callable[_P, _T], _sync)
 
     return _decorator
 
@@ -292,8 +294,8 @@ def record_histogram(
     """
 
     def _decorator(
-        func: Callable[_P, _T | Awaitable[_T]],
-    ) -> Callable[_P, _T | Awaitable[_T]]:
+        func: Callable[_P, _T] | Callable[_P, Awaitable[_T]],
+    ) -> Callable[_P, _T] | Callable[_P, Awaitable[_T]]:
         meter = get_meter(func.__module__)
         hist = meter.create_histogram(name, unit=unit, description=description)
 
@@ -308,7 +310,7 @@ def record_histogram(
                 hist.record(dur, attributes)
 
         @wraps(func)
-        async def _async(*args: _P.args, **kwargs: _P.kwargs) -> _T:  # type: ignore[misc]
+        async def _async(*args: _P.args, **kwargs: _P.kwargs) -> _T:
             start = time.perf_counter()
             try:
                 return await cast(  # type: ignore[func-returns-value]
@@ -319,7 +321,9 @@ def record_histogram(
                 attributes = attr_fn(args, kwargs) if attr_fn else {}
                 hist.record(dur, attributes)
 
-        return _async if _is_coroutine(func) else _sync
+        if _is_coroutine(func):
+            return cast(Callable[_P, Awaitable[_T]], _async)
+        return cast(Callable[_P, _T], _sync)
 
     return _decorator
 

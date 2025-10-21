@@ -60,7 +60,7 @@ from tripsage_core.services.infrastructure.websocket_broadcaster import (
     websocket_broadcaster,
 )
 from tripsage_core.services.infrastructure.websocket_manager import websocket_manager
-from tripsage_core.services.simple_mcp_service import mcp_manager
+from tripsage_core.services.simple_mcp_service import default_mcp_service
 
 
 logger = logging.getLogger(__name__)
@@ -87,13 +87,13 @@ async def lifespan(app: FastAPI):
         app: The FastAPI application
     """
     # Startup: Initialize MCP Manager and WebSocket Services
-    logger.info("Initializing MCP Manager on API startup")
-    await mcp_manager.initialize_all_enabled()
+    logger.info("Initializing MCP service on API startup")
+    await default_mcp_service.initialize()
 
-    available_mcps = mcp_manager.get_available_mcps()
-    initialized_mcps = mcp_manager.get_initialized_mcps()
-    logger.info("Available MCPs: %s", available_mcps)
-    logger.info("Initialized MCPs: %s", initialized_mcps)
+    available_services = default_mcp_service.available_services()
+    initialized_services = default_mcp_service.initialized_services()
+    logger.info("Available MCP services: %s", available_services)
+    logger.info("Initialized MCP services: %s", initialized_services)
 
     # Initialize WebSocket Broadcaster first
     logger.info("Starting WebSocket Broadcaster")
@@ -114,7 +114,7 @@ async def lifespan(app: FastAPI):
     await websocket_broadcaster.stop()
 
     logger.info("Shutting down MCP Manager")
-    await mcp_manager.shutdown()
+    await default_mcp_service.shutdown()
 
 
 def create_app() -> FastAPI:  # pylint: disable=too-many-statements

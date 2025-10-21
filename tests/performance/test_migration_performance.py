@@ -32,7 +32,7 @@ class PerformanceBenchmark:
         start_time = time.perf_counter()
         try:
             await operation(*args, **kwargs)
-        except Exception as e:
+        except (RuntimeError, OSError, TimeoutError) as e:
             print(f"Operation {name} failed: {e}")
             return float("inf")
         end_time = time.perf_counter()

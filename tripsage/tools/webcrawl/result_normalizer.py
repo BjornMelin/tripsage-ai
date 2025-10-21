@@ -1,8 +1,4 @@
-"""Result normalizer for web crawling tools.
-
-This module provides functionality to normalize results from different web crawling
-sources (Crawl4AI and Firecrawl) into a consistent UnifiedCrawlResult format.
-"""
+"""Normalization helpers that standardize crawler outputs for TripSage."""
 
 import re
 from datetime import UTC, datetime
@@ -17,8 +13,12 @@ logger = get_logger(__name__)
 
 
 class ResultNormalizer:
-    """Normalizes results from different web crawling sources into UnifiedCrawlResult."""
+    """Normalizes results from different web crawling sources.
 
+    Converts to UnifiedCrawlResult.
+    """
+
+    # -- Firecrawl normalization -------------------------------------------------
     async def normalize_firecrawl_output(
         self, raw_output: dict[str, Any], original_url: str
     ) -> UnifiedCrawlResult:
@@ -35,15 +35,21 @@ class ResultNormalizer:
         if raw_output.get("error"):
             return UnifiedCrawlResult(
                 url=original_url,
+                title=None,
+                main_content_markdown=None,
+                main_content_text=None,
+                html_content=None,
+                structured_data=None,
                 status="error",
                 error_message=raw_output.get("error"),
-                metadata={
+                crawl_metadata={
                     "source_crawler": "firecrawl",
                     "crawl_timestamp": datetime.now(UTC).isoformat(),
                 },
             )
 
         # Extract main content from different formats
+        # Firecrawl prioritizes markdown but may include raw HTML fallback.
         markdown_content = raw_output.get("markdown")
         html_content = raw_output.get("html")
 
@@ -69,7 +75,8 @@ class ResultNormalizer:
             main_content_text=raw_output.get("text"),
             html_content=html_content,
             structured_data=structured_data if structured_data else None,
-            metadata={
+            error_message=None,
+            crawl_metadata={
                 "source_crawler": "firecrawl",
                 "crawl_timestamp": datetime.now(UTC).isoformat(),
                 "content_length": len(markdown_content or ""),
@@ -95,9 +102,14 @@ class ResultNormalizer:
         if raw_output.get("error"):
             return UnifiedCrawlResult(
                 url=original_url,
+                title=None,
+                main_content_markdown=None,
+                main_content_text=None,
+                html_content=None,
+                structured_data=None,
                 status="error",
                 error_message=raw_output.get("error"),
-                metadata={
+                crawl_metadata={
                     "source_crawler": "crawl4ai",
                     "crawl_timestamp": datetime.now(UTC).isoformat(),
                 },
@@ -139,7 +151,8 @@ class ResultNormalizer:
             main_content_text=text_content,
             html_content=html_content,
             structured_data=structured_data if structured_data else None,
-            metadata=metadata,
+            error_message=None,
+            crawl_metadata=metadata,
             status="success",
         )
 
@@ -160,11 +173,16 @@ class ResultNormalizer:
 
         for idx, result in enumerate(raw_results):
             # Create a basic unified result for each search result
+            # Search aggregates only expose snippets; we keep metadata minimal.
             unified_result = UnifiedCrawlResult(
                 url=result.get("url", f"search-result-{idx}"),
                 title=result.get("title"),
+                main_content_markdown=None,
                 main_content_text=result.get("snippet") or result.get("description"),
-                metadata={
+                html_content=None,
+                structured_data=None,
+                error_message=None,
+                crawl_metadata={
                     "source_crawler": source,
                     "search_query": query,
                     "result_position": idx + 1,
@@ -192,10 +210,15 @@ class ResultNormalizer:
         if raw_output.get("error") or raw_output.get("status") == "error":
             return UnifiedCrawlResult(
                 url=original_url,
+                title=None,
+                main_content_markdown=None,
+                main_content_text=None,
+                html_content=None,
+                structured_data=None,
                 status="error",
                 error_message=raw_output.get("error")
                 or raw_output.get("error_message"),
-                metadata={
+                crawl_metadata={
                     "source_crawler": "playwright_mcp",
                     "crawl_timestamp": datetime.now(UTC).isoformat(),
                 },
@@ -230,11 +253,13 @@ class ResultNormalizer:
         result = UnifiedCrawlResult(
             url=original_url,
             title=title,
+            main_content_markdown=None,
             main_content_text=text_content,
             html_content=html_content,
-            metadata=metadata,
+            structured_data=None,
+            error_message=None,
+            crawl_metadata=metadata,
             status="success",
-            source_crawler="playwright_mcp",
         )
 
         logger.debug("Normalized Playwright MCP output for %s", original_url)
@@ -256,10 +281,15 @@ class ResultNormalizer:
             if not crawl_result.success:
                 return UnifiedCrawlResult(
                     url=url,
+                    title=None,
+                    main_content_markdown=None,
+                    main_content_text=None,
+                    html_content=None,
+                    structured_data=None,
                     status="error",
                     error_message=crawl_result.error_message
                     or "Direct Crawl4AI failed",
-                    metadata={
+                    crawl_metadata={
                         "source_crawler": "crawl4ai_direct",
                         **crawl_result.metadata,
                         "performance_metrics": crawl_result.performance_metrics,
@@ -294,7 +324,8 @@ class ResultNormalizer:
                 main_content_text=main_content_text,
                 html_content=crawl_result.html,
                 structured_data=crawl_result.structured_data,
-                metadata=metadata,
+                error_message=None,
+                crawl_metadata=metadata,
                 status="success",
             )
 
@@ -305,9 +336,14 @@ class ResultNormalizer:
             logger.exception("Error normalizing direct Crawl4AI output for %s", url)
             return UnifiedCrawlResult(
                 url=url,
+                title=None,
+                main_content_markdown=None,
+                main_content_text=None,
+                html_content=None,
+                structured_data=None,
                 status="error",
                 error_message=f"Normalization error: {e!s}",
-                metadata={
+                crawl_metadata={
                     "source_crawler": "crawl4ai_direct",
                     "error_type": type(e).__name__,
                 },
