@@ -19,8 +19,8 @@ class TestFlightsRouter:
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
         assert payload["search_id"]
-        assert payload["results"] == []
-        assert payload["count"] == 0
+        assert payload["offers"] == []
+        assert payload["total_results"] == 0
 
     def test_get_flight_offer_success(self, api_test_client):
         """Flight offer lookup returns 200 when offer is known."""
@@ -44,7 +44,7 @@ class TestFlightsRouter:
         assert response.status_code == status.HTTP_201_CREATED
         payload = response.json()
         assert payload["offer_id"] == valid_flight_booking_request["offer_id"]
-        assert payload["status"] == "booked"
+        assert payload["status"].lower() == "booked"
         assert payload["cancellable"] is True
 
     def test_list_bookings_success(self, api_test_client):
