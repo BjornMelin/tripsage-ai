@@ -25,6 +25,8 @@ def mock_database_service():
     # Add specific methods used by services
     db.execute_query = AsyncMock()
     db.get_accommodation_listing = AsyncMock()
+    db.store_accommodation_search = AsyncMock()
+    db.store_accommodation_listing = AsyncMock()
     db.store_accommodation_booking = AsyncMock()
     db.get_accommodation_booking = AsyncMock()
     db.get_accommodation_bookings = AsyncMock()
