@@ -5,20 +5,43 @@ replacing the OpenAI Agents SDK implementation with improved performance and
 capabilities.
 """
 
-import json
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal, cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, ConfigDict, Field
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
+from tripsage.orchestration.utils.structured import (
+    StructuredExtractor,
+    model_to_dict,
+)
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
 
 logger = get_logger(__name__)
+
+
+class ItineraryParameters(BaseModel):
+    """Structured itinerary extraction payload."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    operation: Literal["create", "optimize", "modify", "calendar"] | None = None
+    destination: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    duration: int | None = Field(default=None, ge=1)
+    interests: list[str] | None = None
+    pace: str | None = None
+    budget_per_day: float | None = Field(default=None, ge=0)
+    transportation_mode: str | None = None
+    group_size: int | None = Field(default=None, ge=1)
+    special_requests: list[str] | None = None
+    itinerary_id: str | None = None
 
 
 class ItineraryAgentNode(BaseAgentNode):
@@ -37,15 +60,23 @@ class ItineraryAgentNode(BaseAgentNode):
         """
         # Get dynamic configuration for itinerary agent
         settings = get_settings()
-        agent_config = settings.get_agent_config("itinerary_agent", **config_overrides)
+        agent_config = cast(Any, settings).get_agent_config(
+            "itinerary_agent", **config_overrides
+        )
 
         # Initialize LLM with dynamic configuration (needed by _initialize_tools)
-        self.llm = ChatOpenAI(
-            model=agent_config["model"],
-            temperature=agent_config["temperature"],
-            max_tokens=agent_config["max_tokens"],
-            top_p=agent_config["top_p"],
-            api_key=agent_config["api_key"],
+        llm_kwargs: dict[str, Any] = {
+            "model": agent_config["model"],
+            "temperature": agent_config["temperature"],
+            "top_p": agent_config["top_p"],
+            "api_key": agent_config["api_key"],
+        }
+        if "max_tokens" in agent_config:
+            llm_kwargs["max_tokens"] = agent_config["max_tokens"]
+
+        self.llm = ChatOpenAI(**llm_kwargs)
+        self._parameter_extractor = StructuredExtractor(
+            self.llm, ItineraryParameters, logger=logger
         )
 
         # Store config for monitoring/debugging
@@ -158,7 +189,7 @@ class ItineraryAgentNode(BaseAgentNode):
         - Flight searches: {len(state.get("flight_searches", []))}
         - Accommodation searches: {len(state.get("accommodation_searches", []))}
         - Budget analyses: {len(state.get("budget_analyses", []))}
-        - Destination info: {list(state.get("destination_info", {}).keys())}
+        - Destination info: {list((state.get("destination_info") or {}).keys())}
 
         Determine the operation type from these options:
         - "create": Create a new itinerary
@@ -188,36 +219,24 @@ class ItineraryAgentNode(BaseAgentNode):
         """
 
         try:
-            messages = [
-                SystemMessage(
-                    content=(
-                        "You are an itinerary planning parameter extraction assistant."
-                    )
+            result = await self._parameter_extractor.extract_from_prompts(
+                system_prompt=(
+                    "You are an itinerary planning parameter extraction assistant."
                 ),
-                HumanMessage(content=extraction_prompt),
-            ]
-
-            response = await self.llm.ainvoke(messages)
-
-            # Parse the response
-            if response.content.strip().lower() in ["null", "none", "{}"]:
-                return None
-
-            params = json.loads(response.content)
-
-            # Validate that this is itinerary-related
-            if params and (
-                "operation" in params
-                or "itinerary" in message.lower()
-                or "schedule" in message.lower()
-            ):
-                return params
-            else:
-                return None
-
+                user_prompt=extraction_prompt,
+            )
         except Exception:
             logger.exception("Error extracting itinerary parameters")
             return None
+        params = model_to_dict(result)
+
+        if params and (
+            params.get("operation")
+            or "itinerary" in message.lower()
+            or "schedule" in message.lower()
+        ):
+            return params
+        return None
 
     async def _create_itinerary(
         self, params: dict[str, Any], state: TravelPlanningState
@@ -248,7 +267,8 @@ class ItineraryAgentNode(BaseAgentNode):
                 duration = params.get("duration", 3)
 
             # Get destination information from previous research
-            destination_info = state.get("destination_info", {}).get(destination, {})
+            destination_store = state.get("destination_info") or {}
+            destination_info = destination_store.get(destination, {})
             attractions = destination_info.get("attractions", [])
             activities = destination_info.get("activities", [])
 
@@ -417,7 +437,7 @@ class ItineraryAgentNode(BaseAgentNode):
 
     def _calculate_estimated_cost(
         self, daily_schedule: list[dict], budget_per_day: float
-    ) -> dict[str, float]:
+    ) -> dict[str, float | list[float]]:
         """Calculate estimated costs for the itinerary."""
         total_cost = 0
         daily_costs = []
@@ -812,6 +832,9 @@ class ItineraryAgentNode(BaseAgentNode):
         Keep the response friendly and concise.
         """
 
+        if self.llm is None:
+            raise RuntimeError("Itinerary LLM is not initialized")
+
         try:
             messages = [
                 SystemMessage(
@@ -821,7 +844,8 @@ class ItineraryAgentNode(BaseAgentNode):
             ]
 
             response = await self.llm.ainvoke(messages)
-            content = response.content
+            raw_content = response.content
+            content = raw_content if isinstance(raw_content, str) else str(raw_content)
 
         except Exception:
             logger.exception("Error generating itinerary response")

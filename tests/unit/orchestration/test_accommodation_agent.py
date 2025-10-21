@@ -9,7 +9,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tripsage.agents.service_registry import ServiceRegistry
-from tripsage.orchestration.nodes.accommodation_agent import AccommodationAgentNode
+from tripsage.orchestration.nodes.accommodation_agent import (
+    AccommodationAgentNode,
+    AccommodationSearchParameters,
+)
 from tripsage.orchestration.state import create_initial_state
 from tripsage_core.services.business.accommodation_service import (
     AccommodationListing,
@@ -110,15 +113,19 @@ def mock_registry(sample_response: AccommodationSearchResponse) -> MagicMock:
 
 
 @pytest.fixture
-def mock_llm() -> AsyncMock:
-    """Provide a mock ChatOpenAI instance."""
-    llm = AsyncMock()
+def mock_llm() -> MagicMock:
+    """Provide a mock ChatOpenAI instance with structured support."""
+    llm = MagicMock()
     llm.bind_tools = MagicMock(return_value=llm)
+    llm.ainvoke = AsyncMock()
+    structured_runnable = MagicMock()
+    structured_runnable.ainvoke = AsyncMock()
+    llm.with_structured_output = MagicMock(return_value=structured_runnable)
     return llm
 
 
 @pytest.fixture
-def agent(mock_registry: MagicMock, mock_llm: AsyncMock) -> AccommodationAgentNode:
+def agent(mock_registry: MagicMock, mock_llm: MagicMock) -> AccommodationAgentNode:
     """Instantiate the accommodation agent under test."""
     with patch(
         "tripsage.orchestration.nodes.accommodation_agent.ChatOpenAI",
@@ -128,13 +135,16 @@ def agent(mock_registry: MagicMock, mock_llm: AsyncMock) -> AccommodationAgentNo
 
 
 @pytest.mark.asyncio
-async def test_process_success(agent: AccommodationAgentNode, mock_llm: AsyncMock):
+async def test_process_success(agent: AccommodationAgentNode, mock_llm: MagicMock):
     """Agent should perform search, update state, and produce assistant message."""
-    mock_llm.ainvoke.return_value = MagicMock(
-        content=(
-            '{"location": "Tokyo, Shibuya", "check_in_date": "2024-06-15", '
-            '"check_out_date": "2024-06-22", "guests": 2}'
-        )
+    structured = mock_llm.with_structured_output.return_value
+    structured.ainvoke.return_value = AccommodationSearchParameters.model_validate(
+        {
+            "location": "Tokyo, Shibuya",
+            "check_in_date": date(2024, 6, 15),
+            "check_out_date": date(2024, 6, 22),
+            "guests": 2,
+        }
     )
     state = create_initial_state(
         "user-123",
@@ -155,13 +165,14 @@ async def test_process_success(agent: AccommodationAgentNode, mock_llm: AsyncMoc
 
 @pytest.mark.asyncio
 async def test_process_with_missing_parameters(
-    agent: AccommodationAgentNode, mock_llm: AsyncMock
+    agent: AccommodationAgentNode, mock_llm: MagicMock
 ):
     """Agent should fall back to guidance when extraction fails."""
-    mock_llm.ainvoke.side_effect = [
-        MagicMock(content="null"),
-        MagicMock(content="Please share your travel details so I can help."),
-    ]
+    structured = mock_llm.with_structured_output.return_value
+    structured.ainvoke.side_effect = RuntimeError("no parse")
+    mock_llm.ainvoke.return_value = MagicMock(
+        content="Please share your travel details so I can help."
+    )
     state = create_initial_state("user-321", "Can you help me find a place to stay?")
 
     updated = await agent(state)
@@ -175,7 +186,7 @@ async def test_process_with_missing_parameters(
 async def test_process_handles_service_error(
     agent: AccommodationAgentNode,
     mock_registry: MagicMock,
-    mock_llm: AsyncMock,
+    mock_llm: MagicMock,
 ):
     """Agent should surface a graceful message when the service raises."""
     failing_service = AsyncMock()
@@ -193,11 +204,14 @@ async def test_process_handles_service_error(
     ):
         failing_agent = AccommodationAgentNode(mock_registry)
 
-    mock_llm.ainvoke.return_value = MagicMock(
-        content=(
-            '{"location": "Tokyo, Shibuya", "check_in_date": "2024-06-15", '
-            '"check_out_date": "2024-06-22", "guests": 2}'
-        )
+    structured = mock_llm.with_structured_output.return_value
+    structured.ainvoke.return_value = AccommodationSearchParameters.model_validate(
+        {
+            "location": "Tokyo, Shibuya",
+            "check_in_date": date(2024, 6, 15),
+            "check_out_date": date(2024, 6, 22),
+            "guests": 2,
+        }
     )
     state = create_initial_state(
         "user-234",

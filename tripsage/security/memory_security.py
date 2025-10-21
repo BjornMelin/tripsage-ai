@@ -13,18 +13,25 @@ from datetime import UTC, datetime
 from functools import wraps
 from typing import Any
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from pydantic import BaseModel, Field
 
-from tripsage.monitoring.telemetry import get_telemetry
 from tripsage_core.config import get_settings
+from tripsage_core.observability.otel import get_meter, get_tracer
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.utils.logging_utils import get_logger
 
 
 logger = get_logger(__name__)
 settings = get_settings()
-telemetry = get_telemetry()
+_tracer = get_tracer("tripsage.security.memory")
+_meter = get_meter("tripsage.security.memory")
+_op_counter = _meter.create_counter(
+    "memory.operation.count", unit="1", description="Total memory operations"
+)
+_op_duration = _meter.create_histogram(
+    "memory.operation.duration", unit="ms", description="Memory operation duration"
+)
 
 
 class SecurityConfig(BaseModel):
@@ -143,7 +150,7 @@ class MemoryEncryption:
             if field in result and isinstance(result[field], str):
                 try:
                     result[field] = self.decrypt(result[field])
-                except Exception as decrypt_error:
+                except InvalidToken as decrypt_error:
                     logger.debug(
                         "Skipping decryption for field '%s': %s",
                         field,
@@ -157,6 +164,7 @@ class RateLimiter:
     """Token bucket rate limiter for memory operations."""
 
     def __init__(self, config: SecurityConfig):
+        """Initialize the rate limiter with the given config."""
         self.config = config
         self.buckets: dict[str, dict[str, Any]] = defaultdict(self._create_bucket)
 
@@ -203,19 +211,21 @@ class RateLimiter:
             await cache.set(
                 f"rate_limit:{key}",
                 json.dumps(bucket),
-                ex=self.config.rate_limit_window,
+                ttl=self.config.rate_limit_window,
             )
 
             return True
 
         # Log rate limit hit
         logger.warning("Rate limit hit for user %s on operation %s", user_id, operation)
-        telemetry.record_memory_operation(
-            operation=operation,
-            duration_ms=0,
-            user_id=user_id,
-            success=False,
-            error="rate_limited",
+        _op_counter.add(
+            1,
+            {
+                "operation": operation,
+                "user_id": user_id,
+                "success": "false",
+                "error": "rate_limited",
+            },
         )
 
         return False
@@ -225,6 +235,7 @@ class AuditLogger:
     """Handles audit logging for memory operations."""
 
     def __init__(self, config: SecurityConfig):
+        """Initialize the audit logger with the given config."""
         self.config = config
         self.cache_service = None
 
@@ -271,10 +282,11 @@ class AuditLogger:
             self.cache_service = await get_cache_service()
 
         key = f"audit:{user_id}:{int(time.time())}"
+        assert self.cache_service is not None
         await self.cache_service.set(
             key,
             audit_entry.model_dump_json(),
-            ex=86400 * 30,  # Keep for 30 days
+            ttl=86400 * 30,  # Keep for 30 days
         )
 
         # Log to monitoring
@@ -298,6 +310,7 @@ class AuditLogger:
         now = int(time.time())
         count = 0
 
+        assert self.cache_service is not None
         for i in range(60):  # Check last minute
             key = f"audit:{user_id}:{now - i}"
             if await self.cache_service.exists(key):
@@ -309,12 +322,14 @@ class AuditLogger:
                 user_id,
                 count,
             )
-            telemetry.record_memory_operation(
-                operation="suspicious_activity",
-                duration_ms=0,
-                user_id=user_id,
-                success=False,
-                error=f"high_frequency_access:{count}",
+            _op_counter.add(
+                1,
+                {
+                    "operation": "suspicious_activity",
+                    "user_id": user_id,
+                    "success": "false",
+                    "error": f"high_frequency_access:{count}",
+                },
             )
 
 
@@ -322,6 +337,7 @@ class MemorySecurity:
     """Main security service for memory operations."""
 
     def __init__(self, config: SecurityConfig | None = None):
+        """Initialize memory security components."""
         self.config = config or SecurityConfig()
         self.encryption = MemoryEncryption(self.config.encryption_key)
         self.rate_limiter = RateLimiter(self.config)
@@ -432,7 +448,8 @@ class MemorySecurity:
         result = None
 
         try:
-            with telemetry.span(f"secure_{operation}", {"user_id": user_id}):
+            with _tracer.start_as_current_span(f"secure_{operation}") as span:
+                span.set_attribute("enduser.id", user_id)
                 result = await func(*args, **kwargs)
                 success = True
                 return result
@@ -446,13 +463,15 @@ class MemorySecurity:
             duration_ms = (time.time() - start_time) * 1000
 
             # Record telemetry
-            telemetry.record_memory_operation(
-                operation=operation,
-                duration_ms=duration_ms,
-                user_id=user_id,
-                success=success,
-                error=error,
-            )
+            attrs = {
+                "operation": operation,
+                "user_id": user_id,
+                "success": "true" if success else "false",
+            }
+            if error:
+                attrs["error"] = error
+            _op_counter.add(1, attrs)
+            _op_duration.record(duration_ms, attrs)
 
             # Audit log
             await self.audit_logger.log(
