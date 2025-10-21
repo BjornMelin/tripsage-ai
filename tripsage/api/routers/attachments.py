@@ -106,7 +106,9 @@ async def upload_file(
 
         # Create upload request
         upload_request = FileUploadRequest(
-            filename=file.filename, content=content, auto_analyze=True
+            filename=file.filename or "uploaded_file",
+            content=content,
+            auto_analyze=True,
         )
 
         # Process file
@@ -188,7 +190,9 @@ async def upload_files_batch(
 
             # Create upload request
             upload_request = FileUploadRequest(
-                filename=file.filename, content=content, auto_analyze=True
+                filename=file.filename or "uploaded_file",
+                content=content,
+                auto_analyze=True,
             )
 
             # Process file
@@ -447,7 +451,7 @@ async def list_trip_attachments(
         search_request = FileSearchRequest(
             limit=limit,
             offset=offset,
-            filters={"trip_id": trip_id},
+            trip_id=trip_id,
         )
 
         files = await service.search_files(user_id, search_request)

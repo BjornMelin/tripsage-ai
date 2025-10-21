@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.orchestration.tools import get_tools_for_agent
+from tripsage.orchestration.tools.simple_tools import get_tools_for_agent
 from tripsage.orchestration.utils.structured import (
     StructuredExtractor,
     model_to_dict,

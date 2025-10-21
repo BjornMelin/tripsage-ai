@@ -2,29 +2,14 @@
 
 This module provides decorators used across the TripSage codebase for standardized
 error handling and client initialization patterns.
-
-Pylint directives:
-- disable=import-error: third-party libs resolved at runtime via uv
-- disable=too-many-statements: decorators centralize error policy by design
-- disable=no-else-return: clarity preferred in some branches
 """
 # pylint: disable=import-error, too-many-statements, no-else-return
 
 import functools
 import inspect
-import logging
 import time
 from collections.abc import Callable
 from typing import Any, TypeVar, cast
-
-from tenacity import (
-    RetryCallState,
-    RetryError,
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
 
 from tripsage_core.exceptions import (
     CoreAuthenticationError,
@@ -32,9 +17,8 @@ from tripsage_core.exceptions import (
     CoreServiceError,
     CoreValidationError,
 )
+from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
-
-from .error_handling_utils import log_exception
 
 
 logger = get_logger(__name__)
@@ -395,94 +379,7 @@ def ensure_memory_client_initialized[F: Callable[..., Any]](func: F) -> F:
     return cast(F, wrapper)
 
 
-def retry_on_failure(
-    max_attempts: int = 3,
-    delay: float = 1.0,
-    backoff_factor: float = 2.0,
-    exceptions: tuple[type[Exception], ...] = (Exception,),
-) -> Callable[[F], F]:
-    """Retry failed operations with exponential backoff using Tenacity.
-
-    Args:
-        max_attempts: Maximum number of attempts (including the first call)
-        delay: Initial delay (seconds) before the first retry
-        backoff_factor: Multiplicative backoff factor per retry
-        exceptions: Exception types that should trigger a retry
-
-    Returns:
-        Decorator that applies retry logic to the target function.
-    """
-    # Build a Tenacity wait policy matching prior semantics (no jitter).
-    wait_policy = wait_exponential(multiplier=delay, min=delay, exp_base=backoff_factor)
-
-    def _log_retry(retry_state: RetryCallState) -> None:
-        # Log at WARNING on retry, ERROR on final failure for visibility.
-        attempt = retry_state.attempt_number
-        fn_name = getattr(retry_state.fn, "__name__", str(retry_state.fn))
-        exc = retry_state.outcome.exception() if retry_state.outcome else None
-        if exc is not None:
-            level = logging.WARNING if attempt < max_attempts else logging.ERROR
-            logger.log(
-                level,
-                "%s failed (attempt %s/%s): %s",
-                fn_name,
-                attempt,
-                max_attempts,
-                exc,
-            )
-
-    def decorator(func: F) -> F:
-        policy = retry(
-            reraise=False,
-            stop=stop_after_attempt(max_attempts),
-            retry=retry_if_exception_type(exceptions),
-            wait=wait_policy,
-            before_sleep=_log_retry,
-        )
-
-        if inspect.iscoroutinefunction(func):
-
-            @functools.wraps(func)
-            async def async_wrapped(*args: Any, **kwargs: Any) -> Any:
-                wrapped = policy(func)  # type: ignore[no-untyped-call]
-                try:
-                    return await wrapped(*args, **kwargs)  # type: ignore[misc]
-                except RetryError as re:  # pragma: no cover - exercised via tests
-                    logger.exception(
-                        "%s failed after %s attempts", func.__name__, max_attempts
-                    )
-                    exc = (
-                        cast(BaseException, re.last_attempt.exception())
-                        if re.last_attempt
-                        else re
-                    )
-                    raise exc from None
-
-            return cast(F, async_wrapped)
-
-        @functools.wraps(func)
-        def sync_wrapped(*args: Any, **kwargs: Any) -> Any:
-            wrapped = policy(func)  # type: ignore[no-untyped-call]
-            try:
-                return wrapped(*args, **kwargs)  # type: ignore[misc]
-            except RetryError as re:  # pragma: no cover - exercised via tests
-                logger.exception(
-                    "%s failed after %s attempts", func.__name__, max_attempts
-                )
-                exc = (
-                    cast(BaseException, re.last_attempt.exception())
-                    if re.last_attempt
-                    else re
-                )
-                raise exc from None
-
-        return cast(F, sync_wrapped)
-
-    return decorator
-
-
 __all__ = [
     "ensure_memory_client_initialized",
-    "retry_on_failure",
     "with_error_handling",
 ]
