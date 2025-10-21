@@ -1,25 +1,40 @@
 """Budget agent node implementation for LangGraph orchestration.
 
-This module implements the budget optimization agent as a LangGraph node,
-replacing the OpenAI Agents SDK implementation with improved performance and
-capabilities.
+This module implements the budget optimization agent as a LangGraph node.
 """
 
-import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal, cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, ConfigDict, Field
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
+from tripsage.orchestration.utils.structured import StructuredExtractor, model_to_dict
 from tripsage_core.config import get_settings
-from tripsage_core.services.configuration_service import get_configuration_service
+from tripsage_core.services import configuration_service as configuration_service_module
 from tripsage_core.utils.logging_utils import get_logger
 
 
 logger = get_logger(__name__)
+
+
+class BudgetParameters(BaseModel):
+    """Structured payload used for budget parameter extraction."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    operation: Literal["optimize", "track", "compare", "analyze"] | None = None
+    total_budget: float | None = Field(default=None, ge=0)
+    trip_length: int | None = Field(default=None, ge=1)
+    travelers: int | None = Field(default=None, ge=1)
+    destination: str | None = None
+    categories: list[str] | None = None
+    expenses: list[dict[str, Any]] | None = None
+    options: list[dict[str, Any]] | None = None
+    preferences: dict[str, Any] | None = None
 
 
 class BudgetAgentNode(BaseAgentNode):
@@ -38,27 +53,25 @@ class BudgetAgentNode(BaseAgentNode):
             **config_overrides: Runtime configuration overrides (e.g., temperature=0.5)
         """
         # Get configuration service for database-backed config
-        self.config_service = get_configuration_service()
+        self.config_service = cast(
+            Any, configuration_service_module
+        ).get_configuration_service()
 
         # Store overrides for async config loading
         self.config_overrides = config_overrides
         self.agent_config = None
         self.llm = None
+        self._parameter_extractor: StructuredExtractor[BudgetParameters] | None = None
+        self.llm_with_tools = None
 
         super().__init__("budget_agent", service_registry)
 
-    async def _initialize_tools(self) -> None:
+    def _initialize_tools(self) -> None:
         """Initialize budget-specific tools using simple tool catalog."""
         from tripsage.orchestration.tools.simple_tools import get_tools_for_agent
 
-        # Load configuration from database if not already loaded
-        if self.agent_config is None:
-            await self._load_configuration()
-
-        # Get tools for budget agent using simple catalog
         self.available_tools = get_tools_for_agent("budget_agent")
 
-        # Bind tools to LLM for direct use
         if self.llm:
             self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
@@ -71,15 +84,25 @@ class BudgetAgentNode(BaseAgentNode):
             self.agent_config = await self.config_service.get_agent_config(
                 "budget_agent", **self.config_overrides
             )
+            if self.agent_config is None:
+                raise RuntimeError("Budget agent configuration is missing")
 
             # Initialize LLM with loaded configuration
-            self.llm = ChatOpenAI(
-                model=self.agent_config["model"],
-                temperature=self.agent_config["temperature"],
-                max_tokens=self.agent_config["max_tokens"],
-                top_p=self.agent_config["top_p"],
-                api_key=self.agent_config["api_key"],
+            llm_kwargs: dict[str, Any] = {
+                "model": self.agent_config["model"],
+                "temperature": self.agent_config["temperature"],
+                "top_p": self.agent_config["top_p"],
+                "api_key": self.agent_config["api_key"],
+            }
+            if "max_tokens" in self.agent_config:
+                llm_kwargs["max_tokens"] = self.agent_config["max_tokens"]
+
+            self.llm = ChatOpenAI(**llm_kwargs)
+            self._parameter_extractor = StructuredExtractor(
+                self.llm, BudgetParameters, logger=logger
             )
+            if hasattr(self, "available_tools"):
+                self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
             logger.info(
                 "Loaded budget agent configuration from database: temp=%s",
@@ -91,17 +114,25 @@ class BudgetAgentNode(BaseAgentNode):
 
             # Fallback to settings-based configuration
             settings = get_settings()
-            self.agent_config = settings.get_agent_config(
+            self.agent_config = cast(Any, settings).get_agent_config(
                 "budget_agent", **self.config_overrides
             )
 
-            self.llm = ChatOpenAI(
-                model=self.agent_config["model"],
-                temperature=self.agent_config["temperature"],
-                max_tokens=self.agent_config["max_tokens"],
-                top_p=self.agent_config["top_p"],
-                api_key=self.agent_config["api_key"],
+            llm_kwargs = {
+                "model": self.agent_config["model"],
+                "temperature": self.agent_config["temperature"],
+                "top_p": self.agent_config["top_p"],
+                "api_key": self.agent_config["api_key"],
+            }
+            if "max_tokens" in self.agent_config:
+                llm_kwargs["max_tokens"] = self.agent_config["max_tokens"]
+
+            self.llm = ChatOpenAI(**llm_kwargs)
+            self._parameter_extractor = StructuredExtractor(
+                self.llm, BudgetParameters, logger=logger
             )
+            if hasattr(self, "available_tools"):
+                self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
         """Process budget-related requests.
@@ -219,34 +250,27 @@ class BudgetAgentNode(BaseAgentNode):
         """
 
         try:
-            messages = [
-                SystemMessage(
-                    content="You are a budget analysis parameter extraction assistant."
+            if self._parameter_extractor is None or self.llm is None:
+                raise RuntimeError("Budget parameter extractor is not initialised")
+
+            result = await self._parameter_extractor.extract_from_prompts(
+                system_prompt=(
+                    "You are a budget analysis parameter extraction assistant."
                 ),
-                HumanMessage(content=extraction_prompt),
-            ]
-
-            response = await self.llm.ainvoke(messages)
-
-            # Parse the response
-            if response.content.strip().lower() in ["null", "none", "{}"]:
-                return None
-
-            params = json.loads(response.content)
-
-            # Validate that this is budget-related
-            if params and (
-                "operation" in params
-                or "total_budget" in params
-                or "budget" in message.lower()
-            ):
-                return params
-            else:
-                return None
-
+                user_prompt=extraction_prompt,
+            )
         except Exception:
             logger.exception("Error extracting budget parameters")
             return None
+        params = model_to_dict(result)
+
+        if params and (
+            params.get("operation")
+            or params.get("total_budget")
+            or "budget" in message.lower()
+        ):
+            return params
+        return None
 
     async def _optimize_budget(
         self, params: dict[str, Any], state: TravelPlanningState
@@ -708,6 +732,9 @@ class BudgetAgentNode(BaseAgentNode):
         Keep the response friendly and concise.
         """
 
+        if self.llm is None:
+            raise RuntimeError("Budget LLM is not initialized")
+
         try:
             messages = [
                 SystemMessage(
@@ -717,7 +744,8 @@ class BudgetAgentNode(BaseAgentNode):
             ]
 
             response = await self.llm.ainvoke(messages)
-            content = response.content
+            raw_content = response.content
+            content = raw_content if isinstance(raw_content, str) else str(raw_content)
 
         except Exception:
             logger.exception("Error generating budget response")
