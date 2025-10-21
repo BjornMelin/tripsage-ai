@@ -1,35 +1,47 @@
 """Destination research agent node implementation for LangGraph orchestration.
 
 This module implements the destination research agent as a LangGraph node,
-replacing the OpenAI Agents SDK implementation with improved performance and
-capabilities.
+using modern LangGraph @tool patterns for simplicity and maintainability.
 """
 
-import json
-from typing import TYPE_CHECKING, Any
+from typing import Any, Literal, cast
+
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.tools import Tool
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, ConfigDict, Field
 
 from tripsage.orchestration.config import get_default_config
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
+from tripsage.orchestration.utils.structured import StructuredExtractor, model_to_dict
 from tripsage_core.config import get_settings
-from tripsage_core.services.configuration_service import get_configuration_service
+from tripsage_core.services import configuration_service as configuration_service_module
 from tripsage_core.utils.logging_utils import get_logger
-
-
-if TYPE_CHECKING:  # pragma: no cover
-    from langchain_core.messages import HumanMessage, SystemMessage
-    from langchain_core.tools import Tool
-    from langchain_openai import ChatOpenAI
-else:
-    from langchain_core.messages import HumanMessage, SystemMessage
-    from langchain_core.tools import Tool
-    from langchain_openai import ChatOpenAI
 
 
 logger = get_logger(__name__)
 
 
-class DestinationResearchAgentNode(BaseAgentNode):
+class DestinationResearchParameters(BaseModel):
+    """Structured destination research extraction payload."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    destination: str | None = None
+    research_type: (
+        Literal[
+            "overview", "attractions", "activities", "culture", "practical", "weather"
+        ]
+        | None
+    ) = None
+    specific_interests: list[str] | None = None
+    travel_dates: str | None = None
+    travel_style: str | None = None
+    duration: int | None = Field(default=None, ge=1)
+
+
+class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-instance-attributes
     """Destination research agent node.
 
     This node handles all destination research requests including destination
@@ -45,13 +57,19 @@ class DestinationResearchAgentNode(BaseAgentNode):
             **config_overrides: Runtime configuration overrides (e.g., temperature=0.8)
         """
         # Get configuration service for database-backed config
-        self.config_service = get_configuration_service()
+        self.config_service = cast(
+            Any, configuration_service_module
+        ).get_configuration_service()
 
         # Store overrides for async config loading
         self.config_overrides = config_overrides
         self.agent_config: dict[str, Any] | None = None
         self.llm: ChatOpenAI | None = None
         self.tool_map: dict[str, Tool] = {}
+        self._parameter_extractor: (
+            StructuredExtractor[DestinationResearchParameters] | None
+        ) = None
+        self.llm_with_tools = None
 
         super().__init__("destination_research_agent", service_registry)
 
@@ -93,6 +111,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
             self.agent_config = await self.config_service.get_agent_config(
                 "destination_research_agent", **self.config_overrides
             )
+            if self.agent_config is None:
+                raise RuntimeError(
+                    "Destination research configuration could not be loaded"
+                )
             fallback = get_default_config()
             model_name = str(self.agent_config.get("model", fallback.default_model))
             temperature = float(
@@ -109,6 +131,11 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 temperature=temperature,
                 api_key=api_key,  # type: ignore
             )
+            self._parameter_extractor = StructuredExtractor(
+                self.llm, DestinationResearchParameters, logger=logger
+            )
+            if hasattr(self, "available_tools"):
+                self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
             logger.info(
                 "Loaded destination research agent config (temp=%s)",
@@ -139,6 +166,11 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 temperature=fallback.temperature,
                 api_key=api_key,  # type: ignore
             )
+            self._parameter_extractor = StructuredExtractor(
+                self.llm, DestinationResearchParameters, logger=logger
+            )
+            if hasattr(self, "available_tools"):
+                self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
         """Process destination research requests.
@@ -232,36 +264,26 @@ class DestinationResearchAgentNode(BaseAgentNode):
         """
 
         try:
-            messages = [
-                SystemMessage(
-                    content=(
-                        "You are a destination research parameter extraction assistant."
-                    )
+            if self._parameter_extractor is None:
+                raise RuntimeError("Destination research parameter extractor missing")
+
+            result = await self._parameter_extractor.extract_from_prompts(
+                system_prompt=(
+                    "You are a destination research parameter extraction assistant."
                 ),
-                HumanMessage(content=extraction_prompt),
-            ]
-
-            response = await self.llm.ainvoke(messages)
-            raw_content = response.content
-            if not isinstance(raw_content, str):
-                logger.warning(
-                    "Destination parameter extraction returned non-text content",
-                    extra={"content_type": type(raw_content).__name__},
-                )
-                return None
-
-            if raw_content.strip().lower() in {"null", "none", "{}"}:
-                return None
-
-            params = json.loads(raw_content)
-
-            if params and params.get("destination"):
-                return params
-            return None
-
+                user_prompt=extraction_prompt,
+            )
         except Exception:
             logger.exception("Error extracting research parameters")
             return None
+        params = model_to_dict(result)
+
+        if params.get("destination"):
+            interests = params.get("specific_interests")
+            if isinstance(interests, list):
+                params["specific_interests"] = [str(item) for item in interests if item]
+            return params
+        return None
 
     async def _research_destination(
         self, params: dict[str, Any], state: TravelPlanningState

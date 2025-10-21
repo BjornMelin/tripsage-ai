@@ -1,11 +1,16 @@
+# pylint: disable=import-error,too-many-instance-attributes,too-many-return-statements
+
 """Main LangGraph orchestrator for TripSage AI.
 
 This module implements the core graph-based orchestration system that coordinates
 all specialized agents and manages the conversation flow.
 """
 
-from typing import Any
+from __future__ import annotations
 
+from typing import Any, cast
+
+from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
@@ -32,6 +37,9 @@ from tripsage_core.utils.logging_utils import get_logger
 
 
 logger = get_logger(__name__)
+
+
+_global_orchestrator: TripSageOrchestrator | None = None
 
 
 class TripSageOrchestrator:
@@ -97,10 +105,13 @@ class TripSageOrchestrator:
                 checkpoint_manager = get_checkpoint_manager()
                 self.checkpointer = await checkpoint_manager.get_async_checkpointer()
                 logger.info("Initialized PostgreSQL checkpointer")
-            except Exception as e:
+            except Exception as exc:  # noqa: BLE001
                 logger.warning(
-                    "Failed to initialize PostgreSQL checkpointer, using MemorySaver: %s",
-                    e,
+                    (
+                        "Failed to initialize PostgreSQL checkpointer, using "
+                        "MemorySaver: %s"
+                    ),
+                    exc,
                 )
                 self.checkpointer = MemorySaver()
 
@@ -243,7 +254,12 @@ class TripSageOrchestrator:
             return "error"
 
         # Check for handoff using handoff coordinator
-        current_agent = state.get("current_agent", "general_agent")
+        current_agent_value = state.get("current_agent")
+        current_agent = (
+            current_agent_value
+            if isinstance(current_agent_value, str)
+            else "general_agent"
+        )
         handoff_result = self.handoff_coordinator.determine_next_agent(
             current_agent, state, HandoffTrigger.TASK_COMPLETION
         )
@@ -305,8 +321,7 @@ class TripSageOrchestrator:
 
         if error_count < retry_threshold:
             return "retry"
-        else:
-            return "end"
+        return "end"
 
     def _create_stub_node(self, node_name: str):
         """Create a stub node for Phase 1 implementation.
@@ -403,25 +418,37 @@ class TripSageOrchestrator:
             try:
                 initial_state = await self.memory_bridge.hydrate_state(initial_state)
                 logger.debug("Hydrated state with user context for user %s", user_id)
-            except Exception as e:
-                logger.warning("Failed to hydrate state from memory: %s", e)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed to hydrate state from memory: %s", exc)
 
             # Configure for session-based persistence
-            config = {"configurable": {"thread_id": session_id}}
+            runnable_config: RunnableConfig = {
+                "configurable": {"thread_id": session_id}
+            }
 
-            # Process through the graph
-            result = await self.compiled_graph.ainvoke(initial_state, config=config)
+            if self.compiled_graph is None:
+                raise RuntimeError(
+                    "TripSageOrchestrator must be initialized before "
+                    "processing messages"
+                )
+
+            result = await self.compiled_graph.ainvoke(
+                initial_state, config=runnable_config
+            )
+            result_state = cast(TravelPlanningState, result)
 
             # Extract and persist insights from the conversation
             try:
-                insights = await self.memory_bridge.extract_and_persist_insights(result)
+                insights = await self.memory_bridge.extract_and_persist_insights(
+                    result_state
+                )
                 logger.debug("Persisted conversation insights: %s", insights)
-            except Exception as e:
-                logger.warning("Failed to persist insights to memory: %s", e)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed to persist insights to memory: %s", exc)
 
             # Extract response from the last assistant message
             response_content = "I'm ready to help with your travel planning!"
-            for msg in reversed(result["messages"]):
+            for msg in reversed(result_state["messages"]):
                 if msg.get("role") == "assistant":
                     response_content = msg["content"]
                     break
@@ -431,8 +458,8 @@ class TripSageOrchestrator:
             return {
                 "response": response_content,
                 "session_id": session_id,
-                "agent_used": result.get("current_agent", "router"),
-                "state": result,
+                "agent_used": result_state.get("current_agent", "router"),
+                "state": result_state,
             }
 
         except Exception as e:
@@ -456,9 +483,35 @@ class TripSageOrchestrator:
             Session state or None if not found
         """
         try:
-            config = {"configurable": {"thread_id": session_id}}
+            if self.compiled_graph is None:
+                raise RuntimeError(
+                    "TripSageOrchestrator must be initialized before fetching state"
+                )
+
+            config: RunnableConfig = {"configurable": {"thread_id": session_id}}
             state = self.compiled_graph.get_state(config)
             return state.values if state else None
         except Exception:
             logger.exception("Error retrieving session state")
             return None
+
+
+def get_orchestrator(
+    service_registry: ServiceRegistry | None = None,
+) -> TripSageOrchestrator:
+    """Return a singleton TripSageOrchestrator instance."""
+    global _global_orchestrator  # pylint: disable=global-statement
+
+    if _global_orchestrator is None:
+        _global_orchestrator = TripSageOrchestrator(service_registry=service_registry)
+        return _global_orchestrator
+
+    if (
+        service_registry is not None
+        and _global_orchestrator.service_registry is not service_registry
+    ):
+        logger.warning(
+            "Ignoring service_registry override for existing orchestrator instance"
+        )
+
+    return _global_orchestrator

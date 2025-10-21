@@ -4,11 +4,11 @@ This module implements the accommodation search and booking agent as a LangGraph
 using modern LangGraph @tool patterns for simplicity and maintainability.
 """
 
-# pylint: disable=import-error
-
 from datetime import UTC, date, datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
@@ -26,13 +26,6 @@ from tripsage_core.services.business.accommodation_service import (
 )
 from tripsage_core.utils.logging_utils import get_logger
 
-
-if TYPE_CHECKING:  # pragma: no cover
-    from langchain_core.messages import HumanMessage, SystemMessage
-    from langchain_openai import ChatOpenAI
-else:
-    from langchain_core.messages import HumanMessage, SystemMessage
-    from langchain_openai import ChatOpenAI
 
 logger = get_logger(__name__)
 

@@ -14,10 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.orchestration.utils.structured import (
-    StructuredExtractor,
-    model_to_dict,
-)
+from tripsage.orchestration.utils.structured import StructuredExtractor, model_to_dict
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -311,7 +308,7 @@ class ItineraryAgentNode(BaseAgentNode):
             logger.exception("Itinerary creation failed")
             return {"error": f"Failed to create itinerary: {e!s}"}
 
-    async def _generate_daily_schedule(
+    async def _generate_daily_schedule(  # pylint: disable=too-many-positional-arguments
         self,
         destination: str,
         duration: int,
@@ -373,9 +370,7 @@ class ItineraryAgentNode(BaseAgentNode):
             # Create activities for the day
             for i, option in enumerate(all_options[start_idx:end_idx]):
                 # Schedule activities throughout the day
-                hour = 9 + (i * 3)  # Start at 9am, 3 hours apart
-                if hour > 18:  # Don't schedule past 6pm
-                    hour = 18
+                hour = min(9 + (i * 3), 18)  # Start at 9am, cap at 6pm
 
                 activity = {
                     "time": f"{hour:02d}:00",

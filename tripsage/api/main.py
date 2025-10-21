@@ -17,7 +17,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from tripsage.api.core.config import get_settings
 from tripsage.api.core.openapi import custom_openapi
-from tripsage.api.middlewares import (  # AuthenticationMiddleware,  # Temporarily disabled - awaiting Supabase Auth
+from tripsage.api.middlewares import (
+    # AuthenticationMiddleware,  # Temporarily disabled - awaiting Supabase Auth
     EnhancedRateLimitMiddleware,
     LoggingMiddleware,
 )
@@ -50,6 +51,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreTripSageError,
     CoreValidationError,
 )
+from tripsage_core.observability.otel import setup_otel
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,
@@ -115,13 +117,24 @@ async def lifespan(app: FastAPI):
     await mcp_manager.shutdown()
 
 
-def create_app() -> FastAPI:
+def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     """Create and configure the FastAPI application.
 
     Returns:
         The configured FastAPI application
     """
     settings = get_settings()
+
+    # Initialize OpenTelemetry once using settings-driven flags
+    setup_otel(
+        service_name="tripsage-api",
+        service_version=settings.api_version,
+        environment=settings.environment,
+        enable_fastapi=False,  # instrument FastAPI via instrument_app below
+        enable_asgi=settings.enable_asgi_instrumentation,
+        enable_httpx=settings.enable_httpx_instrumentation,
+        enable_redis=settings.enable_redis_instrumentation,
+    )
 
     # Create FastAPI app with unified configuration
     app = FastAPI(
@@ -133,6 +146,18 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json" if not settings.is_production else None,
         lifespan=lifespan,
     )
+
+    # Instrument FastAPI via instrument_app(app) after app creation
+    if settings.enable_fastapi_instrumentation:
+        try:
+            import importlib
+
+            fastapi_inst = importlib.import_module(
+                "opentelemetry.instrumentation.fastapi"
+            )
+            fastapi_inst.FastAPIInstrumentor().instrument_app(app)
+        except ImportError:  # pragma: no cover - optional dep
+            pass
 
     # Configure CORS with unified settings
     app.add_middleware(

@@ -6,62 +6,25 @@ and metrics with minimal, DRY instrumentation.
 
 from __future__ import annotations
 
+import importlib
 import os
 import time
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from functools import wraps
-from typing import Any, ParamSpec, TypeVar, cast
-
-from opentelemetry import metrics as otel_metrics, trace as otel_trace
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
-    OTLPMetricExporter as OTLPMetricExporterGrpc,
-)
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
-    OTLPSpanExporter as OTLPSpanExporterGrpc,
-)
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
-    OTLPMetricExporter as OTLPMetricExporterHttp,
-)
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-    OTLPSpanExporter as OTLPSpanExporterHttp,
-)
-from opentelemetry.metrics import CallbackOptions, Observation
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.semconv._incubating.attributes import (
-    deployment_attributes,
-    service_attributes as incubating_service_attributes,
-)
-from opentelemetry.semconv.attributes import service_attributes
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
 
 
-try:
-    from opentelemetry.instrumentation.fastapi import (
-        FastAPIInstrumentor,  # type: ignore
-    )
-except ImportError:  # pragma: no cover - optional
-    FastAPIInstrumentor = None  # type: ignore[assignment]
+# Import typing-only symbols to avoid runtime ImportError on environments
+# without OpenTelemetry installed; functions lazily import runtime modules.
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from opentelemetry.metrics import CallbackOptions, Observation
+else:  # pragma: no cover - at runtime these are resolved lazily
+    CallbackOptions = Any  # type: ignore[misc,assignment]
+    Observation = Any  # type: ignore[misc,assignment]
 
-try:
-    from opentelemetry.instrumentation.asgi import ASGIInstrumentor  # type: ignore
-except ImportError:  # pragma: no cover - optional
-    ASGIInstrumentor = None  # type: ignore[assignment]
 
-try:
-    from opentelemetry.instrumentation.httpx import (
-        HTTPXClientInstrumentor,  # type: ignore
-    )
-except ImportError:  # pragma: no cover - optional
-    HTTPXClientInstrumentor = None  # type: ignore[assignment]
-
-try:
-    from opentelemetry.instrumentation.redis import RedisInstrumentor  # type: ignore
-except ImportError:  # pragma: no cover - optional
-    RedisInstrumentor = None  # type: ignore[assignment]
+# Instrumentors are imported lazily inside setup_otel().
 
 
 _SETUP_DONE = False
@@ -78,7 +41,7 @@ def setup_otel(
     enable_asgi: bool = False,
     enable_httpx: bool = False,
     enable_redis: bool = False,
-) -> None:
+) -> None:  # pylint: disable=too-many-statements
     """Initialize OpenTelemetry tracing and metrics.
 
     This function is idempotent and reads standard OTEL_* environment variables
@@ -93,16 +56,43 @@ def setup_otel(
         enable_httpx: Enable httpx instrumentation when available.
         enable_redis: Enable Redis instrumentation when available.
     """
+    # pylint: disable=too-many-statements
     global _SETUP_DONE  # pylint: disable=global-statement
     if _SETUP_DONE:  # pragma: no cover
         return
 
+    # Lazy imports via importlib to avoid static import errors under pylint
+    otel_metrics = importlib.import_module("opentelemetry.metrics")  # type: ignore
+    otel_trace = importlib.import_module("opentelemetry.trace")  # type: ignore
+    exp_grpc_metric = importlib.import_module(
+        "opentelemetry.exporter.otlp.proto.grpc.metric_exporter"
+    )
+    exp_grpc_trace = importlib.import_module(
+        "opentelemetry.exporter.otlp.proto.grpc.trace_exporter"
+    )
+    exp_http_metric = importlib.import_module(
+        "opentelemetry.exporter.otlp.proto.http.metric_exporter"
+    )
+    exp_http_trace = importlib.import_module(
+        "opentelemetry.exporter.otlp.proto.http.trace_exporter"
+    )
+    sdk_metrics = importlib.import_module("opentelemetry.sdk.metrics")
+    sdk_metrics_export = importlib.import_module("opentelemetry.sdk.metrics.export")
+    sdk_resources = importlib.import_module("opentelemetry.sdk.resources")
+    sdk_trace = importlib.import_module("opentelemetry.sdk.trace")
+    sdk_trace_export = importlib.import_module("opentelemetry.sdk.trace.export")
+    semconv_inc = importlib.import_module(
+        "opentelemetry.semconv._incubating.attributes"
+    )
+    semconv = importlib.import_module("opentelemetry.semconv.attributes")
+
+    Resource = sdk_resources.Resource
     resource = Resource.create(
         {
-            service_attributes.SERVICE_NAME: service_name,
-            service_attributes.SERVICE_VERSION: service_version,
-            deployment_attributes.DEPLOYMENT_ENVIRONMENT: environment,
-            incubating_service_attributes.SERVICE_INSTANCE_ID: os.getenv(
+            semconv.service_attributes.SERVICE_NAME: service_name,
+            semconv.service_attributes.SERVICE_VERSION: service_version,
+            semconv_inc.deployment_attributes.DEPLOYMENT_ENVIRONMENT: environment,
+            semconv_inc.service_attributes.SERVICE_INSTANCE_ID: os.getenv(
                 "HOSTNAME", "local"
             ),
         }
@@ -113,40 +103,46 @@ def setup_otel(
 
     # Traces
     if protocol.startswith("http"):
-        trace_exporter = OTLPSpanExporterHttp(endpoint=endpoint)
+        trace_exporter = exp_http_trace.OTLPSpanExporter(endpoint=endpoint)
     else:
         # gRPC default
         addr = endpoint.replace("http://", "").replace("https://", "")
-        trace_exporter = OTLPSpanExporterGrpc(endpoint=addr)
+        trace_exporter = exp_grpc_trace.OTLPSpanExporter(endpoint=addr)
 
+    TracerProvider = sdk_trace.TracerProvider
+    BatchSpanProcessor = sdk_trace_export.BatchSpanProcessor
     tp = TracerProvider(resource=resource)
     tp.add_span_processor(BatchSpanProcessor(trace_exporter))
     otel_trace.set_tracer_provider(tp)
 
     # Metrics
     if protocol.startswith("http"):
-        metric_exporter = OTLPMetricExporterHttp(endpoint=endpoint)
+        metric_exporter = exp_http_metric.OTLPMetricExporter(endpoint=endpoint)
     else:
         addr = endpoint.replace("http://", "").replace("https://", "")
-        metric_exporter = OTLPMetricExporterGrpc(endpoint=addr)
+        metric_exporter = exp_grpc_metric.OTLPMetricExporter(endpoint=addr)
 
+    PeriodicExportingMetricReader = sdk_metrics_export.PeriodicExportingMetricReader
+    MeterProvider = sdk_metrics.MeterProvider
     metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
     mp = MeterProvider(resource=resource, metric_readers=[metric_reader])
     otel_metrics.set_meter_provider(mp)
 
-    # Optional auto-instrumentation
-    if enable_fastapi and FastAPIInstrumentor is not None:
+    # Optional auto-instrumentation (lazily import each instrumentor)
+    # For FastAPI, call FastAPIInstrumentor.instrument_app(app) after the app
+    # instance is created (see tripsage/api/main.py).
+    if enable_asgi:
         with suppress(Exception):  # pragma: no cover
-            FastAPIInstrumentor().instrument()
-    if enable_asgi and ASGIInstrumentor is not None:
+            asgi_inst = importlib.import_module("opentelemetry.instrumentation.asgi")
+            asgi_inst.ASGIInstrumentor().instrument()
+    if enable_httpx:
         with suppress(Exception):  # pragma: no cover
-            ASGIInstrumentor().instrument()
-    if enable_httpx and HTTPXClientInstrumentor is not None:
+            httpx_inst = importlib.import_module("opentelemetry.instrumentation.httpx")
+            httpx_inst.HTTPXClientInstrumentor().instrument()
+    if enable_redis:
         with suppress(Exception):  # pragma: no cover
-            HTTPXClientInstrumentor().instrument()
-    if enable_redis and RedisInstrumentor is not None:
-        with suppress(Exception):  # pragma: no cover
-            RedisInstrumentor().instrument()
+            redis_inst = importlib.import_module("opentelemetry.instrumentation.redis")
+            redis_inst.RedisInstrumentor().instrument()
 
     _SETUP_DONE = True
 
@@ -154,15 +150,78 @@ def setup_otel(
 def get_tracer(name: str):
     """Return a tracer for the given name.
 
-    Returns a valid tracer even if setup_otel() was not called; the tracer will
-    be a no-op provider in that case.
+    Works even if setup_otel() was not called; returns a no-op provider when
+    OpenTelemetry is unavailable.
     """
-    return otel_trace.get_tracer(name)
+    try:  # Lazy import to avoid hard dependency at import time
+        from opentelemetry import trace as otel_trace  # type: ignore
+
+        return otel_trace.get_tracer(name)
+    except ImportError:  # pragma: no cover - fallback when OTEL missing
+
+        class _NoopSpan:
+            """No-op span with attribute/exception stubs."""
+
+            def __enter__(self):
+                """Enter no-op span."""
+                return self
+
+            def __exit__(self, *_exc):
+                """Exit no-op span."""
+                return False
+
+            def set_attribute(self, *_a: Any, **_k: Any) -> None:
+                """Ignore attribute set."""
+
+            def record_exception(self, *_a: Any, **_k: Any) -> None:
+                """Ignore exception record."""
+
+        class _NoopTracer:
+            """Factory for no-op span context manager."""
+
+            def start_as_current_span(self, *_a: Any, **_k: Any):
+                """Return a no-op span context manager."""
+                return _NoopSpan()
+
+        return _NoopTracer()
 
 
 def get_meter(name: str):
-    """Return a meter for the given name."""
-    return otel_metrics.get_meter(name)
+    """Return a meter for the given name.
+
+    Falls back to a no-op meter if OpenTelemetry metrics are unavailable.
+    """
+    try:  # Lazy import at call time
+        from opentelemetry import metrics as otel_metrics  # type: ignore
+
+        return otel_metrics.get_meter(name)
+    except ImportError:  # pragma: no cover - fallback when OTEL missing
+
+        class _NoopHistogram:
+            """No-op histogram instrument."""
+
+            def record(self, *_a: Any, **_k: Any) -> None:
+                """Ignore histogram record."""
+
+        class _NoopMeter:
+            """No-op meter with histogram and gauge factories."""
+
+            def create_histogram(self, *_a: Any, **_k: Any) -> _NoopHistogram:
+                """Return a no-op histogram."""
+                return _NoopHistogram()
+
+            def create_observable_gauge(self, *_a: Any, **_k: Any) -> None:
+                """Ignore observable gauge creation."""
+
+            class _NoopCounter:
+                def add(self, *_a: Any, **_k: Any) -> None:
+                    """Ignore counter add."""
+
+            def create_counter(self, *_a: Any, **_k: Any) -> _NoopCounter:
+                """Return a no-op counter."""
+                return _NoopMeter._NoopCounter()
+
+        return _NoopMeter()
 
 
 def trace_span(
@@ -179,7 +238,7 @@ def trace_span(
     """
 
     def _decorator(
-        func: Callable[_P, _T | Awaitable[_T]]
+        func: Callable[_P, _T | Awaitable[_T]],
     ) -> Callable[_P, _T | Awaitable[_T]]:
         tracer = get_tracer(func.__module__)
         span_name = name or func.__qualname__
@@ -232,25 +291,29 @@ def record_histogram(
         attr_fn: Optional callable computing attributes from args/kwargs.
     """
 
-    def _decorator(func: Callable[_P, _T | Awaitable[_T]]) -> Callable[_P, Any]:
+    def _decorator(
+        func: Callable[_P, _T | Awaitable[_T]],
+    ) -> Callable[_P, _T | Awaitable[_T]]:
         meter = get_meter(func.__module__)
         hist = meter.create_histogram(name, unit=unit, description=description)
 
         @wraps(func)
-        def _sync(*args: _P.args, **kwargs: _P.kwargs) -> Any:
+        def _sync(*args: _P.args, **kwargs: _P.kwargs) -> _T:
             start = time.perf_counter()
             try:
-                return func(*args, **kwargs)
+                return cast(_T, func(*args, **kwargs))
             finally:
                 dur = time.perf_counter() - start
                 attributes = attr_fn(args, kwargs) if attr_fn else {}
                 hist.record(dur, attributes)
 
         @wraps(func)
-        async def _async(*args: _P.args, **kwargs: _P.kwargs) -> Any:  # type: ignore[misc]
+        async def _async(*args: _P.args, **kwargs: _P.kwargs) -> _T:  # type: ignore[misc]
             start = time.perf_counter()
             try:
-                return await func(*args, **kwargs)  # type: ignore[func-returns-value]
+                return await cast(  # type: ignore[func-returns-value]
+                    Awaitable[_T], func(*args, **kwargs)
+                )
             finally:
                 dur = time.perf_counter() - start
                 attributes = attr_fn(args, kwargs) if attr_fn else {}

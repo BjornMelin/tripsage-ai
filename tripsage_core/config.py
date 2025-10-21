@@ -1,8 +1,4 @@
-"""Unified, modern configuration for TripSage application.
-
-Following 2025 best practices with a single, flat configuration structure.
-No backwards compatibility concerns - only optimal patterns.
-"""
+"""Unified, modern configuration for TripSage application."""
 
 from functools import lru_cache
 from typing import Literal
@@ -162,6 +158,20 @@ class Settings(BaseSettings):
     )
     enable_metrics_server: bool = Field(
         default=False, description="Enable standalone metrics server"
+    )
+
+    # OpenTelemetry Instrumentation Flags
+    enable_fastapi_instrumentation: bool = Field(
+        default=False, description="Enable FastAPI OTEL auto-instrumentation"
+    )
+    enable_asgi_instrumentation: bool = Field(
+        default=False, description="Enable ASGI OTEL auto-instrumentation"
+    )
+    enable_httpx_instrumentation: bool = Field(
+        default=False, description="Enable httpx OTEL auto-instrumentation"
+    )
+    enable_redis_instrumentation: bool = Field(
+        default=False, description="Enable Redis OTEL auto-instrumentation"
     )
 
     @field_validator("environment")
