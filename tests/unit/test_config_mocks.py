@@ -151,7 +151,7 @@ class MockServiceRegistry:
         """Get an optional mock service."""
         try:
             return self.get_service(name)
-        except Exception:
+        except (KeyError, AttributeError, RuntimeError):
             return None
 
     def _create_accommodation_service_mock(self):
