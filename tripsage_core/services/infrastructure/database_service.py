@@ -17,8 +17,10 @@ Key features:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
+from collections import deque
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -36,6 +38,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError,
     CoreServiceError,
 )
+from tripsage_core.observability.otel import get_meter, get_tracer
 
 
 logger = logging.getLogger(__name__)
@@ -379,7 +382,7 @@ class DatabaseService:
         self._supabase_client: Client | None = None
         self._connected = False
         self._start_time = time.time()
-        self._query_metrics: list[QueryMetrics] = []
+        self._query_metrics: deque[QueryMetrics] = deque(maxlen=1000)
         self._security_alerts: list[SecurityAlert] = []
         self._connection_stats = ConnectionStats(
             pool_size=self.pool_size, max_overflow=self.max_overflow
@@ -388,6 +391,10 @@ class DatabaseService:
         self._metrics: Metrics | None = None
         if self._config.monitoring.enable_metrics:
             self._initialize_metrics()
+
+        # OpenTelemetry tracer and meter
+        self._otel_tracer = get_tracer("tripsage_core.db")
+        self._otel_meter = get_meter("tripsage_core.db")
 
         # Circuit breaker
         self._cb_failures = 0
@@ -564,9 +571,27 @@ class DatabaseService:
         start_time = time.time()
         self._check_circuit_breaker()
         await self._check_rate_limit(user_id)
+        otel_span = None
+        if self._otel_tracer:
+            with contextlib.suppress(
+                Exception
+            ):  # pragma: no cover - environment dependent
+                otel_span = self._otel_tracer.start_span(
+                    name=f"db.{query_type.value.lower()}",
+                    attributes={
+                        "db.system": "postgresql",
+                        "db.provider": "supabase",
+                        "db.operation": query_type.value,
+                        "db.table": table or "unknown",
+                        "enduser.id": user_id or "anonymous",
+                    },
+                )
         try:
             yield
             duration = time.time() - start_time
+            if otel_span is not None:
+                with contextlib.suppress(Exception):  # pragma: no cover
+                    otel_span.set_attribute("db.duration_sec", duration)
             if self.enable_query_tracking:
                 self._query_metrics.append(
                     QueryMetrics(
@@ -596,6 +621,10 @@ class DatabaseService:
             self._record_circuit_breaker_success()
         except Exception:
             duration = time.time() - start_time
+            if otel_span is not None:
+                with contextlib.suppress(Exception):  # pragma: no cover
+                    otel_span.set_attribute("db.duration_sec", duration)
+                    otel_span.record_exception(Exception("query_failed"))
             if self.enable_query_tracking:
                 self._query_metrics.append(
                     QueryMetrics(
@@ -614,6 +643,10 @@ class DatabaseService:
                 ).inc()
             self._record_circuit_breaker_failure()
             raise
+        finally:
+            if otel_span is not None:
+                with contextlib.suppress(Exception):  # pragma: no cover
+                    otel_span.end()
 
     # ---- circuit breaker & rate limiting ----
 
@@ -1067,11 +1100,12 @@ class DatabaseService:
                 ) from e
 
     # ---- Convenience helpers used by wrappers/services ----
-    class _Tx:
-        """Minimal transactional batch executor.
+    class _Batch:
+        """Non-atomic batched operations executor.
 
-        This helper batches multiple CRUD operations and executes them
-        sequentially when ``execute()`` is called inside an async context.
+        Batches CRUD operations and executes them sequentially when
+        ``execute()`` is called. This does NOT provide transactional
+        atomicity—use a database RPC if atomic semantics are required.
 
         Attributes:
             svc: Parent DatabaseService.
@@ -1084,13 +1118,13 @@ class DatabaseService:
             self.user_id = user_id
             self.ops: list[tuple[str, tuple]] = []
 
-        async def __aenter__(self) -> DatabaseService._Tx:
-            """Enter the transaction context and ensure connectivity."""
+        async def __aenter__(self) -> DatabaseService._Batch:
+            """Enter the batch context and ensure connectivity."""
             await self.svc.ensure_connected()
             return self
 
         async def __aexit__(self, exc_type, exc, tb):
-            """Exit the transaction context without committing extra state."""
+            """Exit the batch context without committing extra state."""
             return False
 
         def insert(self, table: str, data: dict[str, Any] | list[dict[str, Any]]):
@@ -1123,17 +1157,17 @@ class DatabaseService:
                     out.append(await self.svc.delete(args[0], args[1], self.user_id))
             return out
 
-    def transaction(self, user_id: str | None = None) -> DatabaseService._Tx:
-        """Create a new transactional batch context.
+    def transaction(self, user_id: str | None = None) -> DatabaseService._Batch:
+        """Create a new non-atomic batch context.
 
         Args:
             user_id: Optional user attribution for auditing.
 
         Returns:
-            A transactional context manager supporting ``insert``, ``update``,
+            A batched context manager supporting ``insert``, ``update``,
             ``delete`` and ``execute``.
         """
-        return DatabaseService._Tx(self, user_id)
+        return DatabaseService._Batch(self, user_id)
 
     async def create_trip(
         self, trip_data: dict[str, Any], user_id: str | None = None
