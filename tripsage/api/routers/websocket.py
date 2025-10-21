@@ -7,7 +7,10 @@ including chat streaming, agent status updates, and live user feedback.
 import asyncio
 import json
 import logging
-from datetime import datetime
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Any, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
@@ -17,18 +20,23 @@ from tripsage.agents.chat import ChatAgent
 from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.api.core.config import get_settings
 from tripsage.api.core.dependencies import get_db
-from tripsage.api.schemas.websocket import (
-    WebSocketAuthRequest,
-    WebSocketSubscribeRequest,
+from tripsage_core.models.schemas_common.chat import (
+    ChatMessage as WebSocketMessage,
+    MessageRole as ChatMessageRole,
 )
-from tripsage_core.models.schemas_common.chat import ChatMessage as WebSocketMessage
 from tripsage_core.services.business.chat_service import (
     ChatService as CoreChatService,
     MessageCreateRequest,
-    MessageRole,
+)
+from tripsage_core.services.infrastructure.websocket_auth_service import (
+    WebSocketAuthRequest,
+)
+from tripsage_core.services.infrastructure.websocket_connection_service import (
+    WebSocketConnection,
 )
 from tripsage_core.services.infrastructure.websocket_manager import (
     WebSocketMessageLimits,
+    WebSocketSubscribeRequest,
     websocket_manager,
 )
 from tripsage_core.services.infrastructure.websocket_messaging_service import (
@@ -42,11 +50,15 @@ from tripsage_core.services.infrastructure.websocket_validation import (
 
 # Create event classes here temporarily until they are properly organized
 class ChatMessageEvent(WebSocketEvent):
+    """Chat message WebSocket event."""
+
     type: str = Field(default=WebSocketEventType.CHAT_MESSAGE, description="Event type")
     message: WebSocketMessage
 
 
 class ChatMessageChunkEvent(WebSocketEvent):
+    """Chat message chunk WebSocket event."""
+
     type: str = Field(default=WebSocketEventType.CHAT_TYPING, description="Event type")
     content: str
     chunk_index: int = 0
@@ -54,14 +66,17 @@ class ChatMessageChunkEvent(WebSocketEvent):
 
 
 class ConnectionEvent(WebSocketEvent):
+    """Connection established WebSocket event."""
+
     type: str = Field(
         default=WebSocketEventType.CONNECTION_ESTABLISHED, description="Event type"
     )
     status: str = Field(..., description="Connection status")
-    connection_id: str = Field(..., description="Connection ID")
 
 
 class ErrorEvent(WebSocketEvent):
+    """Connection error WebSocket event."""
+
     type: str = Field(
         default=WebSocketEventType.CONNECTION_ERROR, description="Event type"
     )
@@ -75,6 +90,21 @@ router = APIRouter()
 
 # Message size limits for incoming messages
 message_limits = WebSocketMessageLimits()
+
+
+@dataclass(slots=True)
+class MessageContext:
+    """Context passed to message handlers."""
+
+    websocket: WebSocket
+    connection_id: str
+    user_id: UUID | None
+    session_id: UUID | None
+    chat_service: CoreChatService | None = None
+    chat_agent: ChatAgent | None = None
+
+
+MessageHandler = Callable[[MessageContext, dict[str, Any]], Awaitable[None]]
 
 
 def validate_incoming_message_size(
@@ -107,7 +137,7 @@ def validate_incoming_message_size(
         return True  # Allow message if validation fails
 
 
-def validate_and_parse_message(message_data: str) -> tuple[bool, dict, str]:
+def validate_and_parse_message(message_data: str) -> tuple[bool, dict[str, Any], str]:
     """Validate and parse incoming WebSocket message with comprehensive security checks.
 
     Args:
@@ -140,17 +170,193 @@ def validate_and_parse_message(message_data: str) -> tuple[bool, dict, str]:
         return False, {}, "Message validation error"
 
 
+def _parse_uuid(value: Any) -> UUID | None:
+    """Parse a value into a UUID if possible."""
+    if value is None:
+        return None
+    if isinstance(value, UUID):
+        return value
+    try:
+        return UUID(str(value))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Invalid UUID format") from exc
+
+
+def build_auth_request(
+    auth_payload: dict[str, Any],
+    *,
+    default_channels: list[str] | None = None,
+) -> WebSocketAuthRequest:
+    """Build a core WebSocketAuthRequest from validated payload."""
+    token = auth_payload.get("token", "")
+    session_id = _parse_uuid(auth_payload.get("session_id"))
+    channels_raw = auth_payload.get("channels") or []
+    if not isinstance(channels_raw, list):
+        raise TypeError("Channels must be provided as a list")
+
+    channels: list[str] = []
+    for channel in channels_raw:
+        if not isinstance(channel, str):
+            raise TypeError("Channel names must be strings")
+        channels.append(channel)
+
+    if not channels and default_channels:
+        channels = list(default_channels)
+
+    return WebSocketAuthRequest(
+        token=token,
+        session_id=session_id,
+        channels=channels,
+    )
+
+
 # Services for test compatibility - tests expect these attributes to exist
 auth_service = websocket_manager.auth_service
+chat_service: CoreChatService | None = None
 
 
-# Mock chat service for test compatibility - create a placeholder since the actual
-# chat service is dependency injected and tests need to patch this module attribute
-class MockChatService:
-    """Placeholder chat service for test compatibility."""
+def serialize_connection(connection: WebSocketConnection) -> dict[str, Any]:
+    """Serialize a WebSocketConnection for API responses."""
+    state_value = getattr(connection.state, "value", str(connection.state))
+    return {
+        "connection_id": connection.connection_id,
+        "user_id": str(connection.user_id) if connection.user_id else None,
+        "session_id": str(connection.session_id) if connection.session_id else None,
+        "state": state_value,
+        "connected_at": connection.connected_at.isoformat(),
+        "last_heartbeat": connection.last_heartbeat.isoformat(),
+        "subscribed_channels": sorted(connection.subscribed_channels),
+        "client_ip": connection.client_ip,
+        "user_agent": connection.user_agent,
+    }
 
 
-chat_service = MockChatService()
+async def _send_error_event(
+    ctx: MessageContext,
+    error_code: str,
+    error_message: str,
+) -> None:
+    """Send a structured error event to the connection."""
+    error_event = ErrorEvent(
+        error_code=error_code,
+        error_message=error_message,
+        user_id=ctx.user_id,
+        session_id=ctx.session_id,
+    )
+    await websocket_manager.send_to_connection(ctx.connection_id, error_event)
+
+
+async def _handle_heartbeat(ctx: MessageContext, _message: dict[str, Any]) -> None:
+    """Update heartbeat timestamp for the connection."""
+    connection = websocket_manager.connections.get(ctx.connection_id)
+    if connection:
+        connection.update_heartbeat()
+
+
+async def _handle_ping(ctx: MessageContext, _message: dict[str, Any]) -> None:
+    """Respond to ping with pong and update heartbeat."""
+    await _handle_heartbeat(ctx, _message)
+    pong_event = WebSocketEvent(
+        type=WebSocketEventType.CONNECTION_PONG,
+        payload={"timestamp": datetime.now(UTC).isoformat(), "pong": True},
+        user_id=ctx.user_id,
+        session_id=ctx.session_id,
+        connection_id=ctx.connection_id,
+    )
+    await websocket_manager.send_to_connection(ctx.connection_id, pong_event)
+
+
+async def _handle_pong(ctx: MessageContext, _message: dict[str, Any]) -> None:
+    """Handle pong response from the client."""
+    connection = websocket_manager.connections.get(ctx.connection_id)
+    if connection:
+        connection.handle_pong()
+
+
+async def _handle_subscribe(ctx: MessageContext, message: dict[str, Any]) -> None:
+    """Subscribe connection to channels provided in the payload."""
+    payload = message.get("payload", {})
+    try:
+        subscribe_request = WebSocketSubscribeRequest.model_validate(payload)
+    except ValidationError as exc:
+        await _send_error_event(ctx, "invalid_subscription_request", str(exc))
+        return
+
+    response = await websocket_manager.subscribe_connection(
+        ctx.connection_id, subscribe_request
+    )
+    await ctx.websocket.send_text(
+        json.dumps({"type": "subscribe_response", "payload": response.model_dump()})
+    )
+
+
+async def _handle_echo(ctx: MessageContext, message: dict[str, Any]) -> None:
+    """Echo unknown messages back to the sender for debugging."""
+    echo_event = WebSocketEvent(
+        type="echo",
+        payload=message,
+        user_id=ctx.user_id,
+        session_id=ctx.session_id,
+        connection_id=ctx.connection_id,
+    )
+    await websocket_manager.send_to_connection(ctx.connection_id, echo_event)
+
+
+async def _handle_chat_payload(ctx: MessageContext, message: dict[str, Any]) -> None:
+    """Dispatch chat payload to the chat message handler."""
+    await handle_chat_message(ctx, message.get("payload", {}))
+
+
+async def _log_unknown_message(ctx: MessageContext, message: dict[str, Any]) -> None:
+    """Log unknown message types for observability."""
+    logger.warning(
+        "Unknown message type on connection %s: %s",
+        ctx.connection_id,
+        message.get("type"),
+    )
+
+
+async def run_message_loop(
+    ctx: MessageContext,
+    handlers: dict[str, MessageHandler],
+    *,
+    fallback: MessageHandler | None = None,
+) -> None:
+    """Run the incoming message loop for a WebSocket connection."""
+    while True:
+        try:
+            message_data = await ctx.websocket.receive_text()
+            is_valid, message_json, error_msg = validate_and_parse_message(message_data)
+            if not is_valid:
+                await _send_error_event(ctx, "message_validation_failed", error_msg)
+                continue
+
+            message_type = message_json.get("type", "")
+            handler = handlers.get(message_type)
+
+            if handler:
+                await handler(ctx, message_json)
+            elif fallback:
+                await fallback(ctx, message_json)
+
+        except WebSocketDisconnect:
+            logger.info("WebSocket disconnected: connection_id=%s", ctx.connection_id)
+            break
+        except json.JSONDecodeError:
+            logger.exception(
+                "Invalid JSON received from connection %s", ctx.connection_id
+            )
+            await _send_error_event(
+                ctx,
+                "invalid_json",
+                "Invalid JSON format",
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.exception(
+                "Error handling message from connection %s", ctx.connection_id
+            )
+            await _send_error_event(ctx, "message_error", str(exc))
+            break
 
 
 async def validate_websocket_origin(websocket: WebSocket) -> bool:
@@ -202,7 +408,7 @@ _service_registry = None
 
 def get_service_registry() -> ServiceRegistry:
     """Get or create the service registry singleton."""
-    global _service_registry
+    global _service_registry  # pylint: disable=global-statement
     if _service_registry is None:
         _service_registry = ServiceRegistry()
     return _service_registry
@@ -210,7 +416,7 @@ def get_service_registry() -> ServiceRegistry:
 
 def get_chat_agent() -> ChatAgent:
     """Get or create the chat agent singleton."""
-    global _chat_agent
+    global _chat_agent  # pylint: disable=global-statement
     if _chat_agent is None:
         service_registry = get_service_registry()
         _chat_agent = ChatAgent(service_registry=service_registry)
@@ -239,53 +445,41 @@ async def generic_websocket(websocket: WebSocket):
     Args:
         websocket: WebSocket connection
     """
-    connection_id = None
+    connection_id: str | None = None
+    ctx: MessageContext | None = None
 
     try:
-        # Validate Origin header before accepting connection (CSWSH protection)
         if not await validate_websocket_origin(websocket):
             await websocket.close(code=4003, reason="Unauthorized origin")
             return
 
-        # Accept WebSocket connection
         await websocket.accept()
         logger.info("Generic WebSocket connection accepted")
 
-        # Wait for authentication message
         auth_data = await websocket.receive_text()
-
-        # Validate authentication message using comprehensive validation
         try:
-            # Use the new validation for auth messages
             validated_auth = WebSocketMessageValidator.validate_message(auth_data)
-            if hasattr(validated_auth, "model_dump"):
-                auth_dict = validated_auth.model_dump()
-            else:
-                auth_dict = validated_auth.dict()
-
-            # Create WebSocketAuthRequest from validated data
-            auth_request = WebSocketAuthRequest(
-                token=auth_dict.get("token", ""),
-                session_id=auth_dict.get("session_id"),
-                channels=auth_dict.get("channels", []),
+            auth_dict = (
+                validated_auth.model_dump()
+                if hasattr(validated_auth, "model_dump")
+                else validated_auth.dict()
             )
-        except (ValueError, ValidationError) as e:
+            auth_request = build_auth_request(auth_dict)
+        except (ValueError, ValidationError) as exc:
             await websocket.send_text(
                 json.dumps(
                     {
                         "type": "error",
                         "message": "Invalid authentication request",
-                        "details": str(e),
-                    },
-                ),
+                        "details": str(exc),
+                    }
+                )
             )
             await websocket.close(code=4000)
             return
 
-        # Authenticate connection
         auth_response = await websocket_manager.authenticate_connection(
-            websocket,
-            auth_request,
+            websocket, auth_request
         )
 
         if not auth_response.success:
@@ -294,203 +488,50 @@ async def generic_websocket(websocket: WebSocket):
                     {
                         "type": "error",
                         "message": auth_response.error or "Authentication failed",
-                    },
-                ),
+                    }
+                )
             )
             await websocket.close(code=4001)
             return
 
         connection_id = auth_response.connection_id
-        user_id = auth_response.user_id
+        ctx = MessageContext(
+            websocket=websocket,
+            connection_id=connection_id,
+            user_id=auth_response.user_id,
+            session_id=auth_response.session_id,
+        )
 
-        # Send authentication success response
         auth_response_dict = auth_response.model_dump()
-        # Convert UUID fields to strings for JSON serialization
         if auth_response_dict.get("user_id"):
             auth_response_dict["user_id"] = str(auth_response_dict["user_id"])
         if auth_response_dict.get("session_id"):
             auth_response_dict["session_id"] = str(auth_response_dict["session_id"])
         await websocket.send_text(json.dumps(auth_response_dict))
 
-        # Send connection established event
         connection_event = ConnectionEvent(
             status="connected",
             connection_id=connection_id,
-            user_id=user_id,
+            user_id=auth_response.user_id,
+            session_id=auth_response.session_id,
         )
         await websocket_manager.send_to_connection(connection_id, connection_event)
 
-        logger.info(
-            "Generic WebSocket authenticated: connection_id=%s, user_id=%s",
-            connection_id,
-            user_id,
-        )
+        handlers: dict[str, MessageHandler] = {
+            "heartbeat": _handle_heartbeat,
+            "ping": _handle_ping,
+            "pong": _handle_pong,
+            "subscribe": _handle_subscribe,
+        }
 
-        # Basic message handling loop
-        while True:
-            try:
-                # Receive message from client
-                message_data = await websocket.receive_text()
+        await run_message_loop(ctx, handlers, fallback=_handle_echo)
 
-                # Validate and parse message using comprehensive validation
-                is_valid, message_json, error_msg = validate_and_parse_message(
-                    message_data
-                )
-                if not is_valid:
-                    error_event = ErrorEvent(
-                        error_code="message_validation_failed",
-                        error_message=error_msg,
-                        user_id=user_id,
-                    )
-                    await websocket_manager.send_to_connection(
-                        connection_id, error_event
-                    )
-                    continue
-
-                message_type = message_json.get("type", "")
-
-                if message_type == "heartbeat":
-                    # Handle heartbeat
-                    connection = websocket_manager.connections.get(connection_id)
-                    if connection:
-                        connection.update_heartbeat()
-
-                elif message_type == "ping":
-                    # Handle ping from client and send pong response
-                    connection = websocket_manager.connections.get(connection_id)
-                    if connection:
-                        connection.update_heartbeat()
-                        # Send pong response
-                        pong_event = WebSocketEvent(
-                            type=WebSocketEventType.CONNECTION_PONG,
-                            payload={
-                                "timestamp": datetime.utcnow().isoformat(),
-                                "pong": True,
-                            },
-                            user_id=user_id,
-                            connection_id=connection_id,
-                        )
-                        await websocket_manager.send_to_connection(
-                            connection_id, pong_event
-                        )
-
-                elif message_type == "pong":
-                    # Handle pong response from client (in response to our ping)
-                    connection = websocket_manager.connections.get(connection_id)
-                    if connection:
-                        connection.handle_pong()
-
-                elif message_type == "chat_message":
-                    # Handle chat message and broadcast to session
-                    payload = message_json.get("payload", {})
-                    message_session_id = payload.get("session_id")
-                    content = payload.get("content", "")
-
-                    if message_session_id and content:
-                        # Create chat message event
-                        chat_event = WebSocketEvent(
-                            type="chat_message",
-                            payload={
-                                "content": content,
-                                "session_id": message_session_id,
-                                "user_id": str(user_id),
-                                "timestamp": datetime.utcnow().isoformat(),
-                            },
-                            user_id=user_id,
-                            connection_id=connection_id,
-                        )
-                        # Broadcast to session
-                        await websocket_manager.send_to_session(
-                            UUID(message_session_id), chat_event
-                        )
-                    else:
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "error",
-                                    "message": "Invalid chat message format",
-                                },
-                            ),
-                        )
-
-                elif message_type == "subscribe":
-                    # Handle channel subscription
-                    try:
-                        subscribe_request = WebSocketSubscribeRequest.model_validate(
-                            message_json.get("payload", {}),
-                        )
-                        response = await websocket_manager.subscribe_connection(
-                            connection_id,
-                            subscribe_request,
-                        )
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "subscribe_response",
-                                    "payload": response.model_dump(),
-                                },
-                            ),
-                        )
-                    except ValidationError as e:
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "error",
-                                    "message": "Invalid subscription request",
-                                    "details": str(e),
-                                },
-                            ),
-                        )
-
-                else:
-                    # Echo back unknown messages for testing
-                    echo_event = WebSocketEvent(
-                        type="echo",
-                        payload=message_json,
-                        user_id=user_id,
-                        connection_id=connection_id,
-                    )
-                    await websocket_manager.send_to_connection(
-                        connection_id, echo_event
-                    )
-
-            except WebSocketDisconnect:
-                logger.info(
-                    "Generic WebSocket disconnected: connection_id=%s", connection_id
-                )
-                break
-            except json.JSONDecodeError:
-                logger.exception(
-                    "Invalid JSON received from connection %s", connection_id
-                )
-                error_event = ErrorEvent(
-                    error_code="invalid_json",
-                    error_message="Invalid JSON format",
-                    user_id=user_id,
-                )
-                await websocket_manager.send_to_connection(connection_id, error_event)
-            except Exception as e:
-                logger.exception(
-                    "Error handling message from connection %s", connection_id
-                )
-                error_event = ErrorEvent(
-                    error_code="message_error",
-                    error_message=str(e),
-                    user_id=user_id,
-                )
-                await websocket_manager.send_to_connection(connection_id, error_event)
-
-    except Exception as e:
+    except Exception as exc:  # pylint: disable=broad-except
         logger.exception("Generic WebSocket error")
-        if connection_id:
-            error_event = ErrorEvent(
-                error_code="websocket_error",
-                error_message=str(e),
-            )
-            await websocket_manager.send_to_connection(connection_id, error_event)
+        if ctx is not None:
+            await _send_error_event(ctx, "websocket_error", str(exc))
 
     finally:
-        # Clean up connection
         if connection_id:
             await websocket_manager.disconnect_connection(connection_id)
 
@@ -510,53 +551,50 @@ async def chat_websocket(
         db: Database service from dependency injection
         chat_service: CoreChatService instance from dependency injection
     """
-    connection_id = None
+    connection_id: str | None = None
+    ctx: MessageContext | None = None
 
     try:
-        # Validate Origin header before accepting connection (CSWSH protection)
         if not await validate_websocket_origin(websocket):
             await websocket.close(code=4003, reason="Unauthorized origin")
             return
 
-        # Accept WebSocket connection
         await websocket.accept()
         logger.info("WebSocket connection accepted for chat session %s", session_id)
 
-        # Wait for authentication message
         auth_data = await websocket.receive_text()
-
-        # Validate authentication message using comprehensive validation
         try:
-            # Use the new validation for auth messages
             validated_auth = WebSocketMessageValidator.validate_message(auth_data)
-            if hasattr(validated_auth, "model_dump"):
-                auth_dict = validated_auth.model_dump()
-            else:
-                auth_dict = validated_auth.dict()
-
-            # Create WebSocketAuthRequest from validated data
-            auth_request = WebSocketAuthRequest(
-                token=auth_dict.get("token", ""),
-                session_id=session_id,  # Ensure session ID matches URL
-                channels=auth_dict.get("channels", []),
+            auth_dict = (
+                validated_auth.model_dump()
+                if hasattr(validated_auth, "model_dump")
+                else validated_auth.dict()
             )
-        except (ValueError, ValidationError) as e:
+            request_from_payload = build_auth_request(auth_dict)
+            if (
+                request_from_payload.session_id is not None
+                and request_from_payload.session_id != session_id
+            ):
+                raise ValueError("Session ID mismatch")
+
+            auth_request = request_from_payload.model_copy(
+                update={"session_id": session_id}
+            )
+        except (ValueError, ValidationError) as exc:
             await websocket.send_text(
                 json.dumps(
                     {
                         "type": "error",
                         "message": "Invalid authentication request",
-                        "details": str(e),
-                    },
-                ),
+                        "details": str(exc),
+                    }
+                )
             )
             await websocket.close(code=4000)
             return
 
-        # Authenticate connection
         auth_response = await websocket_manager.authenticate_connection(
-            websocket,
-            auth_request,
+            websocket, auth_request
         )
 
         if not auth_response.success:
@@ -565,25 +603,37 @@ async def chat_websocket(
                     {
                         "type": "error",
                         "message": auth_response.error or "Authentication failed",
-                    },
-                ),
+                    }
+                )
             )
             await websocket.close(code=4001)
             return
 
         connection_id = auth_response.connection_id
-        user_id = auth_response.user_id
+        user_id_optional = auth_response.user_id
 
-        # Send authentication success response
+        if user_id_optional is None:
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "type": "error",
+                        "message": "User ID mismatch",
+                    }
+                )
+            )
+            await websocket.close(code=4003)
+            return
+
+        assert isinstance(user_id_optional, UUID)
+        user_id = cast(UUID, user_id_optional)
+
         auth_response_dict = auth_response.model_dump()
-        # Convert UUID fields to strings for JSON serialization
         if auth_response_dict.get("user_id"):
             auth_response_dict["user_id"] = str(auth_response_dict["user_id"])
         if auth_response_dict.get("session_id"):
             auth_response_dict["session_id"] = str(auth_response_dict["session_id"])
         await websocket.send_text(json.dumps(auth_response_dict))
 
-        # Send connection established event
         connection_event = ConnectionEvent(
             status="connected",
             connection_id=connection_id,
@@ -592,153 +642,32 @@ async def chat_websocket(
         )
         await websocket_manager.send_to_connection(connection_id, connection_event)
 
-        # Get chat agent instance (dependency injection provides chat_service)
         chat_agent = get_chat_agent()
-
-        logger.info(
-            "Chat WebSocket authenticated: connection_id=%s, user_id=%s",
-            connection_id,
-            user_id,
+        ctx = MessageContext(
+            websocket=websocket,
+            connection_id=connection_id,
+            user_id=user_id,
+            session_id=session_id,
+            chat_service=chat_service,
+            chat_agent=chat_agent,
         )
 
-        # Message handling loop
-        while True:
-            try:
-                # Receive message from client
-                message_data = await websocket.receive_text()
+        handlers: dict[str, MessageHandler] = {
+            "chat_message": _handle_chat_payload,
+            "heartbeat": _handle_heartbeat,
+            "ping": _handle_ping,
+            "pong": _handle_pong,
+            "subscribe": _handle_subscribe,
+        }
 
-                # Validate and parse message using comprehensive validation
-                is_valid, message_json, error_msg = validate_and_parse_message(
-                    message_data
-                )
-                if not is_valid:
-                    error_event = ErrorEvent(
-                        error_code="message_validation_failed",
-                        error_message=error_msg,
-                        user_id=user_id,
-                        session_id=session_id,
-                    )
-                    await websocket_manager.send_to_connection(
-                        connection_id, error_event
-                    )
-                    continue
+        await run_message_loop(ctx, handlers, fallback=_log_unknown_message)
 
-                message_type = message_json.get("type", "")
-
-                if message_type == "chat_message":
-                    # Handle chat message
-                    await handle_chat_message(
-                        connection_id=connection_id,
-                        user_id=user_id,
-                        session_id=session_id,
-                        message_data=message_json.get("payload", {}),
-                        chat_service=chat_service,
-                        chat_agent=chat_agent,
-                    )
-
-                elif message_type == "heartbeat":
-                    # Handle heartbeat
-                    connection = websocket_manager.connections.get(connection_id)
-                    if connection:
-                        connection.update_heartbeat()
-
-                elif message_type == "ping":
-                    # Handle ping from client and send pong response
-                    connection = websocket_manager.connections.get(connection_id)
-                    if connection:
-                        connection.update_heartbeat()
-                        # Send pong response
-                        pong_event = WebSocketEvent(
-                            type=WebSocketEventType.CONNECTION_PONG,
-                            payload={
-                                "timestamp": datetime.utcnow().isoformat(),
-                                "pong": True,
-                            },
-                            user_id=user_id,
-                            session_id=session_id,
-                            connection_id=connection_id,
-                        )
-                        await websocket_manager.send_to_connection(
-                            connection_id, pong_event
-                        )
-
-                elif message_type == "pong":
-                    # Handle pong response from client (in response to our ping)
-                    connection = websocket_manager.connections.get(connection_id)
-                    if connection:
-                        connection.handle_pong()
-
-                elif message_type == "subscribe":
-                    # Handle channel subscription
-                    try:
-                        subscribe_request = WebSocketSubscribeRequest.model_validate(
-                            message_json.get("payload", {}),
-                        )
-                        response = await websocket_manager.subscribe_connection(
-                            connection_id,
-                            subscribe_request,
-                        )
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "subscribe_response",
-                                    "payload": response.model_dump(),
-                                },
-                            ),
-                        )
-                    except ValidationError as e:
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "error",
-                                    "message": "Invalid subscription request",
-                                    "details": str(e),
-                                },
-                            ),
-                        )
-
-                else:
-                    logger.warning("Unknown message type: %s", message_type)
-
-            except WebSocketDisconnect:
-                logger.info(
-                    "Chat WebSocket disconnected: connection_id=%s", connection_id
-                )
-                break
-            except json.JSONDecodeError:
-                logger.exception(
-                    "Invalid JSON received from connection %s", connection_id
-                )
-                error_event = ErrorEvent(
-                    error_code="invalid_json",
-                    error_message="Invalid JSON format",
-                    user_id=user_id,
-                    session_id=session_id,
-                )
-                await websocket_manager.send_to_connection(connection_id, error_event)
-            except Exception as e:
-                logger.exception(
-                    "Error handling message from connection %s", connection_id
-                )
-                error_event = ErrorEvent(
-                    error_code="message_error",
-                    error_message=str(e),
-                    user_id=user_id,
-                    session_id=session_id,
-                )
-                await websocket_manager.send_to_connection(connection_id, error_event)
-
-    except Exception as e:
+    except Exception as exc:  # pylint: disable=broad-except
         logger.exception("Chat WebSocket error")
-        if connection_id:
-            error_event = ErrorEvent(
-                error_code="websocket_error",
-                error_message=str(e),
-            )
-            await websocket_manager.send_to_connection(connection_id, error_event)
+        if ctx is not None:
+            await _send_error_event(ctx, "websocket_error", str(exc))
 
     finally:
-        # Clean up connection
         if connection_id:
             await websocket_manager.disconnect_connection(connection_id)
 
@@ -754,55 +683,44 @@ async def agent_status_websocket(
         websocket: WebSocket connection
         user_id: User ID for agent status updates
     """
-    connection_id = None
+    connection_id: str | None = None
+    ctx: MessageContext | None = None
 
     try:
-        # Validate Origin header before accepting connection (CSWSH protection)
         if not await validate_websocket_origin(websocket):
             await websocket.close(code=4003, reason="Unauthorized origin")
             return
 
-        # Accept WebSocket connection
         await websocket.accept()
         logger.info("Agent status WebSocket connection accepted for user %s", user_id)
 
-        # Wait for authentication message
         auth_data = await websocket.receive_text()
-
-        # Validate authentication message using comprehensive validation
         try:
-            # Use the new validation for auth messages
             validated_auth = WebSocketMessageValidator.validate_message(auth_data)
-            if hasattr(validated_auth, "model_dump"):
-                auth_dict = validated_auth.model_dump()
-            else:
-                auth_dict = validated_auth.dict()
-
-            # Create WebSocketAuthRequest from validated data
-            auth_request = WebSocketAuthRequest(
-                token=auth_dict.get("token", ""),
-                session_id=auth_dict.get("session_id"),
-                channels=[
-                    f"agent_status:{user_id}"
-                ],  # Subscribe to user-specific channel
+            auth_dict = (
+                validated_auth.model_dump()
+                if hasattr(validated_auth, "model_dump")
+                else validated_auth.dict()
             )
-        except (ValueError, ValidationError) as e:
+            auth_request = build_auth_request(
+                auth_dict,
+                default_channels=[f"agent_status:{user_id}"],
+            )
+        except (ValueError, ValidationError) as exc:
             await websocket.send_text(
                 json.dumps(
                     {
                         "type": "error",
                         "message": "Invalid authentication request",
-                        "details": str(e),
-                    },
-                ),
+                        "details": str(exc),
+                    }
+                )
             )
             await websocket.close(code=4000)
             return
 
-        # Authenticate connection
         auth_response = await websocket_manager.authenticate_connection(
-            websocket,
-            auth_request,
+            websocket, auth_request
         )
 
         if not auth_response.success:
@@ -811,8 +729,8 @@ async def agent_status_websocket(
                     {
                         "type": "error",
                         "message": auth_response.error or "Authentication failed",
-                    },
-                ),
+                    }
+                )
             )
             await websocket.close(code=4001)
             return
@@ -820,7 +738,6 @@ async def agent_status_websocket(
         connection_id = auth_response.connection_id
         authenticated_user_id = auth_response.user_id
 
-        # Verify user ID matches authenticated user
         if authenticated_user_id != user_id:
             await websocket.send_text(
                 json.dumps({"type": "error", "message": "User ID mismatch"}),
@@ -828,194 +745,100 @@ async def agent_status_websocket(
             await websocket.close(code=4003)
             return
 
-        # Send authentication success response
+        ctx = MessageContext(
+            websocket=websocket,
+            connection_id=connection_id,
+            user_id=authenticated_user_id,
+            session_id=auth_response.session_id,
+        )
+
         auth_response_dict = auth_response.model_dump()
-        # Convert UUID fields to strings for JSON serialization
         if auth_response_dict.get("user_id"):
             auth_response_dict["user_id"] = str(auth_response_dict["user_id"])
         if auth_response_dict.get("session_id"):
             auth_response_dict["session_id"] = str(auth_response_dict["session_id"])
         await websocket.send_text(json.dumps(auth_response_dict))
 
-        # Send connection established event
         connection_event = ConnectionEvent(
             status="connected",
             connection_id=connection_id,
-            user_id=user_id,
+            user_id=authenticated_user_id,
+            session_id=auth_response.session_id,
         )
         await websocket_manager.send_to_connection(connection_id, connection_event)
 
-        logger.info(
-            "Agent status WebSocket authenticated: connection_id=%s, user_id=%s",
-            connection_id,
-            user_id,
-        )
+        handlers: dict[str, MessageHandler] = {
+            "heartbeat": _handle_heartbeat,
+            "ping": _handle_ping,
+            "pong": _handle_pong,
+            "subscribe": _handle_subscribe,
+        }
 
-        # Message handling loop (mainly for heartbeats and subscription changes)
-        while True:
-            try:
-                # Receive message from client
-                message_data = await websocket.receive_text()
+        await run_message_loop(ctx, handlers, fallback=_log_unknown_message)
 
-                # Validate and parse message using comprehensive validation
-                is_valid, message_json, error_msg = validate_and_parse_message(
-                    message_data
-                )
-                if not is_valid:
-                    logger.warning(
-                        "Message validation failed for agent status connection %s: %s",
-                        connection_id,
-                        error_msg,
-                    )
-                    continue
-
-                message_type = message_json.get("type", "")
-
-                if message_type == "heartbeat":
-                    # Handle heartbeat
-                    connection = websocket_manager.connections.get(connection_id)
-                    if connection:
-                        connection.update_heartbeat()
-
-                elif message_type == "ping":
-                    # Handle ping from client and send pong response
-                    connection = websocket_manager.connections.get(connection_id)
-                    if connection:
-                        connection.update_heartbeat()
-                        # Send pong response
-                        pong_event = WebSocketEvent(
-                            type=WebSocketEventType.CONNECTION_PONG,
-                            payload={
-                                "timestamp": datetime.utcnow().isoformat(),
-                                "pong": True,
-                            },
-                            user_id=user_id,
-                            connection_id=connection_id,
-                        )
-                        await websocket_manager.send_to_connection(
-                            connection_id, pong_event
-                        )
-
-                elif message_type == "pong":
-                    # Handle pong response from client (in response to our ping)
-                    connection = websocket_manager.connections.get(connection_id)
-                    if connection:
-                        connection.handle_pong()
-
-                elif message_type == "subscribe":
-                    # Handle channel subscription
-                    try:
-                        subscribe_request = WebSocketSubscribeRequest.model_validate(
-                            message_json.get("payload", {}),
-                        )
-                        response = await websocket_manager.subscribe_connection(
-                            connection_id,
-                            subscribe_request,
-                        )
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "subscribe_response",
-                                    "payload": response.model_dump(),
-                                },
-                            ),
-                        )
-                    except ValidationError as e:
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "error",
-                                    "message": "Invalid subscription request",
-                                    "details": str(e),
-                                },
-                            ),
-                        )
-
-                else:
-                    logger.warning(
-                        "Unknown message type for agent status: %s", message_type
-                    )
-
-            except WebSocketDisconnect:
-                logger.info(
-                    "Agent status WebSocket disconnected: connection_id=%s",
-                    connection_id,
-                )
-                break
-            except json.JSONDecodeError:
-                logger.exception(
-                    "Invalid JSON received from agent status connection %s",
-                    connection_id,
-                )
-            except Exception:
-                logger.exception(
-                    "Error handling agent status message from connection %s",
-                    connection_id,
-                )
-
-    except Exception:
+    except Exception as exc:  # pylint: disable=broad-except
         logger.exception("Agent status WebSocket error")
+        if ctx is not None:
+            await _send_error_event(ctx, "websocket_error", str(exc))
 
     finally:
-        # Clean up connection
         if connection_id:
             await websocket_manager.disconnect_connection(connection_id)
 
 
 async def handle_chat_message(
-    connection_id: str,
-    user_id: UUID,
-    session_id: UUID,
-    message_data: dict,
-    chat_service: CoreChatService,
-    chat_agent: ChatAgent,
+    ctx: MessageContext, message_data: dict[str, Any]
 ) -> None:
-    """Handle incoming chat message and stream response.
+    """Handle incoming chat message and stream agent response."""
+    if ctx.chat_service is None or ctx.chat_agent is None:
+        raise ValueError("Chat dependencies unavailable")
 
-    Args:
-        connection_id: WebSocket connection ID
-        user_id: User ID
-        session_id: Chat session ID
-        message_data: Message data from client
-        chat_service: CoreChatService instance
-        chat_agent: Chat agent instance
-    """
+    if ctx.user_id is None or ctx.session_id is None:
+        await _send_error_event(
+            ctx,
+            "chat_context_missing",
+            "User or session not established",
+        )
+        return
+
+    chat_service = ctx.chat_service
+    chat_agent = ctx.chat_agent
+    user_id = ctx.user_id
+    session_id = ctx.session_id
+
     try:
-        # Extract and sanitize message content
         content = message_data.get("content", "")
         if not content:
-            error_event = ErrorEvent(
-                error_code="empty_message",
-                error_message="Message content cannot be empty",
-                user_id=user_id,
-                session_id=session_id,
+            await _send_error_event(
+                ctx,
+                "empty_message",
+                "Message content cannot be empty",
             )
-            await websocket_manager.send_to_connection(connection_id, error_event)
             return
 
-        # Sanitize content to prevent XSS and injection attacks
         sanitized_content = WebSocketMessageValidator.sanitize_message_content(content)
 
-        # Create user message with sanitized content
         user_message = WebSocketMessage(
-            role="user",
+            role=ChatMessageRole.USER,
             content=sanitized_content,
-            session_id=session_id,
-            user_id=user_id,
+            tool_calls=None,
+            timestamp=None,
+            metadata=None,
         )
 
-        # Send user message event
         user_message_event = ChatMessageEvent(
+            type=WebSocketEventType.CHAT_MESSAGE,
             message=user_message,
             user_id=user_id,
             session_id=session_id,
         )
         await websocket_manager.send_to_session(session_id, user_message_event)
 
-        # Store user message in database with sanitized content
         user_message_request = MessageCreateRequest(
-            role=MessageRole.USER,
+            role=ChatMessageRole.USER.value,
             content=sanitized_content,
+            metadata=None,
+            tool_calls=None,
         )
         await chat_service.add_message(
             session_id=str(session_id),
@@ -1023,96 +846,93 @@ async def handle_chat_message(
             message_data=user_message_request,
         )
 
-        # Get available tools for this user (simplified for now)
-        available_tools = [
-            "time_tools",
-            "weather_tools",
-            "googlemaps_tools",
-            "webcrawl_tools",
-            "memory_tools",
-            "flight_tools",
-            "accommodations_tools",
-            "planning_tools",
-        ]
-
-        # Build context for agent
         context = {
             "user_id": str(user_id),
             "session_id": str(session_id),
-            "available_tools": available_tools,
+            "available_tools": [
+                "time_tools",
+                "weather_tools",
+                "googlemaps_tools",
+                "webcrawl_tools",
+                "memory_tools",
+                "flight_tools",
+                "accommodations_tools",
+                "planning_tools",
+            ],
             "tool_calling_enabled": True,
             "websocket_mode": True,
         }
 
-        # Stream agent response
         full_content = ""
-        chunk_index = 0
 
-        # Send typing indicator
-        typing_event = ChatMessageChunkEvent(
-            content="",
-            chunk_index=0,
-            is_final=False,
+        typing_start_event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_TYPING_START,
             user_id=user_id,
             session_id=session_id,
+            connection_id=ctx.connection_id,
         )
-        typing_event.type = WebSocketEventType.CHAT_TYPING_START
-        await websocket_manager.send_to_session(session_id, typing_event)
+        await websocket_manager.send_to_session(session_id, typing_start_event)
 
-        # Get agent response (this will be streaming in the future)
-        response = await chat_agent.run(content, context)
+        response = await chat_agent.run(
+            sanitized_content,
+            user_id=str(user_id),
+            session_id=str(session_id),
+            context=context,
+        )
         response_content = response.get("content", "")
 
-        # Send stop typing indicator
-        typing_event.type = WebSocketEventType.CHAT_TYPING_STOP
-        await websocket_manager.send_to_session(session_id, typing_event)
+        typing_stop_event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_TYPING_STOP,
+            user_id=user_id,
+            session_id=session_id,
+            connection_id=ctx.connection_id,
+        )
+        await websocket_manager.send_to_session(session_id, typing_stop_event)
 
-        # Simulate streaming by splitting response into chunks
         words = response_content.split()
-        chunk_size = 3  # Send 3 words at a time
+        chunk_size = 3
 
-        for i in range(0, len(words), chunk_size):
+        for chunk_index, i in enumerate(range(0, len(words), chunk_size)):
             chunk = " ".join(words[i : i + chunk_size])
             if i + chunk_size < len(words):
                 chunk += " "
 
             full_content += chunk
 
-            # Send chunk event
             chunk_event = ChatMessageChunkEvent(
+                type=WebSocketEventType.CHAT_TYPING,
                 content=chunk,
                 chunk_index=chunk_index,
                 is_final=(i + chunk_size >= len(words)),
                 user_id=user_id,
                 session_id=session_id,
+                connection_id=ctx.connection_id,
             )
             await websocket_manager.send_to_session(session_id, chunk_event)
 
-            chunk_index += 1
-
-            # Small delay to simulate streaming
             await asyncio.sleep(0.05)
 
-        # Send final complete message event
         assistant_message = WebSocketMessage(
-            role="assistant",
+            role=ChatMessageRole.ASSISTANT,
             content=full_content,
-            session_id=session_id,
-            user_id=user_id,
+            tool_calls=None,
+            timestamp=None,
+            metadata=None,
         )
 
         complete_message_event = ChatMessageEvent(
+            type=WebSocketEventType.CHAT_MESSAGE_COMPLETE,
             message=assistant_message,
             user_id=user_id,
             session_id=session_id,
         )
-        complete_message_event.type = WebSocketEventType.CHAT_MESSAGE_COMPLETE
         await websocket_manager.send_to_session(session_id, complete_message_event)
 
-        # Store assistant message in database
         assistant_message_request = MessageCreateRequest(
-            role=MessageRole.ASSISTANT,
+            role=ChatMessageRole.ASSISTANT.value,
             content=full_content,
+            metadata=None,
+            tool_calls=None,
         )
         await chat_service.add_message(
             session_id=str(session_id),
@@ -1120,18 +940,11 @@ async def handle_chat_message(
             message_data=assistant_message_request,
         )
 
-    except Exception as e:
+    except Exception as exc:  # pylint: disable=broad-except
         logger.exception("Error handling chat message")
-        error_event = ErrorEvent(
-            error_code="chat_error",
-            error_message=str(e),
-            user_id=user_id,
-            session_id=session_id,
-        )
-        await websocket_manager.send_to_connection(connection_id, error_event)
+        await _send_error_event(ctx, "chat_error", str(exc))
 
 
-# Health check endpoint for WebSocket service
 @router.get("/ws/health")
 async def websocket_health():
     """WebSocket service health check endpoint.
@@ -1143,42 +956,28 @@ async def websocket_health():
 
     return {
         "status": "healthy",
-        "websocket_manager_running": websocket_manager._running,
+        "websocket_manager_running": getattr(websocket_manager, "_running", False),
         "connection_stats": stats,
-        "timestamp": "2024-01-01T00:00:00Z",  # This would be current timestamp
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
 # WebSocket connection management endpoints
 @router.get("/ws/connections")
 async def list_websocket_connections():
-    """List active WebSocket connections (admin only).
-
-    Returns:
-        List of active connections with their information
-    """
+    """List active WebSocket connections (admin only)."""
     # This would typically require admin authentication
     connections = [
-        connection.get_info().model_dump()
+        serialize_connection(connection)
         for connection in websocket_manager.connections.values()
     ]
 
-    return {
-        "connections": connections,
-        "total_count": len(connections),
-    }
+    return {"connections": connections, "total_count": len(connections)}
 
 
 @router.delete("/ws/connections/{connection_id}")
 async def disconnect_websocket_connection(connection_id: str):
-    """Disconnect a specific WebSocket connection (admin only).
-
-    Args:
-        connection_id: Connection ID to disconnect
-
-    Returns:
-        Success message
-    """
+    """Disconnect a specific WebSocket connection (admin only)."""
     # This would typically require admin authentication
     await websocket_manager.disconnect_connection(connection_id)
 
