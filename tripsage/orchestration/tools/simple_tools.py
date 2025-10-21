@@ -11,6 +11,11 @@ from typing import Any
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
+from tripsage.tools.memory_tools import (
+    add_conversation_memory as _add_conversation_memory,
+    search_user_memories as _search_user_memories,
+)
+from tripsage.tools.models import ConversationMessage
 from tripsage_core.services.simple_mcp_service import mcp_manager
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -77,9 +82,7 @@ async def search_flights(
     passengers: int = 1,
     class_preference: str = "economy",
 ) -> str:
-    """Search for flights between locations with filters for dates, passengers,
-    and preferences.
-    """
+    """Search for flights with date and passenger filters."""
     try:
         result = await mcp_manager.invoke(
             method_name="search_flights",
@@ -108,9 +111,7 @@ async def search_accommodations(
     price_min: float | None = None,
     price_max: float | None = None,
 ) -> str:
-    """Search for accommodations in a location with check-in/out dates and
-    guest requirements.
-    """
+    """Search accommodations by location and dates."""
     try:
         params = {
             "location": location,
@@ -179,11 +180,21 @@ async def web_search(query: str, location: str | None = None) -> str:
 async def add_memory(content: str, category: str | None = None) -> str:
     """Save important information to user memory for future reference."""
     try:
-        params = {"content": content}
+        # Persist a simple note as a conversation memory for the current thread.
+        # User identity should be supplied via graph config in production. For now,
+        # we use a system user to record general notes when no principal is bound.
+        messages = [
+            ConversationMessage(
+                role="system", content="Persist important user-facing note."
+            ),
+            ConversationMessage(role="user", content=content),
+        ]
+        meta = {"type": "note"}
         if category:
-            params["category"] = category
-
-        result = await mcp_manager.invoke(method_name="add_memory", params=params)
+            meta["category"] = category
+        result = await _add_conversation_memory(
+            messages=messages, user_id="system", metadata=meta
+        )
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
@@ -195,13 +206,18 @@ async def add_memory(content: str, category: str | None = None) -> str:
 async def search_memories(content: str, category: str | None = None) -> str:
     """Search user memories for relevant information."""
     try:
-        params = {"query": content}
-        if category:
-            params["category"] = category
+        from tripsage.tools.models import (
+            MemorySearchQuery,
+        )  # local import to avoid cycles
 
-        result = await mcp_manager.invoke(method_name="search_memories", params=params)
-
-        return json.dumps(result, ensure_ascii=False)
+        query = MemorySearchQuery(
+            query=content,
+            user_id="system",
+            limit=10,
+            category_filter=category,
+        )
+        results = await _search_user_memories(query)
+        return json.dumps({"results": results, "query": content}, ensure_ascii=False)
     except Exception as e:
         logger.exception("Memory search failed")
         return json.dumps({"error": f"Memory search failed: {e!s}"})
@@ -282,7 +298,7 @@ async def health_check() -> dict[str, Any]:
         # Test basic MCP connectivity
         await mcp_manager.invoke("health_check", {})
         healthy.append("mcp_manager")
-    except Exception as e:
+    except (ConnectionError, TimeoutError, ValueError) as e:
         unhealthy.append({"service": "mcp_manager", "error": str(e)})
 
     return {

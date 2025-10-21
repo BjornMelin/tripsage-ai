@@ -38,6 +38,7 @@ from tripsage_core.services.infrastructure import (
     WebSocketBroadcaster,
     WebSocketManager,
 )
+from tripsage_core.services.simple_mcp_service import SimpleMCPService
 
 
 if TYPE_CHECKING:
@@ -87,6 +88,7 @@ class ServiceRegistry:
         checkpoint_manager: SupabaseCheckpointManager | None = None,
         memory_bridge: SessionMemoryBridge | None = None,
         mcp_bridge: LangGraphMCPBridge | None = None,
+        mcp_service: SimpleMCPService | None = None,
     ):
         """Initialize the service registry with optional service instances.
 
@@ -123,6 +125,7 @@ class ServiceRegistry:
         self.checkpoint_manager = checkpoint_manager
         self.memory_bridge = memory_bridge
         self.mcp_bridge = mcp_bridge
+        self.mcp_service = mcp_service
 
     @classmethod
     async def create_default(cls, db_service: DatabaseService) -> ServiceRegistry:
@@ -159,6 +162,7 @@ class ServiceRegistry:
             db=db_service, cache=cache_service, settings=settings
         )
         memory_service = MemoryService(database_service=db_service)
+        await memory_service.connect()
         chat_service = ChatService(database_service=db_service)
         file_processing_service = FileProcessingService(
             database_service=db_service, ai_analysis_service=document_analyzer
@@ -188,7 +192,8 @@ class ServiceRegistry:
 
         checkpoint_manager = SupabaseCheckpointManager()
         memory_bridge = SessionMemoryBridge(memory_service=memory_service)
-        mcp_bridge = LangGraphMCPBridge()
+        mcp_service = SimpleMCPService()
+        mcp_bridge = LangGraphMCPBridge(mcp_manager=mcp_service)
         await mcp_bridge.initialize()
 
         return cls(
@@ -220,6 +225,7 @@ class ServiceRegistry:
             checkpoint_manager=checkpoint_manager,
             memory_bridge=memory_bridge,
             mcp_bridge=mcp_bridge,
+            mcp_service=mcp_service,
         )
 
     def get_required_service(
@@ -252,28 +258,25 @@ class ServiceRegistry:
         return cast(ServiceT, service)
 
     def get_checkpoint_manager(self) -> SupabaseCheckpointManager:
-        """Return a shared checkpoint manager instance."""
-        from tripsage.orchestration.checkpoint_manager import SupabaseCheckpointManager
-
+        """Return the shared checkpoint manager instance."""
         if self.checkpoint_manager is None:
-            self.checkpoint_manager = SupabaseCheckpointManager()
+            raise ValueError(
+                "Checkpoint manager is not configured on the service registry."
+            )
         return self.checkpoint_manager
 
     def get_memory_bridge(self) -> SessionMemoryBridge:
         """Return the session memory bridge."""
-        from tripsage.orchestration.memory_bridge import SessionMemoryBridge
-
         if self.memory_bridge is None:
-            self.memory_bridge = SessionMemoryBridge(memory_service=self.memory_service)
+            raise ValueError("Memory bridge is not configured on the service registry.")
         return self.memory_bridge
 
     async def get_mcp_bridge(self) -> LangGraphMCPBridge:
         """Return the LangGraph MCP bridge, ensuring it is initialized."""
-        from tripsage.orchestration.mcp_bridge import LangGraphMCPBridge
-
         if self.mcp_bridge is None:
-            self.mcp_bridge = LangGraphMCPBridge()
-        await self.mcp_bridge.initialize()
+            raise ValueError("MCP bridge is not configured on the service registry.")
+        if not self.mcp_bridge.is_initialized:
+            await self.mcp_bridge.initialize()
         return self.mcp_bridge
 
     def get_optional_service(
