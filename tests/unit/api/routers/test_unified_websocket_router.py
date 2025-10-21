@@ -4,6 +4,7 @@ This module tests the updated WebSocket router that integrates with
 both unified services and existing core services.
 """
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -13,6 +14,7 @@ from fastapi.testclient import TestClient
 
 from tripsage.api.routers.websocket import router
 from tripsage_core.services.business.chat_service import ChatService as CoreChatService
+from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
 class TestWebSocketRouterEndpoints:
@@ -75,12 +77,10 @@ class TestWebSocketDependencyInjection:
     @pytest.mark.asyncio
     async def test_get_core_chat_service_creates_instance(self):
         """Test that get_core_chat_service creates CoreChatService with dependency."""
-        from sqlalchemy.ext.asyncio import AsyncSession
-
         from tripsage.api.routers.websocket import get_core_chat_service
 
         # Create mock database session
-        mock_db_session = MagicMock(spec=AsyncSession)
+        mock_db_session = MagicMock(spec=DatabaseService)
 
         # Call the dependency function
         with patch(
@@ -99,26 +99,21 @@ class TestWebSocketDependencyInjection:
         """Test that WebSocket chat endpoint has proper dependency injection."""
         import inspect
 
-        from sqlalchemy.ext.asyncio import AsyncSession
-
         from tripsage.api.routers.websocket import chat_websocket
 
         sig = inspect.signature(chat_websocket)
 
         # Verify required parameters exist
-        required_params = ["websocket", "session_id", "db", "chat_service"]
+        required_params = ["websocket", "session_id", "chat_service"]
         for param in required_params:
             assert param in sig.parameters, f"Missing parameter: {param}"
 
         # Verify dependency injection parameters have correct types
-        db_param = sig.parameters["db"]
         chat_service_param = sig.parameters["chat_service"]
 
-        assert db_param.annotation == AsyncSession
         assert chat_service_param.annotation == CoreChatService
 
-        # Verify they have Depends() defaults
-        assert db_param.default is not None
+        # Verify dependency injection parameter has default Depends
         assert chat_service_param.default is not None
 
 
@@ -234,30 +229,32 @@ class TestWebSocketManagerIntegration:
 
     def test_websocket_connections_endpoint_structure(self):
         """Test WebSocket connections endpoint structure."""
-        from fastapi import FastAPI
-        from fastapi.testclient import TestClient
-
-        from tripsage.api.routers.websocket import router
-
-        # Create test app
-        app = FastAPI()
+        app = FastAPI()  # Create test app
         app.include_router(router)
 
         with patch("tripsage.api.routers.websocket.websocket_manager") as mock_manager:
             # Mock connections
             mock_connection1 = MagicMock()
-            mock_connection1.get_info.return_value.model_dump.return_value = {
-                "connection_id": "conn1",
-                "user_id": "user1",
-                "status": "connected",
-            }
+            mock_connection1.connection_id = "conn1"
+            mock_connection1.user_id = "user1"
+            mock_connection1.session_id = None
+            mock_connection1.state = MagicMock(value="connected")
+            mock_connection1.connected_at = datetime.now(UTC)
+            mock_connection1.last_heartbeat = datetime.now(UTC)
+            mock_connection1.subscribed_channels = {"chat"}
+            mock_connection1.client_ip = "127.0.0.1"
+            mock_connection1.user_agent = "pytest"
 
             mock_connection2 = MagicMock()
-            mock_connection2.get_info.return_value.model_dump.return_value = {
-                "connection_id": "conn2",
-                "user_id": "user2",
-                "status": "connected",
-            }
+            mock_connection2.connection_id = "conn2"
+            mock_connection2.user_id = "user2"
+            mock_connection2.session_id = None
+            mock_connection2.state = MagicMock(value="connected")
+            mock_connection2.connected_at = datetime.now(UTC)
+            mock_connection2.last_heartbeat = datetime.now(UTC)
+            mock_connection2.subscribed_channels = {"agent_status"}
+            mock_connection2.client_ip = "127.0.0.2"
+            mock_connection2.user_agent = "pytest"
 
             mock_manager.connections = {
                 "conn1": mock_connection1,
@@ -283,11 +280,10 @@ class TestWebSocketCoreServiceIntegration:
     def test_websocket_imports_core_services_correctly(self):
         """Test that WebSocket router properly imports core services."""
         # Verify CoreChatService import
-        from tripsage.api.routers.websocket import CoreChatService
-        from tripsage_core.services.business.chat_service import ChatService
+        from tripsage.api.routers.websocket import CoreChatService as RouterChatService
 
-        assert CoreChatService is not None
-        assert CoreChatService == ChatService
+        assert RouterChatService is not None
+        assert RouterChatService == CoreChatService
 
         # Verify model imports
         from tripsage.api.routers.websocket import MessageCreateRequest, MessageRole
@@ -296,13 +292,15 @@ class TestWebSocketCoreServiceIntegration:
         assert MessageRole is not None
 
         # Verify they're from the core service module
+        from tripsage_core.models.schemas_common.chat import (
+            MessageRole as ChatMessageRole,
+        )
         from tripsage_core.services.business.chat_service import (
             MessageCreateRequest as CoreMessageCreateRequest,
-            MessageRole as CoreMessageRole,
         )
 
         assert MessageCreateRequest == CoreMessageCreateRequest
-        assert MessageRole == CoreMessageRole
+        assert MessageRole == ChatMessageRole
 
     def test_websocket_uses_unified_chat_service_alongside_core(self):
         """Test that WebSocket router uses unified ChatService alongside core."""

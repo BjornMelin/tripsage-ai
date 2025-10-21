@@ -612,8 +612,7 @@ class ChatService:
                     },
                 )
                 return updated_tool_call
-            else:
-                return None
+            return None
 
         except RECOVERABLE_ERRORS as error:
             logger.exception(
@@ -647,14 +646,7 @@ class ChatService:
         return content.strip()
 
     def _validate_metadata(self, metadata: Any) -> dict[str, Any]:
-        """Validate and normalize metadata.
-
-        Args:
-            metadata: Raw metadata
-
-        Returns:
-            Validated metadata dictionary
-        """
+        """Validate and normalize metadata."""
         if metadata is None:
             return {}
 
@@ -672,14 +664,7 @@ class ChatService:
         return cleaned
 
     def _estimate_tokens(self, content: str) -> int:
-        """Estimate token count for content.
-
-        Args:
-            content: Text content
-
-        Returns:
-            Estimated token count
-        """
+        """Estimate token count for content."""
         if not content:
             return 0
         return max(1, len(content) // self.chars_per_token)
@@ -1051,11 +1036,7 @@ class ChatService:
 
 # Dependency function for FastAPI
 async def get_chat_service() -> ChatService:
-    """Get chat service instance for dependency injection.
-
-    Returns:
-        ChatService instance
-    """
+    """Get chat service instance for dependency injection."""
     from tripsage_core.services.infrastructure import get_database_service
 
     db = await get_database_service()
