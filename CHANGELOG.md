@@ -13,11 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional Duffel auto‑wiring in `get_flight_service()` when `DUFFEL_ACCESS_TOKEN` (or legacy `DUFFEL_API_TOKEN`) is present.
 - Unit tests: provider (no‑network) and FlightService+provider mapping/booking paths; deterministic and isolated.
 - ADR-0012 documenting canonical flights DTOs and provider convergence.
+- Dashboard regression coverages: async unit tests for `DashboardService`, refreshed HTTP router tests,
+  and an integration harness exercising the new schema.
 
 ### Changed
 
 - Flight agent result formatting updated to use canonical offer fields (airlines, outbound_segments, currency/price).
 - Documentation (developers/operators/architecture) updated to “Duffel API v2 via thin provider,” headers and env var usage modernized, and examples aligned to canonical mapping.
+- Dashboard analytics stack simplified: `DashboardService` emits only modern dataclasses, FastAPI routers consume the `metrics/services/top_users`
+  schema directly, and rate limiting now tolerates missing infrastructure dependencies.
 
 ### Deprecated
 
@@ -26,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Legacy Duffel adapter (`tripsage_core/services/external_apis/flights_service.py`).
 - Duplicate flight DTO module (`tripsage_core/models/api/flights_models.py`) and its re‑exports.
 - Obsolete integration test referencing the removed HTTP client (`tests/integration/external/test_duffel_integration.py`).
+- Dashboard compatibility shims (legacy `DashboardData` fields, `ApiKeyValidator`/`ApiKeyMonitoringService` aliases) and the unused flights mapper module (`tripsage_core/models/mappers`).
 
 ### Fixed
 
