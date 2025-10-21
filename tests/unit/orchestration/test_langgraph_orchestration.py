@@ -4,9 +4,10 @@ Tests the modern LangGraph-based agent orchestration with proper state managemen
 node implementations, and tool integration following latest best practices.
 """
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+from langgraph.checkpoint.memory import MemorySaver
 
 from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.graph import TripSageOrchestrator
@@ -140,13 +141,18 @@ class TestTripSageOrchestrator:
         registry.memory_service = Mock()
         registry.auth_service = Mock()
         registry.user_service = Mock()
+        registry.get_memory_bridge.return_value = MagicMock()
+        checkpoint_manager = Mock()
+        checkpoint_manager.get_async_checkpointer = AsyncMock(
+            return_value=MemorySaver()
+        )
+        registry.get_checkpoint_manager.return_value = checkpoint_manager
         return registry
 
     @pytest.fixture
     def orchestrator(self, mock_service_registry):
         """Create orchestrator with mocked dependencies."""
         with (
-            patch("tripsage.orchestration.graph.get_memory_bridge"),
             patch("tripsage.orchestration.graph.get_handoff_coordinator"),
             patch("tripsage.orchestration.graph.get_default_config"),
         ):

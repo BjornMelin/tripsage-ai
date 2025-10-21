@@ -19,18 +19,10 @@ class TestCheckpointManager:
         return settings
 
     def test_imports(self):
-        """Test that checkpoint manager and accessors can be imported."""
-        from tripsage.orchestration.checkpoint_manager import (
-            SupabaseCheckpointManager,
-            get_async_checkpointer,
-            get_checkpoint_manager,
-            get_sync_checkpointer,
-        )
+        """Checkpoint manager exports should be importable."""
+        from tripsage.orchestration.checkpoint_manager import SupabaseCheckpointManager
 
         assert SupabaseCheckpointManager is not None
-        assert callable(get_checkpoint_manager)
-        assert callable(get_async_checkpointer)
-        assert callable(get_sync_checkpointer)
 
     def test_build_connection_string_supabase(self, mock_settings):
         """Test building connection string from Supabase URL."""
@@ -151,11 +143,33 @@ class TestCheckpointManager:
         assert config.pool_size == 50
         assert config.enable_stats is False
 
-    def test_global_checkpoint_manager_singleton(self):
-        """Test global checkpoint manager is a singleton."""
-        from tripsage.orchestration.checkpoint_manager import get_checkpoint_manager
+    def test_service_registry_checkpoint_singleton(self):
+        """ServiceRegistry should manage checkpoint manager lifecycle."""
+        from tripsage.agents.service_registry import ServiceRegistry
 
-        manager1 = get_checkpoint_manager()
-        manager2 = get_checkpoint_manager()
+        registry = ServiceRegistry()
+        manager1 = registry.get_checkpoint_manager()
+        manager2 = registry.get_checkpoint_manager()
 
         assert manager1 is manager2
+
+    def test_service_registry_memory_bridge_singleton(self):
+        """Verify ServiceRegistry memoizes the session memory bridge."""
+        from tripsage.agents.service_registry import ServiceRegistry
+
+        registry = ServiceRegistry(memory_bridge=None)
+        bridge1 = registry.get_memory_bridge()
+        bridge2 = registry.get_memory_bridge()
+
+        assert bridge1 is bridge2
+
+    @pytest.mark.asyncio
+    async def test_service_registry_mcp_bridge_singleton(self):
+        """Verify ServiceRegistry memoizes the MCP bridge."""
+        from tripsage.agents.service_registry import ServiceRegistry
+
+        registry = ServiceRegistry()
+        bridge1 = await registry.get_mcp_bridge()
+        bridge2 = await registry.get_mcp_bridge()
+
+        assert bridge1 is bridge2

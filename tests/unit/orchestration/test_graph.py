@@ -20,13 +20,19 @@ class TestTripSageOrchestrator:
     @pytest.fixture
     def mock_service_registry(self):
         """Create a mock service registry."""
-        return Mock(spec=ServiceRegistry)
+        registry = Mock(spec=ServiceRegistry)
+        registry.get_memory_bridge.return_value = MagicMock()
+        checkpoint_manager = MagicMock()
+        checkpoint_manager.get_async_checkpointer = AsyncMock(
+            return_value=MemorySaver()
+        )
+        registry.get_checkpoint_manager.return_value = checkpoint_manager
+        return registry
 
     @pytest.fixture
     def orchestrator(self, mock_service_registry):
         """Create an orchestrator instance for testing."""
         with (
-            patch("tripsage.orchestration.graph.get_memory_bridge"),
             patch("tripsage.orchestration.graph.get_handoff_coordinator"),
             patch("tripsage.orchestration.graph.get_default_config"),
         ):
@@ -332,39 +338,39 @@ class TestTripSageOrchestratorEnhanced:
             return_value={"listings": [], "status": "success"}
         )
 
-        registry.get_required_service = MagicMock(
-            side_effect=lambda name: services.get(name)
+        registry.get_required_service = MagicMock(side_effect=services.get)
+        registry.get_optional_service = MagicMock(side_effect=services.get)
+        memory_bridge = MagicMock()
+
+        def hydrate_identity(state):  # type: ignore
+            return state
+
+        memory_bridge.hydrate_state = AsyncMock(side_effect=hydrate_identity)
+        memory_bridge.extract_and_persist_insights = AsyncMock(
+            return_value={"insights": "test"}
         )
-        registry.get_optional_service = MagicMock(
-            side_effect=lambda name: services.get(name)
+        registry.get_memory_bridge.return_value = memory_bridge
+        checkpoint_manager = MagicMock()
+        checkpoint_manager.get_async_checkpointer = AsyncMock(
+            return_value=MemorySaver()
         )
+        registry.get_checkpoint_manager.return_value = checkpoint_manager
 
         return registry
 
     @pytest.fixture
     def enhanced_orchestrator(self, comprehensive_mock_registry):
         """Create an enhanced orchestrator with full mocking."""
-        with patch("tripsage.orchestration.graph.get_memory_bridge") as mock_bridge:
-            with patch(
-                "tripsage.orchestration.graph.get_handoff_coordinator"
-            ) as mock_coord:
-                with patch("tripsage.orchestration.graph.get_default_config"):
-                    # Configure mocks
-                    mock_bridge.return_value.hydrate_state = AsyncMock(
-                        side_effect=lambda state: state
-                    )
-                    mock_bridge.return_value.extract_and_persist_insights = AsyncMock(
-                        return_value={"insights": "test"}
-                    )
+        with (
+            patch("tripsage.orchestration.graph.get_handoff_coordinator") as mock_coord,
+            patch("tripsage.orchestration.graph.get_default_config"),
+        ):
+            mock_coord.return_value.determine_next_agent = MagicMock(return_value=None)
 
-                    mock_coord.return_value.determine_next_agent = MagicMock(
-                        return_value=None
-                    )
-
-                    return TripSageOrchestrator(
-                        service_registry=comprehensive_mock_registry,
-                        checkpointer=MemorySaver(),
-                    )
+            return TripSageOrchestrator(
+                service_registry=comprehensive_mock_registry,
+                checkpointer=MemorySaver(),
+            )
 
     def test_all_agent_nodes_present(self, enhanced_orchestrator):
         """Test that all required agent nodes are present in the graph."""
@@ -406,7 +412,7 @@ class TestTripSageOrchestratorEnhanced:
         # Test with complex handoff scenario
         enhanced_orchestrator.handoff_coordinator.determine_next_agent.return_value = (
             "budget_agent",
-            MagicMock(model_dump=lambda: {"handoff": "context"}),
+            MagicMock(model_dump=MagicMock(return_value={"handoff": "context"})),
         )
 
         state = {
@@ -444,35 +450,33 @@ class TestTripSageOrchestratorEnhanced:
     async def test_postgres_checkpointer_initialization(self, enhanced_orchestrator):
         """Test PostgreSQL checkpointer initialization."""
         # Mock checkpoint manager
-        with patch("tripsage.orchestration.graph.get_checkpoint_manager") as mock_cm:
-            mock_async_checkpointer = AsyncMock()
-            mock_cm.return_value.get_async_checkpointer = AsyncMock(
-                return_value=mock_async_checkpointer
-            )
+        mock_async_checkpointer = AsyncMock()
+        enhanced_orchestrator.checkpoint_manager = MagicMock()
+        enhanced_orchestrator.checkpoint_manager.get_async_checkpointer = AsyncMock(
+            return_value=mock_async_checkpointer
+        )
 
-            # Reset to use PostgreSQL
-            enhanced_orchestrator.checkpointer = None
-            enhanced_orchestrator._initialized = False
+        enhanced_orchestrator.checkpointer = None
+        enhanced_orchestrator._initialized = False
 
-            await enhanced_orchestrator.initialize()
+        await enhanced_orchestrator.initialize()
 
-            assert enhanced_orchestrator.checkpointer == mock_async_checkpointer
-            mock_cm.assert_called_once()
+        assert enhanced_orchestrator.checkpointer == mock_async_checkpointer
 
     @pytest.mark.asyncio
     async def test_postgres_checkpointer_fallback(self, enhanced_orchestrator):
         """Test fallback to MemorySaver when PostgreSQL fails."""
-        with patch("tripsage.orchestration.graph.get_checkpoint_manager") as mock_cm:
-            mock_cm.return_value.get_async_checkpointer = AsyncMock(
-                side_effect=Exception("PostgreSQL connection failed")
-            )
+        enhanced_orchestrator.checkpoint_manager = MagicMock()
+        enhanced_orchestrator.checkpoint_manager.get_async_checkpointer = AsyncMock(
+            side_effect=Exception("PostgreSQL connection failed")
+        )
 
-            enhanced_orchestrator.checkpointer = None
-            enhanced_orchestrator._initialized = False
+        enhanced_orchestrator.checkpointer = None
+        enhanced_orchestrator._initialized = False
 
-            await enhanced_orchestrator.initialize()
+        await enhanced_orchestrator.initialize()
 
-            assert isinstance(enhanced_orchestrator.checkpointer, MemorySaver)
+        assert isinstance(enhanced_orchestrator.checkpointer, MemorySaver)
 
     @pytest.mark.asyncio
     async def test_process_message_with_empty_response(self, enhanced_orchestrator):
@@ -580,22 +584,24 @@ class TestTripSageOrchestratorEnhanced:
         """Test orchestrator with custom configuration."""
         custom_config = {"max_retries": 5, "timeout": 30, "debug": True}
 
-        with patch("tripsage.orchestration.graph.get_memory_bridge"):
-            with patch("tripsage.orchestration.graph.get_handoff_coordinator"):
-                with patch("tripsage.orchestration.graph.get_default_config"):
-                    # Create a mock service registry
-                    from tripsage.agents.service_registry import ServiceRegistry
+        with (
+            patch("tripsage.orchestration.graph.get_handoff_coordinator"),
+            patch("tripsage.orchestration.graph.get_default_config"),
+        ):
+            mock_registry = MagicMock(spec=ServiceRegistry)
+            mock_registry.get_required_service = MagicMock(return_value=MagicMock())
+            mock_registry.get_memory_bridge.return_value = MagicMock()
+            checkpoint_manager = MagicMock()
+            checkpoint_manager.get_async_checkpointer = AsyncMock(
+                return_value=MemorySaver()
+            )
+            mock_registry.get_checkpoint_manager.return_value = checkpoint_manager
 
-                    mock_registry = MagicMock(spec=ServiceRegistry)
-                    mock_registry.get_required_service = MagicMock(
-                        return_value=MagicMock()
-                    )
+            orchestrator = TripSageOrchestrator(
+                config=custom_config, service_registry=mock_registry
+            )
 
-                    orchestrator = TripSageOrchestrator(
-                        config=custom_config, service_registry=mock_registry
-                    )
-
-                    assert orchestrator.config == custom_config
+            assert orchestrator.config == custom_config
 
     @pytest.mark.asyncio
     async def test_session_state_with_complex_data(self, enhanced_orchestrator):
