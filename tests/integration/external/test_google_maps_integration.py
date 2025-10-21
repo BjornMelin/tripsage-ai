@@ -115,8 +115,8 @@ class TestGoogleMapsIntegration:
                         }
                     ],
                     "weekday_text": [
-                        "Monday: 9:30 AM – 11:45 PM",
-                        "Tuesday: 9:30 AM – 11:45 PM",
+                        "Monday: 9:30 AM - 11:45 PM",
+                        "Tuesday: 9:30 AM - 11:45 PM",
                     ],
                 },
                 "photos": [

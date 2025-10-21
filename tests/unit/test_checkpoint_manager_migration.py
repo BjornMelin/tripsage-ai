@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from tripsage.orchestration.mcp_bridge import LangGraphMCPBridge
 from tripsage_core.utils.connection_utils import DatabaseURLParsingError
 
 
@@ -147,7 +148,8 @@ class TestCheckpointManager:
         """ServiceRegistry should manage checkpoint manager lifecycle."""
         from tripsage.agents.service_registry import ServiceRegistry
 
-        registry = ServiceRegistry()
+        checkpoint_manager = MagicMock()
+        registry = ServiceRegistry(checkpoint_manager=checkpoint_manager)
         manager1 = registry.get_checkpoint_manager()
         manager2 = registry.get_checkpoint_manager()
 
@@ -157,19 +159,27 @@ class TestCheckpointManager:
         """Verify ServiceRegistry memoizes the session memory bridge."""
         from tripsage.agents.service_registry import ServiceRegistry
 
-        registry = ServiceRegistry(memory_bridge=None)
+        memory_bridge = MagicMock()
+        registry = ServiceRegistry(memory_bridge=memory_bridge)
         bridge1 = registry.get_memory_bridge()
         bridge2 = registry.get_memory_bridge()
 
         assert bridge1 is bridge2
+        with pytest.raises(ValueError):
+            ServiceRegistry().get_memory_bridge()
 
     @pytest.mark.asyncio
     async def test_service_registry_mcp_bridge_singleton(self):
         """Verify ServiceRegistry memoizes the MCP bridge."""
         from tripsage.agents.service_registry import ServiceRegistry
 
-        registry = ServiceRegistry()
+        bridge = MagicMock(spec=LangGraphMCPBridge)
+        bridge.is_initialized = True
+        bridge.initialize = AsyncMock()
+        registry = ServiceRegistry(mcp_bridge=bridge)
         bridge1 = await registry.get_mcp_bridge()
         bridge2 = await registry.get_mcp_bridge()
 
         assert bridge1 is bridge2
+        with pytest.raises(ValueError):
+            await ServiceRegistry().get_mcp_bridge()

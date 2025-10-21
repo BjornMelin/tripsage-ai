@@ -6,6 +6,7 @@ This module provides common fixtures and utilities used across all test suites.
 import asyncio
 import os
 import sys
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -13,13 +14,13 @@ import pytest
 
 # Load test environment variables FIRST
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 
 
 load_dotenv(".env.test", override=True)
 
 # Add the project root directory to the path so tests can import modules directly
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 
 # Set up test environment before any imports
@@ -83,16 +84,15 @@ def mock_mcp_manager():
     manager.load_configurations = Mock()
 
     # Create a side effect that returns different responses based on the MCP type
+    mcp_responses = {
+        "weather": {"temperature": 22.5, "conditions": "Sunny"},
+        "time": {"current_time": "2025-01-16T12:00:00Z", "timezone": "UTC"},
+        "googlemaps": {"latitude": 37.7749, "longitude": -122.4194},
+        "supabase": {"id": "123", "created_at": "2025-01-16T12:00:00Z"},
+    }
+
     def invoke_side_effect(mcp_name, method_name, params=None, **kwargs):
-        if mcp_name == "weather":
-            return {"temperature": 22.5, "conditions": "Sunny"}
-        elif mcp_name == "time":
-            return {"current_time": "2025-01-16T12:00:00Z", "timezone": "UTC"}
-        elif mcp_name == "googlemaps":
-            return {"latitude": 37.7749, "longitude": -122.4194}
-        elif mcp_name == "supabase":
-            return {"id": "123", "created_at": "2025-01-16T12:00:00Z"}
-        return {}
+        return mcp_responses.get(mcp_name, {})
 
     manager.invoke.side_effect = invoke_side_effect
 
@@ -243,9 +243,7 @@ def mock_web_operations_cache():
 
 @pytest.fixture(autouse=True)
 def mock_settings_and_redis(monkeypatch):
-    """Mock settings and Redis client to avoid actual connections and
-    validation errors.
-    """
+    """Mock settings + Redis client; avoids actual connections and validation errors."""
     # Set environment variables for testing
     monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
     monkeypatch.setenv("SUPABASE_ANON_KEY", "test_anon_key")
@@ -261,10 +259,9 @@ def mock_settings_and_redis(monkeypatch):
         environment="testing",
         debug=True,
         database_url="https://test.supabase.co",
-        database_public_key="test_anon_key",
-        database_service_key="test_service_key",
-        openai_api_key="test_openai_key",
-        _env_file=None,
+        database_public_key=SecretStr("test_anon_key"),
+        database_service_key=SecretStr("test_service_key"),
+        openai_api_key=SecretStr("test_openai_key"),
     )
 
     # Mock Redis client

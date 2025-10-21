@@ -35,7 +35,7 @@ class SessionMemoryBridge:
         """Get or create a MemoryService instance (lazy)."""
         if self._memory_service is None:
             self._memory_service = MemoryService()
-            await self._memory_service.connect()
+        await self._memory_service.connect()
         return self._memory_service
 
     async def hydrate_state(self, state: TravelPlanningState) -> TravelPlanningState:
@@ -196,9 +196,8 @@ class SessionMemoryBridge:
                 result = await svc.add_conversation_memory(user_id, payload)
                 logger.info("Successfully persisted insights for user %s", user_id)
                 return result
-            else:
-                logger.debug("No new insights to persist for user %s", user_id)
-                return {}
+            logger.debug("No new insights to persist for user %s", user_id)
+            return {}
 
         except Exception as e:
             logger.exception("Failed to persist insights for user %s", user_id)

@@ -17,6 +17,8 @@ from tripsage_core.models.schemas_common.geographic import Place as Destination
 
 
 class DestinationCategory(str, Enum):
+    """Destination category types."""
+
     CULTURE = "culture"
     NATURE = "nature"
     ADVENTURE = "adventure"
@@ -25,6 +27,8 @@ class DestinationCategory(str, Enum):
 
 
 class DestinationVisitSchedule(str, Enum):
+    """Destination visit time schedules."""
+
     MORNING = "morning"
     AFTERNOON = "afternoon"
     EVENING = "evening"

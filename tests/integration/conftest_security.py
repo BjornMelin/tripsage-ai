@@ -640,9 +640,10 @@ def security_mock_database_service() -> DatabaseService:
 
         # Block suspicious queries
         suspicious_patterns = ["drop table", "delete from", "truncate", "alter table"]
-        if any(pattern in query_lower for pattern in suspicious_patterns):
-            if not user_context or user_context != "admin":
-                raise PermissionError("Suspicious query blocked by security filter")
+        if any(pattern in query_lower for pattern in suspicious_patterns) and (
+            not user_context or user_context != "admin"
+        ):
+            raise PermissionError("Suspicious query blocked by security filter")
 
         # Return mock data based on query type
         if "select" in query_lower:
