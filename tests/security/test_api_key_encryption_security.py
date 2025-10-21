@@ -136,7 +136,7 @@ class TestApiKeyEncryptionSecurity:
             # Verify encrypted format is valid base64
             try:
                 base64.urlsafe_b64decode(encrypted.encode())
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 pytest.fail(f"Invalid base64 for {key_name}: {e}")
 
     def test_encryption_error_handling(self, api_key_service):
@@ -338,7 +338,7 @@ class TestApiKeyEncryptionSecurity:
         # Verify the encrypted format is valid base64url
         try:
             decoded = base64.urlsafe_b64decode(encrypted.encode())
-        except Exception:
+        except (ValueError, TypeError):
             pytest.fail("Encrypted key should be valid base64url")
 
         # Verify separator exists
@@ -369,7 +369,7 @@ class TestApiKeyEncryptionSecurity:
                 encrypted = api_key_service._encrypt_api_key(test_key)
                 decrypted = api_key_service._decrypt_api_key(encrypted)
                 results.append((encrypted, decrypted))
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 errors.append(e)
 
         # Run concurrent operations

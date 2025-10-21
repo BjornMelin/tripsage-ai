@@ -49,7 +49,7 @@ class MockAdapter(ServiceAdapter):
     def __init__(self, service_name="airbnb"):
         """Initialize adapter with a default service name."""
         super().__init__(service_name)
-        self.mcp_service = MockService()
+        self.mcp_manager = MockService()
         self.direct_service = MockService()
 
     async def get_service_instance(self):
@@ -58,13 +58,13 @@ class MockAdapter(ServiceAdapter):
             await self.direct_service.connect()
             return self.direct_service
         else:
-            await self.mcp_service.connect()
-            return self.mcp_service
+            await self.mcp_manager.connect()
+            return self.mcp_manager
 
     async def get_mcp_client(self):
         """Return a connected MCP client instance."""
-        await self.mcp_service.connect()
-        return self.mcp_service
+        await self.mcp_manager.connect()
+        return self.mcp_manager
 
     async def get_direct_service(self):
         """Return a connected direct service instance."""
@@ -106,7 +106,7 @@ class TestServiceRegistry:
         registry.register_service("test", mock_adapter)
         service = await registry.get_service("test")
 
-        assert service == mock_adapter.mcp_service
+        assert service == mock_adapter.mcp_manager
         assert service.connected
         assert "connect" in service.operations
 
@@ -145,7 +145,7 @@ class TestServiceRegistry:
 
         # Get initial service (MCP)
         service1 = await registry.get_service("test")
-        assert service1 == mock_adapter.mcp_service
+        assert service1 == mock_adapter.mcp_manager
 
         # Change mode
         feature_flags.set_integration_mode("airbnb", IntegrationMode.DIRECT)
