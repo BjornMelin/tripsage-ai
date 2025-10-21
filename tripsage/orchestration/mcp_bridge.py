@@ -1,20 +1,14 @@
-"""LangGraph-MCP Bridge Layer for Airbnb Integration.
+"""LangGraph-MCP bridge layer for Airbnb integration."""
 
-This module provides integration between LangGraph and the Airbnb MCP,
-allowing LangGraph agents to use Airbnb accommodation tools while
-maintaining compatibility with the simplified MCPManager architecture.
-"""
+# pylint: disable=import-error
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
-from langchain_core.tools import Tool, tool
+from langchain_core.tools import Tool
 from pydantic import BaseModel, Field
 
-from tripsage_core.services.simple_mcp_service import (
-    SimpleMCPService as MCPManager,
-    mcp_manager as global_mcp_manager,
-)
+from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
 
 
 logger = logging.getLogger(__name__)
@@ -38,10 +32,15 @@ class LangGraphMCPBridge:
 
     def __init__(self, mcp_manager: MCPManager | None = None):
         """Initialize the bridge with an MCPManager instance."""
-        self.mcp_manager = mcp_manager or global_mcp_manager
+        self.mcp_manager = mcp_manager or MCPManager()
         self._tool_cache: dict[str, Tool] = {}
         self._tool_metadata: dict[str, AirbnbToolWrapper] = {}
         self._initialized = False
+
+    @property
+    def is_initialized(self) -> bool:
+        """Return whether the bridge has completed initialization."""
+        return self._initialized
 
     async def initialize(self) -> None:
         """Initialize the bridge and load available Airbnb tools."""
@@ -52,7 +51,11 @@ class LangGraphMCPBridge:
 
         try:
             # Initialize the Airbnb MCP wrapper
-            await self.mcp_manager.initialize()
+            initialize_fn = getattr(
+                self.mcp_manager, "initialize_all_enabled", None
+            ) or getattr(self.mcp_manager, "initialize", None)
+            if initialize_fn is not None:
+                await initialize_fn()
 
             # Load Airbnb tool metadata
             await self._load_airbnb_tools()
@@ -207,10 +210,7 @@ class LangGraphMCPBridge:
                 )
 
                 # Convert result to string for LangGraph compatibility
-                if isinstance(result, (dict, list)):
-                    return str(result)
-                else:
-                    return str(result)
+                return str(result)
 
             except Exception as e:
                 logger.exception("Airbnb tool %s failed", metadata.name)
@@ -263,7 +263,7 @@ class LangGraphMCPBridge:
                     annotations[param_name] = field_type
                     field_defaults[param_name] = Field(description=param_desc)
                 else:
-                    annotations[param_name] = Optional[field_type]
+                    annotations[param_name] = field_type | None
                     field_defaults[param_name] = Field(
                         default=None, description=param_desc
                     )
@@ -311,54 +311,3 @@ class LangGraphMCPBridge:
         self._tool_metadata.clear()
         self._initialized = False
         await self.initialize()
-
-
-# Global bridge instance for easy access
-_global_bridge: LangGraphMCPBridge | None = None
-
-
-async def get_mcp_bridge() -> LangGraphMCPBridge:
-    """Get the global Airbnb MCP bridge instance."""
-    global _global_bridge
-    if _global_bridge is None:
-        _global_bridge = LangGraphMCPBridge()
-        await _global_bridge.initialize()
-    return _global_bridge
-
-
-async def get_airbnb_tools() -> list[Tool]:
-    """Get all available Airbnb tools for LangGraph."""
-    bridge = await get_mcp_bridge()
-    return await bridge.get_tools()
-
-
-# Convenience function for creating Airbnb tools
-def create_airbnb_tool(name: str, description: str, mcp_method: str):
-    """Decorator to create Airbnb-backed LangGraph tools.
-
-    Usage:
-        @create_airbnb_tool(
-            "search_airbnb",
-            "Search Airbnb accommodations",
-            "search_listings"
-        )
-        async def search_airbnb_tool(
-            location: str,
-            check_in: str = None,
-            check_out: str = None
-        ) -> str:
-            # Tool implementation handled automatically
-            pass
-    """
-
-    def decorator(func):
-        @tool(description=description)
-        async def wrapper(**kwargs) -> str:
-            bridge = await get_mcp_bridge()
-            return await bridge.invoke_tool_direct(f"airbnb_{mcp_method}", kwargs)
-
-        # Set the name manually after creation
-        wrapper.name = name
-        return wrapper
-
-    return decorator

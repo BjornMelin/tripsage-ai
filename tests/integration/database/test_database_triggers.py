@@ -1,4 +1,5 @@
 """Integration tests for database triggers.
+
 Tests business logic automation, event notifications, and scheduled jobs.
 """
 

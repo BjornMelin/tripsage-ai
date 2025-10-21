@@ -1,10 +1,6 @@
 # pylint: disable=import-error,too-many-instance-attributes,too-many-return-statements
 
-"""Main LangGraph orchestrator for TripSage AI.
-
-This module implements the core graph-based orchestration system that coordinates
-all specialized agents and manages the conversation flow.
-"""
+"""LangGraph-based orchestrator for TripSage AI."""
 
 from __future__ import annotations
 
@@ -41,33 +37,7 @@ _global_orchestrator: TripSageOrchestrator | None = None
 
 
 class TripSageOrchestrator:
-    """Enhanced LangGraph orchestrator for TripSage AI with centralized tool management.
-
-    This class builds and manages the graph-based workflow that coordinates
-    all specialized travel planning agents using LangGraph. Enhanced with:
-
-    Features:
-    - **Centralized Tool Registry**: All agent tools managed through
-      LangGraphToolRegistry
-    - **Enhanced Error Handling**: Sophisticated error recovery with fallback strategies
-    - **Improved Routing**: Multi-tier classification with confidence scoring
-    - **Async Optimization**: Full async/await support with concurrent operations
-    - **Robust State Management**: Structured state with comprehensive tracking
-    - **Agent Handoffs**: Intelligent inter-agent coordination and context preservation
-
-    Architecture:
-    - Router Node: Enhanced semantic intent detection with fallback classification
-    - Agent Nodes: Specialized travel planning agents with centralized tool access
-    - Error Recovery: Sophisticated error handling with retry and escalation strategies
-    - Memory Management: Conversation context and user preference tracking
-    - Tool Registry: Centralized management of MCP and SDK tools with usage analytics
-
-    Performance Optimizations:
-    - Batch tool execution for concurrent operations
-    - Event loop-aware async patterns
-    - Intelligent tool selection and caching
-    - Resource usage monitoring and limits
-    """
+    """LangGraph orchestrator that coordinates all TripSage agent flows."""
 
     def __init__(
         self,
@@ -85,9 +55,19 @@ class TripSageOrchestrator:
         """
         self.service_registry = service_registry or ServiceRegistry()
         self.config = config or get_default_config()
-        self.checkpoint_manager = self.service_registry.get_checkpoint_manager()
+        try:
+            self.checkpoint_manager = self.service_registry.get_checkpoint_manager()
+        except ValueError as exc:
+            raise ValueError(
+                "TripSageOrchestrator requires a configured checkpoint manager."
+            ) from exc
         self.checkpointer = checkpointer
-        self.memory_bridge = self.service_registry.get_memory_bridge()
+        try:
+            self.memory_bridge = self.service_registry.get_memory_bridge()
+        except ValueError as exc:
+            raise ValueError(
+                "TripSageOrchestrator requires a configured session memory bridge."
+            ) from exc
         self.handoff_coordinator = get_handoff_coordinator()
         self.graph = self._build_graph()
         self.compiled_graph = None  # Will be set in async initialize
@@ -323,37 +303,6 @@ class TripSageOrchestrator:
             return "retry"
         return "end"
 
-    def _create_stub_node(self, node_name: str):
-        """Create a stub node for Phase 1 implementation.
-
-        These will be replaced with full implementations in Phase 2.
-
-        Args:
-            node_name: Name of the node
-
-        Returns:
-            Simple stub function
-        """
-
-        async def stub_node(state: TravelPlanningState) -> TravelPlanningState:
-            logger.info("Executing stub node: %s", node_name)
-
-            # Add a simple response message
-            response_message = {
-                "role": "assistant",
-                "content": (
-                    f"I'm {node_name} and I'm ready to help with your travel planning! "
-                    f"(This is a Phase 1 implementation - "
-                    f"full functionality coming in Phase 2)"
-                ),
-                "agent": node_name,
-            }
-
-            state["messages"].append(response_message)
-            return state
-
-        return stub_node
-
     def _create_general_agent(self):
         """Create a general-purpose agent for handling unrouted requests.
 
@@ -368,15 +317,9 @@ class TripSageOrchestrator:
             response_message = {
                 "role": "assistant",
                 "content": (
-                    "I'm here to help with your travel planning! "
-                    "I can assist you with:\n\n"
-                    "🛫 Flight searches and bookings\n"
-                    "🏨 Hotel and accommodation searches\n"
-                    "💰 Budget planning and optimization\n"
-                    "🗺️ Destination research and recommendations\n"
-                    "📅 Itinerary planning and scheduling\n\n"
-                    "What would you like to help you with today? Just let me know your "
-                    "destination, travel dates, or any specific travel needs!"
+                    "I can assist with flight planning, accommodation searches, "
+                    "budget analysis, destination research, and itinerary drafting. "
+                    "Share the details you would like me to work on next."
                 ),
                 "agent": "general_agent",
             }
@@ -503,6 +446,10 @@ def get_orchestrator(
     global _global_orchestrator  # pylint: disable=global-statement
 
     if _global_orchestrator is None:
+        if service_registry is None:
+            raise ValueError(
+                "A configured ServiceRegistry is required to create the orchestrator."
+            )
         _global_orchestrator = TripSageOrchestrator(service_registry=service_registry)
         return _global_orchestrator
 

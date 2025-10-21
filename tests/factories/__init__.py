@@ -5,10 +5,11 @@ across the entire test suite. Uses the factory pattern to create realistic
 test data for models, requests, and responses.
 """
 
-from datetime import UTC, date, datetime, timedelta, timezone
-from typing import Any, Dict, List
+from datetime import UTC, date, datetime, timedelta
+from typing import Any
 from uuid import uuid4
 
+from tripsage_core.models.schemas_common.chat import ChatMessage, MessageRole
 from tripsage_core.models.schemas_common.enums import (
     AccommodationType,
     AirlineProvider,
@@ -251,10 +252,8 @@ class ChatFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_websocket_message(cls, **kwargs):
+    def create_websocket_message(cls, **kwargs) -> ChatMessage:
         """Create a WebSocket message object for event tests."""
-        from tripsage_core.models.schemas_common.chat import ChatMessage, MessageRole
-
         defaults = {
             "role": MessageRole.USER,
             "content": "I'm looking for a great hotel in Tokyo",

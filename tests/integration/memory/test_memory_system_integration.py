@@ -1,9 +1,10 @@
 """Integration tests for the memory system workflow.
+
 Tests backend-frontend communication, data flow, and API compatibility.
 """
 
 import asyncio
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -29,8 +30,6 @@ class TestMemorySystemIntegration:
     @pytest.fixture(autouse=True)
     def mock_auth_dependencies(self):
         """Mock authentication dependencies."""
-        from unittest.mock import Mock, patch
-
         # Create mock principal
         mock_principal = Mock()
         mock_principal.id = "test-user-123"
@@ -103,7 +102,7 @@ class TestMemorySystemIntegration:
     @pytest.fixture
     def sample_user(self):
         """Sample user for testing."""
-        return User(
+        return User(  # type: ignore[call-arg]
             id=123,
             email="test@example.com",
             name="Test User",
@@ -125,7 +124,6 @@ class TestMemorySystemIntegration:
 
         # Override the dependency in the FastAPI app
         from tripsage.api.core.dependencies import get_memory_service
-        from tripsage.api.main import app
 
         app.dependency_overrides[get_memory_service] = lambda: mock_service
 

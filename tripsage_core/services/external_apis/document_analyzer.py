@@ -26,10 +26,11 @@ class DocumentAnalyzerError(CoreAPIError):
     """Exception raised for document analyzer errors."""
 
     def __init__(self, message: str, original_error: Exception | None = None):
+        """Initialize the DocumentAnalyzerError."""
         super().__init__(
             message=message,
             code="DOCUMENT_ANALYZER_ERROR",
-            service="DocumentAnalyzer",
+            api_service="DocumentAnalyzer",
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
@@ -280,14 +281,14 @@ class DocumentAnalyzer:
     async def _extract_text_from_text_file(self, file_path: Path) -> str:
         """Extract text from plain text file."""
         try:
-            with open(file_path, encoding="utf-8") as f:
+            with Path(file_path).open(encoding="utf-8") as f:
                 content = f.read()
                 if len(content) > self.max_text_length:
                     content = content[: self.max_text_length]
                 return content
         except UnicodeDecodeError:
             # Try with different encoding
-            with open(file_path, encoding="latin-1") as f:
+            with Path(file_path).open(encoding="latin-1") as f:
                 content = f.read()
                 if len(content) > self.max_text_length:
                     content = content[: self.max_text_length]
@@ -304,7 +305,7 @@ class DocumentAnalyzer:
 
     async def _extract_text_from_json(self, file_path: Path) -> str:
         """Extract text from JSON file."""
-        with open(file_path, encoding="utf-8") as f:
+        with Path(file_path).open(encoding="utf-8") as f:
             data = json.load(f)
             content = json.dumps(data, indent=2)
             if len(content) > self.max_text_length:
@@ -313,7 +314,7 @@ class DocumentAnalyzer:
 
     async def _extract_text_from_csv(self, file_path: Path) -> str:
         """Extract text from CSV file."""
-        with open(file_path, encoding="utf-8") as f:
+        with Path(file_path).open(encoding="utf-8") as f:
             content = f.read()
             if len(content) > self.max_text_length:
                 content = content[: self.max_text_length]
@@ -757,7 +758,7 @@ async def get_document_analyzer() -> DocumentAnalyzer:
     Returns:
         DocumentAnalyzer instance
     """
-    global _document_analyzer
+    global _document_analyzer  # pylint: disable=global-statement
 
     if _document_analyzer is None:
         _document_analyzer = DocumentAnalyzer()
@@ -768,7 +769,7 @@ async def get_document_analyzer() -> DocumentAnalyzer:
 
 async def close_document_analyzer() -> None:
     """Close the global document analyzer instance."""
-    global _document_analyzer
+    global _document_analyzer  # pylint: disable=global-statement
 
     if _document_analyzer:
         await _document_analyzer.close()
