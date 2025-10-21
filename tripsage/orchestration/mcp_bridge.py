@@ -8,7 +8,10 @@ from typing import Any
 from langchain_core.tools import Tool
 from pydantic import BaseModel, Field
 
-from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
+from tripsage_core.services.simple_mcp_service import (
+    SimpleMCPService,
+    default_mcp_service,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -30,9 +33,9 @@ class LangGraphMCPBridge:
     all existing error handling, caching, and monitoring capabilities from MCPManager.
     """
 
-    def __init__(self, mcp_manager: MCPManager | None = None):
-        """Initialize the bridge with an MCPManager instance."""
-        self.mcp_manager = mcp_manager or MCPManager()
+    def __init__(self, mcp_service: SimpleMCPService | None = None):
+        """Initialize the bridge with an MCP service instance."""
+        self.mcp_service = mcp_service or default_mcp_service
         self._tool_cache: dict[str, Tool] = {}
         self._tool_metadata: dict[str, AirbnbToolWrapper] = {}
         self._initialized = False
@@ -51,11 +54,7 @@ class LangGraphMCPBridge:
 
         try:
             # Initialize the Airbnb MCP wrapper
-            initialize_fn = getattr(
-                self.mcp_manager, "initialize_all_enabled", None
-            ) or getattr(self.mcp_manager, "initialize", None)
-            if initialize_fn is not None:
-                await initialize_fn()
+            await self.mcp_service.initialize()
 
             # Load Airbnb tool metadata
             await self._load_airbnb_tools()
@@ -70,7 +69,7 @@ class LangGraphMCPBridge:
     async def _load_airbnb_tools(self) -> None:
         """Load tool metadata from Airbnb MCP wrapper."""
         # Get available methods from the manager
-        methods = self.mcp_manager.get_available_methods()
+        methods = self.mcp_service.get_available_methods()
 
         # Define metadata for each Airbnb method
         tool_metadata = {
@@ -142,20 +141,12 @@ class LangGraphMCPBridge:
 
         # Create tool wrappers for available methods
         for method in methods:
-            # Map method aliases to primary methods
-            if method in ["search_listings", "search_accommodations", "search"]:
+            if method == "search_listings":
                 primary_method = "search_listings"
-            elif method in [
-                "get_listing_details",
-                "get_listing",
-                "get_details",
-                "get_accommodation_details",
-                "check_availability",
-                "check_listing_availability",
-            ]:
+            elif method == "get_listing_details":
                 primary_method = "get_listing_details"
             else:
-                continue  # Skip unknown methods
+                continue
 
             if primary_method in tool_metadata:
                 tool_name = f"airbnb_{method}"
@@ -204,7 +195,7 @@ class LangGraphMCPBridge:
                 )
 
                 # Use existing MCPManager for tool execution
-                result = await self.mcp_manager.invoke(
+                result = await self.mcp_service.invoke(
                     method_name=metadata.mcp_method,
                     params=kwargs,
                 )
@@ -292,7 +283,7 @@ class LangGraphMCPBridge:
         if not metadata:
             raise ValueError(f"Tool {tool_name} not found")
 
-        return await self.mcp_manager.invoke(
+        return await self.mcp_service.invoke(
             method_name=metadata.mcp_method, params=params
         )
 

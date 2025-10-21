@@ -27,7 +27,7 @@ def validate_airport_code(value: str) -> str:
         ValueError: If the airport code is invalid
     """
     if not isinstance(value, str):
-        raise ValueError("Airport code must be a string")
+        raise TypeError("Airport code must be a string")
 
     value = value.strip().upper()
 
@@ -56,7 +56,7 @@ def validate_rating_range(value: float | None) -> float | None:
         return None
 
     if not isinstance(value, (int, float)):
-        raise ValueError("Rating must be a number")
+        raise TypeError("Rating must be a number")
 
     if not 0.0 <= value <= 5.0:
         raise ValueError("Rating must be between 0.0 and 5.0")
@@ -77,7 +77,7 @@ def validate_email_lowercase(value: str | None) -> str | None:
         return None
 
     if not isinstance(value, str):
-        raise ValueError("Email must be a string")
+        raise TypeError("Email must be a string")
 
     return value.strip().lower()
 
@@ -98,7 +98,7 @@ def validate_positive_integer(value: int | None) -> int | None:
         return None
 
     if not isinstance(value, int):
-        raise ValueError("Value must be an integer")
+        raise TypeError("Value must be an integer")
 
     if value < 1:
         raise ValueError("Value must be positive (greater than 0)")
@@ -122,7 +122,7 @@ def validate_non_negative_number(value: float | None) -> float | None:
         return None
 
     if not isinstance(value, (int, float)):
-        raise ValueError("Value must be a number")
+        raise TypeError("Value must be a number")
 
     if value < 0:
         raise ValueError("Value must be non-negative (>= 0)")
@@ -143,7 +143,7 @@ def validate_currency_code(value: str) -> str:
         ValueError: If currency code is invalid
     """
     if not isinstance(value, str):
-        raise ValueError("Currency code must be a string")
+        raise TypeError("Currency code must be a string")
 
     value = value.strip().upper()
 
@@ -172,7 +172,7 @@ def validate_string_length_range(min_len: int, max_len: int):
             return None
 
         if not isinstance(value, str):
-            raise ValueError("Value must be a string")
+            raise TypeError("Value must be a string")
 
         value = value.strip()
 
@@ -207,7 +207,7 @@ def validate_password_strength(value: str) -> str:
         ValueError: If password doesn't meet strength requirements
     """
     if not isinstance(value, str):
-        raise ValueError("Password must be a string")
+        raise TypeError("Password must be a string")
 
     if len(value) < 8:
         raise ValueError("Password must be at least 8 characters long")
@@ -244,7 +244,7 @@ def validate_latitude(value: float | None) -> float | None:
         return None
 
     if not isinstance(value, (int, float)):
-        raise ValueError("Latitude must be a number")
+        raise TypeError("Latitude must be a number")
 
     if not -90.0 <= value <= 90.0:
         raise ValueError("Latitude must be between -90.0 and 90.0")
@@ -268,7 +268,7 @@ def validate_longitude(value: float | None) -> float | None:
         return None
 
     if not isinstance(value, (int, float)):
-        raise ValueError("Longitude must be a number")
+        raise TypeError("Longitude must be a number")
 
     if not -180.0 <= value <= 180.0:
         raise ValueError("Longitude must be between -180.0 and 180.0")

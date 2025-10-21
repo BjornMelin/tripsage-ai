@@ -1,8 +1,4 @@
-"""Optimized source selector for direct Crawl4AI SDK integration.
-
-This module handles content type optimization for the direct Crawl4AI SDK,
-focusing on performance and specialized extraction patterns.
-"""
+"""Content-type heuristics that tune Crawl4AI scraping behavior."""
 
 from typing import ClassVar
 

@@ -101,7 +101,10 @@ class AgentConfigRequest(BaseConfigModel):
             Field(
                 ge=0.0,
                 le=2.0,
-                description="Controls randomness in responses (0.0=deterministic, 2.0=very creative)",
+                description=(
+                    "Controls randomness in responses "
+                    "(0.0=deterministic, 2.0=very creative)"
+                ),
             ),
         ]
         | None
@@ -113,7 +116,9 @@ class AgentConfigRequest(BaseConfigModel):
             Field(
                 ge=1,
                 le=8000,
-                description="Maximum tokens in response (affects cost and response length)",
+                description=(
+                    "Maximum tokens in response (affects cost and response length)"
+                ),
             ),
         ]
         | None
@@ -442,12 +447,11 @@ class ConfigurationRecommendation(BaseConfigModel):
         recommended_temp = self.recommended_config.get("temperature", 0.7)
 
         # Ensure temperature recommendations are within reasonable bounds
-        if abs(recommended_temp - current_temp) > 0.5:
-            if self.confidence_score > 0.9:
-                raise ValueError(
-                    "High confidence recommendations should not suggest "
-                    "dramatic temperature changes"
-                )
+        if abs(recommended_temp - current_temp) > 0.5 and self.confidence_score > 0.9:
+            raise ValueError(
+                "High confidence recommendations should not suggest "
+                "dramatic temperature changes"
+            )
 
         return self
 

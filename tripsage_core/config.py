@@ -7,6 +7,23 @@ from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class Crawl4AIMCPSettings(BaseSettings):
+    """Crawl4AI MCP server configuration."""
+
+    api_key: SecretStr | None = Field(
+        default=None, description="Crawl4AI MCP API key (Bearer token authentication)"
+    )
+    endpoint: str = Field(
+        default="http://localhost:11235", description="Crawl4AI MCP server endpoint URL"
+    )
+    timeout: float = Field(
+        default=30.0,
+        ge=5.0,
+        le=120.0,
+        description="Request timeout in seconds for Crawl4AI operations",
+    )
+
+
 class Settings(BaseSettings):
     """Modern, unified application configuration."""
 
@@ -73,6 +90,12 @@ class Settings(BaseSettings):
         ge=0.0,
         le=2.0,
         description="Default temperature for orchestrator LLMs",
+    )
+
+    # Crawl4AI MCP Configuration
+    crawl4ai_mcp: Crawl4AIMCPSettings = Field(
+        default_factory=Crawl4AIMCPSettings,
+        description="Crawl4AI MCP server configuration",
     )
 
     # Enhanced Rate Limiting Configuration

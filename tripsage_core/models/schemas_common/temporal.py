@@ -234,7 +234,10 @@ class Availability(TripSageModel):
     @model_validator(mode="after")
     def validate_availability_range(self) -> "Availability":
         """Validate that to_datetime is after from_datetime."""
-        if self.from_datetime and self.to_datetime:
-            if self.to_datetime <= self.from_datetime:
-                raise ValueError("to_datetime must be after from_datetime")
+        if (
+            self.from_datetime
+            and self.to_datetime
+            and self.to_datetime <= self.from_datetime
+        ):
+            raise ValueError("to_datetime must be after from_datetime")
         return self
