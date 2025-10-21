@@ -8,6 +8,7 @@ and error rates for the TripSage database services.
 import logging
 import time
 from contextlib import contextmanager
+from typing import Any
 
 from prometheus_client import (
     CollectorRegistry,
@@ -198,7 +199,8 @@ class DatabaseMetrics:
             ).inc()
 
         logger.debug(
-            "Recorded query: service=%s, operation=%s, table=%s, duration=%.3fs, success=%s",
+            "Recorded query: service=%s, operation=%s, table=%s, "
+            "duration=%.3fs, success=%s",
             service,
             operation,
             table,
@@ -303,7 +305,7 @@ class DatabaseMetrics:
                 "Recorded transaction: service=%s, duration=%.3fs", service, duration
             )
 
-    def get_metrics_summary(self) -> dict[str, any]:
+    def get_metrics_summary(self) -> dict[str, Any]:
         """Get a summary of current metrics.
 
         Returns:
@@ -320,20 +322,20 @@ class DatabaseMetrics:
     def _get_counter_value(self, counter: Counter) -> dict[str, float]:
         """Get counter values by labels."""
         try:
-            return {
-                str(sample.labels): sample.value
-                for sample in counter.collect()[0].samples
-            }
+            samples = []
+            for metric in counter.collect():
+                samples.extend(metric.samples)
+            return {str(sample.labels): sample.value for sample in samples}
         except (IndexError, AttributeError):
             return {}
 
     def _get_gauge_value(self, gauge: Gauge) -> dict[str, float]:
         """Get gauge values by labels."""
         try:
-            return {
-                str(sample.labels): sample.value
-                for sample in gauge.collect()[0].samples
-            }
+            samples = []
+            for metric in gauge.collect():
+                samples.extend(metric.samples)
+            return {str(sample.labels): sample.value for sample in samples}
         except (IndexError, AttributeError):
             return {}
 
@@ -344,7 +346,10 @@ class DatabaseMetrics:
             port: Port to serve metrics on
         """
         try:
-            start_http_server(port, registry=self.registry)
+            if self.registry is not None:
+                start_http_server(port, registry=self.registry)
+            else:
+                start_http_server(port)
             logger.info("Metrics server started on port %s", port)
         except Exception:
             logger.exception("Failed to start metrics server")
@@ -361,7 +366,7 @@ def get_database_metrics() -> DatabaseMetrics:
     Returns:
         DatabaseMetrics instance
     """
-    global _database_metrics
+    global _database_metrics  # pylint: disable=global-statement
 
     if _database_metrics is None:
         _database_metrics = DatabaseMetrics()
@@ -371,5 +376,5 @@ def get_database_metrics() -> DatabaseMetrics:
 
 def reset_database_metrics():
     """Reset global database metrics instance (for testing)."""
-    global _database_metrics
+    global _database_metrics  # pylint: disable=global-statement
     _database_metrics = None
