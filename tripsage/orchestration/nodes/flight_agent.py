@@ -1,12 +1,9 @@
-# pylint: disable=import-error
-
 """Flight agent node implementation for LangGraph orchestration.
 
 This module implements the flight search and booking agent as a LangGraph node,
 using modern LangGraph @tool patterns for simplicity and maintainability.
 """
 
-import json
 from datetime import UTC, datetime
 from typing import Any
 
@@ -16,12 +13,12 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.orchestration.tools.simple_tools import (
-    get_tools_for_agent,
-    search_flights,
-)
+from tripsage.orchestration.tools.simple_tools import get_tools_for_agent
 from tripsage.orchestration.utils.structured import StructuredExtractor, model_to_dict
 from tripsage_core.config import get_settings
+from tripsage_core.models.schemas_common.enums import CabinClass
+from tripsage_core.models.schemas_common.flight_schemas import FlightSearchRequest
+from tripsage_core.services.business.flight_service import FlightService
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -183,26 +180,61 @@ class FlightAgentNode(BaseAgentNode):
         return None
 
     async def _search_flights(self, search_params: dict[str, Any]) -> dict[str, Any]:
-        """Perform flight search using simple tool direct access.
+        """Perform flight search via FlightService canonical API.
 
         Args:
-            search_params: Flight search parameters
+            search_params: Flight search parameters extracted from chat.
 
         Returns:
-            Flight search results
+            Dict with key "flights" listing offers (serialized), and metadata.
         """
         try:
-            # Execute flight search using the async LangChain tool interface
-            result_str = await search_flights.ainvoke(search_params)
-            result = json.loads(result_str)
+            service = self.get_service("flight_service")
+            if not isinstance(service, FlightService):  # Defensive check
+                raise TypeError("flight_service is not initialized correctly")
 
-            flights_count = (
-                len(result.get("flights", [])) if isinstance(result, dict) else 0
+            # Build typed request from extracted params
+            # Map cabin class safely to enum
+            cabin_raw = search_params.get("class_preference")
+            try:
+                cabin = CabinClass(str(cabin_raw)) if cabin_raw else CabinClass.ECONOMY
+            except ValueError:
+                cabin = CabinClass.ECONOMY
+
+            dep_raw = search_params.get("departure_date")
+            dep_value = dep_raw if dep_raw else datetime.now(UTC).date()
+
+            req = FlightSearchRequest(
+                origin=str(search_params.get("origin")),
+                destination=str(search_params.get("destination")),
+                departure_date=dep_value,
+                return_date=search_params.get("return_date"),
+                adults=max(1, int(search_params.get("passengers", 1) or 1)),
+                children=0,
+                infants=0,
+                passengers=None,
+                cabin_class=cabin,
+                max_stops=None,
+                max_price=None,
+                preferred_airlines=(
+                    [str(search_params["airline_preference"])]
+                    if search_params.get("airline_preference")
+                    else None
+                ),
+                excluded_airlines=None,
+                trip_id=None,
             )
-            logger.info("Flight search completed: %s flights found", flights_count)
-            return result
 
-        except Exception as e:
+            resp = await service.search_flights(req)
+            # Serialize offers for agent-friendly output
+            offers = [o.model_dump() for o in resp.offers]
+            return {
+                "flights": offers,
+                "search_id": resp.search_id,
+                "total_results": resp.total_results,
+                "cached": resp.cached,
+            }
+        except Exception as e:  # pragma: no cover - orchestration surface
             logger.exception("Flight search failed")
             return {"error": f"Flight search failed: {e!s}"}
 
