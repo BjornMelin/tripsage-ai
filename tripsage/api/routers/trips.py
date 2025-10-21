@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Trip router for TripSage API.
 
 This module provides endpoints for trip management, including creating,
@@ -11,7 +12,7 @@ from typing import Any, Protocol, TypedDict, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from tripsage.api.core.dependencies import require_principal
 from tripsage.api.middlewares.authentication import Principal
@@ -325,8 +326,6 @@ async def create_trip(
 
         # Convert common TripPreferences to core TripPreferences if present
         if trip_request.preferences:
-            from tripsage_core.models.trip import TripPreferences as CoreTripPreferences
-
             # Extract preferences from common model and convert to core model
             common_prefs = trip_request.preferences
             core_preferences = CoreTripPreferences(
@@ -702,10 +701,9 @@ async def get_trip_summary(
         adapted_trip = _adapt_trip_response(trip_response)
 
         # Build summary from trip data
-        date_range = (
-            f"{adapted_trip.start_date.strftime('%b %d')}-"
-            f"{adapted_trip.end_date.strftime('%d, %Y')}"
-        )
+        start_date = _ensure_date(adapted_trip.start_date)
+        end_date = _ensure_date(adapted_trip.end_date)
+        date_range = f"{start_date.strftime('%b %d')}-{end_date.strftime('%d, %Y')}"
 
         # Get budget information from trip data (authorized access verified above)
         budget = getattr(adapted_trip, "budget", None)
@@ -862,11 +860,7 @@ async def duplicate_trip(
             )
 
         # Create new trip based on original using core TripCreateRequest
-        from tripsage_core.services.business.trip_service import (
-            TripCreateRequest as CoreTripCreateRequest,
-        )
-
-        duplicate_request = CoreTripCreateRequest(
+        duplicate_request = TripCreateRequest(
             title=f"Copy of {original_trip.title}",
             description=original_trip.description,
             start_date=original_trip.start_date,
@@ -899,16 +893,29 @@ async def duplicate_trip(
         ) from e
 
 
-@router.get("/search", response_model=TripListResponse)
-async def search_trips(
+class _TripSearchParams(BaseModel):
+    q: str | None = None
+    status: str | None = None
+    skip: int = 0
+    limit: int = 10
+
+
+def _get_trip_search_params(
     q: str | None = Query(default=None, description="Search query"),
-    status_filter: str | None = Query(
+    status: str | None = Query(
         default=None, alias="status", description="Status filter"
     ),
     skip: int = Query(default=0, ge=0, description="Number of trips to skip"),
     limit: int = Query(
         default=10, ge=1, le=100, description="Number of trips to return"
     ),
+) -> _TripSearchParams:
+    return _TripSearchParams(q=q, status=status, skip=skip, limit=limit)
+
+
+@router.get("/search", response_model=TripListResponse)
+async def search_trips(
+    params: _TripSearchParams = Depends(_get_trip_search_params),
     principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
@@ -916,9 +923,7 @@ async def search_trips(
 
     Args:
         q: Search query
-        status_filter: Status filter
-        skip: Number of trips to skip
-        limit: Number of trips to return
+        params: Query parameters (q, status, skip, limit)
         principal: Current authenticated principal
         trip_service: Trip service instance
 
@@ -929,15 +934,15 @@ async def search_trips(
 
     try:
         search_filters: dict[str, Any] = {}
-        if status_filter:
-            search_filters["status"] = status_filter
+        if params.status:
+            search_filters["status"] = params.status
 
         trips = await trip_service.search_trips(
             user_id=principal.user_id,
-            query=q or "",
+            query=params.q or "",
             filters=search_filters or None,
-            limit=limit,
-            offset=skip,
+            limit=params.limit,
+            offset=params.skip,
         )
 
         # Convert to list items for response (Pydantic models)
@@ -960,8 +965,8 @@ async def search_trips(
         return TripListResponse(
             items=trip_items,
             total=len(trip_items),
-            skip=skip,
-            limit=limit,
+            skip=params.skip,
+            limit=params.limit,
         )
 
     except Exception as e:
@@ -1103,14 +1108,14 @@ async def export_trip(
     export_format: str = Query(default="pdf", description="Export format"),
     principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
-    format: str | None = None,  # noqa: A002 - test harness passes 'format' kw
+    format_: str | None = None,  # test harness passes 'format' kw
 ) -> _ExportResponse:
     """Export trip.
 
     Args:
         trip_id: Trip ID
         export_format: Export format requested by the caller
-        format: Optional keyword alias used by some internal tests
+        format_: Optional keyword alias used by some internal tests
         principal: Current authenticated principal
         trip_service: Trip service instance
 
@@ -1132,7 +1137,7 @@ async def export_trip(
 
         # Validate export format
         allowed_formats = {"pdf", "csv", "json"}
-        selected_format = format or export_format
+        selected_format = format_ or export_format
         if selected_format not in allowed_formats:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
