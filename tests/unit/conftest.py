@@ -4,6 +4,7 @@ This module provides common fixtures and utilities used across all test suites.
 """
 
 import asyncio
+import importlib
 import os
 import sys
 from pathlib import Path
@@ -95,7 +96,9 @@ def mock_mcp_manager():
 
     manager.invoke.side_effect = invoke_side_effect
 
-    with patch("tripsage.mcp_abstraction.manager.mcp_manager", manager):
+    with patch(
+        "tripsage_core.services.simple_mcp_service.default_mcp_service", manager
+    ):
         yield manager
 
 
@@ -127,7 +130,12 @@ def mock_mcp_registry():
 
     registry.get_wrapper_class.side_effect = get_wrapper_class_side_effect
 
-    with patch("tripsage.mcp_abstraction.registry.registry", registry):
+    # Only patch legacy path if it exists in this environment
+    try:
+        importlib.import_module("tripsage.mcp_abstraction.registry")
+        with patch("tripsage.mcp_abstraction.registry.registry", registry):
+            yield registry
+    except ImportError:
         yield registry
 
 

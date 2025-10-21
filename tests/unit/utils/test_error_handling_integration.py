@@ -286,15 +286,17 @@ class TestTripSageErrorContext:
 
         original_exc = CoreValidationError("Validation failed")
 
-        with pytest.raises(CoreValidationError) as exc_info:
-            with TripSageErrorContext(
+        with (
+            pytest.raises(CoreValidationError) as exc_info,
+            TripSageErrorContext(
                 operation="validate_user",
                 service="user_service",
                 user_id="user123",
                 request_id="req456",
                 logger_instance=mock_logger,
-            ):
-                raise original_exc
+            ),
+        ):
+            raise original_exc
 
         # Exception should be enhanced with context
         enhanced_exc = exc_info.value
@@ -346,7 +348,7 @@ class TestIntegrationScenarios:
     """Test realistic integration scenarios."""
 
     @patch("tripsage_core.utils.error_handling_utils.get_logger")
-    def test_mcp_service_error_workflow(self, mock_get_logger):
+    def test_mcp_manager_error_workflow(self, mock_get_logger):
         """Test complete MCP service error handling workflow."""
         mock_logger = Mock()
         mock_get_logger.return_value = mock_logger

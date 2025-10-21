@@ -140,7 +140,7 @@ class TestWebSocketEventModels:
         user_id = uuid4()
 
         # Create a proper ChatMessage object
-        chat_message = ChatMessage(role="user", content="Hello")
+        chat_message = ChatMessage(role="user", content="Hello")  # type: ignore
 
         message_event = ChatMessageEvent(
             type="chat.message",
@@ -355,21 +355,23 @@ class TestWebSocketErrorHandling:
         assert get_service_registry is not None
 
         # Test that they return instances (with mocked dependencies)
-        with patch(
-            "tripsage.api.routers.websocket.ServiceRegistry"
-        ) as mock_service_registry:
-            with patch("tripsage.api.routers.websocket.ChatAgent") as mock_chat_agent:
-                mock_service_instance = MagicMock()
-                mock_agent_instance = MagicMock()
-                mock_service_registry.return_value = mock_service_instance
-                mock_chat_agent.return_value = mock_agent_instance
+        with (
+            patch(
+                "tripsage.api.routers.websocket.ServiceRegistry"
+            ) as mock_service_registry,
+            patch("tripsage.api.routers.websocket.ChatAgent") as mock_chat_agent,
+        ):
+            mock_service_instance = MagicMock()
+            mock_agent_instance = MagicMock()
+            mock_service_registry.return_value = mock_service_instance
+            mock_chat_agent.return_value = mock_agent_instance
 
-                # Test service registry singleton
-                registry1 = get_service_registry()
-                registry2 = get_service_registry()
-                assert registry1 is registry2  # Should be singleton
+            # Test service registry singleton
+            registry1 = get_service_registry()
+            registry2 = get_service_registry()
+            assert registry1 is registry2  # Should be singleton
 
-                # Test chat agent singleton
-                agent1 = get_chat_agent()
-                agent2 = get_chat_agent()
-                assert agent1 is agent2  # Should be singleton
+            # Test chat agent singleton
+            agent1 = get_chat_agent()
+            agent2 = get_chat_agent()
+            assert agent1 is agent2  # Should be singleton
