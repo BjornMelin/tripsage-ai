@@ -244,13 +244,12 @@ async def _check_database_health(db_service) -> ComponentHealth:
                 message="Database is responsive",
                 details={"query_result": result},
             )
-        else:
-            return ComponentHealth(
-                name="database",
-                status="unhealthy",
-                latency_ms=latency_ms,
-                message="Database query returned no results",
-            )
+        return ComponentHealth(
+            name="database",
+            status="unhealthy",
+            latency_ms=latency_ms,
+            message="Database query returned no results",
+        )
 
     except Exception as e:  # noqa: BLE001
         latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
@@ -288,13 +287,12 @@ async def _check_cache_health(cache_service) -> ComponentHealth:
                 latency_ms=latency_ms,
                 message="Cache is responsive",
             )
-        else:
-            return ComponentHealth(
-                name="cache",
-                status="unhealthy",
-                latency_ms=latency_ms,
-                message="Cache ping failed",
-            )
+        return ComponentHealth(
+            name="cache",
+            status="unhealthy",
+            latency_ms=latency_ms,
+            message="Cache ping failed",
+        )
 
     except Exception as e:  # noqa: BLE001
         latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
