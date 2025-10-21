@@ -9,12 +9,13 @@ import contextlib
 import logging
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
 from tripsage_core.config import Settings, get_settings
+from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.monitoring.database_metrics import (
     DatabaseMetrics,
     get_database_metrics,
@@ -51,9 +52,10 @@ class HealthCheckResult:
     response_time: float
     message: str
     details: dict[str, Any] | None = None
-    timestamp: datetime = None
+    timestamp: datetime | None = None
 
     def __post_init__(self):
+        """Set a UTC timestamp if unset."""
         if self.timestamp is None:
             self.timestamp = datetime.now(UTC)
 
@@ -66,13 +68,52 @@ class SecurityAlert:
     severity: str
     message: str
     details: dict[str, Any]
-    timestamp: datetime = None
+    timestamp: datetime | None = None
     user_id: str | None = None
     ip_address: str | None = None
 
     def __post_init__(self):
+        """Set a UTC timestamp if unset."""
         if self.timestamp is None:
             self.timestamp = datetime.now(UTC)
+
+
+@dataclass
+class MonitorState:
+    """Runtime monitoring state."""
+
+    active: bool = False
+    task: asyncio.Task | None = None
+    health_interval: float = 60.0
+    security_interval: float = 60.0
+
+
+@dataclass
+class HealthState:
+    """Health monitoring tracking data."""
+
+    last_check: HealthCheckResult | None = None
+    history: list[HealthCheckResult] = field(default_factory=list)
+    max_history: int = 100
+
+
+@dataclass
+class SecurityState:
+    """Security monitoring tracking data."""
+
+    alerts: list[SecurityAlert] = field(default_factory=list)
+    max_history: int = 500
+    failed_connection_count: int = 0
+    last_connection_attempt: float = 0.0
+    callbacks: list[Callable[[SecurityAlert], None]] = field(default_factory=list)
+
+
+@dataclass
+class RecoveryConfig:
+    """Recovery settings."""
+
+    max_attempts: int = 3
+    delay_seconds: float = 5.0
 
 
 class DatabaseConnectionMonitor:
@@ -107,53 +148,43 @@ class DatabaseConnectionMonitor:
         self.settings = settings or get_settings()
         self.metrics = metrics or get_database_metrics()
 
-        # Monitoring state
-        self._monitoring = False
-        self._monitor_task: asyncio.Task | None = None
-        self._health_check_interval = self.settings.db_health_check_interval
-        self._security_check_interval = self.settings.db_security_check_interval
-
-        # Health tracking
-        self._last_health_check: HealthCheckResult | None = None
-        self._health_history: list[HealthCheckResult] = []
-        self._max_health_history = 100
-
-        # Security tracking
-        self._security_alerts: list[SecurityAlert] = []
-        self._max_security_history = 500
-        self._failed_connection_count = 0
-        self._last_connection_attempt = 0
-
-        # Alert callbacks
-        self._alert_callbacks: list[Callable[[SecurityAlert], None]] = []
-
-        # Recovery settings
-        self._max_recovery_attempts = self.settings.db_max_recovery_attempts
-        self._recovery_delay = self.settings.db_recovery_delay
+        # Structured runtime state
+        self._monitor_state = MonitorState(
+            active=False,
+            task=None,
+            health_interval=self.settings.db_health_check_interval,
+            security_interval=self.settings.db_security_check_interval,
+        )
+        self._health_state = HealthState(max_history=100)
+        self._security_state = SecurityState(max_history=500)
+        self._recovery_config = RecoveryConfig(
+            max_attempts=self.settings.db_max_recovery_attempts,
+            delay_seconds=self.settings.db_recovery_delay,
+        )
 
         logger.info("Database connection monitor initialized")
 
     async def start_monitoring(self):
         """Start continuous database monitoring."""
-        if self._monitoring:
+        if self._monitor_state.active:
             logger.warning("Database monitoring already started")
             return
 
-        self._monitoring = True
-        self._monitor_task = asyncio.create_task(self._monitor_loop())
+        self._monitor_state.active = True
+        self._monitor_state.task = asyncio.create_task(self._monitor_loop())
         logger.info("Database monitoring started")
 
     async def stop_monitoring(self):
         """Stop database monitoring."""
-        if not self._monitoring:
+        if not self._monitor_state.active:
             return
 
-        self._monitoring = False
+        self._monitor_state.active = False
 
-        if self._monitor_task and not self._monitor_task.done():
-            self._monitor_task.cancel()
+        if self._monitor_state.task and not self._monitor_state.task.done():
+            self._monitor_state.task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
-                await self._monitor_task
+                await self._monitor_state.task
 
         logger.info("Database monitoring stopped")
 
@@ -162,17 +193,23 @@ class DatabaseConnectionMonitor:
         last_health_check = 0
         last_security_check = 0
 
-        while self._monitoring:
+        while self._monitor_state.active:
             try:
                 current_time = time.time()
 
                 # Health check
-                if current_time - last_health_check >= self._health_check_interval:
+                if (
+                    current_time - last_health_check
+                    >= self._monitor_state.health_interval
+                ):
                     await self._perform_health_check()
                     last_health_check = current_time
 
                 # Security check
-                if current_time - last_security_check >= self._security_check_interval:
+                if (
+                    current_time - last_security_check
+                    >= self._monitor_state.security_interval
+                ):
                     await self._perform_security_check()
                     last_security_check = current_time
 
@@ -230,12 +267,14 @@ class DatabaseConnectionMonitor:
             await self._handle_critical_health(result)
 
         # Update tracking
-        self._last_health_check = result
-        self._health_history.append(result)
+        self._health_state.last_check = result
+        self._health_state.history.append(result)
 
         # Trim history
-        if len(self._health_history) > self._max_health_history:
-            self._health_history = self._health_history[-self._max_health_history :]
+        if len(self._health_state.history) > self._health_state.max_history:
+            self._health_state.history = self._health_state.history[
+                -self._health_state.max_history :
+            ]
 
         # Update metrics
         self.metrics.record_health_check(
@@ -284,17 +323,19 @@ class DatabaseConnectionMonitor:
         if "query_error" in details:
             return HealthStatus.CRITICAL
 
-        # Check response time
+        # Check response time (critical threshold takes precedence)
         query_time = details.get("query_response_time", 0)
+        if query_time > 10.0:  # 10 seconds threshold
+            return HealthStatus.CRITICAL
         if query_time > 5.0:  # 5 seconds threshold
             return HealthStatus.WARNING
-        elif query_time > 10.0:  # 10 seconds threshold
-            return HealthStatus.CRITICAL
 
         # Check database stats if available
         if "database_stats" in details:
-            details["database_stats"]
-            # Add additional checks based on stats
+            # Placeholder for additional stat-based checks
+            stats = details["database_stats"]
+            if isinstance(stats, dict) and stats.get("error_rate", 0) > 0.2:
+                return HealthStatus.WARNING
 
         return HealthStatus.HEALTHY
 
@@ -340,8 +381,10 @@ class DatabaseConnectionMonitor:
         current_time = time.time()
 
         # Check for rapid connection failures
-        if self._failed_connection_count > 5:  # threshold
-            time_since_last = current_time - self._last_connection_attempt
+        if self._security_state.failed_connection_count > 5:  # threshold
+            time_since_last = (
+                current_time - self._security_state.last_connection_attempt
+            )
 
             if time_since_last < 60:  # within 1 minute
                 alert = SecurityAlert(
@@ -349,10 +392,10 @@ class DatabaseConnectionMonitor:
                     severity="warning",
                     message=(
                         f"Multiple connection failures detected: "
-                        f"{self._failed_connection_count}"
+                        f"{self._security_state.failed_connection_count}"
                     ),
                     details={
-                        "failed_count": self._failed_connection_count,
+                        "failed_count": self._security_state.failed_connection_count,
                         "time_window": time_since_last,
                     },
                 )
@@ -400,17 +443,19 @@ class DatabaseConnectionMonitor:
         """Attempt to recover database connection."""
         logger.info("Attempting database connection recovery")
 
-        for attempt in range(self._max_recovery_attempts):
+        for attempt in range(self._recovery_config.max_attempts):
             try:
                 logger.info(
-                    "Recovery attempt %s/%s", attempt + 1, self._max_recovery_attempts
+                    "Recovery attempt %s/%s",
+                    attempt + 1,
+                    self._recovery_config.max_attempts,
                 )
 
                 # Close existing connection
                 await self.database_service.close()
 
                 # Wait before retry
-                await asyncio.sleep(self._recovery_delay)
+                await asyncio.sleep(self._recovery_config.delay_seconds)
 
                 # Attempt to reconnect
                 await self.database_service.connect()
@@ -433,17 +478,17 @@ class DatabaseConnectionMonitor:
             except Exception as e:
                 logger.exception("Recovery attempt %s failed", attempt + 1)
 
-                if attempt == self._max_recovery_attempts - 1:
+                if attempt == self._recovery_config.max_attempts - 1:
                     # Final attempt failed
                     alert = SecurityAlert(
                         event_type=SecurityEvent.CONNECTION_FAILURE,
                         severity="critical",
                         message=(
                             f"Database connection recovery failed after "
-                            f"{self._max_recovery_attempts} attempts"
+                            f"{self._recovery_config.max_attempts} attempts"
                         ),
                         details={
-                            "recovery_attempts": self._max_recovery_attempts,
+                            "recovery_attempts": self._recovery_config.max_attempts,
                             "last_error": str(e),
                         },
                     )
@@ -452,17 +497,19 @@ class DatabaseConnectionMonitor:
     async def _trigger_alert(self, alert: SecurityAlert):
         """Trigger security alert."""
         # Add to history
-        self._security_alerts.append(alert)
+        self._security_state.alerts.append(alert)
 
         # Trim history
-        if len(self._security_alerts) > self._max_security_history:
-            self._security_alerts = self._security_alerts[-self._max_security_history :]
+        if len(self._security_state.alerts) > self._security_state.max_history:
+            self._security_state.alerts = self._security_state.alerts[
+                -self._security_state.max_history :
+            ]
 
         # Log alert
         logger.warning("Security alert: %s - %s", alert.event_type.value, alert.message)
 
         # Call registered callbacks
-        for callback in self._alert_callbacks:
+        for callback in self._security_state.callbacks:
             try:
                 callback(alert)
             except Exception:
@@ -474,7 +521,7 @@ class DatabaseConnectionMonitor:
         Args:
             callback: Function to call when alerts are triggered
         """
-        self._alert_callbacks.append(callback)
+        self._security_state.callbacks.append(callback)
 
     def remove_alert_callback(self, callback: Callable[[SecurityAlert], None]):
         """Remove alert callback function.
@@ -482,23 +529,23 @@ class DatabaseConnectionMonitor:
         Args:
             callback: Function to remove
         """
-        if callback in self._alert_callbacks:
-            self._alert_callbacks.remove(callback)
+        if callback in self._security_state.callbacks:
+            self._security_state.callbacks.remove(callback)
 
     def record_connection_failure(self):
         """Record a connection failure for monitoring."""
-        self._failed_connection_count += 1
-        self._last_connection_attempt = time.time()
+        self._security_state.failed_connection_count += 1
+        self._security_state.last_connection_attempt = time.time()
 
     def reset_connection_failures(self):
         """Reset connection failure tracking."""
-        self._failed_connection_count = 0
+        self._security_state.failed_connection_count = 0
 
     # Status and reporting methods
 
     def get_current_health(self) -> HealthCheckResult | None:
         """Get current health status."""
-        return self._last_health_check
+        return self._health_state.last_check
 
     def get_health_history(self, limit: int | None = None) -> list[HealthCheckResult]:
         """Get health check history.
@@ -509,7 +556,7 @@ class DatabaseConnectionMonitor:
         Returns:
             List of health check results
         """
-        history = self._health_history
+        history = self._health_state.history
         if limit:
             history = history[-limit:]
         return history
@@ -523,7 +570,7 @@ class DatabaseConnectionMonitor:
         Returns:
             List of security alerts
         """
-        alerts = self._security_alerts
+        alerts = self._security_state.alerts
         if limit:
             alerts = alerts[-limit:]
         return alerts
@@ -534,24 +581,30 @@ class DatabaseConnectionMonitor:
         Returns:
             Dictionary with monitoring information
         """
+        last_health = self._health_state.last_check
+        timestamp = (
+            last_health.timestamp.isoformat()
+            if last_health and last_health.timestamp
+            else None
+        )
         return {
-            "monitoring_active": self._monitoring,
-            "health_check_interval": self._health_check_interval,
-            "security_check_interval": self._security_check_interval,
+            "monitoring_active": self._monitor_state.active,
+            "health_check_interval": self._monitor_state.health_interval,
+            "security_check_interval": self._monitor_state.security_interval,
             "last_health_check": (
                 {
-                    "status": self._last_health_check.status.value,
-                    "response_time": self._last_health_check.response_time,
-                    "message": self._last_health_check.message,
-                    "timestamp": self._last_health_check.timestamp.isoformat(),
+                    "status": last_health.status.value,
+                    "response_time": last_health.response_time,
+                    "message": last_health.message,
+                    "timestamp": timestamp,
                 }
-                if self._last_health_check
+                if last_health
                 else None
             ),
-            "health_history_count": len(self._health_history),
-            "security_alerts_count": len(self._security_alerts),
-            "failed_connection_count": self._failed_connection_count,
-            "alert_callbacks_count": len(self._alert_callbacks),
+            "health_history_count": len(self._health_state.history),
+            "security_alerts_count": len(self._security_state.alerts),
+            "failed_connection_count": self._security_state.failed_connection_count,
+            "alert_callbacks_count": len(self._security_state.callbacks),
         }
 
     async def manual_health_check(self) -> HealthCheckResult:
@@ -582,15 +635,15 @@ class DatabaseConnectionMonitor:
             recovery_delay: Delay between recovery attempts
         """
         if health_check_interval is not None:
-            self._health_check_interval = health_check_interval
+            self._monitor_state.health_interval = health_check_interval
 
         if security_check_interval is not None:
-            self._security_check_interval = security_check_interval
+            self._monitor_state.security_interval = security_check_interval
 
         if max_recovery_attempts is not None:
-            self._max_recovery_attempts = max_recovery_attempts
+            self._recovery_config.max_attempts = max_recovery_attempts
 
         if recovery_delay is not None:
-            self._recovery_delay = recovery_delay
+            self._recovery_config.delay_seconds = recovery_delay
 
         logger.info("Monitoring configuration updated")
