@@ -1,5 +1,4 @@
-"""Playwright Service for web scraping and browser automation
-with TripSage Core integration.
+"""Playwright Service for web scraping and browser automation.
 
 This service provides direct Playwright SDK integration for scenarios requiring
 JavaScript execution, complex interactions, or sophisticated browser automation.
@@ -10,12 +9,7 @@ import logging
 import time
 from typing import Any
 
-from playwright.async_api import (
-    Browser,
-    BrowserContext,
-    Playwright,
-    async_playwright,
-)
+from playwright.async_api import Browser, BrowserContext, Playwright, async_playwright
 from pydantic import BaseModel, Field
 
 from tripsage_core.config import Settings, get_settings
@@ -32,10 +26,11 @@ class PlaywrightServiceError(CoreAPIError):
     """Exception raised for Playwright service errors."""
 
     def __init__(self, message: str, original_error: Exception | None = None):
+        """Initialize the Playwright service error."""
         super().__init__(
             message=message,
             code="PLAYWRIGHT_SERVICE_ERROR",
-            service="PlaywrightService",
+            api_service="PlaywrightService",
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
@@ -645,7 +640,7 @@ async def get_playwright_service() -> PlaywrightService:
     Returns:
         PlaywrightService instance
     """
-    global _playwright_service
+    global _playwright_service  # pylint: disable=global-statement
 
     if _playwright_service is None:
         _playwright_service = PlaywrightService()
@@ -656,7 +651,7 @@ async def get_playwright_service() -> PlaywrightService:
 
 async def close_playwright_service() -> None:
     """Close the global Playwright service instance."""
-    global _playwright_service
+    global _playwright_service  # pylint: disable=global-statement
 
     if _playwright_service:
         await _playwright_service.close()
