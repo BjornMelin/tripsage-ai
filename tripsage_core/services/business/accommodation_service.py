@@ -483,7 +483,19 @@ class AccommodationService:
 
             # Add fallback/mock listings if no external service
             if not listings and not self.external_service:
-                listings = await self._generate_mock_listings(search_request)
+                try:
+                    listings = await self._generate_mock_listings(search_request)
+                except Exception as error:  # pragma: no cover - safety net
+                    logger.exception(
+                        "Fallback accommodation listing generation failed",
+                        extra={
+                            "error": str(error),
+                            "location": search_request.location,
+                        },
+                    )
+                    raise ServiceError(
+                        f"Accommodation search failed: {error!s}"
+                    ) from error
 
             # Score and rank listings
             scored_listings = await self._score_listings(listings, search_request)
