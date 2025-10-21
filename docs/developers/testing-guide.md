@@ -556,3 +556,19 @@ When modernizing tests:
 1. Apply patterns to remaining 453 failed frontend tests
 2. Address remaining 481 backend test issues using established patterns
 3. Implement automated test quality checks based on documented patterns
+
+### Testing Standards
+
+The project maintains high testing standards with comprehensive coverage:
+
+- **Unit Tests**: 90%+ coverage with pytest and modern fixtures
+- **Integration Tests**: Service-level testing with real dependencies
+- **E2E Tests**: Playwright browser automation for user workflows
+- **Performance Tests**: Load testing for API endpoints
+
+```bash
+# Run specific test suites
+uv run pytest tests/unit/           # Unit tests only
+uv run pytest tests/integration/    # Integration tests
+uv run pytest --cov=tripsage_core   # Coverage report
+```

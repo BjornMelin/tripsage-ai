@@ -9,7 +9,7 @@ This guide covers backend API development using FastAPI, including patterns, aut
 - [🔌 API Development Guide](#-api-development-guide)
   - [📋 Table of Contents](#-table-of-contents)
   - [🏗️ API Architecture](#️-api-architecture)
-    - [**Project Structure**](#project-structure)
+    - [**API Project Structure**](#api-project-structure)
     - [**FastAPI Application Setup**](#fastapi-application-setup)
   - [🔐 Authentication \& Authorization](#-authentication--authorization)
     - [**JWT Token Management**](#jwt-token-management)
@@ -40,7 +40,13 @@ This guide covers backend API development using FastAPI, including patterns, aut
 
 ## 🏗️ API Architecture
 
-### **Project Structure**
+### **API Project Structure**
+
+For the overall API project structure, see [docs/architecture/project-structure.md](../architecture/project-structure.md).
+
+**Intended API Architecture:**
+
+The API is designed to follow a modular architecture with clear separation of concerns:
 
 ```text
 tripsage/api/

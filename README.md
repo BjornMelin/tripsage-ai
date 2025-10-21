@@ -1,43 +1,46 @@
 # 🌟 TripSage AI
 
-[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)]
-(<https://python.org>)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)]
-(<https://fastapi.tiangolo.com>)
-[![Next.js](https://img.shields.io/badge/Next.js-15+-black.svg)]
-(<https://nextjs.org>)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.
-svg)](https://typescriptlang.org)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)]
-(LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Next.js-15+-black.svg)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://typescriptlang.org)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Next-Generation AI-Powered Travel Planning Platform**  
-> Modern Architecture | Production Ready | Comprehensive Documentation
+<!-- markdownlint-disable MD033 -->
+<div align="center">
 
-TripSage AI is an intelligent travel planning platform that combines the power of
-modern AI agents with comprehensive travel services. Built with FastAPI, Next.js,
-and advanced AI orchestration, it provides personalized travel recommendations,
+## **Next-Generation AI-Powered Travel Planning Platform**
+
+**Modern Architecture** • **Agentic Multi-Agent Search** • **Configurable Providers** • **Open-Source**
+
+</div>
+<!-- markdownlint-enable MD033 -->
+
+---
+
+TripSage AI is an travel planning platform that combines the power of modern AI agents with rich
+all-in-one travel services. Built with FastAPI, Next.js, LangGraph, Supabase, and Redis, with multi-agent AI orchestration, it provides personalized travel recommendations,
 real-time booking capabilities, and intelligent memory management.
 
 ## ✨ Key Features
 
-- 🤖 **AI-Powered Planning**: LangGraph agents with GPT-4 for intelligent
+- **AI-Powered Planning**: LangGraph agents with GPT-4 for intelligent
   trip recommendations
-- ✈️ **Flight Integration**: Direct Duffel API integration for real-time
+- **Flight Integration**: Direct Duffel API integration for real-time
   flight search and booking
-- 🏨 **Accommodation Search**: Comprehensive accommodation discovery and booking
-- 🧠 **Intelligent Memory**: Mem0-powered user preference learning and context
-- ⚡ **Ultra-Fast Caching**: DragonflyDB for sub-millisecond response times
-- 🔒 **Enterprise Security**: Comprehensive RLS policies and JWT authentication
-- 📱 **Modern Frontend**: Next.js 15 with React 19 and TypeScript
-- 🌐 **Real-time Collaboration**: WebSocket-powered trip sharing and updates
+- **Accommodation Search**: Accommodation discovery and booking
+- **Intelligent Memory**: Mem0-powered user preference learning and context
+- **Ultra-Fast Caching**: DragonflyDB for sub-millisecond response times
+- **Enterprise Security**: RLS policies and JWT authentication
+- **Modern Frontend**: Next.js 15 with React 19 and TypeScript
+- **Real-time Collaboration**: WebSocket-powered trip sharing and updates
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - **Python 3.12+** with uv package manager
-- **Node.js 20+** with pnpm
+- **Node.js 24+** with pnpm
 - **PostgreSQL 15+** (or Supabase account)
 - **Redis/DragonflyDB** for caching
 
@@ -45,7 +48,7 @@ real-time booking capabilities, and intelligent memory management.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/tripsage-ai.git
+git clone https://github.com/BjornMelin/tripsage-ai.git
 cd tripsage-ai
 
 # Backend setup
@@ -91,12 +94,12 @@ and scalability:
 
 | Guide | Description |
 |-------|-------------|
-| **[📚 Complete Documentation](docs/README.md)** | **Organized documentation hub** |
-| **[User Guide](docs/08_USER_GUIDES/README.md)** | Complete user manual with API usage examples |
-| **[Developer Guide](docs/04_DEVELOPMENT_GUIDE/README.md)** | Development setup, architecture, and best practices |
-| **[API Reference](docs/06_API_REFERENCE/README.md)** | Complete REST API and WebSocket documentation |
-| **[Security Guide](docs/07_CONFIGURATION/SECURITY/README.md)** | Security implementation and best practices |
-| **[Architecture Guide](docs/03_ARCHITECTURE/README.md)** | System design and technical architecture |
+| **[Complete Documentation](docs/README.md)** | **Organized documentation hub** |
+| **[User Guide](docs/users/README.md)** | Complete user manual with API usage examples |
+| **[Developer Guide](docs/developers/README.md)** | Development setup, architecture, and best practices |
+| **[API Reference](docs/api/README.md)** | Complete REST API and WebSocket documentation |
+| **[Security Guide](docs/operators/security-guide.md)** | Security implementation and best practices |
+| **[Architecture Guide](docs/architecture/README.md)** | System design and technical architecture |
 
 ### Interactive Documentation
 
@@ -108,27 +111,20 @@ and scalability:
 
 ## 🏗️ Project Structure
 
+For detailed information about the project structure and module organization, see [docs/architecture/project-structure.md](docs/architecture/project-structure.md).
+
 ```text
 tripsage-ai/
-├── tripsage/                    # API application
-│   ├── api/                     # FastAPI routers and middleware
-│   │   ├── routers/            # API endpoints (trips, flights, chat)
-│   │   ├── middlewares/        # Authentication and CORS
-│   │   └── core/               # Dependencies and configuration
-│   └── tools/                  # AI agent tools and utilities
-├── tripsage_core/              # Core business logic
-│   ├── services/               # Business and infrastructure services
-│   ├── models/                 # Pydantic models and schemas
-│   └── exceptions/             # Custom exception handling
+├── tripsage/                   # API application (FastAPI)
+├── tripsage_core/              # Core business logic and services
 ├── frontend/                   # Next.js application
-│   ├── app/                    # App Router pages and layouts
-│   ├── components/             # Reusable React components
-│   └── lib/                    # Utilities and API clients
 ├── tests/                      # Comprehensive test suite
-│   ├── unit/                   # Unit tests with 90%+ coverage
-│   ├── integration/            # Service integration tests
-│   └── e2e/                    # End-to-end Playwright tests
-└── scripts/                    # Database and deployment scripts
+├── scripts/                    # Database and deployment scripts
+├── docker/                     # Runtime compose files and Dockerfiles
+├── docs/                       # Documentation
+├── supabase/                   # Supabase configuration
+├── legacy_tripsage/            # Legacy orchestration and agent code
+└── legacy_tripsage_core/       # Legacy core business logic
 ```
 
 ---
@@ -155,28 +151,9 @@ uv run python scripts/database/run_migrations.py    # Run migrations
 uv run python scripts/verification/verify_setup.py  # Verify installation
 ```
 
-### Testing
+## Development Standards
 
-The project maintains high testing standards with comprehensive coverage:
-
-- **Unit Tests**: 90%+ coverage with pytest and modern fixtures
-- **Integration Tests**: Service-level testing with real dependencies
-- **E2E Tests**: Playwright browser automation for user workflows
-- **Performance Tests**: Load testing for API endpoints
-
-```bash
-# Run specific test suites
-uv run pytest tests/unit/           # Unit tests only
-uv run pytest tests/integration/    # Integration tests
-uv run pytest --cov=tripsage_core   # Coverage report
-```
-
-### Code Quality
-
-- **Python**: PEP-8 compliant with ruff formatting (≤88 char lines)
-- **TypeScript**: Biome for linting and formatting
-- **Type Safety**: Full type hints for Python, strict TypeScript
-- **Documentation**: Google-style docstrings for all public APIs
+See [Testing Guide](docs/developers/testing-guide.md) and [Code Standards](docs/developers/code-standards.md) for details on testing, linting, and quality gates.
 
 ---
 
@@ -269,26 +246,7 @@ ws.send(JSON.stringify({
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our
-[Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### Development Workflow
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Write** tests for your changes
-4. **Ensure** all tests pass (`uv run pytest`)
-5. **Format** code (`ruff format . && npx biome format . --write`)
-6. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-7. **Push** to your branch (`git push origin feature/amazing-feature`)
-8. **Open** a Pull Request
-
-### Code Standards
-
-- Follow TDD (Test-Driven Development) principles
-- Maintain 90%+ test coverage
-- Use conventional commit messages
-- Write comprehensive documentation
+We welcome contributions! See the [Developer Contributing Guide](docs/developers/contributing.md) for the full workflow, code standards, and testing details.
 
 ---
 
@@ -339,38 +297,18 @@ uv run pytest tests/security/
 
 ## 📊 Monitoring & Observability
 
-- **Health Checks**: Comprehensive endpoint monitoring
+- **Health Checks**: Endpoint monitoring with health checks
 - **Logging**: Structured logging with correlation IDs
 - **Metrics**: Custom business metrics and performance tracking
 - **Error Tracking**: Detailed error reporting and alerting
 
 ---
 
-## 📜 License
+## License
 
 This project is licensed under the MIT License - see the
 [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🙏 Acknowledgments
-
-- **FastAPI** for the excellent async web framework
-- **Next.js** for the modern React framework
-- **Supabase** for the PostgreSQL backend and authentication
-- **OpenAI** for the AI capabilities
-- **Duffel** for flight search and booking integration
-- **Mem0** for intelligent memory management
-
----
-
-## 📞 Support
-
-- **Documentation**: Check our comprehensive guides above
-- **Issues**: [GitHub Issues](https://github.com/your-org/tripsage-ai/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/tripsage-ai/discussions)
-- **Email**: <support@tripsage.ai>
-
----
-
-## Built with ❤️ for the future of travel planning
+> Built by **Bjorn Melin** as an exploration of AI-driven travel planning.
