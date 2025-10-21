@@ -8,43 +8,15 @@ import asyncio
 from typing import Any
 
 import httpx
-from pydantic import BaseModel, Field
 
+from tripsage.tools.models.accommodations import (
+    AirbnbListingDetailsParams,
+    AirbnbSearchParams,
+)
 from tripsage_core.utils.logging_utils import get_logger
 
 
 logger = get_logger(__name__)
-
-
-class AirbnbSearchParams(BaseModel):
-    """Parameters for Airbnb search."""
-
-    location: str = Field(..., description="Location to search")
-    placeId: str | None = Field(None, description="Specific place ID")
-    checkin: str | None = Field(None, description="Check-in date (YYYY-MM-DD)")
-    checkout: str | None = Field(None, description="Check-out date (YYYY-MM-DD)")
-    adults: int | None = Field(1, description="Number of adults")
-    children: int | None = Field(0, description="Number of children")
-    infants: int | None = Field(0, description="Number of infants")
-    pets: int | None = Field(0, description="Number of pets")
-    minPrice: int | None = Field(None, description="Minimum price per night")
-    maxPrice: int | None = Field(None, description="Maximum price per night")
-    cursor: str | None = Field(None, description="Pagination cursor")
-    ignoreRobotsText: bool | None = Field(
-        False, description="Ignore robots.txt (development only)"
-    )
-
-
-class AirbnbListingDetailsParams(BaseModel):
-    """Parameters for fetching Airbnb listing details."""
-
-    id: str = Field(..., description="Listing ID")
-    checkin: str | None = Field(None, description="Check-in date for pricing")
-    checkout: str | None = Field(None, description="Check-out date for pricing")
-    adults: int | None = Field(1, description="Number of adults for pricing")
-    children: int | None = Field(0, description="Number of children for pricing")
-    infants: int | None = Field(0, description="Number of infants for pricing")
-    pets: int | None = Field(0, description="Number of pets for pricing")
 
 
 class AirbnbMCPClient:
@@ -114,8 +86,13 @@ class AirbnbMCPClient:
         if not self._client:
             await self.connect()
 
+        client = self._client
+        if client is None:
+            await self.connect()
+            client = self._client
+        assert client is not None
         try:
-            response = await self._client.post(
+            response = await client.post(
                 "/invoke",
                 json={"tool": tool_name, "params": params},
                 headers={"Content-Type": "application/json"},
@@ -167,21 +144,28 @@ class AirbnbMCPClient:
         """
         params = AirbnbSearchParams(
             location=location,
+            place_id=None,
             checkin=checkin,
             checkout=checkout,
             adults=adults,
             children=children,
             infants=infants,
             pets=pets,
-            minPrice=min_price,
-            maxPrice=max_price,
+            min_price=min_price,
+            max_price=max_price,
+            min_beds=None,
+            min_bedrooms=None,
+            min_bathrooms=None,
+            property_type=None,
+            amenities=None,
+            room_type=None,
+            superhost=None,
             cursor=cursor,
+            ignore_robots_txt=False,
         )
 
         logger.info("Searching Airbnb accommodations in %s", location)
-        result = await self._invoke_tool(
-            "airbnb_search", params.model_dump(exclude_none=True)
-        )
+        result = await self._invoke_tool("airbnb_search", params.to_airbnb_payload())
 
         listings = result.get("listings", [])
         logger.info("Found %s Airbnb listings", len(listings))
@@ -224,7 +208,7 @@ class AirbnbMCPClient:
 
         logger.info("Fetching details for Airbnb listing %s", listing_id)
         return await self._invoke_tool(
-            "airbnb_listing_details", params.model_dump(exclude_none=True)
+            "airbnb_listing_details", params.to_airbnb_payload()
         )
 
     async def batch_search(
@@ -266,10 +250,12 @@ class AirbnbMCPClient:
             True if the server is healthy, False otherwise
         """
         try:
-            if not self._client:
+            client = self._client
+            if client is None:
                 await self.connect()
-
-            response = await self._client.get("/health")
+                client = self._client
+            assert client is not None
+            response = await client.get("/health")
             return response.status_code == 200
         except Exception:
             logger.exception("Health check failed")

@@ -201,6 +201,7 @@ async def save_activity(
             user_id=user_id,
             saved_at=saved_at.isoformat(),
             notes=request.notes,
+            activity=None,
         )
 
     except HTTPException:
@@ -277,6 +278,7 @@ async def get_saved_activities(
                     user_id=user_id,
                     saved_at=item.get("created_at", datetime.now(UTC).isoformat()),
                     notes=metadata.get("notes"),
+                    activity=None,
                 )
             )
 
@@ -403,14 +405,16 @@ async def delete_saved_activity(
         for item in existing_items:
             # Use Supabase delete with proper filters
             try:
-                await (
+                (
                     db_service.client.table("itinerary_items")
                     .delete()
                     .eq("id", item["id"])
                     .execute()
                 )
+                # Supabase client executes synchronously and returns its summary.
                 deleted_count += 1
-            except Exception as delete_error:
+            except (OSError, RuntimeError, ValueError) as delete_error:
+                # Database/network errors during Supabase delete operation
                 logger.warning("Failed to delete item %s: %s", item["id"], delete_error)
 
         if deleted_count == 0:

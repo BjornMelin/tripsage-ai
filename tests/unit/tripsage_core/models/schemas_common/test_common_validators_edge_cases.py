@@ -521,7 +521,7 @@ class TestValidatorEdgeCases:
                     )  # Cap at 5.0
                     results.append((airport, email, rating))
                     time.sleep(0.001)  # Small delay
-            except Exception as e:
+            except (ValidationError, ValueError, RuntimeError) as e:
                 errors.append(e)
 
         # Start multiple threads

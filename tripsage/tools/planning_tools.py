@@ -9,7 +9,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from tripsage_core.services.business.memory_service import MemoryService
+from tripsage.tools.memory_tools import ConversationMessage, add_conversation_memory
+from tripsage_core.exceptions import CoreServiceError, CoreTripSageError
 from tripsage_core.utils.cache_utils import redis_cache
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.error_handling_utils import log_exception
@@ -17,6 +18,34 @@ from tripsage_core.utils.logging_utils import get_logger
 
 
 logger = get_logger(__name__)
+
+
+async def _record_plan_memory(
+    *,
+    user_id: str,
+    plan_id: str,
+    system_prompt: str,
+    user_content: str,
+    metadata: dict[str, Any],
+) -> None:
+    """Persist plan-related context to the memory service."""
+    try:
+        await add_conversation_memory(
+            messages=[
+                ConversationMessage(role="system", content=system_prompt),
+                ConversationMessage(role="user", content=user_content),
+            ],
+            user_id=user_id,
+            context_type="travel_plan",
+            metadata=metadata,
+        )
+    except (
+        CoreServiceError,
+        CoreTripSageError,
+        RuntimeError,
+        ValueError,
+    ) as exc:  # pragma: no cover - telemetry path
+        logger.warning("Failed to record travel plan memory: %s", exc)
 
 
 class TravelPlanInput(BaseModel):
@@ -114,46 +143,31 @@ async def create_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
         cache_key = f"travel_plan:{plan_id}"
         await redis_cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
-        # Create memory entities for the plan
-        # Using Mem0 direct SDK integration for memory management
-        try:
-            # Initialize direct Mem0 service
-            memory_service = MemoryService()
-            await memory_service.connect()
+        plan_memory = (
+            f"Travel plan '{plan_input.title}' created for user {plan_input.user_id}"
+        )
+        plan_memory += f" with destinations: {', '.join(plan_input.destinations)}"
+        plan_memory += f" from {plan_input.start_date} to {plan_input.end_date}"
+        plan_memory += f" for {plan_input.travelers} travelers"
 
-            # Create memory for the travel plan
-            plan_memory = (
-                f"Travel plan '{plan_input.title}' created for user "
-                f"{plan_input.user_id}"
-            )
-            plan_memory += f" with destinations: {', '.join(plan_input.destinations)}"
-            plan_memory += f" from {plan_input.start_date} to {plan_input.end_date}"
-            plan_memory += f" for {plan_input.travelers} travelers"
+        if plan_input.budget:
+            plan_memory += f" with budget ${plan_input.budget}"
 
-            if plan_input.budget:
-                plan_memory += f" with budget ${plan_input.budget}"
-
-            # Add the memory using Mem0
-            await memory_service.add_conversation_memory(
-                messages=[
-                    {"role": "system", "content": "Travel plan created"},
-                    {"role": "user", "content": plan_memory},
-                ],
-                user_id=plan_input.user_id,
-                metadata={
-                    "plan_id": plan_id,
-                    "type": "travel_plan",
-                    "destinations": plan_input.destinations,
-                    "start_date": plan_input.start_date,
-                    "end_date": plan_input.end_date,
-                    "travelers": plan_input.travelers,
-                    "budget": plan_input.budget,
-                },
-            )
-
-        except Exception as e:
-            logger.warning("Error creating memory entities: %s", e)
-            # Continue even if memory creation fails
+        await _record_plan_memory(
+            user_id=plan_input.user_id,
+            plan_id=plan_id,
+            system_prompt="Travel plan created",
+            user_content=plan_memory,
+            metadata={
+                "plan_id": plan_id,
+                "type": "travel_plan",
+                "destinations": plan_input.destinations,
+                "start_date": plan_input.start_date,
+                "end_date": plan_input.end_date,
+                "travelers": plan_input.travelers,
+                "budget": plan_input.budget,
+            },
+        )
 
         return {
             "success": True,
@@ -203,7 +217,8 @@ async def update_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
             return {"success": False, "error": "Unauthorized to update this plan"}
 
         # Update fields
-        for key, value in update_input.updates.items():
+        updates = dict(update_input.updates)
+        for key, value in updates.items():
             if key in travel_plan:
                 travel_plan[key] = value
 
@@ -213,49 +228,32 @@ async def update_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
         # Save the updated plan
         await redis_cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
-        # Update memory entity
-        # Using Mem0 direct SDK integration for memory management
-        try:
-            # Initialize direct Mem0 service
-            memory_service = MemoryService()
-            await memory_service.connect()
+        update_memory = f"Travel plan '{travel_plan.get('title', 'Untitled')}' updated"
+        update_details = []
 
-            # Create update memory
-            update_memory = (
-                f"Travel plan '{travel_plan.get('title', 'Untitled')}' updated"
+        for key, value in updates.items():
+            if key == "destinations":
+                update_details.append(f"destinations changed to {', '.join(value)}")
+            elif key in {"start_date", "end_date"}:
+                update_details.append(f"{key} changed to {value}")
+            elif key == "budget":
+                update_details.append(f"budget changed to ${value}")
+            elif key == "title":
+                update_details.append(f"title changed to {value}")
+
+        if update_details:
+            update_memory += f" with changes: {', '.join(update_details)}"
+            await _record_plan_memory(
+                user_id=update_input.user_id,
+                plan_id=update_input.plan_id,
+                system_prompt="Travel plan updated",
+                user_content=update_memory,
+                metadata={
+                    "plan_id": update_input.plan_id,
+                    "type": "travel_plan_update",
+                    "changes": updates,
+                },
             )
-            update_details = []
-
-            for key, value in update_input.updates.items():
-                if key == "destinations":
-                    update_details.append(f"destinations changed to {', '.join(value)}")
-                elif key == "start_date" or key == "end_date":
-                    update_details.append(f"{key} changed to {value}")
-                elif key == "budget":
-                    update_details.append(f"budget changed to ${value}")
-                elif key == "title":
-                    update_details.append(f"title changed to {value}")
-
-            if update_details:
-                update_memory += f" with changes: {', '.join(update_details)}"
-
-                # Add the memory update using Mem0
-                await memory_service.add_conversation_memory(
-                    messages=[
-                        {"role": "system", "content": "Travel plan updated"},
-                        {"role": "user", "content": update_memory},
-                    ],
-                    user_id=update_input.user_id,
-                    metadata={
-                        "plan_id": update_input.plan_id,
-                        "type": "travel_plan_update",
-                        "changes": update_input.updates,
-                    },
-                )
-
-        except Exception as e:
-            logger.warning("Error updating memory entity: %s", e)
-            # Continue even if memory update fails
 
         return {
             "success": True,
@@ -304,9 +302,9 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
             "travel_tips": [],
         }
 
-        # Process flight results
-        if search_input.flight_results:
-            flight_offers = search_input.flight_results.get("offers", [])
+        flight_results = dict(search_input.flight_results or {})
+        if flight_results:
+            flight_offers = flight_results.get("offers", [])
             if flight_offers:
                 # Sort by price (assuming flight offers have total_amount field)
                 sorted_flights = sorted(
@@ -321,10 +319,9 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
                     )
 
         # Process accommodation results
-        if search_input.accommodation_results:
-            accommodations = search_input.accommodation_results.get(
-                "accommodations", []
-            )
+        accommodation_results = dict(search_input.accommodation_results or {})
+        if accommodation_results:
+            accommodations = accommodation_results.get("accommodations", [])
             if accommodations:
                 # Sort by a combination of price and rating
                 for accommodation in accommodations:
@@ -352,8 +349,9 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
                     )
 
         # Process activity results
-        if search_input.activity_results:
-            activities = search_input.activity_results.get("activities", [])
+        activity_results = dict(search_input.activity_results or {})
+        if activity_results:
+            activities = activity_results.get("activities", [])
             if activities:
                 # Sort by rating
                 sorted_activities = sorted(
@@ -372,14 +370,15 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
                     )
 
         # Process destination information
-        if search_input.destination_info:
+        destination_info = dict(search_input.destination_info or {})
+        if destination_info:
             # Extract highlights
-            highlights = search_input.destination_info.get("highlights", [])
+            highlights = destination_info.get("highlights", [])
             if highlights:
                 combined_results["destination_highlights"] = highlights[:5]
 
             # Extract travel tips
-            tips = search_input.destination_info.get("tips", [])
+            tips = destination_info.get("tips", [])
             if tips:
                 combined_results["travel_tips"] = tips[:3]
 
@@ -617,70 +616,47 @@ async def save_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
         # For now, we just update the cache with a longer TTL
         await redis_cache.set(cache_key, travel_plan, ttl=86400 * 30)  # 30 days
 
-        # Update knowledge graph
-        # Using Mem0 direct SDK integration for memory management
-        try:
-            # Initialize direct Mem0 service
-            memory_service = MemoryService()
-            await memory_service.connect()
+        if finalize:
+            finalization_time = datetime.now(UTC).isoformat()
+            finalize_memory = (
+                f"Travel plan '{travel_plan.get('title', 'Untitled')}' "
+                f"finalized on {finalization_time}"
+            )
+            await _record_plan_memory(
+                user_id=user_id,
+                plan_id=plan_id,
+                system_prompt="Travel plan finalized",
+                user_content=finalize_memory,
+                metadata={
+                    "plan_id": plan_id,
+                    "type": "travel_plan_finalization",
+                    "finalized_at": finalization_time,
+                },
+            )
 
-            # Add finalization memory if finalized
-            if finalize:
-                finalization_time = datetime.now(UTC).isoformat()
-                finalize_memory = (
-                    f"Travel plan '{travel_plan.get('title', 'Untitled')}' "
-                    f"finalized on {finalization_time}"
+        components = travel_plan.get("components", {})
+        if components:
+            component_memories = [
+                f"{len(items)} {component_type}"
+                for component_type, items in components.items()
+                if items
+            ]
+
+            if component_memories:
+                components_memory = (
+                    f"Travel plan includes: {', '.join(component_memories)}"
                 )
-
-                await memory_service.add_conversation_memory(
-                    messages=[
-                        {"role": "system", "content": "Travel plan finalized"},
-                        {"role": "user", "content": finalize_memory},
-                    ],
+                await _record_plan_memory(
                     user_id=user_id,
+                    plan_id=plan_id,
+                    system_prompt="Travel plan components saved",
+                    user_content=components_memory,
                     metadata={
                         "plan_id": plan_id,
-                        "type": "travel_plan_finalization",
-                        "finalized_at": finalization_time,
+                        "type": "travel_plan_components",
+                        "components": components,
                     },
                 )
-
-            # Create memory for plan components
-            components = travel_plan.get("components", {})
-            if components:
-                component_memories = []
-
-                for component_type, items in components.items():
-                    if not items:
-                        continue
-
-                    component_count = len(items)
-                    component_memories.append(f"{component_count} {component_type}")
-
-                if component_memories:
-                    components_memory = (
-                        f"Travel plan includes: {', '.join(component_memories)}"
-                    )
-
-                    await memory_service.add_conversation_memory(
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": "Travel plan components saved",
-                            },
-                            {"role": "user", "content": components_memory},
-                        ],
-                        user_id=user_id,
-                        metadata={
-                            "plan_id": plan_id,
-                            "type": "travel_plan_components",
-                            "components": components,
-                        },
-                    )
-
-        except Exception as e:
-            logger.warning("Error updating memory entity: %s", e)
-            # Continue even if memory update fails
 
         return {
             "success": True,

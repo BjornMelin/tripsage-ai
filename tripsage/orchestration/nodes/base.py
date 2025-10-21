@@ -107,7 +107,8 @@ class BaseAgentNode(ABC):
             return updated_state
 
         except Exception as e:
-            self.logger.exception("Error in %s node", self.node_name)
+            error_message = f"Error in {self.node_name} node: {e}"
+            self.logger.exception(error_message)
             log_exception(e, logger_name=f"orchestration.{self.node_name}")
             return self._handle_error(state, e)
 

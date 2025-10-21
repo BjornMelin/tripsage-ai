@@ -20,7 +20,7 @@ from tripsage_core.monitoring.database_metrics import (
 class TestDatabaseMetrics:
     """Test suite for DatabaseMetrics class."""
 
-    def setup_method(self):
+    def __init__(self):
         """Set up test fixtures."""
         # Create isolated registry for testing
         self.registry = CollectorRegistry()
@@ -127,9 +127,11 @@ class TestDatabaseMetrics:
 
     def test_time_query_context_manager_error(self):
         """Test query timing context manager with error."""
-        with pytest.raises(ValueError):
-            with self.metrics.time_query("supabase", "DELETE", "trips"):
-                raise ValueError("Test error")
+        with (
+            pytest.raises(ValueError),
+            self.metrics.time_query("supabase", "DELETE", "trips"),
+        ):
+            raise ValueError("Test error")
 
         # Check that error was recorded
         error_metrics = self._get_metric_samples(self.metrics.query_errors)
@@ -255,7 +257,7 @@ class TestDatabaseMetrics:
 class TestGlobalMetricsInstance:
     """Test global metrics instance management."""
 
-    def setup_method(self):
+    def __init__(self):
         """Reset global state before each test."""
         reset_database_metrics()
 
@@ -283,7 +285,7 @@ class TestGlobalMetricsInstance:
 class TestMetricsIntegration:
     """Integration tests for metrics collection."""
 
-    def setup_method(self):
+    def __init__(self):
         """Set up test fixtures."""
         self.registry = CollectorRegistry()
         self.metrics = DatabaseMetrics(registry=self.registry)
