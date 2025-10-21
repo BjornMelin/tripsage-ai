@@ -1,1 +1,1 @@
-# Database utilities package
+"""Database utilities package."""
