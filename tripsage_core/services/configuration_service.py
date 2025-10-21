@@ -1,19 +1,10 @@
-"""Configuration Service for dynamic agent configuration management.
+"""Configuration Service for dynamic agent configuration management (Supabase-only)."""
 
-Provides database-backed configuration management with caching, versioning,
-and real-time updates following 2025 best practices.
-"""
-
-import json
-from datetime import UTC, datetime
+from functools import lru_cache
 from typing import Any
-from uuid import UUID
-
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage_core.config import get_settings
-from tripsage_core.database.connection import get_database_session
+from tripsage_core.services.infrastructure.database_service import DatabaseService
 from tripsage_core.utils.cache_utils import (
     delete_cache,
     generate_cache_key,
@@ -30,8 +21,10 @@ class ConfigurationService:
     """Service for managing agent configurations with database persistence."""
 
     def __init__(self):
+        """Initialize configuration service with settings and DB client."""
         self.settings = get_settings()
         self._cache_ttl = 300  # 5 minutes cache TTL for config data
+        self._db = DatabaseService()
 
     async def get_agent_config(
         self, agent_type: str, environment: str | None = None, **overrides
@@ -71,215 +64,143 @@ class ConfigurationService:
                     "Using database config for %s in %s", agent_type, environment
                 )
                 return final_config
-            else:
-                # Fallback to settings-based config
-                fallback_config = self.settings.get_agent_config(
-                    agent_type, **overrides
-                )
-                logger.warning(
-                    "No database config found for %s, using fallback", agent_type
-                )
-                return fallback_config
+            # Fallback to settings-based config
+            # Fallback to static settings, if available
+            default_fn = getattr(
+                self.settings, "default_agent_config", lambda *_a, **_k: {}
+            )  # type: ignore[attr-defined]
+            fallback_config = default_fn(agent_type, **overrides)
+            logger.warning(
+                "No database config found for %s, using fallback", agent_type
+            )
+            return fallback_config
 
         except Exception:
             logger.exception("Error getting agent config from database")
             # Fallback to settings-based config
-            return self.settings.get_agent_config(agent_type, **overrides)
+            return getattr(self.settings, "default_agent_config", lambda *_a, **_k: {})(  # type: ignore[attr-defined]
+                agent_type, **overrides
+            )
 
     async def _get_agent_config_from_db(
         self, agent_type: str, environment: str
     ) -> dict[str, Any] | None:
-        """Get agent configuration from database."""
-        async with get_database_session() as session:
-            result = await session.execute(
-                text("""
-                    SELECT temperature, max_tokens, top_p, timeout_seconds, model,
-                           description, updated_at, updated_by
-                    FROM configuration_profiles
-                    WHERE agent_type = :agent_type
-                      AND environment = :environment
-                      AND is_active = true
-                    LIMIT 1
-                """),
-                {"agent_type": agent_type, "environment": environment},
-            )
-
-            row = result.fetchone()
-            if row:
-                return {
-                    "model": row.model,
-                    "temperature": float(row.temperature),
-                    "max_tokens": row.max_tokens,
-                    "top_p": float(row.top_p),
-                    "timeout_seconds": row.timeout_seconds,
-                    "api_key": self.settings.openai_api_key.get_secret_value(),
-                    "description": row.description,
-                    "updated_at": row.updated_at,
-                    "updated_by": row.updated_by,
-                }
+        """Get agent configuration from database via Supabase."""
+        await self._db.ensure_connected()
+        rows = await self._db.select(
+            "configuration_profiles",
+            "temperature,max_tokens,top_p,timeout_seconds,model,description,updated_at,updated_by",
+            filters={
+                "agent_type": agent_type,
+                "environment": environment,
+                "is_active": True,
+            },
+            limit=1,
+        )
+        if not rows:
             return None
+        row = rows[0]
+        return {
+            "model": row.get("model"),
+            "temperature": float(row.get("temperature", 0.0)),
+            "max_tokens": row.get("max_tokens"),
+            "top_p": float(row.get("top_p", 1.0)),
+            "timeout_seconds": row.get("timeout_seconds"),
+            # type: ignore # pylint: disable=no-member
+            "api_key": self.settings.openai_api_key.get_secret_value(),
+            "description": row.get("description"),
+            "updated_at": row.get("updated_at"),
+            "updated_by": row.get("updated_by"),
+        }
 
     async def update_agent_config(
         self,
         agent_type: str,
+        *,
         config_updates: dict[str, Any],
         updated_by: str,
         environment: str | None = None,
         description: str | None = None,
     ) -> dict[str, Any]:
-        """Update agent configuration in database with versioning."""
+        """Create or update an agent configuration profile in Supabase.
+
+        Args:
+            agent_type: Logical agent type key.
+            config_updates: Fields to update (temperature, max_tokens, top_p,
+                timeout_seconds, model).
+            updated_by: User identifier performing the change.
+            environment: Target environment, defaults to settings.environment.
+            description: Optional description to set.
+
+        Returns:
+            The resolved configuration after update.
+        """
         if environment is None:
             environment = self.settings.environment
 
-        try:
-            async with get_database_session() as session:
-                # Get current configuration
-                current_config = await self._get_agent_config_from_db(
-                    agent_type, environment
-                )
+        await self._db.ensure_connected()
 
-                if not current_config:
-                    # Create new configuration profile
-                    await self._create_new_config_profile(
-                        session,
-                        agent_type,
-                        config_updates,
-                        updated_by,
-                        environment,
-                        description,
-                    )
-                else:
-                    # Update existing configuration
-                    await self._update_existing_config_profile(
-                        session,
-                        agent_type,
-                        config_updates,
-                        updated_by,
-                        environment,
-                        description,
-                    )
-
-                await session.commit()
-
-                # Clear cache
-                cache_key_str = generate_cache_key(
-                    "agent_config", f"{agent_type}:{environment}"
-                )
-                await delete_cache(cache_key_str)
-
-                # Get updated configuration
-                updated_config = await self.get_agent_config(agent_type, environment)
-
-                logger.info(
-                    "Agent config updated for %s in %s by %s",
-                    agent_type,
-                    environment,
-                    updated_by,
-                )
-                return updated_config
-
-        except Exception:
-            logger.exception("Error updating agent config")
-            raise
-
-    async def _create_new_config_profile(
-        self,
-        session: AsyncSession,
-        agent_type: str,
-        config_updates: dict[str, Any],
-        updated_by: str,
-        environment: str,
-        description: str | None,
-    ) -> UUID:
-        """Create a new configuration profile."""
-        # Get defaults from settings
-        defaults = self.settings.get_agent_config(agent_type)
-
-        # Merge with updates
-        final_config = {**defaults, **config_updates}
-
-        # Insert new profile
-        result = await session.execute(
-            text("""
-                INSERT INTO configuration_profiles (
-                    agent_type, temperature, max_tokens, top_p, timeout_seconds,
-                    model, environment, description, created_by, updated_by
-                ) VALUES (
-                    :agent_type, :temperature, :max_tokens, :top_p, :timeout_seconds,
-                    :model, :environment, :description, :created_by, :updated_by
-                ) RETURNING id
-            """),
-            {
+        current = await self._get_agent_config_from_db(agent_type, environment)
+        if not current:
+            defaults = getattr(
+                self.settings, "default_agent_config", lambda *_a, **_k: {}
+            )(agent_type)
+            final_config = {**defaults, **config_updates}
+            payload = {
                 "agent_type": agent_type,
-                "temperature": final_config["temperature"],
-                "max_tokens": final_config["max_tokens"],
-                "top_p": final_config["top_p"],
-                "timeout_seconds": final_config["timeout_seconds"],
-                "model": final_config["model"],
+                "temperature": final_config.get("temperature"),
+                "max_tokens": final_config.get("max_tokens"),
+                "top_p": final_config.get("top_p"),
+                "timeout_seconds": final_config.get("timeout_seconds"),
+                "model": final_config.get("model"),
                 "environment": environment,
                 "description": description,
                 "created_by": updated_by,
                 "updated_by": updated_by,
-            },
-        )
-
-        return result.fetchone()[0]
-
-    async def _update_existing_config_profile(
-        self,
-        session: AsyncSession,
-        agent_type: str,
-        config_updates: dict[str, Any],
-        updated_by: str,
-        environment: str,
-        description: str | None,
-    ) -> UUID:
-        """Update existing configuration profile."""
-        # Build update clauses
-        update_fields = []
-        params = {
-            "agent_type": agent_type,
-            "environment": environment,
-            "updated_by": updated_by,
-        }
-
-        for field, value in config_updates.items():
-            if field in [
+                "is_active": True,
+            }
+            await self._db.insert("configuration_profiles", payload)
+        else:
+            update_fields: dict[str, Any] = {}
+            for field in (
                 "temperature",
                 "max_tokens",
                 "top_p",
                 "timeout_seconds",
                 "model",
-            ]:
-                update_fields.append(f"{field} = :{field}")
-                params[field] = value
-
-        if description:
-            update_fields.append("description = :description")
-            params["description"] = description
-
-        if not update_fields:
-            raise ValueError("No valid configuration fields to update")
-
-        # Execute update
-        query = f"""
-            UPDATE configuration_profiles
-            SET {", ".join(update_fields)}, updated_by = :updated_by, updated_at = NOW()
-            WHERE agent_type = :agent_type
-              AND environment = :environment
-              AND is_active = true
-            RETURNING id
-        """
-
-        result = await session.execute(text(query), params)
-        row = result.fetchone()
-
-        if not row:
-            raise ValueError(
-                f"No active configuration found for {agent_type} in {environment}"
+            ):
+                if field in config_updates:
+                    update_fields[field] = config_updates[field]
+            if description is not None:
+                update_fields["description"] = description
+            update_fields["updated_by"] = updated_by
+            if not update_fields:
+                raise ValueError("No valid configuration fields to update")
+            await self._db.update(
+                "configuration_profiles",
+                update_fields,
+                filters={
+                    "agent_type": agent_type,
+                    "environment": environment,
+                    "is_active": True,
+                },
             )
 
-        return row[0]
+        # Clear cache and return the new effective configuration
+        cache_key_str = generate_cache_key(
+            "agent_config", f"{agent_type}:{environment}"
+        )
+        await delete_cache(cache_key_str)
+        updated_config = await self.get_agent_config(agent_type, environment)
+        logger.info(
+            "Agent config updated for %s in %s by %s",
+            agent_type,
+            environment,
+            updated_by,
+        )
+        return updated_config
+
+    # Legacy SQL paths removed; Supabase-only implementation above.
 
     async def get_configuration_versions(
         self, agent_type: str, environment: str | None = None, limit: int = 10
@@ -288,33 +209,8 @@ class ConfigurationService:
         if environment is None:
             environment = self.settings.environment
 
-        async with get_database_session() as session:
-            result = await session.execute(
-                text("""
-                    SELECT cv.version_id, cv.config_snapshot, cv.description,
-                           cv.created_at, cv.created_by, cv.is_current
-                    FROM configuration_versions cv
-                    JOIN configuration_profiles cp
-                        ON cv.configuration_profile_id = cp.id
-                    WHERE cp.agent_type = :agent_type
-                      AND cp.environment = :environment
-                    ORDER BY cv.created_at DESC
-                    LIMIT :limit
-                """),
-                {"agent_type": agent_type, "environment": environment, "limit": limit},
-            )
-
-            return [
-                {
-                    "version_id": row.version_id,
-                    "configuration": row.config_snapshot,
-                    "description": row.description,
-                    "created_at": row.created_at,
-                    "created_by": row.created_by,
-                    "is_current": row.is_current,
-                }
-                for row in result
-            ]
+        # Not implemented in Supabase mode; versioning handled externally.
+        return []
 
     async def rollback_to_version(
         self,
@@ -327,80 +223,7 @@ class ConfigurationService:
         if environment is None:
             environment = self.settings.environment
 
-        try:
-            async with get_database_session() as session:
-                # Get version configuration
-                result = await session.execute(
-                    text("""
-                        SELECT cv.config_snapshot, cp.id as profile_id
-                        FROM configuration_versions cv
-                        JOIN configuration_profiles cp
-                            ON cv.configuration_profile_id = cp.id
-                        WHERE cv.version_id = :version_id
-                          AND cp.agent_type = :agent_type
-                          AND cp.environment = :environment
-                    """),
-                    {
-                        "version_id": version_id,
-                        "agent_type": agent_type,
-                        "environment": environment,
-                    },
-                )
-
-                row = result.fetchone()
-                if not row:
-                    raise ValueError(f"Version {version_id} not found for {agent_type}")
-
-                config_snapshot = row.config_snapshot
-                profile_id = row.profile_id
-
-                # Update configuration profile with snapshot data
-                await session.execute(
-                    text("""
-                        UPDATE configuration_profiles
-                        SET temperature = :temperature,
-                            max_tokens = :max_tokens,
-                            top_p = :top_p,
-                            timeout_seconds = :timeout_seconds,
-                            model = :model,
-                            description = :description,
-                            updated_by = :updated_by,
-                            updated_at = NOW()
-                        WHERE id = :profile_id
-                    """),
-                    {
-                        "temperature": config_snapshot["temperature"],
-                        "max_tokens": config_snapshot["max_tokens"],
-                        "top_p": config_snapshot["top_p"],
-                        "timeout_seconds": config_snapshot["timeout_seconds"],
-                        "model": config_snapshot["model"],
-                        "description": f"Rolled back to version {version_id}",
-                        "updated_by": rolled_back_by,
-                        "profile_id": profile_id,
-                    },
-                )
-
-                await session.commit()
-
-                # Clear cache
-                cache_key_str = generate_cache_key(
-                    "agent_config", f"{agent_type}:{environment}"
-                )
-                await delete_cache(cache_key_str)
-
-                logger.info(
-                    "Configuration rolled back to %s for %s by %s",
-                    version_id,
-                    agent_type,
-                    rolled_back_by,
-                )
-
-                # Return updated configuration
-                return await self.get_agent_config(agent_type, environment)
-
-        except Exception:
-            logger.exception("Error rolling back configuration")
-            raise
+        raise NotImplementedError("Rollback not implemented in Supabase mode")
 
     async def get_all_agent_configs(
         self, environment: str | None = None
@@ -420,7 +243,10 @@ class ConfigurationService:
             except Exception:
                 logger.exception("Error getting config for %s", agent_type)
                 # Use fallback
-                configs[agent_type] = self.settings.get_agent_config(agent_type)
+                default_fn = getattr(
+                    self.settings, "default_agent_config", lambda *_a, **_k: {}
+                )  # type: ignore[attr-defined]
+                configs[agent_type] = default_fn(agent_type)
 
         return configs
 
@@ -434,71 +260,10 @@ class ConfigurationService:
         if environment is None:
             environment = self.settings.environment
 
-        try:
-            async with get_database_session() as session:
-                # Get configuration profile ID
-                result = await session.execute(
-                    text("""
-                        SELECT id FROM configuration_profiles
-                        WHERE agent_type = :agent_type
-                          AND environment = :environment
-                          AND is_active = true
-                    """),
-                    {"agent_type": agent_type, "environment": environment},
-                )
-
-                row = result.fetchone()
-                if not row:
-                    logger.warning(
-                        "No configuration profile found for metrics recording: %s",
-                        agent_type,
-                    )
-                    return
-
-                profile_id = row[0]
-
-                # Insert performance metrics
-                await session.execute(
-                    text("""
-                        INSERT INTO configuration_performance_metrics (
-                            configuration_profile_id, average_response_time,
-                            success_rate,
-                            error_rate, token_usage, cost_estimate, sample_size,
-                            measurement_period_start, measurement_period_end
-                        ) VALUES (
-                            :profile_id, :avg_response_time, :success_rate,
-                            :error_rate, :token_usage, :cost_estimate,
-                            :sample_size, :period_start, :period_end
-                        )
-                    """),
-                    {
-                        "profile_id": profile_id,
-                        "avg_response_time": metrics.get("average_response_time", 0.0),
-                        "success_rate": metrics.get("success_rate", 1.0),
-                        "error_rate": metrics.get("error_rate", 0.0),
-                        "token_usage": json.dumps(metrics.get("token_usage", {})),
-                        "cost_estimate": metrics.get("cost_estimate", 0.0),
-                        "sample_size": metrics.get("sample_size", 1),
-                        "period_start": metrics.get("period_start", datetime.now(UTC)),
-                        "period_end": metrics.get("period_end", datetime.now(UTC)),
-                    },
-                )
-
-                await session.commit()
-
-                logger.debug("Performance metrics recorded for %s", agent_type)
-
-        except Exception:
-            logger.exception("Error recording performance metrics")
+        # Not implemented in Supabase mode.
 
 
-# Global service instance
-_configuration_service: ConfigurationService | None = None
-
-
+@lru_cache(maxsize=1)
 def get_configuration_service() -> ConfigurationService:
-    """Get the global configuration service instance."""
-    global _configuration_service
-    if _configuration_service is None:
-        _configuration_service = ConfigurationService()
-    return _configuration_service
+    """Return a cached singleton ConfigurationService instance."""
+    return ConfigurationService()
