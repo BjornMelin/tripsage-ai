@@ -4,6 +4,7 @@ This service provides timezone-aware time operations, eliminating the need for
 external MCP services for basic time and timezone calculations.
 """
 
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -14,6 +15,10 @@ from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError as CoreAPIError,
     CoreServiceError,
+)
+from tripsage_core.services.external_apis.base_service import (
+    AsyncServiceLifecycle,
+    AsyncServiceProvider,
 )
 
 
@@ -66,7 +71,21 @@ class WorldClock(BaseModel):
     utc_offset: str = Field(..., description="UTC offset")
 
 
-class TimeService:
+@dataclass(frozen=True)
+class TimeServiceConfig:
+    """Immutable configuration for the time service."""
+
+    default_timezone: str
+    default_date_format: str
+    default_time_format: str
+    default_datetime_format: str
+    default_business_start: str
+    default_business_end: str
+    weekdays_only: bool
+    custom_timezones: dict[str, str]
+
+
+class TimeService(AsyncServiceLifecycle):
     """Service for timezone and time operations with Core integration."""
 
     def __init__(self, settings: Settings | None = None):
@@ -78,28 +97,30 @@ class TimeService:
         self.settings = settings or get_settings()
         self._connected = False
 
-        # Get time service configuration from settings
-        self.default_timezone = getattr(
-            self.settings, "time_service_default_timezone", "UTC"
+        settings_obj = self.settings
+        self.config = TimeServiceConfig(
+            default_timezone=getattr(
+                settings_obj, "time_service_default_timezone", "UTC"
+            ),
+            default_date_format=getattr(
+                settings_obj, "time_service_date_format", "%Y-%m-%d"
+            ),
+            default_time_format=getattr(
+                settings_obj, "time_service_time_format", "%H:%M:%S"
+            ),
+            default_datetime_format=getattr(
+                settings_obj, "time_service_datetime_format", "%Y-%m-%d %H:%M:%S"
+            ),
+            default_business_start=getattr(
+                settings_obj, "time_service_business_start", "09:00"
+            ),
+            default_business_end=getattr(
+                settings_obj, "time_service_business_end", "17:00"
+            ),
+            weekdays_only=getattr(settings_obj, "time_service_weekdays_only", True),
+            custom_timezones=getattr(settings_obj, "time_service_custom_timezones", {})
+            or {},
         )
-        self.default_date_format = getattr(
-            self.settings, "time_service_date_format", "%Y-%m-%d"
-        )
-        self.default_time_format = getattr(
-            self.settings, "time_service_time_format", "%H:%M:%S"
-        )
-        self.default_datetime_format = getattr(
-            self.settings, "time_service_datetime_format", "%Y-%m-%d %H:%M:%S"
-        )
-
-        # Business hours defaults from settings
-        self.default_business_start = getattr(
-            self.settings, "time_service_business_start", "09:00"
-        )
-        self.default_business_end = getattr(
-            self.settings, "time_service_business_end", "17:00"
-        )
-        self.weekdays_only = getattr(self.settings, "time_service_weekdays_only", True)
 
         # Major timezone mappings (can be extended via settings)
         self._major_timezones = {
@@ -118,9 +139,8 @@ class TimeService:
         }
 
         # Add custom timezone mappings from settings if available
-        custom_timezones = getattr(self.settings, "time_service_custom_timezones", {})
-        if custom_timezones:
-            self._major_timezones.update(custom_timezones)
+        if self.config.custom_timezones:
+            self._major_timezones.update(self.config.custom_timezones)
 
         self._recoverable_errors = (
             CoreServiceError,
@@ -173,7 +193,7 @@ class TimeService:
         """
         await self.ensure_connected()
 
-        resolved_timezone = timezone_name or self.default_timezone
+        resolved_timezone = timezone_name or self.config.default_timezone
         if resolved_timezone is None:
             raise TimeServiceError("No timezone configured for current time lookup.")
 
@@ -274,7 +294,7 @@ class TimeService:
                 except ValueError as exc:
                     # Try other common formats
                     for fmt in [
-                        self.default_datetime_format,
+                        self.config.default_datetime_format,
                         "%Y-%m-%d %H:%M:%S",
                         "%Y-%m-%d %H:%M",
                         "%Y-%m-%d",
@@ -432,8 +452,12 @@ class TimeService:
                             city=display_city,
                             timezone=timezone_name,
                             current_time=current_time,
-                            local_date=current_time.strftime(self.default_date_format),
-                            local_time=current_time.strftime(self.default_time_format),
+                            local_date=current_time.strftime(
+                                self.config.default_date_format
+                            ),
+                            local_time=current_time.strftime(
+                                self.config.default_time_format
+                            ),
                             utc_offset=formatted_offset,
                         )
                     )
@@ -473,7 +497,7 @@ class TimeService:
                     parsed_time = datetime.fromisoformat(target_time)
                 except ValueError:
                     parsed_time = datetime.strptime(
-                        target_time, self.default_datetime_format
+                        target_time, self.config.default_datetime_format
                     )
             else:
                 parsed_time = target_time
@@ -486,10 +510,10 @@ class TimeService:
                 if timezone_name:
                     tz = UTC if timezone_name == "UTC" else ZoneInfo(timezone_name)
                     parsed_time = parsed_time.replace(tzinfo=tz)
-                elif self.default_timezone == "UTC":
+                elif self.config.default_timezone == "UTC":
                     parsed_time = parsed_time.replace(tzinfo=UTC)
                 else:
-                    tz = ZoneInfo(self.default_timezone)
+                    tz = ZoneInfo(self.config.default_timezone)
                     parsed_time = parsed_time.replace(tzinfo=tz)
 
             # Calculate difference
@@ -502,13 +526,13 @@ class TimeService:
                     "time_ago": self._format_timedelta(abs(time_diff)),
                     "total_seconds": time_diff.total_seconds(),
                 }
-            else:
-                return {
-                    "status": "future",
-                    "message": "Time remaining until target",
-                    "time_remaining": self._format_timedelta(time_diff),
-                    "total_seconds": time_diff.total_seconds(),
-                }
+
+            return {
+                "status": "future",
+                "message": "Time remaining until target",
+                "time_remaining": self._format_timedelta(time_diff),
+                "total_seconds": time_diff.total_seconds(),
+            }
 
         except self._recoverable_errors as error:
             raise TimeServiceError(
@@ -566,11 +590,11 @@ class TimeService:
         try:
             # Use defaults from settings if not provided
             if business_start is None:
-                business_start = self.default_business_start
+                business_start = self.config.default_business_start
             if business_end is None:
-                business_end = self.default_business_end
+                business_end = self.config.default_business_end
             if weekdays_only is None:
-                weekdays_only = self.weekdays_only
+                weekdays_only = self.config.weekdays_only
 
             if business_start is None or business_end is None:
                 raise TimeServiceError("Business hours configuration is incomplete.")
@@ -657,7 +681,7 @@ class TimeService:
                 target_dt = dt.astimezone(target_tz)
 
             # Use custom format or default from settings
-            format_to_use = format_string or self.default_datetime_format
+            format_to_use = format_string or self.config.default_datetime_format
 
             return target_dt.strftime(format_to_use)
 
@@ -687,46 +711,22 @@ class TimeService:
         except CoreServiceError:
             return False
 
-    async def close(self) -> None:
-        """Close the service and clean up resources."""
-        await self.disconnect()
 
-    async def __aenter__(self):
-        """Async context manager entry."""
-        await self.connect()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        await self.close()
-
-
-# Global service instance
-_time_service: TimeService | None = None
+_time_service_provider = AsyncServiceProvider(
+    factory=TimeService,
+    initializer=lambda service: service.connect(),
+    finalizer=lambda service: service.close(),
+)
 
 
 async def get_time_service() -> TimeService:
-    """Get the global time service instance.
-
-    Returns:
-        TimeService instance
-    """
-    global _time_service  # pylint: disable=global-statement
-
-    if _time_service is None:
-        _time_service = TimeService()
-        await _time_service.connect()
-
-    return _time_service
+    """Return the shared time service instance."""
+    return await _time_service_provider.get()
 
 
 async def close_time_service() -> None:
-    """Close the global time service instance."""
-    global _time_service  # pylint: disable=global-statement
-
-    if _time_service:
-        await _time_service.close()
-        _time_service = None
+    """Dispose of the shared time service instance."""
+    await _time_service_provider.close()
 
 
 # Convenience functions
