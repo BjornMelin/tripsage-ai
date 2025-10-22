@@ -103,6 +103,8 @@ dev = [
     "rich>=14.2.0",
     "numpy>=2.3.4",
     "uvloop>=0.22.1",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
 ]
 
 
