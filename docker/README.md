@@ -106,8 +106,7 @@ AIRBNB_API_KEY=your_airbnb_key
 # Optional: Web Crawling
 CRAWL4AI_API_KEY=optional_crawl4ai_key
 
-# Optional: Monitoring
-GRAFANA_PASSWORD=admin
+# Optional: Monitoring (OTEL/Jaeger only)
 ```
 
 ### Development-Only Variables
