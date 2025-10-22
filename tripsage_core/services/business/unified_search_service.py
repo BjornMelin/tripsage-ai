@@ -14,13 +14,13 @@ from typing import Any
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import (
     SearchFacet,
-    SearchMetadata,
     SearchResultItem,
     UnifiedSearchResponse,
 )
 from tripsage_core.exceptions.exceptions import CoreServiceError
-from tripsage_core.services.business.activity_service import get_activity_service
+from tripsage_core.services.business.activity_service import ActivityService
 from tripsage_core.services.business.destination_service import get_destination_service
+from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
 from tripsage_core.services.infrastructure.cache_service import get_cache_service
 from tripsage_core.services.infrastructure.search_cache_mixin import SearchCacheMixin
 from tripsage_core.utils.decorator_utils import with_error_handling
@@ -65,11 +65,14 @@ class UnifiedSearchService(
 ):
     """Service for unified search across multiple resource types."""
 
-    def __init__(self, cache_service=None):
+    def __init__(
+        self, cache_service=None, activity_service: ActivityService | None = None
+    ):
         """Initialize unified search service.
 
         Args:
             cache_service: Cache service instance
+            activity_service: Activity service
         """
         self._cache_service = cache_service
         self._cache_ttl = 300  # 5 minutes for search results
@@ -79,7 +82,7 @@ class UnifiedSearchService(
         self._destination_service = None
         self._flight_service = None
         self._accommodation_service = None
-        self._activity_service = None
+        self._activity_service = activity_service
 
     async def ensure_services(self) -> None:
         """Ensure all required services are initialized."""
@@ -91,7 +94,11 @@ class UnifiedSearchService(
             self._destination_service = await get_destination_service()
 
         if not self._activity_service:
-            self._activity_service = await get_activity_service()
+            # Construct ActivityService locally without globals
+            maps = GoogleMapsService()
+            self._activity_service = ActivityService(
+                google_maps_service=maps, cache_service=self._cache_service
+            )
 
     def get_cache_fields(self, request: UnifiedSearchRequest) -> dict[str, Any]:
         """Extract fields for cache key generation."""
@@ -198,14 +205,14 @@ class UnifiedSearchService(
                 results_by_type = {}
 
                 for search_type, result in zip(
-                    search_tasks.keys(), search_results, strict=False
+                    list(search_tasks.keys()), list(search_results), strict=False
                 ):
                     if isinstance(result, Exception):
                         logger.warning("Search failed for %s: %s", search_type, result)
                         provider_errors[search_type] = str(result)
                         results_by_type[search_type] = []
                     else:
-                        type_results = result or []
+                        type_results = list(result) if isinstance(result, list) else []
                         all_results.extend(type_results)
                         results_by_type[search_type] = type_results
                         logger.debug(
@@ -230,19 +237,24 @@ class UnifiedSearchService(
 
             # Create response
             search_id = str(uuid.uuid4())
-            response = UnifiedSearchResponse(
-                results=sorted_results,
-                facets=facets,
-                metadata=SearchMetadata(
-                    total_results=len(all_results),
-                    returned_results=len(sorted_results),
-                    search_time_ms=search_time_ms,
-                    search_id=search_id,
-                    providers_queried=list(search_tasks.keys()),
-                    provider_errors=provider_errors if provider_errors else None,
-                ),
-                results_by_type=results_by_type,
-                errors=provider_errors if provider_errors else None,
+            response = UnifiedSearchResponse.model_validate(
+                {
+                    "results": sorted_results,
+                    "facets": facets,
+                    "metadata": {
+                        "total_results": len(all_results),
+                        "returned_results": len(sorted_results),
+                        "search_time_ms": search_time_ms,
+                        "cached_results": 0,
+                        "search_id": search_id,
+                        "user_id": None,
+                        "personalized": None,
+                        "providers_queried": list(search_tasks.keys()),
+                        "provider_errors": provider_errors or None,
+                    },
+                    "results_by_type": results_by_type,
+                    "errors": provider_errors or None,
+                }
             )
 
             # Cache the results
@@ -270,27 +282,29 @@ class UnifiedSearchService(
                 # Create a destination result based on the query
                 destination_query = request.destination or request.query
 
-                result = SearchResultItem(
-                    id=f"dest_{uuid.uuid4().hex[:8]}",
-                    type="destination",
-                    title=destination_query.title(),
-                    description=(
-                        f"Explore {destination_query} - discover attractions, "
-                        f"activities, and local experiences"
-                    ),
-                    location=destination_query,
-                    relevance_score=0.9,
-                    match_reasons=["Query matches destination name"],
-                    quick_actions=[
-                        {"action": "explore", "label": "Explore Destination"},
-                        {"action": "activities", "label": "Find Activities"},
-                        {"action": "hotels", "label": "Find Hotels"},
-                    ],
-                    metadata={
-                        "country": "Unknown",
-                        "category": "city",
-                        "popularity_score": 0.8,
-                    },
+                result = SearchResultItem.model_validate(
+                    {
+                        "id": f"dest_{uuid.uuid4().hex[:8]}",
+                        "type": "destination",
+                        "title": destination_query.title(),
+                        "description": (
+                            f"Explore {destination_query} - discover attractions, "
+                            f"activities, and local experiences"
+                        ),
+                        "location": destination_query,
+                        "relevance_score": 0.9,
+                        "match_reasons": ["Query matches destination name"],
+                        "quick_actions": [
+                            {"action": "explore", "label": "Explore Destination"},
+                            {"action": "activities", "label": "Find Activities"},
+                            {"action": "hotels", "label": "Find Hotels"},
+                        ],
+                        "metadata": {
+                            "country": "Unknown",
+                            "category": "city",
+                            "popularity_score": 0.8,
+                        },
+                    }
                 )
                 results.append(result)
 
@@ -310,16 +324,19 @@ class UnifiedSearchService(
             # Create activity search request
             from tripsage.api.schemas.requests.activities import ActivitySearchRequest
 
-            activity_request = ActivitySearchRequest(
-                destination=request.destination,
-                start_date=request.start_date or datetime.now().date(),
-                adults=request.adults or 1,
-                children=request.children or 0,
-                infants=request.infants or 0,
-                rating=request.filters.rating_min if request.filters else None,
+            activity_request = ActivitySearchRequest.model_validate(
+                {
+                    "destination": request.destination,
+                    "start_date": request.start_date or datetime.now().date(),
+                    "adults": request.adults or 1,
+                    "children": request.children or 0,
+                    "infants": request.infants or 0,
+                    "rating": request.filters.rating_min if request.filters else None,
+                }
             )
 
             # Search using activity service
+            assert self._activity_service is not None
             activity_response = await self._activity_service.search_activities(
                 activity_request
             )
@@ -327,30 +344,38 @@ class UnifiedSearchService(
             # Convert to unified results
             results = []
             for activity in activity_response.activities:
-                result = SearchResultItem(
-                    id=activity.id,
-                    type="activity",
-                    title=activity.name,
-                    description=activity.description,
-                    price=activity.price,
-                    currency="USD",
-                    location=activity.location,
-                    rating=activity.rating,
-                    relevance_score=min(activity.rating / 5.0, 1.0),
-                    match_reasons=["Activity in requested destination"],
-                    quick_actions=[
-                        {"action": "view", "label": "View Details"},
-                        {"action": "book", "label": "Book Now"},
-                        {"action": "save", "label": "Save to Trip"},
-                    ],
-                    metadata={
-                        "activity_type": activity.type,
-                        "duration": activity.duration,
-                        "provider": activity.provider,
-                        "coordinates": activity.coordinates.model_dump()
-                        if activity.coordinates
-                        else None,
-                    },
+                result = SearchResultItem.model_validate(
+                    {
+                        "id": activity.id,
+                        "type": "activity",
+                        "title": activity.name,
+                        "description": activity.description,
+                        "image_url": None,
+                        "price": activity.price,
+                        "currency": "USD",
+                        "location": activity.location,
+                        "rating": activity.rating,
+                        "review_count": None,
+                        "relevance_score": (
+                            min(activity.rating / 5.0, 1.0) if activity.rating else 0.0
+                        ),
+                        "match_reasons": ["Activity in requested destination"],
+                        "quick_actions": [
+                            {"action": "view", "label": "View Details"},
+                            {"action": "book", "label": "Book Now"},
+                            {"action": "save", "label": "Save to Trip"},
+                        ],
+                        "metadata": {
+                            "activity_type": activity.type,
+                            "duration": activity.duration,
+                            "provider": activity.provider,
+                            "coordinates": (
+                                activity.coordinates.model_dump()
+                                if activity.coordinates
+                                else None
+                            ),
+                        },
+                    }
                 )
                 results.append(result)
 
