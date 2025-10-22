@@ -183,7 +183,7 @@ async def test_trip_collaboration_permissions(
                 "id", trip_id
             ).execute()
             raise AssertionError("Viewer should not be able to update trip")
-        except Exception:
+        except (PermissionError, ValueError):
             pass  # Expected to fail
 
         # Test editor permissions

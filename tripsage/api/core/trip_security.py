@@ -566,7 +566,7 @@ async def check_trip_ownership(
         result = await verify_trip_access(context, trip_service)
         return result.is_authorized and result.is_owner
 
-    except Exception as e:
+    except (ValueError, ConnectionError, TimeoutError) as e:
         logger.warning(
             "Error checking trip ownership",
             extra={
@@ -607,7 +607,7 @@ async def check_trip_collaboration(
         result = await verify_trip_access(context, trip_service)
         return result.is_authorized
 
-    except Exception as e:
+    except (ValueError, ConnectionError, TimeoutError) as e:
         logger.warning(
             "Error checking trip collaboration",
             extra={
@@ -668,7 +668,7 @@ async def get_user_trip_permissions(
             else None,
         }
 
-    except Exception as e:
+    except (ValueError, ConnectionError, TimeoutError) as e:
         logger.warning(
             "Error getting user trip permissions",
             extra={

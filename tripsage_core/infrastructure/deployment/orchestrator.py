@@ -99,6 +99,7 @@ class ConfigurableDeploymentOrchestrator:
     """
 
     def __init__(self):
+        """Initialize the deployment orchestrator."""
         self.enterprise_config = get_enterprise_config()
         self.active_deployments: dict[str, DeploymentResult] = {}
         self.deployment_history: list[DeploymentResult] = []

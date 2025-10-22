@@ -153,6 +153,7 @@ class InMemoryRateLimiter(RateLimiter):
     """Enhanced in-memory rate limiter with sliding window and token bucket."""
 
     def __init__(self):
+        """Initialize the enhanced in-memory rate limiter."""
         self.requests: dict[str, list] = {}
         self.token_buckets: dict[str, dict[str, Any]] = {}
 
@@ -258,6 +259,11 @@ class DragonflyRateLimiter(RateLimiter):
     """Production-ready DragonflyDB-based rate limiter with hybrid algorithms."""
 
     def __init__(self, monitoring_service=None):
+        """Initialize the DragonflyDB-based rate limiter.
+
+        Args:
+            monitoring_service: Optional monitoring service instance.
+        """
         self.cache_service = None
         self.monitoring_service = monitoring_service
         self.fallback_limiter = InMemoryRateLimiter()
@@ -269,7 +275,7 @@ class DragonflyRateLimiter(RateLimiter):
                 from tripsage_core.services.infrastructure import get_cache_service
 
                 self.cache_service = await get_cache_service()
-            except Exception as e:
+            except (ConnectionError, ImportError, RuntimeError) as e:
                 logger.warning("Failed to initialize cache service: %s", e)
                 self.cache_service = None
 
@@ -538,7 +544,7 @@ class DragonflyRateLimiter(RateLimiter):
                         "algorithm": result.algorithm,
                     },
                 )
-            except Exception as e:
+            except (ConnectionError, TimeoutError, RuntimeError) as e:
                 logger.warning("Failed to track rate limit hit: %s", e)
 
     async def _record_request(
@@ -564,7 +570,7 @@ class DragonflyRateLimiter(RateLimiter):
             )  # Keep last 1000 requests
             await self.cache_service.expire(analytics_key, 86400)  # 24 hours
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, RuntimeError) as e:
             logger.debug("Failed to record request analytics: %s", e)
 
     async def reset_rate_limit(self, key: str) -> bool:
@@ -642,7 +648,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                 ApiKeyMonitoringService = key_monitoring_service.KeyMonitoringService
 
                 self.monitoring_service = ApiKeyMonitoringService()
-            except Exception as e:
+            except (ImportError, RuntimeError, ConnectionError) as e:
                 logger.warning("Failed to initialize monitoring service: %s", e)
 
         # Create rate limiter
@@ -1095,7 +1101,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                         "referer": request.headers.get("Referer", "unknown"),
                     },
                 )
-            except Exception as e:
+            except (ConnectionError, TimeoutError, RuntimeError) as e:
                 logger.warning("Failed to track rate limit violation: %s", e)
 
         # Get client IP for audit logging
@@ -1139,7 +1145,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                     tier=context.get("tier", "standard"),
                     user_agent=request.headers.get("User-Agent"),
                 )
-        except Exception as e:
+        except (ConnectionError, TimeoutError, RuntimeError) as e:
             logger.warning("Failed to audit rate limit violation: %s", e)
 
         # Also log the violation
@@ -1199,7 +1205,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                         "status_code": response.status_code,
                     },
                 )
-            except Exception as e:
+            except (ConnectionError, TimeoutError, RuntimeError) as e:
                 logger.debug("Failed to track successful request: %s", e)
 
 
@@ -1301,7 +1307,7 @@ def create_middleware_from_settings(
             )
 
             monitoring_service = ApiKeyMonitoringService()
-        except Exception as e:
+        except (ImportError, RuntimeError, ConnectionError) as e:
             logger.warning("Failed to initialize monitoring service: %s", e)
 
     # Create middleware with settings-based configuration

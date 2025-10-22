@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import HTTPException
 from hypothesis import given, strategies as st
+from pydantic import ValidationError
 
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.routers.keys import (
@@ -493,7 +494,7 @@ class TestKeysRouterModern:
                 result = await create_key(key_data, mock_principal, mock_key_service)
                 assert result is not None
 
-            except Exception as e:
+            except ValidationError as e:
                 # Pydantic validation errors are expected for invalid inputs
                 assert "validation" in str(e).lower() or "value" in str(e).lower()
 

@@ -15,10 +15,12 @@ class TestChatSessionAPI:
 
     @pytest.fixture
     def client(self):
+        """Create a test client for the application."""
         return TestClient(app)
 
     @pytest.fixture
     def principal(self):
+        """Create a test principal for authentication."""
         return Principal(
             id="42",
             type="user",
@@ -28,6 +30,7 @@ class TestChatSessionAPI:
 
     @pytest.mark.asyncio
     async def test_create_list_get_delete_session(self, client, principal):
+        """Test creating, listing, getting, and deleting a chat session."""
         chat_service = AsyncMock()
         chat_service.create_session = AsyncMock(
             return_value={"id": str(uuid4()), "title": "New"}
@@ -68,6 +71,7 @@ class TestChatSessionAPI:
 
     @pytest.mark.asyncio
     async def test_create_and_list_messages(self, client, principal):
+        """Test creating and listing chat messages."""
         chat_service = AsyncMock()
         chat_service.add_message = AsyncMock(
             return_value={"id": str(uuid4()), "role": "user", "content": "Hello"}
@@ -97,6 +101,7 @@ class TestChatSessionAPI:
 
     @pytest.mark.asyncio
     async def test_message_error(self, client, principal):
+        """Test error handling when creating chat messages."""
         chat_service = AsyncMock()
         chat_service.add_message = AsyncMock(side_effect=Exception("boom"))
 

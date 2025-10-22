@@ -97,6 +97,12 @@ class BaseDeploymentStrategy(ABC):
     """Base class for deployment strategies."""
 
     def __init__(self, name: str, config: dict[str, Any] | None = None):
+        """Initialize the base deployment strategy.
+
+        Args:
+            name: Strategy name.
+            config: Optional configuration dictionary.
+        """
         self.name = name
         self.config = config or {}
         self.enterprise_config = get_enterprise_config()
@@ -178,6 +184,11 @@ class SimpleDeploymentStrategy(BaseDeploymentStrategy):
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the simple deployment strategy.
+
+        Args:
+            config: Optional configuration dictionary.
+        """
         super().__init__("simple", config)
         logger.info("Initialized simple deployment strategy")
 
@@ -289,6 +300,11 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the blue-green deployment strategy.
+
+        Args:
+            config: Optional configuration dictionary.
+        """
         super().__init__("blue_green", config)
         self.switch_delay = config.get("switch_delay", 5.0) if config else 5.0
         logger.info("Initialized blue-green deployment strategy")
@@ -455,6 +471,11 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the canary deployment strategy.
+
+        Args:
+            config: Optional configuration dictionary.
+        """
         super().__init__("canary", config)
         self.canary_steps = (
             config.get("canary_steps", [5, 10, 25, 50, 100])
@@ -646,6 +667,11 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the rolling deployment strategy.
+
+        Args:
+            config: Optional configuration dictionary.
+        """
         super().__init__("rolling", config)
         self.instance_count = config.get("instance_count", 3) if config else 3
         self.update_delay = config.get("update_delay", 2.0) if config else 2.0
