@@ -48,17 +48,18 @@ SUPABASE_MAX_OVERFLOW=30
 VECTOR_DIMENSION=1536  # OpenAI embedding dimension
 ```
 
-### DragonflyDB (High-Performance Cache)
+### Upstash Redis (Serverless Cache)
 
 ```bash
-# DragonflyDB Configuration (25x faster than Redis)
-DRAGONFLY_URL=redis://localhost:6379/0
+# Upstash Redis Configuration (HTTP)
+UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
+UPSTASH_REDIS_REST_TOKEN=<token>
 
 # For production with authentication
-DRAGONFLY_URL=redis://username:password@host:port/database
+UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
 
 # For SSL/TLS (recommended for production)
-DRAGONFLY_URL=rediss://username:password@host:port/database
+UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
 
 # Connection Pool Settings
 DRAGONFLY_POOL_SIZE=20
@@ -204,8 +205,8 @@ SUPABASE_URL=https://your-prod-project.supabase.co
 SUPABASE_ANON_KEY=your-prod-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-prod-service-role-key
 
-# Production DragonflyDB with SSL
-DRAGONFLY_URL=rediss://username:password@your-dragonfly-host:6380/0
+# Production Upstash Redis
+UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
 ```
 
 ### Production Monitoring
@@ -238,7 +239,7 @@ SUPABASE_URL=https://your-test-project.supabase.co
 SUPABASE_ANON_KEY=your-test-anon-key
 
 # Test Cache (in-memory)
-DRAGONFLY_URL=redis://localhost:6379/1  # Different database
+# For local-only dev, prefer in-memory cache for tests
 
 # Mock API Keys for Testing
 TEST_DUFFEL_ACCESS_TOKEN=test_access_token_123
@@ -331,7 +332,7 @@ EXTERNAL_API_RETRY_DELAY=1  # seconds
 The system validates all configuration at startup:
 
 1. **Database Connection**: Tests Supabase connectivity
-2. **Cache Connection**: Tests DragonflyDB connectivity  
+2. **Cache Connection**: Tests Upstash Redis connectivity  
 3. **Memory System**: Validates Mem0 API access
 4. **External APIs**: Tests connectivity to required services
 5. **Environment**: Validates all required variables are set
@@ -364,11 +365,11 @@ SUPABASE_ANON_KEY=eyJ...  # Should be JWT format, >100 characters
 **Cache Connection Failed:**
 
 ```bash
-# Check DragonflyDB URL format
-DRAGONFLY_URL=redis://localhost:6379/0
+# Check Upstash URL format
+UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
 
 # For authentication
-DRAGONFLY_URL=redis://username:password@host:port/database
+UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
 ```
 
 **BYOK API Key Issues:**
@@ -410,7 +411,7 @@ This unified architecture represents the complete migration from the previous MC
 - **7 Direct SDKs**: Duffel, Google Maps/Calendar, OpenWeatherMap, Visual Crossing, Crawl4AI, Mem0
 - **1 MCP Integration**: Airbnb (unofficial API, remains MCP)
 - **Unified Storage**: Supabase + pgvector for both relational and vector data
-- **High-Performance Cache**: DragonflyDB (25x faster than Redis)
+- **Serverless Cache**: Upstash Redis (HTTP)
 - **BYOK Security**: User-provided API keys stored encrypted in database
 
 The migration is complete and production-ready.
@@ -420,7 +421,7 @@ The migration is complete and production-ready.
 ### Database Services
 
 - **Supabase**: Primary database with pgvector extensions
-- **DragonflyDB**: High-performance caching layer
+- **Upstash Redis**: Serverless caching layer
 
 ### External APIs
 
@@ -441,7 +442,7 @@ The migration is complete and production-ready.
 - Use `.env.development` for local development
 - Enable DEBUG mode for detailed logging
 - Use test API keys where possible
-- Local DragonflyDB instance via Docker
+- No local cache service needed (managed Upstash)
 
 ### Production Environment (Vercel)
 
@@ -466,5 +467,5 @@ uv run python -c "from tripsage.core.settings import get_settings; print('✅ Al
 uv run python scripts/verification/verify_supabase_connection.py
 
 # Test cache connection  
-uv run python scripts/verification/verify_dragonfly.py
+uv run python scripts/verification/verify_upstash.py
 ```
