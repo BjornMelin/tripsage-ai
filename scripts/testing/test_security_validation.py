@@ -5,16 +5,13 @@ Achieves 90%+ coverage for security_validation.py which previously had 0% test c
 """
 
 import os
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from security.security_validation import (
+# Import directly via the package path under `scripts`
+from scripts.security.security_validation import (
     SECURITY_CHECKS,
     check_authentication_security,
     check_cors_configuration,
@@ -283,15 +280,15 @@ class TestSecurityValidation(unittest.TestCase):
 
         self.assertEqual(result, 1)  # Should return 1 for failure
 
-    @patch("security.security_validation.check_hardcoded_secrets")
-    @patch("security.security_validation.check_sql_injection_protection")
-    @patch("security.security_validation.check_xss_protection")
-    @patch("security.security_validation.check_authentication_security")
-    @patch("security.security_validation.check_input_validation")
-    @patch("security.security_validation.check_cors_configuration")
-    @patch("security.security_validation.check_https_enforcement")
-    @patch("security.security_validation.check_dependency_security")
-    @patch("security.security_validation.generate_security_report")
+    @patch("scripts.security.security_validation.check_hardcoded_secrets")
+    @patch("scripts.security.security_validation.check_sql_injection_protection")
+    @patch("scripts.security.security_validation.check_xss_protection")
+    @patch("scripts.security.security_validation.check_authentication_security")
+    @patch("scripts.security.security_validation.check_input_validation")
+    @patch("scripts.security.security_validation.check_cors_configuration")
+    @patch("scripts.security.security_validation.check_https_enforcement")
+    @patch("scripts.security.security_validation.check_dependency_security")
+    @patch("scripts.security.security_validation.generate_security_report")
     @patch("builtins.open", new_callable=mock_open)
     def test_main_function(self, mock_file, mock_report, *mock_checks):
         """Test main function orchestration."""
@@ -308,7 +305,7 @@ class TestSecurityValidation(unittest.TestCase):
 
         self.assertEqual(result, 0)
 
-    @patch("security.security_validation.generate_security_report")
+    @patch("scripts.security.security_validation.generate_security_report")
     @patch("builtins.open", side_effect=Exception("Write failed"))
     def test_main_function_write_error(self, mock_report):
         """Test main function when report writing fails."""
@@ -339,7 +336,7 @@ class TestSecurityValidationIntegration(unittest.TestCase):
             }
 
             for filename, content in test_files.items():
-                Path(temp_dir, filename).write_text(content)
+                Path(temp_dir, filename).write_text(content, encoding="utf-8")
 
             # Change to temp directory for the test
             original_cwd = Path.cwd()
