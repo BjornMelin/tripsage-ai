@@ -1,6 +1,6 @@
 """Google Maps location service for TripSage.
 
-This service provides comprehensive location operations using the typed
+This service provides location operations using the typed
 `GoogleMapsService`, including geocoding, place search, directions, distance
 calculations, elevation, and timezone data.
 """
@@ -32,7 +32,7 @@ class LocationServiceError(Exception):
 
 
 class LocationService:
-    """Google Maps location service providing comprehensive geographic operations."""
+    """Google Maps location service providing geographic operations."""
 
     def __init__(self, google_maps_service: GoogleMapsService) -> None:
         """Initialize location service with injected Google Maps service."""

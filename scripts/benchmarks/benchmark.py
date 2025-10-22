@@ -153,7 +153,7 @@ class BenchmarkRunner:
             raise
 
     async def run_full_suite(self) -> dict[str, Any]:
-        """Run comprehensive benchmark suite."""
+        """Run benchmark suite."""
         logger.info("Running full benchmark suite...")
 
         try:
@@ -462,7 +462,7 @@ def vector_only(output_dir: str):
 )
 @click.option("--timeout", type=int, default=3600, help="Timeout in seconds")
 def full_suite(output_dir: str, timeout: int):
-    """Run comprehensive benchmark suite."""
+    """Run benchmark suite."""
     output_path = Path(output_dir)
     runner = BenchmarkRunner(output_dir=output_path)
 

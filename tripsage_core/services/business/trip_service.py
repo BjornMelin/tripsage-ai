@@ -1,4 +1,4 @@
-"""Trip service for comprehensive trip management operations.
+"""Trip service for trip management operations.
 
 This service handles all trip-related business logic including trip creation,
 retrieval, updates, sharing, and collaboration features.

@@ -1,8 +1,8 @@
 """Edge case tests for Pydantic v2 auth schemas.
 
-This module provides comprehensive edge case testing for authentication-related
+This module provides edge case testing for authentication-related
 schemas, focusing on boundary conditions, unusual input patterns, and
-production scenarios not covered in the main comprehensive tests.
+production scenarios not covered in the main tests.
 """
 
 import json

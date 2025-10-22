@@ -78,7 +78,7 @@ async def search_activities(
 async def get_activity_details(activity_id: str, activity_service: ActivityServiceDep):
     """Get detailed information about a specific activity.
 
-    Retrieves comprehensive details for an activity including enhanced
+    Retrieves details for an activity including enhanced
     information from Google Maps Places API.
     """
     logger.info("Get activity details request: %s", activity_id)

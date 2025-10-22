@@ -1,6 +1,6 @@
 """Edge case tests for CommonValidators.
 
-This module provides comprehensive edge case testing for validation functions
+This module provides edge case testing for validation functions
 and Annotated types, focusing on boundary conditions, unusual input patterns,
 and complex validator combinations that occur in production scenarios.
 """

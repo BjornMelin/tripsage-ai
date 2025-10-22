@@ -1,6 +1,6 @@
 """Edge case tests for financial schemas.
 
-This module provides comprehensive edge case testing for financial models
+This module provides edge case testing for financial models
 including price calculations, currency conversions, budget tracking, and
 complex financial scenarios that occur in production travel booking systems.
 """

@@ -1,6 +1,6 @@
 """Edge case tests for schema serialization and deserialization.
 
-This module provides comprehensive testing for JSON serialization,
+This module provides testing for JSON serialization,
 deserialization, and data persistence scenarios across all schema types,
 focusing on edge cases that occur in production systems.
 """
@@ -75,7 +75,7 @@ class TestSerializationEdgeCases:
         assert reconstructed.amount == precise_amount
 
     def test_unicode_serialization_comprehensive(self):
-        """Test comprehensive Unicode handling across different schema types."""
+        """Test Unicode handling across different schema types."""
         unicode_test_data = {
             "emoji": "🎉✨🌟💫🚀",
             "chinese": "这是一个测试",

@@ -1,6 +1,6 @@
 """Test coverage for potential trip collaboration endpoints.
 
-This module provides comprehensive test coverage for trip collaboration
+This module provides test coverage for trip collaboration
 features that should be implemented in the router, based on the
 existing service layer functionality.
 """

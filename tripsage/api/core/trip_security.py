@@ -1,6 +1,6 @@
 """Trip Access Verification and Security Decorators for TripSage API.
 
-This module provides comprehensive trip access verification functionality, including
+This module provides trip access verification functionality, including
 decorators for FastAPI endpoints, security helper functions, and integration with
 the existing authentication and audit logging infrastructure.
 

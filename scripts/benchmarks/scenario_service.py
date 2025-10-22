@@ -2,7 +2,7 @@
 """Benchmark scenario management.
 
 This module provides management of different benchmark scenarios and workload
-types for comprehensive performance testing.
+types for performance testing.
 """
 
 from typing import Any

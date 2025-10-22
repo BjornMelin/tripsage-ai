@@ -1,6 +1,6 @@
 """WebSocket Performance Monitoring Service.
 
-This service provides comprehensive performance monitoring for
+This service provides performance monitoring for
 WebSocket connections including:
 - Real-time metrics collection
 - Connection health tracking

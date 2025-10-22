@@ -142,7 +142,7 @@ class MetricsCollector:
         self._connection_stats["creations"] += 1
 
     def get_summary(self) -> dict[str, Any]:
-        """Get comprehensive metrics summary."""
+        """Get metrics summary."""
         return {
             "query_performance": self._get_query_summary(),
             "memory_usage": self.get_memory_summary(),

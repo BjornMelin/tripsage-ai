@@ -273,7 +273,7 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
     """Combine results from multiple search operations into a unified recommendation.
 
     Analyzes and combines flight, accommodation, and activity search results based on
-    user preferences to create a comprehensive travel recommendation.
+    user preferences to create a travel recommendation.
 
     Args:
         params: Search results to combine:
@@ -396,7 +396,7 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
 
 @with_error_handling()
 async def generate_travel_summary(params: dict[str, Any]) -> dict[str, Any]:
-    """Generate a comprehensive summary of a travel plan.
+    """Generate a summary of a travel plan.
 
     Creates a user-friendly summary of a travel plan with key information
     and recommendations.

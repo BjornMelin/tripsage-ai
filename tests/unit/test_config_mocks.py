@@ -1,6 +1,6 @@
 """Mock configuration objects for isolated testing.
 
-This module provides comprehensive mocking of configuration objects
+This module provides mocking of configuration objects
 to enable isolated testing without external dependencies.
 """
 

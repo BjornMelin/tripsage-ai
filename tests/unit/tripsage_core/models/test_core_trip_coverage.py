@@ -38,7 +38,7 @@ class TestDbTripModelCoverage:
         trip = DbTrip(
             user_id=uuid4(),
             title="Complete Test Trip",
-            description="A comprehensive test trip with all fields",
+            description="A test trip with all fields",
             destination="Kyoto, Japan",
             start_date=date(2024, 10, 1),
             end_date=date(2024, 10, 15),
@@ -48,7 +48,7 @@ class TestDbTripModelCoverage:
         )
 
         # Verify all attributes
-        assert trip.description == "A comprehensive test trip with all fields"
+        assert trip.description == "A test trip with all fields"
         assert trip.budget_breakdown.total == 2500.00
         assert len(trip.tags) == 3
         assert "cultural" in trip.tags

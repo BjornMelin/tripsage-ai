@@ -1,6 +1,6 @@
 """WebSocket connection manager with integrated broadcasting and error recovery.
 
-This module provides comprehensive WebSocket connection management including:
+This module provides WebSocket connection management including:
 - Integration with Redis-backed broadcasting
 - Automatic error recovery with exponential backoff
 - 20-second heartbeat/keepalive mechanism
@@ -824,7 +824,7 @@ class WebSocketManager:
             await self.disconnect_connection(connection_id)
 
     def get_connection_stats(self) -> dict[str, Any]:
-        """Get comprehensive connection statistics."""
+        """Get connection statistics."""
         # Get stats from messaging service and combine with local metrics
         messaging_stats = self.messaging_service.get_connection_stats()
 

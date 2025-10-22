@@ -1,6 +1,6 @@
 """Edge case tests for geographic schemas.
 
-This module provides comprehensive edge case testing for geographic models
+This module provides edge case testing for geographic models
 including coordinates, addresses, places, and route calculations with
 focus on boundary conditions, precision handling, and real-world scenarios.
 """

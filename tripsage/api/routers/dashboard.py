@@ -1,6 +1,6 @@
 """Dashboard monitoring API endpoints.
 
-This module provides comprehensive dashboard API endpoints for monitoring and insights:
+This module provides dashboard API endpoints for monitoring and insights:
 - System health and status
 - API key usage statistics and analytics
 - Real-time metrics and monitoring data
@@ -284,7 +284,7 @@ async def get_usage_metrics(
 ) -> UsageMetrics:
     """Get usage metrics for specified time range.
 
-    Returns comprehensive usage metrics including:
+    Returns usage metrics including:
     - Request and error counts
     - Latency statistics
     - Top endpoints
@@ -736,9 +736,9 @@ async def get_analytics_summary(
     time_range_hours: int = Query(default=24, ge=1, le=168),
     principal: Principal = Depends(get_current_principal),
 ) -> dict[str, Any]:
-    """Get comprehensive analytics summary.
+    """Get analytics summary.
 
-    Returns comprehensive analytics including:
+    Returns analytics including:
     - System performance overview
     - Service health summary
     - Usage patterns
@@ -767,7 +767,7 @@ async def get_analytics_summary(
             service.service_name: service.health_status.value for service in services
         }
 
-        # Build comprehensive summary
+        # Build summary
         return {
             "period": {
                 "start": start_time.isoformat(),

@@ -244,7 +244,7 @@ async def readiness_check(
 async def database_health_check(request: Request, db_service: DatabaseDep):
     """Detailed database health check.
 
-    Returns comprehensive database health information including:
+    Returns database health information including:
     - Connection status
     - Query performance
     - Connection pool stats
@@ -279,7 +279,7 @@ async def database_health_check(request: Request, db_service: DatabaseDep):
 async def cache_health_check(request: Request, cache_service: CacheDep):
     """Detailed cache (DragonflyDB) health check.
 
-    Returns comprehensive cache health information including:
+    Returns cache health information including:
     - Connection status
     - Memory usage
     - Key statistics

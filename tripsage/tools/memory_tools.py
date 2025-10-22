@@ -140,7 +140,7 @@ async def search_user_memories(search_query: MemorySearchQuery) -> list[dict[str
 @trace_span("memory.user_context")
 @record_histogram("tripsage.memory.user_context.seconds")
 async def get_user_context(user_id: str) -> dict[str, Any]:
-    """Return comprehensive user context for personalization.
+    """Return user context for personalization.
 
     Args:
         user_id: Subject user identifier.

@@ -210,7 +210,7 @@ class WeatherService:
         Returns:
             Weather forecast data
         """
-        # Use One Call API for comprehensive forecast
+        # Use One Call API for forecast
         params = {
             "lat": latitude,
             "lon": longitude,
@@ -303,7 +303,7 @@ class WeatherService:
         activities: list[str] | None = None,
         units: str = "metric",
     ) -> dict[str, Any]:
-        """Get comprehensive weather summary for travel planning.
+        """Get weather summary for travel planning.
 
         Args:
             latitude: Destination latitude
