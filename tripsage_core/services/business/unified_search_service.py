@@ -45,6 +45,7 @@ class UnifiedSearchServiceError(CoreServiceError):
     """Exception raised for unified search service errors."""
 
     def __init__(self, message: str, original_error: Exception | None = None):
+        """Construct the error with optional original exception."""
         details = {
             "additional_context": {
                 "original_error": str(original_error) if original_error else None
@@ -560,7 +561,7 @@ _unified_search_service: UnifiedSearchService | None = None
 
 async def get_unified_search_service() -> UnifiedSearchService:
     """Get the global unified search service instance."""
-    global _unified_search_service
+    global _unified_search_service  # pylint: disable=global-statement
 
     if _unified_search_service is None:
         _unified_search_service = UnifiedSearchService()
@@ -571,5 +572,5 @@ async def get_unified_search_service() -> UnifiedSearchService:
 
 async def close_unified_search_service() -> None:
     """Close the global unified search service instance."""
-    global _unified_search_service
+    global _unified_search_service  # pylint: disable=global-statement
     _unified_search_service = None
