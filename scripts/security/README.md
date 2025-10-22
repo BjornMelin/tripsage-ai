@@ -161,7 +161,7 @@ SELECT find_dynamic_sql_usage();
 #!/bin/bash
 # security_check.sh
 
-echo "🔒 Running Security Validation Suite"
+echo "Running Security Validation Suite"
 
 # 1. Database Security
 echo "Checking database security..."
