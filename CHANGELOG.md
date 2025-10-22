@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Database bootstrap hardens Supabase RPC handling, runs migrations via lazy imports, and scopes discovery to `supabase/migrations` with offline recording.
 - Accommodation stack now normalizes MCP client calls (keyword-only), propagates canonical booking/search metadata, and validates external listings via `model_validate`.
 - WebSocket router refactored around a shared `MessageContext`, consolidated handlers, and IDNA-aware origin validation while keeping dependencies Supabase-only.
+- API service DI now uses the global `ServiceRegistry` in `tripsage/config/service_registry.py`:
+  - Lifespan registers singletons for `cache` and `google_maps`.
+  - New adapters provide `activity` and `location` services from registry-managed deps.
+  - API dependency providers (`tripsage/api/core/dependencies.py`) resolve via registry (no `app.state` coupling for these services).
 
 ### Deprecated
 
@@ -41,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Legacy Google Maps dict-shaped responses and all backward-compatible paths in services/tests.
 - Module-level singletons for Google Maps and Activity services (`get_google_maps_service`,
   `get_activity_service`) and their `close_*` helpers; final-only DI now required.
+- Deprecated exports in `tripsage_core/services/external_apis/__init__.py` for maps/weather/webcrawl `get_*`/`close_*` helpers removed; use DI/constructors.
 
 ### Fixed
 
