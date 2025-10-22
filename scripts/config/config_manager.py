@@ -190,9 +190,7 @@ class ConfigManager:
         print(f"  Log Level: {config['log_level']}")
 
         print("\nSecurity Status:")
-        print(
-            f"  Production Ready: {'YES' if security['production_ready'] else 'NO'}"
-        )
+        print(f"  Production Ready: {'YES' if security['production_ready'] else 'NO'}")
         print(f"  All Secrets Secure: {'YES' if secrets_info['all_secure'] else 'NO'}")
 
         if security.get("warnings"):

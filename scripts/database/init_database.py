@@ -228,15 +228,17 @@ class DatabaseInitializer:
             """)
 
             # Create sample categories if they exist
-            await self.db_service.execute_sql("""
+            await self.db_service.execute_sql(
+                """
                 INSERT INTO categories (name, description, icon)
                 VALUES
-                    ('Adventure', 'Outdoor activities and exploration', '🏔️'),
-                    ('Culture', 'Cultural experiences and sightseeing', '🏛️'),
-                    ('Relaxation', 'Relaxing and wellness activities', '🏖️'),
-                    ('Food', 'Culinary experiences and dining', '🍽️')
+                    ('Adventure', 'Outdoor activities and exploration', 'mountain'),
+                    ('Culture', 'Cultural experiences and sightseeing', 'museum'),
+                    ('Relaxation', 'Relaxing and wellness activities', 'beach'),
+                    ('Food', 'Culinary experiences and dining', 'dining')
                 ON CONFLICT (name) DO NOTHING
-            """)
+                """
+            )
 
             logger.info("Seeded initial data")
             return True
@@ -344,7 +346,8 @@ def main(with_seed_data: bool, env: str, dry_run: bool) -> None:
             # Initialize services
             db_service = DatabaseService(settings)
             supabase_client = create_client(
-                settings.database_url, settings.database_service_key.get_secret_value()
+                settings.database_url,
+                settings.database_service_key.get_secret_value(),  # type: ignore # pylint: disable=no-member
             )
 
             # Run initialization
