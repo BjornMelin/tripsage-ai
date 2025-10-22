@@ -287,10 +287,12 @@ class Settings(BaseSettings):
         else:
             # Convert Supabase URL to PostgreSQL URL
             import re
+            from urllib.parse import urlparse
 
             # Check test URL first to avoid regex matching issues
             db_url: str = str(self.database_url)
-            if db_url.startswith("https://test.supabase.com"):
+            parsed = urlparse(db_url)
+            if parsed.netloc == "test.supabase.com":
                 # Special handling for test environment
                 url = "postgresql://postgres:password@127.0.0.1:5432/test_database"
             elif db_url.startswith(("postgresql://", "postgres://")):
