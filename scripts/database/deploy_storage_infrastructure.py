@@ -29,32 +29,32 @@ class StorageDeployment:
         """Deploy complete storage infrastructure."""
         results = {}
 
-        print("🚀 Starting TripSage Storage Infrastructure Deployment...")
+        print("Starting TripSage Storage Infrastructure Deployment...")
         print("=" * 60)
 
         try:
             # 1. Run storage migration
-            print("\n📁 Step 1: Running storage migration...")
+            print("\nStep 1: Running storage migration...")
             results["migration"] = await self.run_storage_migration()
 
             # 2. Verify buckets
-            print("\n🪣 Step 2: Verifying storage buckets...")
+            print("\nStep 2: Verifying storage buckets...")
             results["buckets"] = await self.verify_buckets()
 
             # 3. Test RLS policies
-            print("\n🔒 Step 3: Testing RLS policies...")
+            print("\nStep 3: Testing RLS policies...")
             results["policies"] = await self.test_rls_policies()
 
             # 4. Deploy Edge Function
-            print("\n⚡ Step 4: Deploying file processor Edge Function...")
+            print("\nStep 4: Deploying file processor Edge Function...")
             results["edge_function"] = await self.deploy_edge_function()
 
             # 5. Configure webhooks
-            print("\n🔗 Step 5: Configuring webhooks...")
+            print("\nStep 5: Configuring webhooks...")
             results["webhooks"] = await self.configure_webhooks()
 
             # 6. Run verification tests
-            print("\n✅ Step 6: Running verification tests...")
+            print("\nStep 6: Running verification tests...")
             results["verification"] = await self.run_verification_tests()
 
             # Print summary
@@ -63,7 +63,7 @@ class StorageDeployment:
             return results
 
         except Exception as e:  # noqa: BLE001
-            print(f"❌ Deployment failed: {e}")
+            print(f"Deployment failed: {e}")
             return {"deployment": False}
 
     async def run_storage_migration(self) -> bool:
@@ -87,14 +87,14 @@ class StorageDeployment:
 
                 # Execute migration
                 await conn.execute(migration_sql)
-                print("✅ Storage migration completed successfully")
+                print("Storage migration completed successfully")
                 return True
 
             finally:
                 await conn.close()
 
         except Exception as e:  # noqa: BLE001
-            print(f"❌ Migration failed: {e}")
+            print(f"Migration failed: {e}")
             return False
 
     async def verify_buckets(self) -> bool:
@@ -115,14 +115,14 @@ class StorageDeployment:
             missing_buckets = set(expected_buckets) - set(existing_buckets)
 
             if missing_buckets:
-                print(f"❌ Missing buckets: {missing_buckets}")
+                print(f"Missing buckets: {missing_buckets}")
                 return False
 
-            print(f"✅ All buckets verified: {existing_buckets}")
+            print(f"All buckets verified: {existing_buckets}")
             return True
 
         except Exception as e:  # noqa: BLE001
-            print(f"❌ Bucket verification failed: {e}")
+            print(f"Bucket verification failed: {e}")
             return False
 
     async def test_rls_policies(self) -> bool:
@@ -141,17 +141,17 @@ class StorageDeployment:
                 """)
 
                 if policy_count == 0:
-                    print("❌ No storage policies found")
+                    print("No storage policies found")
                     return False
 
-                print(f"✅ Found {policy_count} storage policies")
+                print(f"Found {policy_count} storage policies")
                 return True
 
             finally:
                 await conn.close()
 
         except Exception as e:  # noqa: BLE001
-            print(f"❌ RLS policy test failed: {e}")
+            print(f"RLS policy test failed: {e}")
             return False
 
     async def deploy_edge_function(self) -> bool:
@@ -168,18 +168,18 @@ class StorageDeployment:
             )
 
             if not function_file.exists():
-                print("❌ Edge Function file not found")
+                print("Edge Function file not found")
                 return False
 
-            print("✅ Edge Function file ready for deployment")
+            print("Edge Function file ready for deployment")
             print(
-                "📝 Note: Deploy manually using: "
+                "Note: Deploy manually using: "
                 "supabase functions deploy file-processor"
             )
             return True
 
         except Exception as e:  # noqa: BLE001
-            print(f"❌ Edge Function deployment failed: {e}")
+            print(f"Edge Function deployment failed: {e}")
             return False
 
     async def configure_webhooks(self) -> bool:
@@ -199,7 +199,7 @@ class StorageDeployment:
                 """)
 
                 if not function_exists:
-                    print("❌ Webhook function not found")
+                    print("Webhook function not found")
                     return False
 
                 # Check if trigger exists
@@ -211,17 +211,17 @@ class StorageDeployment:
                 """)
 
                 if not trigger_exists:
-                    print("❌ Webhook trigger not found")
+                    print("Webhook trigger not found")
                     return False
 
-                print("✅ Webhook function and trigger configured")
+                print("Webhook function and trigger configured")
                 return True
 
             finally:
                 await conn.close()
 
         except Exception as e:  # noqa: BLE001
-            print(f"❌ Webhook configuration failed: {e}")
+            print(f"Webhook configuration failed: {e}")
             return False
 
     async def run_verification_tests(self) -> bool:
@@ -252,7 +252,7 @@ class StorageDeployment:
                     )
 
                     if not func_exists:
-                        print(f"❌ Function {func_name} not found")
+                        print(f"Function {func_name} not found")
                         return False
 
                 # Test storage tables
@@ -275,40 +275,40 @@ class StorageDeployment:
                     )
 
                     if not table_exists:
-                        print(f"❌ Table {table_name} not found")
+                        print(f"Table {table_name} not found")
                         return False
 
-                print("✅ All verification tests passed")
+                print("All verification tests passed")
                 return True
 
             finally:
                 await conn.close()
 
         except Exception as e:  # noqa: BLE001
-            print(f"❌ Verification tests failed: {e}")
+            print(f"Verification tests failed: {e}")
             return False
 
     def print_deployment_summary(self, results: dict[str, bool]) -> None:
         """Print deployment summary."""
         print("\n" + "=" * 60)
-        print("📊 DEPLOYMENT SUMMARY")
+        print("DEPLOYMENT SUMMARY")
         print("=" * 60)
 
         total_steps = len(results)
         successful_steps = sum(1 for success in results.values() if success)
 
         for step, success in results.items():
-            status = "✅" if success else "❌"
-            print(f"{status} {step.replace('_', ' ').title()}")
+            status = "OK" if success else "FAIL"
+            print(f"[{status}] {step.replace('_', ' ').title()}")
 
         success_rate = (successful_steps / total_steps) * 100
         print(
-            f"\n📈 Success Rate: {successful_steps}/{total_steps} ({success_rate:.1f}%)"
+            f"\nSuccess Rate: {successful_steps}/{total_steps} ({success_rate:.1f}%)"
         )
 
         if successful_steps == total_steps:
-            print("\n🎉 Storage infrastructure deployment completed successfully!")
-            print("\n📋 Next Steps:")
+            print("\nStorage infrastructure deployment completed successfully")
+            print("\nNext Steps:")
             print("1. Deploy Edge Function: supabase functions deploy file-processor")
             print("2. Configure environment variables for webhooks")
             print("3. Set up CORS settings for browser uploads")
@@ -316,7 +316,7 @@ class StorageDeployment:
             print("5. Monitor storage usage and performance")
         else:
             print(
-                "\n⚠️  Some deployment steps failed. "
+                "\nSome deployment steps failed. "
                 "Please review and fix issues before proceeding."
             )
 
@@ -329,7 +329,7 @@ async def main():
     db_url = os.getenv("DATABASE_URL")
 
     if not all([supabase_url, supabase_key, db_url]):
-        print("❌ Missing required environment variables:")
+        print("Missing required environment variables:")
         print("   - SUPABASE_URL")
         print("   - SUPABASE_SERVICE_ROLE_KEY")
         print("   - DATABASE_URL")
