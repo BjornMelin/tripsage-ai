@@ -2,18 +2,18 @@
 # TripSage AI Modern Development Environment
 # =============================================================================
 # Optimized Docker Compose configuration aligned with current system architecture
-# using direct SDKs, Mem0, DragonflyDB, Crawl4AI, and minimal MCP usage.
+# using direct SDKs, Mem0, Upstash Redis, Crawl4AI, and minimal MCP usage.
 #
 # CURRENT ARCHITECTURE (2025):
 # - Database: Supabase PostgreSQL with pgvector extension
-# - Caching: DragonflyDB (25x faster than Redis)
+# - Caching: Upstash Redis (HTTP, managed)
 # - Memory: Mem0 with pgvector backend (91% faster than Neo4j)
 # - Web Crawling: Crawl4AI direct SDK
 # - Browser: Playwright direct SDK
 # - Only 1 MCP service: Airbnb (no official SDK available)
 #
 # PERFORMANCE ACHIEVEMENTS:
-# - 25x cache performance improvement (DragonflyDB)
+# - Serverless cache via Upstash
 # - 11x faster vector search (pgvector + pgvectorscale)
 # - 91% faster memory operations (Mem0)
 # - 80% infrastructure cost reduction
@@ -63,31 +63,7 @@ services:
       timeout: 10s
       retries: 3
 
-  dragonfly:
-    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
-    container_name: tripsage-dragonfly
-    environment:
-      - DRAGONFLY_PASSWORD=${DRAGONFLY_PASSWORD:-}
-    ports:
-      - "6379:6379"
-    volumes:
-      - dragonfly_data:/data
-    restart: unless-stopped
-    networks:
-      - tripsage-network
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: '1G'
-        reservations:
-          cpus: '0.5'
-          memory: '512M'
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # No local cache container; use Upstash env vars in the API
 
   # ==========================================================================
   # APPLICATION SERVICES
@@ -102,7 +78,8 @@ services:
     environment:
       - ENVIRONMENT=development
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-tripsage_dev_password}@supabase:5432/${POSTGRES_DB:-tripsage_dev}
-      - DRAGONFLY_URL=redis://dragonfly:6379
+      - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL:-}
+      - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN:-}
       - SUPABASE_URL=http://supabase:8000
       - SUPABASE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-your-service-role-key}
       - MEM0_CONFIG=${MEM0_CONFIG:-'{"vector_store":{"provider":"pgvector"}}'}
@@ -117,8 +94,6 @@ services:
       - ../tripsage_core:/app/tripsage_core:ro
     depends_on:
       supabase:
-        condition: service_healthy
-      dragonfly:
         condition: service_healthy
     restart: unless-stopped
     networks:
