@@ -7,6 +7,7 @@ management of services while enabling easy testing through dependency injection.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeVar, cast
 
 from tripsage_core.config import get_settings
@@ -50,6 +51,8 @@ if TYPE_CHECKING:
 ServiceT = TypeVar("ServiceT")
 
 
+@dataclass(slots=True)
+# pylint: disable=too-many-instance-attributes
 class ServiceRegistry:
     """Central registry for all services used in the application.
 
@@ -57,75 +60,39 @@ class ServiceRegistry:
     proper initialization and dependency injection throughout the application.
     """
 
-    def __init__(
-        self,
-        # Business services
-        accommodation_service: AccommodationService | None = None,
-        chat_service: ChatService | None = None,
-        destination_service: DestinationService | None = None,
-        file_processing_service: FileProcessingService | None = None,
-        flight_service: FlightService | None = None,
-        itinerary_service: ItineraryService | None = None,
-        api_key_service: ApiKeyService | None = None,
-        memory_service: MemoryService | None = None,
-        trip_service: TripService | None = None,
-        user_service: UserService | None = None,
-        # External API services
-        calendar_service: GoogleCalendarService | None = None,
-        document_analyzer: DocumentAnalyzer | None = None,
-        google_maps_service: GoogleMapsService | None = None,
-        playwright_service: PlaywrightService | None = None,
-        time_service: TimeService | None = None,
-        weather_service: WeatherService | None = None,
-        webcrawl_service: WebCrawlService | None = None,
-        # Infrastructure services
-        cache_service: CacheService | None = None,
-        database_service: DatabaseService | None = None,
-        key_monitoring_service: KeyMonitoringService | None = None,
-        websocket_broadcaster: WebSocketBroadcaster | None = None,
-        websocket_manager: WebSocketManager | None = None,
-        # Orchestration lifecycle services
-        checkpoint_manager: SupabaseCheckpointManager | None = None,
-        memory_bridge: SessionMemoryBridge | None = None,
-        mcp_bridge: LangGraphMCPBridge | None = None,
-        mcp_service: SimpleMCPService | None = None,
-    ):
-        """Initialize the service registry with optional service instances.
+    # Business services
+    accommodation_service: AccommodationService | None = None
+    chat_service: ChatService | None = None
+    destination_service: DestinationService | None = None
+    file_processing_service: FileProcessingService | None = None
+    flight_service: FlightService | None = None
+    itinerary_service: ItineraryService | None = None
+    api_key_service: ApiKeyService | None = None
+    memory_service: MemoryService | None = None
+    trip_service: TripService | None = None
+    user_service: UserService | None = None
 
-        All services are optional to allow for partial initialization during testing
-        or when only specific services are needed.
-        """
-        # Business services
-        self.accommodation_service = accommodation_service
-        self.chat_service = chat_service
-        self.destination_service = destination_service
-        self.file_processing_service = file_processing_service
-        self.flight_service = flight_service
-        self.itinerary_service = itinerary_service
-        self.api_key_service = api_key_service
-        self.memory_service = memory_service
-        self.trip_service = trip_service
-        self.user_service = user_service
+    # External API services
+    calendar_service: GoogleCalendarService | None = None
+    document_analyzer: DocumentAnalyzer | None = None
+    google_maps_service: GoogleMapsService | None = None
+    playwright_service: PlaywrightService | None = None
+    time_service: TimeService | None = None
+    weather_service: WeatherService | None = None
+    webcrawl_service: WebCrawlService | None = None
 
-        # External API services
-        self.calendar_service = calendar_service
-        self.document_analyzer = document_analyzer
-        self.google_maps_service = google_maps_service
-        self.playwright_service = playwright_service
-        self.time_service = time_service
-        self.weather_service = weather_service
-        self.webcrawl_service = webcrawl_service
+    # Infrastructure services
+    cache_service: CacheService | None = None
+    database_service: DatabaseService | None = None
+    key_monitoring_service: KeyMonitoringService | None = None
+    websocket_broadcaster: WebSocketBroadcaster | None = None
+    websocket_manager: WebSocketManager | None = None
 
-        # Infrastructure services
-        self.cache_service = cache_service
-        self.database_service = database_service
-        self.key_monitoring_service = key_monitoring_service
-        self.websocket_broadcaster = websocket_broadcaster
-        self.websocket_manager = websocket_manager
-        self.checkpoint_manager = checkpoint_manager
-        self.memory_bridge = memory_bridge
-        self.mcp_bridge = mcp_bridge
-        self.mcp_service = mcp_service
+    # Orchestration lifecycle services
+    checkpoint_manager: SupabaseCheckpointManager | None = None
+    memory_bridge: SessionMemoryBridge | None = None
+    mcp_bridge: LangGraphMCPBridge | None = None
+    mcp_service: SimpleMCPService | None = None
 
     @classmethod
     async def create_default(cls, db_service: DatabaseService) -> ServiceRegistry:
@@ -176,9 +143,7 @@ class ServiceRegistry:
 
         flight_service = FlightService(database_service=db_service)
 
-        itinerary_service = ItineraryService(
-            database_service=db_service, external_calendar_service=calendar_service
-        )
+        itinerary_service = ItineraryService(database_service=db_service)
 
         trip_service = TripService(
             database_service=db_service, user_service=user_service
