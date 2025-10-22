@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Legacy Google Maps dict-shaped responses and all backward-compatible paths in services/tests.
+- Module-level singletons for Google Maps and Activity services (`get_google_maps_service`,
+  `get_activity_service`) and their `close_*` helpers; final-only DI now required.
 
 ### Fixed
 
@@ -46,7 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Consolidated, typed Google Maps integration:
   - New Pydantic models (`tripsage_core/models/api/maps_models.py`).
   - `GoogleMapsService` now returns typed models and removes custom HTTP logic.
-  - `LocationService` and `ActivityService` refactored to consume typed API only (no legacy code).
+  - `LocationService` and `ActivityService` refactored to consume typed API only (no legacy code) and use constructor DI.
+  - `tripsage/agents/service_registry.py` wires `ActivityService` via injected `GoogleMapsService` and `CacheService`.
+  - `tripsage/api/routers/activities.py` constructs services explicitly (no globals).
   - Unit/integration tests rewritten for typed returns; deprecated suites removed.
 
 - Legacy Duffel adapter (`tripsage_core/services/external_apis/flights_service.py`).
