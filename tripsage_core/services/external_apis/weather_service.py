@@ -6,6 +6,7 @@ forecasts, current conditions, and travel-specific weather analysis.
 
 import asyncio
 import logging
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -34,6 +35,12 @@ class WeatherServiceError(CoreAPIError):
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
+
+
+ScoreHandler = Callable[[dict[str, Any]], tuple[int, list[str], list[str]]]
+ActivitySummaryEvaluator = Callable[
+    [str, dict[str, Any], int], tuple[str | None, str | None]
+]
 
 
 class WeatherService:
@@ -102,6 +109,28 @@ class WeatherService:
         """Ensure service is connected."""
         if not self._connected:
             await self.connect()
+
+    def _build_location_params(
+        self,
+        latitude: float,
+        longitude: float,
+        extra_params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Assemble latitude/longitude params with optional extras."""
+        params = {"lat": latitude, "lon": longitude}
+        if extra_params:
+            params.update(extra_params)
+        return params
+
+    async def _request_onecall(
+        self,
+        latitude: float,
+        longitude: float,
+        extra_params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Send a One Call API request with shared coordinate params."""
+        params = self._build_location_params(latitude, longitude, extra_params)
+        return await self._make_request("onecall", params, use_v3=True)
 
     async def _make_request(
         self,
@@ -191,6 +220,7 @@ class WeatherService:
         self,
         latitude: float,
         longitude: float,
+        *,
         days: int = 7,
         include_hourly: bool = True,
         units: str = "metric",
@@ -223,9 +253,7 @@ class WeatherService:
         return await self._make_request("onecall", params, use_v3=True)
 
     async def get_air_quality(
-        self,
-        latitude: float,
-        longitude: float,
+        self, latitude: float, longitude: float
     ) -> dict[str, Any]:
         """Get air quality data.
 
@@ -236,10 +264,7 @@ class WeatherService:
         Returns:
             Air pollution data
         """
-        params = {
-            "lat": latitude,
-            "lon": longitude,
-        }
+        params = {"lat": latitude, "lon": longitude}
 
         return await self._make_request("air_pollution", params)
 
@@ -283,10 +308,7 @@ class WeatherService:
             UV index data
         """
         endpoint = "uvi" if dt else "uvi/current"
-        params = {
-            "lat": latitude,
-            "lon": longitude,
-        }
+        params = {"lat": latitude, "lon": longitude}
 
         if dt:
             params["dt"] = int(dt.timestamp())
@@ -299,6 +321,7 @@ class WeatherService:
         longitude: float,
         arrival_date: datetime,
         departure_date: datetime,
+        *,
         activities: list[str] | None = None,
         units: str = "metric",
     ) -> dict[str, Any]:
@@ -513,7 +536,15 @@ class WeatherService:
             # Future date - use forecast
             tasks = []
             for lat, lon, _name in cities:
-                tasks.append(self.get_forecast(lat, lon, 1, False, units))
+                tasks.append(
+                    self.get_forecast(
+                        lat,
+                        lon,
+                        days=1,
+                        include_hourly=False,
+                        units=units,
+                    )
+                )
         else:
             # Current weather
             tasks = []
@@ -788,7 +819,3 @@ class WeatherService:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
         await self.close()
-
-
-# FINAL-ONLY: Removed module-level singleton for WeatherService.
-# Construct WeatherService in application wiring and inject explicitly.

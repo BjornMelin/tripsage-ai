@@ -7,6 +7,7 @@ error handling, and logging.
 
 import asyncio
 import time
+from dataclasses import dataclass
 from typing import Any
 
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
@@ -17,6 +18,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError as CoreAPIError,
     CoreServiceError,
 )
+from tripsage_core.services.external_apis.base_service import AsyncServiceLifecycle
 
 
 class WebCrawlServiceError(CoreAPIError):
@@ -74,7 +76,20 @@ class WebCrawlResult(BaseModel):
     performance_metrics: dict[str, Any] = Field(default_factory=dict)
 
 
-class WebCrawlService:
+@dataclass(frozen=True)
+class WebCrawlServiceConfig:
+    """Immutable configuration for the Crawl4AI wrapper."""
+
+    browser_type: str
+    headless: bool
+    viewport_width: int
+    viewport_height: int
+    verbose: bool
+    cache_enabled: bool
+    max_concurrent_crawls: int
+
+
+class WebCrawlService(AsyncServiceLifecycle):
     """Direct Crawl4AI SDK service for web crawling operations with Core integration.
 
     This service provides high-performance web crawling capabilities using
@@ -90,24 +105,19 @@ class WebCrawlService:
         self.settings = settings or get_settings()
         self._connected = False
 
-        # Get crawler configuration from settings
-        self._browser_type = getattr(self.settings, "webcrawl_browser_type", "chromium")
-        self._headless = getattr(self.settings, "webcrawl_headless", True)
-        self._viewport_width = getattr(self.settings, "webcrawl_viewport_width", 1280)
-        self._viewport_height = getattr(self.settings, "webcrawl_viewport_height", 720)
-        self._verbose = getattr(self.settings, "webcrawl_verbose", False)
-
-        # Cache and performance settings
-        self._default_cache_enabled = getattr(
-            self.settings, "webcrawl_cache_enabled", True
-        )
-        self._default_timeout = getattr(self.settings, "webcrawl_timeout", 30)
-        self._max_concurrent_crawls = getattr(
-            self.settings, "webcrawl_max_concurrent", 3
+        settings_obj = self.settings
+        self.config = WebCrawlServiceConfig(
+            browser_type=getattr(settings_obj, "webcrawl_browser_type", "chromium"),
+            headless=getattr(settings_obj, "webcrawl_headless", True),
+            viewport_width=getattr(settings_obj, "webcrawl_viewport_width", 1280),
+            viewport_height=getattr(settings_obj, "webcrawl_viewport_height", 720),
+            verbose=getattr(settings_obj, "webcrawl_verbose", False),
+            cache_enabled=getattr(settings_obj, "webcrawl_cache_enabled", True),
+            max_concurrent_crawls=getattr(settings_obj, "webcrawl_max_concurrent", 3),
         )
 
         # Rate limiting
-        self._semaphore = asyncio.Semaphore(self._max_concurrent_crawls)
+        self._semaphore = asyncio.Semaphore(self.config.max_concurrent_crawls)
 
         self._browser_config = None
 
@@ -118,11 +128,11 @@ class WebCrawlService:
 
         try:
             self._browser_config = BrowserConfig(
-                headless=self._headless,
-                verbose=self._verbose,
-                browser_type=self._browser_type,
-                viewport_width=self._viewport_width,
-                viewport_height=self._viewport_height,
+                headless=self.config.headless,
+                verbose=self.config.verbose,
+                browser_type=self.config.browser_type,
+                viewport_width=self.config.viewport_width,
+                viewport_height=self.config.viewport_height,
             )
             self._connected = True
 
@@ -260,7 +270,7 @@ class WebCrawlService:
         use_cache = (
             params.use_cache
             if params.use_cache is not None
-            else self._default_cache_enabled
+            else self.config.cache_enabled
         )
         cache_mode = CacheMode.ENABLED if use_cache else CacheMode.BYPASS
 
@@ -270,7 +280,7 @@ class WebCrawlService:
             screenshot=params.screenshot,
             pdf=params.pdf,
             word_count_threshold=10,  # Filter out very small content blocks
-            verbose=self._verbose,
+            verbose=self.config.verbose,
         )
 
         # Add JavaScript if needed
@@ -451,24 +461,3 @@ class WebCrawlService:
             return result.success
         except CoreServiceError:
             return False
-
-    async def close(self) -> None:
-        """Close the service and clean up resources.
-
-        Since we use context managers for AsyncWebCrawler,
-        there's no persistent cleanup needed.
-        """
-        await self.disconnect()
-
-    async def __aenter__(self):
-        """Async context manager entry."""
-        await self.connect()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        await self.close()
-
-
-# FINAL-ONLY: Removed module-level singleton for WebCrawlService.
-# Construct WebCrawlService in application wiring and inject explicitly.
