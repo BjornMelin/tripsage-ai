@@ -1,7 +1,7 @@
-"""Unit tests for Google Maps Service.
+"""Unit tests for the typed Google Maps Service wrapper.
 
-This module tests the direct Google Maps SDK integration service with
-mocked Google Maps responses.
+These tests validate typed mappings and error handling for the
+`GoogleMapsService` which wraps the official `googlemaps` client.
 """
 
 from unittest.mock import Mock, patch
@@ -10,6 +10,14 @@ import pytest
 from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError
 
 from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.models.api.maps_models import (
+    DirectionsResult,
+    DistanceMatrix,
+    ElevationPoint,
+    PlaceDetails,
+    PlaceSummary,
+    TimezoneInfo,
+)
 from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsService,
     GoogleMapsServiceError,
@@ -99,8 +107,14 @@ class TestGoogleMapsService:
             "1600 Amphitheatre Parkway, Mountain View, CA"
         )
 
-        # Verify
-        assert result == expected_result
+        # Verify typed mapping
+        assert isinstance(result, list)
+        assert result and result[0].address and result[0].coordinates
+        assert (
+            result[0].address.formatted == "1600 Amphitheatre Pkwy, Mountain View, CA"
+        )
+        assert abs(result[0].coordinates.latitude - 37.4224764) < 1e-6
+        assert abs(result[0].coordinates.longitude - (-122.0842499)) < 1e-6
         mock_client.geocode.assert_called_once_with(
             "1600 Amphitheatre Parkway, Mountain View, CA"
         )
@@ -132,8 +146,12 @@ class TestGoogleMapsService:
         # Execute
         result = await google_maps_service.reverse_geocode(37.4224764, -122.0842499)
 
-        # Verify
-        assert result == expected_result
+        # Verify typed mapping
+        assert isinstance(result, list)
+        assert result and result[0].address
+        assert (
+            result[0].address.formatted == "1600 Amphitheatre Pkwy, Mountain View, CA"
+        )
         mock_client.reverse_geocode.assert_called_once_with((37.4224764, -122.0842499))
 
     @pytest.mark.asyncio
@@ -165,8 +183,11 @@ class TestGoogleMapsService:
             "restaurants", location=(37.4224764, -122.0842499), radius=1000
         )
 
-        # Verify
-        assert result == expected_result
+        # Verify typed list of PlaceSummary
+        assert isinstance(result, list)
+        assert isinstance(result[0], PlaceSummary)
+        assert result[0].place.place_id == "test_place_id"
+        assert result[0].place.name == "Test Restaurant"
         mock_client.places.assert_called_once_with(
             query="restaurants", location=(37.4224764, -122.0842499), radius=1000
         )
@@ -182,8 +203,9 @@ class TestGoogleMapsService:
         # Execute
         result = await google_maps_service.search_places("restaurants")
 
-        # Verify
-        assert result == expected_result
+        # Verify typed
+        assert isinstance(result, list)
+        assert result == []
         mock_client.places.assert_called_once_with(query="restaurants")
 
     @pytest.mark.asyncio
@@ -207,8 +229,10 @@ class TestGoogleMapsService:
             "test_place_id", fields=["name", "formatted_address", "rating"]
         )
 
-        # Verify
-        assert result == expected_result
+        # Verify typed PlaceDetails
+        assert isinstance(result, PlaceDetails)
+        assert result.place.name == "Test Place"
+        assert result.place.address and result.place.address.formatted == "123 Test St"
         mock_client.place.assert_called_once_with(
             place_id="test_place_id", fields=["name", "formatted_address", "rating"]
         )
@@ -235,8 +259,10 @@ class TestGoogleMapsService:
             "San Francisco, CA", "Oakland, CA", mode="driving"
         )
 
-        # Verify
-        assert result == expected_result
+        # Verify typed DirectionsResult
+        assert isinstance(result, list)
+        assert isinstance(result[0], DirectionsResult)
+        assert result[0].route.distance_km == 10.2
         mock_client.directions.assert_called_once_with(
             origin="San Francisco, CA", destination="Oakland, CA", mode="driving"
         )
@@ -267,8 +293,9 @@ class TestGoogleMapsService:
             origins=["San Francisco, CA"], destinations=["Oakland, CA"], mode="driving"
         )
 
-        # Verify
-        assert result == expected_result
+        # Verify typed DistanceMatrix
+        assert isinstance(result, DistanceMatrix)
+        assert result.rows[0].elements[0].duration_seconds == 900
         mock_client.distance_matrix.assert_called_once_with(
             origins=["San Francisco, CA"], destinations=["Oakland, CA"], mode="driving"
         )
@@ -292,8 +319,10 @@ class TestGoogleMapsService:
         # Execute
         result = await google_maps_service.get_elevation(locations)
 
-        # Verify
-        assert result == expected_result
+        # Verify typed ElevationPoint
+        assert isinstance(result, list)
+        assert isinstance(result[0], ElevationPoint)
+        assert abs(result[0].elevation_meters - 1608.6379) < 1e-3
         mock_client.elevation.assert_called_once_with(locations)
 
     @pytest.mark.asyncio
@@ -315,8 +344,9 @@ class TestGoogleMapsService:
         # Execute
         result = await google_maps_service.get_timezone(location, timestamp=1331161200)
 
-        # Verify
-        assert result == expected_result
+        # Verify typed TimezoneInfo
+        assert isinstance(result, TimezoneInfo)
+        assert result.time_zone_id == "America/Denver"
         mock_client.timezone.assert_called_once_with(
             location=location, timestamp=1331161200
         )
@@ -334,8 +364,9 @@ class TestGoogleMapsService:
         # Execute
         result = await google_maps_service.get_timezone(location)
 
-        # Verify
-        assert result == expected_result
+        # Verify typed
+        assert isinstance(result, TimezoneInfo)
+        assert result.time_zone_id == "America/Denver"
         mock_client.timezone.assert_called_once_with(location=location)
 
     @pytest.mark.asyncio
@@ -353,17 +384,18 @@ class TestGoogleMapsService:
     async def test_transport_error_handling(self, google_maps_service, mock_client):
         """Test handling of transport errors."""
         # Setup
-        mock_client.search_places.side_effect = TransportError("Network error")
+        mock_client.places.side_effect = TransportError("Network error")
         google_maps_service._client = mock_client
 
         # Execute and verify
         with pytest.raises(GoogleMapsServiceError, match="Place search failed"):
             await google_maps_service.search_places("test query")
 
-    def test_singleton_service(self):
-        """Test that get_google_maps_service returns a singleton."""
-        service1 = get_google_maps_service()
-        service2 = get_google_maps_service()
+    @pytest.mark.asyncio
+    async def test_singleton_service(self):
+        """Test that get_google_maps_service returns a singleton (async)."""
+        service1 = await get_google_maps_service()
+        service2 = await get_google_maps_service()
         assert service1 is service2
 
     @pytest.mark.asyncio
@@ -421,7 +453,12 @@ class TestAsyncToThreadIntegration:
 
             mock_client = Mock()
             mock_client_class.return_value = mock_client
-            mock_to_thread.return_value = [{"test": "result"}]
+            mock_to_thread.return_value = [
+                {
+                    "formatted_address": "X",
+                    "geometry": {"location": {"lat": 1.0, "lng": 2.0}},
+                }
+            ]
 
             # Test
             service = GoogleMapsService()
@@ -429,4 +466,4 @@ class TestAsyncToThreadIntegration:
 
             # Verify
             mock_to_thread.assert_called_once()
-            assert result == [{"test": "result"}]
+            assert result and result[0].address and result[0].coordinates

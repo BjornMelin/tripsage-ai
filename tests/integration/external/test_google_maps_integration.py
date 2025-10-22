@@ -8,6 +8,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tripsage_core.models.api.maps_models import (
+    DirectionsResult,
+    DistanceMatrix,
+    PlaceDetails,
+    PlaceSummary,
+)
 from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsService,
     GoogleMapsServiceError,
@@ -174,14 +180,13 @@ class TestGoogleMapsIntegration:
 
         result = await google_maps_service.geocode("Paris, France")
 
-        # Assertions
-        assert result is not None
+        # Assertions (typed Place)
         assert isinstance(result, list)
         assert len(result) == 1
-        assert result[0]["formatted_address"] == "Paris, France"
-        assert result[0]["geometry"]["location"]["lat"] == 48.8566969
-        assert result[0]["geometry"]["location"]["lng"] == 2.3514616
-        assert result[0]["place_id"] == "ChIJD7fiBh9u5kcRYJSMaMOCCwQ"
+        p = result[0]
+        assert p.address and p.address.formatted == "Paris, France"
+        assert p.coordinates and abs(p.coordinates.latitude - 48.8566969) < 1e-6
+        assert p.coordinates and abs(p.coordinates.longitude - 2.3514616) < 1e-6
 
         # Verify client was called
         google_maps_service._client.geocode.assert_called_once_with("Paris, France")
@@ -208,11 +213,10 @@ class TestGoogleMapsIntegration:
 
         result = await google_maps_service.reverse_geocode(48.8566969, 2.3514616)
 
-        # Assertions
-        assert result is not None
+        # Assertions (typed Place)
         assert isinstance(result, list)
         assert len(result) == 1
-        assert result[0]["formatted_address"] == "Paris, France"
+        assert result[0].address and result[0].address.formatted == "Paris, France"
 
         # Verify client was called
         google_maps_service._client.reverse_geocode.assert_called_once_with(
@@ -231,15 +235,13 @@ class TestGoogleMapsIntegration:
             query="Eiffel Tower", location=(48.8566969, 2.3514616), radius=5000
         )
 
-        # Assertions
-        assert result is not None
-        assert "results" in result
-        assert len(result["results"]) == 1
-
-        place = result["results"][0]
-        assert place["name"] == "Eiffel Tower"
-        assert place["place_id"] == "ChIJN1t_tDeuEmsRUsoyG83frY4"
-        assert place["rating"] == 4.6
+        # Assertions (typed PlaceSummary)
+        assert isinstance(result, list)
+        assert isinstance(result[0], PlaceSummary)
+        assert result[0].place.name == "Eiffel Tower"
+        assert result[0].place.place_id == "ChIJN1t_tDeuEmsRUsoyG83frY4"
+        assert result[0].rating is not None
+        assert abs(result[0].rating - 4.6) < 1e-6
 
     @pytest.mark.asyncio
     async def test_get_place_details_success(
@@ -252,12 +254,12 @@ class TestGoogleMapsIntegration:
             "ChIJN1t_tDeuEmsRUsoyG83frY4"
         )
 
-        # Assertions
-        assert result is not None
-        assert "result" in result
-        assert result["result"]["name"] == "Eiffel Tower"
-        assert result["result"]["rating"] == 4.6
-        assert result["result"]["website"] == "https://www.toureiffel.paris/"
+        # Assertions (typed PlaceDetails)
+        assert isinstance(result, PlaceDetails)
+        assert result.place.name == "Eiffel Tower"
+        assert result.rating is not None
+        assert abs(result.rating - 4.6) < 1e-6
+        assert result.website == "https://www.toureiffel.paris/"
 
     @pytest.mark.asyncio
     async def test_get_directions_success(
@@ -273,14 +275,11 @@ class TestGoogleMapsIntegration:
             mode="walking",
         )
 
-        # Assertions
-        assert result is not None
+        # Assertions (typed DirectionsResult)
         assert isinstance(result, list)
-        assert len(result) == 1
-
-        route = result[0]
-        assert route["legs"][0]["distance"]["value"] == 1200
-        assert route["legs"][0]["duration"]["value"] == 900
+        assert isinstance(result[0], DirectionsResult)
+        assert result[0].legs[0].distance_meters == 1200
+        assert result[0].legs[0].duration_seconds == 900
 
         # Verify client was called
         google_maps_service._client.directions.assert_called_once_with(
@@ -315,10 +314,9 @@ class TestGoogleMapsIntegration:
             mode="walking",
         )
 
-        # Assertions
-        assert result is not None
-        assert result["status"] == "OK"
-        assert result["rows"][0]["elements"][0]["distance"]["value"] == 1200
+        # Assertions (typed DistanceMatrix)
+        assert isinstance(result, DistanceMatrix)
+        assert result.rows[0].elements[0].distance_meters == 1200
 
     @pytest.mark.asyncio
     async def test_api_error_handling(self, google_maps_service):
@@ -389,9 +387,7 @@ class TestGoogleMapsIntegration:
             location=(48.8566969, 2.3514616)
         )
 
-        assert result is not None
-        assert result["timeZoneId"] == "Europe/Paris"
-        assert result["status"] == "OK"
+        assert result.time_zone_id == "Europe/Paris"
 
     @pytest.mark.asyncio
     async def test_get_elevation_success(self, google_maps_service):
@@ -410,6 +406,5 @@ class TestGoogleMapsIntegration:
             locations=[(48.8566969, 2.3514616)]
         )
 
-        assert result is not None
         assert isinstance(result, list)
-        assert result[0]["elevation"] == 38.5
+        assert abs(result[0].elevation_meters - 38.5) < 1e-6
