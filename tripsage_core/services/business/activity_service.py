@@ -23,9 +23,8 @@ from tripsage_core.models.api.maps_models import PlaceDetails, PlaceSummary
 from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsService,
     GoogleMapsServiceError,
-    get_google_maps_service,
 )
-from tripsage_core.services.infrastructure.cache_service import get_cache_service
+from tripsage_core.services.infrastructure.cache_service import CacheService
 from tripsage_core.utils.cache_utils import cached
 from tripsage_core.utils.content_utils import ContentType
 from tripsage_core.utils.decorator_utils import with_error_handling
@@ -68,8 +67,8 @@ class ActivityService:
 
     def __init__(
         self,
-        google_maps_service: GoogleMapsService | None = None,
-        cache_service=None,
+        google_maps_service: GoogleMapsService,
+        cache_service: CacheService,
     ):
         """Initialize activity service.
 
@@ -80,14 +79,6 @@ class ActivityService:
         self.google_maps_service = google_maps_service
         self.cache_service = cache_service
         self.web_search_tool = CachedWebSearchTool(namespace="activity-search")
-
-    async def ensure_services(self) -> None:
-        """Ensure all required services are initialized."""
-        if not self.google_maps_service:
-            self.google_maps_service = await get_google_maps_service()
-
-        if not self.cache_service:
-            self.cache_service = await get_cache_service()
 
     @with_error_handling()
     @cached(content_type=ContentType.SEMI_STATIC, ttl=3600)  # 1 hour cache
@@ -105,10 +96,7 @@ class ActivityService:
         Raises:
             ActivityServiceError: If search fails
         """
-        await self.ensure_services()
-
-        if self.google_maps_service is None:
-            raise ActivityServiceError("Google Maps service not initialized")
+        # GoogleMapsService and CacheService are injected via constructor (DI)
 
         try:
             logger.info("Searching activities for destination: %s", request.destination)
@@ -525,7 +513,7 @@ class ActivityService:
         Raises:
             ActivityServiceError: If retrieval fails
         """
-        await self.ensure_services()
+        # Services injected via constructor; no lazy ensures
 
         try:
             # Extract Google Maps place ID if applicable
@@ -643,24 +631,6 @@ class ActivityService:
         )
 
 
-# Global service instance
-_activity_service: ActivityService | None = None
-
-
-async def get_activity_service() -> ActivityService:  # pylint: disable=global-statement
-    """Get the global activity service instance."""
-    # pylint: disable=global-statement
-    global _activity_service
-
-    if _activity_service is None:
-        _activity_service = ActivityService()
-        await _activity_service.ensure_services()
-
-    return _activity_service
-
-
-async def close_activity_service() -> None:  # pylint: disable=global-statement
-    """Close the global activity service instance."""
-    # pylint: disable=global-statement
-    global _activity_service
-    _activity_service = None
+"""Note: Use dependency injection. Construct ActivityService in the composition
+root (e.g., ServiceRegistry or API router) with injected GoogleMapsService and
+CacheService. This module intentionally provides no module-level singletons."""

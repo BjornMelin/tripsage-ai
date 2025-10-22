@@ -18,8 +18,8 @@ from tripsage.api.schemas.responses.activities import (
     SavedActivityResponse,
 )
 from tripsage_core.services.business.activity_service import (
+    ActivityService,
     ActivityServiceError,
-    get_activity_service,
 )
 from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
@@ -27,6 +27,8 @@ from tripsage_core.services.business.audit_logging_service import (
     audit_security_event,
 )
 from tripsage_core.services.business.trip_service import TripService, get_trip_service
+from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
+from tripsage_core.services.infrastructure.cache_service import get_cache_service
 from tripsage_core.services.infrastructure.database_service import (
     DatabaseService,
     get_database_service,
@@ -47,7 +49,11 @@ async def search_activities(request: ActivitySearchRequest):
     logger.info("Activity search request: %s", request.destination)
 
     try:
-        activity_service = await get_activity_service()
+        cache_service = await get_cache_service()
+        maps_service = GoogleMapsService()
+        activity_service = ActivityService(
+            google_maps_service=maps_service, cache_service=cache_service
+        )
         result = await activity_service.search_activities(request)
 
         logger.info(
@@ -79,7 +85,11 @@ async def get_activity_details(activity_id: str):
     logger.info("Get activity details request: %s", activity_id)
 
     try:
-        activity_service = await get_activity_service()
+        cache_service = await get_cache_service()
+        maps_service = GoogleMapsService()
+        activity_service = ActivityService(
+            google_maps_service=maps_service, cache_service=cache_service
+        )
         activity = await activity_service.get_activity_details(activity_id)
 
         if not activity:

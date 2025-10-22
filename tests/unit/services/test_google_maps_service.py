@@ -21,7 +21,6 @@ from tripsage_core.models.api.maps_models import (
 from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsService,
     GoogleMapsServiceError,
-    get_google_maps_service,
 )
 
 
@@ -391,12 +390,7 @@ class TestGoogleMapsService:
         with pytest.raises(GoogleMapsServiceError, match="Place search failed"):
             await google_maps_service.search_places("test query")
 
-    @pytest.mark.asyncio
-    async def test_singleton_service(self):
-        """Test that get_google_maps_service returns a singleton (async)."""
-        service1 = await get_google_maps_service()
-        service2 = await get_google_maps_service()
-        assert service1 is service2
+    # Singleton pattern removed: services are injected via DI; no singleton test
 
     @pytest.mark.asyncio
     async def test_with_error_handling_decorator(
