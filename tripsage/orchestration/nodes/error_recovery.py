@@ -8,6 +8,7 @@ and improved recovery strategies.
 from datetime import UTC, datetime
 from typing import cast
 
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import ErrorInfo, HandoffContext, TravelPlanningState
 from tripsage_core.utils.logging_utils import get_logger
@@ -23,9 +24,9 @@ class ErrorRecoveryNode(BaseAgentNode):
     retry logic, fallback options, and escalation to human support.
     """
 
-    def __init__(self, service_registry):
+    def __init__(self, services: AppServiceContainer):
         """Initialize the error recovery node."""
-        super().__init__("error_recovery", service_registry)
+        super().__init__("error_recovery", services)
         self.max_retries = 3
         self.escalation_threshold = 5
 

@@ -10,7 +10,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
-from tripsage.agents.service_registry import ServiceRegistry
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.config import get_default_config
 from tripsage.orchestration.handoff_coordinator import (
     HandoffTrigger,
@@ -33,37 +33,37 @@ from tripsage_core.utils.logging_utils import get_logger
 logger = get_logger(__name__)
 
 
-_global_orchestrator: TripSageOrchestrator | None = None
-
-
 class TripSageOrchestrator:
     """LangGraph orchestrator that coordinates all TripSage agent flows."""
 
     def __init__(
         self,
-        service_registry: ServiceRegistry | None = None,
+        services: AppServiceContainer,
+        *,
         checkpointer: Any | None = None,
         config: Any | None = None,
     ):
         """Initialize the orchestrator with graph construction and checkpointing.
 
         Args:
-            service_registry: Service registry for dependency injection
+            services: Application service container supplying dependencies.
             checkpointer: Optional checkpointer for state persistence
                          (defaults to MemorySaver for development)
             config: Optional configuration object (defaults to environment config)
         """
-        self.service_registry = service_registry or ServiceRegistry()
+        self.services = services
         self.config = config or get_default_config()
         try:
-            self.checkpoint_service = self.service_registry.get_checkpoint_service()
+            self.checkpoint_service = self.services.get_required_service(
+                "checkpoint_service"
+            )
         except ValueError as exc:
             raise ValueError(
                 "TripSageOrchestrator requires a configured checkpoint service."
             ) from exc
         self.checkpointer = checkpointer
         try:
-            self.memory_bridge = self.service_registry.get_memory_bridge()
+            self.memory_bridge = self.services.get_required_service("memory_bridge")
         except ValueError as exc:
             raise ValueError(
                 "TripSageOrchestrator requires a configured session memory bridge."
@@ -113,17 +113,15 @@ class TripSageOrchestrator:
         graph = StateGraph(TravelPlanningState)
 
         # Add the router node (entry point for all requests)
-        router_node = RouterNode(self.service_registry)
+        router_node = RouterNode(self.services)
         graph.add_node("router", router_node)
 
         # Add specialized agent nodes with service registry
-        flight_agent_node = FlightAgentNode(self.service_registry)
-        accommodation_agent_node = AccommodationAgentNode(self.service_registry)
-        budget_agent_node = BudgetAgentNode(self.service_registry)
-        destination_research_agent_node = DestinationResearchAgentNode(
-            self.service_registry
-        )
-        itinerary_agent_node = ItineraryAgentNode(self.service_registry)
+        flight_agent_node = FlightAgentNode(self.services)
+        accommodation_agent_node = AccommodationAgentNode(self.services)
+        budget_agent_node = BudgetAgentNode(self.services)
+        destination_research_agent_node = DestinationResearchAgentNode(self.services)
+        itinerary_agent_node = ItineraryAgentNode(self.services)
 
         graph.add_node("flight_agent", flight_agent_node)
         graph.add_node("accommodation_agent", accommodation_agent_node)
@@ -135,8 +133,8 @@ class TripSageOrchestrator:
         graph.add_node("general_agent", self._create_general_agent())
 
         # Add utility nodes with service registry
-        memory_update_node = MemoryUpdateNode(self.service_registry)
-        error_recovery_node = ErrorRecoveryNode(self.service_registry)
+        memory_update_node = MemoryUpdateNode(self.services)
+        error_recovery_node = ErrorRecoveryNode(self.services)
         graph.add_node("memory_update", memory_update_node)
         graph.add_node("error_recovery", error_recovery_node)
 
@@ -437,28 +435,3 @@ class TripSageOrchestrator:
         except Exception:
             logger.exception("Error retrieving session state")
             return None
-
-
-def get_orchestrator(
-    service_registry: ServiceRegistry | None = None,
-) -> TripSageOrchestrator:
-    """Return a singleton TripSageOrchestrator instance."""
-    global _global_orchestrator  # pylint: disable=global-statement
-
-    if _global_orchestrator is None:
-        if service_registry is None:
-            raise ValueError(
-                "A configured ServiceRegistry is required to create the orchestrator."
-            )
-        _global_orchestrator = TripSageOrchestrator(service_registry=service_registry)
-        return _global_orchestrator
-
-    if (
-        service_registry is not None
-        and _global_orchestrator.service_registry is not service_registry
-    ):
-        logger.warning(
-            "Ignoring service_registry override for existing orchestrator instance"
-        )
-
-    return _global_orchestrator

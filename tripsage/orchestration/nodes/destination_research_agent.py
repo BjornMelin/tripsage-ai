@@ -11,6 +11,7 @@ from langchain_core.tools import Tool
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.config import get_default_config
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
@@ -49,11 +50,11 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
     information using MCP tool integration.
     """
 
-    def __init__(self, service_registry, **config_overrides):
+    def __init__(self, services: AppServiceContainer, **config_overrides):
         """Initialize the destination research agent node with dynamic configuration.
 
         Args:
-            service_registry: Service registry for dependency injection
+            services: Application service container for dependency injection
             **config_overrides: Runtime configuration overrides (e.g., temperature=0.8)
         """
         # Get configuration service for database-backed config
@@ -70,8 +71,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             StructuredExtractor[DestinationResearchParameters] | None
         ) = None
         self.llm_with_tools = None
-
-        super().__init__("destination_research_agent", service_registry)
+        super().__init__("destination_research_agent", services)
 
     def _initialize_tools(self) -> None:
         """Initialize destination research tools using simple tool catalog."""

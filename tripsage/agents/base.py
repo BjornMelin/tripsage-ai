@@ -18,7 +18,8 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
-from tripsage.agents.service_registry import ServiceRegistry
+from tripsage.app_state import AppServiceContainer
+from tripsage.orchestration.graph import TripSageOrchestrator
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreTripSageError
 from tripsage_core.services.business.memory_service import (
@@ -45,7 +46,8 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         name: str,
-        service_registry: ServiceRegistry,
+        services: AppServiceContainer,
+        orchestrator: TripSageOrchestrator,
         *,
         instructions: str | None = None,
         llm: BaseChatModel | None = None,
@@ -55,18 +57,19 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
 
         Args:
             name: Logical agent name.
-            service_registry: Dependency injection container.
+            services: Application service container.
+            orchestrator: TripSage LangGraph orchestrator singleton.
             instructions: Optional system instructions overriding defaults.
             llm: Optional pre-configured chat model instance.
             summary_interval: Number of messages between memory summaries.
         """
         self.name = name
         self.instructions = instructions or _DEFAULT_INSTRUCTIONS
-        self.service_registry = service_registry
+        self.services = services
         self.llm: BaseChatModel = llm or self._create_llm()
         self._summary_interval = max(summary_interval, 0)
         self._last_summary_index = 0
-        self._orchestrator = None
+        self._orchestrator: TripSageOrchestrator | None = orchestrator
 
         self.messages_history: list[dict[str, Any]] = []
         self.session_id = str(uuid4())
@@ -185,10 +188,8 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
     async def _ensure_orchestrator(self):
         """Lazy-load the LangGraph orchestrator."""
         if self._orchestrator is None:
-            from tripsage.orchestration.graph import get_orchestrator
-
-            self._orchestrator = get_orchestrator(self.service_registry)
-            await self._orchestrator.initialize()
+            raise RuntimeError("TripSageOrchestrator is not configured")
+        await self._orchestrator.initialize()
         return self._orchestrator
 
     async def _hydrate_session(self, user_id: str) -> None:
@@ -328,8 +329,9 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
     def _get_memory_service(self) -> MemoryService | None:
         """Return the optional memory service from the registry."""
         try:
-            return self.service_registry.get_optional_service(
-                "memory_service", expected_type=MemoryService
+            return self.services.get_optional_service(
+                "memory_service",
+                expected_type=MemoryService,
             )
         except TypeError:
             logger.warning("Memory service present but type mismatch; ignoring.")

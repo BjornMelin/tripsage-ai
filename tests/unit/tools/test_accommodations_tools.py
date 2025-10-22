@@ -27,19 +27,6 @@ from tripsage_core.services.business.accommodation_service import (
 )
 
 
-class DummyRegistry:
-    """Minimal registry stub for tool tests."""
-
-    def __init__(self, service):
-        """Store the provided accommodation service."""
-        self._service = service
-
-    def get_required_service(self, service_name: str):
-        """Return the stored service when the accommodation key is requested."""
-        assert service_name == "accommodation_service"
-        return self._service
-
-
 def _sample_listing() -> AccommodationListing:
     return AccommodationListing.model_validate(
         {
@@ -63,9 +50,9 @@ def _sample_listing() -> AccommodationListing:
     )
 
 
-def _make_context(registry: DummyRegistry) -> ToolContext[dict[str, Any]]:
+def _make_context(service: Any) -> ToolContext[dict[str, Any]]:
     return ToolContext(
-        context={"service_registry": registry},
+        context={"accommodation_service": service},
         tool_name="test_tool",
         tool_call_id="test_call",
         tool_arguments="{}",
@@ -103,8 +90,7 @@ async def test_search_accommodations_serializes_response():
 
     service = AsyncMock()
     service.search_accommodations.return_value = response
-    registry = DummyRegistry(service)
-    ctx = _make_context(registry)
+    ctx = _make_context(service)
 
     result = await search_accommodations(
         ctx=ctx,
@@ -127,8 +113,7 @@ async def test_get_accommodation_details_handles_not_found():
     """Expose not_found status when the domain lookup fails."""
     service = AsyncMock()
     service.get_listing_details.return_value = None
-    registry = DummyRegistry(service)
-    ctx = _make_context(registry)
+    ctx = _make_context(service)
 
     result = await get_accommodation_details(
         ctx=ctx,
@@ -175,8 +160,7 @@ async def test_book_accommodation_returns_booking_dump():
 
     service = AsyncMock()
     service.book_accommodation.return_value = booking
-    registry = DummyRegistry(service)
-    ctx = _make_context(registry)
+    ctx = _make_context(service)
 
     result = await book_accommodation(
         ctx=ctx,

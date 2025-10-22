@@ -42,6 +42,7 @@ from tripsage.api.routers import (
 )
 
 # Removed ServiceRegistry: use direct lifespan-managed instances
+from tripsage.app_state import initialise_app_state, shutdown_app_state
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreExternalAPIError,
@@ -51,11 +52,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreValidationError,
 )
 from tripsage_core.observability.otel import setup_otel
-from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
-from tripsage_core.services.infrastructure.websocket_broadcaster import (
-    WebSocketBroadcaster,
-)
-from tripsage_core.services.infrastructure.websocket_manager import WebSocketManager
 
 
 logger: "logging.Logger" = logging.getLogger(__name__)  # pylint: disable=no-member
@@ -78,70 +74,44 @@ async def lifespan(app: FastAPI):
     Args:
         app: The FastAPI application
     """
-    # Startup: Initialize MCP Manager and WebSocket Services
-    logger.info("Initializing MCP service on API startup")
-    from tripsage_core.services.airbnb_mcp import AirbnbMCP
+    services, orchestrator = await initialise_app_state(app)
 
-    app.state.mcp_service = AirbnbMCP()
-    await app.state.mcp_service.initialize()
+    # Instantiate shared agents after services are ready
+    from tripsage.agents.chat import ChatAgent
 
-    # Initialize services (Cache, WebSocket, MCP) in DI-managed app.state
-    logger.info("Initializing Cache service")
-    from tripsage_core.services.infrastructure.cache_service import CacheService
-
-    app.state.cache_service = CacheService()
-    await app.state.cache_service.connect()
-
-    # Initialize Google Maps service (DI-managed singleton for API lifespan)
-    logger.info("Initializing Google Maps service")
-    app.state.google_maps_service = GoogleMapsService()
-    await app.state.google_maps_service.connect()
-    # Services are reachable via request.app.state*
+    app.state.chat_agent = ChatAgent(
+        services=services,
+        orchestrator=orchestrator,
+    )
 
     # Start database connection monitor for unified health reporting
+    database_monitor = None
     try:
+        db_service = services.database_service
+        if db_service is None:
+            raise RuntimeError("Database service unavailable during startup")
         from tripsage_core.services.infrastructure.database_monitor import (
             DatabaseConnectionMonitor,
         )
-        from tripsage_core.services.infrastructure.database_service import (
-            get_database_service,
-        )
 
-        db_service = await get_database_service()
-        app.state.database_monitor = DatabaseConnectionMonitor(
-            database_service=db_service
+        database_monitor = DatabaseConnectionMonitor(
+            database_service=db_service,
         )
-        await app.state.database_monitor.start_monitoring()
-    except Exception:  # noqa: BLE001 - do not break startup if monitor fails
+        await database_monitor.start_monitoring()
+        app.state.database_monitor = database_monitor
+    except Exception:  # noqa: BLE001 - non-critical
         logger.warning("DatabaseConnectionMonitor initialization failed")
 
-    logger.info("Starting WebSocket Broadcaster")
-    app.state.websocket_broadcaster = WebSocketBroadcaster()
-    await app.state.websocket_broadcaster.start()
-
-    # Initialize WebSocket Manager with broadcaster integration
-    logger.info("Starting WebSocket Manager with broadcaster integration")
-    app.state.websocket_manager = WebSocketManager()
-    app.state.websocket_manager.broadcaster = app.state.websocket_broadcaster
-    await app.state.websocket_manager.start()
-
-    yield  # Application runs here
-
-    # Shutdown: Clean up resources (reverse order)
-    logger.info("Stopping WebSocket Manager")
-    await app.state.websocket_manager.stop()
-
-    logger.info("Stopping WebSocket Broadcaster")
-    await app.state.websocket_broadcaster.stop()
-
-    logger.info("Disconnecting Cache service")
-    await app.state.cache_service.disconnect()
-
-    logger.info("Closing Google Maps service")
-    await app.state.google_maps_service.close()
-
-    logger.info("Shutting down MCP Manager")
-    await app.state.mcp_service.shutdown()
+    try:
+        yield  # Application runs here
+    finally:
+        if database_monitor is not None:
+            await database_monitor.stop_monitoring()
+            if hasattr(app.state, "database_monitor"):
+                delattr(app.state, "database_monitor")
+        if hasattr(app.state, "chat_agent"):
+            delattr(app.state, "chat_agent")
+        await shutdown_app_state(app)
 
 
 def create_app() -> FastAPI:  # pylint: disable=too-many-statements
