@@ -7,6 +7,7 @@ over traditional Redis implementations.
 
 import json
 import logging
+from contextlib import asynccontextmanager
 from typing import Any
 
 import redis.asyncio as redis
@@ -632,6 +633,46 @@ class CacheService:
         return await self.set_json(key, value, ttl=86400)  # Long TTL (24 hours)
 
 
-# FINAL-ONLY: Global singleton removed. Use DI to construct and manage CacheService
-# lifecycle (connect/disconnect) in the application startup, and inject explicitly
-# where needed. This module now only defines the CacheService class.
+async def get_cache_service(
+    settings: Settings | None = None, *, ensure_connected: bool = True
+) -> CacheService:
+    """Create a ``CacheService`` instance, optionally establishing a connection.
+
+    Args:
+        settings: Optional ``Settings`` to configure the service. When ``None``,
+            loads defaults via ``get_settings()`` inside ``CacheService``.
+        ensure_connected: When ``True`` (default), establishes the connection by
+            awaiting ``connect()`` before returning.
+
+    Returns:
+        A ``CacheService`` instance (connected when ``ensure_connected`` is True).
+    """
+    service = CacheService(settings)
+    if ensure_connected:
+        await service.connect()
+    return service
+
+
+@asynccontextmanager
+async def cache_service(settings: Settings | None = None):
+    """Async context manager yielding a connected ``CacheService``.
+
+    Ensures fast, explicit lifecycle management: connects on enter and always
+    disconnects on exit. Prefer this in short-lived tasks, tests, and scripts.
+
+    Example:
+        async with cache_service() as cache:
+            await cache.set("k", "v")
+
+    Args:
+        settings: Optional ``Settings`` to configure the service.
+
+    Yields:
+        A connected ``CacheService`` instance.
+    """
+    service = CacheService(settings)
+    try:
+        await service.connect()
+        yield service
+    finally:
+        await service.disconnect()
