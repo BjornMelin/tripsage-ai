@@ -50,7 +50,7 @@ tripsage-ai/
 │   │   ├── types/              # TypeScript type definitions
 │   │   └── __tests__/
 │   └── [config files]
-├── tests/                      # Comprehensive test suite
+├── tests/                      # test suite
 │   ├── __init__.py
 │   ├── conftest.py
 │   ├── database/
@@ -116,7 +116,7 @@ Next.js 15 workspace with modern React patterns.
 
 ### tests/
 
-Comprehensive test suite split by type and scope.
+Test suite split by type and scope.
 
 - **unit/**: Unit tests with 90%+ coverage
 - **integration/**: Service integration tests

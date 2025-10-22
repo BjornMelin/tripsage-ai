@@ -1,5 +1,5 @@
 /**
- * Enhanced React Hook Form integration with Zod validation
+ * React Hook Form integration with Zod validation
  * Provides type-safe form handling with comprehensive error management
  */
 
@@ -21,7 +21,7 @@ import {
   validate,
 } from "../validation";
 
-// Enhanced form options
+// Form options
 interface UseZodFormOptions<T extends FieldValues> extends UseFormProps<T> {
   schema: z.ZodSchema<T>;
   validateMode?: "onSubmit" | "onBlur" | "onChange" | "onTouched" | "all";
@@ -39,9 +39,9 @@ interface UseZodFormOptions<T extends FieldValues> extends UseFormProps<T> {
   stepValidationSchemas?: z.ZodType<any>[];
 }
 
-// Enhanced form return type
+// form return type
 interface UseZodFormReturn<T extends FieldValues> extends UseFormReturn<T> {
-  // Enhanced validation methods
+  // validation methods
   validateField: (
     fieldName: FieldPath<T>,
     value: unknown

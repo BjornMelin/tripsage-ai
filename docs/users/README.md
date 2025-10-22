@@ -11,7 +11,7 @@ User guide from first login to trip planning.
 | 1. [Getting Started](getting-started.md) | Create account and basic setup | 5 min | ✅ |
 | 2. [Your First Trip](travel-planning-guide.md) | Plan your first trip with AI | 10 min | ✅ |
 | 3. [Using the Web App](web-app-guide.md) | Master the interface | 15 min | ✅ |
-| 4. [Advanced Features](advanced-features.md) | Collaboration, preferences, and more | As needed | ✅ |
+| 4. [Advanced Features](feature-reference.md) | Collaboration, preferences, and more | As needed | ✅ |
 
 ## 📚 Documentation Sections
 
@@ -75,7 +75,7 @@ User guide from first login to trip planning.
 **Goal**: Master all TripSage features
 
 1. Complete all Quick Start steps above
-2. **[Advanced Features](advanced-features.md)** - All capabilities
+2. **[Advanced Features](feature-reference.md)** - All capabilities
 3. **[API Documentation](../api/getting-started.md)** - Integration options
 
 ## Use Cases

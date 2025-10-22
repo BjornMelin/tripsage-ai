@@ -10,7 +10,7 @@ Internal developer resources and guidelines.
 |----------|---------|----------|
 | [Quick Start Guide](quick-start-guide.md) | Setup for new developers | New developers |
 | [Code Standards](code-standards.md) | Python/TypeScript coding guidelines & conventions | All developers |
-| [Testing Guide](testing-guide.md) | Comprehensive testing strategies & patterns | All developers |
+| [Testing Guide](testing-guide.md) | Testing strategies & patterns | All developers |
 
 ### Core Development
 
@@ -107,7 +107,7 @@ pnpm test:coverage # Coverage report
 
 - **Backend Tests**: 2,444 tests (79.9% passing)
 - **Frontend Tests**: 1,443 tests (64.1% passing)  
-- **E2E Tests**: Comprehensive Playwright suite
+- **E2E Tests**: Playwright suite
 - **Code Coverage**: 85-90% target coverage
 - **Performance**: Sub-1.5s load times, >95 Lighthouse score
 

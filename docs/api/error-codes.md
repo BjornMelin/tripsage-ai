@@ -1,7 +1,7 @@
 # 🚨 TripSage API Error Codes
 
 > **Complete Error Reference**  
-> Comprehensive guide to HTTP status codes, error types, and troubleshooting for TripSage API
+> Guide to HTTP status codes, error types, and troubleshooting for TripSage API
 
 ## 📋 Table of Contents
 

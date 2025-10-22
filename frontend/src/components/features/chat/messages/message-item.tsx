@@ -63,7 +63,7 @@ export function MessageItem({
   const hasAttachments = message.attachments && message.attachments.length > 0;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
 
-  // Enhanced timestamp formatting with relative time
+  // Timestamp formatting with relative time
   const timeDisplay = useMemo(() => {
     if (!message.createdAt) return null;
 
@@ -92,7 +92,7 @@ export function MessageItem({
     return { relative, absolute };
   }, [message.createdAt]);
 
-  // Enhanced avatar configuration with role-based styling
+  // avatar configuration with role-based styling
   const avatarConfig = useMemo(() => {
     if (isUser) {
       return {
@@ -161,7 +161,7 @@ export function MessageItem({
     }
   }, [message.content]);
 
-  const AdvancedAvatar = ({ config }: { config: typeof avatarConfig }) => {
+  const RoleAvatar = ({ config }: { config: typeof avatarConfig }) => {
     const IconComponent = config.icon;
 
     return (
@@ -276,7 +276,7 @@ export function MessageItem({
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.3 }}
         >
-          <AdvancedAvatar config={avatarConfig} />
+          <RoleAvatar config={avatarConfig} />
         </motion.div>
       )}
 
@@ -339,7 +339,7 @@ export function MessageItem({
           </AnimatePresence>
         </motion.div>
 
-        {/* Enhanced timestamp and actions */}
+        {/* timestamp and actions */}
         <motion.div
           className={cn(
             "flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100",
@@ -423,7 +423,7 @@ export function MessageItem({
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.3 }}
         >
-          <AdvancedAvatar config={avatarConfig} />
+          <RoleAvatar config={avatarConfig} />
         </motion.div>
       )}
     </motion.div>

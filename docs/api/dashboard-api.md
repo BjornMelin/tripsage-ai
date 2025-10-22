@@ -1,9 +1,10 @@
 # Dashboard Monitoring API
 
-This document describes the comprehensive dashboard monitoring API endpoints that provide real-time insights into system performance, API key usage, and service health.
+This document describes the dashboard monitoring API endpoints that provide real-time insights into system performance, API key usage, and service health.
 
 > **Related Documentation:**
-> - [Rate Limiting](../developers/rate-limiting.md) - Enhanced rate limiting implementation
+>
+> - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation
 > - [Authentication](authentication.md) - API authentication guide
 > - [WebSocket API](websocket-api.md) - Real-time WebSocket connections
 > - [Error Codes](error-codes.md) - API error reference
@@ -12,6 +13,7 @@ This document describes the comprehensive dashboard monitoring API endpoints tha
 ## Overview
 
 The Dashboard API provides monitoring and analytics capabilities for:
+
 - System health and performance metrics
 - API key usage statistics and analytics
 - Real-time monitoring data
@@ -32,13 +34,14 @@ All dashboard endpoints require authenticated access. Only users with appropriat
 For detailed authentication information, see the [Authentication Guide](authentication.md).
 
 > **Related Documentation:**
+>
 > - [Authentication Guide](authentication.md) - Complete authentication setup and usage
 > - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation details
 > - [WebSocket API](websocket-api.md) - Real-time features and WebSocket connections
 
 ## Base URL
 
-```
+```text
 /api/dashboard
 ```
 
@@ -51,6 +54,7 @@ For detailed authentication information, see the [Authentication Guide](authenti
 Get high-level system overview and health status.
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -67,6 +71,7 @@ Get high-level system overview and health status.
 ```
 
 **Status Values:**
+
 - `healthy`: All systems operational
 - `degraded`: Some issues detected
 - `unhealthy`: Critical issues present
@@ -79,6 +84,7 @@ Get high-level system overview and health status.
 Get health status for all external services.
 
 **Response:**
+
 ```json
 [
   {
@@ -106,13 +112,15 @@ Get health status for all external services.
 
 #### GET `/metrics`
 
-Get comprehensive usage metrics for specified time period.
+Get usage metrics for specified time period.
 
 **Query Parameters:**
+
 - `time_range_hours` (int, optional): Time range in hours (1-168, default: 24)
 - `service` (string, optional): Filter by specific service
 
 **Response:**
+
 ```json
 {
   "period_start": "2023-01-01T11:00:00Z",
@@ -150,9 +158,11 @@ Get comprehensive usage metrics for specified time period.
 Get current rate limit status for API keys.
 
 **Query Parameters:**
+
 - `limit` (int, optional): Maximum number of results (1-100, default: 20)
 
 **Response:**
+
 ```json
 [
   {
@@ -175,11 +185,13 @@ Get current rate limit status for API keys.
 Get system alerts and notifications.
 
 **Query Parameters:**
+
 - `severity` (string, optional): Filter by severity (low, medium, high, critical)
 - `acknowledged` (boolean, optional): Filter by acknowledgment status
 - `limit` (int, optional): Maximum number of results (1-200, default: 50)
 
 **Response:**
+
 ```json
 [
   {
@@ -204,6 +216,7 @@ Get system alerts and notifications.
 Acknowledge a specific alert.
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -219,6 +232,7 @@ Acknowledge a specific alert.
 Dismiss a specific alert.
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -236,10 +250,12 @@ Dismiss a specific alert.
 Get user activity metrics and patterns.
 
 **Query Parameters:**
+
 - `time_range_hours` (int, optional): Time range in hours (1-168, default: 24)
 - `limit` (int, optional): Maximum number of results (1-100, default: 20)
 
 **Response:**
+
 ```json
 [
   {
@@ -262,13 +278,16 @@ Get user activity metrics and patterns.
 Get time series trend data for specific metrics.
 
 **Path Parameters:**
+
 - `metric_type`: Type of metric (request_count, error_rate, latency, active_users)
 
 **Query Parameters:**
+
 - `time_range_hours` (int, optional): Time range in hours (1-168, default: 24)
 - `interval_minutes` (int, optional): Data point interval (5-1440, default: 60)
 
 **Response:**
+
 ```json
 [
   {
@@ -296,12 +315,14 @@ Get time series trend data for specific metrics.
 
 #### GET `/analytics/summary`
 
-Get comprehensive analytics summary.
+Get an analytics summary.
 
 **Query Parameters:**
+
 - `time_range_hours` (int, optional): Time range in hours (1-168, default: 24)
 
 **Response:**
+
 ```json
 {
   "period": {
@@ -372,16 +393,18 @@ Get comprehensive analytics summary.
 
 Connect to real-time dashboard updates:
 
-```
+```text
 /api/dashboard/realtime/ws/{user_id}
 ```
 
 **Message Types:**
+
 - `metrics`: Real-time performance metrics
 - `alert`: New or updated alerts
 - `system_event`: System status changes
 
 **Example WebSocket Message:**
+
 ```json
 {
   "type": "metrics",
@@ -402,7 +425,7 @@ Connect to real-time dashboard updates:
 
 Alternative real-time updates via SSE:
 
-```
+```text
 GET /api/dashboard/realtime/events
 ```
 
@@ -432,6 +455,7 @@ GET /api/dashboard/realtime/events
 ## Rate Limiting
 
 Dashboard endpoints are subject to rate limiting:
+
 - **Standard Users**: 100 requests per minute
 - **Admin Users**: 500 requests per minute
 - **WebSocket Connections**: Limited to 5 concurrent connections per user
@@ -501,7 +525,7 @@ ws.onmessage = function(event) {
 };
 ```
 
-This dashboard API provides comprehensive monitoring capabilities for maintaining system health and performance visibility.
+This dashboard API provides monitoring capabilities for maintaining system health and performance visibility.
 
 ## See Also
 

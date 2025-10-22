@@ -1,7 +1,7 @@
 # 🔌 TripSage REST API Endpoints
 
 > **Complete API Reference**  
-> Comprehensive documentation for all TripSage REST API endpoints including trip collaboration, real-time features, and data management.
+> Documentation for all TripSage REST API endpoints including trip collaboration, real-time features, and data management.
 
 ## 📋 API Overview
 

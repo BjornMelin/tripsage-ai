@@ -136,7 +136,7 @@ Now that you're set up:
 1. **[Plan Your First Trip](travel-planning-guide.md)** - Detailed planning guide
 2. **[Master the Interface](web-app-guide.md)** - Learn all features
 3. **[Invite Travel Buddies](collaboration.md)** - Plan together
-4. **[Explore Advanced Features](advanced-features.md)** - Power user tips
+4. **[Explore Advanced Features](feature-reference.md)** - Power user tips
 
 ---
 

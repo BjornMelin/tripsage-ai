@@ -118,7 +118,7 @@ tripsage-ai/
 ├── tripsage/                   # API application (FastAPI)
 ├── tripsage_core/              # Core business logic and services
 ├── frontend/                   # Next.js application
-├── tests/                      # Comprehensive test suite
+├── tests/                      # test suite
 ├── scripts/                    # Database and deployment scripts
 ├── docker/                     # Runtime compose files and Dockerfiles
 ├── docs/                       # Documentation

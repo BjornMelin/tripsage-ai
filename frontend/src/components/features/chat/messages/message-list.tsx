@@ -175,7 +175,7 @@ export function MessageList({
     }
   }, []);
 
-  // Enhanced suggestion click handler with optimistic UI
+  // suggestion click handler with optimistic UI
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
       startTransition(() => {
@@ -254,7 +254,7 @@ export function MessageList({
           </div>
         </motion.div>
 
-        {/* Enhanced feature showcase */}
+        {/* feature showcase */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -490,7 +490,7 @@ export function MessageList({
           </TooltipProvider>
         </motion.div>
 
-        {/* Enhanced call to action */}
+        {/* call to action */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -580,7 +580,7 @@ export function MessageList({
                 ))}
               </AnimatePresence>
 
-              {/* Enhanced typing indicator */}
+              {/* typing indicator */}
               <AnimatePresence>
                 {sessionId && typingUsers.length > 0 && (
                   <motion.div
@@ -602,7 +602,7 @@ export function MessageList({
                 )}
               </AnimatePresence>
 
-              {/* Enhanced streaming indicator */}
+              {/* streaming indicator */}
               <AnimatePresence>
                 {isStreaming && (
                   <motion.div

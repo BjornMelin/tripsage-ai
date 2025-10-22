@@ -1,7 +1,7 @@
-# 🚀 Advanced Features Guide
+# 🚀 Feature Reference Guide
 
 > **Unlock the Full Power of TripSage**  
-> Master advanced features for power users, frequent travelers, and API developers
+> Master TripSage capabilities for power users, frequent travelers, and API developers
 
 ## 🧠 AI Memory System Deep Dive
 
@@ -118,7 +118,7 @@ Actions:
 - Activity reminders
 - Expense logging prompts
 
-## 📊 Advanced Analytics
+## 📊 Analytics
 
 ### Personal Travel Analytics
 
@@ -175,7 +175,7 @@ Actions:
 
 ## 🔗 API Integration Mastery
 
-### Advanced API Features
+### API Features
 
 **Webhook Subscriptions:**
 
@@ -257,7 +257,7 @@ Total: 10 days, optimized routing
 
 ### Group Trip Coordination
 
-**Advanced Group Features:**
+**Group Features:**
 
 - Preference voting system
 - Budget pooling calculator

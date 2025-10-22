@@ -8,7 +8,7 @@ TripSage uses a modern, type-safe configuration system built with Pydantic V2 an
 - **Security Hardening**: Automatic detection of fallback/test secrets in production
 - **Environment Flexibility**: Support for development, testing, and production environments
 - **Docker Support**: Built-in Docker secrets and environment variable support
-- **Validation**: Comprehensive validation with clear error messages
+- **Validation**: Validation with clear error messages
 
 ## Configuration Architecture
 

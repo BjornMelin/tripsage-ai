@@ -1,6 +1,6 @@
 # WebSocket API Reference
 
-This document provides a comprehensive API reference for TripSage's WebSocket infrastructure with real-time collaboration features.
+This document provides an API reference for TripSage's WebSocket infrastructure with real-time collaboration features.
 
 ## Table of Contents
 
@@ -624,7 +624,7 @@ Important system-wide message.
 
 ## Real-time Collaboration
 
-TripSage's WebSocket infrastructure provides comprehensive real-time collaboration features for trip planning, editing, and multi-user coordination.
+TripSage's WebSocket infrastructure provides real-time collaboration features for trip planning, editing, and multi-user coordination.
 
 ### Trip Collaboration Events
 
@@ -1154,7 +1154,7 @@ Subscribe to specific channels for targeted message delivery:
 
 ## Client Integration
 
-TripSage provides comprehensive client libraries and integration patterns for seamless WebSocket connectivity.
+TripSage provides client libraries and integration patterns for seamless WebSocket connectivity.
 
 ### React Integration
 
@@ -1943,13 +1943,13 @@ console.log(metrics);
 
 ## Summary
 
-The TripSage WebSocket API provides comprehensive real-time collaboration features including:
+The TripSage WebSocket API provides real-time collaboration features including:
 
 - **Real-time Trip Collaboration**: Multi-user editing with presence indicators and conflict resolution
 - **Optimistic Updates**: Immediate UI responsiveness with server synchronization and rollback capabilities
 - **Advanced Client Integration**: React and Vue.js hooks with TypeScript support
 - **Performance Monitoring**: Built-in metrics and connection health monitoring
-- **Robust Error Handling**: Comprehensive error codes and automatic reconnection strategies
+- **Robust Error Handling**: Error codes and automatic reconnection strategies
 - **Testing Support**: Unit and integration testing patterns for reliable WebSocket implementations
 
 The API supports both chat-based AI interactions and collaborative trip planning workflows, providing a seamless real-time experience for all TripSage users.

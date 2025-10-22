@@ -19,7 +19,7 @@ scripts/benchmarks/
 ├── README.md
 ├── benchmark.py                 # Unified benchmark entry point
 ├── benchmark_runner.py          # Orchestration
-├── scenario_manager.py          # Scenario definitions
+├── scenario_service.py          # Scenario definitions
 ├── metrics_collector.py         # Metrics collection
 ├── report_generator.py          # Reports (HTML/CSV)
 ├── config.py                    # Config and thresholds
@@ -37,7 +37,7 @@ python benchmark.py --quick
 
 ## Components
 
-- Database benchmarking: `benchmark.py`, `benchmark_runner.py`, `scenario_manager.py`
+- Database benchmarking: `benchmark.py`, `benchmark_runner.py`, `scenario_service.py`
 - Cache benchmarking: `dragonfly_performance.py`
 - Metrics and reports: `metrics_collector.py`, `report_generator.py`
 

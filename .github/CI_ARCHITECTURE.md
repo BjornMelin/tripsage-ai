@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the comprehensive CI/CD pipeline architecture for TripSage AI, designed with security, performance, and maintainability as core principles.
+This document describes the CI/CD pipeline architecture for TripSage AI, designed with security, performance, and maintainability as core principles.
 
 ## Table of Contents
 

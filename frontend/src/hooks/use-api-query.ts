@@ -20,7 +20,7 @@ const EndpointSchema = z.string().min(1, "Endpoint cannot be empty");
 
 const _HttpMethodSchema = z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]);
 
-// Enhanced type definitions with proper generics
+// type definitions with proper generics
 type ApiQueryOptions<TData, TError = AppError> = Omit<
   UseQueryOptions<TData, TError, TData, readonly unknown[]>,
   "queryKey" | "queryFn"

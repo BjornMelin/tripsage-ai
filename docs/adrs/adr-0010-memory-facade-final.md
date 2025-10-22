@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-The repository contained multiple memory entry points: a legacy `tripsage/tools/memory_tools.py` using a non-standard tool context and MCP mocks in `orchestration/tools/simple_tools.py`. These caused drift from the `MemoryService` contract and prevented consistent LangGraph usage, observability, and testing.
+The repository contained multiple memory entry points: a legacy `tripsage/tools/memory_tools.py` using a non-standard tool context and MCP mocks in `orchestration/tools/tools.py`. These caused drift from the `MemoryService` contract and prevented consistent LangGraph usage, observability, and testing.
 
 ## Decision
 
@@ -17,7 +17,7 @@ Adopt a single, final implementation:
 - Replace `tripsage/tools/memory_tools.py` with LangGraph-aligned, library-first functions that directly use `tripsage_core.services.business.memory_service` request models.
 - Remove intermediate adapters and MCP-based fallbacks for memory operations.
 - Provide OpenTelemetry tracing and histograms via `tripsage_core/observability/otel.py` for all public memory functions.
-- Update `orchestration/tools/simple_tools.py` to call the new memory functions, ensuring one authoritative code path.
+- Update `orchestration/tools/tools.py` to call the new memory functions, ensuring one authoritative code path.
 - Delete superseded code paths as part of the change.
 
 ## Consequences

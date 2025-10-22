@@ -3,7 +3,7 @@
 > **Status**: ✅ **Production Ready** - Unified PostgreSQL Architecture (May 2025)  
 > **Technology**: Supabase PostgreSQL + pgvector + pgvectorscale
 
-This document provides comprehensive guidance for TripSage's unified database architecture, migration from dual-database complexity, and advanced vector search capabilities.
+This document provides guidance for TripSage's unified database architecture, migration from dual-database complexity, and advanced vector search capabilities.
 
 ## 📋 Table of Contents
 

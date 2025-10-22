@@ -319,9 +319,9 @@ The system uses WebSocket for real-time features:
 
 - Google Maps, Calendar, Weather, Time services
 
-**Advanced AI Features**:
+**AI Features**:
 
-- Enhanced LangGraph workflows
+- LangGraph workflows
 - Multi-modal input processing
 - Reasoning capabilities
 
