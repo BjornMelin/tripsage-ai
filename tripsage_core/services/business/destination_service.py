@@ -15,6 +15,8 @@ from uuid import uuid4
 from pydantic import Field
 
 from tripsage_core.exceptions import (
+    CoreDatabaseError,
+    CoreExternalAPIError,
     CoreResourceNotFoundError as NotFoundError,
     CoreServiceError as ServiceError,
 )
@@ -337,13 +339,11 @@ class DestinationService:
     - Weather and travel advisory integration
     - Saved destinations management
     - Personalized recommendations
-    - External API integration for destination data
     """
 
     def __init__(
         self,
         database_service=None,
-        external_destination_service=None,
         weather_service=None,
         cache_ttl: int = 3600,
     ):
@@ -351,7 +351,6 @@ class DestinationService:
 
         Args:
             database_service: Database service for persistence
-            external_destination_service: External destination API service
             weather_service: Weather service for climate data
             cache_ttl: Cache TTL in seconds
         """
@@ -372,19 +371,8 @@ class DestinationService:
                 logger.warning("Weather service not available")
                 weather_service = None
 
-        if external_destination_service is None:
-            try:
-                from tripsage_core.services.external.destination_service import (
-                    ExternalDestinationService,
-                )
-
-                external_destination_service = ExternalDestinationService()
-            except ImportError:
-                logger.warning("External destination service not available")
-                external_destination_service = None
-
         self.db = database_service
-        self.external_service = external_destination_service
+        self.external_service = None  # No external destination service available
         self.weather_service = weather_service
         self.cache_ttl = cache_ttl
 
@@ -427,28 +415,15 @@ class DestinationService:
                     search_parameters=search_request,
                     total_results=len(cached_result["destinations"]),
                     results_returned=len(cached_result["destinations"]),
+                    search_duration_ms=None,
                     cached=True,
                 )
 
             # Perform search
             destinations = []
 
-            # Try external service first
-            if self.external_service:
-                try:
-                    external_destinations = await self._search_external_destinations(
-                        search_request
-                    )
-                    destinations.extend(external_destinations)
-                except Exception as e:
-                    logger.exception(
-                        "External destination search failed",
-                        extra={"error": str(e), "search_id": search_id},
-                    )
-
-            # Fallback to mock destinations
-            if not destinations:
-                destinations = await self._generate_mock_destinations(search_request)
+            # Use mock destinations (no external service available)
+            destinations = await self._generate_mock_destinations(search_request)
 
             # Enrich with weather data if requested
             if search_request.include_weather:
@@ -528,30 +503,9 @@ class DestinationService:
                 destination = cached_result
             else:
                 # Try to get from database
-                destination_data = await self.db.get_destination(destination_id)
+                destination_data = await self.db.get_destination(destination_id)  # type: ignore
                 if destination_data:
                     destination = Destination(**destination_data)
-                elif self.external_service:
-                    # Try external service
-                    try:
-                        external_dest = (
-                            await self.external_service.get_destination_details(
-                                destination_id
-                            )
-                        )
-                        if external_dest:
-                            destination = await self._convert_external_destination(
-                                external_dest
-                            )
-                            await self._store_destination(destination)
-                        else:
-                            return None
-                    except Exception as e:
-                        logger.warning(
-                            "Failed to get external destination details",
-                            extra={"destination_id": destination_id, "error": str(e)},
-                        )
-                        return None
                 else:
                     return None
 
@@ -661,7 +615,7 @@ class DestinationService:
             if trip_id:
                 filters["trip_id"] = trip_id
 
-            results = await self.db.get_saved_destinations(filters, limit)
+            results = await self.db.get_saved_destinations(filters, limit)  # type: ignore
 
             return [SavedDestination(**result) for result in results]
 
@@ -711,53 +665,6 @@ class DestinationService:
             )
             return []
 
-    async def _search_external_destinations(
-        self, search_request: DestinationSearchRequest
-    ) -> list[Destination]:
-        """Search destinations using external API."""
-        if not self.external_service:
-            return []
-
-        try:
-            external_request = {
-                "query": search_request.query,
-                "categories": [cat.value for cat in search_request.categories]
-                if search_request.categories
-                else None,
-                "limit": search_request.limit,
-            }
-
-            external_destinations = await self.external_service.search_destinations(
-                external_request
-            )
-
-            return [
-                await self._convert_external_destination(external_dest)
-                for external_dest in external_destinations
-            ]
-
-        except Exception as e:
-            logger.exception(
-                "External destination search failed", extra={"error": str(e)}
-            )
-            return []
-
-    async def _convert_external_destination(self, external_dest) -> Destination:
-        """Convert external API destination to our model."""
-        return Destination(
-            id=external_dest.get("id", str(uuid4())),
-            name=external_dest.get("name", "Unknown Destination"),
-            country=external_dest.get("country", "Unknown"),
-            region=external_dest.get("region"),
-            city=external_dest.get("city"),
-            description=external_dest.get("description"),
-            latitude=external_dest.get("latitude"),
-            longitude=external_dest.get("longitude"),
-            rating=external_dest.get("rating"),
-            source="external_api",
-            last_updated=datetime.now(UTC),
-        )
-
     async def _generate_mock_destinations(
         self, search_request: DestinationSearchRequest
     ) -> list[Destination]:
@@ -804,23 +711,42 @@ class DestinationService:
                 id=str(uuid4()),
                 name=data["name"],
                 country=data["country"],
+                region=None,
+                city=None,
                 description=data["description"],
+                long_description=None,
                 categories=data["categories"],
-                rating=data["rating"],
-                safety_rating=data["safety_rating"],
                 latitude=data["latitude"],
                 longitude=data["longitude"],
+                timezone=None,
+                currency=None,
+                languages=[],
                 images=[
                     DestinationImage(
                         url=(
                             f"https://example.com/"
                             f"{data['name'].lower().replace(' ', '_')}.jpg"
                         ),
+                        caption=None,
                         is_primary=True,
+                        attribution=None,
+                        width=None,
+                        height=None,
                     )
                 ],
+                rating=data["rating"],
+                review_count=None,
+                safety_rating=data["safety_rating"],
+                visa_requirements=None,
+                local_transportation=None,
+                popular_activities=[],
+                points_of_interest=[],
+                weather=None,
+                best_time_to_visit=[],
+                travel_advisory=None,
                 source="mock",
                 last_updated=datetime.now(UTC),
+                relevance_score=None,
             )
             for data in mock_data[: search_request.limit]
         ]
@@ -835,7 +761,7 @@ class DestinationService:
         for destination in destinations:
             if destination.latitude and destination.longitude:
                 try:
-                    weather_data = await self.weather_service.get_climate_info(
+                    weather_data = await self.weather_service.get_climate_info(  # type: ignore
                         destination.latitude, destination.longitude
                     )
 
@@ -844,6 +770,8 @@ class DestinationService:
                             season=weather_data.get("season", "Unknown"),
                             temperature_high_c=weather_data.get("temp_high_c", 0),
                             temperature_low_c=weather_data.get("temp_low_c", 0),
+                            temperature_high_f=None,
+                            temperature_low_f=None,
                             precipitation_mm=weather_data.get("precipitation", 0),
                             humidity_percent=weather_data.get("humidity", 0),
                             conditions=weather_data.get("conditions", "Unknown"),
@@ -852,7 +780,7 @@ class DestinationService:
                             ),
                             best_months=weather_data.get("best_months", []),
                         )
-                except Exception as e:
+                except CoreExternalAPIError as e:
                     logger.warning(
                         "Failed to get weather for %s",
                         destination.name,
@@ -876,9 +804,10 @@ class DestinationService:
                     last_updated=datetime.now(UTC),
                     restrictions=[],
                     health_requirements=["Valid passport required"],
+                    embassy_info=None,
                 )
                 destination.travel_advisory = advisory
-            except Exception as e:
+            except ServiceError as e:
                 logger.warning(
                     "Failed to get advisory for %s",
                     destination.name,
@@ -940,7 +869,7 @@ class DestinationService:
         """Enrich a single destination with weather data."""
         if destination.latitude and destination.longitude and self.weather_service:
             try:
-                weather_data = await self.weather_service.get_climate_info(
+                weather_data = await self.weather_service.get_climate_info(  # type: ignore
                     destination.latitude, destination.longitude
                 )
 
@@ -949,14 +878,17 @@ class DestinationService:
                         season=weather_data.get("season", "Unknown"),
                         temperature_high_c=weather_data.get("temp_high_c", 0),
                         temperature_low_c=weather_data.get("temp_low_c", 0),
+                        temperature_high_f=None,
+                        temperature_low_f=None,
                         precipitation_mm=weather_data.get("precipitation", 0),
                         humidity_percent=weather_data.get("humidity", 0),
                         conditions=weather_data.get("conditions", "Unknown"),
                         climate_type=ClimateType(
                             weather_data.get("climate_type", "temperate")
                         ),
+                        best_months=weather_data.get("best_months", []),
                     )
-            except Exception as e:
+            except CoreExternalAPIError as e:
                 logger.warning(
                     "Failed to get weather for %s",
                     destination.name,
@@ -976,14 +908,34 @@ class DestinationService:
                 name=f"Famous Landmark in {destination.name}",
                 category="attraction",
                 description=f"Must-see landmark in {destination.name}",
+                address=None,
+                latitude=None,
+                longitude=None,
                 rating=4.5,
+                review_count=None,
+                price_level=None,
+                opening_hours=None,
+                images=[],
+                website=None,
+                phone=None,
+                popular_times=None,
             ),
             PointOfInterest(
                 id=str(uuid4()),
                 name="Local Museum",
                 category="museum",
                 description=f"Cultural museum showcasing {destination.name} history",
+                address=None,
+                latitude=None,
+                longitude=None,
                 rating=4.2,
+                review_count=None,
+                price_level=None,
+                opening_hours=None,
+                images=[],
+                website=None,
+                phone=None,
+                popular_times=None,
             ),
         ]
 
@@ -1000,6 +952,7 @@ class DestinationService:
             last_updated=datetime.now(UTC),
             restrictions=[],
             health_requirements=["Valid passport required"],
+            embassy_info=None,
         )
         destination.travel_advisory = advisory
         return destination
@@ -1007,9 +960,9 @@ class DestinationService:
     async def _get_user_travel_preferences(self, user_id: str) -> dict[str, Any]:
         """Get user travel preferences from database or defaults."""
         try:
-            prefs = await self.db.get_user_travel_preferences(user_id)
+            prefs = await self.db.get_user_travel_preferences(user_id)  # type: ignore
             return prefs or {}
-        except Exception:
+        except CoreDatabaseError:
             return {}
 
     async def _generate_recommendations(
@@ -1026,13 +979,33 @@ class DestinationService:
                     id=str(uuid4()),
                     name="Kyoto",
                     country="Japan",
+                    region=None,
+                    city=None,
                     description="Ancient capital with beautiful temples and gardens",
+                    long_description=None,
                     categories=[
                         DestinationCategory.CULTURAL,
                         DestinationCategory.HISTORICAL,
                     ],
+                    latitude=None,
+                    longitude=None,
+                    timezone=None,
+                    currency=None,
+                    languages=[],
+                    images=[],
                     rating=4.8,
+                    review_count=None,
+                    safety_rating=None,
+                    visa_requirements=None,
+                    local_transportation=None,
+                    popular_activities=[],
+                    points_of_interest=[],
+                    weather=None,
+                    best_time_to_visit=[],
+                    travel_advisory=None,
                     source="recommendation_engine",
+                    last_updated=None,
+                    relevance_score=None,
                 ),
                 "match_score": 0.92,
                 "reasons": [
@@ -1050,13 +1023,33 @@ class DestinationService:
                     id=str(uuid4()),
                     name="Iceland",
                     country="Iceland",
+                    region=None,
+                    city=None,
                     description="Land of fire and ice with stunning natural landscapes",
+                    long_description=None,
                     categories=[
                         DestinationCategory.ADVENTURE,
                         DestinationCategory.MOUNTAIN,
                     ],
+                    latitude=None,
+                    longitude=None,
+                    timezone=None,
+                    currency=None,
+                    languages=[],
+                    images=[],
                     rating=4.6,
+                    review_count=None,
+                    safety_rating=None,
+                    visa_requirements=None,
+                    local_transportation=None,
+                    popular_activities=[],
+                    points_of_interest=[],
+                    weather=None,
+                    best_time_to_visit=[],
+                    travel_advisory=None,
                     source="recommendation_engine",
+                    last_updated=None,
+                    relevance_score=None,
                 ),
                 "match_score": 0.87,
                 "reasons": [
@@ -1077,6 +1070,7 @@ class DestinationService:
                 match_score=rec_data["match_score"],
                 reasons=rec_data["reasons"],
                 best_for=rec_data["best_for"],
+                estimated_cost=None,
             )
             for rec_data in mock_recommendations[: request.limit]
         ]
@@ -1102,8 +1096,7 @@ class DestinationService:
 
             if time.time() - timestamp < self.cache_ttl:
                 return result
-            else:
-                del self._search_cache[cache_key]
+            del self._search_cache[cache_key]
         return None
 
     def _cache_search_results(self, cache_key: str, result: dict[str, Any]) -> None:
@@ -1120,8 +1113,7 @@ class DestinationService:
 
             if time.time() - timestamp < self.cache_ttl:
                 return result
-            else:
-                del self._destination_cache[cache_key]
+            del self._destination_cache[cache_key]
         return None
 
     def _cache_destination(self, cache_key: str, destination: Destination) -> None:
@@ -1148,9 +1140,9 @@ class DestinationService:
                 "search_timestamp": datetime.now(UTC).isoformat(),
             }
 
-            await self.db.store_destination_search(search_data)
+            await self.db.store_destination_search(search_data)  # type: ignore
 
-        except Exception as e:
+        except CoreDatabaseError as e:
             logger.warning(
                 "Failed to store search history",
                 extra={"search_id": search_id, "error": str(e)},
@@ -1162,9 +1154,9 @@ class DestinationService:
             destination_data = destination.model_dump()
             destination_data["stored_at"] = datetime.now(UTC).isoformat()
 
-            await self.db.store_destination(destination_data)
+            await self.db.store_destination(destination_data)  # type: ignore
 
-        except Exception as e:
+        except CoreDatabaseError as e:
             logger.warning(
                 "Failed to store destination",
                 extra={"destination_id": destination.id, "error": str(e)},
@@ -1178,7 +1170,7 @@ class DestinationService:
             saved_data = saved_destination.model_dump()
             saved_data["created_at"] = datetime.now(UTC).isoformat()
 
-            await self.db.store_saved_destination(saved_data)
+            await self.db.store_saved_destination(saved_data)  # type: ignore
 
         except Exception as e:
             logger.exception(
