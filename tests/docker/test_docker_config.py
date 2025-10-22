@@ -84,7 +84,7 @@ class TestModernDockerArchitecture:
             config = yaml.safe_load(f)
 
         services = config["services"]
-        monitoring_services = ["jaeger", "otel-collector", "prometheus", "grafana"]
+        monitoring_services = ["jaeger", "otel-collector"]
 
         for service_name in monitoring_services:
             assert service_name in services, (
@@ -307,8 +307,7 @@ class TestNetworkAndVolumeConfiguration:
         required_volumes = [
             "supabase_data",  # Database persistence
             "dragonfly_data",  # Cache persistence
-            "prometheus_data",  # Metrics persistence
-            "grafana_data",  # Dashboard persistence
+            # Prometheus/Grafana volumes removed in OTEL-only stack
         ]
 
         for volume_name in required_volumes:

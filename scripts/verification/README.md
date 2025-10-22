@@ -286,7 +286,7 @@ def health_database():
 
 ## Monitoring Integration
 
-### Prometheus Metrics
+### OTEL Metrics
 
 ```python
 # Example metrics exposed by verification scripts

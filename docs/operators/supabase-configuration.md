@@ -560,37 +560,25 @@ Configure alerts in Supabase Dashboard:
 
 ### 3. External Monitoring Setup
 
-**Prometheus Metrics:**
+**OTEL Metrics:**
 
 ```python
 # Custom metrics for monitoring
-from prometheus_client import Counter, Histogram, Gauge
+from opentelemetry import metrics
 
-# Request metrics
-REQUEST_COUNT = Counter(
-    'http_requests_total',
-    'Total HTTP requests',
-    ['method', 'endpoint', 'status_code']
+meter = metrics.get_meter("tripsage")
+REQUESTS = meter.create_counter(
+    "http.server.requests", description="HTTP requests"
 )
-
-REQUEST_DURATION = Histogram(
-    'http_request_duration_seconds',
-    'HTTP request duration'
+REQUEST_DURATION = meter.create_histogram(
+    "http.server.duration", unit="s", description="HTTP request duration"
 )
-
-# Database metrics
-DB_CONNECTIONS = Gauge(
-    'database_connections_active',
-    'Active database connections'
-)
-
-VECTOR_SEARCH_DURATION = Histogram(
-    'vector_search_duration_seconds',
-    'Vector search query duration'
+VECTOR_SEARCH_DURATION = meter.create_histogram(
+    "db.vector_search.duration", unit="s", description="Vector search duration"
 )
 ```
 
-**Grafana Dashboard Configuration:**
+**Observability Configuration:**
 
 ```json
 {

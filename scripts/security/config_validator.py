@@ -229,9 +229,6 @@ class SecurityValidator:
             "enable_security_monitoring": (
                 "Security monitoring should be enabled in production"
             ),
-            "enable_prometheus_metrics": (
-                "Metrics collection should be enabled in production"
-            ),
         }
 
         for feature, message in required_features.items():
@@ -304,7 +301,6 @@ RATE_LIMIT_REQUESTS_PER_HOUR=1000
 
 # Monitoring (recommended for production)
 ENABLE_SECURITY_MONITORING=true
-ENABLE_PROMETHEUS_METRICS=true
 ENABLE_DATABASE_MONITORING=true
 
 # Production-specific settings

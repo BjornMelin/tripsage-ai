@@ -2,7 +2,8 @@
 
 ## Overview
 
-This guide covers deploying TripSage with modern containerization, security best practices, and monitoring. The application is designed for Python 3.13+ and follows cloud-native deployment patterns.
+This guide covers deploying TripSage with containerization, security best practices,
+and monitoring. The application is designed for Python 3.13+ and follows cloud-native deployment patterns.
 
 ## Prerequisites
 
@@ -570,61 +571,40 @@ async def readiness_check():
     return {"status": "ready"}
 ```
 
-### Prometheus Metrics
+### OTEL Metrics
 
 ```python
 # tripsage/observability/metrics.py
-from prometheus_client import Counter, Histogram, Gauge, start_http_server
+from opentelemetry import metrics
 from fastapi import Request
 import time
 
-# Define metrics
-REQUEST_COUNT = Counter(
-    'tripsage_requests_total',
-    'Total number of requests',
-    ['method', 'endpoint', 'status']
+meter = metrics.get_meter("tripsage")
+REQ_COUNT = meter.create_counter(
+    "http.server.requests", description="HTTP requests"
 )
-
-REQUEST_DURATION = Histogram(
-    'tripsage_request_duration_seconds',
-    'Request duration in seconds',
-    ['method', 'endpoint']
-)
-
-ACTIVE_CONNECTIONS = Gauge(
-    'tripsage_active_connections',
-    'Number of active connections'
+REQ_DURATION = meter.create_histogram(
+    "http.server.duration", unit="s", description="HTTP request duration"
 )
 
 # Middleware for metrics collection
 async def metrics_middleware(request: Request, call_next):
     start_time = time.time()
     
-    ACTIVE_CONNECTIONS.inc()
-    try:
-        response = await call_next(request)
-        
-        # Record metrics
-        duration = time.time() - start_time
-        REQUEST_DURATION.labels(
-            method=request.method,
-            endpoint=request.url.path
-        ).observe(duration)
-        
-        REQUEST_COUNT.labels(
-            method=request.method,
-            endpoint=request.url.path,
-            status=response.status_code
-        ).inc()
-        
-        return response
-    finally:
-        ACTIVE_CONNECTIONS.dec()
+    response = await call_next(request)
+    # Record OTEL metrics
+    duration = time.time() - start_time
+    attrs = {
+        "http.method": request.method,
+        "http.route": request.url.path,
+        "http.status_code": response.status_code,
+    }
+    REQ_DURATION.record(duration, attrs)
+    REQ_COUNT.add(1, attrs)
+    return response
 
-# Start metrics server
-def start_metrics_server(port: int = 9090):
-    start_http_server(port)
-    print(f"Metrics server started on port {port}")
+# With OpenTelemetry, export metrics via OTLP using the OTEL Collector.
+# A simple FastAPI middleware example using OTEL is provided in metrics docs.
 ```
 
 ### Structured Logging
@@ -814,12 +794,14 @@ echo "✅ Migration completed successfully!"
 ### Common Deployment Issues
 
 1. **Configuration Validation Errors**
+
    ```bash
    # Check configuration
    python -c "from tripsage_core.config import get_settings; print(get_settings().get_security_report())"
    ```
 
 2. **Database Connection Issues**
+
    ```bash
    # Test database connection
    python -c "
@@ -832,6 +814,7 @@ echo "✅ Migration completed successfully!"
    ```
 
 3. **Secret Management Issues**
+
    ```bash
    # Verify secrets are loaded correctly
    python -c "
@@ -842,6 +825,7 @@ echo "✅ Migration completed successfully!"
    ```
 
 4. **Container Health Check Failures**
+
    ```bash
    # Debug health endpoint
    curl -v http://localhost:8000/health

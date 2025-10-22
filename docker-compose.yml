@@ -12,14 +12,12 @@ services:
     ports:
       - "4317:4317"     # OTLP gRPC receiver
       - "4318:4318"     # OTLP HTTP receiver
-      - "8888:8888"     # Prometheus metrics
-      - "8889:8889"     # Prometheus exporter
+      - "8888:8888"     # Collector self-metrics
     restart: unless-stopped
     networks:
       - tripsage-network
     depends_on:
       - jaeger
-      - prometheus
 
   # Jaeger for distributed tracing
   jaeger:
@@ -34,48 +32,6 @@ services:
     restart: unless-stopped
     networks:
       - tripsage-network
-
-  # Prometheus for metrics
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: tripsage-prometheus
-    volumes:
-      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
-    ports:
-      - "9090:9090"
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--web.enable-lifecycle"
-    restart: unless-stopped
-    networks:
-      - tripsage-network
-
-  # Grafana for dashboards
-  grafana:
-    image: grafana/grafana:latest
-    container_name: tripsage-grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
-    ports:
-      - "3000:3000"
-    restart: unless-stopped
-    networks:
-      - tripsage-network
-    depends_on:
-      - prometheus
-      - jaeger
-
-volumes:
-  prometheus-data:
-    driver: local
-  grafana-data:
-    driver: local
 
 networks:
   tripsage-network:

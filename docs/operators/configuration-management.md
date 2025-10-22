@@ -184,7 +184,7 @@ SECRET_KEY=test-secret-key-for-testing-only
 
 ## Docker Configuration
 
-### Environment Variables
+### Environment Variables (Dockerfile)
 
 ```dockerfile
 # Dockerfile
@@ -205,7 +205,7 @@ RUN pip install -e .
 CMD ["uvicorn", "tripsage.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-### Docker Secrets
+### Docker Secrets (docker-compose.yml)
 
 ```yaml
 # docker-compose.yml
@@ -250,6 +250,7 @@ secrets:
 ### 3. Production Hardening
 
 The configuration system automatically:
+
 - Disables debug mode in production
 - Validates secret strength
 - Detects fallback/test secrets
@@ -272,17 +273,20 @@ if not security_report['production_ready']:
 ### Common Issues
 
 1. **ValidationError on startup**
-   ```
+
+   ```text
    Fix: Check environment variables and ensure all required values are set
    ```
 
 2. **Fallback secret detected in production**
-   ```
+
+   ```text
    Fix: Replace test/fallback secrets with secure production values
    ```
 
 3. **Database connection failed**
-   ```
+
+   ```text
    Fix: Verify DATABASE_URL and credentials are correct
    ```
 
