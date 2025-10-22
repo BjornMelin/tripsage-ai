@@ -473,12 +473,31 @@ GET /api/activities/search?destination=paris&category=museums&date=2025-06-01
 POST /api/chat/sessions
 ```
 
+**Request Body:**
+
+```json
+{
+  "title": "Tokyo Trip Planning",
+  "metadata": {"origin": "SFO"}
+}
+```
+
+Returns 201 Created.
+
 **Response:**
 
 ```json
 {
-  "session_id": "session_123",
-  "created_at": "2025-01-16T10:00:00Z"
+  "id": "2f6c1bb7-5fbd-4d11-8c2a-2a6b6a8f1f3a",
+  "user_id": "user_123",
+  "title": "Tokyo Trip Planning",
+  "trip_id": null,
+  "created_at": "2025-01-16T10:00:00Z",
+  "updated_at": "2025-01-16T10:00:00Z",
+  "ended_at": null,
+  "metadata": {"origin": "SFO"},
+  "message_count": 0,
+  "last_message_at": null
 }
 ```
 
@@ -492,8 +511,8 @@ POST /api/chat/sessions/{session_id}/messages
 
 ```json
 {
-  "content": "Help me find flights from New York to Paris",
-  "attachments": []
+  "role": "user",
+  "content": "Help me find flights from New York to Paris"
 }
 ```
 
@@ -502,10 +521,12 @@ POST /api/chat/sessions/{session_id}/messages
 ```json
 {
   "id": "msg_001",
+  "session_id": "2f6c1bb7-5fbd-4d11-8c2a-2a6b6a8f1f3a",
   "role": "user",
   "content": "Help me find flights from New York to Paris",
-  "timestamp": "2025-01-16T10:00:00Z",
-  "session_id": "session_123"
+  "created_at": "2025-01-16T10:00:00Z",
+  "metadata": {},
+  "tool_calls": []
 }
 ```
 
