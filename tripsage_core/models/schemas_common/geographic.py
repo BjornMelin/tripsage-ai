@@ -11,6 +11,13 @@ from tripsage_core.models.base_core_model import TripSageModel
 from .common_validators import AirportCode, Latitude, Longitude
 
 
+def _require_coordinate(value: float | None, label: str) -> float:
+    """Ensure coordinate components are present before math operations."""
+    if value is None:
+        raise ValueError(f"{label} must be provided for geographic calculations")
+    return float(value)
+
+
 class Coordinates(TripSageModel):
     """Geographic coordinates."""
 
@@ -23,8 +30,12 @@ class Coordinates(TripSageModel):
         import math
 
         # Convert to radians
-        lat1, lon1 = math.radians(self.latitude), math.radians(self.longitude)
-        lat2, lon2 = math.radians(other.latitude), math.radians(other.longitude)
+        lat1 = math.radians(_require_coordinate(self.latitude, "origin latitude"))
+        lon1 = math.radians(_require_coordinate(self.longitude, "origin longitude"))
+        lat2 = math.radians(_require_coordinate(other.latitude, "destination latitude"))
+        lon2 = math.radians(
+            _require_coordinate(other.longitude, "destination longitude")
+        )
 
         # Haversine formula
         dlat = lat2 - lat1
@@ -95,16 +106,29 @@ class BoundingBox(TripSageModel):
 
     def contains(self, coordinates: Coordinates) -> bool:
         """Check if coordinates are within this bounding box."""
-        return (
-            self.south <= coordinates.latitude <= self.north
-            and self.west <= coordinates.longitude <= self.east
+        south = _require_coordinate(self.south, "bounding box south latitude")
+        north = _require_coordinate(self.north, "bounding box north latitude")
+        west = _require_coordinate(self.west, "bounding box west longitude")
+        east = _require_coordinate(self.east, "bounding box east longitude")
+        candidate_lat = _require_coordinate(coordinates.latitude, "candidate latitude")
+        candidate_lon = _require_coordinate(
+            coordinates.longitude, "candidate longitude"
         )
+        return south <= candidate_lat <= north and west <= candidate_lon <= east
 
     def center(self) -> Coordinates:
         """Get the center coordinates of the bounding box."""
-        center_lat = (self.north + self.south) / 2
-        center_lon = (self.east + self.west) / 2
-        return Coordinates(latitude=center_lat, longitude=center_lon)
+        north = _require_coordinate(self.north, "bounding box north latitude")
+        south = _require_coordinate(self.south, "bounding box south latitude")
+        east = _require_coordinate(self.east, "bounding box east longitude")
+        west = _require_coordinate(self.west, "bounding box west longitude")
+        center_lat = (north + south) / 2
+        center_lon = (east + west) / 2
+        return Coordinates(
+            latitude=center_lat,
+            longitude=center_lon,
+            altitude=None,
+        )
 
 
 class Region(TripSageModel):

@@ -1,5 +1,7 @@
 """Working tests for Pydantic v2 common validators."""
 
+import math
+
 import pytest
 from hypothesis import assume, given, strategies as st
 
@@ -179,7 +181,7 @@ class TestNonNegativeNumberValidation:
     @given(st.floats(min_value=0.0, max_value=float("inf")))
     def test_valid_non_negative_numbers(self, value: float):
         """Test valid non-negative numbers."""
-        assume(value == value)  # Filter out NaN
+        assume(not math.isnan(value))  # Filter out NaN values
         result = validate_non_negative_number(value)
         assert result == value
         assert result >= 0
