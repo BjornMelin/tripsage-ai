@@ -85,7 +85,6 @@ class DatabaseConnectionMonitor:
         Args:
             database_service: Service that exposes an async ``health_check`` method.
             settings: TripSage settings used for interval configuration.
-            metrics: Metrics collector. Defaults to the shared Prometheus registry.
             service_label: Label recorded in metrics for this service.
             history_limit: Maximum number of recent snapshots retained in memory.
         """
