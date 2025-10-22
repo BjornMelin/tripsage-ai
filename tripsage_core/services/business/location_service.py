@@ -20,7 +20,6 @@ from tripsage_core.models.schemas_common.geographic import Place
 from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsService,
     GoogleMapsServiceError,
-    get_google_maps_service,
 )
 from tripsage_core.utils.decorator_utils import with_error_handling
 
@@ -35,16 +34,10 @@ class LocationServiceError(Exception):
 class LocationService:
     """Google Maps location service providing comprehensive geographic operations."""
 
-    def __init__(self) -> None:
-        """Initialize location service with lazy Google Maps integration."""
-        self.google_maps_service: GoogleMapsService | None = None
+    def __init__(self, google_maps_service: GoogleMapsService) -> None:
+        """Initialize location service with injected Google Maps service."""
+        self.google_maps_service: GoogleMapsService = google_maps_service
         logger.info("LocationService initialized successfully")
-
-    async def _ensure_service(self) -> GoogleMapsService:
-        """Ensure the Google Maps service is initialized."""
-        if self.google_maps_service is None:
-            self.google_maps_service = await get_google_maps_service()
-        return self.google_maps_service
 
     @with_error_handling()
     async def geocode(self, address: str, **kwargs: Any) -> list[Place]:
@@ -62,8 +55,7 @@ class LocationService:
         """
         try:
             logger.debug("Geocoding address: %s", address)
-            service = await self._ensure_service()
-            return await service.geocode(address, **kwargs)
+            return await self.google_maps_service.geocode(address, **kwargs)
         except GoogleMapsServiceError as e:
             logger.exception("Geocoding failed for address '%s'", address)
             raise LocationServiceError(f"Geocoding failed: {e}") from e
@@ -87,8 +79,7 @@ class LocationService:
         """
         try:
             logger.debug("Reverse geocoding coordinates: (%s, %s)", lat, lng)
-            service = await self._ensure_service()
-            return await service.reverse_geocode(lat, lng, **kwargs)
+            return await self.google_maps_service.reverse_geocode(lat, lng, **kwargs)
         except GoogleMapsServiceError as e:
             logger.exception(
                 "Reverse geocoding failed for coordinates (%s, %s)", lat, lng
@@ -119,8 +110,9 @@ class LocationService:
         """
         try:
             logger.debug("Searching places: %s", query)
-            service = await self._ensure_service()
-            return await service.search_places(query, location, radius, **kwargs)
+            return await self.google_maps_service.search_places(
+                query, location, radius, **kwargs
+            )
         except GoogleMapsServiceError as e:
             logger.exception("Place search failed for query '%s'", query)
             raise LocationServiceError(f"Place search failed: {e}") from e
@@ -144,8 +136,9 @@ class LocationService:
         """
         try:
             logger.debug("Getting place details: %s", place_id)
-            service = await self._ensure_service()
-            return await service.get_place_details(place_id, fields, **kwargs)
+            return await self.google_maps_service.get_place_details(
+                place_id, fields, **kwargs
+            )
         except GoogleMapsServiceError as e:
             logger.exception("Place details request failed for place_id '%s'", place_id)
             raise LocationServiceError(f"Place details request failed: {e}") from e
@@ -170,8 +163,9 @@ class LocationService:
         """
         try:
             logger.debug("Getting directions: %s to %s", origin, destination)
-            service = await self._ensure_service()
-            return await service.get_directions(origin, destination, mode, **kwargs)
+            return await self.google_maps_service.get_directions(
+                origin, destination, mode, **kwargs
+            )
         except GoogleMapsServiceError as e:
             logger.exception(
                 "Directions request failed from '%s' to '%s'", origin, destination
@@ -202,8 +196,9 @@ class LocationService:
         """
         try:
             logger.debug("Calculating distance matrix")
-            service = await self._ensure_service()
-            return await service.distance_matrix(origins, destinations, mode, **kwargs)
+            return await self.google_maps_service.distance_matrix(
+                origins, destinations, mode, **kwargs
+            )
         except GoogleMapsServiceError as e:
             logger.exception("Distance matrix request failed")
             raise LocationServiceError(f"Distance matrix request failed: {e}") from e
@@ -226,8 +221,7 @@ class LocationService:
         """
         try:
             logger.debug("Getting elevation data")
-            service = await self._ensure_service()
-            return await service.get_elevation(locations, **kwargs)
+            return await self.google_maps_service.get_elevation(locations, **kwargs)
         except GoogleMapsServiceError as e:
             logger.exception("Elevation request failed")
             raise LocationServiceError(f"Elevation request failed: {e}") from e
@@ -251,21 +245,13 @@ class LocationService:
         """
         try:
             logger.debug("Getting timezone data for location: %s", location)
-            service = await self._ensure_service()
-            return await service.get_timezone(location, timestamp, **kwargs)
+            return await self.google_maps_service.get_timezone(
+                location, timestamp, **kwargs
+            )
         except GoogleMapsServiceError as e:
             logger.exception("Timezone request failed for location %s", location)
             raise LocationServiceError(f"Timezone request failed: {e}") from e
 
 
-# Singleton instance for global use
-location_service = LocationService()
-
-
-def get_location_service() -> LocationService:
-    """Get the global location service instance.
-
-    Returns:
-        LocationService instance
-    """
-    return location_service
+# Note: Use dependency injection. Construct LocationService in composition
+# roots (e.g., ServiceRegistry or app lifespan) and pass to callers.
