@@ -173,23 +173,25 @@ class TimeService:
         """
         await self.ensure_connected()
 
-        if timezone_name is None:
-            timezone_name = self.default_timezone
+        resolved_timezone = timezone_name or self.default_timezone
+        if resolved_timezone is None:
+            raise TimeServiceError("No timezone configured for current time lookup.")
 
         try:
             # Handle common timezone abbreviations
-            if timezone_name.upper() in self._major_timezones:
-                timezone_name = self._major_timezones[timezone_name.upper()]
+            timezone_key = resolved_timezone.upper()
+            if timezone_key in self._major_timezones:
+                resolved_timezone = self._major_timezones[timezone_key]
 
-            if timezone_name == "UTC":
+            if resolved_timezone == "UTC":
                 return datetime.now(UTC)
 
-            tz = ZoneInfo(timezone_name)
+            tz = ZoneInfo(resolved_timezone)
             return datetime.now(tz)
 
         except self._recoverable_errors as error:
             raise TimeServiceError(
-                f"Error getting time for timezone {timezone_name}: {error!s}",
+                f"Error getting time for timezone {resolved_timezone}: {error!s}",
                 original_error=error,
             ) from error
 
@@ -209,8 +211,9 @@ class TimeService:
 
         try:
             # Handle common timezone abbreviations
-            if timezone_name.upper() in self._major_timezones:
-                timezone_name = self._major_timezones[timezone_name.upper()]
+            timezone_key = timezone_name.upper()
+            if timezone_key in self._major_timezones:
+                timezone_name = self._major_timezones[timezone_key]
 
             tz = UTC if timezone_name == "UTC" else ZoneInfo(timezone_name)
 
@@ -224,9 +227,8 @@ class TimeService:
             abbreviation = current_time.strftime("%Z")
 
             # Check if DST is active
-            dst_active = bool(
-                current_time.dst() and current_time.dst().total_seconds() > 0
-            )
+            dst_delta = current_time.dst()
+            dst_active = bool(dst_delta is not None and dst_delta.total_seconds() > 0)
 
             return TimeZoneInfo(
                 name=timezone_name,
@@ -269,7 +271,7 @@ class TimeService:
                 # Try to parse ISO format
                 try:
                     parsed_time = datetime.fromisoformat(time_to_convert)
-                except ValueError:
+                except ValueError as exc:
                     # Try other common formats
                     for fmt in [
                         self.default_datetime_format,
@@ -287,15 +289,17 @@ class TimeService:
                     else:
                         raise ValueError(
                             f"Unable to parse time format: {time_to_convert}"
-                        )
+                        ) from exc
             else:
                 parsed_time = time_to_convert
 
             # Handle timezone abbreviations
-            if source_timezone.upper() in self._major_timezones:
-                source_timezone = self._major_timezones[source_timezone.upper()]
-            if target_timezone.upper() in self._major_timezones:
-                target_timezone = self._major_timezones[target_timezone.upper()]
+            source_key = source_timezone.upper()
+            target_key = target_timezone.upper()
+            if source_key in self._major_timezones:
+                source_timezone = self._major_timezones[source_key]
+            if target_key in self._major_timezones:
+                target_timezone = self._major_timezones[target_key]
 
             # Convert to source timezone if naive
             if parsed_time.tzinfo is None:
@@ -312,7 +316,13 @@ class TimeService:
             target_time = source_time.astimezone(target_tz)
 
             # Calculate time difference
-            time_diff = target_time.utcoffset() - source_time.utcoffset()
+            source_offset = source_time.utcoffset()
+            target_offset = target_time.utcoffset()
+            if source_offset is None or target_offset is None:
+                raise TimeServiceError(
+                    "Unable to determine timezone offsets for conversion."
+                )
+            time_diff = target_offset - source_offset
             hours_diff = time_diff.total_seconds() / 3600
 
             if hours_diff == 0:
@@ -394,14 +404,15 @@ class TimeService:
 
             world_clock = []
 
-            for city in cities:
+            for city in cities:  # pyright: ignore[reportOptionalIterable]
                 try:
                     # Get timezone for city
+                    display_city = city
                     if city in city_timezones:
                         timezone_name = city_timezones[city]
                     elif city.upper() in self._major_timezones:
                         timezone_name = self._major_timezones[city.upper()]
-                        city = city.upper()  # Use abbreviation as city name
+                        display_city = city.upper()  # Use abbreviation as city name
                     else:
                         # Assume it's already a timezone name
                         timezone_name = city
@@ -418,7 +429,7 @@ class TimeService:
 
                     world_clock.append(
                         WorldClock(
-                            city=city,
+                            city=display_city,
                             timezone=timezone_name,
                             current_time=current_time,
                             local_date=current_time.strftime(self.default_date_format),
@@ -475,12 +486,11 @@ class TimeService:
                 if timezone_name:
                     tz = UTC if timezone_name == "UTC" else ZoneInfo(timezone_name)
                     parsed_time = parsed_time.replace(tzinfo=tz)
+                elif self.default_timezone == "UTC":
+                    parsed_time = parsed_time.replace(tzinfo=UTC)
                 else:
-                    if self.default_timezone == "UTC":
-                        parsed_time = parsed_time.replace(tzinfo=UTC)
-                    else:
-                        tz = ZoneInfo(self.default_timezone)
-                        parsed_time = parsed_time.replace(tzinfo=tz)
+                    tz = ZoneInfo(self.default_timezone)
+                    parsed_time = parsed_time.replace(tzinfo=tz)
 
             # Calculate difference
             time_diff = parsed_time - current_time
@@ -561,6 +571,9 @@ class TimeService:
                 business_end = self.default_business_end
             if weekdays_only is None:
                 weekdays_only = self.weekdays_only
+
+            if business_start is None or business_end is None:
+                raise TimeServiceError("Business hours configuration is incomplete.")
 
             current_time = await self.get_current_time(timezone_name)
             current_hour_min = current_time.strftime("%H:%M")
@@ -644,10 +657,9 @@ class TimeService:
                 target_dt = dt.astimezone(target_tz)
 
             # Use custom format or default from settings
-            if format_string is None:
-                format_string = self.default_datetime_format
+            format_to_use = format_string or self.default_datetime_format
 
-            return target_dt.strftime(format_string)
+            return target_dt.strftime(format_to_use)
 
         except self._recoverable_errors as error:
             raise TimeServiceError(
@@ -699,7 +711,7 @@ async def get_time_service() -> TimeService:
     Returns:
         TimeService instance
     """
-    global _time_service
+    global _time_service  # pylint: disable=global-statement
 
     if _time_service is None:
         _time_service = TimeService()
@@ -710,7 +722,7 @@ async def get_time_service() -> TimeService:
 
 async def close_time_service() -> None:
     """Close the global time service instance."""
-    global _time_service
+    global _time_service  # pylint: disable=global-statement
 
     if _time_service:
         await _time_service.close()

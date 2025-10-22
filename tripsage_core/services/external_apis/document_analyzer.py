@@ -437,8 +437,9 @@ class DocumentAnalyzer:
         entities["flight_numbers"] = re.findall(flight_pattern, text)
 
         # Remove duplicates
-        for key in entities:
-            entities[key] = list(set(entities[key]))
+        for key, values in entities.items():
+            # Preserve insertion order while removing duplicates
+            entities[key] = list(dict.fromkeys(values))
 
         return entities
 
@@ -506,7 +507,7 @@ class DocumentAnalyzer:
         return [keyword for keyword in travel_keywords if keyword in text_lower]
 
     def _extract_travel_information(
-        self, analysis_results: dict[str, Any], text: str
+        self, analysis_results: dict[str, Any], text: str | None
     ) -> TravelInformation | None:
         """Extract structured travel information from analysis results.
 
@@ -518,24 +519,34 @@ class DocumentAnalyzer:
             Structured travel information
         """
         try:
+            if not analysis_results:
+                return None
+
             # Extract entities from enhanced analysis
             entities = analysis_results.get("extracted_entities", {})
             keywords = analysis_results.get("travel_keywords", [])
 
-            # Build travel information structure
-            travel_info = TravelInformation()
+            travel_data: dict[str, Any] = {
+                "destinations": [],
+                "dates": [],
+                "accommodations": [],
+                "flights": [],
+                "activities": [],
+                "budget_info": None,
+                "contact_info": [],
+            }
 
             # Extract destinations (enhanced logic)
             if "locations" in entities:
-                travel_info.destinations = entities["locations"]
+                travel_data["destinations"] = entities["locations"]
 
             # Extract dates
             if "dates" in entities:
-                travel_info.dates = entities["dates"]
+                travel_data["dates"] = entities["dates"]
 
             # Extract flight information
             if "flight_numbers" in entities:
-                travel_info.flights = [
+                travel_data["flights"] = [
                     {"flight_number": flight_num, "type": "flight"}
                     for flight_num in entities["flight_numbers"]
                 ]
@@ -544,7 +555,7 @@ class DocumentAnalyzer:
             if "currency_amounts" in entities:
                 amounts = entities["currency_amounts"]
                 if amounts:
-                    travel_info.budget_info = {
+                    travel_data["budget_info"] = {
                         "mentioned_amounts": amounts,
                         "currency": "USD",  # Default assumption
                         "total_estimates": len(amounts),
@@ -558,8 +569,7 @@ class DocumentAnalyzer:
                 {"type": "phone", "value": phone}
                 for phone in entities.get("phone_numbers", [])
             ]
-
-            travel_info.contact_info = contacts
+            travel_data["contact_info"] = contacts
 
             # Add activities based on keywords and context
             activity_keywords = [
@@ -568,7 +578,7 @@ class DocumentAnalyzer:
                 if kw
                 in ["vacation", "holiday", "trip", "tour", "sightseeing", "activities"]
             ]
-            travel_info.activities = activity_keywords
+            travel_data["activities"] = activity_keywords
 
             # Add accommodation information based on keywords
             if (
@@ -577,17 +587,15 @@ class DocumentAnalyzer:
                 )
                 and "confirmation_numbers" in entities
             ):
-                accommodations = []
-                for conf_num in entities["confirmation_numbers"]:
-                    accommodations += [
-                        {"confirmation_number": conf_num, "type": "accommodation"}
-                        for conf_num in entities["confirmation_numbers"]
-                    ]
-                travel_info.accommodations = accommodations
+                accommodations = [
+                    {"confirmation_number": conf_num, "type": "accommodation"}
+                    for conf_num in entities["confirmation_numbers"]
+                ]
+                travel_data["accommodations"] = accommodations
 
-            return travel_info
+            return TravelInformation(**travel_data)
 
-        except ValueError:
+        except (TypeError, ValueError):
             return None
 
     def _calculate_confidence_score(self, analysis_results: dict[str, Any]) -> float:
@@ -658,21 +666,24 @@ class DocumentAnalyzer:
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Convert exceptions to error results
-            return [
-                DocumentAnalysisResult(
-                    file_id=contexts[i].file_id,
-                    analysis_type=analysis_type,
-                    extracted_text=None,
-                    key_information={"error": str(result)},
-                    travel_relevance=None,
-                    confidence_score=0.0,
-                    processing_time_ms=0,
-                )
-                if isinstance(result, Exception)
-                else result
-                for i, result in enumerate(results)
-            ]
+            processed_results: list[DocumentAnalysisResult] = []
+            for index, result in enumerate(results):
+                if isinstance(result, BaseException):
+                    processed_results.append(
+                        DocumentAnalysisResult(
+                            file_id=contexts[index].file_id,
+                            analysis_type=analysis_type,
+                            extracted_text=None,
+                            key_information={"error": str(result)},
+                            travel_relevance=None,
+                            confidence_score=0.0,
+                            processing_time_ms=0,
+                        )
+                    )
+                else:
+                    processed_results.append(result)
+
+            return processed_results
 
         except Exception as e:
             raise DocumentAnalyzerError(
