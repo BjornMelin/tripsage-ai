@@ -22,7 +22,7 @@ Internal developer resources and guidelines.
 | [**Unified Database Guide**](unified-database-guide.md) | 🗄️ Complete database development reference | Backend developers |
 | [Data Models](data-models.md) | Pydantic models and TypeScript interfaces | All developers |
 
-### Advanced Topics
+### In-Depth Topics
 
 | Document | Purpose | Audience |
 |----------|---------|----------|

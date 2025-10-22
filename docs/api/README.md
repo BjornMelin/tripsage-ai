@@ -353,7 +353,7 @@ curl -i https://api.tripsage.ai/api/trips | grep X-RateLimit
 - 📱 Mobile SDKs (iOS/Android)
 - 🌐 More language SDKs
 - 🤖 AI model selection
-- 📊 Advanced analytics API
+- 📊 Analytics API
 - 🔐 OAuth provider support
 
 ---

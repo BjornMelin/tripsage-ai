@@ -20,7 +20,7 @@ This document describes the production-ready rate limiting implementation for th
 - **Rate limit headers** (RFC 6585 compliant)
 - **Real-time monitoring** integration with API key usage tracking
 
-### Advanced Features
+### Feature Reference
 
 - **Endpoint-specific overrides** for fine-grained control
 - **Request cost multipliers** based on endpoint complexity

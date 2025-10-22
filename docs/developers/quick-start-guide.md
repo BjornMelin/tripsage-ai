@@ -464,7 +464,7 @@ git branch -d feature/your-feature-name
 - [ ] Implement a simple CRUD feature
 - [ ] Write tests
 
-#### **Week 3: Advanced Topics**
+#### **Week 3: In-Depth Topics**
 
 - [ ] Learn [Performance Optimization](performance-optimization.md) techniques
 - [ ] Understand [External Integrations](external-integrations.md)
@@ -478,7 +478,7 @@ git branch -d feature/your-feature-name
 - [ ] Propose and implement improvements
 - [ ] Mentor newer team members
 
-### **Advanced Topics to Explore**
+### **In-Depth Topics to Explore**
 
 - **AI Integration**: LangGraph agents, Mem0 memory system
 - **Performance**: Vector search optimization, caching strategies
