@@ -41,6 +41,10 @@ from tripsage.api.routers import (
     users,
     websocket,
 )
+from tripsage.config.service_registry import (
+    register_api_service_adapters,
+    register_instance,
+)
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreExternalAPIError,
@@ -95,11 +99,18 @@ async def lifespan(app: FastAPI):
 
     app.state.cache_service = CacheService()
     await app.state.cache_service.connect()
+    # Expose via global registry for API dependencies
+    register_instance("cache", app.state.cache_service)
 
     # Initialize Google Maps service (DI-managed singleton for API lifespan)
     logger.info("Initializing Google Maps service")
     app.state.google_maps_service = GoogleMapsService()
     await app.state.google_maps_service.connect()
+    # Expose via global registry for API dependencies
+    register_instance("google_maps", app.state.google_maps_service)
+
+    # Register API-facing adapters that compose from the above
+    register_api_service_adapters()
 
     logger.info("Starting WebSocket Broadcaster")
     app.state.websocket_broadcaster = WebSocketBroadcaster()
