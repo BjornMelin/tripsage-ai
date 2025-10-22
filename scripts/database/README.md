@@ -118,28 +118,18 @@ python scripts/database/deploy_storage_infrastructure.py --buckets avatars,docum
 python scripts/database/deploy_storage_infrastructure.py --policies-only
 ```
 
-### deploy_triggers.py
+### Triggers & Functions (Supabase)
 
-Deploy database triggers and functions for automation.
-
-**Includes**:
-
-- Updated timestamp triggers
-- Audit logging
-- Data validation functions
-- Event notifications
-
-**Usage**:
+Database triggers, functions, and scheduled jobs are managed via Supabase SQL
+migrations and Edge Functions. Use the Supabase CLI and the artifacts under
+`supabase/functions/`, for example:
 
 ```bash
-# Deploy all triggers
-python scripts/database/deploy_triggers.py
-
-# Deploy specific trigger set
-python scripts/database/deploy_triggers.py --type audit
-
-# Remove triggers (cleanup)
-python scripts/database/deploy_triggers.py --remove
+cd supabase
+./functions/deploy.sh   # deploy Edge Functions and apply trigger SQL
+# or apply trigger SQL directly
+psql -h localhost -p 54322 -d postgres -U postgres \
+  -f functions/setup_edge_function_triggers.sql
 ```
 
 ## Migration Best Practices

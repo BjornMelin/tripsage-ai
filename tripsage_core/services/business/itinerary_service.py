@@ -1,1326 +1,628 @@
-"""Itinerary service for comprehensive itinerary management operations.
+"""Minimal, typed itinerary service built on the Supabase DatabaseService.
 
-This service consolidates itinerary-related business logic including itinerary
-creation, item management, optimization, conflict detection, sharing, and
-collaboration features. It provides clean abstractions over external services
-while maintaining proper data relationships.
+This service performs the following responsibilities:
+
+* Persist itineraries and itinerary items using ``DatabaseService`` CRUD helpers.
+* Provide the small set of operations required by the FastAPI routers.
+* Offer lightweight validation (date ranges, ownership checks) and conflict
+  detection for overlapping itinerary items.
+* Return data in shapes compatible with ``tripsage.api.schemas.itineraries``.
 """
 
+from __future__ import annotations
+
 import logging
-from datetime import UTC, date as DateType, datetime, timedelta
+from collections.abc import Mapping
+from datetime import UTC, date, datetime, time
 from enum import Enum
-from typing import Any
+from itertools import pairwise
+from typing import Any, Protocol, cast
 from uuid import uuid4
 
 from pydantic import Field, field_validator
 
 from tripsage_core.exceptions import (
-    CoreResourceNotFoundError as NotFoundError,
-    CoreServiceError as ServiceError,
-    CoreValidationError as ValidationError,
+    CoreDatabaseError,
+    CoreResourceNotFoundError,
+    CoreServiceError,
+    CoreValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
+
+ITINERARIES_TABLE = "itineraries"
+ITINERARY_ITEMS_TABLE = "itinerary_items"
 
 
-class ItineraryItemType(str, Enum):
-    """Itinerary item type enumeration."""
+class SupportsModelDump(Protocol):
+    """Protocol describing objects that expose ``model_dump`` (Pydantic v2)."""
 
-    FLIGHT = "flight"
-    ACCOMMODATION = "accommodation"
-    ACTIVITY = "activity"
-    TRANSPORTATION = "transportation"
-    MEAL = "meal"
-    REST = "rest"
-    MEETING = "meeting"
-    OTHER = "other"
+    def model_dump(self, *, exclude_none: bool = False) -> dict[str, Any]:
+        """Return a serialisable representation of the model."""
+        ...
 
 
 class ItineraryStatus(str, Enum):
-    """Itinerary status enumeration."""
+    """Valid itinerary lifecycle states."""
 
     DRAFT = "draft"
-    PLANNED = "planned"
-    CONFIRMED = "confirmed"
-    IN_PROGRESS = "in_progress"
+    ACTIVE = "active"
     COMPLETED = "completed"
-    CANCELLED = "cancelled"
 
 
-class ItineraryVisibility(str, Enum):
-    """Itinerary visibility enumeration."""
+class ItineraryRecord(TripSageModel):
+    """Internal itinerary representation persisted to Supabase."""
 
-    PRIVATE = "private"
-    SHARED = "shared"
-    PUBLIC = "public"
-
-
-class ConflictType(str, Enum):
-    """Conflict type enumeration."""
-
-    TIME_OVERLAP = "time_overlap"
-    LOCATION_CONFLICT = "location_conflict"
-    BUDGET_EXCEEDED = "budget_exceeded"
-    IMPOSSIBLE_TRAVEL = "impossible_travel"
-    BOOKING_CONFLICT = "booking_conflict"
-
-
-class OptimizationGoal(str, Enum):
-    """Optimization goal enumeration."""
-
-    MINIMIZE_COST = "minimize_cost"
-    MINIMIZE_TRAVEL_TIME = "minimize_travel_time"
-    MAXIMIZE_EXPERIENCES = "maximize_experiences"
-    BALANCE_ACTIVITIES = "balance_activities"
-    MINIMIZE_STRESS = "minimize_stress"
-
-
-class TimeSlot(TripSageModel):
-    """Time slot information."""
-
-    start_time: str = Field(
-        ...,
-        pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$",
-        description="Start time (HH:MM)",
+    id: str = Field(..., description="Itinerary identifier")
+    user_id: str = Field(..., description="Owner identifier")
+    title: str = Field(..., min_length=1, max_length=200, description="Title")
+    description: str | None = Field(None, description="User supplied description")
+    start_date: date = Field(..., description="Start date (UTC)")
+    end_date: date = Field(..., description="End date (UTC)")
+    status: ItineraryStatus = Field(
+        default=ItineraryStatus.DRAFT, description="Lifecycle status"
     )
-    end_time: str = Field(
-        ..., pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$", description="End time (HH:MM)"
-    )
-    duration_minutes: int = Field(..., ge=0, description="Duration in minutes")
-    timezone: str | None = Field(None, description="Timezone for the time slot")
-
-    @field_validator("duration_minutes")
-    @classmethod
-    def validate_duration(cls, v: int, info) -> int:
-        """Validate duration matches start/end times."""
-        if "start_time" in info.data and "end_time" in info.data:
-            start_hour, start_minute = map(int, info.data["start_time"].split(":"))
-            end_hour, end_minute = map(int, info.data["end_time"].split(":"))
-
-            start_minutes = start_hour * 60 + start_minute
-            end_minutes = end_hour * 60 + end_minute
-
-            # Handle overnight slots
-            if end_minutes < start_minutes:
-                end_minutes += 24 * 60
-
-            calculated_duration = end_minutes - start_minutes
-            if abs(v - calculated_duration) > 1:  # Allow 1 minute tolerance
-                v = calculated_duration
-
-        return v
-
-
-class Location(TripSageModel):
-    """Location information."""
-
-    name: str = Field(..., description="Location name")
-    address: str | None = Field(None, description="Full address")
-    city: str | None = Field(None, description="City")
-    country: str | None = Field(None, description="Country")
-    latitude: float | None = Field(None, description="Latitude coordinate")
-    longitude: float | None = Field(None, description="Longitude coordinate")
-    place_id: str | None = Field(None, description="External place ID (Google, etc.)")
-
-
-class ItineraryItem(TripSageModel):
-    """Base itinerary item model."""
-
-    id: str = Field(..., description="Item ID")
-    item_type: ItineraryItemType = Field(..., description="Item type")
-    title: str = Field(..., description="Item title")
-    description: str | None = Field(None, description="Item description")
-    item_date: DateType = Field(..., description="Item date")
-    time_slot: TimeSlot | None = Field(None, description="Time slot")
-    location: Location | None = Field(None, description="Location")
-    cost: float | None = Field(None, ge=0, description="Item cost")
-    currency: str | None = Field(None, description="Currency code")
-    booking_reference: str | None = Field(None, description="Booking reference")
-    notes: str | None = Field(None, description="Additional notes")
-    is_flexible: bool = Field(default=False, description="Whether timing is flexible")
-    is_confirmed: bool = Field(default=False, description="Whether item is confirmed")
-    created_by: str | None = Field(None, description="User ID who created the item")
-
-    # Type-specific data stored as dict for flexibility
-    type_specific_data: dict[str, Any] = Field(
-        default_factory=dict, description="Type-specific data"
-    )
-
-
-class ItineraryConflict(TripSageModel):
-    """Conflict information."""
-
-    id: str = Field(..., description="Conflict ID")
-    conflict_type: ConflictType = Field(..., description="Conflict type")
-    severity: float = Field(..., ge=0, le=1, description="Conflict severity (0-1)")
-    description: str = Field(..., description="Conflict description")
-    affected_items: list[str] = Field(..., description="IDs of affected items")
-    suggestions: list[str] = Field(
-        default_factory=list, description="Resolution suggestions"
-    )
-    auto_resolvable: bool = Field(default=False, description="Whether auto-resolvable")
-
-
-class ItineraryDay(TripSageModel):
-    """Itinerary day model."""
-
-    date: DateType = Field(..., description="Day date")
-    items: list[ItineraryItem] = Field(default_factory=list, description="Day items")
-    notes: str | None = Field(None, description="Day notes")
-    budget_allocated: float | None = Field(
-        None, ge=0, description="Budget allocated for the day"
-    )
-    budget_spent: float | None = Field(
-        None, ge=0, description="Budget spent for the day"
-    )
-
-    @property
-    def sorted_items(self) -> list[ItineraryItem]:
-        """Return items sorted by time."""
-
-        def get_sort_key(item: ItineraryItem) -> str:
-            if not item.time_slot:
-                return "24:00"  # Put items without time at the end
-            return item.time_slot.start_time
-
-        return sorted(self.items, key=get_sort_key)
-
-
-class ItineraryShareSettings(TripSageModel):
-    """Itinerary sharing settings."""
-
-    visibility: ItineraryVisibility = Field(
-        default=ItineraryVisibility.PRIVATE, description="Visibility level"
-    )
-    shared_with: list[str] = Field(
-        default_factory=list, description="User IDs with access"
-    )
-    editable_by: list[str] = Field(
-        default_factory=list, description="User IDs with edit access"
-    )
-    share_link: str | None = Field(None, description="Public share link")
-    password_protected: bool = Field(
-        default=False, description="Whether password protected"
-    )
-    expires_at: datetime | None = Field(None, description="Share link expiration")
-
-
-class ItineraryCreateRequest(TripSageModel):
-    """Request model for creating an itinerary."""
-
-    title: str = Field(..., min_length=1, max_length=200, description="Itinerary title")
-    description: str | None = Field(None, description="Itinerary description")
-    start_date: DateType = Field(..., description="Start date")
-    end_date: DateType = Field(..., description="End date")
-    destinations: list[str] = Field(default_factory=list, description="Destination IDs")
     total_budget: float | None = Field(None, ge=0, description="Total budget")
     currency: str | None = Field(None, description="Currency code")
-    tags: list[str] = Field(default_factory=list, description="Tags")
-    trip_id: str | None = Field(None, description="Associated trip ID")
-    template_id: str | None = Field(None, description="Template to base on")
-
-    @field_validator("end_date")
-    @classmethod
-    def validate_end_date(cls, v: DateType, info) -> DateType:
-        """Validate end date is after start date."""
-        if info.data.get("start_date") and v < info.data["start_date"]:
-            raise ValueError("End date must be after or equal to start date")
-        return v
-
-
-class ItineraryUpdateRequest(TripSageModel):
-    """Request model for updating an itinerary."""
-
-    title: str | None = Field(
-        None, min_length=1, max_length=200, description="Itinerary title"
+    destinations: list[str] = Field(
+        default_factory=list, description="Destination identifiers"
     )
-    description: str | None = Field(None, description="Itinerary description")
-    status: ItineraryStatus | None = Field(None, description="Itinerary status")
-    start_date: DateType | None = Field(None, description="Start date")
-    end_date: DateType | None = Field(None, description="End date")
-    destinations: list[str] | None = Field(None, description="Destination IDs")
-    total_budget: float | None = Field(None, ge=0, description="Total budget")
-    currency: str | None = Field(None, description="Currency code")
-    tags: list[str] | None = Field(None, description="Tags")
-    share_settings: ItineraryShareSettings | None = Field(
-        None, description="Share settings"
-    )
-
-
-class Itinerary(TripSageModel):
-    """Complete itinerary model."""
-
-    id: str = Field(..., description="Itinerary ID")
-    user_id: str = Field(..., description="Owner user ID")
-    trip_id: str | None = Field(None, description="Associated trip ID")
-    title: str = Field(..., description="Itinerary title")
-    description: str | None = Field(None, description="Itinerary description")
-    status: ItineraryStatus = Field(default=ItineraryStatus.DRAFT, description="Status")
-
-    start_date: DateType = Field(..., description="Start date")
-    end_date: DateType = Field(..., description="End date")
-
-    days: list[ItineraryDay] = Field(default_factory=list, description="Itinerary days")
-    destinations: list[str] = Field(default_factory=list, description="Destination IDs")
-
-    total_budget: float | None = Field(None, ge=0, description="Total budget")
-    budget_spent: float | None = Field(None, ge=0, description="Budget spent")
-    currency: str | None = Field(None, description="Currency code")
-
-    tags: list[str] = Field(default_factory=list, description="Tags")
-    share_settings: ItineraryShareSettings = Field(
-        default_factory=ItineraryShareSettings, description="Share settings"
-    )
-
+    tags: list[str] = Field(default_factory=list, description="Free-form tags")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
-    # Collaboration
-    collaborators: list[str] = Field(
-        default_factory=list, description="Collaborator user IDs"
-    )
-    version: int = Field(
-        default=1, description="Version number for conflict resolution"
-    )
-
-    @property
-    def duration_days(self) -> int:
-        """Calculate duration in days."""
-        return (self.end_date - self.start_date).days + 1
+    @field_validator("end_date")
+    @classmethod
+    def _validate_date_range(cls, end: date, info: Any) -> date:
+        """Ensure ``end_date`` is not before ``start_date``."""
+        start: date | None = info.data.get("start_date")
+        if start and end < start:
+            raise ValueError("End date must be on or after start date")
+        return end
 
 
-class ItineraryItemCreateRequest(TripSageModel):
-    """Request model for creating an itinerary item."""
+class ItineraryItemRecord(TripSageModel):
+    """Internal itinerary item representation."""
 
-    item_type: ItineraryItemType = Field(..., description="Item type")
+    id: str = Field(..., description="Itinerary item identifier")
+    itinerary_id: str = Field(..., description="Parent itinerary identifier")
+    item_type: str = Field(..., description="Item type label")
     title: str = Field(..., min_length=1, max_length=200, description="Item title")
     description: str | None = Field(None, description="Item description")
-    item_date: DateType = Field(..., description="Item date")
-    time_slot: TimeSlot | None = Field(None, description="Time slot")
-    location: Location | None = Field(None, description="Location")
-    cost: float | None = Field(None, ge=0, description="Item cost")
+    item_date: date = Field(..., description="Item date")
+    start_time: str | None = Field(
+        None,
+        pattern=r"^([01]\d|2[0-3]):[0-5]\d$",
+        description="Start time (HH:MM)",
+    )
+    end_time: str | None = Field(
+        None,
+        pattern=r"^([01]\d|2[0-3]):[0-5]\d$",
+        description="End time (HH:MM)",
+    )
+    cost: float | None = Field(None, ge=0, description="Cost amount")
     currency: str | None = Field(None, description="Currency code")
     booking_reference: str | None = Field(None, description="Booking reference")
     notes: str | None = Field(None, description="Additional notes")
-    is_flexible: bool = Field(default=False, description="Whether timing is flexible")
-    type_specific_data: dict[str, Any] | None = Field(
-        None, description="Type-specific data"
-    )
+    is_flexible: bool = Field(False, description="Whether the timing is flexible")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
 
-
-class OptimizationSettings(TripSageModel):
-    """Itinerary optimization settings."""
-
-    goals: list[OptimizationGoal] = Field(..., description="Optimization goals")
-    prioritize_cost: bool = Field(default=False, description="Prioritize cost savings")
-    minimize_travel_time: bool = Field(default=True, description="Minimize travel time")
-    include_breaks: bool = Field(default=True, description="Include breaks")
-    break_duration_minutes: int = Field(default=30, ge=0, description="Break duration")
-    start_day_time: str | None = Field(None, description="Preferred day start time")
-    end_day_time: str | None = Field(None, description="Preferred day end time")
-    meal_preferences: dict[str, str] | None = Field(
-        None, description="Meal time preferences"
-    )
-    max_daily_budget: float | None = Field(
-        None, ge=0, description="Maximum daily budget"
-    )
-
-
-class ItineraryOptimizeRequest(TripSageModel):
-    """Request model for optimizing an itinerary."""
-
-    itinerary_id: str = Field(..., description="Itinerary ID to optimize")
-    settings: OptimizationSettings = Field(..., description="Optimization settings")
-    preserve_confirmed: bool = Field(
-        default=True, description="Preserve confirmed items"
-    )
-
-
-class ItineraryOptimizeResponse(TripSageModel):
-    """Response model for itinerary optimization."""
-
-    original_itinerary: Itinerary = Field(..., description="Original itinerary")
-    optimized_itinerary: Itinerary = Field(..., description="Optimized itinerary")
-    changes: list[dict[str, Any]] = Field(..., description="Changes made")
-    optimization_score: float = Field(..., ge=0, le=1, description="Optimization score")
-    estimated_savings: dict[str, float] | None = Field(
-        None, description="Estimated savings"
-    )
-
-
-class ItinerarySearchRequest(TripSageModel):
-    """Request model for searching itineraries."""
-
-    query: str | None = Field(None, description="Search query")
-    status: ItineraryStatus | None = Field(None, description="Status filter")
-    start_date_from: DateType | None = Field(
-        None, description="Start date filter (from)"
-    )
-    start_date_to: DateType | None = Field(None, description="Start date filter (to)")
-    destinations: list[str] | None = Field(None, description="Destination filters")
-    tags: list[str] | None = Field(None, description="Tag filters")
-    shared_only: bool = Field(default=False, description="Only shared itineraries")
-    limit: int = Field(default=20, ge=1, le=100, description="Result limit")
-    offset: int = Field(default=0, ge=0, description="Result offset")
+    @field_validator("end_time")
+    @classmethod
+    def _validate_time_order(cls, end_value: str | None, info: Any) -> str | None:
+        """Ensure the end time, when provided, is not before the start time."""
+        start_value: str | None = info.data.get("start_time")
+        if start_value and end_value and end_value < start_value:
+            raise ValueError("End time must be on or after start time")
+        return end_value
 
 
 class ItineraryService:
-    """Comprehensive itinerary service for creation, management, and optimization.
+    """High-cohesion service that encapsulates itinerary operations."""
 
-    This service handles:
-    - Complete itinerary CRUD operations
-    - Itinerary item management (flights, accommodations, activities, etc.)
-    - Conflict detection and resolution
-    - Itinerary optimization algorithms
-    - Sharing and collaboration features
-    - Budget tracking and management
-    - Template creation and management
-    - Real-time collaborative editing
-    """
-
-    def __init__(
-        self,
-        database_service=None,
-        external_calendar_service=None,
-        optimization_engine=None,
-        cache_ttl: int = 1800,
-    ):
-        """Initialize the itinerary service.
-
-        Args:
-            database_service: Database service for persistence
-            external_calendar_service: External calendar service
-            optimization_engine: Optimization engine for itinerary optimization
-            cache_ttl: Cache TTL in seconds
-        """
-        # Import here to avoid circular imports
-        if database_service is None:
-            from tripsage_core.services.infrastructure import get_database_service
-
-            database_service = get_database_service()
-
-        if external_calendar_service is None:
-            try:
-                from tripsage_core.services.external_apis.calendar_service import (
-                    GoogleCalendarService as CalendarService,
-                )
-
-                external_calendar_service = CalendarService()
-            except ImportError:
-                logger.warning("External calendar service not available")
-                external_calendar_service = None
-
-        if optimization_engine is None:
-            # TODO: Implement external optimization engine
-            # Optimization engine is optional - will use basic optimization
-            optimization_engine = None
-
-        self.db = database_service
-        self.calendar_service = external_calendar_service
-        self.optimization_engine = optimization_engine
-        self.cache_ttl = cache_ttl
-
-        # In-memory cache
-        self._itinerary_cache: dict[str, tuple] = {}
-        self._conflict_cache: dict[str, tuple] = {}
+    def __init__(self, database_service: DatabaseService):
+        """Initialise the service with its required infrastructure dependency."""
+        self._db = database_service
 
     async def create_itinerary(
-        self, user_id: str, create_request: ItineraryCreateRequest
-    ) -> Itinerary:
-        """Create a new itinerary.
+        self,
+        user_id: str,
+        create_request: SupportsModelDump | Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Create a new itinerary owned by ``user_id``.
 
         Args:
-            user_id: User ID
-            create_request: Itinerary creation request
+            user_id: Identifier of the itinerary owner.
+            create_request: Pydantic model or mapping describing the itinerary.
 
         Returns:
-            Created itinerary
+            Serialised itinerary dictionary ready for API responses.
 
         Raises:
-            ValidationError: If request data is invalid
-            ServiceError: If creation fails
+            CoreValidationError: If the request payload is invalid.
+            CoreServiceError: If persistence fails.
         """
-        try:
-            itinerary_id = str(uuid4())
-            now = datetime.now(UTC)
-
-            # Create empty days for the date range
-            days = []
-            current_date: DateType = create_request.start_date
-            while current_date <= create_request.end_date:
-                days.append(ItineraryDay(date=current_date))
-                current_date += timedelta(days=1)
-
-            # If template specified, apply template
-            if create_request.template_id:
-                template_data = await self._apply_template(
-                    create_request.template_id, days
-                )
-                if template_data:
-                    days = template_data.get("days", days)
-
-            itinerary = Itinerary(
-                id=itinerary_id,
-                user_id=user_id,
-                trip_id=create_request.trip_id,
-                title=create_request.title,
-                description=create_request.description,
-                start_date=create_request.start_date,
-                end_date=create_request.end_date,
-                days=days,
-                destinations=create_request.destinations,
-                total_budget=create_request.total_budget,
-                currency=create_request.currency,
-                tags=create_request.tags,
-                created_at=now,
-                updated_at=now,
-            )
-
-            # Store in database
-            await self._store_itinerary(itinerary)
-
-            logger.info(
-                "Itinerary created successfully",
-                extra={
-                    "itinerary_id": itinerary_id,
-                    "user_id": user_id,
-                    "title": create_request.title,
-                },
-            )
-
-            return itinerary
-
-        except Exception as e:
-            logger.exception(
-                "Failed to create itinerary",
-                extra={
-                    "user_id": user_id,
-                    "title": create_request.title,
-                    "error": str(e),
-                },
-            )
-            raise ServiceError(f"Failed to create itinerary: {e!s}") from e
-
-    async def get_itinerary(
-        self, itinerary_id: str, user_id: str, check_access: bool = True
-    ) -> Itinerary | None:
-        """Get an itinerary by ID.
-
-        Args:
-            itinerary_id: Itinerary ID
-            user_id: User ID for access control
-            check_access: Whether to check user access
-
-        Returns:
-            Itinerary or None if not found
-        """
-        try:
-            # Check cache first
-            cache_key = f"itinerary_{itinerary_id}"
-            cached_result = self._get_cached_itinerary(cache_key)
-
-            if cached_result:
-                itinerary = cached_result
-            else:
-                # Get from database
-                itinerary_data = await self.db.get_itinerary(itinerary_id)
-                if not itinerary_data:
-                    return None
-
-                itinerary = Itinerary(**itinerary_data)
-
-                # Cache the result
-                self._cache_itinerary(cache_key, itinerary)
-
-            # Check access permissions
-            if check_access and not await self._check_access(itinerary, user_id):
-                raise PermissionError("Access denied to itinerary")
-
-            return itinerary
-
-        except PermissionError:
-            raise
-        except Exception as e:
-            logger.exception(
-                "Failed to get itinerary",
-                extra={
-                    "itinerary_id": itinerary_id,
-                    "user_id": user_id,
-                    "error": str(e),
-                },
-            )
-            return None
-
-    async def update_itinerary(
-        self, itinerary_id: str, user_id: str, update_request: ItineraryUpdateRequest
-    ) -> Itinerary:
-        """Update an existing itinerary.
-
-        Args:
-            itinerary_id: Itinerary ID
-            user_id: User ID
-            update_request: Update request
-
-        Returns:
-            Updated itinerary
-
-        Raises:
-            NotFoundError: If itinerary not found
-            PermissionError: If user lacks permission
-            ServiceError: If update fails
-        """
-        try:
-            # Validate access and get itinerary
-            itinerary = await self._validate_itinerary_access(
-                itinerary_id, user_id, edit_access=True
-            )
-
-            # Apply updates
-            updated = await self._apply_itinerary_updates(itinerary, update_request)
-
-            # Save if changes were made
-            if updated:
-                await self._save_itinerary_updates(itinerary, itinerary_id)
-
-            return itinerary
-
-        except (NotFoundError, PermissionError, ValidationError):
-            raise
-        except Exception as e:
-            logger.exception(
-                "Failed to update itinerary",
-                extra={
-                    "itinerary_id": itinerary_id,
-                    "user_id": user_id,
-                    "error": str(e),
-                },
-            )
-            raise ServiceError(f"Failed to update itinerary: {e!s}") from e
-
-    async def _validate_itinerary_access(
-        self, itinerary_id: str, user_id: str, edit_access: bool = False
-    ) -> Itinerary:
-        """Validate access to itinerary and return it."""
-        itinerary = await self.get_itinerary(itinerary_id, user_id)
-        if not itinerary:
-            raise NotFoundError("Itinerary not found")
-
-        if edit_access and not await self._check_edit_access(itinerary, user_id):
-            raise PermissionError("Edit access denied")
-
-        return itinerary
-
-    async def _apply_itinerary_updates(
-        self, itinerary: Itinerary, update_request: ItineraryUpdateRequest
-    ) -> bool:
-        """Apply updates to itinerary and return whether any changes were made."""
-        updated = False
-
-        # Simple field updates
-        simple_fields = [
-            ("title", "title"),
-            ("description", "description"),
-            ("status", "status"),
-            ("destinations", "destinations"),
-            ("total_budget", "total_budget"),
-            ("currency", "currency"),
-            ("tags", "tags"),
-            ("share_settings", "share_settings"),
-        ]
-
-        for request_field, itinerary_field in simple_fields:
-            value = getattr(update_request, request_field, None)
-            if value is not None:
-                setattr(itinerary, itinerary_field, value)
-                updated = True
-
-        # Handle complex date updates
-        date_updated = await self._update_itinerary_dates(itinerary, update_request)
-
-        return updated or date_updated
-
-    async def _update_itinerary_dates(
-        self, itinerary: Itinerary, update_request: ItineraryUpdateRequest
-    ) -> bool:
-        """Update itinerary dates and return whether changes were made."""
-        if not (update_request.start_date or update_request.end_date):
-            return False
-
-        new_start = update_request.start_date or itinerary.start_date
-        new_end = update_request.end_date or itinerary.end_date
-
-        if new_end < new_start:
-            raise ValidationError("End date must be after start date")
-
-        # Check if dates actually changed
-        if new_start == itinerary.start_date and new_end == itinerary.end_date:
-            return False
-
-        # Apply date changes
-        itinerary.start_date = new_start
-        itinerary.end_date = new_end
-        itinerary.days = await self._adjust_days(itinerary.days, new_start, new_end)
-
-        return True
-
-    async def _save_itinerary_updates(
-        self, itinerary: Itinerary, itinerary_id: str
-    ) -> None:
-        """Save itinerary updates and update metadata."""
-        itinerary.updated_at = datetime.now(UTC)
-        itinerary.version += 1
-
-        # Store updated itinerary
-        await self._store_itinerary(itinerary)
-
-        # Clear cache
-        self._clear_itinerary_cache(itinerary_id)
-
-    async def add_item_to_itinerary(
-        self, itinerary_id: str, user_id: str, item_request: ItineraryItemCreateRequest
-    ) -> ItineraryItem:
-        """Add an item to an itinerary.
-
-        Args:
-            itinerary_id: Itinerary ID
-            user_id: User ID
-            item_request: Item creation request
-
-        Returns:
-            Created itinerary item
-
-        Raises:
-            NotFoundError: If itinerary not found
-            ValidationError: If item data is invalid
-            ServiceError: If addition fails
-        """
-        try:
-            itinerary = await self.get_itinerary(itinerary_id, user_id)
-            if not itinerary:
-                raise NotFoundError("Itinerary not found")
-
-            # Check edit permissions
-            if not await self._check_edit_access(itinerary, user_id):
-                raise PermissionError("Edit access denied")
-
-            # Validate item date is within itinerary range
-            if (
-                item_request.item_date < itinerary.start_date
-                or item_request.item_date > itinerary.end_date
-            ):
-                raise ValidationError("Item date is outside itinerary date range")
-
-            # Create item
-            item_id = str(uuid4())
-            item = ItineraryItem(
-                id=item_id,
-                item_type=item_request.item_type,
-                title=item_request.title,
-                description=item_request.description,
-                item_date=item_request.item_date,
-                time_slot=item_request.time_slot,
-                location=item_request.location,
-                cost=item_request.cost,
-                currency=item_request.currency,
-                booking_reference=item_request.booking_reference,
-                notes=item_request.notes,
-                is_flexible=item_request.is_flexible,
-                created_by=user_id,
-                type_specific_data=item_request.type_specific_data or {},
-            )
-
-            # Add to appropriate day
-            for day in itinerary.days:
-                if day.date == item_request.item_date:
-                    day.items.append(item)
-                    break
-            else:
-                raise ValidationError(f"No day found for date {item_request.item_date}")
-
-            # Update budget if cost specified
-            if item.cost:
-                if itinerary.budget_spent is None:
-                    itinerary.budget_spent = 0
-                itinerary.budget_spent += item.cost
-
-            # Update itinerary
-            itinerary.updated_at = datetime.now(UTC)
-            itinerary.version += 1
-
-            # Store updated itinerary
-            await self._store_itinerary(itinerary)
-
-            # Clear cache
-            self._clear_itinerary_cache(itinerary_id)
-
-            logger.info(
-                "Item added to itinerary",
-                extra={
-                    "item_id": item_id,
-                    "itinerary_id": itinerary_id,
-                    "user_id": user_id,
-                    "item_type": item_request.item_type.value,
-                },
-            )
-
-            return item
-
-        except (NotFoundError, PermissionError, ValidationError):
-            raise
-        except Exception as e:
-            logger.exception(
-                "Failed to add item to itinerary",
-                extra={
-                    "itinerary_id": itinerary_id,
-                    "user_id": user_id,
-                    "error": str(e),
-                },
-            )
-            raise ServiceError(f"Failed to add item: {e!s}") from e
-
-    async def detect_conflicts(
-        self, itinerary_id: str, user_id: str
-    ) -> list[ItineraryConflict]:
-        """Detect conflicts in an itinerary.
-
-        Args:
-            itinerary_id: Itinerary ID
-            user_id: User ID
-
-        Returns:
-            List of detected conflicts
-        """
-        try:
-            itinerary = await self.get_itinerary(itinerary_id, user_id)
-            if not itinerary:
-                return []
-
-            # Check cache first
-            cache_key = f"conflicts_{itinerary_id}_{itinerary.version}"
-            cached_conflicts = self._get_cached_conflicts(cache_key)
-            if cached_conflicts:
-                return cached_conflicts
-
-            conflicts = []
-
-            # Check for time conflicts
-            time_conflicts = await self._detect_time_conflicts(itinerary)
-            conflicts.extend(time_conflicts)
-
-            # Check for location conflicts
-            location_conflicts = await self._detect_location_conflicts(itinerary)
-            conflicts.extend(location_conflicts)
-
-            # Check for budget conflicts
-            budget_conflicts = await self._detect_budget_conflicts(itinerary)
-            conflicts.extend(budget_conflicts)
-
-            # Check for impossible travel scenarios
-            travel_conflicts = await self._detect_travel_conflicts(itinerary)
-            conflicts.extend(travel_conflicts)
-
-            # Cache conflicts
-            self._cache_conflicts(cache_key, conflicts)
-
-            return conflicts
-
-        except Exception as e:
-            logger.exception(
-                "Failed to detect conflicts",
-                extra={"itinerary_id": itinerary_id, "error": str(e)},
-            )
-            return []
-
-    async def optimize_itinerary(
-        self, user_id: str, optimize_request: ItineraryOptimizeRequest
-    ) -> ItineraryOptimizeResponse:
-        """Optimize an itinerary based on settings.
-
-        Args:
-            user_id: User ID
-            optimize_request: Optimization request
-
-        Returns:
-            Optimization response with original and optimized itineraries
-
-        Raises:
-            NotFoundError: If itinerary not found
-            ServiceError: If optimization fails
-        """
-        try:
-            original_itinerary = await self.get_itinerary(
-                optimize_request.itinerary_id, user_id
-            )
-            if not original_itinerary:
-                raise NotFoundError("Itinerary not found")
-
-            # Check edit permissions
-            if not await self._check_edit_access(original_itinerary, user_id):
-                raise PermissionError("Edit access denied")
-
-            # Create copy for optimization
-            optimized_itinerary = Itinerary(**original_itinerary.model_dump())
-            changes = []
-
-            # Apply optimization algorithms
-            if self.optimization_engine:
-                optimization_result = await self.optimization_engine.optimize(
-                    optimized_itinerary, optimize_request.settings
-                )
-                optimized_itinerary = optimization_result["itinerary"]
-                changes = optimization_result["changes"]
-                optimization_score = optimization_result["score"]
-            else:
-                # Basic optimization without external engine
-                optimization_result = await self._basic_optimization(
-                    optimized_itinerary,
-                    optimize_request.settings,
-                    optimize_request.preserve_confirmed,
-                )
-                optimized_itinerary = optimization_result["itinerary"]
-                changes = optimization_result["changes"]
-                optimization_score = optimization_result["score"]
-
-            # Calculate estimated savings
-            estimated_savings = await self._calculate_savings(
-                original_itinerary, optimized_itinerary
-            )
-
-            logger.info(
-                "Itinerary optimized",
-                extra={
-                    "itinerary_id": optimize_request.itinerary_id,
-                    "user_id": user_id,
-                    "changes_count": len(changes),
-                    "optimization_score": optimization_score,
-                },
-            )
-
-            return ItineraryOptimizeResponse(
-                original_itinerary=original_itinerary,
-                optimized_itinerary=optimized_itinerary,
-                changes=changes,
-                optimization_score=optimization_score,
-                estimated_savings=estimated_savings,
-            )
-
-        except (NotFoundError, PermissionError):
-            raise
-        except Exception as e:
-            logger.exception(
-                "Failed to optimize itinerary",
-                extra={
-                    "itinerary_id": optimize_request.itinerary_id,
-                    "user_id": user_id,
-                    "error": str(e),
-                },
-            )
-            raise ServiceError(f"Failed to optimize itinerary: {e!s}") from e
+        payload = self._normalize_payload(create_request)
+        self._ensure_required_fields(payload, {"title", "start_date", "end_date"})
+        itinerary = self._build_itinerary_record(user_id, payload)
+        await self._insert_itinerary(itinerary)
+        return await self.get_itinerary(user_id, itinerary.id)
+
+    async def list_itineraries(self, user_id: str) -> list[dict[str, Any]]:
+        """Return all itineraries owned by ``user_id``."""
+        rows = await self._safe_select(
+            ITINERARIES_TABLE, filters={"user_id": user_id}, order_by="-start_date"
+        )
+        itineraries = []
+        for raw in rows:
+            itinerary = self._build_itinerary_from_row(raw)
+            items = await self._load_items_for_itinerary(itinerary.id)
+            itineraries.append(self._serialize_itinerary(itinerary, items))
+        return itineraries
 
     async def search_itineraries(
-        self, user_id: str, search_request: ItinerarySearchRequest
-    ) -> list[Itinerary]:
-        """Search itineraries for a user.
-
-        Args:
-            user_id: User ID
-            search_request: Search parameters
-
-        Returns:
-            List of matching itineraries
-        """
-        try:
-            filters = {"user_id": user_id}
-
-            if search_request.status:
-                filters["status"] = search_request.status.value
-
-            if search_request.start_date_from:
-                filters["start_date_from"] = search_request.start_date_from
-
-            if search_request.start_date_to:
-                filters["start_date_to"] = search_request.start_date_to
-
-            if search_request.destinations:
-                filters["destinations"] = search_request.destinations
-
-            if search_request.tags:
-                filters["tags"] = search_request.tags
-
-            if search_request.shared_only:
-                filters["shared_only"] = True
-
-            results = await self.db.search_itineraries(
-                filters,
-                search_request.query,
-                search_request.limit,
-                search_request.offset,
-            )
-
-            return [Itinerary(**result) for result in results]
-
-        except Exception as e:
-            logger.exception(
-                "Failed to search itineraries",
-                extra={"user_id": user_id, "error": str(e)},
-            )
-            return []
-
-    async def delete_itinerary(self, itinerary_id: str, user_id: str) -> bool:
-        """Delete an itinerary.
-
-        Args:
-            itinerary_id: Itinerary ID
-            user_id: User ID
-
-        Returns:
-            True if deleted successfully
-        """
-        try:
-            itinerary = await self.get_itinerary(itinerary_id, user_id)
-            if not itinerary:
-                raise NotFoundError("Itinerary not found")
-
-            # Check permissions (only owner can delete)
-            if itinerary.user_id != user_id:
-                raise PermissionError("Only owner can delete itinerary")
-
-            # Delete from database
-            success = await self.db.delete_itinerary(itinerary_id)
-
-            if success:
-                # Clear cache
-                self._clear_itinerary_cache(itinerary_id)
-
-                logger.info(
-                    "Itinerary deleted",
-                    extra={"itinerary_id": itinerary_id, "user_id": user_id},
-                )
-
-            return success
-
-        except (NotFoundError, PermissionError):
-            raise
-        except Exception as e:
-            logger.exception(
-                "Failed to delete itinerary",
-                extra={
-                    "itinerary_id": itinerary_id,
-                    "user_id": user_id,
-                    "error": str(e),
-                },
-            )
-            return False
-
-    async def _apply_template(
-        self, template_id: str, days: list[ItineraryDay]
-    ) -> dict[str, Any] | None:
-        """Apply a template to itinerary days."""
-        try:
-            template_data = await self.db.get_itinerary_template(template_id)
-            if not template_data:
-                return None
-
-            # Apply template logic here
-            # This would populate days with template items
-            return {"days": days}
-
-        except Exception as e:
-            logger.warning(
-                "Failed to apply template",
-                extra={"template_id": template_id, "error": str(e)},
-            )
-            return None
-
-    async def _adjust_days(
-        self, current_days: list[ItineraryDay], new_start: DateType, new_end: DateType
-    ) -> list[ItineraryDay]:
-        """Adjust days list for new date range."""
-        # Create a dict of existing days by date
-        existing_days = {day.date: day for day in current_days}
-
-        # Create new days list
-        new_days = []
-        current_date: DateType = new_start
-        while current_date <= new_end:
-            if current_date in existing_days:
-                new_days.append(existing_days[current_date])
-            else:
-                new_days.append(ItineraryDay(date=current_date))
-            current_date += timedelta(days=1)
-
-        return new_days
-
-    async def _check_access(self, itinerary: Itinerary, user_id: str) -> bool:
-        """Check if user has access to itinerary."""
-        # Owner always has access
-        if itinerary.user_id == user_id:
-            return True
-
-        # Check if shared with user
-        if user_id in itinerary.share_settings.shared_with:
-            return True
-
-        # Check if public
-        return itinerary.share_settings.visibility == ItineraryVisibility.PUBLIC
-
-    async def _check_edit_access(self, itinerary: Itinerary, user_id: str) -> bool:
-        """Check if user has edit access to itinerary."""
-        # Owner always has edit access
-        if itinerary.user_id == user_id:
-            return True
-
-        # Check if user is in editable_by list
-        return user_id in itinerary.share_settings.editable_by
-
-    async def _detect_time_conflicts(
-        self, itinerary: Itinerary
-    ) -> list[ItineraryConflict]:
-        """Detect time-based conflicts."""
-        conflicts = []
-
-        for day in itinerary.days:
-            items_with_time = [item for item in day.items if item.time_slot]
-            items_with_time.sort(key=lambda x: x.time_slot.start_time)
-
-            for i in range(len(items_with_time) - 1):
-                current = items_with_time[i]
-                next_item = items_with_time[i + 1]
-
-                current_end = current.time_slot.end_time
-                next_start = next_item.time_slot.start_time
-
-                # Convert to minutes for comparison
-                current_end_minutes = self._time_to_minutes(current_end)
-                next_start_minutes = self._time_to_minutes(next_start)
-
-                if next_start_minutes < current_end_minutes:
-                    conflict = ItineraryConflict(
-                        id=str(uuid4()),
-                        conflict_type=ConflictType.TIME_OVERLAP,
-                        severity=0.8,
-                        description=(
-                            f"Time overlap between '{current.title}' and "
-                            f"'{next_item.title}'"
-                        ),
-                        affected_items=[current.id, next_item.id],
-                        suggestions=[
-                            "Adjust start/end times",
-                            "Move one item to different time",
-                            "Remove one of the conflicting items",
-                        ],
-                        auto_resolvable=True,
-                    )
-                    conflicts.append(conflict)
-
-        return conflicts
-
-    async def _detect_location_conflicts(
-        self, itinerary: Itinerary
-    ) -> list[ItineraryConflict]:
-        """Detect location-based conflicts."""
-        return []
-        # Implementation for location conflict detection
-
-    async def _detect_budget_conflicts(
-        self, itinerary: Itinerary
-    ) -> list[ItineraryConflict]:
-        """Detect budget-related conflicts."""
-        conflicts = []
-
-        if itinerary.total_budget and itinerary.budget_spent:
-            if itinerary.budget_spent > itinerary.total_budget:
-                conflict = ItineraryConflict(
-                    id=str(uuid4()),
-                    conflict_type=ConflictType.BUDGET_EXCEEDED,
-                    severity=0.9,
-                    description=(
-                        f"Budget exceeded: spent {itinerary.budget_spent} of "
-                        f"{itinerary.total_budget}"
-                    ),
-                    affected_items=[],
-                    suggestions=[
-                        "Increase total budget",
-                        "Remove expensive items",
-                        "Find cheaper alternatives",
-                    ],
-                    auto_resolvable=False,
-                )
-                conflicts.append(conflict)
-
-        return conflicts
-
-    async def _detect_travel_conflicts(
-        self, itinerary: Itinerary
-    ) -> list[ItineraryConflict]:
-        """Detect impossible travel scenarios."""
-        return []
-        # Implementation for travel conflict detection
-
-    async def _basic_optimization(
         self,
-        itinerary: Itinerary,
-        settings: OptimizationSettings,
-        preserve_confirmed: bool,
+        user_id: str,
+        search_request: SupportsModelDump | Mapping[str, Any],
     ) -> dict[str, Any]:
-        """Basic optimization without external engine."""
-        changes = []
+        """Search itineraries for ``user_id`` with very light filtering.
 
-        # Simple time-based optimization
-        for day in itinerary.days:
-            items_with_time = [
-                item
-                for item in day.items
-                if item.time_slot and (not preserve_confirmed or not item.is_confirmed)
-            ]
+        The search honours ``status`` and ``destinations`` filters, falling back to
+        returning all itineraries when no filters are supplied.
+        """
+        payload = self._normalize_payload(search_request, exclude_none=True)
+        filters: dict[str, Any] = {"user_id": user_id}
+        if status := payload.get("status"):
+            filters["status"] = str(status)
+        if destinations := payload.get("destinations"):
+            filters["destinations"] = destinations
 
-            if not items_with_time:
-                continue
+        rows = await self._safe_select(
+            ITINERARIES_TABLE,
+            filters=filters,
+            order_by="-start_date",
+        )
 
-            # Sort by priority (confirmed items first, then by start time)
-            items_with_time.sort(
-                key=lambda x: (not x.is_confirmed, x.time_slot.start_time)
+        page = int(payload.get("page", 1))
+        page_size = int(payload.get("page_size", len(rows) or 1))
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paginated_rows = rows[start_idx:end_idx]
+
+        serialized = []
+        for raw in paginated_rows:
+            itinerary = self._build_itinerary_from_row(raw)
+            items = await self._load_items_for_itinerary(itinerary.id)
+            serialized.append(self._serialize_itinerary(itinerary, items))
+
+        return {
+            "items": serialized,
+            "page": page,
+            "page_size": page_size,
+            "total": len(rows),
+        }
+
+    async def get_itinerary(self, user_id: str, itinerary_id: str) -> dict[str, Any]:
+        """Fetch a single itinerary ensuring the caller owns it."""
+        raw = await self._get_owned_itinerary_row(user_id, itinerary_id)
+        itinerary = self._build_itinerary_from_row(raw)
+        items = await self._load_items_for_itinerary(itinerary.id)
+        return self._serialize_itinerary(itinerary, items)
+
+    async def update_itinerary(
+        self,
+        user_id: str,
+        itinerary_id: str,
+        update_request: SupportsModelDump | Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Update mutable itinerary fields."""
+        payload = self._normalize_payload(update_request, exclude_none=True)
+        if not payload:
+            return await self.get_itinerary(user_id, itinerary_id)
+
+        raw = await self._get_owned_itinerary_row(user_id, itinerary_id)
+        itinerary = self._build_itinerary_from_row(raw)
+
+        if "start_date" in payload or "end_date" in payload:
+            start = payload.get("start_date", itinerary.start_date)
+            end = payload.get("end_date", itinerary.end_date)
+            self._assert_valid_date_range(start, end)
+
+        payload["updated_at"] = datetime.now(UTC).isoformat()
+        await self._safe_update(
+            ITINERARIES_TABLE, data=payload, filters={"id": itinerary_id}
+        )
+        return await self.get_itinerary(user_id, itinerary_id)
+
+    async def delete_itinerary(self, user_id: str, itinerary_id: str) -> None:
+        """Delete an itinerary and its items."""
+        await self._get_owned_itinerary_row(user_id, itinerary_id)
+        await self._safe_delete(ITINERARY_ITEMS_TABLE, {"itinerary_id": itinerary_id})
+        await self._safe_delete(ITINERARIES_TABLE, {"id": itinerary_id})
+
+    async def add_item_to_itinerary(
+        self,
+        user_id: str,
+        itinerary_id: str,
+        item_request: SupportsModelDump | Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Add an item to an owned itinerary."""
+        await self._get_owned_itinerary_row(user_id, itinerary_id)
+        payload = self._normalize_payload(item_request)
+        self._ensure_required_fields(payload, {"item_type", "title", "item_date"})
+        now = datetime.now(UTC)
+        item = ItineraryItemRecord(
+            id=str(uuid4()),
+            itinerary_id=itinerary_id,
+            item_type=str(payload["item_type"]),
+            title=payload["title"],
+            description=payload.get("description"),
+            item_date=payload["item_date"],
+            start_time=self._extract_time(payload.get("time_slot"), "start_time"),
+            end_time=self._extract_time(payload.get("time_slot"), "end_time"),
+            cost=payload.get("cost"),
+            currency=payload.get("currency"),
+            booking_reference=payload.get("booking_reference"),
+            notes=payload.get("notes"),
+            is_flexible=bool(payload.get("is_flexible", False)),
+            created_at=now,
+            updated_at=now,
+        )
+        await self._insert_item(item, user_id)
+        return self._serialize_item(item)
+
+    async def get_item(
+        self, user_id: str, itinerary_id: str, item_id: str
+    ) -> dict[str, Any]:
+        """Return an itinerary item ensuring the itinerary is owned by the caller."""
+        await self._get_owned_itinerary_row(user_id, itinerary_id)
+        row = await self._safe_select(
+            ITINERARY_ITEMS_TABLE,
+            filters={"id": item_id, "itinerary_id": itinerary_id},
+            limit=1,
+        )
+        if not row:
+            raise CoreResourceNotFoundError(
+                message="Itinerary item not found", code="ITEM_NOT_FOUND"
+            )
+        return self._serialize_item(self._build_item_from_row(row[0]))
+
+    async def update_item(
+        self,
+        user_id: str,
+        itinerary_id: str,
+        item_id: str,
+        update_request: SupportsModelDump | Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Update an itinerary item owned by the user."""
+        await self._get_owned_itinerary_row(user_id, itinerary_id)
+        payload = self._normalize_payload(update_request, exclude_none=True)
+        if not payload:
+            return await self.get_item(user_id, itinerary_id, item_id)
+
+        if "time_slot" in payload:
+            time_slot = payload.pop("time_slot")
+            payload["start_time"] = self._extract_time(time_slot, "start_time")
+            payload["end_time"] = self._extract_time(time_slot, "end_time")
+
+        payload["updated_at"] = datetime.now(UTC).isoformat()
+        await self._safe_update(
+            ITINERARY_ITEMS_TABLE,
+            data=payload,
+            filters={"id": item_id, "itinerary_id": itinerary_id},
+        )
+        return await self.get_item(user_id, itinerary_id, item_id)
+
+    async def delete_item(self, user_id: str, itinerary_id: str, item_id: str) -> None:
+        """Delete an itinerary item when the user owns the itinerary."""
+        await self._get_owned_itinerary_row(user_id, itinerary_id)
+        await self._safe_delete(
+            ITINERARY_ITEMS_TABLE, {"id": item_id, "itinerary_id": itinerary_id}
+        )
+
+    async def check_conflicts(self, user_id: str, itinerary_id: str) -> dict[str, Any]:
+        """Detect simple overlapping time conflicts for an itinerary."""
+        itinerary = await self.get_itinerary(user_id, itinerary_id)
+        conflicts: list[dict[str, Any]] = []
+        items_by_date: dict[date, list[dict[str, Any]]] = {}
+        for item in itinerary["items"]:
+            items_by_date.setdefault(item["item_date"], []).append(item)
+
+        for item_date, items in items_by_date.items():
+            sorted_items = sorted(
+                (i for i in items if i.get("start_time") and i.get("end_time")),
+                key=lambda x: cast(str, x["start_time"]),
+            )
+            for first, second in pairwise(sorted_items):
+                if cast(str, second["start_time"]) < cast(str, first["end_time"]):
+                    conflicts.append(
+                        {
+                            "date": item_date.isoformat(),
+                            "items": [first["id"], second["id"]],
+                            "reason": "time_overlap",
+                        }
+                    )
+
+        return {"has_conflicts": bool(conflicts), "conflicts": conflicts}
+
+    async def optimize_itinerary(
+        self,
+        user_id: str,
+        optimize_request: SupportsModelDump | Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Return a no-op optimisation result retaining the existing itinerary."""
+        payload = self._normalize_payload(optimize_request)
+        itinerary_id_value = payload.get("itinerary_id")
+        if not isinstance(itinerary_id_value, str) or not itinerary_id_value:
+            raise CoreValidationError(
+                message="itinerary_id is required",
+                code="MISSING_ITINERARY_ID",
+            )
+        itinerary = await self.get_itinerary(user_id, itinerary_id_value)
+        return {
+            "original_itinerary": itinerary,
+            "optimized_itinerary": itinerary,
+            "changes": [],
+            "optimization_score": 0.0,
+        }
+
+    # --------------------------------------------------------------------- #
+    # Internal helpers
+    # --------------------------------------------------------------------- #
+
+    @staticmethod
+    def _normalize_payload(
+        data: SupportsModelDump | Mapping[str, Any],
+        *,
+        exclude_none: bool = False,
+    ) -> dict[str, Any]:
+        """Convert request objects to dictionaries."""
+        if hasattr(data, "model_dump"):
+            return cast(SupportsModelDump, data).model_dump(exclude_none=exclude_none)
+        return {
+            key: value
+            for key, value in cast(Mapping[str, Any], data).items()
+            if not (exclude_none and value is None)
+        }
+
+    @staticmethod
+    def _ensure_required_fields(payload: Mapping[str, Any], required: set[str]) -> None:
+        """Assert that required fields are present."""
+        missing = [field for field in required if field not in payload]
+        if missing:
+            raise CoreValidationError(
+                message=f"Missing required fields: {', '.join(sorted(missing))}",
+                code="MISSING_FIELDS",
             )
 
-            # Redistribute times with breaks
-            if settings.start_day_time and settings.end_day_time:
-                start_minutes = self._time_to_minutes(settings.start_day_time)
-                current_minutes = start_minutes
+    @staticmethod
+    def _assert_valid_date_range(start: date, end: date) -> None:
+        """Validate date bounds."""
+        if end < start:
+            raise CoreValidationError(
+                message="End date must be on or after start date",
+                code="INVALID_DATE_RANGE",
+            )
 
-                for item in items_with_time:
-                    if item.is_confirmed and preserve_confirmed:
-                        continue
+    def _build_itinerary_record(
+        self, user_id: str, payload: Mapping[str, Any]
+    ) -> ItineraryRecord:
+        """Construct an itinerary record from payload data."""
+        start_date = cast(date, payload["start_date"])
+        end_date = cast(date, payload["end_date"])
+        self._assert_valid_date_range(start_date, end_date)
+        now = datetime.now(UTC)
+        return ItineraryRecord(
+            id=str(uuid4()),
+            user_id=user_id,
+            title=cast(str, payload["title"]),
+            description=cast(str | None, payload.get("description")),
+            start_date=start_date,
+            end_date=end_date,
+            status=ItineraryStatus(payload.get("status", ItineraryStatus.DRAFT)),
+            total_budget=cast(float | None, payload.get("total_budget")),
+            currency=cast(str | None, payload.get("currency")),
+            destinations=list(payload.get("destinations", [])),
+            tags=list(payload.get("tags", [])),
+            created_at=now,
+            updated_at=now,
+        )
 
-                    old_start = item.time_slot.start_time
-                    old_end = item.time_slot.end_time
+    async def _insert_itinerary(self, itinerary: ItineraryRecord) -> None:
+        """Persist an itinerary record."""
+        await self._safe_insert(
+            ITINERARIES_TABLE,
+            itinerary.model_dump(mode="json", exclude_none=True),
+            user_id=itinerary.user_id,
+        )
 
-                    # Set new start time
-                    new_start = self._minutes_to_time(current_minutes)
-                    new_end_minutes = current_minutes + item.time_slot.duration_minutes
-                    new_end = self._minutes_to_time(new_end_minutes)
-
-                    if old_start != new_start or old_end != new_end:
-                        item.time_slot.start_time = new_start
-                        item.time_slot.end_time = new_end
-
-                        changes.append(
-                            {
-                                "item_id": item.id,
-                                "type": "time_adjustment",
-                                "old_start": old_start,
-                                "old_end": old_end,
-                                "new_start": new_start,
-                                "new_end": new_end,
-                            }
-                        )
-
-                    # Add break time
-                    current_minutes = new_end_minutes + settings.break_duration_minutes
-
-        # Calculate optimization score based on changes made
-        optimization_score = min(1.0, len(changes) * 0.1)
-
-        return {"itinerary": itinerary, "changes": changes, "score": optimization_score}
-
-    async def _calculate_savings(
-        self, original: Itinerary, optimized: Itinerary
-    ) -> dict[str, float]:
-        """Calculate estimated savings from optimization."""
-        savings = {}
-
-        # Time savings (in minutes)
-        original_time = self._calculate_total_travel_time(original)
-        optimized_time = self._calculate_total_travel_time(optimized)
-        savings["time_minutes"] = max(0, original_time - optimized_time)
-
-        # Cost savings
-        original_cost = original.budget_spent or 0
-        optimized_cost = optimized.budget_spent or 0
-        savings["cost"] = max(0, original_cost - optimized_cost)
-
-        return savings
-
-    def _calculate_total_travel_time(self, itinerary: Itinerary) -> int:
-        """Calculate total travel time in minutes."""
-        # Simplified calculation - would need actual route planning
-        return 0
-
-    def _time_to_minutes(self, time_str: str) -> int:
-        """Convert time string to minutes since midnight."""
-        hour, minute = map(int, time_str.split(":"))
-        return hour * 60 + minute
-
-    def _minutes_to_time(self, minutes: int) -> str:
-        """Convert minutes since midnight to time string."""
-        hour = (minutes // 60) % 24
-        minute = minutes % 60
-        return f"{hour:02d}:{minute:02d}"
-
-    def _get_cached_itinerary(self, cache_key: str) -> Itinerary | None:
-        """Get cached itinerary if still valid."""
-        if cache_key in self._itinerary_cache:
-            result, timestamp = self._itinerary_cache[cache_key]
-            import time
-
-            if time.time() - timestamp < self.cache_ttl:
-                return result
-            else:
-                del self._itinerary_cache[cache_key]
-        return None
-
-    def _cache_itinerary(self, cache_key: str, itinerary: Itinerary) -> None:
-        """Cache itinerary."""
-        import time
-
-        self._itinerary_cache[cache_key] = (itinerary, time.time())
-
-    def _clear_itinerary_cache(self, itinerary_id: str) -> None:
-        """Clear cache for an itinerary."""
-        cache_key = f"itinerary_{itinerary_id}"
-        if cache_key in self._itinerary_cache:
-            del self._itinerary_cache[cache_key]
-
-    def _get_cached_conflicts(self, cache_key: str) -> list[ItineraryConflict] | None:
-        """Get cached conflicts if still valid."""
-        if cache_key in self._conflict_cache:
-            result, timestamp = self._conflict_cache[cache_key]
-            import time
-
-            if time.time() - timestamp < self.cache_ttl:
-                return result
-            else:
-                del self._conflict_cache[cache_key]
-        return None
-
-    def _cache_conflicts(
-        self, cache_key: str, conflicts: list[ItineraryConflict]
+    async def _insert_item(
+        self, item: ItineraryItemRecord, user_id: str | None
     ) -> None:
-        """Cache conflicts."""
-        import time
+        """Persist an itinerary item record."""
+        await self._safe_insert(
+            ITINERARY_ITEMS_TABLE,
+            item.model_dump(mode="json", exclude_none=True),
+            user_id=user_id,
+        )
 
-        self._conflict_cache[cache_key] = (conflicts, time.time())
+    def _serialize_itinerary(
+        self, itinerary: ItineraryRecord, items: list[ItineraryItemRecord]
+    ) -> dict[str, Any]:
+        """Convert itinerary data to an API-friendly payload."""
+        return {
+            "id": itinerary.id,
+            "title": itinerary.title,
+            "description": itinerary.description,
+            "start_date": itinerary.start_date,
+            "end_date": itinerary.end_date,
+            "status": itinerary.status.value,
+            "total_budget": itinerary.total_budget,
+            "currency": itinerary.currency,
+            "tags": itinerary.tags,
+            "items": [self._serialize_item(item) for item in items],
+            "created_at": itinerary.created_at.isoformat(),
+            "updated_at": itinerary.updated_at.isoformat(),
+        }
 
-    async def _store_itinerary(self, itinerary: Itinerary) -> None:
-        """Store itinerary in database."""
-        try:
-            itinerary_data = itinerary.model_dump()
-            await self.db.store_itinerary(itinerary_data)
+    @staticmethod
+    def _serialize_item(item: ItineraryItemRecord) -> dict[str, Any]:
+        """Convert an itinerary item into a response dictionary."""
+        return {
+            "id": item.id,
+            "item_type": item.item_type,
+            "title": item.title,
+            "description": item.description,
+            "item_date": item.item_date,
+            "start_time": item.start_time,
+            "end_time": item.end_time,
+            "cost": item.cost,
+            "currency": item.currency,
+            "booking_reference": item.booking_reference,
+            "notes": item.notes,
+            "is_flexible": item.is_flexible,
+            "created_at": item.created_at.isoformat(),
+            "updated_at": item.updated_at.isoformat(),
+        }
 
-        except Exception as e:
-            logger.exception(
-                "Failed to store itinerary",
-                extra={"itinerary_id": itinerary.id, "error": str(e)},
+    async def _load_items_for_itinerary(
+        self, itinerary_id: str
+    ) -> list[ItineraryItemRecord]:
+        """Load itinerary items ordered by date and start time."""
+        rows = await self._safe_select(
+            ITINERARY_ITEMS_TABLE,
+            filters={"itinerary_id": itinerary_id},
+            order_by="item_date",
+        )
+        return [self._build_item_from_row(row) for row in rows]
+
+    @staticmethod
+    def _build_itinerary_from_row(row: Mapping[str, Any]) -> ItineraryRecord:
+        """Instantiate an itinerary record from a database row."""
+        return ItineraryRecord.model_validate(row)
+
+    @staticmethod
+    def _build_item_from_row(row: Mapping[str, Any]) -> ItineraryItemRecord:
+        """Instantiate an itinerary item record from a database row."""
+        return ItineraryItemRecord.model_validate(row)
+
+    async def _get_owned_itinerary_row(
+        self, user_id: str, itinerary_id: str
+    ) -> Mapping[str, Any]:
+        """Fetch an itinerary row ensuring ownership."""
+        rows = await self._safe_select(
+            ITINERARIES_TABLE,
+            filters={"id": itinerary_id, "user_id": user_id},
+            limit=1,
+        )
+        if not rows:
+            raise CoreResourceNotFoundError(
+                message="Itinerary not found",
+                code="ITINERARY_NOT_FOUND",
             )
-            raise
+        return rows[0]
+
+    @staticmethod
+    def _extract_time(
+        slot: Mapping[str, Any] | None,
+        field_name: str,
+    ) -> str | None:
+        """Extract a HH:MM string from a nested time slot mapping."""
+        if slot is None:
+            return None
+        value = slot.get(field_name)
+        if isinstance(value, time):
+            return value.strftime("%H:%M")
+        if isinstance(value, str):
+            return value
+        return None
+
+    # --------------- Safe database wrappers ------------------------------ #
+
+    async def _safe_insert(
+        self,
+        table: str,
+        data: dict[str, Any],
+        user_id: str | None = None,
+    ) -> None:
+        """Insert a record into the database."""
+        try:
+            await self._db.insert(table, data, user_id=user_id)
+        except CoreDatabaseError as exc:
+            LOGGER.exception("Insert failed for table %s", table)
+            raise CoreServiceError(
+                message=f"Failed to insert into {table}",
+                code="INSERT_FAILED",
+            ) from exc
+
+    async def _safe_select(
+        self,
+        table: str,
+        *,
+        filters: Mapping[str, Any] | None = None,
+        order_by: str | None = None,
+        limit: int | None = None,
+    ) -> list[Mapping[str, Any]]:
+        """Select records from the database."""
+        try:
+            return cast(
+                list[Mapping[str, Any]],
+                await self._db.select(
+                    table,
+                    filters=dict(filters) if filters else None,
+                    order_by=order_by,
+                    limit=limit,
+                ),
+            )
+        except CoreDatabaseError as exc:
+            LOGGER.exception("Select failed for table %s", table)
+            raise CoreServiceError(
+                message=f"Failed to load data from {table}",
+                code="SELECT_FAILED",
+            ) from exc
+
+    async def _safe_update(
+        self,
+        table: str,
+        *,
+        data: Mapping[str, Any],
+        filters: Mapping[str, Any],
+    ) -> None:
+        """Update a record in the database."""
+        try:
+            await self._db.update(table, dict(data), dict(filters))
+        except CoreDatabaseError as exc:
+            LOGGER.exception("Update failed for table %s", table)
+            raise CoreServiceError(
+                message=f"Failed to update {table}",
+                code="UPDATE_FAILED",
+            ) from exc
+
+    async def _safe_delete(
+        self,
+        table: str,
+        filters: Mapping[str, Any],
+    ) -> None:
+        """Delete a record from the database."""
+        try:
+            await self._db.delete(table, dict(filters))
+        except CoreDatabaseError as exc:
+            LOGGER.exception("Delete failed for table %s", table)
+            raise CoreServiceError(
+                message=f"Failed to delete from {table}",
+                code="DELETE_FAILED",
+            ) from exc
 
 
-# Dependency function for FastAPI
 async def get_itinerary_service() -> ItineraryService:
-    """Get itinerary service instance for dependency injection.
+    """Factory for dependency injection within FastAPI routers."""
+    from tripsage_core.services.infrastructure.database_service import (
+        get_database_service,
+    )
 
-    Returns:
-        ItineraryService instance
-    """
-    return ItineraryService()
+    database_service = await get_database_service()
+    return ItineraryService(database_service)

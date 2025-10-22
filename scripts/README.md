@@ -15,8 +15,11 @@ Automation scripts and utilities for TripSage development, deployment, and opera
 - **`init_database.py`** - Initialize database schema and seed data
 - **`run_migrations.py`** - Apply pending SQL migrations (supports `--dry-run`)
 - **`deploy_storage_infrastructure.py`** - Deploy storage buckets and policies
-- **`deploy_triggers.py`** - Deploy database triggers and functions
 - **`migrations/`** - SQL migration files with timestamp prefixes
+
+Note: Database triggers and functions are provisioned via Supabase SQL and Edge
+Functions, not via a Python script. Use the Supabase tooling under
+`supabase/functions/` (see `deploy.sh` and `setup_edge_function_triggers.sql`).
 
 ### `/benchmarks/` - Performance Testing
 
