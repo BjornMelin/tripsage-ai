@@ -29,9 +29,9 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import create_engine, event, pool, text
 from sqlalchemy.engine import Engine
-from supabase.lib.client_options import ClientOptions
-
 from supabase import Client, create_client
+
+from supabase.lib.client_options import ClientOptions
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreDatabaseError,
