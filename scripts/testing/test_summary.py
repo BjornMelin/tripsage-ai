@@ -24,7 +24,7 @@ def get_test_results(test_dir):
         "--no-summary",
     ]
 
-    result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+    result = subprocess.run(cmd, env=env, capture_output=True, text=True, check=False)
 
     # Parse output
     passed = 0
@@ -40,7 +40,7 @@ def get_test_results(test_dir):
                     passed = int(parts[i - 1])
                 elif part == "failed":
                     failed = int(parts[i - 1])
-                elif part == "error" in line:
+                elif part in ("errors", "error"):
                     errors = int(parts[i - 1])
         elif " passed" in line and "failed" not in line:
             # Only passed tests

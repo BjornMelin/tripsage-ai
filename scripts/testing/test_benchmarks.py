@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=attribute-defined-outside-init
 """Modern test suite for consolidated benchmark scripts.
 
 Uses pytest-asyncio for modern async testing patterns.
@@ -15,12 +16,15 @@ import pytest
 
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-sys.path.insert(0, str(Path(__file__).parent.parent / "benchmarks"))
 
-from benchmark import BenchmarkRunner
-from collectors import MemorySnapshot, MetricsCollector, ReportGenerator, TimingResult
-
-from config import (
+from scripts.benchmarks.benchmark import BenchmarkRunner
+from scripts.benchmarks.collectors import (
+    MemorySnapshot,
+    MetricsCollector,
+    ReportGenerator,
+    TimingResult,
+)
+from scripts.benchmarks.config import (
     BenchmarkConfig,
     OptimizationLevel,
     WorkloadType,

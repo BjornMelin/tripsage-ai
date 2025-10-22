@@ -74,9 +74,9 @@ SUPABASE_URL=your_supabase_project_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# DragonflyDB Cache (local development)
-DRAGONFLY_URL=redis://localhost:6379
-DRAGONFLY_PASSWORD=tripsage_secure_password
+# Upstash Redis (serverless)
+UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
+UPSTASH_REDIS_REST_TOKEN=<token>
 
 # AI Services (optional for basic development)
 OPENAI_API_KEY=your_openai_key  # For embeddings/chat
@@ -91,13 +91,8 @@ ENVIRONMENT=development
 ### **Start Local Services**
 
 ```bash
-# 7. Start DragonflyDB (optional but recommended)
-docker run -d --name tripsage-dragonfly -p 6379:6379 \
-  docker.dragonflydb.io/dragonflydb/dragonfly:latest \
-  --logtostderr --cache_mode --requirepass tripsage_secure_password
-
-# 8. Verify services
-uv run python scripts/verification/verify_dragonfly.py
+# 7. Verify Upstash Redis
+uv run python scripts/verification/verify_upstash.py
 ```
 
 ## 🔄 Development Workflow

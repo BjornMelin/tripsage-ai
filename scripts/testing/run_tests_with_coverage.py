@@ -14,7 +14,7 @@ def run_tests():
 
     # Set environment variables for testing
     env = os.environ.copy()
-    env["PYTHONPATH"] = Path.cwd()
+    env["PYTHONPATH"] = str(Path.cwd())
     env["ENV"] = "test"
 
     # Run pytest with coverage
@@ -31,7 +31,7 @@ def run_tests():
         "--maxfail=10",  # Stop after 10 failures to see patterns
     ]
 
-    result = subprocess.run(cmd, env=env, capture_output=False)
+    result = subprocess.run(cmd, env=env, capture_output=False, check=False)
 
     print("\n" + "=" * 80)
     print("Test run completed.")
@@ -48,7 +48,7 @@ def run_tests():
     ]
 
     summary_result = subprocess.run(
-        summary_cmd, env=env, capture_output=True, text=True
+        summary_cmd, env=env, capture_output=True, text=True, check=False
     )
 
     if summary_result.returncode == 0:
