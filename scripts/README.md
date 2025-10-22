@@ -1,6 +1,6 @@
 # TripSage Scripts
 
-> **⚡ Quick Start:** `python scripts/testing/test_runner.py` to verify environment setup.
+Quick Start: run `python scripts/testing/test_runner.py` to verify environment setup.
 
 Automation scripts and utilities for TripSage development, deployment, and operations. Organized by functional area for easy discovery and maintenance.
 
