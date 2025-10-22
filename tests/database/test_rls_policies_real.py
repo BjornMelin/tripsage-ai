@@ -109,8 +109,12 @@ class RealRLSPolicyTester:
             )
             if response.user:
                 print(f"Successfully signed in user: {user_data['email']}")
-        except (SupabaseException, AuthError, PostgrestAPIError, ValueError) as exc:
-            print(f"Failed to sign in user {user_data['email']}: {exc}")
+        except (SupabaseException, AuthError, PostgrestAPIError, ValueError):
+            # Avoid logging sensitive info such as password; only report minimal error.
+            masked_email = user_data["email"]
+            # Alternatively, mask all but the first few characters of email
+            # masked_email = masked_email[:3] + "***" + masked_email[-10:]
+            print(f"Failed to sign in user {masked_email}: Authentication error.")
             raise
 
     async def cleanup_test_data(self) -> None:
@@ -131,7 +135,8 @@ class RealRLSPolicyTester:
                 # Note: In production, you'd use admin client to delete users
                 # self.admin_client.auth.admin.delete_user(user["id"])
             except (SupabaseException, AuthError, PostgrestAPIError, ValueError) as exc:
-                print(f"Failed to cleanup user {user['email']}: {exc}")
+                masked_email = user["email"].replace("@", "[at]").split("+")[0]
+                print(f"Failed to cleanup user {masked_email}: {exc}")
 
     def record_result(
         self,
@@ -543,20 +548,18 @@ class RealRLSPolicyTester:
                 self.cleanup_data.append(
                     {"table": "search_destinations", "id": search_id}
                 )
-                query_hash = search_response.data[0]["query_hash"]
         except SUPABASE_ERRORS as exc:
             search_id = None
-            query_hash = None
             print(f"Failed to create search cache: {exc}")
 
-        if search_id and query_hash:
+        if search_id and search_response.data[0]["query_hash"]:
             # User B cannot see User A's search cache
             try:
                 other_cache_response = (
                     user_b["client"]
                     .table("search_destinations")
                     .select("*")
-                    .eq("query_hash", query_hash)
+                    .eq("query_hash", search_response.data[0]["query_hash"])
                     .execute()
                 )
                 unauthorized_access = len(other_cache_response.data) > 0
