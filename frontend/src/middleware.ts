@@ -45,11 +45,7 @@ export async function updateSession(request: NextRequest) {
 
 export async function middleware(request: NextRequest) {
   // Handle Supabase auth for all routes first
-  const response = await updateSession(request);
-
-  // Rate limiting has moved to the backend (SlowAPI). Middleware is now only
-  // responsible for Supabase session propagation.
-  return response;
+  return await updateSession(request);
 }
 
 export const config = {
