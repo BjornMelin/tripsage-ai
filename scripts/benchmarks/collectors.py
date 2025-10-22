@@ -434,7 +434,7 @@ class ReportGenerator:
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 TripSage Benchmark Report</h1>
+            <h1>TripSage Benchmark Report</h1>
             <h2>{report_type.replace("_", " ").title()}</h2>
             <p>Generated on {
             time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(timestamp))
@@ -443,7 +443,7 @@ class ReportGenerator:
         </div>
 
         <div class="metrics">
-            <h3>📊 Performance Metrics</h3>
+            <h3>Performance Metrics</h3>
 """
 
         # Add key metrics
@@ -490,7 +490,7 @@ class ReportGenerator:
         </div>
 
         <div class="validation {success_class}">
-            <h3>🎯 Optimization Claims Validation: {status_text}</h3>
+            <h3>Optimization Claims Validation: {status_text}</h3>
             <p><strong>Claims Validated:</strong>
                {summary.get("claims_validated", "0/4")}</p>
 """
@@ -498,9 +498,9 @@ class ReportGenerator:
             # Add individual claim details
             details = validation.get("details", {})
             for claim_key, claim_data in details.items():
-                status_icon = "✅" if claim_data.get("target_met", False) else "❌"
+                status_text = "OK" if claim_data.get("target_met", False) else "FAILED"
                 html_content += f"""
-            <p>{status_icon} {claim_data.get("claimed", claim_key)}</p>"""
+            <p>[{status_text}] {claim_data.get("claimed", claim_key)}</p>"""
 
             html_content += "</div>"
 

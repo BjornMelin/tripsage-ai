@@ -384,14 +384,14 @@ def quick(output_dir: str, iterations: int, concurrent: int):
     async def run():
         try:
             results = await runner.run_quick_test()
-            click.echo("✅ Quick benchmark completed!")
-            click.echo(f"📈 Report: {results.get('report_path', 'N/A')}")
+            click.echo("Quick benchmark completed")
+            click.echo(f"Report: {results.get('report_path', 'N/A')}")
             click.echo(
-                f"⚡ Operations/sec: {results['results']['operations_per_second']:.1f}"
+                f"Operations/sec: {results['results']['operations_per_second']:.1f}"
             )
             return 0
         except Exception as e:  # noqa: BLE001
-            click.echo(f"❌ Quick benchmark failed: {e}")
+            click.echo(f"Quick benchmark failed: {e}")
             return 1
 
     exit_code = asyncio.run(run())
@@ -441,11 +441,11 @@ def vector_only(output_dir: str):
     async def run():
         try:
             results = await runner.run_vector_only()
-            click.echo("✅ Vector benchmark completed!")
-            click.echo(f"📈 Report: {results.get('report_path', 'N/A')}")
+            click.echo("Vector benchmark completed")
+            click.echo(f"Report: {results.get('report_path', 'N/A')}")
             return 0
         except Exception as e:  # noqa: BLE001
-            click.echo(f"❌ Vector benchmark failed: {e}")
+            click.echo(f"Vector benchmark failed: {e}")
             return 1
 
     exit_code = asyncio.run(run())
@@ -474,22 +474,22 @@ def full_suite(output_dir: str, timeout: int):
             claims_met = validation.get("claims_validated", 0)
             total_claims = validation.get("total_claims", 4)
 
-            click.echo("✅ Full benchmark suite completed!")
-            click.echo(f"📈 Report: {results.get('report_path', 'N/A')}")
-            click.echo(f"🎯 Claims validated: {claims_met}/{total_claims}")
+            click.echo("Full benchmark suite completed")
+            click.echo(f"Report: {results.get('report_path', 'N/A')}")
+            click.echo(f"Claims validated: {claims_met}/{total_claims}")
 
             if validation.get("overall_success", False):
-                click.echo("🎉 All optimization claims validated successfully!")
+                click.echo("All optimization claims validated successfully")
                 return 0
             else:
-                click.echo("⚠️  Some optimization claims were not met.")
+                click.echo("Some optimization claims were not met.")
                 return 1
 
         except TimeoutError:
-            click.echo(f"❌ Benchmark suite timed out after {timeout} seconds")
+            click.echo(f"Benchmark suite timed out after {timeout} seconds")
             return 1
         except Exception as e:  # noqa: BLE001
-            click.echo(f"❌ Benchmark suite failed: {e}")
+            click.echo(f"Benchmark suite failed: {e}")
             return 1
 
     exit_code = asyncio.run(run())
