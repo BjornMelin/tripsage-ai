@@ -62,14 +62,11 @@ from tripsage_core.services.infrastructure.websocket_manager import websocket_ma
 from tripsage_core.services.simple_mcp_service import default_mcp_service
 
 
-logger = logging.getLogger(__name__)
+logger: "logging.Logger" = logging.getLogger(__name__)  # pylint: disable=no-member
 
 
 def format_error_response(exc: CoreTripSageError, request: Request) -> dict[str, Any]:
-    """Format error response with simple, consistent structure.
-
-    Modern approach - single error format for all consumers.
-    """
+    """Format error response with simple, consistent structure."""
     return {
         "error": True,
         "message": exc.message,
@@ -124,13 +121,23 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     """
     settings = get_settings()
 
-    # Initialize OpenTelemetry once using settings-driven flags
+    # Initialize OpenTelemetry once using settings-driven flags. Prevent
+    # duplicate server spans by preferring FastAPI instrumentation when both
+    # toggles are enabled.
+    enable_asgi = settings.enable_asgi_instrumentation
+    if settings.enable_fastapi_instrumentation and settings.enable_asgi_instrumentation:
+        enable_asgi = False
+        logger.warning(
+            "Both FastAPI and ASGI instrumentation enabled; disabling ASGI to "
+            "prevent duplicate spans."
+        )
+
     setup_otel(
         service_name="tripsage-api",
         service_version=settings.api_version,
         environment=settings.environment,
-        enable_fastapi=False,  # instrument FastAPI via instrument_app below
-        enable_asgi=settings.enable_asgi_instrumentation,
+        enable_fastapi=settings.enable_fastapi_instrumentation,
+        enable_asgi=enable_asgi,
         enable_httpx=settings.enable_httpx_instrumentation,
         enable_redis=settings.enable_redis_instrumentation,
     )
@@ -157,6 +164,16 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
             fastapi_inst.FastAPIInstrumentor().instrument_app(app)
         except ImportError:  # pragma: no cover - optional dep
             pass
+
+    # Add OTEL trace/span correlation to logs (root logger)
+    try:
+        from tripsage_core.observability.log_correlation import (
+            install_trace_log_correlation as _install_trace_log_correlation,
+        )
+
+        _install_trace_log_correlation()
+    except Exception:  # noqa: BLE001 - never break startup on logging issues
+        logger.warning("Trace log correlation not installed")
 
     # Configure CORS with unified settings
     app.add_middleware(
