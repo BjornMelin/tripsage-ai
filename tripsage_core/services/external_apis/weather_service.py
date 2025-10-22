@@ -92,8 +92,7 @@ class WeatherService:
                 await self._client.aclose()
             except CoreServiceError as close_error:
                 logger.warning(
-                    "Error closing weather service HTTP client: %s",
-                    close_error,
+                    "Error closing weather service HTTP client: %s", close_error
                 )
             finally:
                 self._client = None
