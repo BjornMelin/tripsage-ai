@@ -11,10 +11,11 @@ import asyncio
 import logging
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import CacheDep, DatabaseDep, SettingsDep
+from tripsage.api.limiting import limiter
 from tripsage_core.observability.otel import (
     http_route_attr_fn,
     record_histogram,
@@ -56,11 +57,15 @@ class ReadinessCheck(BaseModel):
     details: dict[str, str] = Field(default_factory=dict)
 
 
+
+
 @router.get("/health", response_model=SystemHealth)
+@limiter.exempt
 @trace_span(name="api.health")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def comprehensive_health_check(
     request: Request,
+    response: Response,
     settings: SettingsDep,
     db_service: DatabaseDep,
     cache_service: CacheDep,
@@ -141,9 +146,10 @@ async def comprehensive_health_check(
 
 
 @router.get("/health/liveness")
+@limiter.exempt
 @trace_span(name="api.health.liveness")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def liveness_check(request: Request):
+async def liveness_check(request: Request, response: Response):
     """Basic liveness check for container orchestration.
 
     Returns 200 if the application is alive and can respond to requests.
@@ -156,10 +162,12 @@ async def liveness_check(request: Request):
 
 
 @router.get("/health/readiness", response_model=ReadinessCheck)
+@limiter.exempt
 @trace_span(name="api.health.readiness")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def readiness_check(
     request: Request,
+    response: Response,
     db_service: DatabaseDep,
     cache_service: CacheDep,
 ):
@@ -294,7 +302,9 @@ async def cache_health_check(request: Request, cache_service: CacheDep):
     # Add more detailed cache metrics if available
     if hasattr(cache_service, "info"):
         try:
-            info = await cache_service.info()
+            from typing import Any, cast
+
+            info = await cast(Any, cache_service).info()
             health.details.update(
                 {
                     "used_memory": info.get("used_memory_human"),
@@ -310,3 +320,19 @@ async def cache_health_check(request: Request, cache_service: CacheDep):
 
 # Internal helper functions removed; database health sourced from monitor,
 # cache health via service.health_check().
+
+
+@router.get("/health/ratelimit", response_model=dict)
+@limiter.exempt
+async def ratelimit_status(request: Request, response: Response):
+    """Show current rate-limiting backend information (operators)."""
+    lim = getattr(request.app.state, "limiter", None)
+    if lim is None:
+        return {"enabled": False}
+    return {
+        "enabled": True,
+        "storage_uri": getattr(lim, "storage_uri", "unknown"),
+        "storage_options": getattr(lim, "storage_options", {}),
+        "headers_enabled": getattr(lim, "headers_enabled", False),
+        "default_limits": getattr(lim, "default_limits", []),
+    }

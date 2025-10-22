@@ -7,13 +7,14 @@ chat service for clean separation of concerns.
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from tripsage.api.core.dependencies import (
     ChatServiceDep,
     RequiredPrincipalDep,
     get_principal_id,
 )
+from tripsage.api.limiting import limiter
 from tripsage.api.schemas.chat import (
     ChatRequest,
     ChatResponse,
@@ -32,10 +33,13 @@ router = APIRouter()
 
 
 @router.post("/", response_model=ChatResponse)
+@limiter.limit("20/minute")
 @trace_span(name="api.chat.completion")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def chat(
     request: ChatRequest,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
 ):
@@ -43,6 +47,8 @@ async def chat(
 
     Args:
         request: Chat request with messages and options
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
 
@@ -68,21 +74,19 @@ async def chat(
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def create_session(
     body: SessionCreateRequest,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
 ):
     """Create a new chat session.
 
     Args:
-        title: Session title
+        body: Session creation request body
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
-
-    Returns:
-        Created session information
-
-    Args:
-        body: Session creation request body
     """
     try:
         user_id = get_principal_id(principal)
@@ -111,12 +115,16 @@ async def create_session(
 @trace_span(name="api.chat.sessions.list")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def list_sessions(
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
 ):
     """List chat sessions for the current user.
 
     Args:
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
 
@@ -141,6 +149,8 @@ async def list_sessions(
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_session(
     session_id: UUID,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
 ):
@@ -148,6 +158,8 @@ async def get_session(
 
     Args:
         session_id: Session ID
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
 
@@ -178,8 +190,10 @@ async def get_session(
 @router.get("/sessions/{session_id}/messages", response_model=list[dict])
 @trace_span(name="api.chat.messages.list")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def get_session_messages(
+async def get_session_messages(  # pylint: disable=too-many-positional-arguments
     session_id: UUID,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
     limit: int = 50,
@@ -188,6 +202,8 @@ async def get_session_messages(
 
     Args:
         session_id: Session ID
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
         limit: Maximum number of messages to return
@@ -211,8 +227,10 @@ async def get_session_messages(
 @router.post("/sessions/{session_id}/messages", response_model=dict)
 @trace_span(name="api.chat.messages.create")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def create_message(
+async def create_message(  # pylint: disable=too-many-positional-arguments
     session_id: UUID,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
     body: CreateMessageRequest,
@@ -221,15 +239,10 @@ async def create_message(
 
     Args:
         session_id: Session ID
-        content: Message content
-        role: Message role (user/assistant)
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
-
-    Returns:
-        Created message
-
-    Args:
         body: Message creation request body
     """
     try:
@@ -254,6 +267,8 @@ async def create_message(
 @router.delete("/sessions/{session_id}")
 async def delete_session(
     session_id: UUID,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
 ):
@@ -261,6 +276,8 @@ async def delete_session(
 
     Args:
         session_id: Session ID to delete
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
 
