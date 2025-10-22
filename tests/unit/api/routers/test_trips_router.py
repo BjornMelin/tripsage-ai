@@ -1,4 +1,4 @@
-"""Comprehensive tests for trips router with collaboration features.
+"""Tests for trips router with collaboration features.
 
 This module provides complete test coverage for the trips router implementation,
 including collaboration features, permission-based access control, multi-user
@@ -49,7 +49,7 @@ from tripsage_core.services.business.trip_service import TripService
 
 
 class TestTripsRouterComprehensive:
-    """Comprehensive test suite for trips router functionality."""
+    """Test suite for trips router functionality."""
 
     # ===== FIXTURES =====
 
@@ -75,7 +75,7 @@ class TestTripsRouterComprehensive:
 
     @pytest.fixture
     def mock_trip_service(self):
-        """Mock trip service with comprehensive method coverage."""
+        """Mock trip service with method coverage."""
         service = MagicMock(spec=TripService)
         service.create_trip = AsyncMock()
         service.get_trip = AsyncMock()
@@ -105,8 +105,8 @@ class TestTripsRouterComprehensive:
     def sample_shared_trip_response(self):
         """Sample shared trip response from core service."""
         from tripsage_core.models.trip import (
-            BudgetBreakdown,
             Budget,
+            BudgetBreakdown,
             TripPreferences,
         )
         from tripsage_core.services.business.trip_service import TripLocation

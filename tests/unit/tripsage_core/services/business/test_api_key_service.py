@@ -1,4 +1,4 @@
-"""Comprehensive tests for ApiKeyService.
+"""Tests for ApiKeyService.
 
 This module provides full test coverage for the modern API key service
 including validation, storage, rotation, and monitoring functionality.

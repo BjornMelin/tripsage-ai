@@ -1,4 +1,4 @@
-"""Comprehensive tests for LangGraph orchestration system.
+"""Tests for LangGraph orchestration system.
 
 Tests the modern LangGraph-based agent orchestration with proper state management,
 node implementations, and tool integration following latest best practices.
@@ -134,7 +134,7 @@ class TestTripSageOrchestrator:
 
     @pytest.fixture
     def mock_service_registry(self):
-        """Create a comprehensive mock service registry."""
+        """Create a mock service registry."""
         registry = Mock(spec=ServiceRegistry)
         registry.flight_service = Mock()
         registry.accommodation_service = Mock()

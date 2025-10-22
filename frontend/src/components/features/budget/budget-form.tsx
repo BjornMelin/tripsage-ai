@@ -1,5 +1,5 @@
 /**
- * Trip Budget Form with comprehensive Zod validation
+ * Trip Budget Form with Zod validation
  * Demonstrates latest validation patterns and error handling
  */
 

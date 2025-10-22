@@ -1,5 +1,5 @@
 /**
- * Comprehensive loading components index
+ * Loading components index
  * Exports all loading-related components for easy importing
  */
 

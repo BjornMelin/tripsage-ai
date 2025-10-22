@@ -1,6 +1,6 @@
 # TripSage Unified API
 
-A comprehensive FastAPI implementation that serves both frontend applications and AI agents for the TripSage travel planning platform.
+A FastAPI implementation that serves both frontend applications and AI agents for the TripSage travel planning platform.
 
 ## Overview
 
@@ -15,7 +15,7 @@ The TripSage API provides a unified interface that supports:
 
 - **User Authentication & Management** - JWT and API key authentication
 - **BYOK (Bring Your Own Key)** - Secure user-provided API key management
-- **Trip Planning & Management** - Comprehensive travel planning workflow
+- **Trip Planning & Management** - Travel planning workflow
 - **Flight Search & Booking** - Multi-provider flight search and comparison
 - **Accommodation Search** - Hotel and alternative lodging search
 - **Destination Research** - AI-powered destination insights and recommendations
@@ -434,7 +434,7 @@ The API leverages `tripsage_core` for:
 - **Service layer** - Business logic and external API integration
 - **Models** - Shared data structures and validation
 - **Configuration** - Centralized settings management
-- **Error handling** - Comprehensive exception system
+- **Error handling** - Exception system
 - **Infrastructure** - Database, caching, and communication services
 
 Example service integration:

@@ -1,4 +1,4 @@
-"""Comprehensive tests for ChatService.
+"""Tests for ChatService.
 
 This module provides full test coverage for chat session management operations
 including session creation, message handling, context management, and AI interactions.

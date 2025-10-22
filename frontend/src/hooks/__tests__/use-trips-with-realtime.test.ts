@@ -1,5 +1,5 @@
 /**
- * Comprehensive test suite for trip real-time integration hooks.
+ * Test suite for trip real-time integration hooks.
  * Tests trip data synchronization with real-time updates and connection monitoring.
  */
 

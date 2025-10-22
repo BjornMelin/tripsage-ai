@@ -1,4 +1,4 @@
-"""Comprehensive test suite for TripService.
+"""Test suite for TripService.
 
 This module tests the TripService with realistic test data that aligns
 with the actual service implementation. Uses modern pytest patterns
@@ -37,7 +37,7 @@ class TestTripService:
 
     @pytest.fixture
     def mock_database_service(self):
-        """Create mock database service with comprehensive trip operations."""
+        """Create mock database service with trip operations."""
         db = AsyncMock()
         # Set up default return values
         db.create_trip = AsyncMock()

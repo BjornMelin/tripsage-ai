@@ -1,6 +1,6 @@
-"""Comprehensive tests for Pydantic v2 auth schemas.
+"""Tests for Pydantic v2 auth schemas.
 
-This module provides comprehensive test coverage for authentication-related
+This module provides test coverage for authentication-related
 schemas including request validation, password requirements, and API responses.
 """
 

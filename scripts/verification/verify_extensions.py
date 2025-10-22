@@ -24,7 +24,7 @@ REQUIRED_EXTENSIONS = {
     "pg_cron": "Scheduled job automation",
     "pg_net": "HTTP requests from database",
     "pg_stat_statements": "Query performance monitoring",
-    "btree_gist": "Advanced indexing capabilities",
+    "btree_gist": "Indexing capabilities",
     "pgcrypto": "Encryption functions",
 }
 

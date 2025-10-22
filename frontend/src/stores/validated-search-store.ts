@@ -1,5 +1,5 @@
 /**
- * Example of Zustand store with comprehensive Zod validation
+ * Example of Zustand store with Zod validation
  * Demonstrates runtime type safety for store state and mutations
  */
 

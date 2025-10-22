@@ -1,9 +1,9 @@
-"""Modern comprehensive unit tests for chat router.
+"""Modern unit tests for chat router.
 
 Tests the chat router endpoints using 2025 FastAPI testing patterns:
 - Modern dependency injection with Annotated types
 - Proper async testing with pytest-asyncio
-- Comprehensive error handling and edge cases
+- Error handling and edge cases
 - Streaming response testing
 """
 

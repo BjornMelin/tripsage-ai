@@ -23,7 +23,7 @@ TripSage combines AI-powered recommendations with real-time collaboration and ad
 
 - **🧠 AI Memory System**: Learns and remembers your preferences across trips
 - **🤝 Real-time Collaboration**: Plan trips together with travel companions
-- **🔗 Comprehensive Integration**: Direct API access to flights, hotels, and activities
+- **🔗 Integration**: Direct API access to flights, hotels, and activities
 - **🎯 Personalization**: Tailored recommendations based on your travel history
 - **🛠️ Developer-Friendly**: Full API access for custom integrations
 
@@ -103,7 +103,7 @@ Yes! TripSage is designed for self-hosting:
 
 - **🐳 Docker Support**: Complete containerized deployment
 - **☁️ Cloud-Ready**: Deploy on AWS, GCP, Azure, or any cloud provider
-- **📖 Deployment Guides**: Comprehensive setup documentation
+- **📖 Deployment Guides**: Setup documentation
 - **🔧 Configuration**: Flexible environment-based configuration
 - **📊 Monitoring**: Built-in observability and health checks
 
@@ -220,7 +220,7 @@ TripSage supports horizontal scaling:
 
 ### **Is TripSage GDPR compliant?**
 
-Yes! TripSage includes comprehensive GDPR compliance:
+Yes! TripSage includes GDPR compliance:
 
 - **📋 Data Export**: Complete user data export in JSON format
 - **🗑️ Data Deletion**: Secure data removal on request

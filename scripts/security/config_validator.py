@@ -81,7 +81,7 @@ def validate_secrets_security(settings: Any) -> dict[str, bool]:
 
 
 class SecurityValidator:
-    """Comprehensive security validation for TripSage configuration."""
+    """Security validation for TripSage configuration."""
 
     def __init__(self):
         """Initialize security configuration validator."""
@@ -89,7 +89,7 @@ class SecurityValidator:
         self.warnings: list[str] = []
 
     def validate_configuration_security(self) -> bool:
-        """Run comprehensive security validation.
+        """Run security validation.
 
         Returns:
             True if all security checks pass, False otherwise

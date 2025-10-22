@@ -554,7 +554,7 @@ class TestPreConfiguredDependencies:
             assert len(dep.__metadata__) > 0
 
 
-class TestAdvancedSecurityScenarios:
+class TestSecurityScenarios:
     """Test advanced security scenarios and edge cases."""
 
     @pytest.mark.asyncio

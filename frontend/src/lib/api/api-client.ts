@@ -1,5 +1,5 @@
 /**
- * API client with comprehensive Zod validation.
+ * API client with Zod validation.
  * Provides runtime type safety for all API interactions.
  */
 

@@ -1,6 +1,6 @@
 """Modern test suite for ToolCallService with updated interfaces.
 
-Comprehensive tests for MCP tool calling, validation, error handling,
+Tests for MCP tool calling, validation, error handling,
 and retry mechanisms matching the actual implementation.
 """
 

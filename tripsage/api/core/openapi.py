@@ -15,7 +15,7 @@ API_TITLE = "TripSage Unified API"
 API_DESCRIPTION = """
 # TripSage Unified Travel Planning API
 
-A comprehensive FastAPI implementation that serves both frontend applications
+A FastAPI implementation that serves both frontend applications
 and AI agents for travel planning.
 
 ## Dual Consumer Architecture
@@ -37,7 +37,7 @@ This API is designed to serve multiple consumer types with adapted responses:
 ## Core Capabilities
 
 ### Travel Planning & Management
-* **Trip Planning** - Comprehensive travel itinerary creation and optimization
+* **Trip Planning** - Travel itinerary creation and optimization
 * **Flight Search & Booking** - Multi-provider flight search with price tracking
 * **Accommodation Search** - Hotel and alternative lodging with MCP integration
 * **Destination Research** - AI-powered insights and recommendations
@@ -227,7 +227,7 @@ TAG_DESCRIPTIONS = [
     {
         "name": "trips",
         "description": (
-            "Trip planning and management endpoints. Supports comprehensive travel "
+            "Trip planning and management endpoints. Supports travel "
             "itinerary creation, optimization, and collaboration features."
         ),
     },
@@ -249,7 +249,7 @@ TAG_DESCRIPTIONS = [
         "name": "destinations",
         "description": (
             "Destination research endpoints with AI-powered insights. "
-            "Provides comprehensive destination information, weather, "
+            "Provides destination information, weather, "
             "and recommendations."
         ),
     },

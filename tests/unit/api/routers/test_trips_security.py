@@ -1,4 +1,4 @@
-"""Comprehensive security tests for trips router security fixes.
+"""Security tests for trips router security fixes.
 
 This module tests all 7 security vulnerability fixes implemented in the trips router,
 ensuring proper authorization, authentication, and audit logging across all endpoints.
@@ -635,7 +635,7 @@ class TestSecurityAuditLogging:
 
 
 class TestSecurityErrorHandling:
-    """Test comprehensive security error handling."""
+    """Test security error handling."""
 
     @pytest.mark.asyncio
     async def test_security_error_propagation(

@@ -82,7 +82,7 @@ python scripts/benchmarks/benchmark.py --quick
 # Quick benchmark suite
 python scripts/benchmarks/benchmark.py --iterations=50 --concurrent=5
 
-# Comprehensive benchmarks
+# Benchmarks
 python scripts/benchmarks/benchmark.py --full-suite
 
 # Specific benchmark types
@@ -210,7 +210,7 @@ python scripts/verification/validate_schema_consistency.py
 When adding new scripts:
 
 1. **Follow naming conventions**: Use snake_case, descriptive names
-2. **Add error handling**: Comprehensive error messages and recovery
+2. **Add error handling**: Error messages and recovery
 3. **Include documentation**: Docstrings and README updates
 4. **Add tests**: Minimum 90% test coverage for new functionality
 5. **Use type hints**: Full typing for maintainability

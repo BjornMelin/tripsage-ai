@@ -1,5 +1,5 @@
 /**
- * Comprehensive Zod schemas for Agent Status tracking
+ * Zod schemas for Agent Status tracking
  * Runtime validation for all agent-related data types
  */
 

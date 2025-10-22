@@ -1,5 +1,5 @@
 /**
- * Comprehensive Zod schemas for component props validation
+ * Zod schemas for component props validation
  * Runtime validation for all component props to ensure type safety
  */
 

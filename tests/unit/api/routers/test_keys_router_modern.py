@@ -1,7 +1,7 @@
-"""Modern comprehensive tests for keys router using 2025 best practices.
+"""Modern tests for keys router using 2025 best practices.
 
 This module provides enhanced test coverage with property-based testing,
-modern FastAPI testing patterns, and comprehensive error handling scenarios.
+modern FastAPI testing patterns, and error handling scenarios.
 """
 
 import uuid
@@ -47,7 +47,7 @@ uuids = st.uuids().map(str)
 
 
 class TestKeysRouterModern:
-    """Modern test suite for keys router with comprehensive coverage."""
+    """Modern test suite for keys router with coverage."""
 
     @pytest.fixture
     def mock_principal(self):
@@ -61,7 +61,7 @@ class TestKeysRouterModern:
 
     @pytest.fixture
     def mock_key_service(self):
-        """Create comprehensive mock key service."""
+        """Create mock key service."""
         service = MagicMock(spec=ApiKeyService)
 
         # Configure async methods with realistic defaults
@@ -160,7 +160,7 @@ class TestKeysRouterModern:
         mock_key_service.get_key.assert_called_once_with(key_ids)
         mock_key_service.delete_key.assert_called_once_with(key_ids)
 
-    # Comprehensive error handling tests
+    # Error handling tests
     @pytest.mark.asyncio
     async def test_create_key_validation_failure_scenarios(
         self, mock_principal, mock_key_service
@@ -239,7 +239,7 @@ class TestKeysRouterModern:
     async def test_validate_key_comprehensive_scenarios(
         self, mock_principal, mock_key_service
     ):
-        """Test comprehensive validation scenarios."""
+        """Test validation scenarios."""
         validation_scenarios = [
             # Valid key
             {
@@ -288,7 +288,7 @@ class TestKeysRouterModern:
     async def test_rotate_key_comprehensive_scenarios(
         self, mock_principal, mock_key_service, sample_api_key_response
     ):
-        """Test comprehensive key rotation scenarios."""
+        """Test key rotation scenarios."""
         key_id = str(uuid.uuid4())
 
         # Successful rotation

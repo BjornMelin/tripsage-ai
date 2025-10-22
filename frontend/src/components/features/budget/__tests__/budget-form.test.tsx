@@ -1,5 +1,5 @@
 /**
- * Comprehensive test suite for the Trip Budget Form with Zod validation
+ * Test suite for the Trip Budget Form with Zod validation
  * Demonstrates testing patterns for complex forms with runtime validation
  */
 

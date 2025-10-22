@@ -1,4 +1,4 @@
-"""Comprehensive tests for agent node implementations.
+"""Tests for agent node implementations.
 
 Tests the modern agent node architecture with service injection,
 tool integration, and proper async patterns.
@@ -445,7 +445,7 @@ class TestNodeIntegration:
 
     @pytest.fixture
     def mock_service_registry(self):
-        """Create comprehensive mock service registry."""
+        """Create mock service registry."""
         registry = Mock(spec=ServiceRegistry)
         registry.flight_service = Mock()
         registry.accommodation_service = Mock()

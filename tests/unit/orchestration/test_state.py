@@ -1,4 +1,4 @@
-"""Comprehensive tests for orchestration state management.
+"""Tests for orchestration state management.
 
 This module provides full test coverage for the TravelPlanningState and
 related Pydantic models used in the orchestration system.
