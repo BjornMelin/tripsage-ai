@@ -8,7 +8,6 @@ and web crawling for additional information.
 import asyncio
 import uuid
 from datetime import datetime
-from typing import Any
 
 from tripsage.api.schemas.requests.activities import (
     ActivitySearchRequest,
@@ -20,6 +19,7 @@ from tripsage.api.schemas.responses.activities import (
 )
 from tripsage.tools.web_tools import CachedWebSearchTool
 from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.models.api.maps_models import PlaceDetails, PlaceSummary
 from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsService,
     GoogleMapsServiceError,
@@ -53,6 +53,7 @@ class ActivityServiceError(CoreServiceError):
     """Exception raised for activity service errors."""
 
     def __init__(self, message: str, original_error: Exception | None = None):
+        """Construct the error with optional original exception."""
         super().__init__(
             message=message,
             code="ACTIVITY_SERVICE_ERROR",
@@ -90,7 +91,7 @@ class ActivityService:
 
     @with_error_handling()
     @cached(content_type=ContentType.SEMI_STATIC, ttl=3600)  # 1 hour cache
-    async def search_activities(
+    async def search_activities(  # pylint: disable=too-many-statements, too-many-nested-blocks
         self, request: ActivitySearchRequest
     ) -> ActivitySearchResponse:
         """Search for activities based on the provided criteria.
@@ -127,14 +128,46 @@ class ActivityService:
                     limit=20,
                     search_id=str(uuid.uuid4()),
                     filters_applied={"destination": request.destination},
+                    cached=False,
+                    provider_responses=None,
                 )
 
-            # Get the primary location
-            location = geocode_results[0]["geometry"]["location"]
-            lat, lng = location["lat"], location["lng"]
-            search_location = (lat, lng)
+            # Get the primary location (typed Place only - no legacy support)
+            first_place = geocode_results[0]
+            coords = first_place.coordinates
+            if coords is None:
+                logger.warning(
+                    "Missing coordinates for destination: %s", request.destination
+                )
+                return ActivitySearchResponse(
+                    activities=[],
+                    total=0,
+                    skip=0,
+                    limit=20,
+                    search_id=str(uuid.uuid4()),
+                    filters_applied={"destination": request.destination},
+                    cached=False,
+                    provider_responses=None,
+                )
+            if coords.latitude is None or coords.longitude is None:
+                logger.warning(
+                    "Missing lat/lng for destination: %s", request.destination
+                )
+                return ActivitySearchResponse(
+                    activities=[],
+                    total=0,
+                    skip=0,
+                    limit=20,
+                    search_id=str(uuid.uuid4()),
+                    filters_applied={"destination": request.destination},
+                    cached=False,
+                    provider_responses=None,
+                )
+            lat_f = float(coords.latitude)
+            lng_f = float(coords.longitude)
+            search_location = (lat_f, lng_f)
 
-            logger.debug("Geocoded %s to (%s, %s)", request.destination, lat, lng)
+            logger.debug("Geocoded %s to (%s, %s)", request.destination, lat_f, lng_f)
 
             # Determine place types based on requested categories
             place_types = self._get_place_types_for_categories(request.categories or [])
@@ -158,10 +191,10 @@ class ActivityService:
                         radius=search_radius,
                     )
 
-                    if search_results.get("results"):
+                    if search_results:
                         batch_tasks = [
-                            self._convert_place_to_activity(place, request)
-                            for place in search_results["results"][:20]
+                            self._convert_place_summary_to_activity(summary, request)
+                            for summary in search_results[:20]
                         ]  # Limit to 20 results
 
                         if batch_tasks:
@@ -220,7 +253,7 @@ class ActivityService:
                     if request.price_range
                     else None,
                 },
-                cached=False,  # Set by caching decorator if from cache
+                cached=False,
                 provider_responses=None,
             )
 
@@ -254,10 +287,10 @@ class ActivityService:
                 radius=radius,
             )
 
-            if search_results.get("results"):
+            if search_results:
                 batch_tasks = [
-                    self._convert_place_to_activity(place, request)
-                    for place in search_results["results"][:10]
+                    self._convert_place_summary_to_activity(summary, request)
+                    for summary in search_results[:10]
                 ]  # Limit per type
 
                 if batch_tasks:
@@ -298,44 +331,49 @@ class ActivityService:
                 continue
         return activities
 
-    async def _convert_place_to_activity(
-        self, place: dict[str, Any], request: ActivitySearchRequest
+    async def _convert_place_summary_to_activity(
+        self, summary: PlaceSummary, request: ActivitySearchRequest
     ) -> ActivityResponse:
-        """Convert a Google Places result to an ActivityResponse."""
+        """Convert a typed PlaceSummary to an ActivityResponse."""
         try:
-            place_id = place.get("place_id", "")
-            name = place.get("name", "Unknown Activity")
+            place_id = summary.place.place_id or ""
+            name = summary.place.name or "Unknown Activity"
 
-            # Get location
-            geometry = place.get("geometry", {})
-            location_data = geometry.get("location", {})
+            # Coordinates
             coordinates = None
-            if location_data:
+            if (
+                summary.place.coordinates
+                and summary.place.coordinates.latitude is not None
+                and summary.place.coordinates.longitude is not None
+            ):
                 coordinates = ActivityCoordinates(
-                    lat=location_data.get("lat", 0.0),
-                    lng=location_data.get("lng", 0.0),
+                    lat=float(summary.place.coordinates.latitude),
+                    lng=float(summary.place.coordinates.longitude),
                 )
 
             # Determine activity type from place types
-            place_types = place.get("types", [])
+            place_types = summary.types or []
             activity_type = self._determine_activity_type(place_types)
 
             # Get rating and price level
-            rating = float(place.get("rating") or 0.0)
-            price_level = place.get("price_level", 1)  # Google's 0-4 scale
+            rating = float(summary.rating or 0.0)
+            price_level = int(summary.price_level or 1)  # Google's 0-4 scale
 
             # Convert price level to estimated price
             price = self._estimate_price_from_level(price_level, activity_type)
 
-            # Get photos for images
-            images = []
-            if place.get("photos"):
-                # Note: In production, you'd need to generate photo URLs using the
-                # Places API.For now, we'll leave this empty or use placeholder
-                images = []
+            # Images can be resolved from PlaceDetails as needed
+            images: list[str] = []
 
             # Get address
-            vicinity = place.get("vicinity", "") or place.get("formatted_address", "")
+            vicinity: str = (
+                summary.place.address.formatted
+                if (
+                    summary.place.address
+                    and summary.place.address.formatted is not None
+                )
+                else ""
+            )
 
             # Estimate duration based on activity type
             duration = self._estimate_duration(activity_type, place_types)
@@ -392,14 +430,13 @@ class ActivityService:
         # Default categorization based on common types
         if "restaurant" in place_types or "food" in place_types:
             return "food"
-        elif "tourist_attraction" in place_types:
+        if "tourist_attraction" in place_types:
             return "tour"
-        elif "museum" in place_types:
+        if "museum" in place_types:
             return "cultural"
-        elif "park" in place_types:
+        if "park" in place_types:
             return "nature"
-        else:
-            return "entertainment"
+        return "entertainment"
 
     def _estimate_price_from_level(self, price_level: int, activity_type: str) -> float:
         """Estimate price from Google's price level and activity type."""
@@ -496,7 +533,8 @@ class ActivityService:
                 place_id = activity_id[4:]  # Remove "gmp_" prefix
 
                 # Get detailed place information
-                place_details = await self.google_maps_service.get_place_details(
+                assert self.google_maps_service is not None
+                details = await self.google_maps_service.get_place_details(
                     place_id=place_id,
                     fields=[
                         "name",
@@ -513,12 +551,9 @@ class ActivityService:
                     ],
                 )
 
-                if place_details.get("result"):
-                    place = place_details["result"]
-                    # Convert to ActivityResponse with enhanced details
-                    return await self._convert_detailed_place_to_activity(
-                        place, activity_id
-                    )
+                return await self._convert_detailed_place_to_activity(
+                    details, activity_id
+                )
 
             # For non-Google Maps activities, this would query your database
             logger.warning("Activity details not found for ID: %s", activity_id)
@@ -532,29 +567,34 @@ class ActivityService:
             raise ActivityServiceError(f"Failed to get activity details: {e}", e) from e
 
     async def _convert_detailed_place_to_activity(
-        self, place: dict[str, Any], activity_id: str
+        self, details: PlaceDetails, activity_id: str
     ) -> ActivityResponse:
-        """Convert detailed Google Places result to ActivityResponse."""
-        name = place.get("name", "Unknown Activity")
-        formatted_address = place.get("formatted_address", "")
+        """Convert typed PlaceDetails to ActivityResponse."""
+        name = details.place.name or "Unknown Activity"
+        formatted_address: str = (
+            details.place.address.formatted
+            if (details.place.address and details.place.address.formatted is not None)
+            else ""
+        )
 
-        # Get coordinates
-        geometry = place.get("geometry", {})
-        location_data = geometry.get("location", {})
         coordinates = None
-        if location_data:
+        if (
+            details.place.coordinates
+            and details.place.coordinates.latitude is not None
+            and details.place.coordinates.longitude is not None
+        ):
             coordinates = ActivityCoordinates(
-                lat=location_data.get("lat", 0.0),
-                lng=location_data.get("lng", 0.0),
+                lat=float(details.place.coordinates.latitude),
+                lng=float(details.place.coordinates.longitude),
             )
 
         # Determine activity type
-        place_types = place.get("types", [])
+        place_types = details.types or []
         activity_type = self._determine_activity_type(place_types)
 
         # Get rating and price
-        rating = float(place.get("rating") or 0.0)
-        price_level = place.get("price_level", 1)
+        rating = float(details.rating or 0.0)
+        price_level = int(details.price_level or 1)
         price = self._estimate_price_from_level(price_level, activity_type)
 
         # Get duration
@@ -562,7 +602,7 @@ class ActivityService:
 
         # Build description from reviews or use default
         description = f"Popular {activity_type}"
-        reviews = place.get("reviews", [])
+        reviews = (details.raw or {}).get("reviews", [])
         if reviews:
             # Use the first review snippet as part of description
             first_review = reviews[0].get("text", "")
@@ -570,7 +610,7 @@ class ActivityService:
                 description = first_review[:200] + "..."
 
         # Get opening hours
-        opening_hours = place.get("opening_hours", {})
+        opening_hours = details.opening_hours or {}
         availability = "Contact venue"
         if opening_hours.get("open_now") is True:
             availability = "Open now"
@@ -607,8 +647,9 @@ class ActivityService:
 _activity_service: ActivityService | None = None
 
 
-async def get_activity_service() -> ActivityService:
+async def get_activity_service() -> ActivityService:  # pylint: disable=global-statement
     """Get the global activity service instance."""
+    # pylint: disable=global-statement
     global _activity_service
 
     if _activity_service is None:
@@ -618,7 +659,8 @@ async def get_activity_service() -> ActivityService:
     return _activity_service
 
 
-async def close_activity_service() -> None:
+async def close_activity_service() -> None:  # pylint: disable=global-statement
     """Close the global activity service instance."""
+    # pylint: disable=global-statement
     global _activity_service
     _activity_service = None
