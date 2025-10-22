@@ -6,12 +6,12 @@ including authentication, logging, and rate limiting.
 
 from .authentication import AuthenticationMiddleware, Principal
 from .logging import LoggingMiddleware
-from .rate_limiting import EnhancedRateLimitMiddleware
+from .rate_limiting import RateLimitMiddleware
 
 
 __all__ = [
     "AuthenticationMiddleware",
-    "EnhancedRateLimitMiddleware",
     "LoggingMiddleware",
     "Principal",
+    "RateLimitMiddleware",
 ]

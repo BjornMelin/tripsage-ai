@@ -7,16 +7,11 @@ API key operations in TripSage.
 import inspect
 import secrets
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 from functools import wraps
 from typing import Any, TypeVar, cast
-
-from fastapi import Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.status import HTTP_429_TOO_MANY_REQUESTS
-from starlette.types import ASGIApp
 
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.services.infrastructure.cache_service import (
@@ -331,109 +326,6 @@ class KeyMonitoringService:
         # Increment counter
         await self.cache_service.incr(rate_limit_key)
         return False
-
-
-class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
-    """Middleware for rate limiting API key operations.
-
-    This middleware specifically rate limits API key operations,
-    using more strict limits than the general API rate limiting.
-    """
-
-    def __init__(
-        self,
-        app: ASGIApp,
-        monitoring_service: KeyMonitoringService,
-        settings: Settings | None = None,
-    ):
-        """Initialize the middleware.
-
-        Args:
-            app: The ASGI application
-            monitoring_service: The key monitoring service
-            settings: API settings or None to use the default
-        """
-        super().__init__(app)
-        self.monitoring_service = monitoring_service
-        self.settings = settings or get_settings()
-
-    async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
-    ) -> Response:
-        """Process the request/response and handle rate limiting.
-
-        Args:
-            request: The incoming request
-            call_next: The next middleware or endpoint handler
-
-        Returns:
-            The response from the next middleware or endpoint
-        """
-        # Check if this is a key operation
-        key_operation = self._get_key_operation(request)
-        if not key_operation:
-            return await call_next(request)
-
-        # Get user ID
-        user_id = getattr(request.state, "user_id", None)
-        if not user_id:
-            return await call_next(request)
-
-        # Check if rate limited
-        is_limited = await self.monitoring_service.is_rate_limited(
-            user_id, key_operation
-        )
-        if is_limited:
-            # Log the rate limit
-            await self.monitoring_service.log_operation(
-                operation=key_operation,
-                user_id=user_id,
-                success=False,
-                metadata={"rate_limited": True},
-            )
-
-            # Return rate limit response
-            return Response(
-                content="Rate limit exceeded for API key operations",
-                status_code=HTTP_429_TOO_MANY_REQUESTS,
-                headers={"Retry-After": "60"},
-            )
-
-        # Process the request
-        return await call_next(request)
-
-    def _get_key_operation(self, request: Request) -> KeyOperation | None:
-        """Get the key operation from the request.
-
-        Args:
-            request: The incoming request
-
-        Returns:
-            The key operation or None if not a key operation
-        """
-        path = request.url.path
-        method = request.method
-
-        # Check if this is a key operation
-        if not path.startswith("/api/user/keys"):
-            return None
-
-        # Determine the operation based on path and method
-        if path == "/api/user/keys" or path == "/api/user/keys/":
-            if method == "GET":
-                return KeyOperation.LIST
-            elif method == "POST":
-                return KeyOperation.CREATE
-        elif path == "/api/user/keys/validate" or path == "/api/user/keys/validate/":
-            if method == "POST":
-                return KeyOperation.VALIDATE
-        elif path.endswith("/rotate"):
-            if method == "POST":
-                return KeyOperation.ROTATE
-        elif "/api/user/keys/" in path and method == "DELETE":  # Key ID in path
-            return KeyOperation.DELETE
-
-        return None
 
 
 def monitor_key_operation(

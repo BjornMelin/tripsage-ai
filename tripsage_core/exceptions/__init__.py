@@ -14,7 +14,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError,
     CoreKeyValidationError,
     # Specialized exceptions
-    CoreMCPError,
     CoreRateLimitError,
     # Resource and validation
     CoreResourceNotFoundError,
@@ -42,7 +41,6 @@ __all__ = [
     "CoreExternalAPIError",
     "CoreKeyValidationError",
     # Specialized exceptions
-    "CoreMCPError",
     "CoreRateLimitError",
     # Resource and validation
     "CoreResourceNotFoundError",

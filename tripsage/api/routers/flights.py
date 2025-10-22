@@ -16,7 +16,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
+from tripsage.api.core.dependencies import (
+    get_flight_service_dep as get_flight_service,
+    get_principal_id,
+    require_principal,
+)
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.flights import (
     BookingStatus,
@@ -31,10 +35,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreServiceError,
     CoreValidationError,
 )
-from tripsage_core.services.business.flight_service import (
-    FlightService,
-    get_flight_service,
-)
+from tripsage_core.services.business.flight_service import FlightService
 
 
 router = APIRouter()

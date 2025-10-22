@@ -41,25 +41,18 @@ from tripsage.api.routers import (
     users,
     websocket,
 )
-from tripsage.config.service_registry import (
-    register_api_service_adapters,
-    register_instance,
-)
+
+# Removed ServiceRegistry: use direct lifespan-managed instances
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreExternalAPIError,
     CoreKeyValidationError,
-    CoreMCPError,
     CoreRateLimitError,
     CoreTripSageError,
     CoreValidationError,
 )
 from tripsage_core.observability.otel import setup_otel
 from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
-from tripsage_core.services.infrastructure.key_monitoring_service import (
-    KeyMonitoringService,
-    KeyOperationRateLimitMiddleware,
-)
 from tripsage_core.services.infrastructure.websocket_broadcaster import (
     WebSocketBroadcaster,
 )
@@ -88,9 +81,9 @@ async def lifespan(app: FastAPI):
     """
     # Startup: Initialize MCP Manager and WebSocket Services
     logger.info("Initializing MCP service on API startup")
-    from tripsage_core.services.simple_mcp_service import SimpleMCPService
+    from tripsage_core.services.simple_mcp_service import AirbnbMCPService
 
-    app.state.mcp_service = SimpleMCPService()
+    app.state.mcp_service = AirbnbMCPService()
     await app.state.mcp_service.initialize()
 
     # Initialize services (Cache, WebSocket, MCP) in DI-managed app.state
@@ -99,18 +92,29 @@ async def lifespan(app: FastAPI):
 
     app.state.cache_service = CacheService()
     await app.state.cache_service.connect()
-    # Expose via global registry for API dependencies
-    register_instance("cache", app.state.cache_service)
 
     # Initialize Google Maps service (DI-managed singleton for API lifespan)
     logger.info("Initializing Google Maps service")
     app.state.google_maps_service = GoogleMapsService()
     await app.state.google_maps_service.connect()
-    # Expose via global registry for API dependencies
-    register_instance("google_maps", app.state.google_maps_service)
+    # Services are reachable via request.app.state*
 
-    # Register API-facing adapters that compose from the above
-    register_api_service_adapters()
+    # Start database connection monitor for unified health reporting
+    try:
+        from tripsage_core.services.infrastructure.database_monitor import (
+            DatabaseConnectionMonitor,
+        )
+        from tripsage_core.services.infrastructure.database_service import (
+            get_database_service,
+        )
+
+        db_service = await get_database_service()
+        app.state.database_monitor = DatabaseConnectionMonitor(
+            database_service=db_service
+        )
+        await app.state.database_monitor.start_monitoring()
+    except Exception:  # noqa: BLE001 - do not break startup if monitor fails
+        logger.warning("DatabaseConnectionMonitor initialization failed")
 
     logger.info("Starting WebSocket Broadcaster")
     app.state.websocket_broadcaster = WebSocketBroadcaster()
@@ -225,12 +229,7 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     # Temporarily disabled - awaiting Supabase Auth
     # app.add_middleware(AuthenticationMiddleware, settings=settings)
 
-    # Add key operation rate limiting middleware
-    key_monitoring_service = KeyMonitoringService(settings)
-    app.add_middleware(
-        KeyOperationRateLimitMiddleware,
-        monitoring_service=key_monitoring_service,
-    )
+    # Key-operation rate limiting merged into EnhancedRateLimitMiddleware
 
     # Simplified exception handlers
     @app.exception_handler(CoreAuthenticationError)
@@ -267,14 +266,7 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
             headers={"Retry-After": "60"},
         )
 
-    @app.exception_handler(CoreMCPError)
-    async def mcp_error_handler(request: Request, exc: CoreMCPError):
-        """Handle MCP server errors."""
-        logger.exception("MCP error", extra={"path": request.url.path})
-        return JSONResponse(
-            status_code=exc.status_code,
-            content=format_error_response(exc, request),
-        )
+    # CoreMCPError removed; MCP integrations map to CoreExternalAPIError now
 
     @app.exception_handler(CoreExternalAPIError)
     async def external_api_error_handler(request: Request, exc: CoreExternalAPIError):

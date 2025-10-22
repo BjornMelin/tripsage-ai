@@ -10,7 +10,6 @@ from typing import Any, TypeVar
 from tripsage_core.exceptions import (
     CoreDatabaseError,
     CoreExternalAPIError,
-    CoreMCPError,
     CoreTripSageError,
     CoreValidationError,
     ErrorDetails,
@@ -37,17 +36,7 @@ def log_exception(exc: Exception, logger_name: str | None = None) -> None:
     """
     log = logger if logger_name is None else get_logger(logger_name)
 
-    if isinstance(exc, CoreMCPError):
-        # Extract MCP-specific details from the core exception
-        details = exc.details.additional_context or {}
-        log.error(
-            "MCP Error: %s\nServer: %s\nTool: %s\nParams: %s",
-            exc.message,
-            exc.details.service,
-            details.get("tool"),
-            details.get("params"),
-        )
-    elif isinstance(exc, CoreExternalAPIError):
+    if isinstance(exc, CoreExternalAPIError):
         # Extract API-specific details from the core exception
         details = exc.details.additional_context or {}
         log.error(
@@ -121,7 +110,7 @@ def create_mcp_error(
     params: dict[str, Any] | None = None,
     category: str = "unknown",
     status_code: int | None = None,
-) -> CoreMCPError:
+) -> CoreExternalAPIError:
     """Create an MCP error with TripSage-specific formatting.
 
     Args:
@@ -149,13 +138,14 @@ def create_mcp_error(
         },
     )
 
-    return CoreMCPError(
+    # Map legacy MCP error into external API error semantics
+    return CoreExternalAPIError(
         message=message,
-        code=f"MCP_{category.upper()}_ERROR",
+        code=f"{server.upper()}_MCP_ERROR",
+        api_service=server,
+        api_status_code=status_code,
+        api_response={"tool": tool, "params": params},
         details=details,
-        server=server,
-        tool=tool,
-        params=params,
     )
 
 
