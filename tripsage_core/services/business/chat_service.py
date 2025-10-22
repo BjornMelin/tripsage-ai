@@ -245,6 +245,8 @@ class ChatService:
         self._retry_count = 3
         self._retry_delay = 0.1
 
+    @trace_span(name="svc.chat.sessions.create")
+    @record_histogram("svc.op.duration", unit="s")
     async def create_session(
         self, user_id: str, session_data: ChatSessionCreateRequest
     ) -> ChatSessionResponse:
@@ -306,6 +308,8 @@ class ChatService:
 
     # This method is replaced by _get_session_internal to avoid router conflicts
 
+    @trace_span(name="svc.chat.sessions.list")
+    @record_histogram("svc.op.duration", unit="s")
     async def get_user_sessions(
         self, user_id: str, limit: int = 10, include_ended: bool = False
     ) -> list[ChatSessionResponse]:
@@ -351,6 +355,8 @@ class ChatService:
             )
             return []
 
+    @trace_span(name="svc.chat.messages.create")
+    @record_histogram("svc.op.duration", unit="s")
     async def add_message(
         self, session_id: str, user_id: str, message_data: MessageCreateRequest
     ) -> MessageResponse:
@@ -381,7 +387,7 @@ class ChatService:
                 )
 
             # Verify session access
-            session = await self._get_session_internal(session_id, user_id)
+            session = await self.get_session(session_id, user_id)
             if not session:
                 raise NotFoundError("Chat session not found")
 
@@ -409,9 +415,7 @@ class ChatService:
             tool_calls: list[dict[str, Any]] = []
             if message_data.tool_calls:
                 tool_calls = [
-                    (
-                        await self._create_tool_call(message_id, tool_call_data)
-                    ).model_dump()
+                    (await self.add_tool_call(message_id, tool_call_data)).model_dump()
                     for tool_call_data in message_data.tool_calls
                 ]
 
@@ -452,6 +456,8 @@ class ChatService:
 
     # This method is replaced by _get_messages_internal to avoid router conflicts
 
+    @trace_span(name="svc.chat.messages.recent")
+    @record_histogram("svc.op.duration", unit="s")
     async def get_recent_messages(
         self, session_id: str, user_id: str, request: RecentMessagesRequest
     ) -> RecentMessagesResponse:
@@ -467,45 +473,56 @@ class ChatService:
         """
         try:
             # Verify session access
-            session = await self._get_session_internal(session_id, user_id)
+            session = await self.get_session(session_id, user_id)
             if not session:
                 return RecentMessagesResponse(
                     messages=[], total_tokens=0, truncated=False
                 )
 
-            # Get messages with token estimation
-            results = await self.db.get_recent_messages_with_tokens(
-                session_id,
-                request.limit,
-                request.max_tokens,
-                request.offset,
-                self.chars_per_token,
+            # Fetch messages using standard helper and enforce token window locally
+            raw = await self.db.get_session_messages(
+                session_id, limit=(request.limit + request.offset), offset=0
             )
 
-            messages = [
-                MessageResponse(
-                    id=result["id"],
-                    session_id=result["session_id"],
-                    role=result["role"],
-                    content=result["content"],
-                    created_at=datetime.fromisoformat(result["created_at"]),
-                    metadata=result.get("metadata", {}),
-                    tool_calls=list(await self.db.get_message_tool_calls(result["id"])),
-                    estimated_tokens=result.get(
-                        "estimated_tokens", self._estimate_tokens(result["content"])
-                    ),
-                )
-                for result in results
-            ]
-            total_tokens = sum(message.estimated_tokens or 0 for message in messages)
+            # Keep the most recent (limit + offset) then apply offset
+            raw = raw[-(request.limit + request.offset) :] if raw else []
+            if request.offset:
+                raw = raw[request.offset :]
 
-            # Check if truncation occurred based on token limits
-            # The database should handle token limiting, so if we get results,
-            # we assume no truncation unless the database indicates otherwise
-            # For now, assume no truncation if we got any results within token limit
-            truncated = False
-            if messages and total_tokens >= request.max_tokens:
-                truncated = True
+            # Apply max_tokens constraint from most recent backwards
+            selected: list[dict[str, Any]] = []
+            running_tokens = 0
+            for item in reversed(raw):
+                tokens = self._estimate_tokens(item.get("content", ""))
+                # Always include at least one message
+                if running_tokens + tokens > request.max_tokens and selected:
+                    break
+                running_tokens += tokens
+                selected.append(item)
+
+            selected.reverse()
+
+            messages: list[MessageResponse] = []
+            for result in selected:
+                tool_calls = list(
+                    await self.db.get_message_tool_calls(result["id"])  # type: ignore[index]
+                )
+                messages.append(
+                    MessageResponse(
+                        id=result["id"],
+                        session_id=result["session_id"],
+                        role=result["role"],
+                        content=result["content"],
+                        created_at=datetime.fromisoformat(result["created_at"]),
+                        metadata=result.get("metadata", {}),
+                        tool_calls=tool_calls,
+                        estimated_tokens=self._estimate_tokens(result["content"]),
+                    )
+                )
+
+            total_tokens = sum(m.estimated_tokens or 0 for m in messages)
+            # Truncated if we couldn't include all available messages within caps
+            truncated = len(messages) < len(raw)
 
             return RecentMessagesResponse(
                 messages=messages, total_tokens=total_tokens, truncated=truncated
@@ -522,6 +539,8 @@ class ChatService:
             )
             return RecentMessagesResponse(messages=[], total_tokens=0, truncated=False)
 
+    @trace_span(name="svc.chat.sessions.end")
+    @record_histogram("svc.op.duration", unit="s")
     async def end_session(self, session_id: str, user_id: str) -> bool:
         """End a chat session.
 
@@ -538,7 +557,7 @@ class ChatService:
         """
         try:
             # Verify session access
-            session = await self._get_session_internal(session_id, user_id)
+            session = await self.get_session(session_id, user_id)
             if not session:
                 raise NotFoundError("Chat session not found")
 
@@ -568,6 +587,8 @@ class ChatService:
             )
             return False
 
+    @trace_span(name="svc.chat.tool_calls.update")
+    @record_histogram("svc.op.duration", unit="s")
     async def update_tool_call_status(
         self,
         tool_call_id: str,
@@ -728,19 +749,8 @@ class ChatService:
             error_message=None,
         )
 
-    async def _create_tool_call(
-        self, message_id: str, tool_call_data: dict[str, Any]
-    ) -> ToolCallResponse:
-        """Backward-compatible wrapper to create a tool call record."""
-        return await self.add_tool_call(message_id, tool_call_data)
-
-    # ===== Router Compatibility Methods =====
-    # These methods provide compatibility with the router's expected interface
-
-    @trace_span(
-        name="svc.chat.completion",
-        attrs=lambda a, k: {"user_id": a[1] if len(a) > 1 else "unknown"},
-    )
+    # ===== Public Chat Methods =====
+    @trace_span(name="svc.chat.completion")
     @record_histogram("svc.op.duration", unit="s")
     async def chat_completion(self, user_id: str, request) -> dict[str, Any]:
         """Handle chat completion requests (main chat endpoint).
@@ -816,7 +826,7 @@ class ChatService:
             if session_id and hasattr(self, "db"):
                 try:
                     # Create session if it doesn't exist
-                    session = await self._get_session_internal(session_id, user_id)
+                    session = await self.get_session(session_id, user_id)
                     if not session:
                         session_data = ChatSessionCreateRequest(
                             title="Chat with TripSage AI",
@@ -873,66 +883,26 @@ class ChatService:
             )
             raise
 
-    async def list_sessions(self, user_id: str) -> list[dict[str, Any]]:
-        """List chat sessions for a user (router compatibility method).
+    # Router compatibility wrappers removed in final-only alignment.
 
-        Args:
-            user_id: User ID
-
-        Returns:
-            List of user's chat sessions
-        """
-        sessions = await self.get_user_sessions(user_id)
-        return [session.model_dump() for session in sessions]
-
-    async def create_message(
-        self, user_id: str, session_id: str, message_request
-    ) -> dict[str, Any]:
-        """Create a message in a session (router compatibility method).
-
-        Args:
-            user_id: User ID
-            session_id: Session ID
-            message_request: Message creation request
-
-        Returns:
-            Created message data
-        """
-        # Convert the API request to service request
-        service_request = MessageCreateRequest(
-            role=message_request.role,
-            content=message_request.content,
-            metadata=None,
-            tool_calls=None,
-        )
-
-        message = await self.add_message(session_id, user_id, service_request)
-        return message.model_dump()
-
-    async def delete_session(self, user_id: str, session_id: str) -> bool:
-        """Delete a chat session (router compatibility method).
-
-        Args:
-            user_id: User ID
-            session_id: Session ID
-
-        Returns:
-            True if session was deleted successfully
-        """
-        return await self.end_session(session_id, user_id)
-
-    # Rename original methods to avoid conflicts with router compatibility methods
-    async def _get_session_internal(
+    @trace_span(name="svc.chat.sessions.get")
+    @record_histogram("svc.op.duration", unit="s")
+    async def get_session(
         self, session_id: str, user_id: str
     ) -> ChatSessionResponse | None:
-        """Internal get_session method with original signature."""
+        """Get a chat session by id for a user.
+
+        Args:
+            session_id: Session identifier.
+            user_id: User identifier.
+
+        Returns:
+            ChatSessionResponse if found, otherwise None.
+        """
         try:
             result = await self.db.get_chat_session(session_id, user_id)
             if not result:
                 return None
-
-            # Get message statistics
-            stats = await self.db.get_session_stats(session_id)
 
             return ChatSessionResponse(
                 id=result["id"],
@@ -945,10 +915,8 @@ class ChatService:
                 if result.get("ended_at")
                 else None,
                 metadata=result.get("metadata", {}),
-                message_count=stats.get("message_count", 0),
-                last_message_at=datetime.fromisoformat(stats["last_message_at"])
-                if stats.get("last_message_at")
-                else None,
+                message_count=0,
+                last_message_at=None,
             )
 
         except RECOVERABLE_ERRORS as error:
@@ -962,17 +930,19 @@ class ChatService:
             )
             return None
 
-    async def _get_messages_internal(
+    @trace_span(name="svc.chat.messages.list")
+    @record_histogram("svc.op.duration", unit="s")
+    async def get_messages(
         self,
         session_id: str,
         user_id: str,
         limit: int | None = None,
         offset: int = 0,
     ) -> list[MessageResponse]:
-        """Internal get_messages method with original signature."""
+        """List messages for a chat session ordered by creation time."""
         try:
             # Verify session access
-            session = await self._get_session_internal(session_id, user_id)
+            session = await self.get_session(session_id, user_id)
             if not session:
                 return []
 
@@ -1003,35 +973,7 @@ class ChatService:
             )
             return []
 
-    # Router-compatible methods with simplified signatures
-    async def get_session(self, user_id: str, session_id: str) -> dict[str, Any] | None:
-        """Get chat session (router-compatible method).
-
-        Args:
-            user_id: User ID (router parameter order)
-            session_id: Session ID (router parameter order)
-
-        Returns:
-            Chat session data as dictionary or None if not found
-        """
-        session = await self._get_session_internal(session_id, user_id)
-        return session.model_dump() if session else None
-
-    async def get_messages(
-        self, user_id: str, session_id: str, limit: int | None = None
-    ) -> list[dict[str, Any]]:
-        """Get messages (router-compatible method).
-
-        Args:
-            user_id: User ID (router parameter order)
-            session_id: Session ID (router parameter order)
-            limit: Maximum number of messages
-
-        Returns:
-            List of messages as dictionaries
-        """
-        messages = await self._get_messages_internal(session_id, user_id, limit, 0)
-        return [message.model_dump() for message in messages]
+    # End of public methods
 
 
 # Dependency function for FastAPI
