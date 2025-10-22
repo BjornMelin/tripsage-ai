@@ -46,7 +46,11 @@ class Price(TripSageModel):
     ) -> "Price":
         """Convert price to another currency using exchange rate."""
         new_amount = self.amount * exchange_rate
-        return Price(amount=new_amount, currency=target_currency)
+        return Price(
+            amount=new_amount,
+            currency=target_currency,
+            formatted=None,
+        )
 
 
 class PriceRange(TripSageModel):
@@ -73,7 +77,11 @@ class PriceRange(TripSageModel):
     def average(self) -> Price:
         """Calculate average price in the range."""
         avg_amount = (self.min_price.amount + self.max_price.amount) / 2
-        return Price(amount=avg_amount, currency=self.min_price.currency)
+        return Price(
+            amount=avg_amount,
+            currency=self.min_price.currency,
+            formatted=None,
+        )
 
 
 class PriceBreakdown(TripSageModel):
@@ -158,6 +166,7 @@ class Budget(TripSageModel):
         return Price(
             amount=max(Decimal(0), remaining_amount),
             currency=self.total_budget.currency,
+            formatted=None,
         )
 
     def utilization_percentage(self) -> float:

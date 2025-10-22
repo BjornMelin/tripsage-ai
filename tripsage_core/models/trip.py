@@ -5,8 +5,8 @@ It uses UUID as the primary key and includes the full feature set including visi
 tags, preferences, and detailed budget breakdown.
 """
 
-from datetime import date, datetime
-from typing import Any
+from datetime import UTC, date, datetime
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 from pydantic import Field, field_validator, model_validator
@@ -104,9 +104,12 @@ class Trip(TripSageModel):
         default=TripVisibility.PRIVATE,
         description="Trip visibility (private/shared/public)",
     )
-    tags: list[str] = Field(default_factory=list, max_items=20, description="Trip tags")
+    tags: list[str] = Field(
+        default_factory=list, max_length=20, description="Trip tags"
+    )
     preferences_extended: TripPreferences = Field(
-        default_factory=TripPreferences, description="Extended preferences"
+        default_factory=lambda: TripPreferences.model_validate({}),
+        description="Extended preferences",
     )
 
     # Additional metadata
@@ -117,10 +120,10 @@ class Trip(TripSageModel):
 
     # Timestamps
     created_at: datetime = Field(
-        default_factory=lambda: datetime.utcnow(), description="Creation timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Creation timestamp"
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.utcnow(), description="Last update timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Last update timestamp"
     )
 
     @model_validator(mode="after")
@@ -146,30 +149,28 @@ class Trip(TripSageModel):
     @property
     def budget_per_day(self) -> float:
         """Get the budget per day for the trip."""
-        return (
-            self.budget_breakdown.total / self.duration_days
-            if self.duration_days > 0
-            else 0
-        )
+        budget = cast(Budget, self.budget_breakdown)
+        return budget.total / self.duration_days if self.duration_days > 0 else 0
 
     @property
     def budget_per_person(self) -> float:
         """Get the budget per person for the trip."""
-        return self.budget_breakdown.total / self.travelers if self.travelers > 0 else 0
+        budget = cast(Budget, self.budget_breakdown)
+        return budget.total / self.travelers if self.travelers > 0 else 0
 
     @property
     def budget_utilization(self) -> float:
         """Get budget utilization percentage."""
-        if self.budget_breakdown.total <= 0:
+        budget = cast(Budget, self.budget_breakdown)
+        if budget.total <= 0:
             return 0.0
-        return min(
-            (self.budget_breakdown.spent / self.budget_breakdown.total) * 100, 100.0
-        )
+        return min((budget.spent / budget.total) * 100, 100.0)
 
     @property
     def remaining_budget(self) -> float:
         """Get remaining budget amount."""
-        return max(self.budget_breakdown.total - self.budget_breakdown.spent, 0.0)
+        budget = cast(Budget, self.budget_breakdown)
+        return max(budget.total - budget.spent, 0.0)
 
     @property
     def is_shared(self) -> bool:
@@ -218,7 +219,7 @@ class Trip(TripSageModel):
 
         if new_status in valid_transitions.get(self.status, []):
             self.status = new_status
-            self.updated_at = datetime.utcnow()
+            self.updated_at = datetime.now(UTC)
             return True
         return False
 
@@ -237,7 +238,7 @@ class Trip(TripSageModel):
         if len(self.tags) >= 20:
             return False
         self.tags.append(cleaned_tag)
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(UTC)
         return True
 
     def remove_tag(self, tag: str) -> bool:
@@ -252,15 +253,15 @@ class Trip(TripSageModel):
         cleaned_tag = tag.strip()
         if cleaned_tag in self.tags:
             self.tags.remove(cleaned_tag)
-            self.updated_at = datetime.utcnow()
+            self.updated_at = datetime.now(UTC)
             return True
         return False
 
 
 # Export the models
 __all__ = [
-    "BudgetBreakdown",
     "Budget",
+    "BudgetBreakdown",
     "Trip",
     "TripPreferences",
 ]

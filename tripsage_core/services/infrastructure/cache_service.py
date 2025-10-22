@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, cast
 
 from upstash_redis.asyncio import Redis as UpstashRedis
 
@@ -441,6 +442,28 @@ class CacheService:
         return 0
 
     # Cache management
+
+    async def info(self) -> dict[str, Any]:
+        """Return server information details if available."""
+        await self.ensure_connected()
+        try:
+            client = self._require_client()
+            info_callable = getattr(client, "info", None)
+            if info_callable is None or not callable(info_callable):
+                return {"available": False, "details": "info command unsupported"}
+
+            raw_info = await cast(Callable[[], Awaitable[Any]], info_callable)()
+            if isinstance(raw_info, dict):
+                return raw_info
+            return {"raw": raw_info}
+        except Exception as e:
+            logger.exception("Failed to fetch cache info")
+            raise CoreServiceError(
+                message="Failed to fetch cache info",
+                code="CACHE_INFO_FAILED",
+                service="CacheService",
+                details={"error": str(e)},
+            ) from e
 
     async def flushdb(self) -> bool:
         """Clear all data from the current database.
