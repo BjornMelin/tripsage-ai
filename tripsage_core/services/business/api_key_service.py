@@ -800,6 +800,8 @@ class ApiKeyService:
         Raises:
             ServiceError: If decryption fails or format is invalid
         """
+        # TODO: Refactor full function and module if needed to remove all backwards
+        # compatibility code and standardize on final implementation only
         if not encrypted_key:
             raise ServiceError("Cannot decrypt empty encrypted key")
 

@@ -4,7 +4,7 @@
 # =============================================================================
 # FastAPI backend service with modern architecture:
 # - Mem0 memory system with pgvector backend
-# - DragonflyDB for caching (25x faster than Redis)
+# - Upstash Redis (HTTP) for caching (serverless)
 # - Direct SDK integrations (Duffel, Google Maps, Crawl4AI, Playwright)
 # - Supabase PostgreSQL with pgvector extension
 
@@ -55,7 +55,7 @@ EXPOSE 8080
 # Set environment variables for modern architecture
 ENV PYTHONPATH=/app
 ENV DATABASE_TYPE=supabase
-ENV CACHE_TYPE=dragonfly
+ENV CACHE_TYPE=upstash
 ENV MEMORY_PROVIDER=mem0
 ENV VECTOR_STORE=pgvector
 

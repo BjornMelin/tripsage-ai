@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import click
-from supabase import create_client
+import supabase  # type: ignore[import-not-found]
 
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
@@ -346,9 +346,9 @@ def main(with_seed_data: bool, env: str, dry_run: bool) -> None:
 
             # Initialize services
             db_service = DatabaseService(settings)
-            supabase_client = create_client(
+            supabase_client = supabase.create_client(  # type: ignore[attr-defined]
                 settings.database_url,
-                settings.database_service_key.get_secret_value(),  # type: ignore # pylint: disable=no-member
+                settings.database_service_key.get_secret_value(),  # type: ignore[attr-defined]
             )
 
             # Run initialization
