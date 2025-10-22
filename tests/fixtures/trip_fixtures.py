@@ -19,7 +19,7 @@ from tripsage_core.models.schemas_common.enums import (
     TripType,
     TripVisibility,
 )
-from tripsage_core.models.trip import EnhancedBudget, TripPreferences
+from tripsage_core.models.trip import Budget, TripPreferences
 from tripsage_core.services.business.trip_service import (
     TripResponse as CoreTripResponse,
 )
@@ -43,7 +43,7 @@ def core_trip_response() -> CoreTripResponse:
         end_date=now,
         destination="Test City",
         destinations=[],
-        budget=EnhancedBudget(total=1000.0, currency="USD"),
+        budget=Budget(total=1000.0, currency="USD"),
         travelers=1,
         trip_type=TripType.LEISURE,
         status=TripStatus.PLANNING,

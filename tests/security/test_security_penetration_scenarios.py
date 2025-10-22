@@ -20,9 +20,6 @@ from fastapi.testclient import TestClient
 from tripsage.api.middlewares.authentication import (
     AuthenticationMiddleware,
 )
-from tripsage.api.middlewares.rate_limiting import (
-    EnhancedRateLimitMiddleware,
-)
 
 
 class TestAdvancedPersistentThreatScenarios:
@@ -34,8 +31,12 @@ class TestAdvancedPersistentThreatScenarios:
         mock_db = AsyncMock()
         mock_cache = AsyncMock()
         mock_settings = Mock()
-        mock_settings.secret_key = "apt_test_master_secret_key"
-        mock_settings.database_jwt_secret.get_secret_value.return_value = "jwt_secret"
+        mock_secret_key = Mock()
+        mock_secret_key.get_secret_value.return_value = "apt_test_master_secret_key"
+        mock_settings.secret_key = mock_secret_key
+        mock_jwt_secret = Mock()
+        mock_jwt_secret.get_secret_value.return_value = "jwt_secret"
+        mock_settings.database_jwt_secret = mock_jwt_secret
 
         return {"db": mock_db, "cache": mock_cache, "settings": mock_settings}
 
@@ -80,24 +81,62 @@ class TestAdvancedPersistentThreatScenarios:
     @pytest.fixture
     def pentesting_client(self, penetration_test_app, mock_services) -> TestClient:
         """Test client with full security middleware stack."""
-        with patch("tripsage.api.core.config.get_settings") as mock_get_settings:
-            mock_get_settings.return_value = mock_services["settings"]
+        from tripsage.api.middlewares.rate_limiting import RateLimitMiddleware
+        from tripsage_core.services.business.api_key_service import ApiKeyService
 
-            # Add authentication middleware
+        # Mock audit functions to avoid logging issues
+        async def mock_audit_security_event(*args, **kwargs):
+            pass
+
+        async def mock_audit_api_key(*args, **kwargs):
+            pass
+
+        async def mock_audit_authentication(*args, **kwargs):
+            pass
+
+        with (
+            patch(
+                "tripsage.api.middlewares.authentication.audit_security_event",
+                mock_audit_security_event,
+            ),
+            patch(
+                "tripsage.api.middlewares.authentication.audit_api_key",
+                mock_audit_api_key,
+            ),
+            patch(
+                "tripsage.api.middlewares.authentication.audit_authentication",
+                mock_audit_authentication,
+            ),
+        ):
+            # Mock the _ensure_services method to avoid database connections
+            async def mock_ensure_services(self):
+                if not self._services_initialized:
+                    if self.key_service is None:
+                        self.key_service = ApiKeyService(
+                            db=mock_services["db"],
+                            cache=mock_services["cache"],
+                            settings=mock_services["settings"],
+                        )
+                    self._services_initialized = True
+
+            # Add authentication middleware with mocked _ensure_services
             auth_middleware = AuthenticationMiddleware(penetration_test_app)
+            auth_middleware._ensure_services = mock_ensure_services.__get__(
+                auth_middleware, AuthenticationMiddleware
+            )
+
             penetration_test_app.add_middleware(
                 type(auth_middleware).__bases__[0], dispatch=auth_middleware.dispatch
             )
 
             # Add rate limiting middleware
-            with patch("tripsage_core.services.infrastructure.get_cache_service"):
-                rate_middleware = EnhancedRateLimitMiddleware(
-                    app=penetration_test_app, use_dragonfly=False
-                )
-                penetration_test_app.add_middleware(
-                    type(rate_middleware).__bases__[0],
-                    dispatch=rate_middleware.dispatch,
-                )
+            rate_middleware = RateLimitMiddleware(
+                app=penetration_test_app, use_dragonfly=False
+            )
+            penetration_test_app.add_middleware(
+                type(rate_middleware).__bases__[0],
+                dispatch=rate_middleware.dispatch,
+            )
 
             return TestClient(penetration_test_app)
 

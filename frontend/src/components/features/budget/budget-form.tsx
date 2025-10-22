@@ -58,12 +58,12 @@ const enhancedBudgetFormSchema = budgetFormSchema.and(
   })
 );
 
-type EnhancedBudgetFormData = z.infer<typeof enhancedBudgetFormSchema>;
+type BudgetFormData = z.infer<typeof enhancedBudgetFormSchema>;
 
 interface BudgetFormProps {
   onSubmit: (data: BudgetFormData) => Promise<void>;
   onCancel?: () => void;
-  initialData?: Partial<EnhancedBudgetFormData>;
+  initialData?: Partial<BudgetFormData>;
   currencies?: Array<{ code: string; name: string; symbol: string }>;
   tripId?: string;
   className?: string;
@@ -120,7 +120,7 @@ const EXPENSE_CATEGORIES = [
   { value: "other", label: "Other", description: "Miscellaneous expenses", icon: "📝" },
 ] as const;
 
-export function EnhancedBudgetForm({
+export function BudgetForm({
   onSubmit,
   onCancel,
   initialData,

@@ -218,51 +218,6 @@ class TestAccommodationRouterValidation:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-class TestAccommodationRouterCoverageBasics:
-    """Simple tests to improve coverage without complex model validation."""
-
-    def test_schema_adapter_execution_paths(self):
-        """Test schema adapter execution with optional fields."""
-        from uuid import uuid4
-
-        from tripsage.api.routers.accommodations import (
-            _convert_api_to_service_search_request,
-        )
-        from tripsage.api.schemas.accommodations import AccommodationSearchRequest
-        from tripsage_core.models.schemas_common.enums import AccommodationType
-
-        # Test with all optional fields to hit all code paths
-        api_request = AccommodationSearchRequest(
-            location="Paris",
-            check_in=date(2024, 4, 1),
-            check_out=date(2024, 4, 5),
-            adults=1,
-            children=0,
-            rooms=1,
-            property_type=AccommodationType.HOTEL,  # Covers line 73
-            min_price=100.0,  # Covers line 76
-            max_price=500.0,  # Covers line 79
-            amenities=["wifi", "pool"],  # Covers line 83
-            min_rating=4.0,  # Covers line 87
-            latitude=48.8566,  # Covers line 91
-            longitude=2.3522,  # Covers line 91
-            trip_id=uuid4(),  # Covers line 95
-        )
-
-        # Convert to service request (executes all optional field handling)
-        service_request = _convert_api_to_service_search_request(
-            api_request, user_id="test-user-id"
-        )
-
-        # Verify basic conversion worked
-        assert service_request.location == "Paris"
-        assert service_request.guests == 1
-        assert service_request.adults == 1
-        assert service_request.min_price == 100.0
-        assert service_request.max_price == 500.0
-        assert service_request.user_id == "test-user-id"
-
-
 class TestAccommodationRouterBehavior:
     """Test behavior that we can verify without complex service integration."""
 
@@ -341,82 +296,6 @@ class TestAccommodationRouterBehavior:
         assert response.currency == "USD"
         assert len(response.listings) == 0
 
-    def test_schema_adapter_function_exists(self):
-        """Test that the schema adapter function exists and works."""
-        from tripsage.api.routers.accommodations import (
-            _convert_api_to_service_search_request,
-        )
-        from tripsage.api.schemas.accommodations import AccommodationSearchRequest
-
-        # Create API request
-        api_request = AccommodationSearchRequest(
-            location="Tokyo",
-            check_in=date(2024, 3, 15),
-            check_out=date(2024, 3, 18),
-            adults=2,
-            children=1,
-            rooms=1,
-            property_type=None,
-            min_price=None,
-            max_price=None,
-            amenities=None,
-            min_rating=None,
-            latitude=None,
-            longitude=None,
-            trip_id=None,
-        )
-
-        # Convert to service request
-        service_request = _convert_api_to_service_search_request(
-            api_request, user_id="router-test-user"
-        )
-
-        # Verify conversion worked
-        assert service_request.location == "Tokyo"
-        assert service_request.guests == 3  # adults + children = 2 + 1
-        assert service_request.adults == 2
-        assert service_request.children == 1
-        assert service_request.user_id == "router-test-user"
-
-    def test_schema_adapter_with_minimal_fields(self):
-        """Test schema adapter with just required fields."""
-        from tripsage.api.routers.accommodations import (
-            _convert_api_to_service_search_request,
-        )
-        from tripsage.api.schemas.accommodations import AccommodationSearchRequest
-
-        # Create API request with minimal fields
-        api_request = AccommodationSearchRequest(
-            location="Paris",
-            check_in=date(2024, 4, 1),
-            check_out=date(2024, 4, 5),
-            adults=2,
-            children=0,
-            rooms=1,
-            property_type=None,
-            min_price=None,
-            max_price=None,
-            amenities=None,
-            min_rating=None,
-            latitude=None,
-            longitude=None,
-            trip_id=None,
-        )
-
-        # Convert to service request
-        service_request = _convert_api_to_service_search_request(
-            api_request, user_id="router-test-user"
-        )
-
-        # Verify basic conversion
-        assert service_request.location == "Paris"
-        assert service_request.guests == 2  # adults only
-        assert service_request.adults == 2
-        assert (
-            service_request.children == 0
-        )  # API doesn't provide children, so defaults to 0
-        assert service_request.user_id == "router-test-user"
-
 
 # === MODULE TESTS ===
 
@@ -425,13 +304,8 @@ def test_accommodation_router_module_structure():
     """Test that the accommodation router module has expected structure."""
     from tripsage.api.routers import accommodations
 
-    # Verify router exists
+    # Verify router exists and has expected routes
     assert hasattr(accommodations, "router")
-
-    # Verify conversion function exists
-    assert hasattr(accommodations, "_convert_api_to_service_search_request")
-
-    # Verify expected routes exist (simplified check)
     route_strings = [str(route) for route in accommodations.router.routes]
     expected_paths = ["/search", "/details", "/saved"]
 

@@ -248,7 +248,7 @@ class TestTripPlanningJourney:
         }
 
         # Act - Create trip and search for options
-        from tripsage_core.models.trip import EnhancedBudget
+        from tripsage_core.models.trip import Budget
         from tripsage_core.services.business.accommodation_service import (
             AccommodationSearchRequest,
         )
@@ -266,7 +266,7 @@ class TestTripPlanningJourney:
                 "destinations": [
                     {"name": sample_trip_data["destination"], "country": "France"}
                 ],
-                "budget": EnhancedBudget(total=sample_trip_data["budget"]),
+                "budget": Budget(total=sample_trip_data["budget"]),
                 "preferences": sample_trip_data["preferences"],
             }
         )
@@ -334,7 +334,7 @@ class TestTripPlanningJourney:
         }
 
         # Act
-        from tripsage_core.models.trip import EnhancedBudget
+        from tripsage_core.models.trip import Budget
         from tripsage_core.services.business.accommodation_service import (
             AccommodationSearchRequest,
         )
@@ -352,7 +352,7 @@ class TestTripPlanningJourney:
                 "destinations": [
                     {"name": sample_trip_data["destination"], "country": "France"}
                 ],
-                "budget": EnhancedBudget(total=sample_trip_data["budget"]),
+                "budget": Budget(total=sample_trip_data["budget"]),
                 "preferences": sample_trip_data["preferences"],
             }
         )
@@ -426,7 +426,7 @@ class TestTripPlanningJourney:
         ]
 
         # Act
-        from tripsage_core.models.trip import EnhancedBudget
+        from tripsage_core.models.trip import Budget
         from tripsage_core.services.business.accommodation_service import (
             AccommodationSearchRequest,
         )
@@ -444,7 +444,7 @@ class TestTripPlanningJourney:
                 "destinations": [
                     {"name": sample_trip_data["destination"], "country": "France"}
                 ],
-                "budget": EnhancedBudget(total=sample_trip_data["budget"]),
+                "budget": Budget(total=sample_trip_data["budget"]),
                 "preferences": sample_trip_data["preferences"],
             }
         )
@@ -622,7 +622,7 @@ class TestTripPlanningJourney:
         mock_mcp_manager.invoke.side_effect = Exception("External service unavailable")
 
         # Act & Assert
-        from tripsage_core.models.trip import EnhancedBudget
+        from tripsage_core.models.trip import Budget
         from tripsage_core.services.business.trip_service import (
             TripCreateRequest,
         )
@@ -637,7 +637,7 @@ class TestTripPlanningJourney:
                 "destinations": [
                     {"name": sample_trip_data["destination"], "country": "France"}
                 ],
-                "budget": EnhancedBudget(total=sample_trip_data["budget"]),
+                "budget": Budget(total=sample_trip_data["budget"]),
                 "preferences": sample_trip_data["preferences"],
             }
         )
