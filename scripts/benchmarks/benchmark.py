@@ -415,7 +415,7 @@ def database_only(output_dir: str):
         try:
             results = await runner.run_database_only()
             click.echo("✅ Database benchmark completed!")
-            click.echo(f"📈 Report: {results.get('report_path', 'N/A')}")
+            click.echo(f"Report: {results.get('report_path', 'N/A')}")
             return 0
         except Exception as e:  # noqa: BLE001
             click.echo(f"❌ Database benchmark failed: {e}")

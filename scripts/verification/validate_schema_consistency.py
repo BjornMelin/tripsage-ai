@@ -47,11 +47,11 @@ class SchemaValidator:
 
     def validate(self) -> bool:
         """Run all validation checks."""
-        print("🔍 Starting schema consistency validation...")
+        print("Starting schema consistency validation...")
 
         # Find and parse all SQL files
         sql_files = list(self.schema_dir.glob("*.sql"))
-        print(f"📄 Found {len(sql_files)} SQL files to validate")
+        print(f"Found {len(sql_files)} SQL files to validate")
 
         # Parse table definitions
         for sql_file in sql_files:
@@ -283,13 +283,13 @@ class SchemaValidator:
     def _report_results(self) -> bool:
         """Report validation results."""
         print("\n" + "=" * 60)
-        print("📊 SCHEMA VALIDATION RESULTS")
+        print("SCHEMA VALIDATION RESULTS")
         print("=" * 60)
 
         if not self.issues:
             print("✅ All schema consistency checks passed!")
             sql_files = len(list(self.schema_dir.glob("*.sql")))
-            print(f"📋 Validated {len(self.tables)} tables across {sql_files} files")
+            print(f"Validated {len(self.tables)} tables across {sql_files} files")
             return True
 
         # Group issues by severity
@@ -304,7 +304,7 @@ class SchemaValidator:
 
         # Display issues by severity
         if errors:
-            print("\n🚨 ERRORS:")
+            print("\nERRORS:")
             for issue in errors:
                 print(f"  {issue.file_path}:{issue.line_number}")
                 print(f"    [{issue.issue_type}] {issue.description}")
@@ -316,7 +316,7 @@ class SchemaValidator:
                 print(f"    [{issue.issue_type}] {issue.description}")
 
         if info:
-            print("\n📌 INFO:")
+            print("\nINFO:")
             for issue in info:
                 print(f"  {issue.file_path}:{issue.line_number}")
                 print(f"    [{issue.issue_type}] {issue.description}")
