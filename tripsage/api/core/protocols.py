@@ -53,26 +53,26 @@ class ChatServiceProto(Protocol):
         """Create a new chat session for the user."""
         ...
 
-    async def list_sessions(self, user_id: str) -> list[dict[str, Any]]:
+    async def get_user_sessions(
+        self, user_id: str, limit: int = 10, include_ended: bool = False
+    ) -> list[Any]:
         """List chat sessions for the user."""
         ...
 
-    async def get_session(self, user_id: str, session_id: str) -> dict[str, Any] | None:
+    async def get_session(self, session_id: str, user_id: str) -> Any | None:
         """Get a chat session for the user."""
         ...
 
     async def get_messages(
-        self, user_id: str, session_id: str, limit: int | None = None
-    ) -> list[dict[str, Any]]:
+        self, session_id: str, user_id: str, limit: int | None = None, offset: int = 0
+    ) -> list[Any]:
         """List messages in a chat session."""
         ...
 
-    async def create_message(
-        self, user_id: str, session_id: str, message_request: Any
-    ) -> dict[str, Any]:
+    async def add_message(self, session_id: str, user_id: str, message_data: Any) -> Any:
         """Create a message in a chat session."""
         ...
 
-    async def delete_session(self, user_id: str, session_id: str) -> bool:
-        """Delete a chat session."""
+    async def end_session(self, session_id: str, user_id: str) -> bool:
+        """End a chat session."""
         ...
