@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
 from typing import TypeVar
 
 
@@ -70,10 +69,3 @@ class AsyncServiceProvider[ServiceT]:
             if self._finalizer:
                 await self._finalizer(self._instance)
             self._instance = None
-
-
-@dataclass(frozen=True)
-class ConcurrencyLimits:
-    """Common concurrency limits for async services."""
-
-    max_concurrent: int = 3

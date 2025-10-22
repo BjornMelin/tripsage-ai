@@ -40,6 +40,32 @@ class TimeServiceError(CoreAPIError):
         self.original_error = original_error
 
 
+RECOVERABLE_ERRORS: tuple[type[Exception], ...] = (
+    CoreServiceError,
+    TimeServiceError,
+    ZoneInfoNotFoundError,
+    ValueError,
+    OSError,
+    RuntimeError,
+    ConnectionError,
+)
+
+DEFAULT_TIMEZONE_ALIASES: dict[str, str] = {
+    "UTC": "UTC",
+    "EST": "America/New_York",
+    "PST": "America/Los_Angeles",
+    "CST": "America/Chicago",
+    "MST": "America/Denver",
+    "GMT": "Europe/London",
+    "CET": "Europe/Paris",
+    "JST": "Asia/Tokyo",
+    "IST": "Asia/Kolkata",
+    "AEST": "Australia/Sydney",
+    "CEST": "Europe/Berlin",
+    "BST": "Europe/London",
+}
+
+
 class TimeZoneInfo(BaseModel):
     """Timezone information."""
 
@@ -72,16 +98,30 @@ class WorldClock(BaseModel):
 
 
 @dataclass(frozen=True)
+class TimeFormatConfig:
+    """Formatting configuration for date and time."""
+
+    date: str
+    time: str
+    datetime: str
+
+
+@dataclass(frozen=True)
+class BusinessHoursConfig:
+    """Business hours configuration."""
+
+    start: str
+    end: str
+    weekdays_only: bool
+
+
+@dataclass(frozen=True)
 class TimeServiceConfig:
     """Immutable configuration for the time service."""
 
     default_timezone: str
-    default_date_format: str
-    default_time_format: str
-    default_datetime_format: str
-    default_business_start: str
-    default_business_end: str
-    weekdays_only: bool
+    formats: TimeFormatConfig
+    business_hours: BusinessHoursConfig
     custom_timezones: dict[str, str]
 
 
@@ -98,58 +138,26 @@ class TimeService(AsyncServiceLifecycle):
         self._connected = False
 
         settings_obj = self.settings
+        formats = TimeFormatConfig(
+            date=getattr(settings_obj, "time_service_date_format", "%Y-%m-%d"),
+            time=getattr(settings_obj, "time_service_time_format", "%H:%M:%S"),
+            datetime=getattr(
+                settings_obj, "time_service_datetime_format", "%Y-%m-%d %H:%M:%S"
+            ),
+        )
+        business_hours = BusinessHoursConfig(
+            start=getattr(settings_obj, "time_service_business_start", "09:00"),
+            end=getattr(settings_obj, "time_service_business_end", "17:00"),
+            weekdays_only=getattr(settings_obj, "time_service_weekdays_only", True),
+        )
         self.config = TimeServiceConfig(
             default_timezone=getattr(
                 settings_obj, "time_service_default_timezone", "UTC"
             ),
-            default_date_format=getattr(
-                settings_obj, "time_service_date_format", "%Y-%m-%d"
-            ),
-            default_time_format=getattr(
-                settings_obj, "time_service_time_format", "%H:%M:%S"
-            ),
-            default_datetime_format=getattr(
-                settings_obj, "time_service_datetime_format", "%Y-%m-%d %H:%M:%S"
-            ),
-            default_business_start=getattr(
-                settings_obj, "time_service_business_start", "09:00"
-            ),
-            default_business_end=getattr(
-                settings_obj, "time_service_business_end", "17:00"
-            ),
-            weekdays_only=getattr(settings_obj, "time_service_weekdays_only", True),
+            formats=formats,
+            business_hours=business_hours,
             custom_timezones=getattr(settings_obj, "time_service_custom_timezones", {})
             or {},
-        )
-
-        # Major timezone mappings (can be extended via settings)
-        self._major_timezones = {
-            "UTC": "UTC",
-            "EST": "America/New_York",
-            "PST": "America/Los_Angeles",
-            "CST": "America/Chicago",
-            "MST": "America/Denver",
-            "GMT": "Europe/London",
-            "CET": "Europe/Paris",
-            "JST": "Asia/Tokyo",
-            "IST": "Asia/Kolkata",
-            "AEST": "Australia/Sydney",
-            "CEST": "Europe/Berlin",
-            "BST": "Europe/London",
-        }
-
-        # Add custom timezone mappings from settings if available
-        if self.config.custom_timezones:
-            self._major_timezones.update(self.config.custom_timezones)
-
-        self._recoverable_errors = (
-            CoreServiceError,
-            TimeServiceError,
-            ZoneInfoNotFoundError,
-            ValueError,
-            OSError,
-            RuntimeError,
-            ConnectionError,
         )
 
     async def connect(self) -> None:
@@ -162,7 +170,7 @@ class TimeService(AsyncServiceLifecycle):
             _ = datetime.now(UTC)
             self._connected = True
 
-        except self._recoverable_errors as error:
+        except RECOVERABLE_ERRORS as error:
             raise CoreServiceError(
                 message=f"Failed to connect time service: {error!s}",
                 code="CONNECTION_FAILED",
@@ -178,6 +186,18 @@ class TimeService(AsyncServiceLifecycle):
         """Ensure service is connected."""
         if not self._connected:
             await self.connect()
+
+    def _timezone_aliases(self) -> dict[str, str]:
+        """Return merged timezone aliases from defaults and settings."""
+        aliases = dict(DEFAULT_TIMEZONE_ALIASES)
+        if self.config.custom_timezones:
+            aliases.update(
+                {
+                    alias.upper(): zone
+                    for alias, zone in self.config.custom_timezones.items()
+                }
+            )
+        return aliases
 
     async def get_current_time(self, timezone_name: str | None = None) -> datetime:
         """Get current time in specified timezone.
@@ -198,10 +218,10 @@ class TimeService(AsyncServiceLifecycle):
             raise TimeServiceError("No timezone configured for current time lookup.")
 
         try:
+            aliases = self._timezone_aliases()
             # Handle common timezone abbreviations
             timezone_key = resolved_timezone.upper()
-            if timezone_key in self._major_timezones:
-                resolved_timezone = self._major_timezones[timezone_key]
+            resolved_timezone = aliases.get(timezone_key, resolved_timezone)
 
             if resolved_timezone == "UTC":
                 return datetime.now(UTC)
@@ -209,7 +229,7 @@ class TimeService(AsyncServiceLifecycle):
             tz = ZoneInfo(resolved_timezone)
             return datetime.now(tz)
 
-        except self._recoverable_errors as error:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
                 f"Error getting time for timezone {resolved_timezone}: {error!s}",
                 original_error=error,
@@ -231,9 +251,9 @@ class TimeService(AsyncServiceLifecycle):
 
         try:
             # Handle common timezone abbreviations
+            aliases = self._timezone_aliases()
             timezone_key = timezone_name.upper()
-            if timezone_key in self._major_timezones:
-                timezone_name = self._major_timezones[timezone_key]
+            timezone_name = aliases.get(timezone_key, timezone_name)
 
             tz = UTC if timezone_name == "UTC" else ZoneInfo(timezone_name)
 
@@ -258,7 +278,7 @@ class TimeService(AsyncServiceLifecycle):
                 current_time=current_time,
             )
 
-        except self._recoverable_errors as error:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
                 f"Error getting timezone info for {timezone_name}: {error!s}",
                 original_error=error,
@@ -294,7 +314,7 @@ class TimeService(AsyncServiceLifecycle):
                 except ValueError as exc:
                     # Try other common formats
                     for fmt in [
-                        self.config.default_datetime_format,
+                        self.config.formats.datetime,
                         "%Y-%m-%d %H:%M:%S",
                         "%Y-%m-%d %H:%M",
                         "%Y-%m-%d",
@@ -314,12 +334,11 @@ class TimeService(AsyncServiceLifecycle):
                 parsed_time = time_to_convert
 
             # Handle timezone abbreviations
+            aliases = self._timezone_aliases()
             source_key = source_timezone.upper()
             target_key = target_timezone.upper()
-            if source_key in self._major_timezones:
-                source_timezone = self._major_timezones[source_key]
-            if target_key in self._major_timezones:
-                target_timezone = self._major_timezones[target_key]
+            source_timezone = aliases.get(source_key, source_timezone)
+            target_timezone = aliases.get(target_key, target_timezone)
 
             # Convert to source timezone if naive
             if parsed_time.tzinfo is None:
@@ -360,7 +379,7 @@ class TimeService(AsyncServiceLifecycle):
                 time_difference=diff_description,
             )
 
-        except self._recoverable_errors as error:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
                 f"Error converting time from {source_timezone} to {target_timezone}: "
                 f"{error!s}",
@@ -424,14 +443,16 @@ class TimeService(AsyncServiceLifecycle):
 
             world_clock = []
 
+            aliases = self._timezone_aliases()
+
             for city in cities:  # pyright: ignore[reportOptionalIterable]
                 try:
                     # Get timezone for city
                     display_city = city
                     if city in city_timezones:
                         timezone_name = city_timezones[city]
-                    elif city.upper() in self._major_timezones:
-                        timezone_name = self._major_timezones[city.upper()]
+                    elif city.upper() in aliases:
+                        timezone_name = aliases[city.upper()]
                         display_city = city.upper()  # Use abbreviation as city name
                     else:
                         # Assume it's already a timezone name
@@ -452,23 +473,19 @@ class TimeService(AsyncServiceLifecycle):
                             city=display_city,
                             timezone=timezone_name,
                             current_time=current_time,
-                            local_date=current_time.strftime(
-                                self.config.default_date_format
-                            ),
-                            local_time=current_time.strftime(
-                                self.config.default_time_format
-                            ),
+                            local_date=current_time.strftime(self.config.formats.date),
+                            local_time=current_time.strftime(self.config.formats.time),
                             utc_offset=formatted_offset,
                         )
                     )
 
-                except self._recoverable_errors:
+                except RECOVERABLE_ERRORS:
                     # Skip problematic cities but don't fail the entire request
                     continue
 
             return world_clock
 
-        except self._recoverable_errors as error:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
                 f"Error getting world clock: {error!s}", original_error=error
             ) from error
@@ -497,7 +514,7 @@ class TimeService(AsyncServiceLifecycle):
                     parsed_time = datetime.fromisoformat(target_time)
                 except ValueError:
                     parsed_time = datetime.strptime(
-                        target_time, self.config.default_datetime_format
+                        target_time, self.config.formats.datetime
                     )
             else:
                 parsed_time = target_time
@@ -534,7 +551,7 @@ class TimeService(AsyncServiceLifecycle):
                 "total_seconds": time_diff.total_seconds(),
             }
 
-        except self._recoverable_errors as error:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
                 f"Error calculating time until {target_time}: {error!s}",
                 original_error=error,
@@ -590,11 +607,11 @@ class TimeService(AsyncServiceLifecycle):
         try:
             # Use defaults from settings if not provided
             if business_start is None:
-                business_start = self.config.default_business_start
+                business_start = self.config.business_hours.start
             if business_end is None:
-                business_end = self.config.default_business_end
+                business_end = self.config.business_hours.end
             if weekdays_only is None:
-                weekdays_only = self.config.weekdays_only
+                weekdays_only = self.config.business_hours.weekdays_only
 
             if business_start is None or business_end is None:
                 raise TimeServiceError("Business hours configuration is incomplete.")
@@ -617,7 +634,7 @@ class TimeService(AsyncServiceLifecycle):
                 "weekdays_only": weekdays_only,
             }
 
-        except self._recoverable_errors as error:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
                 f"Error checking business hours for {timezone_name}: {error!s}",
                 original_error=error,
@@ -649,7 +666,7 @@ class TimeService(AsyncServiceLifecycle):
 
         except ValueError:
             # Fallback to major timezones
-            return list(self._major_timezones.values())
+            return list(self._timezone_aliases().values())
 
     async def format_datetime(
         self,
@@ -681,11 +698,11 @@ class TimeService(AsyncServiceLifecycle):
                 target_dt = dt.astimezone(target_tz)
 
             # Use custom format or default from settings
-            format_to_use = format_string or self.config.default_datetime_format
+            format_to_use = format_string or self.config.formats.datetime
 
             return target_dt.strftime(format_to_use)
 
-        except self._recoverable_errors as error:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
                 f"Error formatting datetime: {error!s}", original_error=error
             ) from error

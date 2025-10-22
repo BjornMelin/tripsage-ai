@@ -242,14 +242,14 @@ class TestOverallMigrationImpact:
             print(f"  {service}: {mode.value}")
 
         # Verify our migrated services are using direct mode by default
-        assert (
-            flags.redis_integration == IntegrationMode.DIRECT
-            or flags.redis_integration == IntegrationMode.MCP
-        )
-        assert (
-            flags.supabase_integration == IntegrationMode.DIRECT
-            or flags.supabase_integration == IntegrationMode.MCP
-        )
+        assert flags.redis_integration in {
+            IntegrationMode.DIRECT,
+            IntegrationMode.MCP,
+        }
+        assert flags.supabase_integration in {
+            IntegrationMode.DIRECT,
+            IntegrationMode.MCP,
+        }
 
     async def test_performance_improvement_validation(self, performance_benchmark):
         """Validate that we've achieved meaningful performance improvements."""

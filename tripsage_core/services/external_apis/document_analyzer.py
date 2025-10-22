@@ -3,6 +3,7 @@
 import asyncio
 import json
 import re
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,10 @@ from tripsage_core.exceptions.exceptions import (
     CoreServiceError,
 )
 from tripsage_core.models.attachments import DocumentAnalysisResult, FileType
+from tripsage_core.services.external_apis.base_service import (
+    AsyncServiceLifecycle,
+    AsyncServiceProvider,
+)
 
 
 class DocumentAnalyzerError(CoreAPIError):
@@ -65,7 +70,18 @@ class TravelInformation(BaseModel):
     )
 
 
-class DocumentAnalyzer:
+@dataclass(frozen=True)
+class DocumentAnalyzerConfig:
+    """Immutable configuration derived from application settings."""
+
+    ai_enabled: bool
+    max_text_length: int
+    max_concurrent_analyses: int
+    ocr_enabled: bool
+    pdf_extraction_enabled: bool
+
+
+class DocumentAnalyzer(AsyncServiceLifecycle):
     """Service for AI-powered analysis of travel documents with Core integration.
 
     Processes various document types to extract travel-relevant information
@@ -81,27 +97,27 @@ class DocumentAnalyzer:
         self.settings = settings or get_settings()
         self._connected = False
 
-        # Get AI configuration from settings
-        self.ai_enabled = getattr(self.settings, "document_analyzer_ai_enabled", False)
-        self.max_text_length = getattr(
-            self.settings, "document_analyzer_max_text_length", 50000
-        )
-        self.max_concurrent_analyses = getattr(
-            self.settings, "document_analyzer_max_concurrent", 3
-        )
-
-        # OCR settings
-        self.ocr_enabled = getattr(
-            self.settings, "document_analyzer_ocr_enabled", False
-        )
-        self.pdf_extraction_enabled = getattr(
-            self.settings, "document_analyzer_pdf_enabled", False
+        settings_obj = self.settings
+        self.config = DocumentAnalyzerConfig(
+            ai_enabled=getattr(settings_obj, "document_analyzer_ai_enabled", False),
+            max_text_length=getattr(
+                settings_obj, "document_analyzer_max_text_length", 50000
+            ),
+            max_concurrent_analyses=getattr(
+                settings_obj, "document_analyzer_max_concurrent", 3
+            ),
+            ocr_enabled=getattr(settings_obj, "document_analyzer_ocr_enabled", False),
+            pdf_extraction_enabled=getattr(
+                settings_obj, "document_analyzer_pdf_enabled", False
+            ),
         )
 
         # Rate limiting
-        self._analysis_semaphore = asyncio.Semaphore(self.max_concurrent_analyses)
+        self._analysis_semaphore = asyncio.Semaphore(
+            self.config.max_concurrent_analyses
+        )
 
-        # TODO: Initialize AI client when AI service is ready
+        # AI client integration is optional until core AI service ships.
         self.ai_client = None
 
         # Analysis templates for different document types
@@ -138,8 +154,8 @@ class DocumentAnalyzer:
             return
 
         try:
-            # TODO: Initialize AI client when available
-            # if self.ai_enabled:
+            # AI client init is deferred until the Core AI service is deployed.
+            # if self.config.ai_enabled:
             #     self.ai_client = await get_ai_client()
 
             self._connected = True
@@ -239,31 +255,34 @@ class DocumentAnalyzer:
             DocumentAnalyzerError: When text extraction fails
         """
         try:
-            if context.mime_type == "text/plain":
-                return await self._extract_text_from_text_file(context.file_path)
-            if context.mime_type == "application/pdf":
-                if self.pdf_extraction_enabled:
-                    return await self._extract_text_from_pdf(context.file_path)
-                return (
-                    f"PDF text extraction disabled in settings for "
-                    f"{context.file_path.name}"
-                )
-            if context.mime_type == "application/json":
-                return await self._extract_text_from_json(context.file_path)
-            if context.mime_type == "text/csv":
-                return await self._extract_text_from_csv(context.file_path)
-            if context.mime_type.startswith("image/"):
-                if self.ocr_enabled:
-                    return await self._extract_text_from_image(context.file_path)
-                return (
-                    f"OCR text extraction disabled in settings for "
-                    f"{context.file_path.name}"
-                )
-            if "officedocument" in context.mime_type:
-                # TODO: Implement Office document parsing when needed
-                return await self._extract_text_from_office_doc(context.file_path)
+            result: str | None = None
 
-            return None
+            if context.mime_type == "text/plain":
+                result = await self._extract_text_from_text_file(context.file_path)
+            elif context.mime_type == "application/pdf":
+                if self.config.pdf_extraction_enabled:
+                    result = await self._extract_text_from_pdf(context.file_path)
+                else:
+                    result = (
+                        f"PDF text extraction disabled in settings for "
+                        f"{context.file_path.name}"
+                    )
+            elif context.mime_type == "application/json":
+                result = await self._extract_text_from_json(context.file_path)
+            elif context.mime_type == "text/csv":
+                result = await self._extract_text_from_csv(context.file_path)
+            elif context.mime_type.startswith("image/"):
+                if self.config.ocr_enabled:
+                    result = await self._extract_text_from_image(context.file_path)
+                else:
+                    result = (
+                        f"OCR text extraction disabled in settings for "
+                        f"{context.file_path.name}"
+                    )
+            elif "officedocument" in context.mime_type:
+                result = await self._extract_text_from_office_doc(context.file_path)
+
+            return result
 
         except Exception as e:
             raise DocumentAnalyzerError(
@@ -276,21 +295,20 @@ class DocumentAnalyzer:
         try:
             with Path(file_path).open(encoding="utf-8") as f:
                 content = f.read()
-                if len(content) > self.max_text_length:
-                    content = content[: self.max_text_length]
+                if len(content) > self.config.max_text_length:
+                    content = content[: self.config.max_text_length]
                 return content
         except UnicodeDecodeError:
             # Try with different encoding
             with Path(file_path).open(encoding="latin-1") as f:
                 content = f.read()
-                if len(content) > self.max_text_length:
-                    content = content[: self.max_text_length]
+                if len(content) > self.config.max_text_length:
+                    content = content[: self.config.max_text_length]
                 return content
 
     async def _extract_text_from_pdf(self, file_path: Path) -> str | None:
         """Extract text from PDF file."""
-        # TODO: Implement PDF text extraction using PyPDF2 or similar
-        # Placeholder implementation
+        # Placeholder implementation until PDF support is integrated.
         return f"PDF text extraction not yet implemented for {file_path.name}"
 
     async def _extract_text_from_json(self, file_path: Path) -> str:
@@ -298,28 +316,26 @@ class DocumentAnalyzer:
         with Path(file_path).open(encoding="utf-8") as f:
             data = json.load(f)
             content = json.dumps(data, indent=2)
-            if len(content) > self.max_text_length:
-                content = content[: self.max_text_length]
+            if len(content) > self.config.max_text_length:
+                content = content[: self.config.max_text_length]
             return content
 
     async def _extract_text_from_csv(self, file_path: Path) -> str:
         """Extract text from CSV file."""
         with Path(file_path).open(encoding="utf-8") as f:
             content = f.read()
-            if len(content) > self.max_text_length:
-                content = content[: self.max_text_length]
+            if len(content) > self.config.max_text_length:
+                content = content[: self.config.max_text_length]
             return content
 
     async def _extract_text_from_image(self, file_path: Path) -> str | None:
         """Extract text from image using OCR."""
-        # TODO: Implement OCR using pytesseract or cloud OCR service
-        # Placeholder implementation
+        # Placeholder implementation until OCR support is integrated.
         return f"OCR text extraction not yet implemented for {file_path.name}"
 
     async def _extract_text_from_office_doc(self, file_path: Path) -> str | None:
         """Extract text from Office documents."""
-        # TODO: Implement Office document parsing using python-docx, openpyxl
-        # Placeholder implementation
+        # Placeholder implementation until Office document parsing is available.
         return (
             f"Office document text extraction not yet implemented for {file_path.name}"
         )
@@ -337,8 +353,7 @@ class DocumentAnalyzer:
         Returns:
             Analysis results dictionary
         """
-        # TODO: Implement AI analysis using Core AI service when available
-        # For now, return structured placeholder with enhanced analysis
+        # Structured placeholder until Core AI service integration lands.
 
         template = self.analysis_templates.get(
             analysis_type, self.analysis_templates["general"]
@@ -365,7 +380,7 @@ class DocumentAnalyzer:
             "extracted_entities": entities,
             "travel_keywords": keywords,
             "status": "mock_analysis_with_core",
-            "ai_enabled": self.ai_enabled,
+            "ai_enabled": self.config.ai_enabled,
             "settings_source": "core_app_settings",
         }
 
@@ -729,46 +744,22 @@ class DocumentAnalyzer:
         except CoreServiceError:
             return False
 
-    async def close(self) -> None:
-        """Close the service and clean up resources."""
-        await self.disconnect()
 
-    async def __aenter__(self):
-        """Async context manager entry."""
-        await self.connect()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        await self.close()
-
-
-# Global service instance
-_document_analyzer: DocumentAnalyzer | None = None
+_document_analyzer_provider = AsyncServiceProvider(
+    factory=DocumentAnalyzer,
+    initializer=lambda service: service.connect(),
+    finalizer=lambda service: service.close(),
+)
 
 
 async def get_document_analyzer() -> DocumentAnalyzer:
-    """Get the global document analyzer instance.
-
-    Returns:
-        DocumentAnalyzer instance
-    """
-    global _document_analyzer  # pylint: disable=global-statement
-
-    if _document_analyzer is None:
-        _document_analyzer = DocumentAnalyzer()
-        await _document_analyzer.connect()
-
-    return _document_analyzer
+    """Return the shared document analyzer instance."""
+    return await _document_analyzer_provider.get()
 
 
 async def close_document_analyzer() -> None:
-    """Close the global document analyzer instance."""
-    global _document_analyzer  # pylint: disable=global-statement
-
-    if _document_analyzer:
-        await _document_analyzer.close()
-        _document_analyzer = None
+    """Dispose of the shared document analyzer instance."""
+    await _document_analyzer_provider.close()
 
 
 __all__ = [

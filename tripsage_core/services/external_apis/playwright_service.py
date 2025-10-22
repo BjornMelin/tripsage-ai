@@ -17,6 +17,10 @@ from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError as CoreAPIError,
     CoreServiceError,
 )
+from tripsage_core.services.external_apis.base_service import (
+    AsyncServiceLifecycle,
+    AsyncServiceProvider,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -53,6 +57,9 @@ class PlaywrightConfig(BaseModel):
         False, description="Block image loading for faster scraping"
     )
     block_css: bool = Field(False, description="Block CSS loading for faster scraping")
+    max_concurrent_pages: int = Field(
+        3, description="Maximum concurrent pages handled by the service"
+    )
 
 
 class ScrapingResult(BaseModel):
@@ -74,7 +81,7 @@ class ScrapingResult(BaseModel):
     error: str | None = Field(None, description="Error message if failed")
 
 
-class PlaywrightService:
+class PlaywrightService(AsyncServiceLifecycle):
     """Direct Playwright SDK service for complex web scraping with Core integration."""
 
     def __init__(
@@ -100,11 +107,13 @@ class PlaywrightService:
         self._context: BrowserContext | None = None
         self._connected = False
 
-        # Concurrency control from settings
-        self._max_concurrent_pages = getattr(
-            self.settings, "playwright_max_concurrent_pages", 3
+        concurrency_limit = getattr(
+            self.settings,
+            "playwright_max_concurrent_pages",
+            self.config.max_concurrent_pages,
         )
-        self._page_semaphore = asyncio.Semaphore(self._max_concurrent_pages)
+        self.config.max_concurrent_pages = concurrency_limit
+        self._page_semaphore = asyncio.Semaphore(concurrency_limit)
 
     def _build_config_from_settings(self) -> PlaywrightConfig:
         """Build PlaywrightConfig from Core settings."""
@@ -121,6 +130,9 @@ class PlaywrightService:
             ),
             block_images=getattr(self.settings, "playwright_block_images", False),
             block_css=getattr(self.settings, "playwright_block_css", False),
+            max_concurrent_pages=getattr(
+                self.settings, "playwright_max_concurrent_pages", 3
+            ),
         )
 
     async def connect(self) -> None:
@@ -246,6 +258,7 @@ class PlaywrightService:
     async def scrape_url(
         self,
         url: str,
+        *,
         wait_for_selector: str | None = None,
         wait_for_function: str | None = None,
         custom_timeout: int | None = None,
@@ -459,7 +472,9 @@ class PlaywrightService:
 
         # Use settings default if not specified
         target_concurrency = (
-            max_concurrent if max_concurrent is not None else self._max_concurrent_pages
+            max_concurrent
+            if max_concurrent is not None
+            else self.config.max_concurrent_pages
         )
 
         # Create semaphore to limit concurrency
@@ -641,46 +656,22 @@ class PlaywrightService:
         except CoreServiceError:
             return False
 
-    async def close(self) -> None:
-        """Close the service and clean up resources."""
-        await self.disconnect()
 
-    async def __aenter__(self):
-        """Async context manager entry."""
-        await self.connect()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        await self.close()
-
-
-# Global service instance
-_playwright_service: PlaywrightService | None = None
+_playwright_service_provider = AsyncServiceProvider(
+    factory=PlaywrightService,
+    initializer=lambda service: service.connect(),
+    finalizer=lambda service: service.close(),
+)
 
 
 async def get_playwright_service() -> PlaywrightService:
-    """Get the global Playwright service instance.
-
-    Returns:
-        PlaywrightService instance
-    """
-    global _playwright_service  # pylint: disable=global-statement
-
-    if _playwright_service is None:
-        _playwright_service = PlaywrightService()
-        await _playwright_service.connect()
-
-    return _playwright_service
+    """Return the shared Playwright service instance."""
+    return await _playwright_service_provider.get()
 
 
 async def close_playwright_service() -> None:
-    """Close the global Playwright service instance."""
-    global _playwright_service  # pylint: disable=global-statement
-
-    if _playwright_service:
-        await _playwright_service.close()
-        _playwright_service = None
+    """Dispose of the shared Playwright service instance."""
+    await _playwright_service_provider.close()
 
 
 # Convenience functions
