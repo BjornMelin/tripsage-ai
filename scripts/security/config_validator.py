@@ -5,8 +5,11 @@ Validates configuration using `tripsage_core.config.Settings` when available,
 checks common pitfalls, and emits a concise report with proper exit codes.
 """
 
+import json
 import logging
+import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -87,6 +90,7 @@ class SecurityValidator:
         """Initialize security configuration validator."""
         self.issues: list[str] = []
         self.warnings: list[str] = []
+        self._sanitized_report: dict[str, list[str]] = {"issues": [], "warnings": []}
 
     def _sanitize_issue_message(self, message: str) -> str:
         """Sanitize issue messages to avoid logging sensitive information.
@@ -128,6 +132,33 @@ class SecurityValidator:
                 )
 
         return sanitized
+
+    def _capture_sanitized_report(self) -> None:
+        """Store sanitized issues and warnings for secure reporting."""
+        self._sanitized_report = {
+            "issues": [self._sanitize_issue_message(msg) for msg in self.issues],
+            "warnings": [self._sanitize_issue_message(msg) for msg in self.warnings],
+        }
+
+    def _write_sanitized_report(self) -> Path | None:
+        """Persist sanitized findings to a protected JSON report."""
+        if not self.issues and not self.warnings:
+            return None
+
+        self._capture_sanitized_report()
+        timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+        report_path = Path.cwd() / f"security_validation_report_{timestamp}.json"
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            fd = os.open(report_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                json.dump(self._sanitized_report, handle, indent=2)
+        except OSError as exc:
+            logger.warning("Unable to write sanitized security report: %s", exc)
+            return None
+
+        return report_path
 
     def validate_configuration_security(self) -> bool:
         """Run security validation.
@@ -302,19 +333,31 @@ class SecurityValidator:
         else:
             logger.warning("Production security validation has issues")
 
+        report_path: Path | None = None
+        if self.issues or self.warnings:
+            report_path = self._write_sanitized_report()
+
         # Report issues
         if self.issues:
-            logger.exception("%s security issue(s) found:", len(self.issues))
-            for issue in self.issues:
-                sanitized_issue = self._sanitize_issue_message(issue)
-                logger.exception(" - %s", sanitized_issue)
+            if report_path:
+                logger.error(
+                    "%s security issue(s) found. Sanitized summary written to %s",
+                    len(self.issues),
+                    report_path,
+                )
+            else:
+                logger.error("%s security issue(s) found.", len(self.issues))
 
         # Report warnings
         if self.warnings:
-            logger.warning("%s security warning(s):", len(self.warnings))
-            for warning in self.warnings:
-                sanitized_warning = self._sanitize_issue_message(warning)
-                logger.warning("  - %s", sanitized_warning)
+            if report_path:
+                logger.warning(
+                    "%s security warning(s) detected. Sanitized summary written to %s",
+                    len(self.warnings),
+                    report_path,
+                )
+            else:
+                logger.warning("%s security warning(s) detected.", len(self.warnings))
 
         if not self.issues and not self.warnings:
             logger.info("No security issues or warnings found")
@@ -397,7 +440,7 @@ def main():
         logger.info("Security validation completed successfully")
         sys.exit(0)
     else:
-        logger.exception("Security validation failed")
+        logger.error("Security validation failed")
         sys.exit(1)
 
 

@@ -14,6 +14,7 @@ import asyncio
 import hashlib
 import logging
 import mimetypes
+import re
 import threading
 from collections.abc import Iterable, Mapping, MutableMapping
 from dataclasses import dataclass, field
@@ -962,6 +963,15 @@ class FileProcessingService:
             file_type = FileType.ARCHIVE
         return file_type
 
+    @staticmethod
+    def _sanitize_storage_component(value: str, fallback: str) -> str:
+        """Return a filesystem-safe token for storage paths."""
+        cleaned = re.sub(r"[^A-Za-z0-9._-]", "_", value)
+        cleaned = cleaned.strip("._")
+        if not cleaned:
+            return fallback
+        return cleaned[:128]
+
     async def _store_file(
         self, *, file_id: str, user_id: str, filename: str, content: bytes
     ) -> StorageResult:
@@ -987,12 +997,18 @@ class FileProcessingService:
                 url=getattr(storage_result, "url", None),
             )
 
-        user_dir = self._storage_root / "files" / user_id
-        user_dir.mkdir(parents=True, exist_ok=True)
+        safe_user_id = self._sanitize_storage_component(user_id, fallback="user")
+        safe_file_id = self._sanitize_storage_component(file_id, fallback="file")
         extension = Path(filename).suffix.lower()
-        stored_filename = f"{file_id}{extension}"
-        relative_path = Path("files") / user_id / stored_filename
-        full_path = self._storage_root / relative_path
+        stored_filename = f"{safe_file_id}{extension}"
+
+        relative_path = Path("files") / safe_user_id / stored_filename
+        full_path = (self._storage_root / relative_path).resolve()
+        storage_root = self._storage_root.resolve()
+        if not full_path.is_relative_to(storage_root):
+            raise ValidationError("Computed storage path escapes storage root")
+
+        full_path.parent.mkdir(parents=True, exist_ok=True)
         full_path.write_bytes(content)
 
         return StorageResult(

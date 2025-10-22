@@ -50,11 +50,11 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditOutcome,
     audit_api_key,
 )
-from tripsage_core.services.infrastructure.database_service import (
-    get_database_service,
-)
 from tripsage_core.services.infrastructure.cache_service import (
     get_cache_service,
+)
+from tripsage_core.services.infrastructure.database_service import (
+    get_database_service,
 )
 
 

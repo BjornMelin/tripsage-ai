@@ -455,9 +455,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         async def _get_flight_service_override(*_, **__):
             return mock_flight_service
 
-        app.dependency_overrides[get_flight_service_dep] = (
-            _get_flight_service_override
-        )
+        app.dependency_overrides[get_flight_service_dep] = _get_flight_service_override
 
         try:
             with TestClient(app) as client:

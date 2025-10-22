@@ -17,10 +17,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from tripsage.api.core.config import get_settings
 from tripsage.api.core.openapi import custom_openapi
+from tripsage.api.limiting import install_rate_limiting
 from tripsage.api.middlewares import (
     LoggingMiddleware,
 )
-from tripsage.api.limiting import install_rate_limiting
 from tripsage.api.routers import (
     accommodations,
     activities,

@@ -14,9 +14,8 @@ from tripsage.api.core.dependencies import (
     RequiredPrincipalDep,
     get_principal_id,
 )
-
-
 from tripsage.api.limiting import limiter
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["memory"])
@@ -156,6 +155,7 @@ async def search_memories(
             query=request.query, limit=request.limit, filters=None
         )
         from typing import Any, cast
+
         memories = await cast(Any, memory_service).search_memories(
             user_id, search_request
         )
@@ -192,6 +192,7 @@ async def update_preferences(
     try:
         user_id = get_principal_id(principal)
         from typing import Any, cast
+
         return await cast(Any, memory_service).update_user_preferences(
             user_id, request.preferences
         )
@@ -232,6 +233,7 @@ async def add_preference(  # pylint: disable=too-many-positional-arguments
     try:
         user_id = get_principal_id(principal)
         from typing import Any, cast
+
         return await cast(Any, memory_service).add_user_preference(
             user_id, key, value, category
         )
@@ -267,6 +269,7 @@ async def delete_memory(
     try:
         user_id = get_principal_id(principal)
         from typing import Any, cast
+
         success = await cast(Any, memory_service).delete_memory(user_id, memory_id)
 
         if not success:
@@ -307,6 +310,7 @@ async def get_memory_stats(
     try:
         user_id = get_principal_id(principal)
         from typing import Any, cast
+
         return await cast(Any, memory_service).get_memory_stats(user_id)
 
     except Exception as e:
@@ -340,6 +344,7 @@ async def clear_user_memory(
     try:
         user_id = get_principal_id(principal)
         from typing import Any, cast
+
         return await cast(Any, memory_service).clear_user_memory(user_id, confirm)
 
     except Exception as e:

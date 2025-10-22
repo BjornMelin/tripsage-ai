@@ -17,6 +17,7 @@ project_root = script_dir.parent
 sys.path.insert(0, str(project_root))
 
 # These imports rely on the path adjustments above
+# pylint: disable=wrong-import-position
 from tripsage.db.migrations import run_migrations
 from tripsage_core.utils.logging_utils import configure_logging
 
@@ -50,7 +51,7 @@ async def main():
     logger.info("SQL migrations completed: %s succeeded, %s failed", succeeded, failed)
 
     if failed > 0:
-        logger.exception("Some migrations failed")
+        logger.error("Some migrations failed")
         sys.exit(1)
     elif succeeded == 0:
         logger.info("No migrations were applied")
