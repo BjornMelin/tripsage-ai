@@ -106,7 +106,7 @@ class TestTripsRouterComprehensive:
         """Sample shared trip response from core service."""
         from tripsage_core.models.trip import (
             BudgetBreakdown,
-            EnhancedBudget,
+            Budget,
             TripPreferences,
         )
         from tripsage_core.services.business.trip_service import TripLocation
@@ -131,7 +131,7 @@ class TestTripsRouterComprehensive:
             "Tokyo, Japan"  # Core expects singular destination string
         )
         trip_mock.destinations = [destination]  # Use proper TripLocation object
-        trip_mock.budget = EnhancedBudget(
+        trip_mock.budget = Budget(
             total=5000.0,
             currency="USD",
             breakdown=BudgetBreakdown(

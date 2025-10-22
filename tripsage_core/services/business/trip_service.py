@@ -22,11 +22,7 @@ from tripsage_core.models.schemas_common.enums import (
     TripType,
     TripVisibility,
 )
-from tripsage_core.models.trip import (
-    EnhancedBudget,
-    Trip,
-    TripPreferences,
-)
+from tripsage_core.models.trip import Budget, Trip, TripPreferences
 
 
 logger = logging.getLogger(__name__)
@@ -57,7 +53,7 @@ class TripCreateRequest(TripSageModel):
     destinations: list[TripLocation] = Field(
         default_factory=list, description="Trip destinations"
     )
-    budget: EnhancedBudget = Field(..., description="Trip budget with breakdown")
+    budget: Budget = Field(..., description="Trip budget with breakdown")
     travelers: int = Field(default=1, ge=1, description="Number of travelers")
     trip_type: TripType = Field(default=TripType.LEISURE, description="Type of trip")
     visibility: TripVisibility = Field(
@@ -84,7 +80,7 @@ class TripUpdateRequest(TripSageModel):
     end_date: datetime | None = Field(None)
     destination: str | None = Field(None)
     destinations: list[TripLocation] | None = Field(None)
-    budget: EnhancedBudget | None = Field(None)
+    budget: Budget | None = Field(None)
     travelers: int | None = Field(None, ge=1)
     trip_type: TripType | None = Field(None)
     visibility: TripVisibility | None = Field(None)
@@ -106,7 +102,7 @@ class TripResponse(TripSageModel):
     destinations: list[TripLocation] = Field(
         default_factory=list, description="Trip destinations"
     )
-    budget: EnhancedBudget = Field(..., description="Trip budget with breakdown")
+    budget: Budget = Field(..., description="Trip budget with breakdown")
     travelers: int = Field(..., description="Number of travelers")
     trip_type: TripType = Field(..., description="Type of trip")
     status: TripStatus = Field(..., description="Trip status")
@@ -691,7 +687,7 @@ class TripService:
             end_date=trip_data["end_date"],
             destination=trip_data["destination"],
             destinations=destinations,
-            budget=EnhancedBudget(**trip_data["budget_breakdown"]),
+            budget=Budget(**trip_data["budget_breakdown"]),
             travelers=trip_data["travelers"],
             trip_type=TripType(trip_data["trip_type"]),
             status=TripStatus(trip_data["status"]),
