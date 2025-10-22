@@ -19,8 +19,8 @@ from tripsage.api.core.config import get_settings
 from tripsage.api.core.openapi import custom_openapi
 from tripsage.api.middlewares import (
     LoggingMiddleware,
-    RateLimitMiddleware,
 )
+from tripsage.api.limiting import install_rate_limiting
 from tripsage.api.routers import (
     accommodations,
     activities,
@@ -215,20 +215,17 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     )
 
     # Add custom middleware (order matters - first added is last executed)
-    # Logging middleware should be first to log all requests
+    # Logging middleware first to log all requests
     app.add_middleware(LoggingMiddleware)
 
-    # Rate limiting middleware with principal-based limits
-    use_dragonfly = bool(settings.redis_url)
-    app.add_middleware(
-        RateLimitMiddleware, settings=settings, use_dragonfly=use_dragonfly
-    )
+    # Install SlowAPI-based inbound rate limiting
+    install_rate_limiting(app, settings)
 
     # Authentication middleware supporting JWT and API keys
     # Temporarily disabled - awaiting Supabase Auth
     # app.add_middleware(AuthenticationMiddleware, settings=settings)
 
-    # Key-operation rate limiting merged into RateLimitMiddleware
+    # Inbound rate limiting handled via SlowAPI installed above
 
     # Simplified exception handlers
     @app.exception_handler(CoreAuthenticationError)
