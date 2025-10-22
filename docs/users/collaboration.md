@@ -291,7 +291,7 @@ Push Notifications:
   - Updates: ⚙️ Important only
 ```
 
-## 🛠️ Advanced Collaboration
+## 🛠️ Collaboration
 
 ### Templates for Groups
 

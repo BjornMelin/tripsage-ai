@@ -4,7 +4,7 @@
 > **Performance**: 25x improvement over Redis, <100ms search responses  
 > *Last updated: June 17, 2025*
 
-This comprehensive guide covers performance optimization techniques for TripSage AI, including search strategies, caching implementation, profiling methods, and monitoring approaches to maintain peak system performance.
+This guide covers performance optimization techniques for TripSage AI, including search strategies, caching implementation, profiling methods, and monitoring approaches to maintain peak system performance.
 
 ## 📋 Table of Contents
 
@@ -191,7 +191,7 @@ class DragonflyDBService(CacheService):
                 return value
                 
         except Exception as e:
-            logger.error(f"Cache get failed for key {key}: {str(e)}")
+            logger.exception(f"Cache get failed for key {key}: {str(e)}")
             return None
     
     async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
@@ -211,7 +211,7 @@ class DragonflyDBService(CacheService):
             return True
             
         except Exception as e:
-            logger.error(f"Cache set failed for key {key}: {str(e)}")
+            logger.exception(f"Cache set failed for key {key}: {str(e)}")
             return False
     
     async def batch_get(self, keys: List[str]) -> Dict[str, Any]:
@@ -230,7 +230,7 @@ class DragonflyDBService(CacheService):
             return result
             
         except Exception as e:
-            logger.error(f"Cache batch_get failed: {str(e)}")
+            logger.exception(f"Cache batch_get failed: {str(e)}")
             return {}
     
     async def batch_set(self, items: Dict[str, Any], ttl: Optional[int] = None) -> bool:
@@ -257,7 +257,7 @@ class DragonflyDBService(CacheService):
             return True
             
         except Exception as e:
-            logger.error(f"Cache batch_set failed: {str(e)}")
+            logger.exception(f"Cache batch_set failed: {str(e)}")
             return False
 ```
 
@@ -711,13 +711,14 @@ class PerformantRateLimiter:
 ### **Application Metrics**
 
 ```python
-from prometheus_client import Counter, Histogram, Gauge
+from opentelemetry import metrics
 import time
 
 # Define metrics
-REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP requests', ['method', 'endpoint'])
-REQUEST_DURATION = Histogram('http_request_duration_seconds', 'HTTP request duration')
-ACTIVE_CONNECTIONS = Gauge('active_database_connections', 'Active database connections')
+from opentelemetry import metrics
+meter = metrics.get_meter("tripsage")
+REQUEST_COUNT = meter.create_counter("http.server.requests")
+REQUEST_DURATION = meter.create_histogram("http.server.duration", unit="s")
 
 @app.middleware("http")
 async def metrics_middleware(request: Request, call_next):
@@ -946,4 +947,4 @@ async def load_test_endpoint(url: str, concurrent_requests: int = 100):
 
 ---
 
-*This performance optimization guide provides comprehensive tools and techniques for maintaining and improving TripSage AI's exceptional performance across all system components.*
+*This performance optimization guide provides tools and techniques for maintaining and improving TripSage AI's exceptional performance across all system components.*

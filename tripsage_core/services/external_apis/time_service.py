@@ -1,32 +1,69 @@
-"""
-Time Service using Python datetime functionality with TripSage Core integration.
+"""Time Service using Python datetime functionality with TripSage Core integration.
 
 This service provides timezone-aware time operations, eliminating the need for
 external MCP services for basic time and timezone calculations.
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Union
-from zoneinfo import ZoneInfo
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, Field
 
 from tripsage_core.config import Settings, get_settings
-from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
-from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.exceptions.exceptions import (
+    CoreExternalAPIError as CoreAPIError,
+    CoreServiceError,
+)
+from tripsage_core.services.external_apis.base_service import (
+    AsyncServiceLifecycle,
+    AsyncServiceProvider,
+)
 
 
 class TimeServiceError(CoreAPIError):
     """Exception raised for time service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
+        """Initialize TimeServiceError."""
         super().__init__(
             message=message,
             code="TIME_SERVICE_ERROR",
-            service="TimeService",
-            details={"original_error": str(original_error) if original_error else None},
+            api_service="TimeService",
+            details={
+                "additional_context": {
+                    "original_error": str(original_error) if original_error else None
+                }
+            },
         )
         self.original_error = original_error
+
+
+RECOVERABLE_ERRORS: tuple[type[Exception], ...] = (
+    CoreServiceError,
+    TimeServiceError,
+    ZoneInfoNotFoundError,
+    ValueError,
+    OSError,
+    RuntimeError,
+    ConnectionError,
+)
+
+DEFAULT_TIMEZONE_ALIASES: dict[str, str] = {
+    "UTC": "UTC",
+    "EST": "America/New_York",
+    "PST": "America/Los_Angeles",
+    "CST": "America/Chicago",
+    "MST": "America/Denver",
+    "GMT": "Europe/London",
+    "CET": "Europe/Paris",
+    "JST": "Asia/Tokyo",
+    "IST": "Asia/Kolkata",
+    "AEST": "Australia/Sydney",
+    "CEST": "Europe/Berlin",
+    "BST": "Europe/London",
+}
 
 
 class TimeZoneInfo(BaseModel):
@@ -60,12 +97,39 @@ class WorldClock(BaseModel):
     utc_offset: str = Field(..., description="UTC offset")
 
 
-class TimeService:
+@dataclass(frozen=True)
+class TimeFormatConfig:
+    """Formatting configuration for date and time."""
+
+    date: str
+    time: str
+    datetime: str
+
+
+@dataclass(frozen=True)
+class BusinessHoursConfig:
+    """Business hours configuration."""
+
+    start: str
+    end: str
+    weekdays_only: bool
+
+
+@dataclass(frozen=True)
+class TimeServiceConfig:
+    """Immutable configuration for the time service."""
+
+    default_timezone: str
+    formats: TimeFormatConfig
+    business_hours: BusinessHoursConfig
+    custom_timezones: dict[str, str]
+
+
+class TimeService(AsyncServiceLifecycle):
     """Service for timezone and time operations with Core integration."""
 
-    def __init__(self, settings: Optional[Settings] = None):
-        """
-        Initialize Time service.
+    def __init__(self, settings: Settings | None = None):
+        """Initialize Time service.
 
         Args:
             settings: Core application settings
@@ -73,49 +137,28 @@ class TimeService:
         self.settings = settings or get_settings()
         self._connected = False
 
-        # Get time service configuration from settings
-        self.default_timezone = getattr(
-            self.settings, "time_service_default_timezone", "UTC"
+        settings_obj = self.settings
+        formats = TimeFormatConfig(
+            date=getattr(settings_obj, "time_service_date_format", "%Y-%m-%d"),
+            time=getattr(settings_obj, "time_service_time_format", "%H:%M:%S"),
+            datetime=getattr(
+                settings_obj, "time_service_datetime_format", "%Y-%m-%d %H:%M:%S"
+            ),
         )
-        self.default_date_format = getattr(
-            self.settings, "time_service_date_format", "%Y-%m-%d"
+        business_hours = BusinessHoursConfig(
+            start=getattr(settings_obj, "time_service_business_start", "09:00"),
+            end=getattr(settings_obj, "time_service_business_end", "17:00"),
+            weekdays_only=getattr(settings_obj, "time_service_weekdays_only", True),
         )
-        self.default_time_format = getattr(
-            self.settings, "time_service_time_format", "%H:%M:%S"
+        self.config = TimeServiceConfig(
+            default_timezone=getattr(
+                settings_obj, "time_service_default_timezone", "UTC"
+            ),
+            formats=formats,
+            business_hours=business_hours,
+            custom_timezones=getattr(settings_obj, "time_service_custom_timezones", {})
+            or {},
         )
-        self.default_datetime_format = getattr(
-            self.settings, "time_service_datetime_format", "%Y-%m-%d %H:%M:%S"
-        )
-
-        # Business hours defaults from settings
-        self.default_business_start = getattr(
-            self.settings, "time_service_business_start", "09:00"
-        )
-        self.default_business_end = getattr(
-            self.settings, "time_service_business_end", "17:00"
-        )
-        self.weekdays_only = getattr(self.settings, "time_service_weekdays_only", True)
-
-        # Major timezone mappings (can be extended via settings)
-        self._major_timezones = {
-            "UTC": "UTC",
-            "EST": "America/New_York",
-            "PST": "America/Los_Angeles",
-            "CST": "America/Chicago",
-            "MST": "America/Denver",
-            "GMT": "Europe/London",
-            "CET": "Europe/Paris",
-            "JST": "Asia/Tokyo",
-            "IST": "Asia/Kolkata",
-            "AEST": "Australia/Sydney",
-            "CEST": "Europe/Berlin",
-            "BST": "Europe/London",
-        }
-
-        # Add custom timezone mappings from settings if available
-        custom_timezones = getattr(self.settings, "time_service_custom_timezones", {})
-        if custom_timezones:
-            self._major_timezones.update(custom_timezones)
 
     async def connect(self) -> None:
         """Initialize the time service."""
@@ -124,16 +167,16 @@ class TimeService:
 
         try:
             # Test timezone functionality
-            _ = datetime.now(timezone.utc)
+            _ = datetime.now(UTC)
             self._connected = True
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             raise CoreServiceError(
-                message=f"Failed to connect time service: {str(e)}",
+                message=f"Failed to connect time service: {error!s}",
                 code="CONNECTION_FAILED",
                 service="TimeService",
-                details={"error": str(e)},
-            ) from e
+                details={"error": str(error)},
+            ) from error
 
     async def disconnect(self) -> None:
         """Clean up resources."""
@@ -144,9 +187,20 @@ class TimeService:
         if not self._connected:
             await self.connect()
 
-    async def get_current_time(self, timezone_name: Optional[str] = None) -> datetime:
-        """
-        Get current time in specified timezone.
+    def _timezone_aliases(self) -> dict[str, str]:
+        """Return merged timezone aliases from defaults and settings."""
+        aliases = dict(DEFAULT_TIMEZONE_ALIASES)
+        if self.config.custom_timezones:
+            aliases.update(
+                {
+                    alias.upper(): zone
+                    for alias, zone in self.config.custom_timezones.items()
+                }
+            )
+        return aliases
+
+    async def get_current_time(self, timezone_name: str | None = None) -> datetime:
+        """Get current time in specified timezone.
 
         Args:
             timezone_name: Timezone name (e.g., 'America/New_York') or None for default
@@ -159,29 +213,30 @@ class TimeService:
         """
         await self.ensure_connected()
 
-        if timezone_name is None:
-            timezone_name = self.default_timezone
+        resolved_timezone = timezone_name or self.config.default_timezone
+        if resolved_timezone is None:
+            raise TimeServiceError("No timezone configured for current time lookup.")
 
         try:
+            aliases = self._timezone_aliases()
             # Handle common timezone abbreviations
-            if timezone_name.upper() in self._major_timezones:
-                timezone_name = self._major_timezones[timezone_name.upper()]
+            timezone_key = resolved_timezone.upper()
+            resolved_timezone = aliases.get(timezone_key, resolved_timezone)
 
-            if timezone_name == "UTC":
-                return datetime.now(timezone.utc)
+            if resolved_timezone == "UTC":
+                return datetime.now(UTC)
 
-            tz = ZoneInfo(timezone_name)
+            tz = ZoneInfo(resolved_timezone)
             return datetime.now(tz)
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
-                f"Error getting time for timezone {timezone_name}: {str(e)}",
-                original_error=e,
-            ) from e
+                f"Error getting time for timezone {resolved_timezone}: {error!s}",
+                original_error=error,
+            ) from error
 
     async def get_timezone_info(self, timezone_name: str) -> TimeZoneInfo:
-        """
-        Get detailed timezone information.
+        """Get detailed timezone information.
 
         Args:
             timezone_name: Timezone name
@@ -196,13 +251,11 @@ class TimeService:
 
         try:
             # Handle common timezone abbreviations
-            if timezone_name.upper() in self._major_timezones:
-                timezone_name = self._major_timezones[timezone_name.upper()]
+            aliases = self._timezone_aliases()
+            timezone_key = timezone_name.upper()
+            timezone_name = aliases.get(timezone_key, timezone_name)
 
-            if timezone_name == "UTC":
-                tz = timezone.utc
-            else:
-                tz = ZoneInfo(timezone_name)
+            tz = UTC if timezone_name == "UTC" else ZoneInfo(timezone_name)
 
             current_time = datetime.now(tz)
 
@@ -214,9 +267,8 @@ class TimeService:
             abbreviation = current_time.strftime("%Z")
 
             # Check if DST is active
-            dst_active = bool(
-                current_time.dst() and current_time.dst().total_seconds() > 0
-            )
+            dst_delta = current_time.dst()
+            dst_active = bool(dst_delta is not None and dst_delta.total_seconds() > 0)
 
             return TimeZoneInfo(
                 name=timezone_name,
@@ -226,20 +278,19 @@ class TimeService:
                 current_time=current_time,
             )
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
-                f"Error getting timezone info for {timezone_name}: {str(e)}",
-                original_error=e,
-            ) from e
+                f"Error getting timezone info for {timezone_name}: {error!s}",
+                original_error=error,
+            ) from error
 
     async def convert_time(
         self,
-        time_to_convert: Union[datetime, str],
+        time_to_convert: datetime | str,
         source_timezone: str,
         target_timezone: str,
     ) -> TimeConversion:
-        """
-        Convert time between timezones.
+        """Convert time between timezones.
 
         Args:
             time_to_convert: Time to convert (datetime or ISO string)
@@ -259,13 +310,11 @@ class TimeService:
             if isinstance(time_to_convert, str):
                 # Try to parse ISO format
                 try:
-                    parsed_time = datetime.fromisoformat(
-                        time_to_convert.replace("Z", "+00:00")
-                    )
-                except ValueError:
+                    parsed_time = datetime.fromisoformat(time_to_convert)
+                except ValueError as exc:
                     # Try other common formats
                     for fmt in [
-                        self.default_datetime_format,
+                        self.config.formats.datetime,
                         "%Y-%m-%d %H:%M:%S",
                         "%Y-%m-%d %H:%M",
                         "%Y-%m-%d",
@@ -280,20 +329,21 @@ class TimeService:
                     else:
                         raise ValueError(
                             f"Unable to parse time format: {time_to_convert}"
-                        )
+                        ) from exc
             else:
                 parsed_time = time_to_convert
 
             # Handle timezone abbreviations
-            if source_timezone.upper() in self._major_timezones:
-                source_timezone = self._major_timezones[source_timezone.upper()]
-            if target_timezone.upper() in self._major_timezones:
-                target_timezone = self._major_timezones[target_timezone.upper()]
+            aliases = self._timezone_aliases()
+            source_key = source_timezone.upper()
+            target_key = target_timezone.upper()
+            source_timezone = aliases.get(source_key, source_timezone)
+            target_timezone = aliases.get(target_key, target_timezone)
 
             # Convert to source timezone if naive
             if parsed_time.tzinfo is None:
                 if source_timezone == "UTC":
-                    source_tz = timezone.utc
+                    source_tz = UTC
                 else:
                     source_tz = ZoneInfo(source_timezone)
                 source_time = parsed_time.replace(tzinfo=source_tz)
@@ -301,14 +351,17 @@ class TimeService:
                 source_time = parsed_time
 
             # Convert to target timezone
-            if target_timezone == "UTC":
-                target_tz = timezone.utc
-            else:
-                target_tz = ZoneInfo(target_timezone)
+            target_tz = UTC if target_timezone == "UTC" else ZoneInfo(target_timezone)
             target_time = source_time.astimezone(target_tz)
 
             # Calculate time difference
-            time_diff = target_time.utcoffset() - source_time.utcoffset()
+            source_offset = source_time.utcoffset()
+            target_offset = target_time.utcoffset()
+            if source_offset is None or target_offset is None:
+                raise TimeServiceError(
+                    "Unable to determine timezone offsets for conversion."
+                )
+            time_diff = target_offset - source_offset
             hours_diff = time_diff.total_seconds() / 3600
 
             if hours_diff == 0:
@@ -326,18 +379,17 @@ class TimeService:
                 time_difference=diff_description,
             )
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
                 f"Error converting time from {source_timezone} to {target_timezone}: "
-                f"{str(e)}",
-                original_error=e,
-            ) from e
+                f"{error!s}",
+                original_error=error,
+            ) from error
 
     async def get_world_clock(
-        self, cities: Optional[List[str]] = None
-    ) -> List[WorldClock]:
-        """
-        Get world clock for major cities.
+        self, cities: list[str] | None = None
+    ) -> list[WorldClock]:
+        """Get world clock for major cities.
 
         Args:
             cities: List of city/timezone names (optional)
@@ -391,22 +443,22 @@ class TimeService:
 
             world_clock = []
 
-            for city in cities:
+            aliases = self._timezone_aliases()
+
+            for city in cities:  # pyright: ignore[reportOptionalIterable]
                 try:
                     # Get timezone for city
+                    display_city = city
                     if city in city_timezones:
                         timezone_name = city_timezones[city]
-                    elif city.upper() in self._major_timezones:
-                        timezone_name = self._major_timezones[city.upper()]
-                        city = city.upper()  # Use abbreviation as city name
+                    elif city.upper() in aliases:
+                        timezone_name = aliases[city.upper()]
+                        display_city = city.upper()  # Use abbreviation as city name
                     else:
                         # Assume it's already a timezone name
                         timezone_name = city
 
-                    if timezone_name == "UTC":
-                        tz = timezone.utc
-                    else:
-                        tz = ZoneInfo(timezone_name)
+                    tz = UTC if timezone_name == "UTC" else ZoneInfo(timezone_name)
 
                     current_time = datetime.now(tz)
 
@@ -418,31 +470,30 @@ class TimeService:
 
                     world_clock.append(
                         WorldClock(
-                            city=city,
+                            city=display_city,
                             timezone=timezone_name,
                             current_time=current_time,
-                            local_date=current_time.strftime(self.default_date_format),
-                            local_time=current_time.strftime(self.default_time_format),
+                            local_date=current_time.strftime(self.config.formats.date),
+                            local_time=current_time.strftime(self.config.formats.time),
                             utc_offset=formatted_offset,
                         )
                     )
 
-                except Exception:
+                except RECOVERABLE_ERRORS:
                     # Skip problematic cities but don't fail the entire request
                     continue
 
             return world_clock
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
-                f"Error getting world clock: {str(e)}", original_error=e
-            ) from e
+                f"Error getting world clock: {error!s}", original_error=error
+            ) from error
 
     async def get_time_until(
-        self, target_time: Union[datetime, str], timezone_name: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Calculate time remaining until a target time.
+        self, target_time: datetime | str, timezone_name: str | None = None
+    ) -> dict[str, Any]:
+        """Calculate time remaining until a target time.
 
         Args:
             target_time: Target datetime or ISO string
@@ -460,12 +511,10 @@ class TimeService:
             # Parse target time
             if isinstance(target_time, str):
                 try:
-                    parsed_time = datetime.fromisoformat(
-                        target_time.replace("Z", "+00:00")
-                    )
+                    parsed_time = datetime.fromisoformat(target_time)
                 except ValueError:
                     parsed_time = datetime.strptime(
-                        target_time, self.default_datetime_format
+                        target_time, self.config.formats.datetime
                     )
             else:
                 parsed_time = target_time
@@ -476,17 +525,13 @@ class TimeService:
             # Ensure both times have timezone info
             if parsed_time.tzinfo is None:
                 if timezone_name:
-                    if timezone_name == "UTC":
-                        tz = timezone.utc
-                    else:
-                        tz = ZoneInfo(timezone_name)
+                    tz = UTC if timezone_name == "UTC" else ZoneInfo(timezone_name)
                     parsed_time = parsed_time.replace(tzinfo=tz)
+                elif self.config.default_timezone == "UTC":
+                    parsed_time = parsed_time.replace(tzinfo=UTC)
                 else:
-                    if self.default_timezone == "UTC":
-                        parsed_time = parsed_time.replace(tzinfo=timezone.utc)
-                    else:
-                        tz = ZoneInfo(self.default_timezone)
-                        parsed_time = parsed_time.replace(tzinfo=tz)
+                    tz = ZoneInfo(self.config.default_timezone)
+                    parsed_time = parsed_time.replace(tzinfo=tz)
 
             # Calculate difference
             time_diff = parsed_time - current_time
@@ -498,19 +543,19 @@ class TimeService:
                     "time_ago": self._format_timedelta(abs(time_diff)),
                     "total_seconds": time_diff.total_seconds(),
                 }
-            else:
-                return {
-                    "status": "future",
-                    "message": "Time remaining until target",
-                    "time_remaining": self._format_timedelta(time_diff),
-                    "total_seconds": time_diff.total_seconds(),
-                }
 
-        except Exception as e:
+            return {
+                "status": "future",
+                "message": "Time remaining until target",
+                "time_remaining": self._format_timedelta(time_diff),
+                "total_seconds": time_diff.total_seconds(),
+            }
+
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
-                f"Error calculating time until {target_time}: {str(e)}",
-                original_error=e,
-            ) from e
+                f"Error calculating time until {target_time}: {error!s}",
+                original_error=error,
+            ) from error
 
     def _format_timedelta(self, td: timedelta) -> str:
         """Format timedelta into human-readable string."""
@@ -539,12 +584,11 @@ class TimeService:
     async def get_business_hours_status(
         self,
         timezone_name: str,
-        business_start: Optional[str] = None,
-        business_end: Optional[str] = None,
-        weekdays_only: Optional[bool] = None,
-    ) -> Dict[str, Any]:
-        """
-        Check if current time is within business hours.
+        business_start: str | None = None,
+        business_end: str | None = None,
+        weekdays_only: bool | None = None,
+    ) -> dict[str, Any]:
+        """Check if current time is within business hours.
 
         Args:
             timezone_name: Timezone to check
@@ -563,11 +607,14 @@ class TimeService:
         try:
             # Use defaults from settings if not provided
             if business_start is None:
-                business_start = self.default_business_start
+                business_start = self.config.business_hours.start
             if business_end is None:
-                business_end = self.default_business_end
+                business_end = self.config.business_hours.end
             if weekdays_only is None:
-                weekdays_only = self.weekdays_only
+                weekdays_only = self.config.business_hours.weekdays_only
+
+            if business_start is None or business_end is None:
+                raise TimeServiceError("Business hours configuration is incomplete.")
 
             current_time = await self.get_current_time(timezone_name)
             current_hour_min = current_time.strftime("%H:%M")
@@ -587,15 +634,14 @@ class TimeService:
                 "weekdays_only": weekdays_only,
             }
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
-                f"Error checking business hours for {timezone_name}: {str(e)}",
-                original_error=e,
-            ) from e
+                f"Error checking business hours for {timezone_name}: {error!s}",
+                original_error=error,
+            ) from error
 
-    async def get_available_timezones(self, region: Optional[str] = None) -> List[str]:
-        """
-        Get list of available timezone names.
+    async def get_available_timezones(self, region: str | None = None) -> list[str]:
+        """Get list of available timezone names.
 
         Args:
             region: Optional region filter (e.g., 'America', 'Europe')
@@ -618,18 +664,17 @@ class TimeService:
 
             return sorted(timezones)
 
-        except Exception:
+        except ValueError:
             # Fallback to major timezones
-            return list(self._major_timezones.values())
+            return list(self._timezone_aliases().values())
 
     async def format_datetime(
         self,
         dt: datetime,
-        format_string: Optional[str] = None,
-        timezone_name: Optional[str] = None,
+        format_string: str | None = None,
+        timezone_name: str | None = None,
     ) -> str:
-        """
-        Format datetime according to settings or custom format.
+        """Format datetime according to settings or custom format.
 
         Args:
             dt: Datetime to format
@@ -649,26 +694,21 @@ class TimeService:
 
             # Convert timezone if requested
             if timezone_name:
-                if timezone_name == "UTC":
-                    target_tz = timezone.utc
-                else:
-                    target_tz = ZoneInfo(timezone_name)
+                target_tz = UTC if timezone_name == "UTC" else ZoneInfo(timezone_name)
                 target_dt = dt.astimezone(target_tz)
 
             # Use custom format or default from settings
-            if format_string is None:
-                format_string = self.default_datetime_format
+            format_to_use = format_string or self.config.formats.datetime
 
-            return target_dt.strftime(format_string)
+            return target_dt.strftime(format_to_use)
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             raise TimeServiceError(
-                f"Error formatting datetime: {str(e)}", original_error=e
-            ) from e
+                f"Error formatting datetime: {error!s}", original_error=error
+            ) from error
 
     async def health_check(self) -> bool:
-        """
-        Perform a health check to verify the service is working.
+        """Perform a health check to verify the service is working.
 
         Returns:
             True if the service is healthy, False otherwise
@@ -685,50 +725,25 @@ class TimeService:
                 and timezone_info is not None
                 and timezone_info.name == "UTC"
             )
-        except Exception:
+        except CoreServiceError:
             return False
 
-    async def close(self) -> None:
-        """Close the service and clean up resources."""
-        await self.disconnect()
 
-    async def __aenter__(self):
-        """Async context manager entry."""
-        await self.connect()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        await self.close()
-
-
-# Global service instance
-_time_service: Optional[TimeService] = None
+_time_service_provider = AsyncServiceProvider(
+    factory=TimeService,
+    initializer=lambda service: service.connect(),
+    finalizer=lambda service: service.close(),
+)
 
 
 async def get_time_service() -> TimeService:
-    """
-    Get the global time service instance.
-
-    Returns:
-        TimeService instance
-    """
-    global _time_service
-
-    if _time_service is None:
-        _time_service = TimeService()
-        await _time_service.connect()
-
-    return _time_service
+    """Return the shared time service instance."""
+    return await _time_service_provider.get()
 
 
 async def close_time_service() -> None:
-    """Close the global time service instance."""
-    global _time_service
-
-    if _time_service:
-        await _time_service.close()
-        _time_service = None
+    """Dispose of the shared time service instance."""
+    await _time_service_provider.close()
 
 
 # Convenience functions
@@ -744,21 +759,21 @@ async def convert_timezone(time_str: str, from_tz: str, to_tz: str) -> TimeConve
     return await service.convert_time(time_str, from_tz, to_tz)
 
 
-async def get_world_time() -> List[WorldClock]:
+async def get_world_time() -> list[WorldClock]:
     """Get world clock for major cities."""
     service = await get_time_service()
     return await service.get_world_clock()
 
 
 __all__ = [
+    "TimeConversion",
     "TimeService",
     "TimeServiceError",
     "TimeZoneInfo",
-    "TimeConversion",
     "WorldClock",
-    "get_time_service",
     "close_time_service",
-    "get_current_time_utc",
     "convert_timezone",
+    "get_current_time_utc",
+    "get_time_service",
     "get_world_time",
 ]

@@ -1,5 +1,4 @@
-"""
-Comprehensive XSS and CSRF protection tests for API endpoints.
+"""XSS and CSRF protection tests for API endpoints.
 
 This module provides security testing for Cross-Site Scripting (XSS) and
 Cross-Site Request Forgery (CSRF) protection mechanisms in the API key
@@ -9,7 +8,6 @@ header security configurations.
 Based on OWASP WSTG 2024 guidelines and FastAPI security best practices.
 """
 
-from typing import List
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -26,7 +24,7 @@ class TestXSSProtection:
     """Test suite for Cross-Site Scripting (XSS) protection."""
 
     @pytest.fixture
-    def xss_payloads(self) -> List[str]:
+    def xss_payloads(self) -> list[str]:
         """Common XSS attack payloads from OWASP WSTG."""
         return [
             # Basic XSS payloads
@@ -46,7 +44,7 @@ class TestXSSProtection:
             "onmouseover=alert('XSS')",
             "onclick=alert('XSS')",
             "onerror=alert('XSS')",
-            # Advanced XSS bypasses
+            # Complex XSS bypasses
             "<scr<script>ipt>alert('XSS')</script>",
             "<ScRiPt>alert('XSS')</ScRiPt>",
             "<script >alert('XSS')</script >",
@@ -67,7 +65,7 @@ class TestXSSProtection:
         ]
 
     @pytest.fixture
-    def html_injection_payloads(self) -> List[str]:
+    def html_injection_payloads(self) -> list[str]:
         """HTML injection payloads for content injection testing."""
         return [
             "<h1>Injected Content</h1>",
@@ -101,164 +99,166 @@ class TestXSSProtection:
         self, test_client, xss_payloads, mock_principal
     ):
         """Test XSS protection in API key name field."""
-        with patch(
-            "tripsage.api.core.dependencies.require_principal",
-            return_value=mock_principal,
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage.api.core.dependencies.require_principal",
+                return_value=mock_principal,
+            ),
+            patch(
                 "tripsage.api.core.dependencies.get_principal_id",
                 return_value="test-user-123",
-            ):
-                with patch(
-                    "tripsage_core.services.business.api_key_service.get_api_key_service"
-                ) as mock_service:
-                    mock_key_service = AsyncMock()
-                    mock_service.return_value = mock_key_service
+            ),
+            patch(
+                "tripsage_core.services.business.api_key_service.get_api_key_service"
+            ) as mock_service,
+        ):
+            mock_key_service = AsyncMock()
+            mock_service.return_value = mock_key_service
 
-                    # Mock validation to succeed
-                    mock_key_service.validate_key.return_value = ValidationResult(
-                        is_valid=True,
-                        status=ValidationStatus.VALID,
-                        message="Valid key",
+            # Mock validation to succeed
+            mock_key_service.validate_key.return_value = ValidationResult(
+                is_valid=True,
+                status=ValidationStatus.VALID,
+                message="Valid key",
+            )
+
+            for payload in xss_payloads:
+                api_key_data = {
+                    "name": payload,
+                    "service": "openai",
+                    "key": "sk-test_key_123",
+                    "description": "Test key",
+                }
+
+                response = test_client.post("/api/keys", json=api_key_data)
+
+                # Should not return XSS payload in response
+                response_text = response.text
+                assert "<script>" not in response_text
+                assert "javascript:" not in response_text
+                assert "onerror=" not in response_text
+                assert "onclick=" not in response_text
+
+                # Should not execute JavaScript in name validation
+                if "alert" in payload:
+                    assert "alert" not in response_text or "alert" in str(
+                        response.status_code
                     )
-
-                    for payload in xss_payloads:
-                        api_key_data = {
-                            "name": payload,
-                            "service": "openai",
-                            "key": "sk-test_key_123",
-                            "description": "Test key",
-                        }
-
-                        response = test_client.post("/api/keys", json=api_key_data)
-
-                        # Should not return XSS payload in response
-                        response_text = response.text
-                        assert "<script>" not in response_text
-                        assert "javascript:" not in response_text
-                        assert "onerror=" not in response_text
-                        assert "onclick=" not in response_text
-
-                        # Should not execute JavaScript in name validation
-                        if "alert" in payload:
-                            assert "alert" not in response_text or "alert" in str(
-                                response.status_code
-                            )
 
     def test_api_key_description_xss_protection(
         self, test_client, xss_payloads, mock_principal
     ):
         """Test XSS protection in API key description field."""
-        with patch(
-            "tripsage.api.core.dependencies.require_principal",
-            return_value=mock_principal,
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage.api.core.dependencies.require_principal",
+                return_value=mock_principal,
+            ),
+            patch(
                 "tripsage.api.core.dependencies.get_principal_id",
                 return_value="test-user-123",
-            ):
-                with patch(
-                    "tripsage_core.services.business.api_key_service.get_api_key_service"
-                ) as mock_service:
-                    mock_key_service = AsyncMock()
-                    mock_service.return_value = mock_key_service
+            ),
+            patch(
+                "tripsage_core.services.business.api_key_service.get_api_key_service"
+            ) as mock_service,
+        ):
+            mock_key_service = AsyncMock()
+            mock_service.return_value = mock_key_service
 
-                    mock_key_service.validate_key.return_value = ValidationResult(
-                        is_valid=True,
-                        status=ValidationStatus.VALID,
-                        message="Valid key",
-                    )
+            mock_key_service.validate_key.return_value = ValidationResult(
+                is_valid=True,
+                status=ValidationStatus.VALID,
+                message="Valid key",
+            )
 
-                    for payload in xss_payloads:
-                        api_key_data = {
-                            "name": "Test Key",
-                            "service": "openai",
-                            "key": "sk-test_key_123",
-                            "description": payload,
-                        }
+            for payload in xss_payloads:
+                api_key_data = {
+                    "name": "Test Key",
+                    "service": "openai",
+                    "key": "sk-test_key_123",
+                    "description": payload,
+                }
 
-                        response = test_client.post("/api/keys", json=api_key_data)
+                response = test_client.post("/api/keys", json=api_key_data)
 
-                        # Should sanitize description field
-                        response_text = response.text
-                        assert "<script>" not in response_text
-                        assert "javascript:" not in response_text
-                        assert (
-                            payload not in response_text or response.status_code >= 400
-                        )
+                # Should sanitize description field
+                response_text = response.text
+                assert "<script>" not in response_text
+                assert "javascript:" not in response_text
+                assert payload not in response_text or response.status_code >= 400
 
     def test_html_injection_in_error_messages(
         self, test_client, html_injection_payloads, mock_principal
     ):
         """Test HTML injection protection in error messages."""
-        with patch(
-            "tripsage.api.core.dependencies.require_principal",
-            return_value=mock_principal,
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage.api.core.dependencies.require_principal",
+                return_value=mock_principal,
+            ),
+            patch(
                 "tripsage.api.core.dependencies.get_principal_id",
                 return_value="test-user-123",
-            ):
-                with patch(
-                    "tripsage_core.services.business.api_key_service.get_api_key_service"
-                ) as mock_service:
-                    mock_key_service = AsyncMock()
-                    mock_service.return_value = mock_key_service
+            ),
+            patch(
+                "tripsage_core.services.business.api_key_service.get_api_key_service"
+            ) as mock_service,
+        ):
+            mock_key_service = AsyncMock()
+            mock_service.return_value = mock_key_service
 
-                    # Mock validation to fail with error message containing payload
-                    for payload in html_injection_payloads:
-                        mock_key_service.validate_key.return_value = ValidationResult(
-                            is_valid=False,
-                            status=ValidationStatus.INVALID,
-                            message=f"Invalid key: {payload}",
-                        )
+            # Mock validation to fail with error message containing payload
+            for payload in html_injection_payloads:
+                mock_key_service.validate_key.return_value = ValidationResult(
+                    is_valid=False,
+                    status=ValidationStatus.INVALID,
+                    message=f"Invalid key: {payload}",
+                )
 
-                        api_key_data = {
-                            "name": "Test Key",
-                            "service": "openai",
-                            "key": "sk-invalid_key",
-                            "description": "Test",
-                        }
+                api_key_data = {
+                    "name": "Test Key",
+                    "service": "openai",
+                    "key": "sk-invalid_key",
+                    "description": "Test",
+                }
 
-                        response = test_client.post("/api/keys", json=api_key_data)
+                response = test_client.post("/api/keys", json=api_key_data)
 
-                        # Error message should not contain raw HTML
-                        response_text = response.text
-                        assert "<h1>" not in response_text
-                        assert "<div>" not in response_text
-                        assert "<script>" not in response_text
-                        assert "<meta" not in response_text
+                # Error message should not contain raw HTML
+                response_text = response.text
+                assert "<h1>" not in response_text
+                assert "<div>" not in response_text
+                assert "<script>" not in response_text
+                assert "<meta" not in response_text
 
     def test_xss_in_validation_request(self, test_client, xss_payloads, mock_principal):
         """Test XSS protection in key validation requests."""
-        with patch(
-            "tripsage.api.core.dependencies.require_principal",
-            return_value=mock_principal,
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage.api.core.dependencies.require_principal",
+                return_value=mock_principal,
+            ),
+            patch(
                 "tripsage.api.core.dependencies.get_principal_id",
                 return_value="test-user-123",
-            ):
-                with patch(
-                    "tripsage_core.services.business.api_key_service.get_api_key_service"
-                ) as mock_service:
-                    mock_key_service = AsyncMock()
-                    mock_service.return_value = mock_key_service
+            ),
+            patch(
+                "tripsage_core.services.business.api_key_service.get_api_key_service"
+            ) as mock_service,
+        ):
+            mock_key_service = AsyncMock()
+            mock_service.return_value = mock_key_service
 
-                    for payload in xss_payloads:
-                        validation_data = {"key": payload, "service": "openai"}
+            for payload in xss_payloads:
+                validation_data = {"key": payload, "service": "openai"}
 
-                        response = test_client.post(
-                            "/api/keys/validate", json=validation_data
-                        )
+                response = test_client.post("/api/keys/validate", json=validation_data)
 
-                        # Response should not contain unescaped XSS payload
-                        response_text = response.text
-                        assert (
-                            payload not in response_text or response.status_code >= 400
-                        )
-                        assert "<script>" not in response_text
-                        assert "javascript:" not in response_text
+                # Response should not contain unescaped XSS payload
+                response_text = response.text
+                assert payload not in response_text or response.status_code >= 400
+                assert "<script>" not in response_text
+                assert "javascript:" not in response_text
 
     def test_content_type_header_validation(self, test_client, mock_principal):
         """Test Content-Type header validation prevents XSS."""
@@ -368,23 +368,25 @@ class TestCSRFProtection:
 
     def test_content_type_csrf_protection(self, test_client, mock_principal):
         """Test Content-Type based CSRF protection."""
-        with patch(
-            "tripsage.api.core.dependencies.require_principal",
-            return_value=mock_principal,
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage.api.core.dependencies.require_principal",
+                return_value=mock_principal,
+            ),
+            patch(
                 "tripsage.api.core.dependencies.get_principal_id",
                 return_value="test-user-123",
-            ):
-                # Test with simple form content type (potential CSRF vector)
-                response = test_client.post(
-                    "/api/keys",
-                    data="name=Test&service=openai&key=sk-test",
-                    headers={"Content-Type": "application/x-www-form-urlencoded"},
-                )
+            ),
+        ):
+            # Test with simple form content type (potential CSRF vector)
+            response = test_client.post(
+                "/api/keys",
+                data="name=Test&service=openai&key=sk-test",
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
 
-                # Should reject form-encoded data for JSON API
-                assert response.status_code in [400, 415, 422]
+            # Should reject form-encoded data for JSON API
+            assert response.status_code in [400, 415, 422]
 
     def test_csrf_via_json_with_text_plain(self, test_client, mock_principal):
         """Test CSRF protection against JSON with text/plain content type."""
@@ -404,29 +406,31 @@ class TestCSRFProtection:
 
     def test_same_origin_policy_enforcement(self, test_client, mock_principal):
         """Test enforcement of same-origin policy for state changes."""
-        with patch(
-            "tripsage.api.core.dependencies.require_principal",
-            return_value=mock_principal,
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage.api.core.dependencies.require_principal",
+                return_value=mock_principal,
+            ),
+            patch(
                 "tripsage.api.core.dependencies.get_principal_id",
                 return_value="test-user-123",
-            ):
-                # Test with malicious origin header
-                response = test_client.post(
-                    "/api/keys",
-                    json={"name": "Test", "service": "openai", "key": "sk-test"},
-                    headers={"Origin": "http://malicious-site.com"},
-                )
+            ),
+        ):
+            # Test with malicious origin header
+            response = test_client.post(
+                "/api/keys",
+                json={"name": "Test", "service": "openai", "key": "sk-test"},
+                headers={"Origin": "http://malicious-site.com"},
+            )
 
-                # Should either reject or handle appropriately
-                if response.status_code == 200:
-                    # If allowed, check for proper CORS configuration
-                    assert (
-                        "Access-Control-Allow-Origin" not in response.headers
-                        or response.headers.get("Access-Control-Allow-Origin")
-                        != "http://malicious-site.com"
-                    )
+            # Should either reject or handle appropriately
+            if response.status_code == 200:
+                # If allowed, check for proper CORS configuration
+                assert (
+                    "Access-Control-Allow-Origin" not in response.headers
+                    or response.headers.get("Access-Control-Allow-Origin")
+                    != "http://malicious-site.com"
+                )
 
     def test_csrf_token_validation_if_implemented(self, test_client):
         """Test CSRF token validation if CSRF protection is implemented."""
@@ -557,20 +561,22 @@ class TestHTTPSecurityHeaders:
 
     def test_cache_control_for_sensitive_endpoints(self, test_client, mock_principal):
         """Test Cache-Control headers for sensitive endpoints."""
-        with patch(
-            "tripsage.api.core.dependencies.require_principal",
-            return_value=mock_principal,
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage.api.core.dependencies.require_principal",
+                return_value=mock_principal,
+            ),
+            patch(
                 "tripsage.api.core.dependencies.get_principal_id",
                 return_value="test-user-123",
-            ):
-                response = test_client.get("/api/keys")
+            ),
+        ):
+            response = test_client.get("/api/keys")
 
-                # Sensitive endpoints should not be cached
-                if "Cache-Control" in response.headers:
-                    cache_control = response.headers["Cache-Control"]
-                    assert "no-cache" in cache_control or "no-store" in cache_control
+            # Sensitive endpoints should not be cached
+            if "Cache-Control" in response.headers:
+                cache_control = response.headers["Cache-Control"]
+                assert "no-cache" in cache_control or "no-store" in cache_control
 
     def test_server_header_information_disclosure(self, test_client):
         """Test that Server header doesn't disclose sensitive information."""

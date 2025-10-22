@@ -2,7 +2,7 @@
 
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 
-// Enhanced error handling for query cache
+// Error handling for query cache
 const queryCache = new QueryCache({
   onError: (error, query) => {
     // Log errors for debugging

@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for accommodation models.
+"""Tests for accommodation models.
 
 Tests validation, serialization, and business logic for accommodation-related models.
 """
@@ -113,19 +112,12 @@ class TestAccommodationModel:
         if should_pass:
             accommodation = Accommodation(**sample_accommodation_dict)
             assert accommodation.rating == rating
-        else:
-            if rating is not None and rating > 5:
-                validation_helper.assert_validation_error(
-                    Accommodation,
-                    sample_accommodation_dict,
-                    error_field="rating",
-                )
-            elif rating is not None and rating < 0:
-                validation_helper.assert_validation_error(
-                    Accommodation,
-                    sample_accommodation_dict,
-                    error_field="rating",
-                )
+        elif (rating is not None and rating > 5) or (rating is not None and rating < 0):
+            validation_helper.assert_validation_error(
+                Accommodation,
+                sample_accommodation_dict,
+                error_field="rating",
+            )
 
     def test_accommodation_date_validation_logical(self, sample_accommodation_dict):
         """Test that check-out must be after check-in."""

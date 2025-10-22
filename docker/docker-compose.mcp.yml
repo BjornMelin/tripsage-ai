@@ -2,22 +2,15 @@
 # TripSage AI Modern Development Environment
 # =============================================================================
 # Optimized Docker Compose configuration aligned with current system architecture
-# using direct SDKs, Mem0, DragonflyDB, Crawl4AI, and minimal MCP usage.
+# using direct SDKs, Mem0, Upstash Redis, Crawl4AI, and minimal MCP usage.
 #
 # CURRENT ARCHITECTURE (2025):
 # - Database: Supabase PostgreSQL with pgvector extension
-# - Caching: DragonflyDB (25x faster than Redis)
+# - Caching: Upstash Redis (HTTP, managed)
 # - Memory: Mem0 with pgvector backend (91% faster than Neo4j)
 # - Web Crawling: Crawl4AI direct SDK
 # - Browser: Playwright direct SDK
 # - Only 1 MCP service: Airbnb (no official SDK available)
-#
-# PERFORMANCE ACHIEVEMENTS:
-# - 25x cache performance improvement (DragonflyDB)
-# - 11x faster vector search (pgvector + pgvectorscale)
-# - 91% faster memory operations (Mem0)
-# - 80% infrastructure cost reduction
-# - 60-70% architecture complexity reduction
 #
 # USAGE:
 # docker compose -f docker/docker-compose.mcp.yml up -d
@@ -27,7 +20,7 @@
 services:
   # ==========================================================================
   # CORE INFRASTRUCTURE SERVICES
-  # Modern high-performance data layer
+  # Data layer
   # ==========================================================================
   
   supabase:
@@ -63,31 +56,7 @@ services:
       timeout: 10s
       retries: 3
 
-  dragonfly:
-    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
-    container_name: tripsage-dragonfly
-    environment:
-      - DRAGONFLY_PASSWORD=${DRAGONFLY_PASSWORD:-}
-    ports:
-      - "6379:6379"
-    volumes:
-      - dragonfly_data:/data
-    restart: unless-stopped
-    networks:
-      - tripsage-network
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: '1G'
-        reservations:
-          cpus: '0.5'
-          memory: '512M'
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # No local cache container; use Upstash env vars in the API
 
   # ==========================================================================
   # APPLICATION SERVICES
@@ -102,7 +71,8 @@ services:
     environment:
       - ENVIRONMENT=development
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-tripsage_dev_password}@supabase:5432/${POSTGRES_DB:-tripsage_dev}
-      - DRAGONFLY_URL=redis://dragonfly:6379
+      - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL:-}
+      - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN:-}
       - SUPABASE_URL=http://supabase:8000
       - SUPABASE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-your-service-role-key}
       - MEM0_CONFIG=${MEM0_CONFIG:-'{"vector_store":{"provider":"pgvector"}}'}
@@ -117,8 +87,6 @@ services:
       - ../tripsage_core:/app/tripsage_core:ro
     depends_on:
       supabase:
-        condition: service_healthy
-      dragonfly:
         condition: service_healthy
     restart: unless-stopped
     networks:
@@ -221,8 +189,7 @@ services:
     ports:
       - "4317:4317"   # OTLP gRPC receiver
       - "4318:4318"   # OTLP HTTP receiver
-      - "8888:8888"   # Prometheus metrics
-      - "8889:8889"   # Prometheus exporter
+      - "8888:8888"   # Collector self-metrics
     depends_on:
       - jaeger
     restart: unless-stopped
@@ -237,59 +204,6 @@ services:
           cpus: '0.25'
           memory: '256M'
 
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: tripsage-prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=7d'
-      - '--web.enable-lifecycle'
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    ports:
-      - "9090:9090"
-    depends_on:
-      - otel-collector
-    restart: unless-stopped
-    networks:
-      - tripsage-network
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: '512M'
-        reservations:
-          cpus: '0.25'
-          memory: '256M'
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: tripsage-grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-    ports:
-      - "3001:3000"
-    depends_on:
-      - prometheus
-    restart: unless-stopped
-    networks:
-      - tripsage-network
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: '512M'
-        reservations:
-          cpus: '0.25'
-          memory: '256M'
 
 # ==========================================================================
 # NETWORK & VOLUME CONFIGURATION
@@ -308,7 +222,3 @@ volumes:
     name: tripsage_supabase_data
   dragonfly_data:
     name: tripsage_dragonfly_data
-  prometheus_data:
-    name: tripsage_prometheus_data
-  grafana_data:
-    name: tripsage_grafana_data

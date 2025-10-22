@@ -1,5 +1,4 @@
-"""
-Core business domain models for TripSage.
+"""Core business domain models for TripSage.
 
 This module contains the canonical business domain models that represent
 core entities and concepts in the TripSage travel planning system.
@@ -25,7 +24,10 @@ Usage:
     )
 """
 
-# Accommodation domain models
+from tripsage_core.models.domain.flights_canonical import FlightOffer, FlightSegment
+from tripsage_core.models.schemas_common.enums import CabinClass
+from tripsage_core.models.schemas_common.geographic import Airport
+
 from .accommodation import (
     AccommodationAmenity,
     AccommodationImage,
@@ -33,24 +35,7 @@ from .accommodation import (
     AccommodationLocation,
     PropertyType,
 )
-
-# Flight domain models
-from .flight import (
-    Airport,
-    CabinClass,
-    FlightOffer,
-    FlightSegment,
-)
-
-# Memory and knowledge graph domain models
-from .memory import (
-    Entity,
-    Relation,
-    SessionMemory,
-    TravelMemory,
-)
-
-# Transportation domain models
+from .memory import Entity, Relation, SessionMemory, TravelMemory
 from .transportation import (
     TransportationLocation,
     TransportationOffer,
@@ -58,28 +43,29 @@ from .transportation import (
     TransportationVehicle,
 )
 
+
 # Trip domain models - removed as they're now in the unified model
 
 __all__ = [
+    "AccommodationAmenity",
+    "AccommodationImage",
     # Accommodation models
     "AccommodationListing",
     "AccommodationLocation",
-    "AccommodationAmenity",
-    "AccommodationImage",
-    "PropertyType",
+    "Airport",
+    "CabinClass",
+    # Memory models
+    "Entity",
     # Flight models
     "FlightOffer",
-    "Airport",
     "FlightSegment",
-    "CabinClass",
+    "PropertyType",
+    "Relation",
+    "SessionMemory",
+    "TransportationLocation",
     # Transportation models
     "TransportationOffer",
     "TransportationProvider",
     "TransportationVehicle",
-    "TransportationLocation",
-    # Memory models
-    "Entity",
-    "Relation",
     "TravelMemory",
-    "SessionMemory",
 ]

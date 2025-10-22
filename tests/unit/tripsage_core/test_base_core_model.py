@@ -1,5 +1,4 @@
-"""
-Tests for TripSage Core base model classes.
+"""Tests for TripSage Core base model classes.
 
 This module tests the centralized base model classes that provide
 the foundation for all TripSage models.

@@ -1,5 +1,5 @@
 /**
- * Comprehensive Zod schemas for API interfaces
+ * Zod schemas for API interfaces
  * Runtime validation for all API requests and responses
  */
 

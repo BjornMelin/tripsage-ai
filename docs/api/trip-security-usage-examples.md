@@ -4,13 +4,13 @@ This document demonstrates how to use the new trip access verification system in
 
 ## Overview
 
-The trip security system provides comprehensive access control for trip-related operations through:
+The trip security system provides access control for trip-related operations through:
 
 - **Access Levels**: `READ`, `WRITE`, `OWNER`, `COLLABORATOR`
 - **Permissions**: `VIEW`, `EDIT`, `MANAGE`
 - **FastAPI Dependencies**: Pre-configured and custom dependency injection
 - **Decorators**: Clean, declarative endpoint protection
-- **Audit Logging**: Comprehensive security event tracking
+- **Audit Logging**: Security event tracking
 
 ## Basic Usage
 
@@ -127,7 +127,7 @@ async def get_readonly_summary(
     }
 ```
 
-## Advanced Usage
+## Usage Examples
 
 ### Multiple Access Checks
 
@@ -196,7 +196,7 @@ async def update_sensitive_data(
         return {"message": "Sensitive data updated"}
     except Exception as e:
         # Handle any additional errors
-        logger.error(f"Failed to update sensitive data: {e}")
+        logger.exception(f"Failed to update sensitive data: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update trip data"
@@ -440,4 +440,4 @@ def test_trip_endpoint_security(client: TestClient):
     assert response.status_code in [200, 403]
 ```
 
-This comprehensive security system provides fine-grained access control while maintaining clean, readable code and comprehensive audit trails for all trip-related operations.
+This security system provides fine-grained access control while maintaining clean, readable code and audit trails for all trip-related operations.

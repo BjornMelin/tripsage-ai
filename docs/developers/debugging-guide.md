@@ -131,7 +131,7 @@ async def debug_async_operation():
         
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error(f"Task {i} failed: {result}")
+                logger.exception(f"Task {i} failed: {result}")
             else:
                 logger.debug(f"Task {i} completed: {type(result)}")
         
@@ -1160,4 +1160,4 @@ async def debug_trip_creation_issue():
 
 ---
 
-This debugging guide provides comprehensive tools and techniques for troubleshooting TripSage AI development issues. Use these patterns to systematically identify and resolve problems across the entire stack.
+This debugging guide provides tools and techniques for troubleshooting TripSage AI development issues. Use these patterns to systematically identify and resolve problems across the entire stack.

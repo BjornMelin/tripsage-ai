@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""
-TripSage Database Integration Test Script
-Tests Supabase database functionality including trip collaboration,
-RLS policies, and vector search.
+"""TripSage Database Integration Test Script.
+
+Tests Supabase database functionality including trip collaboration, RLS
+policies, and vector search.
 """
 
 import os
 import sys
 from pathlib import Path
-from typing import Dict
 
 
 class DatabaseTester:
     """Database integration tester for TripSage Supabase schema."""
 
     def __init__(self):
+        """Initialize database tester."""
         self.test_results = []
         self.schema_dir = Path("supabase/schemas")
         self.migration_dir = Path("supabase/migrations")
@@ -42,10 +42,9 @@ class DatabaseTester:
             "06_views.sql",
         ]
 
-        missing_files = []
-        for file in required_files:
-            if not (self.schema_dir / file).exists():
-                missing_files.append(file)
+        missing_files = [
+            file for file in required_files if not (self.schema_dir / file).exists()
+        ]
 
         if missing_files:
             self.log_test("Schema Files Exist", False, f"Missing: {missing_files}")
@@ -94,14 +93,14 @@ class DatabaseTester:
             "itinerary_items",
         ]
 
-        missing_collab_policies = []
-        for table in tables_with_collab_access:
-            # Look for "shared trips" pattern in policies
+        missing_collab_policies = [
+            table
+            for table in tables_with_collab_access
             if (
                 f"{table}" in policies_content
                 and "shared trips" not in policies_content
-            ):
-                missing_collab_policies.append(table)
+            )
+        ]
 
         if missing_collab_policies:
             self.log_test(
@@ -184,10 +183,9 @@ class DatabaseTester:
             "check_trip_permission",
         ]
 
-        missing_functions = []
-        for func in required_functions:
-            if func not in functions_content:
-                missing_functions.append(func)
+        missing_functions = [
+            func for func in required_functions if func not in functions_content
+        ]
 
         if missing_functions:
             self.log_test(
@@ -223,8 +221,8 @@ class DatabaseTester:
                         )
                 else:
                     invalid_files.append(f"{sql_file.name} (empty file)")
-            except Exception as e:
-                invalid_files.append(f"{sql_file.name} (read error: {e})")
+            except (OSError, UnicodeDecodeError) as exc:
+                invalid_files.append(f"{sql_file.name} (read error: {exc})")
 
         if invalid_files:
             self.log_test(
@@ -291,14 +289,14 @@ class DatabaseTester:
             self.log_test("Security Configuration", True, "Complete RLS security setup")
             return True
 
-    def generate_schema_summary(self) -> Dict:
-        """Generate a summary of the database schema."""
+    def generate_schema_summary(self) -> dict:
+        """Generate a summary count of schema components."""
         summary = {
-            "tables": [],
-            "indexes": [],
-            "functions": [],
-            "policies": [],
-            "extensions": [],
+            "tables": 0,
+            "indexes": 0,
+            "functions": 0,
+            "policies": 0,
+            "extensions": 0,
         }
 
         try:
@@ -331,8 +329,9 @@ class DatabaseTester:
             )
             summary["policies"] = len(policy_matches)
 
-        except Exception as e:
-            summary["error"] = str(e)
+        except (OSError, UnicodeDecodeError, ValueError):
+            # Record an error event without changing value types.
+            summary["errors"] = 1
 
         return summary
 

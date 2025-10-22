@@ -1,5 +1,4 @@
-"""
-Demonstration integration test for API key validation.
+"""Demonstration integration test for API key validation.
 
 This is a simplified example showing the integration test patterns
 in action with proper setup and teardown.

@@ -1,15 +1,17 @@
-"""
-Pydantic models for OpenWeatherMap API integration.
+"""Pydantic models for OpenWeatherMap API integration.
 
-This module provides comprehensive data models for weather operations,
+This module provides data models for weather operations,
 including current conditions, forecasts, and travel-specific features.
 """
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, TypeAdapter
+
+
+_HTTP_URL_ADAPTER: TypeAdapter[HttpUrl] = TypeAdapter(HttpUrl)
 
 
 class TemperatureUnit(str, Enum):
@@ -112,27 +114,23 @@ class Temperature(BaseModel):
 
     temp: float = Field(..., description="Actual temperature")
     feels_like: float = Field(..., description="Feels like temperature")
-    temp_min: Optional[float] = Field(None, description="Minimum temperature")
-    temp_max: Optional[float] = Field(None, description="Maximum temperature")
-    pressure: Optional[int] = Field(None, description="Atmospheric pressure in hPa")
-    humidity: Optional[int] = Field(
-        None, description="Humidity percentage", ge=0, le=100
-    )
-    sea_level: Optional[int] = Field(None, description="Sea level pressure in hPa")
-    grnd_level: Optional[int] = Field(None, description="Ground level pressure in hPa")
+    temp_min: float | None = Field(None, description="Minimum temperature")
+    temp_max: float | None = Field(None, description="Maximum temperature")
+    pressure: int | None = Field(None, description="Atmospheric pressure in hPa")
+    humidity: int | None = Field(None, description="Humidity percentage", ge=0, le=100)
+    sea_level: int | None = Field(None, description="Sea level pressure in hPa")
+    grnd_level: int | None = Field(None, description="Ground level pressure in hPa")
 
 
 class Wind(BaseModel):
     """Wind information."""
 
     speed: float = Field(..., description="Wind speed", ge=0)
-    deg: Optional[int] = Field(
-        None, description="Wind direction in degrees", ge=0, le=360
-    )
-    gust: Optional[float] = Field(None, description="Wind gust speed", ge=0)
+    deg: int | None = Field(None, description="Wind direction in degrees", ge=0, le=360)
+    gust: float | None = Field(None, description="Wind gust speed", ge=0)
 
     @property
-    def direction_cardinal(self) -> Optional[str]:
+    def direction_cardinal(self) -> str | None:
         """Get cardinal direction from degrees."""
         if self.deg is None:
             return None
@@ -168,10 +166,10 @@ class Clouds(BaseModel):
 class Precipitation(BaseModel):
     """Precipitation data."""
 
-    one_hour: Optional[float] = Field(
+    one_hour: float | None = Field(
         None, alias="1h", description="Rain volume for last 1 hour (mm)", ge=0
     )
-    three_hours: Optional[float] = Field(
+    three_hours: float | None = Field(
         None, alias="3h", description="Rain volume for last 3 hours (mm)", ge=0
     )
 
@@ -179,10 +177,10 @@ class Precipitation(BaseModel):
 class Snow(BaseModel):
     """Snow data."""
 
-    one_hour: Optional[float] = Field(
+    one_hour: float | None = Field(
         None, alias="1h", description="Snow volume for last 1 hour (mm)", ge=0
     )
-    three_hours: Optional[float] = Field(
+    three_hours: float | None = Field(
         None, alias="3h", description="Snow volume for last 3 hours (mm)", ge=0
     )
 
@@ -195,34 +193,34 @@ class CurrentWeather(BaseModel):
     # Location
     coord: Coordinates
     name: str = Field(..., description="City name")
-    country: Optional[str] = None
+    country: str | None = None
     timezone: int = Field(..., description="Timezone offset in seconds")
 
     # Weather
-    weather: List[WeatherCondition]
+    weather: list[WeatherCondition]
     main: Temperature
 
     # Additional conditions
-    visibility: Optional[int] = Field(None, description="Visibility in meters", ge=0)
+    visibility: int | None = Field(None, description="Visibility in meters", ge=0)
     wind: Wind
     clouds: Clouds
-    rain: Optional[Precipitation] = None
-    snow: Optional[Snow] = None
+    rain: Precipitation | None = None
+    snow: Snow | None = None
 
     # Timestamps
     dt: datetime = Field(..., description="Data calculation time")
-    sunrise: Optional[datetime] = None
-    sunset: Optional[datetime] = None
+    sunrise: datetime | None = None
+    sunset: datetime | None = None
 
     # System
     id: int = Field(..., description="City ID")
     cod: int = Field(..., description="Internal parameter")
 
     # TripSage extensions
-    travel_rating: Optional[float] = Field(
+    travel_rating: float | None = Field(
         None, ge=0, le=10, description="Weather rating for travel"
     )
-    activity_recommendations: Optional[List[str]] = None
+    activity_recommendations: list[str] | None = None
 
 
 class HourlyForecast(BaseModel):
@@ -235,17 +233,17 @@ class HourlyForecast(BaseModel):
     feels_like: float
     pressure: int
     humidity: int = Field(..., ge=0, le=100)
-    dew_point: Optional[float] = None
-    uvi: Optional[float] = Field(None, ge=0)
+    dew_point: float | None = None
+    uvi: float | None = Field(None, ge=0)
     clouds: int = Field(..., ge=0, le=100)
-    visibility: Optional[int] = Field(None, ge=0)
+    visibility: int | None = Field(None, ge=0)
     wind_speed: float = Field(..., ge=0)
     wind_deg: int = Field(..., ge=0, le=360)
-    wind_gust: Optional[float] = Field(None, ge=0)
-    weather: List[WeatherCondition]
+    wind_gust: float | None = Field(None, ge=0)
+    weather: list[WeatherCondition]
     pop: float = Field(..., ge=0, le=1, description="Probability of precipitation")
-    rain: Optional[Dict[str, float]] = None
-    snow: Optional[Dict[str, float]] = None
+    rain: dict[str, float] | None = None
+    snow: dict[str, float] | None = None
 
 
 class DailyTemperature(BaseModel):
@@ -288,17 +286,17 @@ class DailyForecast(BaseModel):
     dew_point: float
     wind_speed: float = Field(..., ge=0)
     wind_deg: int = Field(..., ge=0, le=360)
-    wind_gust: Optional[float] = Field(None, ge=0)
+    wind_gust: float | None = Field(None, ge=0)
 
-    weather: List[WeatherCondition]
+    weather: list[WeatherCondition]
     clouds: int = Field(..., ge=0, le=100)
     pop: float = Field(..., ge=0, le=1)
-    rain: Optional[float] = Field(None, ge=0)
-    snow: Optional[float] = Field(None, ge=0)
+    rain: float | None = Field(None, ge=0)
+    snow: float | None = Field(None, ge=0)
     uvi: float = Field(..., ge=0)
 
     # Travel recommendations
-    summary: Optional[str] = None
+    summary: str | None = None
 
 
 class WeatherAlert(BaseModel):
@@ -309,7 +307,7 @@ class WeatherAlert(BaseModel):
     start: datetime
     end: datetime
     description: str
-    tags: List[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
 
 
 class OneCallWeather(BaseModel):
@@ -322,11 +320,11 @@ class OneCallWeather(BaseModel):
     timezone: str
     timezone_offset: int
 
-    current: Optional[Dict[str, Any]] = None
-    minutely: Optional[List[Dict[str, Any]]] = None
-    hourly: Optional[List[HourlyForecast]] = None
-    daily: Optional[List[DailyForecast]] = None
-    alerts: Optional[List[WeatherAlert]] = None
+    current: dict[str, Any] | None = None
+    minutely: list[dict[str, Any]] | None = None
+    hourly: list[HourlyForecast] | None = None
+    daily: list[DailyForecast] | None = None
+    alerts: list[WeatherAlert] | None = None
 
 
 class WeatherForecast(BaseModel):
@@ -335,10 +333,10 @@ class WeatherForecast(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     cod: str
-    message: Optional[Union[int, str]] = None
+    message: int | str | None = None
     cnt: int
-    list: List[Dict[str, Any]]
-    city: Dict[str, Any]
+    list: list[dict[str, Any]]
+    city: dict[str, Any]
 
 
 class AirPollutionComponent(BaseModel):
@@ -370,7 +368,7 @@ class AirPollution(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     dt: datetime
-    main: Dict[str, int]  # Contains 'aqi' field
+    main: dict[str, int]  # Contains 'aqi' field
     components: AirPollutionComponent
 
     @property
@@ -412,7 +410,9 @@ class WeatherMapTile(BaseModel):
         x = int((lon + 180.0) / 360.0 * n)
         y = int((1.0 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2.0 * n)
 
-        tile_url = f"https://tile.openweathermap.org/map/{layer}/{zoom}/{x}/{y}.png"
+        tile_url = _HTTP_URL_ADAPTER.validate_python(
+            f"https://tile.openweathermap.org/map/{layer}/{zoom}/{x}/{y}.png"
+        )
 
         return cls(layer=layer, z=zoom, x=x, y=y, tile_url=tile_url)
 
@@ -434,12 +434,12 @@ class TravelWeatherSummary(BaseModel):
     dominant_condition: str
     travel_rating: float = Field(..., ge=0, le=10)
 
-    recommendations: List[str]
-    packing_suggestions: List[str]
-    activity_suitability: Dict[str, str]
+    recommendations: list[str]
+    packing_suggestions: list[str]
+    activity_suitability: dict[str, str]
 
-    daily_summaries: List[Dict[str, Any]]
-    alerts: List[WeatherAlert] = Field(default_factory=list)
+    daily_summaries: list[dict[str, Any]]
+    alerts: list[WeatherAlert] = Field(default_factory=list)
 
 
 class SeasonalWeather(BaseModel):
@@ -447,12 +447,12 @@ class SeasonalWeather(BaseModel):
 
     location: str
     season: str
-    months: List[str]
+    months: list[str]
 
     avg_temperature: float
     avg_rainfall: float
     avg_humidity: float
 
-    typical_conditions: List[str]
-    best_activities: List[str]
-    travel_tips: List[str]
+    typical_conditions: list[str]
+    best_activities: list[str]
+    travel_tips: list[str]

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Schema Consistency Validation Script
+"""Schema Consistency Validation Script.
 
 Validates that all database schema files follow consistent patterns:
 - All user_id fields are UUID type with foreign key constraints
@@ -41,17 +40,18 @@ class SchemaValidator:
     """Validates PostgreSQL schema files for consistency."""
 
     def __init__(self, schema_dir: str):
+        """Initialize schema validator."""
         self.schema_dir = Path(schema_dir)
         self.issues: list[SchemaIssue] = []
         self.tables: dict[str, TableDefinition] = {}
 
     def validate(self) -> bool:
         """Run all validation checks."""
-        print("🔍 Starting schema consistency validation...")
+        print("Starting schema consistency validation...")
 
         # Find and parse all SQL files
         sql_files = list(self.schema_dir.glob("*.sql"))
-        print(f"📄 Found {len(sql_files)} SQL files to validate")
+        print(f"Found {len(sql_files)} SQL files to validate")
 
         # Parse table definitions
         for sql_file in sql_files:
@@ -68,7 +68,7 @@ class SchemaValidator:
 
     def _parse_sql_file(self, file_path: Path):
         """Parse SQL file for table definitions."""
-        with open(file_path, "r") as f:
+        with file_path.open() as f:
             content = f.read()
             lines = content.split("\n")
 
@@ -232,22 +232,23 @@ class SchemaValidator:
 
         for table_name, table_def in self.tables.items():
             for col_name, col_type in table_def.columns.items():
-                if uuid_pattern.match(col_name) and "TEXT" in col_type.upper():
-                    # Allow external_id and tool_id fields to be TEXT
-                    # (they're not UUIDs)
-                    if col_name not in ["external_id", "tool_id"]:
-                        self.issues.append(
-                            SchemaIssue(
-                                file_path=table_def.file_path,
-                                line_number=table_def.line_number,
-                                issue_type="text_uuid",
-                                description=(
-                                    f"Column {table_name}.{col_name} uses TEXT type "
-                                    f"but appears to be a UUID field"
-                                ),
-                                severity="warning",
-                            )
+                if (
+                    uuid_pattern.match(col_name)
+                    and "TEXT" in col_type.upper()
+                    and col_name not in ["external_id", "tool_id"]
+                ):
+                    self.issues.append(
+                        SchemaIssue(
+                            file_path=table_def.file_path,
+                            line_number=table_def.line_number,
+                            issue_type="text_uuid",
+                            description=(
+                                f"Column {table_name}.{col_name} uses TEXT type "
+                                f"but appears to be a UUID field"
+                            ),
+                            severity="warning",
                         )
+                    )
 
     def _validate_migration_consistency(self):
         """Validate that migration file references all schema files."""
@@ -259,7 +260,7 @@ class SchemaValidator:
             / "20250609_02_consolidated_production_schema.sql"
         )
         if migration_file.exists():
-            with open(migration_file, "r") as f:
+            with migration_file.open() as f:
                 migration_content = f.read()
 
             # Check that all schema files are referenced
@@ -282,13 +283,13 @@ class SchemaValidator:
     def _report_results(self) -> bool:
         """Report validation results."""
         print("\n" + "=" * 60)
-        print("📊 SCHEMA VALIDATION RESULTS")
+        print("SCHEMA VALIDATION RESULTS")
         print("=" * 60)
 
         if not self.issues:
             print("✅ All schema consistency checks passed!")
             sql_files = len(list(self.schema_dir.glob("*.sql")))
-            print(f"📋 Validated {len(self.tables)} tables across {sql_files} files")
+            print(f"Validated {len(self.tables)} tables across {sql_files} files")
             return True
 
         # Group issues by severity
@@ -303,7 +304,7 @@ class SchemaValidator:
 
         # Display issues by severity
         if errors:
-            print("\n🚨 ERRORS:")
+            print("\nERRORS:")
             for issue in errors:
                 print(f"  {issue.file_path}:{issue.line_number}")
                 print(f"    [{issue.issue_type}] {issue.description}")
@@ -315,7 +316,7 @@ class SchemaValidator:
                 print(f"    [{issue.issue_type}] {issue.description}")
 
         if info:
-            print("\n📌 INFO:")
+            print("\nINFO:")
             for issue in info:
                 print(f"  {issue.file_path}:{issue.line_number}")
                 print(f"    [{issue.issue_type}] {issue.description}")

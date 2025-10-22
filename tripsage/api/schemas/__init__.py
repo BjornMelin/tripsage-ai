@@ -1,5 +1,4 @@
-"""
-API schemas for TripSage.
+"""API schemas for TripSage.
 
 This package contains consolidated Pydantic V2 schemas organized by domain:
 
@@ -39,6 +38,7 @@ from tripsage_core.models.schemas_common import (
     TripVisibility,
     UserRole,
 )
+
 
 __all__ = [
     "AccommodationType",

@@ -1,5 +1,4 @@
-"""
-Performance tests for collaboration features in the Supabase schema.
+"""Performance tests for collaboration features in the Supabase schema.
 
 This module tests query performance, indexing efficiency, and scalability
 of collaboration-related database operations.
@@ -8,7 +7,6 @@ of collaboration-related database operations.
 import statistics
 import time
 from datetime import datetime, timedelta
-from typing import List
 from uuid import uuid4
 
 import pytest
@@ -438,7 +436,7 @@ class CollaborationPerformanceTestSuite:
     # Helper methods
 
     async def _populate_database(
-        self, client: MockSupabaseClient, trips: List[TestTrip]
+        self, client: MockSupabaseClient, trips: list[TestTrip]
     ):
         """Helper to populate database with trip data."""
         for trip in trips:
@@ -502,7 +500,7 @@ class PerformanceRegressionTests:
 
             logger = logging.getLogger(__name__)
             for warning in performance_warnings:
-                logger.warning(f"Performance consideration: {warning}")
+                logger.warning("Performance consideration: %s", warning)
 
     def test_index_coverage_analysis(self, schema_files):
         """Analyze index coverage for performance-critical queries."""
@@ -521,19 +519,19 @@ class PerformanceRegressionTests:
         critical_columns = set(where_patterns + join_patterns)
 
         # Check if critical columns have indexes
-        missing_indexes = []
-        for column in critical_columns:
-            if column not in indexes_sql and not any(
-                col in column for col in ["auth.uid()", "id"]
-            ):
-                missing_indexes.append(column)
+        missing_indexes = [
+            column
+            for column in critical_columns
+            if column not in indexes_sql
+            and not any(col in column for col in ["auth.uid()", "id"])
+        ]
 
         # This is informational - indexes might exist with different names
         if missing_indexes:
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.info(f"Columns that might benefit from indexing: {missing_indexes}")
+            logger.info("Columns that might benefit from indexing: %s", missing_indexes)
 
     async def test_performance_baseline_establishment(self, performance_tracker):
         """Establish performance baselines for regression testing."""
@@ -562,7 +560,7 @@ class PerformanceRegressionTests:
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.info(f"Performance summary: {summary}")
+        logger.info("Performance summary: %s", summary)
 
 
 # Test configuration

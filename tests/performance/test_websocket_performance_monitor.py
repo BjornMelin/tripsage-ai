@@ -1,5 +1,4 @@
-"""
-Tests for WebSocket performance monitoring.
+"""Tests for WebSocket performance monitoring.
 
 This test suite validates the WebSocket performance monitoring infrastructure including:
 - Metrics collection and aggregation
@@ -39,14 +38,12 @@ def performance_monitor():
         error_rate_critical=0.10,
     )
 
-    monitor = WebSocketPerformanceMonitor(
+    return WebSocketPerformanceMonitor(
         collection_interval=0.1,  # Fast for testing
         aggregation_interval=1.0,  # Fast for testing
         retention_hours=1,  # Short for testing
         thresholds=thresholds,
     )
-
-    return monitor
 
 
 @pytest.fixture

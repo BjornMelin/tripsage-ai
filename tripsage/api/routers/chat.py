@@ -5,25 +5,41 @@ chat service for clean separation of concerns.
 """
 
 import logging
-from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from tripsage.api.core.dependencies import (
     ChatServiceDep,
     RequiredPrincipalDep,
     get_principal_id,
 )
-from tripsage.api.schemas.chat import ChatRequest, ChatResponse
+from tripsage.api.limiting import limiter
+from tripsage.api.schemas.chat import (
+    ChatRequest,
+    ChatResponse,
+    CreateMessageRequest,
+    SessionCreateRequest,
+)
+from tripsage_core.observability.otel import (
+    http_route_attr_fn,
+    record_histogram,
+    trace_span,
+)
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 @router.post("/", response_model=ChatResponse)
+@limiter.limit("20/minute")
+@trace_span(name="api.chat.completion")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def chat(
     request: ChatRequest,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
 ):
@@ -31,6 +47,8 @@ async def chat(
 
     Args:
         request: Chat request with messages and options
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
 
@@ -41,59 +59,72 @@ async def chat(
         user_id = get_principal_id(principal)
 
         # Delegate to unified chat service
-        response = await chat_service.chat_completion(user_id, request)
-        return response
+        return await chat_service.chat_completion(user_id, request)
 
     except Exception as e:
-        logger.error(f"Chat request failed: {str(e)}")
+        logger.exception("Chat request failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Chat request failed",
         ) from e
 
 
-@router.post("/sessions", response_model=dict)
+@router.post("/sessions", response_model=dict, status_code=status.HTTP_201_CREATED)
+@trace_span(name="api.chat.sessions.create")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def create_session(
-    title: str,
+    body: SessionCreateRequest,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
 ):
     """Create a new chat session.
 
     Args:
-        title: Session title
+        body: Session creation request body
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
-
-    Returns:
-        Created session information
     """
     try:
         user_id = get_principal_id(principal)
 
-        from tripsage.api.schemas.chat import SessionCreateRequest
+        from tripsage_core.services.business.chat_service import (
+            ChatSessionCreateRequest,
+        )
 
-        session_request = SessionCreateRequest(title=title)
+        # Convert API request to core request
+        session_request = ChatSessionCreateRequest(
+            title=body.title, metadata=body.metadata, trip_id=None
+        )
 
         session = await chat_service.create_session(user_id, session_request)
-        return session
+        return session.model_dump() if hasattr(session, "model_dump") else session
 
     except Exception as e:
-        logger.error(f"Session creation failed: {str(e)}")
+        logger.exception("Session creation failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session creation failed",
         ) from e
 
 
-@router.get("/sessions", response_model=List[dict])
+@router.get("/sessions", response_model=list[dict])
+@trace_span(name="api.chat.sessions.list")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def list_sessions(
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
 ):
     """List chat sessions for the current user.
 
     Args:
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
 
@@ -102,11 +133,11 @@ async def list_sessions(
     """
     try:
         user_id = get_principal_id(principal)
-        sessions = await chat_service.list_sessions(user_id)
-        return sessions
+        sessions = await chat_service.get_user_sessions(user_id)
+        return [s.model_dump() if hasattr(s, "model_dump") else s for s in sessions]
 
     except Exception as e:
-        logger.error(f"Session listing failed: {str(e)}")
+        logger.exception("Session listing failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session listing failed",
@@ -114,8 +145,12 @@ async def list_sessions(
 
 
 @router.get("/sessions/{session_id}", response_model=dict)
+@trace_span(name="api.chat.sessions.get")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_session(
     session_id: UUID,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
 ):
@@ -123,6 +158,8 @@ async def get_session(
 
     Args:
         session_id: Session ID
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
 
@@ -131,28 +168,32 @@ async def get_session(
     """
     try:
         user_id = get_principal_id(principal)
-        session = await chat_service.get_session(user_id, session_id)
+        session = await chat_service.get_session(str(session_id), user_id)
 
         if session is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
             )
 
-        return session
+        return session.model_dump() if hasattr(session, "model_dump") else session
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Session retrieval failed: {str(e)}")
+        logger.exception("Session retrieval failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session retrieval failed",
         ) from e
 
 
-@router.get("/sessions/{session_id}/messages", response_model=List[dict])
-async def get_session_messages(
+@router.get("/sessions/{session_id}/messages", response_model=list[dict])
+@trace_span(name="api.chat.messages.list")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
+async def get_session_messages(  # pylint: disable=too-many-positional-arguments
     session_id: UUID,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
     limit: int = 50,
@@ -161,6 +202,8 @@ async def get_session_messages(
 
     Args:
         session_id: Session ID
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
         limit: Maximum number of messages to return
@@ -170,11 +213,11 @@ async def get_session_messages(
     """
     try:
         user_id = get_principal_id(principal)
-        messages = await chat_service.get_messages(user_id, session_id, limit)
-        return messages
+        messages = await chat_service.get_messages(str(session_id), user_id, limit)
+        return [m.model_dump() if hasattr(m, "model_dump") else m for m in messages]
 
     except Exception as e:
-        logger.error(f"Message retrieval failed: {str(e)}")
+        logger.exception("Message retrieval failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Message retrieval failed",
@@ -182,39 +225,39 @@ async def get_session_messages(
 
 
 @router.post("/sessions/{session_id}/messages", response_model=dict)
-async def create_message(
+@trace_span(name="api.chat.messages.create")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
+async def create_message(  # pylint: disable=too-many-positional-arguments
     session_id: UUID,
-    content: str,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
-    role: str = "user",
+    body: CreateMessageRequest,
 ):
     """Create a new message in a session.
 
     Args:
         session_id: Session ID
-        content: Message content
-        role: Message role (user/assistant)
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
-
-    Returns:
-        Created message
+        body: Message creation request body
     """
     try:
         user_id = get_principal_id(principal)
 
-        from tripsage.api.schemas.chat import CreateMessageRequest
+        from tripsage_core.services.business.chat_service import MessageCreateRequest
 
-        message_request = CreateMessageRequest(content=content, role=role)
-
-        message = await chat_service.create_message(
-            user_id, session_id, message_request
+        service_req = MessageCreateRequest(
+            role=body.role, content=body.content, metadata=None, tool_calls=None
         )
-        return message
+        message = await chat_service.add_message(str(session_id), user_id, service_req)
+        return message.model_dump() if hasattr(message, "model_dump") else message
 
     except Exception as e:
-        logger.error(f"Message creation failed: {str(e)}")
+        logger.exception("Message creation failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Message creation failed",
@@ -224,6 +267,8 @@ async def create_message(
 @router.delete("/sessions/{session_id}")
 async def delete_session(
     session_id: UUID,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
 ):
@@ -231,6 +276,8 @@ async def delete_session(
 
     Args:
         session_id: Session ID to delete
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
 
@@ -239,7 +286,7 @@ async def delete_session(
     """
     try:
         user_id = get_principal_id(principal)
-        success = await chat_service.delete_session(user_id, session_id)
+        success = await chat_service.end_session(str(session_id), user_id)
 
         if not success:
             raise HTTPException(
@@ -251,7 +298,7 @@ async def delete_session(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Session deletion failed: {str(e)}")
+        logger.exception("Session deletion failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session deletion failed",

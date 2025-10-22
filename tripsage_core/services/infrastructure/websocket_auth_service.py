@@ -1,5 +1,4 @@
-"""
-WebSocket authentication service.
+"""WebSocket authentication service.
 
 This service handles WebSocket connection authentication including:
 - JWT token verification
@@ -16,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +43,8 @@ class WebSocketAuthService:
     """Service for WebSocket authentication and authorization."""
 
     def __init__(self):
+        """Initialize WebSocket auth service."""
         # Don't cache settings to allow for testing with mocked settings
-        pass
 
     @property
     def settings(self):
@@ -88,12 +88,12 @@ class WebSocketAuthService:
             ) from e
         except jwt.InvalidTokenError as e:
             raise CoreAuthenticationError(
-                message=f"Invalid token: {str(e)}",
+                message=f"Invalid token: {e!s}",
                 code="INVALID_TOKEN",
             ) from e
         except ValueError as e:
             raise CoreAuthenticationError(
-                message=f"Invalid user ID format: {str(e)}",
+                message=f"Invalid user ID format: {e!s}",
                 code="INVALID_USER_ID",
             ) from e
 
@@ -260,12 +260,12 @@ class WebSocketAuthService:
             ) from e
         except jwt.InvalidTokenError as e:
             raise CoreAuthenticationError(
-                message=f"Invalid token: {str(e)}",
+                message=f"Invalid token: {e!s}",
                 code="INVALID_TOKEN",
             ) from e
         except ValueError as e:
             raise CoreAuthenticationError(
-                message=f"Invalid user ID format: {str(e)}",
+                message=f"Invalid user ID format: {e!s}",
                 code="INVALID_USER_ID",
             ) from e
 
@@ -291,7 +291,9 @@ class WebSocketAuthService:
         """
         # In a real implementation, this would track attempts in Redis/database
         # For testing, this is a no-op
-        logger.debug(f"Tracking connection attempt for user {user_id} from {source_ip}")
+        logger.debug(
+            "Tracking connection attempt for user %s from %s", user_id, source_ip
+        )
 
     def _get_user_session_count(self, user_id: UUID | str) -> int:
         """Get current session count for user.

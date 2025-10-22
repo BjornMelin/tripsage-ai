@@ -1,5 +1,5 @@
 /**
- * Comprehensive Zod schemas for Zustand store state validation
+ * Zod schemas for Zustand store state validation
  * Runtime validation for all store state mutations and data
  */
 

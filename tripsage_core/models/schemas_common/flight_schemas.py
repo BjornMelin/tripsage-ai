@@ -1,5 +1,4 @@
-"""
-Unified flight schemas for TripSage.
+"""Unified flight schemas for TripSage.
 
 This module contains consolidated Pydantic models for flight-related operations,
 serving as the single source of truth for flight requests, responses, and data
@@ -8,7 +7,7 @@ eliminate duplication.
 """
 
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -16,6 +15,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from .base_models import BaseResponse
 from .common_validators import AirportCode
 from .enums import CabinClass, PassengerType
+
 
 # Removed TYPE_CHECKING imports to avoid circular import issues
 
@@ -33,19 +33,19 @@ class FlightPassenger(BaseModel):
     """Passenger information for flight bookings."""
 
     type: PassengerType = Field(..., description="Passenger type")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Passenger age")
+    age: int | None = Field(None, ge=0, le=120, description="Passenger age")
 
     # Detailed passenger information (optional for bookings)
-    given_name: Optional[str] = Field(None, description="First name")
-    family_name: Optional[str] = Field(None, description="Last name")
-    title: Optional[str] = Field(None, description="Title (Mr, Ms, etc.)")
-    date_of_birth: Optional[datetime] = Field(None, description="Date of birth")
-    email: Optional[str] = Field(None, description="Email address")
-    phone: Optional[str] = Field(None, description="Phone number")
+    given_name: str | None = Field(None, description="First name")
+    family_name: str | None = Field(None, description="Last name")
+    title: str | None = Field(None, description="Title (Mr, Ms, etc.)")
+    date_of_birth: datetime | None = Field(None, description="Date of birth")
+    email: str | None = Field(None, description="Email address")
+    phone: str | None = Field(None, description="Phone number")
 
     @field_validator("age")
     @classmethod
-    def validate_age_for_type(cls, v: Optional[int], info) -> Optional[int]:
+    def validate_age_for_type(cls, v: int | None, info) -> int | None:
         """Validate age is appropriate for passenger type."""
         if v is None:
             return v
@@ -53,16 +53,16 @@ class FlightPassenger(BaseModel):
         passenger_type = info.data.get("type")
         if passenger_type == PassengerType.CHILD and (v >= 18 or v < 2):
             raise ValueError("Child passengers must be between 2-17 years old")
-        elif passenger_type == PassengerType.INFANT and v >= 2:
+        if passenger_type == PassengerType.INFANT and v >= 2:
             raise ValueError("Infant passengers must be under 2 years old")
-        elif passenger_type == PassengerType.ADULT and v < 18:
+        if passenger_type == PassengerType.ADULT and v < 18:
             raise ValueError("Adult passengers must be 18 or older")
 
         return v
 
     @field_validator("email")
     @classmethod
-    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+    def validate_email(cls, v: str | None) -> str | None:
         """Validate email format."""
         if v and "@" not in v:
             raise ValueError("Invalid email format")
@@ -78,8 +78,8 @@ class FlightSearchRequest(BaseModel):
 
     origin: AirportCode = Field(..., description="Origin airport IATA code")
     destination: AirportCode = Field(..., description="Destination airport IATA code")
-    departure_date: Union[date, datetime] = Field(..., description="Departure date")
-    return_date: Optional[Union[date, datetime]] = Field(
+    departure_date: date | datetime = Field(..., description="Departure date")
+    return_date: date | datetime | None = Field(
         None, description="Return date for round trips"
     )
 
@@ -87,36 +87,36 @@ class FlightSearchRequest(BaseModel):
     adults: int = Field(1, ge=1, le=9, description="Number of adult passengers")
     children: int = Field(0, ge=0, le=9, description="Number of child passengers")
     infants: int = Field(0, ge=0, le=4, description="Number of infant passengers")
-    passengers: Optional[List[FlightPassenger]] = Field(
+    passengers: list[FlightPassenger] | None = Field(
         None, description="Detailed passenger information (optional)"
     )
 
     cabin_class: CabinClass = Field(CabinClass.ECONOMY, description="Cabin class")
-    max_stops: Optional[int] = Field(
+    max_stops: int | None = Field(
         None, ge=0, le=5, description="Maximum number of stops"
     )
-    max_price: Optional[float] = Field(None, gt=0, description="Maximum price in USD")
+    max_price: float | None = Field(None, gt=0, description="Maximum price in USD")
     currency: str = Field(default="USD", description="Price currency")
 
-    # Advanced options
+    # Optional settings
     flexible_dates: bool = Field(
         default=False, description="Allow flexible date search"
     )
-    preferred_airlines: Optional[List[str]] = Field(
+    preferred_airlines: list[str] | None = Field(
         None, description="Preferred airline codes"
     )
-    excluded_airlines: Optional[List[str]] = Field(
+    excluded_airlines: list[str] | None = Field(
         None, description="Excluded airline codes"
     )
 
     # API-specific fields
-    trip_id: Optional[UUID] = Field(None, description="Associated trip ID")
+    trip_id: UUID | None = Field(None, description="Associated trip ID")
 
     @field_validator("return_date")
     @classmethod
     def validate_return_date(
-        cls, v: Optional[Union[date, datetime]], info
-    ) -> Optional[Union[date, datetime]]:
+        cls, v: date | datetime | None, info
+    ) -> date | datetime | None:
         """Validate that return date is after departure date if provided."""
         if v and info.data.get("departure_date"):
             departure = info.data["departure_date"]
@@ -173,13 +173,13 @@ class MultiCityFlightSegment(BaseModel):
 
     origin: AirportCode = Field(..., description="Origin airport IATA code")
     destination: AirportCode = Field(..., description="Destination airport IATA code")
-    departure_date: Union[date, datetime] = Field(..., description="Departure date")
+    departure_date: date | datetime = Field(..., description="Departure date")
 
 
 class MultiCityFlightSearchRequest(BaseModel):
     """Request model for multi-city flight search."""
 
-    segments: List[MultiCityFlightSegment] = Field(
+    segments: list[MultiCityFlightSegment] = Field(
         description="List of flight segments",
         min_length=2,
     )
@@ -187,14 +187,14 @@ class MultiCityFlightSearchRequest(BaseModel):
     children: int = Field(0, ge=0, le=9, description="Number of child passengers")
     infants: int = Field(0, ge=0, le=4, description="Number of infant passengers")
     cabin_class: CabinClass = Field(CabinClass.ECONOMY, description="Cabin class")
-    max_stops: Optional[int] = Field(
+    max_stops: int | None = Field(
         None, ge=0, le=3, description="Maximum number of stops"
     )
-    max_price: Optional[float] = Field(None, gt=0, description="Maximum price in USD")
-    preferred_airlines: Optional[List[str]] = Field(
+    max_price: float | None = Field(None, gt=0, description="Maximum price in USD")
+    preferred_airlines: list[str] | None = Field(
         default=None, description="List of preferred airline codes"
     )
-    trip_id: Optional[UUID] = Field(default=None, description="Associated trip ID")
+    trip_id: UUID | None = Field(default=None, description="Associated trip ID")
 
     @model_validator(mode="after")
     def validate_segments(self) -> "MultiCityFlightSearchRequest":
@@ -242,9 +242,7 @@ class SavedFlightRequest(BaseModel):
 
     offer_id: str = Field(description="Flight offer ID")
     trip_id: UUID = Field(description="Trip ID to save the flight for")
-    notes: Optional[str] = Field(
-        default=None, description="Notes about this flight offer"
-    )
+    notes: str | None = Field(default=None, description="Notes about this flight offer")
 
 
 # FlightOffer moved to domain layer - import from tripsage_core.models.domain.flight
@@ -253,14 +251,14 @@ class SavedFlightRequest(BaseModel):
 class FlightSearchResponse(BaseResponse):
     """Response model for flight search results."""
 
-    results: List[Any] = Field(description="Flight offers")  # FlightOffer from domain
+    results: list[Any] = Field(description="Flight offers")  # FlightOffer from domain
     count: int = Field(description="Number of results")
     currency: str = Field(description="Currency code for prices", default="USD")
     search_id: str = Field(description="Search ID for reference")
-    trip_id: Optional[UUID] = Field(default=None, description="Associated trip ID")
-    min_price: Optional[float] = Field(default=None, description="Minimum price found")
-    max_price: Optional[float] = Field(default=None, description="Maximum price found")
-    search_request: Union[FlightSearchRequest, MultiCityFlightSearchRequest] = Field(
+    trip_id: UUID | None = Field(default=None, description="Associated trip ID")
+    min_price: float | None = Field(default=None, description="Minimum price found")
+    max_price: float | None = Field(default=None, description="Maximum price found")
+    search_request: FlightSearchRequest | MultiCityFlightSearchRequest = Field(
         description="Original search request"
     )
 
@@ -268,7 +266,7 @@ class FlightSearchResponse(BaseResponse):
 class AirportSearchResponse(BaseResponse):
     """Response model for airport search results."""
 
-    results: List[Dict[str, Any]] = Field(description="Airport results")
+    results: list[dict[str, Any]] = Field(description="Airport results")
     count: int = Field(description="Number of results")
 
 
@@ -280,17 +278,15 @@ class SavedFlightResponse(BaseModel):
     trip_id: UUID = Field(description="Trip ID")
     offer: Any = Field(description="Flight offer details")  # FlightOffer from domain
     saved_at: datetime = Field(description="Timestamp when flight was saved")
-    notes: Optional[str] = Field(
-        default=None, description="Notes about this flight offer"
-    )
+    notes: str | None = Field(default=None, description="Notes about this flight offer")
 
 
 class UpcomingFlightResponse(BaseModel):
     """Response model for upcoming flights with real-time status."""
 
     id: str = Field(description="Flight ID")
-    trip_id: Optional[str] = Field(default=None, description="Associated trip ID")
-    trip_title: Optional[str] = Field(default=None, description="Trip title")
+    trip_id: str | None = Field(default=None, description="Associated trip ID")
+    trip_title: str | None = Field(default=None, description="Trip title")
     airline: str = Field(description="Airline code")
     airline_name: str = Field(description="Airline name")
     flight_number: str = Field(description="Flight number")
@@ -303,16 +299,16 @@ class UpcomingFlightResponse(BaseModel):
     price: float = Field(description="Flight price")
     currency: str = Field(description="Currency code", default="USD")
     cabin_class: str = Field(description="Cabin class")
-    seats_available: Optional[int] = Field(default=None, description="Available seats")
+    seats_available: int | None = Field(default=None, description="Available seats")
     status: str = Field(
         description="Flight status", default="upcoming"
     )  # upcoming, boarding, delayed, cancelled
-    terminal: Optional[str] = Field(default=None, description="Terminal")
-    gate: Optional[str] = Field(default=None, description="Gate")
-    # Enhanced trip context fields
-    is_shared_trip: Optional[bool] = Field(
+    terminal: str | None = Field(default=None, description="Terminal")
+    gate: str | None = Field(default=None, description="Gate")
+    # Trip context fields
+    is_shared_trip: bool | None = Field(
         default=False, description="Whether the trip is shared"
     )
-    collaborator_count: Optional[int] = Field(
+    collaborator_count: int | None = Field(
         default=0, description="Number of trip collaborators"
     )

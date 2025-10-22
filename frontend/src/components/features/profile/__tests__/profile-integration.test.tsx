@@ -104,7 +104,7 @@ describe("Profile Components Integration", () => {
   it("displays preferences in PreferencesSection", () => {
     render(<PreferencesSection />);
     expect(screen.getByText("Regional & Language")).toBeInTheDocument();
-    expect(screen.getByText("Advanced Settings")).toBeInTheDocument();
+    expect(screen.getByText("Additional Settings")).toBeInTheDocument();
   });
 
   it("displays security settings in SecuritySection", () => {

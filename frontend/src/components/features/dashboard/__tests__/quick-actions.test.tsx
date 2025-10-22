@@ -35,7 +35,7 @@ describe("QuickActions", () => {
     expect(screen.getByText("Ask AI Assistant")).toBeInTheDocument();
     expect(screen.getByText("Explore Destinations")).toBeInTheDocument();
     expect(screen.getByText("My Trips")).toBeInTheDocument();
-    expect(screen.getByText("Advanced Search")).toBeInTheDocument();
+    expect(screen.getByText("Detailed Search")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
   });
 
@@ -91,7 +91,7 @@ describe("QuickActions", () => {
     expect(tripsLink).toHaveAttribute("href", "/dashboard/trips");
 
     const advancedSearchLink = screen.getByRole("link", {
-      name: /Advanced Search/i,
+      name: /Detailed Search/i,
     });
     expect(advancedSearchLink).toHaveAttribute("href", "/dashboard/search");
 

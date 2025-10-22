@@ -1,6 +1,4 @@
-"""
-Playwright Service for complex web scraping and browser automation
-with TripSage Core integration.
+"""Playwright Service for web scraping and browser automation.
 
 This service provides direct Playwright SDK integration for scenarios requiring
 JavaScript execution, complex interactions, or sophisticated browser automation.
@@ -9,19 +7,21 @@ JavaScript execution, complex interactions, or sophisticated browser automation.
 import asyncio
 import logging
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
-from playwright.async_api import (
-    Browser,
-    BrowserContext,
-    Playwright,
-    async_playwright,
-)
+from playwright.async_api import Browser, BrowserContext, Playwright, async_playwright
 from pydantic import BaseModel, Field
 
 from tripsage_core.config import Settings, get_settings
-from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
-from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.exceptions.exceptions import (
+    CoreExternalAPIError as CoreAPIError,
+    CoreServiceError,
+)
+from tripsage_core.services.external_apis.base_service import (
+    AsyncServiceLifecycle,
+    AsyncServiceProvider,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +29,12 @@ logger = logging.getLogger(__name__)
 class PlaywrightServiceError(CoreAPIError):
     """Exception raised for Playwright service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
+        """Initialize the Playwright service error."""
         super().__init__(
             message=message,
             code="PLAYWRIGHT_SERVICE_ERROR",
-            service="PlaywrightService",
+            api_service="PlaywrightService",
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
@@ -49,13 +50,16 @@ class PlaywrightConfig(BaseModel):
     viewport_width: int = Field(1920, description="Viewport width")
     viewport_height: int = Field(1080, description="Viewport height")
     timeout: int = Field(30000, description="Default timeout in milliseconds")
-    user_agent: Optional[str] = Field(None, description="Custom user agent")
-    proxy: Optional[str] = Field(None, description="Proxy URL")
+    user_agent: str | None = Field(None, description="Custom user agent")
+    proxy: str | None = Field(None, description="Proxy URL")
     disable_javascript: bool = Field(False, description="Disable JavaScript execution")
     block_images: bool = Field(
         False, description="Block image loading for faster scraping"
     )
     block_css: bool = Field(False, description="Block CSS loading for faster scraping")
+    max_concurrent_pages: int = Field(
+        3, description="Maximum concurrent pages handled by the service"
+    )
 
 
 class ScrapingResult(BaseModel):
@@ -63,30 +67,29 @@ class ScrapingResult(BaseModel):
 
     url: str = Field(..., description="URL that was scraped")
     content: str = Field(..., description="Extracted content")
-    html: Optional[str] = Field(None, description="Raw HTML content")
-    title: Optional[str] = Field(None, description="Page title")
-    links: List[str] = Field(default_factory=list, description="Extracted links")
-    images: List[str] = Field(default_factory=list, description="Extracted image URLs")
-    metadata: Dict[str, Any] = Field(
+    html: str | None = Field(None, description="Raw HTML content")
+    title: str | None = Field(None, description="Page title")
+    links: list[str] = Field(default_factory=list, description="Extracted links")
+    images: list[str] = Field(default_factory=list, description="Extracted image URLs")
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
-    performance: Dict[str, Union[int, float]] = Field(
+    performance: dict[str, int | float] = Field(
         default_factory=dict, description="Performance metrics"
     )
     success: bool = Field(True, description="Whether scraping was successful")
-    error: Optional[str] = Field(None, description="Error message if failed")
+    error: str | None = Field(None, description="Error message if failed")
 
 
-class PlaywrightService:
+class PlaywrightService(AsyncServiceLifecycle):
     """Direct Playwright SDK service for complex web scraping with Core integration."""
 
     def __init__(
         self,
-        config: Optional[PlaywrightConfig] = None,
-        settings: Optional[Settings] = None,
+        config: PlaywrightConfig | None = None,
+        settings: Settings | None = None,
     ):
-        """
-        Initialize Playwright service.
+        """Initialize Playwright service.
 
         Args:
             config: Playwright configuration options
@@ -99,16 +102,18 @@ class PlaywrightService:
             config = self._build_config_from_settings()
 
         self.config = config
-        self._playwright: Optional[Playwright] = None
-        self._browser: Optional[Browser] = None
-        self._context: Optional[BrowserContext] = None
+        self._playwright: Playwright | None = None
+        self._browser: Browser | None = None
+        self._context: BrowserContext | None = None
         self._connected = False
 
-        # Concurrency control from settings
-        self._max_concurrent_pages = getattr(
-            self.settings, "playwright_max_concurrent_pages", 3
+        concurrency_limit = getattr(
+            self.settings,
+            "playwright_max_concurrent_pages",
+            self.config.max_concurrent_pages,
         )
-        self._page_semaphore = asyncio.Semaphore(self._max_concurrent_pages)
+        self.config.max_concurrent_pages = concurrency_limit
+        self._page_semaphore = asyncio.Semaphore(concurrency_limit)
 
     def _build_config_from_settings(self) -> PlaywrightConfig:
         """Build PlaywrightConfig from Core settings."""
@@ -125,6 +130,9 @@ class PlaywrightService:
             ),
             block_images=getattr(self.settings, "playwright_block_images", False),
             block_css=getattr(self.settings, "playwright_block_css", False),
+            max_concurrent_pages=getattr(
+                self.settings, "playwright_max_concurrent_pages", 3
+            ),
         )
 
     async def connect(self) -> None:
@@ -157,7 +165,7 @@ class PlaywrightService:
             self._browser = await browser_launcher.launch(**launch_options)
 
             # Create browser context
-            context_options = {
+            context_options: dict[str, Any] = {
                 "viewport": {
                     "width": self.config.viewport_width,
                     "height": self.config.viewport_height,
@@ -167,7 +175,13 @@ class PlaywrightService:
             if self.config.user_agent:
                 context_options["user_agent"] = self.config.user_agent
 
-            self._context = await self._browser.new_context(**context_options)
+            browser = self._browser
+            if browser is None:
+                raise PlaywrightServiceError(
+                    "Browser initialization failed before context creation."
+                )
+
+            self._context = await browser.new_context(**context_options)
 
             # Set up request interception for blocking resources
             if self.config.block_images or self.config.block_css:
@@ -180,11 +194,19 @@ class PlaywrightService:
         except Exception as e:
             await self.disconnect()
             raise CoreServiceError(
-                message=f"Failed to connect Playwright service: {str(e)}",
+                message=f"Failed to connect Playwright service: {e!s}",
                 code="CONNECTION_FAILED",
                 service="PlaywrightService",
                 details={"error": str(e)},
             ) from e
+
+    def _require_context(self) -> BrowserContext:
+        """Ensure a browser context is available."""
+        if self._context is None:
+            raise PlaywrightServiceError(
+                "Playwright browser context is not initialized. Call connect() first."
+            )
+        return self._context
 
     async def _handle_route(self, route, request):
         """Handle resource blocking."""
@@ -222,7 +244,7 @@ class PlaywrightService:
 
         except Exception as e:
             raise CoreServiceError(
-                message=f"Error disconnecting Playwright service: {str(e)}",
+                message=f"Error disconnecting Playwright service: {e!s}",
                 code="DISCONNECT_FAILED",
                 service="PlaywrightService",
                 details={"error": str(e)},
@@ -236,15 +258,15 @@ class PlaywrightService:
     async def scrape_url(
         self,
         url: str,
-        wait_for_selector: Optional[str] = None,
-        wait_for_function: Optional[str] = None,
-        custom_timeout: Optional[int] = None,
+        *,
+        wait_for_selector: str | None = None,
+        wait_for_function: str | None = None,
+        custom_timeout: int | None = None,
         extract_links: bool = True,
         extract_images: bool = True,
         include_html: bool = False,
     ) -> ScrapingResult:
-        """
-        Scrape a single URL with advanced options.
+        """Scrape a single URL with advanced options.
 
         Args:
             url: URL to scrape
@@ -270,7 +292,8 @@ class PlaywrightService:
             page = None
             try:
                 # Create new page
-                page = await self._context.new_page()
+                context = self._require_context()
+                page = await context.new_page()
 
                 # Set timeout
                 page.set_default_timeout(timeout)
@@ -302,6 +325,8 @@ class PlaywrightService:
                     return ScrapingResult(
                         url=url,
                         content="",
+                        html=None,
+                        title=None,
                         success=False,
                         error=error_msg,
                         performance={"total_time": time.time() - start_time},
@@ -311,7 +336,7 @@ class PlaywrightService:
                 if wait_for_selector:
                     try:
                         await page.wait_for_selector(wait_for_selector, timeout=timeout)
-                    except Exception as wait_error:
+                    except CoreServiceError as wait_error:
                         logger.debug(
                             "Playwright wait_for_selector '%s' failed on %s: %s",
                             wait_for_selector,
@@ -322,7 +347,7 @@ class PlaywrightService:
                 if wait_for_function:
                     try:
                         await page.wait_for_function(wait_for_function, timeout=timeout)
-                    except Exception as wait_error:
+                    except CoreServiceError as wait_error:
                         logger.debug(
                             "Playwright wait_for_function failed on %s: %s",
                             url,
@@ -341,12 +366,12 @@ class PlaywrightService:
                             'script, style, noscript'
                         );
                         scripts.forEach(el => el.remove());
-                        
+
                         // Get text content and clean it up
                         const text = document.body
                             ? document.body.innerText
                             : document.documentElement.innerText;
-                        
+
                         // Clean up whitespace
                         return text.replace(/\\s+/g, ' ').trim();
                     }
@@ -414,23 +439,23 @@ class PlaywrightService:
                         "content_type": response.headers.get("content-type"),
                     },
                     performance=performance,
+                    error=None,
                     success=True,
                 )
 
             except Exception as e:
                 total_time = time.time() - start_time
                 raise PlaywrightServiceError(
-                    f"Error scraping {url}: {str(e)}", original_error=e
+                    f"Error scraping {url}: {e!s}", original_error=e
                 ) from e
             finally:
                 if page:
                     await page.close()
 
     async def scrape_multiple_urls(
-        self, urls: List[str], max_concurrent: Optional[int] = None, **scrape_options
-    ) -> List[ScrapingResult]:
-        """
-        Scrape multiple URLs concurrently.
+        self, urls: list[str], max_concurrent: int | None = None, **scrape_options
+    ) -> list[ScrapingResult]:
+        """Scrape multiple URLs concurrently.
 
         Args:
             urls: List of URLs to scrape
@@ -446,20 +471,25 @@ class PlaywrightService:
             return []
 
         # Use settings default if not specified
-        if max_concurrent is None:
-            max_concurrent = self._max_concurrent_pages
+        target_concurrency = (
+            max_concurrent
+            if max_concurrent is not None
+            else self.config.max_concurrent_pages
+        )
 
         # Create semaphore to limit concurrency
-        semaphore = asyncio.Semaphore(max_concurrent)
+        semaphore = asyncio.Semaphore(target_concurrency)
 
         async def scrape_with_semaphore(url: str) -> ScrapingResult:
             async with semaphore:
                 try:
                     return await self.scrape_url(url, **scrape_options)
-                except Exception as e:
+                except CoreServiceError as e:
                     return ScrapingResult(
                         url=url,
                         content="",
+                        html=None,
+                        title=None,
                         success=False,
                         error=str(e),
                         performance={},
@@ -472,11 +502,13 @@ class PlaywrightService:
         # Convert exceptions to failed results
         processed_results = []
         for i, result in enumerate(results):
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 processed_results.append(
                     ScrapingResult(
                         url=urls[i],
                         content="",
+                        html=None,
+                        title=None,
                         success=False,
                         error=str(result),
                         performance={},
@@ -489,9 +521,8 @@ class PlaywrightService:
 
     async def execute_custom_script(
         self, url: str, script: str, wait_before_script: float = 1.0
-    ) -> Dict[str, Any]:
-        """
-        Execute custom JavaScript on a page.
+    ) -> dict[str, Any]:
+        """Execute custom JavaScript on a page.
 
         Args:
             url: URL to navigate to
@@ -509,7 +540,8 @@ class PlaywrightService:
         async with self._page_semaphore:
             page = None
             try:
-                page = await self._context.new_page()
+                context = self._require_context()
+                page = await context.new_page()
                 await page.goto(url, wait_until="domcontentloaded")
 
                 if wait_before_script > 0:
@@ -520,17 +552,16 @@ class PlaywrightService:
 
             except Exception as e:
                 raise PlaywrightServiceError(
-                    f"Error executing script on {url}: {str(e)}", original_error=e
+                    f"Error executing script on {url}: {e!s}", original_error=e
                 ) from e
             finally:
                 if page:
                     await page.close()
 
     async def take_screenshot(
-        self, url: str, output_path: Optional[str] = None, full_page: bool = True
-    ) -> Optional[bytes]:
-        """
-        Take screenshot of a webpage.
+        self, url: str, output_path: str | None = None, full_page: bool = True
+    ) -> bytes | None:
+        """Take screenshot of a webpage.
 
         Args:
             url: URL to take screenshot of
@@ -548,10 +579,11 @@ class PlaywrightService:
         async with self._page_semaphore:
             page = None
             try:
-                page = await self._context.new_page()
+                context = self._require_context()
+                page = await context.new_page()
                 await page.goto(url, wait_until="domcontentloaded")
 
-                screenshot_options = {"full_page": full_page}
+                screenshot_options: dict[str, Any] = {"full_page": full_page}
                 if output_path:
                     screenshot_options["path"] = output_path
 
@@ -560,7 +592,7 @@ class PlaywrightService:
 
             except Exception as e:
                 raise PlaywrightServiceError(
-                    f"Error taking screenshot of {url}: {str(e)}", original_error=e
+                    f"Error taking screenshot of {url}: {e!s}", original_error=e
                 ) from e
             finally:
                 if page:
@@ -569,8 +601,7 @@ class PlaywrightService:
     async def scrape_travel_content(
         self, url: str, content_type: str = "general", wait_time: float = 2.0
     ) -> ScrapingResult:
-        """
-        Scrape travel-specific content with specialized extraction.
+        """Scrape travel-specific content with specialized extraction.
 
         Args:
             url: URL to scrape
@@ -582,7 +613,7 @@ class PlaywrightService:
             ScrapingResult with travel-focused extraction
         """
         # Configure extraction based on content type
-        options = {
+        options: dict[str, Any] = {
             "extract_links": True,
             "extract_images": True,
             "include_html": False,
@@ -606,8 +637,7 @@ class PlaywrightService:
         return await self.scrape_url(url, **options)
 
     async def health_check(self) -> bool:
-        """
-        Perform a health check to verify the service is working.
+        """Perform a health check to verify the service is working.
 
         Returns:
             True if the service is healthy, False otherwise
@@ -623,56 +653,31 @@ class PlaywrightService:
                 custom_timeout=10000,
             )
             return result.success
-        except Exception:
+        except CoreServiceError:
             return False
 
-    async def close(self) -> None:
-        """Close the service and clean up resources."""
-        await self.disconnect()
 
-    async def __aenter__(self):
-        """Async context manager entry."""
-        await self.connect()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        await self.close()
-
-
-# Global service instance
-_playwright_service: Optional[PlaywrightService] = None
+_playwright_service_provider = AsyncServiceProvider(
+    factory=PlaywrightService,
+    initializer=lambda service: service.connect(),
+    finalizer=lambda service: service.close(),
+)
 
 
 async def get_playwright_service() -> PlaywrightService:
-    """
-    Get the global Playwright service instance.
-
-    Returns:
-        PlaywrightService instance
-    """
-    global _playwright_service
-
-    if _playwright_service is None:
-        _playwright_service = PlaywrightService()
-        await _playwright_service.connect()
-
-    return _playwright_service
+    """Return the shared Playwright service instance."""
+    return await _playwright_service_provider.get()
 
 
 async def close_playwright_service() -> None:
-    """Close the global Playwright service instance."""
-    global _playwright_service
-
-    if _playwright_service:
-        await _playwright_service.close()
-        _playwright_service = None
+    """Dispose of the shared Playwright service instance."""
+    await _playwright_service_provider.close()
 
 
 # Convenience functions
 async def create_playwright_service(
-    config: Optional[PlaywrightConfig] = None,
-    settings: Optional[Settings] = None,
+    config: PlaywrightConfig | None = None,
+    settings: Settings | None = None,
 ) -> PlaywrightService:
     """Create and initialize a Playwright service."""
     service = PlaywrightService(config, settings)
@@ -682,8 +687,8 @@ async def create_playwright_service(
 
 async def scrape_with_playwright(
     url: str,
-    config: Optional[PlaywrightConfig] = None,
-    settings: Optional[Settings] = None,
+    config: PlaywrightConfig | None = None,
+    settings: Settings | None = None,
     **scrape_options,
 ) -> ScrapingResult:
     """Quick function to scrape a URL with Playwright."""
@@ -695,12 +700,12 @@ async def scrape_with_playwright(
 
 
 __all__ = [
-    "PlaywrightService",
     "PlaywrightConfig",
-    "ScrapingResult",
+    "PlaywrightService",
     "PlaywrightServiceError",
-    "get_playwright_service",
+    "ScrapingResult",
     "close_playwright_service",
     "create_playwright_service",
+    "get_playwright_service",
     "scrape_with_playwright",
 ]

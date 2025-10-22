@@ -1,5 +1,4 @@
-"""
-Centralized enumerations for TripSage AI.
+"""Centralized enumerations for TripSage AI.
 
 This module contains all shared enums used across the TripSage application.
 These enums provide a single source of truth for status values, types,

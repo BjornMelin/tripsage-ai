@@ -1,5 +1,4 @@
-"""
-Modern configuration testing for TripSage Core.
+"""Modern configuration testing for TripSage Core.
 
 Tests the simplified, consolidated configuration system following 2025 best practices.
 Focuses on the unified Settings structure with feature toggles.
@@ -7,6 +6,7 @@ Focuses on the unified Settings structure with feature toggles.
 
 import os
 import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -197,7 +197,7 @@ class TestConfigurationLoading:
                 )
 
         # Clean up
-        os.unlink(f.name)
+        Path(f.name).unlink()
 
 
 class TestConfigurationErrorHandling:

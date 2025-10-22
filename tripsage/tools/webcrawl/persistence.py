@@ -1,15 +1,12 @@
-"""
-Web crawl persistence utilities.
-
-This module provides functionality to persist web crawl results to Supabase and
-the Memory MCP knowledge graph.
-"""
+"""Helpers for persisting normalized web crawl results to storage backends."""
 
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from collections.abc import Awaitable
+from datetime import UTC, datetime
+from typing import Any, cast
 
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -20,14 +17,14 @@ class WebCrawlPersistence:
     def __init__(self):
         """Initialize the web crawl persistence manager."""
         # Import dynamically to avoid circular imports
-        from tripsage.tools.memory_tools import get_memory_service
-        from tripsage.tools.supabase_tools import get_supabase_client
+        from tripsage.db.initialize import get_supabase_client
 
         self.supabase = get_supabase_client()
-        self.memory_service = get_memory_service()
+        # Memory operations use the high-level functions in tripsage.tools.memory_tools.
+        # Avoid storing an un-awaited service here.
 
     async def store_crawl_result(
-        self, result: Dict[str, Any], session_id: Optional[str] = None
+        self, result: dict[str, Any], session_id: str | None = None
     ) -> bool:
         """Store a web crawl result in Supabase and Memory MCP.
 
@@ -46,7 +43,7 @@ class WebCrawlPersistence:
         return success_supabase and success_memory
 
     async def store_search_result(
-        self, result: Dict[str, Any], session_id: Optional[str] = None
+        self, result: dict[str, Any], session_id: str | None = None
     ) -> bool:
         """Store a web search result in Supabase and Memory MCP.
 
@@ -66,9 +63,9 @@ class WebCrawlPersistence:
 
     async def store_price_result(
         self,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         product_type: str,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
     ) -> bool:
         """Store a price monitoring result in Supabase and Memory MCP.
 
@@ -96,7 +93,7 @@ class WebCrawlPersistence:
         return success_supabase and success_memory
 
     async def store_events_result(
-        self, result: Dict[str, Any], session_id: Optional[str] = None
+        self, result: dict[str, Any], session_id: str | None = None
     ) -> bool:
         """Store an events result in Supabase and Memory MCP.
 
@@ -115,7 +112,7 @@ class WebCrawlPersistence:
         return success_supabase and success_memory
 
     async def store_blog_result(
-        self, result: Dict[str, Any], session_id: Optional[str] = None
+        self, result: dict[str, Any], session_id: str | None = None
     ) -> bool:
         """Store a blog crawl result in Supabase and Memory MCP.
 
@@ -134,7 +131,7 @@ class WebCrawlPersistence:
         return success_supabase and success_memory
 
     async def _store_in_supabase(
-        self, result: Dict[str, Any], table: str, session_id: Optional[str] = None
+        self, result: dict[str, Any], table: str, session_id: str | None = None
     ) -> bool:
         """Store a result in Supabase.
 
@@ -150,7 +147,7 @@ class WebCrawlPersistence:
             # Prepare data for storage
             data = {
                 "result_data": json.dumps(result),
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
                 "success": result.get("success", False),
                 "session_id": session_id,
             }
@@ -168,20 +165,19 @@ class WebCrawlPersistence:
                 data["source"] = result["source"]
 
             # Insert into Supabase
-            response = await self.supabase.insert(table, data)
-
-            if "error" in response:
-                logger.error(f"Supabase storage error: {response.get('error')}")
+            try:
+                self.supabase.table(table).insert(data).execute()
+                logger.info("Successfully stored result in Supabase table: %s", table)
+                return True
+            except Exception:
+                logger.exception("Supabase storage error")
                 return False
 
-            logger.info(f"Successfully stored result in Supabase table: {table}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Error storing result in Supabase: {str(e)}")
+        except Exception:
+            logger.exception("Error storing result in Supabase")
             return False
 
-    async def _store_in_memory(self, result: Dict[str, Any]) -> bool:
+    async def _store_in_memory(self, result: dict[str, Any]) -> bool:
         """Store a result in the Mem0 memory system.
 
         Args:
@@ -234,32 +230,34 @@ class WebCrawlPersistence:
             ]
 
             # Store in memory using system user ID for web crawl results
-            memory_result = await add_conversation_memory(
-                messages=memory_messages,
-                user_id="system",  # Use system user for general web crawl data
-                context_type="web_crawl",
+            mem_result = await cast(
+                Awaitable[dict[str, Any]],
+                add_conversation_memory(
+                    messages=memory_messages,
+                    user_id="system",  # Use system user for general web crawl data
+                    context_type="web_crawl",
+                ),
             )
 
-            if memory_result.get("status") == "success":
+            if mem_result.get("status") == "success":
                 logger.info(
-                    f"Successfully stored web crawl result in memory: "
-                    f"{memory_result.get('memories_extracted', 0)} memories extracted"
+                    "Successfully stored web crawl result in memory: "
+                    "%s memories extracted",
+                    mem_result.get("memories_extracted", 0),
                 )
                 return True
-            else:
-                logger.warning(
-                    (
-                        f"Memory storage completed with issues: "
-                        f"{memory_result.get('error', 'Unknown')}"
-                    )
-                )
-                return False
 
-        except Exception as e:
-            logger.error(f"Error storing result in memory: {str(e)}")
+            logger.warning(
+                "Memory storage completed with issues: %s",
+                mem_result.get("error", "Unknown"),
+            )
             return False
 
-    async def _store_events_in_memory(self, result: Dict[str, Any]) -> bool:
+        except Exception:
+            logger.exception("Error storing result in memory")
+            return False
+
+    async def _store_events_in_memory(self, result: dict[str, Any]) -> bool:
         """Store an events result in the memory system.
 
         Args:
@@ -316,30 +314,35 @@ class WebCrawlPersistence:
             ]
 
             # Store in memory
-            memory_result = await add_conversation_memory(
-                messages=memory_messages, user_id="system", context_type="events_crawl"
+            mem_result = await cast(
+                Awaitable[dict[str, Any]],
+                add_conversation_memory(
+                    messages=memory_messages,
+                    user_id="system",
+                    context_type="events_crawl",
+                ),
             )
 
-            if memory_result.get("status") == "success":
+            if mem_result.get("status") == "success":
                 logger.info(
-                    f"Successfully stored events in memory for {destination_name}: "
-                    f"{memory_result.get('memories_extracted', 0)} memories extracted"
+                    "Successfully stored events in memory for %s: "
+                    "%s memories extracted",
+                    destination_name,
+                    mem_result.get("memories_extracted", 0),
                 )
                 return True
-            else:
-                logger.warning(
-                    (
-                        f"Events memory storage had issues: "
-                        f"{memory_result.get('error', 'Unknown')}"
-                    )
-                )
-                return False
 
-        except Exception as e:
-            logger.error(f"Error storing events in memory: {str(e)}")
+            logger.warning(
+                "Events memory storage had issues: %s",
+                mem_result.get("error", "Unknown"),
+            )
             return False
 
-    async def _store_blog_in_memory(self, result: Dict[str, Any]) -> bool:
+        except Exception:
+            logger.exception("Error storing events in memory")
+            return False
+
+    async def _store_blog_in_memory(self, result: dict[str, Any]) -> bool:
         """Store a blog crawl result in the memory system.
 
         Args:
@@ -415,31 +418,35 @@ class WebCrawlPersistence:
             ]
 
             # Store in memory
-            memory_result = await add_conversation_memory(
-                messages=memory_messages, user_id="system", context_type="blog_crawl"
+            mem_result = await cast(
+                Awaitable[dict[str, Any]],
+                add_conversation_memory(
+                    messages=memory_messages,
+                    user_id="system",
+                    context_type="blog_crawl",
+                ),
             )
 
-            if memory_result.get("status") == "success":
+            if mem_result.get("status") == "success":
                 logger.info(
-                    f"Successfully stored blog in memory from {url}: "
-                    f"{memory_result.get('memories_extracted', 0)} memories extracted"
+                    "Successfully stored blog in memory from %s: %s memories extracted",
+                    url,
+                    mem_result.get("memories_extracted", 0),
                 )
                 return True
-            else:
-                logger.warning(
-                    (
-                        f"Blog memory storage had issues: "
-                        f"{memory_result.get('error', 'Unknown')}"
-                    )
-                )
-                return False
 
-        except Exception as e:
-            logger.error(f"Error storing blog in memory: {str(e)}")
+            logger.warning(
+                "Blog memory storage had issues: %s",
+                mem_result.get("error", "Unknown"),
+            )
+            return False
+
+        except Exception:
+            logger.exception("Error storing blog in memory")
             return False
 
     async def _store_price_history(
-        self, item: Dict[str, Any], product_type: str
+        self, item: dict[str, Any], product_type: str
     ) -> bool:
         """Store a price history entry in Supabase.
 
@@ -457,32 +464,28 @@ class WebCrawlPersistence:
                 "title": item.get("title", ""),
                 "price": item.get("price", 0),
                 "currency": item.get("currency", "USD"),
-                "timestamp": item.get(
-                    "price_timestamp", datetime.now(timezone.utc).isoformat()
-                ),
+                "timestamp": item.get("price_timestamp", datetime.now(UTC).isoformat()),
                 "product_type": product_type,
                 "availability": item.get("availability", ""),
             }
 
             # Insert into Supabase
-            response = await self.supabase.insert("price_history", data)
+            response: Any = self.supabase.table("price_history").insert(data).execute()
 
-            if "error" in response:
-                logger.error(
-                    f"Supabase price history storage error: {response.get('error')}"
+            if not cast(dict, response).get("data"):
+                logger.exception(
+                    "Supabase price history storage error: No data returned"
                 )
                 return False
 
             logger.info(
-                (
-                    f"Successfully stored price history in Supabase for "
-                    f"{item.get('title', '')}"
-                )
+                "Successfully stored price history in Supabase for %s",
+                item.get("title", ""),
             )
             return True
 
-        except Exception as e:
-            logger.error(f"Error storing price history in Supabase: {str(e)}")
+        except Exception:
+            logger.exception("Error storing price history in Supabase")
             return False
 
 

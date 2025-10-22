@@ -1,12 +1,11 @@
-"""
-Comprehensive test suite for TripService.
+"""Test suite for TripService.
 
 This module tests the TripService with realistic test data that aligns
 with the actual service implementation. Uses modern pytest patterns
 and proper mocking of dependencies.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -22,7 +21,7 @@ from tripsage_core.models.schemas_common.enums import (
     TripType,
     TripVisibility,
 )
-from tripsage_core.models.trip import BudgetBreakdown, EnhancedBudget, TripPreferences
+from tripsage_core.models.trip import Budget, BudgetBreakdown, TripPreferences
 from tripsage_core.services.business.trip_service import (
     TripCreateRequest,
     TripLocation,
@@ -38,7 +37,7 @@ class TestTripService:
 
     @pytest.fixture
     def mock_database_service(self):
-        """Create mock database service with comprehensive trip operations."""
+        """Create mock database service with trip operations."""
         db = AsyncMock()
         # Set up default return values
         db.create_trip = AsyncMock()
@@ -76,7 +75,7 @@ class TestTripService:
         """Sample trip creation request using actual domain models."""
         from datetime import timedelta
 
-        now = datetime.now(timezone.utc).replace(microsecond=0)
+        now = datetime.now(UTC).replace(microsecond=0)
         return TripCreateRequest(
             title="Summer Europe Trip",
             description="A wonderful journey through European capitals",
@@ -99,7 +98,7 @@ class TestTripService:
                     timezone="Europe/Rome",
                 ),
             ],
-            budget=EnhancedBudget(
+            budget=Budget(
                 total=5000.00,
                 currency="USD",
                 spent=0.00,
@@ -122,7 +121,7 @@ class TestTripService:
         """Sample trip data as returned from database."""
         trip_id = str(uuid4())
         user_id = str(uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         return {
             "id": trip_id,
@@ -206,7 +205,7 @@ class TestTripService:
     @pytest.mark.asyncio
     async def test_create_trip_invalid_dates(self, trip_service):
         """Test trip creation with invalid dates (end before start)."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # This should raise ValidationError during model creation
         with pytest.raises(ValidationError) as exc_info:
@@ -216,7 +215,7 @@ class TestTripService:
                 start_date=now,
                 end_date=now,  # Same as start date, should fail
                 destination="Test City",
-                budget=EnhancedBudget(
+                budget=Budget(
                     total=1000.00,
                     currency="USD",
                     spent=0.00,
@@ -311,7 +310,7 @@ class TestTripService:
                 "title": "Updated Europe Trip",
                 "description": "Updated description",
                 "tags": ["vacation", "europe", "updated"],
-                "updated_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(UTC),
             }
         )
         mock_database_service.update_trip.return_value = updated_trip_data
@@ -616,14 +615,14 @@ class TestTripService:
     async def test_create_trip_minimal_data(self, trip_service, mock_database_service):
         """Test trip creation with minimal required data."""
         user_id = str(uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         minimal_request = TripCreateRequest(
             title="Minimal Trip",
             start_date=now,
             end_date=now.replace(hour=23, minute=59, second=59),
             destination="Test City",
-            budget=EnhancedBudget(
+            budget=Budget(
                 total=1000.00,
                 currency="USD",
                 spent=0.00,

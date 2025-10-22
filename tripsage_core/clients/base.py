@@ -1,8 +1,9 @@
 """Base client implementations for external services and MCPs."""
 
-from typing import Generic, Optional, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel
+
 
 T = TypeVar("T", bound=BaseModel)
 R = TypeVar("R", bound=BaseModel)
@@ -11,7 +12,7 @@ R = TypeVar("R", bound=BaseModel)
 class BaseClient:
     """Base client for all service integrations."""
 
-    def __init__(self, base_url: str, api_key: Optional[str] = None):
+    def __init__(self, base_url: str, api_key: str | None = None):
         """Initialize the base client.
 
         Args:
@@ -22,10 +23,10 @@ class BaseClient:
         self.api_key = api_key
 
 
-class BaseMCPClient(Generic[T, R]):
+class BaseMCPClient[T: BaseModel, R: BaseModel]:
     """Base client for MCP service integrations."""
 
-    def __init__(self, base_url: str, api_key: Optional[str] = None):
+    def __init__(self, base_url: str, api_key: str | None = None):
         """Initialize the base MCP client.
 
         Args:

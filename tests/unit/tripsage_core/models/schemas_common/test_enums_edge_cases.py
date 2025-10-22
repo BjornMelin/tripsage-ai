@@ -1,6 +1,6 @@
 """Edge case tests for enums.
 
-This module provides comprehensive edge case testing for all enumeration
+This module provides edge case testing for all enumeration
 types used across the TripSage application, including value validation,
 case sensitivity, serialization, and integration with Pydantic models.
 """
@@ -8,8 +8,7 @@ case sensitivity, serialization, and integration with Pydantic models.
 import json
 
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
+from hypothesis import given, settings, strategies as st
 from pydantic import BaseModel, ValidationError
 
 from tripsage_core.models.schemas_common.enums import (

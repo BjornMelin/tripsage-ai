@@ -1,12 +1,12 @@
-"""
-Common test configuration for API router tests.
+"""Common test configuration for API router tests.
 
-This module provides a comprehensive test setup that properly mocks all services
+This module provides a test setup that properly mocks all services
 and dependencies needed for API router testing, ensuring that validation tests
 can run without interference from authentication or cache connection issues.
 """
 
 import os
+from datetime import UTC
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -79,8 +79,6 @@ def create_authenticated_test_client(mock_principal):
     This is a helper function for creating test clients that need authentication.
     Use this pattern in router tests for authenticated endpoints.
     """
-    from fastapi.testclient import TestClient
-
     from tripsage.api.core.dependencies import (
         get_current_principal,
         require_principal,
@@ -97,14 +95,11 @@ def create_authenticated_test_client(mock_principal):
 
 
 def create_unauthenticated_test_client():
-    """Create an unauthenticated test client with authentication
-    dependencies returning None.
+    """Create an unauthenticated test client with auth deps -> None.
 
     This is a helper function for creating test clients for testing unauthorized
     access. Use this pattern in router tests for testing authentication failures.
     """
-    from fastapi.testclient import TestClient
-
     from tripsage.api.core.dependencies import get_current_principal
     from tripsage.api.main import app
 
@@ -133,10 +128,6 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         # Mock Supabase client
         patch("supabase.create_client", return_value=Mock()),
         # Mock legacy MCP references (removed during modernization)
-        # Mock rate limiting middleware to disable it
-        patch(
-            "tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch"
-        ) as mock_rate_limit,
         # Mock the authentication dependency to return a valid principal
         patch(
             "tripsage.api.core.dependencies.get_current_principal",
@@ -147,9 +138,6 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
             "tripsage_core.services.business.accommodation_service.get_accommodation_service"
         ) as mock_acc_service,
         patch("tripsage_core.services.business.trip_service.get_trip_service"),
-        patch(
-            "tripsage_core.services.business.flight_service.get_flight_service"
-        ) as mock_flight_service_getter,
         patch(
             "tripsage_core.services.business.destination_service.get_destination_service"
         ) as mock_destination_service_getter,
@@ -174,11 +162,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
 
         mock_settings.return_value = create_test_settings()
 
-        # Configure rate limiting middleware to pass through
-        async def pass_through_middleware(request, call_next):
-            return await call_next(request)
-
-        mock_rate_limit.side_effect = pass_through_middleware
+        # SlowAPI-based rate limits are tested separately; no special patching
 
         # Import app after all patches are in place
         # Configure service mocks to return mock instances
@@ -187,19 +171,18 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
 
         # Configure default mock responses that match the expected API response schema
 
-        from tripsage.api.schemas.accommodations import AccommodationSearchResponse
+        from tripsage_core.services.business.accommodation_service import (
+            AccommodationSearchRequest,
+            AccommodationSearchResponse,
+        )
 
         def mock_search_accommodations(request):
             """Mock search accommodations method that returns API response format."""
             # Create a valid AccommodationSearchRequest for the response
             from datetime import date
 
-            from tripsage.api.schemas.accommodations import (
-                AccommodationSearchRequest as APISearchRequest,
-            )
-
             # Create a mock API request with default values
-            api_request = APISearchRequest(
+            api_request = AccommodationSearchRequest(
                 location="Tokyo",
                 check_in=date(2024, 3, 15),
                 check_out=date(2024, 3, 18),
@@ -261,17 +244,19 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         mock_destination_service_getter.return_value = mock_destination_service
 
         # Configure destination service mock responses with minimal data
-        from tripsage.api.schemas.destinations import (
-            DestinationDetailsResponse,
+        from tripsage_core.services.business.destination_service import (
+            Destination,
+            DestinationSearchRequest,
             DestinationSearchResponse,
         )
-        from tripsage_core.models.schemas_common.geographic import Place as Destination
 
         # Simple mock that just returns empty result
         mock_search_response = DestinationSearchResponse(
-            destinations=[],
-            count=0,
-            query="Tokyo",
+            search_id="mock-search-id",
+            search_parameters=DestinationSearchRequest(query="Tokyo"),
+            total_results=0,
+            results_returned=0,
+            search_duration_ms=0,
         )
 
         mock_destination_service.search_destinations = AsyncMock(
@@ -304,7 +289,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         mock_user_service_getter.return_value = mock_user_service
 
         # Configure user service mock responses
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from tripsage_core.services.business.user_service import UserResponse
 
@@ -335,8 +320,8 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
                 email="test@example.com",
                 is_active=True,
                 is_verified=True,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
                 preferences=preferences,
             )
 
@@ -346,7 +331,6 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
 
         # Configure flight service mock
         mock_flight_service = AsyncMock()
-        mock_flight_service_getter.return_value = mock_flight_service
 
         # Configure mock search flights response
         from tripsage_core.models.schemas_common.enums import CabinClass
@@ -465,10 +449,19 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         mock_file_instance.delete_file = AsyncMock(return_value=True)
         mock_file_instance.search_files = AsyncMock(return_value=[])
 
+        from tripsage.api.core.dependencies import get_flight_service_dep
         from tripsage.api.main import app
 
-        with TestClient(app) as client:
-            yield client
+        async def _get_flight_service_override(*_, **__):
+            return mock_flight_service
+
+        app.dependency_overrides[get_flight_service_dep] = _get_flight_service_override
+
+        try:
+            with TestClient(app) as client:
+                yield client
+        finally:
+            app.dependency_overrides.pop(get_flight_service_dep, None)
 
 
 @pytest.fixture
@@ -490,10 +483,6 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
         # Mock Supabase client
         patch("supabase.create_client", return_value=Mock()),
         # Mock legacy MCP references (removed during modernization)
-        # Mock rate limiting middleware to disable it
-        patch(
-            "tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch"
-        ) as mock_rate_limit,
         # Mock the authentication dependency to return None (unauthenticated)
         patch(
             "tripsage.api.core.dependencies.get_current_principal", return_value=None
@@ -508,11 +497,7 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
 
         mock_settings.return_value = create_test_settings()
 
-        # Configure rate limiting middleware to pass through
-        async def pass_through_middleware(request, call_next):
-            return await call_next(request)
-
-        mock_rate_limit.side_effect = pass_through_middleware
+        # SlowAPI-based rate limits are tested separately; no special patching
 
         # Configure file processing service mock
         mock_file_instance = Mock()

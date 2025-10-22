@@ -1,22 +1,24 @@
-"""
-WebSocket message broadcasting service for TripSage Core.
+"""WebSocket message broadcasting service for TripSage Core.
 
 This module provides message broadcasting capabilities for WebSocket connections,
 including Redis/DragonflyDB integration for message persistence and scaling.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-import redis.asyncio as redis
 from pydantic import BaseModel, Field
+from redis.asyncio import from_url
+from redis.asyncio.client import PubSub
 
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
+
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +36,7 @@ class BroadcastMessage(BaseModel):
 
 
 class WebSocketBroadcaster:
-    """
-    WebSocket message broadcaster with Redis/DragonflyDB backend.
+    """WebSocket message broadcaster with Redis/DragonflyDB backend.
 
     This service provides:
     - Message broadcasting to different target types
@@ -53,8 +54,9 @@ class WebSocketBroadcaster:
         """
         self.settings = get_settings()
         self.redis_url = redis_url or self.settings.redis_url
-        self.redis_client: redis.Redis | None = None
-        self.pubsub: redis.client.PubSub | None = None
+        # Use Any to accommodate redis stubs across versions.
+        self.redis_client: Any | None = None
+        self.pubsub: PubSub | None = None
         self._running = False
         self._subscribers: dict[str, set[str]] = {}  # channel -> connection_ids
 
@@ -81,9 +83,7 @@ class WebSocketBroadcaster:
         try:
             # Initialize Redis connection
             if self.redis_url:
-                self.redis_client = redis.from_url(
-                    self.redis_url, decode_responses=True
-                )
+                self.redis_client = from_url(self.redis_url, decode_responses=True)
                 self.pubsub = self.redis_client.pubsub()
 
                 # Test connection
@@ -106,9 +106,9 @@ class WebSocketBroadcaster:
             logger.info("WebSocket broadcaster started")
 
         except Exception as e:
-            logger.error(f"Failed to start WebSocket broadcaster: {e}")
+            logger.exception("Failed to start WebSocket broadcaster")
             raise CoreServiceError(
-                message=f"Failed to start WebSocket broadcaster: {str(e)}",
+                message=f"Failed to start WebSocket broadcaster: {e!s}",
                 code="BROADCASTER_START_FAILED",
                 service="WebSocketBroadcaster",
             ) from e
@@ -120,17 +120,13 @@ class WebSocketBroadcaster:
         # Cancel background tasks
         if self._broadcast_task:
             self._broadcast_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._broadcast_task
-            except asyncio.CancelledError:
-                pass
 
         if self._subscription_task:
             self._subscription_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._subscription_task
-            except asyncio.CancelledError:
-                pass
 
         # Close Redis connections
         if self.pubsub:
@@ -172,6 +168,7 @@ class WebSocketBroadcaster:
                 "connected_at": datetime.utcnow().isoformat(),
             }
 
+            assert self.redis_client is not None
             await self.redis_client.hset(
                 f"{self.CONNECTION_INFO_KEY}:{connection_id}",
                 mapping=connection_data,
@@ -192,12 +189,14 @@ class WebSocketBroadcaster:
                 await self.redis_client.sadd(f"channel:{channel}", connection_id)
 
             logger.info(
-                f"Registered connection {connection_id} for user {user_id} "
-                f"with channels: {channels}"
+                "Registered connection %s for user %s with channels: %s",
+                connection_id,
+                user_id,
+                channels,
             )
 
-        except Exception as e:
-            logger.error(f"Failed to register connection {connection_id}: {e}")
+        except Exception:
+            logger.exception("Failed to register connection %s", connection_id)
 
     async def unregister_connection(self, connection_id: str) -> None:
         """Unregister a WebSocket connection.
@@ -213,6 +212,7 @@ class WebSocketBroadcaster:
 
         try:
             # Get connection info
+            assert self.redis_client is not None
             connection_data = await self.redis_client.hgetall(
                 f"{self.CONNECTION_INFO_KEY}:{connection_id}"
             )
@@ -243,10 +243,10 @@ class WebSocketBroadcaster:
                 f"{self.CONNECTION_INFO_KEY}:{connection_id}"
             )
 
-            logger.info(f"Unregistered connection {connection_id}")
+            logger.info("Unregistered connection %s", connection_id)
 
-        except Exception as e:
-            logger.error(f"Failed to unregister connection {connection_id}: {e}")
+        except Exception:
+            logger.exception("Failed to unregister connection %s", connection_id)
 
     async def broadcast_to_channel(
         self, channel: str, event: dict[str, Any], priority: int = 2
@@ -323,7 +323,7 @@ class WebSocketBroadcaster:
 
         # Check for duplicate messages
         if message.id in self._recent_message_ids:
-            logger.debug(f"Skipping duplicate message {message.id}")
+            logger.debug("Skipping duplicate message %s", message.id)
             return
 
         # Track message ID for deduplication
@@ -344,15 +344,18 @@ class WebSocketBroadcaster:
             message_data = message.model_dump_json()
             priority_key = f"{self.BROADCAST_QUEUE_KEY}:priority_{message.priority}"
 
+            assert self.redis_client is not None
             await self.redis_client.lpush(priority_key, message_data)
 
             logger.debug(
-                f"Queued broadcast message {message.id} for "
-                f"{message.target_type}:{message.target_id}"
+                "Queued broadcast message %s for %s:%s",
+                message.id,
+                message.target_type,
+                message.target_id,
             )
 
-        except Exception as e:
-            logger.error(f"Failed to queue broadcast message: {e}")
+        except Exception:
+            logger.exception("Failed to queue broadcast message")
 
     async def _process_broadcast_queue(self) -> None:
         """Background task to process queued broadcast messages."""
@@ -363,7 +366,8 @@ class WebSocketBroadcaster:
                     priority_key = f"{self.BROADCAST_QUEUE_KEY}:priority_{priority}"
 
                     # Get message from queue (blocking with timeout)
-                    result = await self.redis_client.brpop(priority_key, timeout=1)
+                    assert self.redis_client is not None
+                    result = await self.redis_client.brpop([priority_key], timeout=1)
 
                     if result:
                         _, message_data = result
@@ -374,8 +378,8 @@ class WebSocketBroadcaster:
                         # priority ordering
                         break
 
-            except Exception as e:
-                logger.error(f"Error processing broadcast queue: {e}")
+            except Exception:
+                logger.exception("Error processing broadcast queue")
                 await asyncio.sleep(1)
 
     async def _deliver_broadcast_message(self, message: BroadcastMessage) -> None:
@@ -385,6 +389,9 @@ class WebSocketBroadcaster:
             message: Message to deliver
         """
         try:
+            if self.redis_client is None:
+                logger.warning("Redis not connected; cannot deliver broadcast message")
+                return
             if message.target_type == "user" and message.target_id:
                 # Broadcast to all connections for user
                 connection_ids = await self.redis_client.smembers(
@@ -401,20 +408,23 @@ class WebSocketBroadcaster:
                     f"channel:{message.target_id}"
                 )
             else:
-                logger.warning(f"Unknown broadcast target: {message.target_type}")
+                logger.warning("Unknown broadcast target: %s", message.target_type)
                 return
 
             # Publish to Redis pub/sub for each connection
             for connection_id in connection_ids:
                 channel = f"tripsage:websocket:connection:{connection_id}"
-                await self.redis_client.publish(channel, message.event)
+                # Publish JSON-encoded payload.
+                await self.redis_client.publish(channel, json.dumps(message.event))
 
             logger.debug(
-                f"Delivered message {message.id} to {len(connection_ids)} connections"
+                "Delivered message %s to %s connections",
+                message.id,
+                len(connection_ids),
             )
 
-        except Exception as e:
-            logger.error(f"Failed to deliver broadcast message {message.id}: {e}")
+        except Exception:
+            logger.exception("Failed to deliver broadcast message %s", message.id)
 
     async def _handle_subscriptions(self) -> None:
         """Background task to handle Redis pub/sub subscriptions."""
@@ -435,14 +445,14 @@ class WebSocketBroadcaster:
                         # Forward message to local WebSocket manager
                         # This would be handled by the WebSocketManager
                         logger.debug(
-                            f"Received broadcast for connection {connection_id}"
+                            "Received broadcast for connection %s", connection_id
                         )
 
-                    except Exception as e:
-                        logger.error(f"Error handling subscription message: {e}")
+                    except Exception:
+                        logger.exception("Error handling subscription message")
 
-        except Exception as e:
-            logger.error(f"Error in subscription handler: {e}")
+        except Exception:
+            logger.exception("Error in subscription handler")
 
     def get_stats(self) -> dict[str, Any]:
         """Get broadcaster statistics.
@@ -459,5 +469,5 @@ class WebSocketBroadcaster:
         }
 
 
-# Global WebSocket broadcaster instance
-websocket_broadcaster = WebSocketBroadcaster()
+# FINAL-ONLY: Remove module-level singleton. Construct WebSocketBroadcaster in app
+# lifespan and inject via DI where needed.

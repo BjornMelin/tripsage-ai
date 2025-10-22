@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Metrics collection and reporting for TripSage benchmarks.
+"""Metrics collection and reporting for TripSage benchmarks.
 
 Core metrics without over-engineering:
 - Query performance (latency, throughput)
@@ -18,7 +17,9 @@ from pathlib import Path
 from typing import Any
 
 import psutil
-from config import BenchmarkConfig
+
+from scripts.benchmarks.config import BenchmarkConfig
+
 
 logger = logging.getLogger(__name__)
 
@@ -109,15 +110,15 @@ class MetricsCollector:
 
         except asyncio.CancelledError:
             logger.debug("Monitoring loop cancelled")
-        except Exception as e:
-            logger.error(f"Error in monitoring loop: {e}")
+        except psutil.Error:
+            logger.exception("Error in monitoring loop")
 
     def _get_process_memory_mb(self) -> float:
         """Get current process memory usage in MB."""
         try:
             process = psutil.Process()
             return process.memory_info().rss / 1024 / 1024
-        except Exception:
+        except (psutil.Error, OSError):
             return 0.0
 
     def record_timing(
@@ -141,7 +142,7 @@ class MetricsCollector:
         self._connection_stats["creations"] += 1
 
     def get_summary(self) -> dict[str, Any]:
-        """Get comprehensive metrics summary."""
+        """Get metrics summary."""
         return {
             "query_performance": self._get_query_summary(),
             "memory_usage": self.get_memory_summary(),
@@ -258,7 +259,7 @@ class ReportGenerator:
         """Initialize report generator."""
         self.output_dir = output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Report generator initialized with output dir: {output_dir}")
+        logger.info("Report generator initialized with output dir: %s", output_dir)
 
     async def generate_report(self, data: dict[str, Any], report_type: str) -> Path:
         """Generate JSON report with key metrics."""
@@ -277,7 +278,7 @@ class ReportGenerator:
 
         # Save JSON report
         json_path = self.output_dir / f"benchmark_{report_type}_{timestamp}.json"
-        with open(json_path, "w") as f:
+        with json_path.open("w") as f:
             json.dump(report_data, f, indent=2, default=str)
 
         # Save CSV summary for easy analysis
@@ -289,9 +290,9 @@ class ReportGenerator:
         )
 
         logger.info("Reports generated:")
-        logger.info(f"  JSON: {json_path}")
-        logger.info(f"  CSV:  {csv_path}")
-        logger.info(f"  HTML: {html_path}")
+        logger.info("  JSON: %s", json_path)
+        logger.info("  CSV:  %s", csv_path)
+        logger.info("  HTML: %s", html_path)
 
         return html_path  # Return main report path
 
@@ -387,7 +388,7 @@ class ReportGenerator:
         csv_lines.append(f"execution_time_seconds,{exec_time:.2f},seconds")
 
         # Write CSV
-        with open(csv_path, "w") as f:
+        with csv_path.open("w") as f:
             f.write("\n".join(csv_lines))
 
         return csv_path
@@ -408,17 +409,17 @@ class ReportGenerator:
     <title>TripSage Benchmark Report - {report_type.title()}</title>
     <style>
         body {{ font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }}
-        .container {{ 
-            max-width: 800px; margin: 0 auto; background: white; 
-            padding: 30px; border-radius: 8px; 
+        .container {{
+            max-width: 800px; margin: 0 auto; background: white;
+            padding: 30px; border-radius: 8px;
         }}
-        .header {{ 
-            text-align: center; border-bottom: 2px solid #007bff; 
-            padding-bottom: 20px; margin-bottom: 30px; 
+        .header {{
+            text-align: center; border-bottom: 2px solid #007bff;
+            padding-bottom: 20px; margin-bottom: 30px;
         }}
-        .metric {{ 
-            margin: 15px 0; padding: 15px; background: #f8f9fa; 
-            border-radius: 5px; 
+        .metric {{
+            margin: 15px 0; padding: 15px; background: #f8f9fa;
+            border-radius: 5px;
         }}
         .metric-label {{ font-weight: bold; color: #495057; }}
         .metric-value {{ font-size: 1.2em; color: #007bff; }}
@@ -433,16 +434,16 @@ class ReportGenerator:
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 TripSage Benchmark Report</h1>
+            <h1>TripSage Benchmark Report</h1>
             <h2>{report_type.replace("_", " ").title()}</h2>
             <p>Generated on {
             time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(timestamp))
         }</p>
             <p>Execution time: {summary.get("execution_time_formatted", "Unknown")}</p>
         </div>
-        
+
         <div class="metrics">
-            <h3>📊 Performance Metrics</h3>
+            <h3>Performance Metrics</h3>
 """
 
         # Add key metrics
@@ -487,26 +488,26 @@ class ReportGenerator:
 
             html_content += f"""
         </div>
-        
+
         <div class="validation {success_class}">
-            <h3>🎯 Optimization Claims Validation: {status_text}</h3>
-            <p><strong>Claims Validated:</strong> 
+            <h3>Optimization Claims Validation: {status_text}</h3>
+            <p><strong>Claims Validated:</strong>
                {summary.get("claims_validated", "0/4")}</p>
 """
 
             # Add individual claim details
             details = validation.get("details", {})
             for claim_key, claim_data in details.items():
-                status_icon = "✅" if claim_data.get("target_met", False) else "❌"
+                status_text = "OK" if claim_data.get("target_met", False) else "FAILED"
                 html_content += f"""
-            <p>{status_icon} {claim_data.get("claimed", claim_key)}</p>"""
+            <p>[{status_text}] {claim_data.get("claimed", claim_key)}</p>"""
 
             html_content += "</div>"
 
         html_content += """
         </div>
-        
-        <div style="margin-top: 40px; text-align: center; color: #6c757d; 
+
+        <div style="margin-top: 40px; text-align: center; color: #6c757d;
                     border-top: 1px solid #dee2e6; padding-top: 20px;">
             <p>TripSage Database Performance Benchmarking Suite</p>
             <p>Simplified reporting focused on core optimization claims</p>
@@ -516,7 +517,7 @@ class ReportGenerator:
 </html>"""
 
         # Write HTML file
-        with open(html_path, "w") as f:
+        with html_path.open("w") as f:
             f.write(html_content)
 
         return html_path

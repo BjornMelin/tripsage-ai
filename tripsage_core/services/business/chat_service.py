@@ -1,17 +1,18 @@
-"""
-Chat service for managing chat sessions and messages.
+# pylint: disable=too-many-lines
+"""Chat service for managing chat sessions and messages.
 
 This service consolidates chat-related business logic including session management,
 message persistence, tool call tracking, and rate limiting. It provides clean
 integration with the AI agents and maintains conversation context.
 """
 
+import asyncio
 import html
 import logging
 import re
 import time
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -20,17 +21,26 @@ from pydantic import Field, field_validator
 
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions import (
-    CoreAuthorizationError as PermissionError,
-)
-from tripsage_core.exceptions import (
+    CoreAuthorizationError as AuthPermissionError,
     CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.observability.otel import record_histogram, trace_span
+
 
 logger = logging.getLogger(__name__)
+
+RECOVERABLE_ERRORS = (
+    AuthPermissionError,
+    ValidationError,
+    NotFoundError,
+    ConnectionError,
+    RuntimeError,
+    ValueError,
+    asyncio.TimeoutError,
+    TypeError,
+)
 
 
 class MessageRole(str):
@@ -54,9 +64,9 @@ class ToolCallStatus(str):
 class ChatSessionCreateRequest(TripSageModel):
     """Request model for chat session creation."""
 
-    title: Optional[str] = Field(None, max_length=200, description="Session title")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Session metadata")
+    title: str | None = Field(None, max_length=200, description="Session title")
+    trip_id: str | None = Field(None, description="Associated trip ID")
+    metadata: dict[str, Any] | None = Field(None, description="Session metadata")
 
 
 class ChatSessionResponse(TripSageModel):
@@ -64,18 +74,16 @@ class ChatSessionResponse(TripSageModel):
 
     id: str = Field(..., description="Session ID")
     user_id: str = Field(..., description="User ID")
-    title: Optional[str] = Field(None, description="Session title")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
+    title: str | None = Field(None, description="Session title")
+    trip_id: str | None = Field(None, description="Associated trip ID")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    ended_at: Optional[datetime] = Field(None, description="End timestamp")
-    metadata: Dict[str, Any] = Field(
+    ended_at: datetime | None = Field(None, description="End timestamp")
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Session metadata"
     )
     message_count: int = Field(default=0, description="Number of messages")
-    last_message_at: Optional[datetime] = Field(
-        None, description="Last message timestamp"
-    )
+    last_message_at: datetime | None = Field(None, description="Last message timestamp")
 
 
 class MessageCreateRequest(TripSageModel):
@@ -83,10 +91,8 @@ class MessageCreateRequest(TripSageModel):
 
     role: str = Field(..., description="Message role")
     content: str = Field(..., min_length=1, description="Message content")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Message metadata")
-    tool_calls: Optional[List[Dict[str, Any]]] = Field(
-        None, description="Tool calls data"
-    )
+    metadata: dict[str, Any] | None = Field(None, description="Message metadata")
+    tool_calls: list[dict[str, Any]] | None = Field(None, description="Tool calls data")
 
     @field_validator("role")
     @classmethod
@@ -111,13 +117,13 @@ class MessageResponse(TripSageModel):
     role: str = Field(..., description="Message role")
     content: str = Field(..., description="Message content")
     created_at: datetime = Field(..., description="Creation timestamp")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Message metadata"
     )
-    tool_calls: List[Dict[str, Any]] = Field(
+    tool_calls: list[dict[str, Any]] = Field(
         default_factory=list, description="Tool calls"
     )
-    estimated_tokens: Optional[int] = Field(None, description="Estimated token count")
+    estimated_tokens: int | None = Field(None, description="Estimated token count")
 
 
 class ToolCallResponse(TripSageModel):
@@ -127,12 +133,12 @@ class ToolCallResponse(TripSageModel):
     message_id: str = Field(..., description="Message ID")
     tool_id: str = Field(..., description="Tool identifier")
     tool_name: str = Field(..., description="Tool name")
-    arguments: Dict[str, Any] = Field(..., description="Tool arguments")
-    result: Optional[Dict[str, Any]] = Field(None, description="Tool result")
+    arguments: dict[str, Any] = Field(..., description="Tool arguments")
+    result: dict[str, Any] | None = Field(None, description="Tool result")
     status: str = Field(..., description="Tool call status")
     created_at: datetime = Field(..., description="Creation timestamp")
-    completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
-    error_message: Optional[str] = Field(None, description="Error message if failed")
+    completed_at: datetime | None = Field(None, description="Completion timestamp")
+    error_message: str | None = Field(None, description="Error message if failed")
 
 
 class RecentMessagesRequest(TripSageModel):
@@ -148,7 +154,7 @@ class RecentMessagesRequest(TripSageModel):
 class RecentMessagesResponse(TripSageModel):
     """Response model for recent messages."""
 
-    messages: List[MessageResponse] = Field(
+    messages: list[MessageResponse] = Field(
         ..., description="Messages within token limit"
     )
     total_tokens: int = Field(..., description="Total estimated tokens")
@@ -159,8 +165,7 @@ class RateLimiter:
     """Simple in-memory rate limiter for message creation."""
 
     def __init__(self, max_messages: int = 20, window_seconds: int = 60):
-        """
-        Initialize rate limiter.
+        """Initialize rate limiter.
 
         Args:
             max_messages: Maximum messages allowed per window
@@ -168,11 +173,10 @@ class RateLimiter:
         """
         self.max_messages = max_messages
         self.window_seconds = window_seconds
-        self.user_windows: Dict[str, List[float]] = {}
+        self.user_windows: dict[str, list[float]] = {}
 
     def is_allowed(self, user_id: str, count: int = 1) -> bool:
-        """
-        Check if user is allowed to send messages.
+        """Check if user is allowed to send messages.
 
         Args:
             user_id: User ID to check
@@ -210,8 +214,7 @@ class RateLimiter:
 
 
 class ChatService:
-    """
-    Comprehensive chat service for session and message management.
+    """Comprehensive chat service for session and message management.
 
     This service handles:
     - Chat session lifecycle management
@@ -224,35 +227,30 @@ class ChatService:
 
     def __init__(
         self,
-        database_service=None,
-        rate_limiter: Optional[RateLimiter] = None,
+        database_service,
+        rate_limiter: RateLimiter | None = None,
         chars_per_token: int = 4,
     ):
-        """
-        Initialize the chat service.
+        """Initialize the chat service.
 
         Args:
             database_service: Database service for persistence
             rate_limiter: Rate limiter instance
             chars_per_token: Characters per token for estimation
         """
-        # Import here to avoid circular imports
-        if database_service is None:
-            from tripsage_core.services.infrastructure import get_database_service
-
-            database_service = get_database_service()
-
+        # DatabaseService is injected by the FastAPI dependency factory.
         self.db = database_service
         self.rate_limiter = rate_limiter or RateLimiter()
         self.chars_per_token = chars_per_token
         self._retry_count = 3
         self._retry_delay = 0.1
 
+    @trace_span(name="svc.chat.sessions.create")
+    @record_histogram("svc.op.duration", unit="s")
     async def create_session(
         self, user_id: str, session_data: ChatSessionCreateRequest
     ) -> ChatSessionResponse:
-        """
-        Create a new chat session.
+        """Create a new chat session.
 
         Args:
             user_id: User ID
@@ -265,7 +263,7 @@ class ChatService:
             session_id = str(uuid4())
 
             # Prepare session data for database
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             db_session_data = {
                 "id": session_id,
                 "user_id": user_id,
@@ -295,22 +293,27 @@ class ChatService:
                 if result.get("ended_at")
                 else None,
                 metadata=result.get("metadata", {}),
+                message_count=result.get("message_count", 0),
+                last_message_at=datetime.fromisoformat(result["last_message_at"])
+                if result.get("last_message_at")
+                else None,
             )
 
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Failed to create chat session",
-                extra={"user_id": user_id, "error": str(e)},
+                extra={"user_id": user_id, "error": str(error)},
             )
             raise
 
     # This method is replaced by _get_session_internal to avoid router conflicts
 
+    @trace_span(name="svc.chat.sessions.list")
+    @record_histogram("svc.op.duration", unit="s")
     async def get_user_sessions(
         self, user_id: str, limit: int = 10, include_ended: bool = False
-    ) -> List[ChatSessionResponse]:
-        """
-        Get chat sessions for a user.
+    ) -> list[ChatSessionResponse]:
+        """Get chat sessions for a user.
 
         Args:
             user_id: User ID
@@ -325,43 +328,39 @@ class ChatService:
                 user_id, limit, include_ended
             )
 
-            sessions = []
-            for result in results:
-                sessions.append(
-                    ChatSessionResponse(
-                        id=result["id"],
-                        user_id=result["user_id"],
-                        title=result.get("title"),
-                        trip_id=result.get("trip_id"),
-                        created_at=datetime.fromisoformat(result["created_at"]),
-                        updated_at=datetime.fromisoformat(result["updated_at"]),
-                        ended_at=datetime.fromisoformat(result["ended_at"])
-                        if result.get("ended_at")
-                        else None,
-                        metadata=result.get("metadata", {}),
-                        message_count=result.get("message_count", 0),
-                        last_message_at=datetime.fromisoformat(
-                            result["last_message_at"]
-                        )
-                        if result.get("last_message_at")
-                        else None,
-                    )
+            return [
+                ChatSessionResponse(
+                    id=result["id"],
+                    user_id=result["user_id"],
+                    title=result.get("title"),
+                    trip_id=result.get("trip_id"),
+                    created_at=datetime.fromisoformat(result["created_at"]),
+                    updated_at=datetime.fromisoformat(result["updated_at"]),
+                    ended_at=datetime.fromisoformat(result["ended_at"])
+                    if result.get("ended_at")
+                    else None,
+                    metadata=result.get("metadata", {}),
+                    message_count=result.get("message_count", 0),
+                    last_message_at=datetime.fromisoformat(result["last_message_at"])
+                    if result.get("last_message_at")
+                    else None,
                 )
+                for result in results
+            ]
 
-            return sessions
-
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Failed to get user sessions",
-                extra={"user_id": user_id, "error": str(e)},
+                extra={"user_id": user_id, "error": str(error)},
             )
             return []
 
+    @trace_span(name="svc.chat.messages.create")
+    @record_histogram("svc.op.duration", unit="s")
     async def add_message(
         self, session_id: str, user_id: str, message_data: MessageCreateRequest
     ) -> MessageResponse:
-        """
-        Add message to chat session.
+        """Add message to chat session.
 
         Args:
             session_id: Session ID
@@ -374,19 +373,21 @@ class ChatService:
         Raises:
             ValidationError: If rate limit exceeded or validation fails
             NotFoundError: If session not found
-            PermissionError: If user doesn't have access
+            AuthPermissionError: If user doesn't have access
         """
         try:
             # Check rate limit for user messages
-            if message_data.role == MessageRole.USER:
-                if not self.rate_limiter.is_allowed(user_id):
-                    raise ValidationError(
-                        f"Rate limit exceeded. Max {self.rate_limiter.max_messages} "
-                        f"messages per {self.rate_limiter.window_seconds} seconds."
-                    )
+            if (
+                message_data.role == MessageRole.USER
+                and not self.rate_limiter.is_allowed(user_id)
+            ):
+                raise ValidationError(
+                    f"Rate limit exceeded. Max {self.rate_limiter.max_messages} "
+                    f"messages per {self.rate_limiter.window_seconds} seconds.",
+                )
 
             # Verify session access
-            session = await self._get_session_internal(session_id, user_id)
+            session = await self.get_session(session_id, user_id)
             if not session:
                 raise NotFoundError("Chat session not found")
 
@@ -397,7 +398,7 @@ class ChatService:
             message_id = str(uuid4())
 
             # Prepare message data for database
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             db_message_data = {
                 "id": message_id,
                 "session_id": session_id,
@@ -411,11 +412,12 @@ class ChatService:
             result = await self.db.create_chat_message(db_message_data)
 
             # Handle tool calls if present
-            tool_calls = []
+            tool_calls: list[dict[str, Any]] = []
             if message_data.tool_calls:
-                for tool_call_data in message_data.tool_calls:
-                    tool_call = await self._create_tool_call(message_id, tool_call_data)
-                    tool_calls.append(tool_call.model_dump())
+                tool_calls = [
+                    (await self.add_tool_call(message_id, tool_call_data)).model_dump()
+                    for tool_call_data in message_data.tool_calls
+                ]
 
             # Update session timestamp
             await self.db.update_session_timestamp(session_id)
@@ -441,22 +443,25 @@ class ChatService:
                 estimated_tokens=self._estimate_tokens(content),
             )
 
-        except (ValidationError, NotFoundError, PermissionError):
-            raise
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Failed to add message",
-                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             raise
 
     # This method is replaced by _get_messages_internal to avoid router conflicts
 
+    @trace_span(name="svc.chat.messages.recent")
+    @record_histogram("svc.op.duration", unit="s")
     async def get_recent_messages(
         self, session_id: str, user_id: str, request: RecentMessagesRequest
     ) -> RecentMessagesResponse:
-        """
-        Get recent messages within token limit.
+        """Get recent messages within token limit.
 
         Args:
             session_id: Session ID
@@ -468,66 +473,76 @@ class ChatService:
         """
         try:
             # Verify session access
-            session = await self._get_session_internal(session_id, user_id)
+            session = await self.get_session(session_id, user_id)
             if not session:
                 return RecentMessagesResponse(
                     messages=[], total_tokens=0, truncated=False
                 )
 
-            # Get messages with token estimation
-            results = await self.db.get_recent_messages_with_tokens(
-                session_id,
-                request.limit,
-                request.max_tokens,
-                request.offset,
-                self.chars_per_token,
+            # Fetch messages using standard helper and enforce token window locally
+            raw = await self.db.get_session_messages(
+                session_id, limit=(request.limit + request.offset), offset=0
             )
 
-            messages = []
-            total_tokens = 0
+            # Keep the most recent (limit + offset) then apply offset
+            raw = raw[-(request.limit + request.offset) :] if raw else []
+            if request.offset:
+                raw = raw[request.offset :]
 
-            for result in results:
-                # Get tool calls for this message
-                tool_calls = await self.db.get_message_tool_calls(result["id"])
+            # Apply max_tokens constraint from most recent backwards
+            selected: list[dict[str, Any]] = []
+            running_tokens = 0
+            for item in reversed(raw):
+                tokens = self._estimate_tokens(item.get("content", ""))
+                # Always include at least one message
+                if running_tokens + tokens > request.max_tokens and selected:
+                    break
+                running_tokens += tokens
+                selected.append(item)
 
-                message = MessageResponse(
-                    id=result["id"],
-                    session_id=result["session_id"],
-                    role=result["role"],
-                    content=result["content"],
-                    created_at=datetime.fromisoformat(result["created_at"]),
-                    metadata=result.get("metadata", {}),
-                    tool_calls=[tc for tc in tool_calls],
-                    estimated_tokens=result.get(
-                        "estimated_tokens", self._estimate_tokens(result["content"])
-                    ),
+            selected.reverse()
+
+            messages: list[MessageResponse] = []
+            for result in selected:
+                tool_calls = list(
+                    await self.db.get_message_tool_calls(result["id"])  # type: ignore[index]
+                )
+                messages.append(
+                    MessageResponse(
+                        id=result["id"],
+                        session_id=result["session_id"],
+                        role=result["role"],
+                        content=result["content"],
+                        created_at=datetime.fromisoformat(result["created_at"]),
+                        metadata=result.get("metadata", {}),
+                        tool_calls=tool_calls,
+                        estimated_tokens=self._estimate_tokens(result["content"]),
+                    )
                 )
 
-                messages.append(message)
-                total_tokens += message.estimated_tokens or 0
-
-            # Check if truncation occurred based on token limits
-            # The database should handle token limiting, so if we get results,
-            # we assume no truncation unless the database indicates otherwise
-            # For now, assume no truncation if we got any results within token limit
-            truncated = False
-            if messages and total_tokens >= request.max_tokens:
-                truncated = True
+            total_tokens = sum(m.estimated_tokens or 0 for m in messages)
+            # Truncated if we couldn't include all available messages within caps
+            truncated = len(messages) < len(raw)
 
             return RecentMessagesResponse(
                 messages=messages, total_tokens=total_tokens, truncated=truncated
             )
 
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Failed to get recent messages",
-                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             return RecentMessagesResponse(messages=[], total_tokens=0, truncated=False)
 
+    @trace_span(name="svc.chat.sessions.end")
+    @record_histogram("svc.op.duration", unit="s")
     async def end_session(self, session_id: str, user_id: str) -> bool:
-        """
-        End a chat session.
+        """End a chat session.
 
         Args:
             session_id: Session ID
@@ -542,7 +557,7 @@ class ChatService:
         """
         try:
             # Verify session access
-            session = await self._get_session_internal(session_id, user_id)
+            session = await self.get_session(session_id, user_id)
             if not session:
                 raise NotFoundError("Chat session not found")
 
@@ -561,24 +576,27 @@ class ChatService:
 
             return success
 
-        except (NotFoundError, ValidationError):
-            raise
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Failed to end session",
-                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             return False
 
+    @trace_span(name="svc.chat.tool_calls.update")
+    @record_histogram("svc.op.duration", unit="s")
     async def update_tool_call_status(
         self,
         tool_call_id: str,
         status: str,
-        result: Optional[Dict[str, Any]] = None,
-        error_message: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Update tool call status and result.
+        result: dict[str, Any] | None = None,
+        error_message: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Update tool call status and result.
 
         Args:
             tool_call_id: Tool call ID
@@ -592,7 +610,7 @@ class ChatService:
         try:
             completed_at = None
             if status in {ToolCallStatus.COMPLETED, ToolCallStatus.FAILED}:
-                completed_at = datetime.now(timezone.utc)
+                completed_at = datetime.now(UTC)
 
             update_data = {
                 "status": status,
@@ -615,19 +633,21 @@ class ChatService:
                     },
                 )
                 return updated_tool_call
-            else:
-                return None
+            return None
 
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Failed to update tool call status",
-                extra={"tool_call_id": tool_call_id, "status": status, "error": str(e)},
+                extra={
+                    "tool_call_id": tool_call_id,
+                    "status": status,
+                    "error": str(error),
+                },
             )
             return None
 
     def _sanitize_content(self, content: str) -> str:
-        """
-        Sanitize message content to prevent XSS and injection attacks.
+        """Sanitize message content to prevent XSS and injection attacks.
 
         Args:
             content: Raw message content
@@ -646,16 +666,8 @@ class ChatService:
 
         return content.strip()
 
-    def _validate_metadata(self, metadata: Any) -> Dict[str, Any]:
-        """
-        Validate and normalize metadata.
-
-        Args:
-            metadata: Raw metadata
-
-        Returns:
-            Validated metadata dictionary
-        """
+    def _validate_metadata(self, metadata: Any) -> dict[str, Any]:
+        """Validate and normalize metadata."""
         if metadata is None:
             return {}
 
@@ -673,24 +685,30 @@ class ChatService:
         return cleaned
 
     def _estimate_tokens(self, content: str) -> int:
-        """
-        Estimate token count for content.
-
-        Args:
-            content: Text content
-
-        Returns:
-            Estimated token count
-        """
+        """Estimate token count for content."""
         if not content:
             return 0
         return max(1, len(content) // self.chars_per_token)
 
+    @staticmethod
+    def _convert_request_message(
+        message: dict[str, Any],
+    ) -> HumanMessage | AIMessage | SystemMessage | None:
+        """Convert stored request message into a LangChain-compatible message."""
+        role = message.get("role", "user")
+        content = message.get("content", "")
+        if role == "user":
+            return HumanMessage(content=content)
+        if role == "assistant":
+            return AIMessage(content=content)
+        if role == "system":
+            return SystemMessage(content=content)
+        return None
+
     async def add_tool_call(
-        self, message_id: str, tool_call_data: Dict[str, Any]
+        self, message_id: str, tool_call_data: dict[str, Any]
     ) -> ToolCallResponse:
-        """
-        Create a tool call record.
+        """Create a tool call record.
 
         Args:
             message_id: Message ID
@@ -701,7 +719,7 @@ class ChatService:
         """
         tool_call_id = str(uuid4())
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         db_tool_call_data = {
             "id": tool_call_id,
             "message_id": message_id,
@@ -726,14 +744,16 @@ class ChatService:
             arguments=result["arguments"],
             status=result["status"],
             created_at=datetime.fromisoformat(result["created_at"]),
+            result=None,
+            completed_at=None,
+            error_message=None,
         )
 
-    # ===== Router Compatibility Methods =====
-    # These methods provide compatibility with the router's expected interface
-
-    async def chat_completion(self, user_id: str, request) -> Dict[str, Any]:
-        """
-        Handle chat completion requests (main chat endpoint).
+    # ===== Public Chat Methods =====
+    @trace_span(name="svc.chat.completion")
+    @record_histogram("svc.op.duration", unit="s")
+    async def chat_completion(self, user_id: str, request) -> dict[str, Any]:
+        """Handle chat completion requests (main chat endpoint).
 
         This method provides AI chat functionality by processing messages,
         managing sessions, and returning AI responses.
@@ -767,8 +787,8 @@ class ChatService:
             llm = ChatOpenAI(
                 model=model_name,
                 temperature=temperature,
-                max_tokens=max_tokens,
-                api_key=settings.openai_api_key.get_secret_value(),
+                api_key=settings.openai_api_key,
+                model_kwargs={"max_tokens": max_tokens},
             )
 
             # Convert request messages to LangChain format
@@ -781,19 +801,18 @@ class ChatService:
                 "create itineraries, and provide destination recommendations. "
                 "Be helpful, informative, and personalized in your responses."
             )
-            langchain_messages.append(SystemMessage(content=system_prompt))
-
-            # Process user messages
-            for msg in request.messages:
-                role = msg.get("role", "user")
-                content = msg.get("content", "")
-
-                if role == "user":
-                    langchain_messages.append(HumanMessage(content=content))
-                elif role == "assistant":
-                    langchain_messages.append(AIMessage(content=content))
-                elif role == "system":
-                    langchain_messages.append(SystemMessage(content=content))
+            mapped_messages = [
+                converted
+                for converted in (
+                    self._convert_request_message(message)
+                    for message in request.messages
+                )
+                if converted is not None
+            ]
+            langchain_messages = [
+                SystemMessage(content=system_prompt),
+                *mapped_messages,
+            ]
 
             # Get AI response
             response = await llm.ainvoke(langchain_messages)
@@ -807,13 +826,15 @@ class ChatService:
             if session_id and hasattr(self, "db"):
                 try:
                     # Create session if it doesn't exist
-                    session = await self._get_session_internal(session_id, user_id)
+                    session = await self.get_session(session_id, user_id)
                     if not session:
                         session_data = ChatSessionCreateRequest(
                             title="Chat with TripSage AI",
                             metadata={"model": model_name},
+                            trip_id=None,
                         )
-                        await self.create_session(user_id, session_data)
+                        new_session = await self.create_session(user_id, session_data)
+                        session_id = new_session.id
 
                     # Add user message to session
                     if request.messages:
@@ -822,21 +843,24 @@ class ChatService:
                             user_msg_data = MessageCreateRequest(
                                 role="user",
                                 content=last_user_msg.get("content", ""),
+                                metadata=None,
+                                tool_calls=None,
                             )
                             await self.add_message(session_id, user_id, user_msg_data)
 
                     # Add AI response to session
                     ai_msg_data = MessageCreateRequest(
                         role="assistant",
-                        content=response.content,
+                        content=str(response.content),
                         metadata={"model": model_name, "usage": token_usage},
+                        tool_calls=None,
                     )
                     await self.add_message(session_id, user_id, ai_msg_data)
 
-                except Exception as e:
+                except RECOVERABLE_ERRORS as error:
                     logger.warning(
                         "Failed to store chat in session",
-                        extra={"session_id": session_id, "error": str(e)},
+                        extra={"session_id": session_id, "error": str(error)},
                     )
 
             # Return formatted response
@@ -852,74 +876,33 @@ class ChatService:
                 "finish_reason": finish_reason,
             }
 
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Chat completion failed",
-                extra={"user_id": user_id, "error": str(e)},
+                extra={"user_id": user_id, "error": str(error)},
             )
             raise
 
-    async def list_sessions(self, user_id: str) -> List[Dict[str, Any]]:
-        """
-        List chat sessions for a user (router compatibility method).
+    # Router compatibility wrappers removed in final-only alignment.
 
-        Args:
-            user_id: User ID
-
-        Returns:
-            List of user's chat sessions
-        """
-        sessions = await self.get_user_sessions(user_id)
-        return [session.model_dump() for session in sessions]
-
-    async def create_message(
-        self, user_id: str, session_id: str, message_request
-    ) -> Dict[str, Any]:
-        """
-        Create a message in a session (router compatibility method).
-
-        Args:
-            user_id: User ID
-            session_id: Session ID
-            message_request: Message creation request
-
-        Returns:
-            Created message data
-        """
-        # Convert the API request to service request
-        service_request = MessageCreateRequest(
-            role=message_request.role,
-            content=message_request.content,
-        )
-
-        message = await self.add_message(session_id, user_id, service_request)
-        return message.model_dump()
-
-    async def delete_session(self, user_id: str, session_id: str) -> bool:
-        """
-        Delete a chat session (router compatibility method).
-
-        Args:
-            user_id: User ID
-            session_id: Session ID
-
-        Returns:
-            True if session was deleted successfully
-        """
-        return await self.end_session(session_id, user_id)
-
-    # Rename original methods to avoid conflicts with router compatibility methods
-    async def _get_session_internal(
+    @trace_span(name="svc.chat.sessions.get")
+    @record_histogram("svc.op.duration", unit="s")
+    async def get_session(
         self, session_id: str, user_id: str
-    ) -> Optional[ChatSessionResponse]:
-        """Internal get_session method with original signature."""
+    ) -> ChatSessionResponse | None:
+        """Get a chat session by id for a user.
+
+        Args:
+            session_id: Session identifier.
+            user_id: User identifier.
+
+        Returns:
+            ChatSessionResponse if found, otherwise None.
+        """
         try:
             result = await self.db.get_chat_session(session_id, user_id)
             if not result:
                 return None
-
-            # Get message statistics
-            stats = await self.db.get_session_stats(session_id)
 
             return ChatSessionResponse(
                 id=result["id"],
@@ -932,103 +915,71 @@ class ChatService:
                 if result.get("ended_at")
                 else None,
                 metadata=result.get("metadata", {}),
-                message_count=stats.get("message_count", 0),
-                last_message_at=datetime.fromisoformat(stats["last_message_at"])
-                if stats.get("last_message_at")
-                else None,
+                message_count=0,
+                last_message_at=None,
             )
 
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Failed to get chat session",
-                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             return None
 
-    async def _get_messages_internal(
+    @trace_span(name="svc.chat.messages.list")
+    @record_histogram("svc.op.duration", unit="s")
+    async def get_messages(
         self,
         session_id: str,
         user_id: str,
-        limit: Optional[int] = None,
+        limit: int | None = None,
         offset: int = 0,
-    ) -> List[MessageResponse]:
-        """Internal get_messages method with original signature."""
+    ) -> list[MessageResponse]:
+        """List messages for a chat session ordered by creation time."""
         try:
             # Verify session access
-            session = await self._get_session_internal(session_id, user_id)
+            session = await self.get_session(session_id, user_id)
             if not session:
                 return []
 
             results = await self.db.get_session_messages(session_id, limit, offset)
 
-            messages = []
-            for result in results:
-                # Get tool calls for this message
-                tool_calls = await self.db.get_message_tool_calls(result["id"])
-
-                messages.append(
-                    MessageResponse(
-                        id=result["id"],
-                        session_id=result["session_id"],
-                        role=result["role"],
-                        content=result["content"],
-                        created_at=datetime.fromisoformat(result["created_at"]),
-                        metadata=result.get("metadata", {}),
-                        tool_calls=[tc for tc in tool_calls],
-                        estimated_tokens=self._estimate_tokens(result["content"]),
-                    )
+            return [
+                MessageResponse(
+                    id=result["id"],
+                    session_id=result["session_id"],
+                    role=result["role"],
+                    content=result["content"],
+                    created_at=datetime.fromisoformat(result["created_at"]),
+                    metadata=result.get("metadata", {}),
+                    tool_calls=list(await self.db.get_message_tool_calls(result["id"])),
+                    estimated_tokens=self._estimate_tokens(result["content"]),
                 )
+                for result in results
+            ]
 
-            return messages
-
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Failed to get messages",
-                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             return []
 
-    # Router-compatible methods with simplified signatures
-    async def get_session(
-        self, user_id: str, session_id: str
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Get chat session (router-compatible method).
-
-        Args:
-            user_id: User ID (router parameter order)
-            session_id: Session ID (router parameter order)
-
-        Returns:
-            Chat session data as dictionary or None if not found
-        """
-        session = await self._get_session_internal(session_id, user_id)
-        return session.model_dump() if session else None
-
-    async def get_messages(
-        self, user_id: str, session_id: str, limit: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
-        """
-        Get messages (router-compatible method).
-
-        Args:
-            user_id: User ID (router parameter order)
-            session_id: Session ID (router parameter order)
-            limit: Maximum number of messages
-
-        Returns:
-            List of messages as dictionaries
-        """
-        messages = await self._get_messages_internal(session_id, user_id, limit, 0)
-        return [message.model_dump() for message in messages]
+    # End of public methods
 
 
 # Dependency function for FastAPI
 async def get_chat_service() -> ChatService:
-    """
-    Get chat service instance for dependency injection.
+    """Get chat service instance for dependency injection."""
+    from tripsage_core.services.infrastructure import get_database_service
 
-    Returns:
-        ChatService instance
-    """
-    return ChatService()
+    db = await get_database_service()
+    return ChatService(database_service=db)

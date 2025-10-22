@@ -1,6 +1,6 @@
 // Export all hooks for easy import
 
-// Enhanced Supabase hooks
+// Supabase hooks
 export * from "./use-supabase-query";
 export * from "./use-supabase-realtime";
 export * from "./use-supabase-chat";

@@ -15,7 +15,7 @@ const AttributeSchema = z.union([
 const ValueObjectSchema = z.record(z.string(), z.string());
 
 /**
- * Comprehensive Zod schema for ThemeProvider props
+ * Zod schema for ThemeProvider props
  * Provides runtime validation for theme configuration
  */
 export const ThemeProviderPropsSchema = z.object({

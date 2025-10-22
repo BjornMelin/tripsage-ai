@@ -1,6 +1,6 @@
 /**
  * Supabase Realtime mock helpers for testing
- * Provides comprehensive mocking for RealtimeChannel and related functionality
+ * Provides mocking for RealtimeChannel and related functionality
  */
 import type {
   RealtimeChannel,

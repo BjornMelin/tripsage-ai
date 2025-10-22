@@ -1,12 +1,10 @@
-"""
-Simple benchmark validation test to verify pytest-benchmark is working.
+"""Simple benchmark validation test to verify pytest-benchmark is working.
 
 This test validates that the performance monitoring infrastructure is
 functioning correctly.
 """
 
 import time
-from typing import List
 
 import psutil
 import pytest
@@ -99,7 +97,7 @@ class TestBenchmarkValidation:
     def test_batch_operations_benchmark(self, benchmark):
         """Test batch operations performance."""
 
-        def batch_operation(batch_size: int = 100) -> List[int]:
+        def batch_operation(batch_size: int = 100) -> list[int]:
             """Simulate batch processing."""
             results = []
             for i in range(batch_size):
@@ -162,7 +160,6 @@ class TestBenchmarkValidation:
 @pytest.mark.performance
 def test_benchmark_configuration():
     """Test that benchmark configuration is correct."""
-
     # This test verifies that pytest-benchmark is configured correctly
     # by checking that the benchmark plugin is available
     import pytest_benchmark
@@ -173,7 +170,6 @@ def test_benchmark_configuration():
 @pytest.mark.performance
 def test_performance_markers():
     """Test that performance markers are configured correctly."""
-
     # This test should be marked with performance marker
     # and should be discoverable by pytest when filtering
     assert True  # Simple assertion to verify test runs

@@ -1,17 +1,15 @@
 #!/usr/bin/env python
-"""
-Test script for the TripSage API.
+"""Test script for the TripSage API.
 
 This script starts the FastAPI server and performs basic tests to
 verify the API functionality.
 """
 
 import asyncio
-import os
 import sys
 import time
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional
+from pathlib import Path
 
 import httpx
 import uvicorn
@@ -20,10 +18,11 @@ from pydantic import BaseModel
 
 from tripsage.api.main import app
 
+
 # Add the project root to the path so we can import from src
-script_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(script_dir)
-sys.path.insert(0, project_root)
+script_dir = Path(__file__).resolve().parent
+project_root = script_dir.parent
+sys.path.insert(0, str(project_root))
 
 # Load environment variables
 load_dotenv()
@@ -36,31 +35,37 @@ TEST_USER_PASSWORD = "password123"
 
 # Models for test data
 class UserModel(BaseModel):
+    """User data used by end-to-end API tests."""
+
     email: str
     password: str
-    full_name: Optional[str] = None
-    auth_token: Optional[str] = None
+    full_name: str | None = None
+    auth_token: str | None = None
 
 
 class TripModel(BaseModel):
+    """Trip payload for end-to-end API tests."""
+
     name: str
     start_date: date
     end_date: date
     destination: str
     budget: float
     travelers: int = 1
-    id: Optional[str] = None
+    id: str | None = None
 
 
 class FlightModel(BaseModel):
+    """Flight payload used in end-to-end API tests."""
+
     trip_id: str
     origin: str
     destination: str
     departure_time: datetime
     arrival_time: datetime
-    airline: Optional[str] = None
+    airline: str | None = None
     price: float
-    id: Optional[str] = None
+    id: str | None = None
 
 
 async def initialize_db():
@@ -143,7 +148,7 @@ async def create_trip(
         return False
 
 
-async def get_trips(client: httpx.AsyncClient, user: UserModel) -> List[Dict]:
+async def get_trips(client: httpx.AsyncClient, user: UserModel) -> list[dict]:
     """Get all trips for the user."""
     headers = {"Authorization": f"Bearer {user.auth_token}"}
 
@@ -196,7 +201,7 @@ async def create_flight(
 
 async def get_flights_for_trip(
     client: httpx.AsyncClient, user: UserModel, trip_id: str
-) -> List[Dict]:
+) -> list[dict]:
     """Get all flights for a trip."""
     headers = {"Authorization": f"Bearer {user.auth_token}"}
 
@@ -216,103 +221,85 @@ async def get_flights_for_trip(
 
 async def run_tests():
     """Run a series of tests against the API."""
-    try:
-        # Initialize the database
-        await initialize_db()
+    # Initialize the database
+    await initialize_db()
 
-        # Create a test client
-        async with httpx.AsyncClient() as client:
-            # Create a test user
-            test_user = UserModel(
-                email=TEST_USER_EMAIL,
-                password=TEST_USER_PASSWORD,
-                full_name="Test User",
-            )
+    # Create a test client
+    async with httpx.AsyncClient() as client:
+        # Create a test user
+        test_user = UserModel(
+            email=TEST_USER_EMAIL,
+            password=TEST_USER_PASSWORD,
+            full_name="Test User",
+        )
 
-            # Register and login the user
-            if not await register_user(client, test_user):
-                return
-            if not await login_user(client, test_user):
-                return
+        # Register and login the user
+        if not await register_user(client, test_user):
+            return
+        if not await login_user(client, test_user):
+            return
 
-            # Create a test trip
-            today = date.today()
-            test_trip = TripModel(
-                name="Test Vacation",
-                start_date=today + timedelta(days=30),
-                end_date=today + timedelta(days=37),
-                destination="Hawaii",
-                budget=2000.0,
-                travelers=2,
-            )
+        # Create a test trip
+        today = date.today()
+        test_trip = TripModel(
+            name="Test Vacation",
+            start_date=today + timedelta(days=30),
+            end_date=today + timedelta(days=37),
+            destination="Hawaii",
+            budget=2000.0,
+            travelers=2,
+        )
 
-            if not await create_trip(client, test_user, test_trip):
-                return
+        if not await create_trip(client, test_user, test_trip):
+            return
 
-            # Get all trips
-            trips = await get_trips(client, test_user)
-            if not trips:
-                return
+        # Get all trips
+        trips = await get_trips(client, test_user)
+        if not trips:
+            return
 
-            # Create a test flight
-            departure_time = datetime.combine(
-                test_trip.start_date, datetime.min.time()
-            ) + timedelta(hours=10)
-            arrival_time = departure_time + timedelta(hours=6)
+        # Create a test flight
+        departure_time = datetime.combine(
+            test_trip.start_date, datetime.min.time()
+        ) + timedelta(hours=10)
+        arrival_time = departure_time + timedelta(hours=6)
 
-            test_flight = FlightModel(
-                trip_id=test_trip.id,
-                origin="SFO",
-                destination="HNL",
-                departure_time=departure_time,
-                arrival_time=arrival_time,
-                airline="Hawaiian Airlines",
-                price=450.0,
-            )
+        test_flight = FlightModel(
+            trip_id=test_trip.id or "",
+            origin="SFO",
+            destination="HNL",
+            departure_time=departure_time,
+            arrival_time=arrival_time,
+            airline="Hawaiian Airlines",
+            price=450.0,
+        )
 
-            if not await create_flight(client, test_user, test_flight):
-                return
+        if not await create_flight(client, test_user, test_flight):
+            return
 
-            # Get all flights for the trip
-            flights = await get_flights_for_trip(client, test_user, test_trip.id)
-            if not flights:
-                return
+        # Get all flights for the trip
+        flights = await get_flights_for_trip(client, test_user, test_trip.id or "")
+        if not flights:
+            return
 
-            print("\nAll tests completed successfully!")
-    except Exception as e:
-        print(f"Test failed with error: {e}")
+        print("\nAll tests completed successfully!")
 
 
 async def main():
     """Main function to run the test script."""
-    # Start the FastAPI server in a separate thread
-    server_process = None
+    print("Starting API server...")
+
+    config = uvicorn.Config(app=app, host="127.0.0.1", port=8000, log_level="info")
+    server = uvicorn.Server(config)
+    server_task = asyncio.create_task(server.serve())
+
     try:
-        print("Starting API server...")
-
-        # Use uvicorn to start the server
-        config = uvicorn.Config(app=app, host="127.0.0.1", port=8000, log_level="info")
-        server = uvicorn.Server(config)
-
-        # Start the server in a separate task
-        server_task = asyncio.create_task(server.serve())
-
-        # Wait for server to start
         time.sleep(1)
-
-        # Run the tests
         await run_tests()
-
-        # Stop the server
+    finally:
         print("Stopping API server...")
         server.should_exit = True
         await server_task
-    except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        # Ensure server is stopped
-        if server_process:
-            server_process.terminate()
 
 
 if __name__ == "__main__":

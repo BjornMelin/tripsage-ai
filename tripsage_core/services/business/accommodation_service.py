@@ -1,5 +1,5 @@
-"""
-Accommodation service for comprehensive accommodation management operations.
+# pylint: disable=too-many-lines
+"""Accommodation service for accommodation management operations.
 
 This service consolidates accommodation-related business logic including accommodation
 search, booking, management, and integration with external accommodation APIs. It
@@ -7,25 +7,31 @@ provides clean abstractions over external services with proper data relationship
 """
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import Field, field_validator
 
 from tripsage_core.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions import (
     CoreServiceError as ServiceError,
-)
-from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
 
+
 logger = logging.getLogger(__name__)
+
+
+RECOVERABLE_ERRORS = (
+    ServiceError,
+    ConnectionError,
+    TimeoutError,
+    RuntimeError,
+    ValueError,
+)
 
 
 class PropertyType(str, Enum):
@@ -70,35 +76,35 @@ class AccommodationAmenity(TripSageModel):
     """Accommodation amenity information."""
 
     name: str = Field(..., description="Amenity name")
-    category: Optional[str] = Field(None, description="Amenity category")
-    icon: Optional[str] = Field(None, description="Amenity icon identifier")
-    description: Optional[str] = Field(None, description="Amenity description")
+    category: str | None = Field(None, description="Amenity category")
+    icon: str | None = Field(None, description="Amenity icon identifier")
+    description: str | None = Field(None, description="Amenity description")
 
 
 class AccommodationImage(TripSageModel):
     """Accommodation image information."""
 
     url: str = Field(..., description="Image URL")
-    caption: Optional[str] = Field(None, description="Image caption")
+    caption: str | None = Field(None, description="Image caption")
     is_primary: bool = Field(
         default=False, description="Whether this is the primary image"
     )
-    width: Optional[int] = Field(None, description="Image width in pixels")
-    height: Optional[int] = Field(None, description="Image height in pixels")
+    width: int | None = Field(None, description="Image width in pixels")
+    height: int | None = Field(None, description="Image height in pixels")
 
 
 class AccommodationLocation(TripSageModel):
     """Accommodation location information."""
 
-    address: Optional[str] = Field(None, description="Full address")
+    address: str | None = Field(None, description="Full address")
     city: str = Field(..., description="City")
-    state: Optional[str] = Field(None, description="State/province")
+    state: str | None = Field(None, description="State/province")
     country: str = Field(..., description="Country")
-    postal_code: Optional[str] = Field(None, description="Postal/zip code")
-    latitude: Optional[float] = Field(None, description="Latitude coordinate")
-    longitude: Optional[float] = Field(None, description="Longitude coordinate")
-    neighborhood: Optional[str] = Field(None, description="Neighborhood name")
-    distance_to_center: Optional[float] = Field(
+    postal_code: str | None = Field(None, description="Postal/zip code")
+    latitude: float | None = Field(None, description="Latitude coordinate")
+    longitude: float | None = Field(None, description="Longitude coordinate")
+    neighborhood: str | None = Field(None, description="Neighborhood name")
+    distance_to_center: float | None = Field(
         None, description="Distance to city center in km"
     )
 
@@ -108,15 +114,13 @@ class AccommodationHost(TripSageModel):
 
     id: str = Field(..., description="Host ID")
     name: str = Field(..., description="Host name")
-    avatar_url: Optional[str] = Field(None, description="Host avatar URL")
-    rating: Optional[float] = Field(None, ge=0, le=5, description="Host rating")
-    review_count: Optional[int] = Field(None, ge=0, description="Host review count")
-    response_rate: Optional[float] = Field(
-        None, ge=0, le=1, description="Response rate"
-    )
-    response_time: Optional[str] = Field(None, description="Response time")
+    avatar_url: str | None = Field(None, description="Host avatar URL")
+    rating: float | None = Field(None, ge=0, le=5, description="Host rating")
+    review_count: int | None = Field(None, ge=0, description="Host review count")
+    response_rate: float | None = Field(None, ge=0, le=1, description="Response rate")
+    response_time: str | None = Field(None, description="Response time")
     is_superhost: bool = Field(default=False, description="Whether host is a superhost")
-    verification_badges: List[str] = Field(
+    verification_badges: list[str] = Field(
         default_factory=list, description="Host verification badges"
     )
 
@@ -124,54 +128,55 @@ class AccommodationHost(TripSageModel):
 class AccommodationSearchRequest(TripSageModel):
     """Request model for accommodation search."""
 
+    user_id: str = Field(..., description="User performing the accommodation search")
+    trip_id: str | None = Field(None, description="Associated trip identifier")
     location: str = Field(..., description="Search location (city, address, etc.)")
     check_in: date = Field(..., description="Check-in date")
     check_out: date = Field(..., description="Check-out date")
     guests: int = Field(default=1, ge=1, le=16, description="Number of guests")
-    adults: Optional[int] = Field(None, ge=1, le=16, description="Number of adults")
-    children: Optional[int] = Field(None, ge=0, le=16, description="Number of children")
-    infants: Optional[int] = Field(None, ge=0, le=16, description="Number of infants")
+    adults: int | None = Field(None, ge=1, le=16, description="Number of adults")
+    children: int | None = Field(None, ge=0, le=16, description="Number of children")
+    infants: int | None = Field(None, ge=0, le=16, description="Number of infants")
 
-    property_types: Optional[List[PropertyType]] = Field(
+    property_types: list[PropertyType] | None = Field(
         None, description="Preferred property types"
     )
-    min_price: Optional[float] = Field(
-        None, ge=0, description="Minimum price per night"
-    )
-    max_price: Optional[float] = Field(
-        None, ge=0, description="Maximum price per night"
-    )
+    min_price: float | None = Field(None, ge=0, description="Minimum price per night")
+    max_price: float | None = Field(None, ge=0, description="Maximum price per night")
     currency: str = Field(default="USD", description="Currency code")
 
-    bedrooms: Optional[int] = Field(
+    bedrooms: int | None = Field(
         None, ge=0, le=10, description="Minimum number of bedrooms"
     )
-    beds: Optional[int] = Field(None, ge=0, le=20, description="Minimum number of beds")
-    bathrooms: Optional[float] = Field(
+    beds: int | None = Field(None, ge=0, le=20, description="Minimum number of beds")
+    bathrooms: float | None = Field(
         None, ge=0, le=10, description="Minimum number of bathrooms"
     )
 
-    amenities: Optional[List[str]] = Field(None, description="Required amenities")
-    accessibility_features: Optional[List[str]] = Field(
+    amenities: list[str] | None = Field(None, description="Required amenities")
+    accessibility_features: list[str] | None = Field(
         None, description="Required accessibility features"
     )
 
-    instant_book: Optional[bool] = Field(
+    instant_book: bool | None = Field(
         None, description="Filter for instant bookable properties"
     )
-    free_cancellation: Optional[bool] = Field(
+    free_cancellation: bool | None = Field(
         None, description="Filter for free cancellation"
     )
 
-    max_distance_km: Optional[float] = Field(
+    max_distance_km: float | None = Field(
         None, ge=0, description="Maximum distance from center"
     )
-    min_rating: Optional[float] = Field(
+    min_rating: float | None = Field(
         None, ge=0, le=5, description="Minimum property rating"
     )
 
-    sort_by: Optional[str] = Field("relevance", description="Sort criteria")
-    sort_order: Optional[str] = Field("asc", description="Sort order (asc/desc)")
+    metadata: dict[str, Any] | None = Field(
+        None, description="Additional client-provided context for the search"
+    )
+    sort_by: str | None = Field("relevance", description="Sort criteria")
+    sort_order: str | None = Field("asc", description="Sort order (asc/desc)")
 
     @field_validator("check_out")
     @classmethod
@@ -186,61 +191,65 @@ class AccommodationListing(TripSageModel):
     """Accommodation listing response model."""
 
     id: str = Field(..., description="Listing ID")
+    user_id: str | None = Field(None, description="User that stored the listing")
     name: str = Field(..., description="Property name")
-    description: Optional[str] = Field(None, description="Property description")
+    description: str | None = Field(None, description="Property description")
     property_type: PropertyType = Field(..., description="Property type")
 
     location: AccommodationLocation = Field(..., description="Property location")
 
     price_per_night: float = Field(..., description="Price per night")
-    total_price: Optional[float] = Field(None, description="Total price for stay")
+    total_price: float | None = Field(None, description="Total price for stay")
     currency: str = Field(..., description="Currency code")
 
-    rating: Optional[float] = Field(None, ge=0, le=5, description="Property rating")
-    review_count: Optional[int] = Field(None, ge=0, description="Number of reviews")
+    rating: float | None = Field(None, ge=0, le=5, description="Property rating")
+    review_count: int | None = Field(None, ge=0, description="Number of reviews")
 
     max_guests: int = Field(..., description="Maximum number of guests")
-    bedrooms: Optional[int] = Field(None, description="Number of bedrooms")
-    beds: Optional[int] = Field(None, description="Number of beds")
-    bathrooms: Optional[float] = Field(None, description="Number of bathrooms")
+    bedrooms: int | None = Field(None, description="Number of bedrooms")
+    beds: int | None = Field(None, description="Number of beds")
+    bathrooms: float | None = Field(None, description="Number of bathrooms")
 
-    amenities: List[AccommodationAmenity] = Field(
+    amenities: list[AccommodationAmenity] = Field(
         default_factory=list, description="Property amenities"
     )
-    images: List[AccommodationImage] = Field(
+    images: list[AccommodationImage] = Field(
         default_factory=list, description="Property images"
     )
 
-    host: Optional[AccommodationHost] = Field(None, description="Host information")
+    host: AccommodationHost | None = Field(None, description="Host information")
 
-    check_in_time: Optional[str] = Field(None, description="Check-in time")
-    check_out_time: Optional[str] = Field(None, description="Check-out time")
+    check_in_time: str | None = Field(None, description="Check-in time")
+    check_out_time: str | None = Field(None, description="Check-out time")
 
-    cancellation_policy: Optional[CancellationPolicy] = Field(
+    cancellation_policy: CancellationPolicy | None = Field(
         None, description="Cancellation policy"
     )
     instant_book: bool = Field(default=False, description="Whether instantly bookable")
 
-    source: Optional[str] = Field(
+    source: str | None = Field(
         None, description="Data source (airbnb, booking.com, etc.)"
     )
-    source_listing_id: Optional[str] = Field(
+    source_listing_id: str | None = Field(
         None, description="Original listing ID from source"
     )
-    listing_url: Optional[str] = Field(None, description="URL to original listing")
+    listing_url: str | None = Field(None, description="URL to original listing")
+    stored_at: datetime | None = Field(
+        None, description="Timestamp when the listing snapshot was stored"
+    )
 
     # Search context
-    nights: Optional[int] = Field(None, description="Number of nights for the search")
+    nights: int | None = Field(None, description="Number of nights for the search")
     is_available: bool = Field(
         default=True, description="Whether available for search dates"
     )
 
     # Scoring and ranking
-    score: Optional[float] = Field(None, ge=0, le=1, description="Relevance score")
-    price_score: Optional[float] = Field(
+    score: float | None = Field(None, ge=0, le=1, description="Relevance score")
+    price_score: float | None = Field(
         None, ge=0, le=1, description="Price competitiveness"
     )
-    location_score: Optional[float] = Field(
+    location_score: float | None = Field(
         None, ge=0, le=1, description="Location convenience"
     )
 
@@ -250,10 +259,15 @@ class AccommodationBooking(TripSageModel):
 
     id: str = Field(..., description="Booking ID")
     user_id: str = Field(..., description="User ID")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
+    trip_id: str | None = Field(None, description="Associated trip ID")
+    guest_name: str = Field(..., description="Primary guest full name")
+    guest_email: str = Field(..., description="Primary guest email address")
+    guest_phone: str | None = Field(
+        None, description="Primary guest contact phone number"
+    )
 
     listing_id: str = Field(..., description="Booked listing ID")
-    confirmation_number: Optional[str] = Field(
+    confirmation_number: str | None = Field(
         None, description="Booking confirmation number"
     )
 
@@ -273,7 +287,7 @@ class AccommodationBooking(TripSageModel):
     status: BookingStatus = Field(..., description="Booking status")
     booked_at: datetime = Field(..., description="Booking timestamp")
 
-    cancellation_policy: Optional[CancellationPolicy] = Field(
+    cancellation_policy: CancellationPolicy | None = Field(
         None, description="Cancellation policy"
     )
     is_cancellable: bool = Field(
@@ -282,14 +296,23 @@ class AccommodationBooking(TripSageModel):
     is_refundable: bool = Field(
         default=False, description="Whether booking is refundable"
     )
+    hold_only: bool = Field(
+        default=False, description="Whether the booking is held without payment"
+    )
+    payment_method: str | None = Field(
+        None, description="Payment method reference used for the booking"
+    )
 
-    host: Optional[AccommodationHost] = Field(None, description="Host information")
-    special_requests: Optional[str] = Field(
+    host: AccommodationHost | None = Field(None, description="Host information")
+    special_requests: str | None = Field(
         None, description="Special requests from guest"
     )
 
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional booking metadata"
+    )
+    created_at: datetime | None = Field(
+        None, description="Timestamp when the booking record was created"
     )
 
 
@@ -297,7 +320,9 @@ class AccommodationSearchResponse(TripSageModel):
     """Accommodation search response model."""
 
     search_id: str = Field(..., description="Search ID")
-    listings: List[AccommodationListing] = Field(..., description="Search results")
+    user_id: str = Field(..., description="User that initiated the search")
+    trip_id: str | None = Field(None, description="Associated trip identifier")
+    listings: list[AccommodationListing] = Field(..., description="Search results")
     search_parameters: AccommodationSearchRequest = Field(
         ..., description="Original search parameters"
     )
@@ -305,11 +330,11 @@ class AccommodationSearchResponse(TripSageModel):
     total_results: int = Field(..., description="Total number of results")
     results_returned: int = Field(..., description="Number of results returned")
 
-    min_price: Optional[float] = Field(None, description="Minimum price found")
-    max_price: Optional[float] = Field(None, description="Maximum price found")
-    avg_price: Optional[float] = Field(None, description="Average price")
+    min_price: float | None = Field(None, description="Minimum price found")
+    max_price: float | None = Field(None, description="Maximum price found")
+    avg_price: float | None = Field(None, description="Average price")
 
-    search_duration_ms: Optional[int] = Field(
+    search_duration_ms: int | None = Field(
         None, description="Search duration in milliseconds"
     )
     cached: bool = Field(default=False, description="Whether results were cached")
@@ -325,22 +350,21 @@ class AccommodationBookingRequest(TripSageModel):
 
     guest_name: str = Field(..., description="Primary guest name")
     guest_email: str = Field(..., description="Guest email address")
-    guest_phone: Optional[str] = Field(None, description="Guest phone number")
+    guest_phone: str | None = Field(None, description="Guest phone number")
 
-    special_requests: Optional[str] = Field(None, description="Special requests")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
+    special_requests: str | None = Field(None, description="Special requests")
+    trip_id: str | None = Field(None, description="Associated trip ID")
 
-    payment_method: Optional[str] = Field(None, description="Payment method")
+    payment_method: str | None = Field(None, description="Payment method")
     hold_only: bool = Field(default=False, description="Hold booking without payment")
 
-    metadata: Optional[Dict[str, Any]] = Field(
+    metadata: dict[str, Any] | None = Field(
         None, description="Additional booking metadata"
     )
 
 
 class AccommodationService:
-    """
-    Comprehensive accommodation service for search, booking, and management.
+    """Accommodation service for search, booking, and management.
 
     This service handles:
     - Accommodation search with multiple providers
@@ -357,8 +381,7 @@ class AccommodationService:
         external_accommodation_service=None,
         cache_ttl: int = 300,
     ):
-        """
-        Initialize the accommodation service.
+        """Initialize the accommodation service.
 
         Args:
             database_service: Database service for persistence
@@ -367,32 +390,41 @@ class AccommodationService:
         """
         # Import here to avoid circular imports
         if database_service is None:
+            import asyncio
+
             from tripsage_core.services.infrastructure import get_database_service
 
-            database_service = get_database_service()
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            database_service = loop.run_until_complete(get_database_service())
 
         if external_accommodation_service is None:
             # Try to import MCP accommodation client
             try:
                 from tripsage_core.clients.accommodations import AccommodationMCPClient
 
-                external_accommodation_service = AccommodationMCPClient()
+                # Default local MCP base URL; can be made configurable via Settings.
+                external_accommodation_service = AccommodationMCPClient(
+                    base_url="http://localhost:3000"
+                )
             except ImportError:
                 logger.warning("External accommodation service not available")
                 external_accommodation_service = None
 
-        self.db = database_service
-        self.external_service = external_accommodation_service
+        self.db: Any = database_service  # dynamic backend, attribute surface varies
+        self.external_service: Any = external_accommodation_service
         self.cache_ttl = cache_ttl
 
         # In-memory cache for search results
-        self._search_cache: Dict[str, tuple] = {}
+        self._search_cache: dict[str, tuple] = {}
 
     async def search_accommodations(
         self, search_request: AccommodationSearchRequest
     ) -> AccommodationSearchResponse:
-        """
-        Search for accommodation listings.
+        """Search for accommodation listings.
 
         Args:
             search_request: Accommodation search parameters
@@ -405,8 +437,11 @@ class AccommodationService:
             ServiceError: If search fails
         """
         try:
+            if not search_request.user_id:
+                raise ValidationError("User ID is required for accommodation search")
+
             search_id = str(uuid4())
-            start_time = datetime.now(timezone.utc)
+            start_time = datetime.now(UTC)
 
             # Check cache first
             cache_key = self._generate_search_cache_key(search_request)
@@ -420,6 +455,8 @@ class AccommodationService:
 
                 return AccommodationSearchResponse(
                     search_id=search_id,
+                    user_id=search_request.user_id,
+                    trip_id=search_request.trip_id,
                     listings=cached_result["listings"],
                     search_parameters=search_request,
                     total_results=len(cached_result["listings"]),
@@ -427,6 +464,7 @@ class AccommodationService:
                     min_price=cached_result.get("min_price"),
                     max_price=cached_result.get("max_price"),
                     avg_price=cached_result.get("avg_price"),
+                    search_duration_ms=None,
                     cached=True,
                 )
 
@@ -436,15 +474,27 @@ class AccommodationService:
                 try:
                     external_listings = await self._search_external_api(search_request)
                     listings.extend(external_listings)
-                except Exception as e:
-                    logger.error(
+                except RECOVERABLE_ERRORS as error:
+                    logger.exception(
                         "External accommodation search failed",
-                        extra={"error": str(e), "search_id": search_id},
+                        extra={"error": str(error), "search_id": search_id},
                     )
 
             # Add fallback/mock listings if no external service
             if not listings and not self.external_service:
-                listings = await self._generate_mock_listings(search_request)
+                try:
+                    listings = await self._generate_mock_listings(search_request)
+                except Exception as error:  # pragma: no cover - safety net
+                    logger.exception(
+                        "Fallback accommodation listing generation failed",
+                        extra={
+                            "error": str(error),
+                            "location": search_request.location,
+                        },
+                    )
+                    raise ServiceError(
+                        f"Accommodation search failed: {error!s}"
+                    ) from error
 
             # Score and rank listings
             scored_listings = await self._score_listings(listings, search_request)
@@ -470,7 +520,7 @@ class AccommodationService:
             await self._store_search_history(search_id, search_request, scored_listings)
 
             search_duration = int(
-                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                (datetime.now(UTC) - start_time).total_seconds() * 1000
             )
 
             logger.info(
@@ -484,6 +534,8 @@ class AccommodationService:
 
             return AccommodationSearchResponse(
                 search_id=search_id,
+                user_id=search_request.user_id,
+                trip_id=search_request.trip_id,
                 listings=scored_listings,
                 search_parameters=search_request,
                 total_results=len(scored_listings),
@@ -495,23 +547,22 @@ class AccommodationService:
                 cached=False,
             )
 
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Accommodation search failed",
                 extra={
-                    "error": str(e),
+                    "error": str(error),
                     "location": search_request.location,
                     "check_in": search_request.check_in,
                     "check_out": search_request.check_out,
                 },
             )
-            raise ServiceError(f"Accommodation search failed: {str(e)}") from e
+            raise ServiceError(f"Accommodation search failed: {error!s}") from error
 
     async def get_listing_details(
         self, listing_id: str, user_id: str
-    ) -> Optional[AccommodationListing]:
-        """
-        Get detailed information about an accommodation listing.
+    ) -> AccommodationListing | None:
+        """Get detailed information about an accommodation listing.
 
         Args:
             listing_id: Listing ID
@@ -542,26 +593,29 @@ class AccommodationService:
                         await self._store_listing(converted_listing, user_id)
 
                         return converted_listing
-                except Exception as e:
+                except RECOVERABLE_ERRORS as error:
                     logger.warning(
                         "Failed to get external listing details",
-                        extra={"listing_id": listing_id, "error": str(e)},
+                        extra={"listing_id": listing_id, "error": str(error)},
                     )
 
             return None
 
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Failed to get listing details",
-                extra={"listing_id": listing_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "listing_id": listing_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             return None
 
     async def book_accommodation(
         self, user_id: str, booking_request: AccommodationBookingRequest
     ) -> AccommodationBooking:
-        """
-        Book an accommodation listing.
+        """Book an accommodation listing.
 
         Args:
             user_id: User ID
@@ -590,7 +644,7 @@ class AccommodationService:
                 )
 
             booking_id = str(uuid4())
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             nights = (booking_request.check_out - booking_request.check_in).days
 
             # Calculate total price
@@ -601,6 +655,9 @@ class AccommodationService:
                 id=booking_id,
                 user_id=user_id,
                 trip_id=booking_request.trip_id,
+                guest_name=booking_request.guest_name,
+                guest_email=booking_request.guest_email,
+                guest_phone=booking_request.guest_phone,
                 listing_id=booking_request.listing_id,
                 property_name=listing.name,
                 property_type=listing.property_type,
@@ -612,6 +669,7 @@ class AccommodationService:
                 price_per_night=listing.price_per_night,
                 total_price=total_price,
                 currency=listing.currency,
+                confirmation_number=None,
                 status=BookingStatus.INQUIRED
                 if booking_request.hold_only
                 else BookingStatus.BOOKED,
@@ -619,14 +677,17 @@ class AccommodationService:
                 cancellation_policy=listing.cancellation_policy,
                 host=listing.host,
                 special_requests=booking_request.special_requests,
+                hold_only=booking_request.hold_only,
+                payment_method=booking_request.payment_method,
                 metadata=booking_request.metadata or {},
+                created_at=now,
             )
 
             # Attempt external booking if not hold-only
             if not booking_request.hold_only and self.external_service:
                 try:
                     external_booking = await self._book_external_accommodation(
-                        listing, booking_request
+                        listing, booking_request, user_id
                     )
                     if external_booking:
                         booking.confirmation_number = external_booking.get(
@@ -639,13 +700,13 @@ class AccommodationService:
                         booking.is_refundable = external_booking.get(
                             "is_refundable", False
                         )
-                except Exception as e:
-                    logger.error(
+                except RECOVERABLE_ERRORS as error:
+                    logger.exception(
                         "External booking failed",
                         extra={
                             "booking_id": booking_id,
                             "listing_id": booking_request.listing_id,
-                            "error": str(e),
+                            "error": str(error),
                         },
                     )
                     # Continue with inquiry status if external booking fails
@@ -666,28 +727,25 @@ class AccommodationService:
 
             return booking
 
-        except (NotFoundError, ValidationError):
-            raise
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Accommodation booking failed",
                 extra={
                     "user_id": user_id,
                     "listing_id": booking_request.listing_id,
-                    "error": str(e),
+                    "error": str(error),
                 },
             )
-            raise ServiceError(f"Accommodation booking failed: {str(e)}") from e
+            raise ServiceError(f"Accommodation booking failed: {error!s}") from error
 
     async def get_user_bookings(
         self,
         user_id: str,
-        trip_id: Optional[str] = None,
-        status: Optional[BookingStatus] = None,
+        trip_id: str | None = None,
+        status: BookingStatus | None = None,
         limit: int = 50,
-    ) -> List[AccommodationBooking]:
-        """
-        Get accommodation bookings for a user.
+    ) -> list[AccommodationBooking]:
+        """Get accommodation bookings for a user.
 
         Args:
             user_id: User ID
@@ -707,22 +765,17 @@ class AccommodationService:
 
             results = await self.db.get_accommodation_bookings(filters, limit)
 
-            bookings = []
-            for result in results:
-                bookings.append(AccommodationBooking(**result))
+            return [AccommodationBooking(**result) for result in results]
 
-            return bookings
-
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Failed to get user bookings",
-                extra={"user_id": user_id, "error": str(e)},
+                extra={"user_id": user_id, "error": str(error)},
             )
             return []
 
     async def cancel_booking(self, booking_id: str, user_id: str) -> bool:
-        """
-        Cancel an accommodation booking.
+        """Cancel an accommodation booking.
 
         Args:
             booking_id: Booking ID
@@ -758,10 +811,10 @@ class AccommodationService:
             ):
                 try:
                     await self._cancel_external_booking(booking)
-                except Exception as e:
+                except RECOVERABLE_ERRORS as error:
                     logger.warning(
                         "External cancellation failed",
-                        extra={"booking_id": booking_id, "error": str(e)},
+                        extra={"booking_id": booking_id, "error": str(error)},
                     )
 
             # Update booking status
@@ -777,18 +830,20 @@ class AccommodationService:
 
             return success
 
-        except (NotFoundError, ValidationError):
-            raise
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Failed to cancel booking",
-                extra={"booking_id": booking_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "booking_id": booking_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             return False
 
     async def _search_external_api(
         self, search_request: AccommodationSearchRequest
-    ) -> List[AccommodationListing]:
+    ) -> list[AccommodationListing]:
         """Search accommodations using external API."""
         if not self.external_service:
             return []
@@ -799,10 +854,8 @@ class AccommodationService:
                 "location": search_request.location,
                 "check_in": search_request.check_in,
                 "check_out": search_request.check_out,
-                "guests": search_request.adults + search_request.children,
-                "property_types": [search_request.property_type.value]
-                if search_request.property_type
-                else None,
+                "guests": (search_request.adults or 0) + (search_request.children or 0),
+                "property_types": search_request.property_types,
                 "min_price": search_request.min_price,
                 "max_price": search_request.max_price,
                 "amenities": search_request.amenities,
@@ -811,47 +864,46 @@ class AccommodationService:
 
             # Call external API
             external_listings = await self.external_service.search_accommodations(
-                external_request
+                **external_request
             )
 
             # Convert to our model
-            converted_listings = []
-            for external_listing in external_listings:
-                converted_listing = await self._convert_external_listing(
-                    external_listing
-                )
-                converted_listings.append(converted_listing)
+            return [
+                await self._convert_external_listing(external_listing)
+                for external_listing in external_listings
+            ]
 
-            return converted_listings
-
-        except Exception as e:
-            logger.error("External API search failed", extra={"error": str(e)})
+        except RECOVERABLE_ERRORS as error:
+            logger.exception("External API search failed", extra={"error": str(error)})
             return []
 
     async def _convert_external_listing(self, external_listing) -> AccommodationListing:
         """Convert external API listing to our model."""
         # This is a simplified conversion - in practice you'd map all fields
-        return AccommodationListing(
-            id=external_listing.get("id", str(uuid4())),
-            name=external_listing.get("name", "Unknown Property"),
-            property_type=PropertyType(external_listing.get("property_type", "other")),
-            location=AccommodationLocation(
-                city=external_listing.get("location", {}).get("city", "Unknown"),
-                country=external_listing.get("location", {}).get("country", "Unknown"),
-            ),
-            price_per_night=float(external_listing.get("price_per_night", 0)),
-            currency=external_listing.get("currency", "USD"),
-            max_guests=external_listing.get("max_guests", 1),
-            rating=external_listing.get("rating"),
-            source="external_api",
-            source_listing_id=external_listing.get("id"),
+        return AccommodationListing.model_validate(
+            {
+                "id": external_listing.get("id", str(uuid4())),
+                "name": external_listing.get("name", "Unknown Property"),
+                "property_type": external_listing.get("property_type", "other"),
+                "location": {
+                    "city": external_listing.get("location", {}).get("city", "Unknown"),
+                    "country": external_listing.get("location", {}).get(
+                        "country", "Unknown"
+                    ),
+                },
+                "price_per_night": float(external_listing.get("price_per_night", 0)),
+                "currency": external_listing.get("currency", "USD"),
+                "max_guests": external_listing.get("max_guests", 1),
+                "rating": external_listing.get("rating"),
+                "source": "external_api",
+                "source_listing_id": external_listing.get("id"),
+            }
         )
 
     async def _generate_mock_listings(
         self, search_request: AccommodationSearchRequest
-    ) -> List[AccommodationListing]:
+    ) -> list[AccommodationListing]:
         """Generate mock accommodation listings for testing."""
-        listings = []
         nights = (search_request.check_out - search_request.check_in).days
 
         # Generate a few mock listings with different property types and prices
@@ -862,53 +914,61 @@ class AccommodationService:
         ]
         base_price = 80.0
 
-        for i in range(3):
-            listing = AccommodationListing(
-                id=str(uuid4()),
-                name=f"Sample {property_types[i].value.title()} {i + 1}",
-                description=(
-                    f"A beautiful {property_types[i].value} in "
-                    f"{search_request.location}"
-                ),
-                property_type=property_types[i],
-                location=AccommodationLocation(
-                    city=search_request.location.split(",")[0].strip(),
-                    country="United States",
-                    neighborhood="Downtown",
-                    distance_to_center=1.0 + i * 0.5,
-                ),
-                price_per_night=base_price + (i * 30),
-                total_price=(base_price + (i * 30)) * nights,
-                currency=getattr(search_request, "currency", "USD"),
-                rating=4.0 + (i * 0.3),
-                review_count=50 + (i * 25),
-                max_guests=search_request.adults + search_request.children + i,
-                bedrooms=1 + i,
-                beds=1 + i,
-                bathrooms=1.0 + (i * 0.5),
-                amenities=[
-                    AccommodationAmenity(name="WiFi"),
-                    AccommodationAmenity(name="Kitchen" if i > 0 else "Restaurant"),
-                    AccommodationAmenity(name="Pool" if i == 2 else "Air Conditioning"),
-                ],
-                images=[
-                    AccommodationImage(
-                        url=f"https://example.com/image{i + 1}.jpg", is_primary=True
-                    )
-                ],
-                nights=nights,
-                source="mock",
-                instant_book=i % 2 == 0,
+        return [
+            AccommodationListing.model_validate(
+                {
+                    "id": str(uuid4()),
+                    "name": f"Sample {property_types[i].value.title()} {i + 1}",
+                    "description": (
+                        "A beautiful "
+                        f"{property_types[i].value} in {search_request.location}"
+                    ),
+                    "property_type": property_types[i].value,
+                    "location": {
+                        "city": search_request.location.split(",")[0].strip(),
+                        "country": "United States",
+                        "neighborhood": "Downtown",
+                        "distance_to_center": 1.0 + i * 0.5,
+                    },
+                    "price_per_night": base_price + (i * 30),
+                    "total_price": (base_price + (i * 30)) * nights,
+                    "currency": getattr(search_request, "currency", "USD"),
+                    "rating": 4.0 + (i * 0.3),
+                    "review_count": 50 + (i * 25),
+                    "max_guests": (search_request.adults or 0)
+                    + (search_request.children or 0)
+                    + i,
+                    "bedrooms": 1 + i,
+                    "beds": 1 + i,
+                    "bathrooms": 1.0 + (i * 0.5),
+                    "amenities": [
+                        {"name": "WiFi"},
+                        {
+                            "name": "Kitchen" if i > 0 else "Restaurant",
+                        },
+                        {
+                            "name": "Pool" if i == 2 else "Air Conditioning",
+                        },
+                    ],
+                    "images": [
+                        {
+                            "url": f"https://example.com/image{i + 1}.jpg",
+                            "is_primary": True,
+                        }
+                    ],
+                    "nights": nights,
+                    "source": "mock",
+                    "instant_book": i % 2 == 0,
+                }
             )
-            listings.append(listing)
-
-        return listings
+            for i in range(3)
+        ]
 
     async def _score_listings(
         self,
-        listings: List[AccommodationListing],
+        listings: list[AccommodationListing],
         search_request: AccommodationSearchRequest,
-    ) -> List[AccommodationListing]:
+    ) -> list[AccommodationListing]:
         """Score and rank accommodation listings."""
         if not listings:
             return listings
@@ -965,15 +1025,17 @@ class AccommodationService:
         import hashlib
 
         key_data = (
+            f"{search_request.user_id}:{search_request.trip_id or 'none'}:"
             f"{search_request.location}:{search_request.check_in}:"
             f"{search_request.check_out}:"
-            f"{(search_request.adults or 1) + (search_request.children or 0)}:"
+            f"{search_request.guests}:"
+            f"{(search_request.adults or 0)}:{(search_request.children or 0)}:"
             f"{search_request.min_price}:{search_request.max_price}"
         )
 
         return hashlib.sha256(key_data.encode()).hexdigest()[:16]
 
-    def _get_cached_search(self, cache_key: str) -> Optional[Dict[str, Any]]:
+    def _get_cached_search(self, cache_key: str) -> dict[str, Any] | None:
         """Get cached search results if still valid."""
         if cache_key in self._search_cache:
             result, timestamp = self._search_cache[cache_key]
@@ -981,11 +1043,10 @@ class AccommodationService:
 
             if time.time() - timestamp < self.cache_ttl:
                 return result
-            else:
-                del self._search_cache[cache_key]
+            del self._search_cache[cache_key]
         return None
 
-    def _cache_search_results(self, cache_key: str, result: Dict[str, Any]) -> None:
+    def _cache_search_results(self, cache_key: str, result: dict[str, Any]) -> None:
         """Cache search results."""
         import time
 
@@ -1003,26 +1064,32 @@ class AccommodationService:
         self,
         search_id: str,
         search_request: AccommodationSearchRequest,
-        listings: List[AccommodationListing],
+        listings: list[AccommodationListing],
     ) -> None:
         """Store search history in database."""
         try:
             search_data = {
                 "id": search_id,
+                "user_id": search_request.user_id,
+                "trip_id": search_request.trip_id,
                 "location": search_request.location,
                 "check_in": search_request.check_in.isoformat(),
                 "check_out": search_request.check_out.isoformat(),
-                "guests": search_request.adults + search_request.children,
+                "guests": search_request.guests,
+                "adults": search_request.adults,
+                "children": search_request.children,
+                "infants": search_request.infants,
                 "listings_count": len(listings),
-                "search_timestamp": datetime.now(timezone.utc).isoformat(),
+                "search_timestamp": datetime.now(UTC).isoformat(),
+                "metadata": search_request.metadata or {},
             }
 
             await self.db.store_accommodation_search(search_data)
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.warning(
                 "Failed to store search history",
-                extra={"search_id": search_id, "error": str(e)},
+                extra={"search_id": search_id, "error": str(error)},
             )
 
     async def _store_listing(self, listing: AccommodationListing, user_id: str) -> None:
@@ -1030,28 +1097,36 @@ class AccommodationService:
         try:
             listing_data = listing.model_dump()
             listing_data["user_id"] = user_id
-            listing_data["stored_at"] = datetime.now(timezone.utc).isoformat()
+            listing_data["stored_at"] = (
+                listing.stored_at.isoformat()
+                if listing.stored_at
+                else datetime.now(UTC).isoformat()
+            )
 
             await self.db.store_accommodation_listing(listing_data)
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.warning(
                 "Failed to store listing",
-                extra={"listing_id": listing.id, "error": str(e)},
+                extra={"listing_id": listing.id, "error": str(error)},
             )
 
     async def _store_booking(self, booking: AccommodationBooking) -> None:
         """Store accommodation booking in database."""
         try:
             booking_data = booking.model_dump()
-            booking_data["created_at"] = datetime.now(timezone.utc).isoformat()
+            booking_data["created_at"] = (
+                booking.created_at.isoformat()
+                if booking.created_at
+                else datetime.now(UTC).isoformat()
+            )
 
             await self.db.store_accommodation_booking(booking_data)
 
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "Failed to store booking",
-                extra={"booking_id": booking.id, "error": str(e)},
+                extra={"booking_id": booking.id, "error": str(error)},
             )
             raise
 
@@ -1059,7 +1134,8 @@ class AccommodationService:
         self,
         listing: AccommodationListing,
         booking_request: AccommodationBookingRequest,
-    ) -> Optional[Dict[str, Any]]:
+        user_id: str,
+    ) -> dict[str, Any] | None:
         """Book accommodation using external API."""
         if not self.external_service:
             return None
@@ -1075,6 +1151,11 @@ class AccommodationService:
                 "guest_email": booking_request.guest_email,
                 "guest_phone": booking_request.guest_phone,
                 "special_requests": booking_request.special_requests,
+                "user_id": user_id,
+                "trip_id": booking_request.trip_id,
+                "payment_method": booking_request.payment_method,
+                "hold_only": booking_request.hold_only,
+                "metadata": booking_request.metadata or {},
             }
 
             # Create external booking
@@ -1088,10 +1169,10 @@ class AccommodationService:
                 "is_refundable": external_booking.get("is_refundable", False),
             }
 
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "External booking failed",
-                extra={"listing_id": listing.id, "error": str(e)},
+                extra={"listing_id": listing.id, "error": str(error)},
             )
             return None
 
@@ -1105,19 +1186,14 @@ class AccommodationService:
             # Implementation depends on the external service
             pass
 
-        except Exception as e:
-            logger.error(
+        except RECOVERABLE_ERRORS as error:
+            logger.exception(
                 "External cancellation failed",
-                extra={"booking_id": booking.id, "error": str(e)},
+                extra={"booking_id": booking.id, "error": str(error)},
             )
 
 
 # Dependency function for FastAPI
 async def get_accommodation_service() -> AccommodationService:
-    """
-    Get accommodation service instance for dependency injection.
-
-    Returns:
-        AccommodationService instance
-    """
+    """Get accommodation service instance for dependency injection."""
     return AccommodationService()

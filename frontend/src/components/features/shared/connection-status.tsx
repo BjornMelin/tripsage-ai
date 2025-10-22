@@ -586,8 +586,6 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
 
 export default ConnectionStatus;
 
-// Legacy exports for backward compatibility
-export const EnhancedConnectionStatus = ConnectionStatus;
 export const CompactConnectionStatus = (props: ConnectionStatusProps) => (
   <ConnectionStatus {...props} variant="compact" />
 );

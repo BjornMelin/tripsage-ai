@@ -1,5 +1,4 @@
-"""
-Integration tests for weather service functionality.
+"""Integration tests for weather service functionality.
 
 Modern tests that validate weather service operations with mocked
 external API dependencies using actual service APIs.
@@ -8,9 +7,14 @@ external API dependencies using actual service APIs.
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
 
-from tripsage_core.services.external_apis.weather_service import WeatherService
+from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.services.external_apis.weather_service import (
+    WeatherService,
+    WeatherServiceError,
+)
 
 
 @pytest.fixture
@@ -264,16 +268,15 @@ class TestWeatherServiceIntegration:
         except AttributeError:
             # If connect method doesn't exist, that's also fine
             pass
-        except Exception as e:
+        except (WeatherServiceError, CoreServiceError, httpx.HTTPError) as exc:
             # Any other exception should be related to configuration
-            assert "api" in str(e).lower() or "key" in str(e).lower()
+            assert "api" in str(exc).lower() or "key" in str(exc).lower()
 
-        try:
+        from contextlib import suppress
+
+        with suppress(AttributeError):
             await weather_service.disconnect()
             # If disconnect method exists and succeeds, that's good
-        except AttributeError:
-            # If disconnect method doesn't exist, that's also fine
-            pass
 
     @pytest.mark.asyncio
     async def test_api_error_handling(self, weather_service):
@@ -314,10 +317,10 @@ class TestWeatherServiceIntegration:
             # If service creation succeeds, try to use it to trigger API key validation
             await service.get_current_weather(40.7484, -73.9857)
             # If we get here without exception, that's acceptable for integration test
-        except Exception as e:
+        except (WeatherServiceError, CoreServiceError, httpx.HTTPError) as exc:
             # Should raise some kind of error related to API key or settings
             assert any(
-                word in str(e).lower()
+                word in str(exc).lower()
                 for word in ["api", "key", "settings", "configuration", "auth"]
             )
 
@@ -331,10 +334,10 @@ class TestWeatherServiceIntegration:
         except AttributeError:
             # If method doesn't exist, that's also acceptable
             pass
-        except Exception as e:
+        except (WeatherServiceError, CoreServiceError, httpx.HTTPError) as exc:
             # Any other exception should be configuration-related
             assert any(
-                word in str(e).lower()
+                word in str(exc).lower()
                 for word in ["api", "key", "connection", "settings"]
             )
 

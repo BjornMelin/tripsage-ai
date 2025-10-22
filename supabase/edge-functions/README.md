@@ -252,7 +252,7 @@ async function notifyNewCollaborator(
 
 ### Unit Tests
 
-Each function includes comprehensive tests:
+Each function includes tests:
 
 ```typescript
 // ai-processing/index.test.ts

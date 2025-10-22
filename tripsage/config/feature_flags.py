@@ -7,7 +7,7 @@ integration due to lack of an official API.
 """
 
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -103,7 +103,7 @@ class FeatureFlags(BaseSettings):
         else:
             raise ValueError(f"Service '{service_name}' not supported")
 
-    def get_migration_status(self) -> Dict[str, Any]:
+    def get_migration_status(self) -> dict[str, Any]:
         """Get current migration status for all services.
 
         Returns:

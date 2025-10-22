@@ -1,10 +1,10 @@
-"""
-Clean, focused test suite for auth router.
+"""Clean, focused test suite for auth router.
 
 Tests basic structure and imports without requiring full app startup.
 """
 
 import pytest
+from pydantic import ValidationError
 
 
 class TestAuthRouterStructure:
@@ -74,7 +74,7 @@ class TestAuthSchemas:
             assert request.full_name == "Test User"
         except ImportError:
             pytest.skip("RegisterRequest schema not available")
-        except Exception as e:
+        except (ValidationError, ValueError, TypeError) as e:
             # Schema might have different required fields than expected
             pytest.skip(
                 f"RegisterRequest schema structure different than expected: {e}"
@@ -102,7 +102,7 @@ class TestAuthSchemas:
             assert response.is_active is True
         except ImportError:
             pytest.skip("UserResponse schema not available")
-        except Exception as e:
+        except (ValidationError, ValueError, TypeError) as e:
             # Schema might have different required fields than expected
             pytest.skip(f"UserResponse schema structure different than expected: {e}")
 

@@ -1,10 +1,9 @@
-"""
-Comprehensive tests for flight models.
+"""Tests for flight models.
 
 Tests validation, serialization, and business logic for flight-related models.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -88,7 +87,7 @@ class TestFlightModel:
 
     def test_flight_datetime_validation(self, sample_flight_dict):
         """Test departure and arrival time validation."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         departure = now + timedelta(hours=2)
         arrival = departure + timedelta(hours=12)
 
@@ -105,7 +104,7 @@ class TestFlightModel:
 
     def test_flight_datetime_logical_validation(self, sample_flight_dict):
         """Test that arrival time must be after departure time."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         departure = now + timedelta(hours=12)
         arrival = now + timedelta(hours=2)  # Before departure
 
@@ -124,7 +123,7 @@ class TestFlightModel:
 
     def test_flight_duration_calculation(self, sample_flight_dict):
         """Test flight duration calculation."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         departure = now + timedelta(hours=2)
         arrival = departure + timedelta(hours=8, minutes=30)  # 8.5 hour flight
 
@@ -282,7 +281,7 @@ class TestFlightModel:
 
     def test_flight_search_timestamp_handling(self, sample_flight_dict):
         """Test search timestamp field."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         sample_flight_dict["search_timestamp"] = now
 
         flight = Flight(**sample_flight_dict)
@@ -330,7 +329,7 @@ class TestFlightModel:
     def test_flight_timezone_handling(self, sample_flight_dict):
         """Test timezone-aware datetime handling."""
         # Test with different timezones
-        utc_time = datetime.now(timezone.utc)
+        utc_time = datetime.now(UTC)
 
         sample_flight_dict.update(
             {

@@ -1,12 +1,10 @@
-"""
-Configuration management API endpoints.
+"""Configuration management API endpoints.
 
 Provides RESTful endpoints for managing agent configurations with validation,
 versioning, and real-time updates following 2025 best practices.
 """
 
-from datetime import datetime, timezone
-from typing import List
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
@@ -16,11 +14,40 @@ from tripsage.api.schemas.config import (
     AgentConfigRequest,
     AgentConfigResponse,
     AgentType,
+    ConfigurationScope,
     ConfigurationVersion,
     WebSocketConfigMessage,
 )
 from tripsage_core.config import get_settings
+from tripsage_core.observability.otel import record_histogram, trace_span
 from tripsage_core.utils.logging_utils import get_logger
+
+
+# Default agent configurations
+DEFAULT_AGENT_CONFIGS = {
+    AgentType.BUDGET_AGENT: {
+        "temperature": 0.1,
+        "max_tokens": 1000,
+        "top_p": 0.9,
+        "timeout_seconds": 30,
+        "model": "gpt-4o-mini",
+    },
+    AgentType.DESTINATION_RESEARCH_AGENT: {
+        "temperature": 0.3,
+        "max_tokens": 2000,
+        "top_p": 0.95,
+        "timeout_seconds": 60,
+        "model": "gpt-4o",
+    },
+    AgentType.ITINERARY_AGENT: {
+        "temperature": 0.2,
+        "max_tokens": 3000,
+        "top_p": 0.9,
+        "timeout_seconds": 120,
+        "model": "gpt-4o",
+    },
+}
+
 
 logger = get_logger(__name__)
 
@@ -32,13 +59,16 @@ class ConfigurationWebSocketManager:
     """Manages WebSocket connections for real-time configuration updates."""
 
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        """Initialize Config."""
+        self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
+        """Accept and track WebSocket connection."""
         await websocket.accept()
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
+        """Remove WebSocket from tracking."""
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
 
@@ -47,7 +77,8 @@ class ConfigurationWebSocketManager:
         for connection in self.active_connections.copy():
             try:
                 await connection.send_json(message.model_dump())
-            except Exception:
+            except (OSError, RuntimeError):
+                # Network/connection errors during WebSocket send
                 self.disconnect(connection)
 
 
@@ -55,17 +86,19 @@ class ConfigurationWebSocketManager:
 ws_manager = ConfigurationWebSocketManager()
 
 
-@router.get("/agents", response_model=List[str])
+@router.get("/agents", response_model=list[str])
+@trace_span(name="api.config.agents.list")
+@record_histogram("api.op.duration", unit="s")
 async def list_agent_types():
     """List all available agent types."""
     return ["budget_agent", "destination_research_agent", "itinerary_agent"]
 
 
 @router.get("/agents/{agent_type}", response_model=AgentConfigResponse)
+@trace_span(name="api.config.agents.get")
+@record_histogram("api.op.duration", unit="s")
 async def get_agent_config(agent_type: str):
     """Get current configuration for a specific agent type."""
-    settings = get_settings()
-
     # Validate agent type
     valid_agents = ["budget_agent", "destination_research_agent", "itinerary_agent"]
     if agent_type not in valid_agents:
@@ -75,31 +108,35 @@ async def get_agent_config(agent_type: str):
         )
 
     try:
-        config = settings.get_agent_config(agent_type)
+        agent_type_enum = AgentType(agent_type)
+        config = DEFAULT_AGENT_CONFIGS.get(agent_type_enum)
+        if not config:
+            raise ValueError(f"Unknown agent type: {agent_type}")
 
         return AgentConfigResponse(
-            agent_type=agent_type,
+            agent_type=agent_type_enum,
             temperature=config["temperature"],
             max_tokens=config["max_tokens"],
             top_p=config["top_p"],
             timeout_seconds=config["timeout_seconds"],
             model=config["model"],
-            updated_at=datetime.now(timezone.utc),
+            scope=ConfigurationScope.AGENT_SPECIFIC,
+            updated_at=datetime.now(UTC),
         )
     except Exception as e:
-        logger.error(f"Error getting agent config for {agent_type}: {e}")
+        logger.exception("Error getting agent config for %s", agent_type)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.put("/agents/{agent_type}", response_model=AgentConfigResponse)
+@trace_span(name="api.config.agents.update")
+@record_histogram("api.op.duration", unit="s")
 async def update_agent_config(
     agent_type: str,
     config_update: AgentConfigRequest,
     current_user: str = Depends(get_current_user_id),
 ):
     """Update configuration for a specific agent type."""
-    settings = get_settings()
-
     # Validate agent type
     valid_agents = ["budget_agent", "destination_research_agent", "itinerary_agent"]
     if agent_type not in valid_agents:
@@ -109,8 +146,11 @@ async def update_agent_config(
         )
 
     try:
-        # Get current config for validation
-        settings.get_agent_config(agent_type)
+        # Get current config
+        agent_type_enum = AgentType(agent_type)
+        current_config = DEFAULT_AGENT_CONFIGS.get(agent_type_enum)
+        if not current_config:
+            raise ValueError(f"Unknown agent type: {agent_type}")
 
         # Create update dict with only provided values
         updates = {}
@@ -126,7 +166,7 @@ async def update_agent_config(
             updates["model"] = config_update.model
 
         # Apply updates to get new config
-        updated_config = settings.get_agent_config(agent_type, **updates)
+        updated_config = {**current_config, **updates}
 
         # TODO: Persist to database here
         # await _persist_agent_config(agent_type, updated_config, current_user)
@@ -144,27 +184,28 @@ async def update_agent_config(
         )
         await ws_manager.broadcast_update(message)
 
-        logger.info(f"Agent config updated for {agent_type} by {current_user}")
+        logger.info("Agent config updated for %s by %s", agent_type, current_user)
 
         return AgentConfigResponse(
-            agent_type=agent_type,
+            agent_type=AgentType(agent_type),
             temperature=updated_config["temperature"],
             max_tokens=updated_config["max_tokens"],
             top_p=updated_config["top_p"],
             timeout_seconds=updated_config["timeout_seconds"],
             model=updated_config["model"],
-            updated_at=datetime.now(timezone.utc),
+            scope=ConfigurationScope.AGENT_SPECIFIC,
+            updated_at=datetime.now(UTC),
             updated_by=current_user,
         )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        logger.error(f"Error updating agent config for {agent_type}: {e}")
+        logger.exception("Error updating agent config for %s", agent_type)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/agents/{agent_type}/versions", response_model=List[ConfigurationVersion])
+@router.get("/agents/{agent_type}/versions", response_model=list[ConfigurationVersion])
 async def get_agent_config_versions(
     agent_type: str, limit: int = 10, current_user: str = Depends(get_current_user_id)
 ):
@@ -185,7 +226,7 @@ async def get_agent_config_versions(
         return []
 
     except Exception as e:
-        logger.error(f"Error getting config versions for {agent_type}: {e}")
+        logger.exception("Error getting config versions for %s", agent_type)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -224,7 +265,7 @@ async def rollback_agent_config(
         )
 
     except Exception as e:
-        logger.error(f"Error rolling back config for {agent_type}: {e}")
+        logger.exception("Error rolling back config for %s", agent_type)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -237,17 +278,17 @@ async def get_environment_config():
         "environment": settings.environment,
         "debug": settings.debug,
         "feature_flags": {
-            "enable_advanced_agents": settings.enable_advanced_agents,
-            "enable_memory_system": settings.enable_memory_system,
-            "enable_real_time": settings.enable_real_time,
-            "enable_vector_search": settings.enable_vector_search,
-            "enable_monitoring": settings.enable_monitoring,
+            "enable_advanced_agents": True,
+            "enable_memory_system": True,
+            "enable_real_time": settings.enable_websockets,
+            "enable_vector_search": True,
+            "enable_monitoring": True,
         },
         "global_defaults": {
-            "temperature": settings.agent_default_temperature,
-            "max_tokens": settings.agent_default_max_tokens,
-            "top_p": settings.agent_default_top_p,
-            "timeout_seconds": settings.agent_timeout_seconds,
+            "temperature": settings.model_temperature,
+            "max_tokens": 2000,  # Default max tokens
+            "top_p": 0.9,  # Default top_p
+            "timeout_seconds": 60,  # Default timeout
             "model": settings.openai_model,
         },
     }
@@ -263,6 +304,6 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
-    except Exception as e:
-        logger.error(f"Configuration WebSocket error: {e}")
+    except Exception:
+        logger.exception("Configuration WebSocket error")
         ws_manager.disconnect(websocket)

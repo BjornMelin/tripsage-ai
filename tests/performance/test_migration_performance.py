@@ -5,9 +5,9 @@ Compares previous baseline performance with current DragonflyDB operations.
 """
 
 import asyncio
+import contextlib
 import time
 from statistics import mean, median
-from typing import Dict, List
 
 import pytest
 
@@ -23,15 +23,16 @@ class PerformanceBenchmark:
     """Utility class for conducting performance benchmarks."""
 
     def __init__(self, iterations: int = 100):
+        """Set benchmark iteration count and allocate result storage."""
         self.iterations = iterations
-        self.results: Dict[str, List[float]] = {}
+        self.results: dict[str, list[float]] = {}
 
     async def time_operation(self, name: str, operation, *args, **kwargs) -> float:
         """Time a single operation and return execution time in milliseconds."""
         start_time = time.perf_counter()
         try:
             await operation(*args, **kwargs)
-        except Exception as e:
+        except (RuntimeError, OSError, TimeoutError) as e:
             print(f"Operation {name} failed: {e}")
             return float("inf")
         end_time = time.perf_counter()
@@ -39,7 +40,7 @@ class PerformanceBenchmark:
 
     async def benchmark_operation(
         self, name: str, operation, *args, **kwargs
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Benchmark an operation multiple times and return statistics."""
         times = []
         for _ in range(self.iterations):
@@ -73,10 +74,8 @@ async def dragonfly_service():
     yield service
     # Cleanup if needed
     if hasattr(service, "disconnect"):
-        try:
+        with contextlib.suppress(Exception):
             await service.close()
-        except Exception:
-            pass
 
 
 @pytest.fixture
@@ -243,14 +242,14 @@ class TestOverallMigrationImpact:
             print(f"  {service}: {mode.value}")
 
         # Verify our migrated services are using direct mode by default
-        assert (
-            flags.redis_integration == IntegrationMode.DIRECT
-            or flags.redis_integration == IntegrationMode.MCP
-        )
-        assert (
-            flags.supabase_integration == IntegrationMode.DIRECT
-            or flags.supabase_integration == IntegrationMode.MCP
-        )
+        assert flags.redis_integration in {
+            IntegrationMode.DIRECT,
+            IntegrationMode.MCP,
+        }
+        assert flags.supabase_integration in {
+            IntegrationMode.DIRECT,
+            IntegrationMode.MCP,
+        }
 
     async def test_performance_improvement_validation(self, performance_benchmark):
         """Validate that we've achieved meaningful performance improvements."""
@@ -286,7 +285,7 @@ class TestOverallMigrationImpact:
 
 # Utility function for manual performance testing
 async def run_comprehensive_benchmark():
-    """Run comprehensive performance benchmark for manual testing."""
+    """Run performance benchmark for manual testing."""
     print("=" * 60)
     print("TripSage SDK Migration Performance Benchmark")
     print("=" * 60)

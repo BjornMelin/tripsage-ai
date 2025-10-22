@@ -1,5 +1,5 @@
 /**
- * Comprehensive test suite for AI Processing Edge Function
+ * Test suite for AI Processing Edge Function
  * 
  * Tests cover:
  * - HTTP request/response handling

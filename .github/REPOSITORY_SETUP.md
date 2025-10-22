@@ -1,6 +1,6 @@
 # Repository Setup Guide
 
-This document provides comprehensive instructions for setting up a new TripSage
+This document provides instructions for setting up a new TripSage
 repository with all required secrets, configurations, and CI/CD workflows.
 
 ## Required Repository Secrets

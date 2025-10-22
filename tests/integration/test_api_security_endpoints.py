@@ -1,7 +1,6 @@
-"""
-API security integration tests for all fixed endpoints with real HTTP requests.
+"""API security integration tests for all fixed endpoints with real HTTP requests.
 
-This module provides comprehensive integration testing for API security features,
+This module provides integration testing for API security features,
 testing real HTTP requests against secured endpoints. These tests verify:
 
 - All fixed endpoints with real HTTP requests
@@ -17,7 +16,7 @@ Uses FastAPI TestClient for realistic HTTP request simulation.
 
 import json
 from datetime import date
-from typing import Any, Dict, Optional
+from typing import Any
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -123,7 +122,7 @@ class TestAPISecurityEndpoints:
         )
 
     @pytest.fixture
-    def valid_headers(self) -> Dict[str, str]:
+    def valid_headers(self) -> dict[str, str]:
         """Valid request headers."""
         return {
             "Authorization": "Bearer valid-jwt-token",
@@ -133,7 +132,7 @@ class TestAPISecurityEndpoints:
         }
 
     @pytest.fixture
-    def invalid_headers(self) -> Dict[str, str]:
+    def invalid_headers(self) -> dict[str, str]:
         """Invalid request headers."""
         return {
             "Authorization": "Bearer invalid-jwt-token",
@@ -142,7 +141,7 @@ class TestAPISecurityEndpoints:
         }
 
     @pytest.fixture
-    def test_trip_data(self) -> Dict[str, Any]:
+    def test_trip_data(self) -> dict[str, Any]:
         """Test trip data for API requests."""
         return {
             "title": "API Security Test Trip",
@@ -338,9 +337,9 @@ class TestAPISecurityEndpoints:
         self,
         client: TestClient,
         valid_principal: Principal,
-        valid_headers: Dict[str, str],
-        invalid_headers: Dict[str, str],
-        test_trip_data: Dict[str, Any],
+        valid_headers: dict[str, str],
+        invalid_headers: dict[str, str],
+        test_trip_data: dict[str, Any],
     ):
         """Test CRUD operations on trips endpoints for security."""
         trip_id = str(uuid4())
@@ -422,7 +421,7 @@ class TestAPISecurityEndpoints:
         self,
         client: TestClient,
         valid_principal: Principal,
-        valid_headers: Dict[str, str],
+        valid_headers: dict[str, str],
     ):
         """Test trips list endpoint security and pagination."""
         with (
@@ -465,7 +464,7 @@ class TestAPISecurityEndpoints:
         self,
         client: TestClient,
         valid_principal: Principal,
-        valid_headers: Dict[str, str],
+        valid_headers: dict[str, str],
     ):
         """Test trips search endpoint security."""
         with (
@@ -513,7 +512,7 @@ class TestAPISecurityEndpoints:
         self,
         client: TestClient,
         valid_principal: Principal,
-        valid_headers: Dict[str, str],
+        valid_headers: dict[str, str],
     ):
         """Test user profile endpoint security."""
         with (
@@ -587,7 +586,7 @@ class TestAPISecurityEndpoints:
         client: TestClient,
         valid_principal: Principal,
         admin_principal: Principal,
-        valid_headers: Dict[str, str],
+        valid_headers: dict[str, str],
     ):
         """Test admin-only endpoints security."""
         with (
@@ -619,7 +618,7 @@ class TestAPISecurityEndpoints:
         self,
         client: TestClient,
         valid_principal: Principal,
-        valid_headers: Dict[str, str],
+        valid_headers: dict[str, str],
     ):
         """Test chat endpoints security."""
         with (
@@ -718,7 +717,7 @@ class TestAPISecurityEndpoints:
         self,
         client: TestClient,
         valid_principal: Principal,
-        valid_headers: Dict[str, str],
+        valid_headers: dict[str, str],
     ):
         """Test rate limiting enforcement."""
         with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
@@ -787,7 +786,7 @@ class TestAPISecurityEndpoints:
         self,
         client: TestClient,
         valid_principal: Principal,
-        valid_headers: Dict[str, str],
+        valid_headers: dict[str, str],
     ):
         """Test input validation across different endpoints."""
         with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
@@ -848,7 +847,7 @@ class TestAPISecurityEndpoints:
                 # Should reject malicious files or not be implemented
                 assert response.status_code in [400, 403, 404, 413, 415, 422]
 
-    # ===== COMPREHENSIVE ENDPOINT COVERAGE TESTS =====
+    # ===== ENDPOINT COVERAGE TESTS =====
 
     def test_all_authenticated_endpoints_require_auth(self, client: TestClient):
         """Test that all authenticated endpoints properly require authentication."""
@@ -940,8 +939,8 @@ class TestAPISecurityEndpoints:
 
 
 def create_test_headers(
-    token: str = "valid_token", additional_headers: Optional[Dict[str, str]] = None
-) -> Dict[str, str]:
+    token: str = "valid_token", additional_headers: dict[str, str] | None = None
+) -> dict[str, str]:
     """Helper function to create test headers."""
     headers = {
         "Authorization": f"Bearer {token}",
@@ -989,3 +988,4 @@ def simulate_malicious_request(
         return client.put(endpoint, json={}, headers=malicious_headers)
     elif method == "DELETE":
         return client.delete(endpoint, headers=malicious_headers)
+    return None

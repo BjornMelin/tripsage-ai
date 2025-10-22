@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-Supabase Extensions Verification Script
+"""Supabase Extensions Verification Script.
+
 Verifies that all required extensions are properly installed and configured.
 """
 
@@ -14,6 +14,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+
 console = Console()
 
 # Extension requirements
@@ -23,7 +24,7 @@ REQUIRED_EXTENSIONS = {
     "pg_cron": "Scheduled job automation",
     "pg_net": "HTTP requests from database",
     "pg_stat_statements": "Query performance monitoring",
-    "btree_gist": "Advanced indexing capabilities",
+    "btree_gist": "Indexing capabilities",
     "pgcrypto": "Encryption functions",
 }
 
@@ -45,7 +46,14 @@ REALTIME_TABLES = [
 
 
 class ExtensionVerifier:
+    """Verifier for Supabase extensions and automation features."""
+
     def __init__(self, database_url: str):
+        """Initialize extension verifier.
+
+        Args:
+            database_url: Database connection URL
+        """
         self.database_url = database_url
         self.connection: asyncpg.Connection | None = None
 
@@ -54,7 +62,7 @@ class ExtensionVerifier:
         try:
             self.connection = await asyncpg.connect(self.database_url)
             console.print("✅ Connected to database", style="green")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             console.print(f"❌ Failed to connect to database: {e}", style="red")
             sys.exit(1)
 
@@ -63,13 +71,14 @@ class ExtensionVerifier:
         if self.connection:
             await self.connection.close()
 
-    async def verify_extensions(self) -> dict[str, bool]:
+    async def verify_extensions(self) -> bool:
         """Verify all required extensions are installed."""
-        console.print("\n🔍 Checking Extensions...", style="bold blue")
+        console.print("\nChecking Extensions...", style="bold blue")
+        assert self.connection is not None
 
         query = """
-        SELECT extname, extversion 
-        FROM pg_extension 
+        SELECT extname, extversion
+        FROM pg_extension
         WHERE extname = ANY($1)
         ORDER BY extname
         """
@@ -100,12 +109,13 @@ class ExtensionVerifier:
 
     async def verify_automation_tables(self) -> bool:
         """Verify automation tables exist."""
-        console.print("\n🔍 Checking Automation Tables...", style="bold blue")
+        console.print("\nChecking Automation Tables...", style="bold blue")
+        assert self.connection is not None
 
         query = """
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
         AND table_name = ANY($1)
         """
 
@@ -139,7 +149,8 @@ class ExtensionVerifier:
 
     async def verify_realtime_setup(self) -> bool:
         """Verify Realtime publication is configured."""
-        console.print("\n🔍 Checking Realtime Configuration...", style="bold blue")
+        console.print("\nChecking Realtime Configuration...", style="bold blue")
+        assert self.connection is not None
 
         # Check if publication exists
         pub_query = (
@@ -153,8 +164,8 @@ class ExtensionVerifier:
 
         # Check tables in publication
         tables_query = """
-        SELECT schemaname, tablename 
-        FROM pg_publication_tables 
+        SELECT schemaname, tablename
+        FROM pg_publication_tables
         WHERE pubname = 'supabase_realtime'
         ORDER BY tablename
         """
@@ -192,12 +203,13 @@ class ExtensionVerifier:
 
     async def verify_scheduled_jobs(self) -> bool:
         """Verify pg_cron jobs are configured."""
-        console.print("\n🔍 Checking Scheduled Jobs...", style="bold blue")
+        console.print("\nChecking Scheduled Jobs...", style="bold blue")
+        assert self.connection is not None
 
         try:
             query = """
-            SELECT jobname, schedule, command, active 
-            FROM cron.job 
+            SELECT jobname, schedule, command, active
+            FROM cron.job
             ORDER BY jobname
             """
 
@@ -226,18 +238,19 @@ class ExtensionVerifier:
             console.print(f"\nTotal jobs configured: {len(results)}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             console.print(f"❌ Error checking scheduled jobs: {e}", style="red")
             return False
 
     async def verify_webhook_configs(self) -> bool:
         """Verify webhook configurations."""
-        console.print("\n🔍 Checking Webhook Configurations...", style="bold blue")
+        console.print("\nChecking Webhook Configurations...", style="bold blue")
+        assert self.connection is not None
 
         try:
             query = """
             SELECT name, url, is_active, array_length(events, 1) as event_count
-            FROM webhook_configs 
+            FROM webhook_configs
             ORDER BY name
             """
 
@@ -266,13 +279,14 @@ class ExtensionVerifier:
             console.print(f"\nTotal webhook configs: {len(results)}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             console.print(f"❌ Error checking webhook configs: {e}", style="red")
             return False
 
     async def test_functions(self) -> bool:
         """Test critical automation functions."""
-        console.print("\n🔍 Testing Automation Functions...", style="bold blue")
+        console.print("\nTesting Automation Functions...", style="bold blue")
+        assert self.connection is not None
 
         functions_to_test = [
             ("verify_extensions()", "Extension verification"),
@@ -290,7 +304,7 @@ class ExtensionVerifier:
             try:
                 await self.connection.fetch(f"SELECT * FROM {func_call}")
                 status = "✅ Working"
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 status = f"❌ Error: {str(e)[:30]}..."
                 all_good = False
 
@@ -305,7 +319,7 @@ class ExtensionVerifier:
             Panel.fit(
                 "[bold blue]TripSage Supabase Extensions Verification[/bold blue]\n"
                 f"Timestamp: {datetime.now().isoformat()}",
-                title="🚀 Extension Verifier",
+                title="Extension Verifier",
             )
         )
 
@@ -324,7 +338,7 @@ class ExtensionVerifier:
         for check_name, check_coro in checks:
             try:
                 results[check_name] = await check_coro
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 console.print(f"❌ Error in {check_name}: {e}", style="red")
                 results[check_name] = False
 
@@ -332,7 +346,7 @@ class ExtensionVerifier:
 
         # Summary
         console.print("\n" + "=" * 60)
-        console.print("📋 VERIFICATION SUMMARY", style="bold")
+        console.print("VERIFICATION SUMMARY", style="bold")
         console.print("=" * 60)
 
         all_passed = True
@@ -346,7 +360,7 @@ class ExtensionVerifier:
         console.print("=" * 60)
         if all_passed:
             console.print(
-                "🎉 All checks passed! Extensions are properly configured.",
+                "All checks passed! Extensions are properly configured.",
                 style="bold green",
             )
         else:

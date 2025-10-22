@@ -1,9 +1,9 @@
-"""Modern comprehensive unit tests for chat router.
+"""Modern unit tests for chat router.
 
 Tests the chat router endpoints using 2025 FastAPI testing patterns:
 - Modern dependency injection with Annotated types
 - Proper async testing with pytest-asyncio
-- Comprehensive error handling and edge cases
+- Error handling and edge cases
 - Streaming response testing
 """
 
@@ -35,11 +35,11 @@ class TestChatRouter:
         service = AsyncMock()
         service.chat_completion = AsyncMock()
         service.create_session = AsyncMock()
-        service.list_sessions = AsyncMock()
+        service.get_user_sessions = AsyncMock()
         service.get_session = AsyncMock()
         service.get_messages = AsyncMock()
-        service.create_message = AsyncMock()
-        service.delete_session = AsyncMock()
+        service.add_message = AsyncMock()
+        service.end_session = AsyncMock()
         return service
 
     @pytest.fixture
@@ -324,12 +324,12 @@ class TestChatRouter:
         # Act
         response = await async_client.post(
             "/api/chat/sessions",
-            params={"title": "Tokyo Trip Planning"},
+            json={"title": "Tokyo Trip Planning"},
             headers={"Authorization": "Bearer test-token"},
         )
 
         # Assert
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         assert data["title"] == "Tokyo Trip Planning"
         assert "id" in data
@@ -352,7 +352,7 @@ class TestChatRouter:
                 "created_at": "2024-01-02T00:00:00Z",
             },
         ]
-        mock_chat_service.list_sessions.return_value = sessions
+        mock_chat_service.get_user_sessions.return_value = sessions
 
         # Act
         response = await async_client.get(
@@ -483,12 +483,12 @@ class TestChatRouter:
             "session_id": str(session_id),
             "created_at": "2024-01-01T00:00:00Z",
         }
-        mock_chat_service.create_message.return_value = message_data
+        mock_chat_service.add_message.return_value = message_data
 
         # Act
         response = await async_client.post(
             f"/api/chat/sessions/{session_id}/messages",
-            params={"content": "How's the weather in Tokyo?", "role": "user"},
+            json={"content": "How's the weather in Tokyo?", "role": "user"},
             headers={"Authorization": "Bearer test-token"},
         )
 

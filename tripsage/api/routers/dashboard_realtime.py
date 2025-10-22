@@ -10,25 +10,17 @@ This module provides real-time monitoring capabilities for the dashboard:
 import asyncio
 import json
 import logging
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import (
-    APIRouter,
-    Request,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from tripsage.api.core.dependencies import (
-    CacheDep,
-    DatabaseDep,
-)
-from tripsage_core.services.business.dashboard_service import (
-    ApiKeyMonitoringService,  # Compatibility adapter for BJO-211
-)
+from tripsage.api.core.dependencies import CacheDep, DatabaseDep
+from tripsage_core.services.business.dashboard_service import DashboardService
+
 
 logger = logging.getLogger(__name__)
 
@@ -73,10 +65,11 @@ class SystemEvent(BaseModel):
     details: dict[str, Any] = Field(default_factory=dict)
 
 
-class DashboardConnectionManager:
+class DashboardConnectionService:
     """Manages WebSocket connections for dashboard clients."""
 
     def __init__(self) -> None:
+        """Initialize DashboardConnectionService."""
         self.active_connections: list[WebSocket] = []
         self.connection_metadata: dict[WebSocket, dict[str, Any]] = {}
 
@@ -95,7 +88,7 @@ class DashboardConnectionManager:
             "connected_at": datetime.now(UTC),
         }
 
-        logger.info(f"Dashboard WebSocket connection established for user {user_id}")
+        logger.info("Dashboard WebSocket connection established for user %s", user_id)
 
     def disconnect(self, websocket: WebSocket) -> None:
         """Disconnect a dashboard client."""
@@ -103,14 +96,14 @@ class DashboardConnectionManager:
             self.active_connections.remove(websocket)
             metadata = self.connection_metadata.pop(websocket, {})
             user_id = metadata.get("user_id", "unknown")
-            logger.info(f"Dashboard WebSocket connection closed for user {user_id}")
+            logger.info("Dashboard WebSocket connection closed for user %s", user_id)
 
     async def send_personal_message(self, message: str, websocket: WebSocket) -> None:
         """Send message to specific connection."""
         try:
             await websocket.send_text(message)
-        except Exception as e:
-            logger.error(f"Failed to send personal message: {e}")
+        except Exception:
+            logger.exception("Failed to send personal message")
             self.disconnect(websocket)
 
     async def broadcast(self, message: str, connection_type: str | None = None) -> None:
@@ -126,8 +119,8 @@ class DashboardConnectionManager:
                         continue
 
                 await connection.send_text(message)
-            except Exception as e:
-                logger.error(f"Failed to broadcast message: {e}")
+            except Exception:
+                logger.exception("Failed to broadcast message")
                 disconnected.append(connection)
 
         # Clean up disconnected connections
@@ -160,7 +153,7 @@ class DashboardConnectionManager:
 
 
 # Global connection manager
-dashboard_manager = DashboardConnectionManager()
+dashboard_service = DashboardConnectionService()
 
 
 @router.websocket("/ws/{user_id}")
@@ -177,11 +170,12 @@ async def dashboard_websocket_endpoint(
     - Alert notifications
     - System events and status changes
     """
-    await dashboard_manager.connect(websocket, user_id, "dashboard")
+    await dashboard_service.connect(websocket, user_id, "dashboard")
 
+    metrics_task: asyncio.Task[Any] | None = None
     try:
         # Initialize monitoring service
-        monitoring_service = ApiKeyMonitoringService(
+        monitoring_service = DashboardService(
             cache_service=cache_service,
             database_service=db_service,
         )
@@ -210,18 +204,18 @@ async def dashboard_websocket_endpoint(
             except json.JSONDecodeError:
                 logger.warning("Received invalid JSON from dashboard WebSocket client")
                 continue
-            except Exception as e:
-                logger.error(f"Error handling WebSocket message: {e}")
+            except Exception:
+                logger.exception("Error handling WebSocket message")
                 break
 
     except WebSocketDisconnect:
         pass
-    except Exception as e:
-        logger.error(f"Dashboard WebSocket error: {e}")
+    except Exception:
+        logger.exception("Dashboard WebSocket error")
     finally:
-        if "metrics_task" in locals():
+        if metrics_task is not None:
             metrics_task.cancel()
-        dashboard_manager.disconnect(websocket)
+        dashboard_service.disconnect(websocket)
 
 
 @router.get("/events")
@@ -236,9 +230,9 @@ async def dashboard_events_stream(
     to WebSockets for clients that prefer HTTP-based streaming.
     """
 
-    async def event_stream() -> Any:
+    async def event_stream() -> AsyncIterator[str]:
         """Generate server-sent events."""
-        monitoring_service = ApiKeyMonitoringService(
+        monitoring_service = DashboardService(
             cache_service=cache_service,
             database_service=db_service,
         )
@@ -261,15 +255,15 @@ async def dashboard_events_stream(
                             top_users_limit=5,
                         )
 
+                        metrics_snapshot = dashboard_data.metrics
                         metrics = RealtimeMetrics(
-                            requests_per_second=(
-                                dashboard_data.total_requests / 3600.0
-                            ),  # Simplified
-                            errors_per_second=dashboard_data.total_errors / 3600.0,
-                            success_rate=dashboard_data.overall_success_rate,
+                            requests_per_second=metrics_snapshot.total_requests
+                            / 3600.0,
+                            errors_per_second=metrics_snapshot.total_errors / 3600.0,
+                            success_rate=metrics_snapshot.success_rate,
                             avg_latency_ms=150.0,  # Simplified
                             active_connections=len(
-                                dashboard_manager.active_connections
+                                dashboard_service.active_connections
                             ),
                             cache_hit_rate=0.85,  # Simplified
                             memory_usage_percentage=65.0,  # Simplified
@@ -281,8 +275,8 @@ async def dashboard_events_stream(
 
                         last_metrics_time = now
 
-                    except Exception as e:
-                        logger.error(f"Error generating metrics for SSE: {e}")
+                    except Exception:
+                        logger.exception("Error generating metrics for SSE")
 
                 # Send any new alerts
                 for alert in monitoring_service.active_alerts.values():
@@ -293,7 +287,7 @@ async def dashboard_events_stream(
                             severity=alert.severity,
                             message=alert.message,
                             service=alert.service,
-                            key_id=alert.key_id,
+                            key_id=alert.api_key_id,
                             details=alert.details,
                         )
 
@@ -305,8 +299,8 @@ async def dashboard_events_stream(
 
         except asyncio.CancelledError:
             pass
-        except Exception as e:
-            logger.error(f"Error in SSE stream: {e}")
+        except Exception:
+            logger.exception("Error in SSE stream")
 
     return StreamingResponse(
         event_stream(),
@@ -341,7 +335,7 @@ async def broadcast_alert(
             details=alert_data.get("details", {}),
         )
 
-        await dashboard_manager.send_alert(alert)
+        await dashboard_service.send_alert(alert)
 
         return {
             "success": True,
@@ -350,7 +344,7 @@ async def broadcast_alert(
         }
 
     except Exception as e:
-        logger.error(f"Failed to broadcast alert: {e}")
+        logger.exception("Failed to broadcast alert")
         return {
             "success": False,
             "message": f"Failed to broadcast alert: {e!s}",
@@ -378,7 +372,7 @@ async def broadcast_system_event(
             details=event_data.get("details", {}),
         )
 
-        await dashboard_manager.send_system_event(event)
+        await dashboard_service.send_system_event(event)
 
         return {
             "success": True,
@@ -387,7 +381,7 @@ async def broadcast_system_event(
         }
 
     except Exception as e:
-        logger.error(f"Failed to broadcast system event: {e}")
+        logger.exception("Failed to broadcast system event")
         return {
             "success": False,
             "message": f"Failed to broadcast system event: {e!s}",
@@ -400,28 +394,26 @@ async def get_active_connections() -> dict[str, Any]:
 
     Returns statistics about currently connected dashboard clients.
     """
-    connections_info = []
-
-    for _websocket, metadata in dashboard_manager.connection_metadata.items():
-        connections_info.append(
-            {
-                "user_id": metadata.get("user_id"),
-                "connection_type": metadata.get("connection_type"),
-                "connected_at": metadata.get("connected_at"),
-                "duration_seconds": (
-                    datetime.now(UTC) - metadata.get("connected_at", datetime.now(UTC))
-                ).total_seconds(),
-            }
-        )
+    connections_info = [
+        {
+            "user_id": metadata.get("user_id"),
+            "connection_type": metadata.get("connection_type"),
+            "connected_at": metadata.get("connected_at"),
+            "duration_seconds": (
+                datetime.now(UTC) - metadata.get("connected_at", datetime.now(UTC))
+            ).total_seconds(),
+        }
+        for metadata in dashboard_service.connection_metadata.values()
+    ]
 
     return {
-        "total_connections": len(dashboard_manager.active_connections),
+        "total_connections": len(dashboard_service.active_connections),
         "connections": connections_info,
     }
 
 
 async def _send_periodic_metrics(
-    websocket: WebSocket, monitoring_service: ApiKeyMonitoringService
+    websocket: WebSocket, monitoring_service: DashboardService
 ) -> None:
     """Send periodic metrics updates to a WebSocket connection."""
     try:
@@ -434,14 +426,13 @@ async def _send_periodic_metrics(
                 )
 
                 # Create real-time metrics
+                metrics_snapshot = dashboard_data.metrics
                 metrics = RealtimeMetrics(
-                    requests_per_second=(
-                        dashboard_data.total_requests / 3600.0
-                    ),  # Simplified
-                    errors_per_second=dashboard_data.total_errors / 3600.0,
-                    success_rate=dashboard_data.overall_success_rate,
+                    requests_per_second=metrics_snapshot.total_requests / 3600.0,
+                    errors_per_second=metrics_snapshot.total_errors / 3600.0,
+                    success_rate=metrics_snapshot.success_rate,
                     avg_latency_ms=150.0,  # Would be calculated from actual data
-                    active_connections=len(dashboard_manager.active_connections),
+                    active_connections=len(dashboard_service.active_connections),
                     cache_hit_rate=0.85,  # Would be retrieved from cache service
                     memory_usage_percentage=65.0,  # Would be retrieved from system
                 )
@@ -459,8 +450,8 @@ async def _send_periodic_metrics(
 
             except WebSocketDisconnect:
                 break
-            except Exception as e:
-                logger.error(f"Error sending periodic metrics: {e}")
+            except Exception:
+                logger.exception("Error sending periodic metrics")
                 await asyncio.sleep(5)  # Continue trying
 
     except asyncio.CancelledError:
@@ -470,7 +461,7 @@ async def _send_periodic_metrics(
 async def _handle_subscription(
     websocket: WebSocket,
     message: dict[str, Any],
-    monitoring_service: ApiKeyMonitoringService,
+    monitoring_service: DashboardService,
 ) -> None:
     """Handle client subscription requests."""
     try:
@@ -486,7 +477,7 @@ async def _handle_subscription(
                         severity=alert.severity,
                         message=alert.message,
                         service=alert.service,
-                        key_id=alert.key_id,
+                        key_id=alert.api_key_id,
                         details=alert.details,
                     )
 
@@ -504,12 +495,13 @@ async def _handle_subscription(
                 top_users_limit=5,
             )
 
+            metrics_snapshot = dashboard_data.metrics
             metrics = RealtimeMetrics(
-                requests_per_second=dashboard_data.total_requests / 3600.0,
-                errors_per_second=dashboard_data.total_errors / 3600.0,
-                success_rate=dashboard_data.overall_success_rate,
+                requests_per_second=metrics_snapshot.total_requests / 3600.0,
+                errors_per_second=metrics_snapshot.total_errors / 3600.0,
+                success_rate=metrics_snapshot.success_rate,
                 avg_latency_ms=150.0,
-                active_connections=len(dashboard_manager.active_connections),
+                active_connections=len(dashboard_service.active_connections),
                 cache_hit_rate=0.85,
                 memory_usage_percentage=65.0,
             )
@@ -529,15 +521,15 @@ async def _handle_subscription(
 
         await websocket.send_text(json.dumps(confirmation))
 
-    except Exception as e:
-        logger.error(f"Error handling subscription: {e}")
+    except Exception:
+        logger.exception("Error handling subscription")
 
 
 # Export the dashboard manager for use by other services
 __all__ = [
     "AlertNotification",
-    "DashboardConnectionManager",
+    "DashboardConnectionService",
     "RealtimeMetrics",
     "SystemEvent",
-    "dashboard_manager",
+    "dashboard_service",
 ]

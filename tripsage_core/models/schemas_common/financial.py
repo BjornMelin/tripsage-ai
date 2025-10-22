@@ -1,12 +1,10 @@
-"""
-Financial models and schemas for TripSage AI.
+"""Financial models and schemas for TripSage AI.
 
 This module contains price, currency, budget, and payment-related models
 used across the application for consistent financial data handling.
 """
 
 from decimal import Decimal
-from typing import Dict, Optional
 
 from pydantic import Field, model_validator
 
@@ -19,8 +17,8 @@ class Currency(TripSageModel):
     """Currency information with metadata."""
 
     code: CurrencyCode = Field(description="ISO 4217 currency code")
-    symbol: Optional[str] = Field(None, description="Currency symbol")
-    name: Optional[str] = Field(None, description="Currency name")
+    symbol: str | None = Field(None, description="Currency symbol")
+    name: str | None = Field(None, description="Currency name")
     decimal_places: int = Field(2, ge=0, le=4, description="Number of decimal places")
 
 
@@ -29,13 +27,13 @@ class Price(TripSageModel):
 
     amount: Decimal = Field(description="Price amount", ge=0)
     currency: CurrencyCode = Field(description="Currency code")
-    formatted: Optional[str] = Field(None, description="Formatted price string")
+    formatted: str | None = Field(None, description="Formatted price string")
 
     def to_float(self) -> float:
         """Convert amount to float for calculations."""
         return float(self.amount)
 
-    def format(self, currency_symbol: Optional[str] = None) -> str:
+    def format(self, currency_symbol: str | None = None) -> str:
         """Format price with currency symbol."""
         if self.formatted:
             return self.formatted
@@ -48,7 +46,11 @@ class Price(TripSageModel):
     ) -> "Price":
         """Convert price to another currency using exchange rate."""
         new_amount = self.amount * exchange_rate
-        return Price(amount=new_amount, currency=target_currency)
+        return Price(
+            amount=new_amount,
+            currency=target_currency,
+            formatted=None,
+        )
 
 
 class PriceRange(TripSageModel):
@@ -75,16 +77,20 @@ class PriceRange(TripSageModel):
     def average(self) -> Price:
         """Calculate average price in the range."""
         avg_amount = (self.min_price.amount + self.max_price.amount) / 2
-        return Price(amount=avg_amount, currency=self.min_price.currency)
+        return Price(
+            amount=avg_amount,
+            currency=self.min_price.currency,
+            formatted=None,
+        )
 
 
 class PriceBreakdown(TripSageModel):
     """Detailed price breakdown with components."""
 
     base_price: Price = Field(description="Base price")
-    taxes: Optional[Price] = Field(None, description="Tax amount")
-    fees: Optional[Price] = Field(None, description="Additional fees")
-    discounts: Optional[Price] = Field(None, description="Discount amount")
+    taxes: Price | None = Field(None, description="Tax amount")
+    fees: Price | None = Field(None, description="Additional fees")
+    discounts: Price | None = Field(None, description="Discount amount")
     total: Price = Field(description="Total price")
 
     @model_validator(mode="after")
@@ -123,12 +129,10 @@ class Budget(TripSageModel):
     """Budget allocation and tracking."""
 
     total_budget: Price = Field(description="Total budget amount")
-    allocated: Optional[Price] = Field(None, description="Allocated amount")
-    spent: Optional[Price] = Field(None, description="Spent amount")
-    remaining: Optional[Price] = Field(None, description="Remaining amount")
-    categories: Optional[Dict[str, Price]] = Field(
-        None, description="Budget by category"
-    )
+    allocated: Price | None = Field(None, description="Allocated amount")
+    spent: Price | None = Field(None, description="Spent amount")
+    remaining: Price | None = Field(None, description="Remaining amount")
+    categories: dict[str, Price] | None = Field(None, description="Budget by category")
 
     @model_validator(mode="after")
     def validate_budget_currencies(self) -> "Budget":
@@ -160,8 +164,9 @@ class Budget(TripSageModel):
             remaining_amount = self.total_budget.amount
 
         return Price(
-            amount=max(Decimal("0"), remaining_amount),
+            amount=max(Decimal(0), remaining_amount),
             currency=self.total_budget.currency,
+            formatted=None,
         )
 
     def utilization_percentage(self) -> float:
@@ -182,10 +187,10 @@ class PaymentInfo(TripSageModel):
     """Payment information and metadata."""
 
     amount: Price = Field(description="Payment amount")
-    payment_method: Optional[str] = Field(None, description="Payment method")
-    transaction_id: Optional[str] = Field(None, description="Transaction identifier")
-    reference: Optional[str] = Field(None, description="Payment reference")
-    status: Optional[str] = Field(None, description="Payment status")
+    payment_method: str | None = Field(None, description="Payment method")
+    transaction_id: str | None = Field(None, description="Transaction identifier")
+    reference: str | None = Field(None, description="Payment reference")
+    status: str | None = Field(None, description="Payment status")
 
 
 class ExchangeRate(TripSageModel):
@@ -194,8 +199,8 @@ class ExchangeRate(TripSageModel):
     from_currency: CurrencyCode = Field(description="Source currency")
     to_currency: CurrencyCode = Field(description="Target currency")
     rate: Decimal = Field(description="Exchange rate", gt=0)
-    timestamp: Optional[str] = Field(None, description="Rate timestamp")
-    source: Optional[str] = Field(None, description="Rate source")
+    timestamp: str | None = Field(None, description="Rate timestamp")
+    source: str | None = Field(None, description="Rate source")
 
     def convert(self, amount: Decimal) -> Decimal:
         """Convert amount using this exchange rate."""
@@ -225,14 +230,14 @@ class Deal(TripSageModel):
     """Deal or discount information."""
 
     title: str = Field(description="Deal title")
-    description: Optional[str] = Field(None, description="Deal description")
-    discount_amount: Optional[Price] = Field(None, description="Discount amount")
-    discount_percentage: Optional[Decimal] = Field(
+    description: str | None = Field(None, description="Deal description")
+    discount_amount: Price | None = Field(None, description="Discount amount")
+    discount_percentage: Decimal | None = Field(
         None, description="Discount percentage", ge=0, le=100
     )
     original_price: Price = Field(description="Original price before discount")
     final_price: Price = Field(description="Final price after discount")
-    valid_until: Optional[str] = Field(None, description="Deal expiration")
+    valid_until: str | None = Field(None, description="Deal expiration")
 
     @model_validator(mode="after")
     def validate_deal(self) -> "Deal":

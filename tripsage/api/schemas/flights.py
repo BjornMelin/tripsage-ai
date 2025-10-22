@@ -1,47 +1,21 @@
-"""Flight API schemas using Pydantic V2.
+"""Flight API schema façade that re-exports the service models."""
 
-This module re-exports consolidated flight schemas from schemas_common
-to maintain API compatibility while eliminating duplication.
-
-All flight-related schemas have been consolidated to
-tripsage_core.models.schemas_common.flight_schemas as the single source of truth
-following Pydantic V2 best practices.
-"""
-
-# Re-export all flight schemas from the consolidated location
-# Re-export Airport and FlightOffer from domain model (canonical location)
-from tripsage_core.models.domain.flight import Airport, FlightOffer
-
-# Re-export CabinClass from enums (canonical location)
-from tripsage_core.models.schemas_common.enums import CabinClass
-from tripsage_core.models.schemas_common.flight_schemas import (
-    AirportSearchRequest,
-    AirportSearchResponse,
-    FlightPassenger,
-    FlightSearchRequest,
+from tripsage_core.models.domain.flights_canonical import (
+    FlightBooking,
+    FlightBookingRequest,
+    FlightOffer,
     FlightSearchResponse,
-    MultiCityFlightSearchRequest,
-    MultiCityFlightSegment,
-    SavedFlightRequest,
-    SavedFlightResponse,
-    UpcomingFlightResponse,
 )
+from tripsage_core.models.schemas_common.enums import BookingStatus, CabinClass
+from tripsage_core.models.schemas_common.flight_schemas import FlightSearchRequest
+
 
 __all__ = [
-    # Request schemas
-    "FlightSearchRequest",
-    "MultiCityFlightSearchRequest",
-    "MultiCityFlightSegment",
-    "AirportSearchRequest",
-    "SavedFlightRequest",
-    "FlightPassenger",
-    # Response schemas
-    "FlightSearchResponse",
-    "AirportSearchResponse",
-    "SavedFlightResponse",
-    "UpcomingFlightResponse",
-    "FlightOffer",
-    "Airport",
-    # Enums
+    "BookingStatus",
     "CabinClass",
+    "FlightBooking",
+    "FlightBookingRequest",
+    "FlightOffer",
+    "FlightSearchRequest",
+    "FlightSearchResponse",
 ]

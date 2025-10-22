@@ -1,5 +1,5 @@
 /**
- * Comprehensive test suite for Trip Events Edge Function
+ * Test suite for Trip Events Edge Function
  * 
  * Tests cover:
  * - HTTP request/response handling
