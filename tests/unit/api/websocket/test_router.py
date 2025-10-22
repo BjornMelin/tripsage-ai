@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 from types import SimpleNamespace
 from typing import cast
@@ -26,6 +27,9 @@ from tripsage_core.services.infrastructure.websocket_auth_service import (
     WebSocketAuthResponse,
 )
 from tripsage_core.services.infrastructure.websocket_manager import WebSocketManager
+
+
+router_module = importlib.import_module("tripsage.api.websocket.router")
 
 
 class ManagerStub:
@@ -96,11 +100,12 @@ async def test_handle_websocket_session_success(
     announce = AsyncMock()
     loop = AsyncMock()
 
-    monkeypatch.setattr("tripsage.api.websocket.router.establish_connection", establish)
-    monkeypatch.setattr("tripsage.api.websocket.router.announce_connection", announce)
-    monkeypatch.setattr("tripsage.api.websocket.router.run_message_loop", loop)
+    monkeypatch.setattr(router_module, "establish_connection", establish)
+    monkeypatch.setattr(router_module, "announce_connection", announce)
+    monkeypatch.setattr(router_module, "run_message_loop", loop)
     monkeypatch.setattr(
-        "tripsage.api.websocket.router.get_settings",
+        router_module,
+        "get_settings",
         lambda: SimpleNamespace(cors_origins=["*"], is_production=False),
     )
 
@@ -126,17 +131,18 @@ async def test_handle_websocket_session_origin_error(
     async def raise_origin(*args, **kwargs):
         raise WebSocketOriginError("bad origin")
 
+    monkeypatch.setattr(router_module, "establish_connection", raise_origin)
     monkeypatch.setattr(
-        "tripsage.api.websocket.router.establish_connection", raise_origin
-    )
-    monkeypatch.setattr(
-        "tripsage.api.websocket.router.get_settings",
+        router_module,
+        "get_settings",
         lambda: SimpleNamespace(cors_origins=["https://app"], is_production=True),
     )
 
     await _handle_websocket_session(websocket)
 
-    websocket.close.assert_awaited_with(code=4003, reason="bad origin")
+    websocket.close.assert_awaited_with(
+        code=4003, reason=str(WebSocketOriginError("bad origin"))
+    )
 
 
 @pytest.mark.asyncio
@@ -153,18 +159,15 @@ async def test_handle_websocket_session_authentication_error(
     async def raise_auth(*args, **kwargs):
         raise WebSocketAuthenticationError("invalid")
 
+    monkeypatch.setattr(router_module, "establish_connection", raise_auth)
     monkeypatch.setattr(
-        "tripsage.api.websocket.router.establish_connection", raise_auth
-    )
-    monkeypatch.setattr(
-        "tripsage.api.websocket.router.get_settings",
+        router_module,
+        "get_settings",
         lambda: SimpleNamespace(cors_origins=["*"], is_production=False),
     )
 
     close_helper = AsyncMock()
-    monkeypatch.setattr(
-        "tripsage.api.websocket.router._send_error_and_close", close_helper
-    )
+    monkeypatch.setattr(router_module, "_send_error_and_close", close_helper)
 
     await _handle_websocket_session(websocket)
 
