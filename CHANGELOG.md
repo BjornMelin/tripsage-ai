@@ -45,6 +45,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+### Chat Service Alignment (Breaking)
+
+- ChatService finalized to DI-only (no globals/event-loop hacks); public methods now directly call DatabaseService helpers: `create_chat_session`, `create_chat_message`, `get_user_chat_sessions`, `get_session_messages`, `get_chat_session`, `get_message_tool_calls`, `update_tool_call`, `update_session_timestamp`, `end_chat_session`.
+- Removed router-compat wrappers (`list_sessions`, `create_message`, `delete_session`) and legacy parameter orders; canonical signatures are:
+  - `get_session(session_id, user_id)`, `get_messages(session_id, user_id, limit|offset)`, `add_message(session_id, user_id, MessageCreateRequest)`.
+- Router `tripsage/api/routers/chat.py` now accepts JSON bodies (no query-param misuse); `POST /api/chat/sessions` returns 201 Created; endpoints wired to the new service methods.
+- OTEL decorators added on ChatService public methods with low-cardinality attrs; test env skips exporter init to avoid network failures.
+- SecretStr respected for OpenAI key; sanitized content + metadata validation retained.
+- Tests updated to final-only contracts (unit+integration) to reflect JSON bodies and new method signatures.
+
 ## [2.1.0] - 2025-10-20
 
 ### Added
