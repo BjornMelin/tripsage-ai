@@ -270,9 +270,8 @@ class ConfigManager:
             if include_secrets:
                 getter = getattr(attr, "get_secret_value", None)
                 value = str(getter()) if callable(getter) else str(attr)
-            else:
-                if attr.__class__.__name__ != "SecretStr":
-                    value = str(attr)
+            elif attr.__class__.__name__ != "SecretStr":
+                value = str(attr)
 
             lines.append(f"{env_name}={value}")
 

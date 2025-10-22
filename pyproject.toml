@@ -182,6 +182,8 @@ select = [
     "T10",  # flake8-debugger
     # Exception handling
     "TRY",  # tryceratops
+    # pylint
+    "PL",
 ]
 
 ignore = [
@@ -210,6 +212,8 @@ ignore = [
     "ERA001",
     "TRY002",
     "E402",  # Import not at top of file
+    # pylint
+    "PLR2004", "PLR0911", "PLC0415", "PLW0603"
 ]
 
 fixable = ["ALL"]
@@ -256,6 +260,14 @@ exclude = [
     "dist",
     "docs",
     "site",
+    "frontend",
+    "node_modules",
+    ".next",
+    "out",
+    "dist",
+    "build",
+    "coverage",
+    "htmlcov",
     ".pytest_cache",
     ".ruff_cache",
     ".mypy_cache",

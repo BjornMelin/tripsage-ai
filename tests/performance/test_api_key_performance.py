@@ -124,7 +124,6 @@ class TestApiKeyPerformance:
         # Simulate cache operations with realistic latencies
         async def mock_get_with_latency(key):
             await asyncio.sleep(0.0001)  # 0.1ms cache latency
-            return  # Cache miss for most tests
 
         async def mock_set_with_latency(key, value, ex=None):
             await asyncio.sleep(0.0001)  # 0.1ms cache write latency
@@ -1243,8 +1242,9 @@ class TestApiKeyPerformance:
                         )
 
                         # Track peak memory
-                        if memory_mb > resource_metrics["peak_memory_mb"]:
-                            resource_metrics["peak_memory_mb"] = memory_mb
+                        resource_metrics["peak_memory_mb"] = max(
+                            resource_metrics["peak_memory_mb"], memory_mb
+                        )
 
                         # CPU monitoring
                         cpu_percent = process.cpu_percent()

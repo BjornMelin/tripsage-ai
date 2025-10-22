@@ -148,7 +148,7 @@ class TestCircuitBreaker:
 
     def test_circuit_breaker_half_open_state(self):
         """Test circuit breaker half-open state."""
-        cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
+        cb = CircuitBreaker(failure_threshold=2, recovery_timeout=1)
 
         # Open the circuit
         cb.record_failure()
@@ -156,7 +156,7 @@ class TestCircuitBreaker:
         assert cb.state == CircuitBreakerState.OPEN
 
         # Wait for recovery timeout
-        time.sleep(0.2)
+        time.sleep(1.1)
 
         # Should be half-open and allow execution
         assert cb.can_execute() is True
@@ -164,14 +164,14 @@ class TestCircuitBreaker:
 
     def test_circuit_breaker_recovery(self):
         """Test circuit breaker recovery to closed state."""
-        cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
+        cb = CircuitBreaker(failure_threshold=2, recovery_timeout=1)
 
         # Open the circuit
         cb.record_failure()
         cb.record_failure()
 
         # Wait and try again
-        time.sleep(0.2)
+        time.sleep(1.1)
         assert cb.can_execute() is True
 
         # Record success to close circuit
@@ -181,7 +181,7 @@ class TestCircuitBreaker:
 
     def test_circuit_breaker_half_open_to_open_transition(self):
         """Test circuit breaker transitions from HALF_OPEN back to OPEN on failure."""
-        cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
+        cb = CircuitBreaker(failure_threshold=2, recovery_timeout=1)
 
         # Open the circuit
         cb.record_failure()
@@ -189,7 +189,7 @@ class TestCircuitBreaker:
         assert cb.state == CircuitBreakerState.OPEN
 
         # Wait for recovery timeout to transition to HALF_OPEN
-        time.sleep(0.2)
+        time.sleep(1.1)
         assert cb.can_execute() is True
         assert cb.state == CircuitBreakerState.HALF_OPEN
 
@@ -204,7 +204,7 @@ class TestCircuitBreaker:
         assert cb.can_execute() is False
 
         # Wait again and verify it can transition back to HALF_OPEN
-        time.sleep(0.2)
+        time.sleep(1.1)
         assert cb.can_execute() is True
         assert cb.state == CircuitBreakerState.HALF_OPEN
 
@@ -398,8 +398,8 @@ class TestRateLimiting:
         assert result3["reason"] == "user_limit_exceeded"
 
 
-class TestWebSocketConnectionIn depth:
-    """Test advanced WebSocket connection features."""
+class TestWebSocketConnectionInDepth:
+    """Test WebSocket connection features in depth."""
 
     @pytest.fixture
     def mock_websocket(self):
@@ -703,8 +703,6 @@ class TestWebSocketManagerIntegration:
     def test_performance_metrics_tracking(self, manager):
         """Test performance metrics collection."""
         # Add some connections
-        from uuid import uuid4
-
         conn1 = WebSocketConnection(
             websocket=MagicMock(), connection_id="conn1", user_id=uuid4()
         )

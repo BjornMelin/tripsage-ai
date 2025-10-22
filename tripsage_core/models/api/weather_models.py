@@ -8,7 +8,10 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, TypeAdapter
+
+
+_HTTP_URL_ADAPTER: TypeAdapter[HttpUrl] = TypeAdapter(HttpUrl)
 
 
 class TemperatureUnit(str, Enum):
@@ -407,7 +410,9 @@ class WeatherMapTile(BaseModel):
         x = int((lon + 180.0) / 360.0 * n)
         y = int((1.0 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2.0 * n)
 
-        tile_url = f"https://tile.openweathermap.org/map/{layer}/{zoom}/{x}/{y}.png"
+        tile_url = _HTTP_URL_ADAPTER.validate_python(
+            f"https://tile.openweathermap.org/map/{layer}/{zoom}/{x}/{y}.png"
+        )
 
         return cls(layer=layer, z=zoom, x=x, y=y, tile_url=tile_url)
 
