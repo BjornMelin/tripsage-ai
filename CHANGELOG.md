@@ -42,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- [Core Models]: Deleted the entire `tripsage/models/` directory, removing all legacy data models associated with the deprecated MCP architecture to eliminate duplication.
+- [Core Services]: Deleted legacy MCP components, including the generic `AccommodationMCPClient` and the `ErrorHandlingService`, to complete the migration to a direct SDK architecture.
+- [Observability]: Removed the custom performance metrics system in `tripsage/monitoring` and standardized all metrics collection on the OpenTelemetry implementation to use industry best practices.
+- [API]: Centralized all rate-limiting logic into the `RateLimitMiddleware`, removing duplicated implementations from the security and key monitoring services.
+- [Architecture]: Removed the custom `ServiceRegistry` module under `tripsage/config` and its dependent tests to simplify dependency management.
+- [Exceptions]: Removed `CoreMCPError`; MCP-related failures now surface as `CoreExternalAPIError` with appropriate context.
+
 - Legacy Google Maps dict-shaped responses and all backward-compatible paths in services/tests.
 - Module-level singletons for Google Maps and Activity services (`get_google_maps_service`,
   `get_activity_service`) and their `close_*` helpers; final-only DI now required.
