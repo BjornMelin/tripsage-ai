@@ -96,9 +96,7 @@ def mock_mcp_manager():
 
     manager.invoke.side_effect = invoke_side_effect
 
-    with patch(
-        "tripsage_core.services.simple_mcp_service.default_mcp_service", manager
-    ):
+    with patch("tripsage_core.services.airbnb_mcp.default_airbnb_mcp", manager):
         yield manager
 
 
