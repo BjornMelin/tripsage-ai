@@ -27,7 +27,7 @@ class AirbnbMCPBridge:
     """Bridge between LangGraph and Airbnb MCP.
 
     This class converts Airbnb MCP tools to LangGraph-compatible format while preserving
-    error handling, caching, and monitoring capabilities from the previous MCP manager abstraction.
+    error handling, caching, and monitoring capabilities from the prior MCP abstraction.
     """
 
     def __init__(self, mcp_service: AirbnbMCP | None = None):

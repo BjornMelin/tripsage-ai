@@ -308,8 +308,8 @@ class TestStateCreation:
         assert state["user_id"] == "test_user"
 
 
-class TestTripSageOrchestrator:
-    """Test suite for TripSageOrchestrator."""
+class TestTripSageOrchestratorExtended:
+    """Extended tests for TripSageOrchestrator."""
 
     @pytest.fixture
     def comprehensive_mock_registry(self):
