@@ -10,9 +10,10 @@ import asyncio
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import asyncpg
-from supabase import Client, create_client
+import supabase  # type: ignore[import-not-found]
 
 
 class StorageDeployment:
@@ -20,7 +21,8 @@ class StorageDeployment:
 
     def __init__(self, supabase_url: str, supabase_key: str, db_url: str):
         """Initialize storage deployment with Supabase credentials."""
-        self.supabase: Client = create_client(supabase_url, supabase_key)
+        # Avoid tight typing on third-party; use runtime factory
+        self.supabase: Any = supabase.create_client(supabase_url, supabase_key)  # type: ignore[attr-defined]
         self.db_url = db_url
         self.project_root = Path(__file__).parent.parent.parent
         self.storage_dir = self.project_root / "supabase" / "storage"

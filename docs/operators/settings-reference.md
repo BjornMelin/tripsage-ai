@@ -401,8 +401,9 @@ TRIPSAGE_DB_SUPABASE_URL="https://test-project.supabase.co"
 TRIPSAGE_DB_SUPABASE_ANON_KEY="test-anon-key"
 TRIPSAGE_DB_SUPABASE_SERVICE_ROLE_KEY="test-service-role-key"
 
-# Cache (DragonflyDB)
-TRIPSAGE_DRAGONFLY_URL="redis://localhost:6379/0"
+# Cache (Upstash Redis)
+UPSTASH_REDIS_REST_URL="https://<id>.upstash.io"
+UPSTASH_REDIS_REST_TOKEN="<token>"
 
 # External Services (BYOK)
 TRIPSAGE_EXTERNAL_OPENAI_API_KEY="sk-your-dev-key"
@@ -431,8 +432,7 @@ api_port = settings.api_port
 
 # Access nested configuration
 supabase_url = settings.database.supabase_url
-dragonfly_url = settings.dragonfly.url
-cache_ttl = settings.dragonfly.ttl_medium
+upstash_url = settings.upstash_redis_rest_url
 ```
 
 ### 2. Secure API Key Access

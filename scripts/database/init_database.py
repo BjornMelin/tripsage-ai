@@ -11,9 +11,10 @@ Usage:
 import asyncio
 import logging
 from pathlib import Path
+from typing import Any
 
 import click
-from supabase import Client, create_client
+from supabase import create_client
 
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 class DatabaseInitializer:
     """Handles database initialization with schema and seed data."""
 
-    def __init__(self, db_service: DatabaseService, supabase_client: Client):
+    def __init__(self, db_service: DatabaseService, supabase_client: Any):
         """Initialize database initializer."""
         self.db_service = db_service
         self.supabase_client = supabase_client

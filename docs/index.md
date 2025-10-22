@@ -71,7 +71,7 @@ This index lists all documentation files under `docs/` by section.
 - [README](adrs/README.md)
 - [ADR-0001 LangGraph Orchestration](adrs/adr-0001-langgraph-orchestration.md)
 - [ADR-0002 Supabase Platform](adrs/adr-0002-supabase-platform.md)
-- [ADR-0003 Dragonfly Caching](adrs/adr-0003-dragonfly-caching.md)
+- [ADR-0003 Upstash Redis Caching](adrs/adr-0003-upstash-redis.md)
 - [ADR-0004 FastAPI Backend](adrs/adr-0004-fastapi-backend.md)
 - [ADR-0005 Next.js React 19](adrs/adr-0005-nextjs-react19.md)
 - [ADR-0006 WebSocket Architecture](adrs/adr-0006-websocket-architecture.md)

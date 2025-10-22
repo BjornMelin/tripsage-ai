@@ -30,7 +30,7 @@ real-time booking capabilities, and intelligent memory management.
   flight search and booking
 - **Accommodation Search**: Accommodation discovery and booking
 - **Intelligent Memory**: Mem0-powered user preference learning and context
-- **Ultra-Fast Caching**: DragonflyDB for sub-millisecond response times
+- **Ultra-Fast Caching**: Upstash Redis (HTTP) for low-latency serverless caching
 - **Enterprise Security**: RLS policies and JWT authentication
 - **Modern Frontend**: Next.js 15 with React 19 and TypeScript
 - **Real-time Collaboration**: WebSocket-powered trip sharing and updates
@@ -42,7 +42,7 @@ real-time booking capabilities, and intelligent memory management.
 - **Python 3.12+** with uv package manager
 - **Node.js 24+** with pnpm
 - **PostgreSQL 15+** (or Supabase account)
-- **Redis/DragonflyDB** for caching
+- **Upstash Redis** for caching (via Vercel integration)
 
 ### Installation
 
@@ -84,7 +84,7 @@ and scalability:
 - **Backend**: FastAPI with Python 3.12+ and async/await patterns
 - **Database**: Supabase PostgreSQL with pgvector for embeddings
 - **AI**: OpenAI GPT-4 with LangGraph for agent orchestration
-- **Cache**: DragonflyDB for sub-millisecond response times
+- **Cache**: Upstash Redis (HTTP) for low-latency operations
 - **Memory**: Mem0 for intelligent user preference learning
 - **Frontend**: Next.js 15 with TypeScript and Tailwind CSS
 
@@ -189,7 +189,8 @@ kubectl get pods -l app=tripsage-ai
 | `SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
 | `OPENAI_API_KEY` | OpenAI API key for AI features | ✅ |
 | `DUFFEL_ACCESS_TOKEN` | Duffel API token for flights | ⚠️ |
-| `DRAGONFLY_URL` | DragonflyDB connection string | ⚠️ |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | ⚠️ |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | ⚠️ |
 | `MEM0_API_KEY` | Mem0 API key for memory features | ⚠️ |
 
 ✅ Required | ⚠️ Optional (fallback available)

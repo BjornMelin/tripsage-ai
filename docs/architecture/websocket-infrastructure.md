@@ -27,7 +27,7 @@ TripSage's WebSocket infrastructure enables real-time communication between the 
 - **Agent status updates** with progress tracking
 - **Typing indicators** for enhanced user experience
 - **Connection health monitoring** with auto-reconnection
-- **Message broadcasting** with DragonflyDB scalability
+- **Message broadcasting** with Upstash-backed patterns
 - **JWT authentication** for secure connections
 
 ## Architecture
@@ -38,7 +38,7 @@ TripSage's WebSocket infrastructure enables real-time communication between the 
 graph TD
     A[Frontend WebSocket Client] --> B[FastAPI WebSocket Router]
     B --> C[WebSocket Manager]
-    C --> D[DragonflyDB Broadcaster]
+    C --> D[Upstash Redis / QStash Broadcaster]
     C --> E[JWT Authentication]
     C --> F[Connection Pool]
     D --> G[Message Queue]
@@ -56,7 +56,7 @@ graph TD
 2. **Message Broadcasting**
    - Message received from client
    - Validation and processing
-   - DragonflyDB broadcasting
+   - Upstash-backed broadcasting
    - Delivery to subscribed clients
 
 3. **Performance Monitoring**
@@ -89,7 +89,7 @@ The **WebSocket Manager** implements centralized connection handling:
 
 #### Message Broadcasting System
 
-**DragonflyDB-backed broadcasting** enables scalable real-time messaging:
+**Upstash-backed broadcasting** enables scalable real-time messaging:
 
 - **Priority Queue System**: Message prioritization for critical updates
 - **Session-Based Routing**: Efficient message delivery to session participants
@@ -170,7 +170,7 @@ The **TypeScript WebSocket client** implements performance-optimized real-time c
    - Connection pool optimization
    - Performance metrics tracking
 
-4. **DragonflyDB Integration**
+4. **Upstash Integration**
    - High-performance message persistence
    - Scalable broadcasting across instances
    - Message history and replay
@@ -228,8 +228,8 @@ The **bidirectional event system** supports complex communication patterns:
 The WebSocket infrastructure supports **horizontal scaling** through:
 
 - **Sticky Sessions**: Client affinity for connection continuity
-- **DragonflyDB Broadcasting**: Cross-instance message delivery
-- **Shared State**: Centralized state in DragonflyDB
+- **Upstash-Based Broadcasting**: Cross-instance message delivery (TS SDK/QStash)
+- **Shared State**: Centralized state in Upstash Redis
 - **Load Distribution**: Connection-based load balancing
 - **Graceful Scaling**: Zero-downtime scaling operations
 
@@ -290,7 +290,7 @@ The system implements a **structured connection lifecycle**:
 **Distributed state coordination** ensures consistency:
 
 - **Client State**: Local state with server synchronization
-- **Server State**: Authoritative state in DragonflyDB
+- **Server State**: Authoritative state in Upstash Redis
 - **Shared State**: Cross-client state synchronization
 - **Persistent State**: Database-backed state recovery
 
@@ -335,7 +335,7 @@ The system implements a **structured connection lifecycle**:
 TripSage's WebSocket infrastructure demonstrates how modern real-time communication can be achieved with:
 
 - **Performance**: 1,500+ concurrent connections with <30ms latency
-- **Scalability**: Horizontal scaling via DragonflyDB
+- **Scalability**: Horizontal scaling via Upstash
 - **Security**: Multi-layer security architecture
 - **Reliability**: Automatic recovery and state persistence
 - **Developer Experience**: Type-safe, testable architecture
