@@ -326,7 +326,7 @@ export default function TripDetailsPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Advanced budget features coming soon...
+                  Additional budget features coming soon...
                 </p>
               </CardContent>
             </Card>

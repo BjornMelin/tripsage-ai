@@ -1,15 +1,17 @@
-# 🚀 Production Deployment Guide
+# Production Deployment Guide
 
 ## Pre-Deployment Checklist
 
 ### Environment Preparation
+
 - [ ] Database migration scripts tested
 - [ ] Environment variables configured
-- [ ] Redis/DragonflyDB instance ready
+- [ ] Upstash Redis credentials set (UPSTASH_REDIS_REST_URL/TOKEN)
 - [ ] SSL certificates installed
 - [ ] Domain DNS configured
 
 ### Build Validation
+
 - [ ] TypeScript compilation clean: `npm run type-check`
 - [ ] Frontend build successful: `npm run build`
 - [ ] Backend tests passing: `pytest`
@@ -18,6 +20,7 @@
 ## Deployment Sequence
 
 ### 1. Database Migration
+
 ```bash
 # Run database migrations
 python scripts/database/run_migrations.py
@@ -27,17 +30,15 @@ python -c "from tripsage_core.services.infrastructure.database_service import Da
 ```
 
 ### 2. Cache System Setup
-```bash
-# Start DragonflyDB
-docker run -d --name tripsage-dragonfly -p 6379:6379 \
-  docker.dragonflydb.io/dragonflydb/dragonfly:latest \
-  --logtostderr --cache_mode --requirepass tripsage_secure_password
 
+```bash
+# Configure Upstash Redis (managed) — no local container required
 # Verify connection
-python scripts/verification/verify_dragonfly.py
+python scripts/verification/verify_upstash.py
 ```
 
 ### 3. Frontend Deployment
+
 ```bash
 cd frontend
 npm ci --production
@@ -46,6 +47,7 @@ npm start
 ```
 
 ### 4. Backend Deployment
+
 ```bash
 uv install --production
 uv run python -m tripsage.api.main
@@ -54,13 +56,15 @@ uv run python -m tripsage.api.main
 ## Performance Monitoring
 
 ### Key Metrics to Monitor
+
 - Vector search latency: Target <20ms
 - Database connection pool: Target <80% utilization
 - WebSocket connections: Monitor heartbeat failures
 - Memory usage: Target <512MB per service
-- Redis/DragonflyDB hit rate: Target >90%
+- Cache hit rate: Target >90%
 
 ### Monitoring Endpoints
+
 - Health check: `GET /api/health`
 - Metrics: `GET /api/metrics`
 - Database status: `GET /api/health/database`
@@ -71,6 +75,7 @@ uv run python -m tripsage.api.main
 ### Common Issues
 
 #### Database Connection Issues
+
 ```bash
 # Check connection
 python scripts/verification/verify_connection.py
@@ -80,6 +85,7 @@ docker restart tripsage-database
 ```
 
 #### WebSocket Connection Failures
+
 ```bash
 # Check Redis connectivity
 redis-cli ping
@@ -93,9 +99,10 @@ curl -i -N -H "Connection: Upgrade" \
 ```
 
 #### Performance Degradation
+
 ```bash
 # Run performance benchmark
-python scripts/benchmarks/benchmark_database_service.py
+python scripts/benchmarks/benchmark.py --database-only
 
 # Check resource usage
 htop
@@ -105,12 +112,14 @@ iotop
 ## Rollback Procedure
 
 ### Emergency Rollback
+
 1. Switch traffic to previous version
 2. Revert database migrations if needed
 3. Clear cache to prevent stale data
 4. Monitor error rates
 
 ### Database Rollback
+
 ```bash
 # Backup current state
 pg_dump tripsage > backup_$(date +%Y%m%d_%H%M%S).sql
@@ -122,6 +131,7 @@ python scripts/database/rollback_migrations.py --to-version <previous_version>
 ## Security Considerations
 
 ### Production Security Settings
+
 - CORS origins restricted to production domains
 - WebSocket origin validation enabled
 - Rate limiting configured for production load
@@ -129,6 +139,7 @@ python scripts/database/rollback_migrations.py --to-version <previous_version>
 - Database connection strings encrypted
 
 ### Security Validation
+
 ```bash
 # Run security audit
 python scripts/security/security_validation.py
@@ -140,18 +151,21 @@ bandit -r . -f json -o security_report.json
 ## Performance Optimization Tips
 
 ### Database Optimization
+
 - Monitor query performance with `EXPLAIN ANALYZE`
 - Keep pgvector indexes optimized
 - Use connection pooling efficiently
 - Monitor disk I/O and memory usage
 
 ### Frontend Optimization
+
 - Enable production build optimizations
 - Use CDN for static assets
 - Monitor Core Web Vitals
 - Implement proper caching headers
 
 ### WebSocket Optimization
+
 - Monitor connection count
 - Use Redis pub/sub for scaling
 - Implement proper error recovery
@@ -159,4 +173,4 @@ bandit -r . -f json -o security_report.json
 
 ---
 
-*Deployment guide for production-ready TripSage AI platform*
+> *Deployment guide for TripSage AI platform*

@@ -1,7 +1,7 @@
 -- Row Level Security (RLS) Policies Schema
--- Description: Comprehensive multi-tenant security policies with collaboration support
+-- Description: multi-tenant security policies with collaboration support
 -- Dependencies: 01_tables.sql (all table definitions)
--- Last Updated: 2025-06-11 - Enhanced with collaboration features
+-- Last Updated: 2025-06-11 - Includes collaboration features
 
 -- ===========================
 -- ENABLE RLS ON ALL USER-OWNED TABLES
@@ -474,7 +474,7 @@ COMMENT ON POLICY "Users can view trip collaborations they are part of" ON trip_
     IS 'RLS policy allowing users to view collaborations where they are the collaborator, owner, or trip owner';
 
 COMMENT ON POLICY "Users can view accessible trips" ON trips 
-    IS 'Enhanced RLS policy allowing access to owned trips and trips shared via trip_collaborators';
+    IS 'RLS policy allowing access to owned trips and trips shared via trip_collaborators';
 
 COMMENT ON POLICY "Users can access chat sessions for accessible trips" ON chat_sessions 
     IS 'RLS policy allowing access to chat sessions for owned trips and trips shared via collaboration';

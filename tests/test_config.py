@@ -1,5 +1,4 @@
-"""
-Clean test configuration module for TripSage.
+"""Clean test configuration module for TripSage.
 
 This module provides a simplified, robust test configuration approach that:
 1. Uses environment variables exclusively for configuration
@@ -10,7 +9,7 @@ This module provides a simplified, robust test configuration approach that:
 """
 
 import os
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -19,7 +18,7 @@ from tripsage_core.config import Settings
 
 
 def setup_test_environment() -> None:
-    """Set up comprehensive test environment variables."""
+    """Set up test environment variables."""
     test_env = {
         # Core application settings
         "ENVIRONMENT": "testing",
@@ -50,8 +49,7 @@ def setup_test_environment() -> None:
 
 
 def create_test_settings(**overrides) -> Settings:
-    """
-    Create a test settings instance with proper defaults.
+    """Create a test settings instance with proper defaults.
 
     Args:
         **overrides: Optional overrides for specific settings
@@ -83,24 +81,29 @@ class MockCacheService:
     """Simple, reliable mock cache service for tests."""
 
     def __init__(self):
-        self._storage: Dict[str, Any] = {}
+        """Initialize in-memory storage and connection flag."""
+        self._storage: dict[str, Any] = {}
         self._connected = True
 
     @property
     def is_connected(self) -> bool:
+        """Return whether the mock cache reports as connected."""
         return self._connected
 
     async def ensure_connected(self) -> None:
-        pass
+        """No-op connectivity check for mock cache service."""
 
     async def get_json(self, key: str) -> Any:
+        """Get a JSON value from the mock cache storage."""
         return self._storage.get(key)
 
-    async def set_json(self, key: str, value: Any, ttl: int = None) -> bool:
+    async def set_json(self, key: str, value: Any, ttl: int | None = None) -> bool:
+        """Set a JSON value in the mock cache; TTL is accepted but ignored."""
         self._storage[key] = value
         return True
 
     async def delete(self, *keys: str) -> int:
+        """Delete keys from the mock cache and return a count."""
         count = 0
         for key in keys:
             if key in self._storage:
@@ -109,6 +112,7 @@ class MockCacheService:
         return count
 
     async def health_check(self) -> bool:
+        """Return mock cache health status."""
         return True
 
 
@@ -116,25 +120,32 @@ class MockDatabaseService:
     """Simple, reliable mock database service for tests."""
 
     def __init__(self):
+        """Initialize mock DB connection state."""
         self._connected = True
 
     @property
     def is_connected(self) -> bool:
+        """Return whether the mock DB reports as connected."""
         return self._connected
 
     async def get_session(self):
+        """Return a mock session instance."""
         return MagicMock()
 
-    async def execute(self, query: str, params: Dict = None):
+    async def execute(self, query: str, params: dict | None = None):
+        """Execute a mock query and return a placeholder result."""
         return MagicMock()
 
-    async def fetch_one(self, query: str, params: Dict = None):
-        return None
+    async def fetch_one(self, query: str, params: dict | None = None):
+        """Fetch a single record in the mock DB."""
+        return
 
-    async def fetch_all(self, query: str, params: Dict = None):
+    async def fetch_all(self, query: str, params: dict | None = None):
+        """Fetch multiple records in the mock DB."""
         return []
 
     async def health_check(self) -> bool:
+        """Return mock DB health status."""
         return True
 
 
@@ -152,7 +163,7 @@ def clean_test_environment():
         # Mock settings functions to avoid import-time instantiation
         patch(
             "tripsage_core.config.get_settings",
-            side_effect=lambda: create_test_settings(),
+            side_effect=create_test_settings,
         ),
         # Mock cache service
         patch(
@@ -195,8 +206,7 @@ def mock_database_service():
 
 
 def create_mock_api_settings(**overrides) -> Any:
-    """
-    Create mock API settings for tests that need API configuration.
+    """Create mock API settings for tests that need API configuration.
 
     Args:
         **overrides: Optional overrides for specific settings
@@ -259,14 +269,14 @@ def mock_api_settings():
 
 # Export convenience functions
 __all__ = [
-    "setup_test_environment",
-    "create_test_settings",
-    "create_mock_api_settings",
     "MockCacheService",
     "MockDatabaseService",
     "clean_test_environment",
-    "test_settings",
+    "create_mock_api_settings",
+    "create_test_settings",
+    "mock_api_settings",
     "mock_cache_service",
     "mock_database_service",
-    "mock_api_settings",
+    "setup_test_environment",
+    "test_settings",
 ]

@@ -9,7 +9,7 @@ import { z } from "zod";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-// Enhanced Message type with support for tool calls and attachments
+// Message type with support for tool calls and attachments
 export interface Message {
   id: string;
   role: "user" | "assistant" | "system";

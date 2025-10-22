@@ -1,1 +1,1 @@
-# Tests for TripSage Core services
+"""TripSage Core services unit tests package."""

@@ -1,7 +1,6 @@
-"""
-Trip Access Verification and Security Decorators for TripSage API.
+"""Trip Access Verification and Security Decorators for TripSage API.
 
-This module provides comprehensive trip access verification functionality, including
+This module provides trip access verification functionality, including
 decorators for FastAPI endpoints, security helper functions, and integration with
 the existing authentication and audit logging infrastructure.
 
@@ -15,18 +14,16 @@ Features:
 """
 
 import logging
+from collections.abc import Callable
 from enum import Enum
 from functools import wraps
-from typing import Annotated, Any, Callable, Dict, Optional, TypeVar
+from typing import Annotated, Any, TypeVar
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, status
 from pydantic import ConfigDict, Field, field_validator
 
-from tripsage.api.core.dependencies import (
-    get_principal_id,
-    require_principal,
-)
+from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError,
@@ -41,6 +38,7 @@ from tripsage_core.services.business.audit_logging_service import (
     audit_security_event,
 )
 from tripsage_core.services.business.trip_service import TripService
+
 
 logger = logging.getLogger(__name__)
 
@@ -71,12 +69,12 @@ class TripAccessContext(TripSageModel):
     trip_id: str = Field(..., description="Trip ID being accessed")
     principal_id: str = Field(..., description="Principal requesting access")
     required_level: TripAccessLevel = Field(..., description="Required access level")
-    required_permission: Optional[TripAccessPermission] = Field(
+    required_permission: TripAccessPermission | None = Field(
         None, description="Specific permission required for operation"
     )
     operation: str = Field(..., description="Operation being performed")
-    ip_address: Optional[str] = Field(None, description="Client IP address")
-    user_agent: Optional[str] = Field(None, description="Client user agent")
+    ip_address: str | None = Field(None, description="Client IP address")
+    user_agent: str | None = Field(None, description="Client user agent")
 
     model_config = ConfigDict(
         validate_assignment=True,
@@ -112,20 +110,20 @@ class TripAccessResult(TripSageModel):
     """Result of trip access verification."""
 
     is_authorized: bool = Field(..., description="Whether access is authorized")
-    access_level: Optional[TripAccessLevel] = Field(
+    access_level: TripAccessLevel | None = Field(
         None, description="Granted access level"
     )
-    permission_granted: Optional[TripAccessPermission] = Field(
+    permission_granted: TripAccessPermission | None = Field(
         None, description="Specific permission granted"
     )
     is_owner: bool = Field(default=False, description="Whether principal is trip owner")
     is_collaborator: bool = Field(
         default=False, description="Whether principal is collaborator"
     )
-    trip_visibility: Optional[TripVisibility] = Field(
+    trip_visibility: TripVisibility | None = Field(
         None, description="Trip visibility setting"
     )
-    denial_reason: Optional[str] = Field(None, description="Reason for access denial")
+    denial_reason: str | None = Field(None, description="Reason for access denial")
 
     model_config = ConfigDict(
         validate_assignment=True,
@@ -138,8 +136,7 @@ async def verify_trip_access(
     context: TripAccessContext,
     trip_service: TripService,
 ) -> TripAccessResult:
-    """
-    Verify trip access permissions for a principal.
+    """Verify trip access permissions for a principal.
 
     This function implements the core trip access verification logic, checking
     trip ownership, collaboration permissions, and visibility settings.
@@ -320,7 +317,7 @@ async def verify_trip_access(
     except (CoreResourceNotFoundError, CoreSecurityError):
         raise
     except Exception as e:
-        logger.error(
+        logger.exception(
             "Unexpected error during trip access verification",
             extra={
                 "trip_id": context.trip_id,
@@ -335,7 +332,7 @@ async def verify_trip_access(
         await audit_security_event(
             event_type=AuditEventType.SECURITY_SUSPICIOUS_ACTIVITY,
             severity=AuditSeverity.HIGH,
-            message=f"Unexpected error during trip access verification: {str(e)}",
+            message=f"Unexpected error during trip access verification: {e!s}",
             actor_id=context.principal_id,
             ip_address=context.ip_address or "unknown",
             target_resource=context.trip_id,
@@ -359,11 +356,10 @@ async def verify_trip_access(
 
 def create_trip_access_dependency(
     access_level: TripAccessLevel,
-    permission: Optional[TripAccessPermission] = None,
+    permission: TripAccessPermission | None = None,
     trip_id_param: str = "trip_id",
 ) -> Callable:
-    """
-    Create a FastAPI dependency for trip access verification.
+    """Create a FastAPI dependency for trip access verification.
 
     This factory function creates FastAPI dependencies that can be used to verify
     trip access permissions in endpoint decorators following 2025 best practices.
@@ -401,7 +397,6 @@ def create_trip_access_dependency(
         trip_service: TripService = Depends(),
     ) -> TripAccessResult:
         """FastAPI dependency for trip access verification."""
-
         # Extract trip_id from path parameters
         trip_id = request.path_params.get(trip_id_param)
         if not trip_id:
@@ -445,11 +440,10 @@ def create_trip_access_dependency(
 
 def require_trip_access(
     access_level: TripAccessLevel,
-    permission: Optional[TripAccessPermission] = None,
+    permission: TripAccessPermission | None = None,
     trip_id_param: str = "trip_id",
 ):
-    """
-    Decorator for FastAPI endpoints requiring trip access verification.
+    """Decorator for FastAPI endpoints requiring trip access verification.
 
     This decorator provides a clean, declarative way to enforce trip access
     permissions on FastAPI endpoints following modern Python patterns.
@@ -483,7 +477,6 @@ def require_trip_access(
 
     def decorator(func: F) -> F:
         """Apply trip access verification to the decorated function."""
-
         # Create the dependency
         access_dependency = create_trip_access_dependency(
             access_level=access_level,
@@ -552,8 +545,7 @@ async def check_trip_ownership(
     principal: Principal,
     trip_service: TripService,
 ) -> bool:
-    """
-    Check if a principal owns a specific trip.
+    """Check if a principal owns a specific trip.
 
     Args:
         trip_id: Trip ID to check
@@ -574,7 +566,7 @@ async def check_trip_ownership(
         result = await verify_trip_access(context, trip_service)
         return result.is_authorized and result.is_owner
 
-    except Exception as e:
+    except (ValueError, ConnectionError, TimeoutError) as e:
         logger.warning(
             "Error checking trip ownership",
             extra={
@@ -590,10 +582,9 @@ async def check_trip_collaboration(
     trip_id: str,
     principal: Principal,
     trip_service: TripService,
-    required_permission: Optional[TripAccessPermission] = None,
+    required_permission: TripAccessPermission | None = None,
 ) -> bool:
-    """
-    Check if a principal has collaboration access to a trip.
+    """Check if a principal has collaboration access to a trip.
 
     Args:
         trip_id: Trip ID to check
@@ -616,7 +607,7 @@ async def check_trip_collaboration(
         result = await verify_trip_access(context, trip_service)
         return result.is_authorized
 
-    except Exception as e:
+    except (ValueError, ConnectionError, TimeoutError) as e:
         logger.warning(
             "Error checking trip collaboration",
             extra={
@@ -635,9 +626,8 @@ async def get_user_trip_permissions(
     trip_id: str,
     principal: Principal,
     trip_service: TripService,
-) -> Dict[str, Any]:
-    """
-    Get detailed permission information for a user's access to a trip.
+) -> dict[str, Any]:
+    """Get detailed permission information for a user's access to a trip.
 
     Args:
         trip_id: Trip ID to check permissions for
@@ -678,7 +668,7 @@ async def get_user_trip_permissions(
             else None,
         }
 
-    except Exception as e:
+    except (ValueError, ConnectionError, TimeoutError) as e:
         logger.warning(
             "Error getting user trip permissions",
             extra={
@@ -701,25 +691,25 @@ async def get_user_trip_permissions(
 
 
 __all__ = [
+    # Models
+    "TripAccessContext",
     # Enums
     "TripAccessLevel",
     "TripAccessPermission",
-    # Models
-    "TripAccessContext",
     "TripAccessResult",
-    # Core functions
-    "verify_trip_access",
-    "create_trip_access_dependency",
-    "require_trip_access",
-    # Pre-configured dependencies
-    "TripReadAccessDep",
-    "TripWriteAccessDep",
-    "TripOwnerAccessDep",
     "TripCollaboratorAccessDep",
     "TripEditPermissionDep",
     "TripManagePermissionDep",
+    "TripOwnerAccessDep",
+    # Pre-configured dependencies
+    "TripReadAccessDep",
+    "TripWriteAccessDep",
+    "check_trip_collaboration",
     # Helper functions
     "check_trip_ownership",
-    "check_trip_collaboration",
+    "create_trip_access_dependency",
     "get_user_trip_permissions",
+    "require_trip_access",
+    # Core functions
+    "verify_trip_access",
 ]

@@ -1,8 +1,9 @@
-"""Working comprehensive tests for Pydantic v2 common validators."""
+"""Working tests for Pydantic v2 common validators."""
+
+import math
 
 import pytest
-from hypothesis import assume, given
-from hypothesis import strategies as st
+from hypothesis import assume, given, strategies as st
 
 from tripsage_core.models.schemas_common.common_validators import (
     validate_airport_code,
@@ -97,7 +98,7 @@ class TestRatingValidation:
     @given(st.floats().filter(lambda x: x < 0.0 or x > 5.0))
     def test_invalid_ratings(self, rating: float):
         """Test that out-of-range ratings are rejected."""
-        with pytest.raises(ValueError, match="must be between 0.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"must be between 0\.0 and 5\.0"):
             validate_rating_range(rating)
 
     def test_rating_none_handling(self):
@@ -123,13 +124,13 @@ class TestCoordinateValidation:
     @given(st.floats().filter(lambda x: x < -90.0 or x > 90.0))
     def test_invalid_latitude(self, lat: float):
         """Test invalid latitude values."""
-        with pytest.raises(ValueError, match="must be between -90.0 and 90.0"):
+        with pytest.raises(ValueError, match=r"must be between -90\.0 and 90\.0"):
             validate_latitude(lat)
 
     @given(st.floats().filter(lambda x: x < -180.0 or x > 180.0))
     def test_invalid_longitude(self, lng: float):
         """Test invalid longitude values."""
-        with pytest.raises(ValueError, match="must be between -180.0 and 180.0"):
+        with pytest.raises(ValueError, match=r"must be between -180\.0 and 180\.0"):
             validate_longitude(lng)
 
 
@@ -180,7 +181,7 @@ class TestNonNegativeNumberValidation:
     @given(st.floats(min_value=0.0, max_value=float("inf")))
     def test_valid_non_negative_numbers(self, value: float):
         """Test valid non-negative numbers."""
-        assume(not (value != value))  # Filter out NaN
+        assume(not math.isnan(value))  # Filter out NaN values
         result = validate_non_negative_number(value)
         assert result == value
         assert result >= 0

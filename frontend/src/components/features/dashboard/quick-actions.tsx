@@ -95,7 +95,7 @@ const quickActions: QuickAction[] = [
   },
   {
     id: "advanced-search",
-    title: "Advanced Search",
+    title: "Detailed Search",
     description: "Use filters for specific requirements",
     icon: <Search className="h-4 w-4" />,
     href: "/dashboard/search",

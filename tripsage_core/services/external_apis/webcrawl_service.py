@@ -1,5 +1,4 @@
-"""
-WebCrawl Service using direct Crawl4AI SDK integration with TripSage Core.
+"""WebCrawl Service using direct Crawl4AI SDK integration with TripSage Core.
 
 This service provides high-performance web crawling capabilities using the
 Crawl4AI SDK directly, with full TripSage Core integration for settings,
@@ -8,24 +7,29 @@ error handling, and logging.
 
 import asyncio
 import time
-from typing import Any, Dict, Optional
+from dataclasses import dataclass
+from typing import Any
 
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
 from pydantic import BaseModel, Field
 
 from tripsage_core.config import Settings, get_settings
-from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
-from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.exceptions.exceptions import (
+    CoreExternalAPIError as CoreAPIError,
+    CoreServiceError,
+)
+from tripsage_core.services.external_apis.base_service import AsyncServiceLifecycle
 
 
 class WebCrawlServiceError(CoreAPIError):
     """Exception raised for web crawl service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
+        """Initialize the WebCrawlServiceError."""
         super().__init__(
             message=message,
             code="WEBCRAWL_SERVICE_ERROR",
-            service="WebCrawlService",
+            api_service="WebCrawlService",
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
@@ -43,15 +47,13 @@ class WebCrawlParams(BaseModel):
         default=False, description="Extract structured data"
     )
     use_cache: bool = Field(default=True, description="Use caching for results")
-    wait_for: Optional[str] = Field(
+    wait_for: str | None = Field(
         default=None, description="CSS selector or time to wait for"
     )
-    css_selector: Optional[str] = Field(
+    css_selector: str | None = Field(
         default=None, description="CSS selector for content extraction"
     )
-    excluded_tags: Optional[list] = Field(
-        default=None, description="HTML tags to exclude"
-    )
+    excluded_tags: list | None = Field(default=None, description="HTML tags to exclude")
     screenshot: bool = Field(default=False, description="Take screenshot")
     pdf: bool = Field(default=False, description="Generate PDF")
     timeout: int = Field(default=30, description="Request timeout in seconds")
@@ -62,29 +64,40 @@ class WebCrawlResult(BaseModel):
 
     success: bool
     url: str
-    title: Optional[str] = None
-    markdown: Optional[str] = None
-    html: Optional[str] = None
-    structured_data: Optional[Dict[str, Any]] = None
-    screenshot: Optional[bytes] = None
-    pdf: Optional[bytes] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    error_message: Optional[str] = None
-    status_code: Optional[int] = None
-    performance_metrics: Dict[str, Any] = Field(default_factory=dict)
+    title: str | None = None
+    markdown: str | None = None
+    html: str | None = None
+    structured_data: dict[str, Any] | None = None
+    screenshot: bytes | None = None
+    pdf: bytes | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    error_message: str | None = None
+    status_code: int | None = None
+    performance_metrics: dict[str, Any] = Field(default_factory=dict)
 
 
-class WebCrawlService:
-    """
-    Direct Crawl4AI SDK service for web crawling operations with Core integration.
+@dataclass(frozen=True)
+class WebCrawlServiceConfig:
+    """Immutable configuration for the Crawl4AI wrapper."""
+
+    browser_type: str
+    headless: bool
+    viewport_width: int
+    viewport_height: int
+    verbose: bool
+    cache_enabled: bool
+    max_concurrent_crawls: int
+
+
+class WebCrawlService(AsyncServiceLifecycle):
+    """Direct Crawl4AI SDK service for web crawling operations with Core integration.
 
     This service provides high-performance web crawling capabilities using
     the Crawl4AI SDK directly, with full TripSage Core integration.
     """
 
-    def __init__(self, settings: Optional[Settings] = None):
-        """
-        Initialize the WebCrawl service.
+    def __init__(self, settings: Settings | None = None):
+        """Initialize the WebCrawl service.
 
         Args:
             settings: Core application settings
@@ -92,24 +105,19 @@ class WebCrawlService:
         self.settings = settings or get_settings()
         self._connected = False
 
-        # Get crawler configuration from settings
-        self._browser_type = getattr(self.settings, "webcrawl_browser_type", "chromium")
-        self._headless = getattr(self.settings, "webcrawl_headless", True)
-        self._viewport_width = getattr(self.settings, "webcrawl_viewport_width", 1280)
-        self._viewport_height = getattr(self.settings, "webcrawl_viewport_height", 720)
-        self._verbose = getattr(self.settings, "webcrawl_verbose", False)
-
-        # Cache and performance settings
-        self._default_cache_enabled = getattr(
-            self.settings, "webcrawl_cache_enabled", True
-        )
-        self._default_timeout = getattr(self.settings, "webcrawl_timeout", 30)
-        self._max_concurrent_crawls = getattr(
-            self.settings, "webcrawl_max_concurrent", 3
+        settings_obj = self.settings
+        self.config = WebCrawlServiceConfig(
+            browser_type=getattr(settings_obj, "webcrawl_browser_type", "chromium"),
+            headless=getattr(settings_obj, "webcrawl_headless", True),
+            viewport_width=getattr(settings_obj, "webcrawl_viewport_width", 1280),
+            viewport_height=getattr(settings_obj, "webcrawl_viewport_height", 720),
+            verbose=getattr(settings_obj, "webcrawl_verbose", False),
+            cache_enabled=getattr(settings_obj, "webcrawl_cache_enabled", True),
+            max_concurrent_crawls=getattr(settings_obj, "webcrawl_max_concurrent", 3),
         )
 
         # Rate limiting
-        self._semaphore = asyncio.Semaphore(self._max_concurrent_crawls)
+        self._semaphore = asyncio.Semaphore(self.config.max_concurrent_crawls)
 
         self._browser_config = None
 
@@ -120,17 +128,17 @@ class WebCrawlService:
 
         try:
             self._browser_config = BrowserConfig(
-                headless=self._headless,
-                verbose=self._verbose,
-                browser_type=self._browser_type,
-                viewport_width=self._viewport_width,
-                viewport_height=self._viewport_height,
+                headless=self.config.headless,
+                verbose=self.config.verbose,
+                browser_type=self.config.browser_type,
+                viewport_width=self.config.viewport_width,
+                viewport_height=self.config.viewport_height,
             )
             self._connected = True
 
         except Exception as e:
             raise CoreServiceError(
-                message=f"Failed to initialize WebCrawl service: {str(e)}",
+                message=f"Failed to initialize WebCrawl service: {e!s}",
                 code="CONNECTION_FAILED",
                 service="WebCrawlService",
                 details={"error": str(e)},
@@ -147,10 +155,9 @@ class WebCrawlService:
             await self.connect()
 
     async def crawl_url(
-        self, url: str, params: Optional[WebCrawlParams] = None
+        self, url: str, params: WebCrawlParams | None = None
     ) -> WebCrawlResult:
-        """
-        Crawl a single URL using direct Crawl4AI SDK.
+        """Crawl a single URL using direct Crawl4AI SDK.
 
         Args:
             url: The URL to crawl
@@ -176,6 +183,7 @@ class WebCrawlService:
                 run_config = self._build_crawler_config(params)
 
                 # Perform the crawl
+                assert self._browser_config is not None
                 async with AsyncWebCrawler(config=self._browser_config) as crawler:
                     result = await crawler.arun(url=url, config=run_config)
 
@@ -184,23 +192,20 @@ class WebCrawlService:
                     duration_ms = (end_time - start_time) * 1000
 
                     # Convert to our result format
-                    crawl_result = self._convert_crawl_result(result, url, duration_ms)
-
-                    return crawl_result
+                    return self._convert_crawl_result(result, url, duration_ms)
 
             except Exception as e:
                 end_time = time.time()
                 duration_ms = (end_time - start_time) * 1000
 
                 raise WebCrawlServiceError(
-                    f"Web crawl failed for {url}: {str(e)}", original_error=e
+                    f"Web crawl failed for {url}: {e!s}", original_error=e
                 ) from e
 
     async def crawl_multiple_urls(
-        self, urls: list[str], params: Optional[WebCrawlParams] = None
+        self, urls: list[str], params: WebCrawlParams | None = None
     ) -> list[WebCrawlResult]:
-        """
-        Crawl multiple URLs concurrently.
+        """Crawl multiple URLs concurrently.
 
         Args:
             urls: List of URLs to crawl
@@ -249,12 +254,11 @@ class WebCrawlService:
 
         except Exception as e:
             raise WebCrawlServiceError(
-                f"Failed to crawl multiple URLs: {str(e)}", original_error=e
+                f"Failed to crawl multiple URLs: {e!s}", original_error=e
             ) from e
 
     def _build_crawler_config(self, params: WebCrawlParams) -> CrawlerRunConfig:
-        """
-        Build CrawlerRunConfig from WebCrawlParams.
+        """Build CrawlerRunConfig from WebCrawlParams.
 
         Args:
             params: Input parameters
@@ -266,7 +270,7 @@ class WebCrawlService:
         use_cache = (
             params.use_cache
             if params.use_cache is not None
-            else self._default_cache_enabled
+            else self.config.cache_enabled
         )
         cache_mode = CacheMode.ENABLED if use_cache else CacheMode.BYPASS
 
@@ -276,7 +280,7 @@ class WebCrawlService:
             screenshot=params.screenshot,
             pdf=params.pdf,
             word_count_threshold=10,  # Filter out very small content blocks
-            verbose=self._verbose,
+            verbose=self.config.verbose,
         )
 
         # Add JavaScript if needed
@@ -312,8 +316,7 @@ class WebCrawlService:
     def _convert_crawl_result(
         self, crawl_result: Any, url: str, duration_ms: float
     ) -> WebCrawlResult:
-        """
-        Convert Crawl4AI result to WebCrawlResult format.
+        """Convert Crawl4AI result to WebCrawlResult format.
 
         Args:
             crawl_result: Result from Crawl4AI
@@ -392,11 +395,11 @@ class WebCrawlService:
                 },
             )
 
-        except Exception as e:
+        except CoreServiceError as e:
             return WebCrawlResult(
                 success=False,
                 url=url,
-                error_message=f"Result conversion error: {str(e)}",
+                error_message=f"Result conversion error: {e!s}",
                 performance_metrics={
                     "duration_ms": duration_ms,
                     "crawler_type": "crawl4ai_direct",
@@ -407,8 +410,7 @@ class WebCrawlService:
     async def extract_travel_content(
         self, url: str, content_type: str = "general"
     ) -> WebCrawlResult:
-        """
-        Extract travel-specific content from a URL.
+        """Extract travel-specific content from a URL.
 
         Args:
             url: URL to crawl
@@ -443,8 +445,7 @@ class WebCrawlService:
         return await self.crawl_url(url, params)
 
     async def health_check(self) -> bool:
-        """
-        Perform a health check to verify the service is working.
+        """Perform a health check to verify the service is working.
 
         Returns:
             True if the service is healthy, False otherwise
@@ -458,52 +459,5 @@ class WebCrawlService:
                 WebCrawlParams(use_cache=False, javascript_enabled=False, timeout=10),
             )
             return result.success
-        except Exception:
+        except CoreServiceError:
             return False
-
-    async def close(self) -> None:
-        """
-        Close the service and clean up resources.
-
-        Since we use context managers for AsyncWebCrawler,
-        there's no persistent cleanup needed.
-        """
-        await self.disconnect()
-
-    async def __aenter__(self):
-        """Async context manager entry."""
-        await self.connect()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        await self.close()
-
-
-# Global service instance
-_webcrawl_service: Optional[WebCrawlService] = None
-
-
-async def get_webcrawl_service() -> WebCrawlService:
-    """
-    Get the global WebCrawl service instance.
-
-    Returns:
-        WebCrawlService instance
-    """
-    global _webcrawl_service
-
-    if _webcrawl_service is None:
-        _webcrawl_service = WebCrawlService()
-        await _webcrawl_service.connect()
-
-    return _webcrawl_service
-
-
-async def close_webcrawl_service() -> None:
-    """Close the global WebCrawl service instance."""
-    global _webcrawl_service
-
-    if _webcrawl_service:
-        await _webcrawl_service.close()
-        _webcrawl_service = None

@@ -1,4 +1,4 @@
-"""Comprehensive unit tests for attachments router."""
+"""Unit tests for attachments router."""
 
 from io import BytesIO
 
@@ -121,11 +121,10 @@ class TestAttachmentsRouter:
         # Create files that exceed MAX_SESSION_SIZE (50MB)
         # Each file will be ~6MB, so 10 files = ~60MB > 50MB limit
         large_content = b"X" * (6 * 1024 * 1024)  # 6MB per file
-        files = []
-        for i in range(10):  # 10 files * 6MB = 60MB > 50MB limit
-            files.append(
-                ("files", (f"large{i}.txt", BytesIO(large_content), "text/plain"))
-            )
+        files = [
+            ("files", (f"large{i}.txt", BytesIO(large_content), "text/plain"))
+            for i in range(10)
+        ]  # 10 files * 6MB = 60MB > 50MB limit
 
         # Act
         response = api_test_client.post(

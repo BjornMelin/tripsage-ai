@@ -1,7 +1,6 @@
-"""
-Integration tests for trip access verification that test the complete security flow.
+"""Integration tests for trip access verification that test the complete security flow.
 
-This module provides comprehensive integration testing for trip security features,
+This module provides integration testing for trip security features,
 testing the complete flow from HTTP request through authentication, authorization,
 service layer, and database operations. These tests verify:
 
@@ -16,8 +15,8 @@ Uses real Supabase database connections and actual security components.
 
 import asyncio
 import logging
-from datetime import date, datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, date, datetime
+from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -48,6 +47,7 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
     AuditSeverity,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +161,7 @@ class TestTripSecurityIntegration:
         )
 
     @pytest.fixture
-    def test_trip_data(self) -> Dict[str, Any]:
+    def test_trip_data(self) -> dict[str, Any]:
         """Test trip data for creation."""
         return {
             "name": "Security Test Trip",
@@ -181,8 +181,8 @@ class TestTripSecurityIntegration:
         collaborator_user: User,
         viewer_user: User,
         unauthorized_user: User,
-        test_trip_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        test_trip_data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Set up test data for integration tests."""
         # In a real integration test, this would create actual database records
         # For now, we'll use mock data that simulates database state
@@ -203,8 +203,8 @@ class TestTripSecurityIntegration:
             "visibility": test_trip_data["visibility"],
             "status": TripStatus.PLANNING.value,
             "trip_type": TripType.LEISURE.value,
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
+            "updated_at": datetime.now(UTC),
         }
 
         # Mock collaborators
@@ -213,13 +213,13 @@ class TestTripSecurityIntegration:
                 "trip_id": trip_id,
                 "user_id": str(collaborator_user.id),
                 "permission": "edit",
-                "created_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
             },
             {
                 "trip_id": trip_id,
                 "user_id": str(viewer_user.id),
                 "permission": "view",
-                "created_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
             },
         ]
 
@@ -238,7 +238,7 @@ class TestTripSecurityIntegration:
 
     async def test_complete_authentication_flow(
         self,
-        setup_test_data: Dict[str, Any],
+        setup_test_data: dict[str, Any],
         owner_principal: Principal,
         unauthorized_principal: Principal,
     ):
@@ -298,7 +298,7 @@ class TestTripSecurityIntegration:
 
     async def test_collaboration_permission_levels(
         self,
-        setup_test_data: Dict[str, Any],
+        setup_test_data: dict[str, Any],
         collaborator_principal: Principal,
         viewer_principal: Principal,
     ):
@@ -370,7 +370,7 @@ class TestTripSecurityIntegration:
 
     async def test_cross_user_access_prevention(
         self,
-        setup_test_data: Dict[str, Any],
+        setup_test_data: dict[str, Any],
         unauthorized_principal: Principal,
     ):
         """Test prevention of cross-user access attempts."""
@@ -414,7 +414,7 @@ class TestTripSecurityIntegration:
 
     async def test_database_isolation(
         self,
-        setup_test_data: Dict[str, Any],
+        setup_test_data: dict[str, Any],
         owner_principal: Principal,
         unauthorized_principal: Principal,
     ):
@@ -465,7 +465,7 @@ class TestTripSecurityIntegration:
 
     async def test_audit_logging_end_to_end(
         self,
-        setup_test_data: Dict[str, Any],
+        setup_test_data: dict[str, Any],
         owner_principal: Principal,
         unauthorized_principal: Principal,
     ):
@@ -542,7 +542,7 @@ class TestTripSecurityIntegration:
 
     async def test_concurrent_access_scenarios(
         self,
-        setup_test_data: Dict[str, Any],
+        setup_test_data: dict[str, Any],
         owner_principal: Principal,
         collaborator_principal: Principal,
         viewer_principal: Principal,
@@ -601,7 +601,7 @@ class TestTripSecurityIntegration:
 
     async def test_performance_impact_measurement(
         self,
-        setup_test_data: Dict[str, Any],
+        setup_test_data: dict[str, Any],
         owner_principal: Principal,
     ):
         """Test and measure performance impact of security verification."""
@@ -656,7 +656,7 @@ class TestTripSecurityIntegration:
 
     async def test_error_handling_scenarios(
         self,
-        setup_test_data: Dict[str, Any],
+        setup_test_data: dict[str, Any],
         owner_principal: Principal,
     ):
         """Test error handling in security verification flow."""
@@ -692,7 +692,7 @@ class TestTripSecurityIntegration:
 
     async def test_edge_case_scenarios(
         self,
-        setup_test_data: Dict[str, Any],
+        setup_test_data: dict[str, Any],
         owner_principal: Principal,
     ):
         """Test edge case scenarios in security verification."""
@@ -740,7 +740,7 @@ class TestTripSecurityIntegration:
     async def test_api_endpoint_integration(
         self,
         client: TestClient,
-        setup_test_data: Dict[str, Any],
+        setup_test_data: dict[str, Any],
         owner_principal: Principal,
         unauthorized_principal: Principal,
     ):
@@ -758,19 +758,15 @@ class TestTripSecurityIntegration:
             trip_service = MockTripService.return_value
             trip_service._check_trip_access.return_value = True
             trip_service.get_trip.return_value = Trip(
-                **{
-                    "id": int(
-                        trip_data["id"].replace("-", "")[:10]
-                    ),  # Convert to int for Trip model
-                    "name": trip_data["name"],
-                    "destination": trip_data["destination"],
-                    "start_date": trip_data["start_date"],
-                    "end_date": trip_data["end_date"],
-                    "budget": trip_data["budget"],
-                    "travelers": trip_data["travelers"],
-                    "status": TripStatus.PLANNING,
-                    "trip_type": TripType.LEISURE,
-                }
+                id=int(trip_data["id"].replace("-", "")[:10]),
+                name=trip_data["name"],
+                destination=trip_data["destination"],
+                start_date=trip_data["start_date"],
+                end_date=trip_data["end_date"],
+                budget=trip_data["budget"],
+                travelers=trip_data["travelers"],
+                status=TripStatus.PLANNING,
+                trip_type=TripType.LEISURE,
             )
 
             # Test 1: Authorized access succeeds
@@ -801,7 +797,7 @@ class TestTripSecurityIntegration:
 
     async def test_realistic_attack_scenarios(
         self,
-        setup_test_data: Dict[str, Any],
+        setup_test_data: dict[str, Any],
         unauthorized_principal: Principal,
     ):
         """Test realistic attack scenarios against the security system."""
@@ -867,7 +863,7 @@ class TestTripSecurityIntegration:
 
     async def test_data_cleanup_scenarios(
         self,
-        setup_test_data: Dict[str, Any],
+        setup_test_data: dict[str, Any],
     ):
         """Test proper cleanup of test data."""
         # In a real integration test, this would clean up database records
@@ -901,7 +897,7 @@ def create_test_context(
     principal_id: str,
     access_level: TripAccessLevel,
     operation: str,
-    permission: Optional[TripAccessPermission] = None,
+    permission: TripAccessPermission | None = None,
     ip_address: str = "192.168.1.100",
     user_agent: str = "Integration-Test/1.0",
 ) -> TripAccessContext:
@@ -925,7 +921,7 @@ def assert_successful_access(result: TripAccessResult) -> None:
 
 
 def assert_denied_access(
-    result: TripAccessResult, expected_reason: Optional[str] = None
+    result: TripAccessResult, expected_reason: str | None = None
 ) -> None:
     """Helper function to assert denied access results."""
     assert result.is_authorized is False

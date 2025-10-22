@@ -1,23 +1,14 @@
-"""
-Comprehensive integration tests for enhanced Supabase schema and collaboration features.
+"""Integration tests for Supabase schema and collaboration features.
 
-This test suite covers:
-- RLS policy validation for collaborative access
-- Foreign key constraints and data integrity
-- Index performance and query optimization
-- Database function correctness
-- Migration compatibility and rollback safety
-- Collaboration workflow end-to-end testing
-- Multi-user scenarios with different permission levels
-- Security isolation and permission inheritance
-- Performance testing for collaboration queries
-
-Dependencies: PostgreSQL, pgvector, Supabase auth
+This test suite covers RLS policy validation, foreign key constraints,
+index performance, database functions, migration compatibility,
+collaboration workflows, multi-user scenarios, security isolation,
+and performance optimization.
 """
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
@@ -27,7 +18,8 @@ import pytest
 class MockSupabaseAuthUser:
     """Mock Supabase auth user for testing."""
 
-    def __init__(self, user_id: UUID, email: str = None):
+    def __init__(self, user_id: UUID, email: str | None = None):
+        """Create a mock auth user with optional email."""
         self.id = user_id
         self.email = email or f"user{user_id.hex[:8]}@test.com"
         self.created_at = datetime.utcnow()
@@ -37,7 +29,8 @@ class MockDatabaseService:
     """Mock database service that simulates Supabase behavior."""
 
     def __init__(self):
-        self.current_user_id: Optional[UUID] = None
+        """Initialize in-memory tables for mock DB service."""
+        self.current_user_id: UUID | None = None
         self.tables = {
             "trips": [],
             "trip_collaborators": [],
@@ -54,20 +47,24 @@ class MockDatabaseService:
         self.indexes = []
         self.functions = []
 
-    def set_current_user(self, user_id: Optional[UUID]):
+    def set_current_user(self, user_id: UUID | None):
         """Set the current authenticated user for RLS testing."""
         self.current_user_id = user_id
 
     async def execute_query(self, query: str, *params) -> Any:
         """Mock query execution with basic RLS simulation."""
         # Simulate constraint violations
-        if "INSERT INTO" in query.upper() and "memories" in query:
-            if params and len(params) > 1:
-                user_id = params[1]
-                if not self._user_exists(user_id):
-                    raise Exception(
-                        'Foreign key constraint "memories_user_id_fkey" violated'
-                    )
+        if (
+            "INSERT INTO" in query.upper()
+            and "memories" in query
+            and params
+            and len(params) > 1
+        ):
+            user_id = params[1]
+            if not self._user_exists(user_id):
+                raise ValueError(
+                    'Foreign key constraint "memories_user_id_fkey" violated'
+                )
 
         # Simulate RLS filtering
         if "SELECT" in query.upper() and self.current_user_id:
@@ -75,7 +72,7 @@ class MockDatabaseService:
 
         return None
 
-    async def fetch_one(self, query: str, *params) -> Optional[Dict[str, Any]]:
+    async def fetch_one(self, query: str, *params) -> dict[str, Any] | None:
         """Mock single row fetch with RLS simulation."""
         if "auth.uid()" in query:
             return {
@@ -85,14 +82,14 @@ class MockDatabaseService:
             }
 
         if "information_schema.table_constraints" in query:
-            return self._get_constraint_info(params[0] if params else None)
+            return self._get_constraint_info(params[0] if params else "")
 
         if "pg_policies" in query:
-            return self._get_policy_info(params[0] if params else None)
+            return self._get_policy_info(params[0] if params else "")
 
         return None
 
-    async def fetch_all(self, query: str, *params) -> List[Dict[str, Any]]:
+    async def fetch_all(self, query: str, *params) -> list[dict[str, Any]]:
         """Mock multiple row fetch with RLS simulation."""
         if "pg_policies" in query:
             return self._get_all_policies()
@@ -110,7 +107,7 @@ class MockDatabaseService:
         # Simulate system user always exists
         return str(user_id) == "00000000-0000-0000-0000-000000000001"
 
-    def _apply_rls_filter(self, query: str, params: tuple) -> List[Dict[str, Any]]:
+    def _apply_rls_filter(self, query: str, params: tuple) -> list[dict[str, Any]]:
         """Apply mock RLS filtering based on current user."""
         if not self.current_user_id:
             return []
@@ -118,7 +115,7 @@ class MockDatabaseService:
         # Simulate user-specific data access
         return [{"id": 1, "user_id": str(self.current_user_id), "content": "User data"}]
 
-    def _get_constraint_info(self, table_name: str) -> Dict[str, Any]:
+    def _get_constraint_info(self, table_name: str) -> dict[str, Any]:
         """Get mock constraint information."""
         if table_name == "memories":
             return {
@@ -130,7 +127,7 @@ class MockDatabaseService:
             }
         return {}
 
-    def _get_policy_info(self, table_name: str) -> Dict[str, Any]:
+    def _get_policy_info(self, table_name: str) -> dict[str, Any]:
         """Get mock RLS policy information."""
         if table_name == "memories":
             return {
@@ -143,7 +140,7 @@ class MockDatabaseService:
             }
         return {}
 
-    def _get_all_policies(self) -> List[Dict[str, Any]]:
+    def _get_all_policies(self) -> list[dict[str, Any]]:
         """Get all mock RLS policies."""
         return [
             {
@@ -176,7 +173,7 @@ class MockDatabaseService:
             },
         ]
 
-    def _get_column_info(self) -> List[Dict[str, Any]]:
+    def _get_column_info(self) -> list[dict[str, Any]]:
         """Get mock column information."""
         return [
             {"table_name": "memories", "column_name": "user_id", "data_type": "uuid"},
@@ -188,7 +185,7 @@ class MockDatabaseService:
             {"table_name": "trips", "column_name": "user_id", "data_type": "uuid"},
         ]
 
-    def _get_accessible_trips(self) -> List[Dict[str, Any]]:
+    def _get_accessible_trips(self) -> list[dict[str, Any]]:
         """Get trips accessible to current user (owned + collaborative)."""
         return [
             {
@@ -209,9 +206,7 @@ class MockDatabaseService:
 
 
 class TestSupabaseCollaborationSchema:
-    """
-    Comprehensive test suite for enhanced Supabase schema and collaboration features.
-    """
+    """test suite for enhanced Supabase schema and collab features."""
 
     @pytest.fixture
     def mock_db_service(self):
@@ -291,10 +286,7 @@ class TestRLSPolicyValidation:
         assert trips[0]["user_role"] == "collaborator"
 
     async def test_permission_level_inheritance(self, mock_db_service, test_users):
-        """
-        Test that trip-related data inherits proper permissions from trip
-        collaboration.
-        """
+        """Test that trip-related data inherits permissions from trip collab."""
         editor = test_users["editor"]
         mock_db_service.set_current_user(editor.id)
 
@@ -313,13 +305,13 @@ class TestRLSPolicyValidation:
 
         flights = await mock_db_service.fetch_all(
             """
-            SELECT f.*, 
-                   CASE WHEN tc.permission_level IN ('edit', 'admin') 
-                        OR t.user_id = auth.uid() 
+            SELECT f.*,
+                   CASE WHEN tc.permission_level IN ('edit', 'admin')
+                        OR t.user_id = auth.uid()
                         THEN true ELSE false END as can_edit
             FROM flights f
             JOIN trips t ON f.trip_id = t.id
-            LEFT JOIN trip_collaborators tc ON t.id = tc.trip_id 
+            LEFT JOIN trip_collaborators tc ON t.id = tc.trip_id
                  AND tc.user_id = auth.uid()
             WHERE auth.uid() = t.user_id OR tc.user_id = auth.uid()
             """
@@ -341,10 +333,10 @@ class TestRLSPolicyValidation:
         with pytest.raises(Exception, match="RLS policy violation"):
             await mock_db_service.execute_query(
                 """
-                UPDATE flights 
-                SET destination = $1 
+                UPDATE flights
+                SET destination = $1
                 WHERE trip_id IN (
-                    SELECT trip_id FROM trip_collaborators 
+                    SELECT trip_id FROM trip_collaborators
                     WHERE user_id = auth.uid() AND permission_level = 'view'
                 )
                 """,
@@ -365,8 +357,8 @@ class TestRLSPolicyValidation:
         # Try to access user1's private trip
         private_trips = await mock_db_service.fetch_all(
             """
-            SELECT * FROM trips 
-            WHERE user_id = $1 
+            SELECT * FROM trips
+            WHERE user_id = $1
             AND id NOT IN (
                 SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid()
             )
@@ -469,7 +461,7 @@ class TestForeignKeyConstraints:
         # Valid collaboration insert
         await mock_db_service.execute_query(
             """
-            INSERT INTO trip_collaborators 
+            INSERT INTO trip_collaborators
             (trip_id, user_id, permission_level, added_by)
             VALUES ($1, $2, $3, $4)
             """,
@@ -489,7 +481,7 @@ class TestForeignKeyConstraints:
         with pytest.raises(Exception, match="trip_collaborators_trip_id_fkey"):
             await mock_db_service.execute_query(
                 """
-                INSERT INTO trip_collaborators 
+                INSERT INTO trip_collaborators
                 (trip_id, user_id, permission_level, added_by)
                 VALUES ($1, $2, $3, $4)
                 """,
@@ -741,7 +733,7 @@ class TestCollaborationWorkflows:
 
         await mock_db_service.execute_query(
             """
-            INSERT INTO trip_collaborators 
+            INSERT INTO trip_collaborators
             (trip_id, user_id, permission_level, added_by)
             VALUES ($1, $2, $3, $4)
             """,
@@ -762,7 +754,7 @@ class TestCollaborationWorkflows:
             SELECT t.* FROM trips t
             WHERE t.id = $1 AND (
                 t.user_id = auth.uid() OR
-                t.id IN (SELECT trip_id FROM trip_collaborators 
+                t.id IN (SELECT trip_id FROM trip_collaborators
                          WHERE user_id = auth.uid())
             )
             """,
@@ -784,7 +776,7 @@ class TestCollaborationWorkflows:
 
         await mock_db_service.execute_query(
             """
-            UPDATE trip_collaborators 
+            UPDATE trip_collaborators
             SET permission_level = $1, updated_at = NOW()
             WHERE trip_id = $2 AND user_id = $3
             AND trip_id IN (SELECT id FROM trips WHERE user_id = auth.uid())
@@ -822,7 +814,7 @@ class TestCollaborationWorkflows:
 
         await mock_db_service.execute_query(
             """
-            DELETE FROM trip_collaborators 
+            DELETE FROM trip_collaborators
             WHERE trip_id = $1 AND user_id = $2
             AND trip_id IN (SELECT id FROM trips WHERE user_id = auth.uid())
             """,
@@ -839,7 +831,7 @@ class TestCollaborationWorkflows:
             SELECT t.* FROM trips t
             WHERE t.id = $1 AND (
                 t.user_id = auth.uid() OR
-                t.id IN (SELECT trip_id FROM trip_collaborators 
+                t.id IN (SELECT trip_id FROM trip_collaborators
                          WHERE user_id = auth.uid())
             )
             """,
@@ -884,14 +876,14 @@ class TestMultiUserScenarios:
         collaborators = await mock_db_service.fetch_all(
             """
             SELECT user_id, permission_level,
-                   CASE WHEN permission_level IN ('admin') THEN true 
+                   CASE WHEN permission_level IN ('admin') THEN true
                         ELSE false END as can_manage
             FROM trip_collaborators
             WHERE trip_id = $1
-            ORDER BY CASE permission_level 
+            ORDER BY CASE permission_level
                      WHEN 'admin' THEN 3
-                     WHEN 'edit' THEN 2 
-                     WHEN 'view' THEN 1 
+                     WHEN 'edit' THEN 2
+                     WHEN 'view' THEN 1
                      END DESC
             """,
             1,
@@ -954,7 +946,7 @@ class TestMultiUserScenarios:
         hierarchy = await mock_db_service.fetch_all(
             """
             SELECT trip_id, user_id, permission_level,
-                   CASE WHEN permission_level = 'admin' THEN true 
+                   CASE WHEN permission_level = 'admin' THEN true
                         ELSE false END as can_add_collaborators
             FROM trip_collaborators
             WHERE trip_id = $1
@@ -987,7 +979,7 @@ class TestSecurityIsolation:
         # Attempt to access other users' collaborations
         collaborations = await mock_db_service.fetch_all(
             """
-            SELECT * FROM trip_collaborators 
+            SELECT * FROM trip_collaborators
             WHERE trip_id NOT IN (
                 SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid()
                 UNION
@@ -1012,7 +1004,7 @@ class TestSecurityIsolation:
         with pytest.raises(Exception, match="RLS policy prevents"):
             await mock_db_service.execute_query(
                 """
-                UPDATE trip_collaborators 
+                UPDATE trip_collaborators
                 SET permission_level = 'admin'
                 WHERE user_id = auth.uid()
                 """
@@ -1113,7 +1105,7 @@ class TestPerformanceOptimization:
             """
             SELECT m.*, 1 - (m.embedding <=> $1) as similarity
             FROM memories m
-            WHERE m.user_id = auth.uid() 
+            WHERE m.user_id = auth.uid()
             AND (1 - (m.embedding <=> $1)) >= $2
             ORDER BY m.embedding <=> $1
             LIMIT $3

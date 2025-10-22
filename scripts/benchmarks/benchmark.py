@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Unified Database Performance Benchmark for TripSage.
+"""Unified Database Performance Benchmark for TripSage.
 
 Simple, focused benchmark that validates core optimization claims:
 - 3x general query performance improvement
@@ -16,13 +15,16 @@ Usage:
 
 import asyncio
 import logging
+import sys
 import time
 from pathlib import Path
 from typing import Any
 
 import click
-from collectors import MetricsCollector, ReportGenerator
-from config import BenchmarkConfig
+
+from scripts.benchmarks.collectors import MetricsCollector, ReportGenerator
+from scripts.benchmarks.config import BenchmarkConfig
+
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,7 @@ class BenchmarkRunner:
         self.reporter = ReportGenerator(self.output_dir)
         self.start_time = time.time()
 
-        logger.info(f"Benchmark runner initialized with output dir: {self.output_dir}")
+        logger.info("Benchmark runner initialized with output dir: %s", self.output_dir)
 
     async def run_quick_test(self) -> dict[str, Any]:
         """Run quick performance test (2-3 minutes)."""
@@ -74,11 +76,11 @@ class BenchmarkRunner:
             report_path = await self.reporter.generate_report(report_data, "quick_test")
             report_data["report_path"] = str(report_path)
 
-            logger.info(f"Quick test completed. Report: {report_path}")
+            logger.info("Quick test completed. Report: %s", report_path)
             return report_data
 
-        except Exception as e:
-            logger.error(f"Quick test failed: {e}")
+        except Exception:
+            logger.exception("Quick test failed")
             raise
 
     async def run_database_only(self) -> dict[str, Any]:
@@ -109,11 +111,11 @@ class BenchmarkRunner:
             )
             report_data["report_path"] = str(report_path)
 
-            logger.info(f"Database-only test completed. Report: {report_path}")
+            logger.info("Database-only test completed. Report: %s", report_path)
             return report_data
 
-        except Exception as e:
-            logger.error(f"Database-only test failed: {e}")
+        except Exception:
+            logger.exception("Database-only test failed")
             raise
 
     async def run_vector_only(self) -> dict[str, Any]:
@@ -144,15 +146,15 @@ class BenchmarkRunner:
             )
             report_data["report_path"] = str(report_path)
 
-            logger.info(f"Vector-only test completed. Report: {report_path}")
+            logger.info("Vector-only test completed. Report: %s", report_path)
             return report_data
 
-        except Exception as e:
-            logger.error(f"Vector-only test failed: {e}")
+        except Exception:
+            logger.exception("Vector-only test failed")
             raise
 
     async def run_full_suite(self) -> dict[str, Any]:
-        """Run comprehensive benchmark suite."""
+        """Run benchmark suite."""
         logger.info("Running full benchmark suite...")
 
         try:
@@ -196,11 +198,11 @@ class BenchmarkRunner:
             report_path = await self.reporter.generate_report(report_data, "full_suite")
             report_data["report_path"] = str(report_path)
 
-            logger.info(f"Full suite completed. Report: {report_path}")
+            logger.info("Full suite completed. Report: %s", report_path)
             return report_data
 
-        except Exception as e:
-            logger.error(f"Full suite failed: {e}")
+        except Exception:
+            logger.exception("Full suite failed")
             raise
 
     async def _run_core_scenarios(
@@ -231,7 +233,7 @@ class BenchmarkRunner:
             operation_count += 1
 
             if i % 100 == 0:
-                logger.debug(f"Completed {i}/{iterations} operations")
+                logger.debug("Completed %s/%s operations", i, iterations)
 
         results["scenarios_completed"] = 1
         results["total_operations"] = operation_count
@@ -249,8 +251,9 @@ class BenchmarkRunner:
     ) -> dict[str, Any]:
         """Run database-focused scenarios."""
         logger.info(
-            f"Running database scenarios: {iterations} iterations, "
-            f"{concurrent_users} users"
+            "Running database scenarios: %s iterations, %s users",
+            iterations,
+            concurrent_users,
         )
 
         # For real implementation, this would test actual database operations
@@ -263,8 +266,9 @@ class BenchmarkRunner:
     ) -> dict[str, Any]:
         """Run vector search scenarios."""
         logger.info(
-            f"Running vector scenarios: {iterations} iterations, "
-            f"{concurrent_users} users"
+            "Running vector scenarios: %s iterations, %s users",
+            iterations,
+            concurrent_users,
         )
 
         # For real implementation, this would test pgvector operations
@@ -277,8 +281,9 @@ class BenchmarkRunner:
     ) -> dict[str, Any]:
         """Run mixed workload scenarios."""
         logger.info(
-            f"Running mixed scenarios: {iterations} iterations, "
-            f"{concurrent_users} users"
+            "Running mixed scenarios: %s iterations, %s users",
+            iterations,
+            concurrent_users,
         )
 
         # For real implementation, this would test combined workloads
@@ -380,18 +385,18 @@ def quick(output_dir: str, iterations: int, concurrent: int):
     async def run():
         try:
             results = await runner.run_quick_test()
-            click.echo("✅ Quick benchmark completed!")
-            click.echo(f"📈 Report: {results.get('report_path', 'N/A')}")
+            click.echo("Quick benchmark completed")
+            click.echo(f"Report: {results.get('report_path', 'N/A')}")
             click.echo(
-                f"⚡ Operations/sec: {results['results']['operations_per_second']:.1f}"
+                f"Operations/sec: {results['results']['operations_per_second']:.1f}"
             )
             return 0
-        except Exception as e:
-            click.echo(f"❌ Quick benchmark failed: {e}")
+        except Exception as e:  # noqa: BLE001
+            click.echo(f"Quick benchmark failed: {e}")
             return 1
 
     exit_code = asyncio.run(run())
-    exit(exit_code)
+    sys.exit(exit_code)
 
 
 @main.command()
@@ -411,14 +416,14 @@ def database_only(output_dir: str):
         try:
             results = await runner.run_database_only()
             click.echo("✅ Database benchmark completed!")
-            click.echo(f"📈 Report: {results.get('report_path', 'N/A')}")
+            click.echo(f"Report: {results.get('report_path', 'N/A')}")
             return 0
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             click.echo(f"❌ Database benchmark failed: {e}")
             return 1
 
     exit_code = asyncio.run(run())
-    exit(exit_code)
+    sys.exit(exit_code)
 
 
 @main.command()
@@ -437,15 +442,15 @@ def vector_only(output_dir: str):
     async def run():
         try:
             results = await runner.run_vector_only()
-            click.echo("✅ Vector benchmark completed!")
-            click.echo(f"📈 Report: {results.get('report_path', 'N/A')}")
+            click.echo("Vector benchmark completed")
+            click.echo(f"Report: {results.get('report_path', 'N/A')}")
             return 0
-        except Exception as e:
-            click.echo(f"❌ Vector benchmark failed: {e}")
+        except Exception as e:  # noqa: BLE001
+            click.echo(f"Vector benchmark failed: {e}")
             return 1
 
     exit_code = asyncio.run(run())
-    exit(exit_code)
+    sys.exit(exit_code)
 
 
 @main.command()
@@ -458,7 +463,7 @@ def vector_only(output_dir: str):
 )
 @click.option("--timeout", type=int, default=3600, help="Timeout in seconds")
 def full_suite(output_dir: str, timeout: int):
-    """Run comprehensive benchmark suite."""
+    """Run benchmark suite."""
     output_path = Path(output_dir)
     runner = BenchmarkRunner(output_dir=output_path)
 
@@ -470,26 +475,26 @@ def full_suite(output_dir: str, timeout: int):
             claims_met = validation.get("claims_validated", 0)
             total_claims = validation.get("total_claims", 4)
 
-            click.echo("✅ Full benchmark suite completed!")
-            click.echo(f"📈 Report: {results.get('report_path', 'N/A')}")
-            click.echo(f"🎯 Claims validated: {claims_met}/{total_claims}")
+            click.echo("Full benchmark suite completed")
+            click.echo(f"Report: {results.get('report_path', 'N/A')}")
+            click.echo(f"Claims validated: {claims_met}/{total_claims}")
 
             if validation.get("overall_success", False):
-                click.echo("🎉 All optimization claims validated successfully!")
+                click.echo("All optimization claims validated successfully")
                 return 0
             else:
-                click.echo("⚠️  Some optimization claims were not met.")
+                click.echo("Some optimization claims were not met.")
                 return 1
 
-        except asyncio.TimeoutError:
-            click.echo(f"❌ Benchmark suite timed out after {timeout} seconds")
+        except TimeoutError:
+            click.echo(f"Benchmark suite timed out after {timeout} seconds")
             return 1
-        except Exception as e:
-            click.echo(f"❌ Benchmark suite failed: {e}")
+        except Exception as e:  # noqa: BLE001
+            click.echo(f"Benchmark suite failed: {e}")
             return 1
 
     exit_code = asyncio.run(run())
-    exit(exit_code)
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

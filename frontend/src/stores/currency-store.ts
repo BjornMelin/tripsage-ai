@@ -101,7 +101,7 @@ interface CurrencyStore extends CurrencyState {
     toCurrency: CurrencyCode
   ) => ConversionResult | null;
 
-  // Advanced features
+  // Additional features
   getRecentCurrencyPairs: () => CurrencyPair[];
   getPopularCurrencies: () => Currency[];
   getCurrencyByCode: (code: string) => Currency | undefined;

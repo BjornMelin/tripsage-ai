@@ -15,4 +15,5 @@ All other services have been migrated to direct SDK integration:
 
 from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
 
+
 __all__ = ["AirbnbMCPClient"]

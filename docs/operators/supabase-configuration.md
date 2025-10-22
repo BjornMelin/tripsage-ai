@@ -50,7 +50,7 @@ pip install supabase python-dotenv
 | Real-time Subscriptions | Limited | ✅ | ✅ |
 | Row Level Security | ✅ | ✅ | ✅ |
 | Custom Domains | ❌ | ✅ | ✅ |
-| Advanced Monitoring | ❌ | ✅ | ✅ |
+| Monitoring | ❌ | ✅ | ✅ |
 | SLA | None | 99.9% | 99.99% |
 
 ## Supabase Project Setup
@@ -523,7 +523,7 @@ LIMIT 20;
 
 ### 1. Health Check Endpoints
 
-Create comprehensive health checks:
+Create health checks:
 
 ```python
 # Backend health check implementation
@@ -560,37 +560,25 @@ Configure alerts in Supabase Dashboard:
 
 ### 3. External Monitoring Setup
 
-**Prometheus Metrics:**
+**OTEL Metrics:**
 
 ```python
 # Custom metrics for monitoring
-from prometheus_client import Counter, Histogram, Gauge
+from opentelemetry import metrics
 
-# Request metrics
-REQUEST_COUNT = Counter(
-    'http_requests_total',
-    'Total HTTP requests',
-    ['method', 'endpoint', 'status_code']
+meter = metrics.get_meter("tripsage")
+REQUESTS = meter.create_counter(
+    "http.server.requests", description="HTTP requests"
 )
-
-REQUEST_DURATION = Histogram(
-    'http_request_duration_seconds',
-    'HTTP request duration'
+REQUEST_DURATION = meter.create_histogram(
+    "http.server.duration", unit="s", description="HTTP request duration"
 )
-
-# Database metrics
-DB_CONNECTIONS = Gauge(
-    'database_connections_active',
-    'Active database connections'
-)
-
-VECTOR_SEARCH_DURATION = Histogram(
-    'vector_search_duration_seconds',
-    'Vector search query duration'
+VECTOR_SEARCH_DURATION = meter.create_histogram(
+    "db.vector_search.duration", unit="s", description="Vector search duration"
 )
 ```
 
-**Grafana Dashboard Configuration:**
+**Observability Configuration:**
 
 ```json
 {
@@ -856,7 +844,7 @@ GROUP BY state;
 - [ ] **Monitoring Setup**: Security monitoring and alerting configured
 - [ ] **Backup Strategy**: Automated backups configured and tested
 - [ ] **Access Controls**: Database access restricted to application servers
-- [ ] **Audit Logging**: Comprehensive audit logging enabled
+- [ ] **Audit Logging**: Audit logging enabled
 
 ### Post-Deployment Verification
 
@@ -873,7 +861,7 @@ GROUP BY state;
 
 ## Conclusion
 
-This comprehensive guide provides everything needed to deploy TripSage on Supabase in a production environment. The setup includes enterprise-grade security, performance optimization, monitoring, and automation.
+This guide provides everything needed to deploy TripSage on Supabase in a production environment. The setup includes enterprise-grade security, performance optimization, monitoring, and automation.
 
 For additional support:
 
@@ -1282,7 +1270,7 @@ EMAIL_SERVICE_URL=your-email-service-url (optional)
 
 ### 4. Error Handling
 
-- Implement comprehensive logging for all automated tasks
+- Implement logging for all automated tasks
 - Set up alerts for failed jobs or webhooks
 - Maintain rollback procedures for critical operations
 - Regular review of error logs and performance metrics
@@ -1334,4 +1322,4 @@ EMAIL_SERVICE_URL=your-email-service-url (optional)
 - `get_webhook_stats()` - Webhook performance metrics
 - `SELECT * FROM system_metrics ORDER BY created_at DESC LIMIT 100;` - Recent metrics
 
-This comprehensive automation setup ensures TripSage operates efficiently with minimal manual intervention while providing robust monitoring and notification capabilities.
+This automation setup ensures TripSage operates efficiently with minimal manual intervention while providing robust monitoring and notification capabilities.

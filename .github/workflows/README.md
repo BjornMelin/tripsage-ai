@@ -19,7 +19,7 @@ This directory contains the modern CI/CD pipeline for TripSage, following 2025 b
    - OIDC authentication for AWS
    - Multi-environment support (staging, production)
    - Automatic rollback capabilities
-   - Comprehensive smoke tests
+   - Smoke tests
    - GitHub Deployments API integration
 
 3. **`utilities.yml`** - PR Automation & Maintenance
@@ -46,6 +46,7 @@ Located in `.github/actions/`:
 ## Key Features
 
 ### Security
+
 - All actions pinned to commit SHAs
 - OIDC authentication (no long-lived credentials)
 - Integrated vulnerability scanning
@@ -53,6 +54,7 @@ Located in `.github/actions/`:
 - Minimal workflow permissions
 
 ### Performance
+
 - Advanced multi-level caching
 - Matrix builds with intelligent exclusions
 - Parallel test execution
@@ -60,13 +62,15 @@ Located in `.github/actions/`:
 - Larger runners for resource-intensive tasks
 
 ### Reliability
+
 - Smart retry mechanisms for flaky tests
 - Proper health checks for services
 - Timeout configurations
-- Comprehensive error handling
+- Error handling
 - Rollback capabilities for failed deployments
 
 ### Developer Experience
+
 - Clear error messages and logs
 - Helpful PR automation
 - Fast feedback loops
@@ -76,13 +80,16 @@ Located in `.github/actions/`:
 ## Required Secrets
 
 ### GitHub Actions
+
 - `CODECOV_TOKEN` - For coverage reporting
 
 ### AWS Deployment
+
 - `AWS_DEPLOY_ROLE_ARN` - OIDC role for AWS
 - `AWS_REGION` - AWS region (default: us-east-1)
 
 ### Supabase
+
 - `SUPABASE_URL` - Supabase project URL
 - `SUPABASE_ANON_KEY` - Public anonymous key
 - `SUPABASE_SERVICE_KEY` - Service role key
@@ -90,22 +97,27 @@ Located in `.github/actions/`:
 - `SUPABASE_PROJECT_ID` - Project reference
 
 ### Vercel
+
 - `VERCEL_TOKEN` - Vercel API token
 - `VERCEL_ORG_ID` - Organization ID
 - `VERCEL_PROJECT_ID` - Project ID
 
 ### Notifications (Optional)
+
 - `SLACK_WEBHOOK_URL` - Slack deployment notifications
 
 ## Usage
 
 ### Running CI
+
 CI runs automatically on:
+
 - Push to main, develop, feat/*, session/* branches
 - Pull requests to main or develop
 - Manual workflow dispatch
 
 ### Manual Deployment
+
 ```bash
 # Deploy to staging
 gh workflow run deploy.yml -f environment=staging
@@ -115,6 +127,7 @@ gh workflow run deploy.yml -f environment=production
 ```
 
 ### Running Utilities
+
 ```bash
 # Generate release notes
 gh workflow run utilities.yml -f action=release-prep
@@ -129,6 +142,7 @@ gh workflow run utilities.yml -f action=metrics-report
 ## Migration from Old Workflows
 
 The following workflows have been replaced:
+
 - `backend-ci.yml` → Integrated into `ci.yml`
 - `frontend-ci-simple.yml` → Integrated into `ci.yml`
 - `coverage.yml` → Integrated into `ci.yml`
@@ -142,7 +156,7 @@ The following workflows have been replaced:
 2. **Use composite actions** for repeated logic
 3. **Implement proper caching** to speed up builds
 4. **Run tests in parallel** when possible
-5. **Use matrix strategies** for comprehensive testing
+5. **Use matrix strategies** for testing
 6. **Implement retry logic** for flaky operations
 7. **Keep workflows simple** and modular
 8. **Document all secrets** required
@@ -176,6 +190,7 @@ The following workflows have been replaced:
 ### Debug Mode
 
 Enable debug logging:
+
 ```bash
 gh workflow run ci.yml -f debug=true
 ```
@@ -183,6 +198,7 @@ gh workflow run ci.yml -f debug=true
 ### Support
 
 For issues or questions:
+
 1. Check workflow logs in GitHub Actions
 2. Review this documentation
 3. Check `.github/CODEOWNERS` for maintainers
@@ -191,17 +207,20 @@ For issues or questions:
 ## Maintenance
 
 ### Weekly Tasks
+
 - Review Dependabot PRs (grouped by category)
 - Check workflow performance metrics
 - Update pinned action versions if needed
 
 ### Monthly Tasks
+
 - Review and update coverage thresholds
 - Audit workflow permissions
 - Update composite actions
 - Review stale issues/PRs
 
 ### Quarterly Tasks
+
 - Major dependency updates
 - Security audit of workflows
 - Performance optimization review

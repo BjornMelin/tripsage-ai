@@ -1,7 +1,6 @@
-"""
-Modern test suite for ToolCallService with updated interfaces.
+"""Modern test suite for ToolCallService with updated interfaces.
 
-Comprehensive tests for MCP tool calling, validation, error handling,
+Tests for MCP tool calling, validation, error handling,
 and retry mechanisms matching the actual implementation.
 """
 
@@ -19,6 +18,7 @@ from tripsage_core.services.business.tool_calling_service import (
     ToolCallValidationResult,
     get_tool_calling_service,
 )
+
 
 # Module-level fixtures for pytest discovery
 
@@ -503,7 +503,7 @@ class TestErrorHandling:
             )
 
             # Verify error was logged
-            mock_logger.error.assert_called()
+            mock_logger.exception.assert_called()
             assert response.status == "error"
 
     @pytest.mark.asyncio

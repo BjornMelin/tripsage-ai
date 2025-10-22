@@ -1,22 +1,51 @@
-"""
-Planning tools for TripSage travel planning agent.
+"""Planning tools for TripSage travel planning agent.
 
 This module provides function tools for travel planning operations used by the
 TravelPlanningAgent, including plan creation, updates, and persistence.
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-from tripsage_core.services.business.memory_service import MemoryService
+from tripsage.tools.memory_tools import ConversationMessage, add_conversation_memory
+from tripsage_core.exceptions import CoreServiceError, CoreTripSageError
 from tripsage_core.utils.cache_utils import redis_cache
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
+
+
+async def _record_plan_memory(
+    *,
+    user_id: str,
+    plan_id: str,
+    system_prompt: str,
+    user_content: str,
+    metadata: dict[str, Any],
+) -> None:
+    """Persist plan-related context to the memory service."""
+    try:
+        await add_conversation_memory(
+            messages=[
+                ConversationMessage(role="system", content=system_prompt),
+                ConversationMessage(role="user", content=user_content),
+            ],
+            user_id=user_id,
+            context_type="travel_plan",
+            metadata=metadata,
+        )
+    except (
+        CoreServiceError,
+        CoreTripSageError,
+        RuntimeError,
+        ValueError,
+    ) as exc:  # pragma: no cover - telemetry path
+        logger.warning("Failed to record travel plan memory: %s", exc)
 
 
 class TravelPlanInput(BaseModel):
@@ -24,12 +53,12 @@ class TravelPlanInput(BaseModel):
 
     user_id: str = Field(..., description="User ID")
     title: str = Field(..., description="Plan title")
-    destinations: List[str] = Field(..., description="List of destinations")
+    destinations: list[str] = Field(..., description="List of destinations")
     start_date: str = Field(..., description="Start date (YYYY-MM-DD)")
     end_date: str = Field(..., description="End date (YYYY-MM-DD)")
     travelers: int = Field(1, description="Number of travelers")
-    budget: Optional[float] = Field(None, description="Total budget")
-    preferences: Optional[Dict[str, Any]] = Field(None, description="User preferences")
+    budget: float | None = Field(None, description="Total budget")
+    preferences: dict[str, Any] | None = Field(None, description="User preferences")
 
 
 class TravelPlanUpdate(BaseModel):
@@ -37,31 +66,31 @@ class TravelPlanUpdate(BaseModel):
 
     plan_id: str = Field(..., description="Travel plan ID")
     user_id: str = Field(..., description="User ID")
-    updates: Dict[str, Any] = Field(..., description="Fields to update")
+    updates: dict[str, Any] = Field(..., description="Fields to update")
 
 
 class SearchResultInput(BaseModel):
     """Input model for combining search results."""
 
-    flight_results: Optional[Dict[str, Any]] = Field(
+    flight_results: dict[str, Any] | None = Field(
         None, description="Flight search results"
     )
-    accommodation_results: Optional[Dict[str, Any]] = Field(
+    accommodation_results: dict[str, Any] | None = Field(
         None, description="Accommodation search results"
     )
-    activity_results: Optional[Dict[str, Any]] = Field(
+    activity_results: dict[str, Any] | None = Field(
         None, description="Activity search results"
     )
-    destination_info: Optional[Dict[str, Any]] = Field(
+    destination_info: dict[str, Any] | None = Field(
         None, description="Destination information"
     )
-    user_preferences: Optional[Dict[str, Any]] = Field(
+    user_preferences: dict[str, Any] | None = Field(
         None, description="User preferences"
     )
 
 
 @with_error_handling()
-async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
+async def create_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
     """Create a new travel plan with basic information.
 
     Creates an initial travel plan with core details like destinations, dates,
@@ -86,7 +115,7 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         plan_input = TravelPlanInput(**params)
 
         # Generate plan ID
-        plan_id = f"plan_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+        plan_id = f"plan_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
 
         # Create travel plan object
         travel_plan = {
@@ -99,8 +128,8 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             "travelers": plan_input.travelers,
             "budget": plan_input.budget,
             "preferences": plan_input.preferences or {},
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "components": {
                 "flights": [],
                 "accommodations": [],
@@ -114,46 +143,31 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         cache_key = f"travel_plan:{plan_id}"
         await redis_cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
-        # Create memory entities for the plan
-        # Using Mem0 direct SDK integration for memory management
-        try:
-            # Initialize direct Mem0 service
-            memory_service = MemoryService()
-            await memory_service.connect()
+        plan_memory = (
+            f"Travel plan '{plan_input.title}' created for user {plan_input.user_id}"
+        )
+        plan_memory += f" with destinations: {', '.join(plan_input.destinations)}"
+        plan_memory += f" from {plan_input.start_date} to {plan_input.end_date}"
+        plan_memory += f" for {plan_input.travelers} travelers"
 
-            # Create memory for the travel plan
-            plan_memory = (
-                f"Travel plan '{plan_input.title}' created for user "
-                f"{plan_input.user_id}"
-            )
-            plan_memory += f" with destinations: {', '.join(plan_input.destinations)}"
-            plan_memory += f" from {plan_input.start_date} to {plan_input.end_date}"
-            plan_memory += f" for {plan_input.travelers} travelers"
+        if plan_input.budget:
+            plan_memory += f" with budget ${plan_input.budget}"
 
-            if plan_input.budget:
-                plan_memory += f" with budget ${plan_input.budget}"
-
-            # Add the memory using Mem0
-            await memory_service.add_conversation_memory(
-                messages=[
-                    {"role": "system", "content": "Travel plan created"},
-                    {"role": "user", "content": plan_memory},
-                ],
-                user_id=plan_input.user_id,
-                metadata={
-                    "plan_id": plan_id,
-                    "type": "travel_plan",
-                    "destinations": plan_input.destinations,
-                    "start_date": plan_input.start_date,
-                    "end_date": plan_input.end_date,
-                    "travelers": plan_input.travelers,
-                    "budget": plan_input.budget,
-                },
-            )
-
-        except Exception as e:
-            logger.warning(f"Error creating memory entities: {str(e)}")
-            # Continue even if memory creation fails
+        await _record_plan_memory(
+            user_id=plan_input.user_id,
+            plan_id=plan_id,
+            system_prompt="Travel plan created",
+            user_content=plan_memory,
+            metadata={
+                "plan_id": plan_id,
+                "type": "travel_plan",
+                "destinations": plan_input.destinations,
+                "start_date": plan_input.start_date,
+                "end_date": plan_input.end_date,
+                "travelers": plan_input.travelers,
+                "budget": plan_input.budget,
+            },
+        )
 
         return {
             "success": True,
@@ -163,13 +177,13 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Error creating travel plan: {str(e)}")
+        logger.exception("Error creating travel plan")
         log_exception(e)
-        return {"success": False, "error": f"Travel plan creation error: {str(e)}"}
+        return {"success": False, "error": f"Travel plan creation error: {e!s}"}
 
 
 @with_error_handling()
-async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
+async def update_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
     """Update an existing travel plan with new information.
 
     Updates specific fields in a travel plan, such as adding components or
@@ -203,59 +217,43 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             return {"success": False, "error": "Unauthorized to update this plan"}
 
         # Update fields
-        for key, value in update_input.updates.items():
+        updates = dict(update_input.updates)
+        for key, value in updates.items():
             if key in travel_plan:
                 travel_plan[key] = value
 
         # Update the modification timestamp
-        travel_plan["updated_at"] = datetime.now(timezone.utc).isoformat()
+        travel_plan["updated_at"] = datetime.now(UTC).isoformat()
 
         # Save the updated plan
         await redis_cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
-        # Update memory entity
-        # Using Mem0 direct SDK integration for memory management
-        try:
-            # Initialize direct Mem0 service
-            memory_service = MemoryService()
-            await memory_service.connect()
+        update_memory = f"Travel plan '{travel_plan.get('title', 'Untitled')}' updated"
+        update_details = []
 
-            # Create update memory
-            update_memory = (
-                f"Travel plan '{travel_plan.get('title', 'Untitled')}' updated"
+        for key, value in updates.items():
+            if key == "destinations":
+                update_details.append(f"destinations changed to {', '.join(value)}")
+            elif key in {"start_date", "end_date"}:
+                update_details.append(f"{key} changed to {value}")
+            elif key == "budget":
+                update_details.append(f"budget changed to ${value}")
+            elif key == "title":
+                update_details.append(f"title changed to {value}")
+
+        if update_details:
+            update_memory += f" with changes: {', '.join(update_details)}"
+            await _record_plan_memory(
+                user_id=update_input.user_id,
+                plan_id=update_input.plan_id,
+                system_prompt="Travel plan updated",
+                user_content=update_memory,
+                metadata={
+                    "plan_id": update_input.plan_id,
+                    "type": "travel_plan_update",
+                    "changes": updates,
+                },
             )
-            update_details = []
-
-            for key, value in update_input.updates.items():
-                if key == "destinations":
-                    update_details.append(f"destinations changed to {', '.join(value)}")
-                elif key == "start_date" or key == "end_date":
-                    update_details.append(f"{key} changed to {value}")
-                elif key == "budget":
-                    update_details.append(f"budget changed to ${value}")
-                elif key == "title":
-                    update_details.append(f"title changed to {value}")
-
-            if update_details:
-                update_memory += f" with changes: {', '.join(update_details)}"
-
-                # Add the memory update using Mem0
-                await memory_service.add_conversation_memory(
-                    messages=[
-                        {"role": "system", "content": "Travel plan updated"},
-                        {"role": "user", "content": update_memory},
-                    ],
-                    user_id=update_input.user_id,
-                    metadata={
-                        "plan_id": update_input.plan_id,
-                        "type": "travel_plan_update",
-                        "changes": update_input.updates,
-                    },
-                )
-
-        except Exception as e:
-            logger.warning(f"Error updating memory entity: {str(e)}")
-            # Continue even if memory update fails
 
         return {
             "success": True,
@@ -265,17 +263,17 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Error updating travel plan: {str(e)}")
+        logger.exception("Error updating travel plan")
         log_exception(e)
-        return {"success": False, "error": f"Travel plan update error: {str(e)}"}
+        return {"success": False, "error": f"Travel plan update error: {e!s}"}
 
 
 @with_error_handling()
-async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
+async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
     """Combine results from multiple search operations into a unified recommendation.
 
     Analyzes and combines flight, accommodation, and activity search results based on
-    user preferences to create a comprehensive travel recommendation.
+    user preferences to create a travel recommendation.
 
     Args:
         params: Search results to combine:
@@ -304,9 +302,9 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
             "travel_tips": [],
         }
 
-        # Process flight results
-        if search_input.flight_results:
-            flight_offers = search_input.flight_results.get("offers", [])
+        flight_results = dict(search_input.flight_results or {})
+        if flight_results:
+            flight_offers = flight_results.get("offers", [])
             if flight_offers:
                 # Sort by price (assuming flight offers have total_amount field)
                 sorted_flights = sorted(
@@ -321,10 +319,9 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
                     )
 
         # Process accommodation results
-        if search_input.accommodation_results:
-            accommodations = search_input.accommodation_results.get(
-                "accommodations", []
-            )
+        accommodation_results = dict(search_input.accommodation_results or {})
+        if accommodation_results:
+            accommodations = accommodation_results.get("accommodations", [])
             if accommodations:
                 # Sort by a combination of price and rating
                 for accommodation in accommodations:
@@ -352,8 +349,9 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
                     )
 
         # Process activity results
-        if search_input.activity_results:
-            activities = search_input.activity_results.get("activities", [])
+        activity_results = dict(search_input.activity_results or {})
+        if activity_results:
+            activities = activity_results.get("activities", [])
             if activities:
                 # Sort by rating
                 sorted_activities = sorted(
@@ -372,14 +370,15 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
                     )
 
         # Process destination information
-        if search_input.destination_info:
+        destination_info = dict(search_input.destination_info or {})
+        if destination_info:
             # Extract highlights
-            highlights = search_input.destination_info.get("highlights", [])
+            highlights = destination_info.get("highlights", [])
             if highlights:
                 combined_results["destination_highlights"] = highlights[:5]
 
             # Extract travel tips
-            tips = search_input.destination_info.get("tips", [])
+            tips = destination_info.get("tips", [])
             if tips:
                 combined_results["travel_tips"] = tips[:3]
 
@@ -390,14 +389,14 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Error combining search results: {str(e)}")
+        logger.exception("Error combining search results")
         log_exception(e)
-        return {"success": False, "error": f"Result combination error: {str(e)}"}
+        return {"success": False, "error": f"Result combination error: {e!s}"}
 
 
 @with_error_handling()
-async def generate_travel_summary(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Generate a comprehensive summary of a travel plan.
+async def generate_travel_summary(params: dict[str, Any]) -> dict[str, Any]:
+    """Generate a summary of a travel plan.
 
     Creates a user-friendly summary of a travel plan with key information
     and recommendations.
@@ -450,12 +449,12 @@ async def generate_travel_summary(params: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Error generating travel summary: {str(e)}")
+        logger.exception("Error generating travel summary")
         log_exception(e)
-        return {"success": False, "error": f"Summary generation error: {str(e)}"}
+        return {"success": False, "error": f"Summary generation error: {e!s}"}
 
 
-def _generate_markdown_summary(travel_plan: Dict[str, Any]) -> str:
+def _generate_markdown_summary(travel_plan: dict[str, Any]) -> str:
     """Generate a markdown summary of a travel plan.
 
     Args:
@@ -534,7 +533,7 @@ def _generate_markdown_summary(travel_plan: Dict[str, Any]) -> str:
     return summary
 
 
-def _generate_text_summary(travel_plan: Dict[str, Any]) -> str:
+def _generate_text_summary(travel_plan: dict[str, Any]) -> str:
     """Generate a plain text summary of a travel plan.
 
     Args:
@@ -547,11 +546,10 @@ def _generate_text_summary(travel_plan: Dict[str, Any]) -> str:
     # For simplicity, we're just using a basic implementation
     markdown = _generate_markdown_summary(travel_plan)
     text = markdown.replace("# ", "").replace("## ", "").replace("### ", "")
-    text = text.replace("**", "").replace("*", "").replace("\n\n", "\n")
-    return text
+    return text.replace("**", "").replace("*", "").replace("\n\n", "\n")
 
 
-def _generate_html_summary(travel_plan: Dict[str, Any]) -> str:
+def _generate_html_summary(travel_plan: dict[str, Any]) -> str:
     """Generate an HTML summary of a travel plan.
 
     Args:
@@ -571,7 +569,7 @@ def _generate_html_summary(travel_plan: Dict[str, Any]) -> str:
 
 
 @with_error_handling()
-async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
+async def save_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
     """Save a travel plan to persistent storage.
 
     Stores the travel plan in the database and updates related knowledge graph entities.
@@ -608,80 +606,57 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         # Mark as finalized if requested
         if finalize:
             travel_plan["status"] = "finalized"
-            travel_plan["finalized_at"] = datetime.now(timezone.utc).isoformat()
+            travel_plan["finalized_at"] = datetime.now(UTC).isoformat()
 
         # Update the modification timestamp
-        travel_plan["updated_at"] = datetime.now(timezone.utc).isoformat()
+        travel_plan["updated_at"] = datetime.now(UTC).isoformat()
 
         # Save to persistent storage (database)
         # This would interface with the database in a real implementation
         # For now, we just update the cache with a longer TTL
         await redis_cache.set(cache_key, travel_plan, ttl=86400 * 30)  # 30 days
 
-        # Update knowledge graph
-        # Using Mem0 direct SDK integration for memory management
-        try:
-            # Initialize direct Mem0 service
-            memory_service = MemoryService()
-            await memory_service.connect()
+        if finalize:
+            finalization_time = datetime.now(UTC).isoformat()
+            finalize_memory = (
+                f"Travel plan '{travel_plan.get('title', 'Untitled')}' "
+                f"finalized on {finalization_time}"
+            )
+            await _record_plan_memory(
+                user_id=user_id,
+                plan_id=plan_id,
+                system_prompt="Travel plan finalized",
+                user_content=finalize_memory,
+                metadata={
+                    "plan_id": plan_id,
+                    "type": "travel_plan_finalization",
+                    "finalized_at": finalization_time,
+                },
+            )
 
-            # Add finalization memory if finalized
-            if finalize:
-                finalization_time = datetime.now(timezone.utc).isoformat()
-                finalize_memory = (
-                    f"Travel plan '{travel_plan.get('title', 'Untitled')}' "
-                    f"finalized on {finalization_time}"
+        components = travel_plan.get("components", {})
+        if components:
+            component_memories = [
+                f"{len(items)} {component_type}"
+                for component_type, items in components.items()
+                if items
+            ]
+
+            if component_memories:
+                components_memory = (
+                    f"Travel plan includes: {', '.join(component_memories)}"
                 )
-
-                await memory_service.add_conversation_memory(
-                    messages=[
-                        {"role": "system", "content": "Travel plan finalized"},
-                        {"role": "user", "content": finalize_memory},
-                    ],
+                await _record_plan_memory(
                     user_id=user_id,
+                    plan_id=plan_id,
+                    system_prompt="Travel plan components saved",
+                    user_content=components_memory,
                     metadata={
                         "plan_id": plan_id,
-                        "type": "travel_plan_finalization",
-                        "finalized_at": finalization_time,
+                        "type": "travel_plan_components",
+                        "components": components,
                     },
                 )
-
-            # Create memory for plan components
-            components = travel_plan.get("components", {})
-            if components:
-                component_memories = []
-
-                for component_type, items in components.items():
-                    if not items:
-                        continue
-
-                    component_count = len(items)
-                    component_memories.append(f"{component_count} {component_type}")
-
-                if component_memories:
-                    components_memory = (
-                        f"Travel plan includes: {', '.join(component_memories)}"
-                    )
-
-                    await memory_service.add_conversation_memory(
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": "Travel plan components saved",
-                            },
-                            {"role": "user", "content": components_memory},
-                        ],
-                        user_id=user_id,
-                        metadata={
-                            "plan_id": plan_id,
-                            "type": "travel_plan_components",
-                            "components": components,
-                        },
-                    )
-
-        except Exception as e:
-            logger.warning(f"Error updating memory entity: {str(e)}")
-            # Continue even if memory update fails
 
         return {
             "success": True,
@@ -694,6 +669,6 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Error saving travel plan: {str(e)}")
+        logger.exception("Error saving travel plan")
         log_exception(e)
-        return {"success": False, "error": f"Travel plan save error: {str(e)}"}
+        return {"success": False, "error": f"Travel plan save error: {e!s}"}

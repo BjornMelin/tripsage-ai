@@ -1,5 +1,6 @@
 """Tests for the updated error_handling utilities integration with core exceptions."""
 
+import logging
 from unittest.mock import Mock, patch
 
 import pytest
@@ -7,8 +8,6 @@ import pytest
 from tripsage_core.exceptions import (
     CoreDatabaseError,
     CoreExternalAPIError,
-    CoreMCPError,
-    CoreTripSageError,
     CoreValidationError,
 )
 from tripsage_core.utils.error_handling_utils import (
@@ -26,30 +25,6 @@ from tripsage_core.utils.error_handling_utils import (
 )
 
 
-class TestBackwardsCompatibility:
-    """Test backwards compatibility aliases."""
-
-    def test_alias_mappings(self):
-        """Test that aliases point to correct core exceptions."""
-        # These aliases no longer exist after Phase 1 cleanup
-        # The error_handling_utils module now directly uses Core exceptions
-        pass
-
-    def test_alias_functionality(self):
-        """Test that aliases work identically to core exceptions."""
-        # Test with alias
-        alias_exc = CoreTripSageError("Test message", "TEST_CODE")
-
-        # Test with core exception
-        core_exc = CoreTripSageError("Test message", "TEST_CODE")
-
-        # Should have same functionality
-        assert alias_exc.message == core_exc.message
-        assert alias_exc.code == core_exc.code
-        assert alias_exc.status_code == core_exc.status_code
-        assert type(alias_exc) is type(core_exc)
-
-
 class TestUpdatedUtilityFunctions:
     """Test updated utility functions that use core exceptions."""
 
@@ -62,34 +37,23 @@ class TestUpdatedUtilityFunctions:
         assert "message" in result
         assert result["message"] == "Test validation error"
 
-    @patch("tripsage_core.utils.error_handling_utils.get_logger")
-    def test_log_exception_with_mcp_error(self, mock_get_logger):
-        """Test log_exception with CoreMCPError."""
-        mock_logger = Mock()
-        mock_get_logger.return_value = mock_logger
-
-        exc = CoreMCPError(
-            message="MCP operation failed",
-            server="flights-mcp",
-            tool="search_flights",
-            params={"query": "NYC to LAX"},
+    def test_log_exception_with_external_api_error(self, caplog):
+        """Test log_exception with CoreExternalAPIError."""
+        exc = CoreExternalAPIError(
+            message="External API failed",
+            api_service="flights-mcp",
+            api_status_code=504,
+            api_response={"error": "timeout"},
         )
 
-        log_exception(exc)
+        with caplog.at_level(logging.ERROR):
+            log_exception(exc)
 
-        # Should log error with MCP-specific details
-        mock_logger.error.assert_called_once()
-        call_args = mock_logger.error.call_args[0]
-        assert "MCP Error" in call_args[0]
-        assert "flights-mcp" in call_args
-        assert "search_flights" in call_args
+        assert any("API Error" in record.message for record in caplog.records)
+        assert any("flights-mcp" in record.message for record in caplog.records)
 
-    @patch("tripsage_core.utils.error_handling_utils.get_logger")
-    def test_log_exception_with_api_error(self, mock_get_logger):
+    def test_log_exception_with_api_error(self, caplog):
         """Test log_exception with CoreExternalAPIError."""
-        mock_logger = Mock()
-        mock_get_logger.return_value = mock_logger
-
         exc = CoreExternalAPIError(
             message="API call failed",
             api_service="openai",
@@ -97,48 +61,36 @@ class TestUpdatedUtilityFunctions:
             api_response={"error": "rate limit exceeded"},
         )
 
-        log_exception(exc)
+        with caplog.at_level(logging.ERROR):
+            log_exception(exc)
 
-        # Should log error with API-specific details
-        mock_logger.error.assert_called_once()
-        call_args = mock_logger.error.call_args[0]
-        assert "API Error" in call_args[0]
-        assert "openai" in call_args
-        assert 429 in call_args
+        assert any("API Error" in record.message for record in caplog.records)
+        assert any("openai" in record.message for record in caplog.records)
 
-    @patch("tripsage_core.utils.error_handling_utils.get_logger")
-    def test_log_exception_with_core_exception(self, mock_get_logger):
+    def test_log_exception_with_core_exception(self, caplog):
         """Test log_exception with generic CoreTripSageError."""
-        mock_logger = Mock()
-        mock_get_logger.return_value = mock_logger
-
         exc = CoreValidationError("Validation failed")
 
-        log_exception(exc)
+        with caplog.at_level(logging.WARNING):
+            log_exception(exc)
 
-        # Should log warning for application errors
-        mock_logger.warning.assert_called_once()
-        call_args = mock_logger.warning.call_args[0]
-        assert "Application error" in call_args[0]
-        assert "CoreValidationError" in call_args[1]
-        assert "Validation failed" in call_args[2]
+        assert any(
+            "Application error: CoreValidationError - Validation failed"
+            in record.message
+            for record in caplog.records
+        )
 
-    @patch("tripsage_core.utils.error_handling_utils.get_logger")
-    def test_log_exception_with_standard_exception(self, mock_get_logger):
+    def test_log_exception_with_standard_exception(self, caplog):
         """Test log_exception with standard Python exception."""
-        mock_logger = Mock()
-        mock_get_logger.return_value = mock_logger
-
         exc = ValueError("Standard error")
 
-        log_exception(exc)
+        with caplog.at_level(logging.ERROR):
+            log_exception(exc)
 
-        # Should log error for system errors
-        mock_logger.error.assert_called_once()
-        call_args = mock_logger.error.call_args[0]
-        assert "System error" in call_args[0]
-        assert "ValueError" in call_args[1]
-        assert "Standard error" in call_args[2]
+        assert any(
+            "System error: ValueError - Standard error" in record.message
+            for record in caplog.records
+        )
 
     def test_safe_execute_delegates_to_core(self):
         """Test that safe_execute delegates to core implementation."""
@@ -168,14 +120,14 @@ class TestUpdatedUtilityFunctions:
 
         result = test_func()
         assert result == "error_result"
-        mock_logger.error.assert_called_once()
+        mock_logger.exception.assert_called_once()
 
 
 class TestFactoryFunctions:
     """Test factory functions for creating TripSage-specific exceptions."""
 
     def test_create_mcp_error(self):
-        """Test create_mcp_error factory function."""
+        """Test create_mcp_error now maps to CoreExternalAPIError."""
         exc = create_mcp_error(
             message="MCP operation failed",
             server="flights-mcp",
@@ -185,16 +137,9 @@ class TestFactoryFunctions:
             status_code=408,
         )
 
-        assert isinstance(exc, CoreMCPError)
+        assert isinstance(exc, CoreExternalAPIError)
         assert exc.message == "MCP operation failed"
-        assert exc.code == "MCP_TIMEOUT_ERROR"
-        assert exc.details.service == "flights-mcp"
-
-        context = exc.details.additional_context
-        assert context["tool"] == "search_flights"
-        assert context["params"] == {"query": "NYC to LAX"}
-        assert context["category"] == "timeout"
-        assert context["status_code"] == 408
+        assert exc.code == "FLIGHTS-MCP_MCP_ERROR"
 
     def test_create_api_error(self):
         """Test create_api_error factory function."""
@@ -212,6 +157,7 @@ class TestFactoryFunctions:
         assert exc.details.service == "openai"
 
         context = exc.details.additional_context
+        assert context is not None
         assert context["api_status_code"] == 429
         assert context["api_response"] == api_response
 
@@ -229,6 +175,7 @@ class TestFactoryFunctions:
         assert exc.code == "VALIDATION_ERROR"
 
         context = exc.details.additional_context
+        assert context is not None
         assert context["field"] == "email"
         assert context["value"] == "invalid-email"
         assert context["constraint"] == "must be valid email address"
@@ -247,7 +194,9 @@ class TestFactoryFunctions:
         assert exc.message == "Query execution failed"
         assert exc.code == "DATABASE_ERROR"
         assert exc.details.operation == "SELECT"
-        assert exc.details.additional_context["table"] == "users"
+        context = exc.details.additional_context
+        assert context is not None
+        assert context["table"] == "users"
 
 
 class TestTripSageErrorContext:
@@ -272,37 +221,43 @@ class TestTripSageErrorContext:
 
         # Check start log
         start_call = mock_logger.debug.call_args_list[0]
-        assert "Starting operation: test_operation" in start_call[0][0]
-        assert start_call[1]["extra"]["service"] == "test_service"
-        assert start_call[1]["extra"]["user_id"] == "user123"
-        assert start_call[1]["extra"]["request_id"] == "req456"
+        assert start_call.args[0] == "Starting operation: %s"
+        assert start_call.args[1] == "test_operation"
+        extra = (start_call.kwargs or {}).get("extra", {})
+        assert extra["service"] == "test_service"
+        assert extra["user_id"] == "user123"
+        assert extra["request_id"] == "req456"
 
         # Check completion log
         completion_call = mock_logger.debug.call_args_list[1]
-        assert "Completed operation: test_operation" in completion_call[0][0]
+        assert completion_call.args[0] == "Completed operation: %s"
+        assert completion_call.args[1] == "test_operation"
 
     def test_error_context_enhancement(self):
         """Test context manager enhances exceptions with context."""
         mock_logger = Mock()
+        mock_logger.name = "tests.context"
 
         original_exc = CoreValidationError("Validation failed")
 
-        with pytest.raises(CoreValidationError) as exc_info:
-            with TripSageErrorContext(
+        with (
+            pytest.raises(CoreValidationError) as exc_info,
+            TripSageErrorContext(
                 operation="validate_user",
                 service="user_service",
                 user_id="user123",
                 request_id="req456",
                 logger_instance=mock_logger,
-            ):
-                raise original_exc
+            ),
+        ):
+            raise original_exc
 
         # Exception should be enhanced with context
-        enhanced_exc = exc_info.value
-        assert enhanced_exc.details.operation == "validate_user"
-        assert enhanced_exc.details.service == "user_service"
-        assert enhanced_exc.details.user_id == "user123"
-        assert enhanced_exc.details.request_id == "req456"
+        detailed_exc = exc_info.value
+        assert detailed_exc.details.operation == "validate_user"
+        assert detailed_exc.details.service == "user_service"
+        assert detailed_exc.details.user_id == "user123"
+        assert detailed_exc.details.request_id == "req456"
 
         # Should log the error
         assert mock_logger.debug.call_count == 1  # Only start log (no completion)
@@ -310,12 +265,15 @@ class TestTripSageErrorContext:
     def test_context_with_standard_exception(self):
         """Test context manager with non-TripSage exception."""
         mock_logger = Mock()
+        mock_logger.name = "tests.context"
 
-        with pytest.raises(ValueError):
-            with TripSageErrorContext(
+        with (
+            pytest.raises(ValueError),
+            TripSageErrorContext(
                 operation="test_operation", logger_instance=mock_logger
-            ):
-                raise ValueError("Standard error")
+            ),
+        ):
+            raise ValueError("Standard error")
 
         # Should still log the start operation
         assert mock_logger.debug.call_count == 1
@@ -323,6 +281,7 @@ class TestTripSageErrorContext:
     def test_minimal_context(self):
         """Test context manager with minimal parameters."""
         mock_logger = Mock()
+        mock_logger.name = "tests.context"
 
         with TripSageErrorContext(
             operation="minimal_test", logger_instance=mock_logger
@@ -332,10 +291,11 @@ class TestTripSageErrorContext:
         # Should work with just operation name
         assert mock_logger.debug.call_count == 2
         start_call = mock_logger.debug.call_args_list[0]
-        assert "Starting operation: minimal_test" in start_call[0][0]
+        assert start_call.args[0] == "Starting operation: %s"
+        assert start_call.args[1] == "minimal_test"
 
         # Extra context should handle None values
-        extra = start_call[1]["extra"]
+        extra = (start_call.kwargs or {}).get("extra", {})
         assert extra["service"] is None
         assert extra["user_id"] is None
         assert extra["request_id"] is None
@@ -345,44 +305,45 @@ class TestIntegrationScenarios:
     """Test realistic integration scenarios."""
 
     @patch("tripsage_core.utils.error_handling_utils.get_logger")
-    def test_mcp_service_error_workflow(self, mock_get_logger):
+    def test_mcp_manager_error_workflow(self, mock_get_logger):
         """Test complete MCP service error handling workflow."""
         mock_logger = Mock()
+        mock_logger.name = "tests.mcp"
         mock_get_logger.return_value = mock_logger
 
         # Simulate MCP service operation with error
-        with pytest.raises(CoreMCPError) as exc_info:
-            with TripSageErrorContext(
+        with (
+            pytest.raises(CoreExternalAPIError) as exc_info,
+            TripSageErrorContext(
                 operation="search_flights",
                 service="flight_service",
                 user_id="user123",
                 request_id="req456",
                 logger_instance=mock_logger,
-            ):
-                # Create MCP error as would happen in real service
-                exc = create_mcp_error(
-                    message="Flight search timeout",
-                    server="duffel-mcp",
-                    tool="search_flights",
-                    params={"origin": "NYC", "destination": "LAX"},
-                    category="timeout",
-                )
-                raise exc
+            ),
+        ):
+            # Create MCP error as would happen in real service
+            exc = create_mcp_error(
+                message="Flight search timeout",
+                server="duffel-mcp",
+                tool="search_flights",
+                params={"origin": "NYC", "destination": "LAX"},
+                category="timeout",
+            )
+            raise exc
 
         # Verify exception enhancement
-        enhanced_exc = exc_info.value
-        assert enhanced_exc.details.operation == "search_flights"
-        assert (
-            enhanced_exc.details.service == "duffel-mcp"
-        )  # Service from MCP error takes precedence
-        assert enhanced_exc.details.user_id == "user123"
-        assert enhanced_exc.details.request_id == "req456"
+        detailed_exc = exc_info.value
+        assert detailed_exc.details.operation == "search_flights"
+        assert detailed_exc.details.service == "flight_service"
+        assert detailed_exc.details.user_id == "user123"
+        assert detailed_exc.details.request_id == "req456"
 
         # Verify error formatting
-        formatted = enhanced_exc.to_dict()
-        assert formatted["error"] == "CoreMCPError"
+        formatted = detailed_exc.to_dict()
+        assert formatted["error"] == "CoreExternalAPIError"
         assert formatted["message"] == "Flight search timeout"
-        assert formatted["code"] == "MCP_TIMEOUT_ERROR"
+        assert formatted["code"] == "DUFFEL-MCP_MCP_ERROR"
 
         details = formatted["details"]
         assert details["operation"] == "search_flights"
@@ -431,7 +392,7 @@ class TestIntegrationScenarios:
         result = get_users()
 
         assert result == []
-        mock_logger.error.assert_called_once()
+        mock_logger.exception.assert_called_once()
 
     def test_api_error_response_creation(self):
         """Test creating API responses from exceptions."""

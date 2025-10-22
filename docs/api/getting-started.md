@@ -452,7 +452,7 @@ Now that you've made your first API calls:
 - Itinerary generator
 - Group trip planner
 
-**Advanced:**
+**In depth:**
 
 - Full travel booking app
 - AI travel assistant bot

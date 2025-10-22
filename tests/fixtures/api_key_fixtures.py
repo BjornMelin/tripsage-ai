@@ -1,13 +1,12 @@
-"""
-Modern reusable fixtures for API key testing.
+"""Modern reusable fixtures for API key testing.
 
-This module provides comprehensive fixtures following 2025 best practices
+This module provides fixtures following 2025 best practices
 for async testing, property-based testing, and dependency injection.
 """
 
 import asyncio
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -31,6 +30,7 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
 )
 
+
 # Hypothesis strategies for property-based testing
 API_KEY_STRATEGIES = {
     "openai": st.text(min_size=20, max_size=100).map(lambda x: f"sk-{x}"),
@@ -44,8 +44,8 @@ USER_IDS = st.uuids().map(str)
 KEY_NAMES = st.text(min_size=1, max_size=100).filter(str.strip)
 DESCRIPTIONS = st.text(min_size=0, max_size=500)
 TIMESTAMPS = st.datetimes(
-    min_value=datetime(2020, 1, 1, tzinfo=timezone.utc),
-    max_value=datetime(2030, 12, 31, tzinfo=timezone.utc),
+    min_value=datetime(2020, 1, 1, tzinfo=UTC),
+    max_value=datetime(2030, 12, 31, tzinfo=UTC),
 )
 
 
@@ -125,11 +125,11 @@ def sample_api_key_response():
         service=ServiceType.OPENAI,
         description="Test key for unit testing",
         is_valid=True,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
-        expires_at=datetime.now(timezone.utc) + timedelta(days=365),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+        expires_at=datetime.now(UTC) + timedelta(days=365),
         last_used=None,
-        last_validated=datetime.now(timezone.utc),
+        last_validated=datetime.now(UTC),
         usage_count=0,
     )
 
@@ -137,7 +137,7 @@ def sample_api_key_response():
 @pytest.fixture
 def multiple_api_key_responses():
     """Create multiple API key responses for bulk testing."""
-    base_time = datetime.now(timezone.utc)
+    base_time = datetime.now(UTC)
     return [
         ApiKeyResponse(
             id=str(uuid.uuid4()),
@@ -169,7 +169,7 @@ def sample_validation_result():
 
 @pytest.fixture
 def validation_results_various():
-    """Create various validation results for comprehensive testing."""
+    """Create various validation results for testing."""
     return {
         "valid": ValidationResult(
             is_valid=True,
@@ -215,11 +215,11 @@ def sample_db_result():
         "encrypted_key": "encrypted_test_key_data",
         "description": "Test key for unit testing",
         "is_valid": True,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-        "expires_at": (datetime.now(timezone.utc) + timedelta(days=365)).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
+        "updated_at": datetime.now(UTC).isoformat(),
+        "expires_at": (datetime.now(UTC) + timedelta(days=365)).isoformat(),
         "last_used": None,
-        "last_validated": datetime.now(timezone.utc).isoformat(),
+        "last_validated": datetime.now(UTC).isoformat(),
         "usage_count": 0,
     }
 
@@ -227,7 +227,7 @@ def sample_db_result():
 @pytest.fixture
 def multiple_db_results():
     """Create multiple database results for bulk testing."""
-    base_time = datetime.now(timezone.utc)
+    base_time = datetime.now(UTC)
     return [
         {
             "id": str(uuid.uuid4()),
@@ -252,7 +252,7 @@ def multiple_db_results():
 
 @pytest.fixture
 async def mock_api_key_service():
-    """Create comprehensive mock API key service."""
+    """Create mock API key service."""
     service = MagicMock(spec=ApiKeyService)
 
     # Configure async methods
@@ -281,7 +281,7 @@ async def mock_api_key_service():
 
 @pytest.fixture
 async def mock_key_monitoring_service():
-    """Create comprehensive mock key monitoring service."""
+    """Create mock key monitoring service."""
     service = MagicMock(spec=KeyMonitoringService)
 
     # Configure async methods
@@ -376,7 +376,7 @@ def sample_validate_request():
 @pytest.fixture
 def monitoring_data_samples():
     """Create sample monitoring data."""
-    base_time = datetime.now(timezone.utc)
+    base_time = datetime.now(UTC)
     return {
         "healthy": {
             "last_check": base_time.isoformat(),
@@ -408,7 +408,7 @@ def monitoring_data_samples():
 @pytest.fixture
 def audit_log_samples():
     """Create sample audit log entries."""
-    base_time = datetime.now(timezone.utc)
+    base_time = datetime.now(UTC)
     return [
         {
             "id": str(uuid.uuid4()),
@@ -436,7 +436,7 @@ def audit_log_samples():
 def error_scenarios():
     """Create various error scenarios for testing."""
     return {
-        "network_timeout": asyncio.TimeoutError("Network request timeout"),
+        "network_timeout": TimeoutError("Network request timeout"),
         "connection_error": ConnectionError("Failed to connect to external service"),
         "http_error": Exception("HTTP 500 Internal Server Error"),
         "validation_error": ValueError("Invalid key format"),

@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""
-TripSage Database Schema Deployment Script
+"""TripSage Database Schema Deployment Script.
+
 Automates database schema deployment to Supabase with
 validation and rollback capability.
 """
 
-import datetime
 import json
 import os
 import subprocess
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 
 class DatabaseDeployer:
     """Handles TripSage database schema deployment to Supabase."""
 
-    def __init__(self, project_ref: Optional[str] = None):
+    def __init__(self, project_ref: str | None = None):
+        """Initialize database deployer."""
         self.project_ref = project_ref
         self.schema_dir = Path("supabase/schemas")
         self.migration_dir = Path("supabase/migrations")
@@ -25,7 +25,7 @@ class DatabaseDeployer:
 
     def log_step(self, step: str, success: bool = True, details: str = ""):
         """Log deployment step."""
-        timestamp = datetime.datetime.now().isoformat()
+        timestamp = datetime.now(UTC).isoformat()
         status = "✅" if success else "❌"
         log_entry = {
             "timestamp": timestamp,
@@ -110,28 +110,28 @@ class DatabaseDeployer:
             self.log_step("Schema Validation", False, f"Validation failed: {e.stderr}")
             return False
 
-    def create_consolidated_migration(self) -> Optional[Path]:
+    def create_consolidated_migration(self) -> Path | None:
         """Create a consolidated migration file for deployment."""
         print("\n📝 Creating Consolidated Migration...")
 
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         migration_file = (
             self.migration_dir / f"{timestamp}_production_schema_deployment.sql"
         )
 
         try:
-            with open(migration_file, "w") as f:
+            with migration_file.open("w", encoding="utf-8") as f:
                 f.write(f"""-- TripSage Production Schema Deployment
--- Generated: {datetime.datetime.now().isoformat()}
+-- Generated: {datetime.now(UTC).isoformat()}
 -- Description: Complete database schema with trip collaboration and vector search
--- 
+--
 -- This migration applies the complete TripSage schema including:
 -- - Core travel planning tables (trips, flights, accommodations)
 -- - Trip collaboration system (trip_collaborators with RLS)
 -- - Chat system with tool call tracking
 -- - Memory system with pgvector embeddings
 -- - API key management (BYOK)
--- - Comprehensive RLS policies for multi-tenant security
+-- - RLS policies for multi-tenant security
 
 -- ===========================
 -- SCHEMA DEPLOYMENT
@@ -168,7 +168,7 @@ class DatabaseDeployer:
 DO $$
 BEGIN
     RAISE NOTICE 'TripSage Production Schema deployed successfully!';
-    RAISE NOTICE 'Deployment timestamp: {datetime.datetime.now().isoformat()}';
+    RAISE NOTICE 'Deployment timestamp: {datetime.now(UTC).isoformat()}';
     RAISE NOTICE 'Features included:';
     RAISE NOTICE '- ✅ Core travel planning (12 tables)';
     RAISE NOTICE '- ✅ Trip collaboration system with RLS';
@@ -183,8 +183,8 @@ $$;
             self.log_step("Migration File Created", True, f"File: {migration_file}")
             return migration_file
 
-        except Exception as e:
-            self.log_step("Migration Creation", False, f"Error: {e}")
+        except (OSError, ValueError) as exc:
+            self.log_step("Migration Creation", False, f"Error: {exc}")
             return None
 
     def deploy_to_local(self) -> bool:
@@ -257,14 +257,14 @@ $$;
     def save_deployment_log(self) -> None:
         """Save deployment log to file."""
         log_file = Path(
-            f"deployment_log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            f"deployment_log_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
         )
 
-        with open(log_file, "w") as f:
+        with log_file.open("w", encoding="utf-8") as f:
             json.dump(
                 {
                     "deployment_summary": {
-                        "timestamp": datetime.datetime.now().isoformat(),
+                        "timestamp": datetime.now(UTC).isoformat(),
                         "project_ref": self.project_ref,
                         "total_steps": len(self.deployment_log),
                         "successful_steps": sum(

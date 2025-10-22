@@ -1075,7 +1075,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION weekly_maintenance_job()
 RETURNS VOID AS $$
 BEGIN
-    -- Run comprehensive maintenance
+    -- Run maintenance
     PERFORM maintain_database_performance();
     
     -- Clean up orphaned collaborators

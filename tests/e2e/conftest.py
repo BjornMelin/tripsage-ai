@@ -1,5 +1,4 @@
-"""
-Modern test configuration for TripSage.
+"""Modern test configuration for TripSage.
 
 Simple, clean test setup following 2025 best practices.
 """
@@ -10,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+
 
 # Set test environment
 os.environ.update(

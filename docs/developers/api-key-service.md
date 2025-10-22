@@ -1,9 +1,9 @@
-# 🔑 API Key Service - Internal Implementation Guide
+# API Key Service - Internal Implementation Guide
 
-> **Internal Development Documentation**  
-> Complete implementation guide for the TripSage API Key Service architecture, patterns, and best practices
+> Internal Development Documentation
+> Implementation guide for the TripSage API Key Service architecture and patterns
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Service Overview](#service-overview)
 - [Architecture & Design](#architecture--design)
@@ -20,15 +20,15 @@
 
 ## Service Overview
 
-The API Key Service provides secure management of third-party API keys (BYOK - Bring Your Own Key) for TripSage platform integrations. This service follows KISS principles while maintaining enterprise-grade security and reliability.
+The API Key Service manages third-party API keys (BYOK) for TripSage integrations.
 
 ### Core Capabilities
 
-- **Secure Storage**: Envelope encryption with rotation capability
+- **Secure Storage**: Envelope encryption with rotation
 - **Validation**: Service-specific API key validation
-- **Health Monitoring**: Proactive health checking and alerting
-- **Audit Logging**: Comprehensive usage tracking and audit trails
-- **Lifecycle Management**: Full CRUD operations with expiration handling
+- **Health Monitoring**: Health checking and alerting
+- **Audit Logging**: Usage tracking and audit trails
+- **Lifecycle Management**: CRUD operations with expiration handling
 
 ### Service Dependencies
 
@@ -56,28 +56,16 @@ graph TB
 
 ## Architecture & Design
 
-### Simplified Architecture
+### Architecture
 
-The service has been refactored to follow KISS principles:
+The service follows KISS principles with security and reliability.
 
-#### Before (Over-engineered)
-- Late imports and optional dependency resolution
-- Complex retry mechanisms with circuit breakers
-- Unnecessary validation attempt tracking
-- Over-engineered exception handling that masked errors
-
-#### After (Simplified)
-- **Explicit Dependencies**: Constructor injection for testability
-- **Atomic Operations**: Database transactions for consistency
-- **Clean Error Handling**: Let ServiceError bubble to FastAPI
-- **Modern Patterns**: Pydantic V2 and FastAPI dependency injection
-
-### Service Layer Pattern
+#### Service Layer Pattern
 
 ```python
 # tripsage_core/services/business/api_key_service.py
 class ApiKeyService:
-    """Simplified API Key Service with explicit dependencies."""
+    """API Key Service with explicit dependencies."""
     
     def __init__(
         self,
@@ -138,7 +126,7 @@ class ApiKeyService:
 
 ### FastAPI Integration
 
-Modern dependency injection pattern:
+**Dependency injection pattern**:
 
 ```python
 # Dependency provider
@@ -152,7 +140,7 @@ ApiKeyServiceDep = Annotated[
 async def create_key(
     key_data: ApiKeyCreate,
     principal: Principal = Depends(require_principal),
-    key_service: ApiKeyServiceDep,  # Clean injection
+    key_service: ApiKeyServiceDep,  # Injection
 ):
     user_id = get_principal_id(principal)
     return await key_service.create_key(user_id, key_data)
@@ -164,7 +152,7 @@ async def create_key(
 
 ### Current Router Endpoints
 
-The API Key router is located at `tripsage/api/routers/keys.py` with these endpoints:
+The API Key router is at `tripsage/api/routers/keys.py`:
 
 ```python
 # Endpoint mapping
@@ -179,7 +167,7 @@ GET    /api/keys/audit     -> get_audit_log()  # Audit logs
 
 ### Pydantic V2 Schemas
 
-Located at `tripsage/api/schemas/api_keys.py`:
+At `tripsage/api/schemas/api_keys.py`:
 
 ```python
 class ApiKeyCreate(BaseModel):
@@ -266,7 +254,7 @@ async def validate_key(
         return result
         
     except Exception as e:
-        logger.error(f"Validation failed for service {service}: {e}")
+        logger.exception(f"Validation failed for service {service}: {e}")
         return ApiKeyValidateResponse(
             is_valid=False,
             service=service,
@@ -465,8 +453,8 @@ self.http_client = aiohttp.ClientSession(
 
 - **Atomic Transactions**: Batch related operations
 - **Prepared Statements**: Reuse query plans
-- **Connection Pooling**: Efficient connection management
-- **Selective Indexes**: Query-specific performance optimization
+- **Connection Pooling**: Connection management
+- **Selective Indexes**: Query-specific optimization
 
 ---
 
@@ -517,7 +505,7 @@ async def test_api_key_full_workflow():
         key_data = ApiKeyCreate(
             name="Integration Test Key",
             service="duffel",
-            key=os.getenv("TEST_DUFFEL_API_KEY")
+            key=os.getenv("TEST_DUFFEL_ACCESS_TOKEN")
         )
         
         created_key = await service.create_key(user_id, key_data)
@@ -686,7 +674,7 @@ async def _log_operation(
     if success:
         logger.info(f"API key {operation} successful", extra=log_data)
     else:
-        logger.error(f"API key {operation} failed", extra=log_data)
+        logger.exception(f"API key {operation} failed", extra=log_data)
 ```
 
 ---
@@ -704,7 +692,7 @@ cp tripsage/config/env_example .env
 
 # Required environment variables
 export TRIPSAGE_MASTER_SECRET_KEY="your-32-char-secret-key"
-export DUFFEL_API_KEY="your-test-duffel-key"  # For testing
+export DUFFEL_ACCESS_TOKEN="your-test-duffel-access-token"  # For testing
 export GOOGLE_MAPS_API_KEY="your-test-maps-key"  # For testing
 
 # 3. Run database migrations
@@ -755,13 +743,13 @@ uv run pytest --cov=tripsage_core.services.business.api_key_service \
 
 ### From Legacy Implementation
 
-The service has been simplified from the previous over-engineered version:
+The service has been simplified from the previous version.
 
 #### Key Changes Made
 
 1. **Constructor Simplification**
    - Removed late imports and optional dependency resolution
-   - Explicit dependency injection for better testability
+   - Explicit dependency injection for testability
    - Clear initialization without complex setup logic
 
 2. **Atomic Operations**
@@ -772,12 +760,12 @@ The service has been simplified from the previous over-engineered version:
 3. **Error Handling**
    - Removed complex exception masking
    - Let ServiceError bubble up to FastAPI exception handlers
-   - Clear error messages with proper HTTP status codes
+   - Clear error messages with HTTP status codes
 
 4. **Performance Improvements**
    - Connection pooling for HTTP clients
-   - Intelligent caching of validation results
-   - Optimized database queries with proper indexing
+   - Caching of validation results
+   - Optimized database queries with indexing
 
 #### Migration Checklist
 
@@ -791,30 +779,30 @@ The service has been simplified from the previous over-engineered version:
 
 - **Constructor signature changed**: Requires explicit dependencies
 - **Exception types updated**: Uses ServiceError consistently
-- **Database schema updated**: Added new audit and health tables
+- **Database schema updated**: Added audit and health tables
 - **API responses standardized**: Consistent response models
 
 ---
 
-## 🔗 Related Documentation
+## Related Documentation
 
 ### Internal References
 
-- **[API Development Guide](api-development.md)** - FastAPI patterns and best practices
-- **[Database Guide](unified-database-guide.md)** - Database connection and migration patterns
-- **[Testing Guide](testing-guide.md)** - Testing strategies and fixtures
-- **[Security Guide](../operators/security-guide.md)** - Security implementation details
+- [API Development Guide](api-development.md) - FastAPI patterns
+- [Database Guide](unified-database-guide.md) - Database connection and migration
+- [Testing Guide](testing-guide.md) - Testing strategies and fixtures
+- [Security Guide](../operators/security-guide.md) - Security details
 
 ### External API Documentation
 
-- **[External Authentication Guide](../api/authentication.md)** - How to use API keys from client perspective
-- **[API Examples](../api/usage-examples.md)** - Code examples for API integration
+- [External Authentication Guide](../api/authentication.md) - Client-side usage patterns
+- [API Examples](../api/usage-examples.md) - Code examples for API integration
 
 ### Architecture References
 
-- **[System Overview](../architecture/system-overview.md)** - High-level architecture context
-- **[Security Architecture](../architecture/security-architecture.md)** - Security design patterns
+- [System Overview](../architecture/system-overview.md) - High-level architecture context
+- [Security Architecture](../architecture/security-architecture.md) - Security design patterns
 
 ---
 
-**Next Steps**: Review the [External Authentication Guide](../api/authentication.md) to understand the client-side usage patterns, then explore the [Testing Guide](testing-guide.md) for comprehensive testing strategies.
+> **Next Steps**: Review the [External Authentication Guide](../api/authentication.md) for client-side patterns, then explore the [Testing Guide](testing-guide.md) for testing strategies.

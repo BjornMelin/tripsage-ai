@@ -1,5 +1,5 @@
-"""
-Simplified accommodation router tests following ULTRATHINK methodology.
+# pylint: disable=duplicate-code,R0801
+"""Simplified accommodation router tests following ULTRATHINK methodology.
 
 This module focuses on testing the validation and routing behavior that we know works,
 avoiding complex service integration that causes test instability.
@@ -10,6 +10,8 @@ Key principles:
 - Focus on what we can reliably test
 - Minimal mocking for maximum reliability
 """
+
+from datetime import date
 
 import pytest
 from fastapi import status
@@ -152,7 +154,6 @@ class TestAccommodationRouterValidation:
 
     def test_endpoints_exist_and_respond(self, unauthenticated_test_client):
         """Test that all accommodation endpoints exist and respond (not 404)."""
-
         # Test data that will pass validation but fail auth
         valid_search = {
             "location": "Tokyo",
@@ -190,7 +191,6 @@ class TestAccommodationRouterValidation:
 
     def test_required_fields_validation(self, unauthenticated_test_client):
         """Test that required fields are properly validated."""
-
         # Missing location
         incomplete_request = {
             "check_in": "2024-03-15",
@@ -218,49 +218,6 @@ class TestAccommodationRouterValidation:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-class TestAccommodationRouterCoverageBasics:
-    """Simple tests to improve coverage without complex model validation."""
-
-    def test_schema_adapter_execution_paths(self):
-        """
-        Test schema adapter execution to cover optional field paths
-        (lines 73, 76, 79, 83, 87, 91, 95).
-        """
-        from uuid import uuid4
-
-        from tripsage.api.routers.accommodations import (
-            _convert_api_to_service_search_request,
-        )
-        from tripsage.api.schemas.accommodations import AccommodationSearchRequest
-        from tripsage_core.models.schemas_common.enums import AccommodationType
-
-        # Test with all optional fields to hit all code paths
-        api_request = AccommodationSearchRequest(
-            location="Paris",
-            check_in="2024-04-01",
-            check_out="2024-04-05",
-            adults=1,
-            property_type=AccommodationType.HOTEL,  # Covers line 73
-            min_price=100.0,  # Covers line 76
-            max_price=500.0,  # Covers line 79
-            amenities=["wifi", "pool"],  # Covers line 83
-            min_rating=4.0,  # Covers line 87
-            latitude=48.8566,  # Covers line 91
-            longitude=2.3522,  # Covers line 91
-            trip_id=uuid4(),  # Covers line 95
-        )
-
-        # Convert to service request (executes all optional field handling)
-        service_request = _convert_api_to_service_search_request(api_request)
-
-        # Verify basic conversion worked
-        assert service_request.location == "Paris"
-        assert service_request.guests == 1
-        assert service_request.adults == 1
-        assert service_request.min_price == 100.0
-        assert service_request.max_price == 500.0
-
-
 class TestAccommodationRouterBehavior:
     """Test behavior that we can verify without complex service integration."""
 
@@ -271,9 +228,19 @@ class TestAccommodationRouterBehavior:
         # Test with minimal valid data
         request_data = {
             "location": "Tokyo",
-            "check_in": "2024-03-15",
-            "check_out": "2024-03-18",
+            "check_in": date(2024, 3, 15),
+            "check_out": date(2024, 3, 18),
             "adults": 2,
+            "children": 0,
+            "rooms": 1,
+            "property_type": None,
+            "min_price": None,
+            "max_price": None,
+            "amenities": None,
+            "min_rating": None,
+            "latitude": None,
+            "longitude": None,
+            "trip_id": None,
         }
 
         # This should not raise an exception
@@ -292,9 +259,19 @@ class TestAccommodationRouterBehavior:
         # Test with minimal valid data
         search_request = AccommodationSearchRequest(
             location="Tokyo",
-            check_in="2024-03-15",
-            check_out="2024-03-18",
+            check_in=date(2024, 3, 15),
+            check_out=date(2024, 3, 18),
             adults=2,
+            children=0,
+            rooms=1,
+            property_type=None,
+            min_price=None,
+            max_price=None,
+            amenities=None,
+            min_rating=None,
+            latitude=None,
+            longitude=None,
+            trip_id=None,
         )
 
         response_data = {
@@ -303,6 +280,14 @@ class TestAccommodationRouterBehavior:
             "currency": "USD",
             "search_id": "test-123",
             "search_request": search_request,
+            "property_type": None,
+            "min_price": None,
+            "max_price": None,
+            "amenities": None,
+            "min_rating": None,
+            "latitude": None,
+            "longitude": None,
+            "trip_id": None,
         }
 
         # This should not raise an exception
@@ -310,54 +295,6 @@ class TestAccommodationRouterBehavior:
         assert response.count == 0
         assert response.currency == "USD"
         assert len(response.listings) == 0
-
-    def test_schema_adapter_function_exists(self):
-        """Test that the schema adapter function exists and works."""
-        from tripsage.api.routers.accommodations import (
-            _convert_api_to_service_search_request,
-        )
-        from tripsage.api.schemas.accommodations import AccommodationSearchRequest
-
-        # Create API request
-        api_request = AccommodationSearchRequest(
-            location="Tokyo",
-            check_in="2024-03-15",
-            check_out="2024-03-18",
-            adults=2,
-            children=1,
-        )
-
-        # Convert to service request
-        service_request = _convert_api_to_service_search_request(api_request)
-
-        # Verify conversion worked
-        assert service_request.location == "Tokyo"
-        assert service_request.guests == 3  # adults + children = 2 + 1
-        assert service_request.adults == 2
-        assert service_request.children == 1
-
-    def test_schema_adapter_with_minimal_fields(self):
-        """Test schema adapter with just required fields."""
-        from tripsage.api.routers.accommodations import (
-            _convert_api_to_service_search_request,
-        )
-        from tripsage.api.schemas.accommodations import AccommodationSearchRequest
-
-        # Create API request with minimal fields
-        api_request = AccommodationSearchRequest(
-            location="Paris", check_in="2024-04-01", check_out="2024-04-05", adults=2
-        )
-
-        # Convert to service request
-        service_request = _convert_api_to_service_search_request(api_request)
-
-        # Verify basic conversion
-        assert service_request.location == "Paris"
-        assert service_request.guests == 2  # adults only
-        assert service_request.adults == 2
-        assert (
-            service_request.children == 0
-        )  # API doesn't provide children, so defaults to 0
 
 
 # === MODULE TESTS ===
@@ -367,17 +304,12 @@ def test_accommodation_router_module_structure():
     """Test that the accommodation router module has expected structure."""
     from tripsage.api.routers import accommodations
 
-    # Verify router exists
+    # Verify router exists and has expected routes
     assert hasattr(accommodations, "router")
-
-    # Verify conversion function exists
-    assert hasattr(accommodations, "_convert_api_to_service_search_request")
-
-    # Verify expected routes exist
-    routes = [route.path for route in accommodations.router.routes]
+    route_strings = [str(route) for route in accommodations.router.routes]
     expected_paths = ["/search", "/details", "/saved"]
 
     for expected_path in expected_paths:
-        assert any(expected_path in path for path in routes), (
-            f"Expected path {expected_path} not found in {routes}"
+        assert any(expected_path in route_str for route_str in route_strings), (
+            f"Expected path {expected_path} not found in routes"
         )

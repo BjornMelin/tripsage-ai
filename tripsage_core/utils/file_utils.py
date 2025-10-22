@@ -1,18 +1,17 @@
-"""
-File handling utilities for TripSage Core.
+"""File handling utilities for TripSage Core.
 
 This module combines file validation and configuration functionality,
-implementing comprehensive file validation including type checking,
+implementing file validation including type checking,
 size limits, and security scanning following KISS principles.
 """
 
 import hashlib
 import mimetypes
 from pathlib import Path
-from typing import Optional, Tuple
 
 from fastapi import UploadFile
 from pydantic import BaseModel, Field
+
 
 # ===== File Configuration Constants =====
 
@@ -103,19 +102,18 @@ class ValidationResult(BaseModel):
     """Result of file validation."""
 
     is_valid: bool = Field(..., description="Whether the file passed validation")
-    error_message: Optional[str] = Field(
+    error_message: str | None = Field(
         None, description="Error message if validation failed"
     )
     file_size: int = Field(..., description="File size in bytes")
-    detected_type: Optional[str] = Field(None, description="Detected MIME type")
-    file_hash: Optional[str] = Field(None, description="SHA256 hash of file content")
+    detected_type: str | None = Field(None, description="Detected MIME type")
+    file_hash: str | None = Field(None, description="SHA256 hash of file content")
 
 
 async def validate_file(
     file: UploadFile, max_size: int = MAX_FILE_SIZE
 ) -> ValidationResult:
-    """
-    Validate uploaded file for security and format compliance.
+    """Validate uploaded file for security and format compliance.
 
     Args:
         file: FastAPI UploadFile object
@@ -134,7 +132,11 @@ async def validate_file(
     # Size validation
     if file_size == 0:
         return ValidationResult(
-            is_valid=False, error_message="File is empty", file_size=file_size
+            is_valid=False,
+            error_message="File is empty",
+            file_size=file_size,
+            detected_type=None,
+            file_hash=None,
         )
 
     if file_size > max_size:
@@ -145,18 +147,28 @@ async def validate_file(
                 f"({max_size} bytes)"
             ),
             file_size=file_size,
+            detected_type=None,
+            file_hash=None,
         )
 
     # Filename security validation
     if not file.filename:
         return ValidationResult(
-            is_valid=False, error_message="Filename is required", file_size=file_size
+            is_valid=False,
+            error_message="Filename is required",
+            file_size=file_size,
+            detected_type=None,
+            file_hash=None,
         )
 
     filename_result = _validate_filename(file.filename)
     if not filename_result[0]:
         return ValidationResult(
-            is_valid=False, error_message=filename_result[1], file_size=file_size
+            is_valid=False,
+            error_message=filename_result[1],
+            file_size=file_size,
+            detected_type=None,
+            file_hash=None,
         )
 
     # MIME type validation
@@ -168,6 +180,7 @@ async def validate_file(
             error_message=f"File type '{detected_type}' is not allowed",
             file_size=file_size,
             detected_type=detected_type,
+            file_hash=None,
         )
 
     # Content-based validation
@@ -178,26 +191,20 @@ async def validate_file(
             error_message=content_result[1],
             file_size=file_size,
             detected_type=detected_type,
+            file_hash=None,
         )
 
     return ValidationResult(
         is_valid=True,
+        error_message=None,
         file_size=file_size,
         detected_type=detected_type,
         file_hash=file_hash,
     )
 
 
-def _validate_filename(filename: str) -> Tuple[bool, Optional[str]]:
-    """
-    Validate filename for security issues.
-
-    Args:
-        filename: Original filename from upload
-
-    Returns:
-        Tuple of (is_valid, error_message)
-    """
+def _validate_filename(filename: str) -> tuple[bool, str | None]:
+    """Validate filename for security issues."""
     # Check for suspicious patterns
     for pattern in SUSPICIOUS_PATTERNS:
         if pattern in filename.lower():
@@ -216,8 +223,7 @@ def _validate_filename(filename: str) -> Tuple[bool, Optional[str]]:
 
 
 def _detect_mime_type(filename: str, content: bytes) -> str:
-    """
-    Detect MIME type using both filename and content analysis.
+    """Detect MIME type using both filename and content analysis.
 
     Args:
         filename: Original filename
@@ -237,7 +243,7 @@ def _detect_mime_type(filename: str, content: bytes) -> str:
         return "image/jpeg"
     elif content.startswith(b"\x89PNG\r\n\x1a\n"):
         return "image/png"
-    elif content.startswith(b"GIF87a") or content.startswith(b"GIF89a"):
+    elif content.startswith((b"GIF87a", b"GIF89a")):
         return "image/gif"
     elif content.startswith(b"%PDF-"):
         return "application/pdf"
@@ -260,11 +266,8 @@ def _detect_mime_type(filename: str, content: bytes) -> str:
     return "application/octet-stream"
 
 
-def _validate_file_content(
-    content: bytes, mime_type: str
-) -> Tuple[bool, Optional[str]]:
-    """
-    Validate file content for format consistency and security.
+def _validate_file_content(content: bytes, mime_type: str) -> tuple[bool, str | None]:
+    """Validate file content for format consistency and security.
 
     Args:
         content: File content bytes
@@ -285,24 +288,20 @@ def _validate_file_content(
     return True, None
 
 
-def _validate_image_content(
-    content: bytes, mime_type: str
-) -> Tuple[bool, Optional[str]]:
+def _validate_image_content(content: bytes, mime_type: str) -> tuple[bool, str | None]:
     """Validate image file content."""
     # Check for basic image headers
     if mime_type == "image/jpeg" and not content.startswith(b"\xff\xd8\xff"):
         return False, "Invalid JPEG header"
     elif mime_type == "image/png" and not content.startswith(b"\x89PNG\r\n\x1a\n"):
         return False, "Invalid PNG header"
-    elif mime_type == "image/gif" and not (
-        content.startswith(b"GIF87a") or content.startswith(b"GIF89a")
-    ):
+    elif mime_type == "image/gif" and not content.startswith((b"GIF87a", b"GIF89a")):
         return False, "Invalid GIF header"
 
     return True, None
 
 
-def _validate_pdf_content(content: bytes) -> Tuple[bool, Optional[str]]:
+def _validate_pdf_content(content: bytes) -> tuple[bool, str | None]:
     """Validate PDF file content."""
     if not content.startswith(b"%PDF-"):
         return False, "Invalid PDF header"
@@ -314,7 +313,7 @@ def _validate_pdf_content(content: bytes) -> Tuple[bool, Optional[str]]:
     return True, None
 
 
-def _validate_text_content(content: bytes) -> Tuple[bool, Optional[str]]:
+def _validate_text_content(content: bytes) -> tuple[bool, str | None]:
     """Validate text file content."""
     try:
         # Attempt to decode as UTF-8
@@ -327,8 +326,7 @@ def _validate_text_content(content: bytes) -> Tuple[bool, Optional[str]]:
 async def validate_batch_upload(
     files: list[UploadFile], max_total_size: int = MAX_SESSION_SIZE
 ) -> ValidationResult:
-    """
-    Validate a batch of files for upload.
+    """Validate a batch of files for upload.
 
     Args:
         files: List of UploadFile objects
@@ -339,7 +337,11 @@ async def validate_batch_upload(
     """
     if not files:
         return ValidationResult(
-            is_valid=False, error_message="No files provided", file_size=0
+            is_valid=False,
+            error_message="No files provided",
+            file_size=0,
+            detected_type=None,
+            file_hash=None,
         )
 
     total_size = 0
@@ -358,6 +360,8 @@ async def validate_batch_upload(
                 f"({max_total_size} bytes)"
             ),
             file_size=total_size,
+            detected_type=None,
+            file_hash=None,
         )
 
     # Validate individual files
@@ -368,14 +372,21 @@ async def validate_batch_upload(
                 is_valid=False,
                 error_message=f"File '{file.filename}': {result.error_message}",
                 file_size=total_size,
+                detected_type=None,
+                file_hash=None,
             )
 
-    return ValidationResult(is_valid=True, file_size=total_size)
+    return ValidationResult(
+        is_valid=True,
+        error_message=None,
+        file_size=total_size,
+        detected_type=None,
+        file_hash=None,
+    )
 
 
 def generate_safe_filename(original_filename: str, user_id: str) -> str:
-    """
-    Generate a safe filename for storage.
+    """Generate a safe filename for storage.
 
     Args:
         original_filename: Original uploaded filename
@@ -394,25 +405,23 @@ def generate_safe_filename(original_filename: str, user_id: str) -> str:
     ).hexdigest()[:8]
 
     # Generate safe filename with user isolation
-    safe_name = f"{user_id}_{filename_hash}{extension}"
-
-    return safe_name
+    return f"{user_id}_{filename_hash}{extension}"
 
 
 __all__ = [
-    # Configuration constants
-    "MAX_FILE_SIZE",
-    "MAX_FILES_PER_REQUEST",
-    "MAX_SESSION_SIZE",
     "ALLOWED_EXTENSIONS",
     "ALLOWED_MIME_TYPES",
-    "FILE_TYPE_MAPPING",
     "DEFAULT_STORAGE_ROOT",
-    "TEMP_UPLOAD_DIR",
+    "FILE_TYPE_MAPPING",
+    "MAX_FILES_PER_REQUEST",
+    # Configuration constants
+    "MAX_FILE_SIZE",
+    "MAX_SESSION_SIZE",
     "PROCESSED_DIR",
+    "TEMP_UPLOAD_DIR",
     # Validation functions and classes
     "ValidationResult",
-    "validate_file",
-    "validate_batch_upload",
     "generate_safe_filename",
+    "validate_batch_upload",
+    "validate_file",
 ]

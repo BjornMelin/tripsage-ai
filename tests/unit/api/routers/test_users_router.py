@@ -1,10 +1,9 @@
-"""
-Unit tests for user-related endpoints including preferences.
+"""Unit tests for user-related endpoints including preferences.
 
 Tests user preferences endpoints that require authentication.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -168,8 +167,8 @@ class TestUsersRouter:
             email="test@example.com",
             is_active=True,
             is_verified=True,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
             preferences=sample_preferences,
         )
         mock_user_service.update_user_preferences.return_value = mock_user_response
@@ -228,8 +227,8 @@ class TestUsersRouter:
             email="test@example.com",
             is_active=True,
             is_verified=True,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
             preferences=merged_preferences,
         )
         mock_user_service.update_user_preferences.return_value = mock_user_response
@@ -262,8 +261,8 @@ class TestUsersRouter:
             email="test@example.com",
             is_active=True,
             is_verified=True,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
             preferences=sample_preferences,
         )
         mock_user_service.update_user_preferences.return_value = mock_user_response

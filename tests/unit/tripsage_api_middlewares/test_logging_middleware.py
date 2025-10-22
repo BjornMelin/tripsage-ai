@@ -12,8 +12,7 @@ from tripsage.api.middlewares.logging import LoggingMiddleware
 @pytest.fixture
 def mock_app():
     """Create a mock ASGI app."""
-    app = MagicMock(spec=ASGIApp)
-    return app
+    return MagicMock(spec=ASGIApp)
 
 
 @pytest.fixture

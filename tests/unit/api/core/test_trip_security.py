@@ -1,5 +1,4 @@
-"""
-Tests for trip access verification and security decorators.
+"""Tests for trip access verification and security decorators.
 
 This module tests the trip security functionality including access verification,
 decorators, and integration with the existing authentication system.
@@ -555,7 +554,7 @@ class TestPreConfiguredDependencies:
             assert len(dep.__metadata__) > 0
 
 
-class TestAdvancedSecurityScenarios:
+class TestSecurityScenarios:
     """Test advanced security scenarios and edge cases."""
 
     @pytest.mark.asyncio

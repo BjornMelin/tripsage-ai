@@ -9,7 +9,7 @@ This guide covers backend API development using FastAPI, including patterns, aut
 - [🔌 API Development Guide](#-api-development-guide)
   - [📋 Table of Contents](#-table-of-contents)
   - [🏗️ API Architecture](#️-api-architecture)
-    - [**Project Structure**](#project-structure)
+    - [**API Project Structure**](#api-project-structure)
     - [**FastAPI Application Setup**](#fastapi-application-setup)
   - [🔐 Authentication \& Authorization](#-authentication--authorization)
     - [**JWT Token Management**](#jwt-token-management)
@@ -17,7 +17,7 @@ This guide covers backend API development using FastAPI, including patterns, aut
   - [📝 Request/Response Models](#-requestresponse-models)
     - [**Pydantic Models with Validation**](#pydantic-models-with-validation)
   - [🛡️ Input Validation](#️-input-validation)
-    - [**Advanced Validation Patterns**](#advanced-validation-patterns)
+    - [**Validation Patterns**](#validation-patterns)
   - [⚠️ Error Handling](#️-error-handling)
     - [**Structured Error Responses**](#structured-error-responses)
   - [🚀 Performance Optimization](#-performance-optimization)
@@ -40,7 +40,13 @@ This guide covers backend API development using FastAPI, including patterns, aut
 
 ## 🏗️ API Architecture
 
-### **Project Structure**
+### **API Project Structure**
+
+For the overall API project structure, see [docs/architecture/project-structure.md](../architecture/project-structure.md).
+
+**Intended API Architecture:**
+
+The API is designed to follow a modular architecture with clear separation of concerns:
 
 ```text
 tripsage/api/
@@ -66,7 +72,7 @@ tripsage/api/
 │   └── ai_service.py    # AI integration
 └── middlewares/
     ├── authentication.py # Auth middleware
-    ├── rate_limiting.py  # Rate limiting
+    ├── limiting.py  # SlowAPI configuration (rate limiting)
     └── cors.py          # CORS configuration
 ```
 
@@ -86,7 +92,8 @@ from tripsage.api.routers import (
     auth, trips, flights, accommodations, chat, users
 )
 from tripsage.api.middlewares.authentication import AuthenticationMiddleware
-from tripsage.api.middlewares.rate_limiting import RateLimitingMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -127,7 +134,8 @@ app.add_middleware(
 )
 
 app.add_middleware(AuthenticationMiddleware)
-app.add_middleware(RateLimitingMiddleware)
+# Rate limiting is installed via SlowAPI in tripsage/api/limiting.py
+# install_rate_limiting(app)
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
@@ -408,7 +416,7 @@ class TripResponse(BaseModel):
 
 ## 🛡️ Input Validation
 
-### **Advanced Validation Patterns**
+### **Validation Patterns**
 
 ```python
 # tripsage/api/schemas/common.py
@@ -506,7 +514,7 @@ class RateLimitExceeded(TripSageException):
 
 async def tripsage_exception_handler(request: Request, exc: TripSageException):
     """Handle custom TripSage exceptions."""
-    logger.error(f"TripSage error: {exc.message}", exc_info=True)
+    logger.exception(f"TripSage error: {exc.message}", exc_info=True)
     
     return JSONResponse(
         status_code=400,
@@ -775,7 +783,7 @@ async def process_trip_optimization(trip_id: str, user_id: str):
         )
         
     except Exception as e:
-        logger.error(f"Trip optimization failed: {e}")
+        logger.exception(f"Trip optimization failed: {e}")
         await websocket_manager.send_to_user(
             user_id,
             {
@@ -1220,7 +1228,7 @@ async def debug_middleware(request: Request, call_next):
             response = await call_next(request)
             return response
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Unhandled exception",
                 extra={
                     "error": str(e),
@@ -1240,4 +1248,4 @@ if settings.debug:
 
 ---
 
-This API development guide provides comprehensive patterns and best practices for building robust, secure, and performant FastAPI applications. Follow these guidelines to maintain consistency and quality across the TripSage AI codebase.
+This API development guide provides patterns and best practices for building robust, secure, and performant FastAPI applications. Follow these guidelines to maintain consistency and quality across the TripSage AI codebase.

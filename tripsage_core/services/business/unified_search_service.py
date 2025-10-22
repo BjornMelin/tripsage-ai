@@ -1,5 +1,4 @@
-"""
-Unified search service for TripSage.
+"""Unified search service for TripSage.
 
 This service orchestrates searches across multiple resource types (destinations,
 flights, accommodations, activities) and provides a unified interface for
@@ -10,22 +9,19 @@ to avoid code duplication while providing enhanced search capabilities.
 import asyncio
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import (
     SearchFacet,
-    SearchMetadata,
     SearchResultItem,
     UnifiedSearchResponse,
 )
 from tripsage_core.exceptions.exceptions import CoreServiceError
-from tripsage_core.services.business.activity_service import get_activity_service
-from tripsage_core.services.business.destination_service import get_destination_service
-from tripsage_core.services.infrastructure.cache_service import get_cache_service
 from tripsage_core.services.infrastructure.search_cache_mixin import SearchCacheMixin
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -44,7 +40,8 @@ DEFAULT_SEARCH_TYPES = ["destination", "activity", "accommodation"]
 class UnifiedSearchServiceError(CoreServiceError):
     """Exception raised for unified search service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
+        """Construct the error with optional original exception."""
         details = {
             "additional_context": {
                 "original_error": str(original_error) if original_error else None
@@ -64,36 +61,35 @@ class UnifiedSearchService(
 ):
     """Service for unified search across multiple resource types."""
 
-    def __init__(self, cache_service=None):
-        """
-        Initialize unified search service.
+    def __init__(
+        self,
+        *,
+        cache_service,
+        destination_service=None,
+        activity_service=None,
+        flight_service=None,
+        accommodation_service=None,
+    ):
+        """Initialize unified search service.
 
         Args:
             cache_service: Cache service instance
+            destination_service: Destination service
+            activity_service: Activity service
+            flight_service: Flight service
+            accommodation_service: Accommodation service instance
         """
         self._cache_service = cache_service
         self._cache_ttl = 300  # 5 minutes for search results
         self._cache_prefix = "unified_search"
 
-        # Service instances (lazy loaded)
-        self._destination_service = None
-        self._flight_service = None
-        self._accommodation_service = None
-        self._activity_service = None
+        # Collaborators are injected; no lazy globals
+        self._destination_service = destination_service
+        self._flight_service = flight_service
+        self._accommodation_service = accommodation_service
+        self._activity_service = activity_service
 
-    async def ensure_services(self) -> None:
-        """Ensure all required services are initialized."""
-        if not self._cache_service:
-            self._cache_service = await get_cache_service()
-
-        # Lazy load business services as needed
-        if not self._destination_service:
-            self._destination_service = await get_destination_service()
-
-        if not self._activity_service:
-            self._activity_service = await get_activity_service()
-
-    def get_cache_fields(self, request: UnifiedSearchRequest) -> Dict[str, Any]:
+    def get_cache_fields(self, request: UnifiedSearchRequest) -> dict[str, Any]:
         """Extract fields for cache key generation."""
         cache_fields = {
             "query": request.query,
@@ -134,8 +130,7 @@ class UnifiedSearchService(
     async def unified_search(
         self, request: UnifiedSearchRequest
     ) -> UnifiedSearchResponse:
-        """
-        Perform unified search across multiple resource types.
+        """Perform unified search across multiple resource types.
 
         Args:
             request: Unified search request
@@ -146,12 +141,13 @@ class UnifiedSearchService(
         Raises:
             UnifiedSearchServiceError: If search fails
         """
-        await self.ensure_services()
+        # Dependencies are injected; no lazy ensures
 
         try:
             logger.info(
-                f"Unified search request: '{request.query}' across types: "
-                f"{request.types}"
+                "Unified search request: '%s' across types: %s",
+                request.query,
+                request.types,
             )
 
             start_time = datetime.now()
@@ -160,7 +156,7 @@ class UnifiedSearchService(
             cached_result = await self.get_cached_search(request)
             if cached_result:
                 logger.info(
-                    f"Returning cached unified search results for: {request.query}"
+                    "Returning cached unified search results for: %s", request.query
                 )
                 return cached_result
 
@@ -198,17 +194,19 @@ class UnifiedSearchService(
                 results_by_type = {}
 
                 for search_type, result in zip(
-                    search_tasks.keys(), search_results, strict=False
+                    list(search_tasks.keys()), list(search_results), strict=False
                 ):
                     if isinstance(result, Exception):
-                        logger.warning(f"Search failed for {search_type}: {result}")
+                        logger.warning("Search failed for %s: %s", search_type, result)
                         provider_errors[search_type] = str(result)
                         results_by_type[search_type] = []
                     else:
-                        type_results = result or []
+                        type_results = list(result) if isinstance(result, list) else []
                         all_results.extend(type_results)
                         results_by_type[search_type] = type_results
-                        logger.debug(f"Found {len(type_results)} {search_type} results")
+                        logger.debug(
+                            "Found %s %s results", len(type_results), search_type
+                        )
             else:
                 all_results = []
                 results_by_type = {}
@@ -228,36 +226,41 @@ class UnifiedSearchService(
 
             # Create response
             search_id = str(uuid.uuid4())
-            response = UnifiedSearchResponse(
-                results=sorted_results,
-                facets=facets,
-                metadata=SearchMetadata(
-                    total_results=len(all_results),
-                    returned_results=len(sorted_results),
-                    search_time_ms=search_time_ms,
-                    search_id=search_id,
-                    providers_queried=list(search_tasks.keys()),
-                    provider_errors=provider_errors if provider_errors else None,
-                ),
-                results_by_type=results_by_type,
-                errors=provider_errors if provider_errors else None,
+            response = UnifiedSearchResponse.model_validate(
+                {
+                    "results": sorted_results,
+                    "facets": facets,
+                    "metadata": {
+                        "total_results": len(all_results),
+                        "returned_results": len(sorted_results),
+                        "search_time_ms": search_time_ms,
+                        "cached_results": 0,
+                        "search_id": search_id,
+                        "user_id": None,
+                        "personalized": None,
+                        "providers_queried": list(search_tasks.keys()),
+                        "provider_errors": provider_errors or None,
+                    },
+                    "results_by_type": results_by_type,
+                    "errors": provider_errors or None,
+                }
             )
 
             # Cache the results
             await self.cache_search_results(request, response)
 
             logger.info(
-                f"Unified search completed: {len(sorted_results)} total results"
+                "Unified search completed: %s total results", len(sorted_results)
             )
             return response
 
         except Exception as e:
-            logger.error(f"Unified search failed: {e}")
+            logger.exception("Unified search failed")
             raise UnifiedSearchServiceError(f"Unified search failed: {e}", e) from e
 
     async def _search_destinations(
         self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         """Search destinations and convert to unified results."""
         try:
             # Use the destination service to search
@@ -268,38 +271,40 @@ class UnifiedSearchService(
                 # Create a destination result based on the query
                 destination_query = request.destination or request.query
 
-                result = SearchResultItem(
-                    id=f"dest_{uuid.uuid4().hex[:8]}",
-                    type="destination",
-                    title=destination_query.title(),
-                    description=(
-                        f"Explore {destination_query} - discover attractions, "
-                        f"activities, and local experiences"
-                    ),
-                    location=destination_query,
-                    relevance_score=0.9,
-                    match_reasons=["Query matches destination name"],
-                    quick_actions=[
-                        {"action": "explore", "label": "Explore Destination"},
-                        {"action": "activities", "label": "Find Activities"},
-                        {"action": "hotels", "label": "Find Hotels"},
-                    ],
-                    metadata={
-                        "country": "Unknown",
-                        "category": "city",
-                        "popularity_score": 0.8,
-                    },
+                result = SearchResultItem.model_validate(
+                    {
+                        "id": f"dest_{uuid.uuid4().hex[:8]}",
+                        "type": "destination",
+                        "title": destination_query.title(),
+                        "description": (
+                            f"Explore {destination_query} - discover attractions, "
+                            f"activities, and local experiences"
+                        ),
+                        "location": destination_query,
+                        "relevance_score": 0.9,
+                        "match_reasons": ["Query matches destination name"],
+                        "quick_actions": [
+                            {"action": "explore", "label": "Explore Destination"},
+                            {"action": "activities", "label": "Find Activities"},
+                            {"action": "hotels", "label": "Find Hotels"},
+                        ],
+                        "metadata": {
+                            "country": "Unknown",
+                            "category": "city",
+                            "popularity_score": 0.8,
+                        },
+                    }
                 )
                 results.append(result)
 
             return results
-        except Exception as e:
-            logger.warning(f"Destination search failed: {e}")
+        except (ValueError, KeyError, CoreServiceError) as e:
+            logger.warning("Destination search failed: %s", e)
             return []
 
     async def _search_activities(
         self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         """Search activities and convert to unified results."""
         try:
             if not request.destination:
@@ -308,16 +313,19 @@ class UnifiedSearchService(
             # Create activity search request
             from tripsage.api.schemas.requests.activities import ActivitySearchRequest
 
-            activity_request = ActivitySearchRequest(
-                destination=request.destination,
-                start_date=request.start_date or datetime.now().date(),
-                adults=request.adults or 1,
-                children=request.children or 0,
-                infants=request.infants or 0,
-                rating=request.filters.rating_min if request.filters else None,
+            activity_request = ActivitySearchRequest.model_validate(
+                {
+                    "destination": request.destination,
+                    "start_date": request.start_date or datetime.now().date(),
+                    "adults": request.adults or 1,
+                    "children": request.children or 0,
+                    "infants": request.infants or 0,
+                    "rating": request.filters.rating_min if request.filters else None,
+                }
             )
 
             # Search using activity service
+            assert self._activity_service is not None
             activity_response = await self._activity_service.search_activities(
                 activity_request
             )
@@ -325,67 +333,75 @@ class UnifiedSearchService(
             # Convert to unified results
             results = []
             for activity in activity_response.activities:
-                result = SearchResultItem(
-                    id=activity.id,
-                    type="activity",
-                    title=activity.name,
-                    description=activity.description,
-                    price=activity.price,
-                    currency="USD",
-                    location=activity.location,
-                    rating=activity.rating,
-                    relevance_score=min(activity.rating / 5.0, 1.0),
-                    match_reasons=["Activity in requested destination"],
-                    quick_actions=[
-                        {"action": "view", "label": "View Details"},
-                        {"action": "book", "label": "Book Now"},
-                        {"action": "save", "label": "Save to Trip"},
-                    ],
-                    metadata={
-                        "activity_type": activity.type,
-                        "duration": activity.duration,
-                        "provider": activity.provider,
-                        "coordinates": activity.coordinates.model_dump()
-                        if activity.coordinates
-                        else None,
-                    },
+                result = SearchResultItem.model_validate(
+                    {
+                        "id": activity.id,
+                        "type": "activity",
+                        "title": activity.name,
+                        "description": activity.description,
+                        "image_url": None,
+                        "price": activity.price,
+                        "currency": "USD",
+                        "location": activity.location,
+                        "rating": activity.rating,
+                        "review_count": None,
+                        "relevance_score": (
+                            min(activity.rating / 5.0, 1.0) if activity.rating else 0.0
+                        ),
+                        "match_reasons": ["Activity in requested destination"],
+                        "quick_actions": [
+                            {"action": "view", "label": "View Details"},
+                            {"action": "book", "label": "Book Now"},
+                            {"action": "save", "label": "Save to Trip"},
+                        ],
+                        "metadata": {
+                            "activity_type": activity.type,
+                            "duration": activity.duration,
+                            "provider": activity.provider,
+                            "coordinates": (
+                                activity.coordinates.model_dump()
+                                if activity.coordinates
+                                else None
+                            ),
+                        },
+                    }
                 )
                 results.append(result)
 
             return results
-        except Exception as e:
-            logger.warning(f"Activity search failed: {e}")
+        except (ValueError, KeyError, CoreServiceError) as e:
+            logger.warning("Activity search failed: %s", e)
             return []
 
     async def _search_flights(
         self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         """Search flights and convert to unified results."""
         try:
             # For now, return empty as flight service integration needs more work
             # TODO: Implement flight search integration when flight service is available
             logger.debug("Flight search not yet implemented in unified search")
             return []
-        except Exception as e:
-            logger.warning(f"Flight search failed: {e}")
+        except (ValueError, KeyError, CoreServiceError) as e:
+            logger.warning("Flight search failed: %s", e)
             return []
 
     async def _search_accommodations(
         self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         """Search accommodations and convert to unified results."""
         try:
             # For now, return empty as accommodation service integration needs more work
             # TODO: Implement accommodation search integration when service is available
             logger.debug("Accommodation search not yet implemented in unified search")
             return []
-        except Exception as e:
-            logger.warning(f"Accommodation search failed: {e}")
+        except (ValueError, KeyError, CoreServiceError) as e:
+            logger.warning("Accommodation search failed: %s", e)
             return []
 
     def _apply_unified_filters(
-        self, results: List[SearchResultItem], request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+        self, results: list[SearchResultItem], request: UnifiedSearchRequest
+    ) -> list[SearchResultItem]:
         """Apply filters across all result types."""
         if not request.filters:
             return results
@@ -418,8 +434,8 @@ class UnifiedSearchService(
         return filtered
 
     def _sort_unified_results(
-        self, results: List[SearchResultItem], request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+        self, results: list[SearchResultItem], request: UnifiedSearchRequest
+    ) -> list[SearchResultItem]:
         """Sort results across all types."""
         sort_by = request.sort_by or "relevance"
         reverse = request.sort_order == "desc"
@@ -445,7 +461,7 @@ class UnifiedSearchService(
 
         return results
 
-    def _generate_facets(self, results: List[SearchResultItem]) -> List[SearchFacet]:
+    def _generate_facets(self, results: list[SearchResultItem]) -> list[SearchFacet]:
         """Generate facets for filtering UI."""
         facets = []
 
@@ -493,9 +509,8 @@ class UnifiedSearchService(
         return facets
 
     @with_error_handling()
-    async def get_search_suggestions(self, query: str, limit: int = 10) -> List[str]:
-        """
-        Get search suggestions based on partial query.
+    async def get_search_suggestions(self, query: str, limit: int = 10) -> list[str]:
+        """Get search suggestions based on partial query.
 
         Args:
             query: Partial search query
@@ -550,26 +565,9 @@ class UnifiedSearchService(
             return suggestions[:limit]
 
         except Exception as e:
-            logger.error(f"Failed to get search suggestions: {e}")
+            logger.exception("Failed to get search suggestions")
             raise UnifiedSearchServiceError(f"Failed to get suggestions: {e}", e) from e
 
 
-# Global service instance
-_unified_search_service: Optional[UnifiedSearchService] = None
-
-
-async def get_unified_search_service() -> UnifiedSearchService:
-    """Get the global unified search service instance."""
-    global _unified_search_service
-
-    if _unified_search_service is None:
-        _unified_search_service = UnifiedSearchService()
-        await _unified_search_service.ensure_services()
-
-    return _unified_search_service
-
-
-async def close_unified_search_service() -> None:
-    """Close the global unified search service instance."""
-    global _unified_search_service
-    _unified_search_service = None
+# FINAL-ONLY: Removed module-level singleton and factory. Inject this service
+# via application DI with required collaborators.

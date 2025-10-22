@@ -1,18 +1,17 @@
 """Edge case tests for Pydantic v2 auth schemas.
 
-This module provides comprehensive edge case testing for authentication-related
+This module provides edge case testing for authentication-related
 schemas, focusing on boundary conditions, unusual input patterns, and
-production scenarios not covered in the main comprehensive tests.
+production scenarios not covered in the main tests.
 """
 
 import json
 from datetime import datetime, timedelta
-from typing import Any, Dict
+from typing import Any
 from uuid import uuid4
 
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
+from hypothesis import given, settings, strategies as st
 from pydantic import ValidationError
 
 from tripsage.api.schemas.auth import (
@@ -370,7 +369,7 @@ class TestAuthSchemaEdgeCases:
         )
     )
     @settings(max_examples=50, deadline=None)
-    def test_user_preferences_property_based(self, preferences: Dict[str, Any]):
+    def test_user_preferences_property_based(self, preferences: dict[str, Any]):
         """Test user preferences with property-based testing."""
         now = datetime.utcnow()
 

@@ -4,7 +4,7 @@ This directory contains reusable UI components for the TripSage frontend applica
 
 ## Loading Components
 
-Comprehensive loading state management with accessibility support and TypeScript validation.
+Loading state management with accessibility support and TypeScript validation.
 
 ### Components Included
 
@@ -107,7 +107,7 @@ Loading components are integrated with Next.js App Router:
 
 ### Testing
 
-Comprehensive test coverage (>90%) includes:
+Test coverage (>90%) includes:
 
 - Component rendering and props
 - Accessibility attributes

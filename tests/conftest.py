@@ -5,14 +5,15 @@ Updated for Pydantic v2 and modern pytest patterns (2025).
 """
 
 import os
-from datetime import datetime, timezone
-from typing import Any, Dict
+from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from uuid import uuid4
 
 import pytest
 import pytest_asyncio
 from pydantic import SecretStr
+
 
 # Configure pytest-asyncio - updated for pytest-asyncio 1.0
 # No longer need event_loop fixture with pytest-asyncio 1.0
@@ -171,26 +172,26 @@ def sample_trip_id() -> str:
 @pytest.fixture
 def sample_timestamp() -> datetime:
     """Generate a sample timestamp."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @pytest.fixture
-def sample_user_data(sample_user_id: str) -> Dict[str, Any]:
+def sample_user_data(sample_user_id: str) -> dict[str, Any]:
     """Create sample user data."""
     return {
         "id": sample_user_id,
         "email": "test@example.com",
         "username": "testuser",
         "full_name": "Test User",
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc),
+        "created_at": datetime.now(UTC),
+        "updated_at": datetime.now(UTC),
         "is_active": True,
         "is_verified": True,
     }
 
 
 @pytest.fixture
-def sample_trip_data(sample_trip_id: str, sample_user_id: str) -> Dict[str, Any]:
+def sample_trip_data(sample_trip_id: str, sample_user_id: str) -> dict[str, Any]:
     """Create sample trip data."""
     return {
         "id": sample_trip_id,
@@ -203,8 +204,8 @@ def sample_trip_data(sample_trip_id: str, sample_user_id: str) -> Dict[str, Any]
         "status": "planning",
         "budget": 5000.00,
         "currency": "USD",
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc),
+        "created_at": datetime.now(UTC),
+        "updated_at": datetime.now(UTC),
     }
 
 
@@ -383,14 +384,12 @@ class SerializationHelper:
     def test_json_round_trip(self, model_instance):
         """Test JSON serialization round trip and return restored object."""
         json_data = model_instance.model_dump_json()
-        restored = model_instance.__class__.model_validate_json(json_data)
-        return restored
+        return model_instance.__class__.model_validate_json(json_data)
 
     def test_dict_round_trip(self, model_instance):
         """Test dict serialization round trip and return restored object."""
         dict_data = model_instance.model_dump()
-        restored = model_instance.__class__.model_validate(dict_data)
-        return restored
+        return model_instance.__class__.model_validate(dict_data)
 
 
 @pytest.fixture

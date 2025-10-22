@@ -27,15 +27,15 @@ export interface Destination {
   notes?: string;
 }
 
-// Enhanced budget structure aligned with backend
-export interface EnhancedBudget {
+// budget structure aligned with backend
+export interface Budget {
   total: number;
   currency: string;
   spent: number;
   breakdown: Record<string, number>;
 }
 
-// Enhanced preferences structure
+// preferences structure
 export interface TripPreferences {
   budget?: {
     total?: number;
@@ -88,11 +88,11 @@ export interface Trip {
 
   // Budget - supporting both legacy and enhanced
   budget?: number; // Legacy simple budget
-  enhanced_budget?: EnhancedBudget; // New enhanced budget
+  budget_breakdown?: Budget; // New enhanced budget
   currency?: string;
   spent_amount?: number;
 
-  // Enhanced fields
+  // fields
   visibility?: "private" | "shared" | "public";
   isPublic?: boolean; // Legacy field for backward compatibility
   tags?: string[];
@@ -207,12 +207,12 @@ export const useTripStore = create<TripState>()(
             tags: data.tags || [],
             preferences: data.preferences || {},
             status: data.status || "planning",
-            // Enhanced budget structure
-            budget_breakdown: data.enhanced_budget
+            // budget structure
+            budget_breakdown: data.budget_breakdown
               ? {
-                  total: data.enhanced_budget.total,
-                  spent: data.enhanced_budget.spent,
-                  breakdown: data.enhanced_budget.breakdown,
+                  total: data.budget_breakdown.total,
+                  spent: data.budget_breakdown.spent,
+                  breakdown: data.budget_breakdown.breakdown,
                 }
               : data.budget
                 ? {
@@ -245,7 +245,7 @@ export const useTripStore = create<TripState>()(
             endDate: newTrip.end_date, // Frontend compatibility
             destinations: [], // Will be handled separately
             budget: newTrip.budget,
-            enhanced_budget: newTrip.budget_breakdown
+            budget_breakdown: newTrip.budget_breakdown
               ? {
                   total: newTrip.budget_breakdown.total || newTrip.budget || 0,
                   currency: newTrip.currency || "USD",
@@ -305,15 +305,15 @@ export const useTripStore = create<TripState>()(
           if (data.status) updateData.status = data.status;
 
           // Handle enhanced budget
-          if (data.enhanced_budget) {
+          if (data.budget_breakdown) {
             updateData.budget_breakdown = {
-              total: data.enhanced_budget.total,
-              spent: data.enhanced_budget.spent,
-              breakdown: data.enhanced_budget.breakdown,
+              total: data.budget_breakdown.total,
+              spent: data.budget_breakdown.spent,
+              breakdown: data.budget_breakdown.breakdown,
             };
-            updateData.budget = data.enhanced_budget.total;
-            updateData.spent_amount = data.enhanced_budget.spent;
-            updateData.currency = data.enhanced_budget.currency;
+            updateData.budget = data.budget_breakdown.total;
+            updateData.spent_amount = data.budget_breakdown.spent;
+            updateData.currency = data.budget_breakdown.currency;
           }
 
           const { data: updatedTrip, error } = await supabase
@@ -337,7 +337,7 @@ export const useTripStore = create<TripState>()(
             end_date: updatedTrip.end_date,
             endDate: updatedTrip.end_date, // Frontend compatibility
             budget: updatedTrip.budget,
-            enhanced_budget: updatedTrip.budget_breakdown
+            budget_breakdown: updatedTrip.budget_breakdown
               ? {
                   total: updatedTrip.budget_breakdown.total || updatedTrip.budget || 0,
                   currency: updatedTrip.currency || "USD",

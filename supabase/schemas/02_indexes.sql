@@ -1,5 +1,5 @@
 -- Performance Indexes Schema
--- Description: Comprehensive indexing strategy for optimal query performance
+-- Description: indexing strategy for optimal query performance
 -- Dependencies: 01_tables.sql (all table definitions)
 -- Based on: pgvector, Supabase, and PostgreSQL best practices research
 

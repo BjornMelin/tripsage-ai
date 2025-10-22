@@ -4,8 +4,8 @@ This module provides shared fixtures and utilities for testing business services
 Updated for Pydantic v2 and modern testing patterns.
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict
+from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -25,6 +25,8 @@ def mock_database_service():
     # Add specific methods used by services
     db.execute_query = AsyncMock()
     db.get_accommodation_listing = AsyncMock()
+    db.store_accommodation_search = AsyncMock()
+    db.store_accommodation_listing = AsyncMock()
     db.store_accommodation_booking = AsyncMock()
     db.get_accommodation_booking = AsyncMock()
     db.get_accommodation_bookings = AsyncMock()
@@ -117,11 +119,11 @@ def sample_trip_id() -> str:
 @pytest.fixture
 def sample_timestamp() -> datetime:
     """Generate a sample timestamp."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @pytest.fixture
-def sample_user_data(sample_user_id: str, sample_timestamp: datetime) -> Dict[str, Any]:
+def sample_user_data(sample_user_id: str, sample_timestamp: datetime) -> dict[str, Any]:
     """Create sample user data."""
     return {
         "id": sample_user_id,

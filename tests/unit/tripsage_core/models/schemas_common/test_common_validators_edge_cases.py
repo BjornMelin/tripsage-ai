@@ -1,6 +1,6 @@
 """Edge case tests for CommonValidators.
 
-This module provides comprehensive edge case testing for validation functions
+This module provides edge case testing for validation functions
 and Annotated types, focusing on boundary conditions, unusual input patterns,
 and complex validator combinations that occur in production scenarios.
 """
@@ -10,8 +10,7 @@ from enum import Enum
 from typing import Any
 
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
+from hypothesis import given, settings, strategies as st
 from pydantic import BaseModel, ValidationError
 
 from tripsage_core.models.schemas_common.common_validators import (
@@ -87,13 +86,13 @@ class TestValidatorEdgeCases:
     def test_rating_special_numeric_values(self):
         """Test rating with special numeric values."""
         # Test infinity and NaN - these are considered numbers but outside valid range
-        with pytest.raises(ValueError, match="between 0.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"between 0\.0 and 5\.0"):
             CommonValidators.rating_range(float("inf"))
 
-        with pytest.raises(ValueError, match="between 0.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"between 0\.0 and 5\.0"):
             CommonValidators.rating_range(float("-inf"))
 
-        with pytest.raises(ValueError, match="between 0.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"between 0\.0 and 5\.0"):
             CommonValidators.rating_range(float("nan"))
 
     def test_email_unicode_and_international(self):
@@ -522,7 +521,7 @@ class TestValidatorEdgeCases:
                     )  # Cap at 5.0
                     results.append((airport, email, rating))
                     time.sleep(0.001)  # Small delay
-            except Exception as e:
+            except (ValidationError, ValueError, RuntimeError) as e:
                 errors.append(e)
 
         # Start multiple threads

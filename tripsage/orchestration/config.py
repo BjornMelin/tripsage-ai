@@ -1,5 +1,4 @@
-"""
-Configuration management for LangGraph orchestration.
+"""Configuration management for LangGraph orchestration.
 
 This module provides configuration classes and utilities for managing
 the LangGraph-based orchestration system settings.
@@ -8,7 +7,7 @@ the LangGraph-based orchestration system settings.
 import os
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 from tripsage_core.config import get_settings
 
@@ -23,8 +22,7 @@ class CheckpointStorage(Enum):
 
 @dataclass
 class LangGraphConfig:
-    """
-    Configuration for LangGraph orchestration system.
+    """Configuration for LangGraph orchestration system.
 
     This class encapsulates all configuration options for the LangGraph-based
     agent orchestration including models, checkpointing, and performance settings.
@@ -41,7 +39,7 @@ class LangGraphConfig:
 
     # Checkpointing and state management
     checkpoint_storage: CheckpointStorage = CheckpointStorage.MEMORY
-    checkpoint_connection_string: Optional[str] = None
+    checkpoint_connection_string: str | None = None
 
     # Error handling and resilience
     max_retries: int = 3
@@ -52,7 +50,7 @@ class LangGraphConfig:
     # Monitoring and observability
     enable_langsmith: bool = True
     langsmith_project: str = "tripsage-langgraph"
-    langsmith_api_key: Optional[str] = None
+    langsmith_api_key: str | None = None
 
     # Performance optimization
     parallel_execution: bool = True
@@ -72,8 +70,7 @@ class LangGraphConfig:
 
     @classmethod
     def from_environment(cls) -> "LangGraphConfig":
-        """
-        Load configuration from environment variables.
+        """Load configuration from environment variables.
 
         Returns:
             LangGraphConfig instance with values from environment
@@ -134,8 +131,7 @@ class LangGraphConfig:
 
     @classmethod
     def from_app_settings(cls) -> "LangGraphConfig":
-        """
-        Load configuration from existing app settings.
+        """Load configuration from existing app settings.
 
         Returns:
             LangGraphConfig instance derived from app settings
@@ -157,9 +153,8 @@ class LangGraphConfig:
             else None,
         )
 
-    def to_dict(self) -> Dict[str, Any]:
-        """
-        Convert configuration to dictionary.
+    def to_dict(self) -> dict[str, Any]:
+        """Convert configuration to dictionary.
 
         Returns:
             Dictionary representation of configuration
@@ -191,8 +186,7 @@ class LangGraphConfig:
         }
 
     def validate(self) -> None:
-        """
-        Validate configuration settings.
+        """Validate configuration settings.
 
         Raises:
             ValueError: If configuration is invalid
@@ -226,8 +220,7 @@ class LangGraphConfig:
 
 
 def get_default_config() -> LangGraphConfig:
-    """
-    Get default configuration based on environment and app settings.
+    """Get default configuration based on environment and app settings.
 
     Returns:
         Default LangGraphConfig instance

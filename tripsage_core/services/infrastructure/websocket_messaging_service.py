@@ -1,5 +1,4 @@
-"""
-WebSocket messaging service.
+"""WebSocket messaging service.
 
 This service consolidates all WebSocket message sending logic including:
 - Connection-level messaging
@@ -19,11 +18,12 @@ from pydantic import BaseModel, Field
 from .websocket_auth_service import WebSocketAuthService
 from .websocket_connection_service import WebSocketConnection
 
+
 logger = logging.getLogger(__name__)
 
 
 class WebSocketEvent(BaseModel):
-    """Enhanced WebSocket event model."""
+    """WebSocket event model."""
 
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     type: str
@@ -100,6 +100,7 @@ class WebSocketMessagingService:
     """Service for consolidating WebSocket messaging operations."""
 
     def __init__(self, auth_service: WebSocketAuthService):
+        """Initialize WebSocket messaging service."""
         self.auth_service = auth_service
 
         # Connection tracking
@@ -348,7 +349,7 @@ class WebSocketMessagingService:
             )
         if target_type == "broadcast":
             return await self.broadcast_to_all(event, rate_limiter, message_limits)
-        logger.warning(f"Unknown target type: {target_type}")
+        logger.warning("Unknown target type: %s", target_type)
         return 0
 
     def get_connection_stats(self) -> dict[str, Any]:

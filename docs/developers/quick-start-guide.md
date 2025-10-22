@@ -1,6 +1,6 @@
 # ⚡ Developer Quick Start Guide
 
-> **New to TripSage?** Get productive in 15 minutes with this comprehensive onboarding guide.  
+> **New to TripSage?** Get productive in 15 minutes with this onboarding guide.  
 > **Target Audience**: New developers joining the TripSage AI team
 
 This guide will get you from zero to productive development in minimal time, covering essential setup, key concepts, and your first contributions to the TripSage AI platform.
@@ -74,9 +74,9 @@ SUPABASE_URL=your_supabase_project_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# DragonflyDB Cache (local development)
-DRAGONFLY_URL=redis://localhost:6379
-DRAGONFLY_PASSWORD=tripsage_secure_password
+# Upstash Redis (serverless)
+UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
+UPSTASH_REDIS_REST_TOKEN=<token>
 
 # AI Services (optional for basic development)
 OPENAI_API_KEY=your_openai_key  # For embeddings/chat
@@ -91,13 +91,8 @@ ENVIRONMENT=development
 ### **Start Local Services**
 
 ```bash
-# 7. Start DragonflyDB (optional but recommended)
-docker run -d --name tripsage-dragonfly -p 6379:6379 \
-  docker.dragonflydb.io/dragonflydb/dragonfly:latest \
-  --logtostderr --cache_mode --requirepass tripsage_secure_password
-
-# 8. Verify services
-uv run python scripts/verification/verify_dragonfly.py
+# 7. Verify Upstash Redis
+uv run python scripts/verification/verify_upstash.py
 ```
 
 ## 🔄 Development Workflow
@@ -257,7 +252,7 @@ async def debug_example():
         logger.info(f"Operation successful: {result}")
         return {"result": result}
     except Exception as e:
-        logger.error(f"Operation failed: {str(e)}")
+        logger.exception(f"Operation failed: {str(e)}")
         raise
 ```
 
@@ -467,9 +462,9 @@ git branch -d feature/your-feature-name
 - [ ] Review [API Development](api-development.md) guide
 - [ ] Study [Frontend Development](frontend-development.md) patterns
 - [ ] Implement a simple CRUD feature
-- [ ] Write comprehensive tests
+- [ ] Write tests
 
-#### **Week 3: Advanced Topics**
+#### **Week 3: In-Depth Topics**
 
 - [ ] Learn [Performance Optimization](performance-optimization.md) techniques
 - [ ] Understand [External Integrations](external-integrations.md)
@@ -483,7 +478,7 @@ git branch -d feature/your-feature-name
 - [ ] Propose and implement improvements
 - [ ] Mentor newer team members
 
-### **Advanced Topics to Explore**
+### **In-Depth Topics to Explore**
 
 - **AI Integration**: LangGraph agents, Mem0 memory system
 - **Performance**: Vector search optimization, caching strategies
@@ -495,7 +490,7 @@ git branch -d feature/your-feature-name
 
 #### **Internal Documentation**
 
-- [Testing Guide](testing-guide.md) - Comprehensive testing strategies
+- [Testing Guide](testing-guide.md) - Testing strategies
 - [Debugging Guide](debugging-guide.md) - Troubleshooting techniques  
 - [Performance Optimization](performance-optimization.md) - Speed & efficiency
 - [External Integrations](external-integrations.md) - Third-party APIs

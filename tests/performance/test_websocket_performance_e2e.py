@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Comprehensive WebSocket Performance Tests
+"""WebSocket Performance Tests.
 
 This module tests WebSocket performance across various scenarios:
 - Connection establishment and teardown
@@ -21,10 +20,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import websockets
-from httpx import AsyncClient
 
-from tripsage.api.main import app
 from tripsage_core.config import get_settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +40,9 @@ def websocket_settings():
 @pytest.fixture
 async def test_client():
     """Async test client for the FastAPI app."""
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        yield client
+    # Mock client since not used in performance simulations
+    mock_client = AsyncMock()
+    yield mock_client
 
 
 @pytest.fixture
@@ -63,8 +62,8 @@ async def authenticated_websocket_connection(websocket_settings):
         try:
             websocket = await websockets.connect(uri)
             yield websocket
-        except Exception as e:
-            logger.warning(f"Could not establish WebSocket connection: {e}")
+        except (ConnectionError, TimeoutError, RuntimeError, OSError) as e:
+            logger.warning("Could not establish WebSocket connection: %s", e)
             # Yield a mock WebSocket for testing
             mock_ws = AsyncMock()
             mock_ws.send = AsyncMock()
@@ -92,8 +91,7 @@ class TestWebSocketConnectionPerformance:
             # Simulate authentication
             await asyncio.sleep(0.002)  # Simulate auth verification
 
-            connection_time = time.time() - start_time
-            return connection_time
+            return time.time() - start_time
 
         # Benchmark connection establishment
         result = await benchmark.pedantic(connect_websocket, rounds=50, iterations=1)
@@ -247,7 +245,7 @@ class TestWebSocketMessagePerformance:
 
             for i in range(batch_size):
                 # Simulate message processing
-                {
+                _ = {
                     "id": i,
                     "type": "batch_test",
                     "data": f"Message {i}",
@@ -372,6 +370,7 @@ class TestWebSocketErrorRecoveryPerformance:
                         await asyncio.sleep(backoff_time)
                     else:
                         return {"success": False, "attempts": attempt + 1}
+            return None
 
         result = await benchmark.pedantic(retry_failed_message, rounds=20, iterations=1)
         assert result["success"] is True
@@ -404,7 +403,7 @@ class TestWebSocketScalabilityPerformance:
                 await asyncio.sleep(0.0001)
 
             # Simulate periodic maintenance
-            for _, conn_data in connections.items():
+            for conn_data in connections.values():
                 conn_data["last_maintenance"] = time.time()
                 await asyncio.sleep(0.00001)
 
@@ -518,13 +517,11 @@ class TestWebSocketIntegrationPerformance:
 @pytest.mark.performance
 @pytest.mark.websocket
 def test_websocket_performance_regression_detection():
-    """
-    Performance regression detection for WebSocket operations.
+    """Performance regression detection for WebSocket operations.
 
     This test defines performance thresholds and can be used in CI/CD
     to detect performance regressions.
     """
-
     # Define performance thresholds (in milliseconds)
     PERFORMANCE_THRESHOLDS = {
         "connection_establishment": 100,  # 100ms max

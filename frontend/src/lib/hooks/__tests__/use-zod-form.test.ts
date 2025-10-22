@@ -1,5 +1,5 @@
 /**
- * Comprehensive test suite for useZodForm hook
+ * Test suite for useZodForm hook
  * Demonstrates advanced Zod validation patterns for forms
  */
 
@@ -29,7 +29,7 @@ vi.mock("@hookform/resolvers/zod", () => ({
 }));
 
 // Test schemas for validation
-const SimpleFormSchema = z.object({
+const TestFormSchema = z.object({
   email: z.string().email("Invalid email format"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   name: z.string().min(1, "Name is required"),
@@ -70,7 +70,7 @@ const AsyncValidationSchema = z.object({
   email: z.string().email(),
 });
 
-type SimpleFormData = z.infer<typeof SimpleFormSchema>;
+type TestFormData = z.infer<typeof TestFormSchema>;
 type ComplexFormData = z.infer<typeof ComplexFormSchema>;
 // type AsyncFormData = z.infer<typeof AsyncValidationSchema>;
 
@@ -107,21 +107,21 @@ describe("useZodForm Hook", () => {
 
   describe("Basic Form Functionality", () => {
     it("initializes form with Zod schema and default values", () => {
-      const defaultValues: Partial<SimpleFormData> = {
+      const defaultValues: Partial<TestFormData> = {
         email: "test@example.com",
         name: "John Doe",
       };
 
       const { result } = renderHook(() =>
         useZodForm({
-          schema: SimpleFormSchema,
+          schema: TestFormSchema,
           defaultValues,
         })
       );
 
       expect(mockUseForm).toHaveBeenCalledWith(
         expect.objectContaining({
-          resolver: expect.objectContaining({ schema: SimpleFormSchema }),
+          resolver: expect.objectContaining({ schema: TestFormSchema }),
           defaultValues,
           mode: "onChange",
         })
@@ -142,7 +142,7 @@ describe("useZodForm Hook", () => {
 
       const { result } = renderHook(() =>
         useZodForm({
-          schema: SimpleFormSchema,
+          schema: TestFormSchema,
         })
       );
 
@@ -164,7 +164,7 @@ describe("useZodForm Hook", () => {
 
       const { result } = renderHook(() =>
         useZodForm({
-          schema: SimpleFormSchema,
+          schema: TestFormSchema,
           transformSubmitData,
         })
       );
@@ -192,13 +192,13 @@ describe("useZodForm Hook", () => {
 
   describe("Validation Patterns", () => {
     it("validates simple form data with Zod schema", () => {
-      const validData: SimpleFormData = {
+      const validData: TestFormData = {
         email: "test@example.com",
         password: "securepassword123",
         name: "John Doe",
       };
 
-      expect(() => SimpleFormSchema.parse(validData)).not.toThrow();
+      expect(() => TestFormSchema.parse(validData)).not.toThrow();
 
       const invalidData = {
         email: "invalid-email",
@@ -206,7 +206,7 @@ describe("useZodForm Hook", () => {
         name: "",
       };
 
-      expect(() => SimpleFormSchema.parse(invalidData)).toThrow();
+      expect(() => TestFormSchema.parse(invalidData)).toThrow();
     });
 
     it("validates complex nested form data", () => {
@@ -257,7 +257,7 @@ describe("useZodForm Hook", () => {
     it("provides detailed validation error messages", () => {
       const { result } = renderHook(() =>
         useZodForm({
-          schema: SimpleFormSchema,
+          schema: TestFormSchema,
         })
       );
 
@@ -327,14 +327,14 @@ describe("useZodForm Hook", () => {
 
   describe("Form Reset and State Management", () => {
     it("resets form to default values", () => {
-      const defaultValues: Partial<SimpleFormData> = {
+      const defaultValues: Partial<TestFormData> = {
         email: "default@example.com",
         name: "Default Name",
       };
 
       const { result } = renderHook(() =>
         useZodForm({
-          schema: SimpleFormSchema,
+          schema: TestFormSchema,
           defaultValues,
         })
       );
@@ -356,7 +356,7 @@ describe("useZodForm Hook", () => {
 
       const { result } = renderHook(() =>
         useZodForm({
-          schema: SimpleFormSchema,
+          schema: TestFormSchema,
         })
       );
 
@@ -387,7 +387,7 @@ describe("useZodForm Hook", () => {
 
       const { result } = renderHook(() =>
         useZodForm({
-          schema: SimpleFormSchema,
+          schema: TestFormSchema,
           onSubmitError,
         })
       );
@@ -416,7 +416,7 @@ describe("useZodForm Hook", () => {
 
       const { result } = renderHook(() =>
         useZodForm({
-          schema: SimpleFormSchema,
+          schema: TestFormSchema,
           onValidationError,
         })
       );
@@ -514,7 +514,7 @@ describe("useZodForm Hook", () => {
     it("debounces validation for performance", async () => {
       const { result } = renderHook(() =>
         useZodForm({
-          schema: SimpleFormSchema,
+          schema: TestFormSchema,
           validateMode: "onChange",
           debounceValidation: 300,
         })
@@ -537,7 +537,7 @@ describe("useZodForm Hook", () => {
     });
 
     it("memoizes validation results", () => {
-      const memoizedSchema = SimpleFormSchema;
+      const memoizedSchema = TestFormSchema;
 
       const { result, rerender } = renderHook(({ schema }) => useZodForm({ schema }), {
         initialProps: { schema: memoizedSchema },

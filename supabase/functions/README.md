@@ -1,8 +1,8 @@
 # TripSage Edge Functions Test Suite
 
-This directory contains comprehensive test coverage for all Supabase Edge Functions used in the TripSage platform.
+This directory contains test coverage for all Supabase Edge Functions used in the TripSage platform.
 
-## 📁 Structure
+## Structure
 
 ```text
 functions/
@@ -12,28 +12,28 @@ functions/
 │   └── integration.test.ts    # Cross-function integration tests
 ├── ai-processing/             # AI processing function
 │   ├── index.ts              # Function implementation
-│   └── index.test.ts         # Comprehensive test suite
+│   └── index.test.ts         # Tests for the function
 ├── trip-events/              # Trip collaboration events
 │   ├── index.ts              # Function implementation
-│   └── index.test.ts         # Comprehensive test suite
+│   └── index.test.ts         # Tests for the function
 ├── file-processing/          # File upload and processing
 │   ├── index.ts              # Function implementation
-│   └── index.test.ts         # Comprehensive test suite
+│   └── index.test.ts         # Tests for the function
 ├── cache-invalidation/       # Redis cache management
 │   ├── index.ts              # Function implementation
-│   └── index.test.ts         # Comprehensive test suite
+│   └── index.test.ts         # Tests for the function
 ├── trip-notifications/       # Email and webhook notifications
 │   ├── index.ts              # Function implementation
-│   └── index.test.ts         # Comprehensive test suite
+│   └── index.test.ts         # Tests for the function
 ├── deno.json                 # Deno configuration and tasks
 ├── import_map.json           # Import mappings
 ├── run-tests.ts              # Test runner script
 └── README.md                 # This file
 ```
 
-## 🧪 Test Coverage
+## Test Coverage
 
-Each Edge Function has **90%+ test coverage** including:
+Each Edge Function has test coverage including:
 
 ### Core Functionality Tests
 
@@ -218,10 +218,10 @@ deno task test:integration
 deno task test:utils
 ```
 
-### Advanced Test Runner
+### Test Runner
 
 ```bash
-# Use the comprehensive test runner
+# Use the test runner
 deno run --allow-net --allow-env --allow-read --allow-write run-tests.ts
 ```
 
@@ -557,7 +557,7 @@ CREATE TRIGGER trip_collaborators_webhook
 
 ## Monitoring and Logging
 
-All functions include comprehensive logging and error handling:
+All functions include logging and error handling:
 
 - Request validation and authentication
 - Detailed operation logging
@@ -601,6 +601,6 @@ When adding new Edge Functions:
 
 1. Follow the established directory structure
 2. Use shared utilities from `_shared/` directory
-3. Include comprehensive JSDoc documentation
+3. Include JSDoc documentation
 4. Add appropriate error handling and logging
 5. Update this README with new function details

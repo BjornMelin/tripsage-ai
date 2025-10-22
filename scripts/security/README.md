@@ -16,7 +16,7 @@ Security scripts help identify vulnerabilities, validate security policies, and 
 
 ### rls_vulnerability_tests.sql
 
-Comprehensive Row Level Security (RLS) policy testing for PostgreSQL/Supabase.
+Row Level Security (RLS) policy testing for PostgreSQL/Supabase.
 
 **Purpose**: Validate that RLS policies correctly enforce access controls and prevent unauthorized data access.
 
@@ -58,7 +58,7 @@ SELECT COUNT(*) FROM trips;
 
 ### security_validation.py
 
-Comprehensive security audit script that validates multiple security aspects.
+Security audit script that validates multiple security aspects.
 
 **Checks**:
 
@@ -161,7 +161,7 @@ SELECT find_dynamic_sql_usage();
 #!/bin/bash
 # security_check.sh
 
-echo "🔒 Running Security Validation Suite"
+echo "Running Security Validation Suite"
 
 # 1. Database Security
 echo "Checking database security..."
@@ -228,7 +228,7 @@ jobs:
 Schedule regular security audits:
 
 ```bash
-# Weekly comprehensive audit
+# Weekly audit
 0 0 * * 0 /app/scripts/security/weekly_audit.sh
 
 # Daily quick checks

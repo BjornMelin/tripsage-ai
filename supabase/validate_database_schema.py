@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-TripSage Database Schema Validation Script
+"""TripSage Database Schema Validation Script.
+
 Validates Supabase database structure and identifies integration issues.
 """
 
@@ -9,12 +9,13 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
 
-def analyze_schema_files() -> Dict[str, any]:
+def analyze_schema_files() -> dict[str, Any]:
     """Analyze schema files for completeness and consistency."""
     schema_dir = Path("supabase/schemas")
 
@@ -61,7 +62,7 @@ def analyze_schema_files() -> Dict[str, any]:
     return results
 
 
-def check_trip_collaborators_integration() -> List[str]:
+def check_trip_collaborators_integration() -> list[str]:
     """Check if trip_collaborators table is properly integrated."""
     issues = []
 
@@ -104,7 +105,7 @@ def check_trip_collaborators_integration() -> List[str]:
     return issues
 
 
-def analyze_foreign_key_constraints() -> List[str]:
+def analyze_foreign_key_constraints() -> list[str]:
     """Analyze foreign key relationships for data integrity."""
     issues = []
 
@@ -131,7 +132,7 @@ def analyze_foreign_key_constraints() -> List[str]:
     return issues
 
 
-def check_memory_table_consistency() -> List[str]:
+def check_memory_table_consistency() -> list[str]:
     """Check memory tables for Mem0 integration consistency."""
     issues = []
 
@@ -161,7 +162,7 @@ def check_memory_table_consistency() -> List[str]:
     return issues
 
 
-def generate_recommendations() -> List[str]:
+def generate_recommendations() -> list[str]:
     """Generate actionable recommendations for database improvements."""
     recommendations = []
 

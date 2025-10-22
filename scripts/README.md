@@ -1,6 +1,6 @@
 # TripSage Scripts
 
-> **⚡ Quick Start:** `python scripts/testing/test_runner.py` to verify environment setup.
+Quick Start: run `python scripts/testing/test_runner.py` to verify environment setup.
 
 Automation scripts and utilities for TripSage development, deployment, and operations. Organized by functional area for easy discovery and maintenance.
 
@@ -15,8 +15,11 @@ Automation scripts and utilities for TripSage development, deployment, and opera
 - **`init_database.py`** - Initialize database schema and seed data
 - **`run_migrations.py`** - Apply pending SQL migrations (supports `--dry-run`)
 - **`deploy_storage_infrastructure.py`** - Deploy storage buckets and policies
-- **`deploy_triggers.py`** - Deploy database triggers and functions
 - **`migrations/`** - SQL migration files with timestamp prefixes
+
+Note: Database triggers and functions are provisioned via Supabase SQL and Edge
+Functions, not via a Python script. Use the Supabase tooling under
+`supabase/functions/` (see `deploy.sh` and `setup_edge_function_triggers.sql`).
 
 ### `/benchmarks/` - Performance Testing
 
@@ -79,7 +82,7 @@ python scripts/benchmarks/benchmark.py --quick
 # Quick benchmark suite
 python scripts/benchmarks/benchmark.py --iterations=50 --concurrent=5
 
-# Comprehensive benchmarks
+# Benchmarks
 python scripts/benchmarks/benchmark.py --full-suite
 
 # Specific benchmark types
@@ -207,7 +210,7 @@ python scripts/verification/validate_schema_consistency.py
 When adding new scripts:
 
 1. **Follow naming conventions**: Use snake_case, descriptive names
-2. **Add error handling**: Comprehensive error messages and recovery
+2. **Add error handling**: Error messages and recovery
 3. **Include documentation**: Docstrings and README updates
 4. **Add tests**: Minimum 90% test coverage for new functionality
 5. **Use type hints**: Full typing for maintainability
@@ -240,7 +243,7 @@ def main(dry_run: bool) -> None:
         # Implementation
         pass
     except Exception as e:
-        logger.error(f"Script failed: {e}")
+        logger.exception(f"Script failed: {e}")
         raise click.ClickException(str(e))
 
 

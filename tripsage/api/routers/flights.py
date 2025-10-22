@@ -1,38 +1,42 @@
-"""Flight router for TripSage API.
+"""Flight router exposing the finalized flight management API surface.
 
-This module provides endpoints for flight-related operations, including
-searching for flights, managing saved flights, and searching for airports.
+This module provides a thin, well-typed adapter between the public FastAPI layer
+and the consolidated `FlightService`. Legacy endpoints (multi-city search, saved
+flight management, ad-hoc mock data) have been removed to keep the API aligned
+with the maintained service capabilities and to eliminate duplicated business
+logic. The remaining endpoints delegate validation and error handling to the
+core service while translating domain errors into HTTP responses.
 """
 
-import logging
-import secrets
-from typing import List, Optional
+# pylint: disable=duplicate-code
+
+from __future__ import annotations
+
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
-from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.exceptions.exceptions import (
-    CoreResourceNotFoundError as ResourceNotFoundError,
+from tripsage.api.core.dependencies import (
+    get_flight_service_dep as get_flight_service,
+    get_principal_id,
+    require_principal,
 )
-from tripsage_core.models.domain.flight import FlightOffer
-from tripsage_core.models.schemas_common.flight_schemas import (
-    AirportSearchRequest,
-    AirportSearchResponse,
+from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.schemas.flights import (
+    BookingStatus,
+    FlightBooking,
+    FlightBookingRequest,
+    FlightOffer,
     FlightSearchRequest,
     FlightSearchResponse,
-    MultiCityFlightSearchRequest,
-    SavedFlightRequest,
-    SavedFlightResponse,
-    UpcomingFlightResponse,
 )
-from tripsage_core.services.business.flight_service import (
-    FlightService,
-    get_flight_service,
+from tripsage_core.exceptions.exceptions import (
+    CoreResourceNotFoundError,
+    CoreServiceError,
+    CoreValidationError,
 )
+from tripsage_core.services.business.flight_service import FlightService
 
-logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -42,69 +46,32 @@ async def search_flights(
     request: FlightSearchRequest,
     principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
-):
-    """Search for flights based on the provided criteria.
+) -> FlightSearchResponse:
+    """Search for flight offers using the unified flight service.
 
     Args:
-        request: Flight search parameters
-        principal: Current authenticated principal
-        flight_service: Injected flight service
+        request: Typed flight search parameters validated by Pydantic.
+        principal: Authenticated user context (unused directly but enforces auth).
+        flight_service: Injected flight service instance.
 
     Returns:
-        Flight search results
+        Search results including offers, metadata, and cache indicators.
+
+    Raises:
+        HTTPException: If the underlying service raises a handled error.
     """
-    logger.debug(f"Received flight search request: {request}")
-    logger.debug(f"Request type: {type(request)}")
-    logger.debug(
-        "Request fields: %s",
-        request.model_fields if hasattr(request, "model_fields") else "No model_fields",
-    )
-
-    # Search for flights using unified schema
-    results = await flight_service.search_flights(request)
-    return results
-
-
-@router.post("/search/multi-city", response_model=FlightSearchResponse)
-async def search_multi_city_flights(
-    request: MultiCityFlightSearchRequest,
-    principal: Principal = Depends(require_principal),
-    flight_service: FlightService = Depends(get_flight_service),
-):
-    """Search for multi-city flights based on the provided criteria.
-
-    Args:
-        request: Multi-city flight search parameters
-        principal: Current authenticated principal
-        flight_service: Injected flight service
-
-    Returns:
-        Flight search results
-    """
-    # Search for multi-city flights
-    results = await flight_service.search_multi_city_flights(request)
-    return results
-
-
-@router.post("/airports/search", response_model=AirportSearchResponse)
-async def search_airports(
-    request: AirportSearchRequest,
-    principal: Principal = Depends(require_principal),
-    flight_service: FlightService = Depends(get_flight_service),
-):
-    """Search for airports based on the provided query.
-
-    Args:
-        request: Airport search parameters
-        principal: Current authenticated principal
-        flight_service: Injected flight service
-
-    Returns:
-        Airport search results
-    """
-    # Search for airports
-    results = await flight_service.search_airports(request)
-    return results
+    try:
+        return await flight_service.search_flights(request)
+    except CoreValidationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(error),
+        ) from error
+    except CoreServiceError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Flight search failed",
+        ) from error
 
 
 @router.get("/offers/{offer_id}", response_model=FlightOffer)
@@ -112,237 +79,154 @@ async def get_flight_offer(
     offer_id: str,
     principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
-):
-    """Get details of a specific flight offer.
+) -> FlightOffer:
+    """Retrieve detailed information about a specific flight offer.
 
     Args:
-        offer_id: Flight offer ID
-        principal: Current authenticated principal
-        flight_service: Injected flight service
+        offer_id: Identifier returned from a previous search.
+        principal: Authenticated user context.
+        flight_service: Injected flight service instance.
 
     Returns:
-        Flight offer details
+        Detailed flight offer information.
 
     Raises:
-        ResourceNotFoundError: If the flight offer is not found
+        HTTPException: 404 if the offer is unknown, 502 for service failures.
     """
-    # Get the flight offer
-    offer = await flight_service.get_flight_offer(offer_id)
+    user_id = get_principal_id(principal)
+
+    try:
+        offer = await flight_service.get_offer_details(offer_id, user_id)
+    except CoreServiceError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to load flight offer",
+        ) from error
+
     if not offer:
-        raise ResourceNotFoundError(
-            message=f"Flight offer with ID {offer_id} not found",
-            details={"offer_id": offer_id},
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Flight offer '{offer_id}' not found",
         )
 
     return offer
 
 
 @router.post(
-    "/saved", response_model=SavedFlightResponse, status_code=status.HTTP_201_CREATED
+    "/bookings",
+    response_model=FlightBooking,
+    status_code=status.HTTP_201_CREATED,
 )
-async def save_flight(
-    request: SavedFlightRequest,
+async def book_flight(
+    request: FlightBookingRequest,
     principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
-):
-    """Save a flight offer for a trip.
+) -> FlightBooking:
+    """Book a flight offer for the authenticated user.
 
     Args:
-        request: Save flight request
-        principal: Current authenticated principal
-        flight_service: Injected flight service
+        request: Booking payload containing offer and passenger data.
+        principal: Authenticated user context.
+        flight_service: Injected flight service.
 
     Returns:
-        Saved flight response
+        Confirmed booking details.
 
     Raises:
-        ResourceNotFoundError: If the flight offer is not found
-    """
-    # Save the flight
-    user_id = get_principal_id(principal)
-    result = await flight_service.save_flight(user_id, request)
-    if not result:
-        raise ResourceNotFoundError(
-            message=f"Flight offer with ID {request.offer_id} not found",
-            details={"offer_id": request.offer_id},
-        )
-
-    return result
-
-
-@router.delete("/saved/{saved_flight_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_saved_flight(
-    saved_flight_id: UUID,
-    principal: Principal = Depends(require_principal),
-    flight_service: FlightService = Depends(get_flight_service),
-):
-    """Delete a saved flight.
-
-    Args:
-        saved_flight_id: Saved flight ID
-        principal: Current authenticated principal
-        flight_service: Injected flight service
-
-    Raises:
-        ResourceNotFoundError: If the saved flight is not found
-    """
-    # Delete the saved flight
-    user_id = get_principal_id(principal)
-    success = await flight_service.delete_saved_flight(user_id, saved_flight_id)
-    if not success:
-        raise ResourceNotFoundError(
-            message=f"Saved flight with ID {saved_flight_id} not found",
-            details={"saved_flight_id": str(saved_flight_id)},
-        )
-
-
-@router.get("/saved", response_model=List[SavedFlightResponse])
-async def list_saved_flights(
-    trip_id: Optional[UUID] = None,
-    principal: Principal = Depends(require_principal),
-    flight_service: FlightService = Depends(get_flight_service),
-):
-    """List saved flights for a user, optionally filtered by trip.
-
-    Args:
-        trip_id: Optional trip ID to filter by
-        principal: Current authenticated principal
-        flight_service: Injected flight service
-
-    Returns:
-        List of saved flights
-    """
-    # List saved flights
-    user_id = get_principal_id(principal)
-    return await flight_service.list_saved_flights(user_id, trip_id)
-
-
-@router.get("/upcoming", response_model=List[UpcomingFlightResponse])
-async def get_upcoming_flights(
-    limit: int = 10,
-    include_trip_context: bool = True,
-    date_range_days: int = 30,
-    principal: Principal = Depends(require_principal),
-    flight_service: FlightService = Depends(get_flight_service),
-):
-    """Get upcoming flights for a user with real-time status and trip context.
-
-    This endpoint retrieves flights from the user's trips and saved flights,
-    providing comprehensive trip context and collaboration information.
-
-    Args:
-        limit: Maximum number of flights to return
-        include_trip_context: Whether to include trip information with flights
-        date_range_days: Number of days ahead to search for flights
-        principal: Current authenticated principal
-        flight_service: Injected flight service
-
-    Returns:
-        List of upcoming flights with status and trip information
+        HTTPException: 404 if the offer cannot be found, 422 for validation
+        errors, and 502 for downstream failures.
     """
     user_id = get_principal_id(principal)
 
     try:
-        # Get upcoming flights with trip context
-        upcoming_flights = await flight_service.get_upcoming_flights_with_trip_context(
+        return await flight_service.book_flight(user_id, request)
+    except CoreResourceNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error),
+        ) from error
+    except CoreValidationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(error),
+        ) from error
+    except CoreServiceError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Flight booking failed",
+        ) from error
+
+
+@router.get("/bookings", response_model=list[FlightBooking])
+async def list_bookings(
+    trip_id: UUID | None = Query(default=None),
+    status_filter: BookingStatus | None = Query(default=None, alias="status"),
+    limit: int = Query(default=50, ge=1, le=100),
+    principal: Principal = Depends(require_principal),
+    flight_service: FlightService = Depends(get_flight_service),
+) -> list[FlightBooking]:
+    """List bookings for the authenticated user with optional filters.
+
+    Args:
+        trip_id: Optional trip identifier filter.
+        status_filter: Optional booking status filter.
+        limit: Maximum number of bookings to return.
+        principal: Authenticated user context.
+        flight_service: Injected flight service.
+
+    Returns:
+        A list of bookings matching the provided filters.
+    """
+    user_id = get_principal_id(principal)
+
+    try:
+        return await flight_service.get_user_bookings(
             user_id=user_id,
+            trip_id=str(trip_id) if trip_id else None,
+            status=status_filter,
             limit=limit,
-            date_range_days=date_range_days,
-            include_collaborations=include_trip_context,
         )
+    except CoreServiceError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to fetch bookings",
+        ) from error
 
-        return upcoming_flights
 
-    except Exception as e:
-        logger.error(f"Failed to get upcoming flights: {str(e)}")
+@router.delete(
+    "/bookings/{booking_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def cancel_booking(
+    booking_id: str,
+    principal: Principal = Depends(require_principal),
+    flight_service: FlightService = Depends(get_flight_service),
+) -> None:
+    """Cancel an existing booking for the authenticated user.
 
-        # Fallback to enhanced mock data with trip context
-        from datetime import datetime, timedelta
+    Args:
+        booking_id: Identifier of the booking to cancel.
+        principal: Authenticated user context.
+        flight_service: Injected flight service.
 
-        mock_flights = []
-        current_time = datetime.now()
+    Raises:
+        HTTPException: 404 if the booking is not found or cannot be cancelled,
+        502 for downstream errors.
+    """
+    user_id = get_principal_id(principal)
 
-        # Generate mock data with trip context
-        airlines = [
-            ("AA", "American Airlines"),
-            ("DL", "Delta Air Lines"),
-            ("UA", "United Airlines"),
-            ("B6", "JetBlue Airways"),
-        ]
+    try:
+        cancelled = await flight_service.cancel_booking(
+            booking_id=booking_id, user_id=user_id
+        )
+    except CoreServiceError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to cancel booking",
+        ) from error
 
-        airports = [
-            ("JFK", "LGA", "EWR"),  # NYC area
-            ("LAX", "SFO", "ORD"),  # Major destinations
-            ("MIA", "ATL", "DFW"),
-        ]
-        airport_codes = [code for group in airports for code in group]
-        destination_choices = {
-            code: [other for other in airport_codes if other != code]
-            for code in airport_codes
-        }
-
-        trip_names = [
-            "Summer Europe Trip",
-            "Business Conference - NYC",
-            "Family Vacation",
-            "Weekend Getaway",
-            "Client Meeting - LA",
-        ]
-
-        statuses = ["upcoming", "boarding", "delayed", "cancelled"]
-        terminals = ["A", "B", "C", "D"]
-
-        for i in range(min(limit, 5)):  # Generate up to 5 mock flights
-            airline_code, airline_name = secrets.choice(airlines)
-            origin = secrets.choice(airport_codes)
-            destination = secrets.choice(destination_choices[origin])
-
-            search_window = max(date_range_days, 1)
-            departure_time = current_time + timedelta(
-                days=secrets.randbelow(search_window) + 1,
-                hours=6 + secrets.randbelow(17),
-                minutes=secrets.choice([0, 15, 30, 45]),
-            )
-
-            duration_minutes = 120 + secrets.randbelow(361)  # 2-8 hours
-            arrival_time = departure_time + timedelta(minutes=duration_minutes)
-
-            flight = UpcomingFlightResponse(
-                id=f"flight-{i + 1}",
-                airline=airline_code,
-                airline_name=airline_name,
-                flight_number=f"{airline_code}{secrets.randbelow(9000) + 1000}",
-                origin=origin,
-                destination=destination,
-                departure_time=departure_time,
-                arrival_time=arrival_time,
-                duration=duration_minutes,
-                stops=secrets.randbelow(3),
-                price=300 + secrets.randbelow(901),
-                currency="USD",
-                cabin_class="economy",
-                seats_available=10 + secrets.randbelow(41),
-                status=secrets.choice(statuses),
-                terminal=(
-                    secrets.choice(terminals) if secrets.randbelow(10) > 2 else None
-                ),
-                gate=(
-                    str(secrets.randbelow(50) + 1)
-                    if secrets.randbelow(10) > 2
-                    else None
-                ),
-                # Enhanced fields with trip context
-                trip_id=f"trip-{i + 1}" if include_trip_context else None,
-                trip_title=secrets.choice(trip_names) if include_trip_context else None,
-                is_shared_trip=bool(secrets.randbelow(2))
-                if include_trip_context
-                else False,
-                collaborator_count=secrets.randbelow(5) if include_trip_context else 0,
-            )
-
-            mock_flights.append(flight)
-
-        # Sort by departure time
-        mock_flights.sort(key=lambda f: f.departure_time)
-
-        return mock_flights
+    if not cancelled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Booking '{booking_id}' not found or cannot be cancelled",
+        )

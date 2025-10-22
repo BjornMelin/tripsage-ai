@@ -143,6 +143,9 @@ dist/
 # Temporary upload directories
 uploads/
 
+# Debug test scripts
+debug_tests/
+
 # Logs directory
 logs/
 

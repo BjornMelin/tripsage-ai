@@ -1,5 +1,4 @@
-"""
-Intelligent routing node for LangGraph orchestration.
+"""Intelligent routing node for LangGraph orchestration.
 
 This module implements enhanced semantic intent detection and routing logic to determine
 which specialized agent should handle each user request, with improved context awareness
@@ -7,23 +6,24 @@ and confidence scoring.
 """
 
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict
+from datetime import UTC, datetime
+from typing import Any, cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 
 class RouterNode(BaseAgentNode):
-    """
-    Intelligent routing node using semantic analysis to determine agent routing.
+    """Intelligent routing node using semantic analysis to determine agent routing.
 
     This node analyzes user messages and determines which specialized agent
     should handle the request based on intent detection, context analysis,
@@ -43,10 +43,16 @@ class RouterNode(BaseAgentNode):
 
         # Initialize classifier model with improved configuration
         settings = get_settings()
+        api_key_config = settings.openai_api_key
+        if isinstance(api_key_config, SecretStr) or api_key_config is None:
+            secret_api_key = api_key_config
+        else:
+            secret_api_key = SecretStr(str(api_key_config))
+
         self.classifier = ChatOpenAI(
             model="gpt-4o-mini",  # Use smaller, faster model for classification
             temperature=0.1,  # Low temperature for consistent routing decisions
-            api_key=settings.openai_api_key.get_secret_value(),
+            api_key=secret_api_key,
         )
 
         # Available agent types and their capabilities
@@ -137,7 +143,7 @@ class RouterNode(BaseAgentNode):
                 ],
                 "entities": ["destination", "interests", "season", "duration"],
             },
-            "travel_agent": {
+            "general_agent": {
                 "description": (
                     "General travel assistance, documentation, travel tips, "
                     "multi-domain queries"
@@ -157,11 +163,9 @@ class RouterNode(BaseAgentNode):
 
     def _initialize_tools(self) -> None:
         """Router doesn't need external tools, only classification model."""
-        pass
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
-        """
-        Analyze user intent and route to appropriate agent.
+        """Analyze user intent and route to appropriate agent.
 
         Args:
             state: Current travel planning state
@@ -176,7 +180,7 @@ class RouterNode(BaseAgentNode):
         conversation_context = self._build_conversation_context(state)
 
         # Perform enhanced semantic classification with fallback strategies
-        classification = await self._enhanced_classification_with_fallback(
+        classification = await self._classify_with_fallback(
             last_message, conversation_context
         )
 
@@ -185,24 +189,25 @@ class RouterNode(BaseAgentNode):
         state["handoff_context"] = {
             "routing_confidence": classification["confidence"],
             "routing_reasoning": classification["reasoning"],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "message_analyzed": last_message[:100] + "..."
             if len(last_message) > 100
             else last_message,
         }
 
         self.logger.info(
-            f"Routed to {classification['agent']} with confidence "
-            f"{classification['confidence']:.2f}: {classification['reasoning']}"
+            "Routed to %s with confidence %.2f: %s",
+            classification["agent"],
+            classification["confidence"],
+            classification["reasoning"],
         )
 
         return state
 
     async def _classify_intent(
-        self, message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Classify user intent using semantic analysis.
+        self, message: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Classify user intent using semantic analysis.
 
         Args:
             message: User message to classify
@@ -225,36 +230,33 @@ class RouterNode(BaseAgentNode):
 
             response = await self.classifier.ainvoke(messages)
             # Handle different response formats
-            content = (
-                response.content if hasattr(response, "content") else str(response)
-            )
-            classification = json.loads(content)
+            raw_content = response.content if hasattr(response, "content") else response
+            if isinstance(raw_content, (dict, list)):
+                content_str = json.dumps(raw_content)
+            else:
+                content_str = cast(str, raw_content)
+            classification = json.loads(content_str)
 
             # Validate classification result
             if not self._validate_classification(classification):
-                # Fallback to general travel agent
-                return {
-                    "agent": "travel_agent",
-                    "confidence": 0.5,
-                    "reasoning": "Fallback routing due to classification error",
-                }
+                return self._get_safe_fallback_classification(
+                    reason="Fallback routing due to classification error",
+                    confidence=0.5,
+                )
 
             return classification
 
-        except Exception as e:
-            self.logger.error(f"Intent classification failed: {str(e)}")
-            # Fallback to general travel agent
-            return {
-                "agent": "travel_agent",
-                "confidence": 0.3,
-                "reasoning": f"Error in classification, using fallback: {str(e)}",
-            }
+        except Exception as exc:
+            self.logger.exception("Intent classification failed")
+            return self._get_safe_fallback_classification(
+                reason=f"Error in classification, using fallback: {exc!s}",
+                confidence=0.3,
+            )
 
     def _build_classification_prompt(
-        self, message: str, context: Dict[str, Any]
+        self, message: str, context: dict[str, Any]
     ) -> str:
-        """
-        Build the classification prompt for intent detection.
+        """Build the classification prompt for intent detection.
 
         Args:
             message: User message to classify
@@ -273,36 +275,37 @@ class RouterNode(BaseAgentNode):
 
         return f"""
         Analyze this travel-related message and classify the primary intent.
-        
+
         Message: "{message}"
-        
+
         Context:
         {context_str}
-        
+
         Available agents and their specialties:
         - flight_agent: Flight search, booking, changes, airline information
         - accommodation_agent: Hotels, rentals, lodging, accommodation booking
         - budget_agent: Budget planning, cost analysis, expense tracking
         - itinerary_agent: Trip planning, scheduling, activities, day-by-day planning
-        - destination_agent: Destination research, recommendations, local information
-        - travel_agent: General travel assistance, documentation, travel tips, 
-          multi-domain queries
-        
+        - destination_research_agent: Destination research, recommendations,
+          local information
+        - general_agent: General travel assistance, documentation,
+          travel tips, multi-domain queries
+
         Classification Rules:
         1. If asking about specific flights, airlines, or flight booking → flight_agent
         2. If asking about hotels, accommodations, places to stay → accommodation_agent
         3. If asking about costs, budgets, expenses → budget_agent
         4. If asking about itineraries, schedules, daily plans → itinerary_agent
-        5. If asking about destinations, attractions, local info → destination_agent
-        6. For general travel questions or unclear intent → travel_agent
-        
+        5. If asking about destinations, attractions, local info →
+           destination_research_agent
+        6. For general travel questions or unclear intent → general_agent
+
         Respond with valid JSON only:
         {{"agent": "agent_name", "confidence": 0.9, "reasoning": "brief explanation"}}
         """
 
-    def _build_conversation_context(self, state: TravelPlanningState) -> Dict[str, Any]:
-        """
-        Build conversation context for better routing decisions.
+    def _build_conversation_context(self, state: TravelPlanningState) -> dict[str, Any]:
+        """Build conversation context for better routing decisions.
 
         Args:
             state: Current travel planning state
@@ -336,9 +339,8 @@ class RouterNode(BaseAgentNode):
 
         return context
 
-    def _validate_classification(self, classification: Dict[str, Any]) -> bool:
-        """
-        Validate the classification result.
+    def _validate_classification(self, classification: dict[str, Any]) -> bool:
+        """Validate the classification result.
 
         Args:
             classification: Classification result to validate
@@ -347,24 +349,18 @@ class RouterNode(BaseAgentNode):
             True if valid, False otherwise
         """
         required_keys = ["agent", "confidence", "reasoning"]
-        valid_agents = [
-            "flight_agent",
-            "accommodation_agent",
-            "budget_agent",
-            "itinerary_agent",
-            "destination_research_agent",  # Updated to match actual agent name
-            "general_agent",  # Updated to match actual fallback agent
-        ]
+        valid_agents = set(self.agent_capabilities.keys())
+        valid_agents.update({"general_agent", "error_recovery"})
 
         # Check required keys
         if not all(key in classification for key in required_keys):
-            logger.warning(f"Classification missing required keys: {classification}")
+            logger.warning("Classification missing required keys: %s", classification)
             return False
 
         # Check agent is valid
         if classification["agent"] not in valid_agents:
             logger.warning(
-                f"Invalid agent in classification: {classification['agent']}"
+                "Invalid agent in classification: %s", classification["agent"]
             )
             return False
 
@@ -373,7 +369,7 @@ class RouterNode(BaseAgentNode):
             not isinstance(classification["confidence"], (int, float))
             or not 0 <= classification["confidence"] <= 1
         ):
-            logger.warning(f"Invalid confidence score: {classification['confidence']}")
+            logger.warning("Invalid confidence score: %s", classification["confidence"])
             return False
 
         # Additional validation: ensure reasoning is not empty
@@ -383,11 +379,10 @@ class RouterNode(BaseAgentNode):
 
         return True
 
-    async def _enhanced_classification_with_fallback(
-        self, message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Enhanced classification with multiple fallback strategies.
+    async def _classify_with_fallback(
+        self, message: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Classification with multiple fallback strategies.
 
         Args:
             message: User message to classify
@@ -405,21 +400,21 @@ class RouterNode(BaseAgentNode):
                 keyword_classification = self._keyword_based_classification(message)
                 if keyword_classification["confidence"] > classification["confidence"]:
                     logger.info(
-                        f"Using keyword-based classification over LLM: "
-                        f"{keyword_classification['agent']} "
-                        f"(confidence: {keyword_classification['confidence']})"
+                        "Using keyword-based classification over LLM: %s "
+                        "(confidence: %s)",
+                        keyword_classification["agent"],
+                        keyword_classification["confidence"],
                     )
                     return keyword_classification
 
             return classification
 
-        except Exception as e:
-            logger.error(f"Enhanced classification failed: {str(e)}")
+        except Exception:
+            logger.exception("Classification failed")
             return self._get_safe_fallback_classification()
 
-    def _keyword_based_classification(self, message: str) -> Dict[str, Any]:
-        """
-        Keyword-based classification as fallback.
+    def _keyword_based_classification(self, message: str) -> dict[str, Any]:
+        """Keyword-based classification as fallback.
 
         Args:
             message: User message to classify
@@ -430,8 +425,8 @@ class RouterNode(BaseAgentNode):
         message_lower = message.lower()
 
         # Calculate confidence scores for each agent based on keyword matches
-        agent_scores = {}
-        agent_keyword_counts = {}
+        agent_scores: dict[str, float] = {}
+        agent_keyword_counts: dict[str, int] = {}
 
         for agent, capabilities in self.agent_capabilities.items():
             score = 0
@@ -456,7 +451,7 @@ class RouterNode(BaseAgentNode):
 
         # Find the best match
         if agent_scores:
-            best_agent = max(agent_scores, key=agent_scores.get)
+            best_agent = max(agent_scores, key=lambda agent: agent_scores[agent])
             confidence = agent_scores[best_agent]
             best_keyword_matches = agent_keyword_counts[best_agent]
 
@@ -468,13 +463,14 @@ class RouterNode(BaseAgentNode):
                     f"keyword matches"
                 ),
             }
-        else:
-            return self._get_safe_fallback_classification()
+        return self._get_safe_fallback_classification()
 
-    def _get_safe_fallback_classification(self) -> Dict[str, Any]:
-        """Get a safe fallback classification."""
+    def _get_safe_fallback_classification(
+        self, *, reason: str | None = None, confidence: float = 0.3
+    ) -> dict[str, Any]:
+        """Return a safe fallback classification using the general agent."""
         return {
             "agent": "general_agent",
-            "confidence": 0.3,
-            "reasoning": "Safe fallback due to classification failure",
+            "confidence": confidence,
+            "reasoning": reason or "Safe fallback due to classification failure",
         }

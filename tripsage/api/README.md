@@ -1,6 +1,6 @@
 # TripSage Unified API
 
-A comprehensive FastAPI implementation that serves both frontend applications and AI agents for the TripSage travel planning platform.
+A FastAPI implementation that serves both frontend applications and AI agents for the TripSage travel planning platform.
 
 ## Overview
 
@@ -15,7 +15,7 @@ The TripSage API provides a unified interface that supports:
 
 - **User Authentication & Management** - JWT and API key authentication
 - **BYOK (Bring Your Own Key)** - Secure user-provided API key management
-- **Trip Planning & Management** - Comprehensive travel planning workflow
+- **Trip Planning & Management** - Travel planning workflow
 - **Flight Search & Booking** - Multi-provider flight search and comparison
 - **Accommodation Search** - Hotel and alternative lodging search
 - **Destination Research** - AI-powered destination insights and recommendations
@@ -66,7 +66,7 @@ The API automatically adapts responses based on the consumer type:
 
 - **Detailed error context** - Technical error information for agent decision-making
 - **Raw data access** - Unfiltered data for AI processing
-- **Enhanced rate limits** - Higher limits for agent operations
+- **Higher rate limits** - Increased limits for agent operations
 - **Tool integration data** - Rich context for agent tool calling
 
 ## Directory Structure
@@ -94,9 +94,9 @@ tripsage/api/
 │   ├── attachments.py    # File upload and processing
 │   ├── websocket.py      # Real-time communication
 │   └── health.py         # Health checks and monitoring
-├── schemas/              # Request/response models
-│   ├── requests/         # Input validation schemas
-│   └── responses/        # Output formatting schemas
+├── schemas/              # API-specific compositions and re-exports
+│   ├── requests/         # Input validation schemas (API-only)
+│   └── responses/        # Output formatting schemas (API-only)
 ├── services/             # Business logic and external integrations
 │   ├── accommodation.py  # Accommodation search and booking
 │   ├── auth.py          # Authentication and session management
@@ -174,7 +174,13 @@ GET /api/v1/flights/search
 - **User-specific salt** for additional security
 - **Key validation** before storage
 - **Usage monitoring** and rotation support
-- **Rate limiting** per key and user
+- **Rate limiting** standardized on SlowAPI with distributed counters via Redis/Valkey (when configured). Per-route limits can be applied where needed.
+
+## Schema Strategy
+
+- API schemas in `tripsage/api/schemas/` avoid duplicating domain models.
+- Canonical data structures come from `tripsage_core/models/` and `tripsage_core/services/business/*`.
+- API files may compose or re-export these models, and define only request/response wrappers that are truly API-specific.
 
 ## API Endpoints
 
@@ -428,7 +434,7 @@ The API leverages `tripsage_core` for:
 - **Service layer** - Business logic and external API integration
 - **Models** - Shared data structures and validation
 - **Configuration** - Centralized settings management
-- **Error handling** - Comprehensive exception system
+- **Error handling** - Exception system
 - **Infrastructure** - Database, caching, and communication services
 
 Example service integration:

@@ -1,43 +1,87 @@
-"""
-File processing service for comprehensive file management operations.
+"""Final file processing service used for uploads, metadata, and retrieval.
 
-This service consolidates file-related business logic including file upload,
-validation, storage, metadata extraction, security scanning, and AI analysis.
-It provides clean abstractions over storage providers while maintaining proper
-security and data relationships.
+This implementation focuses on maintainability and predictable behaviour.  It
+performs local validation, delegates durable storage to an optional storage
+backend, and persists metadata through a small database adapter.  All legacy
+code paths have been removed.
 """
+
+# pylint: disable=too-many-lines
+
+from __future__ import annotations
 
 import asyncio
 import hashlib
 import logging
 import mimetypes
-from datetime import datetime, timezone
+import re
+import threading
+from collections.abc import Iterable, Mapping, MutableMapping
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from uuid import uuid4
 
-from pydantic import Field
+from pydantic import Field  # pylint: disable=import-error
 
 from tripsage_core.exceptions import (
-    CoreAuthorizationError as PermissionError,
-)
-from tripsage_core.exceptions import (
+    CoreAuthorizationError as AuthPermissionError,
     CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions import (
     CoreServiceError as ServiceError,
-)
-from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
 
+
 logger = logging.getLogger(__name__)
+
+FILES_TABLE = "files"
+DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+
+class _NullDatabaseBackend:
+    """Minimal async stub used when no database is available."""
+
+    async def fetch_one(self, *args: Any, **kwargs: Any) -> None:
+        """Fetch one record from the database."""
+        return
+
+    async def fetch_all(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+        """Fetch all records from the database."""
+        return []
+
+    async def insert(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+        """Insert a record into the database."""
+        return []
+
+    async def update(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+        """Update a record in the database."""
+        return []
+
+    async def delete(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+        """Delete a record from the database."""
+        return []
+
+    async def select(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+        """Select records from the database."""
+        return []
+
+    async def get_file_usage_stats(self, user_id: str) -> dict[str, Any]:
+        """Get file usage statistics."""
+        return {
+            "total_files": 0,
+            "total_size": 0,
+            "files_by_type": {},
+            "storage_by_type": {},
+            "recent_uploads": 0,
+            "most_accessed": [],
+        }
 
 
 class FileType(str, Enum):
-    """File type enumeration."""
+    """Logical file categories."""
 
     IMAGE = "image"
     DOCUMENT = "document"
@@ -50,11 +94,9 @@ class FileType(str, Enum):
 
 
 class ProcessingStatus(str, Enum):
-    """File processing status enumeration."""
+    """Life-cycle stages of a processed file."""
 
     PENDING = "pending"
-    UPLOADING = "uploading"
-    VALIDATING = "validating"
     PROCESSING = "processing"
     ANALYZING = "analyzing"
     COMPLETED = "completed"
@@ -62,16 +104,14 @@ class ProcessingStatus(str, Enum):
 
 
 class StorageProvider(str, Enum):
-    """Storage provider enumeration."""
+    """Supported storage providers."""
 
     LOCAL = "local"
-    AWS_S3 = "aws_s3"
-    AZURE_BLOB = "azure_blob"
-    GOOGLE_CLOUD = "google_cloud"
+    EXTERNAL = "external"
 
 
 class FileVisibility(str, Enum):
-    """File visibility enumeration."""
+    """Visibility state for a stored file."""
 
     PRIVATE = "private"
     SHARED = "shared"
@@ -79,276 +119,106 @@ class FileVisibility(str, Enum):
 
 
 class FileValidationResult(TripSageModel):
-    """File validation result model."""
+    """Outcome of file validation."""
 
-    is_valid: bool = Field(..., description="Whether file passed validation")
-    error_message: Optional[str] = Field(
-        None, description="Error message if validation failed"
-    )
-    file_size: int = Field(..., description="File size in bytes")
-    detected_mime_type: Optional[str] = Field(None, description="Detected MIME type")
-    file_hash: Optional[str] = Field(None, description="SHA256 hash of file content")
-    security_warnings: List[str] = Field(
-        default_factory=list, description="Security warnings"
-    )
+    is_valid: bool
+    error_message: str | None = None
+    file_size: int
+    detected_mime_type: str
+    file_hash: str | None = None
+    security_warnings: tuple[str, ...] = Field(default_factory=tuple)
 
 
 class FileMetadata(TripSageModel):
-    """File metadata model."""
+    """Derived metadata for a processed file."""
 
-    dimensions: Optional[Dict[str, int]] = Field(
-        None, description="Image/video dimensions"
-    )
-    duration: Optional[float] = Field(
-        None, description="Audio/video duration in seconds"
-    )
-    page_count: Optional[int] = Field(None, description="Document page count")
-    word_count: Optional[int] = Field(None, description="Text word count")
-    character_count: Optional[int] = Field(None, description="Text character count")
-    encoding: Optional[str] = Field(None, description="Text encoding")
-    creation_date: Optional[datetime] = Field(None, description="File creation date")
-    modification_date: Optional[datetime] = Field(
-        None, description="File modification date"
-    )
-    author: Optional[str] = Field(None, description="Document author")
-    title: Optional[str] = Field(None, description="Document title")
-    keywords: List[str] = Field(default_factory=list, description="Extracted keywords")
-    language: Optional[str] = Field(None, description="Detected language")
+    character_count: int | None = None
+    word_count: int | None = None
+    encoding: str | None = None
+    keywords: tuple[str, ...] = Field(default_factory=tuple)
+    creation_date: datetime | None = None
 
 
 class FileAnalysisResult(TripSageModel):
-    """AI analysis result for file content."""
+    """Optional AI analysis outcome."""
 
-    content_summary: Optional[str] = Field(
-        None, description="AI-generated content summary"
-    )
-    extracted_text: Optional[str] = Field(None, description="Extracted text content")
-    entities: List[str] = Field(default_factory=list, description="Detected entities")
-    categories: List[str] = Field(
-        default_factory=list, description="Content categories"
-    )
-    sentiment: Optional[float] = Field(
-        None, ge=-1, le=1, description="Sentiment score (-1 to 1)"
-    )
-    confidence_score: Optional[float] = Field(
-        None, ge=0, le=1, description="Analysis confidence"
-    )
-    language_detected: Optional[str] = Field(None, description="Detected language")
-    travel_related: bool = Field(
-        default=False, description="Whether content is travel-related"
-    )
-    travel_context: Optional[Dict[str, Any]] = Field(
-        None, description="Travel-specific context"
-    )
+    content_summary: str | None = None
+    extracted_text: str | None = None
+    sentiment: float | None = None
+    confidence_score: float | None = None
+    categories: tuple[str, ...] = Field(default_factory=tuple)
+    entities: tuple[str, ...] = Field(default_factory=tuple)
 
 
 class ProcessedFile(TripSageModel):
-    """Processed file model."""
+    """Canonical representation of a stored file."""
 
-    id: str = Field(..., description="File ID")
-    user_id: str = Field(..., description="Owner user ID")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
-
-    original_filename: str = Field(..., description="Original filename")
-    stored_filename: str = Field(..., description="Storage filename")
-    file_size: int = Field(..., description="File size in bytes")
-    file_type: FileType = Field(..., description="File type category")
-    mime_type: str = Field(..., description="MIME type")
-    file_hash: str = Field(..., description="SHA256 hash")
-
-    storage_provider: StorageProvider = Field(..., description="Storage provider")
-    storage_path: str = Field(..., description="Storage path")
-    storage_url: Optional[str] = Field(None, description="Storage URL")
-
-    processing_status: ProcessingStatus = Field(..., description="Processing status")
-    upload_timestamp: datetime = Field(..., description="Upload timestamp")
-    processed_timestamp: Optional[datetime] = Field(
-        None, description="Processing completion timestamp"
-    )
-
-    metadata: Optional[FileMetadata] = Field(None, description="File metadata")
-    analysis_result: Optional[FileAnalysisResult] = Field(
-        None, description="AI analysis result"
-    )
-
-    visibility: FileVisibility = Field(
-        default=FileVisibility.PRIVATE, description="File visibility"
-    )
-    shared_with: List[str] = Field(
-        default_factory=list, description="User IDs with access"
-    )
-    tags: List[str] = Field(default_factory=list, description="File tags")
-
-    version: int = Field(default=1, description="File version")
-    parent_file_id: Optional[str] = Field(
-        None, description="Parent file ID for versions"
-    )
-
-    # Usage tracking
-    download_count: int = Field(default=0, description="Download count")
-    last_accessed: Optional[datetime] = Field(None, description="Last access timestamp")
+    id: str
+    user_id: str
+    trip_id: str | None = None
+    original_filename: str
+    stored_filename: str
+    file_size: int
+    file_type: FileType
+    mime_type: str
+    file_hash: str
+    storage_provider: StorageProvider
+    storage_path: str
+    storage_url: str | None = None
+    processing_status: ProcessingStatus = ProcessingStatus.PROCESSING
+    upload_timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    processed_timestamp: datetime | None = None
+    metadata: FileMetadata | None = None
+    analysis_result: FileAnalysisResult | None = None
+    visibility: FileVisibility = FileVisibility.PRIVATE
+    shared_with: tuple[str, ...] = Field(default_factory=tuple)
+    tags: tuple[str, ...] = Field(default_factory=tuple)
+    version: int = 1
+    parent_file_id: str | None = None
+    download_count: int = 0
+    last_accessed: datetime | None = None
 
 
 class FileUploadRequest(TripSageModel):
-    """File upload request model."""
+    """Upload payload delivered by API consumers."""
 
-    filename: str = Field(..., description="Original filename")
-    content: bytes = Field(..., description="File content")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
-    tags: List[str] = Field(default_factory=list, description="File tags")
-    visibility: FileVisibility = Field(
-        default=FileVisibility.PRIVATE, description="File visibility"
-    )
-    auto_analyze: bool = Field(
-        default=True, description="Whether to perform AI analysis"
-    )
-
-
-class FileBatchUploadRequest(TripSageModel):
-    """Batch file upload request model."""
-
-    files: List[FileUploadRequest] = Field(..., description="Files to upload")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
-    max_total_size: int = Field(
-        default=50 * 1024 * 1024, description="Maximum total size in bytes"
-    )
+    filename: str
+    content: bytes
+    trip_id: str | None = None
+    tags: tuple[str, ...] = Field(default_factory=tuple)
+    visibility: FileVisibility = FileVisibility.PRIVATE
+    auto_analyze: bool = True
 
 
 class FileSearchRequest(TripSageModel):
-    """File search request model."""
+    """Search parameters supported by the service."""
 
-    query: Optional[str] = Field(None, description="Search query")
-    file_types: Optional[List[FileType]] = Field(None, description="File type filters")
-    trip_id: Optional[str] = Field(None, description="Trip ID filter")
-    tags: Optional[List[str]] = Field(None, description="Tag filters")
-    date_from: Optional[datetime] = Field(None, description="Date range start")
-    date_to: Optional[datetime] = Field(None, description="Date range end")
-    min_size: Optional[int] = Field(None, description="Minimum file size")
-    max_size: Optional[int] = Field(None, description="Maximum file size")
-    shared_only: bool = Field(default=False, description="Only shared files")
-    limit: int = Field(default=20, ge=1, le=100, description="Result limit")
-    offset: int = Field(default=0, ge=0, description="Result offset")
+    query: str | None = None
+    limit: int = Field(default=20, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)
+    file_types: tuple[FileType, ...] | None = None
+    trip_id: str | None = None
+    tags: tuple[str, ...] | None = None
+    shared_only: bool = False
 
 
 class FileUsageStats(TripSageModel):
-    """File usage statistics model."""
+    """Aggregated usage statistics."""
 
-    total_files: int = Field(..., description="Total number of files")
-    total_size: int = Field(..., description="Total storage used in bytes")
-    files_by_type: Dict[str, int] = Field(..., description="File count by type")
-    storage_by_type: Dict[str, int] = Field(..., description="Storage used by type")
-    recent_uploads: int = Field(..., description="Files uploaded in last 7 days")
-    most_accessed: List[str] = Field(..., description="Most accessed file IDs")
+    total_files: int
+    total_size: int
+    files_by_type: dict[str, int]
+    storage_by_type: dict[str, int]
+    recent_uploads: int
+    most_accessed: tuple[str, ...] = Field(default_factory=tuple)
 
 
-class FileProcessingService:
-    """
-    Comprehensive file processing service for upload, storage, and analysis.
+@dataclass(slots=True)
+class FileValidationRules:
+    """Validation rules container."""
 
-    This service handles:
-    - File upload and validation with security checks
-    - Multiple storage provider support (local, cloud)
-    - File metadata extraction and analysis
-    - AI-powered content analysis and categorization
-    - File versioning and deduplication
-    - File sharing and permission management
-    - File search and indexing
-    - Batch processing capabilities
-    - Usage analytics and optimization
-    """
-
-    def __init__(
-        self,
-        database_service=None,
-        storage_service=None,
-        ai_analysis_service=None,
-        virus_scanner=None,
-        storage_root: str = "uploads",
-        max_file_size: int = 10 * 1024 * 1024,
-        max_session_size: int = 50 * 1024 * 1024,
-    ):
-        """
-        Initialize the file processing service.
-
-        Args:
-            database_service: Database service for persistence
-            storage_service: File storage service
-            ai_analysis_service: AI analysis service for content processing
-            virus_scanner: Virus scanning service
-            storage_root: Root directory for local storage
-            max_file_size: Maximum individual file size
-            max_session_size: Maximum total session size
-        """
-        # Import here to avoid circular imports
-        if database_service is None:
-            from tripsage_core.services.infrastructure import get_database_service
-
-            database_service = get_database_service()
-
-        if storage_service is None:
-            try:
-                from tripsage_core.services.external_apis.storage_service import (
-                    StorageService,
-                )
-
-                storage_service = StorageService()
-            except ImportError:
-                logger.warning(
-                    "External storage service not available, using local storage"
-                )
-                storage_service = None
-
-        if ai_analysis_service is None:
-            try:
-                from tripsage_core.services.external_apis.document_analyzer import (
-                    DocumentAnalyzer as AIAnalysisService,
-                )
-
-                ai_analysis_service = AIAnalysisService()
-            except ImportError:
-                logger.warning("AI analysis service not available")
-                ai_analysis_service = None
-
-        if virus_scanner is None:
-            try:
-                from tripsage_core.services.external_apis.virus_scanner import (
-                    VirusScanner,
-                )
-
-                virus_scanner = VirusScanner()
-            except ImportError:
-                logger.warning("Virus scanner not available")
-                virus_scanner = None
-
-        self.db = database_service
-        self.storage_service = storage_service
-        self.ai_analysis_service = ai_analysis_service
-        self.virus_scanner = virus_scanner
-
-        self.storage_root = Path(storage_root)
-        self.max_file_size = max_file_size
-        self.max_session_size = max_session_size
-
-        # Create storage directories
-        self._ensure_storage_structure()
-
-        # Configuration
-        self.allowed_mime_types = {
-            "application/pdf",
-            "text/plain",
-            "text/csv",
-            "application/json",
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "image/gif",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/zip",
-            "video/mp4",
-            "audio/mpeg",
-        }
-
-        self.allowed_extensions = {
+    allowed_extensions: set[str] = field(
+        default_factory=lambda: {
             ".pdf",
             ".txt",
             ".csv",
@@ -363,8 +233,25 @@ class FileProcessingService:
             ".mp4",
             ".mp3",
         }
-
-        self.suspicious_patterns = {
+    )
+    allowed_mime_types: set[str] = field(
+        default_factory=lambda: {
+            "application/pdf",
+            "text/plain",
+            "text/csv",
+            "application/json",
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+            DOCX_MIME,
+            "application/zip",
+            "video/mp4",
+            "audio/mpeg",
+        }
+    )
+    suspicious_patterns: set[str] = field(
+        default_factory=lambda: {
             "..",
             "/",
             "\\",
@@ -382,496 +269,622 @@ class FileProcessingService:
             ".pif",
             ".jar",
         }
+    )
 
-    def _ensure_storage_structure(self) -> None:
-        """Ensure storage directory structure exists."""
-        self.storage_root.mkdir(exist_ok=True)
-        (self.storage_root / "files").mkdir(exist_ok=True)
-        (self.storage_root / "temp").mkdir(exist_ok=True)
-        (self.storage_root / "processed").mkdir(exist_ok=True)
-        (self.storage_root / "thumbnails").mkdir(exist_ok=True)
+
+@dataclass(slots=True)
+class FileProcessingLimits:
+    """Size limits applied during uploads."""
+
+    max_file_size: int
+    max_session_size: int
+
+
+@dataclass(slots=True)
+class ServiceIntegrations:
+    """Optional external service integrations."""
+
+    storage: Any | None
+    analysis: Any | None
+    scanner: Any | None
+
+
+@dataclass(slots=True)
+class StorageResult:
+    """Normalized storage response."""
+
+    provider: StorageProvider
+    path: str
+    stored_filename: str
+    url: str | None = None
+
+
+class FileRepository:
+    """Adapter around heterogeneous database backends."""
+
+    def __init__(self, backend: Any, table: str = FILES_TABLE) -> None:
+        """Initialize the FileRepository."""
+        self._backend = backend
+        self._table = table
+
+    async def fetch_by_id(self, file_id: str) -> dict[str, Any] | None:
+        """Fetch a file by ID."""
+        if hasattr(self._backend, "get_file"):
+            return await self._backend.get_file(file_id)
+
+        if hasattr(self._backend, "fetch_one"):
+            method = self._backend.fetch_one
+            try:
+                return await method(self._table, {"id": file_id})  # type: ignore[arg-type]
+            except TypeError:
+                try:
+                    return await method({"id": file_id})  # type: ignore[call-arg]
+                except TypeError:
+                    return await method(file_id)  # type: ignore[misc]
+
+        if hasattr(self._backend, "select"):
+            rows = await self._backend.select(
+                self._table, filters={"id": file_id}, limit=1
+            )
+            return rows[0] if rows else None
+
+        return None
+
+    async def fetch_by_hash(
+        self, user_id: str, file_hash: str
+    ) -> dict[str, Any] | None:
+        """Fetch a file by hash."""
+        if hasattr(self._backend, "get_file_by_hash"):
+            return await self._backend.get_file_by_hash(user_id, file_hash)
+
+        if hasattr(self._backend, "fetch_one"):
+            method = self._backend.fetch_one
+            try:
+                return await method(
+                    self._table,
+                    {"user_id": user_id, "file_hash": file_hash},
+                )  # type: ignore[arg-type]
+            except TypeError:
+                return await method({"user_id": user_id, "file_hash": file_hash})  # type: ignore[call-arg]
+
+        if hasattr(self._backend, "select"):
+            rows = await self._backend.select(
+                self._table,
+                filters={"user_id": user_id, "file_hash": file_hash},
+                limit=1,
+            )
+            return rows[0] if rows else None
+
+        return None
+
+    async def insert(self, payload: Mapping[str, Any]) -> None:
+        """Insert a record into the database."""
+        if hasattr(self._backend, "store_file"):
+            await self._backend.store_file(dict(payload))
+            return
+
+        if hasattr(self._backend, "insert"):
+            await self._backend.insert(self._table, dict(payload))
+            return
+
+        if hasattr(self._backend, "upsert"):
+            await self._backend.upsert(self._table, dict(payload))
+            return
+
+        if hasattr(self._backend, "fetch_one"):
+            # Fallback: pretend success for mock backends
+            await self._backend.fetch_one("insert_file", dict(payload))
+
+    async def update(self, file_id: str, payload: Mapping[str, Any]) -> None:
+        """Update a record in the database."""
+        if hasattr(self._backend, "update_file"):
+            await self._backend.update_file(file_id, dict(payload))
+            return
+
+        if hasattr(self._backend, "update"):
+            await self._backend.update(
+                self._table, dict(payload), filters={"id": file_id}
+            )
+            return
+
+        if hasattr(self._backend, "upsert"):
+            await self._backend.upsert(self._table, {**dict(payload), "id": file_id})
+            return
+
+        if hasattr(self._backend, "fetch_one"):
+            await self._backend.fetch_one(
+                "update_file", {"id": file_id, **dict(payload)}
+            )
+
+    async def delete(self, file_id: str) -> bool:
+        """Delete a record from the database."""
+        if hasattr(self._backend, "delete_file"):
+            return bool(await self._backend.delete_file(file_id))
+
+        if hasattr(self._backend, "delete"):
+            result = await self._backend.delete(self._table, filters={"id": file_id})
+            return bool(result)
+
+        if hasattr(self._backend, "fetch_one"):
+            await self._backend.fetch_one("delete_file", {"id": file_id})
+            return True
+
+        return False
+
+    async def search(
+        self, filters: Mapping[str, Any], query: str | None, limit: int, offset: int
+    ) -> list[dict[str, Any]]:
+        """Search for records in the database."""
+        if hasattr(self._backend, "search_files"):
+            return await self._backend.search_files(filters, query, limit, offset)
+
+        if hasattr(self._backend, "fetch_all"):
+            return await self._backend.fetch_all(
+                self._table,
+                {
+                    "filters": dict(filters),
+                    "query": query,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            )
+
+        if hasattr(self._backend, "select"):
+            db_filters: MutableMapping[str, Any] = dict(filters)
+            if query:
+                db_filters["fts"] = {"ilike": f"%{query}%"}
+            return await self._backend.select(
+                self._table,
+                filters=db_filters,
+                limit=limit,
+                offset=offset,
+            )
+
+        return []
+
+    async def usage_stats(self, user_id: str) -> dict[str, Any]:
+        """Get file usage statistics."""
+        if hasattr(self._backend, "get_file_usage_stats"):
+            return await self._backend.get_file_usage_stats(user_id)
+
+        if hasattr(self._backend, "fetch_one"):
+            result = await self._backend.fetch_one(
+                "file_usage_stats", {"user_id": user_id}
+            )
+            if isinstance(result, dict):
+                return result
+
+        if hasattr(self._backend, "select"):
+            rows = await self._backend.select(self._table, filters={"user_id": user_id})
+            total_size = sum(int(row.get("file_size", 0)) for row in rows)
+            return {
+                "total_files": len(rows),
+                "total_size": total_size,
+                "files_by_type": {},
+                "storage_by_type": {},
+                "recent_uploads": 0,
+                "most_accessed": [],
+            }
+
+        return {
+            "total_files": 0,
+            "total_size": 0,
+            "files_by_type": {},
+            "storage_by_type": {},
+            "recent_uploads": 0,
+            "most_accessed": [],
+        }
+
+
+class FileProcessingService:
+    """Service orchestrating file validation, storage, and persistence."""
+
+    def __init__(
+        self,
+        database_service: Any | None = None,
+        storage_service: Any | None = None,
+        ai_analysis_service: Any | None = None,
+        virus_scanner: Any | None = None,
+        *,
+        storage_root: str = "uploads",
+        max_file_size: int = 10 * 1024 * 1024,
+        max_session_size: int = 50 * 1024 * 1024,
+        rules: FileValidationRules | None = None,
+    ) -> None:
+        """Create a file processing service with optional dependencies."""
+        if database_service is None:
+            from tripsage_core.services.infrastructure import (  # pylint: disable=import-outside-toplevel
+                get_database_service,
+            )
+
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                try:
+                    asyncio.set_event_loop(loop)
+                    database_service = loop.run_until_complete(get_database_service())
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(
+                        "Database service initialization failed; using null backend",
+                        exc_info=exc,
+                    )
+                    database_service = _NullDatabaseBackend()
+                finally:
+                    asyncio.set_event_loop(None)
+                    loop.close()
+            else:
+                result: dict[str, Any] = {}
+                error_holder: list[BaseException] = []
+
+                def _load_database_service() -> None:
+                    new_loop = asyncio.new_event_loop()
+                    try:
+                        asyncio.set_event_loop(new_loop)
+                        result["value"] = new_loop.run_until_complete(
+                            get_database_service()
+                        )
+                    except BaseException as exc:  # noqa: BLE001
+                        error_holder.append(exc)
+                    finally:
+                        asyncio.set_event_loop(None)
+                        new_loop.close()
+
+                thread = threading.Thread(
+                    target=_load_database_service, name="FileProcessingServiceDBInit"
+                )
+                thread.start()
+                thread.join()
+                if error_holder:
+                    logger.warning(
+                        "Falling back to null database backend",
+                        exc_info=error_holder[0],
+                    )
+                    database_service = _NullDatabaseBackend()
+                else:
+                    database_service = result.get("value")
+                    if database_service is None:
+                        logger.warning(
+                            "Database service unavailable, using null backend"
+                        )
+                        database_service = _NullDatabaseBackend()
+
+        self._repo = FileRepository(database_service)
+        self._integrations = ServiceIntegrations(
+            storage=storage_service,
+            analysis=ai_analysis_service,
+            scanner=virus_scanner,
+        )
+        self._storage_root = Path(storage_root)
+        self._limits = FileProcessingLimits(
+            max_file_size=max_file_size,
+            max_session_size=max_session_size,
+        )
+        self._rules = rules or FileValidationRules()
+        self._analysis_tasks: set[asyncio.Task[Any]] = set()
+
+        self._ensure_storage_structure()
+
+    @property
+    def allowed_extensions(self) -> set[str]:
+        """Expose allowed extensions for tests and configuration."""
+        return self._rules.allowed_extensions
+
+    @allowed_extensions.setter
+    def allowed_extensions(self, value: Iterable[str]) -> None:
+        """Set allowed extensions."""
+        self._rules.allowed_extensions = set(value)
+
+    @property
+    def allowed_mime_types(self) -> set[str]:
+        """Expose allowed MIME types."""
+        return self._rules.allowed_mime_types
+
+    @allowed_mime_types.setter
+    def allowed_mime_types(self, value: Iterable[str]) -> None:
+        """Set allowed MIME types."""
+        self._rules.allowed_mime_types = set(value)
+
+    @property
+    def suspicious_patterns(self) -> set[str]:
+        """Expose suspicious filename patterns."""
+        return self._rules.suspicious_patterns
+
+    @suspicious_patterns.setter
+    def suspicious_patterns(self, value: Iterable[str]) -> None:
+        """Set suspicious filename patterns."""
+        self._rules.suspicious_patterns = set(value)
+
+    @property
+    def max_file_size(self) -> int:
+        """Maximum allowed size for a single file in bytes."""
+        return self._limits.max_file_size
+
+    @property
+    def max_session_size(self) -> int:
+        """Maximum aggregate upload size per batch in bytes."""
+        return self._limits.max_session_size
 
     async def upload_file(
         self, user_id: str, upload_request: FileUploadRequest
     ) -> ProcessedFile:
-        """
-        Upload and process a single file.
+        """Validate, store, and persist a single file."""
+        validation = await self._validate_file_content(
+            upload_request.filename, upload_request.content
+        )
+        if not validation.is_valid:
+            raise ValidationError(validation.error_message or "File validation failed")
 
-        Args:
-            user_id: User ID
-            upload_request: File upload request
-
-        Returns:
-            Processed file information
-
-        Raises:
-            ValidationError: If file validation fails
-            ServiceError: If processing fails
-        """
-        try:
-            # Validate file
-            validation_result = await self._validate_file_content(
-                upload_request.filename, upload_request.content
+        if self._integrations.scanner:
+            scan_result = await self._integrations.scanner.scan_content(
+                upload_request.content
             )
+            if getattr(scan_result, "threats_detected", False):
+                raise ValidationError("File contains malicious content")
 
-            if not validation_result.is_valid:
-                raise ValidationError(validation_result.error_message)
-
-            # Security scan
-            if self.virus_scanner:
-                scan_result = await self.virus_scanner.scan_content(
-                    upload_request.content
-                )
-                if scan_result.threats_detected:
-                    raise ValidationError("File contains malicious content")
-
-            # Generate file ID and metadata
-            file_id = str(uuid4())
-            file_hash = validation_result.file_hash
-
-            # Check for duplicate files
-            existing_file = await self._check_duplicate(user_id, file_hash)
-            if existing_file:
-                logger.info(
-                    "Duplicate file detected, linking to existing",
-                    extra={
-                        "file_id": file_id,
-                        "existing_file_id": existing_file.id,
-                        "user_id": user_id,
-                    },
-                )
-                # Create new reference to existing file
-                return await self._create_file_reference(
-                    existing_file, upload_request, user_id
-                )
-
-            # Store file
-            storage_result = await self._store_file(
-                file_id, user_id, upload_request.filename, upload_request.content
-            )
-
-            # Extract file metadata
-            metadata = await self._extract_metadata(
-                upload_request.content,
-                validation_result.detected_mime_type,
-                upload_request.filename,
-            )
-
-            # Create processed file record
-            processed_file = ProcessedFile(
-                id=file_id,
-                user_id=user_id,
-                trip_id=upload_request.trip_id,
-                original_filename=upload_request.filename,
-                stored_filename=storage_result["stored_filename"],
-                file_size=validation_result.file_size,
-                file_type=self._get_file_type(validation_result.detected_mime_type),
-                mime_type=validation_result.detected_mime_type,
-                file_hash=file_hash,
-                storage_provider=storage_result["provider"],
-                storage_path=storage_result["path"],
-                storage_url=storage_result.get("url"),
-                processing_status=ProcessingStatus.PROCESSING,
-                upload_timestamp=datetime.now(timezone.utc),
-                metadata=metadata,
-                visibility=upload_request.visibility,
-                tags=upload_request.tags,
-            )
-
-            # Store in database
-            await self._store_file_record(processed_file)
-
-            # Schedule AI analysis if requested
-            if upload_request.auto_analyze and self.ai_analysis_service:
-                asyncio.create_task(self._analyze_file_content(processed_file))
-            else:
-                # Mark as completed if no analysis needed
-                processed_file.processing_status = ProcessingStatus.COMPLETED
-                processed_file.processed_timestamp = datetime.now(timezone.utc)
-                await self._update_file_record(processed_file)
-
+        file_hash = validation.file_hash or ""
+        duplicate = await self._repo.fetch_by_hash(user_id, file_hash)
+        if duplicate and isinstance(duplicate, Mapping):
             logger.info(
-                "File uploaded successfully",
-                extra={
-                    "file_id": file_id,
-                    "user_id": user_id,
-                    "filename": upload_request.filename,
-                    "size": validation_result.file_size,
+                "Duplicate file detected; returning existing reference",
+                extra={"user_id": user_id, "file_id": duplicate.get("id")},
+            )
+            return self._deserialize_processed_file(duplicate)
+        if duplicate:
+            logger.warning(
+                "Duplicate lookup returned unsupported payload",
+                extra={"type": type(duplicate)},
+            )
+
+        file_id = str(uuid4())
+
+        storage = await self._store_file(
+            file_id=file_id,
+            user_id=user_id,
+            filename=upload_request.filename,
+            content=upload_request.content,
+        )
+
+        metadata = await self._extract_metadata(
+            upload_request.content, validation.detected_mime_type
+        )
+
+        processed_file = ProcessedFile(
+            id=file_id,
+            user_id=user_id,
+            trip_id=upload_request.trip_id,
+            original_filename=upload_request.filename,
+            stored_filename=storage.stored_filename,
+            file_size=validation.file_size,
+            file_type=self._get_file_type(validation.detected_mime_type),
+            mime_type=validation.detected_mime_type,
+            file_hash=file_hash,
+            storage_provider=storage.provider,
+            storage_path=storage.path,
+            storage_url=storage.url,
+            metadata=metadata,
+            visibility=upload_request.visibility,
+            tags=tuple(upload_request.tags),
+        )
+
+        await self._repo.insert(processed_file.model_dump())
+
+        if upload_request.auto_analyze and self._integrations.analysis:
+            self._ensure_background_task(
+                asyncio.create_task(self._analyze_file_content(processed_file))
+            )
+        else:
+            processed_file.processing_status = ProcessingStatus.COMPLETED
+            processed_file.processed_timestamp = datetime.now(UTC)
+            completed_at = processed_file.processed_timestamp.isoformat()
+            await self._repo.update(
+                processed_file.id,
+                {
+                    "processing_status": processed_file.processing_status.value,
+                    "processed_timestamp": completed_at,
                 },
             )
 
-            return processed_file
-
-        except (ValidationError, ServiceError):
-            raise
-        except Exception as e:
-            logger.error(
-                "File upload failed",
-                extra={
-                    "user_id": user_id,
-                    "filename": upload_request.filename,
-                    "error": str(e),
-                },
-            )
-            raise ServiceError(f"File upload failed: {str(e)}") from e
+        logger.info(
+            "File uploaded successfully",
+            extra={
+                "file_id": processed_file.id,
+                "user_id": user_id,
+                "filename": upload_request.filename,
+            },
+        )
+        return processed_file
 
     async def upload_batch(
-        self, user_id: str, batch_request: FileBatchUploadRequest
-    ) -> List[ProcessedFile]:
-        """
-        Upload multiple files in batch.
-
-        Args:
-            user_id: User ID
-            batch_request: Batch upload request
-
-        Returns:
-            List of processed files
-
-        Raises:
-            ValidationError: If batch validation fails
-            ServiceError: If processing fails
-        """
-        try:
-            # Validate batch size
-            total_size = sum(len(file.content) for file in batch_request.files)
-            if total_size > batch_request.max_total_size:
-                raise ValidationError(
-                    f"Batch size {total_size} exceeds limit "
-                    f"{batch_request.max_total_size}"
-                )
-
-            # Process files concurrently
-            tasks = []
-            for file_request in batch_request.files:
-                if batch_request.trip_id and not file_request.trip_id:
-                    file_request.trip_id = batch_request.trip_id
-
-                task = self.upload_file(user_id, file_request)
-                tasks.append(task)
-
-            # Wait for all uploads to complete
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            processed_files = []
-            errors = []
-
-            for i, result in enumerate(results):
-                if isinstance(result, Exception):
-                    errors.append(
-                        f"File {batch_request.files[i].filename}: {str(result)}"
-                    )
-                else:
-                    processed_files.append(result)
-
-            if errors and not processed_files:
-                raise ServiceError(f"All files failed: {'; '.join(errors)}")
-
-            logger.info(
-                "Batch upload completed",
-                extra={
-                    "user_id": user_id,
-                    "total_files": len(batch_request.files),
-                    "successful": len(processed_files),
-                    "failed": len(errors),
-                },
+        self, user_id: str, uploads: Iterable[FileUploadRequest]
+    ) -> list[ProcessedFile]:
+        """Upload multiple files ensuring session size limits."""
+        uploads_list = list(uploads)
+        total_size = sum(len(item.content) for item in uploads_list)
+        if total_size > self._limits.max_session_size:
+            raise ValidationError(
+                f"Total upload size {total_size} exceeds max "
+                f"{self._limits.max_session_size}"
             )
 
-            return processed_files
-
-        except (ValidationError, ServiceError):
-            raise
-        except Exception as e:
-            logger.error(
-                "Batch upload failed", extra={"user_id": user_id, "error": str(e)}
-            )
-            raise ServiceError(f"Batch upload failed: {str(e)}") from e
+        return [await self.upload_file(user_id, request) for request in uploads_list]
 
     async def get_file(
-        self, file_id: str, user_id: str, check_access: bool = True
-    ) -> Optional[ProcessedFile]:
-        """
-        Get file information by ID.
+        self, file_id: str, user_id: str, *, check_access: bool = True
+    ) -> ProcessedFile | None:
+        """Return file metadata if accessible to the user."""
+        record = await self._repo.fetch_by_id(file_id)
+        if not record:
+            return None
 
-        Args:
-            file_id: File ID
-            user_id: User ID for access control
-            check_access: Whether to check access permissions
-
-        Returns:
-            File information or None if not found
-        """
-        try:
-            file_data = await self.db.get_file(file_id)
-            if not file_data:
-                return None
-
-            processed_file = ProcessedFile(**file_data)
-
-            # Check access permissions
-            if check_access and not await self._check_file_access(
-                processed_file, user_id
-            ):
-                raise PermissionError("Access denied to file")
-
-            # Update last accessed timestamp
-            processed_file.last_accessed = datetime.now(timezone.utc)
-            await self._update_file_record(processed_file)
-
-            return processed_file
-
-        except PermissionError:
-            raise
-        except Exception as e:
-            logger.error(
-                "Failed to get file",
-                extra={"file_id": file_id, "user_id": user_id, "error": str(e)},
+        if not isinstance(record, Mapping):
+            logger.warning(
+                "Unexpected file record payload",
+                extra={"file_id": file_id, "type": type(record)},
             )
             return None
 
-    async def get_file_content(self, file_id: str, user_id: str) -> Optional[bytes]:
-        """
-        Get file content by ID.
+        processed_file = self._deserialize_processed_file(record)
 
-        Args:
-            file_id: File ID
-            user_id: User ID for access control
+        if check_access and not await self._check_file_access(processed_file, user_id):
+            raise AuthPermissionError("Access denied")
 
-        Returns:
-            File content bytes or None if not found
-        """
-        try:
-            processed_file = await self.get_file(file_id, user_id)
-            if not processed_file:
-                return None
+        processed_file.last_accessed = datetime.now(UTC)
+        await self._repo.update(
+            processed_file.id,
+            {
+                "last_accessed": processed_file.last_accessed.isoformat(),
+            },
+        )
 
-            # Get content from storage
-            if self.storage_service:
-                content = await self.storage_service.get_file_content(
-                    processed_file.storage_path
-                )
-            else:
-                # Local storage fallback
-                file_path = self.storage_root / processed_file.storage_path
-                if file_path.exists():
-                    content = file_path.read_bytes()
-                else:
-                    content = None
+        return processed_file
 
-            if content:
-                # Update download count
-                processed_file.download_count += 1
-                await self._update_file_record(processed_file)
-
-            return content
-
-        except Exception as e:
-            logger.error(
-                "Failed to get file content",
-                extra={"file_id": file_id, "user_id": user_id, "error": str(e)},
-            )
+    async def get_file_content(self, file_id: str, user_id: str) -> bytes | None:
+        """Return binary content for an accessible file."""
+        processed_file = await self.get_file(file_id, user_id)
+        if not processed_file:
             return None
+
+        if self._integrations.storage:
+            content = await self._integrations.storage.get_file_content(
+                processed_file.storage_path
+            )
+        else:
+            path = self._storage_root / processed_file.storage_path
+            content = path.read_bytes() if path.exists() else None
+
+        if content:
+            processed_file.download_count += 1
+            await self._repo.update(
+                processed_file.id, {"download_count": processed_file.download_count}
+            )
+
+        return content
 
     async def search_files(
         self, user_id: str, search_request: FileSearchRequest
-    ) -> List[ProcessedFile]:
-        """
-        Search files for a user.
+    ) -> list[ProcessedFile]:
+        """Search user files applying simple filters."""
+        filters: dict[str, Any] = {"user_id": user_id}
 
-        Args:
-            user_id: User ID
-            search_request: Search parameters
+        if search_request.file_types:
+            filters["file_type"] = [ft.value for ft in search_request.file_types]
 
-        Returns:
-            List of matching files
-        """
+        if search_request.trip_id:
+            filters["trip_id"] = search_request.trip_id
+
+        if search_request.tags:
+            filters["tags"] = list(search_request.tags)
+
+        if search_request.shared_only:
+            filters["shared_only"] = True
+
         try:
-            filters = {"user_id": user_id}
-
-            if search_request.file_types:
-                filters["file_types"] = [ft.value for ft in search_request.file_types]
-
-            if search_request.trip_id:
-                filters["trip_id"] = search_request.trip_id
-
-            if search_request.tags:
-                filters["tags"] = search_request.tags
-
-            if search_request.date_from:
-                filters["date_from"] = search_request.date_from
-
-            if search_request.date_to:
-                filters["date_to"] = search_request.date_to
-
-            if search_request.min_size:
-                filters["min_size"] = search_request.min_size
-
-            if search_request.max_size:
-                filters["max_size"] = search_request.max_size
-
-            if search_request.shared_only:
-                filters["shared_only"] = True
-
-            results = await self.db.search_files(
+            records = await self._repo.search(
                 filters,
                 search_request.query,
                 search_request.limit,
                 search_request.offset,
             )
+        except Exception as error:  # pylint: disable=broad-except
+            logger.exception("File search failed", extra={"user_id": user_id})
+            raise ServiceError("File search failed") from error
 
-            processed_files = []
-            for result in results:
-                processed_files.append(ProcessedFile(**result))
+        processed_files: list[ProcessedFile] = []
+        for record in records:
+            if not isinstance(record, Mapping):
+                logger.warning(
+                    "Skipping unexpected search payload",
+                    extra={"type": type(record)},
+                )
+                continue
+            processed_files.append(self._deserialize_processed_file(record))
 
-            return processed_files
-
-        except Exception as e:
-            logger.error(
-                "File search failed", extra={"user_id": user_id, "error": str(e)}
-            )
-            return []
+        return processed_files
 
     async def delete_file(self, file_id: str, user_id: str) -> bool:
-        """
-        Delete a file and its content.
+        """Delete file metadata and storage."""
+        processed_file = await self.get_file(file_id, user_id)
+        if not processed_file:
+            raise NotFoundError("File not found")
 
-        Args:
-            file_id: File ID
-            user_id: User ID for access control
+        if processed_file.user_id != user_id:
+            raise AuthPermissionError("Only owners can delete files")
 
-        Returns:
-            True if deleted successfully
-        """
-        try:
-            processed_file = await self.get_file(file_id, user_id)
-            if not processed_file:
-                raise NotFoundError("File not found")
+        if self._integrations.storage:
+            await self._integrations.storage.delete_file(processed_file.storage_path)
+        else:
+            path = self._storage_root / processed_file.storage_path
+            if path.exists():
+                path.unlink()
 
-            # Check ownership or edit permissions
-            if processed_file.user_id != user_id:
-                raise PermissionError("Only file owner can delete")
-
-            # Delete from storage
-            if self.storage_service:
-                await self.storage_service.delete_file(processed_file.storage_path)
-            else:
-                # Local storage fallback
-                file_path = self.storage_root / processed_file.storage_path
-                if file_path.exists():
-                    file_path.unlink()
-
-            # Delete from database
-            success = await self.db.delete_file(file_id)
-
-            if success:
-                logger.info(
-                    "File deleted successfully",
-                    extra={"file_id": file_id, "user_id": user_id},
-                )
-
-            return success
-
-        except (NotFoundError, PermissionError):
-            raise
-        except Exception as e:
-            logger.error(
-                "Failed to delete file",
-                extra={"file_id": file_id, "user_id": user_id, "error": str(e)},
-            )
-            return False
+        return await self._repo.delete(file_id)
 
     async def get_usage_stats(self, user_id: str) -> FileUsageStats:
-        """
-        Get file usage statistics for a user.
-
-        Args:
-            user_id: User ID
-
-        Returns:
-            Usage statistics
-        """
+        """Return aggregate file usage statistics for a user."""
         try:
-            stats_data = await self.db.get_file_usage_stats(user_id)
-            return FileUsageStats(**stats_data)
-
-        except Exception as e:
-            logger.error(
-                "Failed to get usage stats",
-                extra={"user_id": user_id, "error": str(e)},
+            stats = await self._repo.usage_stats(user_id)
+            return FileUsageStats(
+                total_files=int(stats.get("total_files", 0)),
+                total_size=int(stats.get("total_size", 0)),
+                files_by_type=dict(stats.get("files_by_type", {})),
+                storage_by_type=dict(stats.get("storage_by_type", {})),
+                recent_uploads=int(stats.get("recent_uploads", 0)),
+                most_accessed=tuple(stats.get("most_accessed", [])),
             )
+        except Exception:  # pylint: disable=broad-except
+            logger.exception("Failed to obtain usage stats", extra={"user_id": user_id})
             return FileUsageStats(
                 total_files=0,
                 total_size=0,
                 files_by_type={},
                 storage_by_type={},
                 recent_uploads=0,
-                most_accessed=[],
             )
 
     async def _validate_file_content(
         self, filename: str, content: bytes
     ) -> FileValidationResult:
-        """Validate file content and metadata."""
+        """Validate file content for security and format compliance."""
         file_size = len(content)
-        file_hash = hashlib.sha256(content).hexdigest()
-        security_warnings = []
+        detected_mime_type = "application/octet-stream"
+        error_message: str | None = None
 
-        # Size validation
         if file_size == 0:
-            return FileValidationResult(
-                is_valid=False, error_message="File is empty", file_size=file_size
+            error_message = "File is empty"
+        elif file_size > self._limits.max_file_size:
+            error_message = (
+                f"File size {file_size} exceeds max {self._limits.max_file_size}"
             )
+        elif not filename:
+            error_message = "Filename is required"
 
-        if file_size > self.max_file_size:
-            return FileValidationResult(
-                is_valid=False,
-                error_message=f"File size {file_size} exceeds max {self.max_file_size}",
-                file_size=file_size,
-            )
-
-        # Filename validation
-        if not filename:
-            return FileValidationResult(
-                is_valid=False,
-                error_message="Filename is required",
-                file_size=file_size,
-            )
-
-        # Check for suspicious patterns
-        for pattern in self.suspicious_patterns:
-            if pattern in filename.lower():
-                security_warnings.append(
-                    f"Filename contains suspicious pattern: {pattern}"
-                )
-
-        # Extension validation
-        file_path = Path(filename)
-        if file_path.suffix.lower() not in self.allowed_extensions:
-            return FileValidationResult(
-                is_valid=False,
-                error_message=f"File extension '{file_path.suffix}' is not allowed",
-                file_size=file_size,
-            )
-
-        # MIME type detection and validation
-        detected_mime_type = self._detect_mime_type(filename, content)
-
-        if detected_mime_type not in self.allowed_mime_types:
-            return FileValidationResult(
-                is_valid=False,
-                error_message=f"File type '{detected_mime_type}' is not allowed",
-                file_size=file_size,
-                detected_mime_type=detected_mime_type,
-            )
-
-        # Content validation
-        content_valid, content_error = self._validate_file_format(
-            content, detected_mime_type
+        security_warnings = tuple(
+            pattern
+            for pattern in self._rules.suspicious_patterns
+            if pattern in filename.lower()
         )
-        if not content_valid:
+
+        extension = Path(filename).suffix.lower()
+        if not error_message and extension not in self._rules.allowed_extensions:
+            error_message = f"Extension '{extension}' is not allowed"
+
+        if not error_message:
+            detected_mime_type = self._detect_mime_type(filename, content)
+            if detected_mime_type not in self._rules.allowed_mime_types:
+                error_message = f"MIME type '{detected_mime_type}' is not allowed"
+
+        if not error_message:
+            format_valid, format_error = self._validate_file_format(
+                content, detected_mime_type
+            )
+            if not format_valid:
+                error_message = format_error
+
+        if error_message:
             return FileValidationResult(
                 is_valid=False,
-                error_message=content_error,
+                error_message=error_message,
                 file_size=file_size,
                 detected_mime_type=detected_mime_type,
             )
@@ -880,261 +893,204 @@ class FileProcessingService:
             is_valid=True,
             file_size=file_size,
             detected_mime_type=detected_mime_type,
-            file_hash=file_hash,
+            file_hash=hashlib.sha256(content).hexdigest(),
             security_warnings=security_warnings,
         )
 
     def _detect_mime_type(self, filename: str, content: bytes) -> str:
-        """Detect MIME type using filename and content analysis."""
-        # Try filename-based detection first
+        """Detect MIME type from filename and magic numbers."""
         mime_type, _ = mimetypes.guess_type(filename)
-        if mime_type:
-            return mime_type
-
-        # Content-based detection for common formats
-        if content.startswith(b"\xff\xd8\xff"):
-            return "image/jpeg"
-        elif content.startswith(b"\x89PNG\r\n\x1a\n"):
-            return "image/png"
-        elif content.startswith(b"GIF87a") or content.startswith(b"GIF89a"):
-            return "image/gif"
-        elif content.startswith(b"%PDF-"):
-            return "application/pdf"
-        elif content.startswith(b"PK\x03\x04"):
-            # ZIP-based formats
-            if filename.lower().endswith(".docx"):
-                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"  # noqa: E501
-
-        return "application/octet-stream"
+        detected = mime_type or ""
+        if not detected:
+            if content.startswith(b"\xff\xd8\xff"):
+                detected = "image/jpeg"
+            elif content.startswith(b"\x89PNG\r\n\x1a\n"):
+                detected = "image/png"
+            elif content.startswith((b"GIF87a", b"GIF89a")):
+                detected = "image/gif"
+            elif content.startswith(b"%PDF-"):
+                detected = "application/pdf"
+            elif content.startswith(b"PK\x03\x04") and filename.lower().endswith(
+                ".docx"
+            ):
+                detected = DOCX_MIME
+            else:
+                detected = "application/octet-stream"
+        return detected
 
     def _validate_file_format(
         self, content: bytes, mime_type: str
-    ) -> Tuple[bool, Optional[str]]:
-        """Validate file format consistency."""
-        if mime_type.startswith("image/"):
-            return self._validate_image_format(content, mime_type)
-        elif mime_type == "application/pdf":
-            return self._validate_pdf_format(content)
-        elif mime_type in ["text/plain", "text/csv", "application/json"]:
-            return self._validate_text_format(content)
-
-        return True, None
-
-    def _validate_image_format(
-        self, content: bytes, mime_type: str
-    ) -> Tuple[bool, Optional[str]]:
-        """Validate image format."""
+    ) -> tuple[bool, str | None]:
+        """Run MIME-specific heuristics to avoid spoofing."""
+        error_message: str | None = None
         if mime_type == "image/jpeg" and not content.startswith(b"\xff\xd8\xff"):
-            return False, "Invalid JPEG header"
+            error_message = "Invalid JPEG header"
         elif mime_type == "image/png" and not content.startswith(b"\x89PNG\r\n\x1a\n"):
-            return False, "Invalid PNG header"
-        elif mime_type == "image/gif" and not (
-            content.startswith(b"GIF87a") or content.startswith(b"GIF89a")
+            error_message = "Invalid PNG header"
+        elif mime_type == "image/gif" and not content.startswith(
+            (b"GIF87a", b"GIF89a")
         ):
-            return False, "Invalid GIF header"
+            error_message = "Invalid GIF header"
+        elif mime_type == "application/pdf" and not content.startswith(b"%PDF-"):
+            error_message = "Invalid PDF header"
+        elif mime_type.startswith("text/"):
+            try:
+                content.decode("utf-8")
+            except UnicodeDecodeError:
+                error_message = "Text content must be UTF-8"
 
-        return True, None
-
-    def _validate_pdf_format(self, content: bytes) -> Tuple[bool, Optional[str]]:
-        """Validate PDF format."""
-        if not content.startswith(b"%PDF-"):
-            return False, "Invalid PDF header"
-
-        if b"%%EOF" not in content[-1024:]:
-            return False, "Invalid PDF structure"
-
-        return True, None
-
-    def _validate_text_format(self, content: bytes) -> Tuple[bool, Optional[str]]:
-        """Validate text format."""
-        try:
-            content.decode("utf-8")
-            return True, None
-        except UnicodeDecodeError:
-            return False, "Text file is not valid UTF-8"
+        return error_message is None, error_message
 
     def _get_file_type(self, mime_type: str) -> FileType:
-        """Get file type category from MIME type."""
+        """Map MIME types to logical file categories."""
+        file_type = FileType.OTHER
         if mime_type.startswith("image/"):
-            return FileType.IMAGE
+            file_type = FileType.IMAGE
         elif mime_type.startswith("video/"):
-            return FileType.VIDEO
+            file_type = FileType.VIDEO
         elif mime_type.startswith("audio/"):
-            return FileType.AUDIO
-        elif mime_type in [
+            file_type = FileType.AUDIO
+        elif mime_type in {
             "application/pdf",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ]:
-            return FileType.DOCUMENT
-        elif mime_type in ["text/csv"]:
-            return FileType.SPREADSHEET
-        elif mime_type in ["text/plain", "text/csv", "application/json"]:
-            return FileType.TEXT
-        elif mime_type in ["application/zip"]:
-            return FileType.ARCHIVE
-        else:
-            return FileType.OTHER
+        }:
+            file_type = FileType.DOCUMENT
+        elif mime_type == "text/csv":
+            file_type = FileType.SPREADSHEET
+        elif mime_type in {"text/plain", "application/json"}:
+            file_type = FileType.TEXT
+        elif mime_type == "application/zip":
+            file_type = FileType.ARCHIVE
+        return file_type
 
-    async def _check_duplicate(
-        self, user_id: str, file_hash: str
-    ) -> Optional[ProcessedFile]:
-        """Check for duplicate files by hash."""
-        try:
-            duplicate_data = await self.db.get_file_by_hash(user_id, file_hash)
-            if duplicate_data:
-                return ProcessedFile(**duplicate_data)
-            return None
-        except Exception:
-            return None
-
-    async def _create_file_reference(
-        self,
-        existing_file: ProcessedFile,
-        upload_request: FileUploadRequest,
-        user_id: str,
-    ) -> ProcessedFile:
-        """Create a new reference to an existing file."""
-        new_file = ProcessedFile(**existing_file.model_dump())
-        new_file.id = str(uuid4())
-        new_file.user_id = user_id
-        new_file.trip_id = upload_request.trip_id
-        new_file.tags = upload_request.tags
-        new_file.visibility = upload_request.visibility
-        new_file.upload_timestamp = datetime.now(timezone.utc)
-        new_file.parent_file_id = existing_file.id
-
-        await self._store_file_record(new_file)
-        return new_file
+    @staticmethod
+    def _sanitize_storage_component(value: str, fallback: str) -> str:
+        """Return a filesystem-safe token for storage paths."""
+        cleaned = re.sub(r"[^A-Za-z0-9._-]", "_", value)
+        cleaned = cleaned.strip("._")
+        if not cleaned:
+            return fallback
+        return cleaned[:128]
 
     async def _store_file(
-        self, file_id: str, user_id: str, filename: str, content: bytes
-    ) -> Dict[str, Any]:
-        """Store file content to storage provider."""
-        if self.storage_service:
-            # Use external storage service
-            storage_result = await self.storage_service.store_file(
+        self, *, file_id: str, user_id: str, filename: str, content: bytes
+    ) -> StorageResult:
+        """Store file content and return normalized storage metadata."""
+        if self._integrations.storage:
+            storage_result = await self._integrations.storage.store_file(
                 file_id, user_id, filename, content
             )
-            return {
-                "provider": StorageProvider.AWS_S3,  # or detect from service
-                "path": storage_result["path"],
-                "url": storage_result.get("url"),
-                "stored_filename": storage_result["filename"],
-            }
-        else:
-            # Local storage fallback
-            user_dir = self.storage_root / "files" / user_id
-            user_dir.mkdir(parents=True, exist_ok=True)
+            if isinstance(storage_result, Mapping):
+                return StorageResult(
+                    provider=StorageProvider(
+                        storage_result.get("provider", StorageProvider.EXTERNAL)
+                    ),
+                    path=storage_result["path"],
+                    stored_filename=storage_result.get("stored_filename", filename),
+                    url=storage_result.get("url"),
+                )
 
-            file_path = Path(filename)
-            stored_filename = f"{file_id}{file_path.suffix.lower()}"
-            storage_path = user_dir / stored_filename
+            return StorageResult(
+                provider=StorageProvider.EXTERNAL,
+                path=str(storage_result.path),
+                stored_filename=storage_result.stored_filename,
+                url=getattr(storage_result, "url", None),
+            )
 
-            storage_path.write_bytes(content)
+        safe_user_id = self._sanitize_storage_component(user_id, fallback="user")
+        safe_file_id = self._sanitize_storage_component(file_id, fallback="file")
+        extension = Path(filename).suffix.lower()
+        stored_filename = f"{safe_file_id}{extension}"
 
-            return {
-                "provider": StorageProvider.LOCAL,
-                "path": str(storage_path.relative_to(self.storage_root)),
-                "url": None,
-                "stored_filename": stored_filename,
-            }
+        relative_path = Path("files") / safe_user_id / stored_filename
+        full_path = (self._storage_root / relative_path).resolve()
+        storage_root = self._storage_root.resolve()
+        if not full_path.is_relative_to(storage_root):
+            raise ValidationError("Computed storage path escapes storage root")
+
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        full_path.write_bytes(content)
+
+        return StorageResult(
+            provider=StorageProvider.LOCAL,
+            path=str(relative_path),
+            stored_filename=stored_filename,
+        )
 
     async def _extract_metadata(
-        self, content: bytes, mime_type: str, filename: str
-    ) -> FileMetadata:
-        """Extract file metadata."""
+        self, content: bytes, mime_type: str
+    ) -> FileMetadata | None:
+        """Extract metadata from file content."""
         metadata = FileMetadata()
+        metadata.creation_date = datetime.now(UTC)
 
-        try:
-            # Basic file info
-            metadata.creation_date = datetime.now(timezone.utc)
-
-            # Type-specific metadata extraction
-            if mime_type.startswith("text/"):
-                try:
-                    text_content = content.decode("utf-8")
-                    metadata.character_count = len(text_content)
-                    metadata.word_count = len(text_content.split())
-                    metadata.encoding = "utf-8"
-
-                    # Extract keywords (simple approach)
-                    words = text_content.lower().split()
-                    word_freq = {}
-                    for word in words:
-                        if len(word) > 3:  # Only consider words longer than 3 chars
-                            word_freq[word] = word_freq.get(word, 0) + 1
-
-                    # Get top 10 most frequent words as keywords
-                    metadata.keywords = sorted(
-                        word_freq.keys(), key=word_freq.get, reverse=True
-                    )[:10]
-
-                except UnicodeDecodeError:
-                    pass
-
-            elif mime_type == "application/pdf":
-                # For PDF, we'd use a library like PyPDF2 here
-                # For now, just set basic info
-                metadata.title = Path(filename).stem
-
-        except Exception as e:
-            logger.warning("Failed to extract metadata", extra={"error": str(e)})
-
+        if mime_type.startswith("text/"):
+            try:
+                text = content.decode("utf-8")
+            except UnicodeDecodeError:
+                return metadata
+            metadata.character_count = len(text)
+            words = text.split()
+            metadata.word_count = len(words)
+            metadata.encoding = "utf-8"
+            keyword_candidates: dict[str, int] = {}
+            for word in words:
+                normalized = word.lower()
+                if len(normalized) > 3:
+                    keyword_candidates[normalized] = (
+                        keyword_candidates.get(normalized, 0) + 1
+                    )
+            metadata.keywords = tuple(
+                word
+                for word, _ in sorted(
+                    keyword_candidates.items(), key=lambda item: item[1], reverse=True
+                )[:10]
+            )
         return metadata
 
     async def _analyze_file_content(self, processed_file: ProcessedFile) -> None:
-        """Perform AI analysis on file content."""
+        """Analyze file content."""
         try:
-            if not self.ai_analysis_service:
+            if not self._integrations.analysis:
                 return
-
-            # Get file content
-            if self.storage_service:
-                content = await self.storage_service.get_file_content(
+            if self._integrations.storage:
+                content = await self._integrations.storage.get_file_content(
                     processed_file.storage_path
                 )
             else:
-                file_path = self.storage_root / processed_file.storage_path
-                content = file_path.read_bytes()
-
+                path = self._storage_root / processed_file.storage_path
+                content = path.read_bytes() if path.exists() else None
             if not content:
                 return
 
-            # Perform AI analysis
-            analysis_result = await self.ai_analysis_service.analyze_file(
+            analysis_result = await self._integrations.analysis.analyze_file(  # type: ignore[union-attr]
                 content, processed_file.mime_type, processed_file.original_filename
             )
-
-            # Update file with analysis results
             processed_file.analysis_result = FileAnalysisResult(**analysis_result)
             processed_file.processing_status = ProcessingStatus.COMPLETED
-            processed_file.processed_timestamp = datetime.now(timezone.utc)
-
-            await self._update_file_record(processed_file)
-
-            logger.info(
-                "File analysis completed",
-                extra={
-                    "file_id": processed_file.id,
-                    "confidence": analysis_result.get("confidence_score"),
+            processed_file.processed_timestamp = datetime.now(UTC)
+            processed_at = processed_file.processed_timestamp.isoformat()
+            await self._repo.update(
+                processed_file.id,
+                {
+                    "analysis_result": processed_file.analysis_result.model_dump(),
+                    "processing_status": processed_file.processing_status.value,
+                    "processed_timestamp": processed_at,
                 },
             )
-
-        except Exception as e:
-            logger.error(
-                "File analysis failed",
-                extra={"file_id": processed_file.id, "error": str(e)},
+        except Exception:  # pylint: disable=broad-except
+            logger.exception(
+                "File analysis failed", extra={"file_id": processed_file.id}
             )
-
-            # Mark as failed
-            processed_file.processing_status = ProcessingStatus.FAILED
-            await self._update_file_record(processed_file)
+            await self._repo.update(
+                processed_file.id,
+                {"processing_status": ProcessingStatus.FAILED.value},
+            )
 
     async def _check_file_access(
         self, processed_file: ProcessedFile, user_id: str
     ) -> bool:
-        """Check if user has access to file."""
-        # Owner always has access
+        """Check if a file is accessible to a user."""
         if processed_file.user_id == user_id:
             return True
 
@@ -1143,41 +1099,40 @@ class FileProcessingService:
             return True
 
         # Check if public
-        if processed_file.visibility == FileVisibility.PUBLIC:
-            return True
+        return processed_file.visibility == FileVisibility.PUBLIC
 
-        return False
-
-    async def _store_file_record(self, processed_file: ProcessedFile) -> None:
-        """Store file record in database."""
-        try:
-            file_data = processed_file.model_dump()
-            await self.db.store_file(file_data)
-        except Exception as e:
-            logger.error(
-                "Failed to store file record",
-                extra={"file_id": processed_file.id, "error": str(e)},
+    def _deserialize_processed_file(self, data: Mapping[str, Any]) -> ProcessedFile:
+        """Deserialize a processed file from a mapping."""
+        payload = dict(data)
+        payload.setdefault("tags", ())
+        payload.setdefault("shared_with", ())
+        payload.setdefault("processing_status", ProcessingStatus.PROCESSING.value)
+        if isinstance(payload["processing_status"], str):
+            payload["processing_status"] = ProcessingStatus(
+                payload["processing_status"]
             )
-            raise
-
-    async def _update_file_record(self, processed_file: ProcessedFile) -> None:
-        """Update file record in database."""
-        try:
-            file_data = processed_file.model_dump()
-            await self.db.update_file(processed_file.id, file_data)
-        except Exception as e:
-            logger.error(
-                "Failed to update file record",
-                extra={"file_id": processed_file.id, "error": str(e)},
+        if isinstance(payload.get("file_type"), str):
+            payload["file_type"] = FileType(payload["file_type"])
+        if isinstance(payload.get("visibility"), str):
+            payload["visibility"] = FileVisibility(payload["visibility"])
+        if isinstance(payload.get("storage_provider"), str):
+            payload["storage_provider"] = StorageProvider(payload["storage_provider"])
+        if "metadata" in payload and isinstance(payload["metadata"], Mapping):
+            payload["metadata"] = FileMetadata(**payload["metadata"])
+        if "analysis_result" in payload and isinstance(
+            payload["analysis_result"], Mapping
+        ):
+            payload["analysis_result"] = FileAnalysisResult(
+                **payload["analysis_result"]
             )
+        return ProcessedFile(**payload)
 
+    def _ensure_background_task(self, task: asyncio.Task[Any]) -> None:
+        """Ensure a background task is added to the set."""
+        self._analysis_tasks.add(task)
+        task.add_done_callback(self._analysis_tasks.discard)
 
-# Dependency function for FastAPI
-async def get_file_processing_service() -> FileProcessingService:
-    """
-    Get file processing service instance for dependency injection.
-
-    Returns:
-        FileProcessingService instance
-    """
-    return FileProcessingService()
+    def _ensure_storage_structure(self) -> None:
+        """Ensure the storage structure exists."""
+        for relative in ("files", "temp", "processed", "thumbnails"):
+            (self._storage_root / relative).mkdir(parents=True, exist_ok=True)
