@@ -93,7 +93,7 @@ class ConfigManager:
         try:
             for i in range(count):
                 secret = secrets.token_urlsafe(length)
-                logger.info("Secret %s: %s", i + 1, secret)
+                print(f"Secret {i + 1}: {secret} (store securely, do not share)")
 
             logger.info("Secrets generated successfully")
             logger.warning(
