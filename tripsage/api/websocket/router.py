@@ -6,6 +6,7 @@ import json
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from functools import lru_cache
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, WebSocket
@@ -28,6 +29,7 @@ from tripsage.api.websocket.lifecycle import (
     serialize_connection,
 )
 from tripsage_core.services.business.chat_service import ChatService as CoreChatService
+from tripsage_core.services.infrastructure.database_service import DatabaseService
 from tripsage_core.services.infrastructure.websocket_manager import WebSocketManager
 from tripsage_core.services.infrastructure.websocket_messaging_service import (
     WebSocketEvent,
@@ -35,6 +37,9 @@ from tripsage_core.services.infrastructure.websocket_messaging_service import (
 
 
 router = APIRouter()
+
+DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
+ManagerDep = Annotated[WebSocketManager, Depends(get_websocket_manager_dep)]
 
 
 @lru_cache(maxsize=1)
@@ -49,7 +54,7 @@ def get_chat_agent() -> ChatAgent:
     return ChatAgent(service_registry=get_service_registry())
 
 
-async def get_core_chat_service(db=Depends(get_db)) -> CoreChatService:
+async def get_core_chat_service(db: DatabaseDep) -> CoreChatService:
     """Construct the core chat service from the database dependency."""
     return CoreChatService(database_service=db)
 
@@ -139,7 +144,7 @@ async def generic_websocket(websocket: WebSocket) -> None:
 async def chat_websocket(
     websocket: WebSocket,
     session_id: UUID,
-    chat_service: CoreChatService = Depends(get_core_chat_service),
+    chat_service: Annotated[CoreChatService, Depends(get_core_chat_service)],
 ) -> None:
     """Chat WebSocket endpoint providing user <-> assistant streaming."""
     await _handle_websocket_session(
@@ -161,9 +166,7 @@ async def agent_status_websocket(websocket: WebSocket, user_id: UUID) -> None:
 
 
 @router.get("/ws/health")
-async def websocket_health(
-    manager=Depends(get_websocket_manager_dep),
-) -> dict[str, object]:
+async def websocket_health(manager: ManagerDep) -> dict[str, object]:
     """Return health metrics for the WebSocket subsystem."""
     stats = manager.get_connection_stats()
     return {
@@ -175,9 +178,7 @@ async def websocket_health(
 
 
 @router.get("/ws/connections")
-async def list_websocket_connections(
-    manager=Depends(get_websocket_manager_dep),
-) -> dict[str, object]:
+async def list_websocket_connections(manager: ManagerDep) -> dict[str, object]:
     """List active WebSocket connections (admin use)."""
     connections = [
         serialize_connection(connection) for connection in manager.connections.values()
@@ -188,7 +189,7 @@ async def list_websocket_connections(
 @router.delete("/ws/connections/{connection_id}")
 async def disconnect_websocket_connection(
     connection_id: str,
-    manager=Depends(get_websocket_manager_dep),
+    manager: ManagerDep,
 ) -> dict[str, str]:
     """Disconnect a specific WebSocket connection."""
     await manager.disconnect_connection(connection_id)
