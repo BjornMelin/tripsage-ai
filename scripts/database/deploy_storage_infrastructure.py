@@ -22,7 +22,9 @@ class StorageDeployment:
     def __init__(self, supabase_url: str, supabase_key: str, db_url: str):
         """Initialize storage deployment with Supabase credentials."""
         # Avoid tight typing on third-party; use runtime factory
-        self.supabase: Any = supabase.create_client(supabase_url, supabase_key)  # type: ignore[attr-defined]
+        self.supabase: Any = supabase.create_client(  # type: ignore[attr-defined]  # pylint: disable=no-member,c-extension-no-member
+            supabase_url, supabase_key
+        )
         self.db_url = db_url
         self.project_root = Path(__file__).parent.parent.parent
         self.storage_dir = self.project_root / "supabase" / "storage"

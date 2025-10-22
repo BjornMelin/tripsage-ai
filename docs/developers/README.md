@@ -60,7 +60,7 @@ npx biome lint --apply .               # TypeScript linting/formatting
 - **Backend**: Python 3.13, FastAPI, Pydantic v2
 - **Frontend**: Next.js 15, TypeScript, Tailwind CSS  
 - **Database**: PostgreSQL (Supabase) + pgvector
-- **Caching**: DragonflyDB
+- **Caching**: Upstash Redis (HTTP)
 - **Testing**: pytest (Python), Vitest (TypeScript), Playwright (E2E)
 - **AI/ML**: LangGraph, Mem0, OpenTelemetry
 

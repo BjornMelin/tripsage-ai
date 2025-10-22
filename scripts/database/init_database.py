@@ -346,9 +346,9 @@ def main(with_seed_data: bool, env: str, dry_run: bool) -> None:
 
             # Initialize services
             db_service = DatabaseService(settings)
-            supabase_client = supabase.create_client(  # type: ignore[attr-defined]
+            supabase_client = supabase.create_client(  # type: ignore[attr-defined]  # pylint: disable=no-member,c-extension-no-member
                 settings.database_url,
-                settings.database_service_key.get_secret_value(),  # type: ignore[attr-defined]
+                settings.database_service_key.get_secret_value(),
             )
 
             # Run initialization

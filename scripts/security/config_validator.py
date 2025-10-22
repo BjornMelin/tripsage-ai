@@ -11,12 +11,8 @@ from pathlib import Path
 
 
 try:
-    from tripsage_core.config import (
-        Settings,
-        get_settings,  # type: ignore[reportAssignmentType]
-    )
+    from tripsage_core.config import get_settings  # type: ignore[reportAssignmentType]
 except ImportError:  # pragma: no cover - optional import in this script context
-    Settings = object  # type: ignore
 
     def get_settings():  # type: ignore
         """Get settings."""
