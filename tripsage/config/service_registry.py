@@ -260,3 +260,74 @@ def register_service(name: str, adapter: ServiceAdapter) -> None:
 async def close_all_services() -> None:
     """Convenience function to close all services in the global registry."""
     await service_registry.close_all()
+
+
+# ----- Adapters for API service wiring -----
+class ExistingInstanceAdapter(ServiceAdapter):
+    """Adapter that returns a pre-constructed instance.
+
+    Useful for registering lifespan-managed singletons (e.g., CacheService,
+    GoogleMapsService) with the registry so other adapters can depend on them.
+    """
+
+    def __init__(self, service_name: str, instance: Any) -> None:
+        """Create adapter that returns an existing instance.
+
+        Args:
+            service_name: Logical service name for registry listings.
+            instance: Pre-constructed instance to expose.
+        """
+        super().__init__(service_name)
+        self._instance = instance
+
+    async def get_service_instance(self) -> Any:
+        """Return the pre-constructed instance (no-op factory)."""
+        return self._instance
+
+
+def register_instance(name: str, instance: Any) -> None:
+    """Register a pre-built instance under ``name`` using ExistingInstanceAdapter."""
+    adapter = ExistingInstanceAdapter(name, instance)
+    register_service(name, adapter)
+
+
+# Factory adapters for API-facing business services that compose other services
+class ActivityServiceAdapter(ServiceAdapter):
+    """Factory adapter that builds ActivityService from registry-managed deps."""
+
+    def __init__(self) -> None:
+        """Initialize adapter for ActivityService factory."""
+        super().__init__("activity")
+
+    async def get_service_instance(self) -> Any:
+        """Build ``ActivityService`` using registry-managed dependencies."""
+        # Late imports to avoid import cycles at module import time
+        from tripsage_core.services.business.activity_service import ActivityService
+
+        maps = await get_service("google_maps")
+        cache = await get_service("cache")
+        return ActivityService(google_maps_service=maps, cache_service=cache)
+
+
+class LocationServiceAdapter(ServiceAdapter):
+    """Factory adapter that builds LocationService from registry-managed deps."""
+
+    def __init__(self) -> None:
+        """Initialize adapter for LocationService factory."""
+        super().__init__("location")
+
+    async def get_service_instance(self) -> Any:
+        """Build ``LocationService`` using registry-managed dependencies."""
+        from tripsage_core.services.business.location_service import LocationService
+
+        maps = await get_service("google_maps")
+        return LocationService(google_maps_service=maps)
+
+
+def register_api_service_adapters() -> None:
+    """Register API-facing service adapters (Activity/Location).
+
+    Call this after registering the core instances (``cache``, ``google_maps``).
+    """
+    register_service("activity", ActivityServiceAdapter())
+    register_service("location", LocationServiceAdapter())

@@ -11,6 +11,7 @@ from fastapi import Depends, Request
 from tripsage.api.core.config import Settings, get_settings
 from tripsage.api.core.protocols import ApiKeyServiceProto, ChatServiceProto
 from tripsage.api.middlewares.authentication import Principal
+from tripsage.config.service_registry import get_service
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
 from tripsage_core.services.business.accommodation_service import (
     AccommodationService,
@@ -160,9 +161,9 @@ async def verify_service_access(
 
 
 # Cache service dependency
-async def get_cache_service_dep(request: Request) -> CacheService:
-    """Get cache service from app state (DI-managed)."""
-    return request.app.state.cache_service  # type: ignore[attr-defined]
+async def get_cache_service_dep(_request: Request) -> CacheService:
+    """Get cache service from global registry (lifespan-registered)."""
+    return await get_service("cache")
 
 
 async def get_websocket_manager_dep(request: Request):
@@ -176,24 +177,22 @@ async def get_websocket_broadcaster_dep(request: Request):
 
 
 # Google Maps service dependency (DI-managed in app lifespan)
-def get_maps_service_dep(request: Request) -> GoogleMapsService:
-    """Get DI-managed Google Maps service instance."""
-    return request.app.state.google_maps_service  # type: ignore[attr-defined]
+async def get_maps_service_dep(_request: Request) -> GoogleMapsService:
+    """Get DI-managed Google Maps service instance from registry."""
+    return await get_service("google_maps")
 
 
 # Activity service dependency constructed from DI-managed services
-def get_activity_service_dep(request: Request) -> ActivityService:
-    """Build ActivityService from DI-managed maps + cache services."""
-    maps: GoogleMapsService = get_maps_service_dep(request)
-    cache: CacheService = request.app.state.cache_service  # type: ignore[attr-defined]
-    return ActivityService(google_maps_service=maps, cache_service=cache)
+async def get_activity_service_dep(_request: Request) -> ActivityService:
+    """Resolve ActivityService via the global registry factory adapter."""
+    return await get_service("activity")
 
 
 # Unified search service dependency
-def get_unified_search_service_dep(request: Request) -> UnifiedSearchService:
+async def get_unified_search_service_dep(request: Request) -> UnifiedSearchService:
     """Build UnifiedSearchService from DI-managed collaborators."""
-    cache: CacheService = request.app.state.cache_service  # type: ignore[attr-defined]
-    activity = get_activity_service_dep(request)
+    cache: CacheService = await get_cache_service_dep(request)
+    activity = await get_activity_service_dep(request)
     return UnifiedSearchService(
         cache_service=cache,
         destination_service=None,
