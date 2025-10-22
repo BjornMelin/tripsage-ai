@@ -14,22 +14,16 @@ from .document_analyzer import (
     close_document_analyzer,
     get_document_analyzer,
 )
-from .google_maps_service import (
-    GoogleMapsService,
-    close_google_maps_service,
-    get_google_maps_service,
-)
+from .google_maps_service import GoogleMapsService
 from .playwright_service import (
     PlaywrightService,
     close_playwright_service,
     get_playwright_service,
 )
 from .time_service import TimeService, close_time_service, get_time_service
-from .weather_service import WeatherService, close_weather_service, get_weather_service
+from .weather_service import WeatherService
 from .webcrawl_service import (
     WebCrawlService,
-    close_webcrawl_service,
-    get_webcrawl_service,
 )
 
 
@@ -45,17 +39,11 @@ __all__ = [
     "close_calendar_service",
     "close_document_analyzer",
     # Service closers
-    "close_google_maps_service",
     "close_playwright_service",
     "close_time_service",
-    "close_weather_service",
-    "close_webcrawl_service",
     "get_calendar_service",
     "get_document_analyzer",
     # Global service getters
-    "get_google_maps_service",
     "get_playwright_service",
     "get_time_service",
-    "get_weather_service",
-    "get_webcrawl_service",
 ]
