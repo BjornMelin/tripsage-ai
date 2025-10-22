@@ -7,6 +7,8 @@ Library-first implementation built on ``upstash-redis`` async client:
 - TTL support through ``SET ex=...`` and ``EXPIRE``
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -48,14 +50,31 @@ class CacheService:
         """Check if the client is initialized and validated."""
         return self._is_connected and self._client is not None
 
+    def _require_client(self) -> UpstashRedis:
+        """Return the initialized Upstash client or raise a service error.
+
+        Returns:
+            UpstashRedis: Initialized Upstash client.
+
+        Raises:
+            CoreServiceError: If the client is not connected/initialized.
+        """
+        if self._client is None:
+            raise CoreServiceError(
+                message="Cache service not connected",
+                code="CACHE_NOT_CONNECTED",
+                service="CacheService",
+            )
+        return self._client
+
     async def connect(self) -> None:
         """Initialize the Upstash client from environment and validate with PING."""
         if self._is_connected:
             return
         try:
             # Prefer explicit settings if provided; otherwise use environment.
-            url = getattr(self.settings, "upstash_redis_rest_url", None)
-            token = getattr(self.settings, "upstash_redis_rest_token", None)
+            url: str | None = getattr(self.settings, "upstash_redis_rest_url", None)
+            token: str | None = getattr(self.settings, "upstash_redis_rest_token", None)
             if url and token:
                 self._client = UpstashRedis(url=url, token=token)
             else:
@@ -102,7 +121,8 @@ class CacheService:
         try:
             ttl_seconds = ttl if ttl is not None else 3600
             json_value = json.dumps(value, default=str)
-            result = await self._client.set(key, json_value, ex=ttl_seconds)
+            client = self._require_client()
+            result = await client.set(key, json_value, ex=ttl_seconds)
             return bool(result)
         except Exception as e:
             logger.exception("Failed to set JSON value for key %s", key)
@@ -125,7 +145,8 @@ class CacheService:
         """
         await self.ensure_connected()
         try:
-            value = await self._client.get(key)
+            client = self._require_client()
+            value = await client.get(key)
             if value is None:
                 return default
             return json.loads(value)
@@ -157,7 +178,8 @@ class CacheService:
         await self.ensure_connected()
         try:
             ttl_seconds = ttl if ttl is not None else 3600
-            return bool(await self._client.set(key, value, ex=ttl_seconds))
+            client = self._require_client()
+            return bool(await client.set(key, value, ex=ttl_seconds))
         except Exception as e:
             logger.exception("Failed to set key %s", key)
             raise CoreServiceError(
@@ -178,7 +200,11 @@ class CacheService:
         """
         await self.ensure_connected()
         try:
-            return await self._client.get(key)
+            client = self._require_client()
+            value = await client.get(key)
+            if isinstance(value, (bytes, bytearray)):
+                return value.decode("utf-8")
+            return value
         except Exception as e:
             logger.exception("Failed to get key %s", key)
             raise CoreServiceError(
@@ -201,7 +227,8 @@ class CacheService:
         """
         await self.ensure_connected()
         try:
-            return int(await self._client.delete(*keys))
+            client = self._require_client()
+            return int(await client.delete(*keys))
         except Exception as e:
             logger.exception("Failed to delete keys %s", keys)
             raise CoreServiceError(
@@ -222,7 +249,8 @@ class CacheService:
         """
         await self.ensure_connected()
         try:
-            return int(await self._client.exists(*keys))
+            client = self._require_client()
+            return int(await client.exists(*keys))
         except Exception as e:
             logger.exception("Failed to check existence of keys %s", keys)
             raise CoreServiceError(
@@ -244,7 +272,8 @@ class CacheService:
         """
         await self.ensure_connected()
         try:
-            return bool(await self._client.expire(key, seconds))
+            client = self._require_client()
+            return bool(await client.expire(key, seconds))
         except Exception as e:
             logger.exception("Failed to set expiration for key %s", key)
             raise CoreServiceError(
@@ -265,7 +294,8 @@ class CacheService:
         """
         await self.ensure_connected()
         try:
-            return int(await self._client.ttl(key))
+            client = self._require_client()
+            return int(await client.ttl(key))
         except Exception as e:
             logger.exception("Failed to get TTL for key %s", key)
             raise CoreServiceError(
@@ -288,7 +318,8 @@ class CacheService:
         """
         await self.ensure_connected()
         try:
-            return int(await self._client.incr(key))
+            client = self._require_client()
+            return int(await client.incr(key))
         except Exception as e:
             logger.exception("Failed to increment key %s", key)
             raise CoreServiceError(
@@ -309,7 +340,8 @@ class CacheService:
         """
         await self.ensure_connected()
         try:
-            return int(await self._client.decr(key))
+            client = self._require_client()
+            return int(await client.decr(key))
         except Exception as e:
             logger.exception("Failed to decrement key %s", key)
             raise CoreServiceError(
@@ -334,7 +366,8 @@ class CacheService:
         try:
             if not keys:
                 return []
-            values = await self._client.mget(*keys)
+            client = self._require_client()
+            values = await client.mget(*keys)
             return [v if v is not None else None for v in values]
         except Exception as e:
             logger.exception("Failed to mget keys")
@@ -356,7 +389,8 @@ class CacheService:
         """
         await self.ensure_connected()
         try:
-            return bool(await self._client.mset(mapping))
+            client = self._require_client()
+            return bool(await client.mset(mapping))
         except Exception as e:
             logger.exception("Failed to mset")
             raise CoreServiceError(
@@ -379,8 +413,15 @@ class CacheService:
         """
         await self.ensure_connected()
         try:
-            keys = await self._client.keys(pattern)
-            return [str(k) for k in keys]
+            client = self._require_client()
+            keys = await client.keys(pattern)
+            result: list[str] = []
+            for k in keys:
+                if isinstance(k, (bytes, bytearray)):
+                    result.append(k.decode("utf-8"))
+                else:
+                    result.append(str(k))
+            return result
         except Exception:
             logger.exception("Failed to get keys with pattern %s", pattern)
             return []
@@ -411,7 +452,8 @@ class CacheService:
         """
         await self.ensure_connected()
         try:
-            result = await self._client.flushdb()
+            client = self._require_client()
+            result = await client.flushdb()
             return bool(result)
         except Exception:
             logger.exception("Failed to flush database")
@@ -427,7 +469,8 @@ class CacheService:
         """
         try:
             await self.ensure_connected()
-            return bool(await self._client.ping())
+            client = self._require_client()
+            return bool(await client.ping())
         except Exception:
             logger.exception("Cache health check failed")
             return False
