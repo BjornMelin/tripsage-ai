@@ -1,8 +1,10 @@
-"""Cache service for TripSage Core using DragonflyDB.
+"""Cache service for TripSage Core using Upstash Redis (HTTP, asyncio).
 
-This module provides high-performance caching capabilities
-using DragonflyDB (Redis-compatible) with 25x performance improvement
-over traditional Redis implementations.
+Library-first implementation built on ``upstash-redis`` async client:
+- Connectionless HTTP client ideal for Vercel serverless environments
+- Simple, typed wrappers around core Redis commands we actually use
+- JSON helpers via stdlib ``json`` only (KISS; no bespoke codecs)
+- TTL support through ``SET ex=...`` and ``EXPIRE``
 """
 
 import json
@@ -10,7 +12,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-import redis.asyncio as redis
+from upstash_redis.asyncio import Redis as UpstashRedis
 
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
@@ -20,15 +22,15 @@ logger = logging.getLogger(__name__)
 
 
 class CacheService:
-    """DragonflyDB cache service for high-performance caching operations.
+    """Upstash Redis (HTTP) cache service for core caching operations.
 
-    This service provides:
-    - Redis-compatible interface with DragonflyDB backend
-    - JSON value serialization/deserialization
-    - TTL-based expiration management
-    - Batch operations support
-    - Performance monitoring
-    - Connection pooling
+    Notes:
+    - Uses ``UpstashRedis.from_env()``; expects ``UPSTASH_REDIS_REST_URL`` and
+      ``UPSTASH_REDIS_REST_TOKEN`` to be present in the environment (Vercel
+      integration sets these automatically).
+    - Upstash is connectionless; ``connect()`` simply validates credentials via
+      a ``PING`` and stores the client for reuse across calls.
+    - API surface is intentionally minimal and aligned to used features.
     """
 
     def __init__(self, settings: Settings | None = None):
@@ -38,81 +40,35 @@ class CacheService:
             settings: Application settings or None to use defaults
         """
         self.settings = settings or get_settings()
-        self._client: redis.Redis | None = None
-        self._connection_pool: redis.ConnectionPool | None = None
+        self._client: UpstashRedis | None = None
         self._is_connected = False
 
     @property
     def is_connected(self) -> bool:
-        """Check if the service is connected to DragonflyDB."""
+        """Check if the client is initialized and validated."""
         return self._is_connected and self._client is not None
 
     async def connect(self) -> None:
-        """Establish connection to DragonflyDB server."""
+        """Initialize the Upstash client from environment and validate with PING."""
         if self._is_connected:
             return
-
-        # Skip connection if redis_url is None (testing/disabled mode)
-        if self.settings.redis_url is None:
-            logger.info(
-                "Redis URL not configured, cache service will operate in disabled mode"
-            )
-            self._is_connected = False
-            return
-
         try:
-            # Get DragonflyDB URL from settings
-            redis_url = self.settings.redis_url
-
-            # Add password to URL if configured
-            if self.settings.redis_password:
-                # Parse URL and add password
-                from urllib.parse import urlparse, urlunparse
-
-                parsed = urlparse(redis_url)
-                # Reconstruct with password
-                if parsed.username:
-                    netloc = (
-                        f"{parsed.username}:{self.settings.redis_password}@"
-                        f"{parsed.hostname}"
-                    )
-                else:
-                    netloc = f":{self.settings.redis_password}@{parsed.hostname}"
-                if parsed.port:
-                    netloc += f":{parsed.port}"
-                redis_url = urlunparse(
-                    (
-                        parsed.scheme,
-                        netloc,
-                        parsed.path,
-                        parsed.params,
-                        parsed.query,
-                        parsed.fragment,
-                    )
-                )
-
-            safe_url = redis_url.replace(self.settings.redis_password or "", "***")
-            logger.info("Connecting to DragonflyDB at %s", safe_url)
-
-            # Create connection pool for better performance
-            self._connection_pool = redis.ConnectionPool.from_url(
-                redis_url,
-                max_connections=self.settings.redis_max_connections,
-                retry_on_timeout=True,
-                decode_responses=False,  # We handle JSON encoding/decoding manually
-            )
-
-            self._client = redis.Redis(connection_pool=self._connection_pool)
-
-            # Test the connection
+            # Prefer explicit settings if provided; otherwise use environment.
+            url = getattr(self.settings, "upstash_redis_rest_url", None)
+            token = getattr(self.settings, "upstash_redis_rest_token", None)
+            if url and token:
+                self._client = UpstashRedis(url=url, token=token)
+            else:
+                # Instantiate client using env provided by Vercel/Upstash integration.
+                self._client = UpstashRedis.from_env()
+            # Validate credentials/connectivity.
             await self._client.ping()
             self._is_connected = True
-
-            logger.info("Successfully connected to DragonflyDB cache service")
-
+            logger.info("Connected to Upstash Redis (HTTP)")
         except Exception as e:
-            logger.exception("Failed to connect to DragonflyDB")
+            self._client = None
             self._is_connected = False
+            logger.exception("Failed to initialize Upstash Redis client")
             raise CoreServiceError(
                 message=f"Failed to connect to cache service: {e!s}",
                 code="CACHE_CONNECTION_FAILED",
@@ -121,25 +77,9 @@ class CacheService:
             ) from e
 
     async def disconnect(self) -> None:
-        """Close connection to DragonflyDB server."""
-        if self._client:
-            try:
-                await self._client.close()
-            except CoreServiceError as e:
-                logger.warning("Error closing DragonflyDB connection: %s", e)
-            finally:
-                self._client = None
-                self._is_connected = False
-
-        if self._connection_pool:
-            try:
-                await self._connection_pool.disconnect()
-            except CoreServiceError as e:
-                logger.warning("Error closing DragonflyDB connection pool: %s", e)
-            finally:
-                self._connection_pool = None
-
-        logger.info("Disconnected from DragonflyDB cache service")
+        """No-op for Upstash. Clears local client reference."""
+        self._client = None
+        self._is_connected = False
 
     async def ensure_connected(self) -> None:
         """Ensure the service is connected, reconnect if necessary."""
@@ -147,7 +87,6 @@ class CacheService:
             await self.connect()
 
     # JSON operations
-
     async def set_json(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Store a JSON-serializable value in cache.
 
@@ -160,19 +99,11 @@ class CacheService:
             True if successful, False otherwise
         """
         await self.ensure_connected()
-
-        # Return success in disabled mode
-        if not self.is_connected:
-            return True
-
         try:
-            # Use default TTL if not specified (flat config)
-            if ttl is None:
-                ttl = 3600  # Default medium TTL (1 hour)
-
+            ttl_seconds = ttl if ttl is not None else 3600
             json_value = json.dumps(value, default=str)
-            result = await self._client.set(key, json_value, ex=ttl)
-            return result is True
+            result = await self._client.set(key, json_value, ex=ttl_seconds)
+            return bool(result)
         except Exception as e:
             logger.exception("Failed to set JSON value for key %s", key)
             raise CoreServiceError(
@@ -193,11 +124,6 @@ class CacheService:
             Deserialized value or default
         """
         await self.ensure_connected()
-
-        # Return default in disabled mode
-        if not self.is_connected:
-            return default
-
         try:
             value = await self._client.get(key)
             if value is None:
@@ -229,16 +155,9 @@ class CacheService:
             True if successful, False otherwise
         """
         await self.ensure_connected()
-
-        # Return success in disabled mode
-        if not self.is_connected:
-            return True
-
         try:
-            if ttl is None:
-                ttl = 3600  # Default medium TTL (1 hour)
-
-            return await self._client.setex(key, ttl, value)
+            ttl_seconds = ttl if ttl is not None else 3600
+            return bool(await self._client.set(key, value, ex=ttl_seconds))
         except Exception as e:
             logger.exception("Failed to set key %s", key)
             raise CoreServiceError(
@@ -258,14 +177,8 @@ class CacheService:
             The value as string or None if not found
         """
         await self.ensure_connected()
-
-        # Return None in disabled mode
-        if not self.is_connected:
-            return None
-
         try:
-            value = await self._client.get(key)
-            return value.decode("utf-8") if value else None
+            return await self._client.get(key)
         except Exception as e:
             logger.exception("Failed to get key %s", key)
             raise CoreServiceError(
@@ -287,13 +200,8 @@ class CacheService:
             Number of keys deleted
         """
         await self.ensure_connected()
-
-        # Return length of keys in disabled mode (simulate successful deletion)
-        if not self.is_connected:
-            return len(keys)
-
         try:
-            return await self._client.delete(*keys)
+            return int(await self._client.delete(*keys))
         except Exception as e:
             logger.exception("Failed to delete keys %s", keys)
             raise CoreServiceError(
@@ -313,13 +221,8 @@ class CacheService:
             Number of existing keys
         """
         await self.ensure_connected()
-
-        # Return 0 in disabled mode (no keys exist)
-        if not self.is_connected:
-            return 0
-
         try:
-            return await self._client.exists(*keys)
+            return int(await self._client.exists(*keys))
         except Exception as e:
             logger.exception("Failed to check existence of keys %s", keys)
             raise CoreServiceError(
@@ -340,13 +243,8 @@ class CacheService:
             True if successful, False otherwise
         """
         await self.ensure_connected()
-
-        # Return True in disabled mode (simulate success)
-        if not self.is_connected:
-            return True
-
         try:
-            return await self._client.expire(key, seconds)
+            return bool(await self._client.expire(key, seconds))
         except Exception as e:
             logger.exception("Failed to set expiration for key %s", key)
             raise CoreServiceError(
@@ -366,16 +264,16 @@ class CacheService:
             TTL in seconds, -1 if no expiration, -2 if key doesn't exist
         """
         await self.ensure_connected()
-
-        # Return -2 in disabled mode (key doesn't exist)
-        if not self.is_connected:
-            return -2
-
         try:
-            return await self._client.ttl(key)
-        except Exception:
+            return int(await self._client.ttl(key))
+        except Exception as e:
             logger.exception("Failed to get TTL for key %s", key)
-            return -2
+            raise CoreServiceError(
+                message=f"Failed to get TTL for cache key '{key}'",
+                code="CACHE_TTL_FAILED",
+                service="CacheService",
+                details={"key": key, "error": str(e)},
+            ) from e
 
     # Atomic operations
 
@@ -389,16 +287,16 @@ class CacheService:
             The new counter value or None if failed
         """
         await self.ensure_connected()
-
-        # Return None in disabled mode (operation not available)
-        if not self.is_connected:
-            return None
-
         try:
-            return await self._client.incr(key)
-        except Exception:
+            return int(await self._client.incr(key))
+        except Exception as e:
             logger.exception("Failed to increment key %s", key)
-            return None
+            raise CoreServiceError(
+                message=f"Failed to increment cache key '{key}'",
+                code="CACHE_INCR_FAILED",
+                service="CacheService",
+                details={"key": key, "error": str(e)},
+            ) from e
 
     async def decr(self, key: str) -> int | None:
         """Decrement a counter in cache.
@@ -410,35 +308,18 @@ class CacheService:
             The new counter value or None if failed
         """
         await self.ensure_connected()
-
-        # Return None in disabled mode (operation not available)
-        if not self.is_connected:
-            return None
-
         try:
-            return await self._client.decr(key)
-        except Exception:
+            return int(await self._client.decr(key))
+        except Exception as e:
             logger.exception("Failed to decrement key %s", key)
-            return None
-
-    # Batch operations
-
-    def pipeline(self):
-        """Create a pipeline for batch operations.
-
-        Returns:
-            Redis pipeline object for batching commands
-
-        Raises:
-            CoreServiceError: If not connected
-        """
-        if not self._client:
             raise CoreServiceError(
-                message="Cache service not connected",
-                code="CACHE_NOT_CONNECTED",
+                message=f"Failed to decrement cache key '{key}'",
+                code="CACHE_DECR_FAILED",
                 service="CacheService",
-            )
-        return self._client.pipeline()
+                details={"key": key, "error": str(e)},
+            ) from e
+
+    # Batch operations (no explicit pipelines in Upstash Python)
 
     async def mget(self, keys: list[str]) -> list[str | None]:
         """Get multiple values at once.
@@ -450,14 +331,11 @@ class CacheService:
             List of values (None for missing keys)
         """
         await self.ensure_connected()
-
-        # Return list of None values in disabled mode
-        if not self.is_connected:
-            return [None] * len(keys)
-
         try:
-            values = await self._client.mget(keys)
-            return [v.decode("utf-8") if v else None for v in values]
+            if not keys:
+                return []
+            values = await self._client.mget(*keys)
+            return [v if v is not None else None for v in values]
         except Exception as e:
             logger.exception("Failed to mget keys")
             raise CoreServiceError(
@@ -477,13 +355,8 @@ class CacheService:
             True if successful
         """
         await self.ensure_connected()
-
-        # Return True in disabled mode (simulate success)
-        if not self.is_connected:
-            return True
-
         try:
-            return await self._client.mset(mapping)
+            return bool(await self._client.mset(mapping))
         except Exception as e:
             logger.exception("Failed to mset")
             raise CoreServiceError(
@@ -505,14 +378,9 @@ class CacheService:
             List of matching keys
         """
         await self.ensure_connected()
-
-        # Return empty list in disabled mode
-        if not self.is_connected:
-            return []
-
         try:
             keys = await self._client.keys(pattern)
-            return [k.decode("utf-8") for k in keys]
+            return [str(k) for k in keys]
         except Exception:
             logger.exception("Failed to get keys with pattern %s", pattern)
             return []
@@ -542,37 +410,12 @@ class CacheService:
             True if successful, False otherwise
         """
         await self.ensure_connected()
-
         try:
             result = await self._client.flushdb()
-            return result is True
+            return bool(result)
         except Exception:
             logger.exception("Failed to flush database")
             return False
-
-    async def info(self, section: str | None = None) -> dict[str, Any]:
-        """Get DragonflyDB server information.
-
-        Args:
-            section: Specific info section to retrieve
-
-        Returns:
-            Server information dictionary
-        """
-        await self.ensure_connected()
-
-        try:
-            info_str = await self._client.info(section)
-            # Parse the info string into a dictionary
-            info_dict = {}
-            for line in info_str.split("\n"):
-                if ":" in line and not line.startswith("#"):
-                    key, value = line.split(":", 1)
-                    info_dict[key] = value
-            return info_dict
-        except Exception:
-            logger.exception("Failed to get server info")
-            return {}
 
     # Health check
 
@@ -584,12 +427,7 @@ class CacheService:
         """
         try:
             await self.ensure_connected()
-
-            # Return False in disabled mode (not healthy)
-            if not self.is_connected:
-                return False
-
-            return await self._client.ping()
+            return bool(await self._client.ping())
         except Exception:
             logger.exception("Cache health check failed")
             return False

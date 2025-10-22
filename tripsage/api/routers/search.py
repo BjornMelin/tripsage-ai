@@ -6,6 +6,8 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from tripsage.api.core.dependencies import (
+    CacheDep,
+    UnifiedSearchServiceDep,
     get_cache_service_dep,
     get_current_principal,
     get_db,
@@ -16,7 +18,6 @@ from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import UnifiedSearchResponse
 from tripsage_core.services.business.search_history_service import SearchHistoryService
 from tripsage_core.services.business.unified_search_service import (
-    UnifiedSearchService,
     UnifiedSearchServiceError,
 )
 
@@ -29,6 +30,8 @@ logger = logging.getLogger(__name__)
 async def unified_search(
     request_: Request,
     request: UnifiedSearchRequest,
+    search_service: UnifiedSearchServiceDep,
+    cache_service: CacheDep,
     use_cache: bool = Query(True, description="Whether to use cached results"),
     principal=Depends(get_current_principal),
 ):
@@ -42,9 +45,7 @@ async def unified_search(
     logger.info("Unified search request: %s (user: %s)", request.query, user_id)
 
     try:
-        # Build DI-managed services
-        cache_service = await get_cache_service_dep(request_)
-        search_service = UnifiedSearchService(cache_service=cache_service)
+        # DI-managed services provided via dependencies
 
         # Generate cache key based on request parameters
         cache_key = f"search:unified:{hash(str(request.model_dump()))}"
@@ -135,6 +136,7 @@ async def _track_search_analytics(
 @router.get("/suggest", response_model=list[str])
 async def search_suggestions(
     request: Request,
+    search_service: UnifiedSearchServiceDep,
     query: str = Query(
         ..., min_length=1, max_length=100, description="Partial search query"
     ),
@@ -149,8 +151,6 @@ async def search_suggestions(
     logger.info("Search suggestions request: '%s' (limit: %s)", query, limit)
 
     try:
-        cache_service = await get_cache_service_dep(request)
-        search_service = UnifiedSearchService(cache_service=cache_service)
         suggestions = await search_service.get_search_suggestions(query, limit)
 
         logger.info("Generated %s suggestions for query: '%s'", len(suggestions), query)
@@ -274,6 +274,8 @@ async def delete_saved_search(
 async def bulk_search(
     request: Request,
     requests: list[UnifiedSearchRequest],
+    search_service: UnifiedSearchServiceDep,
+    cache_service: CacheDep,
     use_cache: bool = Query(True, description="Whether to use cached results"),
     principal=Depends(get_current_principal),
 ):
@@ -293,8 +295,7 @@ async def bulk_search(
 
     try:
         import asyncio
-        cache_service = await get_cache_service_dep(request)
-        search_service = UnifiedSearchService(cache_service=cache_service)
+        # cache_service not required explicitly here; UnifiedSearchService is DI
 
         async def process_single_search(request: UnifiedSearchRequest):
             """Process a single search with caching."""

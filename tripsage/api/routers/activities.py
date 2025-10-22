@@ -6,7 +6,11 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
+from tripsage.api.core.dependencies import (
+    ActivityServiceDep,
+    get_principal_id,
+    require_principal,
+)
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.requests.activities import (
     ActivitySearchRequest,
@@ -18,7 +22,6 @@ from tripsage.api.schemas.responses.activities import (
     SavedActivityResponse,
 )
 from tripsage_core.services.business.activity_service import (
-    ActivityService,
     ActivityServiceError,
 )
 from tripsage_core.services.business.audit_logging_service import (
@@ -27,8 +30,6 @@ from tripsage_core.services.business.audit_logging_service import (
     audit_security_event,
 )
 from tripsage_core.services.business.trip_service import TripService, get_trip_service
-from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
-from tripsage_core.services.infrastructure.cache_service import get_cache_service
 from tripsage_core.services.infrastructure.database_service import (
     DatabaseService,
     get_database_service,
@@ -40,7 +41,10 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/search", response_model=ActivitySearchResponse)
-async def search_activities(request: ActivitySearchRequest):
+async def search_activities(
+    request: ActivitySearchRequest,
+    activity_service: ActivityServiceDep,
+):
     """Search for activities based on provided criteria using Google Maps Places API.
 
     This endpoint searches for activities, attractions, and points of interest
@@ -49,11 +53,6 @@ async def search_activities(request: ActivitySearchRequest):
     logger.info("Activity search request: %s", request.destination)
 
     try:
-        cache_service = await get_cache_service()
-        maps_service = GoogleMapsService()
-        activity_service = ActivityService(
-            google_maps_service=maps_service, cache_service=cache_service
-        )
         result = await activity_service.search_activities(request)
 
         logger.info(
@@ -76,7 +75,9 @@ async def search_activities(request: ActivitySearchRequest):
 
 
 @router.get("/{activity_id}", response_model=ActivityResponse)
-async def get_activity_details(activity_id: str):
+async def get_activity_details(
+    activity_id: str, activity_service: ActivityServiceDep
+):
     """Get detailed information about a specific activity.
 
     Retrieves comprehensive details for an activity including enhanced
@@ -85,11 +86,6 @@ async def get_activity_details(activity_id: str):
     logger.info("Get activity details request: %s", activity_id)
 
     try:
-        cache_service = await get_cache_service()
-        maps_service = GoogleMapsService()
-        activity_service = ActivityService(
-            google_maps_service=maps_service, cache_service=cache_service
-        )
         activity = await activity_service.get_activity_details(activity_id)
 
         if not activity:

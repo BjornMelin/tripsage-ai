@@ -98,7 +98,7 @@ class DatabaseInitializer:
                 await self.db_service.execute_sql(
                     f"CREATE EXTENSION IF NOT EXISTS {extension}"
                 )
-                logger.info(f"✓ Installed extension: {extension}")
+                logger.info("Installed extension: %s", extension)
 
             # Verify extensions
             result = await self.db_service.execute_sql("""
@@ -110,7 +110,7 @@ class DatabaseInitializer:
             missing = set(extensions) - set(installed_extensions)
 
             if missing:
-                logger.warning(f"Some extensions may not be available: {missing}")
+                logger.warning("Some extensions may not be available: %s", missing)
 
             return True
 
@@ -136,9 +136,9 @@ class DatabaseInitializer:
                 if file_path.exists():
                     schema_sql = file_path.read_text()
                     await self.db_service.execute_sql(schema_sql)
-                    logger.info(f"✓ Applied schema: {schema_file}")
+                    logger.info("Applied schema: %s", schema_file)
                 else:
-                    logger.warning(f"Schema file not found: {schema_file}")
+                    logger.warning("Schema file not found: %s", schema_file)
 
             return True
 
@@ -165,7 +165,7 @@ class DatabaseInitializer:
                 await self.db_service.execute_sql(
                     f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"
                 )
-                logger.info(f"✓ Enabled RLS on: {table}")
+                logger.info("Enabled RLS on: %s", table)
 
             # Apply RLS policies from policy files
             policy_files = [
@@ -178,7 +178,7 @@ class DatabaseInitializer:
                 if file_path.exists():
                     policy_sql = file_path.read_text()
                     await self.db_service.execute_sql(policy_sql)
-                    logger.info(f"✓ Applied policies: {policy_file}")
+                    logger.info("Applied policies: %s", policy_file)
 
             return True
 
@@ -206,7 +206,7 @@ class DatabaseInitializer:
             for index_sql in indexes:
                 await self.db_service.execute_sql(index_sql)
                 index_name = index_sql.split(" ON ")[1].split("(")[0]
-                logger.info(f"✓ Created index: {index_name}")
+                logger.info("Created index: %s", index_name)
 
             return True
 
@@ -238,7 +238,7 @@ class DatabaseInitializer:
                 ON CONFLICT (name) DO NOTHING
             """)
 
-            logger.info("✓ Seeded initial data")
+            logger.info("Seeded initial data")
             return True
 
         except Exception:
@@ -263,10 +263,10 @@ class DatabaseInitializer:
                 result = await self.db_service.execute_sql(
                     "SELECT EXISTS (SELECT 1 FROM information_schema.tables "
                     "WHERE table_name = $1)",
-                    (table,),
+                    {"table": table},
                 )
                 if not result[0]["exists"]:
-                    logger.error(f"Required table missing: {table}")
+                    logger.error("Required table missing: %s", table)
                     return False
 
             # Check that RLS is enabled
@@ -282,7 +282,7 @@ class DatabaseInitializer:
             if rls_check[0]["rls_count"] < 3:
                 logger.warning("Some tables may not have RLS enabled")
 
-            logger.info("✓ Initialization validation passed")
+            logger.info("Initialization validation passed")
             return True
 
         except Exception:
@@ -324,13 +324,13 @@ def main(with_seed_data: bool, env: str, dry_run: bool) -> None:
             if not settings.database_url:
                 raise click.ClickException("DATABASE_URL environment variable required")
 
-            if not settings.supabase_url or not settings.supabase_service_role_key:
+            if not settings.database_url or not settings.database_service_key:
                 raise click.ClickException(
                     "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required"
                 )
 
             if dry_run:
-                click.echo("🔍 DRY RUN MODE - No changes will be made")
+                click.echo("DRY RUN MODE - No changes will be made")
                 click.echo("Database initialization would:")
                 click.echo("  1. Install required PostgreSQL extensions")
                 click.echo("  2. Create base tables from schema files")
@@ -344,7 +344,7 @@ def main(with_seed_data: bool, env: str, dry_run: bool) -> None:
             # Initialize services
             db_service = DatabaseService(settings)
             supabase_client = create_client(
-                settings.supabase_url, settings.supabase_service_role_key
+                settings.database_url, settings.database_service_key.get_secret_value()
             )
 
             # Run initialization
@@ -354,9 +354,9 @@ def main(with_seed_data: bool, env: str, dry_run: bool) -> None:
             )
 
             if success:
-                click.echo("✅ Database initialization completed successfully!")
+                click.echo("Database initialization completed successfully")
                 if env == "development" and with_seed_data:
-                    click.echo("💡 Development data seeded - ready for testing")
+                    click.echo("Development data seeded - ready for testing")
             else:
                 raise click.ClickException("Database initialization failed")
 
@@ -369,4 +369,4 @@ def main(with_seed_data: bool, env: str, dry_run: bool) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(with_seed_data=False, env="development", dry_run=False)
