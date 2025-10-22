@@ -174,7 +174,7 @@ GET /api/v1/flights/search
 - **User-specific salt** for additional security
 - **Key validation** before storage
 - **Usage monitoring** and rotation support
-- **Rate limiting** centralized in `RateLimitMiddleware` with endpoint-aware policies (memory and key management endpoints receive specific limits)
+- **Rate limiting** standardized on SlowAPI with distributed counters via Redis/Valkey (when configured). Per-route limits can be applied where needed.
 
 ## Schema Strategy
 

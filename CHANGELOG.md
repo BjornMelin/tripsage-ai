@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Core Models]: Deleted the entire `tripsage/models/` directory, removing all legacy data models associated with the deprecated MCP architecture to eliminate duplication.
 - [Core Services]: Deleted legacy MCP components, including the generic `AccommodationMCPClient` and the `ErrorHandlingService`, to complete the migration to a direct SDK architecture.
 - [Observability]: Removed the custom performance metrics system in `tripsage/monitoring` and standardized all metrics collection on the OpenTelemetry implementation to use industry best practices.
-- [API]: Centralized all rate-limiting logic into the `RateLimitMiddleware`, removing duplicated implementations from the security and key monitoring services.
+- [API]: Standardized inbound rate limiting on SlowAPI (with `limits` async storage) and outbound throttling on `aiolimiter`. Removed the legacy custom `RateLimitMiddleware` and associated modules/tests.
 - [Architecture]: Removed the custom `ServiceRegistry` module under `tripsage/config` and its dependent tests to simplify dependency management.
 - [Exceptions]: Removed `CoreMCPError`; MCP-related failures now surface as `CoreExternalAPIError` with appropriate context.
 
