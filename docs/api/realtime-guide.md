@@ -11,7 +11,7 @@ This guide covers TripSage's real-time collaboration API patterns, implementatio
 5. [Live Presence and Cursors](#live-presence-and-cursors)
 6. [Performance Optimization](#performance-optimization)
 7. [Testing Strategies](#testing-strategies)
-8. [Advanced Features](#advanced-features)
+8. [Feature Reference](#feature-reference)
 
 ## Overview
 
@@ -1581,7 +1581,7 @@ test.describe('Real-time Collaboration', () => {
 });
 ```
 
-## Advanced Features
+## Feature Reference
 
 ### 1. Collaborative Commenting System
 
@@ -1784,7 +1784,7 @@ This Real-time Collaboration API Guide provides everything needed to implement s
 - ✅ **Live Features**: Real-time cursors, field selection, and presence indicators
 - ✅ **Performance Optimization**: Message batching, connection pooling, and efficient updates
 - ✅ **Testing Strategies**: Unit and integration testing approaches
-- ✅ **Advanced Features**: Commenting, version history, and rollback capabilities
+- ✅ **Feature Reference**: Commenting, version history, and rollback capabilities
 
 ### Implementation Highlights
 

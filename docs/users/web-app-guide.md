@@ -252,7 +252,7 @@ Access via search bar or Ctrl/Cmd + K:
 - Group expense categorization
 - Batch document uploads
 
-### Advanced Filters
+### Filters
 
 **Complex Queries:**
 

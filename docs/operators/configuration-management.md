@@ -345,7 +345,7 @@ database_url = settings.database_url
 api_title = settings.api_title
 ```
 
-## Advanced Usage
+## Usage Notes
 
 ### Custom Configuration Sources
 

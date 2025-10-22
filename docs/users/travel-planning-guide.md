@@ -110,7 +110,7 @@ Budget: [AMOUNT]. Starting from [ORIGIN]."
 - Balanced pace with rest days
 - Mix of transport modes (flights, trains, buses)
 
-## 🛠️ Advanced Planning Features
+## 🛠️ Planning Features
 
 ### Budget Optimization
 

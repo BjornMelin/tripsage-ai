@@ -1947,7 +1947,7 @@ The TripSage WebSocket API provides real-time collaboration features including:
 
 - **Real-time Trip Collaboration**: Multi-user editing with presence indicators and conflict resolution
 - **Optimistic Updates**: Immediate UI responsiveness with server synchronization and rollback capabilities
-- **Advanced Client Integration**: React and Vue.js hooks with TypeScript support
+- **Client Integration**: React and Vue.js hooks with TypeScript support
 - **Performance Monitoring**: Built-in metrics and connection health monitoring
 - **Robust Error Handling**: Error codes and automatic reconnection strategies
 - **Testing Support**: Unit and integration testing patterns for reliable WebSocket implementations
@@ -1969,7 +1969,7 @@ The API supports both chat-based AI interactions and collaborative trip planning
 
 - **[Quick Examples](usage-examples.md)** - WebSocket connection examples
 - **[Complete Integration Guide](examples.md)** - Full WebSocket implementation patterns
-- **[Real-time Guide](realtime-guide.md)** - Advanced real-time features
+- **[Real-time Guide](realtime-guide.md)** - Real-time features
 
 ### Troubleshooting
 
