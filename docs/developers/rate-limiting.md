@@ -3,6 +3,7 @@
 This document describes the production-ready rate limiting implementation for the TripSage API, featuring per-API-key configurable limits, service-specific thresholds, and comprehensive monitoring integration.
 
 > **Related Documentation:**
+>
 > - [Dashboard API](../api/dashboard-api.md) - Rate limit monitoring and analytics endpoints
 > - [Performance Optimization](performance-optimization.md) - System performance tuning
 > - [Architecture Guide](architecture-guide.md) - Overall system architecture
@@ -11,6 +12,7 @@ This document describes the production-ready rate limiting implementation for th
 ## Features
 
 ### Core Capabilities
+
 - **Per-API-key configurable limits** with persistent storage in DragonflyDB
 - **Service-specific rate limits** (OpenAI, Weather API, Flight Search, etc.)
 - **Hybrid algorithms**: Sliding window + Token bucket for optimal performance
@@ -19,6 +21,7 @@ This document describes the production-ready rate limiting implementation for th
 - **Real-time monitoring** integration with API key usage tracking
 
 ### Advanced Features
+
 - **Endpoint-specific overrides** for fine-grained control
 - **Request cost multipliers** based on endpoint complexity
 - **Tiered rate limits** (user, agent, premium tiers)
@@ -30,7 +33,7 @@ This document describes the production-ready rate limiting implementation for th
 
 ```mermaid
 graph TB
-    A[Request] --> B[EnhancedRateLimitMiddleware]
+    A[Request] --> B[RateLimitMiddleware]
     B --> C{Rate Limit Check}
     C --> D[DragonflyRateLimiter]
     D --> E{Cache Available?}
@@ -75,7 +78,7 @@ RATE_LIMIT_ENABLE_MONITORING=true
 
 ```python
 from tripsage.api.middlewares.rate_limiting import (
-    EnhancedRateLimitMiddleware,
+    RateLimitMiddleware,
     RateLimitConfig,
     create_middleware_from_settings
 )
@@ -142,6 +145,7 @@ if rate_limit_middleware:
 ### Response Headers
 
 #### Successful Requests
+
 ```http
 X-RateLimit-Limit: 60
 X-RateLimit-Remaining: 45
@@ -153,6 +157,7 @@ X-RateLimit-Cost: 2
 ```
 
 #### Rate Limited Requests (429)
+
 ```http
 HTTP/1.1 429 Too Many Requests
 Retry-After: 30
@@ -176,12 +181,14 @@ X-RateLimit-Policy: 60;w=minute
 ## Algorithms
 
 ### Sliding Window
+
 - **Purpose**: Sustained rate limiting over time periods
 - **Windows**: minute, hour, day
 - **Implementation**: DragonflyDB sorted sets with automatic cleanup
 - **Precision**: Tracks exact request timestamps
 
 ### Token Bucket
+
 - **Purpose**: Burst control and traffic shaping
 - **Refill Rate**: Configurable tokens per second
 - **Burst Size**: Maximum tokens available at once
@@ -192,17 +199,20 @@ X-RateLimit-Policy: 60;w=minute
 The rate limiting middleware integrates with the API Key Monitoring Service to provide:
 
 ### Real-time Tracking
+
 - Rate limit violations with detailed context
 - Request patterns and usage analytics
 - Service-specific usage metrics
 - Endpoint performance data
 
 ### Alerting
+
 - Anomaly detection for unusual usage patterns
 - Rate limit violation notifications
 - Performance degradation alerts
 
 ### Dashboard Data
+
 - Usage trends and patterns
 - Top API key consumers
 - Service health monitoring
@@ -213,16 +223,19 @@ See the [Dashboard API documentation](../api/dashboard-api.md) for complete moni
 ## Performance Considerations
 
 ### DragonflyDB Optimizations
+
 - **Atomic Operations**: Uses pipelines for consistent state updates
 - **Key Expiration**: Automatic cleanup of old rate limit data
 - **Memory Efficiency**: Optimized data structures for high-throughput scenarios
 
 ### Graceful Degradation
+
 - **Fallback Strategy**: In-memory rate limiting when cache unavailable
 - **Error Handling**: Continues processing requests if monitoring fails
 - **Circuit Breaker**: Automatic fallback to prevent cascade failures
 
 ### Scalability
+
 - **Distributed**: Works across multiple application instances
 - **Configurable**: Adjust limits without application restart
 - **Monitoring**: Real-time visibility into rate limiting effectiveness
@@ -251,6 +264,7 @@ async def test_rate_limits():
 ### Load Testing
 
 The implementation is designed to handle:
+
 - **10,000+ requests/second** per application instance
 - **1M+ API keys** with individual rate limits
 - **Sub-millisecond latency** for rate limit checks
@@ -259,16 +273,19 @@ The implementation is designed to handle:
 ## Security Considerations
 
 ### IP-based Rate Limiting
+
 - Unauthenticated requests are limited by IP address
 - Supports X-Real-IP and X-Forwarded-For headers
 - Protects against distributed attacks
 
 ### API Key Protection
+
 - Per-key rate limits prevent abuse
 - Service-specific limits protect downstream APIs
 - Monitoring detects unusual patterns
 
 ### Data Privacy
+
 - No sensitive data stored in rate limit keys
 - Configurable data retention periods
 - Secure key generation and storage
@@ -308,6 +325,7 @@ curl -X POST -H "Authorization: Bearer <admin_key>" \
 ## Future Enhancements
 
 ### Planned Features
+
 - **Geographic rate limiting** based on request origin
 - **Dynamic rate limit adjustment** based on system load
 - **Machine learning-based anomaly detection**
@@ -315,6 +333,7 @@ curl -X POST -H "Authorization: Bearer <admin_key>" \
 - **Integration with external rate limiting services**
 
 ### Configuration Improvements
+
 - **Hot configuration reloading** without restart
 - **Database-backed configuration** for enterprise deployments
 - **A/B testing framework** for rate limit experiments

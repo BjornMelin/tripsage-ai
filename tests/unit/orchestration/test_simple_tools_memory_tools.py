@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from tripsage.orchestration.tools.simple_tools import add_memory, search_memories
+from tripsage.orchestration.tools.tools import add_memory, search_memories
 
 
 @pytest.mark.asyncio
@@ -23,7 +23,7 @@ async def test_add_memory_invokes_facade(monkeypatch: pytest.MonkeyPatch) -> Non
         return {"status": "success", "memories_extracted": 1}
 
     monkeypatch.setattr(
-        "tripsage.orchestration.tools.simple_tools._add_conversation_memory",
+        "tripsage.orchestration.tools.tools._add_conversation_memory",
         _fake_add,
     )
     out = await add_memory.ainvoke("Note A", None)
@@ -40,7 +40,7 @@ async def test_search_memories_invokes_facade(monkeypatch: pytest.MonkeyPatch) -
         return [{"id": "m1"}]
 
     monkeypatch.setattr(
-        "tripsage.orchestration.tools.simple_tools._search_user_memories",
+        "tripsage.orchestration.tools.tools._search_user_memories",
         _fake_search,
     )
     out = await search_memories.ainvoke("Paris", None)

@@ -8,10 +8,7 @@ from typing import Any
 from langchain_core.tools import Tool
 from pydantic import BaseModel, Field
 
-from tripsage_core.services.simple_mcp_service import (
-    AirbnbMCPService,
-    default_airbnb_mcp_service,
-)
+from tripsage_core.services.airbnb_mcp import AirbnbMCP, default_airbnb_mcp
 
 
 logger = logging.getLogger(__name__)
@@ -33,9 +30,9 @@ class AirbnbMCPBridge:
     all existing error handling, caching, and monitoring capabilities from MCPManager.
     """
 
-    def __init__(self, mcp_service: AirbnbMCPService | None = None):
+    def __init__(self, mcp_service: AirbnbMCP | None = None):
         """Initialize the bridge with an MCP service instance."""
-        self.mcp_service = mcp_service or default_airbnb_mcp_service
+        self.mcp_service = mcp_service or default_airbnb_mcp
         self._tool_cache: dict[str, Tool] = {}
         self._tool_metadata: dict[str, AirbnbToolWrapper] = {}
         self._initialized = False

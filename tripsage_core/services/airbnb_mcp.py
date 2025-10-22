@@ -1,8 +1,6 @@
-"""Simplified MCP Service for direct tool integration.
+"""Airbnb MCP Service for direct tool integration.
 
-This module provides the production-grade MCP facade used by orchestration nodes
-and HTTP surfaces. Legacy adapters, compatibility shims, and mock behaviour have
-been removed in favour of a single, explicit implementation.
+This module provides the Airbnb MCP facade for orchestration nodes and HTTP surfaces.
 """
 
 import logging
@@ -19,11 +17,11 @@ logger = logging.getLogger(__name__)
 SUPPORTED_METHODS: Final[tuple[str, ...]] = ("search_listings", "get_listing_details")
 
 
-class SimpleMCPService:
+class AirbnbMCP:
     """Concrete MCP facade that currently proxies Airbnb operations."""
 
     def __init__(self) -> None:
-        """Initialize the SimpleMCPService."""
+        """Initialize the Airbnb MCP facade."""
         self._airbnb_client: AirbnbMCPClient | None = None
         self._airbnb_enabled: bool | None = None
 
@@ -197,6 +195,7 @@ class SimpleMCPService:
         return search_params.model_dump(exclude_none=True)
 
 
-default_mcp_service = SimpleMCPService()
+# Default service instance for DI wiring.
+default_airbnb_mcp = AirbnbMCP()
 
-__all__ = ["SimpleMCPService", "default_mcp_service"]
+__all__ = ["AirbnbMCP", "default_airbnb_mcp"]

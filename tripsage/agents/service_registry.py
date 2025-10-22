@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeVar, cast
 
 from tripsage_core.config import get_settings
+from tripsage_core.services.airbnb_mcp import AirbnbMCP
 from tripsage_core.services.business.accommodation_service import AccommodationService
 from tripsage_core.services.business.api_key_service import ApiKeyService
 from tripsage_core.services.business.chat_service import ChatService
@@ -39,12 +40,11 @@ from tripsage_core.services.infrastructure import (
     WebSocketBroadcaster,
     WebSocketManager,
 )
-from tripsage_core.services.simple_mcp_service import SimpleMCPService
 
 
 if TYPE_CHECKING:
     from tripsage.orchestration.checkpoint_manager import SupabaseCheckpointManager
-    from tripsage.orchestration.mcp_bridge import LangGraphMCPBridge
+    from tripsage.orchestration.mcp_bridge import AirbnbMCPBridge
     from tripsage.orchestration.memory_bridge import SessionMemoryBridge
 
 
@@ -91,8 +91,8 @@ class ServiceRegistry:
     # Orchestration lifecycle services
     checkpoint_manager: SupabaseCheckpointManager | None = None
     memory_bridge: SessionMemoryBridge | None = None
-    mcp_bridge: LangGraphMCPBridge | None = None
-    mcp_service: SimpleMCPService | None = None
+    mcp_bridge: AirbnbMCPBridge | None = None
+    mcp_service: AirbnbMCP | None = None
 
     @classmethod
     async def create_default(cls, db_service: DatabaseService) -> ServiceRegistry:
@@ -152,13 +152,13 @@ class ServiceRegistry:
         from tripsage.orchestration.checkpoint_manager import (
             SupabaseCheckpointManager,
         )
-        from tripsage.orchestration.mcp_bridge import LangGraphMCPBridge
+        from tripsage.orchestration.mcp_bridge import AirbnbMCPBridge
         from tripsage.orchestration.memory_bridge import SessionMemoryBridge
 
         checkpoint_manager = SupabaseCheckpointManager()
         memory_bridge = SessionMemoryBridge(memory_service=memory_service)
-        mcp_service = SimpleMCPService()
-        mcp_bridge = LangGraphMCPBridge(mcp_service=mcp_service)
+        mcp_service = AirbnbMCP()
+        mcp_bridge = AirbnbMCPBridge(mcp_service=mcp_service)
         await mcp_bridge.initialize()
 
         return cls(
@@ -236,7 +236,7 @@ class ServiceRegistry:
             raise ValueError("Memory bridge is not configured on the service registry.")
         return self.memory_bridge
 
-    async def get_mcp_bridge(self) -> LangGraphMCPBridge:
+    async def get_mcp_bridge(self) -> AirbnbMCPBridge:
         """Return the LangGraph MCP bridge, ensuring it is initialized."""
         if self.mcp_bridge is None:
             raise ValueError("MCP bridge is not configured on the service registry.")
