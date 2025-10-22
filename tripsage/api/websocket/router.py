@@ -5,14 +5,12 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from datetime import UTC, datetime
-from functools import lru_cache
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, WebSocket
 
 from tripsage.agents.chat import ChatAgent
-from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.api.core.config import get_settings
 from tripsage.api.core.dependencies import get_db, get_websocket_manager_dep
 from tripsage.api.websocket.context import ConnectionContext
@@ -42,18 +40,6 @@ DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
 ManagerDep = Annotated[WebSocketManager, Depends(get_websocket_manager_dep)]
 
 
-@lru_cache(maxsize=1)
-def get_service_registry() -> ServiceRegistry:
-    """Return a singleton service registry instance."""
-    return ServiceRegistry()
-
-
-@lru_cache(maxsize=1)
-def get_chat_agent() -> ChatAgent:
-    """Return the singleton chat agent."""
-    return ChatAgent(service_registry=get_service_registry())
-
-
 async def get_core_chat_service(db: DatabaseDep) -> CoreChatService:
     """Construct the core chat service from the database dependency."""
     return CoreChatService(database_service=db)
@@ -65,6 +51,14 @@ def _manager_from_websocket(websocket: WebSocket) -> WebSocketManager:
     if manager is None:
         raise WebSocketError("WebSocket manager not initialised")
     return manager
+
+
+def _chat_agent_from_websocket(websocket: WebSocket) -> ChatAgent:
+    """Retrieve the ChatAgent from FastAPI application state."""
+    agent = getattr(websocket.app.state, "chat_agent", None)
+    if agent is None:
+        raise WebSocketError("Chat agent not initialised")
+    return agent
 
 
 async def _send_error_and_close(
@@ -151,7 +145,7 @@ async def chat_websocket(
         websocket,
         enforce_session_id=session_id,
         chat_service=chat_service,
-        chat_agent=get_chat_agent(),
+        chat_agent=_chat_agent_from_websocket(websocket),
     )
 
 

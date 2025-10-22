@@ -9,38 +9,41 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
 
-from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.graph import TripSageOrchestrator
 from tripsage.orchestration.state import create_initial_state
+from tests.unit.orchestration.test_utils import create_mock_services
 
 
 class TestTripSageOrchestrator:
     """Test the main orchestration graph."""
 
     @pytest.fixture
-    def mock_service_registry(self):
-        """Create a mock service registry."""
-        registry = Mock(spec=ServiceRegistry)
-        registry.get_memory_bridge.return_value = MagicMock()
+    def mock_services(self):
+        """Create a mock application service container."""
         checkpoint_service = MagicMock()
         checkpoint_service.get_async_checkpointer = AsyncMock(
             return_value=MemorySaver()
         )
-        registry.get_checkpoint_service.return_value = checkpoint_service
-        return registry
+        services = create_mock_services(
+            {
+                "checkpoint_service": checkpoint_service,
+                "memory_bridge": MagicMock(),
+            }
+        )
+        return services
 
     @pytest.fixture
-    def orchestrator(self, mock_service_registry):
+    def orchestrator(self, mock_services):
         """Create an orchestrator instance for testing."""
         with (
             patch("tripsage.orchestration.graph.get_handoff_coordinator"),
             patch("tripsage.orchestration.graph.get_default_config"),
         ):
-            return TripSageOrchestrator(service_registry=mock_service_registry)
+            return TripSageOrchestrator(services=mock_services)
 
-    def test_orchestrator_initialization(self, orchestrator, mock_service_registry):
+    def test_orchestrator_initialization(self, orchestrator, mock_services):
         """Test that the orchestrator initializes correctly."""
-        assert orchestrator.service_registry == mock_service_registry
+        assert orchestrator.services == mock_services
         assert orchestrator.graph is not None
         assert orchestrator.compiled_graph is None
         assert not orchestrator._initialized

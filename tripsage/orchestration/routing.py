@@ -13,6 +13,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.config import get_settings
@@ -37,9 +38,9 @@ class RouterNode(BaseAgentNode):
     - Extract and update user preferences and travel context
     """
 
-    def __init__(self, service_registry):
+    def __init__(self, services: AppServiceContainer):
         """Initialize the router node with enhanced classification capabilities."""
-        super().__init__("router", service_registry)
+        super().__init__("router", services)
 
         # Initialize classifier model with improved configuration
         settings = get_settings()

@@ -13,6 +13,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools.tools import get_tools_for_agent
@@ -55,7 +56,7 @@ class FlightAgentNode(BaseAgentNode):
     - Update conversation state with search results and booking progress
     """
 
-    def __init__(self, service_registry):
+    def __init__(self, services: AppServiceContainer):
         """Initialize the flight agent node with tools and language model."""
         settings = get_settings()
         api_key_config = settings.openai_api_key
@@ -74,7 +75,7 @@ class FlightAgentNode(BaseAgentNode):
             self.llm, FlightSearchParameters, logger=logger
         )
 
-        super().__init__("flight_agent", service_registry)
+        super().__init__("flight_agent", services)
 
     def _initialize_tools(self) -> None:
         """Initialize flight-specific tools using simple tool catalog."""

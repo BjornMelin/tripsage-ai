@@ -11,6 +11,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools.tools import get_tools_for_agent
@@ -54,7 +55,7 @@ class AccommodationAgentNode(BaseAgentNode):
     and accommodation information using service-based integration.
     """
 
-    def __init__(self, service_registry):
+    def __init__(self, services: AppServiceContainer):
         """Initialize the accommodation agent node."""
         settings = get_settings()
         # type: ignore # pylint: disable=no-member
@@ -67,7 +68,7 @@ class AccommodationAgentNode(BaseAgentNode):
         self._parameter_extractor = StructuredExtractor(
             self.llm, AccommodationSearchParameters, logger=logger
         )
-        super().__init__("accommodation_agent", service_registry)
+        super().__init__("accommodation_agent", services)
         self.accommodation_service: AccommodationService = self.get_service(
             "accommodation_service"
         )

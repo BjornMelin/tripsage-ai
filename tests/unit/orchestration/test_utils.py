@@ -6,6 +6,8 @@ Provides common mocking utilities for LangChain and OpenAI API calls.
 from typing import Any
 from unittest.mock import AsyncMock, Mock
 
+from tripsage.app_state import AppServiceContainer
+
 
 class MockLLMResponse:
     """Mock response for LLM calls."""
@@ -195,19 +197,10 @@ def patch_openai_in_module(module_path: str):
     return patch(f"{module_path}.ChatOpenAI", MockChatOpenAI)
 
 
-def create_mock_service_registry(services: dict[str, Any] | None = None) -> Mock:
-    """Create a mock service registry with common services.
+def create_mock_services(overrides: dict[str, Any] | None = None) -> AppServiceContainer:
+    """Create an AppServiceContainer populated with mock services."""
 
-    Args:
-        services: Optional dictionary of service name to mock service
-
-    Returns:
-        Mock service registry
-    """
-    registry = Mock()
-
-    # Default services
-    default_services = {
+    default_services: dict[str, Any] = {
         "flight_service": Mock(),
         "accommodation_service": Mock(),
         "memory_service": Mock(),
@@ -216,7 +209,24 @@ def create_mock_service_registry(services: dict[str, Any] | None = None) -> Mock
         "destination_service": Mock(),
         "itinerary_service": Mock(),
         "budget_service": Mock(),
+        "checkpoint_service": Mock(),
+        "memory_bridge": Mock(),
+        "mcp_service": Mock(),
+        "mcp_bridge": Mock(),
+        "cache_service": Mock(),
+        "websocket_manager": Mock(),
+        "websocket_broadcaster": Mock(),
+        "database_service": Mock(),
     }
+
+    if overrides:
+        default_services.update(overrides)
+
+    container = AppServiceContainer()
+    for name, service in default_services.items():
+        setattr(container, name, service)
+
+    return container
 
     # Override with provided services
     if services:
