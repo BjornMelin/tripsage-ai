@@ -8,15 +8,9 @@ checks common pitfalls, and emits a concise report with proper exit codes.
 import logging
 import sys
 from pathlib import Path
+from typing import Any, ClassVar
 
-
-try:
-    from tripsage_core.config import get_settings  # type: ignore[reportAssignmentType]
-except ImportError:  # pragma: no cover - optional import in this script context
-
-    def get_settings():  # type: ignore
-        """Get settings."""
-        raise RuntimeError("tripsage_core.config is not available")
+from tripsage_core.config import get_settings
 
 
 # Configure logging
@@ -39,9 +33,6 @@ def validate_configuration() -> bool:
         return True
     except (RuntimeError, ImportError, ValueError):
         return False
-
-
-from typing import Any
 
 
 def validate_secrets_security(settings: Any) -> dict[str, bool]:
@@ -83,10 +74,60 @@ def validate_secrets_security(settings: Any) -> dict[str, bool]:
 class SecurityValidator:
     """Security validation for TripSage configuration."""
 
+    # Sensitive field names that should not appear in logs
+    SENSITIVE_FIELDS: ClassVar[set[str]] = {
+        "secret_key",
+        "database_service_key",
+        "database_jwt_secret",
+        "openai_api_key",
+        "cors_origins",  # May contain sensitive origin URLs
+    }
+
     def __init__(self):
         """Initialize security configuration validator."""
         self.issues: list[str] = []
         self.warnings: list[str] = []
+
+    def _sanitize_issue_message(self, message: str) -> str:
+        """Sanitize issue messages to avoid logging sensitive information.
+
+        Args:
+            message: The original issue message.
+
+        Returns:
+            Sanitized message with sensitive field names redacted.
+        """
+        sanitized = message
+
+        # Replace specific sensitive field names with generic terms
+        secret_fields = {
+            "secret_key",
+            "database_service_key",
+            "database_jwt_secret",
+            "openai_api_key",
+        }
+        for field in self.SENSITIVE_FIELDS:
+            if field in sanitized and field in secret_fields:
+                sanitized = sanitized.replace(field, "a secret field")
+
+        # Handle CORS origins separately (they don't follow the same pattern)
+        if "CORS origin " in sanitized:
+            # Find the position after "CORS origin " and redact everything
+            # until the next space or end
+            cors_prefix = "CORS origin "
+            start_pos = sanitized.find(cors_prefix)
+            if start_pos != -1:
+                end_pos = sanitized.find(" ", start_pos + len(cors_prefix))
+                if end_pos == -1:
+                    # No space found, redact to end of string
+                    end_pos = len(sanitized)
+                sanitized = (
+                    sanitized[: start_pos + len(cors_prefix)]
+                    + "[REDACTED]"
+                    + sanitized[end_pos:]
+                )
+
+        return sanitized
 
     def validate_configuration_security(self) -> bool:
         """Run security validation.
@@ -248,8 +289,13 @@ class SecurityValidator:
         logger.info("  Debug mode: %s", settings.debug)
         logger.info("  Log level: %s", settings.log_level)
 
-        # Get overall security report
-        security_report = settings.get_security_report()
+        # Get overall security report (if method exists)
+        security_report = {}
+        if hasattr(settings, "get_security_report"):
+            try:
+                security_report = settings.get_security_report()
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning("Failed to get security report from settings: %s", e)
 
         if security_report.get("production_ready", False):
             logger.info("Production security validation passed")
@@ -260,13 +306,15 @@ class SecurityValidator:
         if self.issues:
             logger.exception("%s security issue(s) found:", len(self.issues))
             for issue in self.issues:
-                logger.exception(" - %s", issue)
+                sanitized_issue = self._sanitize_issue_message(issue)
+                logger.exception(" - %s", sanitized_issue)
 
         # Report warnings
         if self.warnings:
             logger.warning("%s security warning(s):", len(self.warnings))
             for warning in self.warnings:
-                logger.warning("  - %s", warning)
+                sanitized_warning = self._sanitize_issue_message(warning)
+                logger.warning("  - %s", sanitized_warning)
 
         if not self.issues and not self.warnings:
             logger.info("No security issues or warnings found")
@@ -276,7 +324,19 @@ def generate_secure_config_template() -> str:
     """Generate a secure configuration template."""
     try:
         settings = get_settings()
-        template = settings.export_env_template(include_secrets=False)
+
+        # Check if export_env_template method exists
+        if hasattr(settings, "export_env_template"):
+            try:
+                template = settings.export_env_template(include_secrets=False)  # type: ignore[reportAttributeAccessIssue]
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(
+                    "Failed to export environment template from settings: %s", e
+                )
+                template = "# Unable to generate template from settings\n"
+        else:
+            logger.warning("Settings object does not support template export")
+            template = "# Template export not supported by current settings\n"
 
         # Add security comments
         return f"""# TripSage Secure Configuration Template
