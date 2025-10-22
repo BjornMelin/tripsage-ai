@@ -19,7 +19,7 @@ from tripsage.orchestration.routing import RouterNode
 from tripsage.orchestration.state import create_initial_state
 
 
-class TestEnhancedRouterNode:
+class TestRouterNode:
     """Test cases for the enhanced RouterNode with fallback classification."""
 
     @pytest.fixture
@@ -40,7 +40,7 @@ class TestEnhancedRouterNode:
         )
 
     @pytest.mark.asyncio
-    async def test_enhanced_classification_success(self, router_node, sample_state):
+    async def test_classification_with_fallback_success(self, router_node, sample_state):
         """Test successful enhanced classification."""
         with patch.object(
             router_node, "_classify_intent", new_callable=AsyncMock
@@ -181,7 +181,7 @@ class TestEnhancedRouterNode:
         assert context["recent_agents"] == ["router", "flight_agent"]
 
 
-class TestEnhancedHandoffCoordinator:
+class TestHandoffCoordinator:
     """Test cases for the enhanced AgentHandoffCoordinator."""
 
     @pytest.fixture

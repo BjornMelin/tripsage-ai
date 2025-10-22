@@ -2,7 +2,7 @@
  * Shared test utilities for Edge Functions
  * 
  * Provides mocking capabilities, test data factories, and assertion helpers
- * for comprehensive Edge Function testing.
+ * for Edge Function testing.
  * 
  * @module test-utils
  */
@@ -587,7 +587,7 @@ export class ResponseAssertions {
 }
 
 /**
- * Edge Function test runner with comprehensive setup
+ * Edge Function test runner with setup
  */
 export class EdgeFunctionTester {
   private mockSupabase: MockSupabase;
@@ -603,7 +603,7 @@ export class EdgeFunctionTester {
   }
 
   /**
-   * Sets up comprehensive test environment
+   * Sets up test environment
    */
   async setup() {
     this.testEnv.setup();

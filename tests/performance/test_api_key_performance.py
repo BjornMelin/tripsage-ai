@@ -1,7 +1,7 @@
 # pylint: disable=too-many-lines
 """Performance and load testing for API key service operations.
 
-This module provides comprehensive performance testing including:
+This module provides performance testing including:
 - Benchmark tests for API key operations using pytest-benchmark
 - Load testing for concurrent validation requests
 - Database performance under stress
@@ -1481,7 +1481,7 @@ class TestApiKeyPerformance:
     def test_comprehensive_performance_regression_suite(
         self, api_key_service, mock_cache, mock_db, benchmark
     ):
-        """Comprehensive performance regression test suite.
+        """Performance regression test suite.
 
         This test establishes and validates performance baselines for:
         - Core operation latencies (encryption, validation, creation)
@@ -1517,7 +1517,7 @@ class TestApiKeyPerformance:
 
         # pylint: disable=too-many-statements
         async def run_comprehensive_performance_tests():
-            """Run comprehensive performance tests for regression detection."""
+            """Run performance tests for regression detection."""
             baselines = establish_performance_baselines()
             results = {
                 "encryption_performance": {},
@@ -1743,7 +1743,7 @@ class TestApiKeyPerformance:
 
             return results
 
-        # Benchmark comprehensive performance tests
+        # Benchmark performance tests
         results = benchmark(lambda: asyncio.run(run_comprehensive_performance_tests()))
 
         # Regression assertions
@@ -1763,7 +1763,7 @@ class TestApiKeyPerformance:
             "Cache performance regression"
         )
 
-        print("\nComprehensive Performance Regression Results:")
+        print("\nPerformance Regression Results:")
         print(
             f"  Encryption Max Time: "
             f"{results['encryption_performance']['max_time_ms']:.2f}ms"

@@ -104,7 +104,7 @@ export function MessageList({
     }
   }, [messages, messages.length, isStreaming, userScrolledUp]);
 
-  // Advanced suggestion categories with enhanced UX
+  // Suggestion categories with enhanced UX
   const suggestionCategories = useMemo(
     () => [
       {
@@ -325,7 +325,7 @@ export function MessageList({
           ))}
         </motion.div>
 
-        {/* Advanced suggestion interface */}
+        {/* Suggestion interface */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}

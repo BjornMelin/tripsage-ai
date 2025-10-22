@@ -1,7 +1,7 @@
 """Unified Trip model for TripSage.
 
 This module provides the single, modern Trip model used across the entire application.
-It uses UUID as the primary key and includes all enhanced features like visibility,
+It uses UUID as the primary key and includes the full feature set including visibility,
 tags, preferences, and detailed budget breakdown.
 """
 
@@ -31,8 +31,8 @@ class BudgetBreakdown(TripSageModel):
     miscellaneous: float = Field(default=0.0, ge=0, description="Miscellaneous budget")
 
 
-class EnhancedBudget(TripSageModel):
-    """Enhanced budget structure with breakdown."""
+class Budget(TripSageModel):
+    """Trip budget structure with category breakdown."""
 
     total: float = Field(..., ge=0, description="Total budget amount")
     currency: str = Field(default="USD", description="Currency code")
@@ -90,9 +90,7 @@ class Trip(TripSageModel):
     destination: str = Field(..., description="Primary destination of the trip")
 
     # Budget Information
-    budget_breakdown: EnhancedBudget = Field(
-        ..., description="Enhanced budget with breakdown"
-    )
+    budget_breakdown: Budget = Field(..., description="Budget with category details")
 
     # Trip Details
     travelers: int = Field(default=1, ge=1, description="Number of travelers")
@@ -101,7 +99,7 @@ class Trip(TripSageModel):
     )
     trip_type: TripType = Field(default=TripType.LEISURE, description="Type of trip")
 
-    # Enhanced Features
+    # Additional Features
     visibility: TripVisibility = Field(
         default=TripVisibility.PRIVATE,
         description="Trip visibility (private/shared/public)",
@@ -262,7 +260,7 @@ class Trip(TripSageModel):
 # Export the models
 __all__ = [
     "BudgetBreakdown",
-    "EnhancedBudget",
+    "Budget",
     "Trip",
     "TripPreferences",
 ]

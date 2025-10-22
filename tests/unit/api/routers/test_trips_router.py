@@ -1,4 +1,4 @@
-"""Enhanced comprehensive tests for trips router with collaboration features.
+"""Comprehensive tests for trips router with collaboration features.
 
 This module provides complete test coverage for the trips router implementation,
 including collaboration features, permission-based access control, multi-user

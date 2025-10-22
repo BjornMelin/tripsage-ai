@@ -31,7 +31,7 @@ This API is designed to serve multiple consumer types with adapted responses:
 ### AI Agent Consumers (LangGraph-based Agents)
 - **Rich context data** - Technical details for decision making
 - **Tool integration metadata** - Information for agent tool calling
-- **Enhanced rate limits** - Higher throughput for automated workflows
+- **Higher rate limits** - Higher throughput for automated workflows
 - **Raw data access** - Unfiltered data for AI processing
 
 ## Core Capabilities
@@ -52,7 +52,7 @@ This API is designed to serve multiple consumer types with adapted responses:
 ### Authentication & Security
 * **Dual Authentication** - JWT tokens for users, API keys for agents
 * **BYOK (Bring Your Own Key)** - Secure user-provided API key management
-* **Advanced Rate Limiting** - Consumer-aware limits with enhanced principal tracking
+* **Rate Limiting** - Consumer-aware limits with enhanced principal tracking
 * **Data Protection** - AES-256 encryption for sensitive data
 
 ## Authentication Methods
@@ -129,7 +129,7 @@ POST /api/v1/keys
 ## Performance Features
 
 * **Multi-tier Caching** - DragonflyDB with intelligent TTL (25x improvement)
-* **Consumer-aware Rate Limiting** - Enhanced limits for agents vs. frontend
+* **Consumer-aware Rate Limiting** - Higher limits for agents vs. frontend
 * **Connection Pooling** - Optimized database and external API connections
 * **Query Optimization** - Indexed searches and prepared statements
 
@@ -140,7 +140,7 @@ Consumer-aware rate limiting with different limits:
 * **Frontend Users**: 100 requests/minute, 1000 requests/hour
 * **AI Agents**: 500 requests/minute, 5000 requests/hour
 * **Authenticated Users**: 5x multiplier on base limits
-* **BYOK Users**: Enhanced limits when using own API keys
+* **BYOK Users**: Higher limits when using own API keys
 
 ## Error Handling
 

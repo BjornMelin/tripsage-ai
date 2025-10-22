@@ -12,7 +12,7 @@
  * - Performance under concurrent loads
  * - Database consistency across function calls
  * 
- * Target: Comprehensive integration coverage
+ * Target: integration coverage
  */
 
 import {

@@ -142,11 +142,11 @@ class TestTripSageOrchestrator:
         registry.auth_service = Mock()
         registry.user_service = Mock()
         registry.get_memory_bridge.return_value = MagicMock()
-        checkpoint_manager = Mock()
-        checkpoint_manager.get_async_checkpointer = AsyncMock(
+        checkpoint_service = Mock()
+        checkpoint_service.get_async_checkpointer = AsyncMock(
             return_value=MemorySaver()
         )
-        registry.get_checkpoint_manager.return_value = checkpoint_manager
+        registry.get_checkpoint_service.return_value = checkpoint_service
         return registry
 
     @pytest.fixture

@@ -1,4 +1,4 @@
-"""Comprehensive API key encryption security tests.
+"""API key encryption security tests.
 
 Tests envelope encryption, PBKDF2HMAC security, key derivation,
 and cryptographic attack resistance.

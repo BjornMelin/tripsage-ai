@@ -175,22 +175,22 @@ class BaseDeploymentStrategy(ABC):
             )
 
 
-class SimpleDeploymentStrategy(BaseDeploymentStrategy):
-    """Simple deployment strategy for direct deployments.
+class DirectDeploymentStrategy(BaseDeploymentStrategy):
+    """Direct deployment strategy for straightforward releases.
 
     This strategy deploys directly to the target environment without
-    complex orchestration. It's ideal for development and simple production
-    environments where downtime is acceptable.
+    complex orchestration. It's ideal for development and lightweight production
+    environments where brief downtime is acceptable.
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
-        """Initialize the simple deployment strategy.
+        """Initialize the direct deployment strategy.
 
         Args:
             config: Optional configuration dictionary.
         """
-        super().__init__("simple", config)
-        logger.info("Initialized simple deployment strategy")
+        super().__init__("direct", config)
+        logger.info("Initialized direct deployment strategy")
 
     async def deploy(
         self,
@@ -199,12 +199,12 @@ class SimpleDeploymentStrategy(BaseDeploymentStrategy):
         environment: str,
         config: dict[str, Any],
     ) -> DeploymentMetrics:
-        """Execute simple deployment."""
-        logger.info("Starting simple deployment %s to %s", deployment_id, environment)
+        """Execute direct deployment."""
+        logger.info("Starting direct deployment %s to %s", deployment_id, environment)
 
         metrics = DeploymentMetrics(
             deployment_id=deployment_id,
-            strategy="simple",
+            strategy="direct",
             phase=DeploymentPhase.PREPARING,
         )
 
@@ -233,19 +233,19 @@ class SimpleDeploymentStrategy(BaseDeploymentStrategy):
                 metrics.traffic_percentage = 100.0
                 metrics.phase = DeploymentPhase.COMPLETED
                 logger.info(
-                    "Simple deployment %s completed successfully", deployment_id
+                    "Direct deployment %s completed successfully", deployment_id
                 )
             else:
                 metrics.phase = DeploymentPhase.FAILED
                 logger.exception(
-                    "Simple deployment %s failed health check", deployment_id
+                    "Direct deployment %s failed health check", deployment_id
                 )
 
             metrics.end_time = time.time()
             return metrics
 
         except Exception:
-            logger.exception("Simple deployment %s failed", deployment_id)
+            logger.exception("Direct deployment %s failed", deployment_id)
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
             return metrics
@@ -261,7 +261,7 @@ class SimpleDeploymentStrategy(BaseDeploymentStrategy):
 
         metrics = DeploymentMetrics(
             deployment_id=f"{deployment_id}_rollback",
-            strategy="simple_rollback",
+            strategy="direct_rollback",
             phase=DeploymentPhase.ROLLING_BACK,
         )
 
@@ -841,7 +841,7 @@ def get_deployment_strategy(
     logger.debug("Creating deployment strategy: %s", target_strategy)
 
     if target_strategy == DeploymentStrategy.SIMPLE:
-        return SimpleDeploymentStrategy(config)
+        return DirectDeploymentStrategy(config)
     elif target_strategy == DeploymentStrategy.BLUE_GREEN:
         return BlueGreenDeploymentStrategy(config)
     elif target_strategy == DeploymentStrategy.CANARY:
@@ -852,4 +852,4 @@ def get_deployment_strategy(
         logger.warning(
             "Unknown deployment strategy %s, falling back to simple", target_strategy
         )
-        return SimpleDeploymentStrategy(config)
+        return DirectDeploymentStrategy(config)

@@ -236,7 +236,7 @@ export function MessageItem({
 
             {isAssistant && (
               <div className="text-sm text-muted-foreground">
-                <p>Advanced AI assistant powered by cutting-edge language models</p>
+                <p>TripSage AI assistant powered by cutting-edge language models</p>
                 <div className="flex items-center gap-1 mt-2">
                   <Brain className="w-3 h-3" />
                   <span className="text-xs">Context-aware • Travel expertise</span>

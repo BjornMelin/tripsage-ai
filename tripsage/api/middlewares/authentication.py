@@ -1,7 +1,7 @@
-"""Enhanced authentication middleware for FastAPI.
+"""Authentication middleware for FastAPI.
 
 This module provides robust authentication middleware supporting both JWT tokens
-(for frontend) and API Keys (for agents), populating request.state.principal
+(for frontend) and API keys (for agents), populating request.state.principal
 with authenticated entity information. Includes comprehensive audit logging
 for all authentication events.
 """
@@ -61,13 +61,13 @@ class Principal(BaseModel):
 
 
 class AuthenticationMiddleware(BaseHTTPMiddleware):
-    """Enhanced middleware for JWT and API Key authentication.
+    """Authentication middleware for JWT and API key flows.
 
     This middleware handles:
     - JWT token authentication for frontend users
     - API key authentication for agents and services
     - Populating request.state.principal with authenticated entity info
-    - Proper error responses for different authentication failures
+    - Proper error responses tailored to each authentication failure
     """
 
     def __init__(
@@ -131,7 +131,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # Ensure services are initialized
         await self._ensure_services()
 
-        # Enhanced security: validate request headers
+        # Perform header validation for security
         if not self._validate_request_headers(request):
             # Log suspicious header activity
             await audit_security_event(
@@ -162,7 +162,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         if authorization_header and authorization_header.startswith("Bearer "):
             try:
                 token = authorization_header.replace("Bearer ", "")
-                # Enhanced security: validate token format
+                # Validate token format to enforce security
                 if not self._validate_token_format(token):
                     raise AuthenticationError("Invalid token format")
                 principal = await self._authenticate_jwt(token)
@@ -213,7 +213,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             api_key_header = request.headers.get("X-API-Key")
             if api_key_header:
                 try:
-                    # Enhanced security: validate API key format
+                    # Validate API key format before use
                     if not self._validate_api_key_format(api_key_header):
                         raise KeyValidationError("Invalid API key format")
                     principal = await self._authenticate_api_key(api_key_header)
@@ -318,7 +318,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # Set authenticated principal in request state
         request.state.principal = principal
 
-        # Enhanced logging with security context
+        # Enrich logging with security context
         logger.info(
             "Request authenticated",
             extra={

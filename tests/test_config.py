@@ -18,7 +18,7 @@ from tripsage_core.config import Settings
 
 
 def setup_test_environment() -> None:
-    """Set up comprehensive test environment variables."""
+    """Set up test environment variables."""
     test_env = {
         # Core application settings
         "ENVIRONMENT": "testing",

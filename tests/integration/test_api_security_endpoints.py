@@ -1,6 +1,6 @@
 """API security integration tests for all fixed endpoints with real HTTP requests.
 
-This module provides comprehensive integration testing for API security features,
+This module provides integration testing for API security features,
 testing real HTTP requests against secured endpoints. These tests verify:
 
 - All fixed endpoints with real HTTP requests
@@ -847,7 +847,7 @@ class TestAPISecurityEndpoints:
                 # Should reject malicious files or not be implemented
                 assert response.status_code in [400, 403, 404, 413, 415, 422]
 
-    # ===== COMPREHENSIVE ENDPOINT COVERAGE TESTS =====
+    # ===== ENDPOINT COVERAGE TESTS =====
 
     def test_all_authenticated_endpoints_require_auth(self, client: TestClient):
         """Test that all authenticated endpoints properly require authentication."""

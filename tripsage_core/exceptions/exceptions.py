@@ -466,53 +466,6 @@ class CoreExternalAPIError(CoreTripSageError):
         )
 
 
-# Specialized MCP and Agent Errors
-class CoreMCPError(CoreServiceError):
-    """Raised when an MCP server operation fails."""
-
-    def __init__(
-        self,
-        message: str = "MCP server operation failed",
-        code: str = "MCP_ERROR",
-        details: dict[str, Any] | ErrorDetails | None = None,
-        server: str | None = None,
-        tool: str | None = None,
-        params: dict[str, Any] | None = None,
-    ):
-        """Initialize the CoreMCPError.
-
-        Args:
-            message: Human-readable error message
-            code: Machine-readable error code
-            details: Additional error details
-            server: Name of the MCP server that failed
-            tool: Name of the tool that failed
-            params: Tool parameters that were used
-        """
-        # Add MCP-specific details
-        if details is None:
-            details = ErrorDetails()
-        elif isinstance(details, dict):
-            details = ErrorDetails(**details)
-
-        if server:
-            details.service = server
-        if tool or params:
-            details.additional_context.update(
-                {
-                    "tool": tool,
-                    "params": params,
-                }
-            )
-
-        super().__init__(
-            message=message,
-            code=code,
-            details=details,
-            service=server,
-        )
-
-
 class CoreAgentError(CoreServiceError):
     """Raised when an agent operation fails."""
 
@@ -708,7 +661,6 @@ __all__ = [
     "CoreExternalAPIError",
     "CoreKeyValidationError",
     # Specialized exceptions
-    "CoreMCPError",
     "CoreRateLimitError",
     # Resource and validation
     "CoreResourceNotFoundError",

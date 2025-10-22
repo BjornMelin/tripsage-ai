@@ -522,7 +522,7 @@ class WebSocketManager:
                     self._redis_message_listener()
                 )
 
-            logger.info("Enhanced WebSocket manager started with full integration")
+            logger.info("WebSocket manager started with full integration")
 
         except Exception as e:
             logger.exception("Failed to start WebSocket manager")
@@ -565,7 +565,7 @@ class WebSocketManager:
         if self.redis_client:
             await self.redis_client.close()
 
-        logger.info("Enhanced WebSocket manager stopped")
+        logger.info("WebSocket manager stopped")
 
     async def _initialize_redis(self) -> None:
         """Initialize Redis connection for broadcasting."""

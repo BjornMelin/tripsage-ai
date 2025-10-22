@@ -1,6 +1,6 @@
 """Integration tests for trip access verification that test the complete security flow.
 
-This module provides comprehensive integration testing for trip security features,
+This module provides integration testing for trip security features,
 testing the complete flow from HTTP request through authentication, authorization,
 service layer, and database operations. These tests verify:
 

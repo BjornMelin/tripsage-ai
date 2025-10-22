@@ -180,7 +180,7 @@ class RouterNode(BaseAgentNode):
         conversation_context = self._build_conversation_context(state)
 
         # Perform enhanced semantic classification with fallback strategies
-        classification = await self._enhanced_classification_with_fallback(
+        classification = await self._classify_with_fallback(
             last_message, conversation_context
         )
 
@@ -379,10 +379,10 @@ class RouterNode(BaseAgentNode):
 
         return True
 
-    async def _enhanced_classification_with_fallback(
+    async def _classify_with_fallback(
         self, message: str, context: dict[str, Any]
     ) -> dict[str, Any]:
-        """Enhanced classification with multiple fallback strategies.
+        """Classification with multiple fallback strategies.
 
         Args:
             message: User message to classify
@@ -410,7 +410,7 @@ class RouterNode(BaseAgentNode):
             return classification
 
         except Exception:
-            logger.exception("Enhanced classification failed")
+            logger.exception("Classification failed")
             return self._get_safe_fallback_classification()
 
     def _keyword_based_classification(self, message: str) -> dict[str, Any]:

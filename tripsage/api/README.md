@@ -66,7 +66,7 @@ The API automatically adapts responses based on the consumer type:
 
 - **Detailed error context** - Technical error information for agent decision-making
 - **Raw data access** - Unfiltered data for AI processing
-- **Enhanced rate limits** - Higher limits for agent operations
+- **Higher rate limits** - Increased limits for agent operations
 - **Tool integration data** - Rich context for agent tool calling
 
 ## Directory Structure

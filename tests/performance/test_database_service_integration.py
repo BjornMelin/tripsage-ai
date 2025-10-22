@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Database Service Integration Performance Tests.
 
-This module provides comprehensive performance testing for database service integration:
+This module provides performance testing for database service integration:
 - Connection pool performance
 - Query execution performance
 - Transaction performance

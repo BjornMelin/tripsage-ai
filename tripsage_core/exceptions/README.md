@@ -304,7 +304,7 @@ The exception system integrates with:
 
 - **FastAPI**: Direct status code mapping for HTTP responses
 - **Pydantic**: Structured error details with validation
-- **Logging**: Enhanced logging with structured context
+- **Logging**: Structured logging with rich context
 - **MCP Services**: Specialized MCP error handling
 - **External APIs**: Consistent external service error mapping
 - **Database Operations**: Database-specific error context

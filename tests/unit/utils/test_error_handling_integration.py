@@ -7,8 +7,6 @@ import pytest
 from tripsage_core.exceptions import (
     CoreDatabaseError,
     CoreExternalAPIError,
-    CoreMCPError,
-    CoreTripSageError,
     CoreValidationError,
 )
 from tripsage_core.utils.error_handling_utils import (
@@ -26,29 +24,6 @@ from tripsage_core.utils.error_handling_utils import (
 )
 
 
-class TestBackwardsCompatibility:
-    """Test backwards compatibility aliases."""
-
-    def test_alias_mappings(self):
-        """Test that aliases point to correct core exceptions."""
-        # These aliases no longer exist after Phase 1 cleanup
-        # The error_handling_utils module now directly uses Core exceptions
-
-    def test_alias_functionality(self):
-        """Test that aliases work identically to core exceptions."""
-        # Test with alias
-        alias_exc = CoreTripSageError("Test message", "TEST_CODE")
-
-        # Test with core exception
-        core_exc = CoreTripSageError("Test message", "TEST_CODE")
-
-        # Should have same functionality
-        assert alias_exc.message == core_exc.message
-        assert alias_exc.code == core_exc.code
-        assert alias_exc.status_code == core_exc.status_code
-        assert type(alias_exc) is type(core_exc)
-
-
 class TestUpdatedUtilityFunctions:
     """Test updated utility functions that use core exceptions."""
 
@@ -62,26 +37,21 @@ class TestUpdatedUtilityFunctions:
         assert result["message"] == "Test validation error"
 
     @patch("tripsage_core.utils.error_handling_utils.get_logger")
-    def test_log_exception_with_mcp_error(self, mock_get_logger):
-        """Test log_exception with CoreMCPError."""
+    def test_log_exception_with_external_api_error(self, mock_get_logger):
+        """Test log_exception with CoreExternalAPIError."""
         mock_logger = Mock()
         mock_get_logger.return_value = mock_logger
 
-        exc = CoreMCPError(
-            message="MCP operation failed",
-            server="flights-mcp",
-            tool="search_flights",
-            params={"query": "NYC to LAX"},
+        exc = CoreExternalAPIError(
+            message="External API failed",
+            api_service="flights-mcp",
+            api_status_code=504,
+            api_response={"error": "timeout"},
         )
 
         log_exception(exc)
 
-        # Should log error with MCP-specific details
         mock_logger.exception.assert_called_once()
-        call_args = mock_logger.exception.call_args[0]
-        assert "MCP Error" in call_args[0]
-        assert "flights-mcp" in call_args
-        assert "search_flights" in call_args
 
     @patch("tripsage_core.utils.error_handling_utils.get_logger")
     def test_log_exception_with_api_error(self, mock_get_logger):
@@ -174,7 +144,7 @@ class TestFactoryFunctions:
     """Test factory functions for creating TripSage-specific exceptions."""
 
     def test_create_mcp_error(self):
-        """Test create_mcp_error factory function."""
+        """Test create_mcp_error now maps to CoreExternalAPIError."""
         exc = create_mcp_error(
             message="MCP operation failed",
             server="flights-mcp",
@@ -184,16 +154,9 @@ class TestFactoryFunctions:
             status_code=408,
         )
 
-        assert isinstance(exc, CoreMCPError)
+        assert isinstance(exc, CoreExternalAPIError)
         assert exc.message == "MCP operation failed"
-        assert exc.code == "MCP_TIMEOUT_ERROR"
-        assert exc.details.service == "flights-mcp"
-
-        context = exc.details.additional_context
-        assert context["tool"] == "search_flights"
-        assert context["params"] == {"query": "NYC to LAX"}
-        assert context["category"] == "timeout"
-        assert context["status_code"] == 408
+        assert exc.code == "FLIGHTS-MCP_MCP_ERROR"
 
     def test_create_api_error(self):
         """Test create_api_error factory function."""

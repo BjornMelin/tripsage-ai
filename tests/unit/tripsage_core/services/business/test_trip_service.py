@@ -21,7 +21,7 @@ from tripsage_core.models.schemas_common.enums import (
     TripType,
     TripVisibility,
 )
-from tripsage_core.models.trip import BudgetBreakdown, EnhancedBudget, TripPreferences
+from tripsage_core.models.trip import Budget, BudgetBreakdown, TripPreferences
 from tripsage_core.services.business.trip_service import (
     TripCreateRequest,
     TripLocation,
@@ -98,7 +98,7 @@ class TestTripService:
                     timezone="Europe/Rome",
                 ),
             ],
-            budget=EnhancedBudget(
+            budget=Budget(
                 total=5000.00,
                 currency="USD",
                 spent=0.00,
@@ -215,7 +215,7 @@ class TestTripService:
                 start_date=now,
                 end_date=now,  # Same as start date, should fail
                 destination="Test City",
-                budget=EnhancedBudget(
+                budget=Budget(
                     total=1000.00,
                     currency="USD",
                     spent=0.00,
@@ -622,7 +622,7 @@ class TestTripService:
             start_date=now,
             end_date=now.replace(hour=23, minute=59, second=59),
             destination="Test City",
-            budget=EnhancedBudget(
+            budget=Budget(
                 total=1000.00,
                 currency="USD",
                 spent=0.00,

@@ -1,4 +1,4 @@
-"""Comprehensive unit tests for attachments router."""
+"""Unit tests for attachments router."""
 
 from io import BytesIO
 

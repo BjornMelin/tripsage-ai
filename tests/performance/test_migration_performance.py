@@ -285,7 +285,7 @@ class TestOverallMigrationImpact:
 
 # Utility function for manual performance testing
 async def run_comprehensive_benchmark():
-    """Run comprehensive performance benchmark for manual testing."""
+    """Run performance benchmark for manual testing."""
     print("=" * 60)
     print("TripSage SDK Migration Performance Benchmark")
     print("=" * 60)

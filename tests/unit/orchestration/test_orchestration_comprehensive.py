@@ -186,9 +186,9 @@ def comprehensive_service_registry():
         return_value={"insights": "test"}
     )
     registry.get_memory_bridge.return_value = memory_bridge
-    checkpoint_manager = MagicMock()
-    checkpoint_manager.get_async_checkpointer = AsyncMock(return_value=MemorySaver())
-    registry.get_checkpoint_manager.return_value = checkpoint_manager
+    checkpoint_service = MagicMock()
+    checkpoint_service.get_async_checkpointer = AsyncMock(return_value=MemorySaver())
+    registry.get_checkpoint_service.return_value = checkpoint_service
 
     return registry
 
@@ -589,8 +589,8 @@ class TestTripSageOrchestratorOptimized:
 
         # Test successful PostgreSQL initialization
         mock_checkpointer = AsyncMock()
-        optimized_orchestrator.checkpoint_manager = MagicMock()
-        optimized_orchestrator.checkpoint_manager.get_async_checkpointer = AsyncMock(
+        optimized_orchestrator.checkpoint_service = MagicMock()
+        optimized_orchestrator.checkpoint_service.get_async_checkpointer = AsyncMock(
             return_value=mock_checkpointer
         )
 
@@ -603,8 +603,8 @@ class TestTripSageOrchestratorOptimized:
         optimized_orchestrator.checkpointer = None
 
         # Test fallback to MemorySaver
-        optimized_orchestrator.checkpoint_manager = MagicMock()
-        optimized_orchestrator.checkpoint_manager.get_async_checkpointer = AsyncMock(
+        optimized_orchestrator.checkpoint_service = MagicMock()
+        optimized_orchestrator.checkpoint_service.get_async_checkpointer = AsyncMock(
             side_effect=Exception("PostgreSQL unavailable")
         )
 

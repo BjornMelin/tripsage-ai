@@ -344,7 +344,7 @@ class DocumentAnalyzer:
             analysis_type, self.analysis_templates["general"]
         )
 
-        # Enhanced analysis with better entity extraction
+        # Analysis improvements with better entity extraction
         entities = self._extract_basic_entities(text)
         keywords = self._find_travel_keywords(text)
 
@@ -385,7 +385,7 @@ class DocumentAnalyzer:
             "flight_numbers": [],
         }
 
-        # Enhanced date patterns
+        # Date pattern coverage
         date_patterns = [
             r"\d{1,2}/\d{1,2}/\d{4}",  # MM/DD/YYYY
             r"\d{4}-\d{2}-\d{2}",  # YYYY-MM-DD
@@ -401,7 +401,7 @@ class DocumentAnalyzer:
         email_pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         entities["emails"] = re.findall(email_pattern, text)
 
-        # Enhanced phone patterns
+        # Phone pattern coverage
         phone_patterns = [
             r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b",  # US format
             r"\+\d{1,3}[-.\s]?\d{1,14}\b",  # International format
@@ -411,7 +411,7 @@ class DocumentAnalyzer:
         for pattern in phone_patterns:
             entities["phone_numbers"].extend(re.findall(pattern, text))
 
-        # Enhanced currency patterns
+        # Currency pattern coverage
         currency_patterns = [
             r"\$\d+(?:,\d{3})*(?:\.\d{2})?",  # USD
             r"€\d+(?:,\d{3})*(?:\.\d{2})?",  # EUR
@@ -599,7 +599,7 @@ class DocumentAnalyzer:
         Returns:
             Confidence score between 0.0 and 1.0
         """
-        # Enhanced confidence calculation
+        # Confidence calculation improvements
         score = 0.0
 
         # Base score for successful analysis

@@ -1,4 +1,4 @@
-"""Comprehensive test runner for Supabase schema integration tests.
+"""test runner for Supabase schema integration tests.
 
 This module provides a test runner that orchestrates all schema-related tests
 with proper setup, teardown, and reporting.
@@ -34,7 +34,7 @@ class TestEnvironmentError(SchemaTestError):
 
 
 class SchemaTestRunner:
-    """Orchestrates schema integration tests with comprehensive setup and reporting."""
+    """Orchestrates schema integration tests with setup and reporting."""
 
     def __init__(self, config: dict[str, Any] | None = None):
         """Initialize runner with optional configuration overrides."""
@@ -478,7 +478,7 @@ class SchemaTestRunner:
     async def _generate_test_report(
         self, results: dict[str, Any], analysis: dict[str, Any]
     ):
-        """Generate comprehensive test report."""
+        """Generate test report."""
         report = {
             "metadata": {
                 "timestamp": datetime.utcnow().isoformat(),

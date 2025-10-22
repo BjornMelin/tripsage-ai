@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class ConnectionState(str, Enum):
-    """Enhanced connection state management."""
+    """Connection state management."""
 
     CONNECTING = "connecting"
     CONNECTED = "connected"
@@ -101,7 +101,7 @@ class MonitoredDeque(deque):
 
 
 class WebSocketConnection:
-    """Enhanced WebSocket connection wrapper with health monitoring."""
+    """WebSocket connection wrapper with health monitoring."""
 
     # pylint: disable=too-many-instance-attributes
 

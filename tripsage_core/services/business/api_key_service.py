@@ -191,7 +191,7 @@ class ApiKeyResponse(TripSageModel):
 
 
 class ValidationResult(TripSageModel):
-    """Enhanced validation result with Pydantic V2 optimizations."""
+    """Validation result with Pydantic V2 optimizations."""
 
     model_config = ConfigDict(
         str_strip_whitespace=True,
@@ -213,7 +213,7 @@ class ValidationResult(TripSageModel):
     latency_ms: float = Field(default=0.0)
     validated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
-    # Enhanced metadata
+    # Metadata enrichment
     rate_limit_info: dict[str, Any] | None = Field(default=None)
     quota_info: dict[str, Any] | None = Field(default=None)
     capabilities: list[str] = Field(default_factory=list)
@@ -327,7 +327,7 @@ class ApiKeyService:
         Args:
             master_secret: Master secret for key derivation (str or SecretStr)
         """
-        # Enhanced salt for 2025 security standards
+        # Salt hardened for 2025 security standards
         salt = b"tripsage_api_key_salt_v4_2025"
 
         # Use PBKDF2 with 2025 security standards (600k iterations)
@@ -745,7 +745,7 @@ class ApiKeyService:
         Implementation features:
         - Envelope encryption with unique data keys per operation
         - Secure key material handling
-        - Enhanced error handling and logging
+        - Error handling and logging improvements
         - Base64 URL-safe encoding for storage compatibility
 
         Args:

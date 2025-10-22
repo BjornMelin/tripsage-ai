@@ -1,6 +1,6 @@
 """Security-focused test fixtures and utilities for integration tests.
 
-This module provides comprehensive test fixtures for security integration testing,
+This module provides test fixtures for security integration testing,
 including realistic test data, user scenarios, and security context setup.
 """
 
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture(scope="session")
 def security_test_users() -> list[dict[str, Any]]:
-    """Create comprehensive security test users with different roles and permissions."""
+    """Create security test users with different roles and permissions."""
     return [
         {
             "id": "sec_user_001",
@@ -158,7 +158,7 @@ def security_test_users() -> list[dict[str, Any]]:
 def security_test_trips(
     security_test_users: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Create comprehensive security test trips with different visibility levels."""
+    """Create security test trips with different visibility levels."""
     owner_id = security_test_users[0]["id"]
     return [
         {
@@ -170,7 +170,7 @@ def security_test_trips(
             "end_date": date(2024, 7, 25),
             "budget": 3000.00,
             "travelers": 2,
-            "description": "Private trip for comprehensive security testing",
+            "description": "Private trip for security testing",
             "visibility": TripVisibility.PRIVATE.value,
             "status": TripStatus.PLANNING.value,
             "trip_type": TripType.LEISURE.value,
@@ -403,7 +403,7 @@ def security_principals(
 
 @pytest.fixture(scope="session")
 def security_test_scenarios() -> list[dict[str, Any]]:
-    """Define comprehensive security test scenarios."""
+    """Define security test scenarios."""
     return [
         {
             "name": "owner_access_private_trip",
@@ -801,7 +801,7 @@ def security_performance_monitor():
     return SecurityPerformanceMonitor()
 
 
-# ===== COMPREHENSIVE SECURITY SETUP =====
+# ===== SECURITY SETUP =====
 
 
 @pytest.fixture
@@ -816,7 +816,7 @@ async def comprehensive_security_setup(
     security_audit_logger,
     security_performance_monitor,
 ) -> dict[str, Any]:
-    """Comprehensive security test setup with all components."""
+    """Security test setup with all components."""
     return {
         "users": security_test_users,
         "trips": security_test_trips,

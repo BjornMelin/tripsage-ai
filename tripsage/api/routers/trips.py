@@ -41,8 +41,8 @@ from tripsage_core.models.schemas_common.enums import TripType, TripVisibility
 from tripsage_core.models.schemas_common.geographic import Coordinates
 from tripsage_core.models.schemas_common.travel import TripDestination
 from tripsage_core.models.trip import (
+    Budget,
     BudgetBreakdown,
-    EnhancedBudget,
     TripPreferences as CoreTripPreferences,
 )
 from tripsage_core.observability.otel import (
@@ -273,7 +273,7 @@ async def create_trip(
         )
 
         # Create default budget if preferences don't include one
-        default_budget = EnhancedBudget(
+        default_budget = Budget(
             total=1000.0,  # Default $1000 budget
             currency="USD",
             breakdown=BudgetBreakdown(
@@ -282,7 +282,7 @@ async def create_trip(
         )
 
         # Extract budget from preferences if available
-        budget: EnhancedBudget = default_budget
+        budget: Budget = default_budget
         pref_budget = (
             trip_request.preferences.budget
             if trip_request.preferences and hasattr(trip_request.preferences, "budget")
@@ -291,7 +291,7 @@ async def create_trip(
         if pref_budget:
             if hasattr(pref_budget, "total_budget"):
                 # This is a common Budget with Price
-                budget = EnhancedBudget(
+                budget = Budget(
                     total=float(pref_budget.total_budget.amount),
                     currency=str(pref_budget.total_budget.currency),
                     breakdown=BudgetBreakdown(
@@ -302,11 +302,11 @@ async def create_trip(
                     ),
                 )
             elif hasattr(pref_budget, "total"):
-                # Coerce to EnhancedBudget using model validation
-                budget = EnhancedBudget.model_validate(cast(Any, pref_budget))
+                # Coerce to Budget using model validation
+                budget = Budget.model_validate(cast(Any, pref_budget))
             else:
                 # Try to convert from dict safely
-                budget = EnhancedBudget.model_validate(cast(Any, pref_budget))
+                budget = Budget.model_validate(cast(Any, pref_budget))
 
         # Create core trip create request with all required fields
         core_request = TripCreateRequest(

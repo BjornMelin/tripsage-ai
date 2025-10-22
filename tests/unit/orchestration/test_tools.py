@@ -25,7 +25,7 @@ from tripsage.orchestration.tools.tools import (
 )
 
 
-class TestSimpleTools:
+class TestTools:
     """Test the simple tool implementations."""
 
     @pytest.mark.asyncio

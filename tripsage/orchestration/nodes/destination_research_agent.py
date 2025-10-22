@@ -75,7 +75,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
 
     def _initialize_tools(self) -> None:
         """Initialize destination research tools using simple tool catalog."""
-        from tripsage.orchestration.tools.simple_tools import get_tools_for_agent
+        from tripsage.orchestration.tools.tools import get_tools_for_agent
 
         # Get tools for destination research agent using simple catalog
         self.available_tools = get_tools_for_agent("destination_research_agent")

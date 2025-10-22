@@ -231,7 +231,7 @@ def mock_service_registry():
     return MockServiceRegistry()
 
 
-class MockMCPManager:
+class MockMCPBridge:
     """Mock MCP Manager for testing."""
 
     def __init__(self):
@@ -265,7 +265,7 @@ class MockMCPManager:
 @pytest.fixture
 def mock_mcp_manager():
     """Fixture providing mock MCP manager."""
-    return MockMCPManager()
+    return MockMCPBridge()
 
 
 def mock_pydantic_settings():

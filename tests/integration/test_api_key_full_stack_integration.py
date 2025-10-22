@@ -1,4 +1,4 @@
-"""Comprehensive integration tests for API key validation full stack flow.
+"""Integration tests for API key validation full stack flow.
 
 This module provides end-to-end integration testing covering:
 - FastAPI HTTP endpoints with TestClient
@@ -8,8 +8,6 @@ This module provides end-to-end integration testing covering:
 - Error propagation through the entire stack
 - Concurrent operations and thread safety
 - External API validation with retry mechanisms
-
-Following modern testing patterns (2025) with real dependencies where possible.
 """
 
 import asyncio
