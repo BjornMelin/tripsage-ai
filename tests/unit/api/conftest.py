@@ -139,9 +139,6 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         ) as mock_acc_service,
         patch("tripsage_core.services.business.trip_service.get_trip_service"),
         patch(
-            "tripsage_core.services.business.flight_service.get_flight_service"
-        ) as mock_flight_service_getter,
-        patch(
             "tripsage_core.services.business.destination_service.get_destination_service"
         ) as mock_destination_service_getter,
         patch("tripsage_core.services.business.chat_service.get_chat_service"),
@@ -334,7 +331,6 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
 
         # Configure flight service mock
         mock_flight_service = AsyncMock()
-        mock_flight_service_getter.return_value = mock_flight_service
 
         # Configure mock search flights response
         from tripsage_core.models.schemas_common.enums import CabinClass
@@ -453,10 +449,21 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         mock_file_instance.delete_file = AsyncMock(return_value=True)
         mock_file_instance.search_files = AsyncMock(return_value=[])
 
+        from tripsage.api.core.dependencies import get_flight_service_dep
         from tripsage.api.main import app
 
-        with TestClient(app) as client:
-            yield client
+        async def _get_flight_service_override(*_, **__):
+            return mock_flight_service
+
+        app.dependency_overrides[get_flight_service_dep] = (
+            _get_flight_service_override
+        )
+
+        try:
+            with TestClient(app) as client:
+                yield client
+        finally:
+            app.dependency_overrides.pop(get_flight_service_dep, None)
 
 
 @pytest.fixture
