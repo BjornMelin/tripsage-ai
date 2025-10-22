@@ -406,7 +406,7 @@ export default function RealtimeDemoPage() {
             <h4 className="font-semibold">Future Features</h4>
             <ul className="space-y-2 text-sm">
               <li>• Real-time voice/video collaboration</li>
-              <li>• Advanced conflict resolution algorithms</li>
+              <li>• Conflict resolution algorithms</li>
               <li>• Mobile app synchronization</li>
               <li>• Performance analytics and monitoring</li>
             </ul>

@@ -32,7 +32,7 @@ TripSage combines AI-powered recommendations with real-time collaboration and ad
 TripSage offers multiple tiers:
 
 - **🆓 Free Tier**: Basic travel planning with limited AI interactions
-- **⭐ Premium**: Advanced AI features, unlimited planning, priority support
+- **⭐ Premium**: AI features, unlimited planning, priority support
 - **🏢 Enterprise**: Custom integrations, dedicated support, SLA guarantees
 - **👨‍💻 Developer**: API access with generous rate limits
 
@@ -270,7 +270,7 @@ Absolutely! You have full control:
 **⭐ Premium Plan ($19/month):**
 
 - Unlimited AI conversations
-- Advanced memory features
+- Memory features
 - Priority support
 - Real-time collaboration
 - API access (limited)

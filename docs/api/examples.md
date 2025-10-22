@@ -10,7 +10,7 @@
 - [Complete Trip Planning Flow](#complete-trip-planning-flow)
 - [SDK Examples](#sdk-examples)
 - [Webhook Integration](#webhook-integration)
-- [Advanced Use Cases](#advanced-use-cases)
+- [Use Cases](#use-cases)
 - [Error Handling Examples](#error-handling-examples)
 - [Performance Optimization](#performance-optimization)
 - [Testing & Development](#testing--development)
@@ -603,7 +603,7 @@ app.listen(3000, () => {
 
 ---
 
-## Advanced Use Cases
+## Use Cases
 
 ### 1. Multi-City Trip Planning
 

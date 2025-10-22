@@ -50,7 +50,7 @@ pip install supabase python-dotenv
 | Real-time Subscriptions | Limited | ✅ | ✅ |
 | Row Level Security | ✅ | ✅ | ✅ |
 | Custom Domains | ❌ | ✅ | ✅ |
-| Advanced Monitoring | ❌ | ✅ | ✅ |
+| Monitoring | ❌ | ✅ | ✅ |
 | SLA | None | 99.9% | 99.99% |
 
 ## Supabase Project Setup

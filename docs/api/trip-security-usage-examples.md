@@ -127,7 +127,7 @@ async def get_readonly_summary(
     }
 ```
 
-## Advanced Usage
+## Usage Examples
 
 ### Multiple Access Checks
 
