@@ -50,15 +50,14 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 - `uuid-ossp`: UUID generation
 - `plpgsql`: Stored procedures and triggers
 
-### Cache Layer: **DragonflyDB**
+### Cache Layer: **Upstash Redis (HTTP)**
 
-**Why DragonflyDB:**
+**Why Upstash Redis:**
 
-- **Performance**: 25x faster than Redis (6.43M ops/sec)
-- **Memory Efficiency**: 30% better utilization
-- **Redis Compatible**: Drop-in replacement
-- **Modern Architecture**: Multi-threaded design
-- **Cost Savings**: Better performance per dollar
+- **Serverless**: Connectionless HTTP client ideal for Vercel
+- **Managed**: No local cache containers or ops
+- **Redis Compatible**: Familiar commands, TTLs, batch ops
+- **Simplicity**: `Redis.from_env()` with Vercel integration
 
 ### AI/ML Framework: **LangGraph**
 
@@ -175,7 +174,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 
 | Component | Metric | Target | Achieved | Technology Impact |
 |-----------|--------|--------|----------|-------------------|
-| **Cache** | Operations/sec | 1M | **6.43M** | DragonflyDB multi-threading |
+| **Cache** | Latency | <10ms | **Edge/Global** | Upstash HTTP (serverless) |
 | **Vector Search** | Queries/sec | 50 | **471** | pgvector with HNSW |
 | **API Response** | Latency | <100ms | **<50ms** | FastAPI + async |
 | **Memory Ops** | Performance | Baseline | **+91%** | Mem0 optimization |
@@ -186,14 +185,14 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 **Infrastructure Savings:**
 
 - 80% reduction in database costs (unified architecture)
-- 70% reduction in cache costs (DragonflyDB efficiency)
+- Reduced cache ops and infra costs (managed Upstash)
 - 60% reduction in API costs (direct SDK integration)
 
 ## 🔄 Technology Migration Path
 
 ### Completed Migrations (2025)
 
-✅ **Redis → DragonflyDB**: 25x performance improvement  
+✅ **Redis/Dragonfly → Upstash Redis**: serverless, HTTP  
 ✅ **MCP → Direct SDKs**: 70% latency reduction  
 ✅ **Multi-DB → Unified Supabase**: 80% cost reduction  
 ✅ **OpenAI Agents → LangGraph**: Production-ready orchestration  

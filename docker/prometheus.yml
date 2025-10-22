@@ -20,13 +20,7 @@ scrape_configs:
     static_configs:
       - targets: ['otel-collector:8889']
 
-  # Scrape DragonflyDB metrics directly
-  - job_name: 'dragonfly-direct'
-    static_configs:
-      - targets: ['dragonfly:6379']
-    metrics_path: /metrics
-    params:
-      format: ['prometheus']
+  # Upstash Redis is a managed serverless service; metrics are available via Upstash dashboard.
 
   # Scrape TripSage API metrics (when available)
   # CONFIGURATION NOTES for different development setups:

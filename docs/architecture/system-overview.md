@@ -22,13 +22,16 @@ graph TD
     subgraph "Business Logic Layer<br/>TripSage Core"
         BS[Business Services<br/>• Auth Service<br/>• Memory Svc<br/>• Chat Service<br/>• Flight Svc<br/>• Hotel Service]
         ES[External API Services<br/>• Google Maps<br/>• Weather API<br/>• Calendar API<br/>• Document AI<br/>• Crawl4AI]
-        IS[Infrastructure Services<br/>• Database Service<br/>• Cache Service<br/>DragonflyDB<br/>• WebSocket Manager<br/>• Key Monitoring<br/>Service<br/>• Security Service]
+        IS[Infrastructure Services<br/>• Database Service<br/>• Cache Service<br/>Upstash Redis (HTTP)<br/>• WebSocket Manager<br/>• Key Monitoring<br/>Service<br/>• Security Service]
         LG["LangGraph Orchestration<br/>PostgreSQL Checkpointing |<br/>Memory Bridge |<br/>Handoff Coordination"]
     end
 
     subgraph "Infrastructure Layer<br/>Storage<br/>Architecture"
         D[Database<br/>Supabase<br/>• PostgreSQL<br/>• pgvector<br/>• Mem0 backend<br/>• RLS security<br/>• Migrations]
-        C[Cache<br/>DragonflyDB<br/>• Redis compat<br/>• Multi-tier<br/>• Smart TTL]
+        C[Cache<br/>Upstash Redis (HTTP)
+• Redis compat
+• HTTP client
+• Smart TTL]
         EX[External Services<br/>• Duffel Flights<br/>• Google Maps/Cal<br/>• Weather API<br/>• Airbnb MCP<br/>Only MCP]
     end
 
@@ -133,7 +136,7 @@ Unified service design in TripSage Core:
 (tripsage_core/services/infrastructure/):
 
 - DatabaseService with transaction management
-- CacheService with DragonflyDB integration
+- CacheService with Upstash Redis (HTTP) integration
 - WebSocketManager for real-time communication
 - KeyMonitoringService for security
 
@@ -155,7 +158,7 @@ Unified service design in TripSage Core:
 - Real-time Subscriptions: Data updates
 - Migration System: Schema evolution
 
-#### Cache (DragonflyDB)
+#### Cache (Upstash Redis)
 
 - Redis Compatibility: Replacement with features
 - Multi-tier TTL Strategy: Data management
@@ -179,7 +182,7 @@ sequenceDiagram
     participant Core as TripSage Core
     participant LG as LangGraph
     participant DB as Supabase
-    participant Cache as DragonflyDB
+    participant Cache as Upstash Redis
     participant Ext as External APIs
 
     U->>API: Request (JWT/API Key)
@@ -290,7 +293,7 @@ The system uses WebSocket for real-time features:
 - API Service: Auto-scaling based on request volume
 - Frontend: CDN distribution with edge caching
 - Database: Read replicas for query distribution
-- Cache: DragonflyDB cluster for availability
+- Cache: Upstash Redis (managed)
 
 ### Monitoring & Observability
 
@@ -331,5 +334,5 @@ The system uses WebSocket for real-time features:
 ---
 
 TripSage's architecture uses LangGraph for AI orchestration,
-Supabase for storage, DragonflyDB for caching, consolidated
+Supabase for storage, Upstash Redis for caching, consolidated
 TripSage Core services, and direct SDK integrations.

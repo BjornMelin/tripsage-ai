@@ -1,31 +1,6 @@
 version: '3.8'
 
 services:
-  # DragonflyDB - High-performance Redis replacement
-  # Provides 25x performance improvement with full Redis compatibility
-  dragonfly:
-    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
-    container_name: tripsage-dragonfly
-    ports:
-      - "${DRAGONFLY_PORT:-6379}:6379"
-    volumes:
-      - dragonfly-data:/data
-    environment:
-      - DRAGONFLY_PASSWORD=${DRAGONFLY_PASSWORD:-tripsage_secure_password}
-      - DRAGONFLY_MAX_MEMORY=${DRAGONFLY_MAX_MEMORY:-4gb}
-    command: >
-      --logtostderr
-      --cache-mode
-      --maxmemory-policy=allkeys-lru
-      --requirepass=${DRAGONFLY_PASSWORD:-tripsage_secure_password}
-    restart: unless-stopped
-    networks:
-      - tripsage-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${DRAGONFLY_PASSWORD:-tripsage_secure_password}", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # OpenTelemetry Collector for monitoring
   otel-collector:
@@ -97,8 +72,6 @@ services:
       - jaeger
 
 volumes:
-  dragonfly-data:
-    driver: local
   prometheus-data:
     driver: local
   grafana-data:
