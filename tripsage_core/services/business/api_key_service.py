@@ -1,4 +1,3 @@
-# pylint: disable=too-many-lines
 """API Key Service for TripSage.
 
 Provides API key creation, storage, validation, encryption, and audit logging.
@@ -11,6 +10,8 @@ Features:
 - Envelope encryption for key storage
 - Audit logging for key operations
 """
+
+# pylint: disable=too-many-lines, R1705
 
 import asyncio
 import base64
@@ -48,6 +49,12 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
     AuditOutcome,
     audit_api_key,
+)
+from tripsage_core.services.infrastructure.database_service import (
+    get_database_service,
+)
+from tripsage_core.services.infrastructure.cache_service import (
+    get_cache_service,
 )
 
 
@@ -338,12 +345,8 @@ class ApiKeyService:
             iterations=600000,  # 2025 NIST recommended minimum
         )
 
-        # Handle SecretStr objects and regular strings securely
-        secret_value = (
-            master_secret.get_secret_value()
-            if hasattr(master_secret, "get_secret_value")
-            else master_secret
-        )
+        # master_secret is expected to be a plain string at this point
+        secret_value = master_secret
 
         # Derive master key with enhanced security
         key_bytes = kdf.derive(secret_value.encode("utf-8"))
@@ -859,7 +862,11 @@ class ApiKeyService:
             )
 
         try:
-            response = await self.client.get(
+            from tripsage_core.utils.outbound import request_with_backoff
+
+            response = await request_with_backoff(
+                self.client,
+                "GET",
                 "https://api.openai.com/v1/models",
                 headers={"Authorization": f"Bearer {key_value}"},
                 timeout=self.validation_timeout,
@@ -908,7 +915,11 @@ class ApiKeyService:
             )
 
         try:
-            response = await self.client.get(
+            from tripsage_core.utils.outbound import request_with_backoff
+
+            response = await request_with_backoff(
+                self.client,
+                "GET",
                 "https://api.openweathermap.org/data/2.5/weather",
                 params={"q": "London", "appid": key_value},
                 timeout=self.validation_timeout,
@@ -1340,7 +1351,9 @@ class ApiKeyService:
             cache_key = f"api_validation:v3:{key_hash}"  # v3 for new optimizations
 
             # Use Pydantic V2 optimized JSON serialization
-            await self.cache.set(
+            from typing import cast
+
+            await cast(Any, self.cache).set(
                 cache_key,
                 result.model_dump_json(),  # Direct JSON serialization
                 ex=300,  # Cache for 5 minutes
@@ -1363,7 +1376,7 @@ class ApiKeyService:
                 outcome=AuditOutcome.SUCCESS,
                 key_id=key_id,
                 service=self._get_service_value(key_data.service),
-                ip_address="127.0.0.1",  # TODO: Extract from request context
+                ip_address="127.0.0.1",  # Note: extract from request context
                 message=(
                     f"API key created for service "
                     f"{self._get_service_value(key_data.service)}"
@@ -1419,14 +1432,17 @@ class ApiKeyService:
             for key, value in datetime_fields.items()
         }
 
+        created = parsed_datetimes["created_at"] or datetime.now(UTC)
+        updated = parsed_datetimes["updated_at"] or datetime.now(UTC)
+
         return ApiKeyResponse(
             id=result["id"],
             name=result["name"],
             service=ServiceType(result["service"]),
             description=result.get("description"),
             is_valid=result["is_valid"],
-            created_at=parsed_datetimes["created_at"],
-            updated_at=parsed_datetimes["updated_at"],
+            created_at=created,
+            updated_at=updated,
             expires_at=parsed_datetimes["expires_at"],
             last_used=parsed_datetimes["last_used"],
             last_validated=parsed_datetimes["last_validated"],
@@ -1438,8 +1454,8 @@ class ApiKeyService:
 
 
 async def get_api_key_service(
-    db: Annotated["DatabaseService", Depends("get_database_service")],
-    cache: Annotated[Optional["CacheService"], Depends("get_cache_service")] = None,
+    db: Annotated["DatabaseService", Depends(get_database_service)],
+    cache: Annotated[Optional["CacheService"], Depends(get_cache_service)] = None,
 ) -> ApiKeyService:
     """Modern dependency injection for ApiKeyService.
 

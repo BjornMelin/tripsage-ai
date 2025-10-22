@@ -16,7 +16,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError as CoreAPIError,
     CoreServiceError,
 )
-from tripsage_core.infrastructure.retry_policies import httpx_block_retry
+from tripsage_core.utils.outbound import request_with_backoff
 
 
 logger = logging.getLogger(__name__)
@@ -134,34 +134,26 @@ class WeatherService:
             params = {}
         params["appid"] = self.api_key
 
-        # Retry transient network errors with jittered backoff.
-        async for attempt in httpx_block_retry(attempts=3, max_delay=10.0):
-            with attempt:
-                try:
-                    response = await self._client.get(url, params=params)
-                    response.raise_for_status()
-                    return response.json()
-                except httpx.HTTPStatusError as e:
-                    error_data = {}
-                    try:
-                        error_data = e.response.json() if e.response.content else {}
-                    except ValueError as parse_error:
-                        logger.debug(
-                            "Failed to parse weather API error response: %s",
-                            parse_error,
-                        )
-                    # Do not retry non-network status errors by default.
-                    raise WeatherServiceError(
-                        (
-                            "OpenWeatherMap API error: "
-                            f"{error_data.get('message', str(e))}"
-                        ),
-                        original_error=e,
-                    ) from e
+        try:
+            resp = await request_with_backoff(self._client, "GET", url, params=params)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as e:
+            error_data: dict[str, Any] = {}
+            try:
+                error_data = e.response.json() if e.response.content else {}
+            except ValueError as parse_error:  # pragma: no cover - debug only
+                logger.debug(
+                    "Failed to parse weather API error response: %s", parse_error
+                )
+            raise WeatherServiceError(
+                (f"OpenWeatherMap API error: {error_data.get('message', str(e))}"),
+                original_error=e,
+            ) from e
         # Should not reach here; explicit return satisfies linters.
         return {"error": "unreachable"}
 
-    async def get_current_weather(
+    async def get_current_weather(  # pylint: disable=too-many-positional-arguments
         self,
         latitude: float,
         longitude: float,
@@ -188,7 +180,7 @@ class WeatherService:
 
         return await self._make_request("weather", params)
 
-    async def get_forecast(
+    async def get_forecast(  # pylint: disable=too-many-positional-arguments
         self,
         latitude: float,
         longitude: float,
@@ -294,7 +286,7 @@ class WeatherService:
 
         return await self._make_request(endpoint, params)
 
-    async def get_travel_weather_summary(
+    async def get_travel_weather_summary(  # pylint: disable=too-many-positional-arguments
         self,
         latitude: float,
         longitude: float,
