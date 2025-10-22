@@ -1,20 +1,40 @@
-"""Chat Orchestration Service using direct database integration.
+"""Chat Orchestration Service (FINAL-ONLY, no MCPManager).
 
-This service provides chat orchestration with direct database operations
-for improved performance and simplified architecture.
+- Database operations via ``DatabaseService`` (Supabase RPC/SQL)
+- Flights via ``FlightService`` with optional Duffel provider
+- Accommodations via ``AirbnbMCPClient`` (only MCP-backed service retained)
+- Google Maps via ``GoogleMapsService``
+- Memory via ``MemoryService``
 """
 
 import asyncio
 import json
+import os
 import time
-from typing import Any
+from datetime import date, datetime
+from typing import Any, cast
 
+import httpx
+
+from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
-from tripsage_core.mcp_abstraction.manager import MCPManager
+from tripsage_core.services.business.flight_service import (
+    CabinClass,
+    FlightSearchRequest,
+    FlightService,
+)
+from tripsage_core.services.business.memory_service import (
+    ConversationMemoryRequest,
+    get_memory_service,
+)
 from tripsage_core.services.business.tool_calling_service import (
     ToolCallRequest,
     ToolCallResponse,
     ToolCallService,
+)
+from tripsage_core.services.external_apis.duffel_provider import DuffelProvider
+from tripsage_core.services.external_apis.google_maps_service import (
+    GoogleMapsService,
 )
 from tripsage_core.services.infrastructure import get_database_service
 from tripsage_core.utils.decorator_utils import with_error_handling
@@ -33,10 +53,29 @@ class ChatOrchestrationService:
 
     def __init__(self):
         """Initialize the chat orchestration service."""
-        self.database = None  # Will be initialized async
-        self.mcp_manager = MCPManager()
-        self.tool_call_service = ToolCallService(self.mcp_manager)
+        self.database = None  # Will be initialized asynchronously
+        # ToolCallService no longer accepts MCPManager; keep for formatting helpers
+        self.tool_call_service = ToolCallService()
         self.logger = logger
+        # Lazy-initialized external services
+        self._gmaps: GoogleMapsService | None = None
+        self._airbnb: AirbnbMCPClient | None = None
+
+    @staticmethod
+    def _to_int(value: Any, default: int) -> int:
+        """Best-effort conversion to int with a safe fallback.
+
+        Args:
+            value: Incoming value (possibly None or string)
+            default: Default to use when conversion fails
+
+        Returns:
+            Integer value or the provided default.
+        """
+        try:
+            return int(value) if value is not None else default
+        except (ValueError, TypeError):
+            return default
 
     async def _ensure_database(self):
         """Ensure database service is initialized."""
@@ -54,26 +93,25 @@ class ChatOrchestrationService:
         """
         if value is None:
             return "NULL"
-        elif isinstance(value, bool):
+        if isinstance(value, bool):
             return "TRUE" if value else "FALSE"
-        elif isinstance(value, (int, float)):
+        if isinstance(value, (int, float)):
             return str(value)
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             # For JSON/JSONB columns, properly escape
             json_str = json.dumps(value)
             escaped_json = json_str.replace("'", "''")
             return f"'{escaped_json}'::jsonb"
-        else:
-            # String values: escape single quotes and wrap in quotes
-            str_value = str(value)
-            escaped = str_value.replace("'", "''")
-            return f"'{escaped}'"
+        # String values: escape single quotes and wrap in quotes
+        str_value = str(value)
+        escaped = str_value.replace("'", "''")
+        return f"'{escaped}'"
 
     @with_error_handling()
     async def create_chat_session(
         self, user_id: int, metadata: dict[str, Any] | None = None
     ) -> dict[str, Any]:
-        """Create a new chat session using Supabase MCP.
+        """Create a new chat session using DatabaseService.
 
         Args:
             user_id: User ID for the session
@@ -93,23 +131,19 @@ class ChatOrchestrationService:
             safe_metadata = self._sanitize_sql_value(metadata or {})
 
             # Use properly formatted query with sanitized values
-            query = f"""
-                INSERT INTO chat_sessions (user_id, metadata)
-                VALUES ({safe_user_id}, {safe_metadata}::jsonb)
-                RETURNING id, created_at, updated_at
-            """
-
-            result = await self.mcp_manager.invoke(
-                mcp_name="supabase",
-                method_name="execute_sql",
-                params={
-                    "query": query,
-                },
+            query = (
+                "INSERT INTO chat_sessions (user_id, metadata) "
+                f"VALUES ({safe_user_id}, {safe_metadata}::jsonb) "
+                "RETURNING id, created_at, updated_at"
             )
 
-            if not result:
+            # Execute via DatabaseService
+            await self._ensure_database()
+            assert self.database is not None
+            rows = await self.database.execute_sql(sql=query)
+            if not rows:
                 raise ChatOrchestrationError("No session data returned")
-
+            result = rows[0]
             session_data = {
                 "session_id": result.get("id"),
                 "user_id": user_id,
@@ -133,7 +167,7 @@ class ChatOrchestrationService:
         content: str,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Save a chat message using Supabase MCP.
+        """Save a chat message using DatabaseService.
 
         Args:
             session_id: Chat session ID
@@ -162,21 +196,18 @@ class ChatOrchestrationService:
             safe_metadata = self._sanitize_sql_value(metadata or {})
 
             # Use properly formatted query with sanitized values
-            query = f"""
-                INSERT INTO chat_messages (session_id, role, content, metadata)
-                VALUES ({safe_session_id}, ",
-                    f"{safe_role}, {safe_content}, {safe_metadata}::jsonb"
-                )
-                RETURNING id, created_at
-            """
-
-            result = await self.mcp_manager.invoke(
-                mcp_name="supabase",
-                method_name="execute_sql",
-                params={
-                    "query": query,
-                },
+            query = (
+                "INSERT INTO chat_messages (session_id, role, content, metadata) "
+                f"VALUES ({safe_session_id}, {safe_role}, {safe_content}, "
+                f"{safe_metadata}::jsonb) RETURNING id, created_at"
             )
+
+            await self._ensure_database()
+            assert self.database is not None
+            rows = await self.database.execute_sql(sql=query)
+            if not rows:
+                raise ChatOrchestrationError("No message data returned")
+            result = rows[0]
 
             message_data = {
                 "message_id": result.get("id"),
@@ -196,7 +227,7 @@ class ChatOrchestrationService:
 
     @with_error_handling()
     async def search_flights(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Search flights using Duffel MCP.
+        """Search flights using direct provider/FlightService (no MCP).
 
         Args:
             params: Flight search parameters
@@ -208,13 +239,57 @@ class ChatOrchestrationService:
             ChatOrchestrationError: If flight search fails
         """
         try:
-            self.logger.info("Searching flights via Duffel MCP")
+            self.logger.info("Searching flights via direct provider")
 
-            result = await self.mcp_manager.invoke(
-                mcp_name="duffel_flights",
-                method_name="search_flights",
-                params=params,
+            # Build FlightSearchRequest from untyped params
+            def _get(key: str, default=None):
+                return params.get(key, default)
+
+            # Required fields validation for static typing and runtime safety
+            origin_val = _get("origin")
+            destination_val = _get("destination")
+            departure_val = _get("departure_date")
+            if not origin_val or not destination_val or departure_val is None:
+                raise ChatOrchestrationError(
+                    "origin, destination, and departure_date are required"
+                )
+
+            fs_request = FlightSearchRequest(
+                origin=cast(str, origin_val),
+                destination=cast(str, destination_val),
+                departure_date=cast(date | datetime, departure_val),
+                return_date=_get("return_date"),
+                adults=self._to_int(_get("adults", 1), 1),
+                children=self._to_int(_get("children", 0), 0),
+                infants=self._to_int(_get("infants", 0), 0),
+                cabin_class=CabinClass(_get("cabin_class", CabinClass.ECONOMY.value)),
+                max_stops=(
+                    self._to_int(_get("max_connections") or _get("max_stops"), 0)
+                    if (_get("max_connections") or _get("max_stops")) is not None
+                    else None
+                ),
+                currency=cast(str, _get("currency", "USD")),
+                passengers=None,
+                max_price=_get("max_price"),
+                preferred_airlines=_get("preferred_airlines"),
+                excluded_airlines=_get("excluded_airlines"),
+                trip_id=_get("trip_id"),
             )
+
+            # Optionally wire Duffel provider if access token present
+            duffel_token = os.getenv("DUFFEL_ACCESS_TOKEN")
+            external = (
+                DuffelProvider(access_token=duffel_token) if duffel_token else None
+            )
+
+            await self._ensure_database()
+            flight_service = FlightService(
+                database_service=self.database, external_flight_service=external
+            )
+
+            search_response = await flight_service.search_flights(fs_request)
+            # Convert to plain dict for chat payloads
+            result = search_response.model_dump()
 
             # Store search results in memory graph for future reference
             await self._store_search_result("flight", params, result)
@@ -223,7 +298,7 @@ class ChatOrchestrationService:
                 "search_type": "flights",
                 "results": result,
                 "timestamp": time.time(),
-                "cached": False,
+                "cached": bool(result.get("cached", False)),
             }
 
         except Exception as e:
@@ -232,7 +307,7 @@ class ChatOrchestrationService:
 
     @with_error_handling()
     async def search_accommodations(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Search accommodations using Airbnb MCP.
+        """Search accommodations using Airbnb MCP client directly.
 
         Args:
             params: Accommodation search parameters
@@ -244,13 +319,31 @@ class ChatOrchestrationService:
             ChatOrchestrationError: If accommodation search fails
         """
         try:
-            self.logger.info("Searching accommodations via Airbnb MCP")
+            self.logger.info("Searching accommodations via Airbnb MCP client")
 
-            result = await self.mcp_manager.invoke(
-                mcp_name="airbnb",
-                method_name="search_properties",
-                params=params,
+            # Lazy init client
+            if self._airbnb is None:
+                self._airbnb = AirbnbMCPClient()
+
+            location_value = params.get("location") or params.get("place")
+            if not isinstance(location_value, str) or not location_value.strip():
+                raise ChatOrchestrationError(
+                    "'location' is required for accommodation search"
+                )
+
+            listings = await self._airbnb.search_accommodations(
+                location=location_value,
+                checkin=params.get("checkin") or params.get("check_in"),
+                checkout=params.get("checkout") or params.get("check_out"),
+                adults=self._to_int(params.get("adults", params.get("guests", 1)), 1),
+                children=self._to_int(params.get("children", 0), 0),
+                infants=self._to_int(params.get("infants", 0), 0),
+                pets=self._to_int(params.get("pets", 0), 0),
+                min_price=(params.get("price_min") or params.get("min_price")),
+                max_price=(params.get("price_max") or params.get("max_price")),
+                cursor=params.get("cursor"),
             )
+            result = {"listings": listings}
 
             # Store search results in memory graph
             await self._store_search_result("accommodation", params, result)
@@ -268,7 +361,7 @@ class ChatOrchestrationService:
 
     @with_error_handling()
     async def get_location_info(self, location: str) -> dict[str, Any]:
-        """Get location information using Google Maps MCP.
+        """Get location information using Google Maps service.
 
         Args:
             location: Location query string
@@ -282,21 +375,18 @@ class ChatOrchestrationService:
         try:
             self.logger.info("Getting location info for: %s", location)
 
-            result = await self.mcp_manager.invoke(
-                mcp_name="google_maps",
-                method_name="geocode",
-                params={"address": location},
-            )
+            if self._gmaps is None:
+                self._gmaps = GoogleMapsService()
 
-            # Store location data in memory graph
-            if result:
-                await self._store_location_data(location, result)
+            places = await self._gmaps.geocode(location)
+            # Convert to plain dicts for chat payloads
+            data = [p.model_dump() for p in places]
 
-            return {
-                "location": location,
-                "data": result,
-                "timestamp": time.time(),
-            }
+            # Store location data in memory
+            if data:
+                await self._store_location_data(location, data[0])
+
+            return {"location": location, "data": data, "timestamp": time.time()}
 
         except Exception as e:
             self.logger.exception("Location lookup failed")
@@ -304,7 +394,7 @@ class ChatOrchestrationService:
 
     @with_error_handling()
     async def execute_parallel_tools(self, tool_calls: list[dict]) -> dict[str, Any]:
-        """Execute multiple tool calls in parallel using structured tool calling service.
+        """Execute multiple tool calls in parallel using structured tool call service.
 
         Args:
             tool_calls: List of tool call dictionaries
@@ -336,7 +426,7 @@ class ChatOrchestrationService:
                 requests
             )
 
-            # Convert responses to legacy format for backward compatibility
+            # Convert responses to a simple mapping for callers
             results = {}
             for response in responses:
                 if response.status == "success":
@@ -458,17 +548,88 @@ class ChatOrchestrationService:
         method = tool_call.get("method")
         params = tool_call.get("params", {})
 
-        return await self.mcp_manager.invoke(
-            mcp_name=service,
-            method_name=method,
-            params=params,
+        # Minimal direct execution shim; expand as needed by callers
+        if service == "airbnb":
+            if self._airbnb is None:
+                self._airbnb = AirbnbMCPClient()
+            if method in ("search_properties", "search_listings"):
+                return {
+                    "listings": await self._airbnb.search_accommodations(
+                        location=params.get("location") or params.get("place"),
+                        checkin=params.get("checkin") or params.get("check_in"),
+                        checkout=params.get("checkout") or params.get("check_out"),
+                        adults=int(params.get("adults", params.get("guests", 1))),
+                        children=int(params.get("children", 0)),
+                        infants=int(params.get("infants", 0)),
+                        pets=int(params.get("pets", 0)),
+                        min_price=(params.get("price_min") or params.get("min_price")),
+                        max_price=(params.get("price_max") or params.get("max_price")),
+                        cursor=params.get("cursor"),
+                    )
+                }
+            if method in ("get_listing_details", "listing_details"):
+                if not params.get("listing_id") and not params.get("id"):
+                    raise ChatOrchestrationError(
+                        "listing_id (or id) is required for listing details"
+                    )
+                return await self._airbnb.get_listing_details(
+                    listing_id=params.get("listing_id") or params.get("id"),
+                    checkin=params.get("checkin") or params.get("check_in"),
+                    checkout=params.get("checkout") or params.get("check_out"),
+                    adults=int(params.get("adults", 1)),
+                    children=int(params.get("children", 0)),
+                    infants=int(params.get("infants", 0)),
+                    pets=int(params.get("pets", 0)),
+                )
+
+        if service == "google_maps":
+            if self._gmaps is None:
+                self._gmaps = GoogleMapsService()
+            if method == "geocode":
+                addr = params.get("address") or params.get("location")
+                if not addr:
+                    raise ChatOrchestrationError("Missing address/location for geocode")
+                places = await self._gmaps.geocode(addr)
+                return [p.model_dump() for p in places]
+
+        if service == "supabase":
+            await self._ensure_database()
+            sql = params.get("query") or params.get("sql")
+            if not sql:
+                raise ChatOrchestrationError("Missing SQL query for supabase.execute")
+            assert self.database is not None
+            return await self.database.execute_sql(sql=sql)
+
+        if service == "duffel_flights":
+            return await self.search_flights(params)
+
+        if service == "memory":
+            # Map to memory service conversation entry
+            mem = await get_memory_service()
+            req = ConversationMemoryRequest(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": f"Memory entity created: {json.dumps(params)[:500]}",
+                    }
+                ],
+                session_id=None,
+                trip_id=None,
+                metadata=None,
+            )
+            return await mem.add_conversation_memory(
+                user_id="system", memory_request=req
+            )
+
+        raise ChatOrchestrationError(
+            f"Unsupported tool call service/method: {service}.{method}"
         )
 
     @with_error_handling()
     async def _store_search_result(
         self, search_type: str, params: dict[str, Any], results: Any
     ) -> None:
-        """Store search results in memory graph for future reference.
+        """Store search results using MemoryService for future reference.
 
         Args:
             search_type: Type of search (flight, accommodation, etc.)
@@ -476,30 +637,33 @@ class ChatOrchestrationService:
             results: Search results
         """
         try:
-            # Create a search result entity in the memory graph
-            entity = {
-                "name": f"{search_type}_search_{int(time.time())}",
-                "entityType": "SearchResult",
-                "observations": [
-                    f"search_type:{search_type}",
-                    f"timestamp:{time.time()}",
-                    f"params:{str(params)[:200]}",  # Truncate for storage
-                    f"result_count:{len(results) if isinstance(results, list) else 1}",
-                ],
-            }
-
-            await self.mcp_manager.invoke(
-                mcp_name="memory",
-                method_name="create_entities",
-                params={"entities": [entity]},
+            mem = await get_memory_service()
+            count = len(results) if isinstance(results, list) else 1
+            summary = (
+                f"{search_type} search stored (count={count}): {str(params)[:180]}"
             )
+            req = ConversationMemoryRequest(
+                messages=[{"role": "system", "content": summary}],
+                session_id=None,
+                trip_id=None,
+                metadata={"search_type": search_type},
+            )
+            await mem.add_conversation_memory(user_id="system", memory_request=req)
 
-        except Exception as e:
+        except (
+            httpx.HTTPError,
+            json.JSONDecodeError,
+            ValueError,
+            TypeError,
+            TripSageError,
+        ) as e:
             self.logger.warning("Failed to store search result in memory: %s", e)
+        except Exception as e:  # noqa: BLE001
+            self.logger.warning("Unexpected error storing search result: %s", e)
 
     @with_error_handling()
     async def _store_location_data(self, location: str, data: dict[str, Any]) -> None:
-        """Store location data in memory graph.
+        """Store location data using MemoryService.
 
         Args:
             location: Location query
@@ -510,31 +674,32 @@ class ChatOrchestrationService:
             lat = data.get("lat", "unknown")
             lng = data.get("lng", "unknown")
 
-            entity = {
-                "name": location,
-                "entityType": "Destination",
-                "observations": [
-                    f"latitude:{lat}",
-                    f"longitude:{lng}",
-                    "source:google_maps",
-                    f"timestamp:{time.time()}",
-                ],
-            }
-
-            await self.mcp_manager.invoke(
-                mcp_name="memory",
-                method_name="create_entities",
-                params={"entities": [entity]},
+            mem = await get_memory_service()
+            msg = f"Location stored: {location} (lat={lat}, lng={lng}) via Google Maps"
+            req = ConversationMemoryRequest(
+                messages=[{"role": "system", "content": msg}],
+                session_id=None,
+                trip_id=None,
+                metadata={"source": "google_maps", "location": location},
             )
+            await mem.add_conversation_memory(user_id="system", memory_request=req)
 
-        except Exception as e:
+        except (
+            httpx.HTTPError,
+            json.JSONDecodeError,
+            ValueError,
+            TypeError,
+            TripSageError,
+        ) as e:
             self.logger.warning("Failed to store location data in memory: %s", e)
+        except Exception as e:  # noqa: BLE001
+            self.logger.warning("Unexpected error storing location data: %s", e)
 
     @with_error_handling()
     async def get_chat_history(
         self, session_id: str, limit: int = 10, offset: int = 0
     ) -> list[dict[str, Any]]:
-        """Get chat history using Supabase MCP.
+        """Get chat history using DatabaseService.
 
         Args:
             session_id: Chat session ID
@@ -562,22 +727,17 @@ class ChatOrchestrationService:
             safe_offset = self._sanitize_sql_value(offset)
 
             # Use properly formatted query with sanitized values
-            query = f"""
-                SELECT * FROM chat_messages
-                WHERE session_id = {safe_session_id}
-                ORDER BY created_at DESC
-                LIMIT {safe_limit} OFFSET {safe_offset}
-            """
-
-            result = await self.mcp_manager.invoke(
-                mcp_name="supabase",
-                method_name="execute_sql",
-                params={
-                    "query": query,
-                },
+            query = (
+                "SELECT * FROM chat_messages "
+                f"WHERE session_id = {safe_session_id} "
+                "ORDER BY created_at DESC "
+                f"LIMIT {safe_limit} OFFSET {safe_offset}"
             )
 
-            messages = result if isinstance(result, list) else []
+            await self._ensure_database()
+            assert self.database is not None
+            rows = await self.database.execute_sql(sql=query)
+            messages = rows if isinstance(rows, list) else []
 
             self.logger.info("Retrieved %s messages from history", len(messages))
             return messages
@@ -588,7 +748,7 @@ class ChatOrchestrationService:
 
     @with_error_handling()
     async def end_chat_session(self, session_id: str) -> bool:
-        """End a chat session using Supabase MCP.
+        """End a chat session using DatabaseService.
 
         Args:
             session_id: Chat session ID to end
@@ -605,24 +765,19 @@ class ChatOrchestrationService:
             # Sanitize session_id to prevent SQL injection
             safe_session_id = self._sanitize_sql_value(session_id)
 
-            query = f"""
-                UPDATE chat_sessions
-                SET ended_at = NOW(), updated_at = NOW()
-                WHERE id = {safe_session_id}
-                RETURNING ended_at
-            """
-
-            result = await self.mcp_manager.invoke(
-                mcp_name="supabase",
-                method_name="execute_sql",
-                params={"query": query},
+            query = (
+                "UPDATE chat_sessions "
+                "SET ended_at = NOW(), updated_at = NOW() "
+                f"WHERE id = {safe_session_id} RETURNING ended_at"
             )
 
-            if result:
+            await self._ensure_database()
+            assert self.database is not None
+            rows = await self.database.execute_sql(sql=query)
+            if rows:
                 self.logger.info("Chat session %s ended successfully", session_id)
                 return True
-            else:
-                raise ChatOrchestrationError(f"Session {session_id} not found")
+            raise ChatOrchestrationError(f"Session {session_id} not found")
 
         except Exception as e:
             self.logger.exception("Failed to end chat session")
@@ -655,7 +810,7 @@ async def main():
 
     except ChatOrchestrationError as e:
         print(f"Chat orchestration error: {e}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Unexpected error: {e}")
 
 
