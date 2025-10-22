@@ -632,29 +632,6 @@ class CacheService:
         return await self.set_json(key, value, ttl=86400)  # Long TTL (24 hours)
 
 
-# Global service instance
-_cache_service: CacheService | None = None
-
-
-async def get_cache_service() -> CacheService:
-    """Get the global cache service instance.
-
-    Returns:
-        Connected CacheService instance
-    """
-    global _cache_service
-
-    if _cache_service is None:
-        _cache_service = CacheService()
-        await _cache_service.connect()
-
-    return _cache_service
-
-
-async def close_cache_service() -> None:
-    """Close the global cache service instance."""
-    global _cache_service
-
-    if _cache_service:
-        await _cache_service.disconnect()
-        _cache_service = None
+# FINAL-ONLY: Global singleton removed. Use DI to construct and manage CacheService
+# lifecycle (connect/disconnect) in the application startup, and inject explicitly
+# where needed. This module now only defines the CacheService class.

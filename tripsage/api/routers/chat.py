@@ -63,7 +63,7 @@ async def chat(
         ) from e
 
 
-@router.post("/sessions", response_model=dict)
+@router.post("/sessions", response_model=dict, status_code=status.HTTP_201_CREATED)
 @trace_span(name="api.chat.sessions.create")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def create_session(
@@ -96,7 +96,8 @@ async def create_session(
             title=body.title, metadata=body.metadata, trip_id=None
         )
 
-        return await chat_service.create_session(user_id, session_request)
+        session = await chat_service.create_session(user_id, session_request)
+        return session.model_dump() if hasattr(session, "model_dump") else session
 
     except Exception as e:
         logger.exception("Session creation failed")
@@ -124,7 +125,8 @@ async def list_sessions(
     """
     try:
         user_id = get_principal_id(principal)
-        return await chat_service.list_sessions(user_id)
+        sessions = await chat_service.get_user_sessions(user_id)
+        return [s.model_dump() if hasattr(s, "model_dump") else s for s in sessions]
 
     except Exception as e:
         logger.exception("Session listing failed")
@@ -154,14 +156,14 @@ async def get_session(
     """
     try:
         user_id = get_principal_id(principal)
-        session = await chat_service.get_session(user_id, str(session_id))
+        session = await chat_service.get_session(str(session_id), user_id)
 
         if session is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
             )
 
-        return session
+        return session.model_dump() if hasattr(session, "model_dump") else session
 
     except HTTPException:
         raise
@@ -195,7 +197,8 @@ async def get_session_messages(
     """
     try:
         user_id = get_principal_id(principal)
-        return await chat_service.get_messages(user_id, str(session_id), limit)
+        messages = await chat_service.get_messages(str(session_id), user_id, limit)
+        return [m.model_dump() if hasattr(m, "model_dump") else m for m in messages]
 
     except Exception as e:
         logger.exception("Message retrieval failed")
@@ -232,11 +235,13 @@ async def create_message(
     try:
         user_id = get_principal_id(principal)
 
-        message_request = CreateMessageRequest(content=body.content, role=body.role)
+        from tripsage_core.services.business.chat_service import MessageCreateRequest
 
-        return await chat_service.create_message(
-            user_id, str(session_id), message_request
+        service_req = MessageCreateRequest(
+            role=body.role, content=body.content, metadata=None, tool_calls=None
         )
+        message = await chat_service.add_message(str(session_id), user_id, service_req)
+        return message.model_dump() if hasattr(message, "model_dump") else message
 
     except Exception as e:
         logger.exception("Message creation failed")
@@ -264,7 +269,7 @@ async def delete_session(
     """
     try:
         user_id = get_principal_id(principal)
-        success = await chat_service.delete_session(user_id, str(session_id))
+        success = await chat_service.end_session(str(session_id), user_id)
 
         if not success:
             raise HTTPException(

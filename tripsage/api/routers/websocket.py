@@ -22,7 +22,7 @@ from pydantic import Field, ValidationError
 from tripsage.agents.chat import ChatAgent
 from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.api.core.config import get_settings
-from tripsage.api.core.dependencies import get_db
+from tripsage.api.core.dependencies import get_db, get_websocket_manager_dep
 from tripsage_core.models.schemas_common.chat import (
     ChatMessage as WebSocketMessage,
     MessageRole as ChatMessageRole,
@@ -40,7 +40,6 @@ from tripsage_core.services.infrastructure.websocket_connection_service import (
 from tripsage_core.services.infrastructure.websocket_manager import (
     WebSocketMessageLimits,
     WebSocketSubscribeRequest,
-    websocket_manager,
 )
 from tripsage_core.services.infrastructure.websocket_messaging_service import (
     WebSocketEvent,
@@ -214,7 +213,7 @@ def build_auth_request(
 
 
 # Services for test compatibility - tests expect these attributes to exist
-auth_service = websocket_manager.auth_service
+auth_service = None  # resolved per-request via DI
 chat_service: CoreChatService | None = None
 MessageRole = ChatMessageRole
 
@@ -256,7 +255,8 @@ async def _send_error_event(
         user_id=ctx.user_id,
         session_id=ctx.session_id,
     )
-    await websocket_manager.send_to_connection(ctx.connection_id, error_event)
+    ws_mgr = await get_websocket_manager_dep()  # type: ignore[misc]
+    await ws_mgr.send_to_connection(ctx.connection_id, error_event)
 
 
 async def _handle_heartbeat(ctx: MessageContext, _message: dict[str, Any]) -> None:
@@ -1002,7 +1002,8 @@ async def websocket_health():
     Returns:
         Health status and connection statistics
     """
-    stats = websocket_manager.get_connection_stats()
+    ws_mgr = await get_websocket_manager_dep()  # type: ignore[misc]
+    stats = ws_mgr.get_connection_stats()
 
     return {
         "status": "healthy",
@@ -1019,7 +1020,7 @@ async def list_websocket_connections():
     # This would typically require admin authentication
     connections = [
         serialize_connection(connection)
-        for connection in websocket_manager.connections.values()
+        for connection in ws_mgr.connections.values()
     ]
 
     return {"connections": connections, "total_count": len(connections)}
@@ -1029,7 +1030,8 @@ async def list_websocket_connections():
 async def disconnect_websocket_connection(connection_id: str):
     """Disconnect a specific WebSocket connection (admin only)."""
     # This would typically require admin authentication
-    await websocket_manager.disconnect_connection(connection_id)
+    ws_mgr = await get_websocket_manager_dep()  # type: ignore[misc]
+    await ws_mgr.disconnect_connection(connection_id)
 
     return {
         "message": f"Connection {connection_id} disconnected successfully",
