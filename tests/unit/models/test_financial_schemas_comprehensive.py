@@ -1,4 +1,4 @@
-"""Comprehensive tests for Pydantic v2 financial schemas."""
+"""Tests for Pydantic v2 financial schemas."""
 
 from decimal import Decimal
 

@@ -1,4 +1,4 @@
-"""Comprehensive tests for accommodation models.
+"""Tests for accommodation models.
 
 Tests validation, serialization, and business logic for accommodation-related models.
 """

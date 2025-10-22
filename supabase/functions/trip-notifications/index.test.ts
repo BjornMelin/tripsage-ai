@@ -1,5 +1,5 @@
 /**
- * Comprehensive test suite for Trip Notifications Edge Function
+ * Test suite for Trip Notifications Edge Function
  * 
  * Tests cover:
  * - HTTP request/response handling

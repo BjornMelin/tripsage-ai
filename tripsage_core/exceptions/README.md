@@ -219,7 +219,7 @@ result = get_flight_data()  # Returns [] and logs error
 
 ## Testing
 
-The exception system includes comprehensive tests demonstrating all functionality:
+The exception system includes tests demonstrating all functionality:
 
 - `tests/unit/tripsage_core/test_exceptions.py` - Core exception system tests
 - `tests/unit/utils/test_error_handling_integration.py` - Integration tests

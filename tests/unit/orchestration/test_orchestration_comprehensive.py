@@ -1,4 +1,4 @@
-"""Comprehensive orchestration layer tests following ULTRATHINK principles.
+"""Orchestration layer tests following ULTRATHINK principles.
 
 This module provides complete test coverage for the TripSage orchestration system
 with modern patterns, async support, and 90%+ coverage targeting.
@@ -104,7 +104,7 @@ def event_loop():
 
 @pytest.fixture
 def comprehensive_service_registry():
-    """Create comprehensive mock service registry.
+    """Create mock service registry.
 
     Returns:
         Mock service registry with all required services
@@ -224,7 +224,7 @@ def mock_handoff_coordinator():
 def optimized_orchestrator(
     comprehensive_service_registry, mock_memory_bridge, mock_handoff_coordinator
 ):
-    """Create optimized orchestrator with comprehensive mocking.
+    """Create optimized orchestrator with mocking.
 
     Args:
         comprehensive_service_registry: Mock service registry
@@ -250,7 +250,7 @@ def optimized_orchestrator(
 
 
 class TestBaseAgentNodeComprehensive:
-    """Comprehensive tests for BaseAgentNode following ULTRATHINK principles."""
+    """Tests for BaseAgentNode following ULTRATHINK principles."""
 
     def test_agent_node_initialization_complete(self, comprehensive_service_registry):
         """Test complete agent node initialization.
@@ -293,7 +293,7 @@ class TestBaseAgentNodeComprehensive:
 
     @pytest.mark.asyncio
     async def test_error_handling_comprehensive(self, comprehensive_service_registry):
-        """Test comprehensive error handling in agent nodes.
+        """Test error handling in agent nodes.
 
         Args:
             comprehensive_service_registry: Mock service registry
@@ -369,10 +369,10 @@ class TestBaseAgentNodeComprehensive:
 
 
 class TestTravelPlanningStateModels:
-    """Comprehensive tests for Pydantic state models."""
+    """Tests for Pydantic state models."""
 
     def test_user_preferences_validation_comprehensive(self):
-        """Test comprehensive UserPreferences validation.
+        """Test UserPreferences validation.
 
         Tests all field types, validation rules, and edge cases.
         """
@@ -613,7 +613,7 @@ class TestTripSageOrchestratorOptimized:
         assert isinstance(optimized_orchestrator.checkpointer, MemorySaver)
 
     def test_routing_decision_matrix(self, optimized_orchestrator):
-        """Test comprehensive routing decision matrix.
+        """Test routing decision matrix.
 
         Args:
             optimized_orchestrator: Test orchestrator instance
@@ -649,7 +649,7 @@ class TestTripSageOrchestratorOptimized:
             assert result == expected, f"Failed for state {state}"
 
     def test_next_step_determination_matrix(self, optimized_orchestrator):
-        """Test comprehensive next step determination matrix.
+        """Test next step determination matrix.
 
         Args:
             optimized_orchestrator: Test orchestrator instance
@@ -717,7 +717,7 @@ class TestTripSageOrchestratorOptimized:
 
     @pytest.mark.asyncio
     async def test_message_processing_comprehensive(self, optimized_orchestrator):
-        """Test comprehensive message processing scenarios.
+        """Test message processing scenarios.
 
         Args:
             optimized_orchestrator: Test orchestrator instance
@@ -770,7 +770,7 @@ class TestTripSageOrchestratorOptimized:
 
     @pytest.mark.asyncio
     async def test_error_scenarios_comprehensive(self, optimized_orchestrator):
-        """Test comprehensive error handling scenarios.
+        """Test error handling scenarios.
 
         Args:
             optimized_orchestrator: Test orchestrator instance
@@ -857,7 +857,7 @@ class TestTripSageOrchestratorOptimized:
 
     @pytest.mark.asyncio
     async def test_handoff_coordination_comprehensive(self, optimized_orchestrator):
-        """Test comprehensive agent handoff coordination.
+        """Test agent handoff coordination.
 
         Args:
             optimized_orchestrator: Test orchestrator instance
@@ -890,7 +890,7 @@ class TestTripSageOrchestratorOptimized:
         assert state["handoff_context"]["to_agent"] == "accommodation_agent"
 
     def test_recovery_handling_comprehensive(self, optimized_orchestrator):
-        """Test comprehensive error recovery handling.
+        """Test error recovery handling.
 
         Args:
             optimized_orchestrator: Test orchestrator instance

@@ -1,6 +1,6 @@
 /**
  * Central schema registry and exports
- * All Zod schemas for comprehensive runtime type safety
+ * All Zod schemas for runtime type safety
  */
 
 // Re-export all schemas with selective exports to avoid conflicts
@@ -265,7 +265,7 @@ export const schemaMetadata = {
     ],
   },
   forms: {
-    description: "Form data validation schemas with comprehensive rules",
+    description: "Form data validation schemas with rules",
     schemas: Object.keys(formSchemas).length,
     categories: ["auth", "profile", "search", "trip", "budget", "chat", "contact"],
   },
@@ -362,7 +362,7 @@ export const dev = {
   },
 };
 
-// Export everything for comprehensive type safety
+// Export everything for type safety
 export type ValidationCodes = typeof validationCodes;
 export type ErrorMessages = typeof errorMessages;
 export type CommonPatterns = typeof commonPatterns;

@@ -1,4 +1,4 @@
-"""Comprehensive tests for flight models.
+"""Tests for flight models.
 
 Tests validation, serialization, and business logic for flight-related models.
 """

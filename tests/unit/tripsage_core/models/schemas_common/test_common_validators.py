@@ -1,4 +1,4 @@
-"""Comprehensive tests for CommonValidators.
+"""Tests for CommonValidators.
 
 This module tests all validation functions and Annotated types to ensure
 consistent behavior across the application.
@@ -469,7 +469,7 @@ class TestIntegrationWithPydantic:
     """Test integration with Pydantic models."""
 
     def test_complex_model_validation(self):
-        """Test comprehensive model with multiple validators."""
+        """Test model with multiple validators."""
 
         class FlightModel(BaseModel):
             origin: AirportCode

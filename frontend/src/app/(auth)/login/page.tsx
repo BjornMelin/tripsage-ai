@@ -118,7 +118,7 @@ export default async function LoginPage({
               <div>
                 <h3 className="font-semibold text-foreground">Detailed Itineraries</h3>
                 <p className="text-sm text-muted-foreground">
-                  Comprehensive travel plans with all the details
+                  Travel plans with all the details
                 </p>
               </div>
             </div>

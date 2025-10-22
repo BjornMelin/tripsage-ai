@@ -1,4 +1,4 @@
-"""Comprehensive tests for enhanced routing and handoff coordination.
+"""Tests for enhanced routing and handoff coordination.
 
 This module tests the improved routing logic with multi-tier classification,
 confidence scoring, and sophisticated handoff coordination.
@@ -40,7 +40,9 @@ class TestRouterNode:
         )
 
     @pytest.mark.asyncio
-    async def test_classification_with_fallback_success(self, router_node, sample_state):
+    async def test_classification_with_fallback_success(
+        self, router_node, sample_state
+    ):
         """Test successful enhanced classification."""
         with patch.object(
             router_node, "_classify_intent", new_callable=AsyncMock

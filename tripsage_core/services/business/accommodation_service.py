@@ -1,5 +1,5 @@
 # pylint: disable=too-many-lines
-"""Accommodation service for comprehensive accommodation management operations.
+"""Accommodation service for accommodation management operations.
 
 This service consolidates accommodation-related business logic including accommodation
 search, booking, management, and integration with external accommodation APIs. It
@@ -364,7 +364,7 @@ class AccommodationBookingRequest(TripSageModel):
 
 
 class AccommodationService:
-    """Comprehensive accommodation service for search, booking, and management.
+    """Accommodation service for search, booking, and management.
 
     This service handles:
     - Accommodation search with multiple providers

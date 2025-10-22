@@ -1,4 +1,4 @@
-"""Comprehensive test suite for TripCollaborator Pydantic models.
+"""Test suite for TripCollaborator Pydantic models.
 
 This module tests the TripCollaboratorDB, TripCollaboratorCreate, TripCollaboratorUpdate
 models and PermissionLevel enum with:
@@ -583,7 +583,7 @@ class TestTripCollaboratorEdgeCases:
 
 
 class TestTripCollaboratorPropertyBased:
-    """Property-based tests using Hypothesis for comprehensive validation."""
+    """Property-based tests using Hypothesis for validation."""
 
     @given(
         trip_id=st.integers(min_value=1, max_value=2**31 - 1),

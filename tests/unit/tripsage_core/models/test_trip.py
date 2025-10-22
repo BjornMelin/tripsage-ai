@@ -1,4 +1,4 @@
-"""Comprehensive unit tests for the unified Trip model.
+"""Unit tests for the unified Trip model.
 
 This test suite provides 90%+ coverage for the Trip model,
 testing all validations, properties, and business logic.
@@ -12,8 +12,8 @@ from pydantic import ValidationError
 
 from tripsage_core.models.schemas_common.enums import TripStatus, TripType
 from tripsage_core.models.trip import (
-    BudgetBreakdown,
     Budget,
+    BudgetBreakdown,
     Trip,
     TripPreferences,
     TripVisibility,
@@ -73,9 +73,7 @@ class TestBudget:
             activities=700.0,
             miscellaneous=500.0,
         )
-        budget = Budget(
-            total=5000.0, currency="EUR", spent=1500.0, breakdown=breakdown
-        )
+        budget = Budget(total=5000.0, currency="EUR", spent=1500.0, breakdown=breakdown)
         assert budget.total == 5000.0
         assert budget.currency == "EUR"
         assert budget.spent == 1500.0

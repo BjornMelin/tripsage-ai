@@ -1,4 +1,4 @@
-"""Comprehensive unit tests for WebSocket error recovery and state management.
+"""Unit tests for WebSocket error recovery and state management.
 
 This module tests all 8 connection states, circuit breaker patterns,
 exponential backoff, and error recovery scenarios to ensure 90%+ coverage.

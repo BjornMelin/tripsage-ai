@@ -1,6 +1,6 @@
 /**
  * React Hook Form integration with Zod validation
- * Provides type-safe form handling with comprehensive error management
+ * Provides type-safe form handling with error management
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";

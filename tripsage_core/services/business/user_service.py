@@ -1,4 +1,4 @@
-"""User service for comprehensive user management operations.
+"""User service for user management operations.
 
 This service consolidates user-related business logic including user creation,
 retrieval, updates, and password management. It follows clean architecture
@@ -106,7 +106,7 @@ class PasswordChangeRequest(TripSageModel):
 
 
 class UserService:
-    """Comprehensive user management service.
+    """User management service.
 
     This service handles all user-related operations including:
     - User creation and registration

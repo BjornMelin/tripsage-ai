@@ -1,4 +1,4 @@
-"""Comprehensive tests for TripSageOrchestrator and graph construction.
+"""Tests for TripSageOrchestrator and graph construction.
 
 This module provides full test coverage for the main orchestration graph
 including node configuration, routing logic, and message processing.
@@ -309,11 +309,11 @@ class TestStateCreation:
 
 
 class TestTripSageOrchestrator:
-    """Comprehensive test suite for TripSageOrchestrator."""
+    """Test suite for TripSageOrchestrator."""
 
     @pytest.fixture
     def comprehensive_mock_registry(self):
-        """Create a comprehensive mock service registry."""
+        """Create a mock service registry."""
         registry = MagicMock(spec=ServiceRegistry)
 
         # Mock all services with proper async patterns
@@ -408,7 +408,7 @@ class TestTripSageOrchestrator:
         assert enhanced_orchestrator._route_to_agent(state) == "general_agent"
 
     def test_next_step_determination_comprehensive(self, enhanced_orchestrator):
-        """Test comprehensive next step determination logic."""
+        """Test next step determination logic."""
         # Test with complex handoff scenario
         enhanced_orchestrator.handoff_coordinator.determine_next_agent.return_value = (
             "budget_agent",
@@ -557,7 +557,7 @@ class TestTripSageOrchestrator:
             assert result["session_id"] == f"session-{i}"
 
     def test_general_agent_comprehensive_response(self, enhanced_orchestrator):
-        """Test general agent provides comprehensive help."""
+        """Test general agent provides help."""
         general_agent = enhanced_orchestrator._create_general_agent()
 
         # Verify it's an async function

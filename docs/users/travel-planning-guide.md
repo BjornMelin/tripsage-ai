@@ -30,7 +30,7 @@ TripSage will ask clarifying questions. Be ready to specify:
 
 ### Step 3: Review AI Recommendations 🤖
 
-TripSage provides comprehensive suggestions:
+TripSage provides suggestions:
 
 #### Flights
 

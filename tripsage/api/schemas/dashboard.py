@@ -378,7 +378,7 @@ class TrendDataResponse(BaseModel):
 
 
 class AnalyticsSummaryResponse(BaseModel):
-    """Comprehensive analytics summary response."""
+    """Analytics summary response."""
 
     period: dict[str, Any] = Field(..., description="Analysis period information")
 

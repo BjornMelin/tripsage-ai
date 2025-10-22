@@ -124,7 +124,7 @@ class PreferencesUpdateRequest(TripSageModel):
 
 
 class MemoryService:
-    """Comprehensive memory service using Mem0 with travel-specific optimizations.
+    """Memory service using Mem0 with travel-specific optimizations.
 
     This service handles:
     - Conversation memory extraction and storage
@@ -278,7 +278,7 @@ class MemoryService:
     @trace_span("service.memory.connect")
     @record_histogram("tripsage.service.memory.connect.seconds")
     async def connect(self) -> None:
-        """Initialize service connection with comprehensive validation and retry logic.
+        """Initialize service connection with validation and retry logic.
 
         This method now includes:
         - Database connection validation
@@ -492,7 +492,7 @@ class MemoryService:
     async def get_user_context(
         self, user_id: str, context_type: str | None = None
     ) -> UserContextResponse:
-        """Get comprehensive user context for personalization.
+        """Get user context for personalization.
 
         Args:
             user_id: User identifier

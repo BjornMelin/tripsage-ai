@@ -1,7 +1,7 @@
 /**
  * WebSocket client with auto-reconnection and event handling
  *
- * Provides comprehensive WebSocket management for real-time communication
+ * Provides WebSocket management for real-time communication
  * with the TripSage backend, including authentication, reconnection logic,
  * and typed event handling.
  */

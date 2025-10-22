@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UseQueryResult } from "@tanstack/react-query";
 /**
- * Comprehensive mock helpers for TypeScript compliance
+ * Mock helpers for TypeScript compliance
  */
 import { vi } from "vitest";
 

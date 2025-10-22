@@ -17,7 +17,7 @@ interface QueryStateHandlerProps<TData = unknown, TError = Error> {
 }
 
 /**
- * Comprehensive query state handler with loading, error, and empty states
+ * Query state handler with loading, error, and empty states
  */
 export function QueryStateHandler<TData = unknown, TError = Error>({
   query,

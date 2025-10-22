@@ -768,7 +768,7 @@ X-RateLimit-Window: 3600
 ### Real-time Features
 
 - **[WebSocket API](websocket-api.md)** - Real-time chat and collaboration
-- **[Real-time Guide](realtime-guide.md)** - Advanced real-time patterns
+- **[Real-time Guide](realtime-guide.md)** - Real-time patterns
 
 ### Support
 

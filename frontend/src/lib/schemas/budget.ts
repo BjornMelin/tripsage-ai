@@ -1,5 +1,5 @@
 /**
- * Comprehensive Zod schemas for Budget management
+ * Zod schemas for Budget management
  * Runtime validation for all budget-related data types
  */
 

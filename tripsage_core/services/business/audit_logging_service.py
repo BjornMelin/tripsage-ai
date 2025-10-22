@@ -1,4 +1,4 @@
-"""Comprehensive Security Audit Logging Service.
+"""Security Audit Logging Service.
 
 This service provides enterprise-grade audit logging capabilities following
 NIST SP 800-92, OWASP, and industry best practices for security event tracking.
@@ -168,7 +168,7 @@ class AuditActor(BaseModel):
 
 
 class AuditEvent(TripSageModel):
-    """Comprehensive audit event following NIST SP 800-92 guidelines.
+    """Audit event following NIST SP 800-92 guidelines.
 
     This model represents a single security event with all required
     metadata for compliance and forensic analysis.
@@ -294,7 +294,7 @@ class AuditLogConfig(BaseModel):
 class SecurityAuditLogger:
     """Production-ready security audit logging service.
 
-    This service provides comprehensive audit logging capabilities with:
+    This service provides audit logging capabilities with:
     - Structured JSON logging with consistent schema
     - High-performance async logging with buffering
     - Configurable retention and rotation policies

@@ -1,4 +1,4 @@
-"""Comprehensive tests for BaseAgentNode.
+"""Tests for BaseAgentNode.
 
 This module provides full test coverage for the base agent node functionality
 including error handling, logging, state management, and tool initialization.

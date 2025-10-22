@@ -515,7 +515,7 @@ class ApiKeyService:
         key_value: str,
         user_id: str | None = None,
     ) -> ValidationResult:
-        """Validate an API key with comprehensive retry patterns and caching.
+        """Validate an API key with retry patterns and caching.
 
         This method implements a robust validation pipeline:
         1. Checks cache for recent validation results (5-minute TTL)
@@ -537,7 +537,7 @@ class ApiKeyService:
                 limiting. When provided, enables user-specific tracking.
 
         Returns:
-            ValidationResult: Comprehensive validation response containing:
+            ValidationResult: Validation response containing:
                 - is_valid: Boolean validation status
                 - status: Detailed status (VALID, INVALID, RATE_LIMITED, etc.)
                 - message: Human-readable validation message
@@ -847,7 +847,7 @@ class ApiKeyService:
             key_value: The API key to validate
 
         Returns:
-            ValidationResult with comprehensive validation data
+            ValidationResult with validation data
         """
         # Fast format validation
         if not key_value.startswith("sk-"):
