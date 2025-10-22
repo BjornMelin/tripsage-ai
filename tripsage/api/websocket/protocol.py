@@ -18,7 +18,7 @@ class ConnectionEvent(WebSocketEvent):
         default=WebSocketEventType.CONNECTION_ESTABLISHED,
         description="Connection lifecycle event type",
     )
-    payload: dict[str, str | None] = Field(default_factory=dict)
+    payload: dict[str, str | list[str] | None] = Field(default_factory=dict)
 
 
 class ErrorEvent(WebSocketEvent):
