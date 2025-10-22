@@ -124,16 +124,17 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     """
     settings = get_settings()
 
-    # Initialize OpenTelemetry once using settings-driven flags
-    setup_otel(
-        service_name="tripsage-api",
-        service_version=settings.api_version,
-        environment=settings.environment,
-        enable_fastapi=False,  # instrument FastAPI via instrument_app below
-        enable_asgi=settings.enable_asgi_instrumentation,
-        enable_httpx=settings.enable_httpx_instrumentation,
-        enable_redis=settings.enable_redis_instrumentation,
-    )
+    # Initialize OpenTelemetry once using settings-driven flags (skip in testing)
+    if not settings.is_testing:
+        setup_otel(
+            service_name="tripsage-api",
+            service_version=settings.api_version,
+            environment=settings.environment,
+            enable_fastapi=False,  # instrument FastAPI via instrument_app below
+            enable_asgi=settings.enable_asgi_instrumentation,
+            enable_httpx=settings.enable_httpx_instrumentation,
+            enable_redis=settings.enable_redis_instrumentation,
+        )
 
     # Create FastAPI app with unified configuration
     app = FastAPI(
