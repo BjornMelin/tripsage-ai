@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """WebSocket connection manager with integrated broadcasting and error recovery.
 
 This module provides WebSocket connection management including:
@@ -928,8 +929,9 @@ class WebSocketManager:
                 active_count = len(self.connection_service.connections)
                 self.performance_metrics["active_connections"] = active_count
 
-                if active_count > self.performance_metrics["peak_connections"]:
-                    self.performance_metrics["peak_connections"] = active_count
+                self.performance_metrics["peak_connections"] = max(
+                    self.performance_metrics["peak_connections"], active_count
+                )
 
                 # Log performance metrics every 5 minutes
                 if int(time.time()) % 300 == 0:

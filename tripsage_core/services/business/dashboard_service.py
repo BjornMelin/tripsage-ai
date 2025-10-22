@@ -573,10 +573,8 @@ class DashboardService:
                 # Update activity timestamps
                 timestamp = log.get("timestamp")
                 if timestamp:
-                    if timestamp < stats["first_activity"]:
-                        stats["first_activity"] = timestamp
-                    if timestamp > stats["last_activity"]:
-                        stats["last_activity"] = timestamp
+                    stats["first_activity"] = min(stats["first_activity"], timestamp)
+                    stats["last_activity"] = max(stats["last_activity"], timestamp)
 
             # Convert to UserActivityData objects
             user_activities = [

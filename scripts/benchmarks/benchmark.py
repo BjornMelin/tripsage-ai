@@ -15,6 +15,7 @@ Usage:
 
 import asyncio
 import logging
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -395,7 +396,7 @@ def quick(output_dir: str, iterations: int, concurrent: int):
             return 1
 
     exit_code = asyncio.run(run())
-    exit(exit_code)
+    sys.exit(exit_code)
 
 
 @main.command()
@@ -422,7 +423,7 @@ def database_only(output_dir: str):
             return 1
 
     exit_code = asyncio.run(run())
-    exit(exit_code)
+    sys.exit(exit_code)
 
 
 @main.command()
@@ -449,7 +450,7 @@ def vector_only(output_dir: str):
             return 1
 
     exit_code = asyncio.run(run())
-    exit(exit_code)
+    sys.exit(exit_code)
 
 
 @main.command()
@@ -493,7 +494,7 @@ def full_suite(output_dir: str, timeout: int):
             return 1
 
     exit_code = asyncio.run(run())
-    exit(exit_code)
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

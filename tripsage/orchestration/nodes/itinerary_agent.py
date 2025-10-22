@@ -659,17 +659,16 @@ class ItineraryAgentNode(BaseAgentNode):
                 f"I apologize, but I encountered an issue with your itinerary: "
                 f"{result['error']}"
             )
+        elif operation_type == "create":
+            content = self._format_create_response(result, params)
+        elif operation_type == "optimize":
+            content = self._format_optimize_response(result, params)
+        elif operation_type == "modify":
+            content = self._format_modify_response(result, params)
+        elif operation_type == "calendar":
+            content = self._format_calendar_response(result, params)
         else:
-            if operation_type == "create":
-                content = self._format_create_response(result, params)
-            elif operation_type == "optimize":
-                content = self._format_optimize_response(result, params)
-            elif operation_type == "modify":
-                content = self._format_modify_response(result, params)
-            elif operation_type == "calendar":
-                content = self._format_calendar_response(result, params)
-            else:
-                content = "Itinerary operation completed successfully."
+            content = "Itinerary operation completed successfully."
 
         return self._create_response_message(
             content,

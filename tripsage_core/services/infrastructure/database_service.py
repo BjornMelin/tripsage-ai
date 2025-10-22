@@ -1,4 +1,4 @@
-# pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods,no-name-in-module,global-statement,import-error
+# pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods,no-name-in-module
 """Supabase-only Database Service (FINAL-ONLY).
 
 This module provides a single modern DatabaseService that uses the Supabase
@@ -21,10 +21,11 @@ import contextlib
 import logging
 import time
 from collections import deque
+from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from supabase import Client, create_client
@@ -39,6 +40,27 @@ from tripsage_core.observability.otel import get_meter, get_tracer
 
 
 logger = logging.getLogger(__name__)
+
+
+# -------------------
+# OTEL metric helpers
+# -------------------
+
+
+class _MetricsCounter(Protocol):
+    """Minimal counter protocol for OTEL metric stubs."""
+
+    def add(self, amount: int, attributes: Mapping[str, str] | None = None) -> None:
+        """Record a counter increment."""
+
+
+class _MetricsHistogram(Protocol):
+    """Minimal histogram protocol for OTEL metric stubs."""
+
+    def record(
+        self, amount: float, attributes: Mapping[str, str] | None = None
+    ) -> None:
+        """Record a histogram measurement."""
 
 
 # ---------------------------
@@ -364,6 +386,9 @@ class DatabaseService:
         self._connection_stats = ConnectionStats(
             pool_size=self.pool_size, max_overflow=self.max_overflow
         )
+        self._h_query_duration: _MetricsHistogram | None = None
+        self._c_query_total: _MetricsCounter | None = None
+        self._c_slow_total: _MetricsCounter | None = None
 
         # Initialize OTEL meters when metrics are enabled
         if self._config.monitoring.enable_metrics:
@@ -417,7 +442,7 @@ class DatabaseService:
             await self._test_connections()
             self._connected = True
             try:
-                if getattr(self, "_c_query_total", None):
+                if self._c_query_total is not None:
                     # Reuse query counter to record a synthetic 'connect' event
                     self._c_query_total.add(
                         1,
@@ -426,7 +451,7 @@ class DatabaseService:
                             "table": "_",
                             "status": "success",
                         },
-                    )  # type: ignore[attr-defined]
+                    )
             except Exception:  # noqa: BLE001
                 logger.debug("OTEL DB connect metric record failed", exc_info=True)
             self._connection_stats.uptime_seconds = 0
@@ -435,7 +460,7 @@ class DatabaseService:
         except Exception as e:
             self._connected = False
             try:
-                if getattr(self, "_c_query_total", None):
+                if self._c_query_total is not None:
                     self._c_query_total.add(
                         1,
                         {
@@ -443,7 +468,7 @@ class DatabaseService:
                             "table": "_",
                             "status": "error",
                         },
-                    )  # type: ignore[attr-defined]
+                    )
             except Exception:  # noqa: BLE001
                 logger.debug("OTEL DB connect metric record failed", exc_info=True)
             self._connection_stats.connection_errors += 1
@@ -518,9 +543,9 @@ class DatabaseService:
                 "db.query.slow_total", description="Total slow DB queries"
             )
         except Exception:  # noqa: BLE001 - meter init is best-effort
-            self._h_query_duration = None  # type: ignore[attr-defined]
-            self._c_query_total = None  # type: ignore[attr-defined]
-            self._c_slow_total = None  # type: ignore[attr-defined]
+            self._h_query_duration = None
+            self._c_query_total = None
+            self._c_slow_total = None
             logger.debug("OTEL meter init failed", exc_info=True)
 
     @asynccontextmanager
@@ -569,16 +594,17 @@ class DatabaseService:
                     "table": (table or "unknown"),
                     "status": "success",
                 }
-                if getattr(self, "_h_query_duration", None):
-                    self._h_query_duration.record(duration, attrs)  # type: ignore[attr-defined]
-                if getattr(self, "_c_query_total", None):
-                    self._c_query_total.add(1, attrs)  # type: ignore[attr-defined]
-                if duration > self.slow_query_threshold and getattr(
-                    self, "_c_slow_total", None
+                if self._h_query_duration is not None:
+                    self._h_query_duration.record(duration, attrs)
+                if self._c_query_total is not None:
+                    self._c_query_total.add(1, attrs)
+                if (
+                    self._c_slow_total is not None
+                    and duration > self.slow_query_threshold
                 ):
                     self._c_slow_total.add(
                         1, {k: v for k, v in attrs.items() if k != "status"}
-                    )  # type: ignore[attr-defined]
+                    )
             except Exception:  # noqa: BLE001 - metrics must not affect queries
                 logger.debug("OTEL DB metrics record failed", exc_info=True)
             self._connection_stats.queries_executed += 1
@@ -604,10 +630,10 @@ class DatabaseService:
                     "table": (table or "unknown"),
                     "status": "error",
                 }
-                if getattr(self, "_h_query_duration", None):
-                    self._h_query_duration.record(duration, attrs)  # type: ignore[attr-defined]
-                if getattr(self, "_c_query_total", None):
-                    self._c_query_total.add(1, attrs)  # type: ignore[attr-defined]
+                if self._h_query_duration is not None:
+                    self._h_query_duration.record(duration, attrs)
+                if self._c_query_total is not None:
+                    self._c_query_total.add(1, attrs)
             except Exception:  # noqa: BLE001 - metrics must not affect queries
                 logger.debug("OTEL DB metrics record failed", exc_info=True)
             self._record_circuit_breaker_failure()
@@ -662,7 +688,7 @@ class DatabaseService:
                 return
             if count >= self._config.security.rate_limit_requests:
                 try:
-                    if getattr(self, "_c_query_total", None):
+                    if self._c_query_total is not None:
                         self._c_query_total.add(
                             1,
                             {
@@ -671,7 +697,7 @@ class DatabaseService:
                                 "status": "hit",
                                 "user_id": user_id,
                             },
-                        )  # type: ignore[attr-defined]
+                        )
                 except Exception:  # noqa: BLE001
                     logger.debug("OTEL rate-limit metric record failed", exc_info=True)
                 raise CoreServiceError(
@@ -2032,7 +2058,7 @@ class DatabaseService:
                 )
                 self._security_alerts.append(alert)
                 try:
-                    if getattr(self, "_c_query_total", None):
+                    if self._c_query_total is not None:
                         self._c_query_total.add(
                             1,
                             {
@@ -2040,7 +2066,7 @@ class DatabaseService:
                                 "table": "_",
                                 "status": "sql_injection_attempt",
                             },
-                        )  # type: ignore[attr-defined]
+                        )
                 except Exception:  # noqa: BLE001
                     logger.debug("OTEL security metric record failed", exc_info=True)
                 raise CoreServiceError(
@@ -2083,7 +2109,7 @@ async def get_database_service() -> DatabaseService:
     Returns:
         A connected DatabaseService.
     """
-    global _database_service
+    global _database_service  # pylint: disable=global-statement
     if _database_service is None:
         _database_service = DatabaseService()
         await _database_service.connect()
@@ -2092,7 +2118,7 @@ async def get_database_service() -> DatabaseService:
 
 async def close_database_service() -> None:
     """Close and clear the singleton DatabaseService instance."""
-    global _database_service
+    global _database_service  # pylint: disable=global-statement
     if _database_service:
         await _database_service.close()
         _database_service = None
