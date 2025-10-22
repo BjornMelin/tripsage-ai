@@ -69,7 +69,9 @@ class ChatServiceProto(Protocol):
         """List messages in a chat session."""
         ...
 
-    async def add_message(self, session_id: str, user_id: str, message_data: Any) -> Any:
+    async def add_message(
+        self, session_id: str, user_id: str, message_data: Any
+    ) -> Any:
         """Create a message in a chat session."""
         ...
 

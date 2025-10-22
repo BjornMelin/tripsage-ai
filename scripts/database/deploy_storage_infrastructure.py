@@ -173,8 +173,7 @@ class StorageDeployment:
 
             print("Edge Function file ready for deployment")
             print(
-                "Note: Deploy manually using: "
-                "supabase functions deploy file-processor"
+                "Note: Deploy manually using: supabase functions deploy file-processor"
             )
             return True
 
@@ -302,9 +301,7 @@ class StorageDeployment:
             print(f"[{status}] {step.replace('_', ' ').title()}")
 
         success_rate = (successful_steps / total_steps) * 100
-        print(
-            f"\nSuccess Rate: {successful_steps}/{total_steps} ({success_rate:.1f}%)"
-        )
+        print(f"\nSuccess Rate: {successful_steps}/{total_steps} ({success_rate:.1f}%)")
 
         if successful_steps == total_steps:
             print("\nStorage infrastructure deployment completed successfully")

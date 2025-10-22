@@ -164,13 +164,16 @@ async def get_cache_service_dep(request: Request) -> CacheService:
     """Get cache service from app state (DI-managed)."""
     return request.app.state.cache_service  # type: ignore[attr-defined]
 
+
 async def get_websocket_manager_dep(request: Request):
     """Get DI-managed WebSocket manager instance."""
     return request.app.state.websocket_manager  # type: ignore[attr-defined]
 
+
 async def get_websocket_broadcaster_dep(request: Request):
     """Get DI-managed WebSocket broadcaster instance."""
     return request.app.state.websocket_broadcaster  # type: ignore[attr-defined]
+
 
 # Google Maps service dependency (DI-managed in app lifespan)
 def get_maps_service_dep(request: Request) -> GoogleMapsService:
@@ -239,10 +242,13 @@ AccommodationServiceDep = Annotated[
 ]
 ChatServiceDep = Annotated[ChatServiceProto, Depends(get_chat_service)]
 DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
+
+
 async def get_flight_service_dep(request: Request) -> FlightService:
     """Construct FlightService for endpoints that require it."""
     db = await get_database_service()
     return FlightService(database_service=db)
+
 
 FlightServiceDep = Annotated[FlightService, Depends(get_flight_service_dep)]
 ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)]

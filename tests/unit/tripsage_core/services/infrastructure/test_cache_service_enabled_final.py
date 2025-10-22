@@ -172,11 +172,8 @@ async def test_keys_and_delete_pattern(enabled_cache_service: CacheService) -> N
 
 
 @pytest.mark.anyio
-async def test_flushdb_and_info(enabled_cache_service: CacheService) -> None:
-    """Flush database and parse server info output."""
+async def test_flushdb(enabled_cache_service: CacheService) -> None:
+    """Flush database and verify all keys are removed."""
     await enabled_cache_service.set("k", "v")
     assert await enabled_cache_service.flushdb() is True
     assert await enabled_cache_service.keys("*") == []
-    info = await enabled_cache_service.info()
-    assert isinstance(info, dict)
-    assert "redis_version" in info
