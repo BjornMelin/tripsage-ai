@@ -10,10 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
-from tripsage_core.services.infrastructure.database_service import (
-    DatabaseService,
-    get_database_service,
-)
+from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
 logger = logging.getLogger(__name__)
@@ -194,11 +191,4 @@ class SearchHistoryService:
         return "unified"
 
 
-async def get_search_history_service() -> SearchHistoryService:
-    """Get an instance of the search history service.
-
-    Returns:
-        SearchHistoryService instance
-    """
-    db_service = await get_database_service()
-    return SearchHistoryService(db_service)
+# FINAL-ONLY: Removed factory; construct via DI with explicit DatabaseService.

@@ -470,29 +470,5 @@ class WebCrawlService:
         await self.close()
 
 
-# Global service instance
-_webcrawl_service: WebCrawlService | None = None
-
-
-async def get_webcrawl_service() -> WebCrawlService:
-    """Get the global WebCrawl service instance.
-
-    Returns:
-        WebCrawlService instance
-    """
-    global _webcrawl_service  # pylint: disable=global-statement
-
-    if _webcrawl_service is None:
-        _webcrawl_service = WebCrawlService()
-        await _webcrawl_service.connect()
-
-    return _webcrawl_service
-
-
-async def close_webcrawl_service() -> None:
-    """Close the global WebCrawl service instance."""
-    global _webcrawl_service  # pylint: disable=global-statement
-
-    if _webcrawl_service:
-        await _webcrawl_service.close()
-        _webcrawl_service = None
+# FINAL-ONLY: Removed module-level singleton for WebCrawlService.
+# Construct WebCrawlService in application wiring and inject explicitly.

@@ -56,10 +56,9 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyOperationRateLimitMiddleware,
 )
 from tripsage_core.services.infrastructure.websocket_broadcaster import (
-    websocket_broadcaster,
+    WebSocketBroadcaster,
 )
-from tripsage_core.services.infrastructure.websocket_manager import websocket_manager
-from tripsage_core.services.simple_mcp_service import default_mcp_service
+from tripsage_core.services.infrastructure.websocket_manager import WebSocketManager
 
 
 logger = logging.getLogger(__name__)
@@ -87,33 +86,40 @@ async def lifespan(app: FastAPI):
     """
     # Startup: Initialize MCP Manager and WebSocket Services
     logger.info("Initializing MCP service on API startup")
-    await default_mcp_service.initialize()
+    from tripsage_core.services.simple_mcp_service import SimpleMCPService
+    app.state.mcp_service = SimpleMCPService()
+    await app.state.mcp_service.initialize()
 
-    available_services = default_mcp_service.available_services()
-    initialized_services = default_mcp_service.initialized_services()
-    logger.info("Available MCP services: %s", available_services)
-    logger.info("Initialized MCP services: %s", initialized_services)
+    # Initialize services (Cache, WebSocket, MCP) in DI-managed app.state
+    logger.info("Initializing Cache service")
+    from tripsage_core.services.infrastructure.cache_service import CacheService
+    app.state.cache_service = CacheService()
+    await app.state.cache_service.connect()
 
-    # Initialize WebSocket Broadcaster first
     logger.info("Starting WebSocket Broadcaster")
-    await websocket_broadcaster.start()
+    app.state.websocket_broadcaster = WebSocketBroadcaster()
+    await app.state.websocket_broadcaster.start()
 
     # Initialize WebSocket Manager with broadcaster integration
     logger.info("Starting WebSocket Manager with broadcaster integration")
-    websocket_manager.broadcaster = websocket_broadcaster
-    await websocket_manager.start()
+    app.state.websocket_manager = WebSocketManager()
+    app.state.websocket_manager.broadcaster = app.state.websocket_broadcaster
+    await app.state.websocket_manager.start()
 
     yield  # Application runs here
 
     # Shutdown: Clean up resources (reverse order)
     logger.info("Stopping WebSocket Manager")
-    await websocket_manager.stop()
+    await app.state.websocket_manager.stop()
 
     logger.info("Stopping WebSocket Broadcaster")
-    await websocket_broadcaster.stop()
+    await app.state.websocket_broadcaster.stop()
+
+    logger.info("Disconnecting Cache service")
+    await app.state.cache_service.disconnect()
 
     logger.info("Shutting down MCP Manager")
-    await default_mcp_service.shutdown()
+    await app.state.mcp_service.shutdown()
 
 
 def create_app() -> FastAPI:  # pylint: disable=too-many-statements
