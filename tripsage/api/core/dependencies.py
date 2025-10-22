@@ -16,6 +16,7 @@ from tripsage_core.services.business.accommodation_service import (
     AccommodationService,
     get_accommodation_service,
 )
+from tripsage_core.services.business.activity_service import ActivityService
 from tripsage_core.services.business.api_key_service import ApiKeyService
 from tripsage_core.services.business.chat_service import get_chat_service
 from tripsage_core.services.business.destination_service import (
@@ -34,8 +35,11 @@ from tripsage_core.services.business.memory_service import (
     get_memory_service,
 )
 from tripsage_core.services.business.trip_service import TripService, get_trip_service
+from tripsage_core.services.business.unified_search_service import UnifiedSearchService
 from tripsage_core.services.business.user_service import UserService, get_user_service
+from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
 from tripsage_core.services.infrastructure import CacheService
+from tripsage_core.services.infrastructure.cache_service import get_cache_service
 from tripsage_core.services.infrastructure.database_service import (
     DatabaseService,
     get_database_service,
@@ -140,6 +144,7 @@ async def verify_service_access(
         if key_service is None:
             # Initialize key service if not provided
             db = await get_database_service()
+            # Use core cache getter here (principal check may run outside app.state)
             cache = await get_cache_service()
             settings = get_settings()
             key_service = ApiKeyService(db=db, cache=cache, settings=settings)
@@ -160,10 +165,39 @@ async def get_cache_service_dep(request: Request) -> CacheService:
     return request.app.state.cache_service  # type: ignore[attr-defined]
 
 async def get_websocket_manager_dep(request: Request):
+    """Get DI-managed WebSocket manager instance."""
     return request.app.state.websocket_manager  # type: ignore[attr-defined]
 
 async def get_websocket_broadcaster_dep(request: Request):
+    """Get DI-managed WebSocket broadcaster instance."""
     return request.app.state.websocket_broadcaster  # type: ignore[attr-defined]
+
+# Google Maps service dependency (DI-managed in app lifespan)
+def get_maps_service_dep(request: Request) -> GoogleMapsService:
+    """Get DI-managed Google Maps service instance."""
+    return request.app.state.google_maps_service  # type: ignore[attr-defined]
+
+
+# Activity service dependency constructed from DI-managed services
+def get_activity_service_dep(request: Request) -> ActivityService:
+    """Build ActivityService from DI-managed maps + cache services."""
+    maps: GoogleMapsService = get_maps_service_dep(request)
+    cache: CacheService = request.app.state.cache_service  # type: ignore[attr-defined]
+    return ActivityService(google_maps_service=maps, cache_service=cache)
+
+
+# Unified search service dependency
+def get_unified_search_service_dep(request: Request) -> UnifiedSearchService:
+    """Build UnifiedSearchService from DI-managed collaborators."""
+    cache: CacheService = request.app.state.cache_service  # type: ignore[attr-defined]
+    activity = get_activity_service_dep(request)
+    return UnifiedSearchService(
+        cache_service=cache,
+        destination_service=None,
+        activity_service=activity,
+        flight_service=None,
+        accommodation_service=None,
+    )
 
 
 # MCP service dependency
@@ -187,6 +221,11 @@ DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
 CacheDep = Annotated[CacheService, Depends(get_cache_service_dep)]
 SessionMemoryDep = Annotated[SessionMemory, Depends(get_session_memory)]
 MCPServiceDep = Annotated[SimpleMCPService, Depends(get_mcp_service)]
+MapsServiceDep = Annotated[GoogleMapsService, Depends(get_maps_service_dep)]
+ActivityServiceDep = Annotated[ActivityService, Depends(get_activity_service_dep)]
+UnifiedSearchServiceDep = Annotated[
+    UnifiedSearchService, Depends(get_unified_search_service_dep)
+]
 
 # Principal-based authentication dependencies
 CurrentPrincipalDep = Annotated[Principal | None, Depends(get_current_principal)]
@@ -201,6 +240,7 @@ AccommodationServiceDep = Annotated[
 ChatServiceDep = Annotated[ChatServiceProto, Depends(get_chat_service)]
 DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
 async def get_flight_service_dep(request: Request) -> FlightService:
+    """Construct FlightService for endpoints that require it."""
     db = await get_database_service()
     return FlightService(database_service=db)
 

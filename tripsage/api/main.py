@@ -51,6 +51,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreValidationError,
 )
 from tripsage_core.observability.otel import setup_otel
+from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,
@@ -93,6 +94,11 @@ async def lifespan(app: FastAPI):
     app.state.cache_service = CacheService()
     await app.state.cache_service.connect()
 
+    # Initialize Google Maps service (DI-managed singleton for API lifespan)
+    logger.info("Initializing Google Maps service")
+    app.state.google_maps_service = GoogleMapsService()
+    await app.state.google_maps_service.connect()
+
     logger.info("Starting WebSocket Broadcaster")
     app.state.websocket_broadcaster = WebSocketBroadcaster()
     await app.state.websocket_broadcaster.start()
@@ -114,6 +120,9 @@ async def lifespan(app: FastAPI):
 
     logger.info("Disconnecting Cache service")
     await app.state.cache_service.disconnect()
+
+    logger.info("Closing Google Maps service")
+    await app.state.google_maps_service.close()
 
     logger.info("Shutting down MCP Manager")
     await app.state.mcp_service.shutdown()
