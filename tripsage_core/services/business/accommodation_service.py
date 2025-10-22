@@ -1,5 +1,4 @@
 # pylint: disable=too-many-lines
-
 """Accommodation service for comprehensive accommodation management operations.
 
 This service consolidates accommodation-related business logic including accommodation

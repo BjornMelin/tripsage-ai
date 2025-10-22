@@ -436,9 +436,7 @@ async def validate_websocket_origin(websocket: WebSocket) -> bool:
                 allowed_canonicals.add(allowed_canonical)
 
             if canonical_origin in allowed_canonicals:
-                logger.info(
-                    "WebSocket connection from authorized origin: %s", origin
-                )
+                logger.info("WebSocket connection from authorized origin: %s", origin)
                 is_authorized = True
             elif "*" in settings.cors_origins:
                 logger.warning(
