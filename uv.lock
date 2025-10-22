@@ -3866,6 +3866,7 @@ dependencies = [
     { name = "supabase" },
     { name = "tenacity" },
     { name = "typing-extensions" },
+    { name = "upstash-redis" },
     { name = "uvicorn" },
     { name = "watchdog" },
 ]
@@ -3961,6 +3962,7 @@ requires-dist = [
     { name = "supabase", specifier = ">=2.22.0,<3.0.0" },
     { name = "tenacity", specifier = ">=9.1.2" },
     { name = "typing-extensions", specifier = ">=4.15.0" },
+    { name = "upstash-redis", specifier = ">=1.4.0" },
     { name = "uvicorn", specifier = ">=0.38.0,<0.39.0" },
     { name = "watchdog", specifier = ">=6.0.0" },
 ]
@@ -4047,6 +4049,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/55/e3/70399cb7dd41c10ac53367ae42139cf4b1ca5f36bb3dc6c9d33acdb43655/typing_inspection-0.4.2.tar.gz", hash = "sha256:ba561c48a67c5958007083d386c3295464928b01faa735ab8547c5692e87f464", size = 75949, upload-time = "2025-10-01T02:14:41.687Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/dc/9b/47798a6c91d8bdb567fe2698fe81e0c6b7cb7ef4d13da4114b41d239f65d/typing_inspection-0.4.2-py3-none-any.whl", hash = "sha256:4ed1cacbdc298c220f1bd249ed5287caa16f34d44ef4e9c3d0cbad5b521545e7", size = 14611, upload-time = "2025-10-01T02:14:40.154Z" },
+]
+
+[[package]]
+name = "upstash-redis"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/73/4c/308af54f76b54c2245f60a8f294ec710738402d44291e8605aeac8d82532/upstash_redis-1.4.0.tar.gz", hash = "sha256:e3b77205cb99695b8000042695f8054e27c12fbc2eebe5ccdd428d986b11de87", size = 34976, upload-time = "2025-04-11T13:31:39.274Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/39/1d/faadd7437cbb7496ca8971e18e0ccaf57b373a87ed470562e1f12a67a63e/upstash_redis-1.4.0-py3-none-any.whl", hash = "sha256:88e41c4e95be3ea1e97b5e7818dcecd1bcbea5a3f074cc2c41951bd07fe0db1c", size = 37305, upload-time = "2025-04-11T13:31:37.587Z" },
 ]
 
 [[package]]
