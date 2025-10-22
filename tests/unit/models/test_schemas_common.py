@@ -1,36 +1,23 @@
-"""Comprehensive tests for centralized schemas.
+"""Tests for centralized schemas.
 
 Tests all centralized schema models and enums for validation,
 business logic, and integration functionality.
 """
 
-import sys
-from pathlib import Path
+from datetime import date, datetime, time
+from decimal import Decimal
 
+import pytest
+from pydantic import ValidationError
 
-# Add the project root to Python path
-project_root = Path(__file__).parents[3]
-sys.path.insert(0, str(project_root))
-
-from datetime import date, datetime, time  # noqa: E402
-from decimal import Decimal  # noqa: E402
-
-import pytest  # noqa: E402
-from pydantic import ValidationError  # noqa: E402
-
-from tripsage_core.models.schemas_common import (  # noqa: E402
-    # Enums
+from tripsage_core.models.schemas_common import (
     AccommodationType,
-    # Geographic
     Address,
     Airport,
-    # Temporal
     Availability,
-    # Base models
     BaseResponse,
     BookingStatus,
     BoundingBox,
-    # Financial
     Budget,
     BusinessHours,
     Coordinates,
@@ -107,7 +94,7 @@ class TestBaseModels:
     def test_success_response(self):
         """Test SuccessResponse model."""
         data = {"key": "value", "number": 42}
-        response = SuccessResponse(data=data, message="Success")
+        response = SuccessResponse(success=True, data=data, message="Success")
 
         assert response.success is True
         assert response.data == data
@@ -117,7 +104,10 @@ class TestBaseModels:
         """Test ErrorResponse model."""
         details = {"field": "email", "issue": "invalid format"}
         response = ErrorResponse(
-            message="Validation failed", error_code="VALIDATION_ERROR", details=details
+            success=False,
+            message="Validation failed",
+            error_code="VALIDATION_ERROR",
+            details=details,
         )
 
         assert response.success is False
@@ -153,7 +143,11 @@ class TestBaseModels:
         ]
 
         response = ValidationErrorResponse(
-            message="Validation failed", validation_errors=validation_errors
+            success=False,
+            message="Validation failed",
+            error_code="VALIDATION_ERROR",
+            details=None,
+            validation_errors=validation_errors,
         )
 
         assert response.success is False
@@ -179,13 +173,15 @@ class TestFinancialModels:
     def test_currency_validation(self):
         """Test Currency model validation."""
         with pytest.raises(ValidationError) as excinfo:
-            Currency(code=CurrencyCode.USD, decimal_places=5)
+            Currency(code=CurrencyCode.USD, symbol=None, name=None, decimal_places=5)
 
         assert "Input should be less than or equal to 4" in str(excinfo.value)
 
     def test_price_creation(self):
         """Test Price model creation."""
-        price = Price(amount=Decimal("99.99"), currency=CurrencyCode.USD)
+        price = Price(
+            amount=Decimal("99.99"), currency=CurrencyCode.USD, formatted=None
+        )
 
         assert price.amount == Decimal("99.99")
         assert price.currency == CurrencyCode.USD
@@ -193,20 +189,22 @@ class TestFinancialModels:
     def test_price_validation(self):
         """Test Price model validation."""
         with pytest.raises(ValidationError) as excinfo:
-            Price(amount=Decimal(-10), currency=CurrencyCode.USD)
+            Price(amount=Decimal(-10), currency=CurrencyCode.USD, formatted=None)
 
         assert "Input should be greater than or equal to 0" in str(excinfo.value)
 
     def test_price_formatting(self):
         """Test Price formatting methods."""
-        price = Price(amount=Decimal("99.99"), currency=CurrencyCode.USD)
+        price = Price(
+            amount=Decimal("99.99"), currency=CurrencyCode.USD, formatted=None
+        )
 
         assert price.to_float() == 99.99
         assert price.format("$") == "$99.99"
 
     def test_price_conversion(self):
         """Test Price currency conversion."""
-        price = Price(amount=Decimal(100), currency=CurrencyCode.USD)
+        price = Price(amount=Decimal(100), currency=CurrencyCode.USD, formatted=None)
         converted = price.convert_to(CurrencyCode.EUR, Decimal("0.85"))
 
         assert converted.amount == Decimal(85)
@@ -214,12 +212,16 @@ class TestFinancialModels:
 
     def test_price_range(self):
         """Test PriceRange model."""
-        min_price = Price(amount=Decimal(50), currency=CurrencyCode.USD)
-        max_price = Price(amount=Decimal(150), currency=CurrencyCode.USD)
+        min_price = Price(amount=Decimal(50), currency=CurrencyCode.USD, formatted=None)
+        max_price = Price(
+            amount=Decimal(150), currency=CurrencyCode.USD, formatted=None
+        )
 
         price_range = PriceRange(min_price=min_price, max_price=max_price)
 
-        test_price = Price(amount=Decimal(100), currency=CurrencyCode.USD)
+        test_price = Price(
+            amount=Decimal(100), currency=CurrencyCode.USD, formatted=None
+        )
         assert price_range.contains(test_price)
 
         avg_price = price_range.average()
@@ -227,8 +229,10 @@ class TestFinancialModels:
 
     def test_price_range_validation(self):
         """Test PriceRange validation."""
-        min_price = Price(amount=Decimal(100), currency=CurrencyCode.USD)
-        max_price = Price(amount=Decimal(50), currency=CurrencyCode.USD)
+        min_price = Price(
+            amount=Decimal(100), currency=CurrencyCode.USD, formatted=None
+        )
+        max_price = Price(amount=Decimal(50), currency=CurrencyCode.USD, formatted=None)
 
         with pytest.raises(ValidationError) as excinfo:
             PriceRange(min_price=min_price, max_price=max_price)
@@ -239,10 +243,18 @@ class TestFinancialModels:
 
     def test_budget_creation(self):
         """Test Budget model creation."""
-        total_budget = Price(amount=Decimal(1000), currency=CurrencyCode.USD)
-        spent = Price(amount=Decimal(300), currency=CurrencyCode.USD)
+        total_budget = Price(
+            amount=Decimal(1000), currency=CurrencyCode.USD, formatted=None
+        )
+        spent = Price(amount=Decimal(300), currency=CurrencyCode.USD, formatted=None)
 
-        budget = Budget(total_budget=total_budget, spent=spent)
+        budget = Budget(
+            total_budget=total_budget,
+            allocated=None,
+            spent=spent,
+            remaining=None,
+            categories=None,
+        )
 
         assert budget.utilization_percentage() == 30.0
         assert not budget.is_over_budget()
@@ -256,6 +268,8 @@ class TestFinancialModels:
             from_currency=CurrencyCode.USD,
             to_currency=CurrencyCode.EUR,
             rate=Decimal("0.85"),
+            timestamp=None,
+            source=None,
         )
 
         converted = rate.convert(Decimal(100))
@@ -271,7 +285,7 @@ class TestGeographicModels:
 
     def test_coordinates_creation(self):
         """Test Coordinates model creation."""
-        coords = Coordinates(latitude=40.7128, longitude=-74.0060)
+        coords = Coordinates(latitude=40.7128, longitude=-74.0060, altitude=None)
 
         assert coords.latitude == 40.7128
         assert coords.longitude == -74.0060
@@ -279,19 +293,19 @@ class TestGeographicModels:
     def test_coordinates_validation(self):
         """Test Coordinates validation."""
         with pytest.raises(ValidationError) as excinfo:
-            Coordinates(latitude=91, longitude=0)
+            Coordinates(latitude=91, longitude=0, altitude=None)
 
         assert "Latitude must be between -90.0 and 90.0" in str(excinfo.value)
 
         with pytest.raises(ValidationError) as excinfo:
-            Coordinates(latitude=0, longitude=181)
+            Coordinates(latitude=0, longitude=181, altitude=None)
 
         assert "Longitude must be between -180.0 and 180.0" in str(excinfo.value)
 
     def test_coordinates_distance(self):
         """Test distance calculation between coordinates."""
-        nyc = Coordinates(latitude=40.7128, longitude=-74.0060)
-        london = Coordinates(latitude=51.5074, longitude=-0.1278)
+        nyc = Coordinates(latitude=40.7128, longitude=-74.0060, altitude=None)
+        london = Coordinates(latitude=51.5074, longitude=-0.1278, altitude=None)
 
         distance = nyc.distance_to(london)
         # Approximate distance between NYC and London
@@ -305,6 +319,7 @@ class TestGeographicModels:
             state="NY",
             country="USA",
             postal_code="10001",
+            formatted=None,
         )
 
         assert address.street == "123 Main St"
@@ -314,13 +329,22 @@ class TestGeographicModels:
 
     def test_place_creation(self):
         """Test Place model creation."""
-        coords = Coordinates(latitude=40.7128, longitude=-74.0060)
-        address = Address(city="New York", country="USA")
+        coords = Coordinates(latitude=40.7128, longitude=-74.0060, altitude=None)
+        address = Address(
+            street=None,
+            city="New York",
+            state=None,
+            country="USA",
+            postal_code=None,
+            formatted=None,
+        )
 
         place = Place(
             name="New York City",
             coordinates=coords,
             address=address,
+            place_id=None,
+            place_type=None,
             timezone="America/New_York",
         )
 
@@ -333,7 +357,14 @@ class TestGeographicModels:
         """Test Place creation with invalid timezone (no validation implemented)."""
         # Note: Currently no timezone validation is implemented in Place model
         # This test documents the current behavior
-        place = Place(name="Test", timezone="Invalid")
+        place = Place(
+            name="Test",
+            coordinates=None,
+            address=None,
+            place_id=None,
+            place_type=None,
+            timezone="Invalid",
+        )
         assert place.name == "Test"
         assert place.timezone == "Invalid"  # No validation, accepts any string
 
@@ -342,11 +373,11 @@ class TestGeographicModels:
         bbox = BoundingBox(north=45, south=40, east=-70, west=-75)
 
         # Test coordinate within bounds
-        coords_inside = Coordinates(latitude=42, longitude=-72)
+        coords_inside = Coordinates(latitude=42, longitude=-72, altitude=None)
         assert bbox.contains(coords_inside)
 
         # Test coordinate outside bounds
-        coords_outside = Coordinates(latitude=50, longitude=-72)
+        coords_outside = Coordinates(latitude=50, longitude=-72, altitude=None)
         assert not bbox.contains(coords_outside)
 
         # Test center calculation
@@ -362,6 +393,8 @@ class TestGeographicModels:
             name="John F. Kennedy International Airport",
             city="New York",
             country="USA",
+            coordinates=None,
+            timezone=None,
         )
 
         assert airport.code == "JFK"
@@ -371,7 +404,15 @@ class TestGeographicModels:
     def test_airport_code_validation(self):
         """Test Airport code validation."""
         with pytest.raises(ValidationError) as excinfo:
-            Airport(code="INVALID", name="Test", city="Test", country="Test")
+            Airport(
+                code="INVALID",
+                icao_code=None,
+                name="Test",
+                city="Test",
+                country="Test",
+                coordinates=None,
+                timezone=None,
+            )
 
         assert "Airport code must be exactly 3 characters (IATA code)" in str(
             excinfo.value
@@ -379,14 +420,29 @@ class TestGeographicModels:
 
     def test_route_creation(self):
         """Test Route model creation."""
-        origin = Place(name="NYC")
-        destination = Place(name="LAX")
+        origin = Place(
+            name="NYC",
+            coordinates=None,
+            address=None,
+            place_id=None,
+            place_type=None,
+            timezone=None,
+        )
+        destination = Place(
+            name="LAX",
+            coordinates=None,
+            address=None,
+            place_id=None,
+            place_type=None,
+            timezone=None,
+        )
 
         route = Route(
             origin=origin,
             destination=destination,
             distance_km=4000.0,
             duration_minutes=360,
+            waypoints=None,
         )
 
         assert route.origin.name == "NYC"
@@ -454,7 +510,7 @@ class TestTemporalModels:
     def test_duration_validation(self):
         """Test Duration validation."""
         with pytest.raises(ValidationError) as excinfo:
-            Duration(hours=25)  # Invalid hours
+            Duration(days=0, hours=25, minutes=0)  # Invalid hours
 
         assert "Input should be less than 24" in str(excinfo.value)
 
@@ -465,6 +521,7 @@ class TestTemporalModels:
             from_datetime=datetime(2025, 6, 1, 9, 0),
             to_datetime=datetime(2025, 6, 1, 17, 0),
             capacity=50,
+            restrictions=None,
         )
 
         assert availability.available is True
@@ -477,6 +534,8 @@ class TestTemporalModels:
                 available=True,
                 from_datetime=datetime(2025, 6, 1, 17, 0),
                 to_datetime=datetime(2025, 6, 1, 9, 0),  # End before start
+                capacity=None,
+                restrictions=None,
             )
 
         assert "to_datetime must be after from_datetime" in str(excinfo.value)
@@ -491,6 +550,8 @@ class TestTemporalModels:
             wednesday=morning_hours,
             thursday=morning_hours,
             friday=morning_hours,
+            saturday=None,
+            sunday=None,
             timezone="America/New_York",
         )
 
@@ -507,13 +568,13 @@ class TestTemporalModels:
 @pytest.fixture
 def sample_coordinates():
     """Sample coordinates for testing."""
-    return Coordinates(latitude=40.7128, longitude=-74.0060)
+    return Coordinates(latitude=40.7128, longitude=-74.0060, altitude=None)
 
 
 @pytest.fixture
 def sample_price():
     """Sample price for testing."""
-    return Price(amount=Decimal("99.99"), currency=CurrencyCode.USD)
+    return Price(amount=Decimal("99.99"), currency=CurrencyCode.USD, formatted=None)
 
 
 @pytest.fixture
@@ -525,6 +586,7 @@ def sample_address():
         state="NY",
         country="USA",
         postal_code="10001",
+        formatted=None,
     )
 
 
@@ -539,22 +601,45 @@ class TestIntegration:
             name="Test Location",
             coordinates=sample_coordinates,
             address=sample_address,
+            place_id=None,
+            place_type=None,
             timezone="America/New_York",
         )
 
+        assert place.coordinates is not None
+        assert place.address is not None
         assert place.coordinates.latitude == 40.7128
         assert place.address.city == "New York"
         assert "123 Main St" in place.address.to_string()
 
     def test_route_with_coordinates(self, sample_coordinates):
         """Test Route model with coordinate-based distance calculation."""
-        origin = Place(name="Origin", coordinates=sample_coordinates)
+        origin = Place(
+            name="Origin",
+            coordinates=sample_coordinates,
+            address=None,
+            place_id=None,
+            place_type=None,
+            timezone=None,
+        )
         destination = Place(
             name="Destination",
-            coordinates=Coordinates(latitude=34.0522, longitude=-118.2437),  # LA
+            coordinates=Coordinates(
+                latitude=34.0522, longitude=-118.2437, altitude=None
+            ),  # LA
+            address=None,
+            place_id=None,
+            place_type=None,
+            timezone=None,
         )
 
-        route = Route(origin=origin, destination=destination)
+        route = Route(
+            origin=origin,
+            destination=destination,
+            distance_km=None,
+            duration_minutes=None,
+            waypoints=None,
+        )
 
         # Test calculated distance
         calculated_distance = route.total_distance()
@@ -563,18 +648,39 @@ class TestIntegration:
 
     def test_budget_with_multiple_currencies(self, sample_price):
         """Test Budget model with currency consistency validation."""
-        eur_price = Price(amount=Decimal(50), currency=CurrencyCode.EUR)
-
+        eur_price_full = Price(
+            amount=Decimal(50), currency=CurrencyCode.EUR, formatted=None
+        )
         with pytest.raises(ValidationError) as excinfo:
-            Budget(total_budget=sample_price, spent=eur_price)
+            Budget(
+                total_budget=sample_price,
+                allocated=None,
+                spent=eur_price_full,
+                remaining=None,
+                categories=None,
+            )
 
         assert "All budget amounts must use the same currency" in str(excinfo.value)
 
     def test_paginated_response_with_places(self, sample_coordinates, sample_address):
         """Test PaginatedResponse with Place objects."""
         places = [
-            Place(name="Place 1", coordinates=sample_coordinates),
-            Place(name="Place 2", address=sample_address),
+            Place(
+                name="Place 1",
+                coordinates=sample_coordinates,
+                address=None,
+                place_id=None,
+                place_type=None,
+                timezone=None,
+            ),
+            Place(
+                name="Place 2",
+                coordinates=None,
+                address=sample_address,
+                place_id=None,
+                place_type=None,
+                timezone=None,
+            ),
         ]
 
         pagination = PaginationMeta(
@@ -587,7 +693,7 @@ class TestIntegration:
         )
 
         response = PaginatedResponse[Place](
-            success=True, data=places, pagination=pagination
+            success=True, message=None, data=places, pagination=pagination
         )
 
         assert response.success is True
@@ -601,22 +707,22 @@ class TestEdgeCases:
 
     def test_zero_price(self):
         """Test zero price handling."""
-        price = Price(amount=Decimal(0), currency=CurrencyCode.USD)
+        price = Price(amount=Decimal(0), currency=CurrencyCode.USD, formatted=None)
         assert price.amount == Decimal(0)
         assert price.format() == "USD0.00"
 
     def test_coordinates_extreme_values(self):
         """Test coordinates at extreme valid values."""
         # North pole
-        north_pole = Coordinates(latitude=90.0, longitude=0.0)
+        north_pole = Coordinates(latitude=90.0, longitude=0.0, altitude=None)
         assert north_pole.latitude == 90.0
 
         # South pole
-        south_pole = Coordinates(latitude=-90.0, longitude=0.0)
+        south_pole = Coordinates(latitude=-90.0, longitude=0.0, altitude=None)
         assert south_pole.latitude == -90.0
 
         # International date line
-        dateline = Coordinates(latitude=0.0, longitude=180.0)
+        dateline = Coordinates(latitude=0.0, longitude=180.0, altitude=None)
         assert dateline.longitude == 180.0
 
     def test_duration_edge_cases(self):
@@ -631,17 +737,31 @@ class TestEdgeCases:
 
     def test_empty_address_formatting(self):
         """Test address formatting with minimal data."""
-        empty_address = Address()
+        empty_address = Address(
+            street=None,
+            city=None,
+            state=None,
+            country=None,
+            postal_code=None,
+            formatted=None,
+        )
         assert empty_address.to_string() == ""
 
-        city_only = Address(city="New York")
+        city_only = Address(
+            street=None,
+            city="New York",
+            state=None,
+            country=None,
+            postal_code=None,
+            formatted=None,
+        )
         assert city_only.to_string() == "New York"
 
     def test_bounding_box_edge_cases(self):
         """Test BoundingBox edge cases."""
         # Point bounding box (same coordinates)
         point_bbox = BoundingBox(north=40, south=40, east=-74, west=-74)
-        point_coords = Coordinates(latitude=40, longitude=-74)
+        point_coords = Coordinates(latitude=40, longitude=-74, altitude=None)
         assert point_bbox.contains(point_coords)
 
         center = point_bbox.center()
