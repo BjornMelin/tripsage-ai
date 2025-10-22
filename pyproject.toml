@@ -63,7 +63,6 @@ observability = [
     "opentelemetry-instrumentation-fastapi>=0.59b0,<0.60",
     "opentelemetry-instrumentation-httpx>=0.59b0,<0.60",
     "opentelemetry-instrumentation-redis>=0.59b0,<0.60",
-    "prometheus-client>=0.23.1,<0.24.0",
 ]
 
 test = [

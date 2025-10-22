@@ -711,13 +711,14 @@ class PerformantRateLimiter:
 ### **Application Metrics**
 
 ```python
-from prometheus_client import Counter, Histogram, Gauge
+from opentelemetry import metrics
 import time
 
 # Define metrics
-REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP requests', ['method', 'endpoint'])
-REQUEST_DURATION = Histogram('http_request_duration_seconds', 'HTTP request duration')
-ACTIVE_CONNECTIONS = Gauge('active_database_connections', 'Active database connections')
+from opentelemetry import metrics
+meter = metrics.get_meter("tripsage")
+REQUEST_COUNT = meter.create_counter("http.server.requests")
+REQUEST_DURATION = meter.create_histogram("http.server.duration", unit="s")
 
 @app.middleware("http")
 async def metrics_middleware(request: Request, call_next):

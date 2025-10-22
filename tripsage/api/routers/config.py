@@ -282,7 +282,7 @@ async def get_environment_config():
             "enable_memory_system": True,
             "enable_real_time": settings.enable_websockets,
             "enable_vector_search": True,
-            "enable_monitoring": settings.enable_prometheus_metrics,
+            "enable_monitoring": True,
         },
         "global_defaults": {
             "temperature": settings.model_temperature,

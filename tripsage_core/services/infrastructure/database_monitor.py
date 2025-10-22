@@ -21,10 +21,7 @@ from enum import Enum
 from typing import Any, Protocol
 
 from tripsage_core.config import Settings, get_settings
-from tripsage_core.monitoring.database_metrics import (
-    DatabaseMetrics,
-    get_database_metrics,
-)
+from tripsage_core.observability.otel import get_meter
 
 
 logger = logging.getLogger(__name__)
@@ -80,7 +77,6 @@ class DatabaseConnectionMonitor:
         database_service: DatabaseServiceProtocol,
         *,
         settings: Settings | None = None,
-        metrics: DatabaseMetrics | None = None,
         service_label: str = DEFAULT_SERVICE_LABEL,
         history_limit: int = DEFAULT_HISTORY_LIMIT,
     ) -> None:
@@ -95,7 +91,15 @@ class DatabaseConnectionMonitor:
         """
         self._service = database_service
         self._settings = settings or get_settings()
-        self._metrics = metrics or get_database_metrics()
+        # Set up OTEL instruments (histogram and counter). Gauges are handled via
+        # observable callbacks elsewhere when needed.
+        meter = get_meter(__name__)
+        self._m_hist = meter.create_histogram(
+            "db.health_check.latency", unit="s", description="DB health probe latency"
+        )
+        self._m_count = meter.create_counter(
+            "db.health_check.total", description="Total DB health probes"
+        )
         self._service_label = service_label
         self._interval = max(
             self._settings.db_health_check_interval, MIN_HEALTH_INTERVAL_SECONDS
@@ -223,7 +227,10 @@ class DatabaseConnectionMonitor:
         """Persist the snapshot and update metrics."""
         self._latest = snapshot
         self._history.append(snapshot)
-        self._metrics.record_health_check(
-            self._service_label,
-            snapshot.status is HealthStatus.HEALTHY,
-        )
+        try:
+            attrs = {"service": self._service_label, "status": snapshot.status.value}
+            self._m_hist.record(snapshot.latency_s, attrs)
+            self._m_count.add(1, attrs)
+        except Exception:  # noqa: BLE001 - metrics failures must not break loop
+            # Never let metrics break monitoring loop
+            logger.debug("OTEL metrics record failed", exc_info=True)

@@ -32,8 +32,7 @@ TripSage has evolved to a streamlined, high-performance architecture with dramat
 | `tripsage-frontend` | Frontend | Next.js 15 with App Router | Modern React architecture |
 | `airbnb-mcp` | Integration | Only remaining MCP (no SDK available) | Minimal MCP usage |
 | `jaeger` | Monitoring | Distributed tracing | Production-ready observability |
-| `prometheus` | Metrics | Time-series metrics collection | Real-time performance monitoring |
-| `grafana` | Dashboards | Metrics visualization | Advanced analytics |
+| `otel-collector` | Telemetry | Receives OTLP traces/metrics/logs | Local development export |
 
 ## Quick Start
 
@@ -56,10 +55,9 @@ docker compose -f docker/docker-compose.mcp.yml up supabase tripsage-api tripsag
 # Start complete development environment
 docker compose -f docker/docker-compose.mcp.yml up -d
 
-# Access monitoring stack
-# - Grafana: http://localhost:3001 (admin/admin)
-# - Prometheus: http://localhost:9090
-# - Jaeger: http://localhost:16686
+# Access monitoring
+# - Jaeger: http://localhost:16686 (traces)
+# - OTEL Collector: receives OTLP on 4317/4318; metrics exported to logging/OTLP
 ```
 
 ### Service Management
@@ -141,7 +139,7 @@ SUPABASE_URL=http://supabase:8000
 **Retained Essential Services**:
 
 - ✅ Airbnb MCP (only remaining - no official SDK)
-- ✅ Modern monitoring stack (Jaeger, Prometheus, Grafana)
+- ✅ Modern monitoring with Jaeger (traces) and OTEL Collector (OTLP metrics/logs)
 - ✅ Managed infrastructure (Supabase, Upstash Redis)
 
 ### Development Workflow

@@ -149,9 +149,6 @@ class Settings(BaseSettings):
     enable_database_monitoring: bool = Field(
         default=True, description="Enable database connection monitoring"
     )
-    enable_prometheus_metrics: bool = Field(
-        default=True, description="Enable Prometheus metrics collection"
-    )
     enable_security_monitoring: bool = Field(
         default=True, description="Enable security event monitoring"
     )
@@ -184,13 +181,7 @@ class Settings(BaseSettings):
         default=5.0, description="Delay between recovery attempts in seconds"
     )
 
-    # Metrics Configuration
-    metrics_server_port: int = Field(
-        default=8000, description="Prometheus metrics server port"
-    )
-    enable_metrics_server: bool = Field(
-        default=False, description="Enable standalone metrics server"
-    )
+    # Metrics Configuration (OTEL-only)
 
     # OpenTelemetry Instrumentation Flags
     enable_fastapi_instrumentation: bool = Field(

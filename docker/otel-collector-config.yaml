@@ -32,18 +32,11 @@ exporters:
     tls:
       insecure: true
 
-  # Export metrics to Prometheus
-  prometheus:
-    endpoint: "0.0.0.0:8889"
-    namespace: tripsage
-    const_labels:
-      environment: ${ENVIRONMENT:-development}
-
   # Log to console for debugging
   logging:
     loglevel: info
 
-  # OTLP exporter for future cloud integration
+  # OTLP exporter for cloud integration
   # SECURITY: Always use secure TLS in production environments
   otlp/cloud:
     endpoint: ${OTLP_ENDPOINT:-localhost:4317}
@@ -74,7 +67,7 @@ service:
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
-      exporters: [prometheus, logging]
+      exporters: [logging, otlp/cloud]
     
     logs:
       receivers: [otlp]
