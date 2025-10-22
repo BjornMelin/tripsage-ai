@@ -14,12 +14,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError as CoreAPIError,
     CoreServiceError,
 )
-
-# Import models from existing location (could be moved to Core later)
-from tripsage_core.models.attachments import (
-    DocumentAnalysisResult,
-    FileType,
-)
+from tripsage_core.models.attachments import DocumentAnalysisResult, FileType
 
 
 class DocumentAnalyzerError(CoreAPIError):
@@ -246,31 +241,29 @@ class DocumentAnalyzer:
         try:
             if context.mime_type == "text/plain":
                 return await self._extract_text_from_text_file(context.file_path)
-            elif context.mime_type == "application/pdf":
+            if context.mime_type == "application/pdf":
                 if self.pdf_extraction_enabled:
                     return await self._extract_text_from_pdf(context.file_path)
-                else:
-                    return (
-                        f"PDF text extraction disabled in settings for "
-                        f"{context.file_path.name}"
-                    )
-            elif context.mime_type == "application/json":
+                return (
+                    f"PDF text extraction disabled in settings for "
+                    f"{context.file_path.name}"
+                )
+            if context.mime_type == "application/json":
                 return await self._extract_text_from_json(context.file_path)
-            elif context.mime_type == "text/csv":
+            if context.mime_type == "text/csv":
                 return await self._extract_text_from_csv(context.file_path)
-            elif context.mime_type.startswith("image/"):
+            if context.mime_type.startswith("image/"):
                 if self.ocr_enabled:
                     return await self._extract_text_from_image(context.file_path)
-                else:
-                    return (
-                        f"OCR text extraction disabled in settings for "
-                        f"{context.file_path.name}"
-                    )
-            elif "officedocument" in context.mime_type:
+                return (
+                    f"OCR text extraction disabled in settings for "
+                    f"{context.file_path.name}"
+                )
+            if "officedocument" in context.mime_type:
                 # TODO: Implement Office document parsing when needed
                 return await self._extract_text_from_office_doc(context.file_path)
-            else:
-                return None
+
+            return None
 
         except Exception as e:
             raise DocumentAnalyzerError(
@@ -295,11 +288,8 @@ class DocumentAnalyzer:
                 return content
 
     async def _extract_text_from_pdf(self, file_path: Path) -> str | None:
-        """Extract text from PDF file.
-
-        TODO: Implement PDF text extraction using PyPDF2 or similar
-        when needed. For now, return placeholder.
-        """
+        """Extract text from PDF file."""
+        # TODO: Implement PDF text extraction using PyPDF2 or similar
         # Placeholder implementation
         return f"PDF text extraction not yet implemented for {file_path.name}"
 
@@ -321,20 +311,14 @@ class DocumentAnalyzer:
             return content
 
     async def _extract_text_from_image(self, file_path: Path) -> str | None:
-        """Extract text from image using OCR.
-
-        TODO: Implement OCR using pytesseract or cloud OCR service
-        when needed. For now, return placeholder.
-        """
+        """Extract text from image using OCR."""
+        # TODO: Implement OCR using pytesseract or cloud OCR service
         # Placeholder implementation
         return f"OCR text extraction not yet implemented for {file_path.name}"
 
     async def _extract_text_from_office_doc(self, file_path: Path) -> str | None:
-        """Extract text from Office documents.
-
-        TODO: Implement Office document parsing using python-docx, openpyxl
-        when needed. For now, return placeholder.
-        """
+        """Extract text from Office documents."""
+        # TODO: Implement Office document parsing using python-docx, openpyxl
         # Placeholder implementation
         return (
             f"Office document text extraction not yet implemented for {file_path.name}"

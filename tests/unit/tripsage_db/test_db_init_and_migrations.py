@@ -17,15 +17,22 @@ from tripsage.db.migrations.runner import MIGRATIONS_DIR
 
 
 class _RPCResult:
+    """A stub result for testing database initialization and migrations."""
+
     def __init__(self, data: Any):
+        """Initialize the RPCResult."""
         self.data = data
 
     def execute(self) -> "_RPCResult":
+        """Execute the RPCResult."""
         return self
 
 
 class _StubClient:
+    """A stub client for testing database initialization and migrations."""
+
     def __init__(self, tables: list[str] | None = None):
+        """Initialize the StubClient."""
         self._tables = tables or []
 
     def rpc(self, _name: str, _payload: dict[str, Any] | None = None) -> _RPCResult:
@@ -38,12 +45,15 @@ class _StubClient:
 
     # The sample_data path uses .table(...).upsert(...).execute()
     def table(self, _name: str) -> "_StubClient":
+        """Table the StubClient."""
         return self
 
     def upsert(self, _payload: dict[str, Any]) -> "_StubClient":
+        """Upsert the StubClient."""
         return self
 
     def execute(self) -> SimpleNamespace:  # pragma: no cover - trivial
+        """Execute the StubClient."""
         return SimpleNamespace(data=[{"ok": True}])
 
 
@@ -54,9 +64,7 @@ async def test_initialize_databases_no_verify_no_migrate(
     """initialize_databases returns True when no verification/migrations requested."""
     # Ensure get_supabase_client would not be used (verify=False), but keep stub ready
     monkeypatch.setattr(
-        "tripsage.db.initialize.get_supabase_client",
-        lambda: _StubClient(),
-        raising=True,
+        "tripsage.db.initialize.get_supabase_client", _StubClient(), raising=True
     )
 
     ok = await initialize_databases(
@@ -89,9 +97,7 @@ def test_migrations_dir_points_to_supabase():
 async def test_create_sample_data_uses_client(monkeypatch: pytest.MonkeyPatch):
     """create_sample_data returns True when client operations succeed."""
     monkeypatch.setattr(
-        "tripsage.db.initialize.get_supabase_client",
-        lambda: _StubClient(),
-        raising=True,
+        "tripsage.db.initialize.get_supabase_client", _StubClient(), raising=True
     )
     ok = await create_sample_data()
     assert ok is True
