@@ -268,7 +268,10 @@ class TestChatService:
         """Test message creation with invalid role."""
         with pytest.raises(ValueError, match="Role must be one of"):
             MessageCreateRequest(
-                role="invalid_role", content="Test message", metadata=None, tool_calls=None
+                role="invalid_role",
+                content="Test message",
+                metadata=None,
+                tool_calls=None,
             )
 
     @pytest.mark.asyncio
@@ -313,7 +316,7 @@ class TestChatService:
         assert isinstance(result, RecentMessagesResponse)
         assert len(result.messages) == 1
         assert result.messages[0].id == sample_message_response.id
-        # Token estimation is service-derived; verify positive and consistent with estimator
+        # Token est is service-derived; verify positive and consistent with estimator
         expected_tokens = max(1, len(sample_message_response.content) // 4)
         assert result.total_tokens == expected_tokens
         assert not result.truncated
@@ -663,7 +666,10 @@ class TestChatService:
         tasks = []
         for i in range(3):
             request = MessageCreateRequest(
-                role=MessageRole.USER, content=f"Message {i}", metadata=None, tool_calls=None
+                role=MessageRole.USER,
+                content=f"Message {i}",
+                metadata=None,
+                tool_calls=None,
             )
             task = chat_service.add_message(
                 sample_chat_session.id, sample_chat_session.user_id, request
