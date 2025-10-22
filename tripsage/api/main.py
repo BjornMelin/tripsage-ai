@@ -85,12 +85,14 @@ async def lifespan(app: FastAPI):
     # Startup: Initialize MCP Manager and WebSocket Services
     logger.info("Initializing MCP service on API startup")
     from tripsage_core.services.simple_mcp_service import SimpleMCPService
+
     app.state.mcp_service = SimpleMCPService()
     await app.state.mcp_service.initialize()
 
     # Initialize services (Cache, WebSocket, MCP) in DI-managed app.state
     logger.info("Initializing Cache service")
     from tripsage_core.services.infrastructure.cache_service import CacheService
+
     app.state.cache_service = CacheService()
     await app.state.cache_service.connect()
 
