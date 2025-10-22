@@ -12,7 +12,6 @@ from .database_service import DatabaseService, get_database_service
 from .key_monitoring_service import (
     KeyMonitoringService,
     KeyOperation,
-    KeyOperationRateLimitMiddleware,
     monitor_key_operation,
 )
 from .websocket_broadcaster import WebSocketBroadcaster
@@ -27,7 +26,6 @@ __all__ = [
     # Key Monitoring
     "KeyMonitoringService",
     "KeyOperation",
-    "KeyOperationRateLimitMiddleware",
     "WebSocketBroadcaster",
     # WebSocket
     "WebSocketManager",

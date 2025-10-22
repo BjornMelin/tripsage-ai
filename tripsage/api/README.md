@@ -94,9 +94,9 @@ tripsage/api/
 │   ├── attachments.py    # File upload and processing
 │   ├── websocket.py      # Real-time communication
 │   └── health.py         # Health checks and monitoring
-├── schemas/              # Request/response models
-│   ├── requests/         # Input validation schemas
-│   └── responses/        # Output formatting schemas
+├── schemas/              # API-specific compositions and re-exports
+│   ├── requests/         # Input validation schemas (API-only)
+│   └── responses/        # Output formatting schemas (API-only)
 ├── services/             # Business logic and external integrations
 │   ├── accommodation.py  # Accommodation search and booking
 │   ├── auth.py          # Authentication and session management
@@ -174,7 +174,13 @@ GET /api/v1/flights/search
 - **User-specific salt** for additional security
 - **Key validation** before storage
 - **Usage monitoring** and rotation support
-- **Rate limiting** per key and user
+- **Rate limiting** centralized in `EnhancedRateLimitMiddleware` with endpoint-aware policies (memory and key management endpoints receive specific limits)
+
+## Schema Strategy
+
+- API schemas in `tripsage/api/schemas/` avoid duplicating domain models.
+- Canonical data structures come from `tripsage_core/models/` and `tripsage_core/services/business/*`.
+- API files may compose or re-export these models, and define only request/response wrappers that are truly API-specific.
 
 ## API Endpoints
 

@@ -4,12 +4,10 @@
 
 from __future__ import annotations
 
-import time
-
-from tripsage.monitoring.performance_metrics import record_webcrawl_request
 from tripsage.tools.webcrawl.models import UnifiedCrawlResult
 from tripsage.tools.webcrawl.result_normalizer import ResultNormalizer
 from tripsage.tools.webcrawl.source_selector import WebCrawlSourceSelector
+from tripsage_core.observability.otel import record_histogram
 from tripsage_core.services.external_apis.webcrawl_service import (
     WebCrawlParams,
     WebCrawlService,
@@ -57,6 +55,11 @@ def _build_error_result(url: str, exc: Exception) -> UnifiedCrawlResult:
     )
 
 
+@record_histogram(
+    "webcrawl.duration",
+    unit="s",
+    attr_fn=lambda a, _k: {"tool": "webcrawl", "source": "crawl4ai_direct"},
+)
 @with_error_handling()
 async def crawl_website_content(
     url: str,
@@ -79,18 +82,12 @@ async def crawl_website_content(
     service = WebCrawlService()
     await service.connect()
     normalizer = ResultNormalizer()
-    start = time.perf_counter()
-
     try:
         crawl_result = await service.crawl_url(url, params)
-        duration_ms = (time.perf_counter() - start) * 1000
-        record_webcrawl_request(duration_ms, crawl_result.success)
 
         logger.info("Crawl4AI completed for %s, success=%s", url, crawl_result.success)
         return await normalizer.normalize_direct_crawl4ai_output(crawl_result, url)
     except Exception as exc:
-        duration_ms = (time.perf_counter() - start) * 1000
-        record_webcrawl_request(duration_ms, False)
         logger.exception("Crawl4AI crawl failed for %s", url)
         return _build_error_result(url, exc)
 
@@ -141,7 +138,3 @@ async def crawl_event_listing(
         requires_javascript=True,
         use_cache=use_cache,
     )
-
-
-# Compatibility alias for legacy imports/tests
-crawl_website_content_tool = crawl_website_content

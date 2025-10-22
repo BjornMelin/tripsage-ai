@@ -9,8 +9,8 @@ from langchain_core.tools import Tool
 from pydantic import BaseModel, Field
 
 from tripsage_core.services.simple_mcp_service import (
-    SimpleMCPService,
-    default_mcp_service,
+    AirbnbMCPService,
+    default_airbnb_mcp_service,
 )
 
 
@@ -26,16 +26,16 @@ class AirbnbToolWrapper(BaseModel):
     mcp_method: str = Field(description="Airbnb MCP method name")
 
 
-class LangGraphMCPBridge:
+class AirbnbMCPBridge:
     """Bridge between LangGraph and Airbnb MCP.
 
     This class converts Airbnb MCP tools to LangGraph-compatible format while preserving
     all existing error handling, caching, and monitoring capabilities from MCPManager.
     """
 
-    def __init__(self, mcp_service: SimpleMCPService | None = None):
+    def __init__(self, mcp_service: AirbnbMCPService | None = None):
         """Initialize the bridge with an MCP service instance."""
-        self.mcp_service = mcp_service or default_mcp_service
+        self.mcp_service = mcp_service or default_airbnb_mcp_service
         self._tool_cache: dict[str, Tool] = {}
         self._tool_metadata: dict[str, AirbnbToolWrapper] = {}
         self._initialized = False
