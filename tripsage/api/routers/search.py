@@ -61,7 +61,7 @@ async def unified_search(
                         user_id, request.query, "cache_hit", cache_service
                     )
                     return cached_result
-            except Exception as e:  # noqa: BLE001
+            except (OSError, RuntimeError, ValueError, TypeError) as e:
                 logger.warning("Cache retrieval failed: %s", e)
 
         # Perform actual search
@@ -71,7 +71,7 @@ async def unified_search(
         if use_cache:
             try:
                 await cache_service.set_json(cache_key, result, ttl=300)
-            except Exception as e:  # noqa: BLE001
+            except (OSError, RuntimeError, ValueError, TypeError) as e:
                 logger.warning("Cache storage failed: %s", e)
 
         # Track search analytics
@@ -128,7 +128,7 @@ async def _track_search_analytics(
         # Store back with 24-hour TTL
         await cache_service.set(analytics_key, existing_analytics, ttl=86400)
 
-    except Exception as e:  # noqa: BLE001
+    except (OSError, RuntimeError, ValueError, TypeError) as e:
         logger.warning("Failed to track search analytics: %s", e)
 
 
@@ -309,7 +309,7 @@ async def bulk_search(
                             user_id, request.query, "cache_hit", cache_service
                         )
                         return cached_result
-                except Exception as cache_error:  # noqa: BLE001
+                except (OSError, RuntimeError, ValueError, TypeError) as cache_error:
                     logger.warning(
                         "Cache lookup failed for key %s: %s",
                         cache_key,
@@ -323,7 +323,7 @@ async def bulk_search(
             if use_cache:
                 try:
                     await cache_service.set_json(cache_key, result, ttl=300)
-                except Exception as cache_error:  # noqa: BLE001
+                except (OSError, RuntimeError, ValueError, TypeError) as cache_error:
                     logger.warning(
                         "Cache write failed for key %s: %s",
                         cache_key,
