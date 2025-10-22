@@ -24,7 +24,6 @@ from tripsage_core.services.business.destination_service import (
 )
 from tripsage_core.services.business.flight_service import (
     FlightService,
-    get_flight_service,
 )
 from tripsage_core.services.business.itinerary_service import (
     ItineraryService,
@@ -36,15 +35,12 @@ from tripsage_core.services.business.memory_service import (
 )
 from tripsage_core.services.business.trip_service import TripService, get_trip_service
 from tripsage_core.services.business.user_service import UserService, get_user_service
-from tripsage_core.services.infrastructure import CacheService, get_cache_service
+from tripsage_core.services.infrastructure import CacheService
 from tripsage_core.services.infrastructure.database_service import (
     DatabaseService,
     get_database_service,
 )
-from tripsage_core.services.simple_mcp_service import (
-    SimpleMCPService,
-    default_mcp_service,
-)
+from tripsage_core.services.simple_mcp_service import SimpleMCPService
 from tripsage_core.utils.session_utils import SessionMemory
 
 
@@ -159,22 +155,28 @@ async def verify_service_access(
 
 
 # Cache service dependency
-async def get_cache_service_dep():
-    """Get the cache service instance as a dependency."""
-    return await get_cache_service()
+async def get_cache_service_dep(request: Request) -> CacheService:
+    """Get cache service from app state (DI-managed)."""
+    return request.app.state.cache_service  # type: ignore[attr-defined]
+
+async def get_websocket_manager_dep(request: Request):
+    return request.app.state.websocket_manager  # type: ignore[attr-defined]
+
+async def get_websocket_broadcaster_dep(request: Request):
+    return request.app.state.websocket_broadcaster  # type: ignore[attr-defined]
 
 
 # MCP service dependency
-def get_mcp_service() -> SimpleMCPService:
-    """Get the default MCP service instance."""
-    return default_mcp_service
+def get_mcp_service(request: Request) -> SimpleMCPService:
+    """Get DI-managed MCP service instance."""
+    return request.app.state.mcp_service  # type: ignore[attr-defined]
 
 
 # API Key service dependency
-async def get_api_key_service() -> ApiKeyService:
+async def get_api_key_service(request: Request) -> ApiKeyService:
     """Get the API key service instance as a dependency."""
     db = await get_database_service()
-    cache = await get_cache_service()
+    cache = await get_cache_service_dep(request)
     settings = get_settings()
     return ApiKeyService(db=db, cache=cache, settings=settings)
 
@@ -198,7 +200,11 @@ AccommodationServiceDep = Annotated[
 ]
 ChatServiceDep = Annotated[ChatServiceProto, Depends(get_chat_service)]
 DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
-FlightServiceDep = Annotated[FlightService, Depends(get_flight_service)]
+async def get_flight_service_dep(request: Request) -> FlightService:
+    db = await get_database_service()
+    return FlightService(database_service=db)
+
+FlightServiceDep = Annotated[FlightService, Depends(get_flight_service_dep)]
 ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)]
 ApiKeyServiceDep = Annotated[ApiKeyServiceProto, Depends(get_api_key_service)]
 MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]

@@ -12,7 +12,7 @@ from tripsage.tools.webcrawl.result_normalizer import ResultNormalizer
 from tripsage.tools.webcrawl.source_selector import WebCrawlSourceSelector
 from tripsage_core.services.external_apis.webcrawl_service import (
     WebCrawlParams,
-    get_webcrawl_service,
+    WebCrawlService,
 )
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
@@ -76,7 +76,8 @@ async def crawl_website_content(
     )
     params = _build_params(config=config, use_cache=use_cache)
 
-    service = await get_webcrawl_service()
+    service = WebCrawlService()
+    await service.connect()
     normalizer = ResultNormalizer()
     start = time.perf_counter()
 

@@ -494,7 +494,7 @@ TripSage integrates with Airbnb through the OpenBnB MCP Server for vacation rent
 #### Airbnb Integration Architecture
 
 ```python
-from tripsage_core.services.simple_mcp_service import default_mcp_service
+# FINAL-ONLY: Use DI-managed MCP service via API wiring; avoid importing singletons
 
 class AccommodationService:
     """Unified accommodation service with multi-provider support."""

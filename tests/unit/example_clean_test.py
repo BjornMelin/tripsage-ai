@@ -122,8 +122,8 @@ class TestExampleIntegration:
             ),
         ):
             # Import and test the service
-            from tripsage_core.services.business.chat_service import ChatService
             from tests.test_config import MockDatabaseService
+            from tripsage_core.services.business.chat_service import ChatService
 
             # Instantiate with DI-only requirement satisfied
             service = ChatService(database_service=MockDatabaseService())

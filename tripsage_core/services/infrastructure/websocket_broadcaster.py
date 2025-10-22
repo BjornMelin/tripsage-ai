@@ -469,5 +469,5 @@ class WebSocketBroadcaster:
         }
 
 
-# Global WebSocket broadcaster instance
-websocket_broadcaster = WebSocketBroadcaster()
+# FINAL-ONLY: Remove module-level singleton. Construct WebSocketBroadcaster in app
+# lifespan and inject via DI where needed.

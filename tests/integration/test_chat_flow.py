@@ -1,6 +1,6 @@
 """Integration tests for chat session API (final-only alignment)."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -29,9 +29,15 @@ class TestChatSessionAPI:
     @pytest.mark.asyncio
     async def test_create_list_get_delete_session(self, client, principal):
         chat_service = AsyncMock()
-        chat_service.create_session = AsyncMock(return_value={"id": str(uuid4()), "title": "New"})
-        chat_service.get_user_sessions = AsyncMock(return_value=[{"id": str(uuid4()), "title": "New"}])
-        chat_service.get_session = AsyncMock(return_value={"id": str(uuid4()), "title": "New"})
+        chat_service.create_session = AsyncMock(
+            return_value={"id": str(uuid4()), "title": "New"}
+        )
+        chat_service.get_user_sessions = AsyncMock(
+            return_value=[{"id": str(uuid4()), "title": "New"}]
+        )
+        chat_service.get_session = AsyncMock(
+            return_value={"id": str(uuid4()), "title": "New"}
+        )
         chat_service.end_session = AsyncMock(return_value=True)
 
         from tripsage.api.core.dependencies import get_chat_service, require_principal
@@ -39,7 +45,9 @@ class TestChatSessionAPI:
         app.dependency_overrides[require_principal] = lambda: principal
         app.dependency_overrides[get_chat_service] = lambda: chat_service
         r = client.post(
-            "/api/chat/sessions", json={"title": "New"}, headers={"Authorization": "Bearer t"}
+            "/api/chat/sessions",
+            json={"title": "New"},
+            headers={"Authorization": "Bearer t"},
         )
         assert r.status_code == 201
 
@@ -61,10 +69,15 @@ class TestChatSessionAPI:
     @pytest.mark.asyncio
     async def test_create_and_list_messages(self, client, principal):
         chat_service = AsyncMock()
-        chat_service.add_message = AsyncMock(return_value={"id": str(uuid4()), "role": "user", "content": "Hello"})
-        chat_service.get_messages = AsyncMock(return_value=[{"id": str(uuid4()), "role": "user", "content": "Hello"}])
+        chat_service.add_message = AsyncMock(
+            return_value={"id": str(uuid4()), "role": "user", "content": "Hello"}
+        )
+        chat_service.get_messages = AsyncMock(
+            return_value=[{"id": str(uuid4()), "role": "user", "content": "Hello"}]
+        )
 
         from tripsage.api.core.dependencies import get_chat_service, require_principal
+
         app.dependency_overrides[require_principal] = lambda: principal
         app.dependency_overrides[get_chat_service] = lambda: chat_service
         sid = uuid4()
@@ -88,6 +101,7 @@ class TestChatSessionAPI:
         chat_service.add_message = AsyncMock(side_effect=Exception("boom"))
 
         from tripsage.api.core.dependencies import get_chat_service, require_principal
+
         app.dependency_overrides[require_principal] = lambda: principal
         app.dependency_overrides[get_chat_service] = lambda: chat_service
         sid = uuid4()
