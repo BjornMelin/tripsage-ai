@@ -6,9 +6,10 @@ from across the application into a single, consistent system.
 """
 
 import functools
+import inspect
 import traceback
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 from fastapi import status
 from pydantic import BaseModel, Field
@@ -27,9 +28,29 @@ class ErrorDetails(BaseModel):
     resource_id: str | None = Field(None, description="ID of the resource involved")
     user_id: str | None = Field(None, description="User ID associated with error")
     request_id: str | None = Field(None, description="Request ID for tracing")
-    additional_context: dict[str, Any] | None = Field(
+    additional_context: dict[str, Any] = Field(
         default_factory=dict, description="Additional context information"
     )
+
+
+def _ensure_error_details(
+    details: dict[str, Any] | ErrorDetails | None,
+) -> ErrorDetails:
+    """Normalize optional details into an ErrorDetails instance."""
+    if isinstance(details, ErrorDetails):
+        return details
+
+    if details is None:
+        return ErrorDetails(
+            service=None,
+            operation=None,
+            resource_id=None,
+            user_id=None,
+            request_id=None,
+            additional_context={},
+        )
+
+    return ErrorDetails(**details)
 
 
 class CoreTripSageError(Exception):
@@ -58,14 +79,7 @@ class CoreTripSageError(Exception):
         self.message = message
         self.code = code
         self.status_code = status_code
-
-        # Convert dict to ErrorDetails if needed
-        if isinstance(details, dict):
-            self.details = ErrorDetails(**details)
-        elif details is None:
-            self.details = ErrorDetails()
-        else:
-            self.details = details
+        self.details = _ensure_error_details(details)
 
         super().__init__(self.message)
 
@@ -215,14 +229,10 @@ class CoreValidationError(CoreTripSageError):
             value: The invalid value
             constraint: Description of the constraint that was violated
         """
-        # Add validation-specific details
-        if details is None:
-            details = ErrorDetails()
-        elif isinstance(details, dict):
-            details = ErrorDetails(**details)
+        details_model = _ensure_error_details(details)
 
         if field or value is not None or constraint:
-            details.additional_context.update(
+            details_model.additional_context.update(
                 {
                     "field": field,
                     "value": value,
@@ -234,7 +244,7 @@ class CoreValidationError(CoreTripSageError):
             message=message,
             code=code,
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            details=details,
+            details=details_model,
         )
 
 
@@ -257,20 +267,16 @@ class CoreConnectionError(CoreTripSageError):
             details: Additional error details
             connection_type: Type of connection that failed
         """
-        # Add connection-specific details
-        if details is None:
-            details = ErrorDetails()
-        elif isinstance(details, dict):
-            details = ErrorDetails(**details)
+        details_model = _ensure_error_details(details)
 
         if connection_type:
-            details.additional_context["connection_type"] = connection_type
+            details_model.additional_context["connection_type"] = connection_type
 
         super().__init__(
             message=message,
             code=code,
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            details=details,
+            details=details_model,
         )
 
 
@@ -292,20 +298,16 @@ class CoreServiceError(CoreTripSageError):
             details: Additional error details
             service: Name of the service that failed
         """
-        # Add service-specific details
-        if details is None:
-            details = ErrorDetails()
-        elif isinstance(details, dict):
-            details = ErrorDetails(**details)
+        details_model = _ensure_error_details(details)
 
         if service:
-            details.service = service
+            details_model.service = service
 
         super().__init__(
             message=message,
             code=code,
             status_code=status.HTTP_502_BAD_GATEWAY,
-            details=details,
+            details=details_model,
         )
 
 
@@ -327,20 +329,16 @@ class CoreRateLimitError(CoreTripSageError):
             details: Additional error details
             retry_after: Number of seconds to wait before retrying
         """
-        # Add rate limit specific details
-        if details is None:
-            details = ErrorDetails()
-        elif isinstance(details, dict):
-            details = ErrorDetails(**details)
+        details_model = _ensure_error_details(details)
 
         if retry_after:
-            details.additional_context["retry_after"] = retry_after
+            details_model.additional_context["retry_after"] = retry_after
 
         super().__init__(
             message=message,
             code=code,
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            details=details,
+            details=details_model,
         )
 
 
@@ -362,20 +360,16 @@ class CoreKeyValidationError(CoreTripSageError):
             details: Additional error details
             key_service: Name of the service the key is for
         """
-        # Add key validation specific details
-        if details is None:
-            details = ErrorDetails()
-        elif isinstance(details, dict):
-            details = ErrorDetails(**details)
+        details_model = _ensure_error_details(details)
 
         if key_service:
-            details.service = key_service
+            details_model.service = key_service
 
         super().__init__(
             message=message,
             code=code,
             status_code=status.HTTP_400_BAD_REQUEST,
-            details=details,
+            details=details_model,
         )
 
 
@@ -400,22 +394,18 @@ class CoreDatabaseError(CoreTripSageError):
             operation: Type of database operation that failed
             table: Name of the table involved
         """
-        # Add database-specific details
-        if details is None:
-            details = ErrorDetails()
-        elif isinstance(details, dict):
-            details = ErrorDetails(**details)
+        details_model = _ensure_error_details(details)
 
         if operation:
-            details.operation = operation
+            details_model.operation = operation
         if table:
-            details.additional_context["table"] = table
+            details_model.additional_context["table"] = table
 
         super().__init__(
             message=message,
             code=code,
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            details=details,
+            details=details_model,
         )
 
 
@@ -442,16 +432,12 @@ class CoreExternalAPIError(CoreTripSageError):
             api_status_code: Status code returned by the external API
             api_response: Response body from the external API
         """
-        # Add external API specific details
-        if details is None:
-            details = ErrorDetails()
-        elif isinstance(details, dict):
-            details = ErrorDetails(**details)
+        details_model = _ensure_error_details(details)
 
         if api_service:
-            details.service = api_service
-        if api_status_code or api_response:
-            details.additional_context.update(
+            details_model.service = api_service
+        if api_status_code is not None or api_response is not None:
+            details_model.additional_context.update(
                 {
                     "api_status_code": api_status_code,
                     "api_response": api_response,
@@ -462,7 +448,7 @@ class CoreExternalAPIError(CoreTripSageError):
             message=message,
             code=code,
             status_code=status.HTTP_502_BAD_GATEWAY,
-            details=details,
+            details=details_model,
         )
 
 
@@ -486,21 +472,17 @@ class CoreAgentError(CoreServiceError):
             agent_type: Type of agent that failed
             operation: Operation the agent was performing
         """
-        # Add agent-specific details
-        if details is None:
-            details = ErrorDetails()
-        elif isinstance(details, dict):
-            details = ErrorDetails(**details)
+        details_model = _ensure_error_details(details)
 
         if agent_type:
-            details.service = agent_type
+            details_model.service = agent_type
         if operation:
-            details.operation = operation
+            details_model.operation = operation
 
         super().__init__(
             message=message,
             code=code,
-            details=details,
+            details=details_model,
             service=agent_type,
         )
 
@@ -588,34 +570,39 @@ def with_error_handling(
         Decorator function
     """
 
-    def decorator(func: Callable[..., T | Awaitable[T]]):
-        @functools.wraps(func)
+    def decorator(func: Callable[..., T] | Callable[..., Awaitable[T]]):
+        if inspect.iscoroutinefunction(func):
+            async_func = cast(Callable[..., Awaitable[T]], func)
+
+            @functools.wraps(async_func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> T | Any:
+                try:
+                    return await async_func(*args, **kwargs)
+                except Exception:
+                    if logger:
+                        logger.exception(
+                            "Error in %s", async_func.__name__, exc_info=True
+                        )
+                    if re_raise:
+                        raise
+                    return fallback
+
+            return async_wrapper
+
+        sync_func = cast(Callable[..., T], func)
+
+        @functools.wraps(sync_func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> T | Any:
             try:
-                return func(*args, **kwargs)
+                return sync_func(*args, **kwargs)
             except Exception:
                 if logger:
-                    logger.exception("Error in %s", func.__name__, exc_info=True)
+                    logger.exception("Error in %s", sync_func.__name__, exc_info=True)
                 if re_raise:
                     raise
                 return fallback
 
-        @functools.wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> T | Any:
-            try:
-                return await func(*args, **kwargs)
-            except Exception:
-                if logger:
-                    logger.exception("Error in %s", func.__name__, exc_info=True)
-                if re_raise:
-                    raise
-                return fallback
-
-        # Determine if function is async
-        if hasattr(func, "__code__") and func.__code__.co_flags & 0x80:  # CO_COROUTINE
-            return async_wrapper
-        else:
-            return sync_wrapper
+        return sync_wrapper
 
     return decorator
 
