@@ -1,6 +1,6 @@
 """Centralized exception system for TripSage.
 
-This module provides a comprehensive exception hierarchy for all TripSage components,
+This module provides a exception hierarchy for all TripSage components,
 including APIs, agents, services, and tools. It consolidates exception handling
 from across the application into a single, consistent system.
 """

@@ -115,7 +115,7 @@ class ToolCallService:
 
     @with_error_handling()
     async def execute_tool_call(self, request: ToolCallRequest) -> ToolCallResponse:
-        """Execute a single tool call with comprehensive error handling.
+        """Execute a single tool call with error handling.
 
         Args:
             request: Tool call request
@@ -338,7 +338,7 @@ class ToolCallService:
         return sorted(history, key=lambda x: x.timestamp, reverse=True)[:limit]
 
     async def get_error_statistics(self) -> dict[str, Any]:
-        """Get comprehensive error statistics and monitoring data.
+        """Get error statistics and monitoring data.
 
         Returns:
             Dictionary with error statistics and system health metrics
@@ -376,7 +376,7 @@ class ToolCallService:
     async def _execute_with_retries(
         self, request: ToolCallRequest, params: dict[str, Any]
     ) -> dict[str, Any]:
-        """Execute tool call with comprehensive error recovery."""
+        """Execute tool call with error recovery."""
         # MCP abstraction removed - direct service calls should be used
         raise NotImplementedError(
             f"Direct service integration needed for {request.service}.{request.method} "

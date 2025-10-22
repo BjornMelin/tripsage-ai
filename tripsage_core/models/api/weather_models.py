@@ -1,6 +1,6 @@
 """Pydantic models for OpenWeatherMap API integration.
 
-This module provides comprehensive data models for weather operations,
+This module provides data models for weather operations,
 including current conditions, forecasts, and travel-specific features.
 """
 

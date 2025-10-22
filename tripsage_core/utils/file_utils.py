@@ -1,7 +1,7 @@
 """File handling utilities for TripSage Core.
 
 This module combines file validation and configuration functionality,
-implementing comprehensive file validation including type checking,
+implementing file validation including type checking,
 size limits, and security scanning following KISS principles.
 """
 

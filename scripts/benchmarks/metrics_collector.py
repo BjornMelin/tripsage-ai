@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Metrics collection for benchmark runs.
 
-This module provides comprehensive metrics collection for performance benchmarking,
+This module provides metrics collection for performance benchmarking,
 including timing, memory usage, and system resource monitoring.
 """
 

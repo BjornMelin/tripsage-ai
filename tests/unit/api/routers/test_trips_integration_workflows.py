@@ -27,7 +27,7 @@ from tripsage_core.services.business.trip_service import TripStatus, TripVisibil
 
 
 class TestTripsIntegrationWorkflows:
-    """Integration workflow tests for comprehensive trip management scenarios."""
+    """Integration workflow tests for trip management scenarios."""
 
     # ===== FIXTURES =====
 
@@ -63,7 +63,7 @@ class TestTripsIntegrationWorkflows:
 
     @pytest.fixture
     def comprehensive_trip_service(self):
-        """Mock trip service with comprehensive workflow support."""
+        """Mock trip service with workflow support."""
         service = MagicMock()
 
         # Configure all methods as AsyncMock

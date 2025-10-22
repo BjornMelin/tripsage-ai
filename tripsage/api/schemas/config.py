@@ -1,7 +1,7 @@
 """Configuration management schemas for API endpoints.
 
 Defines Pydantic v2 models for configuration validation and serialization
-following 2025 best practices with comprehensive type safety, computed fields,
+following 2025 best practices with type safety, computed fields,
 and advanced validation patterns.
 """
 
@@ -549,7 +549,7 @@ class ConfigurationValidationError(BaseConfigModel):
 
 
 class ConfigurationValidationResponse(BaseConfigModel):
-    """Response schema for comprehensive configuration validation."""
+    """Response schema for configuration validation."""
 
     is_valid: bool
     errors: list[ConfigurationValidationError] = []

@@ -620,7 +620,7 @@ class DragonflyRateLimiter(RateLimiter):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Production-ready rate limiting middleware with comprehensive features.
+    """Production-ready rate limiting middleware with features.
 
     Features:
     - Per-API-key configurable limits with persistent storage
@@ -671,11 +671,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         else:
             self.rate_limiter = InMemoryRateLimiter()
 
-        # Define comprehensive rate limit configurations
+        # Define rate limit configurations
         self.configs = self._create_rate_limit_configs()
 
     def _create_rate_limit_configs(self) -> dict[str, RateLimitConfig]:
-        """Create comprehensive rate limit configurations."""
+        """Create rate limit configurations."""
         return {
             # Base configurations
             "unauthenticated": RateLimitConfig(
@@ -822,13 +822,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             # Track rate limit hit
             await self._track_rate_limit_violation(request, rate_limit_context, result)
 
-            # Return 429 response with comprehensive headers
+            # Return 429 response with headers
             return self._create_rate_limit_response(result, rate_limit_context)
 
         # Continue with the request
         response = await (call_next)(request)  # type: ignore[misc]
 
-        # Add comprehensive rate limit headers
+        # Add rate limit headers
         self._add_rate_limit_headers(response, result, rate_limit_context)
 
         # Track successful request
@@ -839,7 +839,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return response
 
     def _get_rate_limit_context(self, request: Request) -> dict[str, Any]:
-        """Get comprehensive rate limit context for the request."""
+        """Get rate limit context for the request."""
         principal = getattr(request.state, "principal", None)
         path = request.url.path
         method = request.method
@@ -984,7 +984,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _create_rate_limit_response(
         self, result: RateLimitResult, context: dict[str, Any]
     ) -> Response:
-        """Create a comprehensive 429 response."""
+        """Create a 429 response."""
         retry_after = result.retry_after_seconds
 
         # Create user-friendly error message
@@ -1011,7 +1011,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         else:
             message = f"Rate limit exceeded. Try again in {retry_after} seconds."
 
-        # Create comprehensive headers (RFC 6585 compliant)
+        # Create headers (RFC 6585 compliant)
         headers = {
             "Retry-After": str(retry_after),
             "X-RateLimit-Limit": str(result.limit_value),
@@ -1049,7 +1049,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _add_rate_limit_headers(
         self, response: Response, result: RateLimitResult, context: dict[str, Any]
     ):
-        """Add comprehensive rate limit headers to successful responses."""
+        """Add rate limit headers to successful responses."""
         headers = {
             "X-RateLimit-Limit": str(result.limit_value),
             "X-RateLimit-Remaining": str(result.remaining),

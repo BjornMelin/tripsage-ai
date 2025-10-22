@@ -1,7 +1,7 @@
 """Configuration Change Audit Service.
 
 This service tracks and audits all configuration changes across the TripSage
-application, providing comprehensive audit trails for compliance and security.
+application, providing audit trails for compliance and security.
 It monitors configuration files, environment variables, database settings,
 and runtime configuration changes.
 
@@ -110,7 +110,7 @@ class AuditState:
 class ConfigurationAuditService:
     """Service for monitoring and auditing configuration changes.
 
-    This service provides comprehensive tracking of configuration changes
+    This service provides tracking of configuration changes
     across the entire application stack, with special focus on security-
     relevant configurations.
     """

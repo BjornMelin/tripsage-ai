@@ -1,6 +1,6 @@
 """Updated test suite for tripsage.api.core.config module.
 
-This module provides comprehensive tests for the unified API configuration system,
+This module provides tests for the unified API configuration system,
 updated for the removal of JWT settings and modernized for Pydantic v2.
 """
 

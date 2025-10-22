@@ -2,7 +2,7 @@
 
 This module provides robust authentication middleware supporting both JWT tokens
 (for frontend) and API keys (for agents), populating request.state.principal
-with authenticated entity information. Includes comprehensive audit logging
+with authenticated entity information. Includes audit logging
 for all authentication events.
 """
 
@@ -280,7 +280,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             user_agent = request.headers.get("User-Agent", "Unknown")[:200]
             error_msg = str(auth_error) if auth_error else "No credentials provided"
 
-            # Log comprehensive authentication failure
+            # Log authentication failure
             await audit_security_event(
                 event_type=AuditEventType.ACCESS_DENIED,
                 severity=AuditSeverity.MEDIUM,

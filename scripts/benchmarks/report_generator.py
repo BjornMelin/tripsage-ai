@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Report generation for benchmark results.
 
-This module provides comprehensive report generation capabilities for benchmark
+This module provides report generation capabilities for benchmark
 results, including HTML, CSV, and JSON formats.
 """
 
@@ -12,7 +12,7 @@ from scripts.benchmarks.config import BenchmarkConfig
 
 
 class BenchmarkReportGenerator:
-    """Generate comprehensive benchmark reports."""
+    """Generate benchmark reports."""
 
     def __init__(self, output_dir: Path, config: BenchmarkConfig | None = None):
         """Initialize report generator.

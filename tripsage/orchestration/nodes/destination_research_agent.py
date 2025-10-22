@@ -288,7 +288,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
     async def _research_destination(
         self, params: dict[str, Any], state: TravelPlanningState
     ) -> dict[str, Any]:
-        """Perform comprehensive destination research using MCP tools.
+        """Perform destination research using MCP tools.
 
         Args:
             params: Research parameters
@@ -313,7 +313,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
                 "weather_info": {},
             }
 
-            # Use web crawling for comprehensive research
+            # Use web crawling for research
             if research_type in ("overview", "all"):
                 overview_results = await self._research_overview(destination)
                 research_results["overview"] = overview_results

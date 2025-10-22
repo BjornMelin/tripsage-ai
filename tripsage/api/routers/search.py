@@ -38,7 +38,7 @@ async def unified_search(
     """Perform a unified search across multiple resource types with caching.
 
     This endpoint searches across destinations, activities, accommodations,
-    and flights (when applicable) to provide comprehensive travel search results.
+    and flights (when applicable) to provide travel search results.
     Results are aggregated, filtered, sorted, and cached for performance.
     """
     user_id = principal.id if principal else None

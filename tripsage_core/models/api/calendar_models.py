@@ -1,6 +1,6 @@
 """Pydantic models for Google Calendar API integration.
 
-This module provides comprehensive data models for Google Calendar operations,
+This module provides data models for Google Calendar operations,
 including event management, reminders, and travel-specific features.
 """
 

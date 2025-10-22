@@ -107,13 +107,13 @@ class ConfigManager:
             return False
 
     def security_report(self, output_format: str = "json") -> bool:
-        """Generate comprehensive security report."""
+        """Generate security report."""
         logger.info("Generating security report...")
 
         try:
             settings = self.load_settings()
 
-            # Get comprehensive security information
+            # Get security information
             security_report = self._generate_security_report(settings)
             secret_validation = self._validate_secrets_security(settings)
 

@@ -1,4 +1,4 @@
-"""Destination service for comprehensive destination management operations.
+"""Destination service for destination management operations.
 
 This service consolidates destination-related business logic including destination
 search, discovery, points of interest management, weather integration, and travel

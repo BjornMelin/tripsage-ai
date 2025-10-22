@@ -315,7 +315,7 @@ class DashboardService:
     async def get_dashboard_data(
         self, time_range_hours: int = 24, top_users_limit: int = 10
     ) -> DashboardData:
-        """Get comprehensive dashboard data with real analytics."""
+        """Get dashboard data with real analytics."""
         try:
             # Run analytics queries in parallel for performance
             metrics_task = self._get_real_time_metrics(time_range_hours)

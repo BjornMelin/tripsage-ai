@@ -1,6 +1,6 @@
 """Security, authentication, and authorization tests for trips router.
 
-This module provides comprehensive security testing including authentication
+This module provides security testing including authentication
 edge cases, authorization boundary testing, permission escalation attempts,
 and security vulnerability prevention.
 """
