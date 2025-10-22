@@ -18,10 +18,6 @@ from tripsage.api.schemas.responses.search import (
     UnifiedSearchResponse,
 )
 from tripsage_core.exceptions.exceptions import CoreServiceError
-from tripsage_core.services.business.activity_service import ActivityService
-from tripsage_core.services.business.destination_service import get_destination_service
-from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
-from tripsage_core.services.infrastructure.cache_service import get_cache_service
 from tripsage_core.services.infrastructure.search_cache_mixin import SearchCacheMixin
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
@@ -66,39 +62,32 @@ class UnifiedSearchService(
     """Service for unified search across multiple resource types."""
 
     def __init__(
-        self, cache_service=None, activity_service: ActivityService | None = None
+        self,
+        *,
+        cache_service,
+        destination_service=None,
+        activity_service=None,
+        flight_service=None,
+        accommodation_service=None,
     ):
         """Initialize unified search service.
 
         Args:
             cache_service: Cache service instance
+            destination_service: Destination service
             activity_service: Activity service
+            flight_service: Flight service
+            accommodation_service: Accommodation service instance
         """
         self._cache_service = cache_service
         self._cache_ttl = 300  # 5 minutes for search results
         self._cache_prefix = "unified_search"
 
-        # Service instances (lazy loaded)
-        self._destination_service = None
-        self._flight_service = None
-        self._accommodation_service = None
+        # Collaborators are injected; no lazy globals
+        self._destination_service = destination_service
+        self._flight_service = flight_service
+        self._accommodation_service = accommodation_service
         self._activity_service = activity_service
-
-    async def ensure_services(self) -> None:
-        """Ensure all required services are initialized."""
-        if not self._cache_service:
-            self._cache_service = await get_cache_service()
-
-        # Lazy load business services as needed
-        if not self._destination_service:
-            self._destination_service = await get_destination_service()
-
-        if not self._activity_service:
-            # Construct ActivityService locally without globals
-            maps = GoogleMapsService()
-            self._activity_service = ActivityService(
-                google_maps_service=maps, cache_service=self._cache_service
-            )
 
     def get_cache_fields(self, request: UnifiedSearchRequest) -> dict[str, Any]:
         """Extract fields for cache key generation."""
@@ -152,7 +141,7 @@ class UnifiedSearchService(
         Raises:
             UnifiedSearchServiceError: If search fails
         """
-        await self.ensure_services()
+        # Dependencies are injected; no lazy ensures
 
         try:
             logger.info(
@@ -580,22 +569,5 @@ class UnifiedSearchService(
             raise UnifiedSearchServiceError(f"Failed to get suggestions: {e}", e) from e
 
 
-# Global service instance
-_unified_search_service: UnifiedSearchService | None = None
-
-
-async def get_unified_search_service() -> UnifiedSearchService:
-    """Get the global unified search service instance."""
-    global _unified_search_service  # pylint: disable=global-statement
-
-    if _unified_search_service is None:
-        _unified_search_service = UnifiedSearchService()
-        await _unified_search_service.ensure_services()
-
-    return _unified_search_service
-
-
-async def close_unified_search_service() -> None:
-    """Close the global unified search service instance."""
-    global _unified_search_service  # pylint: disable=global-statement
-    _unified_search_service = None
+# FINAL-ONLY: Removed module-level singleton and factory. Inject this service
+# via application DI with required collaborators.

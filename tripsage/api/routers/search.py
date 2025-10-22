@@ -3,23 +3,22 @@
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from tripsage.api.core.dependencies import (
+    get_cache_service_dep,
     get_current_principal,
+    get_db,
     get_principal_id,
     require_principal,
 )
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import UnifiedSearchResponse
-from tripsage_core.services.business.search_history_service import (
-    get_search_history_service,
-)
+from tripsage_core.services.business.search_history_service import SearchHistoryService
 from tripsage_core.services.business.unified_search_service import (
+    UnifiedSearchService,
     UnifiedSearchServiceError,
-    get_unified_search_service,
 )
-from tripsage_core.services.infrastructure.cache_service import get_cache_service
 
 
 router = APIRouter()
@@ -28,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 @router.post("/unified", response_model=UnifiedSearchResponse)
 async def unified_search(
+    request_: Request,
     request: UnifiedSearchRequest,
     use_cache: bool = Query(True, description="Whether to use cached results"),
     principal=Depends(get_current_principal),
@@ -42,8 +42,9 @@ async def unified_search(
     logger.info("Unified search request: %s (user: %s)", request.query, user_id)
 
     try:
-        search_service = await get_unified_search_service()
-        cache_service = await get_cache_service()
+        # Build DI-managed services
+        cache_service = await get_cache_service_dep(request_)
+        search_service = UnifiedSearchService(cache_service=cache_service)
 
         # Generate cache key based on request parameters
         cache_key = f"search:unified:{hash(str(request.model_dump()))}"
@@ -52,7 +53,7 @@ async def unified_search(
         cached_result = None
         if use_cache:
             try:
-                cached_result = await cache_service.get(cache_key)
+                cached_result = await cache_service.get_json(cache_key)
                 if cached_result:
                     logger.info("Cache hit for search query: %s", request.query)
                     # Track cache hit analytics
@@ -60,7 +61,7 @@ async def unified_search(
                         user_id, request.query, "cache_hit", cache_service
                     )
                     return cached_result
-            except Exception as e:
+            except (OSError, RuntimeError, ValueError, TypeError) as e:
                 logger.warning("Cache retrieval failed: %s", e)
 
         # Perform actual search
@@ -69,8 +70,8 @@ async def unified_search(
         # Cache the result for 5 minutes
         if use_cache:
             try:
-                await cache_service.set(cache_key, result, ttl=300)
-            except Exception as e:
+                await cache_service.set_json(cache_key, result, ttl=300)
+            except (OSError, RuntimeError, ValueError, TypeError) as e:
                 logger.warning("Cache storage failed: %s", e)
 
         # Track search analytics
@@ -127,12 +128,13 @@ async def _track_search_analytics(
         # Store back with 24-hour TTL
         await cache_service.set(analytics_key, existing_analytics, ttl=86400)
 
-    except Exception as e:
+    except (OSError, RuntimeError, ValueError, TypeError) as e:
         logger.warning("Failed to track search analytics: %s", e)
 
 
 @router.get("/suggest", response_model=list[str])
 async def search_suggestions(
+    request: Request,
     query: str = Query(
         ..., min_length=1, max_length=100, description="Partial search query"
     ),
@@ -147,7 +149,8 @@ async def search_suggestions(
     logger.info("Search suggestions request: '%s' (limit: %s)", query, limit)
 
     try:
-        search_service = await get_unified_search_service()
+        cache_service = await get_cache_service_dep(request)
+        search_service = UnifiedSearchService(cache_service=cache_service)
         suggestions = await search_service.get_search_suggestions(query, limit)
 
         logger.info("Generated %s suggestions for query: '%s'", len(suggestions), query)
@@ -182,7 +185,8 @@ async def get_recent_searches(
     logger.info("Get recent searches request for user: %s (limit: %s)", user_id, limit)
 
     try:
-        search_history_service = await get_search_history_service()
+        db = await get_db()
+        search_history_service = SearchHistoryService(db)
         searches = await search_history_service.get_recent_searches(
             user_id, limit=limit
         )
@@ -212,7 +216,8 @@ async def save_search(
     logger.info("Save search request for user %s: %s", user_id, request.query)
 
     try:
-        search_history_service = await get_search_history_service()
+        db = await get_db()
+        search_history_service = SearchHistoryService(db)
         saved_search = await search_history_service.save_search(user_id, request)
 
         logger.info("Saved search %s for user: %s", saved_search["id"], user_id)
@@ -242,7 +247,8 @@ async def delete_saved_search(
     logger.info("Delete saved search request from user %s: %s", user_id, search_id)
 
     try:
-        search_history_service = await get_search_history_service()
+        db = await get_db()
+        search_history_service = SearchHistoryService(db)
         deleted = await search_history_service.delete_saved_search(user_id, search_id)
 
         if not deleted:
@@ -266,6 +272,7 @@ async def delete_saved_search(
 
 @router.post("/bulk", response_model=list[UnifiedSearchResponse])
 async def bulk_search(
+    request: Request,
     requests: list[UnifiedSearchRequest],
     use_cache: bool = Query(True, description="Whether to use cached results"),
     principal=Depends(get_current_principal),
@@ -286,9 +293,8 @@ async def bulk_search(
 
     try:
         import asyncio
-
-        search_service = await get_unified_search_service()
-        cache_service = await get_cache_service()
+        cache_service = await get_cache_service_dep(request)
+        search_service = UnifiedSearchService(cache_service=cache_service)
 
         async def process_single_search(request: UnifiedSearchRequest):
             """Process a single search with caching."""
@@ -297,13 +303,13 @@ async def bulk_search(
             # Try cache first
             if use_cache:
                 try:
-                    cached_result = await cache_service.get(cache_key)
+                    cached_result = await cache_service.get_json(cache_key)
                     if cached_result:
                         await _track_search_analytics(
                             user_id, request.query, "cache_hit", cache_service
                         )
                         return cached_result
-                except Exception as cache_error:
+                except (OSError, RuntimeError, ValueError, TypeError) as cache_error:
                     logger.warning(
                         "Cache lookup failed for key %s: %s",
                         cache_key,
@@ -316,8 +322,8 @@ async def bulk_search(
             # Cache result
             if use_cache:
                 try:
-                    await cache_service.set(cache_key, result, ttl=300)
-                except Exception as cache_error:
+                    await cache_service.set_json(cache_key, result, ttl=300)
+                except (OSError, RuntimeError, ValueError, TypeError) as cache_error:
                     logger.warning(
                         "Cache write failed for key %s: %s",
                         cache_key,
@@ -366,6 +372,7 @@ async def bulk_search(
 
 @router.get("/analytics")
 async def get_search_analytics(
+    request: Request,
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
     principal=Depends(require_principal),
 ):
@@ -377,10 +384,10 @@ async def get_search_analytics(
     logger.info("Search analytics request for %s by user: %s", date, user_id)
 
     try:
-        cache_service = await get_cache_service()
+        cache_service = await get_cache_service_dep(request)
         analytics_key = f"analytics:search:{date}"
 
-        analytics_data = await cache_service.get(analytics_key) or []
+        analytics_data = await cache_service.get_json(analytics_key) or []
 
         # Filter to user's own analytics
         user_analytics = [

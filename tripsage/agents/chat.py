@@ -82,7 +82,10 @@ class ChatAgent(BaseAgent):
                 "chat_service", expected_type=ChatService
             )
             if chat_service:
-                return await chat_service.get_messages(user_id, session_id, limit)
+                return [
+                    m if isinstance(m, dict) else m.model_dump()
+                    for m in await chat_service.get_messages(session_id, user_id, limit)
+                ]
 
             logger.warning(
                 "Chat service not available for history retrieval; using local history."

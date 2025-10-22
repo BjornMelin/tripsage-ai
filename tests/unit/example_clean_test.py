@@ -122,12 +122,11 @@ class TestExampleIntegration:
             ),
         ):
             # Import and test the service
+            from tests.test_config import MockDatabaseService
             from tripsage_core.services.business.chat_service import ChatService
 
-            # The service can now be instantiated without validation errors
-            # Note: This is just an example - the actual service may have different
-            # initialization
-            service = ChatService()
+            # Instantiate with DI-only requirement satisfied
+            service = ChatService(database_service=MockDatabaseService())
             assert service is not None
 
     def test_settings_validation_patterns(self):

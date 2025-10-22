@@ -791,29 +791,5 @@ class WeatherService:
         await self.close()
 
 
-# Global service instance
-_weather_service: WeatherService | None = None
-
-
-async def get_weather_service() -> WeatherService:
-    """Get the global weather service instance.
-
-    Returns:
-        WeatherService instance
-    """
-    global _weather_service  # pylint: disable=global-statement
-
-    if _weather_service is None:
-        _weather_service = WeatherService()
-        await _weather_service.connect()
-
-    return _weather_service
-
-
-async def close_weather_service() -> None:
-    """Close the global weather service instance."""
-    global _weather_service  # pylint: disable=global-statement
-
-    if _weather_service:
-        await _weather_service.close()
-        _weather_service = None
+# FINAL-ONLY: Removed module-level singleton for WeatherService.
+# Construct WeatherService in application wiring and inject explicitly.

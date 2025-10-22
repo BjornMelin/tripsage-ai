@@ -1050,5 +1050,5 @@ class WebSocketManager:
                 await error_sleep_task
 
 
-# Global WebSocket manager instance
-websocket_manager = WebSocketManager()
+# FINAL-ONLY: Remove module-level singleton. Construct WebSocketManager in app
+# lifespan and inject via DI where needed.

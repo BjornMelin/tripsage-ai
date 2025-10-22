@@ -74,7 +74,6 @@ __all__ = [
     "FlightService",
     "FlightType",
     "PassengerType",
-    "get_flight_service",
 ]
 
 
@@ -94,7 +93,7 @@ class FlightService:
     """
 
     def __init__(
-        self, database_service=None, external_flight_service=None, cache_ttl: int = 300
+        self, *, database_service, external_flight_service=None, cache_ttl: int = 300
     ):
         """Initialize the flight service.
 
@@ -103,22 +102,7 @@ class FlightService:
             external_flight_service: External flight API service
             cache_ttl: Cache TTL in seconds
         """
-        # Import here to avoid circular imports
-        if database_service is None:
-            import asyncio
-
-            from tripsage_core.services.infrastructure import get_database_service
-
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            database_service = loop.run_until_complete(get_database_service())
-
-        if external_flight_service is None:
-            # External service can be provided by the application layer.
-            external_flight_service = None
+        # Dependencies must be provided explicitly via DI
 
         # Allow dynamic attributes on services for type checker flexibility
         self.db: Any = database_service
@@ -851,29 +835,4 @@ class FlightService:
             )
 
 
-# Dependency function for FastAPI
-async def get_flight_service() -> FlightService:
-    """Get flight service instance for dependency injection.
-
-    Returns:
-        FlightService instance
-    """
-    # Attempt to attach Duffel provider if a token is configured.
-    # Environment-based detection to avoid coupling to Settings attributes.
-    import os
-
-    access_token = os.getenv("DUFFEL_ACCESS_TOKEN") or os.getenv("DUFFEL_API_TOKEN")
-    if access_token:
-        try:
-            from tripsage_core.services.external_apis.duffel_provider import (
-                DuffelProvider,
-            )
-
-            provider = DuffelProvider(access_token=access_token)
-            return FlightService(external_flight_service=provider)
-        except (ImportError, TypeError, ValueError):
-            # Optional provider init failed; fall back safely.
-            # Fall back to service without external provider on any init error
-            return FlightService()
-
-    return FlightService()
+# FINAL-ONLY: Remove FastAPI dependency factory; construct via API DI where needed.
