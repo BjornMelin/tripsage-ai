@@ -16,9 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dashboard regression coverages: async unit tests for `DashboardService`, refreshed HTTP router tests,
   and an integration harness exercising the new schema.
 - Async unit tests for accommodation tools covering search/detail/booking flows via `ToolContext` mocks.
+- Supabase initialization regression tests covering connection verification, schema discovery, and sample data helpers (no-network stubs).
 
 ### Changed
 
+- Rebuilt `tripsage.agents.base.BaseAgent` around LangGraph orchestration with ChatOpenAI fallback execution, memory hydration, and periodic conversation summarization.
+- Simplified `ChatAgent` to delegate to the new base workflow while exposing async history/clearing helpers backed by `ChatService` with local fallbacks.
 - Flight agent result formatting updated to use canonical offer fields (airlines, outbound_segments, currency/price).
 - Documentation (developers/operators/architecture) updated to “Duffel API v2 via thin provider,” headers and env var usage modernized, and examples aligned to canonical mapping.
 - Dashboard analytics stack simplified: `DashboardService` emits only modern dataclasses, FastAPI routers consume the `metrics/services/top_users`
@@ -27,11 +30,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Web search tooling replaced ad-hoc fallbacks with strict Agents SDK usage and literal-typed context sizing; batch helper now guards cache failures.
 - Web crawl helpers simplified to use `WebCrawlService` exclusively, centralizing error normalization and metrics recording.
 - OTEL decorators use overload-friendly typing so async/sync instrumentation survives pyright + pylint enforcement.
+- Database bootstrap hardens Supabase RPC handling, runs migrations via lazy imports, and scopes discovery to `supabase/migrations` with offline recording.
+- Accommodation stack now normalizes MCP client calls (keyword-only), propagates canonical booking/search metadata, and validates external listings via `model_validate`.
 - WebSocket router refactored around a shared `MessageContext`, consolidated handlers, and IDNA-aware origin validation while keeping dependencies Supabase-only.
 
 ### Deprecated
 
 ### Removed
+
+- Legacy Google Maps dict-shaped responses and all backward-compatible paths in services/tests.
+
+### Fixed
+
+- Base agent node logging now emits the full exception message, keeping orchestration diagnostics actionable.
+- Consolidated, typed Google Maps integration:
+  - New Pydantic models (`tripsage_core/models/api/maps_models.py`).
+  - `GoogleMapsService` now returns typed models and removes custom HTTP logic.
+  - `LocationService` and `ActivityService` refactored to consume typed API only (no legacy code).
+  - Unit/integration tests rewritten for typed returns; deprecated suites removed.
 
 - Legacy Duffel adapter (`tripsage_core/services/external_apis/flights_service.py`).
 - Duplicate flight DTO module (`tripsage_core/models/api/flights_models.py`) and its re‑exports.
