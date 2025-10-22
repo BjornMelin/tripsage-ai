@@ -38,6 +38,8 @@ dependencies = [
     "openai-agents>=0.4.0,<0.5.0",
     "mem0ai>=0.1.118,<2.0.0",
     "tenacity>=9.1.2",
+    "slowapi>=0.1.9",
+    "aiolimiter>=1.1.0",
     "cashews>=7.4.0,<8.0.0",
     # Web scraping and automation
     "crawl4ai>=0.7.4,<0.8.0",

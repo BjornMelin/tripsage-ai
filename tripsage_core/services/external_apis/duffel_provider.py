@@ -26,6 +26,8 @@ from typing import Any
 
 import httpx
 
+from tripsage_core.utils.outbound import request_with_backoff
+
 
 _DEFAULT_BASE_URL = "https://api.duffel.com"
 _API_VERSION = "v2"
@@ -221,8 +223,10 @@ class DuffelProvider:
             payload["data"]["max_connections"] = int(max_connections)
 
         # return_offers=true returns embedded offers
-        resp = await self._client.post(
-            "/air/offer_requests",
+        resp = await request_with_backoff(
+            self._client,
+            "POST",
+            f"{self._client.base_url}/air/offer_requests",
             params={"return_offers": "true"},
             json=payload,
         )
@@ -240,7 +244,9 @@ class DuffelProvider:
         Returns:
             The offer dictionary or ``None`` if not found.
         """
-        resp = await self._client.get(f"/air/offers/{offer_id}")
+        resp = await request_with_backoff(
+            self._client, "GET", f"{self._client.base_url}/air/offers/{offer_id}"
+        )
         if resp.status_code == 404:
             return None
         resp.raise_for_status()
@@ -274,6 +280,8 @@ class DuffelProvider:
                 "payments": [payment],
             }
         }
-        resp = await self._client.post("/air/orders", json=payload)
+        resp = await request_with_backoff(
+            self._client, "POST", f"{self._client.base_url}/air/orders", json=payload
+        )
         resp.raise_for_status()
         return resp.json().get("data", {})

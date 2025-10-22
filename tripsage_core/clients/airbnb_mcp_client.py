@@ -14,6 +14,7 @@ from tripsage.tools.models.accommodations import (
     AirbnbSearchParams,
 )
 from tripsage_core.utils.logging_utils import get_logger
+from tripsage_core.utils.outbound import request_with_backoff
 
 
 logger = get_logger(__name__)
@@ -92,8 +93,10 @@ class AirbnbMCPClient:
             client = self._client
         assert client is not None
         try:
-            response = await client.post(
-                "/invoke",
+            response = await request_with_backoff(
+                client,
+                "POST",
+                f"{client.base_url}/invoke",
                 json={"tool": tool_name, "params": params},
                 headers={"Content-Type": "application/json"},
             )
