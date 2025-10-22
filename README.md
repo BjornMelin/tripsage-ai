@@ -257,7 +257,7 @@ TripSage AI is optimized for high performance and scalability:
 
 - **Response Times**: Sub-200ms for cached requests
 - **Throughput**: 1000+ requests/second on standard hardware
-- **Caching**: DragonflyDB provides 25x faster performance than Redis
+- **Caching**: Upstash Redis provides managed serverless caching
 - **Database**: pgvector enables fast similarity search for recommendations
 - **AI**: Optimized LangGraph agents with streaming responses
 
@@ -269,7 +269,7 @@ uv run python scripts/performance/benchmark_api.py
 uv run python scripts/performance/load_test.py
 
 # Cache performance verification
-uv run python scripts/verification/verify_dragonfly.py
+uv run python scripts/verification/verify_upstash.py
 ```
 
 ---

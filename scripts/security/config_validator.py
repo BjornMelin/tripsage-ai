@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
 """Security configuration validator for TripSage.
 
-This script validates the security configuration before deployment,
-ensuring that production environments meet security requirements.
+Validates configuration using `tripsage_core.config.Settings` when available,
+checks common pitfalls, and emits a concise report with proper exit codes.
 """
 
 import logging
 import sys
 from pathlib import Path
 
-from tripsage_core.config import Settings, get_settings, validate_configuration
+
+try:
+    from tripsage_core.config import (
+        Settings,
+        get_settings,  # type: ignore[reportAssignmentType]
+    )
+except ImportError:  # pragma: no cover - optional import in this script context
+    Settings = object  # type: ignore
+
+    def get_settings():  # type: ignore
+        """Get settings."""
+        raise RuntimeError("tripsage_core.config is not available")
 
 
 # Configure logging
@@ -19,6 +30,58 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
+
+
+def validate_configuration() -> bool:
+    """Basic configuration validation.
+
+    Returns:
+        True if `get_settings()` can instantiate settings, else False.
+    """
+    try:
+        _ = get_settings()
+        return True
+    except (RuntimeError, ImportError, ValueError):
+        return False
+
+
+from typing import Any
+
+
+def validate_secrets_security(settings: Any) -> dict[str, bool]:
+    """Validate common secret fields for strength and placeholders.
+
+    Args:
+        settings: Settings instance from tripsage_core.
+
+    Returns:
+        Mapping of field name to boolean indicating whether it appears secure.
+    """
+    candidates = [
+        "secret_key",
+        "database_service_key",
+        "database_jwt_secret",
+        "openai_api_key",
+    ]
+    result: dict[str, bool] = {}
+
+    for name in candidates:
+        if not hasattr(settings, name):
+            continue
+        try:
+            value = getattr(settings, name)
+            # Handle SecretStr-like objects
+            if hasattr(value, "get_secret_value"):
+                value = value.get_secret_value()
+            value = str(value)
+            is_secure = len(value) >= 16 and not value.lower().startswith(
+                ("test", "demo", "placeholder", "changeme")
+            )
+            result[name] = is_secure
+        except (AttributeError, TypeError, ValueError):
+            result[name] = False
+
+    return result
 
 
 class SecurityValidator:
@@ -35,7 +98,7 @@ class SecurityValidator:
         Returns:
             True if all security checks pass, False otherwise
         """
-        logger.info("🔒 Starting security configuration validation...")
+        logger.info("Starting security configuration validation...")
 
         try:
             # Load and validate basic configuration
@@ -58,13 +121,13 @@ class SecurityValidator:
             return len(self.issues) == 0
 
         except Exception as e:
-            logger.exception("❌ Security validation failed with error")
+            logger.exception("Security validation failed with error")
             self.issues.append(f"Validation error: {e}")
             return False
 
-    def _validate_environment_security(self, settings: Settings) -> None:
+    def _validate_environment_security(self, settings: Any) -> None:
         """Validate environment-specific security settings."""
-        logger.info("🌍 Validating environment security...")
+        logger.info("Validating environment security...")
 
         if settings.environment == "production":
             if settings.debug:
@@ -82,12 +145,12 @@ class SecurityValidator:
                     "Debug mode disabled in development (may hinder debugging)"
                 )
 
-    def _validate_secrets_security(self, settings: Settings) -> None:
+    def _validate_secrets_security(self, settings: Any) -> None:
         """Validate secret security and strength."""
-        logger.info("🔐 Validating secrets security...")
+        logger.info("Validating secrets security...")
 
         # Get detailed secret validation
-        secret_validation = settings.validate_secrets_security()
+        secret_validation = validate_secrets_security(settings)
 
         for field_name, is_secure in secret_validation.items():
             if not is_secure:
@@ -117,9 +180,9 @@ class SecurityValidator:
                             f"appears to be a fallback/test value"
                         )
 
-    def _validate_database_security(self, settings: Settings) -> None:
+    def _validate_database_security(self, settings: Any) -> None:
         """Validate database security configuration."""
-        logger.info("🗄️ Validating database security...")
+        logger.info("Validating database security...")
 
         database_url = str(settings.database_url)
 
@@ -139,9 +202,9 @@ class SecurityValidator:
             if "localhost" in postgres_url and settings.environment == "production":
                 self.warnings.append("PostgreSQL URL points to localhost in production")
 
-    def _validate_api_security(self, settings: Settings) -> None:
+    def _validate_api_security(self, settings: Any) -> None:
         """Validate API security configuration."""
-        logger.info("🌐 Validating API security...")
+        logger.info("Validating API security...")
 
         # Validate CORS origins
         for origin in settings.cors_origins:
@@ -158,12 +221,12 @@ class SecurityValidator:
                 "CORS credentials disabled in production (may break authentication)"
             )
 
-    def _validate_production_requirements(self, settings: Settings) -> None:
+    def _validate_production_requirements(self, settings: Any) -> None:
         """Validate production-specific security requirements."""
         if settings.environment != "production":
             return
 
-        logger.info("🏭 Validating production security requirements...")
+        logger.info("Validating production security requirements...")
 
         # Required security features for production
         required_features = {
@@ -185,9 +248,9 @@ class SecurityValidator:
                 "Redis connection without authentication in production"
             )
 
-    def _report_results(self, settings: Settings) -> None:
+    def _report_results(self, settings: Any) -> None:
         """Report validation results."""
-        logger.info("📊 Security validation report:")
+        logger.info("Security validation report:")
         logger.info("  Environment: %s", settings.environment)
         logger.info("  Debug mode: %s", settings.debug)
         logger.info("  Log level: %s", settings.log_level)
@@ -195,25 +258,25 @@ class SecurityValidator:
         # Get overall security report
         security_report = settings.get_security_report()
 
-        if security_report["production_ready"]:
-            logger.info("✅ Production security validation passed")
+        if security_report.get("production_ready", False):
+            logger.info("Production security validation passed")
         else:
-            logger.warning("⚠️ Production security validation has issues")
+            logger.warning("Production security validation has issues")
 
         # Report issues
         if self.issues:
-            logger.exception("❌ %s security issue(s) found:", len(self.issues))
+            logger.exception("%s security issue(s) found:", len(self.issues))
             for issue in self.issues:
                 logger.exception(" - %s", issue)
 
         # Report warnings
         if self.warnings:
-            logger.warning("⚠️ %s security warning(s):", len(self.warnings))
+            logger.warning("%s security warning(s):", len(self.warnings))
             for warning in self.warnings:
                 logger.warning("  - %s", warning)
 
         if not self.issues and not self.warnings:
-            logger.info("✅ No security issues or warnings found")
+            logger.info("No security issues or warnings found")
 
 
 def generate_secure_config_template() -> str:
@@ -268,21 +331,21 @@ def main():
     is_secure = validator.validate_configuration_security()
 
     # Generate secure template
-    logger.info("📄 Generating secure configuration template...")
+    logger.info("Generating secure configuration template...")
     template = generate_secure_config_template()
 
     if template:
         template_path = Path(".env.secure.template")
-        with template_path.open("w") as f:
+        with template_path.open("w", encoding="utf-8") as f:
             f.write(template)
-        logger.info("✅ Secure configuration template saved to %s", template_path)
+        logger.info("Secure configuration template saved to %s", template_path)
 
     # Exit with appropriate code
     if is_secure:
-        logger.info("🎉 Security validation completed successfully!")
+        logger.info("Security validation completed successfully")
         sys.exit(0)
     else:
-        logger.exception("💥 Security validation failed!")
+        logger.exception("Security validation failed")
         sys.exit(1)
 
 
