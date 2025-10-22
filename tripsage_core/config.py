@@ -80,6 +80,15 @@ class Settings(BaseSettings):
         default=50, description="Maximum Redis connections"
     )
 
+    # Upstash Redis (HTTP) configuration (preferred in Vercel deployments)
+    upstash_redis_rest_url: str | None = Field(
+        default=None, description="Upstash Redis REST URL (UPSTASH_REDIS_REST_URL)"
+    )
+    upstash_redis_rest_token: SecretStr | None = Field(
+        default=None,
+        description="Upstash Redis REST token (UPSTASH_REDIS_REST_TOKEN)",
+    )
+
     # AI Services
     openai_api_key: SecretStr = Field(
         default=SecretStr("sk-test-1234567890"), description="OpenAI API key"
