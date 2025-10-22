@@ -6,7 +6,7 @@
 
 - [ ] Database migration scripts tested
 - [ ] Environment variables configured
-- [ ] Redis/DragonflyDB instance ready
+- [ ] Upstash Redis credentials set (UPSTASH_REDIS_REST_URL/TOKEN)
 - [ ] SSL certificates installed
 - [ ] Domain DNS configured
 
@@ -32,13 +32,9 @@ python -c "from tripsage_core.services.infrastructure.database_service import Da
 ### 2. Cache System Setup
 
 ```bash
-# Start DragonflyDB
-docker run -d --name tripsage-dragonfly -p 6379:6379 \
-  docker.dragonflydb.io/dragonflydb/dragonfly:latest \
-  --logtostderr --cache_mode --requirepass tripsage_secure_password
-
+# Configure Upstash Redis (managed) — no local container required
 # Verify connection
-python scripts/verification/verify_dragonfly.py
+python scripts/verification/verify_upstash.py
 ```
 
 ### 3. Frontend Deployment
@@ -65,7 +61,7 @@ uv run python -m tripsage.api.main
 - Database connection pool: Target <80% utilization
 - WebSocket connections: Monitor heartbeat failures
 - Memory usage: Target <512MB per service
-- Redis/DragonflyDB hit rate: Target >90%
+- Cache hit rate: Target >90%
 
 ### Monitoring Endpoints
 
