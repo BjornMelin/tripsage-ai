@@ -203,7 +203,7 @@ This document provides an overview of TripSage's technology stack, architectural
 
 - GraphQL API layer for mobile apps
 - Edge computing for global distribution
-- Advanced caching strategies
+- Caching strategies
 
 **Long-term (2026):**
 

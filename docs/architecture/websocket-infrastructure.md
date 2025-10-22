@@ -321,7 +321,7 @@ The system implements a **structured connection lifecycle**:
 1. **WebRTC Integration**: Peer-to-peer communication for reduced latency
 2. **Protocol Buffers**: Binary protocol for bandwidth optimization
 3. **Edge Computing**: WebSocket termination at edge locations
-4. **Advanced Monitoring**: Distributed tracing and analytics
+4. **Monitoring**: Distributed tracing and analytics
 5. **Mobile Architecture**: Native WebSocket optimization
 
 ### Scalability Roadmap

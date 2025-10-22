@@ -19,7 +19,7 @@
 - [Security Guide](./security-guide.md) - Security implementation
 - [Authentication Guide](./authentication-guide.md) - OAuth setup and troubleshooting
 
-### Advanced Configuration
+### Configuration Details
 
 - [Settings Reference](./settings-reference.md) - Pydantic settings and technical configuration
 

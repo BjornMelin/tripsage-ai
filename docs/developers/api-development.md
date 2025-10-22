@@ -17,7 +17,7 @@ This guide covers backend API development using FastAPI, including patterns, aut
   - [📝 Request/Response Models](#-requestresponse-models)
     - [**Pydantic Models with Validation**](#pydantic-models-with-validation)
   - [🛡️ Input Validation](#️-input-validation)
-    - [**Advanced Validation Patterns**](#advanced-validation-patterns)
+    - [**Validation Patterns**](#validation-patterns)
   - [⚠️ Error Handling](#️-error-handling)
     - [**Structured Error Responses**](#structured-error-responses)
   - [🚀 Performance Optimization](#-performance-optimization)
@@ -414,7 +414,7 @@ class TripResponse(BaseModel):
 
 ## 🛡️ Input Validation
 
-### **Advanced Validation Patterns**
+### **Validation Patterns**
 
 ```python
 # tripsage/api/schemas/common.py

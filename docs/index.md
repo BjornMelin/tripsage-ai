@@ -66,7 +66,7 @@ This index lists all documentation files under `docs/` by section.
 ## Users
 
 - [README](users/README.md)
-- [Advanced Features](users/feature-reference.md)
+- [Feature Reference](users/feature-reference.md)
 - [Collaboration](users/collaboration.md)
 - [FAQ](users/faq.md)
 - [Getting Started](users/getting-started.md)
