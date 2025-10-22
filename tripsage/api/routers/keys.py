@@ -7,7 +7,16 @@ Own Key) functionality for user-provided API keys.
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    Response,
+    status,
+)
 
 from tripsage.api.core.dependencies import (
     ApiKeyServiceDep,
@@ -50,12 +59,16 @@ def get_monitoring_service() -> KeyMonitoringService:
 @trace_span(name="api.keys.list")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def list_keys(
+    request: Request,
+    response: Response,
     key_service: ApiKeyServiceDep,
     principal: Principal = Depends(require_principal),
 ):
     """List all API keys for the current user.
 
     Args:
+        request: Raw HTTP request (required by SlowAPI for headers)
+        response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         key_service: Injected key service
 
@@ -75,6 +88,8 @@ async def list_keys(
 @trace_span(name="api.keys.create")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def create_key(
+    request: Request,
+    response: Response,
     key_data: ApiKeyCreate,
     key_service: ApiKeyServiceDep,
     principal: Principal = Depends(require_principal),
@@ -82,6 +97,8 @@ async def create_key(
     """Create a new API key.
 
     Args:
+        request: Raw HTTP request (required by SlowAPI for headers)
+        response: Raw HTTP response (required by SlowAPI for headers)
         key_data: API key data
         principal: Current authenticated principal
         key_service: Injected key service
@@ -121,6 +138,8 @@ async def create_key(
 @trace_span(name="api.keys.delete")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def delete_key(
+    request: Request,
+    response: Response,
     key_service: ApiKeyServiceDep,
     principal: Principal = Depends(require_principal),
     key_id: str = Path(..., description="The API key ID"),
@@ -128,6 +147,8 @@ async def delete_key(
     """Delete an API key.
 
     Args:
+        request: Raw HTTP request (required by SlowAPI for headers)
+        response: Raw HTTP response (required by SlowAPI for headers)
         key_service: Injected key service
         principal: Current authenticated principal
         key_id: The API key ID
@@ -163,6 +184,8 @@ async def delete_key(
 @trace_span(name="api.keys.validate")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def validate_key(
+    request: Request,
+    response: Response,
     key_data: ApiKeyValidateRequest,
     key_service: ApiKeyServiceDep,
     principal: Principal = Depends(require_principal),
@@ -170,6 +193,8 @@ async def validate_key(
     """Validate an API key with the service.
 
     Args:
+        request: Raw HTTP request (required by SlowAPI for headers)
+        response: Raw HTTP response (required by SlowAPI for headers)
         key_data: API key data
         principal: Current authenticated principal
         key_service: Injected key service
@@ -188,7 +213,9 @@ async def validate_key(
 )
 @trace_span(name="api.keys.rotate")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def rotate_key(
+async def rotate_key(  # pylint: disable=too-many-positional-arguments
+    request: Request,
+    response: Response,
     key_data: ApiKeyRotateRequest,
     key_service: ApiKeyServiceDep,
     principal: Principal = Depends(require_principal),
@@ -197,6 +224,8 @@ async def rotate_key(
     """Rotate an API key.
 
     Args:
+        request: Raw HTTP request (required by SlowAPI for headers)
+        response: Raw HTTP response (required by SlowAPI for headers)
         key_data: New API key data
         key_id: The API key ID
         principal: Current authenticated principal
@@ -247,11 +276,15 @@ async def rotate_key(
 @trace_span(name="api.keys.metrics")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_metrics(
+    request: Request,
+    response: Response,
     principal: Principal = Depends(require_principal),
 ):
     """Get API key health metrics.
 
     Args:
+        request: Raw HTTP request (required by SlowAPI for headers)
+        response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
 
     Returns:
@@ -270,6 +303,8 @@ async def get_metrics(
 @trace_span(name="api.keys.audit")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_audit_log(
+    request: Request,
+    response: Response,
     principal: Principal = Depends(require_principal),
     limit: int = Query(100, ge=1, le=1000),
     monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
@@ -277,6 +312,8 @@ async def get_audit_log(
     """Get API key audit log for a user.
 
     Args:
+        request: Raw HTTP request (required by SlowAPI for headers)
+        response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         limit: Maximum number of entries to return
         monitoring_service: Key monitoring service

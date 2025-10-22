@@ -72,7 +72,7 @@ tripsage/api/
 │   └── ai_service.py    # AI integration
 └── middlewares/
     ├── authentication.py # Auth middleware
-    ├── rate_limiting.py  # Rate limiting
+    ├── limiting.py  # SlowAPI configuration (rate limiting)
     └── cors.py          # CORS configuration
 ```
 
@@ -92,7 +92,8 @@ from tripsage.api.routers import (
     auth, trips, flights, accommodations, chat, users
 )
 from tripsage.api.middlewares.authentication import AuthenticationMiddleware
-from tripsage.api.middlewares.rate_limiting import RateLimitingMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -133,7 +134,8 @@ app.add_middleware(
 )
 
 app.add_middleware(AuthenticationMiddleware)
-app.add_middleware(RateLimitingMiddleware)
+# Rate limiting is installed via SlowAPI in tripsage/api/limiting.py
+# install_rate_limiting(app)
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])

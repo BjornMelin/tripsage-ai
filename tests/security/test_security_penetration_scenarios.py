@@ -22,123 +22,134 @@ from tripsage.api.middlewares.authentication import (
 )
 
 
+@pytest.fixture
+def mock_services():
+    """Mock all required services for APT testing."""
+    mock_db = AsyncMock()
+    mock_cache = AsyncMock()
+    mock_settings = Mock()
+    mock_secret_key = Mock()
+    mock_secret_key.get_secret_value.return_value = "apt_test_master_secret_key"
+    mock_settings.secret_key = mock_secret_key
+    mock_jwt_secret = Mock()
+    mock_jwt_secret.get_secret_value.return_value = "jwt_secret"
+    mock_settings.database_jwt_secret = mock_jwt_secret
+
+    return {"db": mock_db, "cache": mock_cache, "settings": mock_settings}
+
+
+@pytest.fixture
+def penetration_test_app(mock_services) -> FastAPI:
+    """FastAPI application configured for penetration testing."""
+    app = FastAPI()
+
+    @app.get("/api/sensitive/data")
+    async def sensitive_endpoint(request: Request):
+        principal = getattr(request.state, "principal", None)
+        if not principal:
+            raise HTTPException(status_code=401, detail="Authentication required")
+
+        # Simulate sensitive data access
+        return {
+            "user_id": principal.id,
+            "sensitive_data": "confidential_information",
+            "access_level": getattr(principal, "role", "user"),
+        }
+
+    @app.get("/api/admin/users")
+    async def admin_endpoint(request: Request):
+        principal = getattr(request.state, "principal", None)
+        if not principal:
+            raise HTTPException(status_code=401, detail="Authentication required")
+
+        # Check admin privileges
+        if getattr(principal, "role", "user") != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+
+        return {"users": ["admin", "user1", "user2"], "total": 3}
+
+    @app.post("/api/keys/validate")
+    async def key_validation_endpoint(request: Request):
+        data = await request.json()
+        # Simulate key validation with potential vulnerabilities
+        return {"valid": True, "service": data.get("service", "unknown")}
+
+    return app
+
+
+@pytest.fixture
+def pentesting_client(penetration_test_app, mock_services) -> TestClient:
+    """Test client with full security middleware stack."""
+    # Legacy rate limiting middleware removed; SlowAPI covers inbound limits
+    from tripsage_core.services.business.api_key_service import ApiKeyService
+
+    # Mock audit functions to avoid logging to protected paths
+    async def mock_audit_security_event(*args, **kwargs):
+        return None
+
+    async def mock_audit_api_key(*args, **kwargs):
+        return None
+
+    async def mock_audit_authentication(*args, **kwargs):
+        return None
+
+    with (
+        patch(
+            "tripsage.api.middlewares.authentication.audit_security_event",
+            mock_audit_security_event,
+        ),
+        patch(
+            "tripsage.api.middlewares.authentication.audit_api_key",
+            mock_audit_api_key,
+        ),
+        patch(
+            "tripsage.api.middlewares.authentication.audit_authentication",
+            mock_audit_authentication,
+        ),
+        patch(
+            "tripsage_core.services.business.audit_logging_service.SecurityAuditLogger",
+            new=lambda *args, **kwargs: type(
+                "_DL", (), {"log": lambda *_a, **_k: None}
+            )(),
+        ),
+        patch(
+            "tripsage_core.services.business.audit_logging_service.get_audit_logger",
+            new=AsyncMock(
+                return_value=type("_DL", (), {"log": lambda *_a, **_k: None})()
+            ),
+        ),
+    ):
+        # Mock the _ensure_services method to avoid database connections
+        async def mock_ensure_services(self):
+            if not self._services_initialized:
+                if self.key_service is None:
+                    self.key_service = ApiKeyService(
+                        db=mock_services["db"],
+                        cache=mock_services["cache"],
+                        settings=mock_services["settings"],
+                    )
+                self._services_initialized = True
+
+        # Add authentication middleware with mocked _ensure_services
+        auth_middleware = AuthenticationMiddleware(penetration_test_app)
+        auth_middleware._ensure_services = mock_ensure_services.__get__(
+            auth_middleware, AuthenticationMiddleware
+        )
+
+        penetration_test_app.add_middleware(
+            type(auth_middleware).__bases__[0], dispatch=auth_middleware.dispatch
+        )
+
+        # Install SlowAPI rate limiting for penetration testing
+        from tripsage.api.limiting import install_rate_limiting
+
+        install_rate_limiting(penetration_test_app)
+
+        return TestClient(penetration_test_app)
+
+
 class TestPersistentThreatScenarios:
     """Penetration tests simulating Persistent Threat (APT) attack patterns."""
-
-    @pytest.fixture
-    def mock_services(self):
-        """Mock all required services for APT testing."""
-        mock_db = AsyncMock()
-        mock_cache = AsyncMock()
-        mock_settings = Mock()
-        mock_secret_key = Mock()
-        mock_secret_key.get_secret_value.return_value = "apt_test_master_secret_key"
-        mock_settings.secret_key = mock_secret_key
-        mock_jwt_secret = Mock()
-        mock_jwt_secret.get_secret_value.return_value = "jwt_secret"
-        mock_settings.database_jwt_secret = mock_jwt_secret
-
-        return {"db": mock_db, "cache": mock_cache, "settings": mock_settings}
-
-    @pytest.fixture
-    def penetration_test_app(self, mock_services) -> FastAPI:
-        """FastAPI application configured for penetration testing."""
-        app = FastAPI()
-
-        @app.get("/api/sensitive/data")
-        async def sensitive_endpoint(request: Request):
-            principal = getattr(request.state, "principal", None)
-            if not principal:
-                raise HTTPException(status_code=401, detail="Authentication required")
-
-            # Simulate sensitive data access
-            return {
-                "user_id": principal.id,
-                "sensitive_data": "confidential_information",
-                "access_level": getattr(principal, "role", "user"),
-            }
-
-        @app.get("/api/admin/users")
-        async def admin_endpoint(request: Request):
-            principal = getattr(request.state, "principal", None)
-            if not principal:
-                raise HTTPException(status_code=401, detail="Authentication required")
-
-            # Check admin privileges
-            if getattr(principal, "role", "user") != "admin":
-                raise HTTPException(status_code=403, detail="Admin access required")
-
-            return {"users": ["admin", "user1", "user2"], "total": 3}
-
-        @app.post("/api/keys/validate")
-        async def key_validation_endpoint(request: Request):
-            data = await request.json()
-            # Simulate key validation with potential vulnerabilities
-            return {"valid": True, "service": data.get("service", "unknown")}
-
-        return app
-
-    @pytest.fixture
-    def pentesting_client(self, penetration_test_app, mock_services) -> TestClient:
-        """Test client with full security middleware stack."""
-        from tripsage.api.middlewares.rate_limiting import RateLimitMiddleware
-        from tripsage_core.services.business.api_key_service import ApiKeyService
-
-        # Mock audit functions to avoid logging issues
-        async def mock_audit_security_event(*args, **kwargs):
-            pass
-
-        async def mock_audit_api_key(*args, **kwargs):
-            pass
-
-        async def mock_audit_authentication(*args, **kwargs):
-            pass
-
-        with (
-            patch(
-                "tripsage.api.middlewares.authentication.audit_security_event",
-                mock_audit_security_event,
-            ),
-            patch(
-                "tripsage.api.middlewares.authentication.audit_api_key",
-                mock_audit_api_key,
-            ),
-            patch(
-                "tripsage.api.middlewares.authentication.audit_authentication",
-                mock_audit_authentication,
-            ),
-        ):
-            # Mock the _ensure_services method to avoid database connections
-            async def mock_ensure_services(self):
-                if not self._services_initialized:
-                    if self.key_service is None:
-                        self.key_service = ApiKeyService(
-                            db=mock_services["db"],
-                            cache=mock_services["cache"],
-                            settings=mock_services["settings"],
-                        )
-                    self._services_initialized = True
-
-            # Add authentication middleware with mocked _ensure_services
-            auth_middleware = AuthenticationMiddleware(penetration_test_app)
-            auth_middleware._ensure_services = mock_ensure_services.__get__(
-                auth_middleware, AuthenticationMiddleware
-            )
-
-            penetration_test_app.add_middleware(
-                type(auth_middleware).__bases__[0], dispatch=auth_middleware.dispatch
-            )
-
-            # Add rate limiting middleware
-            rate_middleware = RateLimitMiddleware(
-                app=penetration_test_app, use_dragonfly=False
-            )
-            penetration_test_app.add_middleware(
-                type(rate_middleware).__bases__[0],
-                dispatch=rate_middleware.dispatch,
-            )
-
-            return TestClient(penetration_test_app)
 
     async def test_apt_reconnaissance_phase(self, pentesting_client):
         """Test APT reconnaissance phase - information gathering."""
