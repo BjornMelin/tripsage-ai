@@ -10,9 +10,9 @@ from starlette.types import ASGIApp
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.middlewares.rate_limiting import (
     DragonflyRateLimiter,
-    EnhancedRateLimitMiddleware,
     InMemoryRateLimiter,
     RateLimitConfig,
+    RateLimitMiddleware,
 )
 
 
@@ -33,7 +33,7 @@ def mock_settings():
 @pytest.fixture
 def middleware(mock_app, mock_settings):
     """Create middleware instance with in-memory rate limiter."""
-    return EnhancedRateLimitMiddleware(app=mock_app, settings=mock_settings)
+    return RateLimitMiddleware(app=mock_app, settings=mock_settings)
 
 
 @pytest.fixture
@@ -314,8 +314,8 @@ class TestDragonflyRateLimiter:
         assert metadata == {}
 
 
-class TestEnhancedRateLimitMiddleware:
-    """Test cases for EnhancedRateLimitMiddleware."""
+class TestRateLimitMiddleware:
+    """Test cases for RateLimitMiddleware."""
 
     async def test_skip_rate_limit_for_public_endpoints(
         self, middleware, mock_request, mock_call_next
@@ -473,7 +473,7 @@ class TestEnhancedRateLimitMiddleware:
         mock_settings.redis_url = "redis://localhost:6379"
 
         # Create middleware
-        middleware = EnhancedRateLimitMiddleware(
+        middleware = RateLimitMiddleware(
             app=mock_app, settings=mock_settings, use_dragonfly=True
         )
 

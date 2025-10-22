@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from tripsage.orchestration.tools.simple_tools import (
+from tripsage.orchestration.tools.tools import (
     AGENT_TOOLS,
     ALL_TOOLS,
     add_memory,
@@ -29,7 +29,7 @@ class TestSimpleTools:
     """Test the simple tool implementations."""
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    @patch("tripsage.orchestration.tools.tools.mcp_service")
     async def test_search_flights_tool(self, mock_mcp_service):
         """Test the search_flights tool function."""
         # Mock MCP manager response
@@ -58,7 +58,7 @@ class TestSimpleTools:
         assert parsed_result["flights"][0]["airline"] == "Delta"
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    @patch("tripsage.orchestration.tools.tools.mcp_service")
     async def test_search_accommodations_tool(self, mock_mcp_service):
         """Test the search_accommodations tool function."""
         mock_result = {
@@ -82,7 +82,7 @@ class TestSimpleTools:
         assert parsed_result["accommodations"][0]["name"] == "Hotel California"
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    @patch("tripsage.orchestration.tools.tools.mcp_service")
     async def test_geocode_location_tool(self, mock_mcp_service):
         """Test the geocode_location tool function."""
         mock_result = {
@@ -99,7 +99,7 @@ class TestSimpleTools:
         assert parsed_result["longitude"] == -122.4194
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    @patch("tripsage.orchestration.tools.tools.mcp_service")
     async def test_get_weather_tool(self, mock_mcp_service):
         """Test the get_weather tool function."""
         mock_result = {"temperature": 68, "condition": "Sunny", "humidity": 45}
@@ -112,7 +112,7 @@ class TestSimpleTools:
         assert parsed_result["condition"] == "Sunny"
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    @patch("tripsage.orchestration.tools.tools.mcp_service")
     async def test_web_search_tool(self, mock_mcp_service):
         """Test the web_search tool function."""
         mock_result = {
@@ -129,9 +129,9 @@ class TestSimpleTools:
         assert len(parsed_result["results"]) == 1
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools._search_user_memories")
-    @patch("tripsage.orchestration.tools.simple_tools._add_conversation_memory")
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    @patch("tripsage.orchestration.tools.tools._search_user_memories")
+    @patch("tripsage.orchestration.tools.tools._add_conversation_memory")
+    @patch("tripsage.orchestration.tools.tools.mcp_service")
     async def test_memory_tools(
         self,
         mock_mcp_service,
@@ -165,7 +165,7 @@ class TestSimpleTools:
         assert len(parsed_result["results"]) == 1
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    @patch("tripsage.orchestration.tools.tools.mcp_service")
     async def test_tool_error_handling(self, mock_mcp_service):
         """Test tool error handling."""
         # Mock MCP manager to raise an exception
@@ -232,7 +232,7 @@ class TestSimpleTools:
         assert search_memories in AGENT_TOOLS["memory_update"]
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    @patch("tripsage.orchestration.tools.tools.mcp_service")
     async def test_health_check(self, mock_mcp_service):
         """Test the health check function."""
         # Mock successful health check
@@ -248,7 +248,7 @@ class TestSimpleTools:
         assert "timestamp" in result
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    @patch("tripsage.orchestration.tools.tools.mcp_service")
     async def test_health_check_failure(self, mock_mcp_service):
         """Test health check when service is unavailable."""
         mock_mcp_service.health_check = AsyncMock(
@@ -267,7 +267,7 @@ class TestToolSchemaValidation:
 
     def test_flight_search_params_schema(self):
         """Test FlightSearchParams schema validation."""
-        from tripsage.orchestration.tools.simple_tools import FlightSearchParams
+        from tripsage.orchestration.tools.tools import FlightSearchParams
 
         # Valid params
         valid_params = FlightSearchParams(
@@ -281,7 +281,7 @@ class TestToolSchemaValidation:
 
     def test_accommodation_search_params_schema(self):
         """Test AccommodationSearchParams schema validation."""
-        from tripsage.orchestration.tools.simple_tools import AccommodationSearchParams
+        from tripsage.orchestration.tools.tools import AccommodationSearchParams
 
         valid_params = AccommodationSearchParams(
             location="San Francisco",
@@ -296,7 +296,7 @@ class TestToolSchemaValidation:
 
     def test_memory_params_schema(self):
         """Test MemoryParams schema validation."""
-        from tripsage.orchestration.tools.simple_tools import MemoryParams
+        from tripsage.orchestration.tools.tools import MemoryParams
 
         valid_params = MemoryParams(
             content="User prefers aisle seats", category="preferences"
@@ -309,7 +309,7 @@ class TestToolIntegration:
     """Integration tests for tool functionality."""
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.simple_tools.mcp_service")
+    @patch("tripsage.orchestration.tools.tools.mcp_service")
     async def test_tool_chain_execution(self, mock_mcp_service):
         """Test chaining multiple tools together."""
         # Mock responses for different tools

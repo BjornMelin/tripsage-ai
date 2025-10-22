@@ -18,9 +18,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from tripsage.api.core.config import get_settings
 from tripsage.api.core.openapi import custom_openapi
 from tripsage.api.middlewares import (
-    # AuthenticationMiddleware,  # Temporarily disabled - awaiting Supabase Auth
-    EnhancedRateLimitMiddleware,
     LoggingMiddleware,
+    RateLimitMiddleware,
 )
 from tripsage.api.routers import (
     accommodations,
@@ -81,9 +80,9 @@ async def lifespan(app: FastAPI):
     """
     # Startup: Initialize MCP Manager and WebSocket Services
     logger.info("Initializing MCP service on API startup")
-    from tripsage_core.services.simple_mcp_service import AirbnbMCPService
+    from tripsage_core.services.airbnb_mcp import AirbnbMCP
 
-    app.state.mcp_service = AirbnbMCPService()
+    app.state.mcp_service = AirbnbMCP()
     await app.state.mcp_service.initialize()
 
     # Initialize services (Cache, WebSocket, MCP) in DI-managed app.state
@@ -222,14 +221,14 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     # Enhanced rate limiting middleware with principal-based limits
     use_dragonfly = bool(settings.redis_url)
     app.add_middleware(
-        EnhancedRateLimitMiddleware, settings=settings, use_dragonfly=use_dragonfly
+        RateLimitMiddleware, settings=settings, use_dragonfly=use_dragonfly
     )
 
     # Enhanced authentication middleware supporting JWT and API keys
     # Temporarily disabled - awaiting Supabase Auth
     # app.add_middleware(AuthenticationMiddleware, settings=settings)
 
-    # Key-operation rate limiting merged into EnhancedRateLimitMiddleware
+    # Key-operation rate limiting merged into RateLimitMiddleware
 
     # Simplified exception handlers
     @app.exception_handler(CoreAuthenticationError)

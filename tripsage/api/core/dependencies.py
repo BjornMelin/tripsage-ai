@@ -12,6 +12,7 @@ from tripsage.api.core.config import Settings, get_settings
 from tripsage.api.core.protocols import ApiKeyServiceProto, ChatServiceProto
 from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+from tripsage_core.services.airbnb_mcp import AirbnbMCP
 from tripsage_core.services.business.accommodation_service import (
     AccommodationService,
     get_accommodation_service,
@@ -44,7 +45,6 @@ from tripsage_core.services.infrastructure.database_service import (
     DatabaseService,
     get_database_service,
 )
-from tripsage_core.services.simple_mcp_service import AirbnbMCPService
 from tripsage_core.utils.session_utils import SessionMemory
 
 
@@ -204,7 +204,7 @@ async def get_unified_search_service_dep(request: Request) -> UnifiedSearchServi
 
 
 # MCP service dependency
-def get_mcp_service(request: Request) -> AirbnbMCPService:
+def get_mcp_service(request: Request) -> AirbnbMCP:
     """Get DI-managed MCP service instance."""
     return request.app.state.mcp_service  # type: ignore[attr-defined]
 
@@ -223,7 +223,7 @@ SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]
 DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
 CacheDep = Annotated[CacheService, Depends(get_cache_service_dep)]
 SessionMemoryDep = Annotated[SessionMemory, Depends(get_session_memory)]
-MCPServiceDep = Annotated[AirbnbMCPService, Depends(get_mcp_service)]
+MCPServiceDep = Annotated[AirbnbMCP, Depends(get_mcp_service)]
 MapsServiceDep = Annotated[GoogleMapsService, Depends(get_maps_service_dep)]
 ActivityServiceDep = Annotated[ActivityService, Depends(get_activity_service_dep)]
 UnifiedSearchServiceDep = Annotated[

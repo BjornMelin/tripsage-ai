@@ -68,7 +68,7 @@ class BudgetAgentNode(BaseAgentNode):
 
     def _initialize_tools(self) -> None:
         """Initialize budget-specific tools using simple tool catalog."""
-        from tripsage.orchestration.tools.simple_tools import get_tools_for_agent
+        from tripsage.orchestration.tools.tools import get_tools_for_agent
 
         self.available_tools = get_tools_for_agent("budget_agent")
 

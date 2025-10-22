@@ -15,10 +15,6 @@ from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.accommodations import (
     AccommodationDetailsRequest,
     AccommodationDetailsResponse,
-    AccommodationListing,
-    AccommodationLocation,
-    AccommodationSearchRequest,
-    AccommodationSearchResponse,
     SavedAccommodationRequest,
     SavedAccommodationResponse,
 )
@@ -26,13 +22,11 @@ from tripsage_core.exceptions import CoreTripSageError
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
-from tripsage_core.models.schemas_common import AccommodationType, BookingStatus
 from tripsage_core.services.business.accommodation_service import (
-    AccommodationListing as ServiceAccommodationListing,
-    AccommodationLocation as ServiceAccommodationLocation,
     AccommodationSearchRequest as ServiceAccommodationSearchRequest,
     AccommodationSearchResponse as ServiceAccommodationSearchResponse,
     AccommodationService,
+    BookingStatus,
     get_accommodation_service,
 )
 
@@ -42,138 +36,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _convert_api_to_service_search_request(
-    api_request: AccommodationSearchRequest, user_id: str
-) -> ServiceAccommodationSearchRequest:
-    """Convert API AccommodationSearchRequest to Service AccommodationSearchRequest.
-
-    This adapter handles the schema differences between API and service layers:
-    - API uses 'adults' (required) + 'children' (optional) + 'rooms' (optional)
-    - Service uses 'guests' (required) + 'adults' (optional) + 'children' (optional)
-
-    Args:
-        api_request: API accommodation search request
-        user_id: User ID
-
-    Returns:
-        Service accommodation search request
-    """
-    # Convert API schema to service schema
-    # Calculate total guests from adults + children
-    total_guests = api_request.adults + (api_request.children or 0)
-
-    # Map API fields to service fields
-    service_data = {
-        "user_id": user_id,
-        "trip_id": str(api_request.trip_id) if api_request.trip_id else None,
-        "location": api_request.location,
-        "check_in": api_request.check_in,
-        "check_out": api_request.check_out,
-        "guests": total_guests,  # Service requires this
-        "adults": api_request.adults,  # Service has this as optional
-        "children": api_request.children,  # Both have this as optional
-        # Note: API 'rooms' field doesn't exist in service schema
-        "metadata": {},
-    }
-
-    # Add optional fields if they exist
-    if api_request.property_type:
-        # Map API AccommodationType to service PropertyType if needed
-        service_data["property_types"] = [api_request.property_type]
-
-    if api_request.min_price:
-        service_data["min_price"] = api_request.min_price
-
-    if api_request.max_price:
-        service_data["max_price"] = api_request.max_price
-
-    if api_request.amenities:
-        service_data["amenities"] = api_request.amenities
-
-    if api_request.min_rating:
-        service_data["min_rating"] = api_request.min_rating
-
-    if api_request.latitude is not None and api_request.longitude is not None:
-        service_data["metadata"]["coordinates"] = {
-            "latitude": api_request.latitude,
-            "longitude": api_request.longitude,
-        }
-
-    if api_request.rooms:
-        service_data["metadata"]["rooms"] = api_request.rooms
-
-    if not service_data["metadata"]:
-        service_data.pop("metadata")
-
-    return ServiceAccommodationSearchRequest(**service_data)
-
-
-def _convert_service_location_to_api_location(
-    service_location: ServiceAccommodationLocation,
-) -> AccommodationLocation:
-    """Convert service AccommodationLocation to API AccommodationLocation."""
-    return AccommodationLocation(
-        city=service_location.city,
-        country=service_location.country,
-        latitude=service_location.latitude or 0.0,
-        longitude=service_location.longitude or 0.0,
-        neighborhood=getattr(service_location, "neighborhood", None),
-        distance_to_center=getattr(service_location, "distance_to_center", None),
-    )
-
-
-def _convert_service_listing_to_api_listing(
-    service_listing: ServiceAccommodationListing,
-) -> AccommodationListing:
-    """Convert service AccommodationListing to API AccommodationListing."""
-    return AccommodationListing(
-        id=service_listing.id,
-        name=service_listing.name,
-        description=service_listing.description or "",
-        property_type=AccommodationType(service_listing.property_type.value),
-        location=_convert_service_location_to_api_location(service_listing.location),
-        price_per_night=service_listing.price_per_night,
-        currency=getattr(service_listing, "currency", "USD"),
-        rating=getattr(service_listing, "rating", None),
-        review_count=getattr(service_listing, "review_count", None),
-        amenities=getattr(service_listing, "amenities", []),
-        images=getattr(service_listing, "images", []),
-        max_guests=getattr(service_listing, "max_guests", 2),
-        bedrooms=getattr(service_listing, "bedrooms", 1),
-        beds=getattr(service_listing, "beds", 1),
-        bathrooms=getattr(service_listing, "bathrooms", 1.0),
-        check_in_time=getattr(service_listing, "check_in_time", "15:00"),
-        check_out_time=getattr(service_listing, "check_out_time", "11:00"),
-        url=getattr(service_listing, "url", None),
-        source=getattr(service_listing, "source", None),
-        total_price=getattr(service_listing, "total_price", None),
-    )
-
-
-def _convert_service_search_response_to_api_response(
-    service_response: ServiceAccommodationSearchResponse,
-    api_request: AccommodationSearchRequest,
-) -> AccommodationSearchResponse:
-    """Convert service search response into the API schema representation."""
-    return AccommodationSearchResponse(
-        listings=[
-            _convert_service_listing_to_api_listing(listing)
-            for listing in service_response.listings
-        ],
-        count=service_response.total_results,
-        currency=getattr(service_response, "currency", "USD"),
-        search_id=service_response.search_id,
-        trip_id=getattr(api_request, "trip_id", None),
-        min_price=service_response.min_price,
-        max_price=service_response.max_price,
-        avg_price=service_response.avg_price,
-        search_request=api_request,
-    )
-
-
-@router.post("/search", response_model=AccommodationSearchResponse)
+@router.post("/search", response_model=ServiceAccommodationSearchResponse)
 async def search_accommodations(
-    request: AccommodationSearchRequest,
+    request: ServiceAccommodationSearchRequest,
     principal: Principal = Depends(require_principal),
     accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
@@ -187,13 +52,10 @@ async def search_accommodations(
     Returns:
         Accommodation search results
     """
-    # Convert API schema to service schema
     user_id = get_principal_id(principal)
-    service_request = _convert_api_to_service_search_request(request, user_id)
-    service_results = await accommodation_service.search_accommodations(service_request)
-
-    # Convert service response to API response format
-    return _convert_service_search_response_to_api_response(service_results, request)
+    # Ensure user context is attached to the canonical request
+    service_request = request.model_copy(update={"user_id": user_id})
+    return await accommodation_service.search_accommodations(service_request)
 
 
 @router.post("/details", response_model=AccommodationDetailsResponse)
@@ -227,11 +89,10 @@ async def get_accommodation_details(
             details={"listing_id": request.listing_id},
         )
 
-    # Convert service response to API response format
     return AccommodationDetailsResponse(
-        listing=_convert_service_listing_to_api_listing(listing),
-        availability=True,  # Default to available - service could provide this
-        total_price=None,  # Could be calculated based on check-in/out dates
+        listing=listing,
+        availability=True,
+        total_price=None,
     )
 
 
@@ -292,12 +153,11 @@ async def save_accommodation(
     # Use book_accommodation to save the accommodation
     booking = await accommodation_service.book_accommodation(user_id, booking_request)
 
-    # Convert booking to saved accommodation response
     return SavedAccommodationResponse(
         id=UUID(booking.id),
         user_id=user_id,
         trip_id=request.trip_id,
-        listing=_convert_service_listing_to_api_listing(listing),
+        listing=listing,
         check_in=request.check_in,
         check_out=request.check_out,
         saved_at=datetime.now().date(),
@@ -386,14 +246,11 @@ async def list_saved_accommodations(
                         id=UUID(booking.id),
                         user_id=user_id,
                         trip_id=trip_uuid,
-                        listing=_convert_service_listing_to_api_listing(listing),
+                        listing=listing,
                         check_in=booking.check_in,
                         check_out=booking.check_out,
-                        # Booking records omit created_at timestamps.
                         saved_at=datetime.now().date(),
-                        # Accommodation bookings lack a notes field.
                         notes=None,
-                        # Treat all retrieved entries as saved entries in the API.
                         status=BookingStatus.SAVED,
                     )
                 )
@@ -470,7 +327,7 @@ async def update_saved_accommodation_status(
         id=UUID(current_booking.id),
         user_id=user_id,
         trip_id=UUID(current_booking.trip_id) if current_booking.trip_id else None,  # type: ignore
-        listing=_convert_service_listing_to_api_listing(listing),
+        listing=listing,
         check_in=current_booking.check_in,
         check_out=current_booking.check_out,
         saved_at=datetime.now().date(),

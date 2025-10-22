@@ -7,7 +7,7 @@ This module provides core infrastructure services across TripSage:
 - API key monitoring
 """
 
-from .cache_service import CacheService
+from .cache_service import CacheService, get_cache_service
 from .database_service import DatabaseService, get_database_service
 from .key_monitoring_service import (
     KeyMonitoringService,
@@ -29,6 +29,7 @@ __all__ = [
     "WebSocketBroadcaster",
     # WebSocket
     "WebSocketManager",
+    "get_cache_service",
     "get_database_service",
     "monitor_key_operation",
 ]
