@@ -75,9 +75,7 @@ async def search_activities(
 
 
 @router.get("/{activity_id}", response_model=ActivityResponse)
-async def get_activity_details(
-    activity_id: str, activity_service: ActivityServiceDep
-):
+async def get_activity_details(activity_id: str, activity_service: ActivityServiceDep):
     """Get detailed information about a specific activity.
 
     Retrieves comprehensive details for an activity including enhanced
