@@ -404,7 +404,7 @@ erDiagram
 | **Audit Trail** | Full collaboration activity tracking | Timestamps, permission changes, user activity monitoring |
 | **Performance Optimization** | Efficient collaboration queries | Composite indexes and optimized permission lookup patterns |
 
-**Advanced Collaboration Functions:**
+**Collaboration Functions:**
 
 - `get_user_accessible_trips(user_id, include_role)` - Get owned + shared trips with role information
 - `check_trip_permission(user_id, trip_id, permission)` - Validate user access with permission hierarchy
