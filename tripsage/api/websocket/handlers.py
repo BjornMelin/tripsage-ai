@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID
 
 from fastapi import WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
 
 from tripsage.api.websocket.context import ConnectionContext
 from tripsage.api.websocket.exceptions import WebSocketMessageError
@@ -39,7 +41,7 @@ from tripsage_core.services.infrastructure.websocket_validation import (
 )
 
 
-MessageHandler = Callable[[ConnectionContext, object], Awaitable[None]]
+MessageHandler = Callable[[ConnectionContext, BaseModel], Awaitable[None]]
 
 
 def attach_context_meta(event: ConnectionEvent, context: ConnectionContext) -> None:
@@ -236,13 +238,16 @@ def context_user_id(ctx: ConnectionContext) -> UUID | None:
     return ctx.user_id
 
 
-MESSAGE_TYPE_HANDLERS: dict[str, MessageHandler] = {
-    "heartbeat": handle_heartbeat,
-    "ping": handle_ping,
-    "pong": handle_pong,
-    "subscribe": handle_subscribe,
-    "chat_message": handle_chat_message,
-}
+MESSAGE_TYPE_HANDLERS: dict[str, MessageHandler] = cast(
+    dict[str, MessageHandler],
+    {
+        "heartbeat": handle_heartbeat,
+        "ping": handle_ping,
+        "pong": handle_pong,
+        "subscribe": handle_subscribe,
+        "chat_message": handle_chat_message,
+    },
+)
 
 
 async def run_message_loop(

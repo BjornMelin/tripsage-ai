@@ -20,6 +20,9 @@ from tripsage.api.websocket.lifecycle import ensure_origin_allowed, establish_co
 from tripsage_core.services.infrastructure.websocket_auth_service import (
     WebSocketAuthResponse,
 )
+from tripsage_core.services.infrastructure.websocket_validation import (
+    WebSocketAuthMessage,
+)
 
 
 class DummySettings(SimpleNamespace):
@@ -59,6 +62,20 @@ async def test_establish_connection_appends_default_channels(
         DummySettings(cors_origins=["http://client.test"], is_production=False),
     )
 
+    auth_model = WebSocketAuthMessage.model_validate(
+        {
+            "type": "auth",
+            "token": "aaa.bbb.ccc",
+            "channels": ["chat:primary"],
+            "session_id": str(uuid4()),
+        }
+    )
+
+    monkeypatch.setattr(
+        "tripsage.api.websocket.lifecycle.parse_and_validate",
+        lambda _: ("auth", auth_model),
+    )
+
     context, response = await establish_connection(
         websocket,
         manager=manager,
@@ -76,17 +93,23 @@ async def test_establish_connection_appends_default_channels(
 
 
 @pytest.mark.asyncio
-async def test_establish_connection_enforces_session_id() -> None:
+async def test_establish_connection_enforces_session_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Session mismatch should trigger an authentication error."""
     websocket = AsyncMock(spec=WebSocket)
     websocket.headers = {"origin": "http://client.test"}
     websocket.accept = AsyncMock()
-    websocket.receive_text.return_value = json.dumps(
+    mismatched = WebSocketAuthMessage.model_validate(
         {
             "type": "auth",
             "token": "aaa.bbb.ccc",
             "session_id": str(uuid4()),
         }
+    )
+    monkeypatch.setattr(
+        "tripsage.api.websocket.lifecycle.parse_and_validate",
+        lambda _: ("auth", mismatched),
     )
 
     settings = cast(
