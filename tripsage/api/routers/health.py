@@ -11,11 +11,15 @@ import asyncio
 import logging
 from datetime import UTC, datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import CacheDep, DatabaseDep, SettingsDep
-from tripsage_core.observability.otel import record_histogram, trace_span
+from tripsage_core.observability.otel import (
+    http_route_attr_fn,
+    record_histogram,
+    trace_span,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -54,8 +58,9 @@ class ReadinessCheck(BaseModel):
 
 @router.get("/health", response_model=SystemHealth)
 @trace_span(name="api.health")
-@record_histogram("api.op.duration", unit="s")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def comprehensive_health_check(
+    request: Request,
     settings: SettingsDep,
     db_service: DatabaseDep,
     cache_service: CacheDep,
@@ -97,8 +102,8 @@ async def comprehensive_health_check(
 
 @router.get("/health/liveness")
 @trace_span(name="api.health.liveness")
-@record_histogram("api.op.duration", unit="s")
-async def liveness_check():
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
+async def liveness_check(request: Request):
     """Basic liveness check for container orchestration.
 
     Returns 200 if the application is alive and can respond to requests.
@@ -112,8 +117,9 @@ async def liveness_check():
 
 @router.get("/health/readiness", response_model=ReadinessCheck)
 @trace_span(name="api.health.readiness")
-@record_histogram("api.op.duration", unit="s")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def readiness_check(
+    request: Request,
     db_service: DatabaseDep,
     cache_service: CacheDep,
 ):
@@ -168,8 +174,8 @@ async def readiness_check(
 
 @router.get("/health/database")
 @trace_span(name="api.health.database")
-@record_histogram("api.op.duration", unit="s")
-async def database_health_check(db_service: DatabaseDep):
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
+async def database_health_check(request: Request, db_service: DatabaseDep):
     """Detailed database health check.
 
     Returns comprehensive database health information including:
@@ -198,8 +204,8 @@ async def database_health_check(db_service: DatabaseDep):
 
 @router.get("/health/cache")
 @trace_span(name="api.health.cache")
-@record_histogram("api.op.duration", unit="s")
-async def cache_health_check(cache_service: CacheDep):
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
+async def cache_health_check(request: Request, cache_service: CacheDep):
     """Detailed cache (DragonflyDB) health check.
 
     Returns comprehensive cache health information including:

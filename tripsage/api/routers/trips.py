@@ -45,7 +45,11 @@ from tripsage_core.models.trip import (
     EnhancedBudget,
     TripPreferences as CoreTripPreferences,
 )
-from tripsage_core.observability.otel import record_histogram, trace_span
+from tripsage_core.observability.otel import (
+    http_route_attr_fn,
+    record_histogram,
+    trace_span,
+)
 
 # Import audit logging
 from tripsage_core.services.business.audit_logging_service import (
@@ -215,11 +219,7 @@ async def _record_trip_audit_event(
 
 @router.post("/", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
 @trace_span(name="api.trips.create")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {"http.route": "/api/trips/", "http.method": "POST"},
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def create_trip(
     trip_request: CreateTripRequest,
     principal: Principal = Depends(require_principal),
@@ -391,11 +391,7 @@ async def create_trip(
 
 @router.get("/{trip_id}", response_model=TripResponse)
 @trace_span(name="api.trips.get")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {"http.route": "/api/trips/{trip_id}", "http.method": "GET"},
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_trip(
     trip_id: UUID,
     principal: Principal = Depends(require_principal),
@@ -438,11 +434,7 @@ async def get_trip(
 
 @router.get("/", response_model=TripListResponse)
 @trace_span(name="api.trips.list")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {"http.route": "/api/trips/", "http.method": "GET"},
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def list_trips(
     skip: int = Query(default=0, ge=0, description="Number of trips to skip"),
     limit: int = Query(
@@ -504,11 +496,7 @@ async def list_trips(
 
 @router.put("/{trip_id}", response_model=TripResponse)
 @trace_span(name="api.trips.update")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {"http.route": "/api/trips/{trip_id}", "http.method": "PUT"},
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def update_trip(
     trip_id: UUID,
     trip_request: UpdateTripRequest,
@@ -606,14 +594,7 @@ async def update_trip(
 
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
 @trace_span(name="api.trips.delete")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {
-        "http.route": "/api/trips/{trip_id}",
-        "http.method": "DELETE",
-    },
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def delete_trip(
     trip_id: UUID,
     principal: Principal = Depends(require_principal),
