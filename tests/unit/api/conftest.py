@@ -128,10 +128,6 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         # Mock Supabase client
         patch("supabase.create_client", return_value=Mock()),
         # Mock legacy MCP references (removed during modernization)
-        # Mock rate limiting middleware to disable it
-        patch(
-            "tripsage.api.middlewares.rate_limiting.RateLimitMiddleware.dispatch"
-        ) as mock_rate_limit,
         # Mock the authentication dependency to return a valid principal
         patch(
             "tripsage.api.core.dependencies.get_current_principal",
@@ -169,11 +165,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
 
         mock_settings.return_value = create_test_settings()
 
-        # Configure rate limiting middleware to pass through
-        async def pass_through_middleware(request, call_next):
-            return await call_next(request)
-
-        mock_rate_limit.side_effect = pass_through_middleware
+        # SlowAPI-based rate limits are tested separately; no special patching
 
         # Import app after all patches are in place
         # Configure service mocks to return mock instances
@@ -486,10 +478,6 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
         # Mock Supabase client
         patch("supabase.create_client", return_value=Mock()),
         # Mock legacy MCP references (removed during modernization)
-        # Mock rate limiting middleware to disable it
-        patch(
-            "tripsage.api.middlewares.rate_limiting.RateLimitMiddleware.dispatch"
-        ) as mock_rate_limit,
         # Mock the authentication dependency to return None (unauthenticated)
         patch(
             "tripsage.api.core.dependencies.get_current_principal", return_value=None
@@ -504,11 +492,7 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
 
         mock_settings.return_value = create_test_settings()
 
-        # Configure rate limiting middleware to pass through
-        async def pass_through_middleware(request, call_next):
-            return await call_next(request)
-
-        mock_rate_limit.side_effect = pass_through_middleware
+        # SlowAPI-based rate limits are tested separately; no special patching
 
         # Configure file processing service mock
         mock_file_instance = Mock()
