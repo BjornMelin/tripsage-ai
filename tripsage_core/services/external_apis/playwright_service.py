@@ -153,7 +153,7 @@ class PlaywrightService:
             self._browser = await browser_launcher.launch(**launch_options)
 
             # Create browser context
-            context_options = {
+            context_options: dict[str, Any] = {
                 "viewport": {
                     "width": self.config.viewport_width,
                     "height": self.config.viewport_height,
@@ -163,7 +163,13 @@ class PlaywrightService:
             if self.config.user_agent:
                 context_options["user_agent"] = self.config.user_agent
 
-            self._context = await self._browser.new_context(**context_options)
+            browser = self._browser
+            if browser is None:
+                raise PlaywrightServiceError(
+                    "Browser initialization failed before context creation."
+                )
+
+            self._context = await browser.new_context(**context_options)
 
             # Set up request interception for blocking resources
             if self.config.block_images or self.config.block_css:
@@ -181,6 +187,14 @@ class PlaywrightService:
                 service="PlaywrightService",
                 details={"error": str(e)},
             ) from e
+
+    def _require_context(self) -> BrowserContext:
+        """Ensure a browser context is available."""
+        if self._context is None:
+            raise PlaywrightServiceError(
+                "Playwright browser context is not initialized. Call connect() first."
+            )
+        return self._context
 
     async def _handle_route(self, route, request):
         """Handle resource blocking."""
@@ -265,7 +279,8 @@ class PlaywrightService:
             page = None
             try:
                 # Create new page
-                page = await self._context.new_page()
+                context = self._require_context()
+                page = await context.new_page()
 
                 # Set timeout
                 page.set_default_timeout(timeout)
@@ -297,6 +312,8 @@ class PlaywrightService:
                     return ScrapingResult(
                         url=url,
                         content="",
+                        html=None,
+                        title=None,
                         success=False,
                         error=error_msg,
                         performance={"total_time": time.time() - start_time},
@@ -409,6 +426,7 @@ class PlaywrightService:
                         "content_type": response.headers.get("content-type"),
                     },
                     performance=performance,
+                    error=None,
                     success=True,
                 )
 
@@ -440,11 +458,12 @@ class PlaywrightService:
             return []
 
         # Use settings default if not specified
-        if max_concurrent is None:
-            max_concurrent = self._max_concurrent_pages
+        target_concurrency = (
+            max_concurrent if max_concurrent is not None else self._max_concurrent_pages
+        )
 
         # Create semaphore to limit concurrency
-        semaphore = asyncio.Semaphore(max_concurrent)
+        semaphore = asyncio.Semaphore(target_concurrency)
 
         async def scrape_with_semaphore(url: str) -> ScrapingResult:
             async with semaphore:
@@ -454,6 +473,8 @@ class PlaywrightService:
                     return ScrapingResult(
                         url=url,
                         content="",
+                        html=None,
+                        title=None,
                         success=False,
                         error=str(e),
                         performance={},
@@ -466,11 +487,13 @@ class PlaywrightService:
         # Convert exceptions to failed results
         processed_results = []
         for i, result in enumerate(results):
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 processed_results.append(
                     ScrapingResult(
                         url=urls[i],
                         content="",
+                        html=None,
+                        title=None,
                         success=False,
                         error=str(result),
                         performance={},
@@ -502,7 +525,8 @@ class PlaywrightService:
         async with self._page_semaphore:
             page = None
             try:
-                page = await self._context.new_page()
+                context = self._require_context()
+                page = await context.new_page()
                 await page.goto(url, wait_until="domcontentloaded")
 
                 if wait_before_script > 0:
@@ -540,10 +564,11 @@ class PlaywrightService:
         async with self._page_semaphore:
             page = None
             try:
-                page = await self._context.new_page()
+                context = self._require_context()
+                page = await context.new_page()
                 await page.goto(url, wait_until="domcontentloaded")
 
-                screenshot_options = {"full_page": full_page}
+                screenshot_options: dict[str, Any] = {"full_page": full_page}
                 if output_path:
                     screenshot_options["path"] = output_path
 
@@ -573,7 +598,7 @@ class PlaywrightService:
             ScrapingResult with travel-focused extraction
         """
         # Configure extraction based on content type
-        options = {
+        options: dict[str, Any] = {
             "extract_links": True,
             "extract_images": True,
             "include_html": False,
