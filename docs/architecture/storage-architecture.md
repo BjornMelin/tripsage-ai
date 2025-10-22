@@ -161,7 +161,7 @@ graph TD
 
 ### 3. File Versioning Architecture
 
-The system maintains **comprehensive version history**:
+The system maintains **version history**:
 
 - **Version Tracking**: All file modifications create new versions
 - **Checksum Validation**: Integrity verification for each version

@@ -131,7 +131,7 @@ class DatabaseDeployer:
 -- - Chat system with tool call tracking
 -- - Memory system with pgvector embeddings
 -- - API key management (BYOK)
--- - Comprehensive RLS policies for multi-tenant security
+-- - RLS policies for multi-tenant security
 
 -- ===========================
 -- SCHEMA DEPLOYMENT

@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-TripSage requires a comprehensive testing strategy that:
+TripSage requires a testing strategy that:
 
 - Achieves 80-90% code coverage across frontend and backend
 - Supports modern React 19 and Next.js 15 features

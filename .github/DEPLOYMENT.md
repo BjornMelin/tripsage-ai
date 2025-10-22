@@ -1,6 +1,6 @@
-# 🚀 Quick Deployment Guide
+# Quick Deployment Guide
 
-Simple steps to deploy TripSage AI frontend to Vercel.
+Steps to deploy TripSage AI frontend to Vercel.
 
 ## Prerequisites
 
@@ -51,10 +51,10 @@ Add these repository secrets for automated deployments:
 
 ## Need More Help?
 
-- 📖 **Comprehensive Guide**: [docs/deployment/comprehensive-guide.md](../docs/deployment/comprehensive-guide.md)
-- 💰 **Cost Planning**: [docs/deployment/cost-planning.md](../docs/deployment/cost-planning.md)
-- 🛠 **Troubleshooting**: Check Vercel deployment logs
-- 📞 **Support**: [Vercel Support](https://vercel.com/support) or create GitHub issue
+- **Guide**: [docs/deployment/comprehensive-guide.md](../docs/deployment/comprehensive-guide.md)
+- **Cost Planning**: [docs/deployment/cost-planning.md](../docs/deployment/cost-planning.md)
+- **Troubleshooting**: Check Vercel deployment logs
+- **Support**: [Vercel Support](https://vercel.com/support) or create GitHub issue
 
 ---
-*This guide focuses on essential deployment steps. For detailed configuration, platform alternatives, and business planning, see the comprehensive documentation in `/docs/deployment/`.*
+*This guide focuses on essential deployment steps. For detailed configuration, platform alternatives, and business planning, see the documentation in `/docs/deployment/`.*

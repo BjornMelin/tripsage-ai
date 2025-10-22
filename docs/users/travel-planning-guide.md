@@ -454,4 +454,4 @@ Perfect for spontaneous getaways:
 
 **Ready to plan your perfect trip?** Start a conversation with TripSage and watch your travel dreams become reality! 🌟
 
-> Need help? Check our [FAQ](faq.md) or explore [advanced features](advanced-features.md)
+> Need help? Check our [FAQ](faq.md) or explore [advanced features](feature-reference.md)

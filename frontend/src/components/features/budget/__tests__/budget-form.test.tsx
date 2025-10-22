@@ -1,5 +1,5 @@
 /**
- * Comprehensive test suite for Enhanced Budget Form with Zod validation
+ * Comprehensive test suite for the Trip Budget Form with Zod validation
  * Demonstrates testing patterns for complex forms with runtime validation
  */
 
@@ -13,7 +13,7 @@ import {
   budgetFormSchema,
   expenseCategorySchema,
 } from "@/lib/schemas/budget";
-import { BudgetForm } from "../enhanced-budget-form";
+import { BudgetForm } from "../budget-form";
 
 // Mock the useZodForm hook
 const mockUseZodForm = vi.fn();

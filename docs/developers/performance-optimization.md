@@ -4,7 +4,7 @@
 > **Performance**: 25x improvement over Redis, <100ms search responses  
 > *Last updated: June 17, 2025*
 
-This comprehensive guide covers performance optimization techniques for TripSage AI, including search strategies, caching implementation, profiling methods, and monitoring approaches to maintain peak system performance.
+This guide covers performance optimization techniques for TripSage AI, including search strategies, caching implementation, profiling methods, and monitoring approaches to maintain peak system performance.
 
 ## 📋 Table of Contents
 
@@ -947,4 +947,4 @@ async def load_test_endpoint(url: str, concurrent_requests: int = 100):
 
 ---
 
-*This performance optimization guide provides comprehensive tools and techniques for maintaining and improving TripSage AI's exceptional performance across all system components.*
+*This performance optimization guide provides tools and techniques for maintaining and improving TripSage AI's exceptional performance across all system components.*

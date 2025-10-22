@@ -524,7 +524,7 @@ router = APIRouter()
 
 @router.get("/health")
 async def health_check(settings: Settings = Depends(get_settings)):
-    """Comprehensive health check endpoint."""
+    """Health check endpoint."""
     checks = {
         "status": "healthy",
         "environment": settings.environment,
@@ -851,4 +851,4 @@ echo "✅ Migration completed successfully!"
    - Implement proper indexing
    - Use read replicas for scaling
 
-This deployment guide provides comprehensive coverage of deploying TripSage in various environments with proper security, monitoring, and observability practices.
+This deployment guide provides coverage of deploying TripSage in various environments with proper security, monitoring, and observability practices.

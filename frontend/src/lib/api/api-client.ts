@@ -1,6 +1,6 @@
 /**
- * Enhanced API client with comprehensive Zod validation
- * Provides runtime type safety for all API interactions
+ * API client with comprehensive Zod validation.
+ * Provides runtime type safety for all API interactions.
  */
 
 import type { z } from "zod";
@@ -12,8 +12,8 @@ import {
   validateStrict,
 } from "../validation";
 
-// Enhanced API error class
-export class EnhancedApiError extends Error {
+// API error class with validation context
+export class ApiClientError extends Error {
   public readonly status: number;
   public readonly code: string;
   public readonly data?: unknown;
@@ -30,7 +30,7 @@ export class EnhancedApiError extends Error {
     validationErrors?: ValidationResult<unknown>
   ) {
     super(message);
-    this.name = "EnhancedApiError";
+    this.name = "ApiClientError";
     this.status = status;
     this.code = code;
     this.data = data;
@@ -64,7 +64,7 @@ export class EnhancedApiError extends Error {
 }
 
 // Request configuration interface
-interface EnhancedRequestConfig<TRequest = unknown, TResponse = unknown> {
+interface RequestConfig<TRequest = unknown, TResponse = unknown> {
   endpoint: string;
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   data?: TRequest;
@@ -80,7 +80,7 @@ interface EnhancedRequestConfig<TRequest = unknown, TResponse = unknown> {
 }
 
 // Client configuration
-interface EnhancedClientConfig {
+interface ApiClientConfig {
   baseUrl: string;
   timeout: number;
   retries: number;
@@ -93,21 +93,21 @@ interface EnhancedClientConfig {
 // Response interceptor function type
 type ResponseInterceptor<T = unknown> = (
   response: T,
-  config: EnhancedRequestConfig<unknown, T>
+  config: RequestConfig<unknown, T>
 ) => T | Promise<T>;
 
 // Request interceptor function type
 type RequestInterceptor = (
-  config: EnhancedRequestConfig
-) => EnhancedRequestConfig | Promise<EnhancedRequestConfig>;
+  config: RequestConfig
+) => RequestConfig | Promise<RequestConfig>;
 
-// Enhanced API client class
-export class EnhancedApiClient {
-  private config: EnhancedClientConfig;
+// API client class
+export class ApiClient {
+  private config: ApiClientConfig;
   private requestInterceptors: RequestInterceptor[] = [];
   private responseInterceptors: ResponseInterceptor[] = [];
 
-  constructor(config: Partial<EnhancedClientConfig> = {}) {
+  constructor(config: Partial<ApiClientConfig> = {}) {
     this.config = {
       baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "/api",
       timeout: 10000,
@@ -144,12 +144,12 @@ export class EnhancedApiClient {
 
   // Generic request method
   private async request<TRequest, TResponse>(
-    config: EnhancedRequestConfig<TRequest, TResponse>
+    config: RequestConfig<TRequest, TResponse>
   ): Promise<TResponse> {
     // Apply request interceptors
     let finalConfig = config;
     for (const interceptor of this.requestInterceptors) {
-      finalConfig = (await interceptor(finalConfig)) as EnhancedRequestConfig<
+      finalConfig = (await interceptor(finalConfig)) as RequestConfig<
         TRequest,
         TResponse
       >;
@@ -166,7 +166,7 @@ export class EnhancedApiClient {
           );
         } catch (error) {
           if (error instanceof TripSageValidationError) {
-            throw new EnhancedApiError(
+            throw new ApiClientError(
               "Request validation failed",
               400,
               "VALIDATION_ERROR",
@@ -243,7 +243,7 @@ export class EnhancedApiClient {
           const errorData = (await this.parseResponseBody(response)) as any;
           const errorObject =
             typeof errorData === "object" && errorData !== null ? errorData : {};
-          throw new EnhancedApiError(
+          throw new ApiClientError(
             errorObject.message || `HTTP ${response.status}: ${response.statusText}`,
             response.status,
             errorObject.code || `HTTP_${response.status}`,
@@ -265,7 +265,7 @@ export class EnhancedApiClient {
             );
 
             if (!validationResult.success) {
-              throw new EnhancedApiError(
+              throw new ApiClientError(
                 "Response validation failed",
                 500,
                 "RESPONSE_VALIDATION_ERROR",
@@ -290,7 +290,7 @@ export class EnhancedApiClient {
 
         // Don't retry on validation errors or 4xx errors
         if (
-          error instanceof EnhancedApiError &&
+          error instanceof ApiClientError &&
           (error.isValidationError() || (error.status >= 400 && error.status < 500))
         ) {
           throw error;
@@ -298,7 +298,7 @@ export class EnhancedApiClient {
 
         // Don't retry on abort errors
         if (error instanceof DOMException && error.name === "AbortError") {
-          throw new EnhancedApiError(
+          throw new ApiClientError(
             `Request timeout after ${timeout}ms`,
             408,
             "TIMEOUT_ERROR",
@@ -348,7 +348,7 @@ export class EnhancedApiClient {
   // Convenience methods
   public async get<TResponse = unknown>(
     endpoint: string,
-    options: Omit<EnhancedRequestConfig<never, TResponse>, "endpoint" | "method"> = {}
+    options: Omit<RequestConfig<never, TResponse>, "endpoint" | "method"> = {}
   ): Promise<TResponse> {
     return this.request({
       ...options,
@@ -361,7 +361,7 @@ export class EnhancedApiClient {
     endpoint: string,
     data?: TRequest,
     options: Omit<
-      EnhancedRequestConfig<TRequest, TResponse>,
+      RequestConfig<TRequest, TResponse>,
       "endpoint" | "method" | "data"
     > = {}
   ): Promise<TResponse> {
@@ -377,7 +377,7 @@ export class EnhancedApiClient {
     endpoint: string,
     data?: TRequest,
     options: Omit<
-      EnhancedRequestConfig<TRequest, TResponse>,
+      RequestConfig<TRequest, TResponse>,
       "endpoint" | "method" | "data"
     > = {}
   ): Promise<TResponse> {
@@ -393,7 +393,7 @@ export class EnhancedApiClient {
     endpoint: string,
     data?: TRequest,
     options: Omit<
-      EnhancedRequestConfig<TRequest, TResponse>,
+      RequestConfig<TRequest, TResponse>,
       "endpoint" | "method" | "data"
     > = {}
   ): Promise<TResponse> {
@@ -407,7 +407,7 @@ export class EnhancedApiClient {
 
   public async delete<TResponse = unknown>(
     endpoint: string,
-    options: Omit<EnhancedRequestConfig<never, TResponse>, "endpoint" | "method"> = {}
+    options: Omit<RequestConfig<never, TResponse>, "endpoint" | "method"> = {}
   ): Promise<TResponse> {
     return this.request({
       ...options,
@@ -421,7 +421,7 @@ export class EnhancedApiClient {
     endpoint: string,
     responseSchema: z.ZodSchema<TResponse>,
     options: Omit<
-      EnhancedRequestConfig<never, TResponse>,
+      RequestConfig<never, TResponse>,
       "endpoint" | "method" | "responseSchema"
     > = {}
   ): Promise<TResponse> {
@@ -434,7 +434,7 @@ export class EnhancedApiClient {
     requestSchema: z.ZodSchema<TRequest>,
     responseSchema: z.ZodSchema<TResponse>,
     options: Omit<
-      EnhancedRequestConfig<TRequest, TResponse>,
+      RequestConfig<TRequest, TResponse>,
       "endpoint" | "method" | "data" | "requestSchema" | "responseSchema"
     > = {}
   ): Promise<TResponse> {
@@ -447,7 +447,7 @@ export class EnhancedApiClient {
     requestSchema: z.ZodSchema<TRequest>,
     responseSchema: z.ZodSchema<TResponse>,
     options: Omit<
-      EnhancedRequestConfig<TRequest, TResponse>,
+      RequestConfig<TRequest, TResponse>,
       "endpoint" | "method" | "data" | "requestSchema" | "responseSchema"
     > = {}
   ): Promise<TResponse> {
@@ -460,7 +460,7 @@ export class EnhancedApiClient {
     requestSchema: z.ZodSchema<TRequest>,
     responseSchema: z.ZodSchema<TResponse>,
     options: Omit<
-      EnhancedRequestConfig<TRequest, TResponse>,
+      RequestConfig<TRequest, TResponse>,
       "endpoint" | "method" | "data" | "requestSchema" | "responseSchema"
     > = {}
   ): Promise<TResponse> {
@@ -471,7 +471,7 @@ export class EnhancedApiClient {
     endpoint: string,
     responseSchema: z.ZodSchema<TResponse>,
     options: Omit<
-      EnhancedRequestConfig<never, TResponse>,
+      RequestConfig<never, TResponse>,
       "endpoint" | "method" | "responseSchema"
     > = {}
   ): Promise<TResponse> {
@@ -524,7 +524,7 @@ export class EnhancedApiClient {
 }
 
 // Create and export default instance
-const defaultClient = new EnhancedApiClient();
+const defaultClient = new ApiClient();
 
 // Add common request interceptor for authentication
 defaultClient.addRequestInterceptor(async (config) => {
@@ -540,13 +540,13 @@ defaultClient.addResponseInterceptor(async (response, config) => {
   return response;
 });
 
-export { defaultClient as enhancedApiClient };
+export { defaultClient as apiClient };
 
 // Export utility functions
 export const createTypedApiClient = <TApiSchema extends Record<string, z.ZodSchema>>(
   schemas: TApiSchema
 ) => {
-  const client = new EnhancedApiClient();
+  const client = new ApiClient();
 
   // Create typed methods for each schema
   const typedMethods = {} as {
@@ -601,10 +601,4 @@ export const createTypedApiClient = <TApiSchema extends Record<string, z.ZodSche
 };
 
 // Export types
-export type { EnhancedRequestConfig, ResponseInterceptor, RequestInterceptor };
-
-// Legacy type alias for backward compatibility
-export type RequestConfig<
-  TRequest = unknown,
-  TResponse = unknown,
-> = EnhancedRequestConfig<TRequest, TResponse>;
+export type { RequestConfig, ResponseInterceptor, RequestInterceptor };

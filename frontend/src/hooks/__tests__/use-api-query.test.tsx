@@ -1,9 +1,9 @@
 /**
- * Enhanced test example for React Query v5 best practices
+ * React Query v5 best practices example
  * Demonstrates proper testing patterns for the new API hooks
  */
 
-import { enhancedApiClient } from "@/lib/api/enhanced-client";
+import { apiClient } from "@/lib/api/api-client";
 import { ApiError } from "@/lib/api/error-types";
 import { queryKeys } from "@/lib/query-keys";
 import { createControlledQuery } from "@/test/query-mocks";
@@ -40,7 +40,7 @@ const TestTripSchema = z.object({
 type TestUser = z.infer<typeof TestUserSchema>;
 type TestTrip = z.infer<typeof TestTripSchema>;
 
-describe("useApiQuery Enhanced with Zod Validation", () => {
+describe("useApiQuery with Zod validation", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
@@ -239,8 +239,8 @@ describe("useApiQuery Enhanced with Zod Validation", () => {
   });
 });
 
-describe("Enhanced API Client Integration", () => {
-  it("should validate request and response data with enhanced client", async () => {
+describe("API client integration", () => {
+  it("should validate request and response data with the API client", async () => {
     const validTrip = {
       name: "Paris Vacation",
       destination: "Paris, France",
@@ -253,8 +253,8 @@ describe("Enhanced API Client Integration", () => {
       ...validTrip,
     };
 
-    // Test the enhanced API client's validation capabilities
-    const _client = enhancedApiClient;
+    // Test the API client's validation capabilities
+    const _client = apiClient;
 
     // Mock the underlying fetch
     global.fetch = vi.fn().mockResolvedValue({
@@ -263,7 +263,7 @@ describe("Enhanced API Client Integration", () => {
       json: () => Promise.resolve(expectedResponse),
     });
 
-    // The enhanced client should validate both request and response
+    // The API client should validate both request and response
     const TripCreateSchema = z.object({
       name: z.string().min(1),
       destination: z.string().min(1),
@@ -277,7 +277,7 @@ describe("Enhanced API Client Integration", () => {
   });
 });
 
-describe("useApiMutation Enhanced with Zod", () => {
+describe("useApiMutation with Zod", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {

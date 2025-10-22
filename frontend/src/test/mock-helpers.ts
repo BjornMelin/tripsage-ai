@@ -184,7 +184,7 @@ export const createMockUseQueryResult = <T, E = Error>(
     promise: Promise.resolve(data as T),
   }) as UseQueryResult<T, E>;
 
-// Enhanced error mock - matches the real ApiError interface
+// error mock - matches the real ApiError interface
 export class MockApiError extends Error {
   public readonly status: number;
   public readonly code?: string;
@@ -291,7 +291,7 @@ export const createTestQueryClient = () =>
     },
   });
 
-// Enhanced toast mock factory
+// toast mock factory
 export const createMockToast = () => {
   const mockToast = vi.fn((_props: any) => ({
     id: `toast-${Date.now()}`,
@@ -309,7 +309,7 @@ export const createMockToast = () => {
   };
 };
 
-// Enhanced search store mock factory
+// search store mock factory
 export const createMockSearchStore = () => ({
   currentSearchType: null,
   currentParams: null,
@@ -335,7 +335,7 @@ export const createMockSearchStore = () => ({
   })),
 });
 
-// Enhanced user store mock factory
+// user store mock factory
 export const createMockUserStore = (overrides = {}) => ({
   profile: {
     id: "test-user-id",

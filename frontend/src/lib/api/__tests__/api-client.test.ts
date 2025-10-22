@@ -1,12 +1,11 @@
 /**
- * Comprehensive test suite for Enhanced API Client with Zod validation
- * Demonstrates advanced patterns for runtime type safety and validation
+ * Test suite for the API client with Zod validation
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { enhancedApiClient } from "../enhanced-client";
+import { apiClient } from "../api-client";
 import { ApiError } from "../error-types";
 
 // Test schemas for validation
@@ -52,7 +51,7 @@ type PaginatedResponse = z.infer<typeof PaginatedResponseSchema>;
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-describe("Enhanced API Client with Zod Validation", () => {
+describe("API client with Zod Validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFetch.mockClear();
@@ -88,7 +87,7 @@ describe("Enhanced API Client with Zod Validation", () => {
       });
 
       // Test with validated request data
-      const result = await enhancedApiClient.postValidated<
+      const result = await apiClient.postValidated<
         UserCreateRequest,
         UserResponse
       >("/api/users", validUserData, UserCreateRequestSchema, UserResponseSchema);
@@ -114,7 +113,7 @@ describe("Enhanced API Client with Zod Validation", () => {
       };
 
       await expect(
-        enhancedApiClient.postValidated<UserCreateRequest, UserResponse>(
+        apiClient.postValidated<UserCreateRequest, UserResponse>(
           "/api/users",
           invalidUserData,
           UserCreateRequestSchema,
@@ -138,7 +137,7 @@ describe("Enhanced API Client with Zod Validation", () => {
       } as UserCreateRequest;
 
       await expect(
-        enhancedApiClient.postValidated<UserCreateRequest, UserResponse>(
+        apiClient.postValidated<UserCreateRequest, UserResponse>(
           "/api/users",
           invalidUserData,
           UserCreateRequestSchema,
@@ -169,7 +168,7 @@ describe("Enhanced API Client with Zod Validation", () => {
         json: () => Promise.resolve(validResponse),
       });
 
-      const result = await enhancedApiClient.getValidated(
+      const result = await apiClient.getValidated(
         "/api/users/123",
         UserResponseSchema
       );
@@ -197,7 +196,7 @@ describe("Enhanced API Client with Zod Validation", () => {
       });
 
       await expect(
-        enhancedApiClient.getValidated("/api/users/123", UserResponseSchema)
+        apiClient.getValidated("/api/users/123", UserResponseSchema)
       ).rejects.toThrow();
     });
 
@@ -240,7 +239,7 @@ describe("Enhanced API Client with Zod Validation", () => {
         json: () => Promise.resolve(validPaginatedResponse),
       });
 
-      const result = await enhancedApiClient.getValidated(
+      const result = await apiClient.getValidated(
         "/api/users",
         PaginatedResponseSchema
       );
@@ -265,7 +264,7 @@ describe("Enhanced API Client with Zod Validation", () => {
       } as UserCreateRequest;
 
       try {
-        await enhancedApiClient.postValidated<UserCreateRequest, UserResponse>(
+        await apiClient.postValidated<UserCreateRequest, UserResponse>(
           "/api/users",
           invalidData,
           UserCreateRequestSchema,
@@ -292,7 +291,7 @@ describe("Enhanced API Client with Zod Validation", () => {
       });
 
       await expect(
-        enhancedApiClient.getValidated("/api/users/invalid", UserResponseSchema)
+        apiClient.getValidated("/api/users/invalid", UserResponseSchema)
       ).rejects.toThrow(ApiError);
     });
 
@@ -300,7 +299,7 @@ describe("Enhanced API Client with Zod Validation", () => {
       mockFetch.mockRejectedValue(new Error("Network error"));
 
       await expect(
-        enhancedApiClient.getValidated("/api/users", UserResponseSchema)
+        apiClient.getValidated("/api/users", UserResponseSchema)
       ).rejects.toThrow("Network error");
     });
   });
@@ -324,7 +323,7 @@ describe("Enhanced API Client with Zod Validation", () => {
         json: () => Promise.resolve(mockUser),
       });
 
-      const result = await enhancedApiClient.getValidated(
+      const result = await apiClient.getValidated(
         "/api/users/123",
         UserResponseSchema
       );
@@ -361,7 +360,7 @@ describe("Enhanced API Client with Zod Validation", () => {
 
       const partialSchema = UserCreateRequestSchema.partial();
 
-      const result = await enhancedApiClient.putValidated(
+      const result = await apiClient.putValidated(
         "/api/users/123",
         updateData,
         partialSchema,
@@ -392,7 +391,7 @@ describe("Enhanced API Client with Zod Validation", () => {
         json: () => Promise.resolve(deleteResponse),
       });
 
-      const result = await enhancedApiClient.deleteValidated(
+      const result = await apiClient.deleteValidated(
         "/api/users/123",
         DeleteResponseSchema
       );
@@ -428,7 +427,7 @@ describe("Enhanced API Client with Zod Validation", () => {
         json: () => Promise.resolve(userWithOptionalFields),
       });
 
-      const result = await enhancedApiClient.getValidated(
+      const result = await apiClient.getValidated(
         "/api/users/123",
         UserResponseSchema
       );
@@ -458,7 +457,7 @@ describe("Enhanced API Client with Zod Validation", () => {
         json: () => Promise.resolve(apiResponse),
       });
 
-      const result = (await enhancedApiClient.get("/api/dates")) as {
+      const result = (await apiClient.get("/api/dates")) as {
         date: Date;
         timestamp: Date;
       };
@@ -490,7 +489,7 @@ describe("Enhanced API Client with Zod Validation", () => {
       });
 
       await expect(
-        enhancedApiClient.getValidated("/api/users/123", StrictUserSchema)
+        apiClient.getValidated("/api/users/123", StrictUserSchema)
       ).rejects.toThrow();
     });
   });
@@ -516,7 +515,7 @@ describe("Enhanced API Client with Zod Validation", () => {
       });
 
       const start = performance.now();
-      const result = await enhancedApiClient.getValidated(
+      const result = await apiClient.getValidated(
         "/api/users/bulk",
         z.array(UserResponseSchema)
       );

@@ -1,5 +1,5 @@
 /**
- * Enhanced Budget Form with comprehensive Zod validation
+ * Trip Budget Form with comprehensive Zod validation
  * Demonstrates latest validation patterns and error handling
  */
 
@@ -29,11 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useZodForm } from "@/lib/hooks/use-zod-form";
-import {
-  type BudgetFormData,
-  type ExpenseCategory,
-  budgetFormSchema,
-} from "@/lib/schemas/budget";
+import { type ExpenseCategory, budgetFormSchema } from "@/lib/schemas/budget";
 import { cn } from "@/lib/utils";
 import {
   AlertCircle,
@@ -47,8 +43,8 @@ import {
 import React, { useCallback, useState } from "react";
 import { z } from "zod";
 
-// Enhanced form data with additional UI state
-const enhancedBudgetFormSchema = budgetFormSchema.and(
+// Augmented form data with additional UI state
+const budgetFormUISchema = budgetFormSchema.and(
   z.object({
     // UI-specific fields
     autoAllocate: z.boolean().optional(),
@@ -58,12 +54,12 @@ const enhancedBudgetFormSchema = budgetFormSchema.and(
   })
 );
 
-type BudgetFormData = z.infer<typeof enhancedBudgetFormSchema>;
+type BudgetFormViewData = z.infer<typeof budgetFormUISchema>;
 
 interface BudgetFormProps {
-  onSubmit: (data: BudgetFormData) => Promise<void>;
+  onSubmit: (data: BudgetFormViewData) => Promise<void>;
   onCancel?: () => void;
-  initialData?: Partial<BudgetFormData>;
+  initialData?: Partial<BudgetFormViewData>;
   currencies?: Array<{ code: string; name: string; symbol: string }>;
   tripId?: string;
   className?: string;
@@ -130,9 +126,9 @@ export function BudgetForm({
 }: BudgetFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Enhanced form with custom validation and error handling
+  // form with custom validation and error handling
   const form = useZodForm({
-    schema: enhancedBudgetFormSchema,
+    schema: budgetFormUISchema,
     defaultValues: {
       name: "",
       totalAmount: 0,

@@ -3,9 +3,11 @@
 This index lists all documentation files under `docs/` by section.
 
 ## Overview
+
 - [Overview](README.md)
 
 ## API
+
 - [README](api/README.md)
 - [Authentication](api/authentication.md)
 - [Dashboard API](api/dashboard-api.md)
@@ -20,6 +22,7 @@ This index lists all documentation files under `docs/` by section.
 - [WebSocket Guide](api/websocket-guide.md)
 
 ## Architecture
+
 - [README](architecture/README.md)
 - [Agent Design](architecture/agent-design.md)
 - [Data Architecture](architecture/data-architecture.md)
@@ -29,6 +32,7 @@ This index lists all documentation files under `docs/` by section.
 - [WebSocket Infrastructure](architecture/websocket-infrastructure.md)
 
 ## Developers
+
 - [README](developers/README.md)
 - [API Development](developers/api-development.md)
 - [API Key Service](developers/api-key-service.md)
@@ -46,10 +50,11 @@ This index lists all documentation files under `docs/` by section.
 - [Unified Database Guide](developers/unified-database-guide.md)
 
 ## Operators
+
 - [README](operators/README.md)
 - [Admin Guide](operators/admin-guide.md)
 - [Authentication Guide](operators/authentication-guide.md)
-- [Comprehensive Deployment Guide](operators/comprehensive-deployment-guide.md)
+- [Deployment Guide](operators/comprehensive-deployment-guide.md)
 - [Configuration Management](operators/configuration-management.md)
 - [Deployment Guide](operators/deployment-guide.md)
 - [Environment Configuration](operators/environment-configuration.md)
@@ -59,8 +64,9 @@ This index lists all documentation files under `docs/` by section.
 - [Supabase Configuration](operators/supabase-configuration.md)
 
 ## Users
+
 - [README](users/README.md)
-- [Advanced Features](users/advanced-features.md)
+- [Advanced Features](users/feature-reference.md)
 - [Collaboration](users/collaboration.md)
 - [FAQ](users/faq.md)
 - [Getting Started](users/getting-started.md)
@@ -68,6 +74,7 @@ This index lists all documentation files under `docs/` by section.
 - [Web App Guide](users/web-app-guide.md)
 
 ## ADRs
+
 - [README](adrs/README.md)
 - [ADR-0001 LangGraph Orchestration](adrs/adr-0001-langgraph-orchestration.md)
 - [ADR-0002 Supabase Platform](adrs/adr-0002-supabase-platform.md)
@@ -81,6 +88,7 @@ This index lists all documentation files under `docs/` by section.
 - [ADR Template](adrs/template.md)
 
 ## Deployments
+
 - [README](deployments/README.md)
 
 <!-- Archive intentionally omitted from index; see .gitignore rule for docs/archive/ -->

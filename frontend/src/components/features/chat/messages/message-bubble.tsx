@@ -46,7 +46,7 @@ export function MessageBubble({
   const isSystem = message.role === "system";
   const isTool = false; // 'tool' role not supported in current Message type
 
-  // Enhanced role-based styling configuration
+  // role-based styling configuration
   const bubbleConfig = useMemo(() => {
     if (isUser) {
       return {
@@ -113,10 +113,10 @@ export function MessageBubble({
     }
   }, [message.content]);
 
-  // Enhanced markdown components with syntax highlighting
+  // markdown components with syntax highlighting
   const markdownComponents = useMemo(
     () => ({
-      // Enhanced code blocks with syntax highlighting
+      // code blocks with syntax highlighting
       code: ({ node, inline, className, children, ...props }: any) => {
         const match = /language-(\w+)/.exec(className || "");
         const language = match ? match[1] : "";
@@ -185,7 +185,7 @@ export function MessageBubble({
         );
       },
 
-      // Enhanced pre blocks
+      // pre blocks
       pre: ({ node, children, ...props }: any) => (
         <motion.pre
           initial={{ opacity: 0, y: 10 }}
@@ -201,7 +201,7 @@ export function MessageBubble({
         </motion.pre>
       ),
 
-      // Enhanced links with external link indicator
+      // links with external link indicator
       a: ({ node, href, children, ...props }: any) => (
         <motion.a
           whileHover={{ scale: 1.02 }}
@@ -221,7 +221,7 @@ export function MessageBubble({
         </motion.a>
       ),
 
-      // Enhanced headings
+      // headings
       h1: ({ children, ...props }: any) => (
         <motion.h1
           initial={{ opacity: 0, x: -10 }}
@@ -256,7 +256,7 @@ export function MessageBubble({
         </motion.h3>
       ),
 
-      // Enhanced lists
+      // lists
       ul: ({ children, ...props }: any) => (
         <motion.ul
           initial={{ opacity: 0 }}
@@ -291,7 +291,7 @@ export function MessageBubble({
         </motion.li>
       ),
 
-      // Enhanced blockquotes
+      // blockquotes
       blockquote: ({ children, ...props }: any) => (
         <motion.blockquote
           initial={{ opacity: 0, x: -20 }}
@@ -307,7 +307,7 @@ export function MessageBubble({
         </motion.blockquote>
       ),
 
-      // Enhanced tables
+      // tables
       table: ({ children, ...props }: any) => (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -426,7 +426,7 @@ export function MessageBubble({
         </ReactMarkdown>
       </motion.div>
 
-      {/* Enhanced action buttons for hover state */}
+      {/* action buttons for hover state */}
       <motion.div
         className={cn(
           "absolute top-2 right-2 flex items-center gap-1",

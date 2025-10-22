@@ -10,11 +10,11 @@ from typing import Any
 from scripts.benchmarks.config import BenchmarkConfig
 
 
-class BenchmarkScenarioManager:
+class BenchmarkScenarioService:
     """Manage benchmark scenarios and workloads."""
 
     def __init__(self, config: BenchmarkConfig | None = None):
-        """Initialize scenario manager."""
+        """Initialize scenario service."""
         self.config = config
 
     def get_scenario(self, scenario_name: str) -> dict[str, Any]:

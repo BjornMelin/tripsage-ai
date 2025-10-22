@@ -1160,4 +1160,4 @@ async def debug_trip_creation_issue():
 
 ---
 
-This debugging guide provides comprehensive tools and techniques for troubleshooting TripSage AI development issues. Use these patterns to systematically identify and resolve problems across the entire stack.
+This debugging guide provides tools and techniques for troubleshooting TripSage AI development issues. Use these patterns to systematically identify and resolve problems across the entire stack.

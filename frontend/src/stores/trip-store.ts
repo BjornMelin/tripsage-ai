@@ -27,7 +27,7 @@ export interface Destination {
   notes?: string;
 }
 
-// Enhanced budget structure aligned with backend
+// budget structure aligned with backend
 export interface Budget {
   total: number;
   currency: string;
@@ -35,7 +35,7 @@ export interface Budget {
   breakdown: Record<string, number>;
 }
 
-// Enhanced preferences structure
+// preferences structure
 export interface TripPreferences {
   budget?: {
     total?: number;
@@ -92,7 +92,7 @@ export interface Trip {
   currency?: string;
   spent_amount?: number;
 
-  // Enhanced fields
+  // fields
   visibility?: "private" | "shared" | "public";
   isPublic?: boolean; // Legacy field for backward compatibility
   tags?: string[];
@@ -207,7 +207,7 @@ export const useTripStore = create<TripState>()(
             tags: data.tags || [],
             preferences: data.preferences || {},
             status: data.status || "planning",
-            // Enhanced budget structure
+            // budget structure
             budget_breakdown: data.budget_breakdown
               ? {
                   total: data.budget_breakdown.total,

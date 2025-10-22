@@ -504,4 +504,4 @@ Monitor your travel spending:
 
 ---
 
-**Master the interface, master your travels!** 🚀 Explore more [advanced features](advanced-features.md) or check our [FAQ](faq.md) for more help.
+**Master the interface, master your travels!** 🚀 Explore more [advanced features](feature-reference.md) or check our [FAQ](faq.md) for more help.

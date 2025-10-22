@@ -1246,4 +1246,4 @@ if settings.debug:
 
 ---
 
-This API development guide provides comprehensive patterns and best practices for building robust, secure, and performant FastAPI applications. Follow these guidelines to maintain consistency and quality across the TripSage AI codebase.
+This API development guide provides patterns and best practices for building robust, secure, and performant FastAPI applications. Follow these guidelines to maintain consistency and quality across the TripSage AI codebase.
