@@ -57,8 +57,6 @@ class ReadinessCheck(BaseModel):
     details: dict[str, str] = Field(default_factory=dict)
 
 
-
-
 @router.get("/health", response_model=SystemHealth)
 @limiter.exempt
 @trace_span(name="api.health")

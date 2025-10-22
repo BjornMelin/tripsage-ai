@@ -12,18 +12,27 @@ test data to verify RLS policies are working correctly.
 """
 
 import asyncio
+import logging
 import os
 import time
 from datetime import datetime, timedelta
 from typing import cast
 
 import pytest
-from supabase import AuthError, PostgrestAPIError, SupabaseException, create_client
+from supabase import (  # pylint: disable=no-name-in-module
+    AuthError,
+    PostgrestAPIError,
+    SupabaseException,
+    create_client,
+)
 
 from tripsage_core.models.base_core_model import TripSageModel
 
 
 SUPABASE_ERRORS = (SupabaseException, AuthError, PostgrestAPIError, ValueError)
+
+
+logger = logging.getLogger(__name__)
 
 
 class RLSTestResult(TripSageModel):
@@ -62,6 +71,15 @@ class RealRLSPolicyTester:
         self.test_results: list[RLSTestResult] = []
         self.cleanup_data: list[dict] = []
 
+    @staticmethod
+    def _mask_email(email: str) -> str:
+        """Return a redacted representation of an email address."""
+        local_part, _, domain = email.partition("@")
+        if not local_part or not domain:
+            return "***"
+        prefix = local_part[:3]
+        return f"{prefix}***@{domain}"
+
     async def setup_test_users(self) -> list[dict]:
         """Create real test users for RLS testing."""
         test_users = []
@@ -92,7 +110,12 @@ class RealRLSPolicyTester:
                     test_users.append(user_data)
 
             except (SupabaseException, AuthError, PostgrestAPIError, ValueError) as exc:
-                print(f"Failed to create test user {email}: {exc}")
+                masked_email = self._mask_email(email)
+                logger.warning(
+                    "Failed to create test user %s: %s",
+                    masked_email,
+                    exc.__class__.__name__,
+                )
                 continue
 
         if len(test_users) < 2:
@@ -108,13 +131,16 @@ class RealRLSPolicyTester:
                 {"email": user_data["email"], "password": user_data["password"]}
             )
             if response.user:
-                print(f"Successfully signed in user: {user_data['email']}")
+                logger.info(
+                    "Successfully signed in user: %s",
+                    self._mask_email(user_data["email"]),
+                )
         except (SupabaseException, AuthError, PostgrestAPIError, ValueError):
             # Avoid logging sensitive info such as password; only report minimal error.
-            masked_email = user_data["email"]
-            # Alternatively, mask all but the first few characters of email
-            # masked_email = masked_email[:3] + "***" + masked_email[-10:]
-            print(f"Failed to sign in user {masked_email}: Authentication error.")
+            masked_email = self._mask_email(user_data["email"])
+            logger.warning(
+                "Failed to sign in user %s: Authentication error.", masked_email
+            )
             raise
 
     async def cleanup_test_data(self) -> None:
@@ -126,7 +152,15 @@ class RealRLSPolicyTester:
                 record_id = cleanup_item["id"]
                 self.admin_client.table(table).delete().eq("id", record_id).execute()
             except (SupabaseException, PostgrestAPIError, AuthError, ValueError) as exc:
-                print(f"Failed to cleanup {cleanup_item}: {exc}")
+                safe_table = cleanup_item.get("table", "<unknown>")
+                record_id = str(cleanup_item.get("id", ""))
+                masked_id = record_id[:4] + "***" if record_id else "<unknown>"
+                logger.warning(
+                    "Failed to cleanup record %s (%s): %s",
+                    safe_table,
+                    masked_id,
+                    exc.__class__.__name__,
+                )
 
         # Clean up test users
         for user in self.test_users:
@@ -135,10 +169,14 @@ class RealRLSPolicyTester:
                 # Note: In production, you'd use admin client to delete users
                 # self.admin_client.auth.admin.delete_user(user["id"])
             except (SupabaseException, AuthError, PostgrestAPIError, ValueError) as exc:
-                masked_email = user["email"].replace("@", "[at]").split("+")[0]
-                print(f"Failed to cleanup user {masked_email}: {exc}")
+                masked_email = self._mask_email(user["email"])
+                logger.warning(
+                    "Failed to cleanup user %s: %s",
+                    masked_email,
+                    exc.__class__.__name__,
+                )
 
-    def record_result(
+    def record_result(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         test_name: str,
         table_name: str,
@@ -206,12 +244,12 @@ class RealRLSPolicyTester:
 
         results.append(
             self.record_result(
-                "user_data_isolation",
-                "trips",
-                "INSERT",
-                "owner",
-                True,
-                trip_created,
+                test_name="user_data_isolation",
+                table_name="trips",
+                operation="INSERT",
+                user_role="owner",
+                expected_access=True,
+                actual_access=trip_created,
                 performance_ms=perf_ms,
             )
         )
@@ -237,12 +275,12 @@ class RealRLSPolicyTester:
 
             results.append(
                 self.record_result(
-                    "user_data_isolation",
-                    "trips",
-                    "SELECT",
-                    "other_user",
-                    False,
-                    access_granted,
+                    test_name="user_data_isolation",
+                    table_name="trips",
+                    operation="SELECT",
+                    user_role="other_user",
+                    expected_access=False,
+                    actual_access=access_granted,
                     error=error,
                     performance_ms=perf_ms,
                 )
@@ -282,16 +320,16 @@ class RealRLSPolicyTester:
             except SUPABASE_ERRORS:
                 access_granted = False
 
-            results.append(
-                self.record_result(
-                    "user_data_isolation",
-                    "memories",
-                    "SELECT",
-                    "other_user",
-                    False,
-                    access_granted,
-                )
+        results.append(
+            self.record_result(
+                test_name="user_data_isolation",
+                table_name="memories",
+                operation="SELECT",
+                user_role="other_user",
+                expected_access=False,
+                actual_access=access_granted,
             )
+        )
 
         return results
 
@@ -331,7 +369,10 @@ class RealRLSPolicyTester:
                 self.cleanup_data.append({"table": "trips", "id": trip_id})
         except SUPABASE_ERRORS as exc:
             trip_id = None
-            print(f"Failed to create collaborative trip: {exc}")
+            logger.warning(
+                "Failed to create collaborative trip: %s",
+                exc.__class__.__name__,
+            )
 
         if not trip_id:
             return results
@@ -360,16 +401,19 @@ class RealRLSPolicyTester:
             collaboration_created = bool(collab_response.data)
         except SUPABASE_ERRORS as exc:
             collaboration_created = False
-            print(f"Failed to create collaboration: {exc}")
+            logger.warning(
+                "Failed to create trip collaboration: %s",
+                exc.__class__.__name__,
+            )
 
         results.append(
             self.record_result(
-                "collaboration_permissions",
-                "trip_collaborators",
-                "INSERT",
-                "trip_owner",
-                True,
-                collaboration_created,
+                test_name="collaboration_permissions",
+                table_name="trip_collaborators",
+                operation="INSERT",
+                user_role="trip_owner",
+                expected_access=True,
+                actual_access=collaboration_created,
             )
         )
 
@@ -381,12 +425,12 @@ class RealRLSPolicyTester:
 
         results.append(
             self.record_result(
-                "collaboration_permissions",
-                "trips",
-                "SELECT",
-                "viewer",
-                True,
-                can_view,
+                test_name="collaboration_permissions",
+                table_name="trips",
+                operation="SELECT",
+                user_role="viewer",
+                expected_access=True,
+                actual_access=can_view,
             )
         )
 
@@ -403,12 +447,12 @@ class RealRLSPolicyTester:
 
         results.append(
             self.record_result(
-                "collaboration_permissions",
-                "trips",
-                "UPDATE",
-                "viewer",
-                False,
-                can_update,
+                test_name="collaboration_permissions",
+                table_name="trips",
+                operation="UPDATE",
+                user_role="viewer",
+                expected_access=False,
+                actual_access=can_update,
             )
         )
 
@@ -420,12 +464,12 @@ class RealRLSPolicyTester:
 
         results.append(
             self.record_result(
-                "collaboration_permissions",
-                "trips",
-                "SELECT",
-                "non_collaborator",
-                False,
-                unauthorized_access,
+                test_name="collaboration_permissions",
+                table_name="trips",
+                operation="SELECT",
+                user_role="non_collaborator",
+                expected_access=False,
+                actual_access=unauthorized_access,
             )
         )
 
@@ -506,12 +550,12 @@ class RealRLSPolicyTester:
 
             results.append(
                 self.record_result(
-                    "cascade_permissions",
-                    "flights",
-                    "SELECT",
-                    "non_collaborator",
-                    False,
-                    unauthorized_access,
+                    test_name="cascade_permissions",
+                    table_name="flights",
+                    operation="SELECT",
+                    user_role="non_collaborator",
+                    expected_access=False,
+                    actual_access=unauthorized_access,
                 )
             )
 
@@ -550,7 +594,10 @@ class RealRLSPolicyTester:
                 )
         except SUPABASE_ERRORS as exc:
             search_id = None
-            print(f"Failed to create search cache: {exc}")
+            logger.warning(
+                "Failed to create search cache entry: %s",
+                exc.__class__.__name__,
+            )
 
         if search_id and search_response.data[0]["query_hash"]:
             # User B cannot see User A's search cache
@@ -568,12 +615,12 @@ class RealRLSPolicyTester:
 
             results.append(
                 self.record_result(
-                    "search_cache_isolation",
-                    "search_destinations",
-                    "SELECT",
-                    "other_user",
-                    False,
-                    unauthorized_access,
+                    test_name="search_cache_isolation",
+                    table_name="search_destinations",
+                    operation="SELECT",
+                    user_role="other_user",
+                    expected_access=False,
+                    actual_access=unauthorized_access,
                 )
             )
 
@@ -615,7 +662,10 @@ class RealRLSPolicyTester:
                 )
         except SUPABASE_ERRORS as exc:
             notification_id = None
-            print(f"Failed to create notification: {exc}")
+            logger.warning(
+                "Failed to create notification: %s",
+                exc.__class__.__name__,
+            )
 
         if notification_id:
             # User A can see their notification
@@ -633,12 +683,12 @@ class RealRLSPolicyTester:
 
             results.append(
                 self.record_result(
-                    "notification_isolation",
-                    "notifications",
-                    "SELECT",
-                    "owner",
-                    True,
-                    can_view_own,
+                    test_name="notification_isolation",
+                    table_name="notifications",
+                    operation="SELECT",
+                    user_role="owner",
+                    expected_access=True,
+                    actual_access=can_view_own,
                 )
             )
 
@@ -657,12 +707,12 @@ class RealRLSPolicyTester:
 
             results.append(
                 self.record_result(
-                    "notification_isolation",
-                    "notifications",
-                    "SELECT",
-                    "other_user",
-                    False,
-                    unauthorized_access,
+                    test_name="notification_isolation",
+                    table_name="notifications",
+                    operation="SELECT",
+                    user_role="other_user",
+                    expected_access=False,
+                    actual_access=unauthorized_access,
                 )
             )
 
@@ -682,12 +732,12 @@ class RealRLSPolicyTester:
 
             results.append(
                 self.record_result(
-                    "notification_isolation",
-                    "notifications",
-                    "UPDATE",
-                    "owner",
-                    True,
-                    can_update_own,
+                    test_name="notification_isolation",
+                    table_name="notifications",
+                    operation="UPDATE",
+                    user_role="owner",
+                    expected_access=True,
+                    actual_access=can_update_own,
                 )
             )
 
@@ -707,12 +757,12 @@ class RealRLSPolicyTester:
 
             results.append(
                 self.record_result(
-                    "notification_isolation",
-                    "notifications",
-                    "UPDATE",
-                    "other_user",
-                    False,
-                    unauthorized_update,
+                    test_name="notification_isolation",
+                    table_name="notifications",
+                    operation="UPDATE",
+                    user_role="other_user",
+                    expected_access=False,
+                    actual_access=unauthorized_update,
                 )
             )
 
@@ -823,7 +873,7 @@ async def test_real_rls_policies():
 
         # Generate report
         report = tester.generate_report()
-        print(report)
+        logger.info("Real RLS policy report:\n%s", report)
 
         # Assert all tests passed
         failed_tests = [r for r in tester.test_results if not r.passed]

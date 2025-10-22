@@ -8,8 +8,10 @@ Provides validation, template generation, secret management, and deployment util
 import argparse
 import json
 import logging
+import os
 import secrets
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -86,18 +88,35 @@ class ConfigManager:
             logger.exception("Template generation failed")
             return False
 
-    def generate_secrets(self, count: int = 1, length: int = 32) -> bool:
-        """Generate cryptographically secure secrets."""
+    def generate_secrets(
+        self, count: int = 1, length: int = 32, output_path: Path | None = None
+    ) -> bool:
+        """Generate cryptographically secure secrets and store them securely."""
         logger.info("Generating %s secure secret(s) (length: %s)...", count, length)
 
         try:
-            for i in range(count):
-                secret = secrets.token_urlsafe(length)
-                print(f"Secret {i + 1}: {secret} (store securely, do not share)")
+            secrets_generated = [secrets.token_urlsafe(length) for _ in range(count)]
 
-            logger.info("Secrets generated successfully")
+            timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+            target_path = (
+                output_path.resolve()
+                if output_path is not None
+                else (Path.cwd() / f"generated_secrets_{timestamp}.txt")
+            )
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+
+            fd = os.open(target_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                for index, secret in enumerate(secrets_generated, start=1):
+                    handle.write(f"Secret {index}: {secret}\n")
+
+            for index, secret in enumerate(secrets_generated, start=1):
+                masked = f"{secret[:4]}…{secret[-4:]}"
+                print(f"Secret {index}: {masked} (stored securely at {target_path})")
+
+            logger.info("Secrets generated and stored at %s", target_path)
             logger.warning(
-                "Store these secrets securely and never commit to version control!"
+                "Restrict permissions on the secrets file and rotate values regularly."
             )
 
             return True
@@ -235,9 +254,9 @@ class ConfigManager:
                     issues.extend(security_report.get("warnings", []))
 
             if issues:
-                logger.exception("Configuration not suitable for %s:", target_env)
+                logger.error("Configuration not suitable for %s:", target_env)
                 for issue in issues:
-                    logger.exception(" - %s", issue)
+                    logger.error(" - %s", issue)
                 return False
 
             logger.info("Configuration is suitable for %s", target_env)
@@ -347,7 +366,7 @@ class ConfigManager:
                 )
                 content = json.dumps(config_dict, indent=2, default=str)
             else:
-                logger.exception("❌ Unsupported format: %s", format_type)
+                logger.error("❌ Unsupported format: %s", format_type)
                 return False
 
             with output_path.open("w", encoding="utf-8") as f:
@@ -399,6 +418,14 @@ Examples:
         "--count", type=int, default=1, help="Number of secrets to generate"
     )
     secrets_parser.add_argument("--length", type=int, default=32, help="Secret length")
+    secrets_parser.add_argument(
+        "--output",
+        type=Path,
+        help=(
+            "Optional file for generated secrets "
+            "(default: ./generated_secrets_<timestamp>.txt)"
+        ),
+    )
 
     # Security report command
     security_parser = subparsers.add_parser(
@@ -440,7 +467,7 @@ Examples:
         elif args.command == "template":
             success = manager.generate_template(args.output, args.include_secrets)
         elif args.command == "secrets":
-            success = manager.generate_secrets(args.count, args.length)
+            success = manager.generate_secrets(args.count, args.length, args.output)
         elif args.command == "security-report":
             success = manager.security_report(args.format)
         elif args.command == "check-env":
@@ -448,7 +475,7 @@ Examples:
         elif args.command == "export":
             success = manager.export_config(args.output, args.format)
         else:
-            logger.exception("❌ Unknown command: %s", args.command)
+            logger.error("❌ Unknown command: %s", args.command)
             success = False
 
     except KeyboardInterrupt:

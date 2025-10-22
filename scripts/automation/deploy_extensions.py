@@ -47,8 +47,17 @@ class ExtensionDeployer:
 
     async def disconnect(self):
         """Disconnect from database."""
-        if self.connection:
-            await self.connection.close()
+        try:
+            connection = self._ensure_connected()
+        except RuntimeError:
+            return
+
+        try:
+            await connection.close()
+        except asyncpg.PostgresError as exc:
+            console.print(f"Failed to close connection: {exc}", style="yellow")
+        finally:
+            self.connection = None
 
     async def execute_sql_file(
         self, file_path: Path, description: str | None = None
@@ -70,10 +79,11 @@ class ExtensionDeployer:
             # Split on semicolon but be careful with function definitions
             statements = self._split_sql_statements(sql_content)
 
+            connection = self._ensure_connected()
             for i, statement in enumerate(statements):
                 if statement.strip():
                     try:
-                        await self._ensure_connected().execute(statement)
+                        await connection.execute(statement)
                     except asyncpg.PostgresError as exec_error:
                         console.print(
                             f"Warning in statement {i + 1}: {exec_error}",
@@ -191,6 +201,7 @@ class ExtensionDeployer:
         console.print("\nVerifying deployment...", style="bold blue")
 
         checks = {}
+        connection = self._ensure_connected()
 
         # Check extensions
         try:
@@ -198,7 +209,7 @@ class ExtensionDeployer:
             SELECT extname FROM pg_extension
             WHERE extname IN ('pg_cron', 'pg_net', 'vector', 'uuid-ossp', 'pgcrypto')
             """
-            extensions = await self._ensure_connected().fetch(extensions_query)
+            extensions = await connection.fetch(extensions_query)
             checks["extensions"] = len(extensions) >= 5
             console.print(f"Extensions installed: {len(extensions)}/5")
         except asyncpg.PostgresError as exc:
@@ -213,7 +224,7 @@ class ExtensionDeployer:
                 'notifications', 'system_metrics', 'webhook_configs', 'webhook_logs'
             )
             """
-            tables = await self._ensure_connected().fetch(tables_query)
+            tables = await connection.fetch(tables_query)
             checks["automation_tables"] = len(tables) >= 4
             console.print(f"Automation tables created: {len(tables)}/4")
         except asyncpg.PostgresError as exc:
@@ -226,7 +237,7 @@ class ExtensionDeployer:
             SELECT COUNT(*) as table_count FROM pg_publication_tables
             WHERE pubname = 'supabase_realtime'
             """
-            result = await self._ensure_connected().fetchval(realtime_query)
+            result = await connection.fetchval(realtime_query)
             checks["realtime"] = (result or 0) >= 6
             console.print(f"Realtime tables configured: {result or 0}/6")
         except asyncpg.PostgresError as exc:
@@ -243,7 +254,7 @@ class ExtensionDeployer:
                 'verify_extensions', 'send_webhook_with_retry', 'list_scheduled_jobs'
             )
             """
-            result = await self._ensure_connected().fetchval(functions_query)
+            result = await connection.fetchval(functions_query)
             checks["functions"] = (result or 0) >= 3
             console.print(f"Key functions created: {result or 0}/3")
         except asyncpg.PostgresError as exc:
@@ -266,7 +277,8 @@ class ExtensionDeployer:
             WHERE url LIKE '%your-domain.supabase.co%'
             """
 
-            await self._ensure_connected().execute(update_query, supabase_url)
+            connection = self._ensure_connected()
+            await connection.execute(update_query, supabase_url)
             console.print(f"Updated webhook URLs to use: {supabase_url}")
             return True
 

@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import urlparse
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -286,29 +287,34 @@ class Settings(BaseSettings):
             url = self.postgres_url
         else:
             # Convert Supabase URL to PostgreSQL URL
-            import re
-            from urllib.parse import urlparse
-
-            # Check test URL first to avoid regex matching issues
-            db_url: str = str(self.database_url)
+            db_url = str(self.database_url)
             parsed = urlparse(db_url)
-            if parsed.netloc == "test.supabase.com":
-                # Special handling for test environment
-                url = "postgresql://postgres:password@127.0.0.1:5432/test_database"
-            elif db_url.startswith(("postgresql://", "postgres://")):
+            scheme = (parsed.scheme or "").lower()
+
+            if scheme in {"postgresql", "postgres"}:
                 # URL is already a PostgreSQL URL
                 url = db_url
-            else:
-                # Try to match real Supabase URLs
-                match = re.match(r"https://([^.]+)\.supabase\.co$", db_url)
-                if match:
-                    project_ref = match.group(1)
-                    # Construct PostgreSQL URL from Supabase project reference
-                    # Format: postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
-                    url = f"postgresql://postgres.{project_ref}:[YOUR-PASSWORD]@aws-0-[region].pooler.supabase.com:6543/postgres"
-                else:
-                    # Fallback for test/development environments
+            elif scheme in {"http", "https"}:
+                host = (parsed.hostname or "").lower()
+                path = parsed.path or ""
+
+                if (
+                    host == "test.supabase.com"
+                    and not parsed.port
+                    and path in {"", "/"}
+                ):
+                    # Special handling for test environment
                     url = "postgresql://postgres:password@127.0.0.1:5432/test_database"
+                elif host.endswith(".supabase.co") and path in {"", "/"}:
+                    project_ref = host.split(".", 1)[0]
+                    url = (
+                        "postgresql://postgres."
+                        f"{project_ref}:[YOUR-PASSWORD]@aws-0-[region].pooler.supabase.com:6543/postgres"
+                    )
+                else:
+                    url = "postgresql://postgres:password@127.0.0.1:5432/test_database"
+            else:
+                url = "postgresql://postgres:password@127.0.0.1:5432/test_database"
 
         # For testing, don't add asyncpg driver suffix as it may cause parsing issues
         # In production, the actual database service handles driver selection
