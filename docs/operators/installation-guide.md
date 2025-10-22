@@ -184,7 +184,7 @@ cd frontend && pnpm dev
 
 - **API**: [FastAPI docs](http://localhost:8000/docs)
 - **Frontend**: [Next.js app](http://localhost:3000)
-- **Monitoring**: Jaeger UI at <http://localhost:16686>; OTEL Collector for OTLP
+- **Monitoring**: Jaeger UI at <http://localhost:16686>; OTEL Collector (OTLP 4317/4318)
 
 ## Architecture Overview
 

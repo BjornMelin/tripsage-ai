@@ -10,7 +10,7 @@ Key features:
 - Supabase CRUD (select/insert/update/upsert/delete/count)
 - Vector search using pgvector via PostgREST expression ordering
 - RPC function invocation and raw SQL via a safe RPC wrapper (execute_sql)
-- Lightweight monitoring (Prometheus optional) and basic rate limiting/circuit breaker
+- Lightweight monitoring (OTEL metrics) and basic rate limiting/circuit breaker
 - Convenience helpers used by business services and wrappers
 """
 
@@ -22,7 +22,6 @@ import logging
 import time
 from collections import deque
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
@@ -90,7 +89,7 @@ class DatabaseMonitoringConfig(BaseModel):
 
     Attributes:
         enable_monitoring: Enable internal monitoring hooks.
-        enable_metrics: Enable Prometheus metrics counters/gauges.
+        enable_metrics: Enable OTEL metrics counters/histograms.
         enable_query_tracking: Track per-query timings in memory.
         slow_query_threshold: Seconds considered a slow query.
     """
@@ -307,27 +306,7 @@ class SecurityAlert(BaseModel):
     user_id: str | None = None
 
 
-@dataclass
-class Metrics:
-    """Prometheus metric handles used by the service.
-
-    Attributes:
-        connection_attempts: Counter for connection attempts by status.
-        query_duration: Histogram for query durations.
-        query_count: Counter for total queries by status.
-        slow_queries: Counter for slow queries detected.
-        health_status: Gauge for component health (1 healthy / 0 unhealthy).
-        security_events: Counter for security events by type/severity.
-        rate_limit_hits: Counter for per-user rate limit hits.
-    """
-
-    connection_attempts: Any
-    query_duration: Any
-    query_count: Any
-    slow_queries: Any
-    health_status: Any
-    security_events: Any
-    rate_limit_hits: Any
+# FINAL-ONLY: no legacy metric handle containers remain.
 
 
 # ----------------
@@ -351,7 +330,7 @@ class DatabaseService:
         _query_metrics: In-memory rolling query metrics.
         _security_alerts: Captured security alerts.
         _connection_stats: Lightweight connection statistics.
-        _metrics: Optional Prometheus metrics container.
+        # OTEL meters are set up in _initialize_metrics(); no legacy handles remain.
     """
 
     def __init__(
@@ -386,7 +365,7 @@ class DatabaseService:
             pool_size=self.pool_size, max_overflow=self.max_overflow
         )
 
-        self._metrics: Metrics | None = None
+        # Initialize OTEL meters when metrics are enabled
         if self._config.monitoring.enable_metrics:
             self._initialize_metrics()
 
@@ -437,17 +416,36 @@ class DatabaseService:
             await self._initialize_supabase_client()
             await self._test_connections()
             self._connected = True
-            if self._metrics:
-                self._metrics.connection_attempts.labels(status="success").inc()
-                self._metrics.health_status.labels(component="connection").set(1)
+            try:
+                if getattr(self, "_c_query_total", None):
+                    # Reuse query counter to record a synthetic 'connect' event
+                    self._c_query_total.add(
+                        1,
+                        {
+                            "operation": "CONNECT",
+                            "table": "_",
+                            "status": "success",
+                        },
+                    )  # type: ignore[attr-defined]
+            except Exception:  # noqa: BLE001
+                logger.debug("OTEL DB connect metric record failed", exc_info=True)
             self._connection_stats.uptime_seconds = 0
             self._connection_stats.connection_errors = 0
             logger.info("Database service connected in %.2fs.", time.time() - start)
         except Exception as e:
             self._connected = False
-            if self._metrics:
-                self._metrics.connection_attempts.labels(status="failure").inc()
-                self._metrics.health_status.labels(component="connection").set(0)
+            try:
+                if getattr(self, "_c_query_total", None):
+                    self._c_query_total.add(
+                        1,
+                        {
+                            "operation": "CONNECT",
+                            "table": "_",
+                            "status": "error",
+                        },
+                    )  # type: ignore[attr-defined]
+            except Exception:  # noqa: BLE001
+                logger.debug("OTEL DB connect metric record failed", exc_info=True)
             self._connection_stats.connection_errors += 1
             self._connection_stats.last_error = str(e)
             logger.exception("Failed to connect to database")
@@ -461,8 +459,7 @@ class DatabaseService:
         """Close the Supabase client and reset internal state."""
         self._supabase_client = None
         self._connected = False
-        if self._metrics:
-            self._metrics.health_status.labels(component="connection").set(0)
+        # No explicit health gauge; rely on OTEL spans/metrics
         logger.info("Database service closed")
 
     async def ensure_connected(self) -> None:
@@ -507,50 +504,24 @@ class DatabaseService:
     # ---- metrics ----
 
     def _initialize_metrics(self) -> None:
+        """Initialize OTEL metrics instruments for DB observability."""
         try:
-            from prometheus_client import Counter, Gauge, Histogram
-
-            self._metrics = Metrics(
-                connection_attempts=Counter(
-                    "tripsage_db_connection_attempts_total",
-                    "Total database connection attempts",
-                    ["status"],
-                ),
-                query_duration=Histogram(
-                    "tripsage_db_query_duration_seconds",
-                    "Database query execution time",
-                    ["operation", "table", "status"],
-                    buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
-                ),
-                query_count=Counter(
-                    "tripsage_db_queries_total",
-                    "Total database queries executed",
-                    ["operation", "table", "status"],
-                ),
-                slow_queries=Counter(
-                    "tripsage_db_slow_queries_total",
-                    "Total slow queries detected",
-                    ["operation", "table"],
-                ),
-                health_status=Gauge(
-                    "tripsage_db_health_status",
-                    "Database health status (1=healthy, 0=unhealthy)",
-                    ["component"],
-                ),
-                security_events=Counter(
-                    "tripsage_db_security_events_total",
-                    "Total security events detected",
-                    ["event_type", "severity"],
-                ),
-                rate_limit_hits=Counter(
-                    "tripsage_db_rate_limit_hits_total",
-                    "Total rate limit hits",
-                    ["user_id"],
-                ),
+            meter = get_meter(__name__)
+            # Create instruments analogous to prior metrics set
+            self._h_query_duration = meter.create_histogram(
+                "db.query.duration", unit="s", description="DB query execution time"
             )
-        except (ImportError, ValueError, RuntimeError, TypeError):
-            logger.warning("Prometheus metrics unavailable; metrics disabled")
-            self._metrics = None
+            self._c_query_total = meter.create_counter(
+                "db.query.total", description="Total DB queries"
+            )
+            self._c_slow_total = meter.create_counter(
+                "db.query.slow_total", description="Total slow DB queries"
+            )
+        except Exception:  # noqa: BLE001 - meter init is best-effort
+            self._h_query_duration = None  # type: ignore[attr-defined]
+            self._c_query_total = None  # type: ignore[attr-defined]
+            self._c_slow_total = None  # type: ignore[attr-defined]
+            logger.debug("OTEL meter init failed", exc_info=True)
 
     @asynccontextmanager
     async def _monitor_query(
@@ -592,21 +563,24 @@ class DatabaseService:
                         user_id=user_id,
                     )
                 )
-            if self._metrics:
-                self._metrics.query_duration.labels(
-                    operation=query_type.value,
-                    table=table or "unknown",
-                    status="success",
-                ).observe(duration)
-                self._metrics.query_count.labels(
-                    operation=query_type.value,
-                    table=table or "unknown",
-                    status="success",
-                ).inc()
-                if duration > self.slow_query_threshold:
-                    self._metrics.slow_queries.labels(
-                        operation=query_type.value, table=table or "unknown"
-                    ).inc()
+            try:
+                attrs = {
+                    "operation": query_type.value,
+                    "table": (table or "unknown"),
+                    "status": "success",
+                }
+                if getattr(self, "_h_query_duration", None):
+                    self._h_query_duration.record(duration, attrs)  # type: ignore[attr-defined]
+                if getattr(self, "_c_query_total", None):
+                    self._c_query_total.add(1, attrs)  # type: ignore[attr-defined]
+                if duration > self.slow_query_threshold and getattr(
+                    self, "_c_slow_total", None
+                ):
+                    self._c_slow_total.add(
+                        1, {k: v for k, v in attrs.items() if k != "status"}
+                    )  # type: ignore[attr-defined]
+            except Exception:  # noqa: BLE001 - metrics must not affect queries
+                logger.debug("OTEL DB metrics record failed", exc_info=True)
             self._connection_stats.queries_executed += 1
             self._record_circuit_breaker_success()
         except Exception:
@@ -624,13 +598,18 @@ class DatabaseService:
                         success=False,
                     )
                 )
-            if self._metrics:
-                self._metrics.query_duration.labels(
-                    operation=query_type.value, table=table or "unknown", status="error"
-                ).observe(duration)
-                self._metrics.query_count.labels(
-                    operation=query_type.value, table=table or "unknown", status="error"
-                ).inc()
+            try:
+                attrs = {
+                    "operation": query_type.value,
+                    "table": (table or "unknown"),
+                    "status": "error",
+                }
+                if getattr(self, "_h_query_duration", None):
+                    self._h_query_duration.record(duration, attrs)  # type: ignore[attr-defined]
+                if getattr(self, "_c_query_total", None):
+                    self._c_query_total.add(1, attrs)  # type: ignore[attr-defined]
+            except Exception:  # noqa: BLE001 - metrics must not affect queries
+                logger.debug("OTEL DB metrics record failed", exc_info=True)
             self._record_circuit_breaker_failure()
             raise
         finally:
@@ -682,8 +661,19 @@ class DatabaseService:
                 self._rate_window[user_id] = (1, now)
                 return
             if count >= self._config.security.rate_limit_requests:
-                if self._metrics:
-                    self._metrics.rate_limit_hits.labels(user_id=user_id).inc()
+                try:
+                    if getattr(self, "_c_query_total", None):
+                        self._c_query_total.add(
+                            1,
+                            {
+                                "operation": "RATE_LIMIT",
+                                "table": "_",
+                                "status": "hit",
+                                "user_id": user_id,
+                            },
+                        )  # type: ignore[attr-defined]
+                except Exception:  # noqa: BLE001
+                    logger.debug("OTEL rate-limit metric record failed", exc_info=True)
                 raise CoreServiceError(
                     message="Rate limit exceeded",
                     code="RATE_LIMIT_EXCEEDED",
@@ -1946,13 +1936,11 @@ class DatabaseService:
             await asyncio.to_thread(
                 self.client.table("users").select("id").limit(1).execute
             )
-            if self._metrics:
-                self._metrics.health_status.labels(component="overall").set(1)
+            # Health tracked via spans/metrics elsewhere
             return True
         except Exception:
             logger.exception("Database health check failed")
-            if self._metrics:
-                self._metrics.health_status.labels(component="overall").set(0)
+            # Health tracked via spans/metrics elsewhere
             return False
 
     async def get_table_info(
@@ -2043,10 +2031,18 @@ class DatabaseService:
                     details={"pattern": pat, "sql_snippet": sql[:100]},
                 )
                 self._security_alerts.append(alert)
-                if self._metrics:
-                    self._metrics.security_events.labels(
-                        event_type="sql_injection_attempt", severity="critical"
-                    ).inc()
+                try:
+                    if getattr(self, "_c_query_total", None):
+                        self._c_query_total.add(
+                            1,
+                            {
+                                "operation": "SECURITY",
+                                "table": "_",
+                                "status": "sql_injection_attempt",
+                            },
+                        )  # type: ignore[attr-defined]
+                except Exception:  # noqa: BLE001
+                    logger.debug("OTEL security metric record failed", exc_info=True)
                 raise CoreServiceError(
                     message="Potential SQL injection detected",
                     code="SQL_INJECTION_DETECTED",
