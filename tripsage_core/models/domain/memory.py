@@ -120,7 +120,7 @@ class SessionMemory(TripSageDomainModel):
     )
     expires_at: datetime | None = Field(None, description="Expiration timestamp")
 
-    # Enhanced session memory fields
+    # Session memory fields
     conversation_context: dict[str, Any] | None = Field(
         {}, description="Conversation context and history"
     )

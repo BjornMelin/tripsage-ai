@@ -22,11 +22,11 @@ class TestTripSageOrchestrator:
         """Create a mock service registry."""
         registry = Mock(spec=ServiceRegistry)
         registry.get_memory_bridge.return_value = MagicMock()
-        checkpoint_manager = MagicMock()
-        checkpoint_manager.get_async_checkpointer = AsyncMock(
+        checkpoint_service = MagicMock()
+        checkpoint_service.get_async_checkpointer = AsyncMock(
             return_value=MemorySaver()
         )
-        registry.get_checkpoint_manager.return_value = checkpoint_manager
+        registry.get_checkpoint_service.return_value = checkpoint_service
         return registry
 
     @pytest.fixture
@@ -308,8 +308,8 @@ class TestStateCreation:
         assert state["user_id"] == "test_user"
 
 
-class TestTripSageOrchestratorEnhanced:
-    """Enhanced test suite for TripSageOrchestrator with comprehensive coverage."""
+class TestTripSageOrchestrator:
+    """Comprehensive test suite for TripSageOrchestrator."""
 
     @pytest.fixture
     def comprehensive_mock_registry(self):
@@ -350,11 +350,11 @@ class TestTripSageOrchestratorEnhanced:
             return_value={"insights": "test"}
         )
         registry.get_memory_bridge.return_value = memory_bridge
-        checkpoint_manager = MagicMock()
-        checkpoint_manager.get_async_checkpointer = AsyncMock(
+        checkpoint_service = MagicMock()
+        checkpoint_service.get_async_checkpointer = AsyncMock(
             return_value=MemorySaver()
         )
-        registry.get_checkpoint_manager.return_value = checkpoint_manager
+        registry.get_checkpoint_service.return_value = checkpoint_service
 
         return registry
 
@@ -451,8 +451,8 @@ class TestTripSageOrchestratorEnhanced:
         """Test PostgreSQL checkpointer initialization."""
         # Mock checkpoint manager
         mock_async_checkpointer = AsyncMock()
-        enhanced_orchestrator.checkpoint_manager = MagicMock()
-        enhanced_orchestrator.checkpoint_manager.get_async_checkpointer = AsyncMock(
+        enhanced_orchestrator.checkpoint_service = MagicMock()
+        enhanced_orchestrator.checkpoint_service.get_async_checkpointer = AsyncMock(
             return_value=mock_async_checkpointer
         )
 
@@ -466,8 +466,8 @@ class TestTripSageOrchestratorEnhanced:
     @pytest.mark.asyncio
     async def test_postgres_checkpointer_fallback(self, enhanced_orchestrator):
         """Test fallback to MemorySaver when PostgreSQL fails."""
-        enhanced_orchestrator.checkpoint_manager = MagicMock()
-        enhanced_orchestrator.checkpoint_manager.get_async_checkpointer = AsyncMock(
+        enhanced_orchestrator.checkpoint_service = MagicMock()
+        enhanced_orchestrator.checkpoint_service.get_async_checkpointer = AsyncMock(
             side_effect=Exception("PostgreSQL connection failed")
         )
 
@@ -591,11 +591,11 @@ class TestTripSageOrchestratorEnhanced:
             mock_registry = MagicMock(spec=ServiceRegistry)
             mock_registry.get_required_service = MagicMock(return_value=MagicMock())
             mock_registry.get_memory_bridge.return_value = MagicMock()
-            checkpoint_manager = MagicMock()
-            checkpoint_manager.get_async_checkpointer = AsyncMock(
+            checkpoint_service = MagicMock()
+            checkpoint_service.get_async_checkpointer = AsyncMock(
                 return_value=MemorySaver()
             )
-            mock_registry.get_checkpoint_manager.return_value = checkpoint_manager
+            mock_registry.get_checkpoint_service.return_value = checkpoint_service
 
             orchestrator = TripSageOrchestrator(
                 config=custom_config, service_registry=mock_registry

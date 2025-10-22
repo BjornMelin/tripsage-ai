@@ -1,6 +1,6 @@
 """Security penetration test scenarios for API key validation infrastructure.
 
-This module provides comprehensive penetration testing scenarios covering
+This module provides penetration testing scenarios covering
 realistic attack vectors against the API key validation system. Tests
 simulate real-world attack patterns including advanced persistent threats,
 multi-vector attacks, and sophisticated bypass attempts.
@@ -22,8 +22,8 @@ from tripsage.api.middlewares.authentication import (
 )
 
 
-class TestAdvancedPersistentThreatScenarios:
-    """Penetration tests simulating Advanced Persistent Threat (APT) attack patterns."""
+class TestPersistentThreatScenarios:
+    """Penetration tests simulating Persistent Threat (APT) attack patterns."""
 
     @pytest.fixture
     def mock_services(self):
@@ -716,7 +716,7 @@ class TestMultiVectorAttackScenarios:
             )
 
 
-class TestAdvancedBypassTechniques:
+class TestBypassTechniques:
     """Penetration tests for advanced security bypass techniques."""
 
     async def test_unicode_normalization_attacks(self, pentesting_client):

@@ -1,6 +1,6 @@
 """Modern reusable fixtures for API key testing.
 
-This module provides comprehensive fixtures following 2025 best practices
+This module provides fixtures following 2025 best practices
 for async testing, property-based testing, and dependency injection.
 """
 
@@ -169,7 +169,7 @@ def sample_validation_result():
 
 @pytest.fixture
 def validation_results_various():
-    """Create various validation results for comprehensive testing."""
+    """Create various validation results for testing."""
     return {
         "valid": ValidationResult(
             is_valid=True,
@@ -252,7 +252,7 @@ def multiple_db_results():
 
 @pytest.fixture
 async def mock_api_key_service():
-    """Create comprehensive mock API key service."""
+    """Create mock API key service."""
     service = MagicMock(spec=ApiKeyService)
 
     # Configure async methods
@@ -281,7 +281,7 @@ async def mock_api_key_service():
 
 @pytest.fixture
 async def mock_key_monitoring_service():
-    """Create comprehensive mock key monitoring service."""
+    """Create mock key monitoring service."""
     service = MagicMock(spec=KeyMonitoringService)
 
     # Configure async methods

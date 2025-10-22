@@ -398,7 +398,7 @@ class TestRateLimiting:
         assert result3["reason"] == "user_limit_exceeded"
 
 
-class TestWebSocketConnectionAdvanced:
+class TestWebSocketConnectionIn depth:
     """Test advanced WebSocket connection features."""
 
     @pytest.fixture

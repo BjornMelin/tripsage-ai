@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class WebSocketEvent(BaseModel):
-    """Enhanced WebSocket event model."""
+    """WebSocket event model."""
 
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     type: str

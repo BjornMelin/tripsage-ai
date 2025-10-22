@@ -218,13 +218,13 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     # Logging middleware should be first to log all requests
     app.add_middleware(LoggingMiddleware)
 
-    # Enhanced rate limiting middleware with principal-based limits
+    # Rate limiting middleware with principal-based limits
     use_dragonfly = bool(settings.redis_url)
     app.add_middleware(
         RateLimitMiddleware, settings=settings, use_dragonfly=use_dragonfly
     )
 
-    # Enhanced authentication middleware supporting JWT and API keys
+    # Authentication middleware supporting JWT and API keys
     # Temporarily disabled - awaiting Supabase Auth
     # app.add_middleware(AuthenticationMiddleware, settings=settings)
 

@@ -14,7 +14,7 @@ Database migrations are SQL scripts that track and apply changes to your databas
 | `20250611_02_add_api_key_usage_tables.sql` | API key usage tracking and analytics | ✅ Applied |
 | `20250611_02_add_business_logic_triggers.sql` | Automated triggers for data consistency | ✅ Applied |
 | `20250611_02_enable_automation_extensions.sql` | Enable required PostgreSQL extensions | ✅ Applied |
-| `20250614_01_extended_rls_policies.sql` | Enhanced Row Level Security policies | ✅ Applied |
+| `20250614_01_extended_rls_policies.sql` | Row Level Security policies updated | ✅ Applied |
 | `20250616_03_configuration_rls_policies.sql` | Configuration table security policies | ✅ Applied |
 | `20250111_01_add_storage_infrastructure.sql` | Storage buckets and file management | ✅ Applied |
 

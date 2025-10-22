@@ -289,7 +289,7 @@ class BudgetAgentNode(BaseAgentNode):
         travelers = params.get("travelers", 1)
         destination = params.get("destination", "")
 
-        # Enhanced allocation logic based on destination and preferences
+        # Allocation logic based on destination and preferences
         # These percentages can be adjusted based on destination type, user
         # preferences, etc.
         if destination.lower() in ["paris", "london", "tokyo", "new york"]:

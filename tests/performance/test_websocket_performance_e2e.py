@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Comprehensive WebSocket Performance Tests.
+"""WebSocket Performance Tests.
 
 This module tests WebSocket performance across various scenarios:
 - Connection establishment and teardown

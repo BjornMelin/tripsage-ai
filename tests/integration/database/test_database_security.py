@@ -1,6 +1,6 @@
 """Database security tests for RLS policy enforcement and user data isolation.
 
-This module provides comprehensive testing for database-level security features,
+This module provides testing for database-level security features,
 specifically focusing on:
 
 - Row Level Security (RLS) policy enforcement

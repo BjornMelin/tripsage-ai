@@ -12,8 +12,8 @@ from pydantic import BaseModel, Field, field_validator
 
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
 
-# MCPManager removed as part of BJO-161 MCP abstraction removal
-# from tripsage_core.mcp_abstraction.manager import MCPManager
+# MCPBridge removed as part of BJO-161 MCP abstraction removal
+# from tripsage_core.mcp_abstraction.manager import MCPBridge
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 

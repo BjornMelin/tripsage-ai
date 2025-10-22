@@ -81,14 +81,54 @@ async def comprehensive_health_check(
         )
     )
 
-    # 2. Database health
-    db_health = await _check_database_health(db_service)
+    # 2. Database health via central monitor if available
+    monitor = getattr(request.app.state, "database_monitor", None)  # type: ignore[attr-defined]
+    if monitor is not None:
+        snapshot = monitor.get_current_health()
+        if snapshot is None:
+            await monitor.check_now()
+            snapshot = monitor.get_current_health()
+        latency_ms = (snapshot.latency_s * 1000) if snapshot else None
+        db_status = snapshot.status.value if snapshot else "unhealthy"
+        db_health = ComponentHealth(
+            name="database",
+            status=db_status,
+            latency_ms=latency_ms,
+            message=(
+                "Database is responsive"
+                if db_status == "healthy"
+                else "Database not healthy"
+            ),
+            details=(snapshot.details if snapshot else {}),
+        )
+    else:
+        # Fallback to direct service probe
+        ok = await db_service.health_check()
+        db_health = ComponentHealth(
+            name="database",
+            status="healthy" if ok else "unhealthy",
+            latency_ms=None,
+            message=("Database is responsive" if ok else "Database not healthy"),
+            details={},
+        )
     components.append(db_health)
     if db_health.status != "healthy":
         overall_status = "degraded" if overall_status == "healthy" else overall_status
 
     # 3. Cache health
-    cache_health = await _check_cache_health(cache_service)
+    ok_cache = True
+    try:
+        ok_cache = await cache_service.health_check() if cache_service else True
+    except Exception as e:  # noqa: BLE001
+        ok_cache = False
+        logger.warning("Cache health check failed: %s", e)
+    cache_health = ComponentHealth(
+        name="cache",
+        status="healthy" if ok_cache else "unhealthy",
+        latency_ms=None,
+        message=("Cache is responsive" if ok_cache else "Cache not healthy"),
+        details={},
+    )
     components.append(cache_health)
     if cache_health.status != "healthy" and overall_status == "healthy":
         overall_status = "degraded"
@@ -131,12 +171,32 @@ async def readiness_check(
     checks = {}
     details = {}
 
-    # Check database (with timeout)
+    # Check database (with timeout) via monitor or direct probe
     try:
-        db_health = await asyncio.wait_for(
-            _check_database_health(db_service),
-            timeout=5.0,
-        )
+
+        async def _db_probe() -> ComponentHealth:
+            mon = getattr(request.app.state, "database_monitor", None)  # type: ignore[attr-defined]
+            if mon is not None:
+                snap = mon.get_current_health() or await mon.check_now()
+                st = snap.status.value if snap else "unhealthy"
+                return ComponentHealth(
+                    name="database",
+                    status=st,
+                    latency_ms=(snap.latency_s * 1000) if snap else None,
+                    message=(
+                        "Database is responsive"
+                        if st == "healthy"
+                        else "Database not healthy"
+                    ),
+                )
+            ok = await db_service.health_check()
+            return ComponentHealth(
+                name="database",
+                status="healthy" if ok else "unhealthy",
+                message=("Database is responsive" if ok else "Database not healthy"),
+            )
+
+        db_health = await asyncio.wait_for(_db_probe(), timeout=5.0)
         checks["database"] = db_health.status == "healthy"
         if db_health.status != "healthy":
             details["database"] = db_health.message or "Database not healthy"
@@ -149,10 +209,16 @@ async def readiness_check(
 
     # Check cache (with timeout)
     try:
-        cache_health = await asyncio.wait_for(
-            _check_cache_health(cache_service),
-            timeout=3.0,
-        )
+
+        async def _cache_probe() -> ComponentHealth:
+            ok = await cache_service.health_check() if cache_service else True
+            return ComponentHealth(
+                name="cache",
+                status="healthy" if ok else "unhealthy",
+                message=("Cache is responsive" if ok else "Cache not healthy"),
+            )
+
+        cache_health = await asyncio.wait_for(_cache_probe(), timeout=3.0)
         checks["cache"] = cache_health.status == "healthy"
         if cache_health.status != "healthy":
             details["cache"] = cache_health.message or "Cache not healthy"
@@ -183,7 +249,12 @@ async def database_health_check(request: Request, db_service: DatabaseDep):
     - Query performance
     - Connection pool stats
     """
-    health = await _check_database_health(db_service)
+    ok = await db_service.health_check()
+    health = ComponentHealth(
+        name="database",
+        status="healthy" if ok else "unhealthy",
+        message=("Database is responsive" if ok else "Database not healthy"),
+    )
 
     # Add more detailed database metrics if available
     try:
@@ -213,7 +284,12 @@ async def cache_health_check(request: Request, cache_service: CacheDep):
     - Memory usage
     - Key statistics
     """
-    health = await _check_cache_health(cache_service)
+    ok = await cache_service.health_check() if cache_service else True
+    health = ComponentHealth(
+        name="cache",
+        status="healthy" if ok else "unhealthy",
+        message=("Cache is responsive" if ok else "Cache not healthy"),
+    )
 
     # Add more detailed cache metrics if available
     if hasattr(cache_service, "info"):
@@ -232,81 +308,5 @@ async def cache_health_check(request: Request, cache_service: CacheDep):
     return health
 
 
-async def _check_database_health(db_service) -> ComponentHealth:
-    """Check database health and connectivity."""
-    start_time = datetime.now(UTC)
-
-    try:
-        # Perform a simple query to check connectivity via RPC wrapper
-        result = await db_service.execute_sql("SELECT 1 as health_check")
-
-        latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
-
-        if result:
-            return ComponentHealth(
-                name="database",
-                status="healthy",
-                latency_ms=latency_ms,
-                message="Database is responsive",
-                details={"query_result": result},
-            )
-        return ComponentHealth(
-            name="database",
-            status="unhealthy",
-            latency_ms=latency_ms,
-            message="Database query returned no results",
-        )
-
-    except Exception as e:  # noqa: BLE001
-        latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
-
-        return ComponentHealth(
-            name="database",
-            status="unhealthy",
-            latency_ms=latency_ms,
-            message=f"Database error: {e!s}",
-            details={"error": str(e)},
-        )
-
-
-async def _check_cache_health(cache_service) -> ComponentHealth:
-    """Check cache (DragonflyDB) health and connectivity."""
-    if not cache_service:
-        return ComponentHealth(
-            name="cache",
-            status="healthy",
-            message="Cache not configured (optional component)",
-        )
-
-    start_time = datetime.now(UTC)
-
-    try:
-        # Perform a simple ping
-        result = await cache_service.ping()
-
-        latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
-
-        if result:
-            return ComponentHealth(
-                name="cache",
-                status="healthy",
-                latency_ms=latency_ms,
-                message="Cache is responsive",
-            )
-        return ComponentHealth(
-            name="cache",
-            status="unhealthy",
-            latency_ms=latency_ms,
-            message="Cache ping failed",
-        )
-
-    except Exception as e:  # noqa: BLE001
-        latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
-
-        return ComponentHealth(
-            name="cache",
-            status="unhealthy",
-            latency_ms=latency_ms,
-            message=f"Cache error: {e!s}",
-            details={"error": str(e)},
-        )
+# Internal helper functions removed; database health sourced from monitor,
+# cache health via service.health_check().

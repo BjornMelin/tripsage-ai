@@ -1,4 +1,4 @@
-"""Simple JWT authentication for TripSage API.
+"""JWT authentication for TripSage API.
 
 This module provides clean, maintainable authentication following FastAPI
 best practices. Replaces complex middleware with simple dependency injection.
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 async def get_current_user_id(authorization: str | None = Header(None)) -> str:
     """Verify JWT token and return user ID.
 
-    Simple, maintainable authentication dependency following FastAPI best practices.
+    Maintainable authentication dependency following FastAPI best practices.
 
     Args:
         authorization: Authorization header with Bearer token

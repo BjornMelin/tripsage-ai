@@ -65,11 +65,11 @@ class SystemEvent(BaseModel):
     details: dict[str, Any] = Field(default_factory=dict)
 
 
-class DashboardConnectionManager:
+class DashboardConnectionService:
     """Manages WebSocket connections for dashboard clients."""
 
     def __init__(self) -> None:
-        """Initialize DashboardConnectionManager."""
+        """Initialize DashboardConnectionService."""
         self.active_connections: list[WebSocket] = []
         self.connection_metadata: dict[WebSocket, dict[str, Any]] = {}
 
@@ -153,7 +153,7 @@ class DashboardConnectionManager:
 
 
 # Global connection manager
-dashboard_manager = DashboardConnectionManager()
+dashboard_service = DashboardConnectionService()
 
 
 @router.websocket("/ws/{user_id}")
@@ -170,7 +170,7 @@ async def dashboard_websocket_endpoint(
     - Alert notifications
     - System events and status changes
     """
-    await dashboard_manager.connect(websocket, user_id, "dashboard")
+    await dashboard_service.connect(websocket, user_id, "dashboard")
 
     metrics_task: asyncio.Task[Any] | None = None
     try:
@@ -215,7 +215,7 @@ async def dashboard_websocket_endpoint(
     finally:
         if metrics_task is not None:
             metrics_task.cancel()
-        dashboard_manager.disconnect(websocket)
+        dashboard_service.disconnect(websocket)
 
 
 @router.get("/events")
@@ -263,7 +263,7 @@ async def dashboard_events_stream(
                             success_rate=metrics_snapshot.success_rate,
                             avg_latency_ms=150.0,  # Simplified
                             active_connections=len(
-                                dashboard_manager.active_connections
+                                dashboard_service.active_connections
                             ),
                             cache_hit_rate=0.85,  # Simplified
                             memory_usage_percentage=65.0,  # Simplified
@@ -335,7 +335,7 @@ async def broadcast_alert(
             details=alert_data.get("details", {}),
         )
 
-        await dashboard_manager.send_alert(alert)
+        await dashboard_service.send_alert(alert)
 
         return {
             "success": True,
@@ -372,7 +372,7 @@ async def broadcast_system_event(
             details=event_data.get("details", {}),
         )
 
-        await dashboard_manager.send_system_event(event)
+        await dashboard_service.send_system_event(event)
 
         return {
             "success": True,
@@ -403,11 +403,11 @@ async def get_active_connections() -> dict[str, Any]:
                 datetime.now(UTC) - metadata.get("connected_at", datetime.now(UTC))
             ).total_seconds(),
         }
-        for metadata in dashboard_manager.connection_metadata.values()
+        for metadata in dashboard_service.connection_metadata.values()
     ]
 
     return {
-        "total_connections": len(dashboard_manager.active_connections),
+        "total_connections": len(dashboard_service.active_connections),
         "connections": connections_info,
     }
 
@@ -432,7 +432,7 @@ async def _send_periodic_metrics(
                     errors_per_second=metrics_snapshot.total_errors / 3600.0,
                     success_rate=metrics_snapshot.success_rate,
                     avg_latency_ms=150.0,  # Would be calculated from actual data
-                    active_connections=len(dashboard_manager.active_connections),
+                    active_connections=len(dashboard_service.active_connections),
                     cache_hit_rate=0.85,  # Would be retrieved from cache service
                     memory_usage_percentage=65.0,  # Would be retrieved from system
                 )
@@ -501,7 +501,7 @@ async def _handle_subscription(
                 errors_per_second=metrics_snapshot.total_errors / 3600.0,
                 success_rate=metrics_snapshot.success_rate,
                 avg_latency_ms=150.0,
-                active_connections=len(dashboard_manager.active_connections),
+                active_connections=len(dashboard_service.active_connections),
                 cache_hit_rate=0.85,
                 memory_usage_percentage=65.0,
             )
@@ -528,8 +528,8 @@ async def _handle_subscription(
 # Export the dashboard manager for use by other services
 __all__ = [
     "AlertNotification",
-    "DashboardConnectionManager",
+    "DashboardConnectionService",
     "RealtimeMetrics",
     "SystemEvent",
-    "dashboard_manager",
+    "dashboard_service",
 ]

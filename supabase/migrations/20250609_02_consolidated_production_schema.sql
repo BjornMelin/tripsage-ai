@@ -1,7 +1,7 @@
 -- Consolidated Production Schema Migration
 -- Description: Complete TripSage database schema deployment in a single migration
 -- Created: 2025-06-09
--- Updated: 2025-06-11 - Enhanced with critical infrastructure gaps addressed
+-- Updated: 2025-06-11 - Includes critical infrastructure gap fixes
 -- Version: Production v2.0
 -- Replaces: All previous migrations - this creates the complete, production-ready schema
 -- Incorporates: 20250610_01_fix_user_id_constraints.sql, 20250611_01_add_trip_collaborators_table.sql
@@ -67,7 +67,7 @@ BEGIN
     RAISE NOTICE 'NEW in v2.0 - Critical Infrastructure:';
     RAISE NOTICE '- 📁 Complete file storage infrastructure with multi-bucket architecture';
     RAISE NOTICE '- 🔍 Search cache tables (destinations, activities, flights, hotels)';
-    RAISE NOTICE '- 🛡️ Enhanced RLS policies for storage and search infrastructure';
+    RAISE NOTICE '- 🛡️ RLS policies for storage and search infrastructure updated';
     RAISE NOTICE '- ⚡ Additional performance indexes for search and storage optimization';
     RAISE NOTICE '- 🔧 Safe SQL execution function with security validation';
     RAISE NOTICE '- 🧹 Automated search cache and file cleanup functions';

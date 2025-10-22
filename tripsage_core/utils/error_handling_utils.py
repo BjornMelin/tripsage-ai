@@ -226,7 +226,7 @@ def create_database_error(
     )
 
 
-# Enhanced error context manager for TripSage operations
+# Error context manager for TripSage operations
 class TripSageErrorContext:
     """Context manager for enhanced error handling in TripSage operations."""
 

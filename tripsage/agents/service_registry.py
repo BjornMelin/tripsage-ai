@@ -43,7 +43,7 @@ from tripsage_core.services.infrastructure import (
 
 
 if TYPE_CHECKING:
-    from tripsage.orchestration.checkpoint_manager import SupabaseCheckpointManager
+    from tripsage.orchestration.checkpoint_service import SupabaseCheckpointService
     from tripsage.orchestration.mcp_bridge import AirbnbMCPBridge
     from tripsage.orchestration.memory_bridge import SessionMemoryBridge
 
@@ -89,7 +89,7 @@ class ServiceRegistry:
     websocket_manager: WebSocketManager | None = None
 
     # Orchestration lifecycle services
-    checkpoint_manager: SupabaseCheckpointManager | None = None
+    checkpoint_service: SupabaseCheckpointService | None = None
     memory_bridge: SessionMemoryBridge | None = None
     mcp_bridge: AirbnbMCPBridge | None = None
     mcp_service: AirbnbMCP | None = None
@@ -149,13 +149,13 @@ class ServiceRegistry:
             database_service=db_service, user_service=user_service
         )
 
-        from tripsage.orchestration.checkpoint_manager import (
-            SupabaseCheckpointManager,
+        from tripsage.orchestration.checkpoint_service import (
+            SupabaseCheckpointService,
         )
         from tripsage.orchestration.mcp_bridge import AirbnbMCPBridge
         from tripsage.orchestration.memory_bridge import SessionMemoryBridge
 
-        checkpoint_manager = SupabaseCheckpointManager()
+        checkpoint_service = SupabaseCheckpointService()
         memory_bridge = SessionMemoryBridge(memory_service=memory_service)
         mcp_service = AirbnbMCP()
         mcp_bridge = AirbnbMCPBridge(mcp_service=mcp_service)
@@ -187,7 +187,7 @@ class ServiceRegistry:
             key_monitoring_service=key_monitoring_service,
             websocket_broadcaster=websocket_broadcaster,
             websocket_manager=websocket_manager,
-            checkpoint_manager=checkpoint_manager,
+            checkpoint_service=checkpoint_service,
             memory_bridge=memory_bridge,
             mcp_bridge=mcp_bridge,
             mcp_service=mcp_service,
@@ -222,13 +222,13 @@ class ServiceRegistry:
             )
         return cast(ServiceT, service)
 
-    def get_checkpoint_manager(self) -> SupabaseCheckpointManager:
+    def get_checkpoint_service(self) -> SupabaseCheckpointService:
         """Return the shared checkpoint manager instance."""
-        if self.checkpoint_manager is None:
+        if self.checkpoint_service is None:
             raise ValueError(
                 "Checkpoint manager is not configured on the service registry."
             )
-        return self.checkpoint_manager
+        return self.checkpoint_service
 
     def get_memory_bridge(self) -> SessionMemoryBridge:
         """Return the session memory bridge."""

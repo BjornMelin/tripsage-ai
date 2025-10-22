@@ -1,4 +1,4 @@
-"""Comprehensive XSS and CSRF protection tests for API endpoints.
+"""XSS and CSRF protection tests for API endpoints.
 
 This module provides security testing for Cross-Site Scripting (XSS) and
 Cross-Site Request Forgery (CSRF) protection mechanisms in the API key
@@ -44,7 +44,7 @@ class TestXSSProtection:
             "onmouseover=alert('XSS')",
             "onclick=alert('XSS')",
             "onerror=alert('XSS')",
-            # Advanced XSS bypasses
+            # Complex XSS bypasses
             "<scr<script>ipt>alert('XSS')</script>",
             "<ScRiPt>alert('XSS')</ScRiPt>",
             "<script >alert('XSS')</script >",

@@ -1,10 +1,11 @@
-"""Enhanced rate limiting middleware for FastAPI.
+# pylint: disable=too-many-lines, too-many-positional-arguments
+"""Rate limiting middleware for FastAPI.
 
 This module provides production-ready rate limiting with:
 - Per-API-key configurable limits
 - Service-specific rate limits
 - Integration with API key monitoring
-- DragonflyDB distributed rate limiting
+- Upstash Redis distributed rate limiting
 - Sliding window and token bucket algorithms
 - Graceful degradation on cache failures
 - Comprehensive rate limit headers
@@ -38,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class RateLimitConfig(BaseModel):
-    """Configuration for rate limiting with enhanced features."""
+    """Configuration for rate limiting with configurable options."""
 
     # Basic rate limits
     requests_per_minute: int = Field(default=60, gt=0)
@@ -52,7 +53,7 @@ class RateLimitConfig(BaseModel):
     # Service-specific multipliers
     service_multipliers: dict[str, float] = Field(default_factory=dict)
 
-    # Advanced features
+    # Feature toggles
     enable_sliding_window: bool = True
     enable_token_bucket: bool = True
     enable_burst_protection: bool = True
@@ -150,10 +151,10 @@ class RateLimiter:
 
 
 class InMemoryRateLimiter(RateLimiter):
-    """Enhanced in-memory rate limiter with sliding window and token bucket."""
+    """In-memory rate limiter with sliding window and token bucket."""
 
     def __init__(self):
-        """Initialize the enhanced in-memory rate limiter."""
+        """Initialize the in-memory rate limiter."""
         self.requests: dict[str, list] = {}
         self.token_buckets: dict[str, dict[str, Any]] = {}
 
@@ -264,7 +265,8 @@ class DragonflyRateLimiter(RateLimiter):
         Args:
             monitoring_service: Optional monitoring service instance.
         """
-        self.cache_service = None
+        # Cache service is provided by infrastructure; treat as dynamic
+        self.cache_service: Any | None = None
         self.monitoring_service = monitoring_service
         self.fallback_limiter = InMemoryRateLimiter()
 
@@ -372,7 +374,8 @@ class DragonflyRateLimiter(RateLimiter):
         refill_key = f"rate_limit:refill:{key}"
 
         # Use Redis pipeline for atomic operations
-        pipe = self.cache_service.pipeline()
+        cache: Any = self.cache_service  # pyright: ignore[reportOptionalMemberAccess]
+        pipe = cache.pipeline()  # type: ignore[attr-defined]
         pipe.get(bucket_key)
         pipe.get(refill_key)
         results = await pipe.execute()
@@ -417,7 +420,8 @@ class DragonflyRateLimiter(RateLimiter):
         tokens -= cost
 
         # Save state atomically
-        pipe = self.cache_service.pipeline()
+        cache = self.cache_service
+        pipe = cache.pipeline()  # type: ignore[attr-defined]
         pipe.set(bucket_key, str(tokens), ex=3600)
         pipe.set(refill_key, str(current_time), ex=3600)
         await pipe.execute()
@@ -458,12 +462,14 @@ class DragonflyRateLimiter(RateLimiter):
             window_start = current_time - window_seconds
 
             # Remove expired entries and count current
-            pipe = self.cache_service.pipeline()
+            cache: Any = self.cache_service  # pyright: ignore[reportOptionalMemberAccess]
+            pipe = cache.pipeline()  # type: ignore[attr-defined]
             pipe.zremrangebyscore(window_key, 0, window_start)
             pipe.zcard(window_key)
             await pipe.execute()
 
-            current_count = await self.cache_service.zcard(window_key)
+            cache = self.cache_service
+            current_count = await cache.zcard(window_key)  # type: ignore[attr-defined]
 
             if current_count + cost > limit:
                 # Calculate precise reset time
@@ -501,15 +507,20 @@ class DragonflyRateLimiter(RateLimiter):
             # Add request timestamps with cost
             for i in range(cost):
                 score = current_time + (i * 0.001)  # Slight offset for multiple cost
-                await self.cache_service.zadd(window_key, {str(score): score})
+                cache = self.cache_service
+                await cache.zadd(window_key, {str(score): score})  # type: ignore[attr-defined]
 
             # Set expiration
-            await self.cache_service.expire(
+            cache = self.cache_service
+            await cache.expire(  # type: ignore[attr-defined]
                 window_key, int(window_seconds * 1.1)
             )  # 10% buffer
 
         # Return success with most restrictive remaining count (minute window)
-        minute_count = await self.cache_service.zcard(f"rate_limit:window:minute:{key}")
+        cache = self.cache_service
+        minute_count = await cache.zcard(  # type: ignore[attr-defined]
+            f"rate_limit:window:minute:{key}"
+        )
 
         return RateLimitResult(
             is_limited=False,
@@ -564,11 +575,12 @@ class DragonflyRateLimiter(RateLimiter):
                 "endpoint": endpoint,
             }
 
-            await self.cache_service.lpush(analytics_key, json.dumps(request_data))
-            await self.cache_service.ltrim(
+            cache: Any = self.cache_service
+            await cache.lpush(analytics_key, json.dumps(request_data))  # type: ignore[attr-defined]
+            await cache.ltrim(  # type: ignore[attr-defined]
                 analytics_key, 0, 999
             )  # Keep last 1000 requests
-            await self.cache_service.expire(analytics_key, 86400)  # 24 hours
+            await cache.expire(analytics_key, 86400)  # type: ignore[attr-defined]
 
         except (ConnectionError, TimeoutError, RuntimeError) as e:
             logger.debug("Failed to record request analytics: %s", e)
@@ -607,14 +619,14 @@ class DragonflyRateLimiter(RateLimiter):
             return False
 
 
-class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
+class RateLimitMiddleware(BaseHTTPMiddleware):
     """Production-ready rate limiting middleware with comprehensive features.
 
     Features:
     - Per-API-key configurable limits with persistent storage
     - Service-specific rate limits (OpenAI, Weather, etc.)
     - Integration with API key monitoring service
-    - DragonflyDB distributed rate limiting with graceful fallback
+    - Upstash Redis distributed rate limiting with graceful fallback
     - Comprehensive rate limit headers (RFC 6585 compliant)
     - Sliding window and token bucket algorithms
     - Endpoint-specific overrides
@@ -628,7 +640,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         use_dragonfly: bool = True,
         monitoring_service=None,
     ):
-        """Initialize EnhancedRateLimitMiddleware.
+        """Initialize RateLimitMiddleware.
 
         Args:
             app: The ASGI application
@@ -686,6 +698,18 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                     "flights": 1.2,
                     "hotels": 1.2,
                 },
+                endpoint_overrides={
+                    "/api/memory": {
+                        "requests_per_minute": 30,
+                        "requests_per_hour": 600,
+                        "burst_size": 10,
+                    },
+                    "/api/user/keys": {
+                        "requests_per_minute": 20,
+                        "requests_per_hour": 200,
+                        "burst_size": 5,
+                    },
+                },
             ),
             "agent": RateLimitConfig(
                 requests_per_minute=300,
@@ -707,6 +731,16 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                     "/api/search/flights": {
                         "requests_per_minute": 200,
                         "burst_size": 30,
+                    },
+                    "/api/memory": {
+                        "requests_per_minute": 60,
+                        "requests_per_hour": 2000,
+                        "burst_size": 20,
+                    },
+                    "/api/user/keys": {
+                        "requests_per_minute": 40,
+                        "requests_per_hour": 800,
+                        "burst_size": 10,
                     },
                 },
             ),
@@ -769,7 +803,8 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
 
         # Skip rate limiting for certain paths
         if self._should_skip_rate_limit(request.url.path):
-            return await call_next(request)
+            # Starlette typing for call_next is Response; runtime is awaitable
+            return await (call_next)(request)  # type: ignore[misc]
 
         # Get rate limit context
         rate_limit_context = self._get_rate_limit_context(request)
@@ -791,7 +826,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
             return self._create_rate_limit_response(result, rate_limit_context)
 
         # Continue with the request
-        response = await call_next(request)
+        response = await (call_next)(request)  # type: ignore[misc]
 
         # Add comprehensive rate limit headers
         self._add_rate_limit_headers(response, result, rate_limit_context)
@@ -833,7 +868,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                     "tier": tier,
                 }
 
-            elif hasattr(principal, "type") and principal.type == "agent":
+            if hasattr(principal, "type") and principal.type == "agent":
                 # API key/agent request
                 service = getattr(principal, "service", None)
                 tier = getattr(principal, "tier", "standard")
@@ -1057,8 +1092,10 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                     return ip
 
         # Fall back to direct connection IP
-        if hasattr(request.client, "host"):
-            return request.client.host
+        client = getattr(request, "client", None)
+        host = getattr(client, "host", None)
+        if isinstance(host, str):
+            return host
 
         return "unknown"
 
@@ -1078,7 +1115,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         """Track rate limit violations for monitoring and analytics."""
         if self.monitoring_service:
             try:
-                await self.monitoring_service.track_usage(
+                await self.monitoring_service.track_usage(  # type: ignore[attr-defined]
                     key_id=context["principal_id"],
                     user_id=context["principal_id"]
                     if context["principal_type"] == "user"
@@ -1178,7 +1215,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
             try:
                 latency_ms = (time.time() - start_time) * 1000
 
-                await self.monitoring_service.track_usage(
+                await self.monitoring_service.track_usage(  # type: ignore[attr-defined]
                     key_id=context["principal_id"],
                     user_id=context["principal_id"]
                     if context["principal_type"] == "user"
@@ -1264,7 +1301,7 @@ def get_default_rate_limit_middleware(
     settings: Settings | None = None,
     use_dragonfly: bool | None = None,
     monitoring_service=None,
-) -> EnhancedRateLimitMiddleware:
+) -> RateLimitMiddleware:
     """Get a pre-configured rate limiting middleware with sensible defaults."""
     if settings is None:
         settings = get_settings()
@@ -1272,7 +1309,7 @@ def get_default_rate_limit_middleware(
     if use_dragonfly is None:
         use_dragonfly = settings.rate_limit_use_dragonfly
 
-    return EnhancedRateLimitMiddleware(
+    return RateLimitMiddleware(
         app=app,
         settings=settings,
         use_dragonfly=use_dragonfly,
@@ -1282,7 +1319,7 @@ def get_default_rate_limit_middleware(
 
 def create_middleware_from_settings(
     app: ASGIApp, settings: Settings | None = None
-) -> EnhancedRateLimitMiddleware | None:
+) -> RateLimitMiddleware | None:
     """Create rate limiting middleware from settings if enabled.
 
     Args:
@@ -1290,7 +1327,7 @@ def create_middleware_from_settings(
         settings: Application settings (will use default if None)
 
     Returns:
-        EnhancedRateLimitMiddleware if enabled in settings, None otherwise
+        RateLimitMiddleware if enabled in settings, None otherwise
     """
     if settings is None:
         settings = get_settings()
@@ -1311,7 +1348,7 @@ def create_middleware_from_settings(
             logger.warning("Failed to initialize monitoring service: %s", e)
 
     # Create middleware with settings-based configuration
-    middleware = EnhancedRateLimitMiddleware(
+    middleware = RateLimitMiddleware(
         app=app,
         settings=settings,
         use_dragonfly=settings.rate_limit_use_dragonfly,

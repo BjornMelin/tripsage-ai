@@ -125,7 +125,7 @@ class TravelPlanningState(TypedDict):
     """Unified state schema for all travel planning workflows.
 
     This state is passed between all agent nodes and contains all the context
-    needed for travel planning conversations and operations. Enhanced with
+    needed for travel planning conversations and operations. Includes
     structured data models for better type safety and clarity.
 
     State Design Principles:
@@ -162,7 +162,7 @@ class TravelPlanningState(TypedDict):
     agent_history: list[str]
     handoff_context: dict[str, Any] | None  # Serialized HandoffContext
 
-    # Enhanced error handling and resilience
+    # Error handling and resilience improvements
     error_info: dict[str, Any]  # Serialized ErrorInfo
 
     # Tool execution tracking with detailed information
@@ -219,7 +219,7 @@ def create_initial_state(
         current_agent=None,
         agent_history=[],
         handoff_context=None,
-        # Enhanced error handling (using structured ErrorInfo)
+        # Error handling using structured ErrorInfo
         error_info=ErrorInfo().model_dump(),
         # Tool call tracking (empty initially)
         active_tool_calls=[],

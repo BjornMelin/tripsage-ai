@@ -206,7 +206,7 @@ class MockDatabaseService:
 
 
 class TestSupabaseCollaborationSchema:
-    """Comprehensive test suite for enhanced Supabase schema and collab features."""
+    """test suite for enhanced Supabase schema and collab features."""
 
     @pytest.fixture
     def mock_db_service(self):

@@ -1,6 +1,6 @@
 """Security tests for secret key rotation and cryptographic edge cases.
 
-This module provides comprehensive security testing for secret key rotation,
+This module provides security testing for secret key rotation,
 cryptographic edge cases, and key lifecycle management vulnerabilities.
 Tests cover various attack scenarios targeting encryption, decryption,
 and key management processes.

@@ -107,7 +107,7 @@ class Settings(BaseSettings):
         description="Crawl4AI MCP server configuration",
     )
 
-    # Enhanced Rate Limiting Configuration
+    # Rate limiting configuration
     rate_limit_enabled: bool = Field(
         default=True, description="Enable rate limiting middleware"
     )

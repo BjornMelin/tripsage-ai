@@ -1,7 +1,7 @@
 -- Supabase Extensions Setup
 -- Description: Required extensions for TripSage database functionality
 -- Dependencies: None (must be run first)
--- Version: 2.0 - Enhanced with automation and real-time capabilities
+-- Version: 2.0 - Includes automation and real-time capabilities
 
 -- ===========================
 -- CORE EXTENSIONS

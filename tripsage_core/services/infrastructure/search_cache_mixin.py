@@ -1,7 +1,6 @@
 """Search cache mixin for standardized caching patterns across services.
 
-This module provides a reusable mixin that implements common caching patterns
-for search operations, reducing code duplication and ensuring consistency.
+Provides a reusable mixin with common caching patterns for search operations.
 """
 
 import hashlib
@@ -34,7 +33,7 @@ class SearchCacheMixin[
     - Consistent cache key generation
     - Automatic cache TTL management
     - Cache hit/miss metrics
-    - Seamless integration with DragonflyDB cache service
+    - Seamless integration with Upstash Redis cache service
     - Type-safe caching operations
 
     Usage:
@@ -121,15 +120,14 @@ class SearchCacheMixin[
                 # The implementing class should store the response class
                 response_class = self._get_response_class()
                 return response_class(**cached_data)
-            else:
-                logger.debug(
-                    "Cache miss for search request",
-                    extra={
-                        "cache_key": cache_key,
-                        "service": self._cache_prefix,
-                    },
-                )
-                return None
+            logger.debug(
+                "Cache miss for search request",
+                extra={
+                    "cache_key": cache_key,
+                    "service": self._cache_prefix,
+                },
+            )
+            return None
 
         except CoreServiceError as e:
             # Limit noisy cache failures; surface as cache miss.
@@ -324,8 +322,8 @@ class SearchCacheMixin[
         """
 
 
-class SimpleCacheMixin:
-    """Simplified cache mixin for non-search caching patterns.
+class CacheMixin:
+    """Cache mixin for non-search caching patterns.
 
     This mixin provides basic caching functionality for general use cases
     that don't follow the search request/response pattern.

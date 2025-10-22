@@ -27,7 +27,7 @@ class AirbnbMCPBridge:
     """Bridge between LangGraph and Airbnb MCP.
 
     This class converts Airbnb MCP tools to LangGraph-compatible format while preserving
-    all existing error handling, caching, and monitoring capabilities from MCPManager.
+    error handling, caching, and monitoring capabilities from the previous MCP manager abstraction.
     """
 
     def __init__(self, mcp_service: AirbnbMCP | None = None):
@@ -185,13 +185,13 @@ class AirbnbMCPBridge:
         """
 
         async def tool_function(**kwargs) -> str:
-            """Execute Airbnb tool via MCPManager."""
+            """Execute Airbnb tool via MCPBridge."""
             try:
                 logger.debug(
                     "Executing Airbnb tool: %s with params: %s", metadata.name, kwargs
                 )
 
-                # Use existing MCPManager for tool execution
+                # Use existing MCPBridge for tool execution
                 result = await self.mcp_service.invoke(
                     method_name=metadata.mcp_method,
                     params=kwargs,

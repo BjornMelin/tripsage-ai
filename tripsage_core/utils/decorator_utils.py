@@ -86,7 +86,7 @@ def with_error_handling(
 
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-                """Enhanced async wrapper with comprehensive error handling."""
+                """Async wrapper with comprehensive error handling."""
                 start_time = time.time()
                 extra_context = {}
 
@@ -226,7 +226,7 @@ def with_error_handling(
 
             @functools.wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-                """Enhanced sync wrapper with comprehensive error handling."""
+                """Sync wrapper with comprehensive error handling."""
                 start_time = time.time()
                 extra_context = {}
 

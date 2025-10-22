@@ -6,7 +6,7 @@ These tests exercise the actual DB trip model implementation to increase coverag
 from datetime import date
 from uuid import uuid4
 
-from tripsage_core.models.trip import EnhancedBudget as TripBudget, Trip as DbTrip
+from tripsage_core.models.trip import Budget as TripBudget, Trip as DbTrip
 
 
 class TestDbTripModelCoverage:
@@ -53,7 +53,7 @@ class TestDbTripModelCoverage:
         assert len(trip.tags) == 3
         assert "cultural" in trip.tags
 
-    def test_db_trip_with_enhanced_budget(self):
+    def test_db_trip_with_budget_breakdown(self):
         """Test DbTrip with enhanced budget."""
         from tripsage_core.models.trip import BudgetBreakdown
 
@@ -63,7 +63,7 @@ class TestDbTripModelCoverage:
             activities=800.0,
             transportation=400.0,
         )
-        enhanced_budget = TripBudget(
+        budget_breakdown = TripBudget(
             total=3000.0,
             currency="EUR",
             spent=750.0,
@@ -77,7 +77,7 @@ class TestDbTripModelCoverage:
             end_date=date(2025, 8, 25),
             destination="Berlin, Germany",
             travelers=2,
-            budget_breakdown=enhanced_budget,
+            budget_breakdown=budget_breakdown,
         )
 
         # Verify budget integration
@@ -292,7 +292,7 @@ class TestDbTripModelCoverage:
         from tripsage_core.models.trip import BudgetBreakdown
 
         breakdown = BudgetBreakdown(accommodation=900.0, miscellaneous=900.0)
-        enhanced_budget = TripBudget(
+        budget_breakdown = TripBudget(
             total=1800.0,
             currency="CAD",
             spent=450.0,
@@ -308,7 +308,7 @@ class TestDbTripModelCoverage:
             end_date=date(2025, 9, 10),
             destination="Toronto, Canada",
             travelers=1,
-            budget_breakdown=enhanced_budget,
+            budget_breakdown=budget_breakdown,
             visibility=TripVisibility.SHARED,
         )
 

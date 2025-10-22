@@ -404,7 +404,7 @@ describe("API client with Zod Validation", () => {
     });
   });
 
-  describe("Advanced Validation Scenarios", () => {
+  describe("Validation scenarios", () => {
     it("handles optional fields correctly", async () => {
       const userWithOptionalFields: UserResponse = {
         id: "550e8400-e29b-41d4-a716-446655440000",

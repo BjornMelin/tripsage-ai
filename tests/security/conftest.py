@@ -73,7 +73,7 @@ def mock_environment_variables():
 # Mock MCP manager for use in tests
 @pytest.fixture
 def mock_mcp_manager():
-    """Create a mock MCPManager for testing."""
+    """Create a mock MCPBridge for testing."""
     manager = MagicMock()
     manager.invoke = AsyncMock(return_value={})
     manager.initialize_mcp = AsyncMock()
@@ -202,7 +202,7 @@ def assert_mcp_invoked(
     method_name: str,
     params: dict[str, Any] | None = None,
 ):
-    """Assert that MCPManager.invoke was called with expected parameters."""
+    """Assert that MCPBridge.invoke was called with expected parameters."""
     mock_manager.invoke.assert_called_once()
     call_args = mock_manager.invoke.call_args[0]
 
@@ -258,7 +258,7 @@ def mock_settings_and_redis(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test_openai_key")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
 
-    # Create a comprehensive mock settings object using flat structure
+    # Create a mock settings object using flat structure
     from tripsage_core.config import Settings
 
     mock_settings = Settings(

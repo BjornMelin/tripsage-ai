@@ -98,7 +98,7 @@ class FlightSearchRequest(BaseModel):
     max_price: float | None = Field(None, gt=0, description="Maximum price in USD")
     currency: str = Field(default="USD", description="Price currency")
 
-    # Advanced options
+    # Optional settings
     flexible_dates: bool = Field(
         default=False, description="Allow flexible date search"
     )
@@ -305,7 +305,7 @@ class UpcomingFlightResponse(BaseModel):
     )  # upcoming, boarding, delayed, cancelled
     terminal: str | None = Field(default=None, description="Terminal")
     gate: str | None = Field(default=None, description="Gate")
-    # Enhanced trip context fields
+    # Trip context fields
     is_shared_trip: bool | None = Field(
         default=False, description="Whether the trip is shared"
     )

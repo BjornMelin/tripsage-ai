@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Comprehensive RLS (Row Level Security) Policy Test Suite.
+"""RLS (Row Level Security) Policy Test Suite.
 
 Tests all RLS policies across the TripSage database to ensure:
 - Users can only access their own data
@@ -47,7 +47,7 @@ class RLSTestResult(BaseModel):
 
 
 class RLSPolicyTester:
-    """Comprehensive RLS policy testing framework."""
+    """RLS policy testing framework."""
 
     def __init__(self, supabase_url: str, supabase_key: str):
         """Initialize tester with connection settings and in-memory state."""
@@ -1106,7 +1106,7 @@ class RLSPolicyTester:
         return performance_results
 
     def generate_report(self) -> str:
-        """Generate a comprehensive test report."""
+        """Generate a test report."""
         total_tests = len(self.test_results)
         passed_tests = sum(1 for r in self.test_results if r.passed)
         failed_tests = total_tests - passed_tests

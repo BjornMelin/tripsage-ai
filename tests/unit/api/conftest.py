@@ -1,6 +1,6 @@
 """Common test configuration for API router tests.
 
-This module provides a comprehensive test setup that properly mocks all services
+This module provides a test setup that properly mocks all services
 and dependencies needed for API router testing, ensuring that validation tests
 can run without interference from authentication or cache connection issues.
 """
@@ -130,7 +130,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         # Mock legacy MCP references (removed during modernization)
         # Mock rate limiting middleware to disable it
         patch(
-            "tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch"
+            "tripsage.api.middlewares.rate_limiting.RateLimitMiddleware.dispatch"
         ) as mock_rate_limit,
         # Mock the authentication dependency to return a valid principal
         patch(
@@ -182,19 +182,18 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
 
         # Configure default mock responses that match the expected API response schema
 
-        from tripsage.api.schemas.accommodations import AccommodationSearchResponse
+        from tripsage_core.services.business.accommodation_service import (
+            AccommodationSearchRequest,
+            AccommodationSearchResponse,
+        )
 
         def mock_search_accommodations(request):
             """Mock search accommodations method that returns API response format."""
             # Create a valid AccommodationSearchRequest for the response
             from datetime import date
 
-            from tripsage.api.schemas.accommodations import (
-                AccommodationSearchRequest as APISearchRequest,
-            )
-
             # Create a mock API request with default values
-            api_request = APISearchRequest(
+            api_request = AccommodationSearchRequest(
                 location="Tokyo",
                 check_in=date(2024, 3, 15),
                 check_out=date(2024, 3, 18),
@@ -256,17 +255,19 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         mock_destination_service_getter.return_value = mock_destination_service
 
         # Configure destination service mock responses with minimal data
-        from tripsage.api.schemas.destinations import (
-            DestinationDetailsResponse,
+        from tripsage_core.services.business.destination_service import (
+            Destination,
+            DestinationSearchRequest,
             DestinationSearchResponse,
         )
-        from tripsage_core.models.schemas_common.geographic import Place as Destination
 
         # Simple mock that just returns empty result
         mock_search_response = DestinationSearchResponse(
-            destinations=[],
-            count=0,
-            query="Tokyo",
+            search_id="mock-search-id",
+            search_parameters=DestinationSearchRequest(query="Tokyo"),
+            total_results=0,
+            results_returned=0,
+            search_duration_ms=0,
         )
 
         mock_destination_service.search_destinations = AsyncMock(
@@ -487,7 +488,7 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
         # Mock legacy MCP references (removed during modernization)
         # Mock rate limiting middleware to disable it
         patch(
-            "tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch"
+            "tripsage.api.middlewares.rate_limiting.RateLimitMiddleware.dispatch"
         ) as mock_rate_limit,
         # Mock the authentication dependency to return None (unauthenticated)
         patch(

@@ -63,7 +63,7 @@ class TestSQLInjectionPrevention:
             # NoSQL injection (for completeness)
             "'; return true; //",
             "' || '1'=='1",
-            # Advanced SQL injection
+            # Sophisticated SQL injection
             # EXTRACTVALUE injection
             (
                 "' AND EXTRACTVALUE(1, CONCAT(0x7e, "

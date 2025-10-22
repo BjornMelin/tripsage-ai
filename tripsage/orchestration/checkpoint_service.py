@@ -29,7 +29,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class SupabaseCheckpointManager:
+class SupabaseCheckpointService:
     """Create LangGraph checkpointers from Supabase/PostgreSQL settings."""
 
     def __init__(self):

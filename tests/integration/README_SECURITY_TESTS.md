@@ -1,6 +1,6 @@
 # Trip Security Integration Tests
 
-This directory contains comprehensive integration tests for trip access verification that test the complete security flow from HTTP request to database. The tests verify security at all layers: API, service, and database.
+This directory contains integration tests for trip access verification that test the complete security flow from HTTP request to database. The tests verify security at all layers: API, service, and database.
 
 ## Overview
 
@@ -42,7 +42,7 @@ The security integration tests validate:
    - Transaction isolation and audit trails
 
 4. **`conftest_security.py`** - Security test fixtures and utilities
-   - Comprehensive test data with multiple user types
+   - Test data with multiple user types
    - Mock services with realistic security behavior
    - Performance monitoring and audit logging
    - Security test scenarios and utilities
@@ -84,11 +84,13 @@ Various collaboration permission levels:
 
 1. **Python Environment**: Python 3.13+ with uv
 2. **Dependencies**: Install test dependencies
+
    ```bash
    uv sync --dev
    ```
 
 3. **Environment Variables**: Set up test environment
+
    ```bash
    cp .env.example .env.test
    # Configure test database and API keys
@@ -180,24 +182,28 @@ The tests verify that security measures don't significantly impact performance:
 The tests ensure compliance with security best practices:
 
 ### Authentication
+
 - ✅ JWT token validation
 - ✅ Token expiration handling
 - ✅ Multi-factor authentication support
 - ✅ Account lockout protection
 
 ### Authorization
+
 - ✅ Role-based access control (RBAC)
 - ✅ Resource-level permissions
 - ✅ Collaboration permission levels
 - ✅ Least privilege principle
 
 ### Data Protection
+
 - ✅ Row Level Security (RLS)
 - ✅ User data isolation
 - ✅ Encryption in transit
 - ✅ Sensitive data handling
 
 ### Audit & Monitoring
+
 - ✅ Security event logging
 - ✅ Access attempt tracking
 - ✅ Suspicious activity detection
@@ -251,12 +257,12 @@ uv run pytest tests/integration/ --collect-only
 
 ### Test Data Inspection
 
-The security fixtures provide detailed test data that can be inspected:
+The security fixtures provide test data that can be inspected:
 
 ```python
-def test_inspect_security_data(comprehensive_security_setup):
+def test_inspect_security_data(security_setup):
     """Inspect the security test data setup."""
-    setup = comprehensive_security_setup
+    setup = security_setup
     
     print("Users:", len(setup["users"]))
     print("Trips:", len(setup["trips"]))
@@ -283,6 +289,7 @@ def test_audit_log_analysis(security_audit_logger):
 ### Common Issues
 
 1. **Database Connection Errors**
+
    ```bash
    # Check environment variables
    uv run python -c "import os; print(os.environ.get('SUPABASE_URL'))"
@@ -292,18 +299,21 @@ def test_audit_log_analysis(security_audit_logger):
    ```
 
 2. **Authentication Failures**
+
    ```bash
    # Check JWT configuration
    uv run python -c "from tripsage.api.core.auth import verify_jwt_token; print('JWT config OK')"
    ```
 
 3. **Permission Errors**
+
    ```bash
    # Verify RLS policies
    uv run python scripts/security/rls_vulnerability_tests.sql
    ```
 
 4. **Performance Issues**
+
    ```bash
    # Run performance profiling
    uv run pytest tests/integration/test_trip_security_integration.py::test_performance_impact_measurement --profile
@@ -336,12 +346,12 @@ When adding new security tests:
 @pytest.mark.integration
 @pytest.mark.security
 async def test_new_security_feature(
-    comprehensive_security_setup: Dict[str, Any],
+    security_setup: Dict[str, Any],
     security_principals: Dict[str, Principal],
 ):
     """Test description explaining the security aspect being tested."""
     # Arrange
-    setup = comprehensive_security_setup
+    setup = security_setup
     owner_principal = security_principals["owner"]
     
     # Act
@@ -358,7 +368,7 @@ async def test_new_security_feature(
 
 ## Security Test Coverage
 
-The integration tests provide comprehensive coverage of:
+The integration tests provide coverage of:
 
 - ✅ **Authentication**: 95% of auth flows tested
 - ✅ **Authorization**: 90% of permission scenarios covered  

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains comprehensive integration tests for the enhanced Supabase schema with collaboration features. The test suite validates RLS policies, foreign key constraints, database functions, performance optimization, and multi-user collaboration workflows.
+This directory contains integration tests for the enhanced Supabase schema with collaboration features. The test suite validates RLS policies, foreign key constraints, database functions, performance optimization, and multi-user collaboration workflows.
 
 ## Test Architecture
 
@@ -198,7 +198,7 @@ pytest tests/performance/test_collaboration_performance.py --durations=10
 
 ### Automated Report Generation
 
-The test runner generates comprehensive reports:
+The test runner generates reports:
 
 ```text
 test_reports/

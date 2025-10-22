@@ -1,6 +1,6 @@
 """Configuration for full stack integration tests.
 
-This module provides fixtures and setup for comprehensive integration testing
+This module provides fixtures and setup for integration testing
 with real database and cache dependencies.
 """
 

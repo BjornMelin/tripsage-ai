@@ -1,6 +1,6 @@
 """Authentication bypass attempt security tests.
 
-This module provides comprehensive security testing for authentication bypass
+This module provides security testing for authentication bypass
 attempts against the API key validation infrastructure. Tests cover various
 attack vectors including JWT manipulation, API key forgery, header injection,
 and session management vulnerabilities.

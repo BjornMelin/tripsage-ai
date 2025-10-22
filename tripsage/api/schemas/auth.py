@@ -155,7 +155,7 @@ class Token(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    """Enhanced token response model."""
+    """Token response model."""
 
     access_token: str = Field(description="JWT access token")
     refresh_token: str = Field(description="JWT refresh token")

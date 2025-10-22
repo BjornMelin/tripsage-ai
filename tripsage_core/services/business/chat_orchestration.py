@@ -1,4 +1,4 @@
-"""Chat Orchestration Service (FINAL-ONLY, no MCPManager).
+"""Chat Orchestration Service (FINAL-ONLY, no MCPBridge).
 
 - Database operations via ``DatabaseService`` (Supabase RPC/SQL)
 - Flights via ``FlightService`` with optional Duffel provider
@@ -54,7 +54,7 @@ class ChatOrchestrationService:
     def __init__(self):
         """Initialize the chat orchestration service."""
         self.database = None  # Will be initialized asynchronously
-        # ToolCallService no longer accepts MCPManager; keep for formatting helpers
+        # ToolCallService no longer accepts MCPBridge; keep for formatting helpers
         self.tool_call_service = ToolCallService()
         self.logger = logger
         # Lazy-initialized external services

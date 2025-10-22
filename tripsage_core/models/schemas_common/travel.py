@@ -74,7 +74,7 @@ class TransportationPreferences(TripSageModel):
 
 
 class TripPreferences(TripSageModel):
-    """Enhanced trip preferences using shared financial and accommodation models."""
+    """Trip preferences using shared financial and accommodation models."""
 
     budget: Budget | None = Field(None, description="Trip budget")
     accommodation: AccommodationPreferences | None = Field(

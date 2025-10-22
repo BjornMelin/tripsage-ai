@@ -56,10 +56,10 @@ class TripSageOrchestrator:
         self.service_registry = service_registry or ServiceRegistry()
         self.config = config or get_default_config()
         try:
-            self.checkpoint_manager = self.service_registry.get_checkpoint_manager()
+            self.checkpoint_service = self.service_registry.get_checkpoint_service()
         except ValueError as exc:
             raise ValueError(
-                "TripSageOrchestrator requires a configured checkpoint manager."
+                "TripSageOrchestrator requires a configured checkpoint service."
             ) from exc
         self.checkpointer = checkpointer
         try:
@@ -82,7 +82,7 @@ class TripSageOrchestrator:
         if self.checkpointer is None or isinstance(self.checkpointer, MemorySaver):
             try:
                 self.checkpointer = (
-                    await self.checkpoint_manager.get_async_checkpointer()
+                    await self.checkpoint_service.get_async_checkpointer()
                 )
                 logger.info("Initialized PostgreSQL checkpointer")
             except Exception as exc:  # noqa: BLE001
