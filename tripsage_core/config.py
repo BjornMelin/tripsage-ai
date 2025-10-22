@@ -197,6 +197,29 @@ class Settings(BaseSettings):
         default=False, description="Enable Redis OTEL auto-instrumentation"
     )
 
+    # Google Maps Platform configuration
+    google_maps_api_key: SecretStr | None = Field(
+        default=None, description="Google Maps Platform API key"
+    )
+    google_maps_timeout: float = Field(
+        default=10.0,
+        ge=1.0,
+        le=120.0,
+        description="Combined connect+read timeout (seconds) for Google Maps requests",
+    )
+    google_maps_retry_timeout: int = Field(
+        default=60,
+        ge=1,
+        le=600,
+        description="Total retry timeout (s) across retriable Maps requests",
+    )
+    google_maps_queries_per_second: int = Field(
+        default=10,
+        ge=1,
+        le=60,
+        description="Client-side QPS throttle for Google Maps requests",
+    )
+
     @field_validator("environment")
     @classmethod
     def validate_environment(cls, v: str) -> str:

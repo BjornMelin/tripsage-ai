@@ -10,7 +10,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.schemas.users import UserPreferencesRequest, UserPreferencesResponse
-from tripsage_core.observability.otel import record_histogram, trace_span
+from tripsage_core.observability.otel import (
+    http_route_attr_fn,
+    record_histogram,
+    trace_span,
+)
 from tripsage_core.services.business.user_service import UserService, get_user_service
 
 
@@ -20,14 +24,7 @@ logger = logging.getLogger(__name__)
 
 @router.get("/preferences", response_model=UserPreferencesResponse)
 @trace_span(name="api.users.preferences.get")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {
-        "http.route": "/api/users/preferences",
-        "http.method": "GET",
-    },
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_user_preferences(
     principal=Depends(require_principal),
     user_service: UserService = Depends(get_user_service),
@@ -71,14 +68,7 @@ async def get_user_preferences(
 
 @router.put("/preferences", response_model=UserPreferencesResponse)
 @trace_span(name="api.users.preferences.update")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {
-        "http.route": "/api/users/preferences",
-        "http.method": "PUT",
-    },
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def update_user_preferences(
     preferences_request: UserPreferencesRequest,
     principal=Depends(require_principal),

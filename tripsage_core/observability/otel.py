@@ -1,18 +1,26 @@
 """Unified OpenTelemetry setup, accessors, and decorators.
 
-This module centralizes OTEL initialization and provides helpers for tracing
-and metrics with minimal, DRY instrumentation.
+This module centralizes OpenTelemetry (OTEL) initialization and provides
+helpers for tracing and metrics with minimal, DRY instrumentation.
+
+Design goals:
+- Idempotent setup that honors OTEL_* environment variables.
+- Library-first: rely on official SDKs/instrumentations; avoid wrappers.
+- Guard rails to avoid double instrumentation (FastAPI vs ASGI).
+- Small, typed decorators that work for sync/async callables.
+- Metrics attributes are standardized and avoid PII by default.
 """
 
 from __future__ import annotations
 
 import importlib
+import logging
 import os
 import time
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from functools import wraps
-from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
 
 
 # Import typing-only symbols to avoid runtime ImportError on environments
@@ -23,6 +31,8 @@ else:  # pragma: no cover - at runtime these are resolved lazily
     CallbackOptions = Any  # type: ignore[misc,assignment]
     Observation = Any  # type: ignore[misc,assignment]
 
+
+logger: logging.Logger = logging.getLogger(__name__)  # pylint: disable=no-member
 
 # Instrumentors are imported lazily inside setup_otel().
 
@@ -81,6 +91,9 @@ def setup_otel(
     )
     sdk_metrics = importlib.import_module("opentelemetry.sdk.metrics")
     sdk_metrics_export = importlib.import_module("opentelemetry.sdk.metrics.export")
+    sdk_metrics_view = None
+    with suppress(ImportError):  # pragma: no cover - optional API
+        sdk_metrics_view = importlib.import_module("opentelemetry.sdk.metrics.view")
     sdk_resources = importlib.import_module("opentelemetry.sdk.resources")
     sdk_trace = importlib.import_module("opentelemetry.sdk.trace")
     sdk_trace_export = importlib.import_module("opentelemetry.sdk.trace.export")
@@ -142,12 +155,72 @@ def setup_otel(
     PeriodicExportingMetricReader = sdk_metrics_export.PeriodicExportingMetricReader
     MeterProvider = sdk_metrics.MeterProvider
     metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
-    mp = MeterProvider(resource=resource, metric_readers=[metric_reader])
+
+    views = []
+    # Optional: configure duration histogram buckets via env
+    # TRIPSAGE_DURATION_BUCKETS="0.005,0.01,0.025,0.05,0.1,0.25,0.5,1,2.5,5,10"
+    buckets_env = os.getenv("TRIPSAGE_DURATION_BUCKETS")
+    try:
+        if sdk_metrics_view is not None:
+            # Cast dynamic lookups to Any to satisfy static analysis when optional.
+            ViewT = cast(Any, getattr(sdk_metrics_view, "View", None))
+            ExplicitBucketHistogramAggregationT = cast(
+                Any,
+                getattr(
+                    sdk_metrics_view,
+                    "ExplicitBucketHistogramAggregation",
+                    None,
+                ),
+            )
+            if ViewT and ExplicitBucketHistogramAggregationT:
+                if buckets_env:
+                    buckets = [
+                        float(x.strip()) for x in buckets_env.split(",") if x.strip()
+                    ]
+                else:
+                    buckets = [
+                        0.005,
+                        0.01,
+                        0.025,
+                        0.05,
+                        0.1,
+                        0.25,
+                        0.5,
+                        1.0,
+                        2.5,
+                        5.0,
+                        10.0,
+                    ]
+                # Create a view that applies explicit histogram buckets. Some SDK
+                # builds may apply this globally when selectors are unavailable.
+                view = ViewT(
+                    # Keep instrument_name unspecified if wildcard matching is not
+                    # available; the SDK may apply globally.
+                    aggregation=ExplicitBucketHistogramAggregationT(buckets=buckets),
+                )
+                views = [view]
+    except (AttributeError, TypeError, ValueError):  # pragma: no cover - optional API
+        views = []
+
+    if views:
+        mp = MeterProvider(
+            resource=resource, metric_readers=[metric_reader], views=views
+        )
+    else:
+        mp = MeterProvider(resource=resource, metric_readers=[metric_reader])
     otel_metrics.set_meter_provider(mp)
 
     # Optional auto-instrumentation (lazily import each instrumentor)
     # For FastAPI, call FastAPIInstrumentor.instrument_app(app) after the app
     # instance is created (see tripsage/api/main.py).
+    # Guard: prefer FastAPI instrumentation over generic ASGI to avoid doubles
+    if enable_fastapi and enable_asgi:
+        logger.warning(
+            "Both FastAPI and ASGI instrumentation enabled; disabling ASGI to "
+            "avoid double-instrumentation."
+        )
+        enable_asgi = False
+
     if enable_asgi:
         with suppress(ImportError):  # pragma: no cover
             asgi_inst = importlib.import_module("opentelemetry.instrumentation.asgi")
@@ -316,26 +389,6 @@ def trace_span(
     return _decorator
 
 
-@overload
-def record_histogram(
-    name: str,
-    *,
-    unit: str = "s",
-    description: str = "Function duration in seconds",
-    attr_fn: Callable[[tuple[Any, ...], dict[str, Any]], dict[str, Any]] | None = None,
-) -> Callable[[F], F]: ...
-
-
-@overload
-def record_histogram(
-    name: str,
-    *,
-    unit: str = "s",
-    description: str = "Function duration in seconds",
-    attr_fn: Callable[[tuple[Any, ...], dict[str, Any]], dict[str, Any]] | None = None,
-) -> Callable[[F], F]: ...
-
-
 def record_histogram(
     name: str,
     *,
@@ -350,6 +403,11 @@ def record_histogram(
         unit: Measurement unit.
         description: Instrument description.
         attr_fn: Optional callable computing attributes from args/kwargs.
+            When provided, its attributes are merged with default attributes:
+            - ``module``: the function's module name
+            - ``http.route`` and ``http.method`` when a FastAPI/Starlette
+              Request is present in parameters (best-effort discovery).
+            No PII should be added by this function.
     """
 
     def _decorator(func: F) -> F:
@@ -365,7 +423,9 @@ def record_histogram(
                 return cast(object, func(*args, **kwargs))
             finally:
                 dur = time.perf_counter() - start
-                attributes = attr_fn(args, kwargs) if attr_fn else {}
+                attributes = _merge_default_metric_attrs(
+                    func.__module__, args, kwargs, attr_fn
+                )
                 hist.record(dur, attributes)
 
         @wraps(func)
@@ -378,7 +438,9 @@ def record_histogram(
                 )
             finally:
                 dur = time.perf_counter() - start
-                attributes = attr_fn(args, kwargs) if attr_fn else {}
+                attributes = _merge_default_metric_attrs(
+                    func.__module__, args, kwargs, attr_fn
+                )
                 hist.record(dur, attributes)
 
         wrapped: F = cast(F, _async) if _is_coroutine(func) else cast(F, _sync)
@@ -409,3 +471,96 @@ def create_observable_gauge(
 def _is_coroutine(func: Callable[..., Any]) -> bool:
     """Return True if the function is a coroutine function."""
     return getattr(func, "__code__", None) and bool(func.__code__.co_flags & 0x80)  # type: ignore[union-attr]
+
+
+def _merge_default_metric_attrs(
+    module: str,
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    attr_fn: Callable[[tuple[Any, ...], dict[str, Any]], dict[str, Any]] | None,
+) -> dict[str, Any]:
+    """Merge user attributes with standardized metric attributes.
+
+    - Always includes ``module``.
+    - Adds ``http.route`` and ``http.method`` when a Request-like object is
+      found among parameters. We avoid importing FastAPI/Starlette types and
+      use duck-typing to extract values.
+
+    Args:
+        module: Caller module name to include in attributes.
+        args: Positional arguments passed to the wrapped function.
+        kwargs: Keyword arguments passed to the wrapped function.
+        attr_fn: Optional attribute factory provided by the caller.
+
+    Returns:
+        A dictionary of attributes safe for metrics (no PII by default).
+    """
+    base = attr_fn(args, kwargs) if attr_fn else {}
+    # Ensure no PII is added here. Only standardized keys are set.
+    base.setdefault("module", module)
+
+    # Attempt to discover an incoming request to enrich route attributes.
+    req = None
+    for v in (*args, *kwargs.values()):
+        if hasattr(v, "method") and hasattr(v, "url") and hasattr(v, "scope"):
+            # Likely a Starlette/FastAPI Request
+            req = v
+            break
+    if req is not None:
+        try:
+            # Prefer templated route path if available
+            route = None
+            scope = getattr(req, "scope", {})
+            route_obj = scope.get("route") if isinstance(scope, dict) else None
+            if route_obj is not None:
+                route = getattr(route_obj, "path", None)
+            if not route:
+                url = getattr(req, "url", None)
+                route = getattr(url, "path", None)
+            method = getattr(req, "method", None)
+            if route:
+                base.setdefault("http.route", route)
+            if method:
+                base.setdefault("http.method", method)
+        except (AttributeError, KeyError, TypeError):  # pragma: no cover
+            pass
+
+    return base
+
+
+def http_route_attr_fn(args: tuple[Any, ...], kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Best-effort attribute factory for FastAPI route handlers.
+
+    Produces standardized attributes:
+    - ``http.route``: templated route path if available, else path
+    - ``http.method``: request method
+
+    Notes:
+    - This helper intentionally avoids PII (no user identifiers).
+    - Use with :func:`record_histogram` as ``attr_fn=http_route_attr_fn``.
+    """
+    # Module is added by the decorator; only compute HTTP attributes here.
+    http_attrs: dict[str, Any] = {}
+    req = None
+    for v in (*args, *kwargs.values()):
+        if hasattr(v, "method") and hasattr(v, "url") and hasattr(v, "scope"):
+            req = v
+            break
+    if req is not None:
+        try:
+            route = None
+            scope = getattr(req, "scope", {})
+            route_obj = scope.get("route") if isinstance(scope, dict) else None
+            if route_obj is not None:
+                route = getattr(route_obj, "path", None)
+            if not route:
+                url = getattr(req, "url", None)
+                route = getattr(url, "path", None)
+            method = getattr(req, "method", None)
+            if route:
+                http_attrs["http.route"] = route
+            if method:
+                http_attrs["http.method"] = method
+        except (AttributeError, KeyError, TypeError):  # pragma: no cover
+            pass
+    return http_attrs

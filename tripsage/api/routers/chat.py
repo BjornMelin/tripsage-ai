@@ -20,7 +20,11 @@ from tripsage.api.schemas.chat import (
     CreateMessageRequest,
     SessionCreateRequest,
 )
-from tripsage_core.observability.otel import record_histogram, trace_span
+from tripsage_core.observability.otel import (
+    http_route_attr_fn,
+    record_histogram,
+    trace_span,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -29,11 +33,7 @@ router = APIRouter()
 
 @router.post("/", response_model=ChatResponse)
 @trace_span(name="api.chat.completion")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {"http.route": "/api/chat/", "http.method": "POST"},
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def chat(
     request: ChatRequest,
     principal: RequiredPrincipalDep,
@@ -65,14 +65,7 @@ async def chat(
 
 @router.post("/sessions", response_model=dict)
 @trace_span(name="api.chat.sessions.create")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {
-        "http.route": "/api/chat/sessions",
-        "http.method": "POST",
-    },
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def create_session(
     body: SessionCreateRequest,
     principal: RequiredPrincipalDep,
@@ -115,14 +108,7 @@ async def create_session(
 
 @router.get("/sessions", response_model=list[dict])
 @trace_span(name="api.chat.sessions.list")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {
-        "http.route": "/api/chat/sessions",
-        "http.method": "GET",
-    },
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def list_sessions(
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
@@ -150,14 +136,7 @@ async def list_sessions(
 
 @router.get("/sessions/{session_id}", response_model=dict)
 @trace_span(name="api.chat.sessions.get")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {
-        "http.route": "/api/chat/sessions/{session_id}",
-        "http.method": "GET",
-    },
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_session(
     session_id: UUID,
     principal: RequiredPrincipalDep,
@@ -196,14 +175,7 @@ async def get_session(
 
 @router.get("/sessions/{session_id}/messages", response_model=list[dict])
 @trace_span(name="api.chat.messages.list")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {
-        "http.route": "/api/chat/sessions/{session_id}/messages",
-        "http.method": "GET",
-    },
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_session_messages(
     session_id: UUID,
     principal: RequiredPrincipalDep,
@@ -235,14 +207,7 @@ async def get_session_messages(
 
 @router.post("/sessions/{session_id}/messages", response_model=dict)
 @trace_span(name="api.chat.messages.create")
-@record_histogram(
-    "api.op.duration",
-    unit="s",
-    attr_fn=lambda _a, _k: {
-        "http.route": "/api/chat/sessions/{session_id}/messages",
-        "http.method": "POST",
-    },
-)
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def create_message(
     session_id: UUID,
     principal: RequiredPrincipalDep,
