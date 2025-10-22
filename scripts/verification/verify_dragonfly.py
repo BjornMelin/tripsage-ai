@@ -20,12 +20,12 @@ from tripsage_core.services.infrastructure.cache_service import CacheService
 
 async def verify_dragonfly_connection():
     """Verify DragonflyDB is properly configured and accessible."""
-    print("🔍 Verifying DragonflyDB Configuration...")
+    print("Verifying DragonflyDB Configuration...")
 
     try:
         # Get settings (flat structure)
         settings = get_settings()
-        print("\n📋 Configuration:")
+        print("\nConfiguration:")
         print(f"   URL: {settings.redis_url}")
         pwd_status = "***" if settings.redis_password else "Not configured"
         print(f"   Password: {pwd_status}")
@@ -35,13 +35,13 @@ async def verify_dragonfly_connection():
         # Initialize cache service
         cache_service = CacheService(settings)
 
-        print("\n🔗 Attempting to connect to DragonflyDB...")
+        print("\nAttempting to connect to DragonflyDB...")
         await cache_service.connect()
 
         print("✅ Successfully connected to DragonflyDB!")
 
         # Test basic operations
-        print("\n🧪 Testing basic operations...")
+        print("\nTesting basic operations...")
 
         # Set a test value
         test_key = "dragonfly_test_key"
@@ -65,7 +65,7 @@ async def verify_dragonfly_connection():
         print(f"   Deleted test key: {'✅' if deleted else '❌'}")
 
         # Show connection status
-        print("\n📊 Cache Status:")
+        print("\nCache Status:")
         print(f"   Connected: {cache_service.is_connected}")
         print("   ✅ All operations completed successfully!")
 
@@ -76,7 +76,7 @@ async def verify_dragonfly_connection():
 
     except Exception as e:  # noqa: BLE001
         print(f"\n❌ Error: {e!s}")
-        print("\n💡 Troubleshooting tips:")
+        print("\nTroubleshooting tips:")
         print("   1. Ensure DragonflyDB container is running:")
         print("      docker-compose up -d dragonfly")
         print("   2. Check if port 6379 is available: lsof -i :6379")
