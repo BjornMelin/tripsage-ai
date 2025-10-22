@@ -248,7 +248,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                             if len(parts) >= 3:
                                 service = parts[1]
                                 key_id = parts[2]
-                    except Exception:
+                    except (ValueError, IndexError):
                         pass
 
                     # Log failed API key authentication

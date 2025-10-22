@@ -91,7 +91,7 @@ async def test_redis():
         yield redis_client
         await redis_client.flushdb()  # Clean up
         await redis_client.close()
-    except Exception:
+    except (ConnectionError, TimeoutError, OSError):
         # Fallback to mock Redis for CI environments
         from unittest.mock import AsyncMock
 

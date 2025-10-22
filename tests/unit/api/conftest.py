@@ -79,8 +79,6 @@ def create_authenticated_test_client(mock_principal):
     This is a helper function for creating test clients that need authentication.
     Use this pattern in router tests for authenticated endpoints.
     """
-    from fastapi.testclient import TestClient
-
     from tripsage.api.core.dependencies import (
         get_current_principal,
         require_principal,
@@ -97,14 +95,11 @@ def create_authenticated_test_client(mock_principal):
 
 
 def create_unauthenticated_test_client():
-    """Create an unauthenticated test client with authentication
-    dependencies returning None.
+    """Create an unauthenticated test client with auth deps -> None.
 
     This is a helper function for creating test clients for testing unauthorized
     access. Use this pattern in router tests for testing authentication failures.
     """
-    from fastapi.testclient import TestClient
-
     from tripsage.api.core.dependencies import get_current_principal
     from tripsage.api.main import app
 

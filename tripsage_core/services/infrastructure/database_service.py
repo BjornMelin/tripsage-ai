@@ -1867,9 +1867,8 @@ class DatabaseService:
                 if "end_date" in dr:
                     q = q.lte("end_date", dr["end_date"].isoformat())
             q = q.order("created_at").limit(limit).offset(offset)
-            result: Any = await asyncio.to_thread(q.execute)
-            return result.data
-        return len(result) > 0
+        result: Any = await asyncio.to_thread(q.execute)
+        return result.data
 
     async def delete_api_key_by_service(self, user_id: str, service_name: str) -> bool:
         """Delete an API key by service for a user.

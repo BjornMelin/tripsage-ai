@@ -6,6 +6,7 @@ Focuses on the unified Settings structure with feature toggles.
 
 import os
 import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -196,7 +197,7 @@ class TestConfigurationLoading:
                 )
 
         # Clean up
-        os.unlink(f.name)
+        Path(f.name).unlink()
 
 
 class TestConfigurationErrorHandling:

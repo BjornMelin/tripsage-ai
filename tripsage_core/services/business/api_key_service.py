@@ -1,15 +1,15 @@
-"""API Key Service - Modern Implementation for TripSage.
+# pylint: disable=too-many-lines
+"""API Key Service for TripSage.
 
-This service provides comprehensive API key management functionality following
-2025 best practices and modern architectural patterns.
+Provides API key creation, storage, validation, encryption, and audit logging.
 
 Features:
-- BYOK (Bring Your Own Key) functionality
-- Modern Pydantic V2 patterns with ConfigDict optimization
-- Tenacity-based retry and circuit breaking
+- Bring Your Own Key (BYOK) support
+- Pydantic V2 model usage (ConfigDict)
+- Tenacity-based retry for validation
 - Validation and monitoring
-- Security with envelope encryption
-- Comprehensive audit logging
+- Envelope encryption for key storage
+- Audit logging for key operations
 """
 
 import asyncio
@@ -21,12 +21,6 @@ import uuid
 from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any, Optional
-
-
-if TYPE_CHECKING:
-    from tripsage_core.config import Settings
-    from tripsage_core.services.infrastructure.cache_service import CacheService
-    from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
@@ -55,6 +49,12 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditOutcome,
     audit_api_key,
 )
+
+
+if TYPE_CHECKING:
+    from tripsage_core.config import Settings
+    from tripsage_core.services.infrastructure.cache_service import CacheService
+    from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
 logger = logging.getLogger(__name__)
@@ -286,7 +286,7 @@ class ApiKeyService:
             settings = get_settings()
 
         # Initialize encryption with settings
-        self._initialize_encryption(settings.secret_key)
+        self._initialize_encryption(settings.secret_key.get_secret_value())
 
         # HTTP client with simple configuration
         self.client = httpx.AsyncClient(
@@ -315,16 +315,14 @@ class ApiKeyService:
         Returns:
             String representation of the service type
         """
-        return service.value if hasattr(service, "value") else str(service)
+        return service.value if isinstance(service, ServiceType) else str(service)
 
     def _initialize_encryption(self, master_secret: str) -> None:
-        """Initialize envelope encryption with 2025 enhanced security standards.
+        """Initialize envelope encryption.
 
-        Uses modern cryptographic practices including:
         - PBKDF2 with 600,000 iterations (2025 NIST recommendation)
         - SHA-256 for key derivation
         - Secure salt management
-        - Proper secret handling for various input types
 
         Args:
             master_secret: Master secret for key derivation (str or SecretStr)
@@ -415,7 +413,7 @@ class ApiKeyService:
             result = results[0][0]  # First operation (create_api_key) result
 
             # Audit log (fire-and-forget)
-            asyncio.create_task(
+            asyncio.create_task(  # noqa: RUF006
                 self._audit_key_creation(key_id, user_id, key_data, validation_result)
             )
 
@@ -499,7 +497,9 @@ class ApiKeyService:
         decrypted_key = self._decrypt_api_key(result["encrypted_key"])
 
         # Update last used timestamp (fire-and-forget)
-        asyncio.create_task(self.db.update_api_key_last_used(result["id"]))
+        asyncio.create_task(  # noqa: RUF006
+            self.db.update_api_key_last_used(result["id"])
+        )
 
         return decrypted_key
 
@@ -724,7 +724,9 @@ class ApiKeyService:
 
         if success:
             # Audit log (fire-and-forget)
-            asyncio.create_task(self._audit_key_deletion(key_id, user_id, key_data))
+            asyncio.create_task(  # noqa: RUF006
+                self._audit_key_deletion(key_id, user_id, key_data)
+            )
 
             logger.info(
                 "API key deleted",
@@ -738,7 +740,7 @@ class ApiKeyService:
         return success
 
     def _encrypt_api_key(self, key_value: str) -> str:
-        """Encrypt API key using enhanced envelope encryption with 2025 security patterns.
+        """Encrypt API key using envelope encryption.
 
         Implementation features:
         - Envelope encryption with unique data keys per operation
@@ -787,12 +789,10 @@ class ApiKeyService:
             ) from error
 
     def _decrypt_api_key(self, encrypted_key: str) -> str:
-        """Decrypt API key using enhanced envelope encryption with backwards compatibility.
-
-        Supports both v3 and v4 encryption formats for seamless migration.
+        """Decrypt API key using envelope encryption (v4 format only).
 
         Args:
-            encrypted_key: Base64-encoded encrypted API key
+            encrypted_key: Base64-encoded encrypted API key (v4 format)
 
         Returns:
             Decrypted API key string
@@ -800,8 +800,6 @@ class ApiKeyService:
         Raises:
             ServiceError: If decryption fails or format is invalid
         """
-        # TODO: Refactor full function and module if needed to remove all backwards
-        # compatibility code and standardize on final implementation only
         if not encrypted_key:
             raise ServiceError("Cannot decrypt empty encrypted key")
 
@@ -809,14 +807,12 @@ class ApiKeyService:
             # Decode from base64
             combined = base64.urlsafe_b64decode(encrypted_key.encode("ascii"))
 
-            # Try v4 format first (enhanced separator)
-            if b"::v4::" in combined:
-                parts = combined.split(b"::v4::", 1)
-            elif b"::" in combined:
-                # Backwards compatibility with v3 format
-                parts = combined.split(b"::", 1)
-            else:
-                raise ServiceError("Invalid encrypted key format - no separator found")
+            # Require v4 separator
+            if b"::v4::" not in combined:
+                raise ServiceError(
+                    "Invalid encrypted key format - expected v4 separator"
+                )
+            parts = combined.split(b"::v4::", 1)
 
             if len(parts) != 2:
                 raise ServiceError("Invalid encrypted key format - malformed structure")

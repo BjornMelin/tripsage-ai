@@ -332,7 +332,7 @@ async def test_redis():
         yield redis_client
         await redis_client.flushdb()
         await redis_client.close()
-    except Exception:
+    except (ConnectionError, TimeoutError, OSError):
         # Fallback to mock Redis for CI environments
         mock_redis = AsyncMock()
         mock_redis.get.return_value = None
