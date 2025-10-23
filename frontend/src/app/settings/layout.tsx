@@ -1,22 +1,16 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-// Force dynamic rendering to avoid SSG issues with authentication
-export const dynamic = "force-dynamic";
+// caching handled at app level via cacheComponents; no per-file directive
+import { cn } from "@/lib/utils";
 
 const navItems = [
   { name: "API Keys", href: "/settings/api-keys" },
   // Add more settings sections as needed
 ];
 
-export default function SettingsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (

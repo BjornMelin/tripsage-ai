@@ -1,12 +1,10 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
-
-// This page can be statically generated for better performance
-export const dynamic = "force-static";
-export const revalidate = 3600; // Revalidate every hour
+import { Button } from "@/components/ui/button";
+// caching handled at app level via cacheComponents; no per-file directive
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CurrentYear } from "@/components/ui/current-year";
 
 export default function Home() {
   return (
@@ -130,7 +128,7 @@ export default function Home() {
       <footer className="border-t py-6 md:py-0">
         <div className="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
           <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
-            © {new Date().getFullYear()} TripSage AI. All rights reserved.
+            © <CurrentYear /> TripSage AI. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <Link
