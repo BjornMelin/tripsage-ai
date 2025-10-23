@@ -2,9 +2,10 @@
 
 This index lists all documentation files under `docs/` by section.
 
-## Overview
+## Platform Overview
 
-- [Overview](README.md)
+- [Project Overview](README.md)
+- [Next.js 16 Migration Notes](specs/spec-next16-migration.md)
 
 ## API
 
@@ -33,21 +34,26 @@ This index lists all documentation files under `docs/` by section.
 
 ## Developers
 
-- [README](developers/README.md)
-- [API Development](developers/api-development.md)
-- [API Key Service](developers/api-key-service.md)
-- [Architecture Guide](developers/architecture-guide.md)
-- [CI Overview](developers/ci-overview.md)
-- [Code Standards](developers/code-standards.md)
-- [Data Models](developers/data-models.md)
-- [Debugging Guide](developers/debugging-guide.md)
-- [External Integrations](developers/external-integrations.md)
-- [Frontend Development](developers/frontend-development.md)
-- [Performance Optimization](developers/performance-optimization.md)
-- [Quick Start Guide](developers/quick-start-guide.md)
-- [Rate Limiting](developers/rate-limiting.md)
-- [Testing Guide](developers/testing-guide.md)
-- [Unified Database Guide](developers/unified-database-guide.md)
+- **Onboarding**
+  - [Developer README](developers/README.md)
+  - [Quick Start Guide](developers/quick-start-guide.md)
+  - [Code Standards](developers/code-standards.md)
+- **Frontend (Next.js 16)**
+  - [Frontend Development](developers/frontend-development.md)
+  - [AI SDK v5 Migration](specs/spec-ai-sdk-v5.md)
+  - [Tailwind CSS v4 Migration](specs/spec-tailwind-v4.md)
+- **Backend & Services**
+  - [Backend Development](developers/api-development.md)
+  - [API Key Service](developers/api-key-service.md)
+  - [Unified Database Guide](developers/unified-database-guide.md)
+- **Testing & CI**
+  - [Testing Guide](developers/testing-guide.md)
+  - [CI Overview](developers/ci-overview.md)
+- **Operations & Performance**
+  - [Debugging Guide](developers/debugging-guide.md)
+  - [Performance Optimization](developers/performance-optimization.md)
+  - [Rate Limiting](developers/rate-limiting.md)
+  - [External Integrations](developers/external-integrations.md)
 
 ## Operators
 

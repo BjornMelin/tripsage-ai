@@ -218,12 +218,6 @@ frontend/lint-*.txt
 frontend/lint-*.json
 frontend/lint-*.log
 frontend/dashboard-*.png
-frontend/*_SUMMARY.md
-frontend/*_REPORT.md
-frontend/*_ANALYSIS.md
-frontend/*_CHECKLIST.md
-frontend/*_INTEGRATION.md
-frontend/*_TEST_*.md
 frontend/test-debug.*
 frontend/*-debug.*
 frontend/*.debug.*
@@ -246,8 +240,6 @@ frontend/*.temp.*
 **/debug/
 
 # Documentation generation artifacts
-**/CONSOLIDATION_PLAN.md
-**/MIGRATION_PLAN.md
 docs/**/temp/
 docs/**/*.backup
 docs/**/*-backup.*
@@ -331,3 +323,6 @@ scan-results/
 .env.development.local
 .env.test.local
 .env.staging.local
+
+# Project specific files
+.agent/
