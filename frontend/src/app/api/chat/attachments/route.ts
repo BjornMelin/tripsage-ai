@@ -1,13 +1,66 @@
-"use cache: private";
-import { revalidateTag } from "next/cache";
-import type { NextRequest } from "next/server";
+/**
+ * @fileoverview API route for uploading chat attachments with rate limiting.
+ * Handles multipart form data uploads, validates file sizes and types,
+ * and provides rate limiting protection.
+ */
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
+"use cache: private";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+import { revalidateTag } from "next/cache";
+import { headers as nextHeaders } from "next/headers";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+
+/** Maximum file size allowed per file in bytes (10MB). */
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+/** Maximum number of files allowed per upload request. */
 const MAX_FILES_PER_REQUEST = 5;
+
+/** Backend API URL for attachment operations. */
 const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8001";
 
+/**
+ * Handles attachment uploads with validation and rate limiting.
+ *
+ * @param req - The Next.js request object containing multipart form data.
+ * @returns A JSON response with uploaded file information or an error response.
+ * @throws Will return error responses for validation failures or server errors.
+ */
 export async function POST(req: NextRequest) {
   try {
+    // Optional rate limit: enable only when Upstash env is configured
+    const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (upstashUrl && upstashToken) {
+      const redis = Redis.fromEnv();
+      const ratelimit = new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(20, "1 m"),
+        analytics: true,
+        prefix: "ratelimit:attachments",
+      });
+      const hdrs = await nextHeaders();
+      const ipHeader =
+        hdrs.get("x-forwarded-for") || hdrs.get("x-real-ip") || "unknown";
+      const auth = req.headers.get("authorization") || "anon";
+      const identifier = `${auth.split(" ")[1] || "anon"}:${ipHeader.split(",")[0]}`;
+      const { success, limit, remaining, reset } = await ratelimit.limit(identifier);
+      if (!success) {
+        return NextResponse.json(
+          { error: "Rate limit exceeded", code: "RATE_LIMIT" },
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": String(limit),
+              "X-RateLimit-Remaining": String(remaining),
+              "X-RateLimit-Reset": String(reset),
+            },
+          }
+        );
+      }
+    }
     // Validate content type
     const contentType = req.headers.get("content-type");
     if (!contentType?.includes("multipart/form-data")) {

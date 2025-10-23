@@ -1,13 +1,19 @@
 """Chat router for TripSage API.
 
 This module provides endpoints for AI chat functionality using the unified
-chat service for clean separation of concerns.
+chat service for clean separation of concerns. It handles chat completions,
+streaming responses, session management, and message operations.
 """
 
+import asyncio
+import json
 import logging
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi.responses import StreamingResponse
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 
 from tripsage.api.core.dependencies import (
     ChatServiceDep,
@@ -53,7 +59,10 @@ async def chat(
         chat_service: Unified chat service
 
     Returns:
-        Chat response with assistant message
+        ChatResponse: Chat response with assistant message.
+
+    Raises:
+        HTTPException: If chat request processing fails.
     """
     try:
         user_id = get_principal_id(principal)
@@ -67,6 +76,101 @@ async def chat(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Chat request failed",
         ) from e
+
+
+@router.post("/stream")
+@limiter.limit("40/minute")
+@trace_span(name="api.chat.stream")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
+async def chat_stream(
+    request: ChatRequest,
+    http_request: Request,
+    http_response: Response,
+    principal: RequiredPrincipalDep,
+):
+    r"""Stream chat responses as Server-Sent Events (SSE).
+
+    Yields JSON lines formatted as SSE: "data: {json}\n\n" where json contains
+    token deltas and a final message.
+
+    Args:
+        request: Chat request with messages and options.
+        http_request: Raw HTTP request (required by SlowAPI for headers).
+        http_response: Raw HTTP response (required by SlowAPI for headers).
+        principal: Current authenticated principal.
+
+    Yields:
+        str: Server-Sent Events formatted strings with chat response data.
+
+    Raises:
+        HTTPException: If streaming setup or processing fails.
+    """
+
+    async def event_gen():  # type: ignore[no-redef]
+        try:
+            user_id = get_principal_id(principal)
+            # System prompt aligned with non-streaming endpoint
+            system_prompt = (
+                "You are TripSage AI, an expert travel planning assistant. "
+                "You help users plan trips, find flights and accommodations, "
+                "create itineraries, and provide destination recommendations. "
+                "Be helpful, informative, and personalized in your responses."
+            )
+
+            # Build message list
+            mapped = [
+                HumanMessage(content=m.content)
+                for m in request.messages
+                if str(m.role) == "user"
+            ]
+            # We currently ignore assistant/tool messages for simplicity
+
+            # Initialize model
+            from tripsage_core.config import get_settings
+
+            settings = get_settings()
+            model_name = getattr(request, "model", "gpt-4o-mini")
+            temperature = getattr(request, "temperature", 0.7)
+            max_tokens = getattr(request, "max_tokens", 4096)
+
+            llm = ChatOpenAI(
+                model=model_name,
+                temperature=temperature,
+                api_key=settings.openai_api_key,
+                model_kwargs={"max_tokens": max_tokens},
+                streaming=True,
+            )
+
+            # Send started event
+            yield f"data: {json.dumps({'type': 'started', 'user': user_id})}\n\n"
+
+            full = ""
+            async for chunk in llm.astream(
+                [SystemMessage(content=system_prompt), *mapped]
+            ):
+                part = getattr(chunk, "content", None)
+                if part:
+                    full += part
+                    yield f"data: {json.dumps({'type': 'delta', 'content': part})}\n\n"
+                # Keep the event loop responsive
+                await asyncio.sleep(0)
+
+            # Final event
+            yield f"data: {json.dumps({'type': 'final', 'content': full})}\n\n"
+            # Done marker
+            yield "data: [DONE]\n\n"
+        except Exception as e:  # pragma: no cover  # noqa: BLE001
+            err = {"type": "error", "message": str(e)}
+            yield f"data: {json.dumps(err)}\n\n"
+
+    headers = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "Content-Type": "text/event-stream",
+    }
+    return StreamingResponse(
+        event_gen(), headers=headers, media_type="text/event-stream"
+    )
 
 
 @router.post("/sessions", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -129,7 +233,10 @@ async def list_sessions(
         chat_service: Unified chat service
 
     Returns:
-        List of user's chat sessions
+        list[dict]: List of user's chat sessions.
+
+    Raises:
+        HTTPException: If session listing fails.
     """
     try:
         user_id = get_principal_id(principal)
