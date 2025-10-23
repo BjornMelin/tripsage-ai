@@ -7,12 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Native AI SDK v5 chat route at `src/app/api/chat/route.ts` (streams UI messages via toUIMessageStreamResponse).
+- Example AI SDK tool (`confirm`) with Zod input schema in chat route.
+
 ### Changed
 
 - Frontend deps: upgraded to Zod v4 and @hookform/resolvers v5; adapted code to new error and record APIs.
 - AI SDK route: fixed error handler to use `onError` returning string.
 - Supabase client usage in store: corrected imports, aligned with centralized repo functions.
 - Tailwind v4 verification fixes: replaced `<img>` with `next/image` for MFA QR code; converted interactive `<div>`s to `<button>`s in message attachments; added explicit radix to `Number.parseInt` calls.
+ - Replaced additional `<img>` tags with `next/image` in search cards; added unique IDs via `useId` for inputs.
 
 ### Docs
 
