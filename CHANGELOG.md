@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Minor Tailwind v4 compatibility: updated some `outline-none` usages to `outline-hidden` in UI components.
 - Frontend API routes now default to FastAPI at `http://localhost:8001` and unified paths (`/api/chat`, `/api/attachments/*`).
 - Attachments API now revalidates the `attachments` cache tag for both single and batch uploads before returning responses.
+- Chat domain canonicalized on FastAPI ChatService; removed the Next.js native chat route. Frontend hook now calls `${NEXT_PUBLIC_API_URL}/api/v1/chat/` directly and preserves authentication via credentials.
 - Moved dynamic year rendering on the home page to a small client component to avoid server prerender time coupling under Cache Components.
 - Centralized Supabase typed insert/update via `src/lib/supabase/typed-helpers.ts`; updated hooks to use helpers.
 - Chat UI prefers `message.parts` when present; removed ad-hoc adapter in `use-chat-ai` sync.

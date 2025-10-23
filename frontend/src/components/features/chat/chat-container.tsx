@@ -307,8 +307,7 @@ export function ChatContainer({
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              {authError ||
-                (error instanceof Error ? error.message : String(error || ""))}
+              {authError || (typeof error === "string" ? error : String(error || ""))}
               {authError?.includes("API key") && (
                 <div className="mt-2">
                   <Link href="/settings/api-keys">
