@@ -17,7 +17,7 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
-import { useUIStore } from "../ui-store";
+import { useUIStore, type Theme } from "../ui-store";
 
 // Mock setTimeout to make tests run faster
 vi.mock("global", () => ({
