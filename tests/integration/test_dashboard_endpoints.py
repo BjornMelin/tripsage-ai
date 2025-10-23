@@ -14,7 +14,7 @@ from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.routers import dashboard as dashboard_router
 from tripsage_core.services.business.api_key_service import (
-    ServiceHealthCheck,
+    ApiValidationResult,
     ServiceHealthStatus,
     ServiceType,
 )
@@ -213,19 +213,25 @@ def _patch_dependencies(
 
     api_key_service = AsyncMock()
     api_key_service.check_all_services_health.return_value = {
-        ServiceType.OPENAI: ServiceHealthCheck(
+        ServiceType.OPENAI: ApiValidationResult(
             service=ServiceType.OPENAI,
-            status=ServiceHealthStatus.HEALTHY,
+            is_valid=None,
+            status=None,
+            health_status=ServiceHealthStatus.HEALTHY,
             latency_ms=110.0,
             message="Operating normally",
             checked_at=datetime.now(UTC),
+            validated_at=None,
         ),
-        ServiceType.WEATHER: ServiceHealthCheck(
+        ServiceType.WEATHER: ApiValidationResult(
             service=ServiceType.WEATHER,
-            status=ServiceHealthStatus.DEGRADED,
+            is_valid=None,
+            status=None,
+            health_status=ServiceHealthStatus.DEGRADED,
             latency_ms=210.0,
             message="Latency elevated",
             checked_at=datetime.now(UTC),
+            validated_at=None,
         ),
     }
     dashboard_service.api_key_service = api_key_service

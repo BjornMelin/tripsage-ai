@@ -29,8 +29,8 @@ from fastapi.exceptions import HTTPException
 from tripsage_core.services.business.api_key_service import (
     ApiKeyCreateRequest,
     ApiKeyService,
+    ApiValidationResult,
     ServiceType,
-    ValidationResult,
     ValidationStatus,
 )
 
@@ -193,7 +193,7 @@ class TestApiKeyPerformance:
 
         # Mock successful validation to focus on service performance
         with patch.object(api_key_service, "validate_api_key") as mock_validate:
-            mock_validate.return_value = ValidationResult(
+            mock_validate.return_value = ApiValidationResult(
                 is_valid=True,
                 status=ValidationStatus.VALID,
                 service=ServiceType.OPENAI,
@@ -266,7 +266,7 @@ class TestApiKeyPerformance:
 
             # Analyze results
             successful_validations = sum(
-                1 for r in results if isinstance(r, ValidationResult) and r.is_valid
+                1 for r in results if isinstance(r, ApiValidationResult) and r.is_valid
             )
             failed_validations = len(results) - successful_validations
 
@@ -297,7 +297,7 @@ class TestApiKeyPerformance:
 
         # Mock validation for all operations
         with patch.object(api_key_service, "validate_api_key") as mock_validate:
-            mock_validate.return_value = ValidationResult(
+            mock_validate.return_value = ApiValidationResult(
                 is_valid=True,
                 status=ValidationStatus.VALID,
                 service=ServiceType.OPENAI,
@@ -512,7 +512,7 @@ class TestApiKeyPerformance:
                             timeouts += 1
                         else:
                             failed_ops += 1
-                    elif isinstance(result, ValidationResult):
+                    elif isinstance(result, ApiValidationResult):
                         if result.is_valid:
                             successful_ops += 1
                         else:
@@ -600,7 +600,7 @@ class TestApiKeyPerformance:
         BASELINE_CREATION_TIME = 0.05  # 50ms
 
         with patch.object(api_key_service, "validate_api_key") as mock_validate:
-            mock_validate.return_value = ValidationResult(
+            mock_validate.return_value = ApiValidationResult(
                 is_valid=True,
                 status=ValidationStatus.VALID,
                 service=ServiceType.OPENAI,
@@ -1601,7 +1601,7 @@ class TestApiKeyPerformance:
 
             # Mock validation for throughput testing
             with patch.object(api_key_service, "validate_api_key") as mock_validate:
-                mock_validate.return_value = ValidationResult(
+                mock_validate.return_value = ApiValidationResult(
                     is_valid=True,
                     status=ValidationStatus.VALID,
                     service=ServiceType.OPENAI,

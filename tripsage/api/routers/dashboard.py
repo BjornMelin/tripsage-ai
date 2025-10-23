@@ -242,9 +242,9 @@ async def get_services_status(
         services_status: list[ServiceStatus] = []
         for service_type, health_check in health_checks.items():
             status_str = "healthy"
-            if health_check.status == ServiceHealthStatus.DEGRADED:
+            if health_check.health_status == ServiceHealthStatus.DEGRADED:
                 status_str = "degraded"
-            elif health_check.status == ServiceHealthStatus.UNHEALTHY:
+            elif health_check.health_status == ServiceHealthStatus.UNHEALTHY:
                 status_str = "unhealthy"
 
             details = health_check.details or {}
@@ -256,7 +256,7 @@ async def get_services_status(
                     service=service_type.value,
                     status=status_str,
                     latency_ms=health_check.latency_ms,
-                    last_check=health_check.checked_at,
+                    last_check=health_check.checked_at or datetime.now(UTC),
                     error_rate=error_rate,
                     uptime_percentage=uptime_percentage,
                     message=health_check.message,
