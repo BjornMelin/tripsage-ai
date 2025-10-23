@@ -21,6 +21,7 @@ Internal developer resources and guidelines.
 | [Frontend Development](frontend-development.md) | Next.js frontend development guide | Frontend developers |
 | [**Unified Database Guide**](unified-database-guide.md) | 🗄️ Complete database development reference | Backend developers |
 | [Data Models](data-models.md) | Pydantic models and TypeScript interfaces | All developers |
+| [**Branch Conventions**](branch-conventions.md) | 🏗️ Git workflow and branch naming standards | All developers |
 
 ### In-Depth Topics
 

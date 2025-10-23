@@ -28,7 +28,7 @@ Refer to the [Testing Guide](testing-guide.md) for details on unit, integration,
 
 ## Additional Guidelines
 
-- **Branch Naming**: Use `feat/`, `fix/`, `docs/` prefixes (e.g., `feat/add-flight-search`).
+- **Branch Naming**: Follow the [Branch Conventions](../developers/branch-conventions.md) for standardized naming and workflow integration.
 - **PR Reviews**: Expect feedback on design, tests, and standards. Address all comments before merging.
 - **Releases**: Changes are included in semantic versions based on commit types.
 
