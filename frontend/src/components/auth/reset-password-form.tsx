@@ -27,6 +27,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
   const [email, setEmail] = React.useState("");
   const [isSuccess, setIsSuccess] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
+  const emailFieldId = React.useId();
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -86,9 +87,9 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
 
             {/* Email Field */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor={emailFieldId}>Email Address</Label>
               <Input
-                id="email"
+                id={emailFieldId}
                 name="email"
                 type="email"
                 placeholder="john@example.com"

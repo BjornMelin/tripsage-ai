@@ -451,7 +451,9 @@ describe("Deals Store", () => {
 
     beforeEach(() => {
       const store = useDealsStore.getState();
-      deals.forEach((deal) => store.addDeal(deal));
+      for (const deal of deals) {
+        store.addDeal(deal);
+      }
     });
 
     it("should calculate deal stats", () => {

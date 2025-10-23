@@ -5,19 +5,13 @@
 
 "use client";
 
-import { useEffect } from "react";
+import type { ReactNode } from "react";
 import { AuthProvider } from "@/contexts/auth-context";
 
 interface SupabaseProviderProps {
-  children: React.ReactNode;
-  initialSession?: any;
+  children: ReactNode;
 }
 
-export function SupabaseProvider({ children, initialSession }: SupabaseProviderProps) {
-  // Optionally perform any one-time client init side-effects here
-  useEffect(() => {
-    // noop placeholder; hooks that call useSupabase() will initialize the client
-  }, []);
-
+export function SupabaseProvider({ children }: SupabaseProviderProps) {
   return <AuthProvider>{children}</AuthProvider>;
 }

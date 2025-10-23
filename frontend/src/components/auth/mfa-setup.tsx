@@ -9,7 +9,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +42,7 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedSecret, setCopiedSecret] = useState(false);
+  const verificationInputId = useId();
 
   const handleInitiateSetup = async () => {
     setIsLoading(true);
@@ -255,34 +256,23 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
           {/* Verification */}
           <div className="space-y-4">
             <div className="space-y-2">
-              {(() => {
-                const id = (
-                  typeof React !== "undefined" && React.useId
-                    ? React.useId()
-                    : "verification-code"
-                ) as string;
-                return (
-                  <>
-                    <Label htmlFor={id}>
-                      Enter the 6-digit code from your authenticator app:
-                    </Label>
-                    <Input
-                      id={id}
-                      type="text"
-                      placeholder="123456"
-                      value={verificationCode}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 6);
-                        setVerificationCode(value);
-                        setError(null);
-                      }}
-                      maxLength={6}
-                      className="text-center text-lg tracking-widest font-mono"
-                      disabled={isLoading}
-                    />
-                  </>
-                );
-              })()}
+              <Label htmlFor={verificationInputId}>
+                Enter the 6-digit code from your authenticator app:
+              </Label>
+              <Input
+                id={verificationInputId}
+                type="text"
+                placeholder="123456"
+                value={verificationCode}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+                  setVerificationCode(value);
+                  setError(null);
+                }}
+                maxLength={6}
+                className="text-center text-lg tracking-widest font-mono"
+                disabled={isLoading}
+              />
             </div>
 
             {error && (

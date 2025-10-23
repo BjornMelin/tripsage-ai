@@ -95,7 +95,7 @@ export function useDeleteApiKey() {
       updater: (oldData: unknown, serviceToDelete: string) => {
         const data = oldData as AllKeysResponse | undefined;
         if (!data) return data;
-        const { [serviceToDelete]: deletedKey, ...remainingKeys } = data.keys;
+        const { [serviceToDelete]: _deletedKey, ...remainingKeys } = data.keys;
         return {
           ...data,
           keys: remainingKeys,

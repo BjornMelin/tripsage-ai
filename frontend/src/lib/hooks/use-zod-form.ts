@@ -98,7 +98,7 @@ export function useZodForm<T extends FieldValues>(
     onValidationError,
     onSubmitSuccess,
     onSubmitError,
-    enableAsyncValidation = false,
+    enableAsyncValidation: _enableAsyncValidation = false,
     ...formOptions
   } = options;
 

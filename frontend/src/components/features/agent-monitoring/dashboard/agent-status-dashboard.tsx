@@ -16,7 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import type React from "react";
-import { startTransition, useEffect, useOptimistic, useState } from "react";
+import { startTransition, useEffect, useId, useOptimistic, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -224,6 +224,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
   onAgentSelect,
   refreshInterval: _refreshInterval = 5000,
 }) => {
+  const responseTimeGradientId = useId();
   const [timeSeriesData] = useState(generateMockTimeSeriesData);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<string>("");
@@ -516,7 +517,13 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={timeSeriesData}>
                 <defs>
-                  <linearGradient id="responseTimeGradient" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id={responseTimeGradientId}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
                   </linearGradient>
@@ -530,7 +537,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
                   dataKey="responseTime"
                   stroke="#3b82f6"
                   fillOpacity={1}
-                  fill="url(#responseTimeGradient)"
+                  fill={`url(#${responseTimeGradientId})`}
                 />
               </AreaChart>
             </ResponsiveContainer>

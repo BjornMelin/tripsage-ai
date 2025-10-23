@@ -401,7 +401,7 @@ export function useSupabaseStorage() {
   // Clear upload progress for a specific file
   const clearUploadProgress = useCallback((fileId: string) => {
     setUploadProgress((prev) => {
-      const { [fileId]: removed, ...rest } = prev;
+      const { [fileId]: _removed, ...rest } = prev;
       return rest;
     });
   }, []);

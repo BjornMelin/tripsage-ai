@@ -14,7 +14,9 @@ export const createMockStore = <T extends Record<string, unknown>>(
   const setState = (updater: Partial<T> | ((prev: T) => Partial<T>)) => {
     const updates = typeof updater === "function" ? updater(state as T) : updater;
     Object.assign(state, updates);
-    subscribers.forEach((fn) => fn(state as T));
+    for (const fn of subscribers) {
+      fn(state as T);
+    }
   };
 
   const getState = () => state as T;

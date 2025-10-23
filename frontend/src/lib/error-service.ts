@@ -132,7 +132,9 @@ class ErrorService {
 
       // Keep only the last 10 errors
       const keysToRemove = errorKeys.slice(10);
-      keysToRemove.forEach((key) => localStorage.removeItem(key));
+      for (const key of keysToRemove) {
+        localStorage.removeItem(key);
+      }
     } catch (error) {
       console.error("Failed to cleanup local errors:", error);
     }

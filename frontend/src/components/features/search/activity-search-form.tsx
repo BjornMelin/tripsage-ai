@@ -175,7 +175,7 @@ export function ActivitySearchForm({
                           max={20}
                           {...field}
                           onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value))
+                            field.onChange(Number.parseInt(e.target.value, 10))
                           }
                         />
                       </FormControl>
@@ -197,7 +197,7 @@ export function ActivitySearchForm({
                           max={10}
                           {...field}
                           onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value))
+                            field.onChange(Number.parseInt(e.target.value, 10))
                           }
                         />
                       </FormControl>
@@ -219,7 +219,7 @@ export function ActivitySearchForm({
                           max={5}
                           {...field}
                           onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value))
+                            field.onChange(Number.parseInt(e.target.value, 10))
                           }
                         />
                       </FormControl>
@@ -290,7 +290,7 @@ export function ActivitySearchForm({
                           placeholder="Any"
                           {...field}
                           onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value))
+                            field.onChange(Number.parseInt(e.target.value, 10))
                           }
                         />
                       </FormControl>
@@ -336,7 +336,7 @@ export function ActivitySearchForm({
                           placeholder="No minimum"
                           {...field}
                           onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value))
+                            field.onChange(Number.parseInt(e.target.value, 10))
                           }
                         />
                       </FormControl>
@@ -358,7 +358,7 @@ export function ActivitySearchForm({
                           placeholder="No maximum"
                           {...field}
                           onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value))
+                            field.onChange(Number.parseInt(e.target.value, 10))
                           }
                         />
                       </FormControl>
