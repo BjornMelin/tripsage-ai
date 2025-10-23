@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AI SDK route: fixed error handler to use `onError` returning string.
 - Supabase client usage in store: corrected imports, aligned with centralized repo functions.
 - Tailwind v4 verification fixes: replaced `<img>` with `next/image` for MFA QR code; converted interactive `<div>`s to `<button>`s in message attachments; added explicit radix to `Number.parseInt` calls.
- - Replaced additional `<img>` tags with `next/image` in search cards; added unique IDs via `useId` for inputs.
+- Replaced additional `<img>` tags with `next/image` in search cards; added unique IDs via `useId` for inputs.
 
 ### Docs
 
@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tailwind CSS v4: Ran `npx @tailwindcss/upgrade` and confirmed CSS-first setup via `@import "tailwindcss";` in `src/app/globals.css`. Kept `@tailwindcss/postcss` and removed legacy Turbopack flags from `dev` script.
 - Minor Tailwind v4 compatibility: updated some `outline-none` usages to `outline-hidden` in UI components.
 - Frontend API routes now default to FastAPI at `http://localhost:8001` and unified paths (`/api/chat`, `/api/attachments/*`).
-- Attachments API invalidates cache tags via `revalidateTag('attachments', 'max')` after successful uploads.
+- Attachments API now revalidates the `attachments` cache tag for both single and batch uploads before returning responses.
 - Moved dynamic year rendering on the home page to a small client component to avoid server prerender time coupling under Cache Components.
 - Centralized Supabase typed insert/update via `src/lib/supabase/typed-helpers.ts`; updated hooks to use helpers.
 - Chat UI prefers `message.parts` when present; removed ad-hoc adapter in `use-chat-ai` sync.
