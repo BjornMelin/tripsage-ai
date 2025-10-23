@@ -246,6 +246,7 @@ export function MessageList({
   );
 
   // Reuse hoisted component for empty state
+  // biome-ignore lint/correctness/noNestedComponentDefinitions: keep complex empty state local for now
   const EmptyState = () => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

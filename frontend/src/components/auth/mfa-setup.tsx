@@ -255,23 +255,34 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
           {/* Verification */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="verification-code">
-                Enter the 6-digit code from your authenticator app:
-              </Label>
-              <Input
-                id="verification-code"
-                type="text"
-                placeholder="123456"
-                value={verificationCode}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, "").slice(0, 6);
-                  setVerificationCode(value);
-                  setError(null);
-                }}
-                maxLength={6}
-                className="text-center text-lg tracking-widest font-mono"
-                disabled={isLoading}
-              />
+              {(() => {
+                const id = (
+                  typeof React !== "undefined" && React.useId
+                    ? React.useId()
+                    : "verification-code"
+                ) as string;
+                return (
+                  <>
+                    <Label htmlFor={id}>
+                      Enter the 6-digit code from your authenticator app:
+                    </Label>
+                    <Input
+                      id={id}
+                      type="text"
+                      placeholder="123456"
+                      value={verificationCode}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+                        setVerificationCode(value);
+                        setError(null);
+                      }}
+                      maxLength={6}
+                      className="text-center text-lg tracking-widest font-mono"
+                      disabled={isLoading}
+                    />
+                  </>
+                );
+              })()}
             </div>
 
             {error && (
