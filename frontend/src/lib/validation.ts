@@ -1,5 +1,5 @@
 /**
- * Comprehensive validation utilities and error handling system
+ * Validation utilities and error handling system
  * Central validation logic with proper error handling and user feedback
  */
 

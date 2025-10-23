@@ -1,5 +1,4 @@
-"""
-Clean, focused test suite for TripSage exception system.
+"""Clean, focused test suite for TripSage exception system.
 
 Tests core exception functionality with proper Pydantic v2 compatibility.
 """
@@ -13,7 +12,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreDatabaseError,
     CoreExternalAPIError,
     CoreKeyValidationError,
-    CoreMCPError,
     CoreRateLimitError,
     CoreResourceNotFoundError,
     CoreServiceError,
@@ -203,16 +201,6 @@ class TestSpecificExceptions:
         assert error.message == "API call failed"
         assert error.details.service == "test_api"
 
-    def test_mcp_error(self):
-        """Test CoreMCPError."""
-        error = CoreMCPError("MCP operation failed", tool="test_tool")
-        assert error.code == "MCP_ERROR"
-        assert (
-            error.status_code == status.HTTP_502_BAD_GATEWAY
-        )  # Inherits from CoreServiceError
-        assert error.message == "MCP operation failed"
-        assert error.details.additional_context["tool"] == "test_tool"
-
     def test_agent_error(self):
         """Test CoreAgentError."""
         error = CoreAgentError("Agent failed", agent_type="test_agent")
@@ -350,7 +338,6 @@ class TestErrorInheritance:
             CoreKeyValidationError("test"),
             CoreDatabaseError("test"),
             CoreExternalAPIError("test"),
-            CoreMCPError("test"),
             CoreAgentError("test"),
         ]
 
@@ -360,12 +347,9 @@ class TestErrorInheritance:
 
     def test_service_specific_errors_inherit_from_service_error(self):
         """Test that service-specific errors inherit from CoreServiceError."""
-        mcp_error = CoreMCPError("test")
         agent_error = CoreAgentError("test")
 
-        assert isinstance(mcp_error, CoreServiceError)
         assert isinstance(agent_error, CoreServiceError)
-        assert isinstance(mcp_error, CoreTripSageError)
         assert isinstance(agent_error, CoreTripSageError)
 
 

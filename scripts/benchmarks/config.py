@@ -1,5 +1,4 @@
-"""
-Simple configuration for TripSage performance benchmarking.
+"""Simple configuration for TripSage performance benchmarking.
 
 Focused on core optimization claims:
 - 3x general query performance improvement

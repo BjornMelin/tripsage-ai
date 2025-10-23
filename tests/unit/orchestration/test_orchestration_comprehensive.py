@@ -1,12 +1,11 @@
-"""
-Comprehensive orchestration layer tests following ULTRATHINK principles.
+"""Orchestration layer tests following ULTRATHINK principles.
 
 This module provides complete test coverage for the TripSage orchestration system
 with modern patterns, async support, and 90%+ coverage targeting.
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -83,7 +82,7 @@ class MockAgentNode(BaseAgentNode):
                 "role": "assistant",
                 "content": f"Processed by {self.node_name}",
                 "agent": self.node_name,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
         )
 
@@ -105,7 +104,7 @@ def event_loop():
 
 @pytest.fixture
 def comprehensive_service_registry():
-    """Create comprehensive mock service registry.
+    """Create mock service registry.
 
     Returns:
         Mock service registry with all required services
@@ -176,9 +175,20 @@ def comprehensive_service_registry():
     registry.get_required_service = MagicMock(
         side_effect=lambda name: services.get(name, MagicMock())
     )
-    registry.get_optional_service = MagicMock(
-        side_effect=lambda name: services.get(name)
+    registry.get_optional_service = MagicMock(side_effect=services.get)
+    memory_bridge = MagicMock()
+
+    def hydrate_identity(state):  # type: ignore
+        return state
+
+    memory_bridge.hydrate_state = AsyncMock(side_effect=hydrate_identity)
+    memory_bridge.extract_and_persist_insights = AsyncMock(
+        return_value={"insights": "test"}
     )
+    registry.get_memory_bridge.return_value = memory_bridge
+    checkpoint_service = MagicMock()
+    checkpoint_service.get_async_checkpointer = AsyncMock(return_value=MemorySaver())
+    registry.get_checkpoint_service.return_value = checkpoint_service
 
     return registry
 
@@ -214,7 +224,7 @@ def mock_handoff_coordinator():
 def optimized_orchestrator(
     comprehensive_service_registry, mock_memory_bridge, mock_handoff_coordinator
 ):
-    """Create optimized orchestrator with comprehensive mocking.
+    """Create optimized orchestrator with mocking.
 
     Args:
         comprehensive_service_registry: Mock service registry
@@ -224,24 +234,23 @@ def optimized_orchestrator(
     Returns:
         TripSageOrchestrator instance for testing
     """
-    with patch(
-        "tripsage.orchestration.graph.get_memory_bridge",
-        return_value=mock_memory_bridge,
-    ):
-        with patch(
+    comprehensive_service_registry.get_memory_bridge.return_value = mock_memory_bridge
+
+    with (
+        patch(
             "tripsage.orchestration.graph.get_handoff_coordinator",
             return_value=mock_handoff_coordinator,
-        ):
-            with patch("tripsage.orchestration.graph.get_default_config"):
-                orchestrator = TripSageOrchestrator(
-                    service_registry=comprehensive_service_registry,
-                    checkpointer=MemorySaver(),
-                )
-                return orchestrator
+        ),
+        patch("tripsage.orchestration.graph.get_default_config"),
+    ):
+        return TripSageOrchestrator(
+            service_registry=comprehensive_service_registry,
+            checkpointer=MemorySaver(),
+        )
 
 
 class TestBaseAgentNodeComprehensive:
-    """Comprehensive tests for BaseAgentNode following ULTRATHINK principles."""
+    """Tests for BaseAgentNode following ULTRATHINK principles."""
 
     def test_agent_node_initialization_complete(self, comprehensive_service_registry):
         """Test complete agent node initialization.
@@ -284,7 +293,7 @@ class TestBaseAgentNodeComprehensive:
 
     @pytest.mark.asyncio
     async def test_error_handling_comprehensive(self, comprehensive_service_registry):
-        """Test comprehensive error handling in agent nodes.
+        """Test error handling in agent nodes.
 
         Args:
             comprehensive_service_registry: Mock service registry
@@ -360,10 +369,10 @@ class TestBaseAgentNodeComprehensive:
 
 
 class TestTravelPlanningStateModels:
-    """Comprehensive tests for Pydantic state models."""
+    """Tests for Pydantic state models."""
 
     def test_user_preferences_validation_comprehensive(self):
-        """Test comprehensive UserPreferences validation.
+        """Test UserPreferences validation.
 
         Tests all field types, validation rules, and edge cases.
         """
@@ -426,7 +435,7 @@ class TestTravelPlanningStateModels:
         # Create pending search
         search = SearchResult(
             search_id="search-123",
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             agent="accommodation_agent",
             parameters={"location": "Tokyo", "guests": 2},
             results=[],
@@ -485,7 +494,7 @@ class TestTravelPlanningStateModels:
         # Add search results
         search_result = SearchResult(
             search_id="flight-search-001",
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             agent="flight_agent",
             parameters={"origin": "JFK", "destination": "NRT"},
             results=[{"flight": "NH9"}],
@@ -497,7 +506,7 @@ class TestTravelPlanningStateModels:
         # Add tool tracking
         tool_call = ToolCallInfo(
             tool_name="search_flights",
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             parameters={"origin": "JFK"},
             status="success",
             execution_time_ms=1500.0,
@@ -529,34 +538,27 @@ class TestTripSageOrchestratorOptimized:
         Args:
             comprehensive_service_registry: Mock service registry
         """
-        with patch("tripsage.orchestration.graph.get_memory_bridge"):
-            with patch("tripsage.orchestration.graph.get_handoff_coordinator"):
-                with patch("tripsage.orchestration.graph.get_default_config"):
-                    # Test with minimal configuration - provide service registry
-                    # to avoid initialization errors
-                    orchestrator1 = TripSageOrchestrator(
-                        service_registry=comprehensive_service_registry
-                    )
-                    assert orchestrator1 is not None
-                    assert (
-                        orchestrator1.service_registry == comprehensive_service_registry
-                    )
+        with (
+            patch("tripsage.orchestration.graph.get_handoff_coordinator"),
+            patch("tripsage.orchestration.graph.get_default_config"),
+        ):
+            orchestrator1 = TripSageOrchestrator(
+                service_registry=comprehensive_service_registry
+            )
+            assert orchestrator1 is not None
+            assert orchestrator1.service_registry == comprehensive_service_registry
 
-                    # Test with service registry explicitly
-                    orchestrator2 = TripSageOrchestrator(
-                        service_registry=comprehensive_service_registry
-                    )
-                    assert (
-                        orchestrator2.service_registry == comprehensive_service_registry
-                    )
+            orchestrator2 = TripSageOrchestrator(
+                service_registry=comprehensive_service_registry
+            )
+            assert orchestrator2.service_registry == comprehensive_service_registry
 
-                    # Test with custom checkpointer
-                    custom_checkpointer = MemorySaver()
-                    orchestrator3 = TripSageOrchestrator(
-                        service_registry=comprehensive_service_registry,
-                        checkpointer=custom_checkpointer,
-                    )
-                    assert orchestrator3.checkpointer == custom_checkpointer
+            custom_checkpointer = MemorySaver()
+            orchestrator3 = TripSageOrchestrator(
+                service_registry=comprehensive_service_registry,
+                checkpointer=custom_checkpointer,
+            )
+            assert orchestrator3.checkpointer == custom_checkpointer
 
     @pytest.mark.asyncio
     async def test_async_initialization_robustness(self, optimized_orchestrator):
@@ -586,33 +588,32 @@ class TestTripSageOrchestratorOptimized:
         optimized_orchestrator.checkpointer = None
 
         # Test successful PostgreSQL initialization
-        with patch("tripsage.orchestration.graph.get_checkpoint_manager") as mock_cm:
-            mock_checkpointer = AsyncMock()
-            mock_cm.return_value.get_async_checkpointer = AsyncMock(
-                return_value=mock_checkpointer
-            )
+        mock_checkpointer = AsyncMock()
+        optimized_orchestrator.checkpoint_service = MagicMock()
+        optimized_orchestrator.checkpoint_service.get_async_checkpointer = AsyncMock(
+            return_value=mock_checkpointer
+        )
 
-            await optimized_orchestrator.initialize()
+        await optimized_orchestrator.initialize()
 
-            assert optimized_orchestrator.checkpointer == mock_checkpointer
-            mock_cm.assert_called_once()
+        assert optimized_orchestrator.checkpointer == mock_checkpointer
 
         # Reset for fallback test
         optimized_orchestrator._initialized = False
         optimized_orchestrator.checkpointer = None
 
         # Test fallback to MemorySaver
-        with patch("tripsage.orchestration.graph.get_checkpoint_manager") as mock_cm:
-            mock_cm.return_value.get_async_checkpointer = AsyncMock(
-                side_effect=Exception("PostgreSQL unavailable")
-            )
+        optimized_orchestrator.checkpoint_service = MagicMock()
+        optimized_orchestrator.checkpoint_service.get_async_checkpointer = AsyncMock(
+            side_effect=Exception("PostgreSQL unavailable")
+        )
 
-            await optimized_orchestrator.initialize()
+        await optimized_orchestrator.initialize()
 
-            assert isinstance(optimized_orchestrator.checkpointer, MemorySaver)
+        assert isinstance(optimized_orchestrator.checkpointer, MemorySaver)
 
     def test_routing_decision_matrix(self, optimized_orchestrator):
-        """Test comprehensive routing decision matrix.
+        """Test routing decision matrix.
 
         Args:
             optimized_orchestrator: Test orchestrator instance
@@ -648,7 +649,7 @@ class TestTripSageOrchestratorOptimized:
             assert result == expected, f"Failed for state {state}"
 
     def test_next_step_determination_matrix(self, optimized_orchestrator):
-        """Test comprehensive next step determination matrix.
+        """Test next step determination matrix.
 
         Args:
             optimized_orchestrator: Test orchestrator instance
@@ -716,7 +717,7 @@ class TestTripSageOrchestratorOptimized:
 
     @pytest.mark.asyncio
     async def test_message_processing_comprehensive(self, optimized_orchestrator):
-        """Test comprehensive message processing scenarios.
+        """Test message processing scenarios.
 
         Args:
             optimized_orchestrator: Test orchestrator instance
@@ -769,7 +770,7 @@ class TestTripSageOrchestratorOptimized:
 
     @pytest.mark.asyncio
     async def test_error_scenarios_comprehensive(self, optimized_orchestrator):
-        """Test comprehensive error handling scenarios.
+        """Test error handling scenarios.
 
         Args:
             optimized_orchestrator: Test orchestrator instance
@@ -856,7 +857,7 @@ class TestTripSageOrchestratorOptimized:
 
     @pytest.mark.asyncio
     async def test_handoff_coordination_comprehensive(self, optimized_orchestrator):
-        """Test comprehensive agent handoff coordination.
+        """Test agent handoff coordination.
 
         Args:
             optimized_orchestrator: Test orchestrator instance
@@ -889,7 +890,7 @@ class TestTripSageOrchestratorOptimized:
         assert state["handoff_context"]["to_agent"] == "accommodation_agent"
 
     def test_recovery_handling_comprehensive(self, optimized_orchestrator):
-        """Test comprehensive error recovery handling.
+        """Test error recovery handling.
 
         Args:
             optimized_orchestrator: Test orchestrator instance

@@ -5,9 +5,8 @@ conversation history, and travel preferences using the unified memory service.
 """
 
 import logging
-from typing import Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import (
@@ -15,6 +14,8 @@ from tripsage.api.core.dependencies import (
     RequiredPrincipalDep,
     get_principal_id,
 )
+from tripsage.api.limiting import limiter
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["memory"])
@@ -23,8 +24,8 @@ router = APIRouter(prefix="/memory", tags=["memory"])
 class ConversationMemoryRequest(BaseModel):
     """Request model for adding conversation memory."""
 
-    messages: List[Dict[str, str]] = Field(..., description="Conversation messages")
-    session_id: Optional[str] = Field(None, description="Session ID")
+    messages: list[dict[str, str]] = Field(..., description="Conversation messages")
+    session_id: str | None = Field(None, description="Session ID")
     context_type: str = Field("travel_planning", description="Context type")
 
 
@@ -38,12 +39,15 @@ class SearchMemoryRequest(BaseModel):
 class UpdatePreferencesRequest(BaseModel):
     """Request model for updating user preferences."""
 
-    preferences: Dict = Field(..., description="User preferences to update")
+    preferences: dict = Field(..., description="User preferences to update")
 
 
 @router.post("/conversation")
+@limiter.limit("30/minute")
 async def add_conversation_memory(
     request: ConversationMemoryRequest,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
 ):
@@ -51,6 +55,8 @@ async def add_conversation_memory(
 
     Args:
         request: Conversation memory request
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
 
@@ -73,13 +79,16 @@ async def add_conversation_memory(
             metadata=(
                 {"context_type": request.context_type} if request.context_type else None
             ),
+            trip_id=None,
+        )
+        from typing import Any, cast
+
+        return await cast(Any, memory_service).add_conversation_memory(
+            user_id, core_request
         )
 
-        result = await memory_service.add_conversation_memory(user_id, core_request)
-        return result
-
     except Exception as e:
-        logger.error(f"Add conversation memory failed: {str(e)}")
+        logger.exception("Add conversation memory failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to add conversation memory",
@@ -88,12 +97,16 @@ async def add_conversation_memory(
 
 @router.get("/context")
 async def get_user_context(
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
 ):
     """Get user context and preferences.
 
     Args:
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
 
@@ -102,11 +115,10 @@ async def get_user_context(
     """
     try:
         user_id = get_principal_id(principal)
-        context = await memory_service.get_user_context(user_id)
-        return context
+        return await memory_service.get_user_context(user_id)
 
     except Exception as e:
-        logger.error(f"Get user context failed: {str(e)}")
+        logger.exception("Get user context failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get user context",
@@ -114,8 +126,11 @@ async def get_user_context(
 
 
 @router.post("/search")
+@limiter.limit("30/minute")
 async def search_memories(
     request: SearchMemoryRequest,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
 ):
@@ -123,6 +138,8 @@ async def search_memories(
 
     Args:
         request: Search request
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
 
@@ -134,12 +151,18 @@ async def search_memories(
         # Convert router request to service request
         from tripsage_core.services.business.memory_service import MemorySearchRequest
 
-        search_request = MemorySearchRequest(query=request.query, limit=request.limit)
-        memories = await memory_service.search_memories(user_id, search_request)
+        search_request = MemorySearchRequest(
+            query=request.query, limit=request.limit, filters=None
+        )
+        from typing import Any, cast
+
+        memories = await cast(Any, memory_service).search_memories(
+            user_id, search_request
+        )
         return {"results": memories, "query": request.query, "total": len(memories)}
 
     except Exception as e:
-        logger.error(f"Search memories failed: {str(e)}")
+        logger.exception("Search memories failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to search memories",
@@ -149,6 +172,8 @@ async def search_memories(
 @router.put("/preferences")
 async def update_preferences(
     request: UpdatePreferencesRequest,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
 ):
@@ -156,6 +181,8 @@ async def update_preferences(
 
     Args:
         request: Preferences update request
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
 
@@ -164,13 +191,14 @@ async def update_preferences(
     """
     try:
         user_id = get_principal_id(principal)
-        result = await memory_service.update_user_preferences(
+        from typing import Any, cast
+
+        return await cast(Any, memory_service).update_user_preferences(
             user_id, request.preferences
         )
-        return result
 
     except Exception as e:
-        logger.error(f"Update preferences failed: {str(e)}")
+        logger.exception("Update preferences failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update preferences",
@@ -178,9 +206,12 @@ async def update_preferences(
 
 
 @router.post("/preference")
-async def add_preference(
+@limiter.limit("30/minute")
+async def add_preference(  # pylint: disable=too-many-positional-arguments
     key: str,
     value: str,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
     category: str = "general",
@@ -191,6 +222,8 @@ async def add_preference(
         key: Preference key
         value: Preference value
         category: Preference category
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
 
@@ -199,11 +232,14 @@ async def add_preference(
     """
     try:
         user_id = get_principal_id(principal)
-        result = await memory_service.add_user_preference(user_id, key, value, category)
-        return result
+        from typing import Any, cast
+
+        return await cast(Any, memory_service).add_user_preference(
+            user_id, key, value, category
+        )
 
     except Exception as e:
-        logger.error(f"Add preference failed: {str(e)}")
+        logger.exception("Add preference failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to add preference",
@@ -213,6 +249,8 @@ async def add_preference(
 @router.delete("/memory/{memory_id}")
 async def delete_memory(
     memory_id: str,
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
 ):
@@ -220,6 +258,8 @@ async def delete_memory(
 
     Args:
         memory_id: Memory ID to delete
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
 
@@ -228,7 +268,9 @@ async def delete_memory(
     """
     try:
         user_id = get_principal_id(principal)
-        success = await memory_service.delete_memory(user_id, memory_id)
+        from typing import Any, cast
+
+        success = await cast(Any, memory_service).delete_memory(user_id, memory_id)
 
         if not success:
             raise HTTPException(
@@ -240,7 +282,7 @@ async def delete_memory(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Delete memory failed: {str(e)}")
+        logger.exception("Delete memory failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete memory",
@@ -249,12 +291,16 @@ async def delete_memory(
 
 @router.get("/stats")
 async def get_memory_stats(
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
 ):
     """Get memory statistics for the user.
 
     Args:
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
 
@@ -263,11 +309,12 @@ async def get_memory_stats(
     """
     try:
         user_id = get_principal_id(principal)
-        stats = await memory_service.get_memory_stats(user_id)
-        return stats
+        from typing import Any, cast
+
+        return await cast(Any, memory_service).get_memory_stats(user_id)
 
     except Exception as e:
-        logger.error(f"Get memory stats failed: {str(e)}")
+        logger.exception("Get memory stats failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get memory stats",
@@ -276,6 +323,8 @@ async def get_memory_stats(
 
 @router.delete("/clear")
 async def clear_user_memory(
+    http_request: Request,
+    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
     confirm: bool = False,
@@ -284,6 +333,8 @@ async def clear_user_memory(
 
     Args:
         confirm: Confirmation flag
+        http_request: Raw HTTP request (required by SlowAPI for headers)
+        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
 
@@ -292,11 +343,12 @@ async def clear_user_memory(
     """
     try:
         user_id = get_principal_id(principal)
-        result = await memory_service.clear_user_memory(user_id, confirm)
-        return result
+        from typing import Any, cast
+
+        return await cast(Any, memory_service).clear_user_memory(user_id, confirm)
 
     except Exception as e:
-        logger.error(f"Clear memory failed: {str(e)}")
+        logger.exception("Clear memory failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to clear memory",

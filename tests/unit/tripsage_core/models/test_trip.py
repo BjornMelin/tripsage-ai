@@ -1,4 +1,4 @@
-"""Comprehensive unit tests for the unified Trip model.
+"""Unit tests for the unified Trip model.
 
 This test suite provides 90%+ coverage for the Trip model,
 testing all validations, properties, and business logic.
@@ -12,8 +12,8 @@ from pydantic import ValidationError
 
 from tripsage_core.models.schemas_common.enums import TripStatus, TripType
 from tripsage_core.models.trip import (
+    Budget,
     BudgetBreakdown,
-    EnhancedBudget,
     Trip,
     TripPreferences,
     TripVisibility,
@@ -53,19 +53,19 @@ class TestBudgetBreakdown:
             BudgetBreakdown(accommodation=-100.0)
 
 
-class TestEnhancedBudget:
-    """Test EnhancedBudget model."""
+class TestBudget:
+    """Test Budget model."""
 
-    def test_enhanced_budget_required_fields(self):
-        """Test EnhancedBudget with required fields only."""
-        budget = EnhancedBudget(total=5000.0)
+    def test_budget_breakdown_required_fields(self):
+        """Test Budget with required fields only."""
+        budget = Budget(total=5000.0)
         assert budget.total == 5000.0
         assert budget.currency == "USD"
         assert budget.spent == 0.0
         assert isinstance(budget.breakdown, BudgetBreakdown)
 
-    def test_enhanced_budget_full_data(self):
-        """Test EnhancedBudget with all fields."""
+    def test_budget_breakdown_full_data(self):
+        """Test Budget with all fields."""
         breakdown = BudgetBreakdown(
             accommodation=2000.0,
             transportation=1000.0,
@@ -73,23 +73,21 @@ class TestEnhancedBudget:
             activities=700.0,
             miscellaneous=500.0,
         )
-        budget = EnhancedBudget(
-            total=5000.0, currency="EUR", spent=1500.0, breakdown=breakdown
-        )
+        budget = Budget(total=5000.0, currency="EUR", spent=1500.0, breakdown=breakdown)
         assert budget.total == 5000.0
         assert budget.currency == "EUR"
         assert budget.spent == 1500.0
         assert budget.breakdown.accommodation == 2000.0
 
-    def test_enhanced_budget_negative_total_rejected(self):
-        """Test EnhancedBudget rejects negative total."""
+    def test_budget_breakdown_negative_total_rejected(self):
+        """Test Budget rejects negative total."""
         with pytest.raises(ValidationError):
-            EnhancedBudget(total=-1000.0)
+            Budget(total=-1000.0)
 
-    def test_enhanced_budget_negative_spent_rejected(self):
-        """Test EnhancedBudget rejects negative spent amount."""
+    def test_budget_breakdown_negative_spent_rejected(self):
+        """Test Budget rejects negative spent amount."""
         with pytest.raises(ValidationError):
-            EnhancedBudget(total=1000.0, spent=-100.0)
+            Budget(total=1000.0, spent=-100.0)
 
 
 class TestTripPreferences:
@@ -163,7 +161,7 @@ class TestTrip:
             "start_date": date.today() + timedelta(days=30),
             "end_date": date.today() + timedelta(days=44),
             "destination": "Europe",
-            "budget_breakdown": EnhancedBudget(
+            "budget_breakdown": Budget(
                 total=5000.0,
                 currency="EUR",
                 breakdown=BudgetBreakdown(
@@ -436,7 +434,7 @@ class TestTrip:
         """Test budget calculation edge cases."""
         # Zero budget
         data = valid_trip_data.copy()
-        data["budget_breakdown"] = EnhancedBudget(total=0.0)
+        data["budget_breakdown"] = Budget(total=0.0)
         trip = Trip(**data)
         assert trip.budget_per_day == 0.0
         assert trip.budget_per_person == 0.0
@@ -514,7 +512,7 @@ class TestTripIntegration:
             accessibility_needs=["step-free access", "hearing loop"],
         )
 
-        budget = EnhancedBudget(
+        budget = Budget(
             total=10000.0,
             currency="USD",
             spent=3500.0,

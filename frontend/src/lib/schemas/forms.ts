@@ -1,5 +1,5 @@
 /**
- * Comprehensive Zod schemas for form validation
+ * Zod schemas for form validation
  * Runtime validation for all form inputs and user data
  */
 

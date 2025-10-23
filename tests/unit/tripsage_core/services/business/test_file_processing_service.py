@@ -1,4 +1,4 @@
-"""Comprehensive test suite for FileProcessingService.
+"""Test suite for FileProcessingService.
 
 This module tests the FileProcessingService with realistic test data
 that aligns with the actual service implementation and validation logic.

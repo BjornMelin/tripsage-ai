@@ -1,14 +1,14 @@
-"""Enhanced authentication middleware for FastAPI.
+"""Authentication middleware for FastAPI.
 
 This module provides robust authentication middleware supporting both JWT tokens
-(for frontend) and API Keys (for agents), populating request.state.principal
-with authenticated entity information. Includes comprehensive audit logging
+(for frontend) and API keys (for agents), populating request.state.principal
+with authenticated entity information. Includes audit logging
 for all authentication events.
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import Callable, Optional, Union
+from collections.abc import Callable
+from datetime import UTC, datetime
 
 from fastapi import Request, Response
 from pydantic import BaseModel, ConfigDict
@@ -19,8 +19,6 @@ from starlette.types import ASGIApp
 from tripsage.api.core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
-)
-from tripsage_core.exceptions.exceptions import (
     CoreKeyValidationError as KeyValidationError,
 )
 from tripsage_core.services.business.api_key_service import ApiKeyService
@@ -33,6 +31,7 @@ from tripsage_core.services.business.audit_logging_service import (
     audit_security_event,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,8 +40,8 @@ class Principal(BaseModel):
 
     id: str
     type: str  # "user" or "agent"
-    email: Optional[str] = None
-    service: Optional[str] = None  # For API keys
+    email: str | None = None
+    service: str | None = None  # For API keys
     auth_method: str  # "jwt" or "api_key"
     scopes: list[str] = []
     metadata: dict = {}
@@ -62,20 +61,20 @@ class Principal(BaseModel):
 
 
 class AuthenticationMiddleware(BaseHTTPMiddleware):
-    """Enhanced middleware for JWT and API Key authentication.
+    """Authentication middleware for JWT and API key flows.
 
     This middleware handles:
     - JWT token authentication for frontend users
     - API key authentication for agents and services
     - Populating request.state.principal with authenticated entity info
-    - Proper error responses for different authentication failures
+    - Proper error responses tailored to each authentication failure
     """
 
     def __init__(
         self,
         app: ASGIApp,
-        settings: Optional[Settings] = None,
-        key_service: Optional[ApiKeyService] = None,
+        settings: Settings | None = None,
+        key_service: ApiKeyService | None = None,
     ):
         """Initialize AuthenticationMiddleware.
 
@@ -132,7 +131,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # Ensure services are initialized
         await self._ensure_services()
 
-        # Enhanced security: validate request headers
+        # Perform header validation for security
         if not self._validate_request_headers(request):
             # Log suspicious header activity
             await audit_security_event(
@@ -163,7 +162,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         if authorization_header and authorization_header.startswith("Bearer "):
             try:
                 token = authorization_header.replace("Bearer ", "")
-                # Enhanced security: validate token format
+                # Validate token format to enforce security
                 if not self._validate_token_format(token):
                     raise AuthenticationError("Invalid token format")
                 principal = await self._authenticate_jwt(token)
@@ -191,14 +190,15 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     user_id="unknown",
                     ip_address=self._get_client_ip(request),
                     user_agent=request.headers.get("User-Agent"),
-                    message=f"JWT authentication failed: {str(e)}",
+                    message=f"JWT authentication failed: {e!s}",
                     endpoint=request.url.path,
                     method=request.method,
                     error_type=type(e).__name__,
                 )
 
                 logger.warning(
-                    f"JWT authentication failed: {e}",
+                    "JWT authentication failed: %s",
+                    e,
                     extra={
                         "ip_address": self._get_client_ip(request),
                         "user_agent": request.headers.get("User-Agent", "Unknown")[
@@ -213,7 +213,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             api_key_header = request.headers.get("X-API-Key")
             if api_key_header:
                 try:
-                    # Enhanced security: validate API key format
+                    # Validate API key format before use
                     if not self._validate_api_key_format(api_key_header):
                         raise KeyValidationError("Invalid API key format")
                     principal = await self._authenticate_api_key(api_key_header)
@@ -248,7 +248,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                             if len(parts) >= 3:
                                 service = parts[1]
                                 key_id = parts[2]
-                    except Exception:
+                    except (ValueError, IndexError):
                         pass
 
                     # Log failed API key authentication
@@ -258,14 +258,15 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                         key_id=key_id,
                         service=service,
                         ip_address=self._get_client_ip(request),
-                        message=f"API key authentication failed: {str(e)}",
+                        message=f"API key authentication failed: {e!s}",
                         endpoint=request.url.path,
                         method=request.method,
                         error_type=type(e).__name__,
                     )
 
                     logger.warning(
-                        f"API key authentication failed: {e}",
+                        "API key authentication failed: %s",
+                        e,
                         extra={
                             "ip_address": self._get_client_ip(request),
                             "user_agent": user_agent,
@@ -279,7 +280,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             user_agent = request.headers.get("User-Agent", "Unknown")[:200]
             error_msg = str(auth_error) if auth_error else "No credentials provided"
 
-            # Log comprehensive authentication failure
+            # Log authentication failure
             await audit_security_event(
                 event_type=AuditEventType.ACCESS_DENIED,
                 severity=AuditSeverity.MEDIUM,
@@ -317,7 +318,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # Set authenticated principal in request state
         request.state.principal = principal
 
-        # Enhanced logging with security context
+        # Enrich logging with security context
         logger.info(
             "Request authenticated",
             extra={
@@ -360,11 +361,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             "/api/auth/token",  # OAuth2 token endpoint
         ]
 
-        for skip_path in skip_paths:
-            if path.startswith(skip_path):
-                return True
-
-        return False
+        return any(path.startswith(skip_path) for skip_path in skip_paths)
 
     async def _authenticate_jwt(self, token: str) -> Principal:
         """Authenticate using JWT token.
@@ -415,11 +412,11 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
         except jwt.ExpiredSignatureError:
             raise AuthenticationError("Token has expired") from None
-        except jwt.InvalidTokenError as e:
-            logger.error(f"JWT InvalidTokenError: {e}")
+        except jwt.InvalidTokenError:
+            logger.exception("JWT InvalidTokenError")
             raise AuthenticationError("Invalid token") from None
         except Exception as e:
-            logger.error(f"JWT authentication error: {e}")
+            logger.exception("JWT authentication error")
             raise AuthenticationError("Invalid authentication token") from e
 
     async def _authenticate_api_key(self, api_key: str) -> Principal:
@@ -482,7 +479,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     metadata={
                         "key_id": key_id,
                         "service": service,
-                        "validated_at": datetime.now(timezone.utc).isoformat(),
+                        "validated_at": datetime.now(UTC).isoformat(),
                         **key_metadata,  # Additional metadata
                     },
                 )
@@ -508,11 +505,11 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         except (AuthenticationError, KeyValidationError):
             raise
         except Exception as e:
-            logger.error(f"API key authentication error: {e}")
+            logger.exception("API key authentication error")
             raise AuthenticationError("Invalid API key") from e
 
     def _create_auth_error_response(
-        self, error: Union[AuthenticationError, KeyValidationError]
+        self, error: AuthenticationError | KeyValidationError
     ) -> Response:
         """Create an authentication error response.
 

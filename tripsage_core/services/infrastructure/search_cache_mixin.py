@@ -1,20 +1,20 @@
-"""
-Search cache mixin for standardized caching patterns across services.
+"""Search cache mixin for standardized caching patterns across services.
 
-This module provides a reusable mixin that implements common caching patterns
-for search operations, reducing code duplication and ensuring consistency.
+Provides a reusable mixin with common caching patterns for search operations.
 """
 
 import hashlib
 import json
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
-from typing import Any, Dict, Generic, Optional, TypeVar
+from datetime import UTC, datetime
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
+from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.infrastructure.cache_service import CacheService
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,15 +23,17 @@ SearchRequestType = TypeVar("SearchRequestType", bound=BaseModel)
 SearchResponseType = TypeVar("SearchResponseType", bound=BaseModel)
 
 
-class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
-    """
-    Mixin for standardized search caching patterns.
+class SearchCacheMixin[
+    SearchRequestType: BaseModel,
+    SearchResponseType: BaseModel,
+](ABC):
+    """Mixin for standardized search caching patterns.
 
     This mixin provides:
     - Consistent cache key generation
     - Automatic cache TTL management
     - Cache hit/miss metrics
-    - Seamless integration with DragonflyDB cache service
+    - Seamless integration with Upstash Redis cache service
     - Type-safe caching operations
 
     Usage:
@@ -57,14 +59,13 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
     """
 
     # These attributes must be set by the implementing class
-    _cache_service: Optional[CacheService]
+    _cache_service: CacheService | None
     _cache_ttl: int  # TTL in seconds
     _cache_prefix: str  # Prefix for cache keys
 
     @abstractmethod
-    def get_cache_fields(self, request: SearchRequestType) -> Dict[str, Any]:
-        """
-        Extract fields from the search request to use for cache key generation.
+    def get_cache_fields(self, request: SearchRequestType) -> dict[str, Any]:
+        """Extract fields from the search request to use for cache key generation.
 
         This method should return a dictionary of fields that uniquely identify
         the search request. Only include fields that affect search results.
@@ -75,18 +76,9 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
         Returns:
             Dictionary of fields to include in cache key
         """
-        pass
 
     def generate_cache_key(self, request: SearchRequestType) -> str:
-        """
-        Generate a consistent cache key for the search request.
-
-        Args:
-            request: The search request
-
-        Returns:
-            Cache key string
-        """
+        """Generate a consistent cache key for the search request."""
         # Get fields to include in cache key
         cache_fields = self.get_cache_fields(request)
 
@@ -104,16 +96,8 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
 
     async def get_cached_search(
         self, request: SearchRequestType
-    ) -> Optional[SearchResponseType]:
-        """
-        Get cached search results if available.
-
-        Args:
-            request: The search request
-
-        Returns:
-            Cached response if available and valid, None otherwise
-        """
+    ) -> SearchResponseType | None:
+        """Get cached search results if available."""
         if not self._cache_service:
             return None
 
@@ -136,23 +120,20 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
                 # The implementing class should store the response class
                 response_class = self._get_response_class()
                 return response_class(**cached_data)
-            else:
-                logger.debug(
-                    "Cache miss for search request",
-                    extra={
-                        "cache_key": cache_key,
-                        "service": self._cache_prefix,
-                    },
-                )
-                return None
-
-        except Exception as e:
-            logger.warning(
-                "Failed to get cached search results",
+            logger.debug(
+                "Cache miss for search request",
                 extra={
-                    "error": str(e),
+                    "cache_key": cache_key,
                     "service": self._cache_prefix,
                 },
+            )
+            return None
+
+        except CoreServiceError as e:
+            # Limit noisy cache failures; surface as cache miss.
+            logger.warning(
+                "Failed to get cached search results",
+                extra={"error": str(e), "service": self._cache_prefix},
             )
             return None
 
@@ -160,10 +141,9 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
         self,
         request: SearchRequestType,
         response: SearchResponseType,
-        ttl: Optional[int] = None,
+        ttl: int | None = None,
     ) -> bool:
-        """
-        Cache search results.
+        """Cache search results.
 
         Args:
             request: The search request
@@ -184,7 +164,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             response_data = response.model_dump()
 
             # Add metadata
-            response_data["_cached_at"] = datetime.now(timezone.utc).isoformat()
+            response_data["_cached_at"] = datetime.now(UTC).isoformat()
             response_data["_cache_version"] = "1.0"
 
             # Store in cache
@@ -212,8 +192,8 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
 
             return success
 
-        except Exception as e:
-            logger.error(
+        except CoreServiceError as e:
+            logger.exception(
                 "Error caching search results",
                 extra={
                     "error": str(e),
@@ -223,15 +203,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             return False
 
     async def invalidate_cache(self, request: SearchRequestType) -> bool:
-        """
-        Invalidate cached results for a specific search request.
-
-        Args:
-            request: The search request to invalidate
-
-        Returns:
-            True if cache was invalidated, False otherwise
-        """
+        """Invalidate cached results for a specific search request."""
         if not self._cache_service:
             return False
 
@@ -250,8 +222,8 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
 
             return bool(deleted)
 
-        except Exception as e:
-            logger.error(
+        except CoreServiceError as e:
+            logger.exception(
                 "Error invalidating cache",
                 extra={
                     "error": str(e),
@@ -261,8 +233,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             return False
 
     async def invalidate_cache_pattern(self, pattern: str) -> int:
-        """
-        Invalidate all cached results matching a pattern.
+        """Invalidate all cached results matching a pattern.
 
         Args:
             pattern: Pattern to match (e.g., "my_service:search:*")
@@ -289,8 +260,8 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
 
             return deleted
 
-        except Exception as e:
-            logger.error(
+        except CoreServiceError as e:
+            logger.exception(
                 "Error invalidating cache pattern",
                 extra={
                     "error": str(e),
@@ -300,9 +271,8 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             )
             return 0
 
-    async def get_cache_stats(self) -> Dict[str, Any]:
-        """
-        Get cache statistics for this service.
+    async def get_cache_stats(self) -> dict[str, Any]:
+        """Get cache statistics for this service.
 
         Returns:
             Dictionary with cache statistics
@@ -326,8 +296,8 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
                 "cache_info": info,
             }
 
-        except Exception as e:
-            logger.error(
+        except CoreServiceError as e:
+            logger.exception(
                 "Error getting cache stats",
                 extra={
                     "error": str(e),
@@ -342,8 +312,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
 
     @abstractmethod
     def _get_response_class(self) -> type[SearchResponseType]:
-        """
-        Get the response class for deserialization.
+        """Get the response class for deserialization.
 
         This method must be implemented by the concrete class to provide
         the proper response type for cache deserialization.
@@ -351,18 +320,16 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
         Returns:
             The response class type
         """
-        pass
 
 
-class SimpleCacheMixin:
-    """
-    Simplified cache mixin for non-search caching patterns.
+class CacheMixin:
+    """Cache mixin for non-search caching patterns.
 
     This mixin provides basic caching functionality for general use cases
     that don't follow the search request/response pattern.
     """
 
-    _cache_service: Optional[CacheService]
+    _cache_service: CacheService | None
     _cache_ttl: int
     _cache_prefix: str
 
@@ -374,7 +341,7 @@ class SimpleCacheMixin:
         full_key = f"{self._cache_prefix}:{key}"
         return await self._cache_service.get_json(full_key, default)
 
-    async def cache_set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def cache_set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Set a value in cache."""
         if not self._cache_service:
             return False

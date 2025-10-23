@@ -5,9 +5,9 @@ Consolidates both request and response schemas for API key operations.
 """
 
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
+
 
 # ===== Request Schemas =====
 
@@ -18,8 +18,8 @@ class ApiKeyCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     service: str = Field(min_length=1, max_length=255)
     key: str
-    description: Optional[str] = None
-    expires_at: Optional[datetime] = None
+    description: str | None = None
+    expires_at: datetime | None = None
 
 
 class ApiKeyValidateRequest(BaseModel):
@@ -44,12 +44,12 @@ class ApiKeyResponse(BaseModel):
     id: str
     name: str
     service: str
-    description: Optional[str] = None
+    description: str | None = None
     created_at: datetime
     updated_at: datetime
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
     is_valid: bool = True
-    last_used: Optional[datetime] = None
+    last_used: datetime | None = None
 
 
 class ApiKeyValidateResponse(BaseModel):
@@ -63,5 +63,5 @@ class ApiKeyValidateResponse(BaseModel):
 class ApiKeyListResponse(BaseModel):
     """API key list response model."""
 
-    api_keys: List[ApiKeyResponse] = Field(description="List of API keys")
+    api_keys: list[ApiKeyResponse] = Field(description="List of API keys")
     count: int = Field(description="Number of API keys")

@@ -1,6 +1,6 @@
 """Tests for TripNote model."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -18,7 +18,7 @@ def test_trip_note_creation(sample_trip_note_dict):
 
 def test_trip_note_optional_fields():
     """Test creating a TripNote model with minimal required fields."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     minimal_trip_note = TripNote(
         trip_id=1,
         timestamp=now,
@@ -32,7 +32,7 @@ def test_trip_note_optional_fields():
 
 def test_trip_note_validation_content():
     """Test content validation."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Test empty content
     with pytest.raises(ValidationError) as excinfo:

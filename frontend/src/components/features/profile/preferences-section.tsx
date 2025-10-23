@@ -86,7 +86,7 @@ export function PreferencesSection() {
     }
   };
 
-  const toggleAdvancedSetting = async (setting: string, enabled: boolean) => {
+  const toggleAdditionalSetting = async (setting: string, enabled: boolean) => {
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -338,12 +338,12 @@ export function PreferencesSection() {
         </CardContent>
       </Card>
 
-      {/* Advanced Settings */}
+      {/* Additional Settings */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5" />
-            Advanced Settings
+            Additional Settings
           </CardTitle>
           <CardDescription>
             Configure advanced features and experimental options.
@@ -360,7 +360,7 @@ export function PreferencesSection() {
             <Switch
               defaultChecked={true}
               onCheckedChange={(enabled) =>
-                toggleAdvancedSetting("autoSaveSearches", enabled)
+                toggleAdditionalSetting("autoSaveSearches", enabled)
               }
             />
           </div>
@@ -375,7 +375,7 @@ export function PreferencesSection() {
             <Switch
               defaultChecked={true}
               onCheckedChange={(enabled) =>
-                toggleAdvancedSetting("smartSuggestions", enabled)
+                toggleAdditionalSetting("smartSuggestions", enabled)
               }
             />
           </div>
@@ -390,7 +390,7 @@ export function PreferencesSection() {
             <Switch
               defaultChecked={false}
               onCheckedChange={(enabled) =>
-                toggleAdvancedSetting("locationServices", enabled)
+                toggleAdditionalSetting("locationServices", enabled)
               }
             />
           </div>
@@ -404,7 +404,7 @@ export function PreferencesSection() {
             </div>
             <Switch
               defaultChecked={true}
-              onCheckedChange={(enabled) => toggleAdvancedSetting("analytics", enabled)}
+              onCheckedChange={(enabled) => toggleAdditionalSetting("analytics", enabled)}
             />
           </div>
         </CardContent>

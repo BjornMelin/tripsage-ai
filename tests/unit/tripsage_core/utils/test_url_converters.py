@@ -1,8 +1,7 @@
-"""
-Unit tests for database URL conversion utilities.
+"""Unit tests for database URL conversion utilities.
 
 Tests the conversion between Supabase HTTPS URLs and PostgreSQL connection
-strings with comprehensive edge cases and security validation.
+strings with edge cases and security validation.
 """
 
 import pytest

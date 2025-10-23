@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""
-Database Service Integration Performance Tests
+"""Database Service Integration Performance Tests.
 
-This module provides comprehensive performance testing for database service integration:
+This module provides performance testing for database service integration:
 - Connection pool performance
 - Query execution performance
 - Transaction performance
@@ -16,8 +15,8 @@ Uses pytest-benchmark for accurate performance measurements.
 """
 
 import asyncio
+import contextlib
 import logging
-from typing import Optional
 
 import numpy as np
 import pytest
@@ -26,6 +25,7 @@ from pydantic import BaseModel
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.cache_service import CacheService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
+
 
 logger = logging.getLogger(__name__)
 
@@ -37,21 +37,15 @@ class DatabaseMetrics(BaseModel):
     duration_ms: float
     success: bool
     connection_count: int
-    memory_usage_mb: Optional[float] = None
-    query_complexity: Optional[str] = None
-    cache_hit: Optional[bool] = None
+    memory_usage_mb: float | None = None
+    query_complexity: str | None = None
+    cache_hit: bool | None = None
 
 
 @pytest.fixture
 def db_settings():
     """Database settings for performance testing."""
-    settings = get_settings()
-    # Optimize for testing
-    settings.DATABASE_POOL_SIZE = 20
-    settings.DATABASE_MAX_OVERFLOW = 30
-    settings.DATABASE_POOL_TIMEOUT = 30
-    settings.ENABLE_QUERY_CACHE = True
-    return settings
+    return get_settings()
 
 
 @pytest.fixture
@@ -68,7 +62,7 @@ async def cache_service():
     """Cache service instance for testing."""
     service = CacheService()
     yield service
-    await service.close()
+    await service.disconnect()
 
 
 class TestDatabaseConnectionPerformance:
@@ -95,7 +89,6 @@ class TestDatabaseConnectionPerformance:
     @pytest.mark.database
     async def test_connection_pool_performance(self, benchmark, db_settings):
         """Benchmark connection pool acquisition and release."""
-
         service = DatabaseService(settings=db_settings)
         await service.connect()
 
@@ -126,7 +119,6 @@ class TestDatabaseConnectionPerformance:
     @pytest.mark.database
     async def test_concurrent_connection_handling(self, benchmark, db_settings):
         """Benchmark handling multiple concurrent database connections."""
-
         service = DatabaseService(settings=db_settings)
         await service.connect()
 
@@ -172,8 +164,8 @@ class TestDatabaseQueryPerformance:
             try:
                 result = await database_service.execute_sql("SELECT 1 as test_value")
                 return len(result) if result else 0
-            except Exception as e:
-                logger.warning(f"Query failed: {e}")
+            except (RuntimeError, TimeoutError, OSError) as e:
+                logger.warning("Query failed: %s", e)
                 return 0
 
         result = await benchmark.pedantic(
@@ -193,8 +185,8 @@ class TestDatabaseQueryPerformance:
                     "SELECT $1::text as param_value", ("test_parameter",)
                 )
                 return len(result) if result else 0
-            except Exception as e:
-                logger.warning(f"Parameterized query failed: {e}")
+            except (RuntimeError, TimeoutError, OSError) as e:
+                logger.warning("Parameterized query failed: %s", e)
                 return 0
 
         result = await benchmark.pedantic(
@@ -219,8 +211,8 @@ class TestDatabaseQueryPerformance:
                 """
                 result = await database_service.execute_sql(query)
                 return len(result) if result else 0
-            except Exception as e:
-                logger.warning(f"Complex join failed: {e}")
+            except (RuntimeError, TimeoutError, OSError) as e:
+                logger.warning("Complex join failed: %s", e)
                 return 0
 
         result = await benchmark.pedantic(execute_complex_join, rounds=20, iterations=1)
@@ -230,7 +222,6 @@ class TestDatabaseQueryPerformance:
     @pytest.mark.database
     async def test_bulk_insert_performance(self, benchmark, database_service):
         """Benchmark bulk insert performance."""
-
         # Setup test table
         try:
             await database_service.execute_sql("""
@@ -241,8 +232,8 @@ class TestDatabaseQueryPerformance:
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
-        except Exception as e:
-            logger.warning(f"Table creation failed: {e}")
+        except (RuntimeError, OSError) as e:
+            logger.warning("Table creation failed: %s", e)
 
         async def execute_bulk_insert():
             """Execute bulk insert operations."""
@@ -254,17 +245,15 @@ class TestDatabaseQueryPerformance:
                         (f"bulk_test_{i}", i * 10),
                     )
                 return 5
-            except Exception as e:
-                logger.warning(f"Bulk insert failed: {e}")
+            except (RuntimeError, TimeoutError, OSError) as e:
+                logger.warning("Bulk insert failed: %s", e)
                 return 0
             finally:
                 # Cleanup
-                try:
+                with contextlib.suppress(Exception):
                     await database_service.execute_sql(
                         "DELETE FROM test_bulk_insert WHERE name LIKE 'bulk_test_%'"
                     )
-                except Exception:
-                    pass
 
         result = await benchmark.pedantic(execute_bulk_insert, rounds=10, iterations=1)
         assert result >= 0
@@ -285,8 +274,8 @@ class TestDatabaseTransactionPerformance:
                     await database_service.execute_sql("SELECT 1")
                     await database_service.execute_sql("SELECT 2")
                 return True
-            except Exception as e:
-                logger.warning(f"Transaction failed: {e}")
+            except (RuntimeError, TimeoutError, OSError) as e:
+                logger.warning("Transaction failed: %s", e)
                 return False
 
         result = await benchmark.pedantic(
@@ -298,9 +287,8 @@ class TestDatabaseTransactionPerformance:
     @pytest.mark.database
     async def test_complex_transaction_performance(self, benchmark, database_service):
         """Benchmark complex transaction with multiple operations."""
-
         # Setup test table
-        try:
+        with contextlib.suppress(Exception):
             await database_service.execute_sql("""
                 CREATE TABLE IF NOT EXISTS test_transaction (
                     id SERIAL PRIMARY KEY,
@@ -308,8 +296,6 @@ class TestDatabaseTransactionPerformance:
                     status TEXT DEFAULT 'pending'
                 )
             """)
-        except Exception:
-            pass
 
         async def execute_complex_transaction():
             """Execute a complex transaction with multiple operations."""
@@ -335,17 +321,15 @@ class TestDatabaseTransactionPerformance:
                     )
 
                 return len(result) if result else 0
-            except Exception as e:
-                logger.warning(f"Complex transaction failed: {e}")
+            except (RuntimeError, TimeoutError, OSError) as e:
+                logger.warning("Complex transaction failed: %s", e)
                 return 0
             finally:
                 # Cleanup
-                try:
+                with contextlib.suppress(Exception):
                     await database_service.execute_sql(
                         "DELETE FROM test_transaction WHERE data = 'test_data'"
                     )
-                except Exception:
-                    pass
 
         result = await benchmark.pedantic(
             execute_complex_transaction, rounds=15, iterations=1
@@ -363,8 +347,8 @@ class TestDatabaseTransactionPerformance:
                 async with database_service.transaction():
                     await database_service.execute_sql("SELECT 1")
                     # Simulate an error to trigger rollback
-                    raise Exception("Intentional rollback")
-            except Exception:
+                    raise RuntimeError("Intentional rollback")
+            except RuntimeError:
                 # Expected exception for rollback
                 return True
             return False
@@ -383,7 +367,6 @@ class TestDatabaseCacheIntegration:
     @pytest.mark.cache
     async def test_cached_query_performance(self, benchmark, database_service):
         """Benchmark cached query performance."""
-
         # Mock cache for testing
         mock_cache = {}
 
@@ -402,8 +385,8 @@ class TestDatabaseCacheIntegration:
                 )
                 mock_cache[cache_key] = result
                 return result
-            except Exception as e:
-                logger.warning(f"Cached query failed: {e}")
+            except (RuntimeError, TimeoutError, OSError) as e:
+                logger.warning("Cached query failed: %s", e)
                 return []
 
         # First run - should hit database
@@ -424,18 +407,12 @@ class TestDatabaseCacheIntegration:
     @pytest.mark.cache
     async def test_cache_invalidation_performance(self, benchmark):
         """Benchmark cache invalidation performance."""
-
         mock_cache = {f"key_{i}": f"value_{i}" for i in range(100)}
 
         async def invalidate_cache_pattern():
             """Invalidate cache entries matching a pattern."""
             pattern = "key_1"
-            keys_to_remove = []
-
-            # Find keys matching pattern
-            for key in mock_cache.keys():
-                if pattern in key:
-                    keys_to_remove.append(key)
+            keys_to_remove = [key for key in mock_cache if pattern in key]
 
             # Remove matching keys
             for key in keys_to_remove:
@@ -468,8 +445,9 @@ class TestDatabaseVectorSearchPerformance:
                 )
 
                 # Generate test vectors
-                vector1 = np.random.random(384).tolist()
-                vector2 = np.random.random(384).tolist()
+                rng = np.random.default_rng()
+                vector1 = rng.random(384).tolist()
+                vector2 = rng.random(384).tolist()
 
                 # Perform vector similarity calculation
                 result = await database_service.execute_sql(
@@ -478,8 +456,8 @@ class TestDatabaseVectorSearchPerformance:
 
                 return len(result) if result else 0
 
-            except Exception as e:
-                logger.warning(f"Vector search not available: {e}")
+            except (RuntimeError, NotImplementedError, OSError) as e:
+                logger.warning("Vector search not available: %s", e)
                 # Return mock result for testing
                 return 1
 
@@ -500,8 +478,8 @@ class TestDatabaseVectorSearchPerformance:
                 await asyncio.sleep(0.005)  # Simulate index creation
                 await asyncio.sleep(0.002)  # Simulate index usage
                 return True
-            except Exception as e:
-                logger.warning(f"Vector index test failed: {e}")
+            except (RuntimeError, NotImplementedError, OSError) as e:
+                logger.warning("Vector index test failed: %s", e)
                 return False
 
         result = await benchmark.pedantic(
@@ -540,8 +518,8 @@ class TestDatabaseMemoryUsage:
                         processed_count += 1
 
                 return processed_count
-            except Exception as e:
-                logger.warning(f"Large resultset test failed: {e}")
+            except (RuntimeError, TimeoutError, OSError, MemoryError) as e:
+                logger.warning("Large resultset test failed: %s", e)
                 return 0
 
         result = await benchmark.pedantic(
@@ -567,20 +545,16 @@ class TestDatabaseMemoryUsage:
 
                 # Simulate concurrent operations
                 for service in services:
-                    try:
+                    with contextlib.suppress(Exception):
                         await service.execute_sql("SELECT 1")
-                    except Exception:
-                        pass
 
                 return len(services)
 
             finally:
                 # Cleanup
                 for service in services:
-                    try:
+                    with contextlib.suppress(Exception):
                         await service.close()
-                    except Exception:
-                        pass
 
         result = await benchmark.pedantic(
             test_pool_memory_efficiency, rounds=5, iterations=1
@@ -613,8 +587,8 @@ class TestDatabaseErrorHandlingPerformance:
                 result = await service.execute_sql("SELECT 1")
                 return len(result) if result else 0
 
-            except Exception as e:
-                logger.warning(f"Connection recovery failed: {e}")
+            except (RuntimeError, TimeoutError, OSError, ConnectionError) as e:
+                logger.warning("Connection recovery failed: %s", e)
                 return 0
             finally:
                 await service.close()
@@ -641,11 +615,11 @@ class TestDatabaseErrorHandlingPerformance:
                 result = await database_service.execute_sql("SELECT 1")
                 return len(result) if result else 0
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # Handle timeout gracefully
                 return -1
-            except Exception as e:
-                logger.warning(f"Query timeout test failed: {e}")
+            except (RuntimeError, OSError) as e:
+                logger.warning("Query timeout test failed: %s", e)
                 return 0
 
         result = await benchmark.pedantic(test_query_timeout, rounds=20, iterations=1)
@@ -661,9 +635,8 @@ class TestDatabaseIntegrationWorkflows:
         self, benchmark, database_service
     ):
         """Benchmark a complete CRUD workflow."""
-
         # Setup test table
-        try:
+        with contextlib.suppress(Exception):
             await database_service.execute_sql("""
                 CREATE TABLE IF NOT EXISTS test_crud_workflow (
                     id SERIAL PRIMARY KEY,
@@ -673,8 +646,6 @@ class TestDatabaseIntegrationWorkflows:
                     updated_at TIMESTAMP DEFAULT NOW()
                 )
             """)
-        except Exception:
-            pass
 
         async def complete_crud_workflow():
             """Execute a complete CRUD workflow."""
@@ -709,8 +680,8 @@ class TestDatabaseIntegrationWorkflows:
 
                 return 1
 
-            except Exception as e:
-                logger.warning(f"CRUD workflow failed: {e}")
+            except (RuntimeError, TimeoutError, OSError) as e:
+                logger.warning("CRUD workflow failed: %s", e)
                 return 0
 
         result = await benchmark.pedantic(
@@ -722,7 +693,6 @@ class TestDatabaseIntegrationWorkflows:
         self, benchmark, database_service
     ):
         """Benchmark database operations with cache integration."""
-
         mock_cache = {}
 
         async def database_cache_workflow():
@@ -746,8 +716,8 @@ class TestDatabaseIntegrationWorkflows:
 
                 return []
 
-            except Exception as e:
-                logger.warning(f"Database cache workflow failed: {e}")
+            except (RuntimeError, TimeoutError, OSError) as e:
+                logger.warning("Database cache workflow failed: %s", e)
                 return []
 
         # First run (database hit)
@@ -768,12 +738,10 @@ class TestDatabaseIntegrationWorkflows:
 @pytest.mark.performance
 @pytest.mark.database
 def test_database_performance_regression_detection():
-    """
-    Performance regression detection for database operations.
+    """Performance regression detection for database operations.
 
     Defines performance thresholds for database operations to detect regressions.
     """
-
     # Define performance thresholds (in milliseconds)
     PERFORMANCE_THRESHOLDS = {
         "connection_establishment": 500,  # 500ms max

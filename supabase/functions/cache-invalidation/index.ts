@@ -3,7 +3,7 @@
  * 
  * Handles cache invalidation operations including:
  * - Database change event processing
- * - Redis/DragonflyDB cache clearing
+ * - Upstash Redis cache clearing
  * - Search cache table updates
  * - Application layer notifications
  * 
@@ -12,7 +12,7 @@
 
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.1";
-import { connect } from "https://deno.land/x/redis@v0.31.0/mod.ts";
+import { Redis } from "https://deno.land/x/upstash_redis@v1.22.0/mod.ts";
 
 // Type definitions
 interface WebhookPayload {
@@ -42,8 +42,8 @@ interface CacheInvalidationResult {
 // Environment variables
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const REDIS_URL = Deno.env.get('REDIS_URL') || 'redis://localhost:6379';
-const REDIS_PASSWORD = Deno.env.get('REDIS_PASSWORD');
+const UPSTASH_REDIS_REST_URL = Deno.env.get('UPSTASH_REDIS_REST_URL')!;
+const UPSTASH_REDIS_REST_TOKEN = Deno.env.get('UPSTASH_REDIS_REST_TOKEN')!;
 const CACHE_WEBHOOK_URL = Deno.env.get('CACHE_WEBHOOK_URL');
 
 // Initialize Supabase client
@@ -94,18 +94,14 @@ async function validateRequest(req: Request): Promise<{ isValid: boolean; error?
 }
 
 /**
- * Connects to Redis/DragonflyDB
+ * Connects to Upstash Redis
  */
-async function connectToRedis() {
+function connectToRedis() {
   try {
-    const redis = await connect({
-      hostname: new URL(REDIS_URL).hostname,
-      port: parseInt(new URL(REDIS_URL).port) || 6379,
-      password: REDIS_PASSWORD
-    });
-    return redis;
+    if (!UPSTASH_REDIS_REST_URL || !UPSTASH_REDIS_REST_TOKEN) return null;
+    return new Redis({ url: UPSTASH_REDIS_REST_URL, token: UPSTASH_REDIS_REST_TOKEN });
   } catch (error) {
-    console.error('Redis connection error:', error);
+    console.error('Upstash init error:', error);
     return null;
   }
 }
@@ -114,9 +110,9 @@ async function connectToRedis() {
  * Clears Redis cache keys by pattern
  */
 async function clearRedisCache(patterns: string[]): Promise<number> {
-  const redis = await connectToRedis();
+  const redis = connectToRedis();
   if (!redis) {
-    console.error('Failed to connect to Redis');
+    console.error('Failed to initialize Upstash Redis');
     return 0;
   }
 
@@ -134,6 +130,7 @@ async function clearRedisCache(patterns: string[]): Promise<number> {
         const batchSize = 100;
         for (let i = 0; i < keys.length; i += batchSize) {
           const batch = keys.slice(i, i + batchSize);
+          // Upstash del supports variadic keys as array via spread
           await redis.del(...batch);
           totalCleared += batch.length;
         }
@@ -143,7 +140,7 @@ async function clearRedisCache(patterns: string[]): Promise<number> {
   } catch (error) {
     console.error('Redis clear error:', error);
   } finally {
-    await redis.quit();
+    // Upstash is HTTP-based; no explicit quit required
   }
 
   return totalCleared;
@@ -153,9 +150,9 @@ async function clearRedisCache(patterns: string[]): Promise<number> {
  * Clears specific Redis cache keys
  */
 async function clearRedisKeys(keys: string[]): Promise<number> {
-  const redis = await connectToRedis();
+  const redis = connectToRedis();
   if (!redis) {
-    console.error('Failed to connect to Redis');
+    console.error('Failed to initialize Upstash Redis');
     return 0;
   }
 

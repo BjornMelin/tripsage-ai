@@ -1,42 +1,40 @@
-"""Unified web crawl output schema for normalizing results from different crawlers."""
+"""Pydantic schemas for normalized web crawl results."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class UnifiedCrawlResult(BaseModel):
-    """
-    Unified result schema for web crawling operations across different MCP clients.
+    """Unified result schema for web crawling operations.
+
+    Supports different MCP clients.
     """
 
+    # Core identifying fields included in every normalized result.
     url: str = Field(..., description="The URL that was crawled")
-    title: Optional[str] = Field(
-        None, description="Page title extracted from the content"
-    )
-    main_content_markdown: Optional[str] = Field(
+    title: str | None = Field(None, description="Page title extracted from the content")
+    main_content_markdown: str | None = Field(
         None, description="Main content in markdown format"
     )
-    main_content_text: Optional[str] = Field(
+    main_content_text: str | None = Field(
         None, description="Main content as plain text"
     )
-    html_content: Optional[str] = Field(
-        None, description="Raw HTML content if available"
-    )
-    structured_data: Optional[Dict[str, Any]] = Field(
+    html_content: str | None = Field(None, description="Raw HTML content if available")
+    # Structured artifacts cover JSON-LD, OG metadata, etc.
+    structured_data: dict[str, Any] | None = Field(
         None,
         description=(
             "Structured data extracted from the page (e.g., JSON-LD, OpenGraph)"
         ),
     )
-    metadata: Dict[str, Any] = Field(
+    # crawl_metadata acts as an open payload for source specific details.
+    crawl_metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional metadata about the crawl operation",
     )
-    error_message: Optional[str] = Field(
-        None, description="Error message if crawl failed"
-    )
+    error_message: str | None = Field(None, description="Error message if crawl failed")
     status: str = Field("success", description="Status of the crawl operation")
 
     model_config = {
@@ -59,12 +57,13 @@ class UnifiedCrawlResult(BaseModel):
     }
 
     @property
-    def crawl_timestamp(self) -> Optional[datetime]:
+    def crawl_timestamp(self) -> datetime | None:
         """Get the crawl timestamp from metadata if available."""
-        timestamp = self.metadata.get("crawl_timestamp")
+        metadata = dict(self.crawl_metadata)
+        timestamp = metadata.get("crawl_timestamp")
         if timestamp and isinstance(timestamp, str):
             try:
-                return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                return datetime.fromisoformat(timestamp)
             except (ValueError, AttributeError):
                 pass
         elif isinstance(timestamp, datetime):
@@ -72,9 +71,10 @@ class UnifiedCrawlResult(BaseModel):
         return None
 
     @property
-    def source_crawler(self) -> Optional[str]:
+    def source_crawler(self) -> str | None:
         """Get the source crawler from metadata if available."""
-        return self.metadata.get("source_crawler")
+        metadata = dict(self.crawl_metadata)
+        return metadata.get("source_crawler")
 
     def has_content(self) -> bool:
         """Check if the result contains any meaningful content."""

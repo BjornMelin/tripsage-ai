@@ -8,13 +8,14 @@ from fastapi.openapi.utils import get_openapi
 
 from tripsage.api.core.config import get_settings
 
+
 # API metadata
 settings = get_settings()
 API_TITLE = "TripSage Unified API"
 API_DESCRIPTION = """
 # TripSage Unified Travel Planning API
 
-A comprehensive FastAPI implementation that serves both frontend applications
+A FastAPI implementation that serves both frontend applications
 and AI agents for travel planning.
 
 ## Dual Consumer Architecture
@@ -27,16 +28,16 @@ This API is designed to serve multiple consumer types with adapted responses:
 - **Standard rate limits** - Optimized for human interaction patterns
 - **Sanitized data** - Secure, filtered responses for web display
 
-### AI Agent Consumers (LangGraph-based Agents) 
+### AI Agent Consumers (LangGraph-based Agents)
 - **Rich context data** - Technical details for decision making
 - **Tool integration metadata** - Information for agent tool calling
-- **Enhanced rate limits** - Higher throughput for automated workflows
+- **Higher rate limits** - Higher throughput for automated workflows
 - **Raw data access** - Unfiltered data for AI processing
 
 ## Core Capabilities
 
 ### Travel Planning & Management
-* **Trip Planning** - Comprehensive travel itinerary creation and optimization
+* **Trip Planning** - Travel itinerary creation and optimization
 * **Flight Search & Booking** - Multi-provider flight search with price tracking
 * **Accommodation Search** - Hotel and alternative lodging with MCP integration
 * **Destination Research** - AI-powered insights and recommendations
@@ -51,7 +52,7 @@ This API is designed to serve multiple consumer types with adapted responses:
 ### Authentication & Security
 * **Dual Authentication** - JWT tokens for users, API keys for agents
 * **BYOK (Bring Your Own Key)** - Secure user-provided API key management
-* **Advanced Rate Limiting** - Consumer-aware limits with enhanced principal tracking
+* **Rate Limiting** - Consumer-aware limits with enhanced principal tracking
 * **Data Protection** - AES-256 encryption for sensitive data
 
 ## Authentication Methods
@@ -128,7 +129,7 @@ POST /api/v1/keys
 ## Performance Features
 
 * **Multi-tier Caching** - DragonflyDB with intelligent TTL (25x improvement)
-* **Consumer-aware Rate Limiting** - Enhanced limits for agents vs. frontend
+* **Consumer-aware Rate Limiting** - Higher limits for agents vs. frontend
 * **Connection Pooling** - Optimized database and external API connections
 * **Query Optimization** - Indexed searches and prepared statements
 
@@ -137,9 +138,9 @@ POST /api/v1/keys
 Consumer-aware rate limiting with different limits:
 
 * **Frontend Users**: 100 requests/minute, 1000 requests/hour
-* **AI Agents**: 500 requests/minute, 5000 requests/hour  
+* **AI Agents**: 500 requests/minute, 5000 requests/hour
 * **Authenticated Users**: 5x multiplier on base limits
-* **BYOK Users**: Enhanced limits when using own API keys
+* **BYOK Users**: Higher limits when using own API keys
 
 ## Error Handling
 
@@ -184,7 +185,7 @@ WebSocket endpoints for live communication:
 This API leverages the `tripsage_core` shared library for:
 
 * **Business Services** - Flight, accommodation, memory, and chat services
-* **Infrastructure Services** - Database, caching, and WebSocket management  
+* **Infrastructure Services** - Database, caching, and WebSocket management
 * **External API Integration** - Standardized patterns for third-party services
 * **Security & Configuration** - Centralized settings and encryption
 """
@@ -226,7 +227,7 @@ TAG_DESCRIPTIONS = [
     {
         "name": "trips",
         "description": (
-            "Trip planning and management endpoints. Supports comprehensive travel "
+            "Trip planning and management endpoints. Supports travel "
             "itinerary creation, optimization, and collaboration features."
         ),
     },
@@ -248,7 +249,7 @@ TAG_DESCRIPTIONS = [
         "name": "destinations",
         "description": (
             "Destination research endpoints with AI-powered insights. "
-            "Provides comprehensive destination information, weather, "
+            "Provides destination information, weather, "
             "and recommendations."
         ),
     },

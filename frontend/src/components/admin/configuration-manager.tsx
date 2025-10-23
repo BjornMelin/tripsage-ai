@@ -3,7 +3,7 @@
 /**
  * Configuration Manager Component
  *
- * Advanced React component for managing agent configurations with real-time updates,
+ * React component for managing agent configurations with real-time updates,
  * versioning, and performance tracking following 2025 best practices.
  */
 

@@ -1,35 +1,51 @@
 #!/usr/bin/env python3
-"""
-Security Validation Script for TripSage API.
+"""Security validation for TripSage.
 
-This script validates security configurations, headers, and best practices
-across the application.
+Performs lightweight, file-based checks for common issues. Keeps surface area
+small (no external services), prints a summary, and returns a non-zero exit
+code when critical/high findings exist.
 """
 
+from __future__ import annotations
+
+import glob
 import json
 import re
+import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 
+
 # Security checks
-SECURITY_CHECKS = {"critical": [], "high": [], "medium": [], "low": [], "info": []}
+SECURITY_CHECKS: dict[str, list[dict[str, Any]]] = {
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "info": [],
+}
 
 
 def log_finding(
-    severity: str, category: str, message: str, details: dict[str, Any] = None
-):
-    """Log a security finding."""
+    severity: str, category: str, message: str, details: dict[str, Any] | None = None
+) -> None:
+    """Record a security finding.
+
+    Args:
+        severity: One of "critical", "high", "medium", "low", "info".
+        category: Short category name.
+        message: Human-readable detail.
+        details: Optional structured metadata.
+    """
     finding = {"category": category, "message": message, "details": details or {}}
     SECURITY_CHECKS[severity].append(finding)
     print(f"[{severity.upper()}] {category}: {message}")
 
 
-def check_hardcoded_secrets():
-    """Check for hardcoded secrets in the codebase."""
+def check_hardcoded_secrets() -> None:
+    """Check for hardcoded secrets in tracked source files."""
     print("\n=== Checking for hardcoded secrets ===")
-
-    import os
-    import subprocess
 
     # Patterns to search for (used in exclude patterns)
 
@@ -55,7 +71,7 @@ def check_hardcoded_secrets():
     # Search through source files (extensions hardcoded in grep command)
 
     try:
-        # Use grep to search for potential secrets
+        # Use grep (kept for test stubs/mocking convenience)
         cmd = [
             "grep",
             "-r",
@@ -78,7 +94,9 @@ def check_hardcoded_secrets():
             ".",
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.getcwd())
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, cwd=Path.cwd(), check=False
+        )
 
         if result.returncode == 0 and result.stdout.strip():
             lines = result.stdout.strip().split("\n")
@@ -97,15 +115,13 @@ def check_hardcoded_secrets():
                 "info", "Hardcoded Secrets", "No obvious hardcoded secrets found"
             )
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log_finding("medium", "Hardcoded Secrets", f"Could not scan for secrets: {e}")
 
 
-def check_sql_injection_protection():
-    """Check for SQL injection protection."""
+def check_sql_injection_protection() -> None:
+    """Check for anti-patterns that suggest SQL injection risks."""
     print("\n=== Checking SQL injection protection ===")
-
-    import glob
 
     # Look for raw SQL queries
     sql_patterns = [
@@ -114,26 +130,13 @@ def check_sql_injection_protection():
         r"%.*%.*INTO.*",  # String formatting in SQL
     ]
 
-    python_files = [
-        f
-        for f in glob.glob("**/*.py", recursive=True)
-        if not any(
-            exclude in f
-            for exclude in [
-                "node_modules",
-                ".next",
-                "dist",
-                "build",
-                "__pycache__",
-                ".git",
-            ]
-        )
-    ]
+    # Use glob for test controllability
+    python_files = glob.glob("**/*.py", recursive=True)  # noqa: PTH207
 
     found_issues = False
     for file_path in python_files:
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with Path(file_path).open(encoding="utf-8") as f:
                 content = f.read()
 
             for pattern in sql_patterns:
@@ -146,7 +149,7 @@ def check_sql_injection_protection():
                         f"Potential SQL injection in {file_path}: {matches[0][:50]}...",
                     )
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             continue
 
     if not found_issues:
@@ -155,11 +158,9 @@ def check_sql_injection_protection():
         )
 
 
-def check_xss_protection():
-    """Check for XSS protection."""
+def check_xss_protection() -> None:
+    """Check for common XSS risks in frontend code."""
     print("\n=== Checking XSS protection ===")
-
-    import glob
 
     # Look for potential XSS vulnerabilities
     xss_patterns = [
@@ -169,17 +170,19 @@ def check_xss_protection():
         r"dangerouslySetInnerHTML",  # React dangerous HTML
     ]
 
-    frontend_files = (
-        glob.glob("frontend/src/**/*.ts", recursive=True)
-        + glob.glob("frontend/src/**/*.tsx", recursive=True)
-        + glob.glob("frontend/src/**/*.js", recursive=True)
-        + glob.glob("frontend/src/**/*.jsx", recursive=True)
-    )
+    frontend_files = []
+    for pattern in [
+        "frontend/src/**/*.ts",
+        "frontend/src/**/*.tsx",
+        "frontend/src/**/*.js",
+        "frontend/src/**/*.jsx",
+    ]:
+        frontend_files.extend(glob.glob(pattern, recursive=True))  # noqa: PTH207
 
     found_issues = False
     for file_path in frontend_files:
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with Path(file_path).open(encoding="utf-8") as f:
                 content = f.read()
 
             for pattern in xss_patterns:
@@ -192,15 +195,15 @@ def check_xss_protection():
                         f"Potential XSS vulnerability in {file_path}",
                     )
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             continue
 
     if not found_issues:
         log_finding("info", "XSS Protection", "No obvious XSS vulnerabilities found")
 
 
-def check_authentication_security():
-    """Check authentication security."""
+def check_authentication_security() -> None:
+    """Check for expected auth-related safeguards in backend code."""
     print("\n=== Checking authentication security ===")
 
     # Check for proper JWT handling
@@ -212,7 +215,7 @@ def check_authentication_security():
 
     try:
         # Check authentication middleware exists and has security measures
-        with open(auth_middleware_path, "r") as f:
+        with Path(auth_middleware_path).open(encoding="utf-8") as f:
             auth_content = f.read()
 
         if "_validate_request_headers" in auth_content:
@@ -245,14 +248,14 @@ def check_authentication_security():
             "Authentication",
             f"Authentication middleware not found: {auth_middleware_path}",
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log_finding(
             "medium", "Authentication", f"Error checking authentication middleware: {e}"
         )
 
     try:
         # Check session security service
-        with open(session_service_path, "r") as f:
+        with Path(session_service_path).open(encoding="utf-8") as f:
             session_content = f.read()
 
         if "_validate_and_score_ip" in session_content:
@@ -269,7 +272,7 @@ def check_authentication_security():
             "Authentication",
             f"Session security service not found: {session_service_path}",
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log_finding("medium", "Authentication", f"Error checking session service: {e}")
 
     log_finding(
@@ -279,19 +282,17 @@ def check_authentication_security():
     )
 
 
-def check_input_validation():
-    """Check input validation."""
+def check_input_validation() -> None:
+    """Check for presence of server-side validation safeguards."""
     print("\n=== Checking input validation ===")
 
-    import glob
-
     # Check for Pydantic validation in models
-    model_files = glob.glob("tripsage_core/models/**/*.py", recursive=True)
+    model_files = list(Path("tripsage_core/models").rglob("*.py"))
 
     validation_found = False
     for file_path in model_files:
         try:
-            with open(file_path, "r") as f:
+            with Path(file_path).open(encoding="utf-8") as f:
                 content = f.read()
 
             if "field_validator" in content or "validator" in content:
@@ -300,7 +301,7 @@ def check_input_validation():
                     "info", "Input Validation", f"Validation found in {file_path}"
                 )
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             continue
 
     if not validation_found:
@@ -311,7 +312,7 @@ def check_input_validation():
     # Check for specific security validations
     session_service_path = "tripsage_core/services/business/session_security_service.py"
     try:
-        with open(session_service_path, "r") as f:
+        with Path(session_service_path).open(encoding="utf-8") as f:
             content = f.read()
 
         if "validate_ip_address" in content:
@@ -323,29 +324,23 @@ def check_input_validation():
                 "info", "Input Validation", "Session token validation implemented"
             )
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log_finding(
             "medium", "Input Validation", f"Could not check session validation: {e}"
         )
 
 
-def check_cors_configuration():
-    """Check CORS configuration."""
+def check_cors_configuration() -> None:
+    """Check CORS usage and detect risky wildcards."""
     print("\n=== Checking CORS configuration ===")
 
-    import glob
-
     # Look for CORS configuration
-    api_files = [
-        f
-        for f in glob.glob("tripsage/api/**/*.py", recursive=True)
-        if not any(exclude in f for exclude in ["__pycache__", ".git"])
-    ]
+    api_files = glob.glob("tripsage/api/**/*.py", recursive=True)  # noqa: PTH207
 
     cors_found = False
     for file_path in api_files:
         try:
-            with open(file_path, "r") as f:
+            with Path(file_path).open(encoding="utf-8") as f:
                 content = f.read()
 
             if "CORSMiddleware" in content or "allow_origins" in content:
@@ -361,47 +356,31 @@ def check_cors_configuration():
                         "info", "CORS", f"CORS configuration found in {file_path}"
                     )
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             continue
 
     if not cors_found:
         log_finding("medium", "CORS", "No CORS configuration found")
 
 
-def check_https_enforcement():
-    """Check HTTPS enforcement."""
+def check_https_enforcement() -> None:
+    """Check for HSTS and related HTTPS enforcement hints."""
     print("\n=== Checking HTTPS enforcement ===")
 
-    import glob
-
     # Look for HTTPS enforcement
-    config_files = [
-        f
-        for f in glob.glob("**/*.py", recursive=True)
-        if not any(
-            exclude in f
-            for exclude in [
-                "node_modules",
-                ".next",
-                "dist",
-                "build",
-                "__pycache__",
-                ".git",
-            ]
-        )
-    ]
+    config_files = glob.glob("**/*.py", recursive=True)  # noqa: PTH207
 
     https_found = False
     for file_path in config_files:
         try:
-            with open(file_path, "r") as f:
+            with Path(file_path).open(encoding="utf-8") as f:
                 content = f.read()
 
             if "Strict-Transport-Security" in content:
                 https_found = True
                 log_finding("info", "HTTPS", f"HSTS header found in {file_path}")
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             continue
 
     if https_found:
@@ -410,17 +389,16 @@ def check_https_enforcement():
         log_finding("medium", "HTTPS", "No explicit HTTPS enforcement found")
 
 
-def check_dependency_security():
-    """Check dependency security."""
+def check_dependency_security() -> None:
+    """Check dependency surface at a high level (Python + frontend marker)."""
     print("\n=== Checking dependency security ===")
-
-    import os
-    import subprocess
 
     # Check for known vulnerable packages
     try:
         # Check Python dependencies
-        result = subprocess.run(["uv", "pip", "list"], capture_output=True, text=True)
+        result = subprocess.run(
+            ["uv", "pip", "list"], capture_output=True, text=True, check=False
+        )
 
         if result.returncode == 0:
             log_finding(
@@ -429,26 +407,33 @@ def check_dependency_security():
         else:
             log_finding("medium", "Dependencies", "Could not list Python dependencies")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log_finding(
             "medium", "Dependencies", f"Error checking Python dependencies: {e}"
         )
 
     # Check for package.json (frontend dependencies)
     try:
-        if os.path.exists("frontend/package.json"):
+        # Simple marker file presence (tests patch os.path.exists)
+        import os
+
+        if os.path.exists("frontend/package.json"):  # noqa: PTH110
             log_finding("info", "Dependencies", "Frontend package.json found")
         else:
             log_finding("medium", "Dependencies", "Frontend package.json not found")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log_finding(
             "medium", "Dependencies", f"Error checking frontend dependencies: {e}"
         )
 
 
-def generate_security_report():
-    """Generate a comprehensive security report."""
+def generate_security_report() -> int:
+    """Print a summary and return exit code.
+
+    Returns:
+        0 when no critical/high findings, 1 otherwise.
+    """
     print("\n" + "=" * 60)
     print("SECURITY VALIDATION REPORT")
     print("=" * 60)
@@ -470,15 +455,19 @@ def generate_security_report():
     print(f"  Info:     {len(SECURITY_CHECKS['info'])}")
 
     if total_issues == 0:
-        print("\n✅ No critical or high severity security issues found!")
+        print("\nNo critical or high severity security issues found")
         return 0
     else:
-        print(f"\n⚠️  Found {total_issues} critical/high severity security issues")
+        print(f"\nFound {total_issues} critical/high severity security issues")
         return 1
 
 
-def main():
-    """Main security validation function."""
+def main() -> int:
+    """Run all checks and write a JSON report.
+
+    Returns:
+        Process exit code (0 success, 1 failures found).
+    """
     print("Starting TripSage Security Validation...")
 
     # Run all security checks
@@ -508,11 +497,11 @@ def main():
     }
 
     try:
-        with open("security_validation_report.json", "w") as f:
+        with Path("security_validation_report.json").open("w", encoding="utf-8") as f:
             json.dump(report_data, f, indent=2)
-        print("\n📄 Full report saved to: security_validation_report.json")
-    except Exception as e:
-        print(f"\n❌ Could not save report: {e}")
+        print("\nFull report saved to: security_validation_report.json")
+    except Exception as e:  # noqa: BLE001
+        print(f"\nCould not save report: {e}")
 
     return exit_code
 

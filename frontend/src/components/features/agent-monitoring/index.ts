@@ -4,7 +4,6 @@ export { AgentStatusDashboard } from "./dashboard/agent-status-dashboard";
 // Communication Components
 export {
   ConnectionStatus,
-  EnhancedConnectionStatus,
   CompactConnectionStatus,
 } from "../shared/connection-status";
 export { AgentCollaborationHub } from "./communication/agent-collaboration-hub";

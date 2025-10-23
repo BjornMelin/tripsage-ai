@@ -5,24 +5,29 @@ for the memory service to ensure data privacy and security.
 """
 
 import hashlib
-import json
 import time
-from collections import defaultdict
-from datetime import datetime, timezone
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Dict, Optional, Set
+from typing import Any
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from pydantic import BaseModel, Field
 
-from tripsage.monitoring.telemetry import get_telemetry
 from tripsage_core.config import get_settings
-from tripsage_core.services.infrastructure import get_cache_service
+from tripsage_core.observability.otel import get_meter, get_tracer
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 settings = get_settings()
-telemetry = get_telemetry()
+_tracer = get_tracer("tripsage.security.memory")
+_meter = get_meter("tripsage.security.memory")
+_op_counter = _meter.create_counter(
+    "memory.operation.count", unit="1", description="Total memory operations"
+)
+_op_duration = _meter.create_histogram(
+    "memory.operation.duration", unit="ms", description="Memory operation duration"
+)
 
 
 class SecurityConfig(BaseModel):
@@ -44,39 +49,25 @@ class SecurityConfig(BaseModel):
     rate_limit_burst: int = Field(default=10, description="Burst allowance")
 
     # Encryption settings
-    encryption_key: Optional[str] = Field(
+    encryption_key: str | None = Field(
         default=None, description="Base64 encoded encryption key"
     )
 
     # Access control settings
-    allowed_operations: Set[str] = Field(
+    allowed_operations: set[str] = Field(
         default={"search", "add", "update", "delete"},
         description="Allowed memory operations",
     )
-    sensitive_fields: Set[str] = Field(
+    sensitive_fields: set[str] = Field(
         default={"personal_info", "financial_data", "health_info"},
         description="Fields requiring extra protection",
     )
 
 
-class AuditLog(BaseModel):
-    """Audit log entry for memory operations."""
-
-    timestamp: datetime
-    user_id: str
-    operation: str
-    resource_id: Optional[str] = None
-    success: bool
-    error: Optional[str] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    ip_address: Optional[str] = None
-    session_id: Optional[str] = None
-
-
 class MemoryEncryption:
     """Handles encryption/decryption of memory content."""
 
-    def __init__(self, key: Optional[str] = None):
+    def __init__(self, key: str | None = None):
         """Initialize encryption with key.
 
         Args:
@@ -110,7 +101,7 @@ class MemoryEncryption:
         """
         return self.cipher.decrypt(encrypted.encode()).decode()
 
-    def encrypt_dict(self, data: Dict[str, Any], fields: Set[str]) -> Dict[str, Any]:
+    def encrypt_dict(self, data: dict[str, Any], fields: set[str]) -> dict[str, Any]:
         """Encrypt specific fields in dictionary.
 
         Args:
@@ -126,7 +117,7 @@ class MemoryEncryption:
                 result[field] = self.encrypt(result[field])
         return result
 
-    def decrypt_dict(self, data: Dict[str, Any], fields: Set[str]) -> Dict[str, Any]:
+    def decrypt_dict(self, data: dict[str, Any], fields: set[str]) -> dict[str, Any]:
         """Decrypt specific fields in dictionary.
 
         Args:
@@ -141,7 +132,7 @@ class MemoryEncryption:
             if field in result and isinstance(result[field], str):
                 try:
                     result[field] = self.decrypt(result[field])
-                except Exception as decrypt_error:
+                except InvalidToken as decrypt_error:
                     logger.debug(
                         "Skipping decryption for field '%s': %s",
                         field,
@@ -151,178 +142,21 @@ class MemoryEncryption:
         return result
 
 
-class RateLimiter:
-    """Token bucket rate limiter for memory operations."""
-
-    def __init__(self, config: SecurityConfig):
-        self.config = config
-        self.buckets: Dict[str, Dict[str, Any]] = defaultdict(self._create_bucket)
-
-    def _create_bucket(self) -> Dict[str, Any]:
-        """Create a new token bucket."""
-        return {
-            "tokens": self.config.rate_limit_burst,
-            "last_update": time.time(),
-        }
-
-    async def check_rate_limit(self, user_id: str, operation: str) -> bool:
-        """Check if operation is allowed under rate limit.
-
-        Args:
-            user_id: User identifier
-            operation: Operation being performed
-
-        Returns:
-            True if allowed, False if rate limited
-        """
-        if not self.config.rate_limit_enabled:
-            return True
-
-        key = f"{user_id}:{operation}"
-        bucket = self.buckets[key]
-
-        # Update tokens based on time passed
-        now = time.time()
-        time_passed = now - bucket["last_update"]
-        bucket["last_update"] = now
-
-        # Add tokens based on time (token/second rate)
-        rate = self.config.rate_limit_max_requests / self.config.rate_limit_window
-        bucket["tokens"] = min(
-            self.config.rate_limit_burst, bucket["tokens"] + (time_passed * rate)
-        )
-
-        # Check if we have tokens
-        if bucket["tokens"] >= 1:
-            bucket["tokens"] -= 1
-
-            # Cache the rate limit state
-            cache = await get_cache_service()
-            await cache.set(
-                f"rate_limit:{key}",
-                json.dumps(bucket),
-                ex=self.config.rate_limit_window,
-            )
-
-            return True
-
-        # Log rate limit hit
-        logger.warning(f"Rate limit hit for user {user_id} on operation {operation}")
-        telemetry.record_memory_operation(
-            operation=operation,
-            duration_ms=0,
-            user_id=user_id,
-            success=False,
-            error="rate_limited",
-        )
-
-        return False
-
-
-class AuditLogger:
-    """Handles audit logging for memory operations."""
-
-    def __init__(self, config: SecurityConfig):
-        self.config = config
-        self.cache_service = None
-
-    async def log(
-        self,
-        user_id: str,
-        operation: str,
-        success: bool,
-        resource_id: Optional[str] = None,
-        error: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        ip_address: Optional[str] = None,
-        session_id: Optional[str] = None,
-    ) -> None:
-        """Log an audit entry.
-
-        Args:
-            user_id: User performing operation
-            operation: Operation name
-            success: Whether operation succeeded
-            resource_id: Optional resource identifier
-            error: Optional error message
-            metadata: Optional additional metadata
-            ip_address: Optional IP address
-            session_id: Optional session ID
-        """
-        if not self.config.audit_enabled:
-            return
-
-        audit_entry = AuditLog(
-            timestamp=datetime.now(timezone.utc),
-            user_id=user_id,
-            operation=operation,
-            resource_id=resource_id,
-            success=success,
-            error=error,
-            metadata=metadata or {},
-            ip_address=ip_address,
-            session_id=session_id,
-        )
-
-        # Store in cache for quick access
-        if not self.cache_service:
-            self.cache_service = await get_cache_service()
-
-        key = f"audit:{user_id}:{int(time.time())}"
-        await self.cache_service.set(
-            key,
-            audit_entry.model_dump_json(),
-            ex=86400 * 30,  # Keep for 30 days
-        )
-
-        # Log to monitoring
-        logger.info(f"Audit: {audit_entry.model_dump_json()}")
-
-        # Check for suspicious patterns
-        await self._check_suspicious_patterns(user_id, operation)
-
-    async def _check_suspicious_patterns(self, user_id: str, operation: str) -> None:
-        """Check for suspicious access patterns.
-
-        Args:
-            user_id: User to check
-            operation: Current operation
-        """
-        # Get recent operations
-        # Pattern would be f"audit:{user_id}:*"
-        # Implement pattern checking logic here
-
-        # Example: Check for rapid operations
-        now = int(time.time())
-        count = 0
-
-        for i in range(60):  # Check last minute
-            key = f"audit:{user_id}:{now - i}"
-            if await self.cache_service.exists(key):
-                count += 1
-
-        if count > 20:  # More than 20 operations in a minute
-            logger.warning(
-                f"Suspicious activity detected for user {user_id}: "
-                f"{count} operations in 60s"
-            )
-            telemetry.record_memory_operation(
-                operation="suspicious_activity",
-                duration_ms=0,
-                user_id=user_id,
-                success=False,
-                error=f"high_frequency_access:{count}",
-            )
+from tripsage_core.services.business.audit_logging_service import (
+    AuditEventType,
+    AuditSeverity,
+    audit_security_event,
+)
 
 
 class MemorySecurity:
     """Main security service for memory operations."""
 
-    def __init__(self, config: Optional[SecurityConfig] = None):
+    def __init__(self, config: SecurityConfig | None = None):
+        """Initialize memory security components."""
         self.config = config or SecurityConfig()
         self.encryption = MemoryEncryption(self.config.encryption_key)
-        self.rate_limiter = RateLimiter(self.config)
-        self.audit_logger = AuditLogger(self.config)
+        # Rate limiting is centralized in API middleware; remove local limiter.
 
     def sanitize_input(self, text: str) -> str:
         """Sanitize user input to prevent injection attacks.
@@ -393,8 +227,8 @@ class MemorySecurity:
         user_id: str,
         func: Callable,
         *args,
-        ip_address: Optional[str] = None,
-        session_id: Optional[str] = None,
+        ip_address: str | None = None,
+        session_id: str | None = None,
         **kwargs,
     ) -> Any:
         """Execute operation with security checks.
@@ -418,10 +252,6 @@ class MemorySecurity:
         if not self.validate_operation(operation):
             raise SecurityError(f"Operation '{operation}' not allowed")
 
-        # Check rate limit
-        if not await self.rate_limiter.check_rate_limit(user_id, operation):
-            raise SecurityError("Rate limit exceeded")
-
         # Execute with monitoring
         start_time = time.time()
         success = False
@@ -429,7 +259,8 @@ class MemorySecurity:
         result = None
 
         try:
-            with telemetry.span(f"secure_{operation}", {"user_id": user_id}):
+            with _tracer.start_as_current_span(f"secure_{operation}") as span:
+                span.set_attribute("enduser.id", user_id)
                 result = await func(*args, **kwargs)
                 success = True
                 return result
@@ -443,30 +274,41 @@ class MemorySecurity:
             duration_ms = (time.time() - start_time) * 1000
 
             # Record telemetry
-            telemetry.record_memory_operation(
-                operation=operation,
-                duration_ms=duration_ms,
-                user_id=user_id,
-                success=success,
-                error=error,
-            )
-
-            # Audit log
-            await self.audit_logger.log(
-                user_id=user_id,
-                operation=operation,
-                success=success,
-                error=error,
-                metadata={"duration_ms": duration_ms},
-                ip_address=ip_address,
-                session_id=session_id,
-            )
+            attrs = {
+                "operation": operation,
+                "user_id": user_id,
+                "success": "true" if success else "false",
+            }
+            if error:
+                attrs["error"] = error
+            _op_counter.add(1, attrs)
+            _op_duration.record(duration_ms, attrs)
+            # Centralized audit logging
+            if self.config.audit_enabled:
+                try:
+                    await audit_security_event(
+                        event_type=AuditEventType.DATA_ACCESS
+                        if success
+                        else AuditEventType.SECURITY_SUSPICIOUS_ACTIVITY,
+                        severity=AuditSeverity.INFORMATIONAL
+                        if success
+                        else AuditSeverity.LOW,
+                        message=f"memory.{operation}",
+                        actor_id=user_id,
+                        ip_address=ip_address or "unknown",
+                        target_resource="memory",
+                        risk_score=None if success else 20,
+                        duration_ms=duration_ms,
+                        session_id=session_id,
+                    )
+                except Exception:  # noqa: BLE001 - do not break flow on audit failures
+                    logger.debug(
+                        "Audit logging failed for memory operation %s", operation
+                    )
 
 
 class SecurityError(Exception):
     """Security-related error."""
-
-    pass
 
 
 # Decorator for securing functions

@@ -1,5 +1,4 @@
-"""
-Comprehensive API key encryption security tests.
+"""API key encryption security tests.
 
 Tests envelope encryption, PBKDF2HMAC security, key derivation,
 and cryptographic attack resistance.
@@ -30,8 +29,7 @@ class TestApiKeyEncryptionSecurity:
         mock_settings = Mock()
         mock_settings.secret_key = "test-master-secret-key-for-encryption"
 
-        service = ApiKeyService(db=mock_db, cache=mock_cache, settings=mock_settings)
-        return service
+        return ApiKeyService(db=mock_db, cache=mock_cache, settings=mock_settings)
 
     @pytest.fixture
     def secure_api_keys(self):
@@ -138,7 +136,7 @@ class TestApiKeyEncryptionSecurity:
             # Verify encrypted format is valid base64
             try:
                 base64.urlsafe_b64decode(encrypted.encode())
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 pytest.fail(f"Invalid base64 for {key_name}: {e}")
 
     def test_encryption_error_handling(self, api_key_service):
@@ -293,9 +291,7 @@ class TestApiKeyEncryptionSecurity:
             salt=corrupted_salt,
             iterations=300000,
         )
-        corrupted_key = base64.urlsafe_b64encode(
-            kdf.derive("corrupted-master-key".encode())
-        )
+        corrupted_key = base64.urlsafe_b64encode(kdf.derive(b"corrupted-master-key"))
         service.master_key = corrupted_key
         service.master_cipher = Fernet(corrupted_key)
 
@@ -342,7 +338,7 @@ class TestApiKeyEncryptionSecurity:
         # Verify the encrypted format is valid base64url
         try:
             decoded = base64.urlsafe_b64decode(encrypted.encode())
-        except Exception:
+        except (ValueError, TypeError):
             pytest.fail("Encrypted key should be valid base64url")
 
         # Verify separator exists
@@ -373,7 +369,7 @@ class TestApiKeyEncryptionSecurity:
                 encrypted = api_key_service._encrypt_api_key(test_key)
                 decrypted = api_key_service._decrypt_api_key(encrypted)
                 results.append((encrypted, decrypted))
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 errors.append(e)
 
         # Run concurrent operations

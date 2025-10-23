@@ -17,9 +17,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from tripsage.api.core.config import get_settings
 from tripsage.api.core.openapi import custom_openapi
+from tripsage.api.limiting import install_rate_limiting
 from tripsage.api.middlewares import (
-    # AuthenticationMiddleware,  # Temporarily disabled - awaiting Supabase Auth
-    EnhancedRateLimitMiddleware,
     LoggingMiddleware,
 )
 from tripsage.api.routers import (
@@ -30,7 +29,6 @@ from tripsage.api.routers import (
     chat,
     config,
     dashboard,
-    dashboard_realtime,
     destinations,
     flights,
     health,
@@ -42,33 +40,29 @@ from tripsage.api.routers import (
     users,
     websocket,
 )
+
+# Removed ServiceRegistry: use direct lifespan-managed instances
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreExternalAPIError,
     CoreKeyValidationError,
-    CoreMCPError,
     CoreRateLimitError,
     CoreTripSageError,
     CoreValidationError,
 )
-from tripsage_core.services.infrastructure.key_monitoring_service import (
-    KeyMonitoringService,
-    KeyOperationRateLimitMiddleware,
-)
+from tripsage_core.observability.otel import setup_otel
+from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
 from tripsage_core.services.infrastructure.websocket_broadcaster import (
-    websocket_broadcaster,
+    WebSocketBroadcaster,
 )
-from tripsage_core.services.infrastructure.websocket_manager import websocket_manager
-from tripsage_core.services.simple_mcp_service import mcp_manager
+from tripsage_core.services.infrastructure.websocket_manager import WebSocketManager
 
-logger = logging.getLogger(__name__)
+
+logger: "logging.Logger" = logging.getLogger(__name__)  # pylint: disable=no-member
 
 
 def format_error_response(exc: CoreTripSageError, request: Request) -> dict[str, Any]:
-    """Format error response with simple, consistent structure.
-
-    Modern approach - single error format for all consumers.
-    """
+    """Format error response with simple, consistent structure."""
     return {
         "error": True,
         "message": exc.message,
@@ -85,43 +79,98 @@ async def lifespan(app: FastAPI):
         app: The FastAPI application
     """
     # Startup: Initialize MCP Manager and WebSocket Services
-    logger.info("Initializing MCP Manager on API startup")
-    await mcp_manager.initialize_all_enabled()
+    logger.info("Initializing MCP service on API startup")
+    from tripsage_core.services.airbnb_mcp import AirbnbMCP
 
-    available_mcps = mcp_manager.get_available_mcps()
-    initialized_mcps = mcp_manager.get_initialized_mcps()
-    logger.info(f"Available MCPs: {available_mcps}")
-    logger.info(f"Initialized MCPs: {initialized_mcps}")
+    app.state.mcp_service = AirbnbMCP()
+    await app.state.mcp_service.initialize()
 
-    # Initialize WebSocket Broadcaster first
+    # Initialize services (Cache, WebSocket, MCP) in DI-managed app.state
+    logger.info("Initializing Cache service")
+    from tripsage_core.services.infrastructure.cache_service import CacheService
+
+    app.state.cache_service = CacheService()
+    await app.state.cache_service.connect()
+
+    # Initialize Google Maps service (DI-managed singleton for API lifespan)
+    logger.info("Initializing Google Maps service")
+    app.state.google_maps_service = GoogleMapsService()
+    await app.state.google_maps_service.connect()
+    # Services are reachable via request.app.state*
+
+    # Start database connection monitor for unified health reporting
+    try:
+        from tripsage_core.services.infrastructure.database_monitor import (
+            DatabaseConnectionMonitor,
+        )
+        from tripsage_core.services.infrastructure.database_service import (
+            get_database_service,
+        )
+
+        db_service = await get_database_service()
+        app.state.database_monitor = DatabaseConnectionMonitor(
+            database_service=db_service
+        )
+        await app.state.database_monitor.start_monitoring()
+    except Exception:  # noqa: BLE001 - do not break startup if monitor fails
+        logger.warning("DatabaseConnectionMonitor initialization failed")
+
     logger.info("Starting WebSocket Broadcaster")
-    await websocket_broadcaster.start()
+    app.state.websocket_broadcaster = WebSocketBroadcaster()
+    await app.state.websocket_broadcaster.start()
 
     # Initialize WebSocket Manager with broadcaster integration
     logger.info("Starting WebSocket Manager with broadcaster integration")
-    websocket_manager.broadcaster = websocket_broadcaster
-    await websocket_manager.start()
+    app.state.websocket_manager = WebSocketManager()
+    app.state.websocket_manager.broadcaster = app.state.websocket_broadcaster
+    await app.state.websocket_manager.start()
 
     yield  # Application runs here
 
     # Shutdown: Clean up resources (reverse order)
     logger.info("Stopping WebSocket Manager")
-    await websocket_manager.stop()
+    await app.state.websocket_manager.stop()
 
     logger.info("Stopping WebSocket Broadcaster")
-    await websocket_broadcaster.stop()
+    await app.state.websocket_broadcaster.stop()
+
+    logger.info("Disconnecting Cache service")
+    await app.state.cache_service.disconnect()
+
+    logger.info("Closing Google Maps service")
+    await app.state.google_maps_service.close()
 
     logger.info("Shutting down MCP Manager")
-    await mcp_manager.shutdown()
+    await app.state.mcp_service.shutdown()
 
 
-def create_app() -> FastAPI:
+def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     """Create and configure the FastAPI application.
 
     Returns:
         The configured FastAPI application
     """
     settings = get_settings()
+
+    # Initialize OpenTelemetry once using settings-driven flags (skip in testing).
+    # Prevent duplicate server spans by preferring FastAPI instrumentation when both
+    # toggles are enabled: we instrument FastAPI after app creation below, so pass
+    # enable_fastapi=False here and disable ASGI if FastAPI instr is enabled.
+    enable_asgi = settings.enable_asgi_instrumentation
+    if settings.enable_fastapi_instrumentation and enable_asgi:
+        enable_asgi = False
+        logger.warning("FastAPI+ASGI instrumentation both enabled; disabling ASGI.")
+
+    if not settings.is_testing:
+        setup_otel(
+            service_name="tripsage-api",
+            service_version=settings.api_version,
+            environment=settings.environment,
+            enable_fastapi=False,  # instrument FastAPI via instrument_app below
+            enable_asgi=enable_asgi,
+            enable_httpx=settings.enable_httpx_instrumentation,
+            enable_redis=settings.enable_redis_instrumentation,
+        )
 
     # Create FastAPI app with unified configuration
     app = FastAPI(
@@ -134,6 +183,28 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Instrument FastAPI via instrument_app(app) after app creation
+    if settings.enable_fastapi_instrumentation:
+        try:
+            import importlib
+
+            fastapi_inst = importlib.import_module(
+                "opentelemetry.instrumentation.fastapi"
+            )
+            fastapi_inst.FastAPIInstrumentor().instrument_app(app)
+        except ImportError:  # pragma: no cover - optional dep
+            pass
+
+    # Add OTEL trace/span correlation to logs (root logger)
+    try:
+        from tripsage_core.observability.log_correlation import (
+            install_trace_log_correlation as _install_trace_log_correlation,
+        )
+
+        _install_trace_log_correlation()
+    except Exception:  # noqa: BLE001 - never break startup on logging issues
+        logger.warning("Trace log correlation not installed")
+
     # Configure CORS with unified settings
     app.add_middleware(
         CORSMiddleware,
@@ -144,25 +215,17 @@ def create_app() -> FastAPI:
     )
 
     # Add custom middleware (order matters - first added is last executed)
-    # Logging middleware should be first to log all requests
+    # Logging middleware first to log all requests
     app.add_middleware(LoggingMiddleware)
 
-    # Enhanced rate limiting middleware with principal-based limits
-    use_dragonfly = bool(settings.redis_url)
-    app.add_middleware(
-        EnhancedRateLimitMiddleware, settings=settings, use_dragonfly=use_dragonfly
-    )
+    # Install SlowAPI-based inbound rate limiting
+    install_rate_limiting(app, settings)
 
-    # Enhanced authentication middleware supporting JWT and API keys
+    # Authentication middleware supporting JWT and API keys
     # Temporarily disabled - awaiting Supabase Auth
     # app.add_middleware(AuthenticationMiddleware, settings=settings)
 
-    # Add key operation rate limiting middleware
-    key_monitoring_service = KeyMonitoringService(settings)
-    app.add_middleware(
-        KeyOperationRateLimitMiddleware,
-        monitoring_service=key_monitoring_service,
-    )
+    # Inbound rate limiting handled via SlowAPI installed above
 
     # Simplified exception handlers
     @app.exception_handler(CoreAuthenticationError)
@@ -170,9 +233,7 @@ def create_app() -> FastAPI:
         request: Request, exc: CoreAuthenticationError
     ):
         """Handle authentication errors."""
-        logger.error(
-            f"Authentication error: {exc.message}", extra={"path": request.url.path}
-        )
+        logger.exception("Authentication error", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -183,9 +244,7 @@ def create_app() -> FastAPI:
         request: Request, exc: CoreKeyValidationError
     ):
         """Handle API key validation errors."""
-        logger.error(
-            f"Key validation error: {exc.message}", extra={"path": request.url.path}
-        )
+        logger.exception("Key validation error", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -195,7 +254,7 @@ def create_app() -> FastAPI:
     async def rate_limit_error_handler(request: Request, exc: CoreRateLimitError):
         """Handle rate limit errors."""
         logger.warning(
-            f"Rate limit exceeded: {exc.message}", extra={"path": request.url.path}
+            "Rate limit exceeded: %s", exc.message, extra={"path": request.url.path}
         )
         return JSONResponse(
             status_code=exc.status_code,
@@ -203,21 +262,12 @@ def create_app() -> FastAPI:
             headers={"Retry-After": "60"},
         )
 
-    @app.exception_handler(CoreMCPError)
-    async def mcp_error_handler(request: Request, exc: CoreMCPError):
-        """Handle MCP server errors."""
-        logger.error(f"MCP error: {exc.message}", extra={"path": request.url.path})
-        return JSONResponse(
-            status_code=exc.status_code,
-            content=format_error_response(exc, request),
-        )
+    # CoreMCPError removed; MCP integrations map to CoreExternalAPIError now
 
     @app.exception_handler(CoreExternalAPIError)
     async def external_api_error_handler(request: Request, exc: CoreExternalAPIError):
         """Handle external API errors."""
-        logger.error(
-            f"External API error: {exc.message}", extra={"path": request.url.path}
-        )
+        logger.exception("External API error", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -227,7 +277,7 @@ def create_app() -> FastAPI:
     async def validation_error_handler(request: Request, exc: CoreValidationError):
         """Handle validation errors."""
         logger.warning(
-            f"Validation error: {exc.message}", extra={"path": request.url.path}
+            "Validation error: %s", exc.message, extra={"path": request.url.path}
         )
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -237,7 +287,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(CoreTripSageError)
     async def core_tripsage_error_handler(request: Request, exc: CoreTripSageError):
         """Handle all other core TripSage exceptions."""
-        logger.error(f"Core error: {exc.message}", extra={"path": request.url.path})
+        logger.exception("Core error", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -258,7 +308,7 @@ def create_app() -> FastAPI:
         ]
 
         logger.warning(
-            f"Validation errors: {len(errors)}", extra={"path": request.url.path}
+            "Validation errors: %s", len(errors), extra={"path": request.url.path}
         )
 
         return JSONResponse(
@@ -276,7 +326,7 @@ def create_app() -> FastAPI:
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         """Handle HTTP exceptions."""
         logger.warning(
-            f"HTTP {exc.status_code}: {exc.detail}", extra={"path": request.url.path}
+            "HTTP %s: %s", exc.status_code, exc.detail, extra={"path": request.url.path}
         )
         return JSONResponse(
             status_code=exc.status_code,
@@ -291,9 +341,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
         """Handle all other unhandled exceptions."""
-        logger.exception(
-            f"Unhandled exception: {exc}", extra={"path": request.url.path}
-        )
+        logger.exception("Unhandled exception", extra={"path": request.url.path})
 
         content = {
             "error": True,
@@ -317,9 +365,7 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
-    app.include_router(
-        dashboard_realtime.router, prefix="/api", tags=["dashboard_realtime"]
-    )
+    # dashboard_realtime router is temporarily excluded pending module finalization
     app.include_router(keys.router, prefix="/api/user/keys", tags=["api_keys"])
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
@@ -352,7 +398,7 @@ def create_app() -> FastAPI:
     # Set custom OpenAPI schema
     app.openapi = lambda: custom_openapi(app)
 
-    logger.info(f"FastAPI application configured with {len(app.routes)} routes")
+    logger.info("FastAPI application configured with %s routes", len(app.routes))
     return app
 
 

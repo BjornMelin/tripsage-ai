@@ -2,16 +2,16 @@
 
 ## Project Structure & Module Organization
 
-- `tripsage/` hosts FastAPI entrypoints, routers, and middleware.
-  Use `tripsage/api` for HTTP surfaces and `tripsage/tools` for LangGraph tools.
+For detailed project structure information, see [docs/architecture/project-structure.md](../docs/architecture/project-structure.md).
+
+**Key Guidelines:**
+
+- `tripsage/api/` hosts the FastAPI application entry point and core API logic.
 - `tripsage_core/` holds domain services, models, and shared exceptions—extend
-  logic here, not in API layers.
-- `frontend/` is the Next.js 15 workspace (`app/`, `components/`, `lib/`) backed
-  by Tailwind; keep UI assets under `frontend/public/`.
-- `tests/` splits into `unit/`, `integration/`, `e2e/`, `performance/`, and
-  `security/`; fixtures live in `tests/fixtures/` and `tests/factories/`.
-- Supporting automation sits in `scripts/` (database tooling) and `docker/`
-  (runtime compose files); configuration samples ship with `.env.example`.
+  logic here, not in API layers. Services are split into `business/` and `infrastructure/` subdirectories.
+- `frontend/src/` is the Next.js 15 workspace with `app/`, `components/`, `lib/`, `hooks/`, `contexts/`, `stores/`, `types/`, and `schemas/` directories.
+- `tests/` splits into `unit/`, `integration/`, `e2e/`, `performance/`, and `security/`; fixtures live in `tests/fixtures/` and `tests/factories/`.
+- Supporting automation sits in `scripts/` and `docker/`; configuration samples ship with `.env.example`.
 
 ## Build, Test, and Development Commands
 

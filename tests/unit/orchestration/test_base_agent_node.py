@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for BaseAgentNode.
+"""Tests for BaseAgentNode.
 
 This module provides full test coverage for the base agent node functionality
 including error handling, logging, state management, and tool initialization.
@@ -7,7 +6,7 @@ Tests use actual domain models with proper mocking and async patterns.
 """
 
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -25,7 +24,7 @@ class TestableAgentNode(BaseAgentNode):
         service_registry: ServiceRegistry,
         process_func=None,
         initialize_func=None,
-        config: Dict[str, Any] = None,
+        config: dict[str, Any] | None = None,
     ):
         """Initialize with optional custom functions."""
         self.process_func = process_func

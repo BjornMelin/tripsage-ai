@@ -1,5 +1,5 @@
 /**
- * Comprehensive Zod schemas for search functionality
+ * Zod schemas for search functionality
  * Runtime validation for all search-related data types
  */
 

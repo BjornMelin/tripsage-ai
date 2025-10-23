@@ -21,7 +21,7 @@
 
 ## Introduction
 
-This guide provides comprehensive information about testing in the TripSage project. Whether you're writing your first test or optimizing existing test suites, this guide will help you understand our testing approach and best practices.
+This guide provides information about testing in the TripSage project. Whether you're writing your first test or optimizing existing test suites, this guide will help you understand our testing approach and best practices.
 
 ## Testing Philosophy
 

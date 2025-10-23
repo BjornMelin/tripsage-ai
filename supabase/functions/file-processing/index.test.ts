@@ -1,5 +1,5 @@
 /**
- * Comprehensive test suite for File Processing Edge Function
+ * Test suite for File Processing Edge Function
  * 
  * Tests cover:
  * - HTTP request/response handling

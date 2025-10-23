@@ -1,5 +1,4 @@
-"""
-API key monitoring and security service for TripSage Core.
+"""API key monitoring and security service for TripSage Core.
 
 This module provides monitoring, structured logging, and security features for
 API key operations in TripSage.
@@ -8,15 +7,11 @@ API key operations in TripSage.
 import inspect
 import secrets
 import time
-from datetime import datetime, timedelta, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Set, TypeVar, cast
-
-from fastapi import Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.status import HTTP_429_TOO_MANY_REQUESTS
-from starlette.types import ASGIApp
+from typing import Any, TypeVar, cast
 
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.services.infrastructure.cache_service import (
@@ -28,6 +23,7 @@ from tripsage_core.services.infrastructure.database_service import (
     get_database_service,
 )
 from tripsage_core.utils.logging_utils import get_logger
+
 
 # Type hints
 F = TypeVar("F", bound=Callable[..., Any])
@@ -48,23 +44,22 @@ class KeyOperation(str, Enum):
 
 
 class KeyMonitoringService:
-    """
-    Service for monitoring API key operations.
+    """Service for monitoring API key operations.
 
     This service is responsible for monitoring API key operations, detecting
     suspicious patterns, and sending alerts.
     """
 
-    def __init__(self, settings: Optional[Settings] = None):
+    def __init__(self, settings: Settings | None = None):
         """Initialize the key monitoring service.
 
         Args:
             settings: Application settings or None to use defaults
         """
         self.settings = settings or get_settings()
-        self.cache_service: Optional[CacheService] = None
-        self.database_service: Optional[DatabaseService] = None
-        self.suspicious_patterns: Set[str] = set()
+        self.cache_service: CacheService | None = None
+        self.database_service: DatabaseService | None = None
+        self.suspicious_patterns: set[str] = set()
         self.alert_threshold = {
             KeyOperation.CREATE: 5,  # 5 creates in 10 minutes
             KeyOperation.DELETE: 5,  # 5 deletes in 10 minutes
@@ -84,10 +79,10 @@ class KeyMonitoringService:
         self,
         operation: KeyOperation,
         user_id: str,
-        key_id: Optional[str] = None,
-        service: Optional[str] = None,
+        key_id: str | None = None,
+        service: str | None = None,
         success: bool = True,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Log an API key operation with structured data.
 
@@ -102,9 +97,12 @@ class KeyMonitoringService:
         # Initialize services
         await self.initialize()
 
+        # Validate services for type checkers
+        assert self.cache_service is not None
+
         # Create a log entry
         log_data = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "operation": operation.value,
             "user_id": user_id,
             "key_id": key_id,
@@ -125,12 +123,14 @@ class KeyMonitoringService:
         # Log the operation with logging module
         if success:
             logger.info(
-                f"API key {operation.value}",
+                "API key %s",
+                operation.value,
                 extra=log_data,
             )
         else:
             logger.warning(
-                f"Failed API key {operation.value}",
+                "Failed API key %s",
+                operation.value,
                 extra=log_data,
             )
 
@@ -162,15 +162,15 @@ class KeyMonitoringService:
             user_id: The user ID
         """
         # Store operation in cache with expiration
+        await self.initialize()
+        assert self.cache_service is not None
         key = f"key_ops:{user_id}:{operation.value}"
         # Get existing operations
         existing_ops = await self.cache_service.get_json(key) or []
         # Add new timestamp
-        existing_ops.append(datetime.now(timezone.utc).isoformat())
+        existing_ops.append(datetime.now(UTC).isoformat())
         # Keep only recent operations within timeframe
-        cutoff_time = datetime.now(timezone.utc) - timedelta(
-            seconds=self.pattern_timeframe
-        )
+        cutoff_time = datetime.now(UTC) - timedelta(seconds=self.pattern_timeframe)
         existing_ops = [
             op for op in existing_ops if datetime.fromisoformat(op) > cutoff_time
         ]
@@ -194,6 +194,8 @@ class KeyMonitoringService:
             return False
 
         # Get recent operations from cache
+        await self.initialize()
+        assert self.cache_service is not None
         key = f"key_ops:{user_id}:{operation.value}"
         operations = await self.cache_service.get_json(key) or []
 
@@ -205,7 +207,7 @@ class KeyMonitoringService:
         return count >= threshold
 
     async def _send_alert(
-        self, operation: KeyOperation, user_id: str, log_data: Dict[str, Any]
+        self, operation: KeyOperation, user_id: str, log_data: dict[str, Any]
     ) -> None:
         """Send an alert for suspicious key operations.
 
@@ -221,7 +223,7 @@ class KeyMonitoringService:
         )
 
         # Log the alert
-        logger.error(
+        logger.exception(
             alert_message,
             extra={
                 "operation": operation.value,
@@ -232,11 +234,13 @@ class KeyMonitoringService:
         )
 
         # Store the alert in cache
+        await self.initialize()
+        assert self.cache_service is not None
         alert_key = "key_alerts"
         existing_alerts = await self.cache_service.get_json(alert_key) or []
         existing_alerts.append(
             {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "message": alert_message,
                 "operation": operation.value,
                 "user_id": user_id,
@@ -252,7 +256,7 @@ class KeyMonitoringService:
 
     async def get_user_operations(
         self, user_id: str, limit: int = 100
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get recent key operations for a user.
 
         Args:
@@ -264,6 +268,7 @@ class KeyMonitoringService:
         """
         # Initialize services
         await self.initialize()
+        assert self.cache_service is not None
 
         # Get operations from cache
         log_key = f"key_logs:{user_id}"
@@ -271,7 +276,7 @@ class KeyMonitoringService:
         # Return limited results
         return logs[-limit:] if len(logs) > limit else logs
 
-    async def get_alerts(self, limit: int = 100) -> List[Dict[str, Any]]:
+    async def get_alerts(self, limit: int = 100) -> list[dict[str, Any]]:
         """Get recent key operation alerts.
 
         Args:
@@ -282,6 +287,7 @@ class KeyMonitoringService:
         """
         # Initialize services
         await self.initialize()
+        assert self.cache_service is not None
 
         # Get alerts from cache
         alerts = await self.cache_service.get_json("key_alerts") or []
@@ -300,6 +306,7 @@ class KeyMonitoringService:
         """
         # Initialize services
         await self.initialize()
+        assert self.cache_service is not None
 
         # Create a cache key
         rate_limit_key = f"rate_limit:key_ops:{user_id}:{operation.value}"
@@ -319,113 +326,6 @@ class KeyMonitoringService:
         # Increment counter
         await self.cache_service.incr(rate_limit_key)
         return False
-
-
-class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
-    """
-    Middleware for rate limiting API key operations.
-
-    This middleware specifically rate limits API key operations,
-    using more strict limits than the general API rate limiting.
-    """
-
-    def __init__(
-        self,
-        app: ASGIApp,
-        monitoring_service: KeyMonitoringService,
-        settings: Optional[Settings] = None,
-    ):
-        """Initialize the middleware.
-
-        Args:
-            app: The ASGI application
-            monitoring_service: The key monitoring service
-            settings: API settings or None to use the default
-        """
-        super().__init__(app)
-        self.monitoring_service = monitoring_service
-        self.settings = settings or get_settings()
-
-    async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Response]
-    ) -> Response:
-        """Process the request/response and handle rate limiting.
-
-        Args:
-            request: The incoming request
-            call_next: The next middleware or endpoint handler
-
-        Returns:
-            The response from the next middleware or endpoint
-        """
-        # Check if this is a key operation
-        key_operation = self._get_key_operation(request)
-        if not key_operation:
-            return await call_next(request)
-
-        # Get user ID
-        user_id = getattr(request.state, "user_id", None)
-        if not user_id:
-            return await call_next(request)
-
-        # Check if rate limited
-        is_limited = await self.monitoring_service.is_rate_limited(
-            user_id, key_operation
-        )
-        if is_limited:
-            # Log the rate limit
-            await self.monitoring_service.log_operation(
-                operation=key_operation,
-                user_id=user_id,
-                success=False,
-                metadata={"rate_limited": True},
-            )
-
-            # Return rate limit response
-            return Response(
-                content="Rate limit exceeded for API key operations",
-                status_code=HTTP_429_TOO_MANY_REQUESTS,
-                headers={"Retry-After": "60"},
-            )
-
-        # Process the request
-        response = await call_next(request)
-
-        return response
-
-    def _get_key_operation(self, request: Request) -> Optional[KeyOperation]:
-        """Get the key operation from the request.
-
-        Args:
-            request: The incoming request
-
-        Returns:
-            The key operation or None if not a key operation
-        """
-        path = request.url.path
-        method = request.method
-
-        # Check if this is a key operation
-        if not path.startswith("/api/user/keys"):
-            return None
-
-        # Determine the operation based on path and method
-        if path == "/api/user/keys" or path == "/api/user/keys/":
-            if method == "GET":
-                return KeyOperation.LIST
-            elif method == "POST":
-                return KeyOperation.CREATE
-        elif path == "/api/user/keys/validate" or path == "/api/user/keys/validate/":
-            if method == "POST":
-                return KeyOperation.VALIDATE
-        elif path.endswith("/rotate"):
-            if method == "POST":
-                return KeyOperation.ROTATE
-        elif "/api/user/keys/" in path:  # Key ID in path
-            if method == "DELETE":
-                return KeyOperation.DELETE
-
-        return None
 
 
 def monitor_key_operation(
@@ -453,7 +353,7 @@ def monitor_key_operation(
                     break
 
             if not monitoring_service:
-                for _, value in kwargs.items():
+                for value in kwargs.values():
                     if isinstance(value, KeyMonitoringService):
                         monitoring_service = value
                         break
@@ -486,19 +386,26 @@ def monitor_key_operation(
 
             # Get service from args or kwargs
             service = kwargs.get("service")
-            if not service and "key_data" in kwargs:
-                # Try to get service from key_data
-                if hasattr(kwargs["key_data"], "service"):
-                    service = kwargs["key_data"].service
+            if (
+                not service
+                and "key_data" in kwargs
+                and hasattr(kwargs["key_data"], "service")
+            ):
+                service = kwargs["key_data"].service
 
             # Execute the function
             start_time = time.time()
             try:
                 result = await func(*args, **kwargs)
                 success = True
-            except Exception as e:
+            except (
+                ValueError,
+                PermissionError,
+                LookupError,
+                RuntimeError,
+                TypeError,
+            ) as e:
                 success = False
-                # Log the error with the monitoring service
                 if monitoring_service and user_id:
                     await monitoring_service.log_operation(
                         operation=operation,
@@ -561,7 +468,7 @@ def constant_time_compare(a: str, b: str) -> bool:
     return secrets.compare_digest(a.encode(), b.encode())
 
 
-def clear_sensitive_data(data: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
+def clear_sensitive_data(data: dict[str, Any], keys: list[str]) -> dict[str, Any]:
     """Clear sensitive data from a dictionary.
 
     Args:
@@ -580,7 +487,7 @@ def clear_sensitive_data(data: Dict[str, Any], keys: List[str]) -> Dict[str, Any
 
 async def check_key_expiration(
     monitoring_service: KeyMonitoringService, days_before: int = 7
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Check for API keys that are about to expire.
 
     Args:
@@ -594,29 +501,41 @@ async def check_key_expiration(
     await monitoring_service.initialize()
 
     # Get date threshold
-    threshold = datetime.now(timezone.utc) + timedelta(days=days_before)
+    threshold = datetime.now(UTC) + timedelta(days=days_before)
 
     # Get expiring keys from database
+    from tripsage_core.exceptions.exceptions import CoreServiceError
+
+    assert monitoring_service.database_service is not None
     try:
         result = await monitoring_service.database_service.select(
             "api_keys",
             "*",
-            {"expires_at": {"lte": threshold.isoformat()}},
+            filters={"expires_at": {"lte": threshold.isoformat()}},
         )
-        return result
-    except Exception as e:
-        logger.error(f"Failed to check key expiration: {e}")
+        normalized: list[dict[str, Any]] = []
+        if result:
+            for row in result:
+                if isinstance(row, dict):
+                    normalized.append(row)
+                else:
+                    normalized.append({"record": row})
+        return normalized
+    except CoreServiceError:
+        logger.exception("Failed to check key expiration")
         return []
 
 
-async def get_key_health_metrics() -> Dict[str, Any]:
+async def get_key_health_metrics() -> dict[str, Any]:
     """Get health metrics for API keys.
 
     Returns:
         Dictionary with key health metrics
     """
+    # Get database service
+    from tripsage_core.exceptions.exceptions import CoreServiceError
+
     try:
-        # Get database service
         db_service = await get_database_service()
 
         # Get total count of keys
@@ -624,14 +543,17 @@ async def get_key_health_metrics() -> Dict[str, Any]:
 
         # Get count of keys by service
         service_result = await db_service.select("api_keys", "service")
-        service_count = {}
+        service_count: dict[str, int] = {}
         if service_result:
             for row in service_result:
-                service = row.get("service", "unknown")
+                if isinstance(row, dict):
+                    service = str(row.get("service", "unknown"))
+                else:
+                    service = str(row)
                 service_count[service] = service_count.get(service, 0) + 1
 
         # Get count of expired keys
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expired_count = await db_service.count(
             "api_keys", {"expires_at": {"lte": now.isoformat()}}
         )
@@ -641,7 +563,7 @@ async def get_key_health_metrics() -> Dict[str, Any]:
         expiring_result = await db_service.select(
             "api_keys",
             "*",
-            {
+            filters={
                 "expires_at": {
                     "gt": now.isoformat(),
                     "lte": future_date.isoformat(),
@@ -652,10 +574,13 @@ async def get_key_health_metrics() -> Dict[str, Any]:
 
         # Get count of keys by user
         user_result = await db_service.select("api_keys", "user_id")
-        user_count = {}
+        user_count: dict[str, int] = {}
         if user_result:
             for row in user_result:
-                user_id = row.get("user_id", "unknown")
+                if isinstance(row, dict):
+                    user_id = str(row.get("user_id", "unknown"))
+                else:
+                    user_id = str(row)
                 user_count[user_id] = user_count.get(user_id, 0) + 1
 
         return {
@@ -668,10 +593,10 @@ async def get_key_health_metrics() -> Dict[str, Any]:
             "user_count": [{"user_id": k, "count": v} for k, v in user_count.items()],
         }
 
-    except Exception as e:
-        logger.error(f"Failed to get key health metrics: {e}")
+    except CoreServiceError:
+        logger.exception("Failed to get key health metrics")
         return {
-            "error": str(e),
+            "error": "database_error",
             "total_count": 0,
             "service_count": [],
             "expired_count": 0,

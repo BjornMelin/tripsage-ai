@@ -1,12 +1,12 @@
 """Unified Trip model for TripSage.
 
 This module provides the single, modern Trip model used across the entire application.
-It uses UUID as the primary key and includes all enhanced features like visibility,
+It uses UUID as the primary key and includes the full feature set including visibility,
 tags, preferences, and detailed budget breakdown.
 """
 
-from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from datetime import UTC, date, datetime
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 from pydantic import Field, field_validator, model_validator
@@ -31,8 +31,8 @@ class BudgetBreakdown(TripSageModel):
     miscellaneous: float = Field(default=0.0, ge=0, description="Miscellaneous budget")
 
 
-class EnhancedBudget(TripSageModel):
-    """Enhanced budget structure with breakdown."""
+class Budget(TripSageModel):
+    """Trip budget structure with category breakdown."""
 
     total: float = Field(..., ge=0, description="Total budget amount")
     currency: str = Field(default="USD", description="Currency code")
@@ -52,19 +52,19 @@ class TripPreferences(TripSageModel):
     destination_flexibility: bool = Field(
         False, description="Whether destination is flexible"
     )
-    accommodation_preferences: Dict[str, Any] = Field(
+    accommodation_preferences: dict[str, Any] = Field(
         default_factory=dict, description="Accommodation preferences"
     )
-    transportation_preferences: Dict[str, Any] = Field(
+    transportation_preferences: dict[str, Any] = Field(
         default_factory=dict, description="Transportation preferences"
     )
-    activity_preferences: List[str] = Field(
+    activity_preferences: list[str] = Field(
         default_factory=list, description="Activity preferences"
     )
-    dietary_restrictions: List[str] = Field(
+    dietary_restrictions: list[str] = Field(
         default_factory=list, description="Dietary restrictions"
     )
-    accessibility_needs: List[str] = Field(
+    accessibility_needs: list[str] = Field(
         default_factory=list, description="Accessibility requirements"
     )
 
@@ -82,7 +82,7 @@ class Trip(TripSageModel):
 
     # Core Trip Information
     title: str = Field(..., min_length=1, max_length=200, description="Trip title")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, max_length=2000, description="Trip description"
     )
     start_date: date = Field(..., description="Trip start date")
@@ -90,9 +90,7 @@ class Trip(TripSageModel):
     destination: str = Field(..., description="Primary destination of the trip")
 
     # Budget Information
-    budget_breakdown: EnhancedBudget = Field(
-        ..., description="Enhanced budget with breakdown"
-    )
+    budget_breakdown: Budget = Field(..., description="Budget with category details")
 
     # Trip Details
     travelers: int = Field(default=1, ge=1, description="Number of travelers")
@@ -101,28 +99,31 @@ class Trip(TripSageModel):
     )
     trip_type: TripType = Field(default=TripType.LEISURE, description="Type of trip")
 
-    # Enhanced Features
+    # Additional Features
     visibility: TripVisibility = Field(
         default=TripVisibility.PRIVATE,
         description="Trip visibility (private/shared/public)",
     )
-    tags: List[str] = Field(default_factory=list, max_items=20, description="Trip tags")
+    tags: list[str] = Field(
+        default_factory=list, max_length=20, description="Trip tags"
+    )
     preferences_extended: TripPreferences = Field(
-        default_factory=TripPreferences, description="Extended preferences"
+        default_factory=lambda: TripPreferences.model_validate({}),
+        description="Extended preferences",
     )
 
     # Additional metadata
-    notes: List[Dict[str, Any]] = Field(default_factory=list, description="Trip notes")
-    search_metadata: Dict[str, Any] = Field(
+    notes: list[dict[str, Any]] = Field(default_factory=list, description="Trip notes")
+    search_metadata: dict[str, Any] = Field(
         default_factory=dict, description="Search and discovery metadata"
     )
 
     # Timestamps
     created_at: datetime = Field(
-        default_factory=lambda: datetime.utcnow(), description="Creation timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Creation timestamp"
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.utcnow(), description="Last update timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Last update timestamp"
     )
 
     @model_validator(mode="after")
@@ -134,12 +135,11 @@ class Trip(TripSageModel):
 
     @field_validator("tags")
     @classmethod
-    def validate_tags(cls, v: List[str]) -> List[str]:
+    def validate_tags(cls, v: list[str]) -> list[str]:
         """Validate and clean trip tags."""
         # Remove duplicates and empty strings
-        cleaned = list(set(tag.strip() for tag in v if tag.strip()))
+        return list({tag.strip() for tag in v if tag.strip()})
         # max_items constraint already enforces the limit
-        return cleaned
 
     @property
     def duration_days(self) -> int:
@@ -149,30 +149,28 @@ class Trip(TripSageModel):
     @property
     def budget_per_day(self) -> float:
         """Get the budget per day for the trip."""
-        return (
-            self.budget_breakdown.total / self.duration_days
-            if self.duration_days > 0
-            else 0
-        )
+        budget = cast(Budget, self.budget_breakdown)
+        return budget.total / self.duration_days if self.duration_days > 0 else 0
 
     @property
     def budget_per_person(self) -> float:
         """Get the budget per person for the trip."""
-        return self.budget_breakdown.total / self.travelers if self.travelers > 0 else 0
+        budget = cast(Budget, self.budget_breakdown)
+        return budget.total / self.travelers if self.travelers > 0 else 0
 
     @property
     def budget_utilization(self) -> float:
         """Get budget utilization percentage."""
-        if self.budget_breakdown.total <= 0:
+        budget = cast(Budget, self.budget_breakdown)
+        if budget.total <= 0:
             return 0.0
-        return min(
-            (self.budget_breakdown.spent / self.budget_breakdown.total) * 100, 100.0
-        )
+        return min((budget.spent / budget.total) * 100, 100.0)
 
     @property
     def remaining_budget(self) -> float:
         """Get remaining budget amount."""
-        return max(self.budget_breakdown.total - self.budget_breakdown.spent, 0.0)
+        budget = cast(Budget, self.budget_breakdown)
+        return max(budget.total - budget.spent, 0.0)
 
     @property
     def is_shared(self) -> bool:
@@ -221,7 +219,7 @@ class Trip(TripSageModel):
 
         if new_status in valid_transitions.get(self.status, []):
             self.status = new_status
-            self.updated_at = datetime.utcnow()
+            self.updated_at = datetime.now(UTC)
             return True
         return False
 
@@ -240,7 +238,7 @@ class Trip(TripSageModel):
         if len(self.tags) >= 20:
             return False
         self.tags.append(cleaned_tag)
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(UTC)
         return True
 
     def remove_tag(self, tag: str) -> bool:
@@ -255,15 +253,15 @@ class Trip(TripSageModel):
         cleaned_tag = tag.strip()
         if cleaned_tag in self.tags:
             self.tags.remove(cleaned_tag)
-            self.updated_at = datetime.utcnow()
+            self.updated_at = datetime.now(UTC)
             return True
         return False
 
 
 # Export the models
 __all__ = [
-    "Trip",
-    "EnhancedBudget",
+    "Budget",
     "BudgetBreakdown",
+    "Trip",
     "TripPreferences",
 ]

@@ -1,5 +1,4 @@
-"""
-Base agent node implementation for LangGraph orchestration.
+"""Base agent node implementation for LangGraph orchestration.
 
 This module provides the abstract base class that all specialized agent nodes
 inherit from, ensuring consistent error handling, logging, and tool management.
@@ -7,8 +6,8 @@ Refactored to support dependency injection and service-based architecture.
 """
 
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.state import TravelPlanningState, update_state_timestamp
@@ -20,12 +19,9 @@ from tripsage_core.utils.logging_utils import get_logger
 class BaseAgentNodeError(TripSageError):
     """Error raised when agent node operations fail."""
 
-    pass
-
 
 class BaseAgentNode(ABC):
-    """
-    Abstract base class for all LangGraph agent nodes.
+    """Abstract base class for all LangGraph agent nodes.
 
     Provides common functionality for error handling, logging, state management,
     and tool initialization that all specialized agent nodes can inherit.
@@ -35,10 +31,9 @@ class BaseAgentNode(ABC):
         self,
         node_name: str,
         service_registry: ServiceRegistry,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
     ):
-        """
-        Initialize the base agent node with dependency injection.
+        """Initialize the base agent node with dependency injection.
 
         Args:
             node_name: Unique name for this node (used in logging and routing)
@@ -53,7 +48,7 @@ class BaseAgentNode(ABC):
         # Initialize node-specific tools
         self._initialize_tools()
 
-        self.logger.info(f"Initialized {node_name} node with service injection")
+        self.logger.info("Initialized %s node with service injection", node_name)
 
     @property
     def name(self) -> str:
@@ -62,19 +57,16 @@ class BaseAgentNode(ABC):
 
     @abstractmethod
     def _initialize_tools(self) -> None:
-        """
-        Initialize node-specific tools and resources.
+        """Initialize node-specific tools and resources.
 
         This method should be implemented by each specialized node to set up
         any tools, MCP clients, or other resources it needs to operate.
         The implementation should use self.service_registry to access services.
         """
-        pass
 
     @abstractmethod
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
-        """
-        Process the current state and return updated state.
+        """Process the current state and return updated state.
 
         This is the main processing method that each specialized node must
         implement to perform its specific travel planning tasks.
@@ -88,11 +80,9 @@ class BaseAgentNode(ABC):
         Raises:
             BaseAgentNodeError: If processing fails
         """
-        pass
 
     async def __call__(self, state: TravelPlanningState) -> TravelPlanningState:
-        """
-        Main entry point for node execution.
+        """Main entry point for node execution.
 
         This method provides the standard execution flow with error handling,
         logging, and state management that all nodes follow.
@@ -104,7 +94,7 @@ class BaseAgentNode(ABC):
             Updated state after processing
         """
         try:
-            self.logger.info(f"Executing {self.node_name} node")
+            self.logger.info("Executing %s node", self.node_name)
 
             # Process the state using node-specific logic
             updated_state = await self.process(state)
@@ -113,19 +103,19 @@ class BaseAgentNode(ABC):
             updated_state["agent_history"].append(self.node_name)
             updated_state = update_state_timestamp(updated_state)
 
-            self.logger.info(f"Successfully completed {self.node_name} node execution")
+            self.logger.info("Successfully completed %s node execution", self.node_name)
             return updated_state
 
         except Exception as e:
-            self.logger.error(f"Error in {self.node_name} node: {str(e)}")
+            error_message = f"Error in {self.node_name} node: {e}"
+            self.logger.exception(error_message)
             log_exception(e, logger_name=f"orchestration.{self.node_name}")
             return self._handle_error(state, e)
 
     def _handle_error(
         self, state: TravelPlanningState, error: Exception
     ) -> TravelPlanningState:
-        """
-        Standardized error handling for all nodes.
+        """Standardized error handling for all nodes.
 
         Args:
             state: Current state when error occurred
@@ -152,18 +142,15 @@ class BaseAgentNode(ABC):
             ),
             "agent": self.node_name,
             "error": True,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
         state["messages"].append(error_message)
 
         # Update timestamp
-        state = update_state_timestamp(state)
+        return update_state_timestamp(state)
 
-        return state
-
-    def _extract_user_intent(self, message: str) -> Dict[str, Any]:
-        """
-        Extract user intent from a message (default implementation).
+    def _extract_user_intent(self, message: str) -> dict[str, Any]:
+        """Extract user intent from a message (default implementation).
 
         Specialized nodes can override this to provide more sophisticated
         intent extraction specific to their domain.
@@ -176,15 +163,14 @@ class BaseAgentNode(ABC):
         """
         return {
             "message": message,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "node": self.node_name,
         }
 
     def _create_response_message(
-        self, content: str, additional_data: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """
-        Create a standardized response message.
+        self, content: str, additional_data: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Create a standardized response message.
 
         Args:
             content: The response content
@@ -197,7 +183,7 @@ class BaseAgentNode(ABC):
             "role": "assistant",
             "content": content,
             "agent": self.node_name,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         if additional_data:
@@ -206,8 +192,7 @@ class BaseAgentNode(ABC):
         return message
 
     def get_service(self, service_name: str):
-        """
-        Get a required service from the registry.
+        """Get a required service from the registry.
 
         Args:
             service_name: Name of the service to retrieve
@@ -221,8 +206,7 @@ class BaseAgentNode(ABC):
         return self.service_registry.get_required_service(service_name)
 
     def get_optional_service(self, service_name: str):
-        """
-        Get an optional service from the registry.
+        """Get an optional service from the registry.
 
         Args:
             service_name: Name of the service to retrieve

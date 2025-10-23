@@ -1,5 +1,4 @@
-"""
-Web crawling tools package for TripSage.
+"""Web crawling tools package for TripSage.
 
 This package provides interfaces for web crawling, search, and content extraction
 tools that interact with external web services via MCPs.
@@ -13,8 +12,9 @@ from .models import UnifiedCrawlResult
 from .result_normalizer import ResultNormalizer
 from .source_selector import WebCrawlSourceSelector
 
+
 __all__ = [
-    "UnifiedCrawlResult",
     "ResultNormalizer",
+    "UnifiedCrawlResult",
     "WebCrawlSourceSelector",
 ]

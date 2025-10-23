@@ -1,8 +1,7 @@
-"""
-Modern comprehensive tests for keys router using 2025 best practices.
+"""Modern tests for keys router using 2025 best practices.
 
 This module provides enhanced test coverage with property-based testing,
-modern FastAPI testing patterns, and comprehensive error handling scenarios.
+modern FastAPI testing patterns, and error handling scenarios.
 """
 
 import uuid
@@ -10,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
+from pydantic import ValidationError
 
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.routers.keys import (
@@ -38,6 +37,7 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
 )
 
+
 # Hypothesis strategies for property-based testing
 user_ids = st.text(min_size=1, max_size=50).filter(str.strip)
 service_names = st.sampled_from(["openai", "google", "weather"])
@@ -47,7 +47,7 @@ uuids = st.uuids().map(str)
 
 
 class TestKeysRouterModern:
-    """Modern test suite for keys router with comprehensive coverage."""
+    """Modern test suite for keys router with coverage."""
 
     @pytest.fixture
     def mock_principal(self):
@@ -61,7 +61,7 @@ class TestKeysRouterModern:
 
     @pytest.fixture
     def mock_key_service(self):
-        """Create comprehensive mock key service."""
+        """Create mock key service."""
         service = MagicMock(spec=ApiKeyService)
 
         # Configure async methods with realistic defaults
@@ -160,7 +160,7 @@ class TestKeysRouterModern:
         mock_key_service.get_key.assert_called_once_with(key_ids)
         mock_key_service.delete_key.assert_called_once_with(key_ids)
 
-    # Comprehensive error handling tests
+    # Error handling tests
     @pytest.mark.asyncio
     async def test_create_key_validation_failure_scenarios(
         self, mock_principal, mock_key_service
@@ -239,7 +239,7 @@ class TestKeysRouterModern:
     async def test_validate_key_comprehensive_scenarios(
         self, mock_principal, mock_key_service
     ):
-        """Test comprehensive validation scenarios."""
+        """Test validation scenarios."""
         validation_scenarios = [
             # Valid key
             {
@@ -288,7 +288,7 @@ class TestKeysRouterModern:
     async def test_rotate_key_comprehensive_scenarios(
         self, mock_principal, mock_key_service, sample_api_key_response
     ):
-        """Test comprehensive key rotation scenarios."""
+        """Test key rotation scenarios."""
         key_id = str(uuid.uuid4())
 
         # Successful rotation
@@ -494,7 +494,7 @@ class TestKeysRouterModern:
                 result = await create_key(key_data, mock_principal, mock_key_service)
                 assert result is not None
 
-            except Exception as e:
+            except ValidationError as e:
                 # Pydantic validation errors are expected for invalid inputs
                 assert "validation" in str(e).lower() or "value" in str(e).lower()
 

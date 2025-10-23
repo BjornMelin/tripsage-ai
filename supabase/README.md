@@ -1,6 +1,6 @@
 # TripSage Supabase Project
 
-Comprehensive Supabase infrastructure for TripSage, including database schemas, edge functions, storage configuration, and migrations. Built with modern best practices for scalability and maintainability.
+Supabase infrastructure for TripSage, including database schemas, edge functions, storage configuration, and migrations. Built with modern best practices for scalability and maintainability.
 
 ## 🏗️ Project Structure
 
@@ -45,7 +45,7 @@ supabase/
 | **Migrations** | [migrations/README.md](./migrations/README.md) | Database migration best practices |
 | **Edge Functions** | [edge-functions/README.md](./edge-functions/README.md) | Serverless function development |
 | **Storage** | [storage/README.md](./storage/README.md) | File storage and management |
-| **Functions** | [functions/README.md](./functions/README.md) | Comprehensive edge function suite |
+| **Functions** | [functions/README.md](./functions/README.md) | Edge function suite |
 | **Troubleshooting** | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Common issues and solutions |
 
 ## 🚀 Quick Start Guide
@@ -161,7 +161,7 @@ DATABASE_POOLER_URL=postgresql://postgres.[PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[R
 2. **[Migrations](./migrations/README.md)** - Version-controlled database changes
 3. **[Edge Functions](./edge-functions/README.md)** - Serverless compute at the edge
 4. **[Storage](./storage/README.md)** - File storage with RLS policies
-5. **[Functions](./functions/README.md)** - Comprehensive serverless suite
+5. **[Functions](./functions/README.md)** - Serverless suite
 
 ### Entity Relationship Diagram
 
@@ -371,7 +371,7 @@ erDiagram
 | `transportation` | Ground transport options | Multi-modal support, collaborative access, shared transportation planning |
 | `itinerary_items` | Detailed trip activities and schedule | Flexible activity planning, collaborative editing, timeline management |
 
-### Chat & AI System (Collaboration-Enhanced)
+### Chat & AI System (Collaboration Suite)
 
 | Table | Description | Key Features |
 |-------|-------------|--------------|
@@ -392,11 +392,11 @@ erDiagram
 |-------|-------------|--------------|
 | `api_keys` | BYOK (Bring Your Own Keys) | Encrypted storage, usage tracking, service-specific key management |
 
-### Enhanced Trip Collaboration System
+### Trip Collaboration System
 
 | Feature | Description | Implementation |
 |---------|-------------|----------------|
-| **Granular Permissions** | `view`, `edit`, `admin` permission levels | Database-enforced via comprehensive RLS policies |
+| **Granular Permissions** | `view`, `edit`, `admin` permission levels | Database-enforced via RLS policies |
 | **Seamless Collaborative Access** | Users access shared trips transparently | Automatic inheritance through `trip_collaborators` junction table |
 | **Owner-Controlled Sharing** | Trip owners manage all collaborator permissions | Dedicated INSERT/UPDATE/DELETE policies with ownership validation |
 | **Complete Data Isolation** | Multi-tenant security with zero data leakage | RLS on all tables with user-scoped access patterns |
@@ -404,7 +404,7 @@ erDiagram
 | **Audit Trail** | Full collaboration activity tracking | Timestamps, permission changes, user activity monitoring |
 | **Performance Optimization** | Efficient collaboration queries | Composite indexes and optimized permission lookup patterns |
 
-**Advanced Collaboration Functions:**
+**Collaboration Functions:**
 
 - `get_user_accessible_trips(user_id, include_role)` - Get owned + shared trips with role information
 - `check_trip_permission(user_id, trip_id, permission)` - Validate user access with permission hierarchy
@@ -416,15 +416,15 @@ erDiagram
 
 ## 🔒 Security Features
 
-### Enhanced Row Level Security (RLS) with Collaboration
+### Row Level Security (RLS) with Collaboration
 
 - **Multi-tenant isolation with collaboration support**: Users access owned data plus explicitly shared resources
 - **Granular permission enforcement**: View/edit/admin permissions enforced at database level
-- **Automatic policy application**: Comprehensive RLS policies with zero manual security checks required
+- **Automatic policy application**: RLS policies with zero manual security checks required
 - **Supabase Auth integration**: Seamless integration with `auth.uid()` for user identification
 - **Performance-optimized security**: Efficient permission lookups with composite indexes
 
-### Comprehensive Security Policies
+### Security Policies
 
 - **Trip Ownership**: Users own their trips and control all collaboration permissions
 - **Collaborative Access**: Shared trips accessible based on explicit permission grants (view/edit/admin)

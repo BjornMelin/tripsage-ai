@@ -1,7 +1,6 @@
-"""
-Dashboard Service - Production-ready Analytics Implementation.
+"""Dashboard Service - Production-ready Analytics Implementation.
 
-This service provides comprehensive dashboard analytics and monitoring functionality
+This service provides dashboard analytics and monitoring functionality
 using real-time data aggregation from the unified ApiKeyService and database.
 
 Features:
@@ -13,12 +12,14 @@ Features:
 - Rate limiting status from live cache data
 """
 
+from __future__ import annotations
+
 import asyncio
 import enum
 import logging
 import statistics
-from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -27,6 +28,7 @@ from tripsage_core.services.business.api_key_service import (
     ServiceHealthStatus,
     ServiceType,
 )
+
 
 if TYPE_CHECKING:
     from tripsage_core.services.infrastructure.cache_service import CacheService
@@ -114,7 +116,7 @@ class UserActivityData(BaseModel):
     error_count: int = Field(description="Total errors by user")
     success_rate: float = Field(description="User's success rate")
     avg_latency_ms: float = Field(description="User's average latency")
-    services_used: List[str] = Field(description="Services accessed by user")
+    services_used: list[str] = Field(description="Services accessed by user")
     first_activity: datetime = Field(description="First recorded activity")
     last_activity: datetime = Field(description="Most recent activity")
     total_api_keys: int = Field(description="Number of API keys owned")
@@ -125,7 +127,7 @@ class UserActivityData(BaseModel):
         """Calculate user activity score (0-100)."""
         base_score = min(50.0, self.request_count / 10.0)  # Max 50 for volume
         success_bonus = self.success_rate * 30.0  # Max 30 for reliability
-        recency_days = (datetime.now(timezone.utc) - self.last_activity).days
+        recency_days = (datetime.now(UTC) - self.last_activity).days
         recency_penalty = max(0.0, min(20.0, recency_days * 2.0))  # Max 20 penalty
         return max(0.0, base_score + success_bonus - recency_penalty)
 
@@ -142,44 +144,44 @@ class AlertData(BaseModel):
     updated_at: datetime = Field(description="Last update timestamp")
 
     # Context data
-    service: Optional[str] = Field(default=None, description="Related service")
-    user_id: Optional[str] = Field(default=None, description="Related user")
-    api_key_id: Optional[str] = Field(default=None, description="Related API key")
+    service: str | None = Field(default=None, description="Related service")
+    user_id: str | None = Field(default=None, description="Related user")
+    api_key_id: str | None = Field(default=None, description="Related API key")
 
     # Status tracking
     acknowledged: bool = Field(
         default=False, description="Whether alert is acknowledged"
     )
-    acknowledged_by: Optional[str] = Field(
+    acknowledged_by: str | None = Field(
         default=None, description="User who acknowledged"
     )
-    acknowledged_at: Optional[datetime] = Field(
+    acknowledged_at: datetime | None = Field(
         default=None, description="Acknowledgment timestamp"
     )
     resolved: bool = Field(default=False, description="Whether alert is resolved")
-    resolved_at: Optional[datetime] = Field(
+    resolved_at: datetime | None = Field(
         default=None, description="Resolution timestamp"
     )
 
     # Alert data
-    threshold_value: Optional[float] = Field(
+    threshold_value: float | None = Field(
         default=None, description="Threshold that triggered alert"
     )
-    current_value: Optional[float] = Field(
+    current_value: float | None = Field(
         default=None, description="Current metric value"
     )
-    affected_resources: List[str] = Field(
+    affected_resources: list[str] = Field(
         default_factory=list, description="Affected resources"
     )
-    recommended_actions: List[str] = Field(
+    recommended_actions: list[str] = Field(
         default_factory=list, description="Suggested remediation"
     )
 
     # Metadata
-    tags: List[str] = Field(
+    tags: list[str] = Field(
         default_factory=list, description="Alert tags for filtering"
     )
-    details: Dict[str, Any] = Field(
+    details: dict[str, Any] = Field(
         default_factory=dict, description="Additional context data"
     )
 
@@ -187,7 +189,7 @@ class AlertData(BaseModel):
     @property
     def age_minutes(self) -> int:
         """Calculate alert age in minutes."""
-        return int((datetime.now(timezone.utc) - self.created_at).total_seconds() / 60)
+        return int((datetime.now(UTC) - self.created_at).total_seconds() / 60)
 
     @computed_field
     @property
@@ -210,46 +212,21 @@ class AlertData(BaseModel):
 
         return base_score
 
-    @property
-    def anomaly_type(self):
-        """Compatibility property for legacy code."""
-
-        class AnomalyTypeCompat:
-            def __init__(self, value: str):
-                self.value = value
-
-        return AnomalyTypeCompat(self.alert_type.value)
-
 
 class DashboardData(BaseModel):
-    """Comprehensive dashboard data from real analytics."""
+    """Comprehensive dashboard data derived from real analytics."""
 
-    metrics: RealTimeMetrics = Field(description="Real-time system metrics")
-    services: List[ServiceAnalytics] = Field(description="Per-service analytics")
-    top_users: List[UserActivityData] = Field(description="Top active users")
-    recent_alerts: List[AlertData] = Field(
+    metrics: RealTimeMetrics = Field(description="Aggregated real-time metrics")
+    services: list[ServiceAnalytics] = Field(description="Per-service analytics")
+    top_users: list[UserActivityData] = Field(description="Top active users")
+    recent_alerts: list[AlertData] = Field(
         default_factory=list, description="Recent system alerts"
     )
-    usage_trend: List[Dict[str, Any]] = Field(
+    usage_trend: list[dict[str, Any]] = Field(
         default_factory=list, description="Historical trend data"
     )
-    cache_stats: Dict[str, Any] = Field(
-        default_factory=dict, description="Cache performance stats"
-    )
-
-    # Legacy compatibility fields
-    total_requests: int = Field(description="Legacy compatibility field")
-    total_errors: int = Field(description="Legacy compatibility field")
-    overall_success_rate: float = Field(description="Legacy compatibility field")
-    active_keys: int = Field(description="Legacy compatibility field")
-    top_users_legacy: List[Dict[str, Any]] = Field(
-        default_factory=list, description="Legacy format top users", alias="top_users"
-    )
-    services_status: Dict[str, str] = Field(
-        default_factory=dict, description="Legacy services status"
-    )
-    usage_by_service: Dict[str, int] = Field(
-        default_factory=dict, description="Legacy usage by service"
+    cache_stats: dict[str, Any] = Field(
+        default_factory=dict, description="Cache performance statistics"
     )
 
     @computed_field
@@ -298,7 +275,7 @@ class RateLimitStatus(BaseModel):
     reset_at: datetime = Field(description="When the limit resets")
     percentage_used: float = Field(description="Percentage of limit used")
     is_throttled: bool = Field(default=False, description="Whether currently throttled")
-    last_request: Optional[datetime] = Field(
+    last_request: datetime | None = Field(
         default=None, description="Last request timestamp"
     )
 
@@ -308,24 +285,26 @@ class DashboardService:
 
     def __init__(
         self,
-        cache_service: Optional["CacheService"] = None,
-        database_service: Optional["DatabaseService"] = None,
-        settings=None,
+        cache_service: CacheService | None = None,
+        database_service: DatabaseService | None = None,
+        settings: Any | None = None,
     ):
         """Initialize dashboard service with dependencies."""
         self.cache = cache_service
         self.db = database_service
         self.settings = settings
 
-        # Initialize API key service for health checks and validation
-        self.api_key_service = ApiKeyService(
-            db=database_service,
-            cache=cache_service,
-            settings=settings,
-        )
+        # Initialize API key service for health checks and validation when possible
+        self.api_key_service: ApiKeyService | None = None
+        if database_service is not None:
+            self.api_key_service = ApiKeyService(
+                db=database_service,
+                cache=cache_service,
+                settings=settings,
+            )
 
         # Active alerts storage (in production, this would be in database/cache)
-        self._active_alerts: Dict[str, AlertData] = {}
+        self._active_alerts: dict[str, AlertData] = {}
 
         # Cache keys for metrics
         self._cache_prefix = "dashboard:metrics:"
@@ -336,7 +315,7 @@ class DashboardService:
     async def get_dashboard_data(
         self, time_range_hours: int = 24, top_users_limit: int = 10
     ) -> DashboardData:
-        """Get comprehensive dashboard data with real analytics."""
+        """Get dashboard data with real analytics."""
         try:
             # Run analytics queries in parallel for performance
             metrics_task = self._get_real_time_metrics(time_range_hours)
@@ -363,24 +342,6 @@ class DashboardService:
                 cache_stats_task,
             )
 
-            # Build legacy compatibility fields
-            legacy_services_status = {
-                service.service_name: service.health_status.value
-                for service in services
-            }
-
-            legacy_usage_by_service = {
-                service.service_name: service.total_requests for service in services
-            }
-
-            legacy_top_users = [
-                {
-                    "user_id": user.user_id,
-                    "request_count": user.request_count,
-                }
-                for user in top_users
-            ]
-
             return DashboardData(
                 metrics=metrics,
                 services=services,
@@ -388,25 +349,16 @@ class DashboardService:
                 recent_alerts=alerts,
                 usage_trend=trends,
                 cache_stats=cache_stats,
-                # Legacy compatibility
-                total_requests=metrics.total_requests,
-                total_errors=metrics.total_errors,
-                overall_success_rate=metrics.success_rate,
-                active_keys=metrics.active_keys_count,
-                top_users_legacy=legacy_top_users,
-                services_status=legacy_services_status,
-                usage_by_service=legacy_usage_by_service,
             )
 
-        except Exception as e:
-            logger.error(f"Failed to get dashboard data: {e}")
+        except Exception:
+            logger.exception("Failed to get dashboard data")
             # Return minimal data on error
-            now = datetime.now(timezone.utc)
-            return await self._get_fallback_dashboard_data(now, time_range_hours)
+            return await self._get_fallback_dashboard_data(time_range_hours)
 
     async def get_rate_limit_status(
         self, key_id: str, window_minutes: int = 60
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get real rate limit status from cache data."""
         try:
             if not self.cache:
@@ -425,8 +377,7 @@ class DashboardService:
                     cached_data.get(
                         "reset_at",
                         (
-                            datetime.now(timezone.utc)
-                            + timedelta(minutes=window_minutes)
+                            datetime.now(UTC) + timedelta(minutes=window_minutes)
                         ).isoformat(),
                     )
                 )
@@ -441,12 +392,12 @@ class DashboardService:
                     else 0,
                     "is_throttled": current_usage >= limit_value,
                 }
-            else:
-                # No cached data, return defaults
-                return self._get_default_rate_limit_status(key_id, window_minutes)
 
-        except Exception as e:
-            logger.error(f"Failed to get rate limit status for {key_id}: {e}")
+            # No cached data, return defaults
+            return self._get_default_rate_limit_status(key_id, window_minutes)
+
+        except Exception:
+            logger.exception("Failed to get rate limit status for %s", key_id)
             return self._get_default_rate_limit_status(key_id, window_minutes)
 
     async def _get_real_time_metrics(self, time_range_hours: int) -> RealTimeMetrics:
@@ -462,7 +413,7 @@ class DashboardService:
                 if cached_metrics:
                     return RealTimeMetrics(**cached_metrics)
 
-            end_time = datetime.now(timezone.utc)
+            end_time = datetime.now(UTC)
             start_time = end_time - timedelta(hours=time_range_hours)
 
             # Query usage logs for real data
@@ -500,10 +451,10 @@ class DashboardService:
 
             # Get unique counts
             unique_users = len(
-                set(log.get("user_id") for log in usage_logs if log.get("user_id"))
+                {log.get("user_id") for log in usage_logs if log.get("user_id")}
             )
             unique_keys = len(
-                set(log.get("key_id") for log in usage_logs if log.get("key_id"))
+                {log.get("key_id") for log in usage_logs if log.get("key_id")}
             )
 
             # Calculate requests per minute
@@ -532,57 +483,55 @@ class DashboardService:
 
             return metrics
 
-        except Exception as e:
-            logger.error(f"Failed to get real-time metrics: {e}")
+        except Exception:
+            logger.exception("Failed to get real-time metrics")
             return self._get_default_metrics(time_range_hours)
 
     async def _get_service_analytics(
         self, time_range_hours: int
-    ) -> List[ServiceAnalytics]:
+    ) -> list[ServiceAnalytics]:
         """Get per-service analytics from real data."""
         try:
+            if self.api_key_service is None:
+                return self._get_default_service_analytics()
+
             # Get health checks for all services
             health_checks = await self.api_key_service.check_all_services_health()
 
-            services = []
-            for service_type, health_check in health_checks.items():
-                # Get usage data for this service
-                service_usage = await self._get_service_usage_data(
-                    service_type, time_range_hours
+            return [
+                ServiceAnalytics(
+                    service_name=service_type.value,
+                    service_type=service_type,
+                    total_requests=service_usage.get("requests", 0),
+                    total_errors=service_usage.get("errors", 0),
+                    success_rate=service_usage.get("success_rate", 1.0),
+                    avg_latency_ms=health_check.latency_ms,
+                    active_keys=service_usage.get("active_keys", 0),
+                    last_health_check=health_check.checked_at,
+                    health_status=health_check.status,
+                    rate_limit_hits=service_usage.get("rate_limit_hits", 0),
+                    quota_usage_percent=service_usage.get("quota_usage", 0.0),
                 )
+                for service_type, health_check in health_checks.items()
+                for service_usage in [
+                    await self._get_service_usage_data(service_type, time_range_hours)
+                ]
+            ]
 
-                services.append(
-                    ServiceAnalytics(
-                        service_name=service_type.value,
-                        service_type=service_type,
-                        total_requests=service_usage.get("requests", 0),
-                        total_errors=service_usage.get("errors", 0),
-                        success_rate=service_usage.get("success_rate", 1.0),
-                        avg_latency_ms=health_check.latency_ms,
-                        active_keys=service_usage.get("active_keys", 0),
-                        last_health_check=health_check.checked_at,
-                        health_status=health_check.status,
-                        rate_limit_hits=service_usage.get("rate_limit_hits", 0),
-                        quota_usage_percent=service_usage.get("quota_usage", 0.0),
-                    )
-                )
-
-            return services
-
-        except Exception as e:
-            logger.error(f"Failed to get service analytics: {e}")
+        except Exception:
+            logger.exception("Failed to get service analytics")
             return self._get_default_service_analytics()
 
     async def _get_user_activity_data(
         self, time_range_hours: int, limit: int
-    ) -> List[UserActivityData]:
+    ) -> list[UserActivityData]:
         """Get real user activity analytics."""
         try:
             if not self.db:
                 return []
 
             # Query user activity from usage logs
-            end_time = datetime.now(timezone.utc)
+            end_time = datetime.now(UTC)
             start_time = end_time - timedelta(hours=time_range_hours)
 
             usage_logs = await self._query_usage_logs(start_time, end_time)
@@ -598,7 +547,8 @@ class DashboardService:
                     user_stats[user_id] = {
                         "request_count": 0,
                         "error_count": 0,
-                        "latencies": [],
+                        "latency_sum": 0.0,
+                        "latency_count": 0,
                         "services": set(),
                         "first_activity": log.get("timestamp"),
                         "last_activity": log.get("timestamp"),
@@ -611,7 +561,8 @@ class DashboardService:
                     stats["error_count"] += 1
 
                 if log.get("latency_ms"):
-                    stats["latencies"].append(log["latency_ms"])
+                    stats["latency_sum"] += log["latency_ms"]
+                    stats["latency_count"] += 1
 
                 if log.get("service"):
                     stats["services"].add(log["service"])
@@ -622,48 +573,43 @@ class DashboardService:
                 # Update activity timestamps
                 timestamp = log.get("timestamp")
                 if timestamp:
-                    if timestamp < stats["first_activity"]:
-                        stats["first_activity"] = timestamp
-                    if timestamp > stats["last_activity"]:
-                        stats["last_activity"] = timestamp
+                    stats["first_activity"] = min(stats["first_activity"], timestamp)
+                    stats["last_activity"] = max(stats["last_activity"], timestamp)
 
             # Convert to UserActivityData objects
-            user_activities = []
-            for user_id, stats in user_stats.items():
-                success_rate = (
-                    (stats["request_count"] - stats["error_count"])
-                    / stats["request_count"]
-                    if stats["request_count"] > 0
-                    else 1.0
+            user_activities = [
+                UserActivityData(
+                    user_id=user_id,
+                    request_count=stats["request_count"],
+                    error_count=stats["error_count"],
+                    success_rate=(
+                        (stats["request_count"] - stats["error_count"])
+                        / stats["request_count"]
+                        if stats["request_count"] > 0
+                        else 1.0
+                    ),
+                    avg_latency_ms=(
+                        stats["latency_sum"] / stats["latency_count"]
+                        if stats["latency_count"]
+                        else 150.0
+                    ),
+                    services_used=list(stats["services"]),
+                    first_activity=stats["first_activity"],
+                    last_activity=stats["last_activity"],
+                    total_api_keys=len(stats["api_keys"]),
                 )
-
-                avg_latency = (
-                    statistics.mean(stats["latencies"]) if stats["latencies"] else 150.0
-                )
-
-                user_activities.append(
-                    UserActivityData(
-                        user_id=user_id,
-                        request_count=stats["request_count"],
-                        error_count=stats["error_count"],
-                        success_rate=success_rate,
-                        avg_latency_ms=avg_latency,
-                        services_used=list(stats["services"]),
-                        first_activity=stats["first_activity"],
-                        last_activity=stats["last_activity"],
-                        total_api_keys=len(stats["api_keys"]),
-                    )
-                )
+                for user_id, stats in user_stats.items()
+            ]
 
             # Sort by activity score and return top users
             user_activities.sort(key=lambda u: u.activity_score, reverse=True)
             return user_activities[:limit]
 
-        except Exception as e:
-            logger.error(f"Failed to get user activity data: {e}")
+        except Exception:
+            logger.exception("Failed to get user activity data")
             return []
 
-    async def _get_recent_alerts(self) -> List[AlertData]:
+    async def _get_recent_alerts(self) -> list[AlertData]:
         """Get recent system alerts."""
         try:
             # In a real implementation, this would query from database
@@ -675,58 +621,58 @@ class DashboardService:
 
             return alerts[:50]  # Limit to most recent/important
 
-        except Exception as e:
-            logger.error(f"Failed to get recent alerts: {e}")
+        except Exception:
+            logger.exception("Failed to get recent alerts")
             return []
 
-    async def _get_usage_trends(self, time_range_hours: int) -> List[Dict[str, Any]]:
+    async def _get_usage_trends(self, time_range_hours: int) -> list[dict[str, Any]]:
         """Get usage trend data over time."""
         try:
             if not self.db:
                 return []
 
-            end_time = datetime.now(timezone.utc)
+            end_time = datetime.now(UTC)
             start_time = end_time - timedelta(hours=time_range_hours)
 
-            # Create hourly buckets
-            trends = []
+            buckets = []
             current_time = start_time
-
             while current_time <= end_time:
                 bucket_end = current_time + timedelta(hours=1)
-
-                # Query usage for this hour
-                hour_usage = await self._query_usage_logs(current_time, bucket_end)
-
-                requests = len(hour_usage)
-                errors = sum(1 for log in hour_usage if not log.get("success", True))
-                success_rate = (requests - errors) / requests if requests > 0 else 1.0
-
-                trends.append(
-                    {
-                        "timestamp": current_time.isoformat(),
-                        "requests": requests,
-                        "errors": errors,
-                        "success_rate": success_rate,
-                    }
-                )
-
+                buckets.append((current_time, bucket_end))
                 current_time = bucket_end
 
-            return trends
+            return [
+                {
+                    "timestamp": bucket_start.isoformat(),
+                    "requests": requests,
+                    "errors": errors,
+                    "success_rate": success_rate,
+                }
+                for bucket_start, bucket_end in buckets
+                for hour_usage in [
+                    await self._query_usage_logs(bucket_start, bucket_end)
+                ]
+                for requests in [len(hour_usage)]
+                for errors in [
+                    sum(1 for log in hour_usage if not log.get("success", True))
+                ]
+                for success_rate in [
+                    (requests - errors) / requests if requests > 0 else 1.0
+                ]
+            ]
 
-        except Exception as e:
-            logger.error(f"Failed to get usage trends: {e}")
+        except Exception:
+            logger.exception("Failed to get usage trends")
             return []
 
-    async def _get_cache_statistics(self) -> Dict[str, Any]:
+    async def _get_cache_statistics(self) -> dict[str, Any]:
         """Get cache performance statistics."""
         try:
             if not self.cache:
                 return {}
 
             # Get cache info (DragonflyDB/Redis compatible)
-            stats = {
+            return {
                 "connected": self.cache.is_connected,
                 "hit_rate": 0.85,  # Would be calculated from real metrics
                 "memory_usage_mb": 128.5,  # Would be from Redis INFO
@@ -735,15 +681,13 @@ class DashboardService:
                 "evicted_keys": 12,  # Would be tracked
             }
 
-            return stats
-
-        except Exception as e:
-            logger.error(f"Failed to get cache statistics: {e}")
+        except Exception:
+            logger.exception("Failed to get cache statistics")
             return {}
 
     async def _query_usage_logs(
         self, start_time: datetime, end_time: datetime
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Query usage logs from database."""
         try:
             if not self.db:
@@ -755,21 +699,20 @@ class DashboardService:
                 "timestamp__lte": end_time.isoformat(),
             }
 
-            logs = await self.db.select(
+            return await self.db.select(
                 "api_key_usage_logs", filters=filters, limit=10000
             )
-            return logs
 
-        except Exception as e:
-            logger.error(f"Failed to query usage logs: {e}")
+        except Exception:
+            logger.exception("Failed to query usage logs")
             return []
 
     async def _get_service_usage_data(
         self, service_type: ServiceType, time_range_hours: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get usage data for a specific service."""
         try:
-            end_time = datetime.now(timezone.utc)
+            end_time = datetime.now(UTC)
             start_time = end_time - timedelta(hours=time_range_hours)
 
             usage_logs = await self._query_usage_logs(start_time, end_time)
@@ -791,7 +734,7 @@ class DashboardService:
             errors = sum(1 for log in service_logs if not log.get("success", True))
             success_rate = (requests - errors) / requests if requests > 0 else 1.0
             active_keys = len(
-                set(log.get("key_id") for log in service_logs if log.get("key_id"))
+                {log.get("key_id") for log in service_logs if log.get("key_id")}
             )
 
             return {
@@ -803,8 +746,8 @@ class DashboardService:
                 "quota_usage": 0.0,  # Would be calculated from quotas
             }
 
-        except Exception as e:
-            logger.error(f"Failed to get service usage data for {service_type}: {e}")
+        except Exception:
+            logger.exception("Failed to get service usage data for %s", service_type)
             return {
                 "requests": 0,
                 "errors": 0,
@@ -816,13 +759,13 @@ class DashboardService:
 
     def _get_default_rate_limit_status(
         self, key_id: str, window_minutes: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get default rate limit status when cache is unavailable."""
         # Use deterministic but varied values based on key_id
         base_usage = hash(key_id) % 500
         limit_value = 1000
         remaining = limit_value - base_usage
-        reset_at = datetime.now(timezone.utc) + timedelta(minutes=window_minutes)
+        reset_at = datetime.now(UTC) + timedelta(minutes=window_minutes)
 
         return {
             "requests_in_window": base_usage,
@@ -835,7 +778,7 @@ class DashboardService:
 
     def _get_default_metrics(self, time_range_hours: int) -> RealTimeMetrics:
         """Get default metrics when database is unavailable."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         start_time = now - timedelta(hours=time_range_hours)
 
         # Scaled defaults based on time range
@@ -856,32 +799,28 @@ class DashboardService:
             period_end=now,
         )
 
-    def _get_default_service_analytics(self) -> List[ServiceAnalytics]:
+    def _get_default_service_analytics(self) -> list[ServiceAnalytics]:
         """Get default service analytics when data is unavailable."""
-        now = datetime.now(timezone.utc)
-        services = []
-
-        for service_type in ServiceType:
-            services.append(
-                ServiceAnalytics(
-                    service_name=service_type.value,
-                    service_type=service_type,
-                    total_requests=200,
-                    total_errors=10,
-                    success_rate=0.95,
-                    avg_latency_ms=150.0,
-                    active_keys=2,
-                    last_health_check=now,
-                    health_status=ServiceHealthStatus.HEALTHY,
-                    rate_limit_hits=0,
-                    quota_usage_percent=45.0,
-                )
+        now = datetime.now(UTC)
+        return [
+            ServiceAnalytics(
+                service_name=service_type.value,
+                service_type=service_type,
+                total_requests=200,
+                total_errors=10,
+                success_rate=0.95,
+                avg_latency_ms=150.0,
+                active_keys=2,
+                last_health_check=now,
+                health_status=ServiceHealthStatus.HEALTHY,
+                rate_limit_hits=0,
+                quota_usage_percent=45.0,
             )
-
-        return services
+            for service_type in ServiceType
+        ]
 
     async def _get_fallback_dashboard_data(
-        self, timestamp: datetime, time_range_hours: int
+        self, time_range_hours: int
     ) -> DashboardData:
         """Get fallback dashboard data when queries fail."""
         metrics = self._get_default_metrics(time_range_hours)
@@ -894,17 +833,14 @@ class DashboardService:
             recent_alerts=[],
             usage_trend=[],
             cache_stats={},
-            # Legacy compatibility
-            total_requests=metrics.total_requests,
-            total_errors=metrics.total_errors,
-            overall_success_rate=metrics.success_rate,
-            active_keys=metrics.active_keys_count,
-            top_users_legacy=[],
-            services_status={s.service_name: s.health_status.value for s in services},
-            usage_by_service={s.service_name: s.total_requests for s in services},
         )
 
     # Alert management methods
+    @property
+    def active_alerts(self) -> dict[str, AlertData]:
+        """Expose active alerts for external consumers."""
+        return self._active_alerts
+
     async def create_alert(
         self,
         alert_type: AlertType,
@@ -914,7 +850,7 @@ class DashboardService:
         **kwargs,
     ) -> AlertData:
         """Create a new system alert."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         # Use microseconds to ensure unique IDs for alerts created in rapid succession
         alert_id = f"alert_{int(now.timestamp() * 1000000)}"
 
@@ -930,7 +866,7 @@ class DashboardService:
         )
 
         self._active_alerts[alert.alert_id] = alert
-        logger.info(f"Created alert {alert.alert_id}: {title}")
+        logger.info("Created alert %s: %s", alert.alert_id, title)
 
         return alert
 
@@ -940,10 +876,10 @@ class DashboardService:
             alert = self._active_alerts[alert_id]
             alert.acknowledged = True
             alert.acknowledged_by = user_id
-            alert.acknowledged_at = datetime.now(timezone.utc)
-            alert.updated_at = datetime.now(timezone.utc)
+            alert.acknowledged_at = datetime.now(UTC)
+            alert.updated_at = datetime.now(UTC)
 
-            logger.info(f"Alert {alert_id} acknowledged by {user_id}")
+            logger.info("Alert %s acknowledged by %s", alert_id, user_id)
             return True
 
         return False
@@ -953,39 +889,10 @@ class DashboardService:
         if alert_id in self._active_alerts:
             alert = self._active_alerts[alert_id]
             alert.resolved = True
-            alert.resolved_at = datetime.now(timezone.utc)
-            alert.updated_at = datetime.now(timezone.utc)
+            alert.resolved_at = datetime.now(UTC)
+            alert.updated_at = datetime.now(UTC)
 
-            logger.info(f"Alert {alert_id} resolved")
+            logger.info("Alert %s resolved", alert_id)
             return True
 
         return False
-
-
-# Legacy compatibility aliases
-ApiKeyMonitoringService = DashboardService
-
-
-class ApiKeyValidator:
-    """Compatibility wrapper for ApiKeyService validation."""
-
-    def __init__(self, settings=None):
-        self.settings = settings
-
-    async def __aenter__(self):
-        """Async context manager entry."""
-        self.api_key_service = ApiKeyService(
-            db=None,
-            cache=None,
-            settings=self.settings,
-        )
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        if hasattr(self.api_key_service, "__aexit__"):
-            await self.api_key_service.__aexit__(exc_type, exc_val, exc_tb)
-
-    async def check_all_services_health(self):
-        """Check health of all services."""
-        return await self.api_key_service.check_all_services_health()

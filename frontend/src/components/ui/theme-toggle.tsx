@@ -58,7 +58,7 @@ export function ThemeToggle() {
 }
 
 // Alternative compact toggle for simpler use cases
-export function SimpleThemeToggle() {
+export function CompactThemeToggle() {
   const { setTheme, theme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 

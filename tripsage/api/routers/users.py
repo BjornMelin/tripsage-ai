@@ -1,5 +1,4 @@
-"""
-User-related endpoints for the TripSage API.
+"""User-related endpoints for the TripSage API.
 
 This module provides endpoints for user preferences and profile management.
 Simplified authentication using direct JWT verification.
@@ -11,13 +10,21 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.schemas.users import UserPreferencesRequest, UserPreferencesResponse
+from tripsage_core.observability.otel import (
+    http_route_attr_fn,
+    record_histogram,
+    trace_span,
+)
 from tripsage_core.services.business.user_service import UserService, get_user_service
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 @router.get("/preferences", response_model=UserPreferencesResponse)
+@trace_span(name="api.users.preferences.get")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_user_preferences(
     principal=Depends(require_principal),
     user_service: UserService = Depends(get_user_service),
@@ -35,7 +42,7 @@ async def get_user_preferences(
         HTTPException: If user is not found
     """
     user_id = get_principal_id(principal)
-    logger.info(f"Getting preferences for user: {user_id}")
+    logger.info("Getting preferences for user: %s", user_id)
 
     try:
         user = await user_service.get_user_by_id(user_id)
@@ -46,13 +53,13 @@ async def get_user_preferences(
             )
 
         # Return preferences or empty dict if none set
-        preferences = user.preferences_json or {}
+        preferences = user.preferences or {}
         return UserPreferencesResponse(preferences=preferences)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting user preferences: {e}")
+        logger.exception("Error getting user preferences")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve preferences",
@@ -60,6 +67,8 @@ async def get_user_preferences(
 
 
 @router.put("/preferences", response_model=UserPreferencesResponse)
+@trace_span(name="api.users.preferences.update")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def update_user_preferences(
     preferences_request: UserPreferencesRequest,
     principal=Depends(require_principal),
@@ -82,7 +91,7 @@ async def update_user_preferences(
         HTTPException: If update fails
     """
     user_id = get_principal_id(principal)
-    logger.info(f"Updating preferences for user: {user_id}")
+    logger.info("Updating preferences for user: %s", user_id)
 
     try:
         # Update preferences (service handles merging)
@@ -93,7 +102,7 @@ async def update_user_preferences(
         return UserPreferencesResponse(preferences=updated_user.preferences or {})
 
     except Exception as e:
-        logger.error(f"Error updating user preferences: {e}")
+        logger.exception("Error updating user preferences")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update preferences",

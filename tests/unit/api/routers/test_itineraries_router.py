@@ -1,5 +1,4 @@
-"""
-Clean tests for itineraries router.
+"""Clean tests for itineraries router.
 
 Tests the actual implemented itinerary management functionality.
 Follows TripSage standards for focused, actionable testing.

@@ -1,5 +1,5 @@
 /**
- * Comprehensive error type definitions for React Query integration
+ * Error type definitions for React Query integration
  * Provides proper TypeScript error handling across the application
  */
 

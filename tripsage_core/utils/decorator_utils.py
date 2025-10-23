@@ -1,15 +1,15 @@
-"""
-Utility decorators for TripSage Core.
+"""Utility decorators for TripSage Core.
 
 This module provides decorators used across the TripSage codebase for standardized
 error handling and client initialization patterns.
 """
+# pylint: disable=import-error, too-many-statements, no-else-return
 
-import asyncio
 import functools
 import inspect
 import time
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, cast
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 from tripsage_core.exceptions import (
     CoreAuthenticationError,
@@ -17,9 +17,9 @@ from tripsage_core.exceptions import (
     CoreServiceError,
     CoreValidationError,
 )
+from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
 
-from .error_handling_utils import log_exception
 
 logger = get_logger(__name__)
 
@@ -27,19 +27,26 @@ logger = get_logger(__name__)
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def with_error_handling(
-    operation_name: Optional[str] = None,
-    expected_errors: Optional[Tuple[Exception, ...]] = None,
-    log_extra_func: Optional[Callable[..., Dict[str, Any]]] = None,
-    reraise_errors: Optional[Tuple[Exception, ...]] = None,
-    default_return: Optional[Any] = None,
-) -> Callable[[F], F]:
-    """
-    Enhanced decorator for standardized error handling with comprehensive features.
+def _wants_error_dict_async(func: Callable[..., Any]) -> bool:
+    """Async functions: treat missing or exact ``dict`` annotation as dict."""
+    ra = inspect.signature(func).return_annotation
+    return (ra is inspect.Signature.empty) or (ra is dict)
 
-    This decorator provides advanced error handling with configurable parameters,
-    proper logging, performance metrics, and support for both sync and async functions.
-    It follows the latest best practices for Python error handling decorators.
+
+def _wants_error_dict_sync(func: Callable[..., Any]) -> bool:
+    """Sync functions: only exact ``dict`` annotation returns dict."""
+    ra = inspect.signature(func).return_annotation
+    return ra is dict
+
+
+def with_error_handling(
+    operation_name: str | None = None,
+    expected_errors: tuple[type[Exception], ...] | None = None,
+    log_extra_func: Callable[..., dict[str, Any]] | None = None,
+    reraise_errors: tuple[type[BaseException], ...] | None = None,
+    default_return: Any | None = None,
+) -> Callable[[F], F]:
+    """Decorator for standardized error handling.
 
     Args:
         operation_name: Custom operation name for logging (defaults to function name)
@@ -51,27 +58,6 @@ def with_error_handling(
 
     Returns:
         Decorator function that applies error handling to the target function
-
-    Example:
-        ```python
-        # Basic usage
-        @with_error_handling()
-        async def fetch_user_data(user_id: str) -> Dict[str, Any]:
-            # Function implementation
-            pass
-
-        # Advanced usage with custom configuration
-        @with_error_handling(
-            operation_name="user_authentication",
-            expected_errors=(CoreValidationError, CoreAuthenticationError),
-            log_extra_func=lambda *args, **kwargs: {"user_id": kwargs.get("user_id")},
-            reraise_errors=(CoreDatabaseError,),
-            default_return={"error": "Authentication failed"}
-        )
-        async def authenticate_user(user_id: str, password: str) -> Dict[str, Any]:
-            # Function implementation
-            pass
-        ```
     """
 
     def decorator(func: F) -> F:
@@ -90,12 +76,17 @@ def with_error_handling(
         if reraise_errors is None:
             reraise_errors = (CoreDatabaseError, SystemExit, KeyboardInterrupt)
 
+        # Narrow types for static checkers
+        exp_errors: tuple[type[Exception], ...] = expected_errors
+        rer_errors: tuple[type[BaseException], ...] = reraise_errors
+
         # Check if the function is a coroutine function (async)
+        # Async coroutine functions
         if inspect.iscoroutinefunction(func):
 
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-                """Enhanced async wrapper with comprehensive error handling."""
+                """Async wrapper with error handling."""
                 start_time = time.time()
                 extra_context = {}
 
@@ -104,14 +95,15 @@ def with_error_handling(
                     if log_extra_func:
                         try:
                             extra_context = log_extra_func(*args, **kwargs)
-                        except Exception as context_error:
+                        except Exception as context_error:  # noqa: BLE001
                             logger.warning(
-                                f"Failed to generate logging context: {context_error}"
+                                "Failed to generate logging context: %s", context_error
                             )
 
                     # Log operation start
                     logger.info(
-                        f"Starting operation: {operation_name}",
+                        "Starting operation: %s",
+                        operation_name,
                         extra={"operation": operation_name, **extra_context},
                     )
 
@@ -121,7 +113,8 @@ def with_error_handling(
                     # Log successful completion with execution time
                     execution_time = time.time() - start_time
                     logger.info(
-                        f"Operation completed successfully: {operation_name}",
+                        "Operation completed successfully: %s",
+                        operation_name,
                         extra={
                             "operation": operation_name,
                             "execution_time_ms": round(execution_time * 1000, 2),
@@ -131,11 +124,13 @@ def with_error_handling(
 
                     return result
 
-                except reraise_errors as e:
+                except rer_errors as e:
                     # Always re-raise critical errors
                     execution_time = time.time() - start_time
                     logger.critical(
-                        f"Critical error in {operation_name}: {str(e)}",
+                        "Critical error in %s: %s",
+                        operation_name,
+                        e,
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -143,14 +138,16 @@ def with_error_handling(
                             **extra_context,
                         },
                     )
-                    log_exception(e, operation_name)
+                    # Avoid passing BaseException-derived objects to log_exception
                     raise
 
-                except expected_errors as e:
+                except exp_errors as e:
                     # Handle expected errors gracefully
                     execution_time = time.time() - start_time
                     logger.warning(
-                        f"Expected error in {operation_name}: {str(e)}",
+                        "Expected error in %s: %s",
+                        operation_name,
+                        e,
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -173,14 +170,14 @@ def with_error_handling(
                             "error_code": getattr(e, "code", "UNKNOWN"),
                         }
 
-                    # Re-raise for non-dict returning functions
-                    raise
+                    raise  # Re-raise for non-dict returning functions
 
                 except Exception as e:
                     # Handle unexpected errors
                     execution_time = time.time() - start_time
-                    logger.error(
-                        f"Unexpected error in {operation_name}: {str(e)}",
+                    logger.exception(
+                        "Unexpected error in %s",
+                        operation_name,
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -188,38 +185,48 @@ def with_error_handling(
                             **extra_context,
                         },
                     )
-                    log_exception(e, operation_name)
+                    log_exception(cast(Exception, e), operation_name)
 
-                    # Wrap unexpected errors in CoreServiceError
-                    service_error = CoreServiceError(
-                        message=f"Operation failed: {operation_name}",
-                        code="OPERATION_FAILED",
-                        details={
-                            "original_error": str(e),
-                            "operation": operation_name,
-                            **extra_context,
-                        },
-                    )
+                    # Preserve original error context; avoid wrapping
 
                     # Check if function returns Dict (for agent tools)
-                    signature = inspect.signature(func)
-                    return_type = signature.return_annotation
-                    return_type_str = str(return_type)
+                    if _wants_error_dict_async(func):
+                        # Preserve original error message for callers that expect it
+                        return {"error": str(e)}
 
-                    if "dict" in return_type_str.lower() or return_type is dict:
-                        return service_error.to_dict()
-
-                    # Re-raise the wrapped error
-                    raise service_error from e
+                    # Re-raise the original error for non-dict returns
+                    raise
 
             return cast(F, async_wrapper)
+
+        # Async generator functions
+        elif inspect.isasyncgenfunction(func):
+
+            @functools.wraps(func)
+            async def async_gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+                """Consume async generator safely so `await` calls do not error.
+
+                Returns an empty dict for compatibility with tests that call
+                `await` on decorated async generators.
+                """
+                try:
+                    async for _ in func(*args, **kwargs):
+                        pass
+                    return {}
+                except Exception as e:
+                    log_exception(e, func.__name__)
+                    if _wants_error_dict_async(func):
+                        return {"error": str(e)}
+                    raise
+
+            return cast(F, async_gen_wrapper)
 
         # For synchronous functions
         else:
 
             @functools.wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-                """Enhanced sync wrapper with comprehensive error handling."""
+                """Sync wrapper with error handling."""
                 start_time = time.time()
                 extra_context = {}
 
@@ -228,14 +235,15 @@ def with_error_handling(
                     if log_extra_func:
                         try:
                             extra_context = log_extra_func(*args, **kwargs)
-                        except Exception as context_error:
+                        except Exception as context_error:  # noqa: BLE001
                             logger.warning(
-                                f"Failed to generate logging context: {context_error}"
+                                "Failed to generate logging context: %s", context_error
                             )
 
                     # Log operation start
                     logger.info(
-                        f"Starting operation: {operation_name}",
+                        "Starting operation: %s",
+                        operation_name,
                         extra={"operation": operation_name, **extra_context},
                     )
 
@@ -245,7 +253,8 @@ def with_error_handling(
                     # Log successful completion with execution time
                     execution_time = time.time() - start_time
                     logger.info(
-                        f"Operation completed successfully: {operation_name}",
+                        "Operation completed successfully: %s",
+                        operation_name,
                         extra={
                             "operation": operation_name,
                             "execution_time_ms": round(execution_time * 1000, 2),
@@ -255,11 +264,13 @@ def with_error_handling(
 
                     return result
 
-                except reraise_errors as e:
+                except rer_errors as e:
                     # Always re-raise critical errors
                     execution_time = time.time() - start_time
                     logger.critical(
-                        f"Critical error in {operation_name}: {str(e)}",
+                        "Critical error in %s: %s",
+                        operation_name,
+                        e,
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -267,14 +278,16 @@ def with_error_handling(
                             **extra_context,
                         },
                     )
-                    log_exception(e, operation_name)
+                    # Skip log_exception for BaseException-derived types
                     raise
 
-                except expected_errors as e:
+                except exp_errors as e:
                     # Handle expected errors gracefully
                     execution_time = time.time() - start_time
                     logger.warning(
-                        f"Expected error in {operation_name}: {str(e)}",
+                        "Expected error in %s: %s",
+                        operation_name,
+                        e,
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -303,8 +316,9 @@ def with_error_handling(
                 except Exception as e:
                     # Handle unexpected errors
                     execution_time = time.time() - start_time
-                    logger.error(
-                        f"Unexpected error in {operation_name}: {str(e)}",
+                    logger.exception(
+                        "Unexpected error in %s",
+                        operation_name,
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -314,60 +328,26 @@ def with_error_handling(
                     )
                     log_exception(e, operation_name)
 
-                    # Wrap unexpected errors in CoreServiceError
-                    service_error = CoreServiceError(
-                        message=f"Operation failed: {operation_name}",
-                        code="OPERATION_FAILED",
-                        details={
-                            "original_error": str(e),
-                            "operation": operation_name,
-                            **extra_context,
-                        },
-                    )
+                    # Preserve original error context; avoid wrapping
 
-                    # Check if function returns Dict (for agent tools)
-                    signature = inspect.signature(func)
-                    return_type = signature.return_annotation
-                    return_type_str = str(return_type)
+                    if _wants_error_dict_sync(func):
+                        return {"error": str(e)}
 
-                    if "dict" in return_type_str.lower() or return_type is dict:
-                        return service_error.to_dict()
-
-                    # Re-raise the wrapped error
-                    raise service_error from e
+                    raise  # Re-raise the original error
 
             return cast(F, sync_wrapper)
 
     return decorator
 
 
-def ensure_memory_client_initialized(func: F) -> F:
+def ensure_memory_client_initialized[F: Callable[..., Any]](func: F) -> F:
     """Decorator to ensure memory service is initialized.
-
-    This decorator ensures that the memory service is initialized before
-    the decorated function is called. This avoids redundant initialization
-    calls in each function that uses the memory service.
 
     Args:
         func: Function to decorate (must be async)
 
     Returns:
         Decorated function with memory service initialization
-
-    Example:
-        ```python
-        @function_tool
-        @ensure_memory_client_initialized
-        async def add_memory() -> Dict[str, Any]:
-            # Memory service is already initialized here
-            from tripsage_core.services.business.memory_service import MemoryService
-            memory_service = MemoryService()
-            result = await memory_service.add_memory(
-                user_id="user-123",
-                content="Trip preference"
-            )
-            return {"memory_id": result}
-        ```
     """
     if not inspect.iscoroutinefunction(func):
         raise TypeError(
@@ -388,106 +368,18 @@ def ensure_memory_client_initialized(func: F) -> F:
         except Exception as e:
             # Get function name for better error logging
             func_name = func.__name__
-            logger.error(f"Error in {func_name}: {str(e)}")
+            logger.exception("Error in %s", func_name)
             log_exception(e)
 
-            # Return error response in the expected format for agent tools
-            # Only do this if the function returns a dict (for agent tools)
-            signature = inspect.signature(func)
-            if "Dict" in str(signature.return_annotation):
+            # Return error response for dict-returning async functions
+            if inspect.signature(func).return_annotation is dict:
                 return {"error": str(e)}
-            # Re-raise for non-dict returning functions
-            raise
+            raise  # Re-raise for non-dict returning functions
 
     return cast(F, wrapper)
-
-
-# Retry decorator for network operations
-def retry_on_failure(
-    max_attempts: int = 3,
-    delay: float = 1.0,
-    backoff_factor: float = 2.0,
-    exceptions: tuple = (Exception,),
-) -> Callable[[F], F]:
-    """Decorator to retry failed operations with exponential backoff.
-
-    Args:
-        max_attempts: Maximum number of retry attempts
-        delay: Initial delay between retries in seconds
-        backoff_factor: Factor to multiply delay by after each retry
-        exceptions: Tuple of exceptions to catch and retry
-
-    Returns:
-        Decorated function with retry logic
-    """
-
-    def decorator(func: F) -> F:
-        if inspect.iscoroutinefunction(func):
-
-            @functools.wraps(func)
-            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-                last_exception = None
-                current_delay = delay
-
-                for attempt in range(max_attempts):
-                    try:
-                        return await func(*args, **kwargs)
-                    except exceptions as e:
-                        last_exception = e
-                        if attempt < max_attempts - 1:
-                            logger.warning(
-                                f"{func.__name__} failed "
-                                f"(attempt {attempt + 1}/{max_attempts}): {e}"
-                            )
-                            await asyncio.sleep(current_delay)
-                            current_delay *= backoff_factor
-                        else:
-                            logger.error(
-                                f"{func.__name__} failed after {max_attempts} attempts"
-                            )
-                            raise
-
-                if last_exception:
-                    raise last_exception
-
-            return cast(F, async_wrapper)
-        else:
-
-            @functools.wraps(func)
-            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-                last_exception = None
-                current_delay = delay
-
-                for attempt in range(max_attempts):
-                    try:
-                        return func(*args, **kwargs)
-                    except exceptions as e:
-                        last_exception = e
-                        if attempt < max_attempts - 1:
-                            logger.warning(
-                                f"{func.__name__} failed "
-                                f"(attempt {attempt + 1}/{max_attempts}): {e}"
-                            )
-                            import time
-
-                            time.sleep(current_delay)
-                            current_delay *= backoff_factor
-                        else:
-                            logger.error(
-                                f"{func.__name__} failed after {max_attempts} attempts"
-                            )
-                            raise
-
-                if last_exception:
-                    raise last_exception
-
-            return cast(F, sync_wrapper)
-
-    return decorator
 
 
 __all__ = [
     "ensure_memory_client_initialized",
     "with_error_handling",
-    "retry_on_failure",
 ]

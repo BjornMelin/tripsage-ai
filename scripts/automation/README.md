@@ -91,7 +91,7 @@ Scripts in this directory follow these error handling principles:
 When creating new automation scripts:
 
 1. Follow the existing naming convention: `deploy_<feature>.py` or `configure_<service>.py`
-2. Include comprehensive docstrings and CLI help
+2. Include docstrings and CLI help
 3. Implement dry-run mode where applicable
 4. Use logging for all operations
 5. Handle errors gracefully with rollback capabilities

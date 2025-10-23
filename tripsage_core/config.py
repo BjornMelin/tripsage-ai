@@ -1,26 +1,32 @@
-"""
-Unified, modern configuration for TripSage application.
-
-Following 2025 best practices with a single, flat configuration structure.
-No backwards compatibility concerns - only optimal patterns.
-"""
+"""Unified, modern configuration for TripSage application."""
 
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import urlparse
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):
-    """Modern, unified application configuration.
+class Crawl4AIMCPSettings(BaseSettings):
+    """Crawl4AI MCP server configuration."""
 
-    Single configuration class following 2025 best practices:
-    - Flat structure (no nested configs)
-    - Environment-based feature toggles
-    - Clear validation and defaults
-    - No backwards compatibility code
-    """
+    api_key: SecretStr | None = Field(
+        default=None, description="Crawl4AI MCP API key (Bearer token authentication)"
+    )
+    endpoint: str = Field(
+        default="http://localhost:11235", description="Crawl4AI MCP server endpoint URL"
+    )
+    timeout: float = Field(
+        default=30.0,
+        ge=5.0,
+        le=120.0,
+        description="Request timeout in seconds for Crawl4AI operations",
+    )
+
+
+class Settings(BaseSettings):
+    """Modern, unified application configuration."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -46,13 +52,13 @@ class Settings(BaseSettings):
         default="https://test.supabase.com", description="Supabase database URL"
     )
     database_public_key: SecretStr = Field(
-        default="test-public-key", description="Supabase public anon key"
+        default=SecretStr("test-public-key"), description="Supabase public anon key"
     )
     database_service_key: SecretStr = Field(
-        default="test-service-key", description="Supabase service role key"
+        default=SecretStr("test-service-key"), description="Supabase service role key"
     )
     database_jwt_secret: SecretStr = Field(
-        default="test-jwt-secret-for-testing-only",
+        default=SecretStr("test-jwt-secret-for-testing-only"),
         description="Supabase JWT secret for token validation",
     )
 
@@ -64,7 +70,7 @@ class Settings(BaseSettings):
 
     # Application Security
     secret_key: SecretStr = Field(
-        default="test-application-secret-key-for-testing-only",
+        default=SecretStr("test-application-secret-key-for-testing-only"),
         description="Application secret key for encryption and signing",
     )
 
@@ -75,13 +81,34 @@ class Settings(BaseSettings):
         default=50, description="Maximum Redis connections"
     )
 
+    # Upstash Redis (HTTP) configuration (preferred in Vercel deployments)
+    upstash_redis_rest_url: str | None = Field(
+        default=None, description="Upstash Redis REST URL (UPSTASH_REDIS_REST_URL)"
+    )
+    upstash_redis_rest_token: SecretStr | None = Field(
+        default=None,
+        description="Upstash Redis REST token (UPSTASH_REDIS_REST_TOKEN)",
+    )
+
     # AI Services
     openai_api_key: SecretStr = Field(
-        default="sk-test-1234567890", description="OpenAI API key"
+        default=SecretStr("sk-test-1234567890"), description="OpenAI API key"
     )
     openai_model: str = "gpt-4o"
+    model_temperature: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=2.0,
+        description="Default temperature for orchestrator LLMs",
+    )
 
-    # Enhanced Rate Limiting Configuration
+    # Crawl4AI MCP Configuration
+    crawl4ai_mcp: Crawl4AIMCPSettings = Field(
+        default_factory=Crawl4AIMCPSettings,
+        description="Crawl4AI MCP server configuration",
+    )
+
+    # Rate limiting configuration
     rate_limit_enabled: bool = Field(
         default=True, description="Enable rate limiting middleware"
     )
@@ -123,9 +150,6 @@ class Settings(BaseSettings):
     enable_database_monitoring: bool = Field(
         default=True, description="Enable database connection monitoring"
     )
-    enable_prometheus_metrics: bool = Field(
-        default=True, description="Enable Prometheus metrics collection"
-    )
     enable_security_monitoring: bool = Field(
         default=True, description="Enable security event monitoring"
     )
@@ -158,12 +182,43 @@ class Settings(BaseSettings):
         default=5.0, description="Delay between recovery attempts in seconds"
     )
 
-    # Metrics Configuration
-    metrics_server_port: int = Field(
-        default=8000, description="Prometheus metrics server port"
+    # Metrics Configuration (OTEL-only)
+
+    # OpenTelemetry Instrumentation Flags
+    enable_fastapi_instrumentation: bool = Field(
+        default=False, description="Enable FastAPI OTEL auto-instrumentation"
     )
-    enable_metrics_server: bool = Field(
-        default=False, description="Enable standalone metrics server"
+    enable_asgi_instrumentation: bool = Field(
+        default=False, description="Enable ASGI OTEL auto-instrumentation"
+    )
+    enable_httpx_instrumentation: bool = Field(
+        default=False, description="Enable httpx OTEL auto-instrumentation"
+    )
+    enable_redis_instrumentation: bool = Field(
+        default=False, description="Enable Redis OTEL auto-instrumentation"
+    )
+
+    # Google Maps Platform configuration
+    google_maps_api_key: SecretStr | None = Field(
+        default=None, description="Google Maps Platform API key"
+    )
+    google_maps_timeout: float = Field(
+        default=10.0,
+        ge=1.0,
+        le=120.0,
+        description="Combined connect+read timeout (seconds) for Google Maps requests",
+    )
+    google_maps_retry_timeout: int = Field(
+        default=60,
+        ge=1,
+        le=600,
+        description="Total retry timeout (s) across retriable Maps requests",
+    )
+    google_maps_queries_per_second: int = Field(
+        default=10,
+        ge=1,
+        le=60,
+        description="Client-side QPS throttle for Google Maps requests",
     )
 
     @field_validator("environment")
@@ -188,7 +243,7 @@ class Settings(BaseSettings):
     @property
     def is_testing(self) -> bool:
         """Check if running in test environment."""
-        return self.environment == "test"
+        return self.environment in ("test", "testing")
 
     @property
     def ENABLE_WEBSOCKETS(self) -> bool:
@@ -232,26 +287,34 @@ class Settings(BaseSettings):
             url = self.postgres_url
         else:
             # Convert Supabase URL to PostgreSQL URL
-            import re
+            db_url = str(self.database_url)
+            parsed = urlparse(db_url)
+            scheme = (parsed.scheme or "").lower()
 
-            # Check test URL first to avoid regex matching issues
-            if self.database_url.startswith("https://test.supabase.com"):
-                # Special handling for test environment
-                url = "postgresql://postgres:password@127.0.0.1:5432/test_database"
-            elif self.database_url.startswith(("postgresql://", "postgres://")):
+            if scheme in {"postgresql", "postgres"}:
                 # URL is already a PostgreSQL URL
-                url = self.database_url
-            else:
-                # Try to match real Supabase URLs
-                match = re.match(r"https://([^.]+)\.supabase\.co$", self.database_url)
-                if match:
-                    project_ref = match.group(1)
-                    # Construct PostgreSQL URL from Supabase project reference
-                    # Format: postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
-                    url = f"postgresql://postgres.{project_ref}:[YOUR-PASSWORD]@aws-0-[region].pooler.supabase.com:6543/postgres"
-                else:
-                    # Fallback for test/development environments
+                url = db_url
+            elif scheme in {"http", "https"}:
+                host = (parsed.hostname or "").lower()
+                path = parsed.path or ""
+
+                if (
+                    host == "test.supabase.com"
+                    and not parsed.port
+                    and path in {"", "/"}
+                ):
+                    # Special handling for test environment
                     url = "postgresql://postgres:password@127.0.0.1:5432/test_database"
+                elif host.endswith(".supabase.co") and path in {"", "/"}:
+                    project_ref = host.split(".", 1)[0]
+                    url = (
+                        "postgresql://postgres."
+                        f"{project_ref}:[YOUR-PASSWORD]@aws-0-[region].pooler.supabase.com:6543/postgres"
+                    )
+                else:
+                    url = "postgresql://postgres:password@127.0.0.1:5432/test_database"
+            else:
+                url = "postgresql://postgres:password@127.0.0.1:5432/test_database"
 
         # For testing, don't add asyncpg driver suffix as it may cause parsing issues
         # In production, the actual database service handles driver selection

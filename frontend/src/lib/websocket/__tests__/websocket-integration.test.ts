@@ -1,5 +1,5 @@
 /**
- * Comprehensive WebSocket Integration Tests
+ * WebSocket Integration Tests
  *
  * Tests the WebSocket client, chat store integration, and real-time features
  * to ensure complete functionality with 90%+ coverage.

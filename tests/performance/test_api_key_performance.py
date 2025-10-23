@@ -1,7 +1,7 @@
-"""
-Performance and load testing for API key service operations.
+# pylint: disable=too-many-lines
+"""Performance and load testing for API key service operations.
 
-This module provides comprehensive performance testing including:
+This module provides performance testing including:
 - Benchmark tests for API key operations using pytest-benchmark
 - Load testing for concurrent validation requests
 - Database performance under stress
@@ -11,6 +11,7 @@ This module provides comprehensive performance testing including:
 """
 
 import asyncio
+import gc
 import hashlib
 import json
 import random
@@ -18,10 +19,11 @@ import statistics
 import threading
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from fastapi.exceptions import HTTPException
 
 # pytest_benchmark provides the benchmark fixture automatically
 from tripsage_core.services.business.api_key_service import (
@@ -49,8 +51,8 @@ class TestApiKeyPerformance:
                 "name": "Test Key",
                 "service": "openai",
                 "is_valid": True,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
                 "usage_count": 0,
             }
 
@@ -65,7 +67,15 @@ class TestApiKeyPerformance:
 
         async def mock_list_with_latency(*args, **kwargs):
             await asyncio.sleep(0.003)  # 3ms for list operation
-            return [mock_get_with_latency() for _ in range(5)]
+            return [
+                {
+                    "id": str(uuid.uuid4()),
+                    "encrypted_key": "encrypted_value",
+                    "service": "openai",
+                    "expires_at": None,
+                }
+                for _ in range(5)
+            ]
 
         db.create_api_key = mock_create_with_latency
         db.get_api_key_by_id = mock_get_with_latency
@@ -88,15 +98,15 @@ class TestApiKeyPerformance:
                         "id": str(uuid.uuid4()),
                         "name": "Test API Key",
                         "service": "openai",
-                        "created_at": datetime.now(timezone.utc).isoformat(),
-                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                        "created_at": datetime.now(UTC).isoformat(),
+                        "updated_at": datetime.now(UTC).isoformat(),
                         "is_active": True,
                         "is_valid": True,
                         "usage_count": 0,
                         "description": "Test key description",
                         "expires_at": None,
                         "last_used": None,
-                        "last_validated": datetime.now(timezone.utc).isoformat(),
+                        "last_validated": datetime.now(UTC).isoformat(),
                     }
                 ],
                 [],
@@ -114,7 +124,6 @@ class TestApiKeyPerformance:
         # Simulate cache operations with realistic latencies
         async def mock_get_with_latency(key):
             await asyncio.sleep(0.0001)  # 0.1ms cache latency
-            return None  # Cache miss for most tests
 
         async def mock_set_with_latency(key, value, ex=None):
             await asyncio.sleep(0.0001)  # 0.1ms cache write latency
@@ -127,18 +136,18 @@ class TestApiKeyPerformance:
     @pytest.fixture
     def api_key_service(self, mock_db_service, mock_cache_service):
         """Create ApiKeyService instance for performance testing."""
-        service = ApiKeyService(
+        return ApiKeyService(
             db=mock_db_service,
             cache=mock_cache_service,
             validation_timeout=5,
         )
-        return service
 
     @pytest.fixture
     def sample_api_keys(self):
         """Generate sample API keys for testing."""
         return [
-            f"sk-test_key_{i:04d}_{''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=32))}"  # noqa: E501
+            f"sk-test_key_{i:04d}_"
+            f"{''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=32))}"
             for i in range(100)
         ]
 
@@ -178,7 +187,7 @@ class TestApiKeyPerformance:
         request = ApiKeyCreateRequest(
             name="Performance Test Key",
             service=ServiceType.OPENAI,
-            key_value="sk-performance_test_key_123456789",
+            key="sk-performance_test_key_123456789",  # Use alias 'key'
             description="Key for performance testing",
         )
 
@@ -242,12 +251,12 @@ class TestApiKeyPerformance:
             mock_get.return_value = mock_response
 
             # Create validation tasks
-            tasks = []
-            for i in range(50):  # 50 concurrent validations
-                task = api_key_service.validate_api_key(
+            tasks = [
+                api_key_service.validate_api_key(
                     ServiceType.OPENAI, sample_api_keys[i], str(uuid.uuid4())
                 )
-                tasks.append(task)
+                for i in range(50)
+            ]  # 50 concurrent validations
 
             # Execute all validations concurrently
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -279,7 +288,7 @@ class TestApiKeyPerformance:
             print(f"Throughput: {throughput:.2f} requests/second")
             print(f"Average latency: {avg_latency * 1000:.2f}ms")
 
-    @pytest.mark.asyncio
+    # pylint: disable=too-many-statements
     async def test_database_performance_under_load(
         self, api_key_service, sample_users, sample_api_keys
     ):
@@ -296,27 +305,31 @@ class TestApiKeyPerformance:
             )
 
             # Create multiple operations: create, read, list
-            tasks = []
+            create_tasks = [
+                (
+                    "create",
+                    api_key_service.create_api_key(
+                        sample_users[i % len(sample_users)],
+                        ApiKeyCreateRequest(
+                            name=f"Load Test Key {i}",
+                            service=ServiceType.OPENAI,
+                            key=sample_api_keys[i],  # Use alias 'key'
+                            description=f"Load test key {i}",
+                        ),
+                    ),
+                )
+                for i in range(30)
+            ]
 
-            # Create operations (30 concurrent)
-            for i in range(30):
-                request = ApiKeyCreateRequest(
-                    name=f"Load Test Key {i}",
-                    service=ServiceType.OPENAI,
-                    key_value=sample_api_keys[i],
-                    description=f"Load test key {i}",
+            list_tasks = [
+                (
+                    "list",
+                    api_key_service.list_user_keys(sample_users[i % len(sample_users)]),
                 )
-                task = api_key_service.create_api_key(
-                    sample_users[i % len(sample_users)], request
-                )
-                tasks.append(("create", task))
+                for i in range(20)
+            ]
 
-            # List operations (20 concurrent)
-            for i in range(20):
-                task = api_key_service.list_user_keys(
-                    sample_users[i % len(sample_users)]
-                )
-                tasks.append(("list", task))
+            tasks = create_tasks + list_tasks
 
             # Execute all operations
             operation_tasks = [task for _, task in tasks]
@@ -361,7 +374,7 @@ class TestApiKeyPerformance:
 
             async def tracked_cache_get(key):
                 nonlocal cache_hits, cache_misses
-                result = await original_get(key)
+                result = await original_get(key)  # type: ignore[reportOptionalCall]
                 if result:
                     cache_hits += 1
                 else:
@@ -435,14 +448,14 @@ class TestApiKeyPerformance:
             mock_get.return_value = mock_response
 
             # Create many validation tasks
-            tasks = []
-            for i in range(100):
-                task = api_key_service.validate_api_key(
+            tasks = [
+                api_key_service.validate_api_key(
                     ServiceType.OPENAI,
                     sample_api_keys[i % len(sample_api_keys)],
                     str(uuid.uuid4()),
                 )
-                tasks.append(task)
+                for i in range(100)
+            ]
 
             # Execute and measure memory
             await asyncio.gather(*tasks)
@@ -461,11 +474,9 @@ class TestApiKeyPerformance:
                 f"Memory usage too high: {memory_increase:.2f} MB"
             )
 
-    @pytest.mark.asyncio
+    # pylint: disable=too-many-statements
     async def test_stress_test_extreme_load(self, api_key_service):
         """Stress test with extreme load to find breaking points."""
-        import time
-
         # Track metrics
         successful_ops = 0
         failed_ops = 0
@@ -478,12 +489,12 @@ class TestApiKeyPerformance:
             mock_get.return_value = mock_response
 
             # Create extreme load: 200 concurrent operations
-            tasks = []
-            for i in range(200):
-                task = api_key_service.validate_api_key(
+            tasks = [
+                api_key_service.validate_api_key(
                     ServiceType.OPENAI, f"sk-stress_test_{i}", str(uuid.uuid4())
                 )
-                tasks.append(task)
+                for i in range(200)
+            ]
 
             start_time = time.time()
 
@@ -507,7 +518,7 @@ class TestApiKeyPerformance:
                         else:
                             failed_ops += 1
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 timeouts = len(tasks)
 
             end_time = time.time()
@@ -550,7 +561,6 @@ class TestApiKeyPerformance:
     @pytest.mark.asyncio
     async def test_service_health_check_performance(self, api_key_service):
         """Test performance of service health checks."""
-
         with patch("httpx.AsyncClient.get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 200
@@ -585,7 +595,6 @@ class TestApiKeyPerformance:
     @pytest.mark.asyncio
     async def test_performance_regression_baseline(self, api_key_service):
         """Establish performance baseline for regression testing."""
-
         # Define baseline performance expectations
         BASELINE_ENCRYPTION_TIME = 0.01  # 10ms
         BASELINE_CREATION_TIME = 0.05  # 50ms
@@ -612,7 +621,7 @@ class TestApiKeyPerformance:
             request = ApiKeyCreateRequest(
                 name="Baseline Test",
                 service=ServiceType.OPENAI,
-                key_value="sk-baseline_key",
+                key="sk-baseline_key",  # Use alias 'key'
                 description="Baseline test",
             )
 
@@ -645,11 +654,11 @@ class TestApiKeyPerformance:
                 "Creation performance regression"
             )
 
+    # pylint: disable=too-many-statements
     def test_database_performance_under_concurrent_load(
         self, api_key_service, mock_cache, mock_db, benchmark
     ):
-        """
-        Test database performance under high concurrent load.
+        """Test database performance under high concurrent load.
 
         This test simulates multiple concurrent database operations including:
         - Concurrent key creation with transaction management
@@ -659,10 +668,9 @@ class TestApiKeyPerformance:
         - Query performance under load
         """
 
+        # pylint: disable=too-many-statements
         def setup_concurrent_db_mocks():
             """Setup realistic database mocking for concurrent operations."""
-            import time
-
             # Simulate connection pool with limited connections
             connection_pool = threading.Semaphore(10)  # Max 10 concurrent connections
             query_metrics = {
@@ -678,10 +686,12 @@ class TestApiKeyPerformance:
                 query_metrics["total_queries"] += 1
 
                 # Simulate connection acquisition
+                # pylint: disable=consider-using-with
                 connection_acquired = connection_pool.acquire(blocking=False)
                 if not connection_acquired:
                     query_metrics["connection_timeouts"] += 1
                     await asyncio.sleep(0.01)  # Brief timeout
+                    # pylint: disable=consider-using-with
                     connection_pool.acquire()  # Block until available
 
                 try:
@@ -691,7 +701,7 @@ class TestApiKeyPerformance:
                     # Simulate occasional deadlock (1% chance)
                     if random.random() < 0.01:
                         query_metrics["deadlock_detections"] += 1
-                        raise Exception("Deadlock detected")
+                        raise RuntimeError("Deadlock detected")
 
                     # Create realistic result
                     result = {
@@ -701,8 +711,8 @@ class TestApiKeyPerformance:
                         "service": data["service"],
                         "encrypted_key": data["encrypted_key"],
                         "is_valid": True,
-                        "created_at": datetime.now(timezone.utc).isoformat(),
-                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                        "created_at": datetime.now(UTC).isoformat(),
+                        "updated_at": datetime.now(UTC).isoformat(),
                         "usage_count": 0,
                     }
 
@@ -720,10 +730,12 @@ class TestApiKeyPerformance:
                 query_start = time.time()
                 query_metrics["total_queries"] += 1
 
+                # pylint: disable=consider-using-with
                 connection_acquired = connection_pool.acquire(blocking=False)
                 if not connection_acquired:
                     query_metrics["connection_timeouts"] += 1
                     await asyncio.sleep(0.005)
+                    # pylint: disable=consider-using-with
                     connection_pool.acquire()
 
                 try:
@@ -740,8 +752,8 @@ class TestApiKeyPerformance:
                                 "service": "openai",
                                 "encrypted_key": f"encrypted_value_{i}",
                                 "is_valid": True,
-                                "created_at": datetime.now(timezone.utc).isoformat(),
-                                "updated_at": datetime.now(timezone.utc).isoformat(),
+                                "created_at": datetime.now(UTC).isoformat(),
+                                "updated_at": datetime.now(UTC).isoformat(),
                                 "usage_count": random.randint(0, 50),
                             }
                             for i in range(random.randint(1, 5))
@@ -763,10 +775,12 @@ class TestApiKeyPerformance:
                 query_start = time.time()
                 query_metrics["total_queries"] += 1
 
+                # pylint: disable=consider-using-with
                 connection_acquired = connection_pool.acquire(blocking=False)
                 if not connection_acquired:
                     query_metrics["connection_timeouts"] += 1
                     await asyncio.sleep(0.003)
+                    # pylint: disable=consider-using-with
                     connection_pool.acquire()
 
                 try:
@@ -776,7 +790,7 @@ class TestApiKeyPerformance:
                     result = {
                         "id": filters.get("id", str(uuid.uuid4())),
                         "last_used": data.get(
-                            "last_used", datetime.now(timezone.utc).isoformat()
+                            "last_used", datetime.now(UTC).isoformat()
                         ),
                         "usage_count": random.randint(1, 100),
                     }
@@ -804,16 +818,19 @@ class TestApiKeyPerformance:
             user_id = str(uuid.uuid4())
 
             # Phase 1: Concurrent key creation (write-heavy)
-            creation_tasks = []
-            for i in range(25):  # 25 concurrent creations
-                key_data = {
-                    "id": str(uuid.uuid4()),
-                    "user_id": user_id,
-                    "name": f"Concurrent Key {i}",
-                    "service": "openai",
-                    "encrypted_key": f"encrypted_test_key_{i}",
-                }
-                creation_tasks.append(mock_db.insert("api_keys", key_data))
+            creation_tasks = [
+                mock_db.insert(
+                    "api_keys",
+                    {
+                        "id": str(uuid.uuid4()),
+                        "user_id": user_id,
+                        "name": f"Concurrent Key {i}",
+                        "service": "openai",
+                        "encrypted_key": f"encrypted_test_key_{i}",
+                    },
+                )
+                for i in range(25)
+            ]  # 25 concurrent creations
 
             creation_start = time.time()
             creation_results = await asyncio.gather(
@@ -826,9 +843,9 @@ class TestApiKeyPerformance:
             )
 
             # Phase 2: Concurrent key retrieval (read-heavy)
-            retrieval_tasks = []
-            for _ in range(50):  # 50 concurrent reads
-                retrieval_tasks.append(mock_db.select("api_keys", {"user_id": user_id}))
+            retrieval_tasks = [
+                mock_db.select("api_keys", {"user_id": user_id}) for _ in range(50)
+            ]  # 50 concurrent reads
 
             retrieval_start = time.time()
             retrieval_results = await asyncio.gather(
@@ -841,27 +858,29 @@ class TestApiKeyPerformance:
             )
 
             # Phase 3: Mixed operations (concurrent read/write)
-            mixed_tasks = []
-            for i in range(30):
-                if i % 3 == 0:  # 1/3 writes
-                    key_data = {
-                        "id": str(uuid.uuid4()),
-                        "user_id": user_id,
-                        "name": f"Mixed Key {i}",
-                        "service": "openai",
-                        "encrypted_key": f"encrypted_mixed_key_{i}",
-                    }
-                    mixed_tasks.append(mock_db.insert("api_keys", key_data))
-                elif i % 3 == 1:  # 1/3 updates
-                    mixed_tasks.append(
-                        mock_db.update(
-                            "api_keys",
-                            {"last_used": datetime.now(timezone.utc).isoformat()},
-                            {"id": f"key_{i % 10}"},
-                        )
+            mixed_tasks = [
+                (
+                    mock_db.insert(
+                        "api_keys",
+                        {
+                            "id": str(uuid.uuid4()),
+                            "user_id": user_id,
+                            "name": f"Mixed Key {i}",
+                            "service": "openai",
+                            "encrypted_key": f"encrypted_mixed_key_{i}",
+                        },
                     )
-                else:  # 1/3 reads
-                    mixed_tasks.append(mock_db.select("api_keys", {"user_id": user_id}))
+                    if i % 3 == 0
+                    else mock_db.update(
+                        "api_keys",
+                        {"last_used": datetime.now(UTC).isoformat()},
+                        {"id": f"key_{i % 10}"},
+                    )
+                    if i % 3 == 1
+                    else mock_db.select("api_keys", {"user_id": user_id})
+                )
+                for i in range(30)
+            ]
 
             mixed_start = time.time()
             mixed_results = await asyncio.gather(*mixed_tasks, return_exceptions=True)
@@ -872,7 +891,7 @@ class TestApiKeyPerformance:
             )
 
             # Calculate performance metrics
-            performance_metrics = {
+            return {
                 "creation_time_ms": creation_time,
                 "retrieval_time_ms": retrieval_time,
                 "mixed_operations_time_ms": mixed_time,
@@ -893,8 +912,6 @@ class TestApiKeyPerformance:
                 if (creation_time + retrieval_time + mixed_time) > 0
                 else 0,
             }
-
-            return performance_metrics
 
         # Benchmark the concurrent database operations
         results = benchmark(lambda: asyncio.run(run_concurrent_database_operations()))
@@ -937,11 +954,11 @@ class TestApiKeyPerformance:
 
         return results
 
+    # pylint: disable=too-many-statements
     def test_cache_hit_miss_ratio_under_load(
         self, api_key_service, mock_cache, benchmark
     ):
-        """
-        Test cache hit/miss ratios under various load conditions.
+        """Test cache hit/miss ratios under various load conditions.
 
         This test analyzes cache performance including:
         - Cache hit ratio optimization under different access patterns
@@ -951,10 +968,9 @@ class TestApiKeyPerformance:
         - TTL expiration impact on performance
         """
 
+        # pylint: disable=too-many-statements
         def setup_realistic_cache_with_metrics():
             """Setup cache with realistic behavior and metrics tracking."""
-            import time
-
             cache_storage = {}
             cache_metrics = {
                 "hits": 0,
@@ -972,26 +988,7 @@ class TestApiKeyPerformance:
             async def mock_cache_get(key):
                 start_time = time.time()
 
-                if key in cache_storage:
-                    # Check TTL expiration
-                    value, ttl_expiry = cache_storage[key]
-                    if ttl_expiry and time.time() > ttl_expiry:
-                        del cache_storage[key]
-                        cache_metrics["misses"] += 1
-                        cache_metrics["avg_miss_time"].append(
-                            (time.time() - start_time) * 1000
-                        )
-                        return None
-
-                    cache_metrics["hits"] += 1
-                    cache_metrics["avg_hit_time"].append(
-                        (time.time() - start_time) * 1000
-                    )
-
-                    # Simulate cache hit latency (faster than miss)
-                    await asyncio.sleep(random.uniform(0.0001, 0.0005))
-                    return value
-                else:
+                if key not in cache_storage:  # Restructured to avoid unnecessary else
                     cache_metrics["misses"] += 1
                     cache_metrics["avg_miss_time"].append(
                         (time.time() - start_time) * 1000
@@ -1000,6 +997,22 @@ class TestApiKeyPerformance:
                     # Simulate cache miss latency (slower)
                     await asyncio.sleep(random.uniform(0.001, 0.003))
                     return None
+
+                value, ttl_expiry = cache_storage[key]
+                if ttl_expiry and time.time() > ttl_expiry:
+                    del cache_storage[key]
+                    cache_metrics["misses"] += 1
+                    cache_metrics["avg_miss_time"].append(
+                        (time.time() - start_time) * 1000
+                    )
+                    return None
+
+                cache_metrics["hits"] += 1
+                cache_metrics["avg_hit_time"].append((time.time() - start_time) * 1000)
+
+                # Simulate cache hit latency (faster than miss)
+                await asyncio.sleep(random.uniform(0.0001, 0.0005))
+                return value
 
             async def mock_cache_set(key, value, ex=None):
                 cache_metrics["sets"] += 1
@@ -1038,7 +1051,7 @@ class TestApiKeyPerformance:
 
         async def run_cache_load_scenarios():
             """Run various cache load scenarios and measure hit/miss ratios."""
-            cache_metrics, cache_storage = setup_realistic_cache_with_metrics()
+            cache_metrics, _cache_storage = setup_realistic_cache_with_metrics()
 
             # Scenario 1: Cold cache (all misses)
             print("  Running cold cache scenario...")
@@ -1062,7 +1075,7 @@ class TestApiKeyPerformance:
                         "is_valid": True,
                         "status": "valid",
                         "service": "openai",
-                        "validated_at": datetime.now(timezone.utc).isoformat(),
+                        "validated_at": datetime.now(UTC).isoformat(),
                     }
                 )
                 warm_tasks.append(mock_cache.set(key, value, ex=300))  # 5 min TTL
@@ -1122,7 +1135,7 @@ class TestApiKeyPerformance:
                 else 0
             )
 
-            performance_metrics = {
+            return {
                 "cold_cache_time_ms": cold_time,
                 "cache_warming_time_ms": warm_time,
                 "hot_cache_time_ms": hot_time,
@@ -1145,8 +1158,6 @@ class TestApiKeyPerformance:
                 if total_operations > 0
                 else 0,
             }
-
-            return performance_metrics
 
         # Benchmark cache load scenarios
         results = benchmark(lambda: asyncio.run(run_cache_load_scenarios()))
@@ -1179,11 +1190,11 @@ class TestApiKeyPerformance:
 
         return results
 
+    # pylint: disable=too-many-statements
     def test_memory_usage_and_resource_monitoring(
         self, api_key_service, mock_cache, mock_db, benchmark
     ):
-        """
-        Test memory usage and system resource monitoring during API key operations.
+        """Test memory usage and system resource monitoring during API key operations.
 
         This test monitors:
         - Memory consumption during encryption/decryption operations
@@ -1194,11 +1205,9 @@ class TestApiKeyPerformance:
         - Memory efficiency of caching strategies
         """
 
+        # pylint: disable=too-many-statements
         def setup_resource_monitoring():
-            """Setup comprehensive resource monitoring."""
-            import gc
-            import time
-
+            """Setup resource monitoring."""
             import psutil
 
             process = psutil.Process()
@@ -1233,8 +1242,9 @@ class TestApiKeyPerformance:
                         )
 
                         # Track peak memory
-                        if memory_mb > resource_metrics["peak_memory_mb"]:
-                            resource_metrics["peak_memory_mb"] = memory_mb
+                        resource_metrics["peak_memory_mb"] = max(
+                            resource_metrics["peak_memory_mb"], memory_mb
+                        )
 
                         # CPU monitoring
                         cpu_percent = process.cpu_percent()
@@ -1264,7 +1274,7 @@ class TestApiKeyPerformance:
 
                         time.sleep(0.1)  # Sample every 100ms
 
-                    except Exception:
+                    except (OSError, RuntimeError):
                         pass  # Continue monitoring even if sample fails
 
             # Start monitoring thread
@@ -1371,8 +1381,6 @@ class TestApiKeyPerformance:
             cleanup_start = time.time()
 
             # Force garbage collection
-            import gc
-
             collected = gc.collect()
 
             # Wait for memory cleanup
@@ -1394,7 +1402,7 @@ class TestApiKeyPerformance:
 
             # Memory efficiency calculations
             max_memory_during_ops = (
-                max([s["memory_mb"] for s in resource_metrics["memory_samples"]])
+                max(s["memory_mb"] for s in resource_metrics["memory_samples"])
                 if resource_metrics["memory_samples"]
                 else baseline_memory
             )
@@ -1412,7 +1420,7 @@ class TestApiKeyPerformance:
             avg_cpu = statistics.mean(cpu_samples) if cpu_samples else 0
             peak_cpu = max(cpu_samples) if cpu_samples else 0
 
-            performance_metrics = {
+            return {
                 "baseline_memory_mb": baseline_memory,
                 "peak_memory_mb": resource_metrics["peak_memory_mb"],
                 "final_memory_mb": final_memory,
@@ -1430,8 +1438,6 @@ class TestApiKeyPerformance:
                 if encryption_time > 0
                 else 0,
             }
-
-            return performance_metrics
 
         # Benchmark memory-intensive operations
         results = benchmark(lambda: asyncio.run(run_memory_intensive_operations()))
@@ -1471,11 +1477,11 @@ class TestApiKeyPerformance:
 
         return results
 
+    # pylint: disable=too-many-statements
     def test_comprehensive_performance_regression_suite(
         self, api_key_service, mock_cache, mock_db, benchmark
     ):
-        """
-        Comprehensive performance regression test suite.
+        """Performance regression test suite.
 
         This test establishes and validates performance baselines for:
         - Core operation latencies (encryption, validation, creation)
@@ -1486,9 +1492,10 @@ class TestApiKeyPerformance:
         - Overall system performance regression detection
         """
 
+        # pylint: disable=too-many-statements
         def establish_performance_baselines():
             """Establish performance baselines for regression detection."""
-            baselines = {
+            return {
                 # Core operation baselines (milliseconds)
                 "encryption_max_ms": 10,
                 "decryption_max_ms": 10,
@@ -1507,10 +1514,10 @@ class TestApiKeyPerformance:
                 "error_rate_max": 0.05,  # 5% max error rate
                 "timeout_rate_max": 0.01,  # 1% max timeout rate
             }
-            return baselines
 
+        # pylint: disable=too-many-statements
         async def run_comprehensive_performance_tests():
-            """Run comprehensive performance tests for regression detection."""
+            """Run performance tests for regression detection."""
             baselines = establish_performance_baselines()
             results = {
                 "encryption_performance": {},
@@ -1578,7 +1585,7 @@ class TestApiKeyPerformance:
                             str(uuid.uuid4()),
                         )
                         validation_times.append((time.time() - start) * 1000)
-                    except Exception:
+                    except (HTTPException, TimeoutError, RuntimeError):
                         validation_errors += 1
 
                 results["validation_performance"] = {
@@ -1603,13 +1610,12 @@ class TestApiKeyPerformance:
 
                 # Validation throughput
                 start = time.time()
-                validation_tasks = []
-                for i in range(50):
-                    validation_tasks.append(
-                        api_key_service.validate_api_key(
-                            ServiceType.OPENAI, f"sk-throughput_{i}", str(uuid.uuid4())
-                        )
+                validation_tasks = [
+                    api_key_service.validate_api_key(
+                        ServiceType.OPENAI, f"sk-throughput_{i}", str(uuid.uuid4())
                     )
+                    for i in range(50)
+                ]
 
                 await asyncio.gather(*validation_tasks)
                 validation_throughput_time = time.time() - start
@@ -1617,19 +1623,19 @@ class TestApiKeyPerformance:
 
                 # Creation throughput
                 start = time.time()
-                creation_tasks = []
                 user_id = str(uuid.uuid4())
-
-                for i in range(20):
-                    request = ApiKeyCreateRequest(
-                        name=f"Throughput Test {i}",
-                        service=ServiceType.OPENAI,
-                        key_value=f"sk-throughput_create_{i}",
-                        description="Throughput test",
+                creation_tasks = [
+                    api_key_service.create_api_key(
+                        user_id,
+                        ApiKeyCreateRequest(
+                            name=f"Throughput Test {i}",
+                            service=ServiceType.OPENAI,
+                            key=f"sk-throughput_create_{i}",  # Use alias 'key'
+                            description="Throughput test",
+                        ),
                     )
-                    creation_tasks.append(
-                        api_key_service.create_api_key(user_id, request)
-                    )
+                    for i in range(20)
+                ]
 
                 await asyncio.gather(*creation_tasks)
                 creation_throughput_time = time.time() - start
@@ -1721,16 +1727,9 @@ class TestApiKeyPerformance:
             ]
 
             for check_name, actual_value, baseline_value in checks:
-                if "max" in check_name and actual_value > baseline_value:
-                    results["failed_baselines"].append(
-                        {
-                            "metric": check_name,
-                            "actual": actual_value,
-                            "baseline": baseline_value,
-                            "regression_type": "performance_degradation",
-                        }
-                    )
-                elif "min" in check_name and actual_value < baseline_value:
+                if ("max" in check_name and actual_value > baseline_value) or (
+                    "min" in check_name and actual_value < baseline_value
+                ):
                     results["failed_baselines"].append(
                         {
                             "metric": check_name,
@@ -1744,7 +1743,7 @@ class TestApiKeyPerformance:
 
             return results
 
-        # Benchmark comprehensive performance tests
+        # Benchmark performance tests
         results = benchmark(lambda: asyncio.run(run_comprehensive_performance_tests()))
 
         # Regression assertions
@@ -1764,7 +1763,7 @@ class TestApiKeyPerformance:
             "Cache performance regression"
         )
 
-        print("\nComprehensive Performance Regression Results:")
+        print("\nPerformance Regression Results:")
         print(
             f"  Encryption Max Time: "
             f"{results['encryption_performance']['max_time_ms']:.2f}ms"

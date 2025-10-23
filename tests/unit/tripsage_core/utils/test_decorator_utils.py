@@ -1,5 +1,4 @@
-"""
-Unit tests for TripSage Core decorator utilities.
+"""Unit tests for TripSage Core decorator utilities.
 
 Tests error handling decorators, retry logic, timing, async/sync decorators,
 and memory service initialization decorators.
@@ -7,13 +6,13 @@ and memory service initialization decorators.
 
 import inspect
 import time
+from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from tripsage_core.utils.decorator_utils import (
     ensure_memory_client_initialized,
-    retry_on_failure,
     with_error_handling,
 )
 
@@ -32,8 +31,7 @@ class TestWithErrorHandling:
         assert result == {"result": "success"}
 
     async def test_async_function_with_exception_dict_return(self):
-        """Test error handling decorator with async function that fails and
-        returns dict."""
+        """Test error handler returns dict on async failure."""
 
         @with_error_handling()
         async def async_fail_dict() -> dict:
@@ -44,8 +42,7 @@ class TestWithErrorHandling:
         assert "Test error" in result["error"]
 
     async def test_async_function_with_exception_reraise(self):
-        """Test error handling decorator with async function that fails and
-        re-raises."""
+        """Test error handler re-raises on async failure."""
 
         @with_error_handling()
         async def async_fail_reraise() -> str:
@@ -65,8 +62,7 @@ class TestWithErrorHandling:
         assert result == {"result": "success"}
 
     def test_sync_function_with_exception_dict_return(self):
-        """Test error handling decorator with sync function that fails and
-        returns dict."""
+        """Test behavior with error handling."""
 
         @with_error_handling()
         def sync_fail_dict() -> dict:
@@ -77,8 +73,7 @@ class TestWithErrorHandling:
         assert "Test error" in result["error"]
 
     def test_sync_function_with_exception_reraise(self):
-        """Test error handling decorator with sync function that fails and
-        re-raises."""
+        """Test error re-raised."""
 
         @with_error_handling()
         def sync_fail_reraise() -> str:
@@ -108,7 +103,6 @@ class TestWithErrorHandling:
         @with_error_handling()
         def original_function():
             """Original docstring."""
-            pass
 
         assert original_function.__name__ == "original_function"
         assert original_function.__doc__ == "Original docstring."
@@ -129,13 +123,17 @@ class TestWithErrorHandling:
         """Test error handling with complex exception objects."""
 
         class CustomException(Exception):
+            """Custom exception."""
+
             def __init__(self, message, code):
+                """Custom exception initializer."""
                 super().__init__(message)
                 self.code = code
 
         @with_error_handling()
         async def fail_with_custom_exception() -> dict:
-            raise CustomException("Custom error message", 500)
+            """Fail with custom exception."""
+            raise CustomException("Custom error message", code=500)
 
         result = await fail_with_custom_exception()
         assert "error" in result
@@ -146,14 +144,17 @@ class TestWithErrorHandling:
 
         @with_error_handling()
         def dict_return() -> dict:
+            """Fail with value error."""
             raise ValueError("Test")
 
         @with_error_handling()
         def str_return() -> str:
+            """Fail with value error."""
             raise ValueError("Test")
 
         @with_error_handling()
         def no_annotation():
+            """Fail with value error."""
             raise ValueError("Test")
 
         # Dict return should return error dict
@@ -169,192 +170,13 @@ class TestWithErrorHandling:
             no_annotation()
 
 
-class TestRetryOnFailure:
-    """Test the retry_on_failure decorator."""
+class TestRetryRemoved:
+    """Sanity check: legacy retry decorator is removed."""
 
-    async def test_async_retry_success_first_attempt(self):
-        """Test retry decorator with async function that succeeds immediately."""
-        call_count = 0
-
-        @retry_on_failure(max_attempts=3)
-        async def async_success():
-            nonlocal call_count
-            call_count += 1
-            return "success"
-
-        result = await async_success()
-        assert result == "success"
-        assert call_count == 1
-
-    async def test_async_retry_success_after_failures(self):
-        """Test retry decorator with async function that succeeds after failures."""
-        call_count = 0
-
-        @retry_on_failure(max_attempts=3, delay=0.01)
-        async def async_retry():
-            nonlocal call_count
-            call_count += 1
-            if call_count < 3:
-                raise ConnectionError("Network error")
-            return "success"
-
-        result = await async_retry()
-        assert result == "success"
-        assert call_count == 3
-
-    async def test_async_retry_max_attempts_exceeded(self):
-        """Test retry decorator when max attempts are exceeded."""
-        call_count = 0
-
-        @retry_on_failure(max_attempts=2, delay=0.01)
-        async def async_always_fail():
-            nonlocal call_count
-            call_count += 1
-            raise ConnectionError("Always fails")
-
-        with pytest.raises(ConnectionError, match="Always fails"):
-            await async_always_fail()
-
-        assert call_count == 2
-
-    def test_sync_retry_success_after_failures(self):
-        """Test retry decorator with sync function that succeeds after failures."""
-        call_count = 0
-
-        @retry_on_failure(max_attempts=3, delay=0.01)
-        def sync_retry():
-            nonlocal call_count
-            call_count += 1
-            if call_count < 3:
-                raise ValueError("Retry error")
-            return "success"
-
-        result = sync_retry()
-        assert result == "success"
-        assert call_count == 3
-
-    def test_sync_retry_max_attempts_exceeded(self):
-        """Test sync retry decorator when max attempts are exceeded."""
-        call_count = 0
-
-        @retry_on_failure(max_attempts=2, delay=0.01)
-        def sync_always_fail():
-            nonlocal call_count
-            call_count += 1
-            raise ValueError("Always fails")
-
-        with pytest.raises(ValueError, match="Always fails"):
-            sync_always_fail()
-
-        assert call_count == 2
-
-    async def test_exponential_backoff(self):
-        """Test exponential backoff timing."""
-        call_times = []
-
-        @retry_on_failure(max_attempts=3, delay=0.1, backoff_factor=2.0)
-        async def failing_function():
-            call_times.append(time.time())
-            raise RuntimeError("Test error")
-
-        with pytest.raises(RuntimeError):
-            await failing_function()
-
-        # Check that delays increase exponentially
-        assert len(call_times) == 3
-
-        # First retry after ~0.1s
-        if len(call_times) > 1:
-            delay1 = call_times[1] - call_times[0]
-            assert 0.08 <= delay1 <= 0.15
-
-        # Second retry after ~0.2s
-        if len(call_times) > 2:
-            delay2 = call_times[2] - call_times[1]
-            assert 0.18 <= delay2 <= 0.25
-
-    async def test_specific_exception_types(self):
-        """Test retry decorator with specific exception types."""
-        call_count = 0
-
-        @retry_on_failure(max_attempts=3, delay=0.01, exceptions=(ConnectionError,))
-        async def selective_retry():
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                raise ConnectionError("Network error")  # Should retry
-            elif call_count == 2:
-                raise ValueError("Value error")  # Should not retry
-            return "success"
-
-        with pytest.raises(ValueError, match="Value error"):
-            await selective_retry()
-
-        assert call_count == 2
-
-    def test_retry_with_args_and_kwargs(self):
-        """Test retry decorator preserves function arguments."""
-
-        @retry_on_failure(max_attempts=2, delay=0.01)
-        def function_with_args(arg1, arg2, kwarg1=None):
-            if arg1 == "fail":
-                raise ValueError("Test error")
-            return {"arg1": arg1, "arg2": arg2, "kwarg1": kwarg1}
-
-        # Test success case
-        result = function_with_args("success", "value2", kwarg1="value3")
-        assert result["arg1"] == "success"
-
-        # Test failure case
-        with pytest.raises(ValueError):
-            function_with_args("fail", "value2")
-
-    async def test_retry_logging(self, caplog):
-        """Test that retry attempts are properly logged."""
-        call_count = 0
-
-        @retry_on_failure(max_attempts=3, delay=0.01)
-        async def logged_retry():
-            nonlocal call_count
-            call_count += 1
-            raise ConnectionError(f"Attempt {call_count}")
-
-        with pytest.raises(ConnectionError):
-            await logged_retry()
-
-        # Check warning logs for retry attempts
-        assert "logged_retry failed (attempt 1/3)" in caplog.text
-        assert "logged_retry failed (attempt 2/3)" in caplog.text
-        assert "logged_retry failed after 3 attempts" in caplog.text
-
-    def test_retry_preserves_function_metadata(self):
-        """Test that retry decorator preserves function metadata."""
-
-        @retry_on_failure()
-        def original_function():
-            """Original docstring."""
-            pass
-
-        assert original_function.__name__ == "original_function"
-        assert original_function.__doc__ == "Original docstring."
-
-    async def test_no_retry_on_success(self):
-        """Test that successful functions don't trigger retry logic."""
-        call_count = 0
-
-        @retry_on_failure(max_attempts=3, delay=0.1)
-        async def immediate_success():
-            nonlocal call_count
-            call_count += 1
-            return "success"
-
-        start_time = time.time()
-        result = await immediate_success()
-        end_time = time.time()
-
-        assert result == "success"
-        assert call_count == 1
-        assert (end_time - start_time) < 0.05  # Should be immediate
+    def test_retry_removed(self):
+        """Import no longer exposes retry_on_failure."""
+        mod = __import__("tripsage_core.utils.decorator_utils", fromlist=["*"])
+        assert not hasattr(mod, "retry_on_failure")
 
 
 class TestEnsureMemoryClientInitialized:
@@ -365,6 +187,7 @@ class TestEnsureMemoryClientInitialized:
 
         @ensure_memory_client_initialized
         async def memory_function():
+            """Memory function."""
             return {"status": "success"}
 
         result = await memory_function()
@@ -375,6 +198,7 @@ class TestEnsureMemoryClientInitialized:
 
         @ensure_memory_client_initialized
         async def memory_fail_dict() -> dict:
+            """Memory fail dict."""
             raise RuntimeError("Memory error")
 
         result = await memory_fail_dict()
@@ -386,6 +210,7 @@ class TestEnsureMemoryClientInitialized:
 
         @ensure_memory_client_initialized
         async def memory_fail_reraise() -> str:
+            """Memory fail re-raise."""
             raise RuntimeError("Memory error")
 
         with pytest.raises(RuntimeError, match="Memory error"):
@@ -397,13 +222,14 @@ class TestEnsureMemoryClientInitialized:
 
             @ensure_memory_client_initialized
             def sync_function():
-                pass
+                """Sync function."""
 
     async def test_function_name_in_error_log(self, caplog):
         """Test that function name appears in error logs."""
 
         @ensure_memory_client_initialized
         async def memory_test_function() -> dict:
+            """Memory test function."""
             raise RuntimeError("Memory initialization error")
 
         result = await memory_test_function()
@@ -450,6 +276,7 @@ class TestEnsureMemoryClientInitialized:
 
             @ensure_memory_client_initialized
             async def add_memory_function():
+                """Add memory function."""
                 # This would typically use the memory service
                 return {"memory_id": "memory_id_123"}
 
@@ -457,15 +284,16 @@ class TestEnsureMemoryClientInitialized:
             assert result["memory_id"] == "memory_id_123"
 
     async def test_return_annotation_detection(self):
-        """Test that decorator correctly detects return type annotations for
-        memory functions."""
+        """Test decorator detects return type annotations."""
 
         @ensure_memory_client_initialized
         async def dict_return() -> dict:
+            """Fail with value error."""
             raise ValueError("Test")
 
         @ensure_memory_client_initialized
         async def str_return() -> str:
+            """Fail with value error."""
             raise ValueError("Test")
 
         # Dict return should return error dict
@@ -484,6 +312,7 @@ class TestEnsureMemoryClientInitialized:
         @with_error_handling()
         @ensure_memory_client_initialized
         async def combined_function() -> dict:
+            """Combined function."""
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -501,11 +330,13 @@ class TestEnsureMemoryClientInitialized:
         @ensure_memory_client_initialized
         @with_error_handling()
         async def order_test1() -> dict:
+            """Order test 1."""
             raise ValueError("Test error")
 
         @with_error_handling()
         @ensure_memory_client_initialized
         async def order_test2() -> dict:
+            """Order test 2."""
             raise ValueError("Test error")
 
         # Both should return error dicts, but different decorators handle the error
@@ -523,20 +354,20 @@ class TestDecoratorHelpers:
         """Test that decorators correctly identify async vs sync functions."""
 
         async def async_func():
-            pass
+            """Async function."""
 
         def sync_func():
-            pass
+            """Sync function."""
 
         assert inspect.iscoroutinefunction(async_func)
         assert not inspect.iscoroutinefunction(sync_func)
 
     async def test_complex_return_annotations(self):
         """Test decorators with complex return type annotations."""
-        from typing import Dict, List, Optional
 
         @with_error_handling()
-        async def complex_return() -> Optional[Dict[str, List[str]]]:
+        async def complex_return() -> dict[str, list[str]] | None:
+            """Complex return."""
             raise ValueError("Complex type error")
 
         # Should re-raise since it's not exactly Dict
@@ -546,10 +377,10 @@ class TestDecoratorHelpers:
     async def test_nested_decorators_performance(self):
         """Test performance impact of nested decorators."""
 
-        @retry_on_failure(max_attempts=1)
         @with_error_handling()
         @ensure_memory_client_initialized
         async def heavily_decorated() -> dict:
+            """Heavily decorated function."""
             return {"performance": "test"}
 
         start_time = time.time()
@@ -564,12 +395,14 @@ class TestDecoratorHelpers:
         """Test that decorators work with generator functions."""
 
         @with_error_handling()
-        async def async_generator() -> dict:
+        async def async_generator() -> AsyncGenerator[dict[str, int]]:
+            """Async generator."""
             yield {"item": 1}
             yield {"item": 2}
 
         # This should work (though generators return generator objects)
-        await async_generator()
+        async for _ in async_generator():
+            pass
         # Note: This test verifies the decorator doesn't break the function,
         # though the actual generator behavior depends on the specific use case
 
@@ -577,12 +410,10 @@ class TestDecoratorHelpers:
         """Test that all decorators are properly imported and accessible."""
         # Verify all expected functions are imported
         assert callable(with_error_handling)
-        assert callable(retry_on_failure)
         assert callable(ensure_memory_client_initialized)
 
         # Verify they have proper docstrings
         assert with_error_handling.__doc__ is not None
-        assert retry_on_failure.__doc__ is not None
         assert ensure_memory_client_initialized.__doc__ is not None
 
     async def test_exception_chaining(self):

@@ -1,26 +1,27 @@
-"""
-Pytest configuration for TripSage tests.
+"""Pytest configuration for TripSage tests.
 
 This module provides common fixtures and utilities used across all test suites.
 """
 
 import asyncio
+import importlib
 import os
 import sys
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
 # Load test environment variables FIRST
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
+
 
 load_dotenv(".env.test", override=True)
 
 # Add the project root directory to the path so tests can import modules directly
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
+sys.path.insert(0, str((Path(__file__).parent.parent).resolve()))
 
 # Set up test environment before any imports
 os.environ.update(
@@ -72,7 +73,7 @@ def mock_environment_variables():
 # Mock MCP manager for use in tests
 @pytest.fixture
 def mock_mcp_manager():
-    """Create a mock MCPManager for testing."""
+    """Create a mock MCPBridge for testing."""
     manager = MagicMock()
     manager.invoke = AsyncMock(return_value={})
     manager.initialize_mcp = AsyncMock()
@@ -83,20 +84,19 @@ def mock_mcp_manager():
     manager.load_configurations = Mock()
 
     # Create a side effect that returns different responses based on the MCP type
+    mcp_responses = {
+        "weather": {"temperature": 22.5, "conditions": "Sunny"},
+        "time": {"current_time": "2025-01-16T12:00:00Z", "timezone": "UTC"},
+        "googlemaps": {"latitude": 37.7749, "longitude": -122.4194},
+        "supabase": {"id": "123", "created_at": "2025-01-16T12:00:00Z"},
+    }
+
     def invoke_side_effect(mcp_name, method_name, params=None, **kwargs):
-        if mcp_name == "weather":
-            return {"temperature": 22.5, "conditions": "Sunny"}
-        elif mcp_name == "time":
-            return {"current_time": "2025-01-16T12:00:00Z", "timezone": "UTC"}
-        elif mcp_name == "googlemaps":
-            return {"latitude": 37.7749, "longitude": -122.4194}
-        elif mcp_name == "supabase":
-            return {"id": "123", "created_at": "2025-01-16T12:00:00Z"}
-        return {}
+        return mcp_responses.get(mcp_name, {})
 
     manager.invoke.side_effect = invoke_side_effect
 
-    with patch("tripsage.mcp_abstraction.manager.mcp_manager", manager):
+    with patch("tripsage_core.services.airbnb_mcp.default_airbnb_mcp", manager):
         yield manager
 
 
@@ -114,21 +114,25 @@ def mock_mcp_registry():
     registry.get_registered_mcps = Mock(return_value=[])
 
     # Setup side_effect for get_wrapper_class
+    mcp_wrapper_classes = {
+        "weather": MagicMock(__name__="WeatherMCPWrapper"),
+        "time": MagicMock(__name__="TimeMCPWrapper"),
+        "googlemaps": MagicMock(__name__="GoogleMapsMCPWrapper"),
+        "supabase": MagicMock(__name__="SupabaseMCPWrapper"),
+    }
+
     def get_wrapper_class_side_effect(mcp_name):
-        if mcp_name == "weather":
-            return MagicMock(__name__="WeatherMCPWrapper")
-        elif mcp_name == "time":
-            return MagicMock(__name__="TimeMCPWrapper")
-        elif mcp_name == "googlemaps":
-            return MagicMock(__name__="GoogleMapsMCPWrapper")
-        elif mcp_name == "supabase":
-            return MagicMock(__name__="SupabaseMCPWrapper")
-        else:
+        if mcp_name not in mcp_wrapper_classes:
             raise KeyError(f"MCP '{mcp_name}' not found in registry")
+        return mcp_wrapper_classes[mcp_name]
 
     registry.get_wrapper_class.side_effect = get_wrapper_class_side_effect
 
-    with patch("tripsage.mcp_abstraction.registry.registry", registry):
+    try:
+        importlib.import_module("tripsage.mcp_abstraction.registry")
+        with patch("tripsage.mcp_abstraction.registry.registry", registry):
+            yield registry
+    except ImportError:
         yield registry
 
 
@@ -155,7 +159,7 @@ class TestRequest(BaseModel):
 class TestResponse(BaseModel):
     """Generic test response model."""
 
-    results: List[Dict[str, Any]]
+    results: list[dict[str, Any]]
     total: int
     success: bool = True
 
@@ -194,9 +198,9 @@ def assert_mcp_invoked(
     mock_manager,
     service_name: str,
     method_name: str,
-    params: Optional[Dict[str, Any]] = None,
+    params: dict[str, Any] | None = None,
 ):
-    """Assert that MCPManager.invoke was called with expected parameters."""
+    """Assert that MCPBridge.invoke was called with expected parameters."""
     mock_manager.invoke.assert_called_once()
     call_args = mock_manager.invoke.call_args[0]
 
@@ -206,7 +210,7 @@ def assert_mcp_invoked(
         assert call_args[2] == params
 
 
-def create_mock_tool_response(data: Any, error: Optional[str] = None):
+def create_mock_tool_response(data: Any, error: str | None = None):
     """Create a standardized tool response for testing."""
     if error:
         return {"error": error, "success": False}
@@ -243,8 +247,7 @@ def mock_web_operations_cache():
 
 @pytest.fixture(autouse=True)
 def mock_settings_and_redis(monkeypatch):
-    """Mock settings and Redis client to avoid actual connections and
-    validation errors."""
+    """Mock settings and Redis client for tests."""
     # Set environment variables for testing
     monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
     monkeypatch.setenv("SUPABASE_ANON_KEY", "test_anon_key")
@@ -253,17 +256,16 @@ def mock_settings_and_redis(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test_openai_key")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
 
-    # Create a comprehensive mock settings object using flat structure
+    # Create a mock settings object using flat structure
     from tripsage_core.config import Settings
 
     mock_settings = Settings(
         environment="testing",
         debug=True,
         database_url="https://test.supabase.co",
-        database_public_key="test_anon_key",
-        database_service_key="test_service_key",
-        openai_api_key="test_openai_key",
-        _env_file=None,
+        database_public_key=SecretStr("test_anon_key"),
+        database_service_key=SecretStr("test_service_key"),
+        openai_api_key=SecretStr("test_openai_key"),
     )
 
     # Mock Redis client

@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-"""
-Security configuration validator for TripSage.
+"""Security configuration validator for TripSage.
 
-This script validates the security configuration before deployment,
-ensuring that production environments meet security requirements.
+Validates configuration using `tripsage_core.config.Settings` when available,
+checks common pitfalls, and emits a concise report with proper exit codes.
 """
 
+import json
 import logging
+import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import List
+from typing import Any, ClassVar
 
-from tripsage_core.config import Settings, get_settings, validate_configuration
+from tripsage_core.config import get_settings
+
 
 # Configure logging
 logging.basicConfig(
@@ -22,20 +25,148 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def validate_configuration() -> bool:
+    """Basic configuration validation.
+
+    Returns:
+        True if `get_settings()` can instantiate settings, else False.
+    """
+    try:
+        _ = get_settings()
+        return True
+    except (RuntimeError, ImportError, ValueError):
+        return False
+
+
+def validate_secrets_security(settings: Any) -> dict[str, bool]:
+    """Validate common secret fields for strength and placeholders.
+
+    Args:
+        settings: Settings instance from tripsage_core.
+
+    Returns:
+        Mapping of field name to boolean indicating whether it appears secure.
+    """
+    candidates = [
+        "secret_key",
+        "database_service_key",
+        "database_jwt_secret",
+        "openai_api_key",
+    ]
+    result: dict[str, bool] = {}
+
+    for name in candidates:
+        if not hasattr(settings, name):
+            continue
+        try:
+            value = getattr(settings, name)
+            # Handle SecretStr-like objects
+            if hasattr(value, "get_secret_value"):
+                value = value.get_secret_value()
+            value = str(value)
+            is_secure = len(value) >= 16 and not value.lower().startswith(
+                ("test", "demo", "placeholder", "changeme")
+            )
+            result[name] = is_secure
+        except (AttributeError, TypeError, ValueError):
+            result[name] = False
+
+    return result
+
+
 class SecurityValidator:
-    """Comprehensive security validation for TripSage configuration."""
+    """Security validation for TripSage configuration."""
+
+    # Sensitive field names that should not appear in logs
+    SENSITIVE_FIELDS: ClassVar[set[str]] = {
+        "secret_key",
+        "database_service_key",
+        "database_jwt_secret",
+        "openai_api_key",
+        "cors_origins",  # May contain sensitive origin URLs
+    }
 
     def __init__(self):
-        self.issues: List[str] = []
-        self.warnings: List[str] = []
+        """Initialize security configuration validator."""
+        self.issues: list[str] = []
+        self.warnings: list[str] = []
+        self._sanitized_report: dict[str, list[str]] = {"issues": [], "warnings": []}
+
+    def _sanitize_issue_message(self, message: str) -> str:
+        """Sanitize issue messages to avoid logging sensitive information.
+
+        Args:
+            message: The original issue message.
+
+        Returns:
+            Sanitized message with sensitive field names redacted.
+        """
+        sanitized = message
+
+        # Replace specific sensitive field names with generic terms
+        secret_fields = {
+            "secret_key",
+            "database_service_key",
+            "database_jwt_secret",
+            "openai_api_key",
+        }
+        for field in self.SENSITIVE_FIELDS:
+            if field in sanitized and field in secret_fields:
+                sanitized = sanitized.replace(field, "a secret field")
+
+        # Handle CORS origins separately (they don't follow the same pattern)
+        if "CORS origin " in sanitized:
+            # Find the position after "CORS origin " and redact everything
+            # until the next space or end
+            cors_prefix = "CORS origin "
+            start_pos = sanitized.find(cors_prefix)
+            if start_pos != -1:
+                end_pos = sanitized.find(" ", start_pos + len(cors_prefix))
+                if end_pos == -1:
+                    # No space found, redact to end of string
+                    end_pos = len(sanitized)
+                sanitized = (
+                    sanitized[: start_pos + len(cors_prefix)]
+                    + "[REDACTED]"
+                    + sanitized[end_pos:]
+                )
+
+        return sanitized
+
+    def _capture_sanitized_report(self) -> None:
+        """Store sanitized issues and warnings for secure reporting."""
+        self._sanitized_report = {
+            "issues": [self._sanitize_issue_message(msg) for msg in self.issues],
+            "warnings": [self._sanitize_issue_message(msg) for msg in self.warnings],
+        }
+
+    def _write_sanitized_report(self) -> Path | None:
+        """Persist sanitized findings to a protected JSON report."""
+        if not self.issues and not self.warnings:
+            return None
+
+        self._capture_sanitized_report()
+        timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+        report_path = Path.cwd() / f"security_validation_report_{timestamp}.json"
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            fd = os.open(report_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                json.dump(self._sanitized_report, handle, indent=2)
+        except OSError as exc:
+            logger.warning("Unable to write sanitized security report: %s", exc)
+            return None
+
+        return report_path
 
     def validate_configuration_security(self) -> bool:
-        """Run comprehensive security validation.
+        """Run security validation.
 
         Returns:
             True if all security checks pass, False otherwise
         """
-        logger.info("🔒 Starting security configuration validation...")
+        logger.info("Starting security configuration validation...")
 
         try:
             # Load and validate basic configuration
@@ -58,13 +189,13 @@ class SecurityValidator:
             return len(self.issues) == 0
 
         except Exception as e:
-            logger.error(f"❌ Security validation failed with error: {e}")
+            logger.exception("Security validation failed with error")
             self.issues.append(f"Validation error: {e}")
             return False
 
-    def _validate_environment_security(self, settings: Settings) -> None:
+    def _validate_environment_security(self, settings: Any) -> None:
         """Validate environment-specific security settings."""
-        logger.info("🌍 Validating environment security...")
+        logger.info("Validating environment security...")
 
         if settings.environment == "production":
             if settings.debug:
@@ -82,12 +213,12 @@ class SecurityValidator:
                     "Debug mode disabled in development (may hinder debugging)"
                 )
 
-    def _validate_secrets_security(self, settings: Settings) -> None:
+    def _validate_secrets_security(self, settings: Any) -> None:
         """Validate secret security and strength."""
-        logger.info("🔐 Validating secrets security...")
+        logger.info("Validating secrets security...")
 
         # Get detailed secret validation
-        secret_validation = settings.validate_secrets_security()
+        secret_validation = validate_secrets_security(settings)
 
         for field_name, is_secure in secret_validation.items():
             if not is_secure:
@@ -117,9 +248,9 @@ class SecurityValidator:
                             f"appears to be a fallback/test value"
                         )
 
-    def _validate_database_security(self, settings: Settings) -> None:
+    def _validate_database_security(self, settings: Any) -> None:
         """Validate database security configuration."""
-        logger.info("🗄️ Validating database security...")
+        logger.info("Validating database security...")
 
         database_url = str(settings.database_url)
 
@@ -139,9 +270,9 @@ class SecurityValidator:
             if "localhost" in postgres_url and settings.environment == "production":
                 self.warnings.append("PostgreSQL URL points to localhost in production")
 
-    def _validate_api_security(self, settings: Settings) -> None:
+    def _validate_api_security(self, settings: Any) -> None:
         """Validate API security configuration."""
-        logger.info("🌐 Validating API security...")
+        logger.info("Validating API security...")
 
         # Validate CORS origins
         for origin in settings.cors_origins:
@@ -158,20 +289,17 @@ class SecurityValidator:
                 "CORS credentials disabled in production (may break authentication)"
             )
 
-    def _validate_production_requirements(self, settings: Settings) -> None:
+    def _validate_production_requirements(self, settings: Any) -> None:
         """Validate production-specific security requirements."""
         if settings.environment != "production":
             return
 
-        logger.info("🏭 Validating production security requirements...")
+        logger.info("Validating production security requirements...")
 
         # Required security features for production
         required_features = {
             "enable_security_monitoring": (
                 "Security monitoring should be enabled in production"
-            ),
-            "enable_prometheus_metrics": (
-                "Metrics collection should be enabled in production"
             ),
         }
 
@@ -185,45 +313,76 @@ class SecurityValidator:
                 "Redis connection without authentication in production"
             )
 
-    def _report_results(self, settings: Settings) -> None:
+    def _report_results(self, settings: Any) -> None:
         """Report validation results."""
-        logger.info("📊 Security validation report:")
-        logger.info(f"  Environment: {settings.environment}")
-        logger.info(f"  Debug mode: {settings.debug}")
-        logger.info(f"  Log level: {settings.log_level}")
+        logger.info("Security validation report:")
+        logger.info("  Environment: %s", settings.environment)
+        logger.info("  Debug mode: %s", settings.debug)
+        logger.info("  Log level: %s", settings.log_level)
 
-        # Get overall security report
-        security_report = settings.get_security_report()
+        # Get overall security report (if method exists)
+        security_report = {}
+        if hasattr(settings, "get_security_report"):
+            try:
+                security_report = settings.get_security_report()
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning("Failed to get security report from settings: %s", e)
 
-        if security_report["production_ready"]:
-            logger.info("✅ Production security validation passed")
+        if security_report.get("production_ready", False):
+            logger.info("Production security validation passed")
         else:
-            logger.warning("⚠️ Production security validation has issues")
+            logger.warning("Production security validation has issues")
+
+        report_path: Path | None = None
+        if self.issues or self.warnings:
+            report_path = self._write_sanitized_report()
 
         # Report issues
         if self.issues:
-            logger.error(f"❌ {len(self.issues)} security issue(s) found:")
-            for issue in self.issues:
-                logger.error(f"  - {issue}")
+            if report_path:
+                logger.error(
+                    "%s security issue(s) found. Sanitized summary written to %s",
+                    len(self.issues),
+                    report_path,
+                )
+            else:
+                logger.error("%s security issue(s) found.", len(self.issues))
 
         # Report warnings
         if self.warnings:
-            logger.warning(f"⚠️ {len(self.warnings)} security warning(s):")
-            for warning in self.warnings:
-                logger.warning(f"  - {warning}")
+            if report_path:
+                logger.warning(
+                    "%s security warning(s) detected. Sanitized summary written to %s",
+                    len(self.warnings),
+                    report_path,
+                )
+            else:
+                logger.warning("%s security warning(s) detected.", len(self.warnings))
 
         if not self.issues and not self.warnings:
-            logger.info("✅ No security issues or warnings found")
+            logger.info("No security issues or warnings found")
 
 
 def generate_secure_config_template() -> str:
     """Generate a secure configuration template."""
     try:
         settings = get_settings()
-        template = settings.export_env_template(include_secrets=False)
+
+        # Check if export_env_template method exists
+        if hasattr(settings, "export_env_template"):
+            try:
+                template = settings.export_env_template(include_secrets=False)  # type: ignore[reportAttributeAccessIssue]
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(
+                    "Failed to export environment template from settings: %s", e
+                )
+                template = "# Unable to generate template from settings\n"
+        else:
+            logger.warning("Settings object does not support template export")
+            template = "# Template export not supported by current settings\n"
 
         # Add security comments
-        security_template = f"""# TripSage Secure Configuration Template
+        return f"""# TripSage Secure Configuration Template
 # Generated by security validator
 #
 # SECURITY NOTES:
@@ -245,7 +404,6 @@ RATE_LIMIT_REQUESTS_PER_HOUR=1000
 
 # Monitoring (recommended for production)
 ENABLE_SECURITY_MONITORING=true
-ENABLE_PROMETHEUS_METRICS=true
 ENABLE_DATABASE_MONITORING=true
 
 # Production-specific settings
@@ -254,10 +412,9 @@ ENABLE_DATABASE_MONITORING=true
 # DEBUG=false
 # LOG_LEVEL=INFO
 """
-        return security_template
 
-    except Exception as e:
-        logger.error(f"Failed to generate secure config template: {e}")
+    except Exception:
+        logger.exception("Failed to generate secure config template")
         return ""
 
 
@@ -269,21 +426,21 @@ def main():
     is_secure = validator.validate_configuration_security()
 
     # Generate secure template
-    logger.info("📄 Generating secure configuration template...")
+    logger.info("Generating secure configuration template...")
     template = generate_secure_config_template()
 
     if template:
         template_path = Path(".env.secure.template")
-        with open(template_path, "w") as f:
+        with template_path.open("w", encoding="utf-8") as f:
             f.write(template)
-        logger.info(f"✅ Secure configuration template saved to {template_path}")
+        logger.info("Secure configuration template saved to %s", template_path)
 
     # Exit with appropriate code
     if is_secure:
-        logger.info("🎉 Security validation completed successfully!")
+        logger.info("Security validation completed successfully")
         sys.exit(0)
     else:
-        logger.error("💥 Security validation failed!")
+        logger.error("Security validation failed")
         sys.exit(1)
 
 

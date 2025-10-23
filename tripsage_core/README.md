@@ -7,7 +7,7 @@ The foundational shared library for the TripSage AI travel planning platform. Th
 `tripsage_core` serves as the centralized foundation layer that provides:
 
 - **Shared Configuration Management** - Centralized settings with environment-specific configurations
-- **Exception System** - Comprehensive error handling with HTTP status integration
+- **Exception System** - Error handling with HTTP status integration
 - **Data Models** - Base classes and shared schemas for database, domain, and API operations
 - **Business Services** - Core business logic services with clean dependency injection
 - **External API Integration** - Standardized patterns for third-party service integration
@@ -49,7 +49,7 @@ settings = get_app_settings()
 
 ### Exception System (`exceptions/`)
 
-Comprehensive error handling with FastAPI integration:
+Error handling with FastAPI integration:
 
 ```python
 from tripsage_core.exceptions import (
@@ -189,26 +189,24 @@ from tripsage_core.services.infrastructure import (
 
 ### Utilities (`utils/`)
 
-Common functionality used throughout the application:
+Common functionality used throughout the application.
+Import utilities directly from their submodules (no package-level re‑exports):
 
 ```python
-from tripsage_core.utils import (
-    cache_utils,
-    error_handling_utils,
-    logging_utils,
-    database_utils
-)
+from tripsage_core.utils.cache_utils import cached, invalidate_pattern
+from tripsage_core.utils.logging_utils import get_logger
+from tripsage_core.utils.decorator_utils import retry_on_failure
+from tripsage_core.utils.connection_utils import DatabaseURLParser
 ```
 
-**Available Utilities:**
+**Available Utilities (direct submodules):**
 
-- **cache_utils** - Caching patterns and TTL management
-- **error_handling_utils** - Error recovery and retry logic
-- **logging_utils** - Structured logging and observability
-- **database_utils** - Database connection and transaction helpers
-- **file_utils** - File processing and validation
-- **session_utils** - Session management and security
-- **decorator_utils** - Common decorators for cross-cutting concerns
+- `cache_utils` — Caching patterns and TTL management.
+- `decorator_utils` — Common decorators (e.g., retries with Tenacity).
+- `logging_utils` — Lightweight logger helper.
+- `file_utils` — File validation helpers.
+- `connection_utils` — Database URL parsing and credentials.
+- `url_converters` — Supabase↔Postgres URL conversions + detection.
 
 ## Performance Optimizations
 
@@ -220,10 +218,9 @@ from tripsage_core.utils import (
 
 ### Memory System
 
-- **Mem0 integration** with pgvector backend
-- **91% faster performance** than traditional approaches
-- Vector similarity search for contextual retrieval
-- Automatic conversation context preservation
+- Mem0 integration with pgvector backend.
+- Vector similarity search for contextual retrieval.
+- Automatic conversation context preservation.
 
 ## Security Features
 
@@ -308,7 +305,7 @@ The core is designed with testability in mind:
 
 - **Dependency injection** for easy mocking
 - **Isolated database operations** with test fixtures
-- **Comprehensive test coverage** (>90% target)
+- **Test coverage** (>90% target)
 - **Mock external service integrations**
 
 ```bash
@@ -340,7 +337,7 @@ Key dependencies include:
 - **`tripsage/api/`** - FastAPI application serving both frontend and agents
 - **`tripsage/agents/`** - LangGraph-based AI agents for travel planning
 - **`frontend/`** - Next.js application for user interface
-- **Tests** - Comprehensive test suites for all components
+- **Tests** - Test suites for all components
 
 ## Contributing
 
@@ -348,7 +345,7 @@ When extending `tripsage_core`:
 
 1. **Follow clean architecture principles** - Keep concerns separated
 2. **Use dependency injection** - Make components testable
-3. **Add comprehensive tests** - Maintain high coverage
+3. **Add tests** - Maintain high coverage
 4. **Document new features** - Update this README and add docstrings
 5. **Validate configurations** - Ensure proper settings validation
 6. **Handle errors properly** - Use the exception system consistently

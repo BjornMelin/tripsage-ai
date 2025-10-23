@@ -135,7 +135,7 @@ export default function RealtimeDemoPage() {
         <h1 className="text-4xl font-bold">Real-time Supabase Integration Demo</h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
           Showcasing direct Supabase SDK usage, real-time subscriptions, optimistic
-          updates, and comprehensive connection monitoring for the TripSage platform.
+          updates, and connection monitoring for the TripSage platform.
         </p>
         <div className="flex justify-center">
           <ConnectionStatusMonitor />
@@ -400,13 +400,13 @@ export default function RealtimeDemoPage() {
               <li>• Complete real-time chat message implementation</li>
               <li>• Add query caching and pagination optimizations</li>
               <li>• Implement offline synchronization</li>
-              <li>• Add comprehensive error boundaries</li>
+              <li>• Add error boundaries</li>
             </ul>
 
             <h4 className="font-semibold">Future Features</h4>
             <ul className="space-y-2 text-sm">
               <li>• Real-time voice/video collaboration</li>
-              <li>• Advanced conflict resolution algorithms</li>
+              <li>• Conflict resolution algorithms</li>
               <li>• Mobile app synchronization</li>
               <li>• Performance analytics and monitoring</li>
             </ul>

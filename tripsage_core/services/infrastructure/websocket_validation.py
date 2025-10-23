@@ -1,5 +1,4 @@
-"""
-Comprehensive Pydantic validation models for WebSocket messages.
+"""Comprehensive Pydantic validation models for WebSocket messages.
 
 This module provides security-focused validation for all WebSocket message types
 to prevent injection vulnerabilities and ensure data integrity.
@@ -8,7 +7,7 @@ to prevent injection vulnerabilities and ensure data integrity.
 import json
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -58,10 +57,10 @@ class WebSocketBaseMessage(BaseModel):
     """Base model for all WebSocket messages with security validation."""
 
     type: WebSocketMessageType = Field(..., description="Message type")
-    timestamp: Optional[datetime] = Field(
+    timestamp: datetime | None = Field(
         default_factory=datetime.now, description="Message timestamp"
     )
-    id: Optional[str] = Field(None, max_length=128, description="Optional message ID")
+    id: str | None = Field(None, max_length=128, description="Optional message ID")
 
     @field_validator("type")
     @classmethod
@@ -75,13 +74,11 @@ class WebSocketBaseMessage(BaseModel):
     @classmethod
     def validate_message_id(cls, v):
         """Validate message ID format."""
-        if v is not None:
-            # Allow alphanumeric, hyphens, and underscores only
-            if not v.replace("-", "").replace("_", "").isalnum():
-                raise ValueError(
-                    "Message ID must contain only alphanumeric characters, "
-                    "hyphens, and underscores"
-                )
+        if v is not None and not v.replace("-", "").replace("_", "").isalnum():
+            raise ValueError(
+                "Message ID must contain only alphanumeric characters, "
+                "hyphens, and underscores"
+            )
         return v
 
 
@@ -94,9 +91,9 @@ class WebSocketAuthMessage(WebSocketBaseMessage):
     token: str = Field(
         ..., min_length=1, max_length=4096, description="JWT authentication token"
     )
-    session_id: Optional[UUID] = Field(None, description="Optional session ID")
-    channels: List[str] = Field(
-        default_factory=list, max_items=50, description="Channels to subscribe to"
+    session_id: UUID | None = Field(None, description="Optional session ID")
+    channels: list[str] = Field(
+        default_factory=list, max_length=50, description="Channels to subscribe to"
     )
 
     @field_validator("token")
@@ -118,7 +115,7 @@ class WebSocketAuthMessage(WebSocketBaseMessage):
         if v:
             for channel in v:
                 if not isinstance(channel, str):
-                    raise ValueError("Channel names must be strings")
+                    raise TypeError("Channel names must be strings")
                 if len(channel) > 100:
                     raise ValueError("Channel name too long")
                 # Allow alphanumeric, colons, underscores, and hyphens only
@@ -131,8 +128,8 @@ class WebSocketHeartbeatMessage(WebSocketBaseMessage):
     """Heartbeat/ping/pong message validation."""
 
     type: WebSocketMessageType = Field(..., description="Message type")
-    ping_id: Optional[str] = Field(None, max_length=64, description="Ping identifier")
-    payload: Dict[str, Any] = Field(
+    ping_id: str | None = Field(None, max_length=64, description="Ping identifier")
+    payload: dict[str, Any] = Field(
         default_factory=dict, max_length=512, description="Heartbeat payload"
     )
 
@@ -153,12 +150,11 @@ class WebSocketHeartbeatMessage(WebSocketBaseMessage):
     @classmethod
     def validate_ping_id(cls, v):
         """Validate ping ID format."""
-        if v is not None:
-            if not v.replace("_", "").replace("-", "").isalnum():
-                raise ValueError(
-                    "Ping ID must contain only alphanumeric characters, "
-                    "hyphens, and underscores"
-                )
+        if v is not None and not v.replace("_", "").replace("-", "").isalnum():
+            raise ValueError(
+                "Ping ID must contain only alphanumeric characters, "
+                "hyphens, and underscores"
+            )
         return v
 
 
@@ -172,8 +168,8 @@ class WebSocketChatMessage(WebSocketBaseMessage):
         ..., min_length=1, max_length=32768, description="Message content"
     )  # 32KB max
     session_id: UUID = Field(..., description="Chat session ID")
-    user_id: Optional[UUID] = Field(None, description="User ID")
-    metadata: Dict[str, Any] = Field(
+    user_id: UUID | None = Field(None, description="User ID")
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
 
@@ -205,10 +201,8 @@ class WebSocketChatMessage(WebSocketBaseMessage):
     @classmethod
     def validate_metadata(cls, v):
         """Validate metadata dictionary."""
-        if v:
-            # Limit metadata size
-            if len(json.dumps(v)) > 2048:  # 2KB max for metadata
-                raise ValueError("Metadata too large")
+        if v and len(json.dumps(v)) > 2048:  # 2KB max for metadata
+            raise ValueError("Metadata too large")
         return v
 
 
@@ -218,11 +212,11 @@ class WebSocketSubscribeMessage(WebSocketBaseMessage):
     type: WebSocketMessageType = Field(
         default=WebSocketMessageType.SUBSCRIBE, description="Message type"
     )
-    channels: List[str] = Field(
-        default_factory=list, max_items=20, description="Channels to subscribe to"
+    channels: list[str] = Field(
+        default_factory=list, max_length=20, description="Channels to subscribe to"
     )
-    unsubscribe_channels: List[str] = Field(
-        default_factory=list, max_items=20, description="Channels to unsubscribe from"
+    unsubscribe_channels: list[str] = Field(
+        default_factory=list, max_length=20, description="Channels to unsubscribe from"
     )
 
     @field_validator("channels", "unsubscribe_channels")
@@ -232,7 +226,7 @@ class WebSocketSubscribeMessage(WebSocketBaseMessage):
         if v:
             for channel in v:
                 if not isinstance(channel, str):
-                    raise ValueError("Channel names must be strings")
+                    raise TypeError("Channel names must be strings")
                 if len(channel) > 100:
                     raise ValueError("Channel name too long")
                 # Allow alphanumeric, colons, underscores, and hyphens only
@@ -262,9 +256,7 @@ class WebSocketErrorMessage(WebSocketBaseMessage):
     )
     error_code: str = Field(..., max_length=50, description="Error code")
     error_message: str = Field(..., max_length=1024, description="Error message")
-    details: Optional[Dict[str, Any]] = Field(
-        None, description="Additional error details"
-    )
+    details: dict[str, Any] | None = Field(None, description="Additional error details")
 
     @field_validator("error_code")
     @classmethod
@@ -281,7 +273,7 @@ class WebSocketErrorMessage(WebSocketBaseMessage):
 class WebSocketGenericMessage(WebSocketBaseMessage):
     """Generic message validation for any message type."""
 
-    payload: Dict[str, Any] = Field(default_factory=dict, description="Message payload")
+    payload: dict[str, Any] = Field(default_factory=dict, description="Message payload")
 
     @field_validator("payload")
     @classmethod
@@ -336,12 +328,7 @@ class WebSocketMessageValidator:
             WebSocketMessageType.ERROR: WebSocketErrorMessage,
         }
 
-        # Get appropriate validation model
-        if message_type in type_models:
-            model_class = type_models[message_type]
-        else:
-            # Use generic validation for unknown message types
-            model_class = WebSocketGenericMessage
+        model_class = type_models.get(message_type, WebSocketGenericMessage)
 
         # Validate using appropriate model
         try:

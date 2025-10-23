@@ -130,7 +130,7 @@ describe("PreferencesSection", () => {
   it("renders advanced settings section", () => {
     render(<PreferencesSection />);
 
-    expect(screen.getByText("Advanced Settings")).toBeInTheDocument();
+    expect(screen.getByText("Additional Settings")).toBeInTheDocument();
     expect(screen.getByText("Auto-save Searches")).toBeInTheDocument();
     expect(screen.getByText("Smart Suggestions")).toBeInTheDocument();
     expect(screen.getByText("Location Services")).toBeInTheDocument();
@@ -257,7 +257,7 @@ describe("PreferencesSection", () => {
 
     // Should still render with default values
     expect(screen.getByText("Regional & Language")).toBeInTheDocument();
-    expect(screen.getByText("Advanced Settings")).toBeInTheDocument();
+    expect(screen.getByText("Additional Settings")).toBeInTheDocument();
   });
 
   it("handles missing currency store gracefully", () => {

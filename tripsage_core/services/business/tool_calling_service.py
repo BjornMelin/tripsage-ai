@@ -1,5 +1,4 @@
-"""
-Tool Calling Service for Phase 5 MCP Integration.
+"""Tool Calling Service for Phase 5 MCP Integration.
 
 This service implements structured tool calling patterns for MCP servers
 with validation, error handling, and result formatting.
@@ -7,24 +6,23 @@ with validation, error handling, and result formatting.
 
 import asyncio
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
 
-# MCPManager removed as part of BJO-161 MCP abstraction removal
-# from tripsage_core.mcp_abstraction.manager import MCPManager
+# MCPBridge removed as part of BJO-161 MCP abstraction removal
+# from tripsage_core.mcp_abstraction.manager import MCPBridge
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
 
 class ToolCallError(TripSageError):
     """Error raised when tool calling fails."""
-
-    pass
 
 
 class ToolCallRequest(BaseModel):
@@ -33,10 +31,10 @@ class ToolCallRequest(BaseModel):
     id: str = Field(..., description="Unique identifier for the tool call")
     service: str = Field(..., description="MCP service name")
     method: str = Field(..., description="Method to invoke")
-    params: Dict[str, Any] = Field(
+    params: dict[str, Any] = Field(
         default_factory=dict, description="Method parameters"
     )
-    timeout: Optional[float] = Field(default=30.0, description="Timeout in seconds")
+    timeout: float | None = Field(default=30.0, description="Timeout in seconds")
     retry_count: int = Field(default=3, description="Number of retries on failure")
 
     @field_validator("service")
@@ -62,7 +60,7 @@ class ToolCallRequest(BaseModel):
 
     @field_validator("timeout")
     @classmethod
-    def validate_timeout(cls, v: Optional[float]) -> Optional[float]:
+    def validate_timeout(cls, v: float | None) -> float | None:
         """Validate timeout value."""
         if v is not None and (v <= 0 or v > 300):
             raise ValueError("Timeout must be between 0 and 300 seconds")
@@ -74,10 +72,8 @@ class ToolCallResponse(BaseModel):
 
     id: str = Field(..., description="Tool call identifier")
     status: str = Field(..., description="Response status (success/error/timeout)")
-    result: Optional[Dict[str, Any]] = Field(
-        default=None, description="Tool result data"
-    )
-    error: Optional[str] = Field(default=None, description="Error message if failed")
+    result: dict[str, Any] | None = Field(default=None, description="Tool result data")
+    error: str | None = Field(default=None, description="Error message if failed")
     execution_time: float = Field(..., description="Execution time in seconds")
     service: str = Field(..., description="MCP service used")
     method: str = Field(..., description="Method invoked")
@@ -90,15 +86,14 @@ class ToolCallValidationResult(BaseModel):
     """Tool call validation result."""
 
     is_valid: bool = Field(..., description="Whether tool call is valid")
-    errors: List[str] = Field(default_factory=list, description="Validation errors")
-    sanitized_params: Optional[Dict[str, Any]] = Field(
+    errors: list[str] = Field(default_factory=list, description="Validation errors")
+    sanitized_params: dict[str, Any] | None = Field(
         default=None, description="Sanitized parameters"
     )
 
 
 class ToolCallService:
-    """
-    Service for executing MCP tool calls with validation and error handling.
+    """Service for executing MCP tool calls with validation and error handling.
 
     This service implements Phase 5 patterns for structured tool calling
     with proper validation, error handling, and result formatting.
@@ -115,12 +110,12 @@ class ToolCallService:
             logger.warning("MCP manager parameter is deprecated and will be ignored")
         self.mcp_manager = None
         # Error recovery removed - over-engineered stub
-        self.execution_history: List[ToolCallResponse] = []
-        self.rate_limits: Dict[str, List[float]] = {}
+        self.execution_history: list[ToolCallResponse] = []
+        self.rate_limits: dict[str, list[float]] = {}
 
     @with_error_handling()
     async def execute_tool_call(self, request: ToolCallRequest) -> ToolCallResponse:
-        """Execute a single tool call with comprehensive error handling.
+        """Execute a single tool call with error handling.
 
         Args:
             request: Tool call request
@@ -177,7 +172,7 @@ class ToolCallService:
 
             return response
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return ToolCallResponse(
                 id=request.id,
                 status="timeout",
@@ -187,7 +182,7 @@ class ToolCallService:
                 method=request.method,
             )
         except Exception as e:
-            logger.error(f"Tool call execution failed for {request.id}: {str(e)}")
+            logger.exception("Tool call execution failed for %s", request.id)
             return ToolCallResponse(
                 id=request.id,
                 status="error",
@@ -199,8 +194,8 @@ class ToolCallService:
 
     @with_error_handling()
     async def execute_parallel_tool_calls(
-        self, requests: List[ToolCallRequest]
-    ) -> List[ToolCallResponse]:
+        self, requests: list[ToolCallRequest]
+    ) -> list[ToolCallResponse]:
         """Execute multiple tool calls in parallel for efficiency.
 
         Args:
@@ -216,7 +211,7 @@ class ToolCallService:
             return []
 
         try:
-            logger.info(f"Executing {len(requests)} tool calls in parallel")
+            logger.info("Executing %s tool calls in parallel", len(requests))
 
             # Create tasks for all requests
             tasks = [self.execute_tool_call(request) for request in requests]
@@ -225,27 +220,26 @@ class ToolCallService:
             responses = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Convert exceptions to error responses
-            processed_responses = []
-            for i, response in enumerate(responses):
-                if isinstance(response, Exception):
-                    error_response = ToolCallResponse(
-                        id=requests[i].id,
-                        status="error",
-                        error=f"Parallel execution failed: {str(response)}",
-                        execution_time=0.0,
-                        service=requests[i].service,
-                        method=requests[i].method,
-                    )
-                    processed_responses.append(error_response)
-                else:
-                    processed_responses.append(response)
+            processed_responses = [
+                response
+                if not isinstance(response, Exception)
+                else ToolCallResponse(
+                    id=requests[i].id,
+                    status="error",
+                    error=f"Parallel execution failed: {response!s}",
+                    execution_time=0.0,
+                    service=requests[i].service,
+                    method=requests[i].method,
+                )
+                for i, response in enumerate(responses)
+            ]
 
-            logger.info(f"Completed {len(processed_responses)} parallel tool calls")
+            logger.info("Completed %s parallel tool calls", len(processed_responses))
             return processed_responses
 
         except Exception as e:
-            logger.error(f"Parallel tool call execution failed: {str(e)}")
-            raise ToolCallError(f"Parallel execution failed: {str(e)}") from e
+            logger.exception("Parallel tool call execution failed")
+            raise ToolCallError(f"Parallel execution failed: {e!s}") from e
 
     async def validate_tool_call(
         self, request: ToolCallRequest
@@ -282,7 +276,7 @@ class ToolCallService:
 
     async def format_tool_result_for_chat(
         self, response: ToolCallResponse
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Format tool call result for chat display.
 
         Args:
@@ -325,8 +319,8 @@ class ToolCallService:
             }
 
     async def get_execution_history(
-        self, limit: int = 100, service: Optional[str] = None
-    ) -> List[ToolCallResponse]:
+        self, limit: int = 100, service: str | None = None
+    ) -> list[ToolCallResponse]:
         """Get tool call execution history.
 
         Args:
@@ -343,8 +337,8 @@ class ToolCallService:
 
         return sorted(history, key=lambda x: x.timestamp, reverse=True)[:limit]
 
-    async def get_error_statistics(self) -> Dict[str, Any]:
-        """Get comprehensive error statistics and monitoring data.
+    async def get_error_statistics(self) -> dict[str, Any]:
+        """Get error statistics and monitoring data.
 
         Returns:
             Dictionary with error statistics and system health metrics
@@ -380,9 +374,9 @@ class ToolCallService:
     # Private helper methods
 
     async def _execute_with_retries(
-        self, request: ToolCallRequest, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Execute tool call with comprehensive error recovery."""
+        self, request: ToolCallRequest, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Execute tool call with error recovery."""
         # MCP abstraction removed - direct service calls should be used
         raise NotImplementedError(
             f"Direct service integration needed for {request.service}.{request.method} "
@@ -411,7 +405,7 @@ class ToolCallService:
             self.rate_limits[service] = []
         self.rate_limits[service].append(current_time)
 
-    async def _sanitize_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _sanitize_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """Sanitize parameters to remove potentially harmful content."""
         sanitized = {}
         for key, value in params.items():
@@ -422,47 +416,37 @@ class ToolCallService:
                 sanitized[key] = value
         return sanitized
 
-    async def _validate_flight_params(self, params: Dict[str, Any]) -> List[str]:
+    async def _validate_flight_params(self, params: dict[str, Any]) -> list[str]:
         """Validate flight search parameters."""
-        errors = []
-
         required_fields = ["origin", "destination", "departure_date"]
-        for field in required_fields:
-            if field not in params:
-                errors.append(f"Missing required field: {field}")
+        return [
+            f"Missing required field: {field}"
+            for field in required_fields
+            if field not in params
+        ]
 
-        return errors
-
-    async def _validate_accommodation_params(self, params: Dict[str, Any]) -> List[str]:
+    async def _validate_accommodation_params(self, params: dict[str, Any]) -> list[str]:
         """Validate accommodation search parameters."""
-        errors = []
-
         required_fields = ["location", "check_in", "check_out"]
-        for field in required_fields:
-            if field not in params:
-                errors.append(f"Missing required field: {field}")
+        return [
+            f"Missing required field: {field}"
+            for field in required_fields
+            if field not in params
+        ]
 
-        return errors
-
-    async def _validate_maps_params(self, params: Dict[str, Any]) -> List[str]:
+    async def _validate_maps_params(self, params: dict[str, Any]) -> list[str]:
         """Validate maps API parameters."""
-        errors = []
-
         if "address" not in params and "location" not in params:
-            errors.append("Either 'address' or 'location' is required")
+            return ["Either 'address' or 'location' is required"]
+        return []
 
-        return errors
-
-    async def _validate_weather_params(self, params: Dict[str, Any]) -> List[str]:
+    async def _validate_weather_params(self, params: dict[str, Any]) -> list[str]:
         """Validate weather API parameters."""
-        errors = []
-
         if "location" not in params:
-            errors.append("'location' parameter is required")
+            return ["'location' parameter is required"]
+        return []
 
-        return errors
-
-    async def _format_flight_results(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    async def _format_flight_results(self, result: dict[str, Any]) -> dict[str, Any]:
         """Format flight search results for chat display."""
         return {
             "type": "flights",
@@ -472,8 +456,8 @@ class ToolCallService:
         }
 
     async def _format_accommodation_results(
-        self, result: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, result: dict[str, Any]
+    ) -> dict[str, Any]:
         """Format accommodation search results for chat display."""
         return {
             "type": "accommodations",
@@ -482,7 +466,7 @@ class ToolCallService:
             "actions": ["book", "favorite", "share"],
         }
 
-    async def _format_maps_results(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    async def _format_maps_results(self, result: dict[str, Any]) -> dict[str, Any]:
         """Format maps API results for chat display."""
         return {
             "type": "location",
@@ -491,7 +475,7 @@ class ToolCallService:
             "actions": ["navigate", "save", "share"],
         }
 
-    async def _format_weather_results(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    async def _format_weather_results(self, result: dict[str, Any]) -> dict[str, Any]:
         """Format weather API results for chat display."""
         return {
             "type": "weather",
@@ -503,8 +487,7 @@ class ToolCallService:
 
 # Dependency function for FastAPI
 async def get_tool_calling_service() -> ToolCallService:
-    """
-    Get tool calling service instance for dependency injection.
+    """Get tool calling service instance for dependency injection.
 
     Returns:
         ToolCallService instance

@@ -6,7 +6,6 @@ price changes over time for various entities.
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from pydantic import Field, field_validator
 
@@ -33,7 +32,7 @@ class PriceHistory(TripSageModel):
         price: The price value in default currency
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: int | None = Field(None, description="Unique identifier")
     entity_type: EntityType = Field(..., description="Type of entity this price is for")
     entity_id: int = Field(..., description="ID of the entity this price is for")
     timestamp: datetime = Field(..., description="When the price was recorded")
@@ -59,8 +58,7 @@ class PriceHistory(TripSageModel):
     @property
     def is_recent(self) -> bool:
         """Check if the price was recorded recently (within 24 hours)."""
-        from datetime import datetime as datetime_type
-        from datetime import timedelta
+        from datetime import datetime as datetime_type, timedelta
 
         return datetime_type.now() - self.timestamp < timedelta(hours=24)
 
