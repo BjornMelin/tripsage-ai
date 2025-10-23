@@ -24,6 +24,7 @@ import {
   Wifi,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
 import { useOptimistic, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -334,10 +335,11 @@ export function ModernHotelResults({
                 )}
               >
                 {hotel.images.main ? (
-                  <img
+                  <Image
                     src={hotel.images.main}
                     alt={hotel.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 ) : (
                   <div className="flex flex-col items-center text-muted-foreground">
