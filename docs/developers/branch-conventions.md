@@ -1,4 +1,4 @@
-# Branch Naming Conventions
+# Branch Conventions
 
 This document outlines the standardized branch naming conventions for the TripSage repository and how they integrate with our CI/CD workflows.
 
@@ -85,7 +85,7 @@ session/claude-ai-refactor-components
 **Workflow Triggers:**
 
 - ✅ Backend CI (on push)
-- ✅ Frontend CI (on push)  
+- ✅ Frontend CI (on push)
 - ✅ Security Scanning (on push)
 - ✅ Code Coverage Analysis (on push)
 - ✅ Quality Gates (on PR to main/develop)

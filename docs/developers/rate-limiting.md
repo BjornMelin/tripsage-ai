@@ -36,6 +36,7 @@ Upstash REST (`UPSTASH_REDIS_REST_URL`) is not compatible with limits; provision
 - Exempt with `@limiter.exempt` (e.g., for health endpoints).
 
 Example:
+
 ```python
 from fastapi import APIRouter, Request, Response
 from tripsage.api.limiting import limiter
@@ -51,10 +52,12 @@ async def chat(request: Request, response: Response):
 ## Outbound throttling
 
 All outbound HTTP must use `tripsage_core.utils.outbound.request_with_backoff`:
+
 - One `AsyncLimiter` per host
 - 429: honor `Retry-After`, else random exponential backoff
 
 Environment:
+
 - `OUTBOUND_QPM_DEFAULT` (default 60)
 - Per-host overrides: `OUTBOUND_QPM__API_OPENAI_COM=120`
 
@@ -74,4 +77,3 @@ Environment:
 - Removed custom `RateLimitMiddleware` and Dragonfly-based algorithms.
 - Frontend rate limiting removed; backend is the single source of truth.
 - See ADR: `docs/adrs/adr-0012-slowapi-aiolimiter-migration.md`.
-
