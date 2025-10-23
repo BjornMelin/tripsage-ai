@@ -26,6 +26,18 @@ import {
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/chat";
 
+function partsToText(parts?: { type: string; text?: string }[]): string | undefined {
+  if (!parts) return undefined;
+  try {
+    return parts
+      .filter((p) => p && p.type === "text" && typeof p.text === "string")
+      .map((p) => p.text as string)
+      .join("");
+  } catch {
+    return undefined;
+  }
+}
+
 interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
@@ -108,10 +120,9 @@ export function MessageBubble({
 
   // Handle copy content
   const handleCopyContent = useCallback(() => {
-    if (message.content) {
-      navigator.clipboard.writeText(message.content);
-    }
-  }, [message.content]);
+    const text = partsToText((message as any).parts) ?? message.content;
+    if (text) navigator.clipboard.writeText(text);
+  }, [message.content, message]);
 
   // markdown components with syntax highlighting
   const markdownComponents = useMemo(
