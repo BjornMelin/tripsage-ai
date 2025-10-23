@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Next.js 16 caching defaults: enabled `cacheComponents` in `next.config.ts`; turned on `turbopackFileSystemCacheForDev`.
+- Supabase auth confirmation route at `src/app/auth/confirm/route.ts` using `@supabase/ssr`.
+- Upstash Redis helper `src/lib/redis.ts` with `getRedis()` and `incrCounter()` utilities (uses REST client for Edge compatibility).
+-
 - DuffelProvider (httpx, Duffel API v2) for flight search and booking; returns raw provider dicts mapped to canonical `FlightOffer` via the existing mapper (`tripsage_core.models.mappers.flights_mapper`).
 - Optional Duffel auto‑wiring in `get_flight_service()` when `DUFFEL_ACCESS_TOKEN` (or legacy `DUFFEL_API_TOKEN`) is present.
 - Unit tests: provider (no‑network) and FlightService+provider mapping/booking paths; deterministic and isolated.
@@ -20,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Tailwind CSS v4: Ran `npx @tailwindcss/upgrade` and confirmed CSS-first setup via `@import "tailwindcss";` in `src/app/globals.css`. Kept `@tailwindcss/postcss` and removed legacy Turbopack flags from `dev` script.
+- Minor Tailwind v4 compatibility: updated some `outline-none` usages to `outline-hidden` in UI components.
 - Rebuilt `tripsage.agents.base.BaseAgent` around LangGraph orchestration with ChatOpenAI fallback execution, memory hydration, and periodic conversation summarization.
 - Simplified `ChatAgent` to delegate to the new base workflow while exposing async history/clearing helpers backed by `ChatService` with local fallbacks.
 - Flight agent result formatting updated to use canonical offer fields (airlines, outbound_segments, currency/price).
@@ -86,6 +92,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OTEL decorators added on ChatService public methods with low-cardinality attrs; test env skips exporter init to avoid network failures.
 - SecretStr respected for OpenAI key; sanitized content + metadata validation retained.
 - Tests updated to final-only contracts (unit+integration) to reflect JSON bodies and new method signatures.
+
+### Notes
+
+- Tailwind v4 verification of utility coverage is in progress; further class name adjustments
+  will be tracked in the Tailwind v4 spec and reflected here upon completion.
 
 ## [2.1.0] - 2025-10-20
 
