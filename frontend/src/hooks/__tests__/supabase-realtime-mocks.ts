@@ -178,7 +178,9 @@ export class MockRealtimeConnection {
   ) {
     const key = `postgres_changes:${JSON.stringify(config)}`;
     const handlers = this.eventHandlers.get(key) || [];
-    handlers.forEach((handler) => handler(payload));
+    for (const handler of handlers) {
+      handler(payload);
+    }
   }
 
   /**
@@ -188,7 +190,9 @@ export class MockRealtimeConnection {
     const key = "system:{}";
     const handlers = this.eventHandlers.get(key) || [];
     const payload = createMockSystemPayload(status, extension);
-    handlers.forEach((handler) => handler(payload));
+    for (const handler of handlers) {
+      handler(payload);
+    }
   }
 
   /**
@@ -382,7 +386,9 @@ export class RealtimeHookTester {
     ];
 
     // Fire all events simultaneously
-    events.forEach((event) => event());
+    for (const event of events) {
+      event();
+    }
   }
 
   /**

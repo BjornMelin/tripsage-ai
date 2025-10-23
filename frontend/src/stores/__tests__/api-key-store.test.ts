@@ -41,7 +41,7 @@ vi.mock("@/lib/api/client", () => ({
     }
 
     // Remove auth from options before passing to fetch
-    const { auth, ...fetchOptions } = options || {};
+    const { auth: _auth, ...fetchOptions } = options || {};
 
     return global
       .fetch(url, {

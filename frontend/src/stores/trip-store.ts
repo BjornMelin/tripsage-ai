@@ -192,7 +192,7 @@ export const useTripStore = create<TripState>()(
         try {
           // Import hook will need to be used in component that calls this
           // For now, we'll use the supabase client directly
-          const { createTrip: repoCreateTrip, updateTrip: repoUpdateTrip } =
+          const { createTrip: repoCreateTrip, updateTrip: _repoUpdateTrip } =
             await import("@/lib/repositories/trips-repo");
 
           const tripData = {
@@ -255,11 +255,9 @@ export const useTripStore = create<TripState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const { createClient } = await import("@/lib/supabase/client");
           const { updateTrip: repoUpdateTrip } = await import(
             "@/lib/repositories/trips-repo"
           );
-          const _supabase = createClient();
 
           const updateData: any = {};
 
@@ -292,7 +290,7 @@ export const useTripStore = create<TripState>()(
           }
 
           const updated = await repoUpdateTrip(
-            Number.parseInt(id),
+            Number.parseInt(id, 10),
             (_get().currentTrip as any)?.user_id || "",
             updateData
           );
@@ -328,7 +326,7 @@ export const useTripStore = create<TripState>()(
           const { error } = await supabase
             .from("trips")
             .delete()
-            .eq("id", Number.parseInt(id));
+            .eq("id", Number.parseInt(id, 10));
 
           if (error) throw error;
 

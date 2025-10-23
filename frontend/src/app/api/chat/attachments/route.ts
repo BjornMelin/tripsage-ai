@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     // Transform response
     if (files.length === 1) {
-      return Response.json({
+      const payload = {
         files: [
           {
             id: data.file_id,
@@ -101,9 +101,9 @@ export async function POST(req: NextRequest) {
           },
         ],
         urls: [`/api/attachments/${data.file_id}/download`],
-      });
-      // Invalidate any views that consume attachments lists
-      // Note: revalidateTag scope managed by callers; remove unreachable call.
+      };
+      revalidateTag("attachments", "max");
+      return Response.json(payload);
     }
 
     // Batch response
@@ -123,10 +123,11 @@ export async function POST(req: NextRequest) {
       status: file.processing_status,
     }));
 
-    const result = Response.json({
+    const resultPayload = {
       files: transformedFiles,
       urls: transformedFiles.map((f: any) => f.url),
-    });
+    };
+    const result = Response.json(resultPayload);
     revalidateTag("attachments", "max");
     return result;
   } catch (error) {

@@ -353,7 +353,7 @@ export function FlightSearchForm({
                           <Select
                             value={field.value.toString()}
                             onValueChange={(value) =>
-                              field.onChange(Number.parseInt(value))
+                              field.onChange(Number.parseInt(value, 10))
                             }
                           >
                             <SelectTrigger className="pl-10">
@@ -387,7 +387,7 @@ export function FlightSearchForm({
                         <Select
                           value={field.value.toString()}
                           onValueChange={(value) =>
-                            field.onChange(Number.parseInt(value))
+                            field.onChange(Number.parseInt(value, 10))
                           }
                         >
                           <SelectTrigger>

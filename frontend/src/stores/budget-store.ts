@@ -112,7 +112,7 @@ const calculateBudgetSummary = (budget: Budget, expenses: Expense[]): BudgetSumm
     );
     const elapsedDays = Math.max(
       1,
-      Math.ceil((new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+      Math.ceil((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24))
     );
 
     dailyAverage = elapsedDays > 0 ? totalSpent / elapsedDays : 0;

@@ -82,13 +82,15 @@ export function SearchFilters({
               <div className="space-y-2">
                 {filtersGroup.map((filter) => (
                   <div key={filter.id} className="space-y-2">
-                    <div
-                      className="flex justify-between items-center cursor-pointer"
+                    <button
+                      type="button"
+                      className="w-full flex justify-between items-center px-2 py-1 hover:bg-accent rounded text-left"
                       onClick={() => handleToggleExpand(filter.id)}
+                      aria-expanded={expanded[filter.id]}
                     >
                       <span className="text-sm">{filter.label}</span>
                       <span>{expanded[filter.id] ? "−" : "+"}</span>
-                    </div>
+                    </button>
 
                     {expanded[filter.id] && (
                       <div className="pl-2 border-l-2 border-muted">
