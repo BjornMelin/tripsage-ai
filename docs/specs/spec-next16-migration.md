@@ -26,6 +26,8 @@ Upgrade the app to Next.js 16 by migrating middleware -> proxy, enforcing async 
   - [x] `src/lib/supabase/server.ts` exists with `createServerSupabase()` wrapper.
   - [ ] Update `app/(auth)/reset-password/page.tsx` to server-read auth with the server client (no `useAuth` hook in server). If client interactivity is required, split into server + client child.
   - [ ] Validate build no longer fails at prerender.
+- [x] Wrap client/dynamic UI usage in `<Suspense>` where necessary to comply with Cache Components prerender rules.
+- [x] Removed legacy `dynamic`/`revalidate` segment configs that conflict with `cacheComponents`.
 - [ ] Docs
   - [x] ADR-0013 captures design.
   - [ ] Update `docs/index.md` and `docs/users` for downstream effects.
