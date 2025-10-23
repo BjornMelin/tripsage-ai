@@ -1,5 +1,9 @@
 # Repository Guidelines
 
+## ExecPlans
+
+When writing complex features or significant refactors, use an ExecPlan (as described in [.agent/PLANS.md](.agent/PLANS.md)) from design to implementation.
+
 ## Project Structure & Module Organization
 
 For detailed project structure information, see [docs/architecture/project-structure.md](../docs/architecture/project-structure.md).
