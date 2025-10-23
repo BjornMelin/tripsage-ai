@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from tripsage_core.services.business.api_key_service import (
-    ServiceHealthCheck,
+    ApiValidationResult,
     ServiceHealthStatus,
     ServiceType,
 )
@@ -46,19 +46,25 @@ def mock_api_key_service() -> AsyncMock:
     service = AsyncMock()
     now = datetime.now(UTC)
     service.check_all_services_health.return_value = {
-        ServiceType.OPENAI: ServiceHealthCheck(
+        ServiceType.OPENAI: ApiValidationResult(
             service=ServiceType.OPENAI,
-            status=ServiceHealthStatus.HEALTHY,
+            is_valid=None,
+            status=None,
+            health_status=ServiceHealthStatus.HEALTHY,
             latency_ms=150.0,
             message="Operational",
             checked_at=now,
+            validated_at=None,
         ),
-        ServiceType.WEATHER: ServiceHealthCheck(
+        ServiceType.WEATHER: ApiValidationResult(
             service=ServiceType.WEATHER,
-            status=ServiceHealthStatus.DEGRADED,
+            is_valid=None,
+            status=None,
+            health_status=ServiceHealthStatus.DEGRADED,
             latency_ms=450.0,
             message="Elevated latency",
             checked_at=now,
+            validated_at=None,
         ),
     }
     return service
@@ -179,12 +185,15 @@ class TestDashboardService:
         """Return per-service analytics using health checks."""
         mock_database_service.select.return_value = sample_usage_logs
         mock_api_key_service.check_all_services_health.return_value = {
-            ServiceType.OPENAI: ServiceHealthCheck(
+            ServiceType.OPENAI: ApiValidationResult(
                 service=ServiceType.OPENAI,
-                status=ServiceHealthStatus.HEALTHY,
+                is_valid=None,
+                status=None,
+                health_status=ServiceHealthStatus.HEALTHY,
                 latency_ms=120.0,
                 message="All good",
                 checked_at=datetime.now(UTC),
+                validated_at=None,
             )
         }
 

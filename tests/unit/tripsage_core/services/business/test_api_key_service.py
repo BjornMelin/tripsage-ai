@@ -14,8 +14,9 @@ from tripsage_core.services.business.api_key_service import (
     ApiKeyCreateRequest,
     ApiKeyResponse,
     ApiKeyService,
+    ApiValidationResult,
+    ServiceHealthStatus,
     ServiceType,
-    ValidationResult,
     ValidationStatus,
     get_api_key_service,
 )
@@ -96,7 +97,7 @@ class TestApiKeyService:
     def mock_settings(self):
         """Mock settings."""
         settings = Mock()
-        settings.secret_key = "test_secret_key_for_encryption"
+        settings.secret_key = Mock(get_secret_value=Mock(return_value="test_secret_key_for_encryption"))
         return settings
 
     @pytest.fixture
@@ -109,11 +110,13 @@ class TestApiKeyService:
     @pytest.fixture
     def sample_create_request(self):
         """Sample API key creation request."""
-        return ApiKeyCreateRequest(
-            name="OpenAI API Key",
-            service=ServiceType.OPENAI,
-            key_value="sk-test_key_for_unit_tests",
-            description="Key for GPT-4 access",
+        return ApiKeyCreateRequest.model_validate(
+            {
+                "name": "OpenAI API Key",
+                "service": ServiceType.OPENAI,
+                "key": "sk-test_key_for_unit_tests",
+                "description": "Key for GPT-4 access",
+            }
         )
 
     @pytest.fixture
@@ -159,7 +162,7 @@ class TestApiKeyService:
 
         # Mock successful validation
         with patch.object(api_key_service, "validate_api_key") as mock_validate:
-            mock_validate.return_value = ValidationResult(
+            mock_validate.return_value = ApiValidationResult(
                 is_valid=True,
                 status=ValidationStatus.VALID,
                 service=ServiceType.OPENAI,
@@ -190,7 +193,7 @@ class TestApiKeyService:
 
         # Mock validation failure
         with patch.object(api_key_service, "validate_api_key") as mock_validate:
-            mock_validate.return_value = ValidationResult(
+            mock_validate.return_value = ApiValidationResult(
                 is_valid=False,
                 status=ValidationStatus.INVALID,
                 service=ServiceType.OPENAI,
@@ -351,7 +354,16 @@ class TestApiKeyService:
         result = await api_key_service.check_service_health(ServiceType.OPENAI)
 
         assert result.service == ServiceType.OPENAI
-        assert result.status in ["healthy", "degraded", "unhealthy", "unknown"]
+        assert result.health_status in {
+            ServiceHealthStatus.HEALTHY,
+            ServiceHealthStatus.DEGRADED,
+            ServiceHealthStatus.UNHEALTHY,
+            ServiceHealthStatus.UNKNOWN,
+        }
+        assert result.is_valid is None
+        assert result.status is None
+        assert result.checked_at is not None
+        assert result.validated_at is None
 
     # Note: monitor_key method doesn't exist in the actual implementation
     # This functionality is covered by check_service_health
@@ -374,7 +386,7 @@ class TestApiKeyService:
     async def test_cache_operations(self, api_key_service, mock_cache_service):
         """Test cache operations for validation results."""
         key_value = "sk-test_key"
-        validation_result = ValidationResult(
+        validation_result = ApiValidationResult(
             is_valid=True,
             status=ValidationStatus.VALID,
             service=ServiceType.OPENAI,
@@ -486,6 +498,19 @@ class TestApiKeyService:
         assert ServiceType.OPENAI in results
         assert ServiceType.WEATHER in results
         assert ServiceType.GOOGLEMAPS in results
+
+        for result in results.values():
+            assert isinstance(result, ApiValidationResult)
+            assert result.is_valid is None
+            assert result.status is None
+            assert result.health_status in {
+                ServiceHealthStatus.HEALTHY,
+                ServiceHealthStatus.DEGRADED,
+                ServiceHealthStatus.UNHEALTHY,
+                ServiceHealthStatus.UNKNOWN,
+            }
+            assert result.checked_at is not None
+            assert result.validated_at is None
 
     @pytest.mark.asyncio
     async def test_get_api_key_service_dependency(
