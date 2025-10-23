@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- frontend: Next.js 16 compliance hardening
+  - Supabase SSR client now validates env and guards cookie writes with try/catch
+  - Proxy cookie writes hardened
+  - use-chat-ai: AbortController + 60s timeout added; session handling fixed; immutable Map updates
+  - Verified revalidateTag('attachments', 'max') under Next.js 16 and left in place
+  - Attachments API route validated; Authorization forwarded; cache tag revalidation retained
+
 ### Added
 
 - Added Supabase typed helpers (`insertSingle`, `updateSingle`) with unit tests

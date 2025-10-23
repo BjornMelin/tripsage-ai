@@ -132,9 +132,9 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     if (!existingSession) {
       // Create a new session using the store method
       const createdSessionId = createSession("New Chat");
+      // Ensure subsequent operations target the created session
+      sessionIdRef.current = createdSessionId;
 
-      // Note: The onNewSession callback will be called when the session is available
-      // since sessions is a derived state that might not be immediately updated
       if (onNewSession) {
         // Create a temporary session object for the callback
         const tempSession: ChatSession = {
@@ -149,8 +149,8 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     }
 
     // Set as active session
-    if (currentSessionId !== sessionId) {
-      setCurrentSession(sessionId);
+    if (currentSessionId !== sessionIdRef.current) {
+      setCurrentSession(sessionIdRef.current);
     }
   }, [
     isInitialized,
@@ -164,7 +164,11 @@ export function useChatAi(options: UseChatAiOptions = {}) {
 
   // Tool call management functions
   const addToolCall = useCallback((toolCall: ToolCall) => {
-    setActiveToolCalls((prev) => new Map(prev.set(toolCall.id, toolCall)));
+    setActiveToolCalls((prev) => {
+      const next = new Map(prev);
+      next.set(toolCall.id, toolCall);
+      return next;
+    });
   }, []);
 
   const updateToolCall = useCallback(
@@ -265,6 +269,8 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     "idle" | "submitting" | "streaming"
   >("idle");
   const [localError, setLocalError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Handle sending a user message
   const sendMessage = useCallback(
@@ -316,11 +322,21 @@ export function useChatAi(options: UseChatAiOptions = {}) {
             }));
             const body = JSON.stringify({ messages: recent });
 
+            // Configure abort controller + timeout
+            abortRef.current?.abort();
+            abortRef.current = new AbortController();
+            const signal = abortRef.current.signal;
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            timeoutRef.current = setTimeout(() => {
+              abortRef.current?.abort();
+            }, 60_000);
+
             const response = await fetch(endpoint, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",
               body,
+              signal,
             });
 
             if (!response.ok) {
@@ -357,6 +373,10 @@ export function useChatAi(options: UseChatAiOptions = {}) {
             });
             setSendingStatus("idle");
           } finally {
+            if (timeoutRef.current) {
+              clearTimeout(timeoutRef.current);
+              timeoutRef.current = null;
+            }
             // Clear tool-call tracking between messages
             setActiveToolCalls(new Map());
             setToolResults(new Map());
@@ -373,15 +393,35 @@ export function useChatAi(options: UseChatAiOptions = {}) {
         return;
       }
     },
-    [addMessage, updateAgentStatus, isInitialized, isAuthenticated, isApiKeyValid]
+    [
+      sessions,
+      addMessage,
+      updateAgentStatus,
+      isInitialized,
+      isAuthenticated,
+      isApiKeyValid,
+    ]
   );
 
   // Handle stopping the generation
   const stopGeneration = useCallback(() => {
-    // No streaming cancel with direct backend call; just clear status/UI
+    // Abort in-flight request and clear status/UI
+    abortRef.current?.abort();
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     stopStreaming();
     updateAgentStatus(sessionIdRef.current, { isActive: false, statusMessage: "" });
   }, [stopStreaming, updateAgentStatus]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   return {
     // Chat state
