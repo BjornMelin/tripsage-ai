@@ -41,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Refactor
 
 - **[Models]:** Consolidated all duplicated data models for Trip, Itinerary, and Accommodation into canonical representations within `tripsage_core`. API schemas in `tripsage/api/schemas/` have been removed to enforce a single source of truth.
+  - Merged ValidationResult and ServiceHealthCheck into ApiValidationResult for DRY compliance.
+  - Verification: Single model used in both validation and health methods; tests cover all fields without duplication errors.
 
 ### Deprecated
 
