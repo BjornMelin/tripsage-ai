@@ -28,16 +28,16 @@ from tripsage.api.routers.trips import (
     update_trip,
     update_trip_preferences,
 )
-from tripsage.api.schemas.trips import (
-    CreateTripRequest,
-    TripPreferencesRequest,
-    TripShareRequest,
-    UpdateTripRequest,
-)
 from tripsage_core.exceptions import (
     CoreAuthorizationError as ServicePermissionError,
     CoreResourceNotFoundError as NotFoundError,
     CoreValidationError as ValidationError,
+)
+from tripsage_core.models.api.trip_models import (
+    CreateTripRequest,
+    TripPreferencesRequest,
+    TripShareRequest,
+    UpdateTripRequest,
 )
 from tripsage_core.models.db.trip_collaborator import (
     PermissionLevel,

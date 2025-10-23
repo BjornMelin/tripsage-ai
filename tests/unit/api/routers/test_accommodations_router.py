@@ -12,9 +12,11 @@ Key principles:
 """
 
 from datetime import date
+from uuid import UUID
 
 import pytest
 from fastapi import status
+from pydantic import ValidationError
 
 
 class TestAccommodationRouterValidation:
@@ -223,78 +225,130 @@ class TestAccommodationRouterBehavior:
 
     def test_accommodation_search_request_structure(self):
         """Test that the search request model has the expected structure."""
-        from tripsage.api.schemas.accommodations import AccommodationSearchRequest
+        from tripsage_core.models.api.accommodation_models import (
+            AccommodationSearchRequest,
+        )
 
         # Test with minimal valid data
         request_data = {
+            "user_id": "user-42",
+            "trip_id": None,
             "location": "Tokyo",
             "check_in": date(2024, 3, 15),
             "check_out": date(2024, 3, 18),
+            "guests": 2,
             "adults": 2,
             "children": 0,
-            "rooms": 1,
-            "property_type": None,
-            "min_price": None,
-            "max_price": None,
-            "amenities": None,
-            "min_rating": None,
-            "latitude": None,
-            "longitude": None,
-            "trip_id": None,
+            "currency": "USD",
         }
 
         # This should not raise an exception
-        request = AccommodationSearchRequest(**request_data)
+        request = AccommodationSearchRequest.model_validate(request_data)
         assert request.location == "Tokyo"
         assert request.adults == 2
         assert request.children is None or request.children == 0
 
     def test_accommodation_search_response_structure(self):
         """Test that the search response model has the expected structure."""
-        from tripsage.api.schemas.accommodations import (
+        from tripsage_core.models.api.accommodation_models import (
             AccommodationSearchRequest,
             AccommodationSearchResponse,
         )
 
         # Test with minimal valid data
-        search_request = AccommodationSearchRequest(
-            location="Tokyo",
-            check_in=date(2024, 3, 15),
-            check_out=date(2024, 3, 18),
-            adults=2,
-            children=0,
-            rooms=1,
-            property_type=None,
-            min_price=None,
-            max_price=None,
-            amenities=None,
-            min_rating=None,
-            latitude=None,
-            longitude=None,
-            trip_id=None,
+        search_request = AccommodationSearchRequest.model_validate(
+            {
+                "user_id": "user-42",
+                "trip_id": None,
+                "location": "Tokyo",
+                "check_in": date(2024, 3, 15),
+                "check_out": date(2024, 3, 18),
+                "guests": 2,
+                "adults": 2,
+                "children": 0,
+                "currency": "USD",
+            }
         )
 
         response_data = {
-            "listings": [],
-            "count": 0,
-            "currency": "USD",
             "search_id": "test-123",
-            "search_request": search_request,
-            "property_type": None,
+            "user_id": "user-42",
+            "trip_id": None,
+            "listings": [],
+            "search_parameters": search_request,
+            "total_results": 0,
+            "results_returned": 0,
             "min_price": None,
             "max_price": None,
-            "amenities": None,
-            "min_rating": None,
-            "latitude": None,
-            "longitude": None,
-            "trip_id": None,
+            "avg_price": None,
+            "search_duration_ms": 0,
+            "cached": False,
         }
 
         # This should not raise an exception
-        response = AccommodationSearchResponse(**response_data)
-        assert response.count == 0
-        assert response.currency == "USD"
+        response = AccommodationSearchResponse.model_validate(response_data)
+        assert response.total_results == 0
+        assert response.results_returned == 0
         assert len(response.listings) == 0
+
+    def test_accommodation_details_request_validation(self):
+        """Ensure invalid dates on details request raise validation errors."""
+        from tripsage_core.models.api.accommodation_models import (
+            AccommodationDetailsRequest,
+        )
+
+        with pytest.raises(ValidationError):
+            AccommodationDetailsRequest.model_validate(
+                {
+                    "listing_id": "listing-123",
+                    "check_in": date(2025, 6, 10),
+                    "check_out": date(2025, 6, 9),
+                    "adults": 2,
+                    "children": 1,
+                    "source": "booking",
+                }
+            )
+
+    def test_saved_accommodation_request_validation(self):
+        """Ensure saved request enforces check-out after check-in."""
+        from tripsage_core.models.api.accommodation_models import (
+            SavedAccommodationRequest,
+        )
+
+        with pytest.raises(ValidationError):
+            SavedAccommodationRequest.model_validate(
+                {
+                    "listing_id": "listing-123",
+                    "trip_id": UUID("8c808086-7a9f-4a4a-8212-1c0857f0fa4f"),
+                    "check_in": date(2025, 6, 10),
+                    "check_out": date(2025, 6, 9),
+                    "notes": None,
+                }
+            )
+
+    def test_accommodation_search_request_property_type(self):
+        """Ensure canonical search request captures property type filters."""
+        from tripsage_core.models.api.accommodation_models import (
+            AccommodationSearchRequest,
+        )
+        from tripsage_core.services.business.accommodation_service import (
+            PropertyType,
+        )
+
+        request = AccommodationSearchRequest.model_validate(
+            {
+                "user_id": "user-42",
+                "trip_id": None,
+                "location": "Berlin",
+                "check_in": date(2025, 9, 1),
+                "check_out": date(2025, 9, 4),
+                "guests": 2,
+                "property_types": [PropertyType.APARTMENT],
+                "currency": "EUR",
+            }
+        )
+
+        assert request.property_types == [PropertyType.APARTMENT]
 
 
 # === MODULE TESTS ===

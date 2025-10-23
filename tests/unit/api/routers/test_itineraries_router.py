@@ -4,10 +4,12 @@ Tests the actual implemented itinerary management functionality.
 Follows TripSage standards for focused, actionable testing.
 """
 
+from datetime import date, time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.routers.itineraries import (
@@ -24,19 +26,56 @@ from tripsage.api.routers.itineraries import (
     update_itinerary,
     update_itinerary_item,
 )
-from tripsage.api.schemas.itineraries import (
+from tripsage_core.exceptions.exceptions import CoreResourceNotFoundError
+from tripsage_core.models.api.itinerary_models import (
     ItineraryCreateRequest,
     ItineraryItemCreateRequest,
+    ItineraryItemType,
     ItineraryItemUpdateRequest,
     ItineraryOptimizeRequest,
     ItinerarySearchRequest,
     ItineraryUpdateRequest,
+    OptimizationSetting,
+    TimeSlot,
 )
-from tripsage_core.exceptions.exceptions import CoreResourceNotFoundError
 from tripsage_core.services.business.itinerary_service import ItineraryService
 
 
-class TestItinerariesRouter:
+def test_itinerary_create_request_invalid_date_range():
+    """Itinerary create request should reject end dates before start dates."""
+    with pytest.raises(ValidationError):
+        ItineraryCreateRequest.model_validate(
+            {
+                "title": "Invalid Trip",
+                "start_date": date(2025, 5, 10),
+                "end_date": date(2025, 5, 9),
+            }
+        )
+
+
+def test_time_slot_invalid_end_time():
+    """TimeSlot should validate chronological ordering of times."""
+    with pytest.raises(ValidationError):
+        TimeSlot(start_time=time(10, 0), end_time=time(9, 30))
+
+
+def test_itinerary_item_create_request_requires_timeslot_order():
+    """Item creation should surface nested time slot validation errors."""
+    with pytest.raises(ValidationError):
+        ItineraryItemCreateRequest.model_validate(
+            {
+                "item_type": ItineraryItemType.ACTIVITY,
+                "title": "Morning Tour",
+                "item_date": date(2025, 5, 10),
+                "time_slot": {
+                    "start_time": time(11, 0),
+                    "end_time": time(10, 0),
+                },
+            }
+        )
+
+
+class TestItinerariesRouter:  # pylint: disable=too-many-public-methods
     """Test itineraries router functionality by testing functions directly."""
 
     @pytest.fixture
@@ -68,72 +107,84 @@ class TestItinerariesRouter:
     @pytest.fixture
     def sample_create_request(self):
         """Sample itinerary creation request."""
-        return ItineraryCreateRequest(
-            title="Tokyo Adventure",
-            description="5-day trip exploring Tokyo",
-            start_date="2024-05-01",
-            end_date="2024-05-05",
-            destinations=["Tokyo, Japan"],
-            total_budget=5000.0,
-            currency="USD",
-            tags=["adventure", "culture"],
+        return ItineraryCreateRequest.model_validate(
+            {
+                "title": "Tokyo Adventure",
+                "description": "5-day trip exploring Tokyo",
+                "start_date": date(2024, 5, 1),
+                "end_date": date(2024, 5, 5),
+                "destinations": ["Tokyo, Japan"],
+                "total_budget": 5000.0,
+                "currency": "USD",
+                "tags": ["adventure", "culture"],
+            }
         )
 
     @pytest.fixture
     def sample_update_request(self):
         """Sample itinerary update request."""
-        return ItineraryUpdateRequest(
-            title="Updated Tokyo Trip", description="Updated description"
+        return ItineraryUpdateRequest.model_validate(
+            {
+                "title": "Updated Tokyo Trip",
+                "description": "Updated description",
+            }
         )
 
     @pytest.fixture
     def sample_search_request(self):
         """Sample itinerary search request."""
-        return ItinerarySearchRequest(
-            query="Tokyo",
-            start_date_from="2024-05-01",
-            start_date_to="2024-05-31",
-            destinations=["Tokyo, Japan"],
-            page=1,
-            page_size=10,
+        return ItinerarySearchRequest.model_validate(
+            {
+                "query": "Tokyo",
+                "start_date_from": date(2024, 5, 1),
+                "start_date_to": date(2024, 5, 31),
+                "destinations": ["Tokyo, Japan"],
+                "page": 1,
+                "page_size": 10,
+            }
         )
 
     @pytest.fixture
     def sample_item_create_request(self):
         """Sample itinerary item creation request."""
-        from datetime import date, time
-
-        from tripsage.api.schemas.itineraries import (
-            ItineraryItemType,
-            Location,
-            TimeSlot,
-        )
-
-        return ItineraryItemCreateRequest(
-            item_type=ItineraryItemType.ACTIVITY,
-            title="Visit Tokyo Tower",
-            description="Iconic Tokyo landmark with great city views",
-            item_date=date(2024, 5, 1),
-            time_slot=TimeSlot(start_time=time(10, 0), end_time=time(12, 0)),
-            location=Location(latitude=35.6586, longitude=139.7454, name="Tokyo Tower"),
-            cost=1000.0,
-            currency="JPY",
+        return ItineraryItemCreateRequest.model_validate(
+            {
+                "item_type": ItineraryItemType.ACTIVITY,
+                "title": "Visit Tokyo Tower",
+                "description": "Iconic Tokyo landmark with great city views",
+                "item_date": date(2024, 5, 1),
+                "time_slot": {
+                    "start_time": time(10, 0),
+                    "end_time": time(12, 0),
+                },
+                "location": {
+                    "latitude": 35.6586,
+                    "longitude": 139.7454,
+                    "name": "Tokyo Tower",
+                },
+                "cost": 1000.0,
+                "currency": "JPY",
+            }
         )
 
     @pytest.fixture
     def sample_item_update_request(self):
         """Sample itinerary item update request."""
-        return ItineraryItemUpdateRequest(
-            title="Updated Activity", notes="Updated notes for the activity"
+        return ItineraryItemUpdateRequest.model_validate(
+            {
+                "title": "Updated Activity",
+                "notes": "Updated notes for the activity",
+            }
         )
 
     @pytest.fixture
     def sample_optimize_request(self):
         """Sample itinerary optimization request."""
-        from tripsage.api.schemas.itineraries import OptimizationSetting
-
-        return ItineraryOptimizeRequest(
-            itinerary_id="itinerary123", settings=OptimizationSetting.TIME
+        return ItineraryOptimizeRequest.model_validate(
+            {
+                "itinerary_id": "itinerary123",
+                "settings": OptimizationSetting.TIME,
+            }
         )
 
     async def test_create_itinerary_success(
@@ -219,18 +270,32 @@ class TestItinerariesRouter:
         self, mock_principal, mock_itinerary_service, sample_search_request
     ):
         """Test successful itinerary search."""
-        expected_response = {
-            "itineraries": [
-                {
-                    "id": "itinerary1",
-                    "title": "Tokyo Adventure",
-                    "destinations": ["Tokyo, Japan"],
-                }
+        from tripsage_core.models.api.itinerary_models import (
+            ItineraryResponse,
+            ItinerarySearchResponse,
+        )
+
+        expected_response = ItinerarySearchResponse(
+            items=[
+                ItineraryResponse(
+                    id="itinerary1",
+                    title="Tokyo Adventure",
+                    description="5-day trip",
+                    start_date=date(2024, 5, 1),
+                    end_date=date(2024, 5, 5),
+                    status="active",
+                    total_budget=5000.0,
+                    currency="USD",
+                    tags=["Tokyo"],
+                    items=[],
+                    created_at="2024-04-01T00:00:00Z",
+                    updated_at="2024-04-01T00:00:00Z",
+                )
             ],
-            "total_count": 1,
-            "page": 1,
-            "per_page": 10,
-        }
+            page=1,
+            page_size=10,
+            total=1,
+        )
         mock_itinerary_service.search_itineraries.return_value = expected_response
 
         result = await search_itineraries(
@@ -241,30 +306,32 @@ class TestItinerariesRouter:
             "user123", sample_search_request
         )
         assert result == expected_response
-        assert "itineraries" in result
-        assert "total_count" in result
+        assert len(result.items) == 1
+        assert result.total == 1
 
     async def test_search_itineraries_no_results(
         self, mock_principal, mock_itinerary_service
     ):
         """Test itinerary search with no results."""
-        search_request = ItinerarySearchRequest(
-            query="Nonexistent", page=1, page_size=10
+        search_request = ItinerarySearchRequest.model_validate(
+            {"query": "Nonexistent", "page": 1, "page_size": 10}
         )
-        expected_response = {
-            "itineraries": [],
-            "total_count": 0,
-            "page": 1,
-            "per_page": 10,
-        }
+        from tripsage_core.models.api.itinerary_models import ItinerarySearchResponse
+
+        expected_response = ItinerarySearchResponse(
+            items=[],
+            page=1,
+            page_size=10,
+            total=0,
+        )
         mock_itinerary_service.search_itineraries.return_value = expected_response
 
         result = await search_itineraries(
             search_request, mock_principal, mock_itinerary_service
         )
 
-        assert result["itineraries"] == []
-        assert result["total_count"] == 0
+        assert result.items == []
+        assert result.total == 0
 
     async def test_get_itinerary_success(self, mock_principal, mock_itinerary_service):
         """Test successful itinerary retrieval."""
