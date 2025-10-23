@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
+import { z } from "zod";
 import { useAuth } from "@/contexts/auth-context";
 import { useSupabase } from "@/lib/supabase/client";
 import type {
@@ -9,15 +17,10 @@ import type {
   ChatSessionInsert,
   ChatToolCall,
   ChatToolCallInsert,
-} from "@/lib/supabase/types";
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
-import { z } from "zod";
+  Json,
+  UpdateTables,
+} from "@/lib/supabase/database.types";
+import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 import { useChatRealtime } from "./use-supabase-realtime";
 
 // Zod schemas for validation
@@ -30,9 +33,12 @@ const MessageContentSchema = z
   .min(1, "Message content cannot be empty")
   .max(10000, "Message content too long");
 
-const ChatRoleSchema = z.enum(["user", "assistant", "system", "tool"]).default("user");
+// Align with DB enum ChatRole (no "tool" role in chat_messages)
+const ChatRoleSchema = z.enum(["user", "assistant", "system"]).default("user");
 
-const ToolCallStatusSchema = z.string().min(1, "Tool call status cannot be empty");
+const ToolCallStatusSchema = z
+  .enum(["pending", "running", "completed", "failed"]) // matches DB enum
+  .default("pending");
 
 const ToolCallResultSchema = z.unknown();
 
@@ -149,14 +155,15 @@ export function useSupabaseChat() {
         // Validate input with Zod
         const validatedSessionData = ChatSessionInsertSchema.parse(sessionData);
 
-        const { data, error } = await supabase
-          .from("chat_sessions")
-          .insert({
-            ...validatedSessionData,
-            user_id: user.id,
-          })
-          .select()
-          .single();
+        // Cast metadata to Json to satisfy type
+        const prepared: ChatSessionInsert = {
+          ...(validatedSessionData as any),
+          metadata: (validatedSessionData.metadata as unknown as Json) ?? undefined,
+          user_id: user.id,
+        };
+        const { data, error } = await insertSingle(supabase, "chat_sessions", [
+          prepared,
+        ]);
 
         if (error) throw error;
         return data as ChatSession;
@@ -191,24 +198,22 @@ export function useSupabaseChat() {
         const validatedContent = MessageContentSchema.parse(content);
         const validatedRole = ChatRoleSchema.parse(role);
 
-        const { data, error } = await supabase
-          .from("chat_messages")
-          .insert({
-            session_id: validatedSessionId,
-            role: validatedRole,
-            content: validatedContent,
-            metadata: {},
-          })
-          .select()
-          .single();
+        const { data, error } = await insertSingle(supabase, "chat_messages", {
+          session_id: validatedSessionId,
+          role: validatedRole,
+          content: validatedContent,
+          metadata: {},
+        });
 
         if (error) throw error;
 
         // Update session's updated_at timestamp
-        await supabase
-          .from("chat_sessions")
-          .update({ updated_at: new Date().toISOString() })
-          .eq("id", validatedSessionId);
+        await updateSingle(
+          supabase,
+          "chat_sessions",
+          { updated_at: new Date().toISOString() },
+          (qb) => (qb as any).eq("id", validatedSessionId)
+        );
 
         return data as ChatMessage;
       } catch (error) {
@@ -272,11 +277,11 @@ export function useSupabaseChat() {
   // Add tool call
   const addToolCall = useMutation({
     mutationFn: async (toolCallData: ChatToolCallInsert) => {
-      const { data, error } = await supabase
-        .from("chat_tool_calls")
-        .insert(toolCallData)
-        .select()
-        .single();
+      const { data, error } = await insertSingle(
+        supabase,
+        "chat_tool_calls",
+        toolCallData
+      );
 
       if (error) throw error;
       return data as ChatToolCall;
@@ -309,7 +314,7 @@ export function useSupabaseChat() {
           ? ErrorMessageSchema.parse(error_message)
           : undefined;
 
-        const updates: any = {
+        const updates: Partial<UpdateTables<"chat_tool_calls">> = {
           status: validatedStatus,
           completed_at:
             validatedStatus === "completed" || validatedStatus === "failed"
@@ -317,15 +322,17 @@ export function useSupabaseChat() {
               : null,
         };
 
-        if (validatedResult) updates.result = validatedResult;
-        if (validatedErrorMessage) updates.error_message = validatedErrorMessage;
+        if (validatedResult !== undefined)
+          (updates as any).result = validatedResult as unknown as Json;
+        if (validatedErrorMessage !== undefined)
+          (updates as any).error_message = validatedErrorMessage;
 
-        const { data, error } = await supabase
-          .from("chat_tool_calls")
-          .update(updates)
-          .eq("id", validatedId)
-          .select()
-          .single();
+        const { data, error } = await updateSingle(
+          supabase,
+          "chat_tool_calls",
+          updates,
+          (qb) => (qb as any).eq("id", validatedId)
+        );
 
         if (error) throw error;
         return data as ChatToolCall;
@@ -350,15 +357,15 @@ export function useSupabaseChat() {
         // Validate input with Zod
         const validatedSessionId = SessionIdSchema.parse(sessionId);
 
-        const { data, error } = await supabase
-          .from("chat_sessions")
-          .update({
+        const { data, error } = await updateSingle(
+          supabase,
+          "chat_sessions",
+          {
             ended_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          })
-          .eq("id", validatedSessionId)
-          .select()
-          .single();
+          },
+          (qb) => (qb as any).eq("id", validatedSessionId)
+        );
 
         if (error) throw error;
         return data as ChatSession;
@@ -501,13 +508,13 @@ export function useChatStats() {
         .select("*", { count: "exact", head: true })
         .in(
           "session_id",
-          sessions.map((s) => s.id)
+          (sessions as ChatSession[]).map((s) => s.id)
         );
 
       if (messagesError) throw messagesError;
 
-      const activeSessions = sessions.filter((s) => !s.ended_at);
-      const completedSessions = sessions.filter((s) => s.ended_at);
+      const activeSessions = (sessions as any[]).filter((s) => !s.ended_at);
+      const completedSessions = (sessions as any[]).filter((s) => s.ended_at);
 
       return {
         totalSessions: sessions.length,
