@@ -247,7 +247,8 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
         isExecuting && "border-blue-200 bg-blue-50/50"
       )}
     >
-      <div
+      <button
+        type="button"
         className={cn(
           "p-3 flex items-center justify-between cursor-pointer hover:bg-secondary/30 transition-colors",
           "bg-secondary/20"
@@ -317,7 +318,7 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           )}
         </div>
-      </div>
+      </button>
 
       {expanded && (
         <div className="p-3 pt-0 text-sm border-t bg-background/50">

@@ -9,6 +9,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import { useState } from "react";
+import Image from "next/image";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {

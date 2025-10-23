@@ -584,7 +584,7 @@ export function BudgetForm({
                             step="5"
                             {...field}
                             onChange={(e) =>
-                              field.onChange(Number.parseInt(e.target.value) || 80)
+                              field.onChange(Number.parseInt(e.target.value, 10) || 80)
                             }
                             className="w-20"
                           />
