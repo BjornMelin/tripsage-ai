@@ -16,9 +16,14 @@ from pydantic import BaseModel, ValidationError
 
 from tripsage.api.core.dependencies import require_principal
 from tripsage.api.middlewares.authentication import Principal
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthorizationError,
+    CoreSecurityError,
+    CoreServiceError,
+)
 
 # Import schemas
-from tripsage.api.schemas.trips import (
+from tripsage_core.models.api.trip_models import (
     CreateTripRequest,
     TripCollaboratorResponse,
     TripCollaboratorsListResponse,
@@ -31,11 +36,6 @@ from tripsage.api.schemas.trips import (
     TripSuggestionResponse,
     TripSummaryResponse,
     UpdateTripRequest,
-)
-from tripsage_core.exceptions.exceptions import (
-    CoreAuthorizationError,
-    CoreSecurityError,
-    CoreServiceError,
 )
 from tripsage_core.models.schemas_common.enums import TripType, TripVisibility
 from tripsage_core.models.schemas_common.geographic import Coordinates
@@ -997,7 +997,7 @@ async def get_trip_itinerary(
             itinerary_service = await get_itinerary_service()
 
             # Search for itinerary associated with this trip
-            from tripsage_core.services.business.itinerary_service import (
+            from tripsage_core.models.api.itinerary_models import (
                 ItinerarySearchRequest,
             )
 
@@ -1006,43 +1006,37 @@ async def get_trip_itinerary(
                 {"query": str(trip_id), "limit": 1}
             )
 
-            itineraries = await itinerary_service.search_itineraries(
+            itinerary_search = await itinerary_service.search_itineraries(
                 user_id=principal.user_id, search_request=search_request
             )
 
-            if itineraries and len(itineraries) > 0:
-                itinerary_data = itineraries[0]
+            itinerary_items = itinerary_search.data
 
-                items: list[_ItineraryItem] = [
-                    _ItineraryItem(
-                        id=(str(item.id) if getattr(item, "id", None) else None),
-                        name=str(getattr(item, "name", "")),
-                        description=getattr(item, "description", None),
-                        start_time=(
-                            (
-                                f"{getattr(day, 'date', '')}T"
-                                f"{getattr(item, 'start_time', '')}:00Z"
-                            )
-                            if getattr(item, "start_time", None)
-                            else None
-                        ),
-                        end_time=(
-                            (
-                                f"{getattr(day, 'date', '')}T"
-                                f"{getattr(item, 'end_time', '')}:00Z"
-                            )
-                            if getattr(item, "end_time", None)
-                            else None
-                        ),
-                        location=(
-                            str(getattr(item, "location", ""))
-                            if getattr(item, "location", None)
-                            else None
-                        ),
+            if itinerary_items:
+                itinerary_data = itinerary_items[0]
+
+                items: list[_ItineraryItem] = []
+                for item in getattr(itinerary_data, "items", []):
+                    start_time_value = (
+                        f"{item.item_date.isoformat()}T{item.start_time}:00Z"
+                        if getattr(item, "start_time", None)
+                        else None
                     )
-                    for day in getattr(itinerary_data, "days", [])
-                    for item in getattr(day, "items", [])
-                ]
+                    end_time_value = (
+                        f"{item.item_date.isoformat()}T{item.end_time}:00Z"
+                        if getattr(item, "end_time", None)
+                        else None
+                    )
+                    items.append(
+                        _ItineraryItem(
+                            id=str(item.id) if getattr(item, "id", None) else None,
+                            name=getattr(item, "title", ""),
+                            description=getattr(item, "description", None),
+                            start_time=start_time_value,
+                            end_time=end_time_value,
+                            location=None,
+                        )
+                    )
 
                 itinerary = _ItineraryResponse(
                     id=str(itinerary_data.id)
