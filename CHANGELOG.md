@@ -13,7 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Supabase auth confirmation route at `src/app/auth/confirm/route.ts` using `@supabase/ssr`.
 - Upstash Redis helper `src/lib/redis.ts` with `getRedis()` and `incrCounter()` utilities (uses REST client for Edge compatibility).
 - Suspense wrappers on app and dashboard layouts to satisfy Next 16 prerender rules with Cache Components.
--
+- Native AI SDK v5 chat route at `src/app/api/chat/route.ts` (streams UI messages via toUIMessageStreamResponse).
+- Trip repository `src/lib/repositories/trips-repo.ts` for typed Supabase CRUD and UI mapping.
+
 - DuffelProvider (httpx, Duffel API v2) for flight search and booking; returns raw provider dicts mapped to canonical `FlightOffer` via the existing mapper (`tripsage_core.models.mappers.flights_mapper`).
 - Optional Duffel auto‑wiring in `get_flight_service()` when `DUFFEL_ACCESS_TOKEN` (or legacy `DUFFEL_API_TOKEN`) is present.
 - Unit tests: provider (no‑network) and FlightService+provider mapping/booking paths; deterministic and isolated.
@@ -31,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Attachments API invalidates cache tags via `revalidateTag('attachments', 'max')` after successful uploads.
 - Moved dynamic year rendering on the home page to a small client component to avoid server prerender time coupling under Cache Components.
 - Centralized Supabase typed insert/update via `src/lib/supabase/typed-helpers.ts`; updated hooks to use helpers.
+- Chat UI prefers `message.parts` when present; removed ad-hoc adapter in `use-chat-ai` sync.
+- Trip store now routes create/update through the typed repository; removed direct Supabase writes from store.
 - Rebuilt `tripsage.agents.base.BaseAgent` around LangGraph orchestration with ChatOpenAI fallback execution, memory hydration, and periodic conversation summarization.
 - Simplified `ChatAgent` to delegate to the new base workflow while exposing async history/clearing helpers backed by `ChatService` with local fallbacks.
 - Flight agent result formatting updated to use canonical offer fields (airlines, outbound_segments, currency/price).
@@ -54,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - [Frontend]: Deleted legacy middleware tests referencing `middleware.ts` after migrating to the Next 16 `proxy` convention (final-only policy, no legacy paths retained).
-- 
+-
 - [Core Models]: Deleted the entire `tripsage/models/` directory, removing all legacy data models associated with the deprecated MCP architecture to eliminate duplication.
 - [Core Services]: Deleted legacy MCP components, including the generic `AccommodationMCPClient` and the `ErrorHandlingService`, to complete the migration to a direct SDK architecture.
 - [Observability]: Removed the custom performance metrics system in `tripsage/monitoring` and standardized all metrics collection on the OpenTelemetry implementation to use industry best practices.
@@ -178,4 +182,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [Unreleased]: https://github.com/BjornMelin/tripsage-ai/compare/v2.1.0...HEAD
 [2.1.0]: https://github.com/BjornMelin/tripsage-ai/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/BjornMelin/tripsage-ai/releases/tag/v2.0.0
-
