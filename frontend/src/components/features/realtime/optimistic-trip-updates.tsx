@@ -270,7 +270,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
                 type="number"
                 value={formData.budget || 0}
                 onChange={(e) =>
-                  handleInputChange("budget", Number.parseInt(e.target.value))
+                  handleInputChange("budget", Number.parseInt(e.target.value, 10))
                 }
                 onBlur={() => handleInputBlur("budget")}
                 placeholder="Enter budget..."
@@ -289,7 +289,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
                 min="1"
                 value={formData.travelers || 1}
                 onChange={(e) =>
-                  handleInputChange("travelers", Number.parseInt(e.target.value))
+                  handleInputChange("travelers", Number.parseInt(e.target.value, 10))
                 }
                 onBlur={() => handleInputBlur("travelers")}
                 placeholder="Number of travelers..."

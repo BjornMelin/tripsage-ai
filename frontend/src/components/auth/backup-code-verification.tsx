@@ -1,8 +1,7 @@
 "use client";
 
 import { AlertCircle, ArrowLeft, KeyRound, Loader2 } from "lucide-react";
-import type React from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +30,8 @@ export function BackupCodeVerification({
   const [backupCode, setBackupCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const backupCodeInputId = useId();
 
   const handleVerifyCode = async () => {
     if (!backupCode || backupCode.length < 10) {
@@ -106,9 +107,9 @@ export function BackupCodeVerification({
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="backup-code">Backup Code</Label>
+            <Label htmlFor={backupCodeInputId}>Backup Code</Label>
             <Input
-              id="backup-code"
+              id={backupCodeInputId}
               type="text"
               placeholder="12345-67890"
               value={backupCode}
