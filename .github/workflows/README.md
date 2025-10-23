@@ -1,4 +1,4 @@
-# TripSage CI/CD Architecture (2025)
+# TripSage CI/CD Architecture
 
 ## Architecture
 
