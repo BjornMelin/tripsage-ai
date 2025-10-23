@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import * as React from "react";
+import { cn } from "@/lib/utils";
 import { Skeleton } from "./skeleton";
 
 /**
@@ -266,7 +266,7 @@ export const ChartSkeleton = React.forwardRef<HTMLDivElement, ChartSkeletonProps
             <div className="relative h-full w-full">
               <Skeleton height="100%" width="100%" className="rounded-md" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-muted-foreground/20 to-transparent transform -rotate-12" />
+                <div className="w-full h-0.5 bg-linear-to-r from-transparent via-muted-foreground/20 to-transparent transform -rotate-12" />
               </div>
             </div>
           )}
@@ -280,7 +280,7 @@ export const ChartSkeleton = React.forwardRef<HTMLDivElement, ChartSkeletonProps
           {type === "area" && (
             <div className="relative h-full w-full">
               <Skeleton height="100%" width="100%" className="rounded-md" />
-              <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-muted/50 to-transparent rounded-b-md" />
+              <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-linear-to-t from-muted/50 to-transparent rounded-b-md" />
             </div>
           )}
         </div>

@@ -361,8 +361,7 @@ export const getDefaultConfigForAgent = (agentType: AgentType): AgentConfigReque
       top_p: 0.9,
       timeout_seconds: 30,
       model: "gpt-4",
-      description:
-        "Destination research agent - moderate creativity for research",
+      description: "Destination research agent - moderate creativity for research",
     },
     itinerary_agent: {
       temperature: 0.4,

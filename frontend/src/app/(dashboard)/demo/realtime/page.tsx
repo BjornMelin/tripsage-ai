@@ -1,14 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Activity,
   CheckCircle,
@@ -19,12 +10,20 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
-
 import { ConnectionStatusMonitor } from "@/components/features/realtime/connection-status-monitor";
 import {
   CollaborationIndicator,
   OptimisticTripUpdates,
 } from "@/components/features/realtime/optimistic-trip-updates";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTripsWithRealtime } from "@/hooks/use-trips-with-realtime";
 
 /**
@@ -183,7 +182,7 @@ export default function RealtimeDemoPage() {
                         key={`${feature.id}-${detail}`}
                         className="flex items-start space-x-2 text-sm"
                       >
-                        <CheckCircle className="h-3 w-3 mt-0.5 text-green-500 flex-shrink-0" />
+                        <CheckCircle className="h-3 w-3 mt-0.5 text-green-500 shrink-0" />
                         <span>{detail}</span>
                       </li>
                     ))}

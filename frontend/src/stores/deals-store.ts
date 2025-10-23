@@ -1,3 +1,5 @@
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import {
   type Deal,
   type DealAlert,
@@ -7,8 +9,6 @@ import {
   type DealStats,
   type DealType,
 } from "@/types/deals";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 interface DealsStore extends DealState {
   // Deals management

@@ -1,5 +1,8 @@
 "use client";
 
+import { AlertCircle, ArrowLeft, Loader2, Shield, Smartphone } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,9 +14,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, ArrowLeft, Loader2, Shield, Smartphone } from "lucide-react";
-import type React from "react";
-import { useEffect, useState } from "react";
 
 interface MFAVerificationProps {
   userEmail: string;

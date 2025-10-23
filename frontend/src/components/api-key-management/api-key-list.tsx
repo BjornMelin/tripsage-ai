@@ -1,11 +1,8 @@
 "use client";
 
-import { useDeleteApiKey, useValidateApiKey } from "@/hooks/use-api-keys";
-import { useApiKeyStore } from "@/stores/api-key-store";
-import type { ApiKey } from "@/types/api-keys";
 import { formatDistanceToNow } from "date-fns";
+import { CheckCircle, Loader2, RefreshCw, Trash2, XCircle } from "lucide-react";
 import { useState } from "react";
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +24,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, Loader2, RefreshCw, Trash2, XCircle } from "lucide-react";
+import { useDeleteApiKey, useValidateApiKey } from "@/hooks/use-api-keys";
+import { useApiKeyStore } from "@/stores/api-key-store";
+import type { ApiKey } from "@/types/api-keys";
 
 export function ApiKeyList() {
   const { keys } = useApiKeyStore();

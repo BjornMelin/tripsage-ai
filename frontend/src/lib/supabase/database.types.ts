@@ -866,14 +866,24 @@ export type Accommodation = Tables<"accommodations">;
 export type Transportation = Tables<"transportation">;
 export type ItineraryItem = Tables<"itinerary_items">;
 export type ChatSession = Tables<"chat_sessions">;
+export type ChatSessionInsert = InsertTables<"chat_sessions">;
 export type ChatMessage = Tables<"chat_messages">;
+export type ChatMessageInsert = InsertTables<"chat_messages">;
 export type ChatToolCall = Tables<"chat_tool_calls">;
+export type ChatToolCallInsert = InsertTables<"chat_tool_calls">;
 export type ApiKey = Tables<"api_keys">;
 export type Memory = Tables<"memories">;
 export type SessionMemory = Tables<"session_memories">;
 export type TripCollaborator = Tables<"trip_collaborators">;
 export type FileAttachment = Tables<"file_attachments">;
+export type FileAttachmentInsert = InsertTables<"file_attachments">;
+export type FileAttachmentUpdate = UpdateTables<"file_attachments">;
 export type SearchDestination = Tables<"search_destinations">;
 export type SearchActivity = Tables<"search_activities">;
 export type SearchFlight = Tables<"search_flights">;
 export type SearchHotel = Tables<"search_hotels">;
+
+// Enum shortcuts
+export type ChatRole = Enums<"chat_role">;
+export type UploadStatus = Enums<"upload_status">;
+export type VirusScanStatus = Enums<"virus_scan_status">;

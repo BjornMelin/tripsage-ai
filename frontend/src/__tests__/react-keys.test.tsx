@@ -3,11 +3,11 @@
  * Tests that components render without key warnings when using proper keys
  */
 
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SearchFilters } from "@/components/features/search/search-filters";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { render } from "@/test/test-utils";
 import type { FilterOption } from "@/types/search";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock console.warn to capture React key warnings
 const originalWarn = console.warn;

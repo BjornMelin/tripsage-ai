@@ -1,9 +1,9 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import { useAgentStatusStore } from "@/stores/agent-status-store";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { useAgentStatusStore } from "@/stores/agent-status-store";
 
 interface ChatSidebarProps extends React.HTMLAttributes<HTMLElement> {
   onNewChat?: () => void;
@@ -255,7 +255,7 @@ export function ChatLayout({
       {/* Chat Sidebar */}
       <div
         className={cn(
-          "flex-shrink-0 transition-all duration-300",
+          "shrink-0 transition-all duration-300",
           sidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
         )}
       >
@@ -267,7 +267,7 @@ export function ChatLayout({
 
       {/* Agent Status Panel */}
       {showAgentPanel && (
-        <div className="flex-shrink-0 hidden lg:block">
+        <div className="shrink-0 hidden lg:block">
           <AgentStatusPanel />
         </div>
       )}

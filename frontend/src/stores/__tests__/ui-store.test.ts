@@ -128,7 +128,7 @@ describe("UI Store", () => {
         removeEventListener: vi.fn(),
         dispatchEvent: vi.fn(),
       }));
-      
+
       Object.defineProperty(window, "matchMedia", {
         writable: true,
         value: matchMediaMock,

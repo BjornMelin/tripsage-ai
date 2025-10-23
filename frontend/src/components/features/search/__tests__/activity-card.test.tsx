@@ -2,9 +2,9 @@
  * @vitest-environment jsdom
  */
 
-import type { Activity } from "@/types/search";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { Activity } from "@/types/search";
 import { ActivityCard } from "../activity-card";
 
 const mockActivity: Activity = {

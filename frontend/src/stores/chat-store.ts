@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import {
   ConnectionStatus,
   type WebSocketClient,
@@ -5,9 +8,6 @@ import {
   WebSocketEventType,
 } from "@/lib/websocket/websocket-client";
 import type { ConversationMessage, MemoryContextResponse } from "@/types/memory";
-import { z } from "zod";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 // Message type with support for tool calls and attachments
 export interface Message {

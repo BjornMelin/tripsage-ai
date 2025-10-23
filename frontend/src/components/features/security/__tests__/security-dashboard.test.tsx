@@ -1,10 +1,10 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuth } from "@/contexts/auth-context";
 import { useApiKeys } from "@/hooks/use-api-keys";
 import type { AppError } from "@/lib/api/error-types";
 import { createMockUseQueryResult } from "@/test/mock-helpers";
 import { createMockUser, render, screen, waitFor } from "@/test/test-utils";
 import type { AllKeysResponse } from "@/types/api-keys";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SecurityDashboard } from "../security-dashboard";
 
 // Mock the hooks

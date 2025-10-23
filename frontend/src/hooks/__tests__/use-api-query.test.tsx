@@ -3,14 +3,14 @@
  * Demonstrates proper testing patterns for the new API hooks
  */
 
-import { apiClient } from "@/lib/api/api-client";
-import { ApiError } from "@/lib/api/error-types";
-import { queryKeys } from "@/lib/query-keys";
-import { createControlledQuery } from "@/test/query-mocks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { apiClient } from "@/lib/api/api-client";
+import { ApiError } from "@/lib/api/error-types";
+import { queryKeys } from "@/lib/query-keys";
+import { createControlledQuery } from "@/test/query-mocks";
 import { useApiMutation, useApiQuery } from "../use-api-query";
 
 // Mock the authenticated API hook

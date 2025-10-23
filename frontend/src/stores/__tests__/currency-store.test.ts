@@ -1,8 +1,6 @@
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Currency } from "@/types/currency";
-import { act } from "@testing-library/react";
-import { renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
-import { vi } from "vitest";
 import { useCurrencyStore } from "../currency-store";
 
 // Mock the store to avoid persistence issues in tests

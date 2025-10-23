@@ -3,14 +3,14 @@
  * Following React Query v5 best practices for query organization
  */
 
-import type { AppError } from "@/lib/api/error-types";
-import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
 import type {
   QueryClient,
   UseInfiniteQueryOptions,
   UseMutationOptions,
   UseQueryOptions,
 } from "@tanstack/react-query";
+import type { AppError } from "@/lib/api/error-types";
+import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
 
 /**
  * Base query factory interface

@@ -1,6 +1,6 @@
-import { useUserProfileStore } from "@/stores/user-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useUserProfileStore } from "@/stores/user-store";
 import ProfilePage from "../page";
 
 // Mock the stores and profile components

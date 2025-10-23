@@ -2,11 +2,11 @@
  * @vitest-environment jsdom
  */
 
-import { render } from "@/test/test-utils";
-import type { Destination } from "@/types/search";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render } from "@/test/test-utils";
+import type { Destination } from "@/types/search";
 import { DestinationCard } from "../destination-card";
 
 const mockDestination: Destination = {

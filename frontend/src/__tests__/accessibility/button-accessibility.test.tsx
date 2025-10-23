@@ -4,14 +4,12 @@
  * for accessibility compliance according to WCAG guidelines.
  */
 
-import { render } from "@/test/test-utils";
 import { screen } from "@testing-library/react";
-import { vi } from "vitest";
-import { describe, expect, it } from "vitest";
-
+import { describe, expect, it, vi } from "vitest";
 // Import components with buttons that should be tested
 import { LoginForm } from "@/components/auth/login-form";
 import { RegisterForm } from "@/components/auth/register-form";
+import { render } from "@/test/test-utils";
 
 // Mock the auth context
 vi.mock("@/contexts/auth-context", () => ({

@@ -1,7 +1,7 @@
 "use client";
 
-import { errorService } from "@/lib/error-service";
 import { useCallback } from "react";
+import { errorService } from "@/lib/error-service";
 
 // Extend Window interface for custom properties
 declare global {

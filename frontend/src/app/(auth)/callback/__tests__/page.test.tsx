@@ -1,7 +1,7 @@
-import { type TypedSupabaseClient, createClient } from "@/lib/supabase/client";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { useRouter } from "next/navigation";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createClient, type TypedSupabaseClient } from "@/lib/supabase/client";
 import AuthCallbackPage from "../page";
 
 // Mock next/navigation

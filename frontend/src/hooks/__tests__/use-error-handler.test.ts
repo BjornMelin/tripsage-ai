@@ -1,6 +1,6 @@
-import { errorService } from "@/lib/error-service";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { errorService } from "@/lib/error-service";
 import { useErrorHandler } from "../use-error-handler";
 
 // Mock the error service

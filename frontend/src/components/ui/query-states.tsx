@@ -1,11 +1,11 @@
 "use client";
 
-import { InlineQueryError } from "@/components/providers/query-error-boundary";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import { AlertCircle, Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { InlineQueryError } from "@/components/providers/query-error-boundary";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface QueryStateHandlerProps<TData = unknown, TError = Error> {
   query: UseQueryResult<TData, TError>;

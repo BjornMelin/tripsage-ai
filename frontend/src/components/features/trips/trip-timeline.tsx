@@ -1,5 +1,8 @@
 "use client";
 
+import { differenceInDays, format, parseISO } from "date-fns";
+import { Calendar, Car, Clock, Edit2, MapPin, Plane, Plus, Train } from "lucide-react";
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,9 +14,6 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { Destination, Trip } from "@/stores/trip-store";
-import { differenceInDays, format, parseISO } from "date-fns";
-import { Calendar, Car, Clock, Edit2, MapPin, Plane, Plus, Train } from "lucide-react";
-import { useMemo } from "react";
 
 interface TripTimelineProps {
   trip: Trip;

@@ -1,6 +1,6 @@
-import type { Trip as DatabaseTrip } from "@/lib/supabase/database.types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { Trip as DatabaseTrip } from "@/lib/supabase/database.types";
 
 export interface Destination {
   id: string;
@@ -223,7 +223,7 @@ export const useTripStore = create<TripState>()(
                 : null,
           };
 
-          const { data: newTrip, error } = await supabase
+          const { data: newTrip, error } = await (supabase as any)
             .from("trips")
             .insert([tripData])
             .select()
@@ -316,7 +316,7 @@ export const useTripStore = create<TripState>()(
             updateData.currency = data.budget_breakdown.currency;
           }
 
-          const { data: updatedTrip, error } = await supabase
+          const { data: updatedTrip, error } = await (supabase as any)
             .from("trips")
             .update(updateData)
             .eq("id", Number.parseInt(id))

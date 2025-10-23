@@ -1,6 +1,5 @@
 "use client";
 
-import { type AppError, handleApiError } from "@/lib/api/error-types";
 import {
   type UseMutationOptions,
   type UseQueryOptions,
@@ -9,6 +8,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
+import { type AppError, handleApiError } from "@/lib/api/error-types";
 import { useAuthenticatedApi } from "./use-authenticated-api";
 
 // Zod schemas for validation
@@ -43,6 +43,7 @@ export interface MutationContext<TVariables = unknown> {
   previousData?: unknown;
   optimisticData?: unknown;
   variables?: TVariables;
+  onMutateResult?: unknown;
 }
 
 // Hook for GET requests with enhanced error handling and TypeScript
@@ -121,8 +122,12 @@ export function useApiMutation<
 
       // Call user-defined onMutate
       if (options?.onMutate) {
-        const userContext = await options.onMutate(variables);
-        Object.assign(context, userContext);
+        const userContext = await options.onMutate(variables, {
+          client: queryClient,
+          meta: undefined,
+        });
+        context.onMutateResult = userContext;
+        Object.assign(context, userContext as object);
       }
 
       return context;
@@ -137,7 +142,12 @@ export function useApiMutation<
       }
 
       // Call user-defined onError
-      options?.onError?.(error, variables, context);
+      options?.onError?.(
+        error as any,
+        variables as any,
+        context?.onMutateResult as any,
+        { client: queryClient, meta: undefined } as any
+      );
     },
     onSuccess: (data, variables, context) => {
       // Invalidate specified queries
@@ -148,7 +158,12 @@ export function useApiMutation<
       }
 
       // Call user-defined onSuccess
-      options?.onSuccess?.(data, variables, context);
+      options?.onSuccess?.(
+        data as any,
+        variables as any,
+        context?.onMutateResult as any,
+        { client: queryClient, meta: undefined } as any
+      );
     },
     onSettled: (data, error, variables, context) => {
       // Refetch optimistic update query on settle
@@ -157,7 +172,13 @@ export function useApiMutation<
       }
 
       // Call user-defined onSettled
-      options?.onSettled?.(data, error, variables, context);
+      options?.onSettled?.(
+        data as any,
+        error as any,
+        variables as any,
+        context?.onMutateResult as any,
+        { client: queryClient, meta: undefined } as any
+      );
     },
     throwOnError: false, // Let components handle errors
     // Exclude our custom options from the base mutation options
@@ -233,8 +254,12 @@ export function useApiDeleteMutation<
       }
 
       if (options?.onMutate) {
-        const userContext = await options.onMutate(variables);
-        Object.assign(context, userContext);
+        const userContext = await options.onMutate(variables, {
+          client: queryClient,
+          meta: undefined,
+        });
+        context.onMutateResult = userContext;
+        Object.assign(context, userContext as object);
       }
 
       return context;
@@ -246,7 +271,12 @@ export function useApiDeleteMutation<
           context.previousData
         );
       }
-      options?.onError?.(error, variables, context);
+      options?.onError?.(
+        error as any,
+        variables as any,
+        context?.onMutateResult as any,
+        { client: queryClient, meta: undefined } as any
+      );
     },
     onSuccess: (data, variables, context) => {
       if (options?.invalidateQueries) {
@@ -254,13 +284,24 @@ export function useApiDeleteMutation<
           queryClient.invalidateQueries({ queryKey });
         });
       }
-      options?.onSuccess?.(data, variables, context);
+      options?.onSuccess?.(
+        data as any,
+        variables as any,
+        context?.onMutateResult as any,
+        { client: queryClient, meta: undefined } as any
+      );
     },
     onSettled: (data, error, variables, context) => {
       if (options?.optimisticUpdate) {
         queryClient.invalidateQueries({ queryKey: options.optimisticUpdate.queryKey });
       }
-      options?.onSettled?.(data, error, variables, context);
+      options?.onSettled?.(
+        data as any,
+        error as any,
+        variables as any,
+        context?.onMutateResult as any,
+        { client: queryClient, meta: undefined } as any
+      );
     },
     throwOnError: false,
     ...Object.fromEntries(
@@ -311,8 +352,12 @@ function useApiMutationWithMethod<
       }
 
       if (options?.onMutate) {
-        const userContext = await options.onMutate(variables);
-        Object.assign(context, userContext);
+        const userContext = await options.onMutate(variables, {
+          client: queryClient,
+          meta: undefined,
+        });
+        context.onMutateResult = userContext;
+        Object.assign(context, userContext as object);
       }
 
       return context;
@@ -324,7 +369,12 @@ function useApiMutationWithMethod<
           context.previousData
         );
       }
-      options?.onError?.(error, variables, context);
+      options?.onError?.(
+        error as any,
+        variables as any,
+        context?.onMutateResult as any,
+        { client: queryClient, meta: undefined } as any
+      );
     },
     onSuccess: (data, variables, context) => {
       if (options?.invalidateQueries) {
@@ -332,13 +382,24 @@ function useApiMutationWithMethod<
           queryClient.invalidateQueries({ queryKey });
         });
       }
-      options?.onSuccess?.(data, variables, context);
+      options?.onSuccess?.(
+        data as any,
+        variables as any,
+        context?.onMutateResult as any,
+        { client: queryClient, meta: undefined } as any
+      );
     },
     onSettled: (data, error, variables, context) => {
       if (options?.optimisticUpdate) {
         queryClient.invalidateQueries({ queryKey: options.optimisticUpdate.queryKey });
       }
-      options?.onSettled?.(data, error, variables, context);
+      options?.onSettled?.(
+        data as any,
+        error as any,
+        variables as any,
+        context?.onMutateResult as any,
+        { client: queryClient, meta: undefined } as any
+      );
     },
     throwOnError: false,
     ...Object.fromEntries(

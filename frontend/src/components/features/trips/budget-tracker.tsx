@@ -1,5 +1,7 @@
 "use client";
 
+import { AlertTriangle, DollarSign, Plus, Target, TrendingUp } from "lucide-react";
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +15,6 @@ import { Progress } from "@/components/ui/progress";
 import { useBudgetStore } from "@/stores/budget-store";
 import { useCurrencyStore } from "@/stores/currency-store";
 import type { BudgetSummary } from "@/types/budget";
-import { AlertTriangle, DollarSign, Plus, Target, TrendingUp } from "lucide-react";
-import { useMemo } from "react";
 
 interface BudgetTrackerProps {
   tripId?: string;

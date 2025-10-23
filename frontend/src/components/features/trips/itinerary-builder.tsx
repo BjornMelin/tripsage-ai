@@ -1,5 +1,24 @@
 "use client";
 
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  type DropResult,
+} from "@hello-pangea/dnd";
+import {
+  Calendar,
+  Car,
+  Edit2,
+  GripVertical,
+  Hotel,
+  MapPin,
+  Plane,
+  Plus,
+  Train,
+  Trash2,
+} from "lucide-react";
+import { useCallback, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,25 +47,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { type Destination, type Trip, useTripStore } from "@/stores/trip-store";
-import {
-  DragDropContext,
-  Draggable,
-  type DropResult,
-  Droppable,
-} from "@hello-pangea/dnd";
-import {
-  Calendar,
-  Car,
-  Edit2,
-  GripVertical,
-  Hotel,
-  MapPin,
-  Plane,
-  Plus,
-  Train,
-  Trash2,
-} from "lucide-react";
-import { useCallback, useState } from "react";
 
 interface ItineraryBuilderProps {
   trip: Trip;

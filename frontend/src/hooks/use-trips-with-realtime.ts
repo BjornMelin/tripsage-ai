@@ -3,8 +3,8 @@
  * Combines trip data fetching with real-time subscription management
  */
 
-import { useAuth } from "@/contexts/auth-context";
 import { useMemo } from "react";
+import { useAuth } from "@/contexts/auth-context";
 import { useTripRealtime } from "./use-supabase-realtime";
 import { useTrips } from "./use-trips";
 import {

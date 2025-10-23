@@ -1,12 +1,5 @@
 "use client";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { useAgentStatus } from "@/hooks/use-agent-status";
-import { useAgentStatusWebSocket } from "@/hooks/use-agent-status-websocket";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -35,6 +28,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { useAgentStatus } from "@/hooks/use-agent-status";
+import { useAgentStatusWebSocket } from "@/hooks/use-agent-status-websocket";
 import { ConnectionStatus } from "../../shared/connection-status";
 
 interface AgentMetrics {
@@ -148,7 +148,7 @@ const AgentHealthIndicator: React.FC<{ agent: AgentMetrics }> = ({ agent }) => {
   return (
     <div className="relative">
       <div
-        className={`w-16 h-16 rounded-full bg-gradient-to-br ${healthColorClass} flex items-center justify-center shadow-lg`}
+        className={`w-16 h-16 rounded-full bg-linear-to-br ${healthColorClass} flex items-center justify-center shadow-lg`}
         style={{
           animation:
             agent.status === "active"

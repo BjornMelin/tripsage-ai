@@ -1,10 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useChatStore } from "@/stores/chat-store";
-import type { ToolCall, ToolResult } from "@/types/chat";
 import {
   AlertCircle,
   Building,
@@ -24,6 +19,11 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useChatStore } from "@/stores/chat-store";
+import type { ToolCall, ToolResult } from "@/types/chat";
 
 interface MessageToolCallsProps {
   toolCalls: ToolCall[];

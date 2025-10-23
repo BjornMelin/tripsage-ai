@@ -3,12 +3,12 @@
  * Validates environment variables at startup and provides type-safe access
  */
 
+import type { ClientEnv, EnvironmentInfo, ServerEnv } from "./schemas/env";
 import {
   getEnvironmentInfo,
   validateClientEnv,
   validateServerEnv,
 } from "./schemas/env";
-import type { ClientEnv, EnvironmentInfo, ServerEnv } from "./schemas/env";
 
 // Global environment state
 let serverEnv: ServerEnv | null = null;

@@ -1,6 +1,6 @@
-import { render } from "@/test/test-utils";
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render } from "@/test/test-utils";
 
 // Mock React hooks for testing environment
 vi.mock("react", async () => {

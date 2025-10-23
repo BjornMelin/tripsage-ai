@@ -1,6 +1,6 @@
+import { randomInt, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { vi } from "vitest";
-import { randomInt, randomUUID } from "node:crypto";
 
 // Global storage for mock data that persists across client instances
 const globalMockData: Record<string, any[]> = {

@@ -1,10 +1,10 @@
 "use client";
 
-import { useSupabase } from "@/lib/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
+import { useSupabase } from "@/lib/supabase/client";
 
 // User type extending Supabase User with additional fields
 export interface User {

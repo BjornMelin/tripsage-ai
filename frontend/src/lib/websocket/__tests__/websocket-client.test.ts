@@ -22,7 +22,9 @@ class MockWebSocket {
   close = vi.fn((code?: number, reason?: string) => {
     this.readyState = MockWebSocket.CLOSED;
     if (this.onclose) {
-      this.onclose(new CloseEvent("close", { code: code || 1000, reason: reason || "" }));
+      this.onclose(
+        new CloseEvent("close", { code: code || 1000, reason: reason || "" })
+      );
     }
   });
   send = vi.fn();
@@ -86,7 +88,9 @@ Object.defineProperty(global, "WebSocket", {
 // Helper to get mock instance safely
 const getMockWebSocket = (): MockWebSocket => {
   if (!mockWebSocketInstance) {
-    throw new Error("MockWebSocket instance not available. Make sure WebSocketClient.connect() is called first.");
+    throw new Error(
+      "MockWebSocket instance not available. Make sure WebSocketClient.connect() is called first."
+    );
   }
   return mockWebSocketInstance;
 };
@@ -203,10 +207,7 @@ describe("WebSocketClient", () => {
 
       // Then disconnect
       client.disconnect();
-      expect(getMockWebSocket().close).toHaveBeenCalledWith(
-        1000,
-        "Client disconnect"
-      );
+      expect(getMockWebSocket().close).toHaveBeenCalledWith(1000, "Client disconnect");
       expect(client.getState().status).toBe(ConnectionStatus.DISCONNECTED);
     });
 

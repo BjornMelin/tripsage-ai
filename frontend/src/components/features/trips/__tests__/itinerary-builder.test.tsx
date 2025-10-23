@@ -1,7 +1,7 @@
-import type { Trip } from "@/stores/trip-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Trip } from "@/stores/trip-store";
 import { ItineraryBuilder } from "../itinerary-builder";
 
 // Mock the drag and drop library

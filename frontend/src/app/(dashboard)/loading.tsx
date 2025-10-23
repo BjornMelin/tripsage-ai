@@ -1,5 +1,4 @@
-import { LoadingContainer } from "@/components/ui/loading";
-import { CardSkeleton } from "@/components/ui/loading";
+import { CardSkeleton, LoadingContainer } from "@/components/ui/loading";
 
 /**
  * Dashboard loading component

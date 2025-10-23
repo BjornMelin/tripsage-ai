@@ -1,13 +1,13 @@
 "use client";
 
+import { MessageCircle, Settings, Users } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useOptimisticChat } from "@/hooks/use-optimistic-chat";
 import { useWebSocketChat } from "@/hooks/use-websocket-chat";
 import { cn } from "@/lib/utils";
-import { MessageCircle, Settings, Users } from "lucide-react";
-import { useState } from "react";
 import { CompactConnectionStatus } from "../features/shared/connection-status";
 import { MessageInput } from "./message-input";
 import { MessageList } from "./message-list";
