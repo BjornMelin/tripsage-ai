@@ -42,6 +42,55 @@ import type { Message, ToolCall, ToolResult } from "@/types/chat";
 import { TypingIndicator } from "../typing-indicator";
 import { MessageItem } from "./message-item";
 
+function MessageListEmptyState() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="flex flex-col items-center justify-center h-full py-16 px-6"
+    >
+      <div className="max-w-4xl w-full space-y-12 text-center">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
+          className="space-y-6"
+        >
+          <div className="relative">
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              animate={{
+                background: [
+                  "radial-gradient(circle, rgba(59,130,246,0.1) 0%, rgba(147,51,234,0.1) 100%)",
+                  "radial-gradient(circle, rgba(147,51,234,0.1) 0%, rgba(59,130,246,0.1) 100%)",
+                ],
+              }}
+              transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
+            >
+              <div className="w-32 h-32 rounded-full" />
+            </motion.div>
+            <motion.div animate={{ y: [-5, 5, -5], rotate: [-2, 2, -2] }} transition={{ duration: 6, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}>
+              <Bot className="relative w-20 h-20 mx-auto text-primary drop-shadow-lg" />
+            </motion.div>
+          </div>
+
+          <div className="space-y-4">
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="text-4xl md:text-5xl font-bold bg-linear-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent"
+            >
+              Plan smarter trips with AI
+            </motion.h1>
+          </div>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}
+
 interface MessageListProps {
   messages: Message[];
   isStreaming?: boolean;
@@ -185,6 +234,7 @@ export function MessageList({
     [onSuggestionClick]
   );
 
+  // Reuse hoisted component for empty state
   const EmptyState = () => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

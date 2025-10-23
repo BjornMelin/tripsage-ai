@@ -1,5 +1,6 @@
 import { openai } from "@ai-sdk/openai";
-import { convertToModelMessages, streamText } from "ai";
+import { convertToModelMessages, streamText, tool } from "ai";
+import { z } from "zod";
 import type { NextRequest } from "next/server";
 
 /**
@@ -10,9 +11,20 @@ export async function POST(req: NextRequest) {
   const { messages } = await req.json();
   const model = openai(process.env.OPENAI_MODEL || "gpt-4o-mini");
 
+  const tools = {
+    confirm: tool({
+      description: "Ask the user to confirm an action with an optional note.",
+      inputSchema: z.object({ ok: z.boolean(), note: z.string().optional() }),
+      async execute({ ok, note }) {
+        return { status: ok ? "confirmed" : "cancelled", note: note ?? "" };
+      },
+    }),
+  };
+
   const result = streamText({
     model,
     messages: convertToModelMessages(messages || []),
+    tools,
   });
 
   return result.toUIMessageStreamResponse({

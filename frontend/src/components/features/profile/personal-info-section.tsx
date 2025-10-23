@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useId } from "react";
 import {
   Card,
   CardContent,
@@ -49,6 +50,7 @@ const personalInfoSchema = z.object({
 type PersonalInfoFormData = z.infer<typeof personalInfoSchema>;
 
 export function PersonalInfoSection() {
+  const avatarInputId = useId();
   const { profile, updatePersonalInfo, uploadAvatar } = useUserProfileStore();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
@@ -171,7 +173,7 @@ export function PersonalInfoSection() {
                 size="sm"
                 variant="outline"
                 className="h-8 w-8 rounded-full p-0"
-                onClick={() => document.getElementById("avatar-upload")?.click()}
+                onClick={() => document.getElementById(avatarInputId)?.click()}
                 disabled={isUploading}
               >
                 {isUploading ? (
@@ -182,7 +184,7 @@ export function PersonalInfoSection() {
               </Button>
             </div>
             <input
-              id="avatar-upload"
+              id={avatarInputId}
               type="file"
               accept="image/*"
               className="hidden"

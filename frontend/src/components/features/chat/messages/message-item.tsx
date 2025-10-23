@@ -32,6 +32,97 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+function RoleAvatar({
+  config,
+  isAssistant,
+  isUser,
+  isSystem,
+  isTool,
+  timeDisplay,
+}: {
+  config: ReturnType<typeof useMemo> extends infer T ? any : any;
+  isAssistant: boolean;
+  isUser: boolean;
+  isSystem: boolean;
+  isTool: boolean;
+  timeDisplay: { relative: string; absolute: string } | null;
+}) {
+  const IconComponent = (config as any).icon;
+
+  return (
+    <HoverCard>
+      <HoverCardTrigger asChild>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} transition={{ duration: 0.2 }}>
+          <Avatar
+            className={cn(
+              "h-10 w-10 relative overflow-visible cursor-pointer",
+              "border-2 border-transparent hover:border-primary/20",
+              "transition-all duration-300"
+            )}
+          >
+            <motion.div
+              className={cn(
+                "w-full h-full flex items-center justify-center rounded-full",
+                (config as any).className
+              )}
+              whileHover={{ rotate: isAssistant ? 360 : 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <IconComponent className="h-5 w-5" />
+            </motion.div>
+            <motion.div className="absolute -bottom-1 -right-1" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, duration: 0.3 }}>
+              <div
+                className={cn(
+                  "w-4 h-4 rounded-full border-2 border-background flex items-center justify-center",
+                  isAssistant && "bg-emerald-500",
+                  isUser && "bg-blue-500",
+                  isSystem && "bg-yellow-500",
+                  isTool && "bg-purple-500"
+                )}
+              >
+                {isAssistant && <Sparkles className="w-2 h-2 text-white" />}
+                {isUser && <CheckCircle2 className="w-2 h-2 text-white" />}
+                {isSystem && <Shield className="w-2 h-2 text-white" />}
+                {isTool && <Zap className="w-2 h-2 text-white" />}
+              </div>
+            </motion.div>
+          </Avatar>
+        </motion.div>
+      </HoverCardTrigger>
+      <HoverCardContent className="w-64">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className={cn("w-8 h-8 rounded-full bg-linear-to-r flex items-center justify-center", `bg-linear-to-r ${(config as any).gradient}`)}>
+              <IconComponent className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h4 className="font-medium">{(config as any).hoverText}</h4>
+              <Badge variant={(config as any).badgeVariant} className="text-xs">
+                {(config as any).badgeText}
+              </Badge>
+            </div>
+          </div>
+          {isAssistant && (
+            <div className="text-sm text-muted-foreground">
+              <p>TripSage AI assistant powered by cutting-edge language models</p>
+              <div className="flex items-center gap-1 mt-2">
+                <Brain className="w-3 h-3" />
+                <span className="text-xs">Context-aware • Travel expertise</span>
+              </div>
+            </div>
+          )}
+          {timeDisplay && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="w-3 h-3" />
+              <span>{timeDisplay.absolute}</span>
+            </div>
+          )}
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
 function partsToText(parts?: { type: string; text?: string }[]): string | undefined {
   if (!parts) return undefined;
   try {
@@ -173,100 +264,7 @@ export function MessageItem({
     });
   }, [message]);
 
-  const RoleAvatar = ({ config }: { config: typeof avatarConfig }) => {
-    const IconComponent = config.icon;
-
-    return (
-      <HoverCard>
-        <HoverCardTrigger asChild>
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-          >
-            <Avatar
-              className={cn(
-                "h-10 w-10 relative overflow-visible cursor-pointer",
-                "border-2 border-transparent hover:border-primary/20",
-                "transition-all duration-300"
-              )}
-            >
-              <motion.div
-                className={cn(
-                  "w-full h-full flex items-center justify-center rounded-full",
-                  config.className
-                )}
-                whileHover={{ rotate: isAssistant ? 360 : 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <IconComponent className="h-5 w-5" />
-              </motion.div>
-
-              {/* Status indicator */}
-              <motion.div
-                className="absolute -bottom-1 -right-1"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.3, duration: 0.3 }}
-              >
-                <div
-                  className={cn(
-                    "w-4 h-4 rounded-full border-2 border-background flex items-center justify-center",
-                    isAssistant && "bg-emerald-500",
-                    isUser && "bg-blue-500",
-                    isSystem && "bg-yellow-500",
-                    isTool && "bg-purple-500"
-                  )}
-                >
-                  {isAssistant && <Sparkles className="w-2 h-2 text-white" />}
-                  {isUser && <CheckCircle2 className="w-2 h-2 text-white" />}
-                  {isSystem && <Shield className="w-2 h-2 text-white" />}
-                  {isTool && <Zap className="w-2 h-2 text-white" />}
-                </div>
-              </motion.div>
-            </Avatar>
-          </motion.div>
-        </HoverCardTrigger>
-        <HoverCardContent className="w-64">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "w-8 h-8 rounded-full bg-linear-to-r flex items-center justify-center",
-                  `bg-linear-to-r ${config.gradient}`
-                )}
-              >
-                <IconComponent className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h4 className="font-medium">{config.hoverText}</h4>
-                <Badge variant={config.badgeVariant} className="text-xs">
-                  {config.badgeText}
-                </Badge>
-              </div>
-            </div>
-
-            {isAssistant && (
-              <div className="text-sm text-muted-foreground">
-                <p>TripSage AI assistant powered by cutting-edge language models</p>
-                <div className="flex items-center gap-1 mt-2">
-                  <Brain className="w-3 h-3" />
-                  <span className="text-xs">Context-aware • Travel expertise</span>
-                </div>
-              </div>
-            )}
-
-            {timeDisplay && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Clock className="w-3 h-3" />
-                <span>{timeDisplay.absolute}</span>
-              </div>
-            )}
-          </div>
-        </HoverCardContent>
-      </HoverCard>
-    );
-  };
+  
 
   return (
     <motion.div
@@ -288,7 +286,14 @@ export function MessageItem({
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.3 }}
         >
-          <RoleAvatar config={avatarConfig} />
+          <RoleAvatar
+            config={avatarConfig}
+            isAssistant={isAssistant}
+            isUser={isUser}
+            isSystem={isSystem}
+            isTool={isTool}
+            timeDisplay={timeDisplay}
+          />
         </motion.div>
       )}
 
@@ -435,7 +440,14 @@ export function MessageItem({
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.3 }}
         >
-          <RoleAvatar config={avatarConfig} />
+          <RoleAvatar 
+            config={avatarConfig}
+            isAssistant={isAssistant}
+            isUser={isUser}
+            isSystem={isSystem}
+            isTool={isTool}
+            timeDisplay={timeDisplay}
+          />
         </motion.div>
       )}
     </motion.div>

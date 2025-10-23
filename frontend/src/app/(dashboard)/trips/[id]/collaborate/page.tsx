@@ -13,7 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { ConnectionStatusMonitor } from "@/components/features/realtime/connection-status-monitor";
 import {
   CollaborationIndicator,
@@ -58,6 +58,7 @@ interface Collaborator {
 export default function TripCollaborationPage() {
   const params = useParams();
   const tripId = params.id as string;
+  const inviteInputId = useId();
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -268,10 +269,10 @@ export default function TripCollaborationPage() {
             <CardContent className="space-y-6">
               {/* Invite New Collaborator */}
               <div className="space-y-4">
-                <Label htmlFor="invite-email">Invite by Email</Label>
+                <Label htmlFor={inviteInputId}>Invite by Email</Label>
                 <div className="flex space-x-2">
                   <Input
-                    id="invite-email"
+                    id={inviteInputId}
                     type="email"
                     placeholder="Enter email address..."
                     value={inviteEmail}
