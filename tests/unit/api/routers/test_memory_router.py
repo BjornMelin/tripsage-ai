@@ -1,9 +1,9 @@
-"""Modern comprehensive unit tests for memory router.
+"""Modern unit tests for memory router.
 
 Tests the memory router endpoints using 2025 FastAPI testing patterns:
 - Modern async testing with httpx AsyncClient
 - Proper dependency injection with Annotated types
-- Comprehensive error handling and edge cases
+- Error handling and edge cases
 - Direct function testing and HTTP endpoint testing
 """
 

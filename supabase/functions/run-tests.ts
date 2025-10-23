@@ -3,7 +3,7 @@
 /**
  * Edge Functions Test Runner
  * 
- * This script provides a comprehensive test runner for all Edge Functions
+ * This script provides a test runner for all Edge Functions
  * with coverage reporting, performance metrics, and detailed results.
  */
 

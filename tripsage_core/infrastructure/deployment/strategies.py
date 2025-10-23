@@ -11,11 +11,12 @@ import secrets
 import time
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from tripsage_core.config import DeploymentStrategy, get_enterprise_config
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class HealthCheckResult(BaseModel):
     response_time: float = Field(
         ..., description="Health check response time in seconds"
     )
-    checks: Dict[str, bool] = Field(
+    checks: dict[str, bool] = Field(
         default_factory=dict, description="Individual check results"
     )
     message: str = Field(default="", description="Health check message")
@@ -55,13 +56,13 @@ class DeploymentMetrics(BaseModel):
     start_time: float = Field(
         default_factory=time.time, description="Deployment start time"
     )
-    end_time: Optional[float] = Field(default=None, description="Deployment end time")
+    end_time: float | None = Field(default=None, description="Deployment end time")
     phase: DeploymentPhase = Field(
         default=DeploymentPhase.PREPARING, description="Current phase"
     )
 
     # Health and performance metrics
-    health_checks: List[HealthCheckResult] = Field(
+    health_checks: list[HealthCheckResult] = Field(
         default_factory=list, description="Health check history"
     )
     error_rate: float = Field(default=0.0, description="Current error rate")
@@ -95,7 +96,13 @@ class DeploymentMetrics(BaseModel):
 class BaseDeploymentStrategy(ABC):
     """Base class for deployment strategies."""
 
-    def __init__(self, name: str, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, name: str, config: dict[str, Any] | None = None):
+        """Initialize the base deployment strategy.
+
+        Args:
+            name: Strategy name.
+            config: Optional configuration dictionary.
+        """
         self.name = name
         self.config = config or {}
         self.enterprise_config = get_enterprise_config()
@@ -107,10 +114,9 @@ class BaseDeploymentStrategy(ABC):
         deployment_id: str,
         image_tag: str,
         environment: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
     ) -> DeploymentMetrics:
         """Execute the deployment strategy."""
-        pass
 
     @abstractmethod
     async def rollback(
@@ -120,7 +126,6 @@ class BaseDeploymentStrategy(ABC):
         environment: str,
     ) -> DeploymentMetrics:
         """Rollback to previous version."""
-        pass
 
     async def health_check(
         self,
@@ -160,60 +165,65 @@ class BaseDeploymentStrategy(ABC):
 
         except Exception as e:
             response_time = time.time() - start_time
-            logger.error(f"Health check failed: {e}")
+            logger.exception("Health check failed")
 
             return HealthCheckResult(
                 healthy=False,
                 response_time=response_time,
                 checks={},
-                message=f"Health check error: {str(e)}",
+                message=f"Health check error: {e!s}",
             )
 
 
-class SimpleDeploymentStrategy(BaseDeploymentStrategy):
-    """Simple deployment strategy for direct deployments.
+class DirectDeploymentStrategy(BaseDeploymentStrategy):
+    """Direct deployment strategy for straightforward releases.
 
     This strategy deploys directly to the target environment without
-    complex orchestration. It's ideal for development and simple production
-    environments where downtime is acceptable.
+    complex orchestration. It's ideal for development and lightweight production
+    environments where brief downtime is acceptable.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        super().__init__("simple", config)
-        logger.info("Initialized simple deployment strategy")
+    def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the direct deployment strategy.
+
+        Args:
+            config: Optional configuration dictionary.
+        """
+        super().__init__("direct", config)
+        logger.info("Initialized direct deployment strategy")
 
     async def deploy(
         self,
         deployment_id: str,
         image_tag: str,
         environment: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
     ) -> DeploymentMetrics:
-        """Execute simple deployment."""
-        logger.info(f"Starting simple deployment {deployment_id} to {environment}")
+        """Execute direct deployment."""
+        logger.info("Starting direct deployment %s to %s", deployment_id, environment)
 
         metrics = DeploymentMetrics(
             deployment_id=deployment_id,
-            strategy="simple",
+            strategy="direct",
             phase=DeploymentPhase.PREPARING,
         )
 
         try:
             # Phase 1: Preparing
             metrics.phase = DeploymentPhase.PREPARING
-            logger.info(f"Preparing deployment {deployment_id}")
+            logger.info("Preparing deployment %s", deployment_id)
             await asyncio.sleep(1)  # Simulate preparation time
 
             # Phase 2: Deploying
             metrics.phase = DeploymentPhase.DEPLOYING
-            logger.info(f"Deploying image {image_tag} to {environment}")
+            logger.info("Deploying image %s to %s", image_tag, environment)
             await asyncio.sleep(2)  # Simulate deployment time
 
             metrics.instances_deployed = 1
 
             # Phase 3: Testing
             metrics.phase = DeploymentPhase.TESTING
-            logger.info(f"Running health checks for deployment {deployment_id}")
+            logger.info("Running health checks for deployment %s", deployment_id)
 
             health_result = await self.health_check(environment)
             metrics.health_checks.append(health_result)
@@ -222,16 +232,20 @@ class SimpleDeploymentStrategy(BaseDeploymentStrategy):
                 metrics.instances_healthy = 1
                 metrics.traffic_percentage = 100.0
                 metrics.phase = DeploymentPhase.COMPLETED
-                logger.info(f"Simple deployment {deployment_id} completed successfully")
+                logger.info(
+                    "Direct deployment %s completed successfully", deployment_id
+                )
             else:
                 metrics.phase = DeploymentPhase.FAILED
-                logger.error(f"Simple deployment {deployment_id} failed health check")
+                logger.exception(
+                    "Direct deployment %s failed health check", deployment_id
+                )
 
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
-            logger.error(f"Simple deployment {deployment_id} failed: {e}")
+        except Exception:
+            logger.exception("Direct deployment %s failed", deployment_id)
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
             return metrics
@@ -243,11 +257,11 @@ class SimpleDeploymentStrategy(BaseDeploymentStrategy):
         environment: str,
     ) -> DeploymentMetrics:
         """Rollback to previous version."""
-        logger.info(f"Rolling back deployment {deployment_id} to {previous_version}")
+        logger.info("Rolling back deployment %s to %s", deployment_id, previous_version)
 
         metrics = DeploymentMetrics(
             deployment_id=f"{deployment_id}_rollback",
-            strategy="simple_rollback",
+            strategy="direct_rollback",
             phase=DeploymentPhase.ROLLING_BACK,
         )
 
@@ -262,16 +276,16 @@ class SimpleDeploymentStrategy(BaseDeploymentStrategy):
                 metrics.instances_healthy = 1
                 metrics.traffic_percentage = 100.0
                 metrics.phase = DeploymentPhase.COMPLETED
-                logger.info(f"Rollback {deployment_id} completed successfully")
+                logger.info("Rollback %s completed successfully", deployment_id)
             else:
                 metrics.phase = DeploymentPhase.FAILED
-                logger.error(f"Rollback {deployment_id} failed")
+                logger.exception("Rollback %s failed", deployment_id)
 
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
-            logger.error(f"Rollback {deployment_id} failed: {e}")
+        except Exception:
+            logger.exception("Rollback %s failed", deployment_id)
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
             return metrics
@@ -285,7 +299,12 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
     and zero-downtime deployments.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the blue-green deployment strategy.
+
+        Args:
+            config: Optional configuration dictionary.
+        """
         super().__init__("blue_green", config)
         self.switch_delay = config.get("switch_delay", 5.0) if config else 5.0
         logger.info("Initialized blue-green deployment strategy")
@@ -295,10 +314,12 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
         deployment_id: str,
         image_tag: str,
         environment: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
     ) -> DeploymentMetrics:
         """Execute blue-green deployment."""
-        logger.info(f"Starting blue-green deployment {deployment_id} to {environment}")
+        logger.info(
+            "Starting blue-green deployment %s to %s", deployment_id, environment
+        )
 
         metrics = DeploymentMetrics(
             deployment_id=deployment_id,
@@ -309,19 +330,19 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
         try:
             # Phase 1: Preparing
             metrics.phase = DeploymentPhase.PREPARING
-            logger.info(f"Preparing blue-green deployment {deployment_id}")
+            logger.info("Preparing blue-green deployment %s", deployment_id)
             await asyncio.sleep(1)
 
             # Phase 2: Deploying to inactive environment
             metrics.phase = DeploymentPhase.DEPLOYING
-            logger.info(f"Deploying image {image_tag} to inactive environment")
+            logger.info("Deploying image %s to inactive environment", image_tag)
             await asyncio.sleep(3)  # Blue-green takes longer to deploy
 
             metrics.instances_deployed = 1
 
             # Phase 3: Testing inactive environment
             metrics.phase = DeploymentPhase.TESTING
-            logger.info(f"Testing inactive environment for deployment {deployment_id}")
+            logger.info("Testing inactive environment for deployment %s", deployment_id)
 
             # Perform multiple health checks
             for i in range(3):
@@ -330,9 +351,10 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
 
                 if not health_result.healthy:
                     metrics.phase = DeploymentPhase.FAILED
-                    logger.error(
-                        f"Blue-green deployment {deployment_id} failed health check "
-                        f"{i + 1}"
+                    logger.exception(
+                        "Blue-green deployment %s failed health check %s",
+                        deployment_id,
+                        i + 1,
                     )
                     metrics.end_time = time.time()
                     return metrics
@@ -343,7 +365,7 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
 
             # Phase 4: Traffic switching
             metrics.phase = DeploymentPhase.SWITCHING
-            logger.info(f"Switching traffic for deployment {deployment_id}")
+            logger.info("Switching traffic for deployment %s", deployment_id)
 
             # Gradual traffic switch with monitoring
             for percentage in [25, 50, 75, 100]:
@@ -359,17 +381,19 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
                     and self.enterprise_config.enable_auto_rollback
                 ):
                     logger.warning(
-                        f"Auto-rollback triggered for deployment {deployment_id}"
+                        "Auto-rollback triggered for deployment %s", deployment_id
                     )
                     return await self.rollback(deployment_id, "previous", environment)
 
                 logger.info(
-                    f"Traffic switched to {percentage}% for deployment {deployment_id}"
+                    "Traffic switched to %s%% for deployment %s",
+                    percentage,
+                    deployment_id,
                 )
 
             # Phase 5: Monitoring
             metrics.phase = DeploymentPhase.MONITORING
-            logger.info(f"Monitoring deployment {deployment_id}")
+            logger.info("Monitoring deployment %s", deployment_id)
             await asyncio.sleep(2)
 
             # Final health check
@@ -379,19 +403,19 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
             if final_health.healthy:
                 metrics.phase = DeploymentPhase.COMPLETED
                 logger.info(
-                    f"Blue-green deployment {deployment_id} completed successfully"
+                    "Blue-green deployment %s completed successfully", deployment_id
                 )
             else:
                 metrics.phase = DeploymentPhase.FAILED
-                logger.error(
-                    f"Blue-green deployment {deployment_id} failed final check"
+                logger.exception(
+                    "Blue-green deployment %s failed final check", deployment_id
                 )
 
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
-            logger.error(f"Blue-green deployment {deployment_id} failed: {e}")
+        except Exception:
+            logger.exception("Blue-green deployment %s failed", deployment_id)
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
             return metrics
@@ -403,7 +427,7 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
         environment: str,
     ) -> DeploymentMetrics:
         """Instant rollback by switching traffic back."""
-        logger.info(f"Rolling back blue-green deployment {deployment_id}")
+        logger.info("Rolling back blue-green deployment %s", deployment_id)
 
         metrics = DeploymentMetrics(
             deployment_id=f"{deployment_id}_rollback",
@@ -423,16 +447,16 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
 
             if health_result.healthy:
                 metrics.phase = DeploymentPhase.COMPLETED
-                logger.info(f"Blue-green rollback {deployment_id} completed")
+                logger.info("Blue-green rollback %s completed", deployment_id)
             else:
                 metrics.phase = DeploymentPhase.FAILED
-                logger.error(f"Blue-green rollback {deployment_id} failed")
+                logger.exception("Blue-green rollback %s failed", deployment_id)
 
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
-            logger.error(f"Blue-green rollback {deployment_id} failed: {e}")
+        except Exception:
+            logger.exception("Blue-green rollback %s failed", deployment_id)
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
             return metrics
@@ -446,7 +470,12 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
     the deployment is successful.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the canary deployment strategy.
+
+        Args:
+            config: Optional configuration dictionary.
+        """
         super().__init__("canary", config)
         self.canary_steps = (
             config.get("canary_steps", [5, 10, 25, 50, 100])
@@ -455,7 +484,7 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
         )
         self.step_duration = config.get("step_duration", 3.0) if config else 3.0
         logger.info(
-            f"Initialized canary deployment strategy with steps: {self.canary_steps}"
+            "Initialized canary deployment strategy with steps: %s", self.canary_steps
         )
 
     async def deploy(
@@ -463,10 +492,10 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
         deployment_id: str,
         image_tag: str,
         environment: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
     ) -> DeploymentMetrics:
         """Execute canary deployment."""
-        logger.info(f"Starting canary deployment {deployment_id} to {environment}")
+        logger.info("Starting canary deployment %s to %s", deployment_id, environment)
 
         metrics = DeploymentMetrics(
             deployment_id=deployment_id,
@@ -477,12 +506,12 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
         try:
             # Phase 1: Preparing
             metrics.phase = DeploymentPhase.PREPARING
-            logger.info(f"Preparing canary deployment {deployment_id}")
+            logger.info("Preparing canary deployment %s", deployment_id)
             await asyncio.sleep(1)
 
             # Phase 2: Deploy canary instances
             metrics.phase = DeploymentPhase.DEPLOYING
-            logger.info(f"Deploying canary instances for {deployment_id}")
+            logger.info("Deploying canary instances for %s", deployment_id)
             await asyncio.sleep(2)
 
             metrics.instances_deployed = 1  # Start with canary instance
@@ -492,7 +521,7 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
 
             for step_percentage in self.canary_steps:
                 logger.info(
-                    f"Canary step: {step_percentage}% traffic for {deployment_id}"
+                    "Canary step: %s%% traffic for %s", step_percentage, deployment_id
                 )
                 metrics.traffic_percentage = step_percentage
 
@@ -504,9 +533,10 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
                 metrics.health_checks.append(health_result)
 
                 if not health_result.healthy:
-                    logger.error(
-                        f"Canary deployment {deployment_id} failed at "
-                        f"{step_percentage}%"
+                    logger.exception(
+                        "Canary deployment %s failed at %s%%",
+                        deployment_id,
+                        step_percentage,
                     )
                     metrics.phase = DeploymentPhase.FAILED
 
@@ -526,8 +556,8 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
 
                     if not analysis_result["continue"]:
                         logger.warning(
-                            f"Canary analysis recommends stopping deployment "
-                            f"{deployment_id}"
+                            "Canary analysis recommends stopping deployment %s",
+                            deployment_id,
                         )
                         metrics.phase = DeploymentPhase.FAILED
 
@@ -540,19 +570,19 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
                         return metrics
 
                 logger.info(
-                    f"Canary step {step_percentage}% successful for {deployment_id}"
+                    "Canary step %s%% successful for %s", step_percentage, deployment_id
                 )
 
             # All steps completed successfully
             metrics.instances_healthy = metrics.instances_deployed
             metrics.phase = DeploymentPhase.COMPLETED
-            logger.info(f"Canary deployment {deployment_id} completed successfully")
+            logger.info("Canary deployment %s completed successfully", deployment_id)
 
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
-            logger.error(f"Canary deployment {deployment_id} failed: {e}")
+        except Exception:
+            logger.exception("Canary deployment %s failed", deployment_id)
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
             return metrics
@@ -561,7 +591,7 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
         self,
         environment: str,
         traffic_percentage: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze canary performance and decide whether to continue."""
         await asyncio.sleep(0.5)  # Simulate analysis time
 
@@ -583,7 +613,7 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
             "recommendation": "continue" if continue_deployment else "rollback",
         }
 
-        logger.info(f"Canary analysis: {analysis}")
+        logger.info("Canary analysis: %s", analysis)
         return analysis
 
     async def rollback(
@@ -593,7 +623,7 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
         environment: str,
     ) -> DeploymentMetrics:
         """Rollback canary deployment."""
-        logger.info(f"Rolling back canary deployment {deployment_id}")
+        logger.info("Rolling back canary deployment %s", deployment_id)
 
         metrics = DeploymentMetrics(
             deployment_id=f"{deployment_id}_rollback",
@@ -606,23 +636,23 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
             for percentage in [50, 25, 10, 0]:
                 await asyncio.sleep(0.5)
                 metrics.traffic_percentage = percentage
-                logger.info(f"Reducing canary traffic to {percentage}%")
+                logger.info("Reducing canary traffic to %s%%", percentage)
 
             health_result = await self.health_check(environment)
             metrics.health_checks.append(health_result)
 
             if health_result.healthy:
                 metrics.phase = DeploymentPhase.COMPLETED
-                logger.info(f"Canary rollback {deployment_id} completed")
+                logger.info("Canary rollback %s completed", deployment_id)
             else:
                 metrics.phase = DeploymentPhase.FAILED
-                logger.error(f"Canary rollback {deployment_id} failed")
+                logger.exception("Canary rollback %s failed", deployment_id)
 
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
-            logger.error(f"Canary rollback {deployment_id} failed: {e}")
+        except Exception:
+            logger.exception("Canary rollback %s failed", deployment_id)
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
             return metrics
@@ -636,13 +666,18 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
     with multiple instances.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the rolling deployment strategy.
+
+        Args:
+            config: Optional configuration dictionary.
+        """
         super().__init__("rolling", config)
         self.instance_count = config.get("instance_count", 3) if config else 3
         self.update_delay = config.get("update_delay", 2.0) if config else 2.0
         logger.info(
-            f"Initialized rolling deployment strategy with "
-            f"{self.instance_count} instances"
+            "Initialized rolling deployment strategy with %s instances",
+            self.instance_count,
         )
 
     async def deploy(
@@ -650,10 +685,10 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
         deployment_id: str,
         image_tag: str,
         environment: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
     ) -> DeploymentMetrics:
         """Execute rolling deployment."""
-        logger.info(f"Starting rolling deployment {deployment_id} to {environment}")
+        logger.info("Starting rolling deployment %s to %s", deployment_id, environment)
 
         metrics = DeploymentMetrics(
             deployment_id=deployment_id,
@@ -664,7 +699,7 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
         try:
             # Phase 1: Preparing
             metrics.phase = DeploymentPhase.PREPARING
-            logger.info(f"Preparing rolling deployment {deployment_id}")
+            logger.info("Preparing rolling deployment %s", deployment_id)
             await asyncio.sleep(1)
 
             # Phase 2: Rolling updates
@@ -672,8 +707,10 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
 
             for instance_num in range(1, self.instance_count + 1):
                 logger.info(
-                    f"Updating instance {instance_num}/{self.instance_count} "
-                    f"for {deployment_id}"
+                    "Updating instance %s/%s for %s",
+                    instance_num,
+                    self.instance_count,
+                    deployment_id,
                 )
 
                 # Update this instance
@@ -690,13 +727,15 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
                         instance_num / self.instance_count
                     ) * 100
                     logger.info(
-                        f"Instance {instance_num} healthy for deployment "
-                        f"{deployment_id}"
+                        "Instance %s healthy for deployment %s",
+                        instance_num,
+                        deployment_id,
                     )
                 else:
-                    logger.error(
-                        f"Instance {instance_num} failed health check for "
-                        f"deployment {deployment_id}"
+                    logger.exception(
+                        "Instance %s failed health check for deployment %s",
+                        instance_num,
+                        deployment_id,
                     )
                     metrics.phase = DeploymentPhase.FAILED
 
@@ -710,7 +749,7 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
 
             # Phase 3: Final verification
             metrics.phase = DeploymentPhase.TESTING
-            logger.info(f"Final verification for rolling deployment {deployment_id}")
+            logger.info("Final verification for rolling deployment %s", deployment_id)
 
             final_health = await self.health_check(environment)
             metrics.health_checks.append(final_health)
@@ -718,19 +757,19 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
             if final_health.healthy:
                 metrics.phase = DeploymentPhase.COMPLETED
                 logger.info(
-                    f"Rolling deployment {deployment_id} completed successfully"
+                    "Rolling deployment %s completed successfully", deployment_id
                 )
             else:
                 metrics.phase = DeploymentPhase.FAILED
-                logger.error(
-                    f"Rolling deployment {deployment_id} failed final verification"
+                logger.exception(
+                    "Rolling deployment %s failed final verification", deployment_id
                 )
 
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
-            logger.error(f"Rolling deployment {deployment_id} failed: {e}")
+        except Exception:
+            logger.exception("Rolling deployment %s failed", deployment_id)
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
             return metrics
@@ -742,7 +781,7 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
         environment: str,
     ) -> DeploymentMetrics:
         """Rollback rolling deployment."""
-        logger.info(f"Rolling back deployment {deployment_id}")
+        logger.info("Rolling back deployment %s", deployment_id)
 
         metrics = DeploymentMetrics(
             deployment_id=f"{deployment_id}_rollback",
@@ -754,7 +793,7 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
             # Roll back instances one by one
             for instance_num in range(1, self.instance_count + 1):
                 logger.info(
-                    f"Rolling back instance {instance_num}/{self.instance_count}"
+                    "Rolling back instance %s/%s", instance_num, self.instance_count
                 )
                 await asyncio.sleep(self.update_delay / 2)  # Faster rollback
 
@@ -766,24 +805,24 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
 
             if health_result.healthy:
                 metrics.phase = DeploymentPhase.COMPLETED
-                logger.info(f"Rolling rollback {deployment_id} completed")
+                logger.info("Rolling rollback %s completed", deployment_id)
             else:
                 metrics.phase = DeploymentPhase.FAILED
-                logger.error(f"Rolling rollback {deployment_id} failed")
+                logger.exception("Rolling rollback %s failed", deployment_id)
 
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
-            logger.error(f"Rolling rollback {deployment_id} failed: {e}")
+        except Exception:
+            logger.exception("Rolling rollback %s failed", deployment_id)
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
             return metrics
 
 
 def get_deployment_strategy(
-    strategy: Optional[DeploymentStrategy] = None,
-    config: Optional[Dict[str, Any]] = None,
+    strategy: DeploymentStrategy | None = None,
+    config: dict[str, Any] | None = None,
 ) -> BaseDeploymentStrategy:
     """Get deployment strategy based on enterprise configuration.
 
@@ -799,10 +838,10 @@ def get_deployment_strategy(
     # Use provided strategy or fall back to enterprise config
     target_strategy = strategy or enterprise_config.deployment_strategy
 
-    logger.debug(f"Creating deployment strategy: {target_strategy}")
+    logger.debug("Creating deployment strategy: %s", target_strategy)
 
     if target_strategy == DeploymentStrategy.SIMPLE:
-        return SimpleDeploymentStrategy(config)
+        return DirectDeploymentStrategy(config)
     elif target_strategy == DeploymentStrategy.BLUE_GREEN:
         return BlueGreenDeploymentStrategy(config)
     elif target_strategy == DeploymentStrategy.CANARY:
@@ -811,6 +850,6 @@ def get_deployment_strategy(
         return RollingDeploymentStrategy(config)
     else:
         logger.warning(
-            f"Unknown deployment strategy {target_strategy}, falling back to simple"
+            "Unknown deployment strategy %s, falling back to simple", target_strategy
         )
-        return SimpleDeploymentStrategy(config)
+        return DirectDeploymentStrategy(config)

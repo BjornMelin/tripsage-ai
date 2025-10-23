@@ -30,7 +30,7 @@ TripSage will ask clarifying questions. Be ready to specify:
 
 ### Step 3: Review AI Recommendations 🤖
 
-TripSage provides comprehensive suggestions:
+TripSage provides suggestions:
 
 #### Flights
 
@@ -110,7 +110,7 @@ Budget: [AMOUNT]. Starting from [ORIGIN]."
 - Balanced pace with rest days
 - Mix of transport modes (flights, trains, buses)
 
-## 🛠️ Advanced Planning Features
+## 🛠️ Planning Features
 
 ### Budget Optimization
 
@@ -454,4 +454,4 @@ Perfect for spontaneous getaways:
 
 **Ready to plan your perfect trip?** Start a conversation with TripSage and watch your travel dreams become reality! 🌟
 
-> Need help? Check our [FAQ](faq.md) or explore [advanced features](advanced-features.md)
+> Need help? Check our [FAQ](faq.md) or explore [advanced features](feature-reference.md)

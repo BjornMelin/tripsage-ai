@@ -1,5 +1,4 @@
-"""
-Infrastructure services for TripSage Core.
+"""Infrastructure services for TripSage Core.
 
 This module provides core infrastructure services across TripSage:
 - Database operations (Supabase/PostgreSQL)
@@ -13,27 +12,24 @@ from .database_service import DatabaseService, get_database_service
 from .key_monitoring_service import (
     KeyMonitoringService,
     KeyOperation,
-    KeyOperationRateLimitMiddleware,
     monitor_key_operation,
 )
-from .websocket_broadcaster import WebSocketBroadcaster, websocket_broadcaster
-from .websocket_manager import WebSocketManager, websocket_manager
+from .websocket_broadcaster import WebSocketBroadcaster
+from .websocket_manager import WebSocketManager
+
 
 __all__ = [
-    # Database
-    "DatabaseService",
-    "get_database_service",
     # Cache
     "CacheService",
-    "get_cache_service",
-    # WebSocket
-    "WebSocketManager",
-    "websocket_manager",
-    "WebSocketBroadcaster",
-    "websocket_broadcaster",
+    # Database
+    "DatabaseService",
     # Key Monitoring
     "KeyMonitoringService",
     "KeyOperation",
-    "KeyOperationRateLimitMiddleware",
+    "WebSocketBroadcaster",
+    # WebSocket
+    "WebSocketManager",
+    "get_cache_service",
+    "get_database_service",
     "monitor_key_operation",
 ]

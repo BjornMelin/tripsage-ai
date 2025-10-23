@@ -1,3 +1,1 @@
-"""
-Test suite for TripSage.
-"""
+"""Test suite for TripSage."""

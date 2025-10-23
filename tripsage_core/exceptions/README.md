@@ -1,31 +1,21 @@
-# TripSage Core Exception System
+# Exception System
 
-This directory contains the centralized exception system for the entire TripSage application. It provides a consistent, hierarchical exception framework that can be used across all components including APIs, agents, services, and tools.
-
-## Overview
-
-The TripSage Core Exception System consolidates exception handling from across the application into a single, consistent system. It replaces multiple fragmented exception implementations with a unified approach that provides:
-
-- **Consistent Error Structure**: All exceptions follow the same pattern with message, code, status_code, and structured details
-- **HTTP Status Code Integration**: Uses FastAPI status constants for proper API responses
-- **Structured Error Details**: Pydantic-based error details for enhanced debugging and logging
-- **Backwards Compatibility**: Aliases for existing exception names to ensure smooth migration
-- **Utility Functions**: Helper functions for error handling, logging, and response creation
+This module defines exceptions and error handling utilities for the TripSage application.
 
 ## Core Components
 
-### Base Exception: CoreTripSageError
+### Base Exception
 
-All TripSage exceptions inherit from `CoreTripSageError`, which provides:
+All exceptions inherit from `CoreTripSageError`:
 
 ```python
 from tripsage_core.exceptions import CoreTripSageError
 
 exc = CoreTripSageError(
-    message="Human-readable error message",
-    code="MACHINE_READABLE_CODE",
-    status_code=500,  # HTTP status code
-    details={"service": "example-service"}  # Structured details
+    message="Error message",
+    code="ERROR_CODE",
+    status_code=500,
+    details={"service": "example-service"}
 )
 ```
 
@@ -46,16 +36,16 @@ CoreTripSageError (base)
 └── CoreExternalAPIError (502)
 ```
 
-### Structured Error Details
+### Error Details
 
-The `ErrorDetails` class provides structured context for debugging:
+Use `ErrorDetails` for structured error context:
 
 ```python
 from tripsage_core.exceptions import ErrorDetails
 
 details = ErrorDetails(
     service="flight-service",
-    operation="search_flights", 
+    operation="search_flights",
     user_id="user123",
     request_id="req456",
     additional_context={
@@ -65,17 +55,17 @@ details = ErrorDetails(
 )
 ```
 
-## Usage Examples
+## Usage
 
-### Basic Exception Creation
+### Exception Creation
 
 ```python
 from tripsage_core.exceptions import CoreValidationError
 
-# Simple validation error
+# Simple error
 exc = CoreValidationError("Invalid email format")
 
-# Detailed validation error
+# Detailed error
 exc = CoreValidationError(
     message="Email validation failed",
     field="email",
@@ -86,25 +76,23 @@ exc = CoreValidationError(
 
 ### Factory Functions
 
-Use factory functions for consistent error creation:
-
 ```python
-from tripsage.utils.error_handling import (
+from tripsage_core.utils.error_handling_utils import (
     create_mcp_error,
     create_api_error,
     create_validation_error
 )
 
-# MCP service error
-mcp_error = create_mcp_error(
+# MCP error
+error = create_mcp_error(
     message="Flight search timeout",
-    server="duffel-mcp", 
+    server="duffel-mcp",
     tool="search_flights",
     category="timeout"
 )
 
-# External API error
-api_error = create_api_error(
+# API error
+error = create_api_error(
     message="OpenAI rate limit exceeded",
     service="openai",
     status_code=429,
@@ -112,7 +100,7 @@ api_error = create_api_error(
 )
 
 # Validation error
-validation_error = create_validation_error(
+error = create_validation_error(
     message="Invalid input data",
     field="departure_date",
     value="invalid-date",
@@ -120,36 +108,30 @@ validation_error = create_validation_error(
 )
 ```
 
-### Error Context Management
-
-Use the `TripSageErrorContext` for enhanced error tracking:
+### Error Context
 
 ```python
-from tripsage.utils.error_handling import TripSageErrorContext
+from tripsage_core.utils.error_handling_utils import TripSageErrorContext
 
 with TripSageErrorContext(
     operation="search_flights",
-    service="flight_service", 
+    service="flight_service",
     user_id="user123",
     request_id="req456"
 ):
-    # Any exceptions raised here will be enhanced with context
     raise CoreMCPError("Flight search failed")
 ```
 
-### API Error Responses
-
-Create standardized API responses:
+### API Responses
 
 ```python
 from tripsage_core.exceptions import create_error_response
 from fastapi import HTTPException
 
 try:
-    # Some operation that might fail
+    # operation
     pass
 except CoreTripSageError as e:
-    # Create API response
     error_response = create_error_response(e)
     raise HTTPException(
         status_code=e.status_code,
@@ -157,21 +139,16 @@ except CoreTripSageError as e:
     )
 ```
 
-## Backwards Compatibility
-
-The system provides aliases for existing exception names:
+## Available Exceptions
 
 ```python
-from tripsage.utils.error_handling import (
-    TripSageError,      # -> CoreTripSageError
-    MCPError,           # -> CoreMCPError
-    APIError,           # -> CoreExternalAPIError
-    ValidationError,    # -> CoreValidationError
-    DatabaseError       # -> CoreDatabaseError
+from tripsage_core.exceptions import (
+    CoreTripSageError,
+    CoreMCPError,
+    CoreExternalAPIError,
+    CoreValidationError,
+    CoreDatabaseError
 )
-
-# These work exactly like before
-exc = TripSageError("Compatible error")
 ```
 
 ## Utility Functions
@@ -185,7 +162,7 @@ try:
     raise CoreValidationError("Test error")
 except Exception as e:
     formatted = format_exception(e)
-    # Returns standardized dict with error, message, code, status_code, details
+    # Returns dict with error details
 ```
 
 ### Safe Execution
@@ -193,127 +170,49 @@ except Exception as e:
 ```python
 from tripsage_core.exceptions import safe_execute
 
-def risky_operation():
-    raise ValueError("Something went wrong")
-
 result = safe_execute(
     risky_operation,
     fallback="default_value",
     logger=logger
 )
-# Returns "default_value" and logs the exception
+# Returns fallback value and logs exception
 ```
 
-### Error Handling Decorator
+### Error Decorator
 
 ```python
 from tripsage_core.exceptions import with_error_handling
 
 @with_error_handling(fallback=[], logger=logger)
 def get_flight_data():
-    # Might raise an exception
     raise CoreExternalAPIError("API failed")
 
-result = get_flight_data()  # Returns [] and logs error
+result = get_flight_data()  # Returns fallback and logs error
 ```
 
 ## Testing
 
-The exception system includes comprehensive tests demonstrating all functionality:
+Test files:
 
-- `tests/unit/tripsage_core/test_exceptions.py` - Core exception system tests
-- `tests/unit/utils/test_error_handling_integration.py` - Integration tests
+- `tests/unit/tripsage_core/test_exceptions.py`
+- `tests/unit/utils/test_error_handling_integration.py`
 
-Run tests directly (due to pytest import issues):
+Run tests:
 
 ```bash
-# Test core functionality
 python tests/unit/tripsage_core/test_exceptions_simple.py
-
-# Test integration
-python -c "
-import sys, os
-sys.path.insert(0, '.')
-# Run integration test code here
-"
 ```
 
-## Migration Guide
+## Notes
 
-### From Old API Exceptions
+- Use specific exception types for different error categories
+- Include context in error details for debugging
+- Use factory functions for consistent error creation
+- Use `TripSageErrorContext` for operation tracking
+- Use `safe_execute` and `with_error_handling` for robust error handling
 
-Replace imports:
+## Integrations
 
-```python
-# OLD
-from api.core.exceptions import TripSageError, AuthenticationError
-
-# NEW  
-from tripsage_core.exceptions import CoreTripSageError, CoreAuthenticationError
-
-# OR use backwards-compatible imports
-from tripsage.utils.error_handling import TripSageError, AuthenticationError
-```
-
-### From Utility Exceptions
-
-Replace direct exception classes:
-
-```python
-# OLD
-from tripsage.utils.error_handling import MCPError, APIError
-
-# NEW - use factory functions for consistency
-from tripsage.utils.error_handling import create_mcp_error, create_api_error
-
-# Or use aliases (backwards compatible)
-from tripsage.utils.error_handling import MCPError, APIError
-```
-
-### Exception Creation
-
-Update exception creation patterns:
-
-```python
-# OLD
-exc = MCPError("Server failed", "flights-mcp", tool="search")
-
-# NEW
-exc = create_mcp_error("Server failed", "flights-mcp", tool="search")
-
-# Or direct usage
-exc = CoreMCPError(
-    message="Server failed",
-    server="flights-mcp", 
-    tool="search"
-)
-```
-
-## Best Practices
-
-1. **Use Specific Exception Types**: Choose the most specific exception type for your use case
-2. **Include Context**: Always provide relevant details in the `details` parameter
-3. **Use Factory Functions**: Prefer factory functions for consistency
-4. **Enhance with Context**: Use `TripSageErrorContext` for operation tracking
-5. **Log Appropriately**: Use the built-in logging functions for consistent error reporting
-6. **Handle Gracefully**: Use `safe_execute` and decorators for robust error handling
-
-## Integration Points
-
-The exception system integrates with:
-
-- **FastAPI**: Direct status code mapping for HTTP responses
-- **Pydantic**: Structured error details with validation
-- **Logging**: Enhanced logging with structured context
-- **MCP Services**: Specialized MCP error handling
-- **External APIs**: Consistent external service error mapping
-- **Database Operations**: Database-specific error context
-
-## Architecture Benefits
-
-- **Centralization**: Single source of truth for all application exceptions
-- **Consistency**: Uniform error structure across all components  
-- **Debuggability**: Rich context and structured details for troubleshooting
-- **API Integration**: Direct HTTP status code mapping
-- **Backwards Compatibility**: Smooth migration path from existing code
-- **Extensibility**: Easy to add new exception types as needed
+- FastAPI: HTTP status code mapping
+- Pydantic: Error detail validation
+- Logging: Structured error logging

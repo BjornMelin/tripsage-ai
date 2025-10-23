@@ -1,5 +1,4 @@
-"""
-Tests for utility decorators.
+"""Tests for utility decorators.
 
 This module tests the decorators in src/utils/decorators.py, ensuring they work
 correctly with both synchronous and asynchronous functions.
@@ -132,7 +131,6 @@ class TestEnsureMemoryClientInitialized:
 
     def test_sync_function_error(self):
         """Test that decorator raises error when used with sync function."""
-
         with pytest.raises(TypeError, match="can only be used with async functions"):
 
             @ensure_memory_client_initialized

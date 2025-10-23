@@ -2,9 +2,9 @@
 
 > **Target Audience**: Technical architects, senior developers, integration partners, technical decision makers
 
-This document provides a comprehensive overview of TripSage's technology stack, architectural decisions, and the rationale behind each choice. All technology decisions prioritize production reliability, developer productivity, and operational efficiency.
+This document provides an overview of TripSage's technology stack, architectural decisions, and the rationale behind each choice. All technology decisions prioritize production reliability, developer productivity, and operational efficiency.
 
-## 🎯 Technology Selection Principles
+## Technology Selection Principles
 
 ### Core Principles
 
@@ -14,7 +14,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 4. **Cost Efficient**: Solutions that optimize infrastructure and operational costs
 5. **Future-Proof**: Technologies with strong communities and long-term viability
 
-## 🏗️ Core Technology Stack
+## Core Technology Stack
 
 ### Backend Framework: **FastAPI** (Python 3.11+)
 
@@ -50,15 +50,14 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 - `uuid-ossp`: UUID generation
 - `plpgsql`: Stored procedures and triggers
 
-### Cache Layer: **DragonflyDB**
+### Cache Layer: **Upstash Redis (HTTP)**
 
-**Why DragonflyDB:**
+**Why Upstash Redis:**
 
-- **Performance**: 25x faster than Redis (6.43M ops/sec)
-- **Memory Efficiency**: 30% better utilization
-- **Redis Compatible**: Drop-in replacement
-- **Modern Architecture**: Multi-threaded design
-- **Cost Savings**: Better performance per dollar
+- **Serverless**: Connectionless HTTP client ideal for Vercel
+- **Managed**: No local cache containers or ops
+- **Redis Compatible**: Familiar commands, TTLs, batch ops
+- **Simplicity**: `Redis.from_env()` with Vercel integration
 
 ### AI/ML Framework: **LangGraph**
 
@@ -97,7 +96,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 - `react-hook-form`: Form handling
 - `tanstack-query`: Data fetching and caching
 
-## 🔌 External Service Integrations
+## External Service Integrations
 
 ### Direct SDK Integrations (Performance Optimized)
 
@@ -125,7 +124,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 - Rate limiting middleware
 - CORS configuration
 
-## 🚀 Development & Operations
+## Development & Operations
 
 ### Development Tools
 
@@ -169,13 +168,13 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 - Security scanning
 - Deployment automation
 
-## 📊 Technology Performance Metrics
+## Technology Performance Metrics
 
 ### Achieved Performance
 
 | Component | Metric | Target | Achieved | Technology Impact |
 |-----------|--------|--------|----------|-------------------|
-| **Cache** | Operations/sec | 1M | **6.43M** | DragonflyDB multi-threading |
+| **Cache** | Latency | <10ms | **Edge/Global** | Upstash HTTP (serverless) |
 | **Vector Search** | Queries/sec | 50 | **471** | pgvector with HNSW |
 | **API Response** | Latency | <100ms | **<50ms** | FastAPI + async |
 | **Memory Ops** | Performance | Baseline | **+91%** | Mem0 optimization |
@@ -186,14 +185,14 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 **Infrastructure Savings:**
 
 - 80% reduction in database costs (unified architecture)
-- 70% reduction in cache costs (DragonflyDB efficiency)
+- Reduced cache ops and infra costs (managed Upstash)
 - 60% reduction in API costs (direct SDK integration)
 
-## 🔄 Technology Migration Path
+## Technology Migration Path
 
 ### Completed Migrations (2025)
 
-✅ **Redis → DragonflyDB**: 25x performance improvement  
+✅ **Redis/Dragonfly → Upstash Redis**: serverless, HTTP  
 ✅ **MCP → Direct SDKs**: 70% latency reduction  
 ✅ **Multi-DB → Unified Supabase**: 80% cost reduction  
 ✅ **OpenAI Agents → LangGraph**: Production-ready orchestration  
@@ -204,7 +203,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 
 - GraphQL API layer for mobile apps
 - Edge computing for global distribution
-- Advanced caching strategies
+- Caching strategies
 
 **Long-term (2026):**
 
@@ -212,7 +211,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 - WebAssembly for client-side AI
 - Blockchain for secure transactions
 
-## 🛡️ Technology Risk Management
+## Technology Risk Management
 
 ### Vendor Lock-in Mitigation
 
@@ -248,7 +247,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 - Gradual migration support
 - Backward compatibility
 
-## 📚 Technology Documentation
+## Technology Documentation
 
 ### Internal Resources
 
@@ -263,7 +262,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 - [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
 - [Next.js Documentation](https://nextjs.org/docs)
 
-## 🎯 Technology Decision Framework
+## Technology Decision Framework
 
 When evaluating new technologies, we consider:
 
@@ -276,7 +275,7 @@ When evaluating new technologies, we consider:
 
 ---
 
-*Last Updated: June 2025*  
-*Version: 2.0.0*
+*Last Updated: 2025-10-22*  
+*Version: 2.1.0*
 
 For technology-specific implementation details, see the [Developer Guide](../developers/). For deployment and operational concerns, see the [Operators Guide](../operators/).

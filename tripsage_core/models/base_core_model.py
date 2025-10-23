@@ -1,5 +1,4 @@
-"""
-Base model classes for TripSage Core.
+"""Base model classes for TripSage Core.
 
 This module provides the centralized base model classes used throughout the entire
 TripSage application, establishing common behaviors and configurations for both

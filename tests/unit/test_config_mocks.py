@@ -1,12 +1,11 @@
-"""
-Mock configuration objects for isolated testing.
+"""Mock configuration objects for isolated testing.
 
-This module provides comprehensive mocking of configuration objects
+This module provides mocking of configuration objects
 to enable isolated testing without external dependencies.
 """
 
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -17,6 +16,7 @@ class MockSettings:
     """Mock version of flat Settings for testing."""
 
     def __init__(self):
+        """Initialize mock settings with testing defaults."""
         # Environment & Core (flat structure)
         self.environment = "testing"
         self.debug = True
@@ -52,14 +52,17 @@ class MockSettings:
 
     @property
     def is_production(self) -> bool:
+        """Return True when environment is production."""
         return self.environment == "production"
 
     @property
     def is_development(self) -> bool:
+        """Return True when environment is development."""
         return self.environment == "development"
 
     @property
     def is_testing(self) -> bool:
+        """Return True when environment denotes testing."""
         return self.environment in ("test", "testing")
 
 
@@ -120,6 +123,7 @@ class MockServiceRegistry:
     """Mock service registry for dependency injection testing."""
 
     def __init__(self):
+        """Initialize an empty service registry mapping."""
         self._services = {}
 
     def register_service(self, name: str, service: Any):
@@ -143,11 +147,11 @@ class MockServiceRegistry:
         else:
             return AsyncMock()
 
-    def get_optional_service(self, name: str) -> Optional[Any]:
+    def get_optional_service(self, name: str) -> Any | None:
         """Get an optional mock service."""
         try:
             return self.get_service(name)
-        except Exception:
+        except (KeyError, AttributeError, RuntimeError):
             return None
 
     def _create_accommodation_service_mock(self):
@@ -227,16 +231,17 @@ def mock_service_registry():
     return MockServiceRegistry()
 
 
-class MockMCPManager:
+class MockMCPBridge:
     """Mock MCP Manager for testing."""
 
     def __init__(self):
+        """Initialize a mock MCP manager with async fakes."""
         self.invoke = AsyncMock()
         self.is_connected = AsyncMock(return_value=True)
         self.connect = AsyncMock()
         self.disconnect = AsyncMock()
 
-    async def invoke(self, method_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def invoke(self, method_name: str, params: dict[str, Any]) -> dict[str, Any]:
         """Mock MCP invoke method."""
         # Return different mock responses based on method name
         if "search_flights" in method_name:
@@ -260,7 +265,7 @@ class MockMCPManager:
 @pytest.fixture
 def mock_mcp_manager():
     """Fixture providing mock MCP manager."""
-    return MockMCPManager()
+    return MockMCPBridge()
 
 
 def mock_pydantic_settings():

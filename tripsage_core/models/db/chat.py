@@ -5,7 +5,7 @@ They are separate from the API models to maintain clean separation of concerns.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -20,7 +20,7 @@ class ChatSessionDB(BaseModel):
     user_id: UUID = Field(..., description="User ID from auth.users table")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    ended_at: Optional[datetime] = Field(None, description="Session end timestamp")
+    ended_at: datetime | None = Field(None, description="Session end timestamp")
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Session metadata"
     )
@@ -92,11 +92,11 @@ class ChatToolCallDB(BaseModel):
     arguments: dict[str, Any] = Field(
         default_factory=dict, description="Tool arguments"
     )
-    result: Optional[dict[str, Any]] = Field(None, description="Tool result")
+    result: dict[str, Any] | None = Field(None, description="Tool result")
     status: str = Field("pending", description="Tool call status")
     created_at: datetime = Field(..., description="Creation timestamp")
-    completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
-    error_message: Optional[str] = Field(None, description="Error message if failed")
+    completed_at: datetime | None = Field(None, description="Completion timestamp")
+    error_message: str | None = Field(None, description="Error message if failed")
 
     @field_validator("status")
     @classmethod
@@ -122,7 +122,7 @@ class ChatSessionWithStats(ChatSessionDB):
     """Chat session with additional statistics."""
 
     message_count: int = Field(0, description="Total messages in session")
-    last_message_at: Optional[datetime] = Field(
+    last_message_at: datetime | None = Field(
         None, description="Timestamp of last message"
     )
 

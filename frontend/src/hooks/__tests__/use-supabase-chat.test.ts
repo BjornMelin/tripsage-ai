@@ -1,5 +1,5 @@
 /**
- * Comprehensive test suite for Supabase chat hooks with real-time integration.
+ * Test suite for Supabase chat hooks with real-time integration.
  * Tests chat session management, message handling, optimistic updates, and real-time synchronization.
  */
 
@@ -29,7 +29,7 @@ vi.mock("@/contexts/auth-context", () => ({
 //   ...overrides,
 // });
 
-// Mock Supabase client with comprehensive chat functionality
+// Mock Supabase client with chat functionality
 const mockSupabaseClient = {
   from: vi.fn(() => createCompleteQueryBuilder()),
   auth: {

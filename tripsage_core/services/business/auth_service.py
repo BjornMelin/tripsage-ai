@@ -1,5 +1,4 @@
-"""
-Optimized Supabase Authentication Service for FastAPI.
+"""Optimized Supabase Authentication Service for FastAPI.
 
 This implementation follows community best practices by:
 1. Using local JWT validation for performance (avoids 600ms+ network calls)
@@ -13,13 +12,11 @@ Based on research from:
 - Performance optimization recommendations
 """
 
-from typing import Optional
-
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
 from supabase import Client, create_client
+
 from tripsage_core.config import get_settings
 from tripsage_core.models.base_core_model import TripSageModel
 
@@ -28,8 +25,8 @@ class TokenData(TripSageModel):
     """Token data extracted from Supabase JWT tokens."""
 
     user_id: str
-    email: Optional[str] = None
-    role: Optional[str] = None
+    email: str | None = None
+    role: str | None = None
     aud: str = "authenticated"
 
 
@@ -38,8 +35,7 @@ security = HTTPBearer()
 
 
 def get_supabase_client() -> Client:
-    """
-    Get Supabase client instance for user management operations.
+    """Get Supabase client instance for user management operations.
 
     Returns:
         Supabase client configured with service key for admin operations
@@ -54,8 +50,7 @@ def get_supabase_client() -> Client:
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> TokenData:
-    """
-    Validate Supabase JWT token and return user data.
+    """Validate Supabase JWT token and return user data.
 
     Uses local JWT validation for optimal performance (avoids 600ms+ network calls).
     This is the community-recommended approach for FastAPI + Supabase integration.
@@ -99,7 +94,7 @@ async def get_current_user(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token validation failed: {str(e)}",
+            detail=f"Token validation failed: {e!s}",
         ) from e
 
 
@@ -107,8 +102,7 @@ async def get_user_with_client(
     token_data: TokenData = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_client),
 ) -> dict:
-    """
-    Get full user details using Supabase client.
+    """Get full user details using Supabase client.
 
     Use this dependency when you need full user profile data.
     For most cases, get_current_user() is sufficient and faster.
@@ -130,5 +124,5 @@ async def get_user_with_client(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch user details: {str(e)}",
+            detail=f"Failed to fetch user details: {e!s}",
         ) from e

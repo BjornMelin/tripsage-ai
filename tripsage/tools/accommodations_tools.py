@@ -1,328 +1,217 @@
-"""
-Accommodation search tools for TripSage agents.
+"""Accommodation tools that delegate to the domain AccommodationService."""
 
-This module provides function tools for searching accommodations.
-Refactored to be lean wrappers that delegate to core services.
-"""
+from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from collections.abc import Iterable, Sequence
+from datetime import date
+from typing import Any
 
-try:
-    from agents import function_tool
-except ImportError:
-    from unittest.mock import MagicMock
+from agents.tool_context import ToolContext
 
-    function_tool = MagicMock
-
+from agents import function_tool
 from tripsage.agents.service_registry import ServiceRegistry
+from tripsage_core.services.business.accommodation_service import (
+    AccommodationBookingRequest,
+    AccommodationSearchRequest,
+    AccommodationService,
+    PropertyType,
+)
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
-# Set up logger
+
 logger = get_logger(__name__)
 
 
-@function_tool
+def _parse_iso_date(value: str, field_name: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:  # pragma: no cover - validation path
+        raise ValueError(f"{field_name} must be ISO formatted (YYYY-MM-DD)") from exc
+
+
+def _coerce_property_types(
+    property_types: Iterable[str] | None,
+) -> list[PropertyType] | None:
+    if not property_types:
+        return None
+    normalized: list[PropertyType] = []
+    for raw in property_types:
+        try:
+            normalized.append(PropertyType(raw.lower()))
+        except ValueError as exc:
+            raise ValueError(f"Unsupported property type: {raw}") from exc
+    return normalized
+
+
+def _get_service_registry(
+    ctx: ToolContext[Any],
+) -> ServiceRegistry:
+    registry = ctx.context.get("service_registry")
+    if registry is None:
+        raise ValueError("service_registry missing from tool context")
+    if not hasattr(registry, "get_required_service"):
+        raise TypeError("tool context service_registry is missing required API")
+    return registry
+
+
+def _get_accommodation_service(
+    ctx: ToolContext[Any],
+) -> AccommodationService:
+    registry = _get_service_registry(ctx)
+    service = registry.get_required_service("accommodation_service")
+    required_methods = (
+        "search_accommodations",
+        "get_listing_details",
+        "book_accommodation",
+    )
+    if not all(hasattr(service, method) for method in required_methods):
+        raise TypeError("service_registry did not provide an AccommodationService")
+    return service
+
+
+# pylint: disable=too-many-positional-arguments
 @with_error_handling()
-async def search_airbnb_rentals_tool(
+async def search_accommodations(
+    ctx: ToolContext[Any],
     location: str,
-    service_registry: ServiceRegistry,
-    checkin: Optional[str] = None,
-    checkout: Optional[str] = None,
-    adults: int = 1,
-    children: Optional[int] = None,
-    min_price: Optional[int] = None,
-    max_price: Optional[int] = None,
-    property_type: Optional[str] = None,
-    min_rating: Optional[float] = None,
-    superhost: Optional[bool] = None,
-    min_beds: Optional[int] = None,
-    min_bedrooms: Optional[int] = None,
-    min_bathrooms: Optional[int] = None,
-    amenities: Optional[List[str]] = None,
-) -> Dict[str, Any]:
-    """Search for Airbnb rental options based on location and filters.
+    check_in: str,
+    check_out: str,
+    user_id: str,
+    *,
+    trip_id: str | None = None,
+    guests: int = 1,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    property_types: Sequence[str] | None = None,
+    amenities: Sequence[str] | None = None,
+    instant_book: bool | None = None,
+    free_cancellation: bool | None = None,
+) -> dict[str, Any]:
+    """Search for accommodations using the domain AccommodationService."""
+    service = _get_accommodation_service(ctx)
 
-    Args:
-        location: Location to search for accommodations
-        service_registry: Service registry for accessing services
-        checkin: Check-in date in YYYY-MM-DD format
-        checkout: Check-out date in YYYY-MM-DD format
-        adults: Number of adults (default: 1)
-        children: Number of children
-        min_price: Minimum price per night
-        max_price: Maximum price per night
-        property_type: Type of property (apartment, house, hotel, etc.)
-        min_rating: Minimum rating (0-5)
-        superhost: Filter for superhosts only
-        min_beds: Minimum number of beds
-        min_bedrooms: Minimum number of bedrooms
-        min_bathrooms: Minimum number of bathrooms
-        amenities: List of required amenities (e.g., ["pool", "wifi"])
-
-    Returns:
-        Search results with available Airbnb rental options
-    """
-    logger.info(f"Searching Airbnb rentals in {location}")
-
-    # Get accommodation service from registry
-    accommodation_service = service_registry.get_required_service(
-        "accommodation_service"
+    request_metadata: dict[str, Any] = {
+        "tool": "accommodations_tools.search_accommodations",
+        "actor_id": getattr(ctx, "actor_id", None),
+    }
+    request = AccommodationSearchRequest(
+        user_id=user_id,
+        trip_id=trip_id,
+        location=location.strip(),
+        check_in=_parse_iso_date(check_in, "check_in"),
+        check_out=_parse_iso_date(check_out, "check_out"),
+        guests=guests,
+        adults=None,
+        children=None,
+        infants=None,
+        min_price=min_price,
+        max_price=max_price,
+        property_types=_coerce_property_types(property_types),
+        amenities=list(amenities) if amenities else None,
+        bedrooms=None,
+        beds=None,
+        bathrooms=None,
+        accessibility_features=None,
+        instant_book=instant_book,
+        free_cancellation=free_cancellation,
+        max_distance_km=None,
+        min_rating=None,
+        sort_by="relevance",
+        sort_order="asc",
+        currency="USD",
+        metadata=request_metadata,
     )
 
-    # Prepare search parameters
-    search_params = {
-        "location": location,
-        "adults": adults,
-        "source": "airbnb",
+    logger.info("Searching accommodations for %s", request.location)
+    response = await service.search_accommodations(request)
+    return {
+        "status": "success",
+        "search_id": response.search_id,
+        "total_results": response.total_results,
+        "results_returned": response.results_returned,
+        "min_price": response.min_price,
+        "max_price": response.max_price,
+        "avg_price": response.avg_price,
+        "cached": response.cached,
+        "listings": [listing.model_dump() for listing in response.listings],
+        "search_parameters": response.search_parameters.model_dump(),
     }
 
-    # Add optional parameters
-    if checkin:
-        search_params["checkin"] = checkin
-    if checkout:
-        search_params["checkout"] = checkout
-    if children is not None:
-        search_params["children"] = children
-    if min_price is not None:
-        search_params["min_price"] = min_price
-    if max_price is not None:
-        search_params["max_price"] = max_price
-    if property_type:
-        search_params["property_type"] = property_type
-    if min_rating is not None:
-        search_params["min_rating"] = min_rating
-    if superhost is not None:
-        search_params["superhost"] = superhost
-    if min_beds is not None:
-        search_params["min_beds"] = min_beds
-    if min_bedrooms is not None:
-        search_params["min_bedrooms"] = min_bedrooms
-    if min_bathrooms is not None:
-        search_params["min_bathrooms"] = min_bathrooms
-    if amenities:
-        search_params["amenities"] = amenities
 
-    # Use accommodation service to search
-    result = await accommodation_service.search_accommodations(**search_params)
-
-    # Format results for agent consumption
-    if result.get("status") == "success" and result.get("listings"):
-        formatted_listings = []
-        for listing in result["listings"][:20]:  # Limit to 20 listings
-            formatted_listing = {
-                "id": listing.get("id"),
-                "name": listing.get("name"),
-                "url": listing.get("url"),
-                "image": listing.get("image"),
-                "superhost": listing.get("superhost"),
-                "price": listing.get("price", {}),
-                "rating": listing.get("rating"),
-                "reviews_count": listing.get("reviews_count"),
-                "location": listing.get("location"),
-                "property_type": listing.get("property_type"),
-                "details": listing.get("details", {}),
-                "amenities": listing.get("amenities", []),
-            }
-            formatted_listings.append(formatted_listing)
-
-        return {
-            "source": "airbnb",
-            "location": location,
-            "count": len(formatted_listings),
-            "original_count": result.get("total_count", len(formatted_listings)),
-            "listings": formatted_listings,
-            "search_params": search_params,
-            "error": None,
-            "cache_hit": result.get("cache_hit", False),
-        }
-    else:
-        return {
-            "source": "airbnb",
-            "location": location,
-            "count": 0,
-            "listings": [],
-            "search_params": search_params,
-            "error": result.get("error", "No results found"),
-            "cache_hit": False,
-        }
-
-
-@function_tool
 @with_error_handling()
-async def get_airbnb_listing_details_tool(
+async def get_accommodation_details(
+    ctx: ToolContext[Any],
     listing_id: str,
-    service_registry: ServiceRegistry,
-    checkin: Optional[str] = None,
-    checkout: Optional[str] = None,
-    adults: int = 1,
-) -> Dict[str, Any]:
-    """Get detailed information about a specific Airbnb listing.
-
-    Args:
-        listing_id: Airbnb listing ID
-        service_registry: Service registry for accessing services
-        checkin: Check-in date in YYYY-MM-DD format
-        checkout: Check-out date in YYYY-MM-DD format
-        adults: Number of adults (default: 1)
-
-    Returns:
-        Detailed information about the Airbnb listing
-    """
-    logger.info(f"Getting details for Airbnb listing: {listing_id}")
-
-    # Get accommodation service from registry
-    accommodation_service = service_registry.get_required_service(
-        "accommodation_service"
-    )
-
-    # Get listing details through service
-    result = await accommodation_service.get_accommodation_details(
-        listing_id=listing_id,
-        source="airbnb",
-        checkin=checkin,
-        checkout=checkout,
-        adults=adults,
-    )
-
-    if result.get("status") == "success" and result.get("details"):
-        details = result["details"]
+    user_id: str,
+) -> dict[str, Any]:
+    """Retrieve a single accommodation listing in detail."""
+    service = _get_accommodation_service(ctx)
+    listing = await service.get_listing_details(listing_id, user_id)
+    if listing is None:
         return {
-            "id": details.get("id"),
-            "name": details.get("name"),
-            "url": details.get("url"),
-            "description": details.get("description"),
-            "host": details.get("host", {}),
-            "location": details.get("location"),
-            "coordinates": details.get("coordinates"),
-            "property_type": details.get("property_type"),
-            "details": details.get("details", {}),
-            "amenities": details.get("amenities", []),
-            "price": details.get("price", {}),
-            "rating": details.get("rating"),
-            "reviews_count": details.get("reviews_count"),
-            "reviews_summary": details.get("reviews_summary"),
-            "images": details.get("images", []),
-            "check_in_time": details.get("check_in_time"),
-            "check_out_time": details.get("check_out_time"),
-            "house_rules": details.get("house_rules", []),
-            "cancellation_policy": details.get("cancellation_policy"),
-            "cache_hit": result.get("cache_hit", False),
-        }
-    else:
-        return {
-            "error": result.get("error", "Failed to get listing details"),
+            "status": "not_found",
             "listing_id": listing_id,
+            "message": "Accommodation listing not found",
         }
+    return {
+        "status": "success",
+        "listing": listing.model_dump(),
+    }
 
 
-@function_tool
+# pylint: disable=too-many-positional-arguments
 @with_error_handling()
-async def search_accommodations_tool(
-    location: str,
-    service_registry: ServiceRegistry,
-    source: str = "airbnb",
-    checkin: Optional[str] = None,
-    checkout: Optional[str] = None,
-    adults: int = 1,
-    children: Optional[int] = None,
-    min_price: Optional[int] = None,
-    max_price: Optional[int] = None,
-    property_type: Optional[str] = None,
-    min_rating: Optional[float] = None,
-    amenities: Optional[List[str]] = None,
-) -> Dict[str, Any]:
-    """Search for accommodations across different providers.
-
-    Args:
-        location: Location to search for accommodations
-        service_registry: Service registry for accessing services
-        source: Accommodation source (airbnb, booking, hotels)
-        checkin: Check-in date in YYYY-MM-DD format
-        checkout: Check-out date in YYYY-MM-DD format
-        adults: Number of adults (default: 1)
-        children: Number of children
-        min_price: Minimum price per night
-        max_price: Maximum price per night
-        property_type: Type of property (apartment, house, hotel, etc.)
-        min_rating: Minimum rating (0-5)
-        amenities: List of required amenities (e.g., ["pool", "wifi"])
-
-    Returns:
-        Search results with available accommodation options
-    """
-    logger.info(f"Searching {source} accommodations in {location}")
-
-    # Currently, delegate to airbnb search
-    if source.lower() == "airbnb":
-        return await search_airbnb_rentals_tool(
-            location=location,
-            service_registry=service_registry,
-            checkin=checkin,
-            checkout=checkout,
-            adults=adults,
-            children=children,
-            min_price=min_price,
-            max_price=max_price,
-            property_type=property_type,
-            min_rating=min_rating,
-            amenities=amenities,
-        )
-    else:
-        return {
-            "error": f"Unsupported accommodation source: {source}",
-            "available_sources": ["airbnb"],
-            "message": (
-                "Currently, only Airbnb is supported for accommodations search. "
-                "Hotel search via Booking.com integration is planned for future "
-                "releases."
-            ),
-        }
-
-
-@function_tool
-@with_error_handling()
-async def book_accommodation_tool(
+async def book_accommodation(
+    ctx: ToolContext[Any],
+    user_id: str,
     listing_id: str,
-    service_registry: ServiceRegistry,
-    source: str = "airbnb",
-    checkin: str = None,
-    checkout: str = None,
-    adults: int = 1,
-    children: int = 0,
-    guest_details: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
-    """Initiate accommodation booking process.
+    check_in: str,
+    check_out: str,
+    guests: int,
+    guest_name: str,
+    guest_email: str,
+    guest_phone: str | None = None,
+    hold_only: bool = False,
+    special_requests: str | None = None,
+    trip_id: str | None = None,
+) -> dict[str, Any]:
+    """Book an accommodation listing through the domain service."""
+    service = _get_accommodation_service(ctx)
 
-    Args:
-        listing_id: Accommodation listing ID
-        service_registry: Service registry for accessing services
-        source: Booking source (airbnb, booking, etc.)
-        checkin: Check-in date in YYYY-MM-DD format
-        checkout: Check-out date in YYYY-MM-DD format
-        adults: Number of adults
-        children: Number of children
-        guest_details: Guest information for booking
-
-    Returns:
-        Booking initiation result
-    """
-    logger.info(f"Initiating booking for {source} listing: {listing_id}")
-
-    # Get accommodation service from registry
-    accommodation_service = service_registry.get_required_service(
-        "accommodation_service"
-    )
-
-    # Initiate booking through service
-    result = await accommodation_service.book_accommodation(
+    booking_request = AccommodationBookingRequest(
         listing_id=listing_id,
-        source=source,
-        checkin=checkin,
-        checkout=checkout,
-        adults=adults,
-        children=children,
-        guest_details=guest_details,
+        check_in=_parse_iso_date(check_in, "check_in"),
+        check_out=_parse_iso_date(check_out, "check_out"),
+        guests=guests,
+        guest_name=guest_name,
+        guest_email=guest_email,
+        guest_phone=guest_phone,
+        special_requests=special_requests,
+        trip_id=trip_id,
+        payment_method=None,
+        hold_only=hold_only,
+        metadata=None,
     )
 
-    return result
+    logger.info("Booking accommodation %s for user %s", listing_id, user_id)
+    booking = await service.book_accommodation(user_id, booking_request)
+    return {
+        "status": "success",
+        "booking": booking.model_dump(),
+    }
+
+
+search_accommodations_tool = function_tool(search_accommodations)
+get_accommodation_details_tool = function_tool(get_accommodation_details)
+book_accommodation_tool = function_tool(book_accommodation)
+
+
+__all__ = [
+    "book_accommodation",
+    "book_accommodation_tool",
+    "get_accommodation_details",
+    "get_accommodation_details_tool",
+    "search_accommodations",
+    "search_accommodations_tool",
+]

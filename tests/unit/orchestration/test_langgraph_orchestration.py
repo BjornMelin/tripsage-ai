@@ -1,13 +1,13 @@
-"""
-Comprehensive tests for LangGraph orchestration system.
+"""Tests for LangGraph orchestration system.
 
 Tests the modern LangGraph-based agent orchestration with proper state management,
 node implementations, and tool integration following latest best practices.
 """
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+from langgraph.checkpoint.memory import MemorySaver
 
 from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.graph import TripSageOrchestrator
@@ -134,20 +134,25 @@ class TestTripSageOrchestrator:
 
     @pytest.fixture
     def mock_service_registry(self):
-        """Create a comprehensive mock service registry."""
+        """Create a mock service registry."""
         registry = Mock(spec=ServiceRegistry)
         registry.flight_service = Mock()
         registry.accommodation_service = Mock()
         registry.memory_service = Mock()
         registry.auth_service = Mock()
         registry.user_service = Mock()
+        registry.get_memory_bridge.return_value = MagicMock()
+        checkpoint_service = Mock()
+        checkpoint_service.get_async_checkpointer = AsyncMock(
+            return_value=MemorySaver()
+        )
+        registry.get_checkpoint_service.return_value = checkpoint_service
         return registry
 
     @pytest.fixture
     def orchestrator(self, mock_service_registry):
         """Create orchestrator with mocked dependencies."""
         with (
-            patch("tripsage.orchestration.graph.get_memory_bridge"),
             patch("tripsage.orchestration.graph.get_handoff_coordinator"),
             patch("tripsage.orchestration.graph.get_default_config"),
         ):
@@ -331,18 +336,13 @@ class TestAgentNodes:
         registry.memory_service = Mock()
         return registry
 
-    @pytest.fixture
-    def mock_tool_registry(self):
-        """Create mock tool registry."""
-        registry = Mock()
-        registry.get_tools_for_agent = Mock(return_value=[])
-        registry.get_langchain_tools_for_agent = Mock(return_value=[])
-        return registry
-
     def test_flight_agent_initialization(self, mock_service_registry):
         """Test flight agent node initialization."""
         with (
-            patch("tripsage.orchestration.nodes.flight_agent.get_tool_registry"),
+            patch(
+                "tripsage.orchestration.nodes.flight_agent.get_tools_for_agent",
+                return_value=[],
+            ),
             patch_openai_in_module("tripsage.orchestration.nodes.flight_agent"),
         ):
             node = FlightAgentNode(mock_service_registry)
@@ -353,7 +353,13 @@ class TestAgentNodes:
 
     def test_accommodation_agent_initialization(self, mock_service_registry):
         """Test accommodation agent node initialization."""
-        with patch_openai_in_module("tripsage.orchestration.nodes.accommodation_agent"):
+        with (
+            patch(
+                "tripsage.orchestration.nodes.accommodation_agent.get_tools_for_agent",
+                return_value=[],
+            ),
+            patch_openai_in_module("tripsage.orchestration.nodes.accommodation_agent"),
+        ):
             node = AccommodationAgentNode(mock_service_registry)
 
             assert node.name == "accommodation_agent"

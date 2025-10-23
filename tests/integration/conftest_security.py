@@ -1,13 +1,12 @@
-"""
-Security-focused test fixtures and utilities for integration tests.
+"""Security-focused test fixtures and utilities for integration tests.
 
-This module provides comprehensive test fixtures for security integration testing,
+This module provides test fixtures for security integration testing,
 including realistic test data, user scenarios, and security context setup.
 """
 
 import logging
-from datetime import date, datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, date, datetime, timedelta
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -29,6 +28,7 @@ from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.business.user_service import UserService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,8 +36,8 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def security_test_users() -> List[Dict[str, Any]]:
-    """Create comprehensive security test users with different roles and permissions."""
+def security_test_users() -> list[dict[str, Any]]:
+    """Create security test users with different roles and permissions."""
     return [
         {
             "id": "sec_user_001",
@@ -49,8 +49,8 @@ def security_test_users() -> List[Dict[str, Any]]:
             "is_disabled": False,
             "is_verified": True,
             "security_level": "standard",
-            "created_at": datetime.now(timezone.utc),
-            "last_login": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
+            "last_login": datetime.now(UTC),
             "password_hash": "$2b$12$encrypted_password_hash",
             "login_attempts": 0,
             "locked_until": None,
@@ -65,8 +65,8 @@ def security_test_users() -> List[Dict[str, Any]]:
             "is_disabled": False,
             "is_verified": True,
             "security_level": "standard",
-            "created_at": datetime.now(timezone.utc),
-            "last_login": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
+            "last_login": datetime.now(UTC),
             "password_hash": "$2b$12$encrypted_password_hash",
             "login_attempts": 0,
             "locked_until": None,
@@ -81,8 +81,8 @@ def security_test_users() -> List[Dict[str, Any]]:
             "is_disabled": False,
             "is_verified": True,
             "security_level": "standard",
-            "created_at": datetime.now(timezone.utc),
-            "last_login": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
+            "last_login": datetime.now(UTC),
             "password_hash": "$2b$12$encrypted_password_hash",
             "login_attempts": 0,
             "locked_until": None,
@@ -97,8 +97,8 @@ def security_test_users() -> List[Dict[str, Any]]:
             "is_disabled": False,
             "is_verified": True,
             "security_level": "standard",
-            "created_at": datetime.now(timezone.utc),
-            "last_login": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
+            "last_login": datetime.now(UTC),
             "password_hash": "$2b$12$encrypted_password_hash",
             "login_attempts": 0,
             "locked_until": None,
@@ -113,8 +113,8 @@ def security_test_users() -> List[Dict[str, Any]]:
             "is_disabled": False,
             "is_verified": True,
             "security_level": "elevated",
-            "created_at": datetime.now(timezone.utc),
-            "last_login": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
+            "last_login": datetime.now(UTC),
             "password_hash": "$2b$12$encrypted_password_hash",
             "login_attempts": 0,
             "locked_until": None,
@@ -129,11 +129,11 @@ def security_test_users() -> List[Dict[str, Any]]:
             "is_disabled": True,
             "is_verified": True,
             "security_level": "standard",
-            "created_at": datetime.now(timezone.utc),
-            "last_login": datetime.now(timezone.utc) - timedelta(days=30),
+            "created_at": datetime.now(UTC),
+            "last_login": datetime.now(UTC) - timedelta(days=30),
             "password_hash": "$2b$12$encrypted_password_hash",
             "login_attempts": 5,
-            "locked_until": datetime.now(timezone.utc) + timedelta(hours=24),
+            "locked_until": datetime.now(UTC) + timedelta(hours=24),
         },
         {
             "id": "sec_user_007",
@@ -145,8 +145,8 @@ def security_test_users() -> List[Dict[str, Any]]:
             "is_disabled": False,
             "is_verified": False,
             "security_level": "standard",
-            "created_at": datetime.now(timezone.utc),
-            "last_login": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
+            "last_login": datetime.now(UTC),
             "password_hash": "$2b$12$encrypted_password_hash",
             "login_attempts": 3,
             "locked_until": None,
@@ -156,9 +156,9 @@ def security_test_users() -> List[Dict[str, Any]]:
 
 @pytest.fixture(scope="session")
 def security_test_trips(
-    security_test_users: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    """Create comprehensive security test trips with different visibility levels."""
+    security_test_users: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Create security test trips with different visibility levels."""
     owner_id = security_test_users[0]["id"]
     return [
         {
@@ -170,12 +170,12 @@ def security_test_trips(
             "end_date": date(2024, 7, 25),
             "budget": 3000.00,
             "travelers": 2,
-            "description": "Private trip for comprehensive security testing",
+            "description": "Private trip for security testing",
             "visibility": TripVisibility.PRIVATE.value,
             "status": TripStatus.PLANNING.value,
             "trip_type": TripType.LEISURE.value,
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
+            "updated_at": datetime.now(UTC),
             "metadata": {
                 "security_test": True,
                 "test_category": "private_access",
@@ -194,8 +194,8 @@ def security_test_trips(
             "visibility": TripVisibility.PUBLIC.value,
             "status": TripStatus.PLANNING.value,
             "trip_type": TripType.BUSINESS.value,
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
+            "updated_at": datetime.now(UTC),
             "metadata": {
                 "security_test": True,
                 "test_category": "public_access",
@@ -214,8 +214,8 @@ def security_test_trips(
             "visibility": TripVisibility.PRIVATE.value,
             "status": TripStatus.PLANNING.value,
             "trip_type": TripType.LEISURE.value,
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
+            "updated_at": datetime.now(UTC),
             "metadata": {
                 "security_test": True,
                 "test_category": "collaboration_access",
@@ -235,8 +235,8 @@ def security_test_trips(
             "visibility": TripVisibility.PRIVATE.value,
             "status": TripStatus.PLANNING.value,
             "trip_type": TripType.LEISURE.value,
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
+            "updated_at": datetime.now(UTC),
             "metadata": {
                 "security_test": True,
                 "test_category": "cross_user_isolation",
@@ -247,8 +247,8 @@ def security_test_trips(
 
 @pytest.fixture(scope="session")
 def security_test_collaborators(
-    security_test_users: List[Dict[str, Any]], security_test_trips: List[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+    security_test_users: list[dict[str, Any]], security_test_trips: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Create security test collaborators with different permission levels."""
     collaborative_trip_id = security_test_trips[2]["id"]  # Collaborative trip
     owner_id = security_test_users[0]["id"]
@@ -260,8 +260,8 @@ def security_test_collaborators(
             "user_id": security_test_users[1]["id"],  # Edit collaborator
             "permission": "edit",
             "invited_by": owner_id,
-            "invited_at": datetime.now(timezone.utc),
-            "accepted_at": datetime.now(timezone.utc),
+            "invited_at": datetime.now(UTC),
+            "accepted_at": datetime.now(UTC),
             "status": "accepted",
             "metadata": {
                 "security_test": True,
@@ -274,8 +274,8 @@ def security_test_collaborators(
             "user_id": security_test_users[2]["id"],  # View collaborator
             "permission": "view",
             "invited_by": owner_id,
-            "invited_at": datetime.now(timezone.utc),
-            "accepted_at": datetime.now(timezone.utc),
+            "invited_at": datetime.now(UTC),
+            "accepted_at": datetime.now(UTC),
             "status": "accepted",
             "metadata": {
                 "security_test": True,
@@ -288,8 +288,8 @@ def security_test_collaborators(
             "user_id": security_test_users[1]["id"],  # Edit collaborator
             "permission": "manage",
             "invited_by": owner_id,
-            "invited_at": datetime.now(timezone.utc),
-            "accepted_at": datetime.now(timezone.utc),
+            "invited_at": datetime.now(UTC),
+            "accepted_at": datetime.now(UTC),
             "status": "accepted",
             "metadata": {
                 "security_test": True,
@@ -304,8 +304,8 @@ def security_test_collaborators(
 
 @pytest.fixture
 def security_principals(
-    security_test_users: List[Dict[str, Any]],
-) -> Dict[str, Principal]:
+    security_test_users: list[dict[str, Any]],
+) -> dict[str, Principal]:
     """Create security test principals for different user types."""
     return {
         "owner": Principal(
@@ -402,8 +402,8 @@ def security_principals(
 
 
 @pytest.fixture(scope="session")
-def security_test_scenarios() -> List[Dict[str, Any]]:
-    """Define comprehensive security test scenarios."""
+def security_test_scenarios() -> list[dict[str, Any]]:
+    """Define security test scenarios."""
     return [
         {
             "name": "owner_access_private_trip",
@@ -496,9 +496,9 @@ def security_test_scenarios() -> List[Dict[str, Any]]:
 
 @pytest.fixture
 def security_mock_trip_service(
-    security_test_users: List[Dict[str, Any]],
-    security_test_trips: List[Dict[str, Any]],
-    security_test_collaborators: List[Dict[str, Any]],
+    security_test_users: list[dict[str, Any]],
+    security_test_trips: list[dict[str, Any]],
+    security_test_collaborators: list[dict[str, Any]],
 ) -> TripService:
     """Create mock trip service for security testing."""
     service = MagicMock(spec=TripService)
@@ -540,11 +540,11 @@ def security_mock_trip_service(
         )
         return user_collab is not None
 
-    def mock_get_trip_by_id(trip_id: str) -> Optional[Dict[str, Any]]:
+    def mock_get_trip_by_id(trip_id: str) -> dict[str, Any] | None:
         """Mock getting trip by ID."""
         return next((t for t in security_test_trips if t["id"] == trip_id), None)
 
-    def mock_get_trip_collaborators(trip_id: str) -> List[Dict[str, Any]]:
+    def mock_get_trip_collaborators(trip_id: str) -> list[dict[str, Any]]:
         """Mock getting trip collaborators."""
         return [c for c in security_test_collaborators if c["trip_id"] == trip_id]
 
@@ -566,20 +566,20 @@ def security_mock_trip_service(
 
 @pytest.fixture
 def security_mock_user_service(
-    security_test_users: List[Dict[str, Any]],
+    security_test_users: list[dict[str, Any]],
 ) -> UserService:
     """Create mock user service for security testing."""
     service = MagicMock(spec=UserService)
 
-    def mock_get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
+    def mock_get_user_by_id(user_id: str) -> dict[str, Any] | None:
         """Mock getting user by ID."""
         return next((u for u in security_test_users if u["id"] == user_id), None)
 
-    def mock_get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    def mock_get_user_by_email(email: str) -> dict[str, Any] | None:
         """Mock getting user by email."""
         return next((u for u in security_test_users if u["email"] == email), None)
 
-    def mock_authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
+    def mock_authenticate_user(email: str, password: str) -> dict[str, Any] | None:
         """Mock user authentication."""
         user = mock_get_user_by_email(email)
         if not user:
@@ -590,8 +590,8 @@ def security_mock_user_service(
             return None
 
         if user["locked_until"] and datetime.fromisoformat(
-            user["locked_until"].replace("Z", "+00:00")
-        ) > datetime.now(timezone.utc):
+            user["locked_until"]
+        ) > datetime.now(UTC):
             return None
 
         # Simple password check (in real scenario, would hash and compare)
@@ -621,9 +621,9 @@ def security_mock_database_service() -> DatabaseService:
 
     def mock_execute_query(
         query: str,
-        params: Optional[Dict[str, Any]] = None,
-        user_context: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        params: dict[str, Any] | None = None,
+        user_context: str | None = None,
+    ) -> dict[str, Any]:
         """Mock query execution with security tracking."""
         # Log the query for security analysis
         service._executed_queries.append(
@@ -631,7 +631,7 @@ def security_mock_database_service() -> DatabaseService:
                 "query": query,
                 "params": params,
                 "user_context": user_context,
-                "timestamp": datetime.now(timezone.utc),
+                "timestamp": datetime.now(UTC),
             }
         )
 
@@ -640,9 +640,10 @@ def security_mock_database_service() -> DatabaseService:
 
         # Block suspicious queries
         suspicious_patterns = ["drop table", "delete from", "truncate", "alter table"]
-        if any(pattern in query_lower for pattern in suspicious_patterns):
-            if not user_context or user_context != "admin":
-                raise PermissionError("Suspicious query blocked by security filter")
+        if any(pattern in query_lower for pattern in suspicious_patterns) and (
+            not user_context or user_context != "admin"
+        ):
+            raise PermissionError("Suspicious query blocked by security filter")
 
         # Return mock data based on query type
         if "select" in query_lower:
@@ -690,7 +691,7 @@ def security_audit_logger():
             severity: AuditSeverity,
             user_id: str,
             resource_id: str,
-            details: Dict[str, Any],
+            details: dict[str, Any],
             ip_address: str = "127.0.0.1",
         ):
             """Log security audit event."""
@@ -702,11 +703,11 @@ def security_audit_logger():
                     "resource_id": resource_id,
                     "details": details,
                     "ip_address": ip_address,
-                    "timestamp": datetime.now(timezone.utc),
+                    "timestamp": datetime.now(UTC),
                 }
             )
 
-        def get_events(self) -> List[Dict[str, Any]]:
+        def get_events(self) -> list[dict[str, Any]]:
             """Get all logged events."""
             return audit_events.copy()
 
@@ -716,15 +717,15 @@ def security_audit_logger():
 
         def get_events_by_type(
             self, event_type: AuditEventType
-        ) -> List[Dict[str, Any]]:
+        ) -> list[dict[str, Any]]:
             """Get events by type."""
             return [e for e in audit_events if e["event_type"] == event_type]
 
-        def get_events_by_user(self, user_id: str) -> List[Dict[str, Any]]:
+        def get_events_by_user(self, user_id: str) -> list[dict[str, Any]]:
             """Get events by user."""
             return [e for e in audit_events if e["user_id"] == user_id]
 
-        def get_high_risk_events(self) -> List[Dict[str, Any]]:
+        def get_high_risk_events(self) -> list[dict[str, Any]]:
             """Get high-risk security events."""
             return [
                 e
@@ -751,7 +752,7 @@ def security_performance_monitor():
                 {
                     "operation_id": operation_id,
                     "operation_name": operation_name,
-                    "start_time": datetime.now(timezone.utc),
+                    "start_time": datetime.now(UTC),
                     "end_time": None,
                     "duration_ms": None,
                     "success": None,
@@ -766,14 +767,14 @@ def security_performance_monitor():
                 None,
             )
             if operation:
-                end_time = datetime.now(timezone.utc)
+                end_time = datetime.now(UTC)
                 operation["end_time"] = end_time
                 operation["duration_ms"] = (
                     end_time - operation["start_time"]
                 ).total_seconds() * 1000
                 operation["success"] = success
 
-        def get_performance_data(self) -> List[Dict[str, Any]]:
+        def get_performance_data(self) -> list[dict[str, Any]]:
             """Get all performance data."""
             return performance_data.copy()
 
@@ -789,7 +790,7 @@ def security_performance_monitor():
                 return 0.0
             return sum(op["duration_ms"] for op in operations) / len(operations)
 
-        def get_failed_operations(self) -> List[Dict[str, Any]]:
+        def get_failed_operations(self) -> list[dict[str, Any]]:
             """Get failed operations."""
             return [op for op in performance_data if op["success"] is False]
 
@@ -800,22 +801,22 @@ def security_performance_monitor():
     return SecurityPerformanceMonitor()
 
 
-# ===== COMPREHENSIVE SECURITY SETUP =====
+# ===== SECURITY SETUP =====
 
 
 @pytest.fixture
 async def comprehensive_security_setup(
-    security_test_users: List[Dict[str, Any]],
-    security_test_trips: List[Dict[str, Any]],
-    security_test_collaborators: List[Dict[str, Any]],
-    security_principals: Dict[str, Principal],
+    security_test_users: list[dict[str, Any]],
+    security_test_trips: list[dict[str, Any]],
+    security_test_collaborators: list[dict[str, Any]],
+    security_principals: dict[str, Principal],
     security_mock_trip_service: TripService,
     security_mock_user_service: UserService,
     security_mock_database_service: DatabaseService,
     security_audit_logger,
     security_performance_monitor,
-) -> Dict[str, Any]:
-    """Comprehensive security test setup with all components."""
+) -> dict[str, Any]:
+    """Security test setup with all components."""
     return {
         "users": security_test_users,
         "trips": security_test_trips,
@@ -832,7 +833,7 @@ async def comprehensive_security_setup(
         },
         "test_context": {
             "environment": "security_testing",
-            "timestamp": datetime.now(timezone.utc),
+            "timestamp": datetime.now(UTC),
             "session_id": str(uuid4()),
         },
     }
@@ -845,7 +846,7 @@ def create_security_headers(
     token: str = "valid_security_token",
     user_agent: str = "SecurityTest/1.0",
     ip_address: str = "192.168.1.100",
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Create security test headers."""
     return {
         "Authorization": f"Bearer {token}",
@@ -858,7 +859,7 @@ def create_security_headers(
     }
 
 
-def create_malicious_headers() -> Dict[str, str]:
+def create_malicious_headers() -> dict[str, str]:
     """Create malicious test headers."""
     return {
         "Authorization": "Bearer malicious_token",
@@ -907,11 +908,11 @@ def assert_security_compliance(response, expected_status: int = 200):
 def generate_concurrent_requests(
     client: TestClient,
     endpoint: str,
-    headers: Dict[str, str],
+    headers: dict[str, str],
     count: int = 10,
     method: str = "GET",
-    data: Optional[Dict[str, Any]] = None,
-) -> List[Any]:
+    data: dict[str, Any] | None = None,
+) -> list[Any]:
     """Generate concurrent requests for load testing."""
     responses = []
 

@@ -1,4 +1,10 @@
-"""Database migration runner using direct Supabase SQL execution."""
+"""Database migration runner using Supabase context.
+
+Final implementation (no legacy aliases/paths):
+- Discovers SQL files under `supabase/migrations`.
+- Logs statements that would be executed (offline/SDK-limited mode).
+- Records applied migrations in a `migrations` table if available.
+"""
 
 import asyncio
 import hashlib
@@ -6,35 +12,42 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Tuple
 
-from supabase import Client, create_client
-from tripsage_core.config import get_settings
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 
-# Migration directory
-MIGRATIONS_DIR = Path(__file__).parent.parent.parent.parent / "migrations"
+# Migration directory (canonical Supabase location)
+MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "supabase" / "migrations"
 
 
 class MigrationRunner:
-    """Handles database migrations using direct Supabase SQL execution."""
+    """Handles database migrations using the Supabase client.
 
-    def __init__(self, project_id: Optional[str] = None):
+    Note: The Python SDK does not expose general-purpose DDL execution. This
+    runner operates in an "offline" style: it discovers migrations, logs what
+    would be executed, and records success in a `migrations` table when
+    available. For production-grade application, prefer the Supabase CLI.
+    """
+
+    def __init__(self, project_id: str | None = None):
         """Initialize migration runner.
 
         Args:
-            project_id: Supabase project ID (optional, uses settings if not provided)
+            project_id: Optional Supabase project ID (informational only).
         """
-        self.project_id = project_id or settings.database_project_id
+        self.project_id = project_id
         self.client = self._get_supabase_client()
 
-    def _get_supabase_client(self) -> Client:
-        """Get a Supabase client instance."""
+    def _get_supabase_client(self):  # -> Client
+        """Create a Supabase client instance."""
+        from supabase import create_client  # pylint: disable=import-error
+
+        from tripsage_core.config import get_settings  # pylint: disable=import-error
+
+        settings = get_settings()
         return create_client(
             settings.database_url,
-            settings.database_public_key.get_secret_value(),
+            settings.database_public_key.get_secret_value(),  # pylint: disable=no-member
         )
 
     def _calculate_checksum(self, content: str) -> str:
@@ -52,9 +65,9 @@ class MigrationRunner:
             # We'll use the RPC method if available, or fall back to direct API calls
             # For now, we'll use table operations where possible
             return {"success": True, "data": None}
-        except Exception as e:
-            logger.error(f"SQL execution failed: {e}")
-            return {"success": False, "error": str(e)}
+        except Exception as exc:
+            logger.exception("SQL execution failed")
+            return {"success": False, "error": str(exc)}
 
     async def ensure_migrations_table(self) -> None:
         """Ensure the migrations table exists."""
@@ -63,7 +76,8 @@ class MigrationRunner:
             # Try to query the migrations table
             self.client.table("migrations").select("id").limit(1).execute()
             logger.info("Migrations table already exists")
-        except Exception:
+        except (OSError, RuntimeError, ValueError):
+            # Database query errors or table doesn't exist
             # Table doesn't exist, create it
             create_table_sql = """
             CREATE TABLE IF NOT EXISTS migrations (
@@ -78,9 +92,9 @@ class MigrationRunner:
             logger.info(
                 "Migrations table needs to be created manually or via admin API"
             )
-            logger.info(f"SQL to create table:\n{create_table_sql}")
+            logger.info("SQL to create table:\\n%s", create_table_sql)
 
-    async def get_applied_migrations(self) -> List[str]:
+    async def get_applied_migrations(self) -> list[str]:
         """Get list of already applied migrations."""
         try:
             result = (
@@ -90,12 +104,16 @@ class MigrationRunner:
                 .execute()
             )
 
-            if result.data:
-                return [row["filename"] for row in result.data]
+            try:
+                if hasattr(result, "data") and result.data:  # type: ignore
+                    return [row["filename"] for row in result.data]  # type: ignore
+            except (AttributeError, TypeError):
+                logger.warning("Unexpected result format from migrations query")
             return []
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError) as e:
+            # Database query errors or table doesn't exist
             logger.warning(
-                f"Could not get applied migrations (table may not exist): {e}"
+                "Could not get applied migrations (table may not exist): %s", e
             )
             return []
 
@@ -113,19 +131,23 @@ class MigrationRunner:
                 )
                 .execute()
             )
-            return bool(result.data)
-        except Exception as e:
-            logger.error(f"Failed to record migration {filename}: {e}")
+            try:
+                return bool(getattr(result, "data", False))  # type: ignore[union-attr]
+            except (AttributeError, TypeError):
+                logger.warning("Unexpected result format from migration insert")
+                return False
+        except Exception:
+            logger.exception("Failed to record migration %s", filename)
             return False
 
-    def get_migration_files(self) -> List[Path]:
+    def get_migration_files(self) -> list[Path]:
         """Get all migration files, sorted by filename.
 
         Only scans the main migrations directory, excluding subdirectories like
         examples/ and rollbacks/ per the new directory structure.
         """
         if not MIGRATIONS_DIR.exists():
-            logger.error(f"Migrations directory not found: {MIGRATIONS_DIR}")
+            logger.error("Migrations directory not found: %s", MIGRATIONS_DIR)
             raise FileNotFoundError(f"Migrations directory not found: {MIGRATIONS_DIR}")
 
         # Only get SQL files directly in the migrations directory
@@ -142,7 +164,7 @@ class MigrationRunner:
             ]
         )
 
-        logger.info(f"Found {len(migration_files)} migration files in main directory")
+        logger.info("Found %s migration files in main directory", len(migration_files))
         return migration_files
 
     async def apply_migration(self, filepath: Path) -> bool:
@@ -157,12 +179,12 @@ class MigrationRunner:
         filename = filepath.name
 
         try:
-            with open(filepath, "r") as f:
+            with Path(filepath).open(encoding="utf-8") as f:
                 content = f.read()
 
             checksum = self._calculate_checksum(content)
 
-            logger.info(f"Applying migration: {filename}")
+            logger.info("Applying migration: %s", filename)
 
             # Parse and execute SQL statements
             # Note: This is a simplified approach
@@ -171,24 +193,24 @@ class MigrationRunner:
             for statement in statements:
                 if statement:
                     # Log the statement for manual execution
-                    logger.info(f"Would execute SQL:\n{statement[:100]}...")
+                    logger.info("Would execute SQL:\\n%s...", statement[:100])
                     # In production, execute via proper database connection
 
             # Record the migration
             if await self.record_migration(filename, checksum):
-                logger.info(f"Migration {filename} recorded successfully")
+                logger.info("Migration %s recorded successfully", filename)
                 return True
-            else:
-                logger.error(f"Failed to record migration {filename}")
-                return False
+            logger.error("Failed to record migration %s", filename)
+            return False
 
-        except Exception as e:
-            logger.error(f"Error applying migration {filename}: {e}")
+        except (OSError, RuntimeError, ValueError):
+            # File reading, checksum calculation, or database errors
+            logger.exception("Error applying migration %s", filename)
             return False
 
     async def run_migrations(
-        self, up_to: Optional[str] = None, dry_run: bool = False
-    ) -> Tuple[int, int]:
+        self, up_to: str | None = None, dry_run: bool = False
+    ) -> tuple[int, int]:
         """Run all pending migrations.
 
         Args:
@@ -204,8 +226,9 @@ class MigrationRunner:
         applied_migrations = await self.get_applied_migrations()
 
         logger.info(
-            f"Found {len(migration_files)} migration files, "
-            f"{len(applied_migrations)} already applied"
+            "Found %s migration files, %s already applied",
+            len(migration_files),
+            len(applied_migrations),
         )
 
         succeeded = 0
@@ -213,15 +236,15 @@ class MigrationRunner:
 
         for migration_file in migration_files:
             if migration_file.name in applied_migrations:
-                logger.debug(f"Skipping already applied: {migration_file.name}")
+                logger.debug("Skipping already applied: %s", migration_file.name)
                 continue
 
             if up_to and migration_file.name > up_to:
-                logger.info(f"Stopping at requested migration: {up_to}")
+                logger.info("Stopping at requested migration: %s", up_to)
                 break
 
             if dry_run:
-                logger.info(f"[DRY RUN] Would apply: {migration_file.name}")
+                logger.info("[DRY RUN] Would apply: %s", migration_file.name)
                 succeeded += 1
                 continue
 
@@ -229,7 +252,7 @@ class MigrationRunner:
                 succeeded += 1
             else:
                 failed += 1
-                logger.error(f"Failed to apply: {migration_file.name}")
+                logger.error("Failed to apply: %s", migration_file.name)
                 # Stop on first failure
                 break
 
@@ -237,15 +260,14 @@ class MigrationRunner:
 
 
 async def run_migrations_cli(
-    project_id: Optional[str] = None, up_to: Optional[str] = None, dry_run: bool = False
-) -> Tuple[int, int]:
+    project_id: str | None = None, up_to: str | None = None, dry_run: bool = False
+) -> tuple[int, int]:
     """CLI entry point for running migrations."""
     runner = MigrationRunner(project_id)
     return await runner.run_migrations(up_to=up_to, dry_run=dry_run)
 
 
-# Alias for backward compatibility
-run_migrations = run_migrations_cli
+__all__ = ["run_migrations_cli"]
 
 
 if __name__ == "__main__":
@@ -266,11 +288,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     async def main():
+        """Main function to run migrations."""
         succeeded, failed = await run_migrations_cli(
             project_id=args.project_id, dry_run=args.dry_run, up_to=args.up_to
         )
 
-        logger.info(f"Migration summary: {succeeded} succeeded, {failed} failed")
+        logger.info("Migration summary: %s succeeded, %s failed", succeeded, failed)
 
         if not args.dry_run and succeeded == 0 and failed == 0:
             logger.info("All migrations are already applied")
@@ -281,4 +304,6 @@ if __name__ == "__main__":
 
     # Exit with error code if there were failures
     if result[1] > 0:
-        exit(1)
+        import sys
+
+        sys.exit(1)

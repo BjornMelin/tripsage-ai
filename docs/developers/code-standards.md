@@ -3,20 +3,20 @@
 > **Code Quality Guidelines for TripSage AI**  
 > Consistent coding standards for Python, TypeScript, and documentation
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [🐍 Python Standards](#-python-standards)
-- [📘 TypeScript Standards](#-typescript-standards)
-- [📚 Documentation Standards](#-documentation-standards)
-- [🔧 Code Formatting](#-code-formatting)
-- [🏗️ Architecture Patterns](#️-architecture-patterns)
-- [🔒 Security Guidelines](#-security-guidelines)
-- [📊 Performance Guidelines](#-performance-guidelines)
-- [🎯 Code Review Checklist](#-code-review-checklist)
+- [Python Standards](#python-standards)
+- [TypeScript Standards](#typescript-standards)
+- [Documentation Standards](#documentation-standards)
+- [Code Formatting](#code-formatting)
+- [Architecture Patterns](#architecture-patterns)
+- [Security Guidelines](#security-guidelines)
+- [Performance Guidelines](#performance-guidelines)
+- [Code Review Checklist](#code-review-checklist)
 
 ---
 
-## 🐍 Python Standards
+## Python Standards
 
 ### **Type Hints**
 
@@ -166,7 +166,7 @@ class TripResponse(BaseModel):
 
 ---
 
-## 📘 TypeScript Standards
+## TypeScript Standards
 
 ### **Interface Definitions**
 
@@ -335,7 +335,7 @@ export function useMutationApi<TData, TVariables>(
 
 ---
 
-## 📚 Documentation Standards
+## Documentation Standards
 
 ### **Code Comments**
 
@@ -417,7 +417,7 @@ Detailed explanation of the component's role in the system.
 
 ---
 
-## 🔧 Code Formatting
+## Code Formatting
 
 ### **Python with Ruff**
 
@@ -454,7 +454,7 @@ npx biome lint --apply .
 
 ---
 
-## 🏗️ Architecture Patterns
+## Architecture Patterns
 
 ### **Service Layer Pattern**
 
@@ -498,7 +498,7 @@ class TripRepository:
 
 ---
 
-## 🔒 Security Guidelines
+## Security Guidelines
 
 ### **Input Validation**
 
@@ -537,7 +537,7 @@ async def get_current_user(token: str = Depends(security)) -> User:
 
 ---
 
-## 📊 Performance Guidelines
+## Performance Guidelines
 
 ### **Database Optimization**
 
@@ -601,7 +601,7 @@ async def search_all_providers(params: SearchParams) -> List[SearchResult]:
     valid_results = []
     for result in results:
         if isinstance(result, Exception):
-            logger.error(f"Provider search failed: {result}")
+            logger.exception(f"Provider search failed: {result}")
         else:
             valid_results.extend(result)
     
@@ -619,7 +619,7 @@ async def search_all_providers_bad(params: SearchParams) -> List[SearchResult]:
 
 ---
 
-## 🎯 Code Review Checklist
+## Code Review Checklist
 
 ### **Before Submitting PR**
 
@@ -644,6 +644,15 @@ async def search_all_providers_bad(params: SearchParams) -> List[SearchResult]:
 
 ---
 
-**Following these coding standards ensures consistency, maintainability, and quality across the TripSage codebase.** 🚀
+### Quality Gates
 
-> *Last updated: June 16, 2025*
+- **Python**: PEP-8 compliant with ruff formatting (≤88 char lines)
+- **TypeScript**: Biome for linting and formatting
+- **Type Safety**: Full type hints for Python, strict TypeScript
+- **Documentation**: Google-style docstrings for all public APIs
+
+---
+
+> **Following these coding standards ensures consistency, maintainability, and quality across the TripSage codebase.**
+>
+> *Last updated: October 21, 2025*

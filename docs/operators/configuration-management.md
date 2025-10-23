@@ -8,7 +8,7 @@ TripSage uses a modern, type-safe configuration system built with Pydantic V2 an
 - **Security Hardening**: Automatic detection of fallback/test secrets in production
 - **Environment Flexibility**: Support for development, testing, and production environments
 - **Docker Support**: Built-in Docker secrets and environment variable support
-- **Validation**: Comprehensive validation with clear error messages
+- **Validation**: Validation with clear error messages
 
 ## Configuration Architecture
 
@@ -184,7 +184,7 @@ SECRET_KEY=test-secret-key-for-testing-only
 
 ## Docker Configuration
 
-### Environment Variables
+### Environment Variables (Dockerfile)
 
 ```dockerfile
 # Dockerfile
@@ -205,7 +205,7 @@ RUN pip install -e .
 CMD ["uvicorn", "tripsage.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-### Docker Secrets
+### Docker Secrets (docker-compose.yml)
 
 ```yaml
 # docker-compose.yml
@@ -250,6 +250,7 @@ secrets:
 ### 3. Production Hardening
 
 The configuration system automatically:
+
 - Disables debug mode in production
 - Validates secret strength
 - Detects fallback/test secrets
@@ -264,7 +265,7 @@ security_report = settings.get_security_report()
 
 if not security_report['production_ready']:
     # Alert monitoring system
-    logger.error("Production configuration security issues detected")
+    logger.exception("Production configuration security issues detected")
 ```
 
 ## Troubleshooting
@@ -272,17 +273,20 @@ if not security_report['production_ready']:
 ### Common Issues
 
 1. **ValidationError on startup**
-   ```
+
+   ```text
    Fix: Check environment variables and ensure all required values are set
    ```
 
 2. **Fallback secret detected in production**
-   ```
+
+   ```text
    Fix: Replace test/fallback secrets with secure production values
    ```
 
 3. **Database connection failed**
-   ```
+
+   ```text
    Fix: Verify DATABASE_URL and credentials are correct
    ```
 
@@ -341,7 +345,7 @@ database_url = settings.database_url
 api_title = settings.api_title
 ```
 
-## Advanced Usage
+## Usage Notes
 
 ### Custom Configuration Sources
 

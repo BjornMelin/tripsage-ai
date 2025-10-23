@@ -1,5 +1,4 @@
-"""
-WebSocket connection management service.
+"""WebSocket connection management service.
 
 This service handles individual WebSocket connection lifecycle including:
 - Connection establishment and authentication
@@ -15,17 +14,18 @@ import time
 from collections import deque
 from datetime import datetime
 from enum import Enum
-from typing import Any, Deque
+from typing import Any
 from uuid import UUID
 
 from fastapi import WebSocket
 from pydantic import BaseModel, Field
 
+
 logger = logging.getLogger(__name__)
 
 
 class ConnectionState(str, Enum):
-    """Enhanced connection state management."""
+    """Connection state management."""
 
     CONNECTING = "connecting"
     CONNECTED = "connected"
@@ -55,6 +55,7 @@ class ExponentialBackoffException(Exception):
     """Custom exception for exponential backoff failures."""
 
     def __init__(self, message: str, max_attempts: int, last_delay: float):
+        """Initialize the Exponential Backoff Exception."""
         super().__init__(message)
         self.max_attempts = max_attempts
         self.last_delay = last_delay
@@ -66,34 +67,43 @@ class MonitoredDeque(deque):
     def __init__(
         self, *args, priority_name: str = "", connection_id: str = "", **kwargs
     ):
+        """Initialize the deque."""
         super().__init__(*args, **kwargs)
         self.priority_name = priority_name
         self.connection_id = connection_id
         self.dropped_count = 0
 
-    def append(self, item):
+    def append(self, x):
+        """Append an item to the deque."""
         if self.maxlen and len(self) >= self.maxlen:
             self.dropped_count += 1
             logger.warning(
-                f"Message dropped from {self.priority_name} priority queue "
-                f"for connection {self.connection_id}. "
-                f"Total dropped: {self.dropped_count}"
+                "Message dropped from %s priority queue for connection %s. "
+                "Total dropped: %s",
+                self.priority_name,
+                self.connection_id,
+                self.dropped_count,
             )
-        super().append(item)
+        super().append(x)
 
-    def appendleft(self, item):
+    def appendleft(self, x):
+        """Append an item to the left of the deque."""
         if self.maxlen and len(self) >= self.maxlen:
             self.dropped_count += 1
             logger.warning(
-                f"Message dropped from {self.priority_name} priority queue "
-                f"for connection {self.connection_id}. "
-                f"Total dropped: {self.dropped_count}"
+                "Message dropped from %s priority queue for connection %s. "
+                "Total dropped: %s",
+                self.priority_name,
+                self.connection_id,
+                self.dropped_count,
             )
-        super().appendleft(item)
+        super().appendleft(x)
 
 
 class WebSocketConnection:
-    """Enhanced WebSocket connection wrapper with health monitoring."""
+    """WebSocket connection wrapper with health monitoring."""
+
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -102,6 +112,7 @@ class WebSocketConnection:
         user_id: UUID | None = None,
         session_id: UUID | None = None,
     ):
+        """Initialize the WebSocket connection."""
         self.websocket = websocket
         self.connection_id = connection_id
         self.user_id = user_id
@@ -119,10 +130,10 @@ class WebSocketConnection:
         self.BACKPRESSURE_THRESHOLD = 0.8  # 80% of max size triggers backpressure
 
         # Message queue with priority support - fix starvation issue
-        self.message_queue: Deque[Any] = MonitoredDeque(
+        self.message_queue: deque[Any] = MonitoredDeque(
             maxlen=1000, priority_name="main", connection_id=connection_id
         )
-        self.priority_queue: dict[int, Deque[Any]] = {
+        self.priority_queue: dict[int, deque[Any]] = {
             1: MonitoredDeque(
                 maxlen=100, priority_name="high", connection_id=connection_id
             ),
@@ -147,7 +158,7 @@ class WebSocketConnection:
         self.reconnect_count = 0
 
         # Connection health - fix latency calculation for low sample counts
-        self.latency_samples: Deque[float] = deque(maxlen=10)
+        self.latency_samples: deque[float] = deque(maxlen=10)
         self.ping_sent_times: dict[str, float] = {}  # ping_id -> timestamp
         self.ping_timeout_threshold = 5.0  # seconds
 
@@ -206,14 +217,18 @@ class WebSocketConnection:
         if current_size >= threshold and not self.backpressure_active:
             self.backpressure_active = True
             logger.warning(
-                f"Backpressure activated for connection {self.connection_id}. "
-                f"Queue size: {current_size}/{self.MAX_TOTAL_QUEUE_SIZE}"
+                "Backpressure activated for connection %s. Queue size: %s/%s",
+                self.connection_id,
+                current_size,
+                self.MAX_TOTAL_QUEUE_SIZE,
             )
         elif current_size < threshold / 2 and self.backpressure_active:
             self.backpressure_active = False
             logger.info(
-                f"Backpressure deactivated for connection {self.connection_id}. "
-                f"Queue size: {current_size}/{self.MAX_TOTAL_QUEUE_SIZE}"
+                "Backpressure deactivated for connection %s. Queue size: %s/%s",
+                self.connection_id,
+                current_size,
+                self.MAX_TOTAL_QUEUE_SIZE,
             )
 
         return self.backpressure_active
@@ -233,9 +248,9 @@ class WebSocketConnection:
             if priority == 3:  # Low priority
                 self.dropped_messages_count += 1
                 logger.warning(
-                    f"Dropped low priority message for connection "
-                    f"{self.connection_id}. "
-                    f"Total dropped: {self.dropped_messages_count}"
+                    "Dropped low priority message for connection %s. Total dropped: %s",
+                    self.connection_id,
+                    self.dropped_messages_count,
                 )
                 return True  # Event was "handled" by being dropped
 
@@ -247,18 +262,20 @@ class WebSocketConnection:
                     low_priority_queue.popleft()  # Drop oldest low priority message
                     self.dropped_messages_count += 1
                     logger.warning(
-                        f"Dropped low priority message to make space for "
-                        f"priority {priority} message on connection "
-                        f"{self.connection_id}"
+                        "Dropped low priority message to make space for priority"
+                        "%s message on connection %s",
+                        priority,
+                        self.connection_id,
                     )
                     # Now add the higher priority message
                     self.priority_queue[priority].append(event)
                     return True
                 # No low priority messages to drop, reject the new message
-                logger.error(
-                    f"Queue full and no low priority messages to drop for "
-                    f"connection {self.connection_id}. "
-                    f"Rejecting priority {priority} message."
+                logger.exception(
+                    "Queue full and no low priority messages to drop for connection %s."
+                    "Rejecting priority %s message.",
+                    self.connection_id,
+                    priority,
                 )
                 return False
 
@@ -301,7 +318,9 @@ class WebSocketConnection:
         }
         return await self.send(event)
 
-    async def send(self, event: dict[str, Any], message_limits=None) -> bool:
+    async def send(
+        self, event: dict[str, Any] | BaseModel, message_limits=None
+    ) -> bool:
         """Send event to WebSocket connection with error handling and size validation.
 
         Args:
@@ -314,21 +333,26 @@ class WebSocketConnection:
         Raises:
             CoreValidationError: If message exceeds size limits
         """
+        # pylint: disable=too-many-return-statements
+        # pylint: disable=too-many-statements
         from tripsage_core.exceptions.exceptions import CoreValidationError
 
         # Validate message size before processing
         if message_limits:
-            message_type = event.get("type", "message")
+            if isinstance(event, BaseModel):
+                message_type = getattr(event, "type", "message")
+            else:
+                message_type = event.get("type", "message")
             max_size = message_limits.get_limit_for_message_type(message_type)
 
             # Estimate message size by converting to JSON
             try:
-                if hasattr(event, "model_dump"):
+                if isinstance(event, BaseModel):
                     event_dict = event.model_dump()
                     # Convert UUID fields to strings for JSON serialization
-                    if "user_id" in event_dict and event_dict["user_id"]:
+                    if event_dict.get("user_id"):
                         event_dict["user_id"] = str(event_dict["user_id"])
-                    if "session_id" in event_dict and event_dict["session_id"]:
+                    if event_dict.get("session_id"):
                         event_dict["session_id"] = str(event_dict["session_id"])
                     if "timestamp" in event_dict and hasattr(
                         event_dict["timestamp"], "isoformat"
@@ -345,7 +369,7 @@ class WebSocketConnection:
                         code="MESSAGE_TOO_LARGE",
                     )
             except (TypeError, ValueError) as e:
-                logger.warning(f"Failed to validate message size: {e}")
+                logger.warning("Failed to validate message size: %s", e)
                 # Continue without size validation if serialization fails
 
         if self.state not in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]:
@@ -360,8 +384,9 @@ class WebSocketConnection:
                 pass
             else:
                 logger.warning(
-                    f"Cannot send to connection {self.connection_id} in "
-                    f"state {self.state}"
+                    "Cannot send to connection %s in state %s",
+                    self.connection_id,
+                    self.state,
                 )
                 return False
 
@@ -372,34 +397,33 @@ class WebSocketConnection:
             # circuit breaker, fail
             if self.state == ConnectionState.ERROR:
                 logger.warning(
-                    f"Cannot send to connection {self.connection_id} - "
-                    "circuit breaker OPEN and in ERROR state"
+                    "Cannot send to connection %s - circuit breaker "
+                    "OPEN and in ERROR state",
+                    self.connection_id,
                 )
                 return False
 
             # Circuit breaker is OPEN but connection is healthy - queue the message
             # instead of failing
-            priority = (
-                getattr(event, "priority", 2)
-                if hasattr(event, "priority")
-                else event.get("priority", 2)
-            )
+            if isinstance(event, BaseModel):
+                priority = getattr(event, "priority", 2)
+            else:
+                priority = event.get("priority", 2)
             return self.handle_queue_overflow(event, priority)
 
         # Add to priority queue if connection is busy, with backpressure handling
-        priority = (
-            getattr(event, "priority", 2)
-            if hasattr(event, "priority")
-            else event.get("priority", 2)
-        )
+        if isinstance(event, BaseModel):
+            priority = getattr(event, "priority", 2)
+        else:
+            priority = event.get("priority", 2)
         if self._send_lock.locked():
             # Check backpressure before queueing
             if self.is_backpressure_active() and priority == 3:
                 # Drop low priority messages during backpressure
                 self.dropped_messages_count += 1
                 logger.debug(
-                    f"Dropped low priority message due to backpressure on "
-                    f"connection {self.connection_id}"
+                    "Dropped low priority message due to backpressure on connection %s",
+                    self.connection_id,
                 )
                 return False
 
@@ -408,12 +432,12 @@ class WebSocketConnection:
         async with self._send_lock:
             try:
                 # Handle both Pydantic models and dicts
-                if hasattr(event, "model_dump"):
+                if isinstance(event, BaseModel):
                     event_dict = event.model_dump()
                     # Convert UUID fields to strings for JSON serialization
-                    if "user_id" in event_dict and event_dict["user_id"]:
+                    if event_dict.get("user_id"):
                         event_dict["user_id"] = str(event_dict["user_id"])
-                    if "session_id" in event_dict and event_dict["session_id"]:
+                    if event_dict.get("session_id"):
                         event_dict["session_id"] = str(event_dict["session_id"])
                     if "timestamp" in event_dict and hasattr(
                         event_dict["timestamp"], "isoformat"
@@ -436,13 +460,13 @@ class WebSocketConnection:
                 if self.state == ConnectionState.ERROR:
                     self.state = ConnectionState.CONNECTED
                     logger.info(
-                        f"Connection {self.connection_id} recovered from ERROR state"
+                        "Connection %s recovered from ERROR state", self.connection_id
                     )
 
                 return True
 
-            except Exception as e:
-                logger.error(f"Failed to send message to {self.connection_id}: {e}")
+            except Exception:
+                logger.exception("Failed to send message to %s", self.connection_id)
                 self.error_count += 1
                 self.state = ConnectionState.ERROR
 
@@ -450,14 +474,13 @@ class WebSocketConnection:
                 self.circuit_breaker.record_failure()
 
                 # Queue for retry if not permanent error, using backpressure handling
-                retry_count = (
-                    getattr(event, "retry_count", 0)
-                    if hasattr(event, "retry_count")
-                    else event.get("retry_count", 0)
-                )
+                if isinstance(event, BaseModel):
+                    retry_count = getattr(event, "retry_count", 0)
+                else:
+                    retry_count = event.get("retry_count", 0)
                 if retry_count < 3:
                     # Preserve original event type (Pydantic or dict) for compatibility
-                    if hasattr(event, "model_dump"):
+                    if isinstance(event, BaseModel):
                         # For Pydantic models - create a new instance to preserve
                         # object type
                         event_dict = event.model_dump()
@@ -481,10 +504,6 @@ class WebSocketConnection:
     async def send_ping(self) -> bool:
         """Send ping and track latency with support for multiple outstanding pings."""
         try:
-            # Use the websocket.ping() method for compatibility with tests
-            if hasattr(self.websocket, "ping"):
-                await self.websocket.ping()
-
             # Generate unique ping ID
             ping_id = f"ping_{int(time.time() * 1000)}_{len(self.ping_sent_times)}"
 
@@ -507,7 +526,7 @@ class WebSocketConnection:
             for pid in timed_out_pings:
                 del self.ping_sent_times[pid]
                 logger.warning(
-                    f"Ping {pid} timed out for connection {self.connection_id}"
+                    "Ping %s timed out for connection %s", pid, self.connection_id
                 )
 
             # Track this ping
@@ -521,8 +540,8 @@ class WebSocketConnection:
 
             return success
 
-        except Exception as e:
-            logger.error(f"Failed to send ping to {self.connection_id}: {e}")
+        except Exception:
+            logger.exception("Failed to send ping to %s", self.connection_id)
             self.state = ConnectionState.ERROR
             return False
 
@@ -550,8 +569,8 @@ class WebSocketConnection:
             self.latency_samples.append(latency)
         else:
             logger.debug(
-                f"Received pong but no outstanding pings for "
-                f"connection {self.connection_id}"
+                "Received pong but no outstanding pings for connection %s",
+                self.connection_id,
             )
 
         # Clear compatibility attribute when all pings are handled (for tests)
@@ -581,7 +600,7 @@ class WebSocketConnection:
                 # last_pong is a timestamp
                 current_time = time.time()
                 return current_time - self.last_pong > self.heartbeat_timeout
-            elif hasattr(self.last_pong, "timestamp"):
+            if hasattr(self.last_pong, "timestamp"):
                 # last_pong is a datetime object
                 current_time = time.time()
                 last_pong_timestamp = self.last_pong.timestamp()
@@ -653,12 +672,12 @@ class WebSocketConnection:
                     event = queue.popleft()
 
                     # Convert Pydantic objects to dicts for sending
-                    if hasattr(event, "model_dump"):
+                    if isinstance(event, BaseModel):
                         event_dict = event.model_dump()
                         # Convert UUID fields to strings for JSON serialization
-                        if "user_id" in event_dict and event_dict["user_id"]:
+                        if event_dict.get("user_id"):
                             event_dict["user_id"] = str(event_dict["user_id"])
-                        if "session_id" in event_dict and event_dict["session_id"]:
+                        if event_dict.get("session_id"):
                             event_dict["session_id"] = str(event_dict["session_id"])
                         if "timestamp" in event_dict and hasattr(
                             event_dict["timestamp"], "isoformat"
@@ -680,12 +699,12 @@ class WebSocketConnection:
     def subscribe_to_channel(self, channel: str) -> None:
         """Subscribe to a channel."""
         self.subscribed_channels.add(channel)
-        logger.debug(f"Connection {self.connection_id} subscribed to {channel}")
+        logger.debug("Connection %s subscribed to %s", self.connection_id, channel)
 
     def unsubscribe_from_channel(self, channel: str) -> None:
         """Unsubscribe from a channel."""
         self.subscribed_channels.discard(channel)
-        logger.debug(f"Connection {self.connection_id} unsubscribed from {channel}")
+        logger.debug("Connection %s unsubscribed from %s", self.connection_id, channel)
 
     def is_subscribed_to_channel(self, channel: str) -> bool:
         """Check if subscribed to a channel."""
@@ -696,6 +715,7 @@ class WebSocketConnectionService:
     """Service for managing individual WebSocket connections."""
 
     def __init__(self):
+        """Initialize the WebSocket connection service."""
         self.connections: dict[str, WebSocketConnection] = {}
 
     async def create_connection(
@@ -725,7 +745,7 @@ class WebSocketConnectionService:
         connection = self.connections.pop(connection_id, None)
         if connection:
             connection.state = ConnectionState.DISCONNECTED
-            logger.info(f"Removed WebSocket connection {connection_id}")
+            logger.info("Removed WebSocket connection %s", connection_id)
 
     def get_connection(self, connection_id: str) -> WebSocketConnection | None:
         """Get a connection by ID with better encapsulation."""

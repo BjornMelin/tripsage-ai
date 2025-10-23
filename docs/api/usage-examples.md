@@ -190,7 +190,7 @@ curl -X POST http://localhost:8001/api/flights/search \
 }
 ```
 
-### **Advanced Flight Search with Filters**
+### **Flight Search with Filters with Filters**
 
 ```bash
 curl -X POST http://localhost:8001/api/flights/search \

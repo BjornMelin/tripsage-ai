@@ -1,5 +1,4 @@
-"""
-Shared schemas and models for TripSage AI.
+"""Shared schemas and models for TripSage AI.
 
 This module contains common Pydantic models, enums, and schemas that are used
 across multiple parts of the TripSage application, including API layers,
@@ -80,71 +79,72 @@ from .travel import (
     TripSummary,
 )
 
+
 __all__ = [
+    # Travel
+    "AccommodationPreferences",
+    # Enums
+    "AccommodationType",
+    # Geographic
+    "Address",
+    "Airport",
+    # Flight schemas
+    "AirportSearchRequest",
+    "AirportSearchResponse",
+    # Temporal
+    "Availability",
     # Base models
     "BaseResponse",
-    "ErrorResponse",
-    "PaginatedResponse",
-    "PaginationMeta",
-    "SuccessResponse",
-    "ValidationErrorDetail",
-    "ValidationErrorResponse",
+    "BookingStatus",
+    "BoundingBox",
+    # Financial
+    "Budget",
+    "BusinessHours",
+    "CabinClass",
+    "CancellationPolicy",
     # Chat models
     "ChatContext",
     "ChatMessage",
     "ChatSession",
-    "ToolCall",
-    # Enums
-    "AccommodationType",
-    "BookingStatus",
-    "CabinClass",
-    "CancellationPolicy",
-    "CurrencyCode",
-    "PaymentType",
-    "TransportationType",
-    "TripStatus",
-    "TripType",
-    "TripVisibility",
-    "UserRole",
-    # Financial
-    "Budget",
-    "Currency",
-    "ExchangeRate",
-    "Price",
-    "PriceBreakdown",
-    "PriceRange",
-    # Geographic
-    "Address",
-    "Airport",
-    "BoundingBox",
+    # Validators
+    "CommonValidators",
     "Coordinates",
-    "Place",
-    "Region",
-    "Route",
-    # Temporal
-    "Availability",
-    "BusinessHours",
+    "Currency",
+    "CurrencyCode",
     "DateRange",
     "DateTimeRange",
     "Duration",
-    "TimeRange",
-    # Travel
-    "AccommodationPreferences",
-    "TransportationPreferences",
-    "TripDestination",
-    "TripPreferences",
-    "TripSummary",
-    # Flight schemas
-    "AirportSearchRequest",
-    "AirportSearchResponse",
+    "ErrorResponse",
+    "ExchangeRate",
     "FlightPassenger",
     "FlightSearchRequest",
     "FlightSearchResponse",
     "MultiCityFlightSearchRequest",
     "MultiCityFlightSegment",
+    "PaginatedResponse",
+    "PaginationMeta",
+    "PaymentType",
+    "Place",
+    "Price",
+    "PriceBreakdown",
+    "PriceRange",
+    "Region",
+    "Route",
     "SavedFlightRequest",
     "SavedFlightResponse",
+    "SuccessResponse",
+    "TimeRange",
+    "ToolCall",
+    "TransportationPreferences",
+    "TransportationType",
+    "TripDestination",
+    "TripPreferences",
+    "TripStatus",
+    "TripSummary",
+    "TripType",
+    "TripVisibility",
     "UpcomingFlightResponse",
-    # Validators
-    "CommonValidators",
+    "UserRole",
+    "ValidationErrorDetail",
+    "ValidationErrorResponse",
 ]

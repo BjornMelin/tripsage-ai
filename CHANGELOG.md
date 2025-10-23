@@ -5,287 +5,158 @@ All notable changes to TripSage will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- DuffelProvider (httpx, Duffel API v2) for flight search and booking; returns raw provider dicts mapped to canonical `FlightOffer` via the existing mapper (`tripsage_core.models.mappers.flights_mapper`).
+- Optional Duffel auto‑wiring in `get_flight_service()` when `DUFFEL_ACCESS_TOKEN` (or legacy `DUFFEL_API_TOKEN`) is present.
+- Unit tests: provider (no‑network) and FlightService+provider mapping/booking paths; deterministic and isolated.
+- ADR-0012 documenting canonical flights DTOs and provider convergence.
+- Dashboard regression coverages: async unit tests for `DashboardService`, refreshed HTTP router tests,
+  and an integration harness exercising the new schema.
+- Async unit tests for accommodation tools covering search/detail/booking flows via `ToolContext` mocks.
+- Supabase initialization regression tests covering connection verification, schema discovery, and sample data helpers (no-network stubs).
+
+### Changed
+
+- Rebuilt `tripsage.agents.base.BaseAgent` around LangGraph orchestration with ChatOpenAI fallback execution, memory hydration, and periodic conversation summarization.
+- Simplified `ChatAgent` to delegate to the new base workflow while exposing async history/clearing helpers backed by `ChatService` with local fallbacks.
+- Flight agent result formatting updated to use canonical offer fields (airlines, outbound_segments, currency/price).
+- Documentation (developers/operators/architecture) updated to “Duffel API v2 via thin provider,” headers and env var usage modernized, and examples aligned to canonical mapping.
+- Dashboard analytics stack simplified: `DashboardService` emits only modern dataclasses, FastAPI routers consume the `metrics/services/top_users`
+  schema directly, and rate limiting now tolerates missing infrastructure dependencies.
+- `tripsage.tools.accommodations_tools` now accepts `ToolContext` inputs, validates registry dependencies, and exposes tool wrappers alongside plain coroutine helpers.
+- Web search tooling replaced ad-hoc fallbacks with strict Agents SDK usage and literal-typed context sizing; batch helper now guards cache failures.
+- Web crawl helpers simplified to use `WebCrawlService` exclusively, centralizing error normalization and metrics recording.
+- OTEL decorators use overload-friendly typing so async/sync instrumentation survives pyright + pylint enforcement.
+- Database bootstrap hardens Supabase RPC handling, runs migrations via lazy imports, and scopes discovery to `supabase/migrations` with offline recording.
+- Accommodation stack now normalizes MCP client calls (keyword-only), propagates canonical booking/search metadata, and validates external listings via `model_validate`.
+- WebSocket router refactored around a shared `MessageContext`, consolidated handlers, and IDNA-aware origin validation while keeping dependencies Supabase-only.
+- API service DI now uses the global `ServiceRegistry` in `tripsage/config/service_registry.py`:
+  - Lifespan registers singletons for `cache` and `google_maps`.
+  - New adapters provide `activity` and `location` services from registry-managed deps.
+  - API dependency providers (`tripsage/api/core/dependencies.py`) resolve via registry (no `app.state` coupling for these services).
+
+### Deprecated
+
+### Removed
+
+- [Core Models]: Deleted the entire `tripsage/models/` directory, removing all legacy data models associated with the deprecated MCP architecture to eliminate duplication.
+- [Core Services]: Deleted legacy MCP components, including the generic `AccommodationMCPClient` and the `ErrorHandlingService`, to complete the migration to a direct SDK architecture.
+- [Observability]: Removed the custom performance metrics system in `tripsage/monitoring` and standardized all metrics collection on the OpenTelemetry implementation to use industry best practices.
+- [API]: Standardized inbound rate limiting on SlowAPI (with `limits` async storage) and outbound throttling on `aiolimiter`. Removed the legacy custom `RateLimitMiddleware` and associated modules/tests.
+- [Architecture]: Removed the custom `ServiceRegistry` module under `tripsage/config` and its dependent tests to simplify dependency management.
+- [Exceptions]: Removed `CoreMCPError`; MCP-related failures now surface as `CoreExternalAPIError` with appropriate context.
+
+- Legacy Google Maps dict-shaped responses and all backward-compatible paths in services/tests.
+- Module-level singletons for Google Maps and Activity services (`get_google_maps_service`,
+  `get_activity_service`) and their `close_*` helpers; final-only DI now required.
+- Deprecated exports in `tripsage_core/services/external_apis/__init__.py` for maps/weather/webcrawl `get_*`/`close_*` helpers removed; use DI/constructors.
+
+### Fixed
+
+- Base agent node logging now emits the full exception message, keeping orchestration diagnostics actionable.
+- Consolidated, typed Google Maps integration:
+  - New Pydantic models (`tripsage_core/models/api/maps_models.py`).
+  - `GoogleMapsService` now returns typed models and removes custom HTTP logic.
+  - `LocationService` and `ActivityService` refactored to consume typed API only (no legacy code) and use constructor DI.
+  - `tripsage/agents/service_registry.py` wires `ActivityService` via injected `GoogleMapsService` and `CacheService`.
+  - `tripsage/api/routers/activities.py` constructs services explicitly (no globals).
+  - Unit/integration tests rewritten for typed returns; deprecated suites removed.
+
+- Legacy Duffel adapter (`tripsage_core/services/external_apis/flights_service.py`).
+- Duplicate flight DTO module (`tripsage_core/models/api/flights_models.py`) and its re‑exports.
+- Obsolete integration test referencing the removed HTTP client (`tests/integration/external/test_duffel_integration.py`).
+- Dashboard compatibility shims (legacy `DashboardData` fields, `ApiKeyValidator`/`ApiKeyMonitoringService` aliases) and the unused flights mapper module (`tripsage_core/models/mappers`).
+
+### Fixed
+
+- Linting/typing issues in touched flight tests and orchestration node; pyright/pylint clean on changed scope.
+- WebSocket integration/unit test suites updated for the refactored router (async dependency overrides, Supabase wiring, Unicode homograph coverage).
+
+### Security
+
+### Chat Service Alignment (Breaking)
+
+- ChatService finalized to DI-only (no globals/event-loop hacks); public methods now directly call DatabaseService helpers: `create_chat_session`, `create_chat_message`, `get_user_chat_sessions`, `get_session_messages`, `get_chat_session`, `get_message_tool_calls`, `update_tool_call`, `update_session_timestamp`, `end_chat_session`.
+- Removed router-compat wrappers (`list_sessions`, `create_message`, `delete_session`) and legacy parameter orders; canonical signatures are:
+  - `get_session(session_id, user_id)`, `get_messages(session_id, user_id, limit|offset)`, `add_message(session_id, user_id, MessageCreateRequest)`.
+- Router `tripsage/api/routers/chat.py` now accepts JSON bodies (no query-param misuse); `POST /api/chat/sessions` returns 201 Created; endpoints wired to the new service methods.
+- OTEL decorators added on ChatService public methods with low-cardinality attrs; test env skips exporter init to avoid network failures.
+- SecretStr respected for OpenAI key; sanitized content + metadata validation retained.
+- Tests updated to final-only contracts (unit+integration) to reflect JSON bodies and new method signatures.
+
+## [2.1.0] - 2025-10-20
+
+### Added
+
+- Pydantic-native trip export response with secure token and expiry; supports `export_format` plus optional `format` kw.
+- Date/time normalization helpers in trips router for safe coercion and ISO handling.
+
+### Changed
+
+- Refactored trips router to use Pydantic v2 `model_validate` for core→API mapping; eliminated ad‑hoc casting.
+- `/trips` list and `/trips/search` now return `TripListResponse` with `TripListItem` entries; OpenAPI schema reflects these models.
+- Collaboration endpoints standardize on `TripService` contracts (`share_trip`, `get_trip_collaborators`, `unshare_trip`); responses use `TripCollaboratorResponse`.
+- Authorization semantics unified: 403 (forbidden), 404 (not found), 500 (unexpected error).
+- Relaxed `TripShareRequest.user_emails` to support batch flows (min_length=0, max_length=50).
+
+### Removed
+
+- Dict-shaped responses in list/search paths; replaced with typed response models.
+- Scattered UUID/datetime parsing; centralized to helpers.
+
+### Fixed
+
+- Collaboration endpoint tests aligned to Pydantic v2 models; removed brittle assertions.
+
+### Security
+
+- Trip export path validated; formats restricted to `pdf|csv|json`.
+
+### Migration Notes (Breaking)
+
+- Clients parsing list/search responses as arbitrary dicts should align to the documented `TripListResponse` schema (field names unchanged; server typing improved).
+
 ## [2.0.0] - 2025-06-21
 
-### 🎉 **MAJOR RELEASE: Database Performance & Architecture Optimization**
+### Added
 
-This release represents a **landmark achievement** in system optimization and architectural simplification, delivering **exceptional performance improvements** and **massive code reduction** while maintaining full functionality.
+- Unified Database Service consolidating seven services into a single optimized module.
+- PGVector HNSW indexing (vector search up to ~30x faster vs. prior).
+- Supavisor-backed LIFO connection pooling with safe overflow controls.
+- Enterprise WebSocket stack: Redis-backed sessions, parallel broadcasting, bounded queues/backpressure, and load shedding (validated at >10k concurrent connections).
+- Centralized event serialization helper to remove duplication.
+- Health checks and performance probes for core services.
 
-### 🏆 **Headline Achievements**
+### Changed
 
-- **64.8% overall code reduction** (7,600 → 2,300 lines)
-- **30x pgvector performance improvement** with HNSW optimization
-- **3x general query performance improvement** via Supavisor integration
-- **50% memory usage reduction** through architectural optimization
-- **14 Linear issues completed** in single comprehensive implementation
-- **Enterprise-grade WebSocket infrastructure** supporting 10k+ concurrent connections
-- **Complete over-engineering elimination** across all system layers
+- Query latency improved (~3x typical); vector search ~30x faster; startup 60–70% faster.
+- Memory usage reduced ~35–50% via compression/caching and leaner initialization.
+- Async-first execution replaces blocking hot paths; broadcast fan-out ~31x faster for 100 clients.
+- Configuration flattened and standardized (single settings module).
+- Observability unified with metrics and health endpoints across services.
+- Breaking: consolidated DB APIs; unified configuration module; synchronous paths removed (migrate to async interfaces).
 
----
+### Removed
 
-## 🚀 **Added**
+- Complex tool registry and redundant orchestration/abstraction layers.
+- Nested configuration classes and legacy database service implementations.
+- Deprecated dependencies and unused modules.
 
-### Database Performance Framework (BJO-212)
-- **Unified Database Service** - Consolidated 7 separate database services into single, optimized service (2,325 lines)
-- **Advanced PGVector Operations** - HNSW indexing with 30x performance improvement (462 lines vs 1,311 original)
-- **LIFO Connection Pooling** - Optimized pooling with 100 base connections, 500 overflow
-- **Supavisor Integration** - Serverless-optimized connection management
-- **Comprehensive Monitoring** - Production-grade performance tracking and health checks
-- **Memory Optimization** - halfvec compression and intelligent caching strategies
+### Fixed
 
-### Enterprise WebSocket Infrastructure
-- **Session Management Service** (BJO-218) - Redis-backed session storage with automatic cleanup and security monitoring
-- **Parallel Message Broadcasting** (BJO-220) - 15x performance improvement with asyncio.gather patterns
-- **Queue Management System** (BJO-221) - Bounded queues with backpressure and priority handling
-- **Load Management** (BJO-225) - Dynamic connection limits supporting 10,000+ concurrent connections
-- **Event Serialization** (BJO-223) - Centralized serialization eliminating code duplication
-- **Redis Fallback Patterns** (BJO-224) - Enterprise-grade reliability with automatic failover
+- Memory leaks in connection pools and unbounded queues.
+- Event loop stalls caused by blocking operations in hot paths.
+- Redundant validation chains that increased latency.
 
-### Security Enhancements
-- **Comprehensive Message Validation** (BJO-217) - Pydantic-based validation with XSS prevention
-- **Message Size Limits** (BJO-216) - Configurable limits preventing DoS attacks
-- **Non-blocking Operations** (BJO-219) - Event loop optimization for 1000+ concurrent connections
-- **CSWSH Protection** - Origin header validation and rate limiting
-- **Circuit Breaker Patterns** - Automatic degradation and recovery mechanisms
+### Security
 
-### Modern Architecture Patterns
-- **Simplified LangGraph Tools** (BJO-159) - Modern @tool decorators replacing 885-line registry (68% reduction)
-- **Direct MCP Service** (BJO-161) - Eliminated 677-line abstraction layer (67% reduction)
-- **Unified Configuration** (BJO-170) - Single Settings class replacing 8+ config classes (85% reduction)
-- **Clean Service Architecture** - Single responsibility services with clear interfaces
+- Pydantic-based input validation for WebSocket messages.
+- Message size limits and multi-level rate limiting (Redis-backed).
+- Origin validation (CSWSH protection), tightened JWT validation, and improved audit logging.
 
----
-
-## 🔧 **Changed**
-
-### Performance Optimizations
-- **Database Query Performance** - 3x improvement in general queries, 30x in vector operations
-- **Memory Usage** - 50% reduction through optimized object lifecycle and caching
-- **WebSocket Broadcasting** - 15x improvement in message delivery speed
-- **Startup Time** - 60-70% faster application initialization
-- **Connection Handling** - Support for 10,000+ concurrent WebSocket connections
-
-### Code Quality Improvements
-- **Python 3.13 Modernization** - Full adoption of modern Python patterns and type hints
-- **Pydantic v2 Migration** - Complete migration with enhanced validation and performance
-- **Type Safety** - Comprehensive type annotations across all modules
-- **Error Handling** - Standardized error patterns with proper recovery mechanisms
-- **Testing Coverage** - 80%+ coverage on core modules, 98% on critical services
-
-### Architecture Simplification
-- **Tool Registry** - Replaced 885-line complex registry with 281-line simple tools
-- **MCP Abstraction** - Eliminated 677-line abstraction with 224-line direct service
-- **Configuration** - Consolidated 8+ config classes into single 212-line Settings class
-- **Database Services** - Unified 7 services into single comprehensive service
-
----
-
-## 🗑️ **Removed**
-
-### Over-Engineering Elimination
-- **Complex Tool Registry** - Removed 885-line registry with enterprise analytics for MVP
-- **MCP Abstraction Layers** - Eliminated 677 lines of unnecessary abstraction
-- **Nested Configuration** - Removed complex inheritance chains and nested objects
-- **Legacy Database Services** - Consolidated redundant database service implementations
-- **Backwards Compatibility** - Removed all Pydantic v1 and legacy Python patterns
-- **Deprecated Dependencies** - Cleaned up unused imports and obsolete packages
-
-### Performance Bottlenecks
-- **Blocking Operations** - Replaced synchronous operations with async patterns
-- **Memory Leaks** - Eliminated unbounded queues and connection pools
-- **Sequential Processing** - Replaced with parallel execution patterns
-- **Redundant Validations** - Streamlined validation chains
-
----
-
-## 🔒 **Security**
-
-### WebSocket Security Hardening
-- **Input Validation** - Comprehensive Pydantic validation for all message types
-- **Message Size Limits** - Configurable limits preventing memory exhaustion
-- **Rate Limiting** - Multi-level rate limiting with Redis backing
-- **Session Security** - Secure session management with automatic cleanup
-- **Origin Validation** - CSWSH protection with origin header validation
-
-### Authentication & Authorization
-- **JWT Validation** - Enhanced token validation with proper error handling
-- **Connection Limits** - Per-user and global connection limits
-- **Priority Management** - Admin and premium user priority handling
-- **Audit Logging** - Comprehensive security event tracking
-
----
-
-## 🧪 **Testing**
-
-### Comprehensive Test Coverage
-- **Backend Testing** - 300+ tests with 80%+ coverage on core modules
-- **WebSocket Testing** - 98% coverage across all WebSocket services
-- **Security Testing** - 24/24 security integration tests passing
-- **Performance Testing** - Validated with 10,000+ concurrent connections
-- **Load Testing** - Sustained load testing with statistical validation
-
-### Quality Assurance
-- **Integration Testing** - End-to-end validation of all services
-- **Regression Testing** - Automated performance regression detection
-- **Error Scenario Testing** - Comprehensive failure mode validation
-- **Concurrent Testing** - Multi-user session validation
-
----
-
-## 📊 **Performance Metrics**
-
-### Database Performance
-```
-Vector Search Operations:
-├── Before: 450ms average
-├── After: 15ms average
-└── Improvement: 30x faster
-
-General Query Performance:
-├── Before: 2.1s average
-├── After: 680ms average
-└── Improvement: 3x faster
-
-Memory Usage:
-├── Before: 856MB peak
-├── After: 428MB peak
-└── Improvement: 50% reduction
-```
-
-### WebSocket Performance
-```
-Message Broadcasting:
-├── Before: 250ms for 100 connections
-├── After: 8ms for 100 connections
-└── Improvement: 31x faster
-
-Concurrent Connections:
-├── Before: ~1,000 connections
-├── After: 10,000+ connections
-└── Improvement: 10x capacity increase
-
-Load Management:
-├── Peak Load: 15,000 concurrent attempts
-├── Acceptance Rate: 66.7% (maintained target)
-├── Response Time: <100ms decisions
-└── Recovery Time: <30s from overload
-```
-
-### Code Quality Metrics
-```
-Code Reduction:
-├── Database Services: 7,600 → 2,300 lines (69% reduction)
-├── Tool Registry: 885 → 281 lines (68% reduction)
-├── MCP Abstraction: 677 → 224 lines (67% reduction)
-├── Configuration: 643+ → 212 lines (67% reduction)
-└── Overall: 64.8% code reduction
-
-Performance Improvements:
-├── Startup Time: 60-70% faster
-├── Memory Usage: 35-50% reduction
-├── Error Recovery: 60% faster
-└── Maintenance Complexity: 75% reduction
-```
-
----
-
-## 🔗 **Linear Issues Resolved**
-
-### Primary Database Optimization
-- **BJO-212** - Database Service Performance Optimization Framework
-
-### Critical Security Fixes
-- **BJO-217** - Comprehensive Pydantic input validation for WebSocket messages
-- **BJO-216** - Message size limits to prevent memory exhaustion
-- **BJO-219** - Replace blocking asyncio.sleep with non-blocking operations
-
-### WebSocket Infrastructure
-- **BJO-218** - Session management with proper disconnect cleanup
-- **BJO-220** - Parallel message broadcasting with asyncio.gather
-- **BJO-221** - Message queue bounds and backpressure mechanisms
-- **BJO-222** - Reduce authenticate_connection method complexity
-- **BJO-223** - WebSocketEventSerializer helper class
-- **BJO-224** - @redis_with_fallback decorator pattern
-- **BJO-225** - Load shedding and connection limits
-
-### Architecture Simplification
-- **BJO-159** - Simplify LangGraph Orchestration Architecture
-- **BJO-161** - Remove Over-Engineered MCP Abstraction Layer
-- **BJO-170** - Consolidate Over-Engineered Configuration Classes
-
----
-
-## 🏗️ **Technical Details**
-
-### Architecture Changes
-- **Service Consolidation** - Unified database services with clear separation of concerns
-- **Modern Patterns** - @tool decorators, direct services, flat configuration
-- **Type Safety** - Complete Python 3.13 type annotations throughout
-- **Async Optimization** - Non-blocking operations with proper event loop management
-
-### Infrastructure Improvements
-- **Connection Pooling** - LIFO pooling with intelligent overflow management
-- **Caching Strategy** - Optimized vector caching with memory management
-- **Monitoring Integration** - Production-grade metrics and health checks
-- **Error Recovery** - Circuit breaker patterns with automatic recovery
-
-### Development Experience
-- **Single File Changes** - Centralized configuration and service management
-- **Clear Dependencies** - Eliminated complex abstraction layers
-- **Fast Development** - Modern patterns enabling rapid feature development
-- **Easy Debugging** - Direct call stacks without abstraction confusion
-
----
-
-## 🚀 **Deployment**
-
-### Production Readiness
-- **Zero Critical Issues** - Comprehensive security and performance validation
-- **Enterprise Grade** - Fault tolerance and automatic recovery mechanisms
-- **Scalability** - Validated support for 10,000+ concurrent connections
-- **Monitoring** - Real-time performance and health monitoring
-
-### Breaking Changes
-- **WebSocket Validation** - Message validation now required for all message types
-- **Configuration** - Updated to unified Settings class (environment variables remain same)
-- **Database Services** - Consolidated API (maintains backward compatibility where possible)
-
----
-
-## 📝 **Migration Guide**
-
-### For Developers
-1. **Configuration** - Update imports to use unified `tripsage_core.config.get_settings()`
-2. **Database Services** - Use consolidated `DatabaseService` instead of individual services
-3. **WebSocket Messages** - Ensure all messages include proper type and validation fields
-
-### For Operations
-1. **Environment Variables** - No changes required to existing environment configuration
-2. **Database** - Automatic migration of connection pooling and optimization
-3. **Monitoring** - Enhanced metrics available through existing monitoring endpoints
-
----
-
-## 👥 **Contributors**
-
-This major release represents a comprehensive system optimization and architectural modernization effort focused on performance, simplicity, and maintainability.
-
----
-
-## 🔮 **Looking Forward**
-
-### Next Release Priorities
-- **Real-time Monitoring Dashboard** (BJO-226)
-- **Advanced Load Testing Suite** (BJO-228)
-- **Enhanced Security Metrics** (BJO-229)
-- **Performance Analytics** (BJO-230)
-
-### Future Enhancements
-- **Multi-region Support** - Geographic distribution capabilities
-- **Advanced Caching** - Distributed caching strategies
-- **ML Performance Optimization** - AI-driven performance tuning
-- **Advanced Security** - Enhanced threat detection and response
-
----
-
-**🎉 This release represents a landmark achievement in system optimization, delivering exceptional performance improvements while dramatically simplifying the codebase and maintaining full functionality.**
+[Unreleased]: https://github.com/BjornMelin/tripsage-ai/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/BjornMelin/tripsage-ai/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/BjornMelin/tripsage-ai/releases/tag/v2.0.0

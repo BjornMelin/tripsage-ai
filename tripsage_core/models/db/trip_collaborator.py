@@ -6,7 +6,6 @@ allowing users to share trips with others with different permission levels.
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -164,7 +163,7 @@ class TripCollaboratorUpdate(BaseModel):
         },
     )
 
-    permission_level: Optional[PermissionLevel] = Field(
+    permission_level: PermissionLevel | None = Field(
         default=None, description="Updated permission level for the collaborator"
     )
 

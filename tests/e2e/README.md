@@ -349,7 +349,7 @@ async def test_workflow_with_debugging(test_client, caplog):
 When adding new E2E tests:
 
 1. **Identify User Journey**: Map complete workflow
-2. **Create Test Scenario**: Write comprehensive test
+2. **Create Test Scenario**: Write test
 3. **Handle Edge Cases**: Include error scenarios
 4. **Ensure Cleanup**: Proper teardown of test data
 5. **Document Workflow**: Add clear docstrings
@@ -408,7 +408,7 @@ e2e-tests:
 
 ## Related Documentation
 
-- [Testing Guide](../TESTING_GUIDE.md) - Comprehensive testing guide
+- [Testing Guide](../TESTING_GUIDE.md) - Testing guide
 - [Integration Tests](../integration/README.md) - Component integration tests
 - [API Documentation](/docs/api/) - API endpoint reference
 - [User Workflows](/docs/workflows/) - Detailed workflow documentation

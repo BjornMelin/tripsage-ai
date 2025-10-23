@@ -1,7 +1,7 @@
 -- Supabase Extensions Setup
 -- Description: Required extensions for TripSage database functionality
 -- Dependencies: None (must be run first)
--- Version: 2.0 - Enhanced with automation and real-time capabilities
+-- Version: 2.0 - Includes automation and real-time capabilities
 
 -- ===========================
 -- CORE EXTENSIONS
@@ -120,7 +120,7 @@ $$;
 -- We reference auth.users(id) for all user relationships throughout the schema
 
 -- Additional extensions to consider for future enhancements:
--- - pgvectorscale: Advanced vector indexing for improved embedding search performance
+-- - pgvectorscale: High-performance vector indexing for improved embedding search performance
 -- - pg_amqp: Message queue integration for advanced event processing
 -- - pgtap: Testing framework for database functions and procedures
 -- - plv8: JavaScript language for stored procedures (if needed)

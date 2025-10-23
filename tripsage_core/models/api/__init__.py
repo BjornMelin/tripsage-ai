@@ -1,5 +1,4 @@
-"""
-Pydantic models for direct API integrations.
+"""Pydantic models for direct API integrations.
 
 This package contains data models for the direct API service implementations,
 replacing the previous MCP server abstraction layer.
@@ -13,15 +12,6 @@ from tripsage_core.models.api.calendar_models import (
     EventReminder,
     UpdateEventRequest,
 )
-from tripsage_core.models.api.flights_models import (
-    Airport,
-    FlightOffer,
-    FlightOfferRequest,
-    Passenger,
-    PaymentRequest,
-    PriceBreakdown,
-    Segment,
-)
 from tripsage_core.models.api.weather_models import (
     CurrentWeather,
     DailyForecast,
@@ -31,26 +21,19 @@ from tripsage_core.models.api.weather_models import (
     WeatherForecast,
 )
 
+
 __all__ = [
     # Calendar models
     "CalendarEvent",
     "CalendarList",
     "CreateEventRequest",
-    "EventDateTime",
-    "EventReminder",
-    "UpdateEventRequest",
-    # Flight models
-    "Airport",
-    "FlightOffer",
-    "FlightOfferRequest",
-    "Segment",
-    "Passenger",
-    "PaymentRequest",
-    "PriceBreakdown",
     # Weather models
     "CurrentWeather",
     "DailyForecast",
+    "EventDateTime",
+    "EventReminder",
     "HourlyForecast",
+    "UpdateEventRequest",
     "WeatherAlert",
     "WeatherCondition",
     "WeatherForecast",

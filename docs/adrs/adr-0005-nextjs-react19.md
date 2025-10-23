@@ -17,7 +17,7 @@ TripSage's frontend needs to provide a sophisticated AI agent interface with:
 - Server-side rendering capabilities
 - Progressive enhancement
 
-Based on comprehensive frontend research, we need a framework that supports the latest React features and provides optimal performance for AI-driven applications.
+Based on frontend research, we need a framework that supports the latest React features and provides optimal performance for AI-driven applications.
 
 ## Decision
 

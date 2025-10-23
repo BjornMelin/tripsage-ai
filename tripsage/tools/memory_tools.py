@@ -1,521 +1,333 @@
-"""
-Modern memory tools for TripSage agents using Mem0.
+"""Final LangGraph-aligned memory utilities for TripSage.
 
-This module provides memory management tools that wrap the TripSageMemoryService
-for use with agents. Refactored to use dependency injection instead of global state.
+This module provides the definitive, library-first implementation for
+conversation memory and user context using `tripsage_core`'s MemoryService.
+All legacy adapters/tool-context shims have been removed.
 
-Key Features:
-- User-specific memory isolation
-- Automatic conversation memory extraction
-- Travel preference tracking
-- Session-based memory management
-- Fast semantic search (91% faster than baseline)
-- 26% better accuracy than OpenAI memory
+Features:
+- Strict models via `tripsage.tools.models`.
+- Direct use of `MemoryService` request models.
+- OpenTelemetry tracing and histograms (see `tripsage_core.observability.otel`).
 """
+
+from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
-try:
-    from agents import function_tool
-except ImportError:
-    from unittest.mock import MagicMock
-
-    function_tool = MagicMock
-
-from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.tools.models import (
     ConversationMessage,
     MemorySearchQuery,
     SessionSummary,
     UserPreferences,
 )
-from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.observability.otel import record_histogram, trace_span
+from tripsage_core.services.business.memory_service import (
+    ConversationMemoryRequest,
+    MemorySearchRequest,
+    MemoryService,
+    PreferencesUpdateRequest,
+    UserContextResponse,
+)
 from tripsage_core.utils.logging_utils import get_logger
 
-# Set up logger
+
 logger = get_logger(__name__)
 
 
-@function_tool
-async def add_conversation_memory(
-    messages: List[ConversationMessage],
-    user_id: str,
-    service_registry: ServiceRegistry,
-    session_id: Optional[str] = None,
-    context_type: str = "travel_planning",
-    metadata: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
-    """Add conversation messages to user memory.
+_memory_service_singleton: MemoryService | None = None
 
-    This extracts meaningful information from conversations and stores it
-    as searchable memories for future reference.
 
-    Args:
-        messages: List of conversation messages
-        user_id: User identifier
-        service_registry: Service registry for accessing services
-        session_id: Optional session identifier
-        context_type: Type of conversation context
-        metadata: Additional metadata
+async def get_memory_service() -> MemoryService:
+    """Return a connected MemoryService instance (singleton).
 
     Returns:
-        Dictionary with extraction results and metadata
+        A connected MemoryService.
+
+    Raises:
+        RuntimeError: If the service fails to connect.
     """
-    # Validation - these should bubble up as ValueError exceptions
+    global _memory_service_singleton  # pylint: disable=global-statement
+    if _memory_service_singleton is None:
+        svc = MemoryService()
+        await svc.connect()
+        _memory_service_singleton = svc
+    return _memory_service_singleton
+
+
+@trace_span("memory.add_conversation")
+@record_histogram("tripsage.memory.add.seconds")
+async def add_conversation_memory(
+    *,
+    messages: list[ConversationMessage],
+    user_id: str,
+    session_id: str | None = None,
+    context_type: str = "travel_planning",
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Extract and persist memories from a conversation.
+
+    Args:
+        messages: Ordered conversation messages.
+        user_id: Subject user identifier.
+        session_id: Optional session identifier.
+        context_type: Domain context tag for metadata.
+        metadata: Additional metadata to persist with the memory.
+
+    Returns:
+        A JSON-serializable result with extraction stats and items.
+
+    Raises:
+        ValueError: If inputs are invalid.
+    """
     if not messages:
-        raise ValueError("Messages cannot be empty")
-    if not user_id or user_id.strip() == "":
-        raise ValueError("User ID cannot be empty")
+        raise ValueError("messages cannot be empty")
+    if not user_id.strip():
+        raise ValueError("user_id cannot be empty")
 
-    @with_error_handling()
-    async def _do_add_conversation_memory() -> Dict[str, Any]:
-        logger.info(f"Adding conversation memory for user {user_id}")
+    message_dicts = [{"role": m.role, "content": m.content} for m in messages]
+    meta: dict[str, Any] = {
+        "domain": "travel_planning",
+        "context_type": context_type,
+        "session_id": session_id,
+        "timestamp": datetime.now(UTC).isoformat(),
+        "user_id": user_id,
+    }
+    if metadata:
+        meta.update(metadata)
 
-        memory_service = service_registry.get_required_service("memory_service")
+    req = ConversationMemoryRequest(
+        messages=message_dicts, session_id=session_id, trip_id=None, metadata=meta
+    )
+    svc = await get_memory_service()
+    result = await svc.add_conversation_memory(user_id, req)
 
-        # Convert to the format expected by Mem0
-        message_dicts = [{"role": msg.role, "content": msg.content} for msg in messages]
-
-        # Add travel-specific metadata
-        enhanced_metadata = {
-            "domain": "travel_planning",
-            "context_type": context_type,
-            "session_id": session_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "user_id": user_id,
-        }
-        if metadata:
-            enhanced_metadata.update(metadata)
-
-        result = await memory_service.add_conversation_memory(
-            messages=message_dicts,
-            user_id=user_id,
-            session_id=session_id,
-            metadata=enhanced_metadata,
-        )
-
-        logger.info(
-            (
-                f"Successfully extracted {len(result.get('results', []))} "
-                f"memories for user {user_id}"
-            )
-        )
-
-        return {
-            "status": "success",
-            "memory_id": result.get("memory_id", "mem-generated"),
-            "memories_extracted": len(result.get("results", [])),
-            "tokens_used": result.get("usage", {}).get("total_tokens", 0),
-            "extraction_time": result.get("processing_time", 0),
-            "memories": result.get("results", []),
-        }
-
-    return await _do_add_conversation_memory()
+    return {
+        "status": "success",
+        "memories_extracted": len(result.get("results", [])),
+        "tokens_used": result.get("usage", {}).get("total_tokens", 0),
+        "extraction_time": result.get("processing_time", 0),
+        "memories": result.get("results", []),
+    }
 
 
-@function_tool
-@with_error_handling()
-async def search_user_memories(
-    search_query: MemorySearchQuery,
-    service_registry: ServiceRegistry,
-) -> List[Dict[str, Any]]:
+@trace_span("memory.search")
+@record_histogram("tripsage.memory.search.seconds")
+async def search_user_memories(search_query: MemorySearchQuery) -> list[dict[str, Any]]:
     """Search user memories with semantic similarity.
 
     Args:
-        search_query: Memory search query object
-        service_registry: Service registry for accessing services
+        search_query: Query parameters including user_id, query, limit, filters.
 
     Returns:
-        List of memory search results
+        List of memory records as dictionaries (JSON-safe).
     """
-    try:
-        logger.info(
-            (
-                f"Searching memories for user {search_query.user_id} "
-                f"with query: {search_query.query}"
-            )
-        )
-
-        memory_service = service_registry.get_required_service("memory_service")
-
-        results = await memory_service.search_memories(
-            query=search_query.query,
-            user_id=search_query.user_id,
-            limit=search_query.limit,
-            category_filter=search_query.category_filter,
-        )
-
-        return results
-
-    except Exception as e:
-        logger.error(f"Error searching user memories: {str(e)}")
-        return []
+    svc = await get_memory_service()
+    req = MemorySearchRequest(
+        query=search_query.query,
+        limit=search_query.limit,
+        filters=(
+            {"category": search_query.category_filter}
+            if search_query.category_filter
+            else None
+        ),
+    )
+    results = await svc.search_memories(search_query.user_id, req)
+    return [r.model_dump() for r in results]
 
 
-@function_tool
-async def get_user_context(
-    user_id: str,
-    service_registry: ServiceRegistry,
-    context_type: Optional[str] = None,
-) -> Dict[str, Any]:
-    """Get comprehensive user context for personalization.
+@trace_span("memory.user_context")
+@record_histogram("tripsage.memory.user_context.seconds")
+async def get_user_context(user_id: str) -> dict[str, Any]:
+    """Return user context for personalization.
 
     Args:
-        user_id: User identifier
-        service_registry: Service registry for accessing services
-        context_type: Optional context type filter
+        user_id: Subject user identifier.
 
     Returns:
-        Dictionary with user context including preferences, history, and insights
+        JSON-serializable context dict with preferences, history, insights.
     """
-    if not user_id:
-        raise ValueError("User ID cannot be empty")
+    if not user_id.strip():
+        raise ValueError("user_id cannot be empty")
 
-    @with_error_handling()
-    async def _do_get_user_context() -> Dict[str, Any]:
-        logger.info(f"Getting user context for user {user_id}")
-
-        memory_service = service_registry.get_required_service("memory_service")
-
-        context = await memory_service.get_user_context(user_id)
-
-        return context
-
-    return await _do_get_user_context()
+    svc = await get_memory_service()
+    ctx: UserContextResponse = await svc.get_user_context(user_id)
+    return {"status": "success", "context": ctx.model_dump(exclude_none=True)}
 
 
-@function_tool
-@with_error_handling()
-async def update_user_preferences(
-    preferences: UserPreferences,
-    service_registry: ServiceRegistry,
-) -> Dict[str, Any]:
-    """Update user travel preferences.
+@trace_span("memory.update_preferences")
+@record_histogram("tripsage.memory.update_preferences.seconds")
+async def update_user_preferences(preferences: UserPreferences) -> dict[str, Any]:
+    """Update user travel preferences in persistent memory.
 
     Args:
-        preferences: User preferences object
-        service_registry: Service registry for accessing services
+        preferences: User travel preferences model.
 
     Returns:
-        Dictionary with update status
+        Operation status with count of updated items.
     """
-    try:
-        user_id = preferences.user_id
-        logger.info(f"Updating preferences for user {user_id}")
-
-        memory_service = service_registry.get_required_service("memory_service")
-
-        # Convert preferences to dictionary
-        preferences_dict = preferences.model_dump(
-            exclude_none=True, exclude={"user_id"}, by_alias=True
-        )
-
-        await memory_service.update_user_preferences(
-            user_id=user_id, preferences=preferences_dict
-        )
-
-        return {
-            "status": "success",
-            "message": "User preferences updated successfully",
-            "preferences_updated": len(preferences_dict),
-        }
-
-    except Exception as e:
-        logger.error(f"Error updating user preferences: {str(e)}")
-        return {"status": "error", "error": str(e)}
+    svc = await get_memory_service()
+    pref_dict = preferences.model_dump(
+        exclude_none=True, exclude={"user_id"}, by_alias=True
+    )
+    req = PreferencesUpdateRequest(preferences=pref_dict, category=None)
+    await svc.update_user_preferences(preferences.user_id, req)
+    return {"status": "success", "preferences_updated": len(pref_dict)}
 
 
-@function_tool
-@with_error_handling()
-async def save_session_summary(
-    session_summary: SessionSummary,
-    service_registry: ServiceRegistry,
-) -> Dict[str, Any]:
-    """Save a summary of the conversation session.
+@trace_span("memory.save_session_summary")
+@record_histogram("tripsage.memory.save_session_summary.seconds")
+async def save_session_summary(session_summary: SessionSummary) -> dict[str, Any]:
+    """Persist a conversational session summary as memory.
 
     Args:
-        session_summary: Session summary object
-        service_registry: Service registry for accessing services
+        session_summary: Summary payload.
 
     Returns:
-        Dictionary with save status
+        Operation status including memories created.
     """
-    try:
-        logger.info(f"Saving session summary for user {session_summary.user_id}")
-
-        memory_service = service_registry.get_required_service("memory_service")
-
-        # Create conversation for the summary
-        summary_messages = [
+    sys_msg = {
+        "role": "system",
+        "content": "Extract key insights and decisions from this session summary.",
+    }
+    msgs = [
+        sys_msg,
+        {"role": "user", "content": f"Session Summary: {session_summary.summary}"},
+    ]
+    if session_summary.key_insights:
+        msgs.append(
             {
-                "role": "system",
-                "content": (
-                    "Extract key insights and decisions from this session summary."
-                ),
-            },
-            {"role": "user", "content": f"Session Summary: {session_summary.summary}"},
-        ]
-
-        if session_summary.key_insights:
-            summary_messages.append(
-                {
-                    "role": "user",
-                    "content": (
-                        f"Key Insights: {', '.join(session_summary.key_insights)}"
-                    ),
-                }
-            )
-
-        if session_summary.decisions_made:
-            summary_messages.append(
-                {
-                    "role": "user",
-                    "content": (
-                        f"Decisions Made: {', '.join(session_summary.decisions_made)}"
-                    ),
-                }
-            )
-
-        result = await memory_service.add_conversation_memory(
-            messages=summary_messages,
-            user_id=session_summary.user_id,
-            session_id=session_summary.session_id,
-            metadata={
-                "type": "session_summary",
-                "category": "travel_planning",
-                "session_end": datetime.now(timezone.utc).isoformat(),
-            },
-        )
-
-        return {
-            "status": "success",
-            "message": "Session summary saved successfully",
-            "memories_created": len(result.get("results", [])),
-        }
-
-    except Exception as e:
-        logger.error(f"Error saving session summary: {str(e)}")
-        return {"status": "error", "error": str(e)}
-
-
-@function_tool
-@with_error_handling()
-async def get_travel_insights(
-    user_id: str,
-    service_registry: ServiceRegistry,
-    insight_type: Optional[str] = None,
-) -> Dict[str, Any]:
-    """Get travel insights based on user's memory.
-
-    Args:
-        user_id: User identifier
-        service_registry: Service registry for accessing services
-        insight_type: Type of insights to retrieve
-
-    Returns:
-        Dictionary with travel insights
-    """
-    try:
-        logger.info(f"Getting travel insights for user {user_id}")
-
-        # Get user context first
-        context_result = await get_user_context(user_id, service_registry)
-
-        if context_result["status"] != "success":
-            return context_result
-
-        context = context_result["context"]
-        insights = context.get("insights", {})
-
-        if insight_type and insight_type in insights:
-            return {
-                "status": "success",
-                "insight_type": insight_type,
-                "insights": {insight_type: insights[insight_type]},
+                "role": "user",
+                "content": f"Key Insights: {', '.join(session_summary.key_insights)}",
             }
+        )
+    if session_summary.decisions_made:
+        joined = ", ".join(session_summary.decisions_made)
+        msgs.append({"role": "user", "content": f"Decisions Made: {joined}"})
 
-        return {"status": "success", "insights": insights}
-
-    except Exception as e:
-        logger.error(f"Error getting travel insights: {str(e)}")
-        return {"status": "error", "error": str(e), "insights": {}}
-
-
-@function_tool
-@with_error_handling()
-async def find_similar_travelers(
-    user_id: str,
-    service_registry: ServiceRegistry,
-    similarity_threshold: float = 0.8,
-) -> Dict[str, Any]:
-    """Find users with similar travel preferences and history.
-
-    Args:
-        user_id: User identifier
-        service_registry: Service registry for accessing services
-        similarity_threshold: Minimum similarity threshold
-
-    Returns:
-        Dictionary with similar travelers
-    """
-    try:
-        logger.info(f"Finding similar travelers for user {user_id}")
-
-        # Get user's preferences
-        context_result = await get_user_context(user_id, service_registry)
-
-        if context_result["status"] != "success":
-            return context_result
-
-        # Note: user_context would be used for similarity matching in full impl
-        # user_context = context_result["context"]
-
-        # Note: This is a simplified implementation
-        # In a full implementation, we'd have more sophisticated similarity matching
-        return {
-            "status": "success",
-            "similar_travelers_count": 0,  # Placeholder - needs cross-user search
-            "message": "Similar traveler search requires cross-user memory access",
-        }
-
-    except Exception as e:
-        logger.error(f"Error finding similar travelers: {str(e)}")
-        return {"status": "error", "error": str(e), "similar_travelers": []}
+    svc = await get_memory_service()
+    req = ConversationMemoryRequest(
+        messages=msgs,
+        session_id=session_summary.session_id,
+        trip_id=None,
+        metadata={
+            "type": "session_summary",
+            "category": "travel_planning",
+            "session_end": datetime.now(UTC).isoformat(),
+        },
+    )
+    result = await svc.add_conversation_memory(session_summary.user_id, req)
+    return {"status": "success", "memories_created": len(result.get("results", []))}
 
 
-@function_tool
-@with_error_handling()
+@trace_span("memory.get_destination")
+@record_histogram("tripsage.memory.get_destination.seconds")
 async def get_destination_memories(
-    destination: str,
-    service_registry: ServiceRegistry,
-    user_id: Optional[str] = None,
-) -> Dict[str, Any]:
-    """Get memories related to a specific destination.
+    destination: str, user_id: str | None = None
+) -> dict[str, Any]:
+    """Return memories relevant to a destination, optionally scoped to a user.
 
     Args:
-        destination: Destination name
-        service_registry: Service registry for accessing services
-        user_id: Optional user ID for personalized results
+        destination: Destination name.
+        user_id: Optional user identifier for personalized results.
 
     Returns:
-        Dictionary with destination memories
+        Dictionary with destination and list of memories.
     """
-    try:
-        logger.info(f"Getting destination memories for: {destination}")
-
-        if user_id:
-            # Get user-specific destination memories
-            search_query = MemorySearchQuery(
+    memories: list[dict[str, Any]] = []
+    if user_id:
+        memories = await search_user_memories(
+            MemorySearchQuery(
                 query=destination,
                 user_id=user_id,
                 limit=10,
                 category_filter="destinations",
             )
-            memories = await search_user_memories(search_query, service_registry)
-        else:
-            # This would require system-wide search capability
-            # For now, return empty results
-            memories = []
-
-        return {
-            "status": "success",
-            "destination": destination,
-            "memories": memories if isinstance(memories, list) else [],
-        }
-
-    except Exception as e:
-        logger.error(f"Error getting destination memories: {str(e)}")
-        return {"status": "error", "error": str(e), "memories": []}
-
-
-@function_tool
-@with_error_handling()
-async def track_user_activity(
-    user_id: str,
-    activity_type: str,
-    activity_data: Dict[str, Any],
-    service_registry: ServiceRegistry,
-) -> Dict[str, Any]:
-    """Track user activity for behavior analysis.
-
-    Args:
-        user_id: User identifier
-        activity_type: Type of activity (search, booking, view, etc.)
-        activity_data: Activity data
-        service_registry: Service registry for accessing services
-
-    Returns:
-        Dictionary with tracking status
-    """
-    try:
-        logger.info(f"Tracking activity for user {user_id}: {activity_type}")
-
-        # Create activity memory
-        activity_messages = [
-            ConversationMessage(
-                role="system", content="Track user activity for behavior analysis."
-            ),
-            ConversationMessage(
-                role="user",
-                content=(
-                    f"User performed {activity_type} activity: "
-                    f"{json.dumps(activity_data)}"
-                ),
-            ),
-        ]
-
-        result = await add_conversation_memory(
-            messages=activity_messages,
-            user_id=user_id,
-            service_registry=service_registry,
-            context_type="user_activity",
         )
-
-        return {
-            "status": "success",
-            "activity_tracked": activity_type,
-            "memories_created": result.get("memories_extracted", 0),
-        }
-
-    except Exception as e:
-        logger.error(f"Error tracking user activity: {str(e)}")
-        return {"status": "error", "error": str(e)}
+    return {"status": "success", "destination": destination, "memories": memories}
 
 
-# Health check function
-@function_tool
-@with_error_handling()
-async def memory_health_check(service_registry: ServiceRegistry) -> Dict[str, Any]:
-    """Check memory service health.
+@trace_span("memory.track_activity")
+@record_histogram("tripsage.memory.track_activity.seconds")
+async def track_user_activity(
+    *, user_id: str, activity_type: str, activity_data: dict[str, Any]
+) -> dict[str, Any]:
+    """Track a user activity as a memory event.
 
     Args:
-        service_registry: Service registry for accessing services
+        user_id: User identifier.
+        activity_type: Activity type, e.g. "search" or "booking".
+        activity_data: Arbitrary JSON-safe payload.
 
     Returns:
-        Dictionary with health status
+        Operation status with created memory count.
+    """
+    messages = [
+        ConversationMessage(
+            role="system", content="Track user activity for behavior analysis."
+        ),
+        ConversationMessage(
+            role="user",
+            content=(
+                f"User performed {activity_type} activity: {json.dumps(activity_data)}"
+            ),
+        ),
+    ]
+    result = await add_conversation_memory(
+        messages=messages, user_id=user_id, context_type="user_activity"
+    )
+    return {
+        "status": "success",
+        "activity_tracked": activity_type,
+        "memories_created": result.get("memories_extracted", 0),
+    }
+
+
+@trace_span("memory.health_check")
+@record_histogram("tripsage.memory.health_check.seconds")
+async def memory_health_check() -> dict[str, Any]:
+    """Perform a lightweight health check against the memory backend.
+
+    Returns:
+        Health status payload.
     """
     try:
-        memory_service = service_registry.get_required_service("memory_service")
-        is_healthy = await memory_service.health_check()
-
-        return {
-            "status": "healthy" if is_healthy else "unhealthy",
-            "service": "Mem0 Memory Service",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
-
-    except Exception as e:
-        logger.error(f"Memory health check failed: {str(e)}")
+        svc = await get_memory_service()
+        ok = await svc.health_check()
+        if ok:
+            return {
+                "status": "healthy",
+                "service": "Mem0 Memory Service",
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
         return {
             "status": "unhealthy",
             "service": "Mem0 Memory Service",
-            "error": str(e),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+    except Exception as exc:
+        logger.exception("Memory health check failed")
+        return {
+            "status": "unhealthy",
+            "service": "Mem0 Memory Service",
+            "error": str(exc),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
 
-# Compatibility aliases for legacy test imports
-search_memory_tool = search_user_memories
-add_memory_tool = add_conversation_memory
+__all__ = [
+    "ConversationMessage",
+    "MemorySearchQuery",
+    "SessionSummary",
+    "UserPreferences",
+    "add_conversation_memory",
+    "get_destination_memories",
+    "get_memory_service",
+    "get_user_context",
+    "memory_health_check",
+    "save_session_summary",
+    "search_user_memories",
+    "track_user_activity",
+    "update_user_preferences",
+]

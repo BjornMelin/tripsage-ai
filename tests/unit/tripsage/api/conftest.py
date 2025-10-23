@@ -1,5 +1,4 @@
-"""
-Pytest configuration for tripsage.api tests.
+"""Pytest configuration for tripsage.api tests.
 
 This module provides specific fixtures for testing the agent API configuration
 and exception handlers without interference from global mocks.

@@ -10,16 +10,16 @@
 ### Deployment & Operations
 
 - [Deployment Guide](./deployment-guide.md) - Production deployment checklist and procedures
-- [Comprehensive Deployment Guide](./comprehensive-deployment-guide.md) - Complete deployment for all environments with CI/CD, monitoring, and cloud platforms
+- [Deployment Guide Full](./deployment-guide-full.md) - Complete deployment for all environments with CI/CD, monitoring, and cloud platforms
 - [Configuration Management](./configuration-management.md) - Modern Pydantic-based configuration system with security
 - [Supabase Configuration](./supabase-configuration.md) - Database setup and extensions
 
 ### Security & Authentication
 
-- [Security Guide](./security-guide.md) - Comprehensive security implementation
+- [Security Guide](./security-guide.md) - Security implementation
 - [Authentication Guide](./authentication-guide.md) - OAuth setup and troubleshooting
 
-### Advanced Configuration
+### Configuration Details
 
 - [Settings Reference](./settings-reference.md) - Pydantic settings and technical configuration
 

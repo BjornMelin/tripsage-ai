@@ -28,7 +28,7 @@ const generateTripData = (data: any) => {
     tags: data.tags || [],
     preferences: data.preferences || {},
     status: data.status || "planning",
-    budget_breakdown: data.enhanced_budget || null,
+    budget_breakdown: data.budget_breakdown || null,
     created_at: now,
     updated_at: now,
   };

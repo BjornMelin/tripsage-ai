@@ -14,10 +14,8 @@ from ..trip import Trip
 from .accommodation import (
     Accommodation,
     AccommodationType,
-    CancellationPolicy,
-)
-from .accommodation import (
     BookingStatus as AccommodationBookingStatus,
+    CancellationPolicy,
 )
 
 # API Key models
@@ -36,11 +34,9 @@ from .chat import (
 # Flight models
 from .flight import (
     AirlineProvider,
+    BookingStatus as FlightBookingStatus,
     DataSource,
     Flight,
-)
-from .flight import (
-    BookingStatus as FlightBookingStatus,
 )
 
 # Memory models (Mem0 + pgvector)
@@ -62,8 +58,6 @@ from .search_parameters import SearchParameters
 # Transportation models
 from .transportation import (
     BookingStatus as TransportationBookingStatus,
-)
-from .transportation import (
     Transportation,
     TransportationType,
 )
@@ -79,64 +73,65 @@ from .trip_comparison import TripComparison
 from .trip_note import TripNote
 from .user import User, UserRole
 
+
 __all__ = [
-    # User
-    "User",
-    "UserRole",
-    # API Key
-    "ApiKeyDB",
-    "ApiKeyCreate",
-    "ApiKeyUpdate",
-    # Trip
-    "Trip",
-    "TripStatus",
-    "TripType",
-    "TripVisibility",
-    # Flight
-    "Flight",
-    "AirlineProvider",
-    "FlightBookingStatus",
-    "DataSource",
     # Accommodation
     "Accommodation",
-    "AccommodationType",
     "AccommodationBookingStatus",
+    "AccommodationType",
+    "AirlineProvider",
+    "ApiKeyCreate",
+    # API Key
+    "ApiKeyDB",
+    "ApiKeyUpdate",
     "CancellationPolicy",
-    # Transportation
-    "Transportation",
-    "TransportationType",
-    "TransportationBookingStatus",
+    "ChatMessageDB",
+    # Chat models
+    "ChatSessionDB",
+    "ChatSessionWithStats",
+    "ChatToolCallDB",
+    "DataSource",
+    "EntityType",
+    # Flight
+    "Flight",
+    "FlightBookingStatus",
+    # Memory models
+    "Memory",
+    "MemoryCreate",
+    "MemorySearchResult",
+    "MemoryUpdate",
+    "MessageWithTokenEstimate",
+    "OptionType",
+    "PermissionLevel",
+    # Price History
+    "PriceHistory",
+    "RecentMessagesResponse",
+    # Saved Option
+    "SavedOption",
     # Itinerary Item - temporarily commented out
     # "ItineraryItem",
     # "ItemType",
     # Search Parameters
     "SearchParameters",
-    # Trip Note
-    "TripNote",
+    "SessionMemory",
+    # Transportation
+    "Transportation",
+    "TransportationBookingStatus",
+    "TransportationType",
+    # Trip
+    "Trip",
+    "TripCollaboratorCreate",
     # Trip Collaborator
     "TripCollaboratorDB",
-    "TripCollaboratorCreate",
     "TripCollaboratorUpdate",
-    "PermissionLevel",
-    # Price History
-    "PriceHistory",
-    "EntityType",
-    # Saved Option
-    "SavedOption",
-    "OptionType",
     # Trip Comparison
     "TripComparison",
-    # Chat models
-    "ChatSessionDB",
-    "ChatMessageDB",
-    "ChatToolCallDB",
-    "ChatSessionWithStats",
-    "MessageWithTokenEstimate",
-    "RecentMessagesResponse",
-    # Memory models
-    "Memory",
-    "SessionMemory",
-    "MemorySearchResult",
-    "MemoryCreate",
-    "MemoryUpdate",
+    # Trip Note
+    "TripNote",
+    "TripStatus",
+    "TripType",
+    "TripVisibility",
+    # User
+    "User",
+    "UserRole",
 ]

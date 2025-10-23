@@ -1,18 +1,19 @@
-"""
-Configuration for full stack integration tests.
+"""Configuration for full stack integration tests.
 
-This module provides fixtures and setup for comprehensive integration testing
+This module provides fixtures and setup for integration testing
 with real database and cache dependencies.
 """
 
 import os
 import uuid
-from typing import Any, AsyncGenerator, Dict
+from collections.abc import AsyncGenerator
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import redis.asyncio as redis
 from fastapi.testclient import TestClient
+from redis.exceptions import RedisError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
@@ -76,7 +77,7 @@ async def integration_redis():
         await redis_client.flushdb()
         await redis_client.close()
 
-    except Exception as e:
+    except (RedisError, OSError) as e:
         # Fallback to mock for CI environments without Redis
         print(f"Redis not available, using mock: {e}")
         mock_redis = AsyncMock()
@@ -205,7 +206,7 @@ async def integration_db_engine():
 @pytest.fixture
 async def integration_db_session(
     integration_db_engine,
-) -> AsyncGenerator[AsyncSession, None]:
+) -> AsyncGenerator[AsyncSession]:
     """Create database session for each test."""
     async with AsyncSession(integration_db_engine) as session:
         yield session
@@ -218,12 +219,12 @@ async def test_user_factory(integration_db_session):
     """Factory for creating test users."""
 
     async def create_user(
-        email: str = None,
-        username: str = None,
-        full_name: str = None,
+        email: str | None = None,
+        username: str | None = None,
+        full_name: str | None = None,
         is_active: bool = True,
         is_verified: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         user_id = str(uuid.uuid4())
         user_data = {
             "id": user_id,
@@ -254,18 +255,20 @@ async def authenticated_test_client(test_user_factory):
     """Create TestClient with authenticated user."""
     user = await test_user_factory()
 
-    with patch(
-        "tripsage.api.core.dependencies.get_principal_id", return_value=user["id"]
+    with (
+        patch(
+            "tripsage.api.core.dependencies.get_principal_id", return_value=user["id"]
+        ),
+        patch("tripsage.api.core.dependencies.require_principal") as mock_auth,
     ):
-        with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
-            mock_principal = MagicMock()
-            mock_principal.user_id = user["id"]
-            mock_principal.email = user["email"]
-            mock_auth.return_value = mock_principal
+        mock_principal = MagicMock()
+        mock_principal.user_id = user["id"]
+        mock_principal.email = user["email"]
+        mock_auth.return_value = mock_principal
 
-            client = TestClient(app)
-            client.user = user  # Attach user data for test access
-            yield client
+        client = TestClient(app)
+        cast(Any, client).user = user  # Attach user data for test access
+        yield client
 
 
 @pytest.fixture
@@ -322,23 +325,25 @@ def mock_external_apis():
 @pytest.fixture
 def mock_encryption():
     """Mock encryption for faster tests."""
-    with patch(
-        "tripsage_core.services.business.api_key_service.ApiKeyService._encrypt_api_key"
-    ) as mock_encrypt:
-        with patch(
+    with (
+        patch(
+            "tripsage_core.services.business.api_key_service.ApiKeyService._encrypt_api_key"
+        ) as mock_encrypt,
+        patch(
             "tripsage_core.services.business.api_key_service.ApiKeyService._decrypt_api_key"
-        ) as mock_decrypt:
-            # Simple mock encryption/decryption
-            def encrypt(key_value: str) -> str:
-                return f"encrypted_{key_value}"
+        ) as mock_decrypt,
+    ):
+        # Simple mock encryption/decryption
+        def encrypt(key_value: str) -> str:
+            return f"encrypted_{key_value}"
 
-            def decrypt(encrypted_key: str) -> str:
-                return encrypted_key.replace("encrypted_", "")
+        def decrypt(encrypted_key: str) -> str:
+            return encrypted_key.replace("encrypted_", "")
 
-            mock_encrypt.side_effect = encrypt
-            mock_decrypt.side_effect = decrypt
+        mock_encrypt.side_effect = encrypt
+        mock_decrypt.side_effect = decrypt
 
-            yield {"encrypt": mock_encrypt, "decrypt": mock_decrypt}
+        yield {"encrypt": mock_encrypt, "decrypt": mock_decrypt}
 
 
 @pytest.fixture(autouse=True)
@@ -349,7 +354,7 @@ async def cleanup_redis_after_test(integration_redis):
     try:
         if hasattr(integration_redis, "flushdb"):
             await integration_redis.flushdb()
-    except Exception:
+    except RedisError:
         pass  # Ignore cleanup errors
 
 

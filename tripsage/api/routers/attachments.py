@@ -5,7 +5,6 @@ of travel documents, following KISS principles and security best practices.
 """
 
 import logging
-from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
@@ -24,6 +23,7 @@ from tripsage_core.services.business.file_processing_service import (
 )
 from tripsage_core.services.business.trip_service import TripService, get_trip_service
 from tripsage_core.utils.file_utils import MAX_SESSION_SIZE, validate_file
+
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class FileUploadResponse(BaseModel):
 class BatchUploadResponse(BaseModel):
     """Response model for batch file upload."""
 
-    files: List[FileUploadResponse] = Field(..., description="Processed files")
+    files: list[FileUploadResponse] = Field(..., description="Processed files")
     total_files: int = Field(..., description="Total files processed")
     total_size: int = Field(..., description="Total size in bytes")
 
@@ -106,15 +106,19 @@ async def upload_file(
 
         # Create upload request
         upload_request = FileUploadRequest(
-            filename=file.filename, content=content, auto_analyze=True
+            filename=file.filename or "uploaded_file",
+            content=content,
+            auto_analyze=True,
         )
 
         # Process file
         result = await service.upload_file(user_id, upload_request)
 
         logger.info(
-            f"File uploaded successfully: {file.filename} ({result.file_size} bytes) "
-            f"for user {user_id}"
+            "File uploaded successfully: %s (%s bytes) for user %s",
+            file.filename,
+            result.file_size,
+            user_id,
         )
 
         return FileUploadResponse(
@@ -128,7 +132,7 @@ async def upload_file(
         )
 
     except Exception as e:
-        logger.error(f"File processing failed for {file.filename}: {str(e)}")
+        logger.exception("File processing failed for %s", file.filename)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="File processing failed",
@@ -137,7 +141,7 @@ async def upload_file(
 
 @router.post("/upload/batch", response_model=BatchUploadResponse)
 async def upload_files_batch(
-    files: List[UploadFile] = files_upload_dep,
+    files: list[UploadFile] = files_upload_dep,
     principal: Principal = require_principal_module_dep,
     service: FileProcessingService = get_file_processing_service_dep,
 ):
@@ -186,7 +190,9 @@ async def upload_files_batch(
 
             # Create upload request
             upload_request = FileUploadRequest(
-                filename=file.filename, content=content, auto_analyze=True
+                filename=file.filename or "uploaded_file",
+                content=content,
+                auto_analyze=True,
             )
 
             # Process file
@@ -203,8 +209,8 @@ async def upload_files_batch(
                 )
             )
 
-        except Exception as e:
-            logger.error(f"Failed to process file {file.filename}: {str(e)}")
+        except Exception:
+            logger.exception("Failed to process file %s", file.filename)
             errors.append(f"{file.filename}: Processing failed")
 
     if errors and not processed_files:
@@ -216,11 +222,13 @@ async def upload_files_batch(
 
     if errors:
         # Some files failed - log warnings but return successful ones
-        logger.warning(f"Some files failed processing: {'; '.join(errors)}")
+        logger.warning("Some files failed processing: %s", "; ".join(errors))
 
     logger.info(
-        f"Batch upload completed: {len(processed_files)}/{len(files)} files processed "
-        f"for user {user_id}"
+        "Batch upload completed: %s/%s files processed for user %s",
+        len(processed_files),
+        len(files),
+        user_id,
     )
 
     return BatchUploadResponse(
@@ -252,7 +260,7 @@ async def get_file_metadata(
         return file_info
 
     except Exception as e:
-        logger.error(f"Failed to get file info for {file_id}: {str(e)}")
+        logger.exception("Failed to get file info for %s", file_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve file information",
@@ -278,11 +286,11 @@ async def delete_file(
                 detail="File not found or access denied",
             )
 
-        logger.info(f"File {file_id} deleted by user {user_id}")
+        logger.info("File %s deleted by user %s", file_id, user_id)
         return {"message": "File deleted successfully", "file_id": file_id}
 
     except Exception as e:
-        logger.error(f"Failed to delete file {file_id}: {str(e)}")
+        logger.exception("Failed to delete file %s", file_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete file",
@@ -313,7 +321,7 @@ async def list_user_files(
         }
 
     except Exception as e:
-        logger.error(f"Failed to list files for user {user_id}: {str(e)}")
+        logger.exception("Failed to list files for user %s", user_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve file list",
@@ -364,7 +372,7 @@ async def download_file(
             "Content-Type": file_info.mime_type,
         }
 
-        logger.info(f"File {file_id} downloaded by user {user_id}")
+        logger.info("File %s downloaded by user %s", file_id, user_id)
 
         return StreamingResponse(
             io.BytesIO(file_content),
@@ -375,7 +383,7 @@ async def download_file(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to download file {file_id}: {str(e)}")
+        logger.exception("Failed to download file %s", file_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to download file",
@@ -443,13 +451,13 @@ async def list_trip_attachments(
         search_request = FileSearchRequest(
             limit=limit,
             offset=offset,
-            filters={"trip_id": trip_id},
+            trip_id=trip_id,
         )
 
         files = await service.search_files(user_id, search_request)
 
         logger.info(
-            f"Listed {len(files)} attachments for trip {trip_id} by user {user_id}"
+            "Listed %s attachments for trip %s by user %s", len(files), trip_id, user_id
         )
 
         return {
@@ -463,7 +471,7 @@ async def list_trip_attachments(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to list trip attachments for trip {trip_id}: {str(e)}")
+        logger.exception("Failed to list trip attachments for trip %s", trip_id)
 
         # Log system error
         await audit_security_event(

@@ -1,12 +1,11 @@
-"""
-Test coverage for potential trip collaboration endpoints.
+"""Test coverage for potential trip collaboration endpoints.
 
-This module provides comprehensive test coverage for trip collaboration
+This module provides test coverage for trip collaboration
 features that should be implemented in the router, based on the
 existing service layer functionality.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
@@ -16,9 +15,7 @@ from fastapi import HTTPException, status
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.trips import TripShareRequest
 from tripsage_core.exceptions import (
-    CoreAuthorizationError as PermissionError,
-)
-from tripsage_core.exceptions import (
+    CoreAuthorizationError as ServicePermissionError,
     CoreResourceNotFoundError as NotFoundError,
 )
 from tripsage_core.models.db.trip_collaborator import TripCollaboratorDB
@@ -26,8 +23,7 @@ from tripsage_core.services.business.trip_service import TripService
 
 
 class TestTripCollaborationEndpoints:
-    """
-    Test potential collaboration endpoints for the trips router.
+    """Test potential collaboration endpoints for the trips router.
 
     These tests demonstrate what the collaboration functionality should
     look like when implemented in the router layer.
@@ -67,18 +63,27 @@ class TestTripCollaborationEndpoints:
     @pytest.fixture
     def sample_collaborators(self):
         """Sample trip collaborators."""
+        now = datetime.now(UTC)
         return [
             TripCollaboratorDB(
-                user_id="collab456",
+                id=1,
+                trip_id=123,
+                user_id=uuid4(),
                 email="collaborator@example.com",
                 permission_level="view",
-                added_at=datetime.now(timezone.utc),
+                added_by=uuid4(),
+                added_at=now,
+                updated_at=now,
             ),
             TripCollaboratorDB(
-                user_id="editor789",
+                id=2,
+                trip_id=123,
+                user_id=uuid4(),
                 email="editor@example.com",
                 permission_level="edit",
-                added_at=datetime.now(timezone.utc),
+                added_by=uuid4(),
+                added_at=now,
+                updated_at=now,
             ),
         ]
 
@@ -101,8 +106,7 @@ class TestTripCollaborationEndpoints:
         principal: Principal,
         trip_service: TripService,
     ):
-        """
-        Potential endpoint: Share trip with other users.
+        """Potential endpoint: Share trip with other users.
 
         POST /trips/{trip_id}/share
         """
@@ -117,12 +121,21 @@ class TestTripCollaborationEndpoints:
                 "message": f"Trip shared with {len(collaborators)} users",
                 "collaborators": [
                     {
-                        "user_id": c.user_id,
-                        "email": c.email,
-                        "permission_level": c.permission_level,
-                        "added_at": c.added_at.isoformat(),
+                        "user_id": str(getattr(c, "user_id", "")),
+                        "email": (
+                            getattr(c, "email", "")
+                            or (
+                                share_request.user_emails[idx]
+                                if idx < len(share_request.user_emails)
+                                else ""
+                            )
+                        ),
+                        "permission_level": getattr(c, "permission_level", "view"),
+                        "added_at": getattr(
+                            c, "added_at", datetime.now(UTC)
+                        ).isoformat(),
                     }
-                    for c in collaborators
+                    for idx, c in enumerate(collaborators)
                 ],
             }
 
@@ -131,7 +144,7 @@ class TestTripCollaborationEndpoints:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Trip not found",
             ) from None
-        except PermissionError:
+        except ServicePermissionError:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only trip owner can share the trip",
@@ -148,8 +161,7 @@ class TestTripCollaborationEndpoints:
         principal: Principal,
         trip_service: TripService,
     ):
-        """
-        Potential endpoint: Get trip collaborators.
+        """Potential endpoint: Get trip collaborators.
 
         GET /trips/{trip_id}/collaborators
         """
@@ -163,10 +175,12 @@ class TestTripCollaborationEndpoints:
                 "trip_id": str(trip_id),
                 "collaborators": [
                     {
-                        "user_id": c.user_id,
-                        "email": c.email,
-                        "permission_level": c.permission_level,
-                        "added_at": c.added_at.isoformat(),
+                        "user_id": str(getattr(c, "user_id", "")),
+                        "email": getattr(c, "email", ""),
+                        "permission_level": getattr(c, "permission_level", "view"),
+                        "added_at": getattr(
+                            c, "added_at", datetime.now(UTC)
+                        ).isoformat(),
                     }
                     for c in collaborators
                 ],
@@ -186,8 +200,7 @@ class TestTripCollaborationEndpoints:
         principal: Principal,
         trip_service: TripService,
     ):
-        """
-        Potential endpoint: Remove trip collaborator.
+        """Potential endpoint: Remove trip collaborator.
 
         DELETE /trips/{trip_id}/collaborators/{collaborator_user_id}
         """
@@ -199,12 +212,6 @@ class TestTripCollaborationEndpoints:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Only trip owner can remove collaborators",
                 )
-
-            # Mock removal - this would need to be implemented in service
-            # success = await trip_service.remove_trip_collaborator(
-            #     trip_id=str(trip_id),
-            #     collaborator_user_id=collaborator_user_id,
-            # )
 
             return {"message": "Collaborator removed successfully"}
 
@@ -224,8 +231,7 @@ class TestTripCollaborationEndpoints:
         principal: Principal,
         trip_service: TripService,
     ):
-        """
-        Potential endpoint: Update collaborator permissions.
+        """Potential endpoint: Update collaborator permissions.
 
         PUT /trips/{trip_id}/collaborators/{collaborator_user_id}/permissions
         """
@@ -243,13 +249,6 @@ class TestTripCollaborationEndpoints:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Permission level must be 'view' or 'edit'",
                 )
-
-            # Mock update - this would need to be implemented in service
-            # updated_collaborator = await trip_service.update_collaborator_permission(
-            #     trip_id=str(trip_id),
-            #     collaborator_user_id=collaborator_user_id,
-            #     permission_level=permission_level,
-            # )
 
             return {
                 "message": "Collaborator permissions updated successfully",
@@ -331,7 +330,7 @@ class TestTripCollaborationEndpoints:
             permission_level="view",
         )
 
-        mock_trip_service.share_trip.side_effect = PermissionError(
+        mock_trip_service.share_trip.side_effect = ServicePermissionError(
             "Only trip owner can share the trip"
         )
 
@@ -539,7 +538,7 @@ class TestTripCollaborationEndpoints:
             user_emails=["someone@example.com"],
             permission_level="view",
         )
-        mock_trip_service.share_trip.side_effect = PermissionError("Not owner")
+        mock_trip_service.share_trip.side_effect = ServicePermissionError("Not owner")
 
         with pytest.raises(HTTPException) as exc_info:
             await self.share_trip_endpoint(
@@ -605,12 +604,17 @@ class TestTripCollaborationEndpoints:
         trip_id = uuid4()
 
         # Create 100 collaborators
+        now = datetime.now(UTC)
         large_collaborator_list = [
             TripCollaboratorDB(
-                user_id=f"user{i}",
+                id=i + 1,
+                trip_id=456,
+                user_id=uuid4(),
                 email=f"user{i}@example.com",
                 permission_level="view" if i % 2 == 0 else "edit",
-                added_at=datetime.now(timezone.utc),
+                added_by=uuid4(),
+                added_at=now,
+                updated_at=now,
             )
             for i in range(100)
         ]
@@ -640,12 +644,17 @@ class TestTripCollaborationEndpoints:
         )
 
         # Mock returning all collaborators
+        now = datetime.now(UTC)
         mock_collaborators = [
             TripCollaboratorDB(
-                user_id=f"user{i}",
+                id=i + 1,
+                trip_id=789,
+                user_id=uuid4(),
                 email=f"user{i}@example.com",
                 permission_level="view",
-                added_at=datetime.now(timezone.utc),
+                added_by=uuid4(),
+                added_at=now,
+                updated_at=now,
             )
             for i in range(50)
         ]

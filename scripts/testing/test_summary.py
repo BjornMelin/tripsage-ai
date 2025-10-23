@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""
-Test summary script to show test progress.
-"""
+"""Test summary script to show test progress."""
 
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 
 def get_test_results(test_dir):
     """Run tests and get results."""
     env = os.environ.copy()
-    env["PYTHONPATH"] = os.getcwd()
+    env["PYTHONPATH"] = str(Path.cwd())
     env["ENV"] = "test"
 
     cmd = [
@@ -25,7 +24,7 @@ def get_test_results(test_dir):
         "--no-summary",
     ]
 
-    result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+    result = subprocess.run(cmd, env=env, capture_output=True, text=True, check=False)
 
     # Parse output
     passed = 0
@@ -41,7 +40,7 @@ def get_test_results(test_dir):
                     passed = int(parts[i - 1])
                 elif part == "failed":
                     failed = int(parts[i - 1])
-                elif part == "error" in line:
+                elif part in ("errors", "error"):
                     errors = int(parts[i - 1])
         elif " passed" in line and "failed" not in line:
             # Only passed tests
@@ -76,7 +75,7 @@ def main():
     total_stats = {"total": 0, "passed": 0, "failed": 0, "errors": 0}
 
     for name, test_dir in test_dirs:
-        if os.path.exists(test_dir):
+        if Path(test_dir).exists():
             print(f"\n{name} ({test_dir}):")
             stats = get_test_results(test_dir)
 

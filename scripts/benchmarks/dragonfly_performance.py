@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-DragonflyDB Performance Benchmark Script
+"""DragonflyDB Performance Benchmark Script.
 
 This script validates the performance improvements of DragonflyDB over Redis
 by running various cache operations and measuring throughput.
@@ -10,7 +9,10 @@ import asyncio
 import statistics
 import time
 
+from redis.exceptions import RedisError
+
 from tripsage_core.config import get_settings
+from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.infrastructure.cache_service import CacheService
 
 
@@ -18,6 +20,7 @@ class DragonflyBenchmark:
     """Benchmark suite for DragonflyDB performance testing."""
 
     def __init__(self):
+        """Initialize DragonflyDB performance benchmark."""
         self.settings = get_settings()
         self.cache_service = CacheService(self.settings)
         self.results: dict[str, list[float]] = {}
@@ -25,7 +28,7 @@ class DragonflyBenchmark:
     async def setup(self):
         """Connect to DragonflyDB."""
         await self.cache_service.connect()
-        print(f"✅ Connected to DragonflyDB at {self.settings.redis_url}")
+        print(f"Connected to DragonflyDB at {self.settings.redis_url}")
 
     async def teardown(self):
         """Disconnect from DragonflyDB."""
@@ -33,7 +36,7 @@ class DragonflyBenchmark:
 
     async def benchmark_set_operations(self, iterations: int = 10000):
         """Benchmark SET operations."""
-        print(f"\n📊 Benchmarking SET operations ({iterations} iterations)...")
+        print(f"\nBenchmarking SET operations ({iterations} iterations)...")
         times = []
 
         for i in range(iterations):
@@ -45,11 +48,11 @@ class DragonflyBenchmark:
         self.results["set"] = times
         ops_per_sec = iterations / sum(times)
         avg_ms = statistics.mean(times) * 1000
-        print(f"✅ SET: {ops_per_sec:,.0f} ops/sec (avg: {avg_ms:.3f}ms)")
+        print(f"SET: {ops_per_sec:,.0f} ops/sec (avg: {avg_ms:.3f} ms)")
 
     async def benchmark_get_operations(self, iterations: int = 10000):
         """Benchmark GET operations."""
-        print(f"\n📊 Benchmarking GET operations ({iterations} iterations)...")
+        print(f"\nBenchmarking GET operations ({iterations} iterations)...")
 
         # First, populate cache
         for i in range(min(1000, iterations)):
@@ -67,11 +70,11 @@ class DragonflyBenchmark:
         self.results["get"] = times
         ops_per_sec = iterations / sum(times)
         avg_ms = statistics.mean(times) * 1000
-        print(f"✅ GET: {ops_per_sec:,.0f} ops/sec (avg: {avg_ms:.3f}ms)")
+        print(f"GET: {ops_per_sec:,.0f} ops/sec (avg: {avg_ms:.3f} ms)")
 
     async def benchmark_mixed_operations(self, iterations: int = 10000):
         """Benchmark mixed SET/GET operations."""
-        print(f"\n📊 Benchmarking mixed operations ({iterations} iterations)...")
+        print(f"\nBenchmarking mixed operations ({iterations} iterations)...")
         times = []
 
         for i in range(iterations):
@@ -89,15 +92,15 @@ class DragonflyBenchmark:
         self.results["mixed"] = times
         ops_per_sec = iterations / sum(times)
         avg_ms = statistics.mean(times) * 1000
-        print(f"✅ MIXED: {ops_per_sec:,.0f} ops/sec (avg: {avg_ms:.3f}ms)")
+        print(f"MIXED: {ops_per_sec:,.0f} ops/sec (avg: {avg_ms:.3f} ms)")
 
     async def benchmark_bulk_operations(
         self, batch_size: int = 100, batches: int = 100
     ):
         """Benchmark bulk operations."""
         print(
-            f"\n📊 Benchmarking bulk operations "
-            f"({batch_size} items × {batches} batches)..."
+            f"\nBenchmarking bulk operations "
+            f"({batch_size} items x {batches} batches)..."
         )
         times = []
 
@@ -125,12 +128,12 @@ class DragonflyBenchmark:
         total_ops = batch_size * batches
         ops_per_sec = total_ops / sum(times)
         avg_batch_ms = statistics.mean(times) * 1000
-        print(f"✅ BULK: {ops_per_sec:,.0f} ops/sec (avg batch: {avg_batch_ms:.3f}ms)")
+        print(f"BULK: {ops_per_sec:,.0f} ops/sec (avg batch: {avg_batch_ms:.3f} ms)")
 
     def print_summary(self):
         """Print benchmark summary."""
         print("\n" + "=" * 60)
-        print("📈 DRAGONFLY PERFORMANCE BENCHMARK SUMMARY")
+        print("Dragonfly performance benchmark summary")
         print("=" * 60)
 
         total_ops = 0
@@ -152,7 +155,7 @@ class DragonflyBenchmark:
             print(f"  Latency - Avg: {avg:.3f}ms, P50: {p50:.3f}ms, P99: {p99:.3f}ms")
 
         if total_ops > 0:
-            print("\n🎯 OVERALL PERFORMANCE:")
+            print("\nOverall performance:")
             print(f"  Total Operations: {total_ops:,}")
             print(f"  Total Time: {total_time:.2f}s")
             print(f"  Average Throughput: {total_ops / total_time:,.0f} ops/sec")
@@ -162,7 +165,7 @@ class DragonflyBenchmark:
             dragonfly_throughput = total_ops / total_time
             improvement = dragonfly_throughput / redis_baseline
 
-            print("\n🚀 Performance vs Redis Baseline:")
+            print("\nPerformance vs Redis baseline:")
             print(f"  Redis (typical): ~{redis_baseline:,} ops/sec")
             print(f"  DragonflyDB: ~{dragonfly_throughput:,.0f} ops/sec")
             print(f"  Improvement: {improvement:.1f}x")
@@ -181,15 +184,15 @@ class DragonflyBenchmark:
             # Print results
             self.print_summary()
 
-        except Exception as e:
-            print(f"❌ Benchmark error: {e}")
+        except (TimeoutError, CoreServiceError, RedisError) as exc:
+            print(f"Benchmark error: {exc}")
         finally:
             await self.teardown()
 
 
 async def main():
     """Run DragonflyDB performance benchmarks."""
-    print("🐉 DragonflyDB Performance Benchmark")
+    print("DragonflyDB Performance Benchmark")
     print("=" * 60)
 
     benchmark = DragonflyBenchmark()

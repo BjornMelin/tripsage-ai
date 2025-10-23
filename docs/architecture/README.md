@@ -57,7 +57,7 @@ API layer adapts responses and behavior based on consumer type (frontend applica
 
 ### 3. **Performance-First Caching**
 
-Multi-tier caching strategy with DragonflyDB providing 25x performance improvement over traditional Redis implementations.
+Serverless caching with Upstash Redis (HTTP), integrated via Vercel environment variables, eliminating local cache containers and connection pooling.
 
 ### 4. **Service Consolidation**
 
@@ -80,7 +80,7 @@ Current production architecture achievements:
 
 | Metric | Target | Achieved | Technology |
 |--------|--------|----------|------------|
-| Cache Performance | 1M ops/sec | **6.43M ops/sec** | DragonflyDB |
+| Cache Performance | <10ms latency | **Edge/Global** | Upstash Redis |
 | Concurrent Connections | 1000+ | **1500+** | WebSocket |
 | API Response Time | <100ms | **<50ms** | FastAPI + DragonflyDB |
 | Database Connections | 500+ | **1000+** | Supabase PostgreSQL |
@@ -91,7 +91,7 @@ Current production architecture achievements:
 ### Current Phase: **Production Ready** (June 2025)
 
 - ✅ Unified Supabase architecture implementation
-- ✅ DragonflyDB cache performance optimization  
+- ✅ Upstash Redis serverless caching  
 - ✅ WebSocket real-time communication
 - ✅ Service consolidation and SDK migration
 - ✅ Consumer-aware API design
@@ -99,8 +99,8 @@ Current production architecture achievements:
 ### Next Phase: **Global Scale** (Q3-Q4 2025)
 
 - 🔄 Multi-region deployment architecture
-- 🔄 Advanced monitoring and observability
-- 🔄 Enhanced security and compliance patterns
+- 🔄 Monitoring and observability
+- 🔄 Security and compliance patterns
 - 🔄 Mobile application architecture
 
 ---

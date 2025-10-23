@@ -25,7 +25,7 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 |-----|-------|--------|------|
 | [ADR-0001](adr-0001-langgraph-orchestration.md) | Use LangGraph for Agent Orchestration | Accepted | 2025-06-17 |
 | [ADR-0002](adr-0002-supabase-platform.md) | Adopt Supabase as Primary Database and Auth Platform | Accepted | 2025-06-17 |
-| [ADR-0003](adr-0003-dragonfly-caching.md) | Use DragonflyDB for High-Performance Caching | Accepted | 2025-06-17 |
+| [ADR-0003](adr-0003-upstash-redis.md) | Use Upstash Redis (HTTP) for Caching | Accepted | 2025-10-22 |
 | [ADR-0004](adr-0004-fastapi-backend.md) | FastAPI as Backend Framework | Accepted | 2025-06-17 |
 | [ADR-0005](adr-0005-nextjs-react19.md) | Next.js 15 with React 19 for Frontend | Accepted | 2025-06-17 |
 | [ADR-0006](adr-0006-websocket-architecture.md) | Real-time Communication via WebSockets | Accepted | 2025-06-17 |

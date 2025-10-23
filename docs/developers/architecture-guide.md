@@ -3,7 +3,7 @@
 > **Status**: ✅ **Production Ready** - Unified PostgreSQL Architecture (May 2025)  
 > **Technology**: Supabase PostgreSQL + pgvector + pgvectorscale
 
-This document provides comprehensive guidance for TripSage's unified database architecture, migration from dual-database complexity, and advanced vector search capabilities.
+This document provides guidance for TripSage's unified database architecture, migration from dual-database complexity, and advanced vector search capabilities.
 
 ## 📋 Table of Contents
 
@@ -42,7 +42,7 @@ TripSage has migrated to a **unified Supabase PostgreSQL architecture** with adv
 ### **Unified Architecture Benefits**
 
 - **Single Database System**: Supabase PostgreSQL with pgvector extensions for all environments
-- **Advanced Vector Capabilities**: Native pgvector support for 1536-dimensional embeddings with HNSW indexing
+- **Vector Capabilities**: Native pgvector support for 1536-dimensional embeddings with HNSW indexing
 - **Integrated Services**: Built-in authentication, real-time capabilities, storage, and analytics
 - **Exceptional Performance**: 471+ QPS throughput, <100ms vector search latency
 - **Cost Efficiency**: 80% reduction in infrastructure costs vs. multi-database approaches

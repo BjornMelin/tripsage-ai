@@ -578,11 +578,11 @@ describe("UI Store", () => {
       const { result } = renderHook(() => useUIStore());
 
       act(() => {
-        result.current.openModal("SimpleModal");
+        result.current.openModal("BasicModal");
       });
 
       expect(result.current.modal.isOpen).toBe(true);
-      expect(result.current.modal.component).toBe("SimpleModal");
+      expect(result.current.modal.component).toBe("BasicModal");
       expect(result.current.modal.props).toEqual({});
       expect(result.current.modal.size).toBe("md");
       expect(result.current.modal.closeOnOverlayClick).toBe(true);

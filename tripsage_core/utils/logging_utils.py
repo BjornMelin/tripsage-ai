@@ -1,5 +1,4 @@
-"""
-Logging utilities for TripSage Core.
+"""Logging utilities for TripSage Core.
 
 This module provides standardized logging setup for the TripSage application.
 It configures loggers with appropriate handlers and formatters, and provides
@@ -7,22 +6,25 @@ a function to get a configured logger for a module.
 """
 
 import logging
-import os
 import sys
-from datetime import datetime, timezone
+from collections.abc import MutableMapping
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from tripsage_core.config import get_settings
 
+
 # Cache of loggers to avoid creating multiple loggers for the same module
-_loggers: Dict[str, logging.Logger] = {}
+_loggers: dict[str, logging.Logger] = {}
 
 
 class ContextAdapter(logging.LoggerAdapter):
     """Adapter that adds context information to log records."""
 
-    def process(self, msg: str, kwargs: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
+    def process(
+        self, msg: str, kwargs: MutableMapping[str, Any]
+    ) -> tuple[str, MutableMapping[str, Any]]:
         """Process the log record by adding context information.
 
         Args:
@@ -33,14 +35,15 @@ class ContextAdapter(logging.LoggerAdapter):
             Tuple of (modified message, modified kwargs)
         """
         # Extract extra context if provided
-        context = self.extra.get("context", {})
+        context = self.extra.get("context", {}) if self.extra else {}
 
         # Add context to extra if provided
         if "extra" not in kwargs:
             kwargs["extra"] = {}
 
-        # Update extra with context
-        kwargs["extra"].update(context)
+        # Only update if context is a dict
+        if isinstance(context, dict):
+            kwargs["extra"].update(context)
 
         return msg, kwargs
 
@@ -60,10 +63,10 @@ def _get_log_level() -> int:
 
 def configure_logging(
     name: str,
-    level: Optional[int] = None,
+    level: int | None = None,
     log_to_file: bool = True,
     log_dir: str = "logs",
-    context: Optional[Dict[str, Any]] = None,
+    context: dict[str, Any] | None = None,
 ) -> logging.LoggerAdapter:
     """Configure and return a logger with standardized settings.
 
@@ -83,26 +86,27 @@ def configure_logging(
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    # Clear existing handlers if any
-    if logger.handlers:
-        logger.handlers.clear()
-
-    # Create console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
+    # Avoid clearing handlers to respect global configuration
+    if not logger.handlers:
+        # Create console handler once
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        console_handler.setFormatter(console_formatter)
+        logger.addHandler(console_handler)
+    # Ensure console handler level aligns
+    for h in logger.handlers:
+        h.setLevel(level)
 
     # Add file handler if requested and not in testing
     settings = get_settings()
     if log_to_file and not settings.is_testing:
         # Create logs directory if it doesn't exist
-        os.makedirs(log_dir, exist_ok=True)
+        Path(log_dir).mkdir(parents=True, exist_ok=True)
 
         # Create a log file with timestamp
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d")
         log_filename = f"{name.replace('.', '_')}_{timestamp}.log"
         log_path = Path(log_dir) / log_filename
 
@@ -118,8 +122,8 @@ def configure_logging(
 
 
 def get_logger(
-    name: str, level: Optional[int] = None, context: Optional[Dict[str, Any]] = None
-) -> Union[logging.Logger, logging.LoggerAdapter]:
+    name: str, level: int | None = None, context: dict[str, Any] | None = None
+) -> logging.Logger | logging.LoggerAdapter:
     """Get a logger for a module.
 
     This is a convenience function that should be used in each module:
@@ -166,7 +170,7 @@ def get_logger(
     return _loggers[name]
 
 
-def configure_root_logger(level: Optional[int] = None) -> None:
+def configure_root_logger(level: int | None = None) -> None:
     """Configure the root logger.
 
     Args:
@@ -175,33 +179,23 @@ def configure_root_logger(level: Optional[int] = None) -> None:
     if level is None:
         level = _get_log_level()
 
-    # Clear any existing handlers
     root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-
-    # Configure root logger
     root_logger.setLevel(level)
-
-    # Create console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(level)
-
-    # Create formatter
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    console_handler.setFormatter(formatter)
-
-    # Add handler to root logger
-    root_logger.addHandler(console_handler)
+    if not root_logger.handlers:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(level)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        console_handler.setFormatter(formatter)
+        root_logger.addHandler(console_handler)
 
 
 # Utility function for structured logging
 def log_exception(
     logger: logging.Logger,
     exception: Exception,
-    context: Optional[Dict[str, Any]] = None,
+    context: dict[str, Any] | None = None,
 ) -> None:
     """Log an exception with context.
 
@@ -214,8 +208,7 @@ def log_exception(
     if context:
         extra.update(context)
 
-    logger.error(
-        f"Exception occurred: {str(exception)}",
-        exc_info=True,
+    logger.exception(
+        "Exception occurred",
         extra=extra,
     )

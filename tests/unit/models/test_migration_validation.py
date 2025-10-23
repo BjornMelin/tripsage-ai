@@ -1,5 +1,4 @@
-"""
-Comprehensive migration script validation tests for BJO-121.
+"""Migration script validation tests for BJO-121.
 
 Tests the migration SQL structure, syntax, safety measures, and best practices
 for the foreign key constraints and UUID conversion migration.
@@ -9,6 +8,7 @@ import re
 from pathlib import Path
 
 import pytest
+
 
 # Skip all tests in this file since the migration file doesn't exist yet
 pytestmark = pytest.mark.skip(
@@ -199,7 +199,7 @@ class TestMigrationScriptValidation:
         assert "query_user_id UUID" in migration_sql, "Should use UUID parameter type"
 
     def test_migration_error_handling_blocks(self, migration_sql):
-        """Test comprehensive error handling."""
+        """Test error handling."""
         # Should check for auth.users table existence
         assert "auth.users table not found" in migration_sql, (
             "Should verify auth schema"
@@ -277,9 +277,7 @@ class TestMigrationScriptValidation:
 
         # Should include proper comments for complex operations
         comment_count = migration_sql.count("-- ")
-        assert comment_count > 50, (
-            f"Should have comprehensive comments, found {comment_count}"
-        )
+        assert comment_count > 50, f"Should have comments, found {comment_count}"
 
     def test_migration_rollback_completeness(self, migration_sql):
         """Test that rollback plan is complete and accurate."""

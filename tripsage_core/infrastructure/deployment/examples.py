@@ -9,6 +9,7 @@ import asyncio
 import os
 
 from tripsage_core.config import apply_preset, get_enterprise_config
+from tripsage_core.exceptions import CoreTripSageError
 from tripsage_core.infrastructure.deployment import (
     ConfigurableDeploymentOrchestrator,
 )
@@ -321,8 +322,14 @@ async def main():
         print("\n" + "=" * 60)
         print("✅ All deployment demonstrations completed successfully!")
 
-    except Exception as e:
-        print(f"❌ Demo failed: {e}")
+    except (
+        TimeoutError,
+        CoreTripSageError,
+        RuntimeError,
+        ValueError,
+        OSError,
+    ) as error:
+        print(f"❌ Demo failed: {error}")
         import traceback
 
         traceback.print_exc()

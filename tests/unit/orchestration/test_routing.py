@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for enhanced routing and handoff coordination.
+"""Tests for enhanced routing and handoff coordination.
 
 This module tests the improved routing logic with multi-tier classification,
 confidence scoring, and sophisticated handoff coordination.
@@ -20,7 +19,7 @@ from tripsage.orchestration.routing import RouterNode
 from tripsage.orchestration.state import create_initial_state
 
 
-class TestEnhancedRouterNode:
+class TestRouterNode:
     """Test cases for the enhanced RouterNode with fallback classification."""
 
     @pytest.fixture
@@ -41,7 +40,9 @@ class TestEnhancedRouterNode:
         )
 
     @pytest.mark.asyncio
-    async def test_enhanced_classification_success(self, router_node, sample_state):
+    async def test_classification_with_fallback_success(
+        self, router_node, sample_state
+    ):
         """Test successful enhanced classification."""
         with patch.object(
             router_node, "_classify_intent", new_callable=AsyncMock
@@ -99,6 +100,30 @@ class TestEnhancedRouterNode:
         )
         assert budget_classification["agent"] == "budget_agent"
         assert budget_classification["confidence"] > 0.0
+
+    def test_agent_catalog_alignment(self, router_node):
+        """Ensure canonical agent IDs stay aligned across prompts and validation."""
+        expected_agents = {
+            "flight_agent",
+            "accommodation_agent",
+            "budget_agent",
+            "itinerary_agent",
+            "destination_research_agent",
+            "general_agent",
+        }
+
+        assert set(router_node.agent_capabilities.keys()) == expected_agents
+
+        prompt = router_node._build_classification_prompt("Plan my trip", {})
+        for agent in expected_agents:
+            assert f"- {agent}:" in prompt
+
+        assert "travel_agent" not in prompt
+
+        for agent in expected_agents | {"error_recovery"}:
+            assert router_node._validate_classification(
+                {"agent": agent, "confidence": 0.8, "reasoning": "guard test"}
+            )
 
     def test_classification_validation_enhanced(self, router_node):
         """Test enhanced classification validation."""
@@ -158,7 +183,7 @@ class TestEnhancedRouterNode:
         assert context["recent_agents"] == ["router", "flight_agent"]
 
 
-class TestEnhancedHandoffCoordinator:
+class TestHandoffCoordinator:
     """Test cases for the enhanced AgentHandoffCoordinator."""
 
     @pytest.fixture
@@ -169,11 +194,10 @@ class TestEnhancedHandoffCoordinator:
     @pytest.fixture
     def sample_state(self):
         """Create a sample state for handoff testing."""
-        state = create_initial_state(
+        return create_initial_state(
             user_id="test_user", message="I found a flight, now I need a hotel"
         )
-        state["flight_selections"] = [{"id": "flight_123"}]
-        return state
+        # Don't add keys not defined in the state spec, keep the state valid.
 
     def test_handoff_rule_initialization(self, handoff_coordinator):
         """Test that default handoff rules are initialized correctly."""
@@ -184,8 +208,8 @@ class TestEnhancedHandoffCoordinator:
             (rule.from_agent, rule.to_agent)
             for rule in handoff_coordinator.handoff_rules
         ]
-        assert ("general", "flight_agent") in rule_names
-        assert ("general", "accommodation_agent") in rule_names
+        assert ("general_agent", "flight_agent") in rule_names
+        assert ("general_agent", "accommodation_agent") in rule_names
 
     def test_keyword_based_handoff_detection(self, handoff_coordinator):
         """Test handoff detection based on keywords."""
@@ -195,7 +219,7 @@ class TestEnhancedHandoffCoordinator:
         )
 
         handoff_result = handoff_coordinator.determine_next_agent(
-            "general", state, HandoffTrigger.USER_REQUEST
+            "general_agent", state, HandoffTrigger.USER_REQUEST
         )
 
         assert handoff_result is not None
@@ -214,7 +238,7 @@ class TestEnhancedHandoffCoordinator:
         )
 
         assert handoff_result is not None
-        next_agent, handoff_context = handoff_result
+        next_agent, _handoff_context = handoff_result
         assert next_agent == "itinerary_agent"
 
     def test_error_recovery_handoff(self, handoff_coordinator, sample_state):
@@ -231,8 +255,8 @@ class TestEnhancedHandoffCoordinator:
         )
 
         assert handoff_result is not None
-        next_agent, handoff_context = handoff_result
-        assert next_agent == "general"
+        next_agent, _handoff_context = handoff_result
+        assert next_agent == "general_agent"
 
     def test_handoff_context_preservation(self, handoff_coordinator, sample_state):
         """Test that handoff context preserves relevant state information."""
@@ -240,11 +264,11 @@ class TestEnhancedHandoffCoordinator:
         sample_state["destination"] = "Paris"
 
         handoff_result = handoff_coordinator.determine_next_agent(
-            "general", sample_state, HandoffTrigger.USER_REQUEST
+            "general_agent", sample_state, HandoffTrigger.USER_REQUEST
         )
 
         if handoff_result:
-            next_agent, handoff_context = handoff_result
+            _next_agent, handoff_context = handoff_result
             preserved_context = handoff_context.preserved_context
 
             # Check that relevant context is preserved based on rule
@@ -294,7 +318,7 @@ class TestEnhancedHandoffCoordinator:
 
         # Trigger a handoff
         handoff_result = handoff_coordinator.determine_next_agent(
-            "general", sample_state, HandoffTrigger.USER_REQUEST
+            "general_agent", sample_state, HandoffTrigger.USER_REQUEST
         )
 
         if handoff_result:
@@ -361,11 +385,11 @@ class TestRoutingIntegration:
             result_state = await router_node.process(state)
 
             assert result_state["current_agent"] == "flight_agent"
-            assert result_state["handoff_context"]["routing_confidence"] == 0.9
+            assert result_state.get("handoff_context", {}) is not None
+            assert result_state["handoff_context"] is not None
+            assert result_state["handoff_context"].get("routing_confidence") == 0.9
             assert "routing_reasoning" in result_state["handoff_context"]
 
-    def test_routing_confidence_scoring(self):
-        """Test confidence scoring across different routing scenarios."""
         router_node = RouterNode(MagicMock())
 
         # High confidence keywords
@@ -385,16 +409,14 @@ class TestRoutingIntegration:
         handoff_coordinator = AgentHandoffCoordinator()
 
         # Get valid agents from router validation
-        router_agents = set(
-            [
-                "flight_agent",
-                "accommodation_agent",
-                "budget_agent",
-                "itinerary_agent",
-                "destination_research_agent",
-                "general_agent",
-            ]
-        )
+        router_agents = {
+            "flight_agent",
+            "accommodation_agent",
+            "budget_agent",
+            "itinerary_agent",
+            "destination_research_agent",
+            "general_agent",
+        }
 
         # Get agents from handoff coordinator capabilities
         handoff_agents = set(handoff_coordinator.agent_capabilities.keys())

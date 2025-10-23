@@ -1,5 +1,4 @@
-"""
-Pydantic models for file attachments and document processing.
+"""Pydantic models for file attachments and document processing.
 
 This module defines models for file uploads, metadata, and AI analysis results
 following the established patterns in the codebase.
@@ -7,7 +6,7 @@ following the established patterns in the codebase.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
@@ -61,9 +60,9 @@ class AttachmentCreate(AttachmentBase):
 class AttachmentUpdate(BaseModel):
     """Model for updating attachment metadata."""
 
-    processing_status: Optional[ProcessingStatus] = None
-    metadata: Optional[Dict[str, Any]] = None
-    analysis_results: Optional[Dict[str, Any]] = None
+    processing_status: ProcessingStatus | None = None
+    metadata: dict[str, Any] | None = None
+    analysis_results: dict[str, Any] | None = None
 
 
 class AttachmentDB(AttachmentBase):
@@ -71,9 +70,7 @@ class AttachmentDB(AttachmentBase):
 
     id: UUID = Field(..., description="Unique attachment identifier")
     user_id: UUID = Field(..., description="ID of the user who uploaded the file")
-    chat_session_id: Optional[UUID] = Field(
-        None, description="Associated chat session ID"
-    )
+    chat_session_id: UUID | None = Field(None, description="Associated chat session ID")
 
     stored_filename: str = Field(..., description="Filename used for storage")
     storage_path: str = Field(..., description="Relative path to stored file")
@@ -82,8 +79,8 @@ class AttachmentDB(AttachmentBase):
     processing_status: ProcessingStatus = Field(
         default=ProcessingStatus.PENDING, description="Current processing status"
     )
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="File metadata")
-    analysis_results: Optional[Dict[str, Any]] = Field(
+    metadata: dict[str, Any] = Field(default_factory=dict, description="File metadata")
+    analysis_results: dict[str, Any] | None = Field(
         None, description="AI analysis results"
     )
 
@@ -117,7 +114,7 @@ class AttachmentDB(AttachmentBase):
         return dt.isoformat()
 
     @field_serializer("id", "user_id", "chat_session_id")
-    def serialize_uuid(self, uuid_val: Optional[UUID]) -> Optional[str]:
+    def serialize_uuid(self, uuid_val: UUID | None) -> str | None:
         """Serialize UUID to string."""
         return str(uuid_val) if uuid_val else None
 
@@ -125,8 +122,8 @@ class AttachmentDB(AttachmentBase):
 class AttachmentResponse(AttachmentDB):
     """Response model for attachment API endpoints."""
 
-    download_url: Optional[str] = Field(None, description="Temporary download URL")
-    thumbnail_url: Optional[str] = Field(None, description="Thumbnail URL for images")
+    download_url: str | None = Field(None, description="Temporary download URL")
+    thumbnail_url: str | None = Field(None, description="Thumbnail URL for images")
 
 
 # Request/Response models for API endpoints
@@ -147,10 +144,10 @@ class FileUploadResponse(BaseModel):
 class BatchUploadResponse(BaseModel):
     """Response model for batch file upload."""
 
-    successful_uploads: List[FileUploadResponse] = Field(
+    successful_uploads: list[FileUploadResponse] = Field(
         default_factory=list, description="Successfully uploaded files"
     )
-    failed_uploads: List[Dict[str, str]] = Field(
+    failed_uploads: list[dict[str, str]] = Field(
         default_factory=list, description="Failed uploads with error messages"
     )
     total_files: int = Field(..., description="Total number of files in batch")
@@ -170,8 +167,8 @@ class FileMetadataResponse(BaseModel):
     processing_status: ProcessingStatus = Field(
         ..., description="Current processing status"
     )
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="File metadata")
-    analysis_summary: Optional[Dict[str, Any]] = Field(
+    metadata: dict[str, Any] = Field(default_factory=dict, description="File metadata")
+    analysis_summary: dict[str, Any] | None = Field(
         None, description="Summarized analysis results"
     )
 
@@ -179,7 +176,7 @@ class FileMetadataResponse(BaseModel):
 class UserFileListResponse(BaseModel):
     """Response model for user file listing."""
 
-    files: List[FileMetadataResponse] = Field(
+    files: list[FileMetadataResponse] = Field(
         default_factory=list, description="List of user files"
     )
     total_count: int = Field(..., description="Total number of files")
@@ -194,15 +191,11 @@ class StorageStatsResponse(BaseModel):
     total_files: int = Field(..., description="Total number of files")
     total_size_bytes: int = Field(..., description="Total storage used in bytes")
     total_size_human: str = Field(..., description="Human-readable storage size")
-    files_by_type: Dict[str, int] = Field(
+    files_by_type: dict[str, int] = Field(
         default_factory=dict, description="File count by type"
     )
-    storage_limit_bytes: Optional[int] = Field(
-        None, description="Storage limit in bytes"
-    )
-    usage_percentage: Optional[float] = Field(
-        None, description="Storage usage percentage"
-    )
+    storage_limit_bytes: int | None = Field(None, description="Storage limit in bytes")
+    usage_percentage: float | None = Field(None, description="Storage usage percentage")
 
 
 # AI Analysis Models
@@ -215,7 +208,7 @@ class DocumentAnalysisRequest(BaseModel):
     analysis_type: str = Field(
         default="general", description="Type of analysis to perform"
     )
-    context: Optional[str] = Field(None, description="Additional context for analysis")
+    context: str | None = Field(None, description="Additional context for analysis")
 
 
 class DocumentAnalysisResult(BaseModel):
@@ -223,11 +216,11 @@ class DocumentAnalysisResult(BaseModel):
 
     file_id: str = Field(..., description="Analyzed file ID")
     analysis_type: str = Field(..., description="Type of analysis performed")
-    extracted_text: Optional[str] = Field(None, description="Extracted text content")
-    key_information: Dict[str, Any] = Field(
+    extracted_text: str | None = Field(None, description="Extracted text content")
+    key_information: dict[str, Any] = Field(
         default_factory=dict, description="Extracted key information"
     )
-    travel_relevance: Optional[Dict[str, Any]] = Field(
+    travel_relevance: dict[str, Any] | None = Field(
         None, description="Travel-related information"
     )
     confidence_score: float = Field(
@@ -245,7 +238,7 @@ class DocumentAnalysisResponse(BaseModel):
     analysis_id: str = Field(..., description="Unique analysis identifier")
     file_id: str = Field(..., description="Analyzed file ID")
     status: str = Field(..., description="Analysis status")
-    results: Optional[DocumentAnalysisResult] = Field(
+    results: DocumentAnalysisResult | None = Field(
         None, description="Analysis results if completed"
     )
     message: str = Field(..., description="Status message")
@@ -260,13 +253,13 @@ class FileValidationError(BaseModel):
     filename: str = Field(..., description="Name of the problematic file")
     error_type: str = Field(..., description="Type of validation error")
     error_message: str = Field(..., description="Detailed error message")
-    file_size: Optional[int] = Field(None, description="File size if available")
+    file_size: int | None = Field(None, description="File size if available")
 
 
 class FileProcessingError(BaseModel):
     """Model for file processing errors."""
 
-    file_id: Optional[str] = Field(None, description="File ID if available")
+    file_id: str | None = Field(None, description="File ID if available")
     error_code: str = Field(..., description="Error code")
     error_message: str = Field(..., description="Error description")
     retry_possible: bool = Field(
@@ -288,8 +281,8 @@ class ChatAttachment(BaseModel):
     file_type: FileType = Field(..., description="File type for UI rendering")
     file_size: int = Field(..., description="File size for display")
     processing_status: ProcessingStatus = Field(..., description="Processing status")
-    thumbnail_url: Optional[str] = Field(None, description="Thumbnail URL if available")
-    analysis_summary: Optional[str] = Field(None, description="Brief analysis summary")
+    thumbnail_url: str | None = Field(None, description="Thumbnail URL if available")
+    analysis_summary: str | None = Field(None, description="Brief analysis summary")
 
 
 class MessageWithAttachments(BaseModel):
@@ -297,7 +290,7 @@ class MessageWithAttachments(BaseModel):
 
     message_id: str = Field(..., description="Message identifier")
     content: str = Field(..., description="Message text content")
-    attachments: List[ChatAttachment] = Field(
+    attachments: list[ChatAttachment] = Field(
         default_factory=list, description="Message attachments"
     )
     timestamp: datetime = Field(

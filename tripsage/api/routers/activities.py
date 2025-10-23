@@ -1,15 +1,16 @@
-"""
-Router for activity-related endpoints in the TripSage API.
-"""
+"""Router for activity-related endpoints in the TripSage API."""
 
 import logging
-from datetime import datetime, timezone
-from typing import List
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
+from tripsage.api.core.dependencies import (
+    ActivityServiceDep,
+    get_principal_id,
+    require_principal,
+)
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.requests.activities import (
     ActivitySearchRequest,
@@ -22,7 +23,6 @@ from tripsage.api.schemas.responses.activities import (
 )
 from tripsage_core.services.business.activity_service import (
     ActivityServiceError,
-    get_activity_service,
 )
 from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
@@ -35,37 +35,39 @@ from tripsage_core.services.infrastructure.database_service import (
     get_database_service,
 )
 
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 @router.post("/search", response_model=ActivitySearchResponse)
-async def search_activities(request: ActivitySearchRequest):
-    """
-    Search for activities based on provided criteria using Google Maps Places API.
+async def search_activities(
+    request: ActivitySearchRequest,
+    activity_service: ActivityServiceDep,
+):
+    """Search for activities based on provided criteria using Google Maps Places API.
 
     This endpoint searches for activities, attractions, and points of interest
     in the specified destination using real-time data from Google Maps.
     """
-    logger.info(f"Activity search request: {request.destination}")
+    logger.info("Activity search request: %s", request.destination)
 
     try:
-        activity_service = await get_activity_service()
         result = await activity_service.search_activities(request)
 
         logger.info(
-            f"Found {len(result.activities)} activities for {request.destination}"
+            "Found %s activities for %s", len(result.activities), request.destination
         )
         return result
 
     except ActivityServiceError as e:
-        logger.error(f"Activity service error: {e}")
+        logger.exception("Activity service error")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Activity search failed: {e.message}",
         ) from e
     except Exception as e:
-        logger.error(f"Unexpected error in activity search: {e}")
+        logger.exception("Unexpected error in activity search")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while searching for activities",
@@ -73,17 +75,15 @@ async def search_activities(request: ActivitySearchRequest):
 
 
 @router.get("/{activity_id}", response_model=ActivityResponse)
-async def get_activity_details(activity_id: str):
-    """
-    Get detailed information about a specific activity.
+async def get_activity_details(activity_id: str, activity_service: ActivityServiceDep):
+    """Get detailed information about a specific activity.
 
-    Retrieves comprehensive details for an activity including enhanced
+    Retrieves details for an activity including enhanced
     information from Google Maps Places API.
     """
-    logger.info(f"Get activity details request: {activity_id}")
+    logger.info("Get activity details request: %s", activity_id)
 
     try:
-        activity_service = await get_activity_service()
         activity = await activity_service.get_activity_details(activity_id)
 
         if not activity:
@@ -92,11 +92,11 @@ async def get_activity_details(activity_id: str):
                 detail=f"Activity with ID {activity_id} not found",
             )
 
-        logger.info(f"Retrieved details for activity: {activity_id}")
+        logger.info("Retrieved details for activity: %s", activity_id)
         return activity
 
     except ActivityServiceError as e:
-        logger.error(f"Activity service error: {e}")
+        logger.exception("Activity service error")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get activity details: {e.message}",
@@ -105,7 +105,7 @@ async def get_activity_details(activity_id: str):
         # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
-        logger.error(f"Unexpected error getting activity details: {e}")
+        logger.exception("Unexpected error getting activity details")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while retrieving activity details",
@@ -119,8 +119,7 @@ async def save_activity(
     db_service: DatabaseService = Depends(get_database_service),
     trip_service: TripService = Depends(get_trip_service),
 ):
-    """
-    Save an activity for a user.
+    """Save an activity for a user.
 
     Security features:
     - User authentication required
@@ -128,7 +127,7 @@ async def save_activity(
     - Audit logging for save operations
     - Database persistence with user isolation
     """
-    logger.info(f"Save activity request: {request.activity_id}")
+    logger.info("Save activity request: %s", request.activity_id)
 
     try:
         user_id = get_principal_id(principal)
@@ -159,7 +158,7 @@ async def save_activity(
                 )
 
         # Save activity to itinerary_items table
-        saved_at = datetime.now(timezone.utc)
+        saved_at = datetime.now(UTC)
         itinerary_data = {
             "id": str(uuid4()),
             "trip_id": request.trip_id,
@@ -198,7 +197,7 @@ async def save_activity(
             trip_id=request.trip_id,
         )
 
-        logger.info(f"Activity {request.activity_id} saved for user {user_id}")
+        logger.info("Activity %s saved for user %s", request.activity_id, user_id)
 
         return SavedActivityResponse(
             activity_id=request.activity_id,
@@ -206,12 +205,13 @@ async def save_activity(
             user_id=user_id,
             saved_at=saved_at.isoformat(),
             notes=request.notes,
+            activity=None,
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to save activity {request.activity_id}: {str(e)}")
+        logger.exception("Failed to save activity %s", request.activity_id)
 
         # Log system error
         await audit_security_event(
@@ -233,15 +233,14 @@ async def save_activity(
         ) from e
 
 
-@router.get("/saved", response_model=List[SavedActivityResponse])
+@router.get("/saved", response_model=list[SavedActivityResponse])
 async def get_saved_activities(
     principal: Principal = Depends(require_principal),
     db_service: DatabaseService = Depends(get_database_service),
     limit: int = 50,
     offset: int = 0,
 ):
-    """
-    Get all activities saved by a user.
+    """Get all activities saved by a user.
 
     Security features:
     - User authentication required
@@ -281,10 +280,9 @@ async def get_saved_activities(
                     ),
                     trip_id=item.get("trip_id"),
                     user_id=user_id,
-                    saved_at=item.get(
-                        "created_at", datetime.now(timezone.utc).isoformat()
-                    ),
+                    saved_at=item.get("created_at", datetime.now(UTC).isoformat()),
                     notes=metadata.get("notes"),
+                    activity=None,
                 )
             )
 
@@ -304,13 +302,13 @@ async def get_saved_activities(
         )
 
         logger.info(
-            f"Retrieved {len(saved_activities)} saved activities for user {user_id}"
+            "Retrieved %s saved activities for user %s", len(saved_activities), user_id
         )
 
         return saved_activities
 
     except Exception as e:
-        logger.error(f"Failed to get saved activities: {str(e)}")
+        logger.exception("Failed to get saved activities")
 
         # Log system error
         await audit_security_event(
@@ -337,8 +335,7 @@ async def delete_saved_activity(
     principal: Principal = Depends(require_principal),
     db_service: DatabaseService = Depends(get_database_service),
 ):
-    """
-    Delete a saved activity for a user.
+    """Delete a saved activity for a user.
 
     Security features:
     - User authentication required
@@ -346,7 +343,7 @@ async def delete_saved_activity(
     - Audit logging for deletion operations
     - Data integrity checks
     """
-    logger.info(f"Delete saved activity request: {activity_id}")
+    logger.info("Delete saved activity request: %s", activity_id)
 
     try:
         user_id = get_principal_id(principal)
@@ -412,15 +409,17 @@ async def delete_saved_activity(
         for item in existing_items:
             # Use Supabase delete with proper filters
             try:
-                await (
+                (
                     db_service.client.table("itinerary_items")
                     .delete()
                     .eq("id", item["id"])
                     .execute()
                 )
+                # Supabase client executes synchronously and returns its summary.
                 deleted_count += 1
-            except Exception as delete_error:
-                logger.warning(f"Failed to delete item {item['id']}: {delete_error}")
+            except (OSError, RuntimeError, ValueError) as delete_error:
+                # Database/network errors during Supabase delete operation
+                logger.warning("Failed to delete item %s: %s", item["id"], delete_error)
 
         if deleted_count == 0:
             raise HTTPException(
@@ -443,14 +442,16 @@ async def delete_saved_activity(
         )
 
         logger.info(
-            f"Deleted {deleted_count} saved activity entries for activity "
-            f"{activity_id} by user {user_id}"
+            "Deleted %s saved activity entries for activity %s by user %s",
+            deleted_count,
+            activity_id,
+            user_id,
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete saved activity {activity_id}: {str(e)}")
+        logger.exception("Failed to delete saved activity %s", activity_id)
 
         # Log system error
         await audit_security_event(

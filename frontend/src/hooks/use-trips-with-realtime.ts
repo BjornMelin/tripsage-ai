@@ -15,7 +15,7 @@ import {
 } from "./use-trips-supabase";
 
 /**
- * Enhanced hook that combines trip data with real-time updates
+ * Hook that combines trip data with real-time updates
  * Provides both data and connection status monitoring
  */
 export function useTripsWithRealtime() {

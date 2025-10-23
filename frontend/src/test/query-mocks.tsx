@@ -12,7 +12,7 @@ interface MutationContext<TVariables = unknown> {
   variables?: TVariables;
 }
 /**
- * Enhanced React Query mock utilities for testing React Query v5
+ * React Query mock utilities for testing React Query v5
  */
 import { vi } from "vitest";
 

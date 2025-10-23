@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for CommonValidators.
+"""Tests for CommonValidators.
 
 This module tests all validation functions and Annotated types to ensure
 consistent behavior across the application.
@@ -85,10 +84,10 @@ class TestRatingValidator:
         with pytest.raises(ValueError, match="Rating must be a number"):
             CommonValidators.rating_range("invalid")
 
-        with pytest.raises(ValueError, match="between 0.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"between 0\.0 and 5\.0"):
             CommonValidators.rating_range(-1.0)
 
-        with pytest.raises(ValueError, match="between 0.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"between 0\.0 and 5\.0"):
             CommonValidators.rating_range(6.0)
 
     def test_rating_annotated_type(self):
@@ -309,10 +308,10 @@ class TestCoordinateValidator:
         with pytest.raises(ValueError, match="Latitude must be a number"):
             CommonValidators.latitude("invalid")
 
-        with pytest.raises(ValueError, match="between -90.0 and 90.0"):
+        with pytest.raises(ValueError, match=r"between -90\.0 and 90\.0"):
             CommonValidators.latitude(91.0)
 
-        with pytest.raises(ValueError, match="between -90.0 and 90.0"):
+        with pytest.raises(ValueError, match=r"between -90\.0 and 90\.0"):
             CommonValidators.latitude(-91.0)
 
     def test_valid_longitude(self):
@@ -328,10 +327,10 @@ class TestCoordinateValidator:
         with pytest.raises(ValueError, match="Longitude must be a number"):
             CommonValidators.longitude("invalid")
 
-        with pytest.raises(ValueError, match="between -180.0 and 180.0"):
+        with pytest.raises(ValueError, match=r"between -180\.0 and 180\.0"):
             CommonValidators.longitude(181.0)
 
-        with pytest.raises(ValueError, match="between -180.0 and 180.0"):
+        with pytest.raises(ValueError, match=r"between -180\.0 and 180\.0"):
             CommonValidators.longitude(-181.0)
 
     def test_coordinate_annotated_types(self):
@@ -470,7 +469,7 @@ class TestIntegrationWithPydantic:
     """Test integration with Pydantic models."""
 
     def test_complex_model_validation(self):
-        """Test comprehensive model with multiple validators."""
+        """Test model with multiple validators."""
 
         class FlightModel(BaseModel):
             origin: AirportCode

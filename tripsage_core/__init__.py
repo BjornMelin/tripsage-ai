@@ -1,5 +1,4 @@
-"""
-TripSage Core Package.
+"""TripSage Core Package.
 
 This package contains the centralized core functionality for the TripSage application,
 including models, exceptions, and shared utilities.
@@ -9,16 +8,6 @@ Modules:
 - exceptions: Centralized exception handling system
 - config: Core configuration settings
 - utilities: Shared utility functions and helpers
-
-Usage:
-    # Import core models
-    from tripsage_core.models import TripSageModel, TripSageDomainModel
-
-    # Import domain models
-    from tripsage_core.models.domain import AccommodationListing, FlightOffer
-
-    # Import exceptions
-    from tripsage_core.exceptions import CoreTripSageError, CoreValidationError
 """
 
 __version__ = "1.0.0"
@@ -33,15 +22,16 @@ from tripsage_core.models.base_core_model import (
     TripSageModel,
 )
 
+
 __all__ = [
-    # Core models
-    "TripSageModel",
-    "TripSageDomainModel",
-    "TripSageDBModel",
-    "TripSageBaseResponse",
-    # Exceptions
-    "exceptions",
     # Config
     "Settings",
+    "TripSageBaseResponse",
+    "TripSageDBModel",
+    "TripSageDomainModel",
+    # Core models
+    "TripSageModel",
+    # Exceptions
+    "exceptions",
     "get_settings",
 ]

@@ -55,7 +55,7 @@
 | Role | Permissions | Use Case |
 |------|-------------|----------|
 | **User** | Standard features | Regular travelers |
-| **Premium** | Advanced features + API | Power users |
+| **Premium** | Full feature set + API | Power users |
 | **Business** | Team features + reporting | Corporate accounts |
 | **Admin** | Full system access | System administrators |
 | **Support** | User assistance tools | Support team |

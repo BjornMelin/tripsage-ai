@@ -1,5 +1,5 @@
 /**
- * Comprehensive test suite for Cache Invalidation Edge Function
+ * Test suite for Cache Invalidation Edge Function
  * 
  * Tests cover:
  * - HTTP request/response handling

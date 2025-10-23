@@ -1,7 +1,6 @@
-"""
-Security tests for secret key rotation and cryptographic edge cases.
+"""Security tests for secret key rotation and cryptographic edge cases.
 
-This module provides comprehensive security testing for secret key rotation,
+This module provides security testing for secret key rotation,
 cryptographic edge cases, and key lifecycle management vulnerabilities.
 Tests cover various attack scenarios targeting encryption, decryption,
 and key management processes.
@@ -12,6 +11,7 @@ cryptographic storage security guidelines.
 
 import asyncio
 import base64
+import contextlib
 import secrets
 import time
 from unittest.mock import AsyncMock, Mock
@@ -78,7 +78,7 @@ class TestSecretKeyRotationSecurity:
         return ApiKeyCreateRequest(
             name="Test OpenAI Key",
             service=ServiceType.OPENAI,
-            key_value="sk-test123456789abcdef",
+            key="sk-test123456789abcdef",
             description="Test key for rotation testing",
         )
 
@@ -162,7 +162,7 @@ class TestSecretKeyRotationSecurity:
 
                 await malicious_service.client.aclose()
 
-            except Exception as e:
+            except (ValueError, RuntimeError, OSError, TimeoutError) as e:
                 # Should handle malicious keys gracefully
                 assert "failed" in str(e).lower() or "invalid" in str(e).lower()
 
@@ -201,7 +201,7 @@ class TestSecretKeyRotationSecurity:
                 assert len(encrypted) > 0
                 assert encrypted != test_key  # Should be encrypted
 
-            except Exception as e:
+            except (ValueError, RuntimeError, OSError, TimeoutError) as e:
                 # Should handle edge cases gracefully
                 assert "encryption" in str(e).lower() or "invalid" in str(e).lower()
 
@@ -252,7 +252,7 @@ class TestSecretKeyRotationSecurity:
             with pytest.raises(ServiceError):
                 service._decrypt_api_key(mixed_encrypted)
 
-        except Exception:
+        except (ValueError, RuntimeError, OSError, TimeoutError):
             # Expected - key isolation should prevent mixing
             pass
 
@@ -290,20 +290,16 @@ class TestSecretKeyRotationSecurity:
         # Time valid decryptions
         for _ in range(10):
             start = time.time()
-            try:
+            with contextlib.suppress(Exception):
                 service._decrypt_api_key(valid_encrypted)
-            except Exception:
-                pass
             end = time.time()
             valid_times.append(end - start)
 
         # Time invalid decryptions
         for invalid_key in invalid_encrypted_keys:
             start = time.time()
-            try:
+            with contextlib.suppress(Exception):
                 service._decrypt_api_key(invalid_key)
-            except Exception:
-                pass
             end = time.time()
             invalid_times.append(end - start)
 
@@ -346,7 +342,7 @@ class TestSecretKeyRotationSecurity:
                     encrypted = service_instance._encrypt_api_key(key_with_id)
                     decrypted = service_instance._decrypt_api_key(encrypted)
                     results.append(decrypted == key_with_id)
-                except Exception:
+                except (ValueError, RuntimeError, OSError, TimeoutError):
                     results.append(False)
                 # Small delay to increase concurrency overlap
                 await asyncio.sleep(0.001)
@@ -425,7 +421,7 @@ class TestSecretKeyRotationSecurity:
 
                 await manipulated_service.client.aclose()
 
-            except Exception:
+            except (ValueError, RuntimeError, OSError, TimeoutError):
                 # Expected - salt manipulation should break decryption
                 pass
 
@@ -493,7 +489,7 @@ class TestSecretKeyRotationSecurity:
         for tampered in tampering_attempts:
             # All tampering attempts should be detected and fail
             with pytest.raises(
-                ServiceError, match="(Decryption failed|Invalid encrypted key format)"
+                ServiceError, match=r"(Decryption failed|Invalid encrypted key format)"
             ):
                 api_key_service._decrypt_api_key(tampered)
 
@@ -515,7 +511,7 @@ class TestSecretKeyRotationSecurity:
                 parts = combined.split(b"::", 1)
                 if len(parts) == 2:
                     data_key_parts.append(parts[0])  # Encrypted data key part
-            except Exception:
+            except (ValueError, RuntimeError, OSError, TimeoutError):
                 continue
 
         # Verify data key uniqueness (should all be different)
@@ -584,7 +580,7 @@ class TestSecretKeyRotationSecurity:
         )
 
         # Old encrypted keys should not be accessible after rotation
-        for _state, encrypted in encrypted_versions.items():
+        for encrypted in encrypted_versions.values():
             with pytest.raises(ServiceError):
                 rotated_service._decrypt_api_key(encrypted)
 
@@ -643,7 +639,7 @@ class TestSecretKeyRotationSecurity:
                         or "encryption failed" in error_message
                     )
 
-            except Exception as e:
+            except (ValueError, RuntimeError, OSError, TimeoutError) as e:
                 # Any exception should not leak sensitive information
                 error_str = str(e).lower()
                 assert "secret" not in error_str
@@ -874,7 +870,7 @@ class TestCryptographicEdgeCases:
             try:
                 decoded = base64.urlsafe_b64decode(encrypted.encode())
                 assert len(decoded) > 0
-            except Exception as e:
+            except (ValueError, RuntimeError, OSError, TimeoutError) as e:
                 pytest.fail(f"Invalid base64 encoding for key '{test_key}': {e}")
 
             # Verify round-trip
@@ -944,7 +940,7 @@ class TestCryptographicEdgeCases:
             assert len(encrypted_data_key) > 20, "Encrypted data key too short"
             assert len(encrypted_value) > 20, "Encrypted value too short"
 
-        except Exception as e:
+        except (ValueError, RuntimeError, OSError, TimeoutError) as e:
             pytest.fail(f"Format analysis failed: {e}")
 
     async def test_master_key_derivation_edge_cases(
@@ -980,12 +976,9 @@ class TestCryptographicEdgeCases:
 
                 await service.client.aclose()
 
-            except Exception as e:
+            except (ValueError, RuntimeError, OSError, TimeoutError) as e:
                 # Document which secrets cause issues
                 if len(secret) < 8:
                     # Very short secrets might be rejected
                     continue
-                else:
-                    pytest.fail(
-                        f"Unexpected failure with secret '{secret[:20]}...': {e}"
-                    )
+                pytest.fail(f"Unexpected failure with secret '{secret[:20]}...': {e}")

@@ -6,7 +6,6 @@ such as flights, accommodations, or transportation options.
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from pydantic import Field, field_validator
 
@@ -34,12 +33,12 @@ class SavedOption(TripSageModel):
         notes: Additional notes or comments about this option
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: int | None = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     option_type: OptionType = Field(..., description="Type of the saved option")
     option_id: int = Field(..., description="ID of the saved option")
     timestamp: datetime = Field(..., description="When the option was saved")
-    notes: Optional[str] = Field(None, description="Additional notes or comments")
+    notes: str | None = Field(None, description="Additional notes or comments")
 
     @field_validator("option_id")
     @classmethod
@@ -52,8 +51,7 @@ class SavedOption(TripSageModel):
     @property
     def is_recent(self) -> bool:
         """Check if the option was saved recently (within 24 hours)."""
-        from datetime import datetime as datetime_type
-        from datetime import timedelta
+        from datetime import datetime as datetime_type, timedelta
 
         return datetime_type.now() - self.timestamp < timedelta(hours=24)
 
@@ -92,7 +90,7 @@ class SavedOption(TripSageModel):
         """Check if the option has notes."""
         return self.notes is not None and len(self.notes.strip()) > 0
 
-    def update_notes(self, new_notes: Optional[str]) -> None:
+    def update_notes(self, new_notes: str | None) -> None:
         """Update the notes for this saved option.
 
         Args:

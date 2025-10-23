@@ -308,8 +308,8 @@ class TestComponentUnderTest:
 
 ## Related Documentation
 
-- [Testing Guide](../TESTING_GUIDE.md) - Comprehensive testing guide
-- [Fixtures Documentation](../FIXTURES.md) - Complete fixture reference
+- [Testing Guide](../TESTING_GUIDE.md) - Testing guide
+- [Fixtures Documentation](../FIXTURES.md) - Fixture reference
 - [Integration Tests](../integration/README.md) - Integration testing guide
 - [Root Test README](../README.md) - Test suite overview
 

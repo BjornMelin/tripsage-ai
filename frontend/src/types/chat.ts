@@ -18,7 +18,7 @@ export const ToolCallStatusSchema = z.enum([
 ]);
 export type ToolCallStatus = z.infer<typeof ToolCallStatusSchema>;
 
-// Enhanced tool call schema that matches backend
+// tool call schema that matches backend
 export const ToolCallSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -73,7 +73,7 @@ export const MessageSchema = z.object({
   updatedAt: z.date().or(z.string().datetime()).optional(),
   attachments: z.array(AttachmentSchema).optional(),
   annotations: z.record(z.unknown()).optional(),
-  // Enhanced tool calling support
+  // tool calling support
   toolCalls: z.array(ToolCallSchema).optional(),
   toolResults: z.array(ToolResultSchema).optional(),
   // Agent routing information

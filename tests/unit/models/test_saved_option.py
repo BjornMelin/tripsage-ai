@@ -1,6 +1,6 @@
 """Tests for SavedOption model following modern pytest patterns."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -19,7 +19,7 @@ class TestSavedOptionModel:
             "trip_id": 1,
             "option_type": OptionType.FLIGHT,
             "option_id": 1,
-            "timestamp": datetime.now(timezone.utc),
+            "timestamp": datetime.now(UTC),
             "notes": "Best price found so far",
         }
 
@@ -39,7 +39,7 @@ class TestSavedOptionModel:
             "trip_id": 1,
             "option_type": OptionType.FLIGHT,
             "option_id": 1,
-            "timestamp": datetime.now(timezone.utc),
+            "timestamp": datetime.now(UTC),
         }
         saved_option = SavedOption(**minimal_data)
 

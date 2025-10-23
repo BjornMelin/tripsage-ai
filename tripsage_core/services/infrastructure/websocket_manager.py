@@ -1,7 +1,7 @@
-"""
-WebSocket connection manager with integrated broadcasting and error recovery.
+# pylint: disable=too-many-lines
+"""WebSocket connection manager with integrated broadcasting and error recovery.
 
-This module provides comprehensive WebSocket connection management including:
+This module provides WebSocket connection management including:
 - Integration with Redis-backed broadcasting
 - Automatic error recovery with exponential backoff
 - 20-second heartbeat/keepalive mechanism
@@ -13,20 +13,23 @@ This refactored version extracts responsibilities into focused services.
 """
 
 import asyncio
+import contextlib
 import functools
 import json
 import logging
 import secrets
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
-import redis.asyncio as redis
 from fastapi import WebSocket
 from pydantic import BaseModel, Field
+from redis.asyncio import Redis as AsyncRedis, from_url
+from redis.asyncio.client import PubSub
 
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
@@ -45,6 +48,7 @@ from .websocket_messaging_service import (
     WebSocketMessagingService,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,7 +62,7 @@ class ConnectionStatus(str, Enum):
     RECONNECTING = "reconnecting"
 
 
-def redis_with_fallback(fallback_method: Optional[str] = None):
+def redis_with_fallback(fallback_method: str | None = None):
     """Decorator to handle Redis operations with fallback to local methods.
 
     Args:
@@ -81,16 +85,17 @@ def redis_with_fallback(fallback_method: Optional[str] = None):
                     )
                 else:
                     logger.warning(
-                        f"No Redis client and no fallback method {fallback_name} "
-                        f"found for {func.__name__}"
+                        "No Redis client and no fallback method %s found for %s",
+                        fallback_name,
+                        func.__name__,
                     )
                     return None
 
             try:
                 return await func(self, *args, **kwargs)
-            except Exception as e:
-                logger.error(
-                    f"Redis operation failed in {func.__name__}, using fallback: {e}"
+            except Exception:
+                logger.exception(
+                    "Redis operation failed in %s, using fallback", func.__name__
                 )
                 fallback_name = fallback_method or f"_local_{func.__name__}"
                 if hasattr(self, fallback_name):
@@ -101,8 +106,10 @@ def redis_with_fallback(fallback_method: Optional[str] = None):
                         else fallback_func(*args, **kwargs)
                     )
                 else:
-                    logger.error(
-                        f"No fallback method {fallback_name} found for {func.__name__}"
+                    logger.exception(
+                        "No fallback method %s found for %s",
+                        fallback_name,
+                        func.__name__,
                     )
                     raise
 
@@ -119,23 +126,23 @@ RATE_LIMIT_LUA_SCRIPT = """
     local now = tonumber(ARGV[2])
     local user_limit = tonumber(ARGV[3])
     local conn_limit = tonumber(ARGV[4])
-    
+
     -- Clean old entries
     redis.call('ZREMRANGEBYSCORE', user_key, 0, window_start)
     redis.call('ZREMRANGEBYSCORE', conn_key, 0, window_start)
-    
+
     -- Check current counts
     local user_count = redis.call('ZCARD', user_key)
     local conn_count = redis.call('ZCARD', conn_key)
-    
+
     if user_count >= user_limit then
         return {0, 'user_limit_exceeded', user_count, conn_count}
     end
-    
+
     if conn_count >= conn_limit then
         return {0, 'connection_limit_exceeded', user_count, conn_count}
     end
-    
+
     -- Add current request with secure random suffix
     local random_suffix = ARGV[5]
     if not random_suffix or random_suffix == '' then
@@ -146,7 +153,7 @@ RATE_LIMIT_LUA_SCRIPT = """
     redis.call('ZADD', conn_key, now, score)
     redis.call('EXPIRE', user_key, 60)
     redis.call('EXPIRE', conn_key, 60)
-    
+
     return {1, 'allowed', user_count + 1, conn_count + 1}
 """
 
@@ -157,17 +164,17 @@ RATE_LIMIT_LUA_SCRIPT = """
 class WebSocketSubscribeRequest(BaseModel):
     """WebSocket subscription request."""
 
-    channels: List[str] = Field(default_factory=list)
-    unsubscribe_channels: List[str] = Field(default_factory=list)
+    channels: list[str] = Field(default_factory=list)
+    unsubscribe_channels: list[str] = Field(default_factory=list)
 
 
 class WebSocketSubscribeResponse(BaseModel):
     """WebSocket subscription response."""
 
     success: bool
-    subscribed_channels: List[str] = Field(default_factory=list)
-    failed_channels: List[str] = Field(default_factory=list)
-    error: Optional[str] = None
+    subscribed_channels: list[str] = Field(default_factory=list)
+    failed_channels: list[str] = Field(default_factory=list)
+    error: str | None = None
 
 
 class WebSocketMessageLimits(BaseModel):
@@ -225,6 +232,7 @@ class CircuitBreaker:
     """Circuit breaker for Redis operations."""
 
     def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 30):
+        """Initialize circuit breaker."""
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self.failure_count = 0
@@ -267,6 +275,7 @@ class ExponentialBackoff:
         max_attempts: int = 10,
         jitter: bool = True,
     ):
+        """Initialize exponential backoff."""
         self.base_delay = base_delay
         self.max_delay = max_delay
         self.max_attempts = max_attempts
@@ -309,21 +318,24 @@ class ExponentialBackoff:
 class RateLimiter:
     """Hierarchical rate limiter using Redis sliding window."""
 
-    def __init__(self, redis_client: Optional[redis.Redis], config: RateLimitConfig):
-        self.redis = redis_client
+    def __init__(self, redis_client: AsyncRedis | None, config: RateLimitConfig):
+        """Initialize rate limiter."""
+        # Use Any to accommodate redis-py asyncio stubs across versions.
+        self.redis: Any | None = redis_client
         self.config = config
-        self.local_counters: Dict[str, Dict] = defaultdict(
+        self.local_counters: dict[str, dict] = defaultdict(
             lambda: {"count": 0, "window_start": time.time()}
         )
 
     @redis_with_fallback("_check_local_connection_limit")
     async def check_connection_limit(
-        self, user_id: UUID, session_id: Optional[UUID] = None
+        self, user_id: UUID, session_id: UUID | None = None
     ) -> bool:
         """Check if user/session can create new connection."""
         user_key = f"connections:user:{user_id}"
         session_key = f"connections:session:{session_id}" if session_id else None
 
+        assert self.redis is not None
         user_count = await self.redis.scard(user_key)
 
         if user_count >= self.config.max_connections_per_user:
@@ -339,7 +351,7 @@ class RateLimiter:
     @redis_with_fallback("_check_local_message_rate")
     async def check_message_rate(
         self, user_id: UUID, connection_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check message rate limits."""
         user_key = f"messages:user:{user_id}"
         conn_key = f"messages:connection:{connection_id}"
@@ -347,20 +359,28 @@ class RateLimiter:
         window_start = now - self.config.window_seconds
 
         # Use Redis script for atomic rate limiting
-        result = await self.redis.eval(
+        assert self.redis is not None
+        result = await self.redis.execute_command(
+            "EVAL",
             RATE_LIMIT_LUA_SCRIPT,
-            2,
+            "2",
             user_key,
             conn_key,
-            window_start,
-            now,
-            self.config.max_messages_per_user_per_minute,
-            self.config.max_messages_per_connection_per_second
-            * self.config.window_seconds,
+            str(int(window_start)),
+            str(int(now)),
+            str(self.config.max_messages_per_user_per_minute),
+            str(
+                self.config.max_messages_per_connection_per_second
+                * self.config.window_seconds
+            ),
             secrets.token_hex(16),
         )
 
-        allowed, reason, user_count, conn_count = result
+        allowed_i, reason_s, user_count_s, conn_count_s = result
+        allowed = int(allowed_i)
+        reason = str(reason_s)
+        user_count = int(user_count_s)
+        conn_count = int(conn_count_s)
 
         return {
             "allowed": bool(allowed),
@@ -373,7 +393,7 @@ class RateLimiter:
         }
 
     def _check_local_connection_limit(
-        self, user_id: UUID, session_id: Optional[UUID] = None
+        self, user_id: UUID, session_id: UUID | None = None
     ) -> bool:
         """Fallback local connection limit check."""
         # Simplified local implementation - always allow connections in fallback mode
@@ -381,7 +401,7 @@ class RateLimiter:
 
     def _check_local_message_rate(
         self, user_id: UUID, connection_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Fallback local message rate check."""
         now = time.time()
         counter = self.local_counters[f"user:{user_id}"]
@@ -415,24 +435,22 @@ class RateLimiter:
 
 
 class WebSocketManager:
-    """Enhanced WebSocket connection manager with broadcasting integration.
-
-    Refactored to use extracted services for better separation of concerns.
-    """
+    """WebSocket connection manager with broadcasting integration."""
 
     def __init__(self, broadcaster=None):
+        """Initialize WebSocket manager."""
         # Extracted services
         self.connection_service = WebSocketConnectionService()
         self.auth_service = WebSocketAuthService()
         self.messaging_service = WebSocketMessagingService(self.auth_service)
 
         # Redis integration
-        self.redis_client: Optional[redis.Redis] = None
-        self.redis_pubsub: Optional[redis.client.PubSub] = None
+        self.redis_client: AsyncRedis | None = None
+        self.redis_pubsub: PubSub | None = None
         self.broadcaster = broadcaster
 
         # Rate limiting
-        self.rate_limiter: Optional[RateLimiter] = None
+        self.rate_limiter: RateLimiter | None = None
 
         # Performance monitoring
         self.performance_metrics = {
@@ -446,11 +464,11 @@ class WebSocketManager:
         }
 
         # Background tasks
-        self._cleanup_task: Optional[asyncio.Task] = None
-        self._heartbeat_task: Optional[asyncio.Task] = None
-        self._performance_task: Optional[asyncio.Task] = None
-        self._redis_listener_task: Optional[asyncio.Task] = None
-        self._priority_processor_task: Optional[asyncio.Task] = None
+        self._cleanup_task: asyncio.Task | None = None
+        self._heartbeat_task: asyncio.Task | None = None
+        self._performance_task: asyncio.Task | None = None
+        self._redis_listener_task: asyncio.Task | None = None
+        self._priority_processor_task: asyncio.Task | None = None
         self._running = False
 
         # Settings
@@ -505,13 +523,13 @@ class WebSocketManager:
                     self._redis_message_listener()
                 )
 
-            logger.info("Enhanced WebSocket manager started with full integration")
+            logger.info("WebSocket manager started with full integration")
 
         except Exception as e:
-            logger.error(f"Failed to start WebSocket manager: {e}")
+            logger.exception("Failed to start WebSocket manager")
             self._running = False
             raise CoreServiceError(
-                message=f"Failed to start WebSocket manager: {str(e)}",
+                message=f"Failed to start WebSocket manager: {e!s}",
                 code="WEBSOCKET_MANAGER_START_FAILED",
                 service="WebSocketManager",
             ) from e
@@ -532,10 +550,8 @@ class WebSocketManager:
         for task in tasks:
             if task:
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
         # Stop broadcaster
         if self.broadcaster:
@@ -550,7 +566,7 @@ class WebSocketManager:
         if self.redis_client:
             await self.redis_client.close()
 
-        logger.info("Enhanced WebSocket manager stopped")
+        logger.info("WebSocket manager stopped")
 
     async def _initialize_redis(self) -> None:
         """Initialize Redis connection for broadcasting."""
@@ -562,17 +578,18 @@ class WebSocketManager:
             return
 
         try:
-            self.redis_client = redis.from_url(redis_url, decode_responses=True)
+            self.redis_client = from_url(redis_url, decode_responses=True)
             await self.redis_client.ping()
 
             self.redis_pubsub = self.redis_client.pubsub()
             # Subscribe to broadcast channels
-            await self.redis_pubsub.psubscribe("tripsage:websocket:broadcast:*")
+            if self.redis_pubsub is not None:
+                await self.redis_pubsub.psubscribe("tripsage:websocket:broadcast:*")
 
             logger.info("Redis connection initialized for WebSocket broadcasting")
 
-        except Exception as e:
-            logger.error(f"Failed to initialize Redis: {e}")
+        except Exception:
+            logger.exception("Failed to initialize Redis")
             self.redis_client = None
             self.redis_pubsub = None
 
@@ -635,7 +652,9 @@ class WebSocketManager:
             connection.state = ConnectionState.AUTHENTICATED
 
             logger.info(
-                f"Authenticated WebSocket connection {connection_id} for user {user_id}"
+                "Authenticated WebSocket connection %s for user %s",
+                connection_id,
+                user_id,
             )
 
             return WebSocketAuthResponse(
@@ -647,7 +666,7 @@ class WebSocketManager:
             )
 
         except Exception as e:
-            logger.error(f"WebSocket authentication failed: {e}")
+            logger.exception("WebSocket authentication failed")
             self.performance_metrics["failed_connections"] += 1
             return WebSocketAuthResponse(
                 success=False,
@@ -670,6 +689,10 @@ class WebSocketManager:
 
         # Subscribe to new channels
         if subscribe_request.channels:
+            # Ensure user_id on connection is present
+            if connection.user_id is None:
+                return WebSocketSubscribeResponse(success=False, error="User not set")
+
             allowed_channels, denied_channels = (
                 self.auth_service.validate_channel_access(
                     connection.user_id, subscribe_request.channels
@@ -694,7 +717,7 @@ class WebSocketManager:
         )
 
     async def _check_connection_rate_limit(
-        self, user_id: UUID, session_id: Optional[UUID] = None
+        self, user_id: UUID, session_id: UUID | None = None
     ) -> bool:
         """Check if connection is allowed under rate limits.
 
@@ -730,10 +753,10 @@ class WebSocketManager:
             # Remove from connection service
             await self.connection_service.remove_connection(connection_id)
 
-            logger.info(f"Disconnected WebSocket connection {connection_id}")
+            logger.info("Disconnected WebSocket connection %s", connection_id)
 
-        except Exception as e:
-            logger.error(f"Error disconnecting connection {connection_id}: {e}")
+        except Exception:
+            logger.exception("Error disconnecting connection %s", connection_id)
 
     async def send_to_connection(
         self, connection_id: str, event: WebSocketEvent
@@ -801,12 +824,12 @@ class WebSocketManager:
         for connection_id in connection_ids:
             await self.disconnect_connection(connection_id)
 
-    def get_connection_stats(self) -> Dict[str, Any]:
-        """Get comprehensive connection statistics."""
+    def get_connection_stats(self) -> dict[str, Any]:
+        """Get connection statistics."""
         # Get stats from messaging service and combine with local metrics
         messaging_stats = self.messaging_service.get_connection_stats()
 
-        combined_stats = {
+        return {
             **messaging_stats,
             "redis_connected": self.redis_client is not None,
             "broadcaster_running": self.broadcaster is not None,
@@ -815,8 +838,6 @@ class WebSocketManager:
                 **messaging_stats.get("performance_metrics", {}),
             },
         }
-
-        return combined_stats
 
     @property
     def connections(self):
@@ -846,7 +867,7 @@ class WebSocketManager:
                 stale_connections = self.connection_service.get_stale_connections()
 
                 for connection_id in stale_connections:
-                    logger.info(f"Cleaning up stale connection {connection_id}")
+                    logger.info("Cleaning up stale connection %s", connection_id)
                     await self.disconnect_connection(connection_id)
 
                 # Create non-blocking sleep task for cleanup interval
@@ -855,8 +876,8 @@ class WebSocketManager:
                 )
                 await cleanup_sleep_task
 
-            except Exception as e:
-                logger.error(f"Error in cleanup task: {e}")
+            except Exception:
+                logger.exception("Error in cleanup task")
                 # Create non-blocking sleep task for error recovery
                 error_sleep_task = asyncio.create_task(
                     asyncio.sleep(self.cleanup_interval)
@@ -872,13 +893,12 @@ class WebSocketManager:
             try:
                 from .websocket_connection_service import ConnectionState
 
-                tasks = []
-                for connection in self.connection_service.connections.values():
-                    if connection.state in [
-                        ConnectionState.CONNECTED,
-                        ConnectionState.AUTHENTICATED,
-                    ]:
-                        tasks.append(connection.send_ping())
+                tasks = [
+                    connection.send_ping()
+                    for connection in self.connection_service.connections.values()
+                    if connection.state
+                    in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]
+                ]
 
                 # Send pings concurrently
                 if tasks:
@@ -890,8 +910,8 @@ class WebSocketManager:
                 )
                 await heartbeat_sleep_task
 
-            except Exception as e:
-                logger.error(f"Error in heartbeat task: {e}")
+            except Exception:
+                logger.exception("Error in heartbeat task")
                 # Create non-blocking sleep task for error recovery
                 error_sleep_task = asyncio.create_task(
                     asyncio.sleep(self.heartbeat_interval)
@@ -909,20 +929,21 @@ class WebSocketManager:
                 active_count = len(self.connection_service.connections)
                 self.performance_metrics["active_connections"] = active_count
 
-                if active_count > self.performance_metrics["peak_connections"]:
-                    self.performance_metrics["peak_connections"] = active_count
+                self.performance_metrics["peak_connections"] = max(
+                    self.performance_metrics["peak_connections"], active_count
+                )
 
                 # Log performance metrics every 5 minutes
                 if int(time.time()) % 300 == 0:
                     stats = self.get_connection_stats()
-                    logger.info(f"WebSocket Performance Metrics: {stats}")
+                    logger.info("WebSocket Performance Metrics: %s", stats)
 
                 # Create non-blocking sleep task for performance monitoring interval
                 performance_sleep_task = asyncio.create_task(asyncio.sleep(30))
                 await performance_sleep_task
 
-            except Exception as e:
-                logger.error(f"Error in performance monitor: {e}")
+            except Exception:
+                logger.exception("Error in performance monitor")
                 # Create non-blocking sleep task for error recovery
                 error_sleep_task = asyncio.create_task(asyncio.sleep(30))
                 await error_sleep_task
@@ -939,13 +960,13 @@ class WebSocketManager:
                         # Parse broadcast message
                         data = json.loads(message["data"])
                         await self._handle_broadcast_message(data)
-                    except Exception as e:
-                        logger.error(f"Failed to handle broadcast message: {e}")
+                    except Exception:
+                        logger.exception("Failed to handle broadcast message")
 
-        except Exception as e:
-            logger.error(f"Error in Redis message listener: {e}")
+        except Exception:
+            logger.exception("Error in Redis message listener")
 
-    async def _handle_broadcast_message(self, data: Dict[str, Any]) -> None:
+    async def _handle_broadcast_message(self, data: dict[str, Any]) -> None:
         """Handle incoming broadcast message from Redis."""
         try:
             event = WebSocketEvent(
@@ -982,8 +1003,8 @@ class WebSocketManager:
                     event, self.rate_limiter, self.message_limits
                 )
 
-        except Exception as e:
-            logger.error(f"Failed to handle broadcast message: {e}")
+        except Exception:
+            logger.exception("Failed to handle broadcast message")
 
     async def _process_priority_queues(self) -> None:
         """Background task to process priority message queues with anti-starvation.
@@ -1024,12 +1045,12 @@ class WebSocketManager:
                     sleep_task = asyncio.create_task(asyncio.sleep(0.5))
                     await sleep_task
 
-            except Exception as e:
-                logger.error(f"Error in priority queue processor: {e}")
+            except Exception:
+                logger.exception("Error in priority queue processor")
                 # Create non-blocking sleep task for error recovery
                 error_sleep_task = asyncio.create_task(asyncio.sleep(1))
                 await error_sleep_task
 
 
-# Global WebSocket manager instance
-websocket_manager = WebSocketManager()
+# FINAL-ONLY: Remove module-level singleton. Construct WebSocketManager in app
+# lifespan and inject via DI where needed.

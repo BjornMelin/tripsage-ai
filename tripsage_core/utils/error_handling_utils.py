@@ -1,27 +1,23 @@
-"""
-Error handling utilities for TripSage Core.
+"""Error handling utilities for TripSage Core.
 
 This module provides standardized error handling functionality for the TripSage
 application, building on top of the core exception system.
 """
 
-from typing import Any, Callable, Dict, Optional, TypeVar, Union
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from tripsage_core.exceptions import (
     CoreDatabaseError,
     CoreExternalAPIError,
-    CoreMCPError,
     CoreTripSageError,
     CoreValidationError,
     ErrorDetails,
-)
-from tripsage_core.exceptions import (
     safe_execute as core_safe_execute,
-)
-from tripsage_core.exceptions import (
     with_error_handling as core_with_error_handling,
 )
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -31,7 +27,7 @@ R = TypeVar("R")
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def log_exception(exc: Exception, logger_name: Optional[str] = None) -> None:
+def log_exception(exc: Exception, logger_name: str | None = None) -> None:
     """Log an exception with appropriate level and details.
 
     Args:
@@ -40,27 +36,15 @@ def log_exception(exc: Exception, logger_name: Optional[str] = None) -> None:
     """
     log = logger if logger_name is None else get_logger(logger_name)
 
-    if isinstance(exc, CoreMCPError):
-        # Extract MCP-specific details from the core exception
-        details = exc.details.additional_context
-        log.error(
-            "MCP Error: %s\nServer: %s\nTool: %s\nParams: %s",
-            exc.message,
-            exc.details.service,
-            details.get("tool"),
-            details.get("params"),
-            exc_info=True,
-        )
-    elif isinstance(exc, CoreExternalAPIError):
+    if isinstance(exc, CoreExternalAPIError):
         # Extract API-specific details from the core exception
-        details = exc.details.additional_context
+        details = exc.details.additional_context or {}
         log.error(
             "API Error: %s\nService: %s\nAPI Status Code: %s\nAPI Response: %s",
             exc.message,
             exc.details.service,
             details.get("api_status_code"),
             details.get("api_response"),
-            exc_info=True,
         )
     elif isinstance(exc, CoreTripSageError):
         # Use warning level for expected application errors
@@ -76,13 +60,12 @@ def log_exception(exc: Exception, logger_name: Optional[str] = None) -> None:
             "System error: %s - %s",
             exc.__class__.__name__,
             str(exc),
-            exc_info=True,
         )
 
 
-def safe_execute_with_logging(
+def safe_execute_with_logging[T, R](
     func: Callable[..., T], *args: Any, fallback: R = None, **kwargs: Any
-) -> Union[T, R]:
+) -> T | R:
     """Execute a function with error handling and TripSage logging.
 
     Args:
@@ -99,7 +82,7 @@ def safe_execute_with_logging(
 
 def with_error_handling_and_logging(
     fallback: Any = None,
-    logger_instance: Optional[Any] = None,
+    logger_instance: Any | None = None,
     re_raise: bool = False,
 ):
     """Decorator to add error handling with TripSage logging to functions.
@@ -123,11 +106,11 @@ def with_error_handling_and_logging(
 def create_mcp_error(
     message: str,
     server: str,
-    tool: Optional[str] = None,
-    params: Optional[Dict[str, Any]] = None,
+    tool: str | None = None,
+    params: dict[str, Any] | None = None,
     category: str = "unknown",
-    status_code: Optional[int] = None,
-) -> CoreMCPError:
+    status_code: int | None = None,
+) -> CoreExternalAPIError:
     """Create an MCP error with TripSage-specific formatting.
 
     Args:
@@ -143,6 +126,10 @@ def create_mcp_error(
     """
     details = ErrorDetails(
         service=server,
+        operation=None,
+        resource_id=None,
+        user_id=None,
+        request_id=None,
         additional_context={
             "tool": tool,
             "params": params,
@@ -151,21 +138,22 @@ def create_mcp_error(
         },
     )
 
-    return CoreMCPError(
+    # Map legacy MCP error into external API error semantics
+    return CoreExternalAPIError(
         message=message,
-        code=f"MCP_{category.upper()}_ERROR",
+        code=f"{server.upper()}_MCP_ERROR",
+        api_service=server,
+        api_status_code=status_code,
+        api_response={"tool": tool, "params": params},
         details=details,
-        server=server,
-        tool=tool,
-        params=params,
     )
 
 
 def create_api_error(
     message: str,
     service: str,
-    status_code: Optional[int] = None,
-    response: Optional[Dict[str, Any]] = None,
+    status_code: int | None = None,
+    response: dict[str, Any] | None = None,
 ) -> CoreExternalAPIError:
     """Create an API error with TripSage-specific formatting.
 
@@ -189,9 +177,9 @@ def create_api_error(
 
 def create_validation_error(
     message: str,
-    field: Optional[str] = None,
-    value: Optional[Any] = None,
-    constraint: Optional[str] = None,
+    field: str | None = None,
+    value: Any | None = None,
+    constraint: str | None = None,
 ) -> CoreValidationError:
     """Create a validation error with TripSage-specific formatting.
 
@@ -214,10 +202,10 @@ def create_validation_error(
 
 def create_database_error(
     message: str,
-    operation: Optional[str] = None,
-    query: Optional[str] = None,
-    params: Optional[Dict[str, Any]] = None,
-    table: Optional[str] = None,
+    operation: str | None = None,
+    query: str | None = None,
+    params: dict[str, Any] | None = None,
+    table: str | None = None,
 ) -> CoreDatabaseError:
     """Create a database error with TripSage-specific formatting.
 
@@ -238,17 +226,17 @@ def create_database_error(
     )
 
 
-# Enhanced error context manager for TripSage operations
+# Error context manager for TripSage operations
 class TripSageErrorContext:
     """Context manager for enhanced error handling in TripSage operations."""
 
     def __init__(
         self,
         operation: str,
-        service: Optional[str] = None,
-        user_id: Optional[str] = None,
-        request_id: Optional[str] = None,
-        logger_instance: Optional[Any] = None,
+        service: str | None = None,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        logger_instance: Any | None = None,
     ):
         """Initialize the error context.
 
@@ -268,7 +256,8 @@ class TripSageErrorContext:
     def __enter__(self):
         """Enter the error context."""
         self.logger.debug(
-            f"Starting operation: {self.operation}",
+            "Starting operation: %s",
+            self.operation,
             extra={
                 "service": self.service,
                 "user_id": self.user_id,
@@ -296,7 +285,8 @@ class TripSageErrorContext:
 
         else:
             self.logger.debug(
-                f"Completed operation: {self.operation}",
+                "Completed operation: %s",
+                self.operation,
                 extra={
                     "service": self.service,
                     "user_id": self.user_id,
@@ -309,12 +299,12 @@ class TripSageErrorContext:
 
 
 __all__ = [
+    "TripSageErrorContext",
+    "create_api_error",
+    "create_database_error",
+    "create_mcp_error",
+    "create_validation_error",
     "log_exception",
     "safe_execute_with_logging",
     "with_error_handling_and_logging",
-    "create_mcp_error",
-    "create_api_error",
-    "create_validation_error",
-    "create_database_error",
-    "TripSageErrorContext",
 ]

@@ -1,20 +1,17 @@
-"""
-Search history service for managing user search history.
+"""Search history service for managing user search history.
 
 This service handles saving, retrieving, and managing user search history
 in the database.
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
-from tripsage_core.services.infrastructure.database_service import (
-    DatabaseService,
-    get_database_service,
-)
+from tripsage_core.services.infrastructure.database_service import DatabaseService
+
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +29,7 @@ class SearchHistoryService:
 
     async def get_recent_searches(
         self, user_id: str, limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get recent searches for a user.
 
         Args:
@@ -70,13 +67,13 @@ class SearchHistoryService:
 
             return searches
 
-        except Exception as e:
-            logger.error(f"Error getting recent searches for user {user_id}: {e}")
+        except Exception:
+            logger.exception("Error getting recent searches for user %s", user_id)
             raise
 
     async def save_search(
         self, user_id: str, search_request: UnifiedSearchRequest
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Save a search to the user's history.
 
         Args:
@@ -117,7 +114,7 @@ class SearchHistoryService:
 
             # Insert into database
             search_id = str(uuid4())
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             result = await self.db_service.insert(
                 "search_parameters",
@@ -141,8 +138,8 @@ class SearchHistoryService:
                 **search_params,
             }
 
-        except Exception as e:
-            logger.error(f"Error saving search for user {user_id}: {e}")
+        except Exception:
+            logger.exception("Error saving search for user %s", user_id)
             raise
 
     async def delete_saved_search(self, user_id: str, search_id: str) -> bool:
@@ -164,11 +161,11 @@ class SearchHistoryService:
             # Check if any rows were deleted
             return len(result) > 0
 
-        except Exception as e:
-            logger.error(f"Error deleting search {search_id} for user {user_id}: {e}")
+        except Exception:
+            logger.exception("Error deleting search %s for user %s", search_id, user_id)
             raise
 
-    def _determine_search_type(self, resource_types: Optional[List[str]]) -> str:
+    def _determine_search_type(self, resource_types: list[str] | None) -> str:
         """Determine the search type based on resource types.
 
         Args:
@@ -194,11 +191,4 @@ class SearchHistoryService:
         return "unified"
 
 
-async def get_search_history_service() -> SearchHistoryService:
-    """Get an instance of the search history service.
-
-    Returns:
-        SearchHistoryService instance
-    """
-    db_service = await get_database_service()
-    return SearchHistoryService(db_service)
+# FINAL-ONLY: Removed factory; construct via DI with explicit DatabaseService.

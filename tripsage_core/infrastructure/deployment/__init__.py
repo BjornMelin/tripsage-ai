@@ -17,20 +17,19 @@ from tripsage_core.infrastructure.deployment.orchestrator import (
 from tripsage_core.infrastructure.deployment.strategies import (
     BlueGreenDeploymentStrategy,
     CanaryDeploymentStrategy,
+    DirectDeploymentStrategy,
     RollingDeploymentStrategy,
-    SimpleDeploymentStrategy,
     get_deployment_strategy,
 )
 
+
 __all__ = [
-    # Orchestrator
+    "BlueGreenDeploymentStrategy",
+    "CanaryDeploymentStrategy",
     "ConfigurableDeploymentOrchestrator",
     "DeploymentResult",
     "DeploymentStatus",
-    # Strategies
-    "SimpleDeploymentStrategy",
-    "BlueGreenDeploymentStrategy",
-    "CanaryDeploymentStrategy",
+    "DirectDeploymentStrategy",
     "RollingDeploymentStrategy",
     "get_deployment_strategy",
 ]

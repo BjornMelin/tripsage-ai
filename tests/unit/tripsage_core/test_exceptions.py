@@ -14,7 +14,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError,
     CoreKeyValidationError,
     # Specialized exceptions
-    CoreMCPError,
     CoreRateLimitError,
     # Resource and validation
     CoreResourceNotFoundError,
@@ -252,18 +251,6 @@ class TestSpecificExceptions:
         assert exc.details.additional_context["api_status_code"] == 429
         assert exc.details.additional_context["api_response"] == api_response
 
-    def test_mcp_error(self):
-        """Test CoreMCPError."""
-        params = {"query": "test"}
-        exc = CoreMCPError(server="flights-mcp", tool="search_flights", params=params)
-
-        assert exc.message == "MCP server operation failed"
-        assert exc.code == "MCP_ERROR"
-        assert exc.status_code == status.HTTP_502_BAD_GATEWAY
-        assert exc.details.service == "flights-mcp"
-        assert exc.details.additional_context["tool"] == "search_flights"
-        assert exc.details.additional_context["params"] == params
-
     def test_agent_error(self):
         """Test CoreAgentError."""
         exc = CoreAgentError(agent_type="FlightAgent", operation="search_flights")
@@ -346,7 +333,7 @@ class TestUtilityFunctions:
         result = safe_execute(test_func, fallback="fallback", logger=mock_logger)
 
         assert result == "fallback"
-        mock_logger.error.assert_called_once()
+        mock_logger.exception.assert_called_once()
 
     def test_with_error_handling_decorator_sync(self):
         """Test with_error_handling decorator for sync functions."""
@@ -359,7 +346,7 @@ class TestUtilityFunctions:
         result = test_func()
 
         assert result == "error_result"
-        mock_logger.error.assert_called_once()
+        mock_logger.exception.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_with_error_handling_decorator_async(self):
@@ -373,7 +360,7 @@ class TestUtilityFunctions:
         result = await test_func()
 
         assert result == "error_result"
-        mock_logger.error.assert_called_once()
+        mock_logger.exception.assert_called_once()
 
     def test_with_error_handling_re_raise(self):
         """Test with_error_handling decorator with re_raise=True."""
@@ -386,7 +373,7 @@ class TestUtilityFunctions:
         with pytest.raises(ValueError, match="Test error"):
             test_func()
 
-        mock_logger.error.assert_called_once()
+        mock_logger.exception.assert_called_once()
 
 
 class TestExceptionInheritance:
@@ -415,12 +402,8 @@ class TestExceptionInheritance:
 
     def test_specialized_exceptions_inherit_from_service_error(self):
         """Test that specialized exceptions inherit properly."""
-        # MCP and Agent errors should inherit from ServiceError
-        mcp_error = CoreMCPError()
+        # Agent errors should inherit from ServiceError
         agent_error = CoreAgentError()
-
-        assert isinstance(mcp_error, CoreServiceError)
-        assert isinstance(mcp_error, CoreTripSageError)
 
         assert isinstance(agent_error, CoreServiceError)
         assert isinstance(agent_error, CoreTripSageError)
@@ -463,21 +446,17 @@ class TestExceptionIntegration:
             additional_context={"extra": "data"},
         )
 
-        exc = CoreMCPError(
-            message="MCP operation failed",
-            code="MCP_TIMEOUT_ERROR",
+        exc = CoreServiceError(
+            message="Service operation failed",
+            code="SERVICE_INTERNAL_ERROR",
             details=details,
-            server="flights-mcp",
-            tool="search_flights",
-            params={"origin": "NYC", "destination": "LAX"},
+            service="test-service",
         )
 
-        # Test serialization
         serialized = exc.to_dict()
-
-        assert serialized["error"] == "CoreMCPError"
-        assert serialized["message"] == "MCP operation failed"
-        assert serialized["code"] == "MCP_TIMEOUT_ERROR"
+        assert serialized["error"] == "CoreServiceError"
+        assert serialized["message"] == "Service operation failed"
+        assert serialized["code"] == "SERVICE_INTERNAL_ERROR"
         assert serialized["status_code"] == 502
 
         details_dict = serialized["details"]
@@ -485,11 +464,6 @@ class TestExceptionIntegration:
         assert details_dict["operation"] == "test-operation"
         assert details_dict["user_id"] == "user-123"
         assert details_dict["request_id"] == "req-456"
-
-        context = details_dict["additional_context"]
-        assert context["extra"] == "data"
-        assert context["tool"] == "search_flights"
-        assert context["params"] == {"origin": "NYC", "destination": "LAX"}
 
     def test_error_response_creation(self):
         """Test creating API error responses."""

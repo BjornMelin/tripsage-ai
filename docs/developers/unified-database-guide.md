@@ -4,7 +4,7 @@
 > **Platform**: Supabase (Production/Staging/Development)  
 > **Version**: PostgreSQL 15+ with unified schema design
 
-This comprehensive guide provides complete information about TripSage's database architecture, schema design, operations, triggers, and optimization strategies. It covers everything developers need to work effectively with our PostgreSQL database system.
+This guide provides complete information about TripSage's database architecture, schema design, operations, triggers, and optimization strategies. It covers everything developers need to work effectively with our PostgreSQL database system.
 
 ## 📋 Table of Contents
 
@@ -28,7 +28,7 @@ TripSage has evolved to a unified database architecture that eliminates complexi
 - **Memory System**: Mem0 v1.0+ with direct Supabase backend integration
 - **Performance**: 471+ QPS throughput, <100ms vector search latency
 
-#### **Enhanced Caching Layer**
+#### **Caching Layer Improvements**
 
 - **Technology**: DragonflyDB (Redis-compatible with enhanced performance)
 - **Performance**: 25x improvement over Redis for frequently accessed data
@@ -616,4 +616,4 @@ SELECT monthly_cleanup_job();
 
 ---
 
-*This comprehensive database guide provides the foundation for TripSage's robust travel planning platform, supporting user management, trip planning, AI memory, and performance optimization with PostgreSQL and pgvector capabilities.*
+*This database guide provides the foundation for TripSage's robust travel planning platform, supporting user management, trip planning, AI memory, and performance optimization with PostgreSQL and pgvector capabilities.*

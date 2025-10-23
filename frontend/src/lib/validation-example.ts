@@ -1,5 +1,5 @@
 /**
- * Comprehensive example demonstrating Zod validation integration
+ * Example demonstrating Zod validation integration
  * This file shows how our validation system works across different boundaries
  */
 
@@ -132,7 +132,7 @@ export function demonstrateComponentValidation() {
   }
 }
 
-// Example 4: Comprehensive Error Handling
+// Example 4: Error Handling
 export function demonstrateErrorHandling() {
   console.log("\n=== Error Handling Example ===");
 
@@ -206,7 +206,7 @@ export async function demonstrateValidatedApiClient() {
 
 // Run all examples
 export function runAllValidationExamples() {
-  console.log("🔍 Running Comprehensive Zod Validation Examples\n");
+  console.log("🔍 Running Zod Validation Examples\n");
 
   demonstrateFormValidation();
   demonstrateApiValidation();

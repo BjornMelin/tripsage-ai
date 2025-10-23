@@ -1,6 +1,6 @@
 /**
  * Shared mock utilities for Supabase real-time client testing.
- * Provides comprehensive mocking infrastructure for WebSocket connections,
+ * Provides mocking infrastructure for WebSocket connections,
  * channel management, and real-time event simulation.
  */
 
@@ -69,7 +69,7 @@ export function createMockRealtimeChannel(): MockRealtimeChannel {
 }
 
 /**
- * Creates a comprehensive mock Supabase client for real-time testing
+ * Creates a mock Supabase client for real-time testing
  */
 export function createMockSupabaseClient(): MockSupabaseClient {
   const mockChannel = createMockRealtimeChannel();

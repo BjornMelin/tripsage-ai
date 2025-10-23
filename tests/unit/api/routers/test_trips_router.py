@@ -1,13 +1,12 @@
-"""
-Enhanced comprehensive tests for trips router with collaboration features.
+"""Tests for trips router with collaboration features.
 
 This module provides complete test coverage for the trips router implementation,
 including collaboration features, permission-based access control, multi-user
 trip sharing scenarios, error handling, authentication, and authorization.
 """
 
-from datetime import date, datetime, timezone
-from unittest.mock import AsyncMock, MagicMock
+from datetime import UTC, date, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -15,6 +14,7 @@ from fastapi import HTTPException
 
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.routers.trips import (
+    _TripSearchParams,
     create_trip,
     delete_trip,
     duplicate_trip,
@@ -35,15 +35,14 @@ from tripsage.api.schemas.trips import (
     UpdateTripRequest,
 )
 from tripsage_core.exceptions import (
-    CoreAuthorizationError as PermissionError,
-)
-from tripsage_core.exceptions import (
+    CoreAuthorizationError as ServicePermissionError,
     CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
-from tripsage_core.models.db.trip_collaborator import TripCollaboratorDB
+from tripsage_core.models.db.trip_collaborator import (
+    PermissionLevel,
+    TripCollaboratorDB,
+)
 from tripsage_core.models.schemas_common.enums import (
     TripStatus,
     TripType,
@@ -54,7 +53,9 @@ from tripsage_core.services.business.trip_service import TripService
 
 
 class TestTripsRouterComprehensive:
-    """Comprehensive test suite for trips router functionality."""
+    """Test suite for trips router functionality."""
+
+    # pylint: disable=too-many-public-methods
 
     # ===== FIXTURES =====
 
@@ -80,7 +81,7 @@ class TestTripsRouterComprehensive:
 
     @pytest.fixture
     def mock_trip_service(self):
-        """Mock trip service with comprehensive method coverage."""
+        """Mock trip service with method coverage."""
         service = MagicMock(spec=TripService)
         service.create_trip = AsyncMock()
         service.get_trip = AsyncMock()
@@ -102,7 +103,15 @@ class TestTripsRouterComprehensive:
             start_date=date(2024, 5, 1),
             end_date=date(2024, 5, 5),
             destinations=[
-                TripDestination(name="Tokyo, Japan", country="Japan", city="Tokyo")
+                TripDestination(
+                    name="Tokyo, Japan",
+                    country="Japan",
+                    city="Tokyo",
+                    coordinates=None,
+                    arrival_date=None,
+                    departure_date=None,
+                    duration_days=5,
+                )
             ],
         )
 
@@ -110,8 +119,8 @@ class TestTripsRouterComprehensive:
     def sample_shared_trip_response(self):
         """Sample shared trip response from core service."""
         from tripsage_core.models.trip import (
+            Budget,
             BudgetBreakdown,
-            EnhancedBudget,
             TripPreferences,
         )
         from tripsage_core.services.business.trip_service import TripLocation
@@ -130,13 +139,13 @@ class TestTripsRouterComprehensive:
         trip_mock.user_id = "user123"
         trip_mock.title = "Tokyo Adventure"
         trip_mock.description = "5-day trip exploring Tokyo"
-        trip_mock.start_date = datetime(2024, 5, 1, tzinfo=timezone.utc)
-        trip_mock.end_date = datetime(2024, 5, 5, tzinfo=timezone.utc)
+        trip_mock.start_date = datetime(2024, 5, 1, tzinfo=UTC)
+        trip_mock.end_date = datetime(2024, 5, 5, tzinfo=UTC)
         trip_mock.destination = (
             "Tokyo, Japan"  # Core expects singular destination string
         )
         trip_mock.destinations = [destination]  # Use proper TripLocation object
-        trip_mock.budget = EnhancedBudget(
+        trip_mock.budget = Budget(  # type: ignore[arg-type]
             total=5000.0,
             currency="USD",
             breakdown=BudgetBreakdown(
@@ -150,11 +159,11 @@ class TestTripsRouterComprehensive:
         trip_mock.trip_type = TripType.LEISURE
         trip_mock.visibility = TripVisibility.SHARED
         trip_mock.tags = ["adventure", "culture"]
-        trip_mock.preferences = TripPreferences()
+        trip_mock.preferences = TripPreferences.model_validate({})
         trip_mock.status = TripStatus.PLANNING.value
         trip_mock.shared_with = ["user456", "user789"]
-        trip_mock.created_at = datetime.now(timezone.utc)
-        trip_mock.updated_at = datetime.now(timezone.utc)
+        trip_mock.created_at = datetime.now(UTC)
+        trip_mock.updated_at = datetime.now(UTC)
 
         return trip_mock
 
@@ -166,19 +175,19 @@ class TestTripsRouterComprehensive:
                 id=1,
                 trip_id=123,
                 user_id=UUID("123e4567-e89b-12d3-a456-426614174456"),
-                permission_level="view",
+                permission_level=PermissionLevel.VIEW,
                 added_by=UUID("123e4567-e89b-12d3-a456-426614174000"),
-                added_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                added_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             ),
             TripCollaboratorDB(
                 id=2,
                 trip_id=123,
                 user_id=UUID("123e4567-e89b-12d3-a456-426614174789"),
-                permission_level="edit",
+                permission_level=PermissionLevel.EDIT,
                 added_by=UUID("123e4567-e89b-12d3-a456-426614174000"),
-                added_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                added_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             ),
         ]
 
@@ -223,9 +232,11 @@ class TestTripsRouterComprehensive:
         # Create Budget and TripPreferences as Pydantic models
         # They should serialize to dicts properly
         budget = Budget(
-            total_budget=Price(amount=Decimal("5000"), currency=CurrencyCode.USD)
-        )
-        preferences = TripPreferences(budget=budget)
+            total_budget=Price(
+                amount=Decimal(5000), currency=CurrencyCode.USD, formatted=None
+            )
+        )  # type: ignore[arg-type]
+        preferences = TripPreferences.model_validate({"budget": budget})
 
         trip_request = CreateTripRequest(
             title="Tokyo Adventure",
@@ -233,7 +244,15 @@ class TestTripsRouterComprehensive:
             start_date=date(2024, 5, 1),
             end_date=date(2024, 5, 5),
             destinations=[
-                TripDestination(name="Tokyo, Japan", country="Japan", city="Tokyo")
+                TripDestination(
+                    name="Tokyo, Japan",
+                    country="Japan",
+                    city="Tokyo",
+                    coordinates=None,
+                    arrival_date=None,
+                    departure_date=None,
+                    duration_days=5,
+                )
             ],
             preferences=preferences,
         )
@@ -260,7 +279,15 @@ class TestTripsRouterComprehensive:
                 start_date=date(2024, 5, 5),  # End before start
                 end_date=date(2024, 5, 1),
                 destinations=[
-                    TripDestination(name="Tokyo, Japan", country="Japan", city="Tokyo")
+                    TripDestination(
+                        name="Tokyo, Japan",
+                        country="Japan",
+                        city="Tokyo",
+                        coordinates=None,
+                        arrival_date=None,
+                        departure_date=None,
+                        duration_days=5,
+                    )
                 ],
             )
 
@@ -336,11 +363,11 @@ class TestTripsRouterComprehensive:
             trip_id, update_request, mock_secondary_principal, mock_trip_service
         )
 
-        mock_trip_service.update_trip.assert_called_once_with(
-            user_id="user456",
-            trip_id=str(trip_id),
-            request={"title": "Updated by Collaborator"},
-        )
+        mock_trip_service.update_trip.assert_called_once()
+        call_kwargs = mock_trip_service.update_trip.call_args.kwargs
+        assert call_kwargs["user_id"] == "user456"
+        assert call_kwargs["trip_id"] == str(trip_id)
+        assert call_kwargs["update_data"].title == "Updated by Collaborator"
         assert result.title == "Tokyo Adventure"
 
     async def test_update_trip_permission_denied(
@@ -349,7 +376,7 @@ class TestTripsRouterComprehensive:
         """Test trip update permission denied."""
         trip_id = uuid4()
         update_request = UpdateTripRequest(title="Unauthorized Update")
-        mock_trip_service.update_trip.side_effect = PermissionError(
+        mock_trip_service.update_trip.side_effect = ServicePermissionError(
             "No permission to edit this trip"
         )
 
@@ -358,21 +385,21 @@ class TestTripsRouterComprehensive:
                 trip_id, update_request, mock_secondary_principal, mock_trip_service
             )
 
-        assert exc_info.value.status_code == 500
+        assert exc_info.value.status_code == 403
 
     async def test_delete_trip_as_non_owner(
         self, mock_secondary_principal, mock_trip_service
     ):
         """Test trip deletion by non-owner (should fail)."""
         trip_id = uuid4()
-        mock_trip_service.delete_trip.side_effect = PermissionError(
+        mock_trip_service.delete_trip.side_effect = ServicePermissionError(
             "Only trip owner can delete the trip"
         )
 
         with pytest.raises(HTTPException) as exc_info:
             await delete_trip(trip_id, mock_secondary_principal, mock_trip_service)
 
-        assert exc_info.value.status_code == 500
+        assert exc_info.value.status_code == 403
 
     # ===== MULTI-USER SCENARIOS =====
 
@@ -392,9 +419,9 @@ class TestTripsRouterComprehensive:
         mock_trip_service.get_user_trips.assert_called_once_with(
             user_id="user456", limit=10, offset=0
         )
-        assert result["total"] == 1
-        assert len(result["items"]) == 1
-        assert result["items"][0]["title"] == "Tokyo Adventure"
+        assert result.total == 1
+        assert len(result.items) == 1
+        assert result.items[0].title == "Tokyo Adventure"
 
     async def test_search_trips_includes_shared_trips(
         self, mock_secondary_principal, mock_trip_service, sample_shared_trip_response
@@ -402,20 +429,16 @@ class TestTripsRouterComprehensive:
         """Test that trip search includes shared trips."""
         mock_trip_service.search_trips.return_value = [sample_shared_trip_response]
 
+        params = _TripSearchParams(q="Tokyo", status=None, skip=0, limit=10)
         result = await search_trips(
-            q="Tokyo",
-            status_filter=None,
-            skip=0,
-            limit=10,
+            params=params,
             principal=mock_secondary_principal,
             trip_service=mock_trip_service,
         )
 
-        mock_trip_service.search_trips.assert_called_once_with(
-            user_id="user456", query="Tokyo", limit=10
-        )
-        assert result["total"] == 1
-        assert len(result["items"]) == 1
+        mock_trip_service.search_trips.assert_called_once()
+        assert result.total == 1
+        assert len(result.items) == 1
 
     async def test_duplicate_shared_trip(
         self, mock_secondary_principal, mock_trip_service, sample_shared_trip_response
@@ -502,7 +525,7 @@ class TestTripsRouterComprehensive:
 
         result = await export_trip(
             trip_id,
-            format="pdf",
+            export_format="pdf",
             principal=mock_secondary_principal,
             trip_service=mock_trip_service,
         )
@@ -577,25 +600,23 @@ class TestTripsRouterComprehensive:
         # Note: The router adapter might not preserve these counts,
         # but the service should provide them
 
-    async def test_search_trips_with_advanced_filters(
+    async def test_search_trips_with_filters(
         self, mock_principal, mock_trip_service, sample_shared_trip_response
     ):
-        """Test trip search with advanced filtering."""
+        """Test trip search with detailed filtering."""
         mock_trip_service.search_trips.return_value = [sample_shared_trip_response]
 
+        params = _TripSearchParams(
+            q="Tokyo cultural experience", status="planning", skip=0, limit=10
+        )
         result = await search_trips(
-            q="Tokyo cultural experience",
-            status_filter="planning",
-            skip=0,
-            limit=10,
+            params=params,
             principal=mock_principal,
             trip_service=mock_trip_service,
         )
 
-        mock_trip_service.search_trips.assert_called_once_with(
-            user_id="user123", query="Tokyo cultural experience", limit=10
-        )
-        assert result["total"] == 1
+        mock_trip_service.search_trips.assert_called_once()
+        assert result.total == 1
 
     # ===== AUTHENTICATION AND AUTHORIZATION EDGE CASES =====
 
@@ -610,11 +631,13 @@ class TestTripsRouterComprehensive:
 
         trip_id = uuid4()
         budget = Budget(
-            total_budget=Price(amount=Decimal("6000"), currency=CurrencyCode.USD)
-        )
-        preferences = TripPreferencesRequest(budget=budget)
+            total_budget=Price(
+                amount=Decimal(6000), currency=CurrencyCode.USD, formatted=None
+            )
+        )  # type: ignore[arg-type]
+        preferences = TripPreferencesRequest.model_validate({"budget": budget})
 
-        mock_trip_service.update_trip.side_effect = PermissionError(
+        mock_trip_service.update_trip.side_effect = ServicePermissionError(
             "No permission to edit this trip"
         )
 
@@ -650,7 +673,15 @@ class TestTripsRouterComprehensive:
             start_date=date(2024, 6, 1),
             end_date=date(2024, 6, 10),
             destinations=[
-                TripDestination(name="Kyoto, Japan", country="Japan", city="Kyoto")
+                TripDestination(
+                    name="Kyoto, Japan",
+                    country="Japan",
+                    city="Kyoto",
+                    coordinates=None,
+                    arrival_date=None,
+                    departure_date=None,
+                    duration_days=4,
+                )
             ],
         )
         mock_trip_service.create_trip.return_value = sample_shared_trip_response
@@ -722,7 +753,7 @@ class TestTripsRouterComprehensive:
 
         share_request = TripShareRequest(
             user_emails=["collaborator1@example.com", "collaborator2@example.com"],
-            permission_level="view",
+            permission_level=PermissionLevel.VIEW,
             message="Check out this amazing Tokyo trip!",
         )
 
@@ -757,7 +788,7 @@ class TestTripsRouterComprehensive:
 
         # But they cannot edit it
         update_request = UpdateTripRequest(title="Unauthorized Edit")
-        mock_trip_service.update_trip.side_effect = PermissionError(
+        mock_trip_service.update_trip.side_effect = ServicePermissionError(
             "No permission to edit this trip"
         )
 
@@ -770,13 +801,20 @@ class TestTripsRouterComprehensive:
         self, mock_principal, mock_trip_service
     ):
         """Test trip suggestions with personalization."""
-        result = await get_trip_suggestions(
-            limit=3,
-            budget_max=3000.0,
-            category="culture",
-            principal=mock_principal,
-            trip_service=mock_trip_service,
-        )
+        mock_memory_service = AsyncMock()
+        mock_memory_service.search_memories.return_value = []
+
+        with patch(
+            "tripsage_core.services.business.memory_service.get_memory_service",
+            AsyncMock(return_value=mock_memory_service),
+        ):
+            result = await get_trip_suggestions(
+                limit=3,
+                budget_max=3000.0,
+                category="culture",
+                principal=mock_principal,
+                trip_service=mock_trip_service,
+            )
 
         # Should return suggestions within budget and matching category
         assert isinstance(result, list)
@@ -796,7 +834,7 @@ class TestTripsRouterComprehensive:
         # Test different types of service errors
         service_errors = [
             (NotFoundError("Trip not found"), 500),
-            (PermissionError("Access denied"), 500),
+            (ServicePermissionError("Access denied"), 500),
             (ValidationError("Invalid data"), 500),
             (Exception("Generic error"), 500),
         ]
@@ -842,32 +880,33 @@ class TestTripsRouterComprehensive:
         # Mock large number of trips
         trips = [sample_shared_trip_response] * 100
         mock_trip_service.get_user_trips.return_value = trips
+        mock_trip_service.count_user_trips.return_value = 100
 
         # Test different pagination scenarios
         result = await list_trips(
             skip=0, limit=50, principal=mock_principal, trip_service=mock_trip_service
         )
 
-        assert result["total"] == 100
-        assert len(result["items"]) == 100  # Note: Current implementation returns all
-        assert result["skip"] == 0
-        assert result["limit"] == 50
+        assert result.total == 100
+        assert len(result.items) == 100
+        assert result.skip == 0
+        assert result.limit == 50
 
     async def test_empty_search_results(self, mock_principal, mock_trip_service):
         """Test search with no results."""
         mock_trip_service.search_trips.return_value = []
 
+        params = _TripSearchParams(
+            q="nonexistent destination", status=None, skip=0, limit=10
+        )
         result = await search_trips(
-            q="nonexistent destination",
-            status_filter=None,
-            skip=0,
-            limit=10,
+            params=params,
             principal=mock_principal,
             trip_service=mock_trip_service,
         )
 
-        assert result["total"] == 0
-        assert len(result["items"]) == 0
+        assert result.total == 0
+        assert len(result.items) == 0
 
     async def test_trip_with_no_destinations(self, mock_principal, mock_trip_service):
         """Test handling trip with no destinations."""
@@ -877,7 +916,17 @@ class TestTripsRouterComprehensive:
             description="Trip with minimal data",
             start_date=date(2024, 6, 1),
             end_date=date(2024, 6, 2),
-            destinations=[TripDestination(name="Unknown", country=None, city=None)],
+            destinations=[
+                TripDestination(
+                    name="Unknown",
+                    country=None,
+                    city=None,
+                    coordinates=None,
+                    arrival_date=None,
+                    departure_date=None,
+                    duration_days=1,
+                )
+            ],
         )
 
         mock_trip_response = MagicMock()
@@ -885,13 +934,13 @@ class TestTripsRouterComprehensive:
         mock_trip_response.user_id = "user123"
         mock_trip_response.title = "Minimal Trip"
         mock_trip_response.description = "Trip with minimal data"
-        mock_trip_response.start_date = datetime(2024, 6, 1, tzinfo=timezone.utc)
-        mock_trip_response.end_date = datetime(2024, 6, 2, tzinfo=timezone.utc)
+        mock_trip_response.start_date = datetime(2024, 6, 1, tzinfo=UTC)
+        mock_trip_response.end_date = datetime(2024, 6, 2, tzinfo=UTC)
         mock_trip_response.destinations = []
         mock_trip_response.preferences = {}
         mock_trip_response.status = "planning"
-        mock_trip_response.created_at = datetime.now(timezone.utc)
-        mock_trip_response.updated_at = datetime.now(timezone.utc)
+        mock_trip_response.created_at = datetime.now(UTC)
+        mock_trip_response.updated_at = datetime.now(UTC)
 
         mock_trip_service.create_trip.return_value = mock_trip_response
 

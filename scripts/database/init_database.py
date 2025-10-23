@@ -1,202 +1,376 @@
-#!/usr/bin/env python
-"""
-Database initialization script for TripSage.
+#!/usr/bin/env python3
+"""Database initialization script for TripSage.
 
-This script initializes the SQL database with:
-- Basic schema and tables
-- Sample data for testing
+Initializes a fresh database with base schema, required extensions,
+RLS policies, and optional seed data.
 
-Note: Memory management has been migrated from Neo4j to Mem0 direct SDK integration.
+Usage:
+    python scripts/database/init_database.py [--with-seed-data] [--env development]
 """
 
 import asyncio
-import os
-import sys
+import logging
 from pathlib import Path
+from typing import Any
 
-# Add the project root to the Python path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+import click
+import supabase  # type: ignore[import-not-found]
 
-# These imports rely on the path adjustments above
-from tripsage.mcp_abstraction.manager import MCPManager  # noqa: E402
-
-from tripsage_core.config import get_settings  # noqa: E402
-from tripsage_core.utils.logging_utils import configure_logging  # noqa: E402
-
-# Configure logging
-logger = configure_logging(__name__)
+from tripsage_core.config import get_settings
+from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
-async def check_sql_connection(mcp_manager: MCPManager, project_id: str) -> bool:
-    """Check SQL database connection."""
-    try:
-        result = await mcp_manager.call_tool(
-            integration_name="supabase",
-            tool_name="execute_sql",
-            tool_args={"project_id": project_id, "sql": "SELECT 1 as test;"},
-        )
+logger = logging.getLogger(__name__)
 
-        if result.result:
-            logger.info("Connected to SQL database successfully")
+
+class DatabaseInitializer:
+    """Handles database initialization with schema and seed data."""
+
+    def __init__(self, db_service: DatabaseService, supabase_client: Any):
+        """Initialize database initializer."""
+        self.db_service = db_service
+        self.supabase_client = supabase_client
+        self.settings = get_settings()
+        self.project_root = Path(__file__).parent.parent.parent
+        self.schema_dir = self.project_root / "supabase" / "schemas"
+
+    async def initialize_database(self, with_seed_data: bool = False) -> bool:
+        """Initialize database with schema and optional seed data."""
+        try:
+            logger.info("Starting database initialization...")
+
+            # 1. Install required extensions
+            success = await self._install_extensions()
+            if not success:
+                logger.error("Failed to install extensions")
+                return False
+
+            # 2. Create base tables
+            success = await self._create_base_tables()
+            if not success:
+                logger.error("Failed to create base tables")
+                return False
+
+            # 3. Setup RLS policies
+            success = await self._setup_rls_policies()
+            if not success:
+                logger.error("Failed to setup RLS policies")
+                return False
+
+            # 4. Create indexes
+            success = await self._create_indexes()
+            if not success:
+                logger.error("Failed to create indexes")
+                return False
+
+            # 5. Seed data if requested
+            if with_seed_data:
+                success = await self._seed_initial_data()
+                if not success:
+                    logger.error("Failed to seed initial data")
+                    return False
+
+            # 6. Run post-initialization validation
+            success = await self._validate_initialization()
+            if not success:
+                logger.error("Post-initialization validation failed")
+                return False
+
+            logger.info("Database initialization completed successfully")
             return True
 
-        logger.error("Failed to connect to SQL database")
-        return False
-
-    except Exception as e:
-        logger.error(f"SQL connection check failed: {e}")
-        return False
-
-
-async def init_sql_database(mcp_manager: MCPManager, project_id: str) -> bool:
-    """Initialize SQL database with basic schema."""
-    logger.info("Initializing SQL database...")
-
-    try:
-        # Create users table if not exists
-        create_users_sql = """
-        CREATE TABLE IF NOT EXISTS users (
-            id BIGSERIAL PRIMARY KEY,
-            email TEXT UNIQUE NOT NULL,
-            username TEXT,
-            full_name TEXT,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            preferences JSONB DEFAULT '{}'::jsonb,
-            role TEXT DEFAULT 'user'
-        );
-        """
-
-        result = await mcp_manager.call_tool(
-            integration_name="supabase",
-            tool_name="execute_sql",
-            tool_args={"project_id": project_id, "sql": create_users_sql},
-        )
-
-        if result.error:
-            logger.error(f"Failed to create users table: {result.error}")
+        except Exception:
+            logger.exception("Database initialization failed")
             return False
 
-        # Create trips table if not exists
-        create_trips_sql = """
-        CREATE TABLE IF NOT EXISTS trips (
-            id BIGSERIAL PRIMARY KEY,
-            user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
-            title TEXT NOT NULL,
-            start_date DATE NOT NULL,
-            end_date DATE NOT NULL,
-            status TEXT DEFAULT 'planning',
-            budget DECIMAL(10, 2),
-            currency TEXT DEFAULT 'USD',
-            travelers_count INTEGER DEFAULT 1,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            metadata JSONB DEFAULT '{}'::jsonb
-        );
-        """
+    async def _install_extensions(self) -> bool:
+        """Install required PostgreSQL extensions."""
+        extensions = [
+            "uuid-ossp",  # UUID generation
+            "pg_cron",  # Scheduled jobs
+            "pg_net",  # HTTP requests
+            "pg_stat_statements",  # Query statistics
+        ]
 
-        result = await mcp_manager.call_tool(
-            integration_name="supabase",
-            tool_name="execute_sql",
-            tool_args={"project_id": project_id, "sql": create_trips_sql},
-        )
+        try:
+            logger.info("Installing required extensions...")
 
-        if result.error:
-            logger.error(f"Failed to create trips table: {result.error}")
+            for extension in extensions:
+                await self.db_service.execute_sql(
+                    f"CREATE EXTENSION IF NOT EXISTS {extension}"
+                )
+                logger.info("Installed extension: %s", extension)
+
+            # Verify extensions
+            result = await self.db_service.execute_sql("""
+                SELECT name FROM pg_available_extensions
+                WHERE installed_version IS NOT NULL
+            """)
+
+            installed_extensions = [row["name"] for row in result]
+            missing = set(extensions) - set(installed_extensions)
+
+            if missing:
+                logger.warning("Some extensions may not be available: %s", missing)
+
+            return True
+
+        except Exception:
+            logger.exception("Failed to install extensions")
             return False
 
-        logger.info("SQL database initialized successfully")
-        return True
+    async def _create_base_tables(self) -> bool:
+        """Create base database tables."""
+        try:
+            logger.info("Creating base tables...")
 
-    except Exception as e:
-        logger.error(f"SQL initialization failed: {e}")
-        return False
+            # Create tables from schema files
+            schema_files = [
+                "00_extensions.sql",
+                "01_auth_schema.sql",
+                "02_core_tables.sql",
+                "03_storage_schema.sql",
+            ]
+
+            for schema_file in schema_files:
+                file_path = self.schema_dir / schema_file
+                if file_path.exists():
+                    schema_sql = file_path.read_text()
+                    await self.db_service.execute_sql(schema_sql)
+                    logger.info("Applied schema: %s", schema_file)
+                else:
+                    logger.warning("Schema file not found: %s", schema_file)
+
+            return True
+
+        except Exception:
+            logger.exception("Failed to create base tables")
+            return False
+
+    async def _setup_rls_policies(self) -> bool:
+        """Setup Row Level Security policies."""
+        try:
+            logger.info("Setting up RLS policies...")
+
+            # Enable RLS on tables
+            tables_with_rls = [
+                "user_profiles",
+                "trips",
+                "trip_participants",
+                "trip_messages",
+                "file_attachments",
+                "user_preferences",
+            ]
+
+            for table in tables_with_rls:
+                await self.db_service.execute_sql(
+                    f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"
+                )
+                logger.info("Enabled RLS on: %s", table)
+
+            # Apply RLS policies from policy files
+            policy_files = [
+                "05_rls_policies.sql",
+                "06_auth_policies.sql",
+            ]
+
+            for policy_file in policy_files:
+                file_path = self.schema_dir / policy_file
+                if file_path.exists():
+                    policy_sql = file_path.read_text()
+                    await self.db_service.execute_sql(policy_sql)
+                    logger.info("Applied policies: %s", policy_file)
+
+            return True
+
+        except Exception:
+            logger.exception("Failed to setup RLS policies")
+            return False
+
+    async def _create_indexes(self) -> bool:
+        """Create performance indexes."""
+        try:
+            logger.info("Creating indexes...")
+
+            indexes = [
+                "CREATE INDEX IF NOT EXISTS idx_trips_user_id ON trips(user_id)",
+                "CREATE INDEX IF NOT EXISTS idx_trip_messages_trip_id "
+                "ON trip_messages(trip_id)",
+                "CREATE INDEX IF NOT EXISTS idx_file_attachments_trip_id "
+                "ON file_attachments(trip_id)",
+                "CREATE INDEX IF NOT EXISTS idx_user_profiles_email "
+                "ON user_profiles(email)",
+                "CREATE INDEX IF NOT EXISTS idx_trip_participants_trip_id "
+                "ON trip_participants(trip_id)",
+            ]
+
+            for index_sql in indexes:
+                await self.db_service.execute_sql(index_sql)
+                index_name = index_sql.split(" ON ")[1].split("(")[0]
+                logger.info("Created index: %s", index_name)
+
+            return True
+
+        except Exception:
+            logger.exception("Failed to create indexes")
+            return False
+
+    async def _seed_initial_data(self) -> bool:
+        """Seed initial data for development/testing."""
+        try:
+            logger.info("Seeding initial data...")
+
+            # Create default user preferences template
+            await self.db_service.execute_sql("""
+                INSERT INTO user_preferences
+                (id, theme, notifications_enabled, language)
+                VALUES (gen_random_uuid(), 'system', true, 'en')
+                ON CONFLICT DO NOTHING
+            """)
+
+            # Create sample categories if they exist
+            await self.db_service.execute_sql(
+                """
+                INSERT INTO categories (name, description, icon)
+                VALUES
+                    ('Adventure', 'Outdoor activities and exploration', 'mountain'),
+                    ('Culture', 'Cultural experiences and sightseeing', 'museum'),
+                    ('Relaxation', 'Relaxing and wellness activities', 'beach'),
+                    ('Food', 'Culinary experiences and dining', 'dining')
+                ON CONFLICT (name) DO NOTHING
+                """
+            )
+
+            logger.info("Seeded initial data")
+            return True
+
+        except Exception:
+            logger.exception("Failed to seed initial data")
+            return False
+
+    async def _validate_initialization(self) -> bool:
+        """Validate that initialization was successful."""
+        try:
+            logger.info("Validating initialization...")
+
+            # Check that required tables exist
+            required_tables = [
+                "user_profiles",
+                "trips",
+                "trip_messages",
+                "file_attachments",
+                "user_preferences",
+            ]
+
+            for table in required_tables:
+                result = await self.db_service.execute_sql(
+                    "SELECT EXISTS (SELECT 1 FROM information_schema.tables "
+                    "WHERE table_name = $1)",
+                    {"table": table},
+                )
+                if not result[0]["exists"]:
+                    logger.error("Required table missing: %s", table)
+                    return False
+
+            # Check that RLS is enabled
+            rls_check = await self.db_service.execute_sql("""
+                SELECT COUNT(*) as rls_count
+                FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public'
+                AND c.relrowsecurity = true
+                AND c.relname IN ('user_profiles', 'trips', 'trip_messages')
+            """)
+
+            if rls_check[0]["rls_count"] < 3:
+                logger.warning("Some tables may not have RLS enabled")
+
+            logger.info("Initialization validation passed")
+            return True
+
+        except Exception:
+            logger.exception("Initialization validation failed")
+            return False
 
 
-async def load_sample_data(mcp_manager: MCPManager, project_id: str) -> bool:
-    """Load sample data into SQL database."""
-    logger.info("Loading sample data...")
-
-    try:
-        # Add sample user to SQL
-        sample_user_sql = """
-        INSERT INTO users (email, username, full_name, preferences)
-        VALUES ('demo@tripsage.ai', 'demo_user', 'Demo User', 
-                '{"currency": "USD", "language": "en"}')
-        ON CONFLICT (email) DO NOTHING
-        RETURNING id;
-        """
-
-        result = await mcp_manager.call_tool(
-            integration_name="supabase",
-            tool_name="execute_sql",
-            tool_args={"project_id": project_id, "sql": sample_user_sql},
-        )
-
-        if result.error:
-            logger.warning(f"Sample user creation error: {result.error}")
-
-        logger.info("Sample data loaded successfully")
-        return True
-
-    except Exception as e:
-        logger.error(f"Sample data loading failed: {e}")
-        return False
-
-
-async def main():
-    """Main database initialization function."""
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Initialize TripSage database")
-    parser.add_argument(
-        "--project-id",
-        default=os.getenv("SUPABASE_PROJECT_ID", "default"),
-        help="Supabase project ID",
+@click.command()
+@click.option(
+    "--with-seed-data", is_flag=True, help="Include initial seed data for development"
+)
+@click.option(
+    "--env",
+    type=click.Choice(["development", "staging", "production"]),
+    default="development",
+    help="Environment to initialize for",
+)
+@click.option(
+    "--dry-run", is_flag=True, help="Show what would be done without making changes"
+)
+def main(with_seed_data: bool, env: str, dry_run: bool) -> None:
+    """Initialize TripSage database with schema and optional seed data."""
+    # Setup logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    parser.add_argument("--sample-data", action="store_true", help="Load sample data")
 
-    args = parser.parse_args()
+    # Override environment for initialization
+    import os
 
-    logger.info("Starting database initialization...")
+    os.environ["ENVIRONMENT"] = env
 
-    try:
-        # Initialize MCP manager
-        settings = get_settings()
-        mcp_manager = await MCPManager.get_instance(settings.model_dump())
+    async def run_initialization():
+        try:
+            settings = get_settings()
 
-        # Check SQL connection
-        sql_connected = await check_sql_connection(mcp_manager, args.project_id)
-        if not sql_connected:
-            logger.error("Failed to connect to SQL database")
-            return False
+            # Validate required environment variables
+            if not settings.database_url:
+                raise click.ClickException("DATABASE_URL environment variable required")
 
-        # Initialize SQL database
-        success = await init_sql_database(mcp_manager, args.project_id)
-        if not success:
-            logger.error("SQL database initialization failed")
-            return False
+            if not settings.database_url or not settings.database_service_key:
+                raise click.ClickException(
+                    "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required"
+                )
 
-        # Load sample data if requested
-        if args.sample_data:
-            success = await load_sample_data(mcp_manager, args.project_id)
-            if not success:
-                logger.warning("Sample data loading failed, but continuing...")
+            if dry_run:
+                click.echo("DRY RUN MODE - No changes will be made")
+                click.echo("Database initialization would:")
+                click.echo("  1. Install required PostgreSQL extensions")
+                click.echo("  2. Create base tables from schema files")
+                click.echo("  3. Setup Row Level Security policies")
+                click.echo("  4. Create performance indexes")
+                if with_seed_data:
+                    click.echo("  5. Seed initial development data")
+                click.echo("  6. Validate initialization")
+                return
 
-        logger.info("Database initialization completed successfully!")
-        return True
+            # Initialize services
+            db_service = DatabaseService(settings)
+            supabase_client = supabase.create_client(  # type: ignore[attr-defined]  # pylint: disable=no-member,c-extension-no-member
+                settings.database_url,
+                settings.database_service_key.get_secret_value(),
+            )
 
-    except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
-        return False
+            # Run initialization
+            initializer = DatabaseInitializer(db_service, supabase_client)
+            success = await initializer.initialize_database(
+                with_seed_data=with_seed_data
+            )
 
-    finally:
-        # Clean up MCP manager
-        if "mcp_manager" in locals():
-            await mcp_manager.cleanup()
+            if success:
+                click.echo("Database initialization completed successfully")
+                if env == "development" and with_seed_data:
+                    click.echo("Development data seeded - ready for testing")
+            else:
+                raise click.ClickException("Database initialization failed")
+
+        except Exception as e:
+            logger.exception("Initialization failed")
+            raise click.ClickException(str(e)) from e
+
+    # Run async initialization
+    asyncio.run(run_initialization())
 
 
 if __name__ == "__main__":
-    success = asyncio.run(main())
-    sys.exit(0 if success else 1)
+    main(with_seed_data=False, env="development", dry_run=False)

@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
-"""
-TripSage Configuration Manager CLI.
+"""TripSage Configuration Manager CLI.
 
-A comprehensive tool for managing TripSage configuration across environments.
+A tool for managing TripSage configuration across environments.
 Provides validation, template generation, secret management, and deployment utilities.
 """
 
 import argparse
 import json
 import logging
+import os
 import secrets
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
-from tripsage_core.config import Settings, get_settings, validate_configuration
+from tripsage_core.config import Settings, get_settings
+
 
 # Configure logging
 logging.basicConfig(
@@ -27,7 +29,8 @@ class ConfigManager:
     """Configuration management utilities for TripSage."""
 
     def __init__(self):
-        self.settings: Optional[Settings] = None
+        """Initialize configuration manager."""
+        self.settings: Settings | None = None
 
     def load_settings(self) -> Settings:
         """Load and cache settings."""
@@ -37,87 +40,101 @@ class ConfigManager:
 
     def validate(self) -> bool:
         """Validate current configuration."""
-        logger.info("🔍 Validating configuration...")
+        logger.info("Validating configuration...")
 
         try:
-            if not validate_configuration():
-                logger.error("❌ Configuration validation failed")
-                return False
-
+            # Load settings; instantiation errors indicate invalid config
             settings = self.load_settings()
-            security_report = settings.get_security_report()
+            security_report = self._generate_security_report(settings)
 
-            logger.info("✅ Configuration validation passed")
-            logger.info(f"Environment: {settings.environment}")
-            logger.info(f"Debug mode: {settings.debug}")
-            logger.info(f"Production ready: {security_report['production_ready']}")
+            logger.info("Configuration validation passed")
+            logger.info("Environment: %s", settings.environment)
+            logger.info("Debug mode: %s", settings.debug)
+            logger.info("Production ready: %s", security_report["production_ready"])
 
             if security_report["warnings"]:
-                logger.warning("⚠️ Security warnings:")
+                logger.warning("Security warnings:")
                 for warning in security_report["warnings"]:
-                    logger.warning(f"  - {warning}")
+                    logger.warning("  - %s", warning)
 
             return True
 
-        except Exception as e:
-            logger.error(f"❌ Validation error: {e}")
+        except Exception:
+            logger.exception("Validation error")
             return False
 
     def generate_template(
         self, output_file: str, include_secrets: bool = False
     ) -> bool:
         """Generate environment template file."""
-        logger.info("📄 Generating configuration template...")
+        logger.info("Generating configuration template...")
 
         try:
             settings = self.load_settings()
-            template = settings.export_env_template(include_secrets=include_secrets)
+            template = self._export_env_template(settings, include_secrets)
 
             output_path = Path(output_file)
-            with open(output_path, "w") as f:
+            with output_path.open("w", encoding="utf-8") as f:
                 f.write(template)
 
-            logger.info(f"✅ Template saved to {output_path}")
+            logger.info("Template saved to %s", output_path)
 
             if include_secrets:
-                logger.warning("⚠️ Template contains actual secrets - handle securely!")
+                logger.warning("Template contains actual secrets - handle securely!")
 
             return True
 
-        except Exception as e:
-            logger.error(f"❌ Template generation failed: {e}")
+        except Exception:
+            logger.exception("Template generation failed")
             return False
 
-    def generate_secrets(self, count: int = 1, length: int = 32) -> bool:
-        """Generate cryptographically secure secrets."""
-        logger.info(f"🔐 Generating {count} secure secret(s) (length: {length})...")
+    def generate_secrets(
+        self, count: int = 1, length: int = 32, output_path: Path | None = None
+    ) -> bool:
+        """Generate cryptographically secure secrets and store them securely."""
+        logger.info("Generating %s secure secret(s) (length: %s)...", count, length)
 
         try:
-            for i in range(count):
-                secret = secrets.token_urlsafe(length)
-                logger.info(f"Secret {i + 1}: {secret}")
+            secrets_generated = [secrets.token_urlsafe(length) for _ in range(count)]
 
-            logger.info("✅ Secrets generated successfully")
+            timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+            target_path = (
+                output_path.resolve()
+                if output_path is not None
+                else (Path.cwd() / f"generated_secrets_{timestamp}.txt")
+            )
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+
+            fd = os.open(target_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                for index, secret in enumerate(secrets_generated, start=1):
+                    handle.write(f"Secret {index}: {secret}\n")
+
+            for index, secret in enumerate(secrets_generated, start=1):
+                masked = f"{secret[:4]}…{secret[-4:]}"
+                print(f"Secret {index}: {masked} (stored securely at {target_path})")
+
+            logger.info("Secrets generated and stored at %s", target_path)
             logger.warning(
-                "⚠️ Store these secrets securely and never commit to version control!"
+                "Restrict permissions on the secrets file and rotate values regularly."
             )
 
             return True
 
-        except Exception as e:
-            logger.error(f"❌ Secret generation failed: {e}")
+        except Exception:
+            logger.exception("Secret generation failed")
             return False
 
     def security_report(self, output_format: str = "json") -> bool:
-        """Generate comprehensive security report."""
-        logger.info("🛡️ Generating security report...")
+        """Generate security report."""
+        logger.info("Generating security report...")
 
         try:
             settings = self.load_settings()
 
-            # Get comprehensive security information
-            security_report = settings.get_security_report()
-            secret_validation = settings.validate_secrets_security()
+            # Get security information
+            security_report = self._generate_security_report(settings)
+            secret_validation = self._validate_secrets_security(settings)
 
             report = {
                 "configuration": {
@@ -140,8 +157,8 @@ class ConfigManager:
 
             return True
 
-        except Exception as e:
-            logger.error(f"❌ Security report generation failed: {e}")
+        except Exception:
+            logger.exception("Security report generation failed")
             return False
 
     def _get_security_recommendations(self, settings: Settings) -> list[str]:
@@ -155,7 +172,7 @@ class ConfigManager:
             if settings.log_level.upper() == "DEBUG":
                 recommendations.append("Use INFO or WARNING log level in production")
 
-            secret_validation = settings.validate_secrets_security()
+            secret_validation = self._validate_secrets_security(settings)
             for field, is_secure in secret_validation.items():
                 if not is_secure:
                     recommendations.append(f"Replace weak secret for {field}")
@@ -175,7 +192,7 @@ class ConfigManager:
 
         return recommendations
 
-    def _print_human_readable_report(self, report: Dict[str, Any]) -> None:
+    def _print_human_readable_report(self, report: dict[str, Any]) -> None:
         """Print human-readable security report."""
         config = report["configuration"]
         security = report["security"]
@@ -183,30 +200,30 @@ class ConfigManager:
         recommendations = report["recommendations"]
 
         print("\n" + "=" * 60)
-        print("🛡️  TripSage Security Report")
+        print("TripSage Security Report")
         print("=" * 60)
 
-        print("\n📋 Configuration:")
+        print("\nConfiguration:")
         print(f"  Environment: {config['environment']}")
         print(f"  Debug Mode: {config['debug_mode']}")
         print(f"  Log Level: {config['log_level']}")
 
-        print("\n🔒 Security Status:")
-        print(f"  Production Ready: {'✅' if security['production_ready'] else '❌'}")
-        print(f"  All Secrets Secure: {'✅' if secrets_info['all_secure'] else '❌'}")
+        print("\nSecurity Status:")
+        print(f"  Production Ready: {'YES' if security['production_ready'] else 'NO'}")
+        print(f"  All Secrets Secure: {'YES' if secrets_info['all_secure'] else 'NO'}")
 
         if security.get("warnings"):
-            print(f"\n⚠️  Warnings ({len(security['warnings'])}):")
+            print(f"\nWarnings ({len(security['warnings'])}):")
             for warning in security["warnings"]:
                 print(f"  - {warning}")
 
-        print("\n🔐 Secret Validation:")
+        print("\nSecret Validation:")
         for field, is_secure in secrets_info["validation"].items():
-            status = "✅" if is_secure else "❌"
+            status = "OK" if is_secure else "FAIL"
             print(f"  {field}: {status}")
 
         if recommendations:
-            print(f"\n💡 Recommendations ({len(recommendations)}):")
+            print(f"\nRecommendations ({len(recommendations)}):")
             for rec in recommendations:
                 print(f"  - {rec}")
 
@@ -214,15 +231,16 @@ class ConfigManager:
 
     def check_environment(self, target_env: str) -> bool:
         """Check if configuration is suitable for target environment."""
-        logger.info(f"🎯 Checking configuration for {target_env} environment...")
+        logger.info("Checking configuration for %s environment...", target_env)
 
         try:
             settings = self.load_settings()
 
             if settings.environment != target_env:
                 logger.warning(
-                    f"⚠️ Current environment ({settings.environment}) != "
-                    f"target ({target_env})"
+                    "Current environment (%s) != target (%s)",
+                    settings.environment,
+                    target_env,
                 )
 
             issues = []
@@ -231,27 +249,104 @@ class ConfigManager:
                 if settings.debug:
                     issues.append("Debug mode must be disabled")
 
-                security_report = settings.get_security_report()
+                security_report = self._generate_security_report(settings)
                 if not security_report["production_ready"]:
                     issues.extend(security_report.get("warnings", []))
 
             if issues:
-                logger.error(f"❌ Configuration not suitable for {target_env}:")
+                logger.error("Configuration not suitable for %s:", target_env)
                 for issue in issues:
-                    logger.error(f"  - {issue}")
+                    logger.error(" - %s", issue)
                 return False
 
-            logger.info(f"✅ Configuration is suitable for {target_env}")
+            logger.info("Configuration is suitable for %s", target_env)
             return True
 
-        except Exception as e:
-            logger.error(f"❌ Environment check failed: {e}")
+        except Exception:
+            logger.exception("Environment check failed")
             return False
+
+    def _export_env_template(self, settings: Settings, include_secrets: bool) -> str:
+        """Create a minimal .env template from settings.
+
+        Args:
+            settings: Settings instance.
+            include_secrets: Whether to include actual secret values.
+
+        Returns:
+            The .env file contents.
+        """
+        lines: list[str] = [
+            "# TripSage .env template",
+            "# Populate values as needed; leave blank to use defaults",
+        ]
+
+        for field_name in type(settings).model_fields:
+            env_name = str(field_name).upper()
+            value: str = ""
+
+            attr = getattr(settings, str(field_name))
+            if include_secrets:
+                getter = getattr(attr, "get_secret_value", None)
+                value = str(getter()) if callable(getter) else str(attr)
+            elif attr.__class__.__name__ != "SecretStr":
+                value = str(attr)
+
+            lines.append(f"{env_name}={value}")
+
+        lines.append("")
+        return "\n".join(lines)
+
+    def _generate_security_report(self, settings: Settings) -> dict[str, Any]:
+        """Compute a minimal security report from settings."""
+        warnings: list[str] = []
+
+        if settings.environment == "production":
+            if settings.debug:
+                warnings.append("Debug mode is enabled in production")
+            if settings.log_level.upper() == "DEBUG":
+                warnings.append("Debug logging enabled in production")
+            if "*" in settings.cors_origins:
+                warnings.append("Wildcard CORS origins in production")
+
+        production_ready = settings.environment == "production" and len(warnings) == 0
+
+        return {
+            "production_ready": production_ready,
+            "warnings": warnings,
+        }
+
+    def _validate_secrets_security(self, settings: Settings) -> dict[str, bool]:
+        """Validate strength of secret fields (basic checks)."""
+        validation: dict[str, bool] = {}
+
+        secret_key = settings.secret_key.get_secret_value()
+        validation["secret_key"] = (
+            len(secret_key) >= 32
+            and secret_key != "test-application-secret-key-for-testing-only"
+        )
+
+        db_key = settings.database_service_key.get_secret_value()
+        validation["database_service_key"] = (
+            len(db_key) >= 32 and db_key != "test-service-key"
+        )
+
+        jwt_secret = settings.database_jwt_secret.get_secret_value()
+        validation["database_jwt_secret"] = (
+            len(jwt_secret) >= 32 and jwt_secret != "test-jwt-secret-for-testing-only"
+        )
+
+        openai_key = settings.openai_api_key.get_secret_value()
+        validation["openai_api_key"] = (
+            openai_key.startswith("sk-") and openai_key != "sk-test-1234567890"
+        )
+
+        return validation
 
     def export_config(self, output_file: str, format_type: str = "env") -> bool:
         """Export configuration in various formats."""
         logger.info(
-            f"📤 Exporting configuration to {output_file} (format: {format_type})..."
+            "Exporting configuration to %s (format: %s)...", output_file, format_type
         )
 
         try:
@@ -259,7 +354,7 @@ class ConfigManager:
             output_path = Path(output_file)
 
             if format_type.lower() == "env":
-                content = settings.export_env_template(include_secrets=False)
+                content = self._export_env_template(settings, include_secrets=False)
             elif format_type.lower() == "json":
                 config_dict = settings.model_dump(
                     exclude={
@@ -271,17 +366,17 @@ class ConfigManager:
                 )
                 content = json.dumps(config_dict, indent=2, default=str)
             else:
-                logger.error(f"❌ Unsupported format: {format_type}")
+                logger.error("❌ Unsupported format: %s", format_type)
                 return False
 
-            with open(output_path, "w") as f:
+            with output_path.open("w", encoding="utf-8") as f:
                 f.write(content)
 
-            logger.info(f"✅ Configuration exported to {output_path}")
+            logger.info("✅ Configuration exported to %s", output_path)
             return True
 
-        except Exception as e:
-            logger.error(f"❌ Export failed: {e}")
+        except Exception:
+            logger.exception("❌ Export failed")
             return False
 
 
@@ -323,6 +418,14 @@ Examples:
         "--count", type=int, default=1, help="Number of secrets to generate"
     )
     secrets_parser.add_argument("--length", type=int, default=32, help="Secret length")
+    secrets_parser.add_argument(
+        "--output",
+        type=Path,
+        help=(
+            "Optional file for generated secrets "
+            "(default: ./generated_secrets_<timestamp>.txt)"
+        ),
+    )
 
     # Security report command
     security_parser = subparsers.add_parser(
@@ -364,7 +467,7 @@ Examples:
         elif args.command == "template":
             success = manager.generate_template(args.output, args.include_secrets)
         elif args.command == "secrets":
-            success = manager.generate_secrets(args.count, args.length)
+            success = manager.generate_secrets(args.count, args.length, args.output)
         elif args.command == "security-report":
             success = manager.security_report(args.format)
         elif args.command == "check-env":
@@ -372,14 +475,14 @@ Examples:
         elif args.command == "export":
             success = manager.export_config(args.output, args.format)
         else:
-            logger.error(f"❌ Unknown command: {args.command}")
+            logger.error("❌ Unknown command: %s", args.command)
             success = False
 
     except KeyboardInterrupt:
         logger.info("\n⏹️ Operation cancelled by user")
         success = False
-    except Exception as e:
-        logger.error(f"❌ Unexpected error: {e}")
+    except Exception:
+        logger.exception("❌ Unexpected error")
         success = False
 
     sys.exit(0 if success else 1)

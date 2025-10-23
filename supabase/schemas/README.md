@@ -182,7 +182,7 @@ COMMENT ON FUNCTION public.function_name IS 'Description of function purpose';
 ### RLS Policy Pattern
 
 ```sql
--- Comprehensive RLS policies for a table
+-- RLS policies for a table
 -- 1. Enable RLS
 ALTER TABLE public.table_name ENABLE ROW LEVEL SECURITY;
 

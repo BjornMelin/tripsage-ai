@@ -1,6 +1,6 @@
 /**
  * Tests for PersonalizationInsights component
- * Comprehensive test suite with 80-90% coverage
+ * Test suite with 80-90% coverage
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
