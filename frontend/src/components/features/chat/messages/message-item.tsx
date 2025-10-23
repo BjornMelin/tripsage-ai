@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   Bot,
@@ -40,14 +41,14 @@ function RoleAvatar({
   isTool,
   timeDisplay,
 }: {
-  config: ReturnType<typeof useMemo> extends infer T ? any : any;
+  config: RoleAvatarConfig;
   isAssistant: boolean;
   isUser: boolean;
   isSystem: boolean;
   isTool: boolean;
   timeDisplay: { relative: string; absolute: string } | null;
 }) {
-  const IconComponent = (config as any).icon;
+  const IconComponent = config.icon;
 
   return (
     <HoverCard>
@@ -67,7 +68,7 @@ function RoleAvatar({
             <motion.div
               className={cn(
                 "w-full h-full flex items-center justify-center rounded-full",
-                (config as any).className
+                config.className
               )}
               whileHover={{ rotate: isAssistant ? 360 : 0 }}
               transition={{ duration: 0.6 }}
@@ -104,15 +105,15 @@ function RoleAvatar({
             <div
               className={cn(
                 "w-8 h-8 rounded-full bg-linear-to-r flex items-center justify-center",
-                `bg-linear-to-r ${(config as any).gradient}`
+                `bg-linear-to-r ${config.gradient}`
               )}
             >
               <IconComponent className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h4 className="font-medium">{(config as any).hoverText}</h4>
-              <Badge variant={(config as any).badgeVariant} className="text-xs">
-                {(config as any).badgeText}
+              <h4 className="font-medium">{config.hoverText}</h4>
+              <Badge variant={config.badgeVariant} className="text-xs">
+                {config.badgeText}
               </Badge>
             </div>
           </div>
@@ -153,6 +154,15 @@ import type { Message, ToolCall, ToolResult } from "@/types/chat";
 import { MessageAttachments } from "./message-attachments";
 import { MessageBubble } from "./message-bubble";
 import { MessageToolCalls } from "./message-tool-calls";
+
+type RoleAvatarConfig = {
+  icon: LucideIcon;
+  className: string;
+  gradient: string;
+  badgeText: string;
+  badgeVariant: "default" | "secondary" | "outline";
+  hoverText: string;
+};
 
 interface MessageItemProps {
   message: Message;
@@ -211,7 +221,7 @@ export function MessageItem({
   }, [message.createdAt]);
 
   // avatar configuration with role-based styling
-  const avatarConfig = useMemo(() => {
+  const avatarConfig: RoleAvatarConfig = useMemo(() => {
     if (isUser) {
       return {
         icon: User,
