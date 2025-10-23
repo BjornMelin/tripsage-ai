@@ -20,10 +20,10 @@ Client
 
 Server Route
 
-- [ ] Add/Update `app/api/chat/route.ts`:
-  - [ ] Use `streamText` with provider (e.g., `@ai-sdk/openai`) and convert UI messages to model messages.
-  - [ ] Return `result.toUIMessageStreamResponse()`.
-  - [ ] Example tools: define with `inputSchema` (Zod) and demonstrate `stopWhen` for multi-step.
+- [x] Add/Update `app/api/chat/route.ts`:
+  - [x] Use `streamText` with provider (e.g., `@ai-sdk/openai`) and convert UI messages to model messages.
+  - [x] Return `result.toUIMessageStreamResponse()`.
+  - [x] Example `confirm` tool added with `inputSchema` (Zod). Follow-up: add tests and optional `stopWhen`.
 
 Transport
 
