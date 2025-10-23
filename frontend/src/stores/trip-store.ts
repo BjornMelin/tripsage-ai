@@ -145,38 +145,8 @@ export const useTripStore = create<TripState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const { createClient } = await import("@/lib/supabase/client");
-
-          const supabase = createClient();
-          const { data: trips, error } = await supabase
-            .from("trips")
-            .select("*")
-            .order("created_at", { ascending: false });
-
-          if (error) throw error;
-
-          // Convert to frontend format
-          const frontendTrips: Trip[] = trips.map((trip: DatabaseTrip) => ({
-            id: trip.id.toString(),
-            user_id: trip.user_id,
-            name: trip.name, // Primary field from database
-            title: trip.name, // Legacy compatibility
-            destination: trip.destination,
-            start_date: trip.start_date,
-            startDate: trip.start_date, // Frontend compatibility
-            end_date: trip.end_date,
-            endDate: trip.end_date, // Frontend compatibility
-            destinations: [], // Will be loaded separately or joined
-            budget: trip.budget,
-            currency: "USD",
-            isPublic: false,
-            status: trip.status,
-            created_at: trip.created_at,
-            createdAt: trip.created_at, // Frontend compatibility
-            updated_at: trip.updated_at,
-            updatedAt: trip.updated_at, // Frontend compatibility
-          }));
-
+          const { listTrips } = await import("@/lib/repositories/trips-repo");
+          const frontendTrips = await listTrips();
           set({ trips: frontendTrips, isLoading: false });
         } catch (error) {
           set({
@@ -192,8 +162,9 @@ export const useTripStore = create<TripState>()(
         try {
           // Import hook will need to be used in component that calls this
           // For now, we'll use the supabase client directly
-          const { createTrip: repoCreateTrip, updateTrip: _repoUpdateTrip } =
-            await import("@/lib/repositories/trips-repo");
+          const { createTrip: repoCreateTrip } = await import(
+            "@/lib/repositories/trips-repo"
+          );
 
           const tripData = {
             title: data.title || data.name || "Untitled Trip",
@@ -224,16 +195,16 @@ export const useTripStore = create<TripState>()(
           };
 
           const created = await repoCreateTrip({
-            user_id: (data as any).user_id || "",
+            user_id: (data.user_id as string) || "",
             name: tripData.title,
             start_date: tripData.start_date || new Date().toISOString(),
             end_date: tripData.end_date || new Date().toISOString(),
-            destination: (data as any).destination || "",
+            destination: (data as { destination?: string })?.destination || "",
             budget: tripData.budget || 0,
             travelers: 1,
             search_metadata: {},
             flexibility: {},
-          } as any);
+          });
 
           // Convert to frontend format
           const frontendTrip: Trip = created as any;
@@ -259,42 +230,24 @@ export const useTripStore = create<TripState>()(
             "@/lib/repositories/trips-repo"
           );
 
-          const updateData: any = {};
-
-          // Map frontend fields to database fields
-          if (data.title || data.name) updateData.title = data.title || data.name;
-          if (data.description !== undefined) updateData.description = data.description;
+          // Map to DB update shape
+          const updateData: Partial<DatabaseTrip> = {} as Partial<DatabaseTrip>;
+          if (data.name || data.title) updateData.name = data.name || data.title!;
           if (data.startDate || data.start_date)
-            updateData.start_date = data.startDate || data.start_date;
+            updateData.start_date = (data.startDate || data.start_date)!;
           if (data.endDate || data.end_date)
-            updateData.end_date = data.endDate || data.end_date;
-          if (data.budget !== undefined) updateData.budget = data.budget;
-          if (data.currency) updateData.currency = data.currency;
-          if (data.spent_amount !== undefined)
-            updateData.spent_amount = data.spent_amount;
-          if (data.visibility) updateData.visibility = data.visibility;
-          if (data.tags) updateData.tags = data.tags;
-          if (data.preferences) updateData.preferences = data.preferences;
-          if (data.status) updateData.status = data.status;
-
-          // Handle enhanced budget
-          if (data.budget_breakdown) {
-            updateData.budget_breakdown = {
-              total: data.budget_breakdown.total,
-              spent: data.budget_breakdown.spent,
-              breakdown: data.budget_breakdown.breakdown,
-            };
-            updateData.budget = data.budget_breakdown.total;
-            updateData.spent_amount = data.budget_breakdown.spent;
-            updateData.currency = data.budget_breakdown.currency;
-          }
+            updateData.end_date = (data.endDate || data.end_date)!;
+          if (typeof data.budget === "number") updateData.budget = data.budget;
+          if (data.status) updateData.status = data.status as DatabaseTrip["status"];
+          if (data.preferences) updateData.flexibility = data.preferences as any;
+          if (data.tags) updateData.notes = data.tags as string[];
 
           const updated = await repoUpdateTrip(
             Number.parseInt(id, 10),
-            (_get().currentTrip as any)?.user_id || "",
-            updateData
+            _get().currentTrip?.user_id || "",
+            updateData as any
           );
-          const frontendTrip: Partial<Trip> = updated as any;
+          const frontendTrip: Partial<Trip> = updated;
 
           set((state) => {
             const trips = state.trips.map((trip) =>
@@ -320,15 +273,13 @@ export const useTripStore = create<TripState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const { createClient } = await import("@/lib/supabase/client");
-          const supabase = createClient();
-
-          const { error } = await supabase
-            .from("trips")
-            .delete()
-            .eq("id", Number.parseInt(id, 10));
-
-          if (error) throw error;
+          const { deleteTrip: repoDeleteTrip } = await import(
+            "@/lib/repositories/trips-repo"
+          );
+          await repoDeleteTrip(
+            Number.parseInt(id, 10),
+            _get().currentTrip?.user_id || undefined
+          );
 
           set((state) => {
             const trips = state.trips.filter((trip) => trip.id !== id);

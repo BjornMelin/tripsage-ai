@@ -49,3 +49,22 @@ export async function updateTrip(id: number, userId: string, updates: TripUpdate
   if (error || !data) throw error || new Error("Failed to update trip");
   return mapTripRowToUI(data);
 }
+
+export async function listTrips() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("trips")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map(mapTripRowToUI);
+}
+
+export async function deleteTrip(id: number, userId?: string) {
+  const supabase = createClient();
+  let qb = supabase.from("trips").delete().eq("id", id);
+  if (userId) qb = qb.eq("user_id", userId);
+  const { error } = await qb;
+  if (error) throw error;
+  return true;
+}
