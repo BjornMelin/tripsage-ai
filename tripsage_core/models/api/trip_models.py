@@ -13,6 +13,29 @@ from tripsage_core.models.schemas_common.travel import TripDestination, TripPref
 class CreateTripRequest(TripSageModel):
     """Request model for creating a trip."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "European Highlights",
+                "description": "Ten-day cultural tour",
+                "start_date": "2025-06-01",
+                "end_date": "2025-06-10",
+                "destinations": [
+                    {
+                        "name": "Paris",
+                        "country": "France",
+                        "city": "Paris",
+                    },
+                    {
+                        "name": "Rome",
+                        "country": "Italy",
+                        "city": "Rome",
+                    },
+                ],
+            }
+        }
+    )
+
     title: str = Field(
         description="Trip title",
         min_length=1,
@@ -44,6 +67,24 @@ class CreateTripRequest(TripSageModel):
 
 class UpdateTripRequest(TripSageModel):
     """Request model for updating a trip."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "Updated European Highlights",
+                "description": "Added day trips",
+                "start_date": "2025-06-02",
+                "end_date": "2025-06-12",
+                "destinations": [
+                    {
+                        "name": "Florence",
+                        "country": "Italy",
+                        "city": "Florence",
+                    }
+                ],
+            }
+        }
+    )
 
     title: str | None = Field(
         default=None,
@@ -129,6 +170,21 @@ class TripResponse(TripSageModel):
 class TripListItem(TripSageModel):
     """Response model for trip list items."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "123e4567-e89b-12d3-a456-426614174000",
+                "title": "Summer Vacation",
+                "start_date": "2025-06-01",
+                "end_date": "2025-06-10",
+                "duration_days": 10,
+                "destinations": ["Paris", "Rome"],
+                "status": "planning",
+                "created_at": "2025-01-15T14:30:00Z",
+            }
+        }
+    )
+
     id: UUID = Field(description="Trip ID")
     title: str = Field(description="Trip title")
     start_date: date = Field(description="Trip start date")
@@ -141,6 +197,28 @@ class TripListItem(TripSageModel):
 
 class TripListResponse(TripSageModel):
     """Response model for a list of trips."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "items": [
+                    {
+                        "id": "123e4567-e89b-12d3-a456-426614174000",
+                        "title": "Summer Vacation",
+                        "start_date": "2025-06-01",
+                        "end_date": "2025-06-10",
+                        "duration_days": 10,
+                        "destinations": ["Paris", "Rome"],
+                        "status": "planning",
+                        "created_at": "2025-01-15T14:30:00Z",
+                    }
+                ],
+                "total": 1,
+                "skip": 0,
+                "limit": 10,
+            }
+        }
+    )
 
     items: list[TripListItem] = Field(description="List of trips")
     total: int = Field(description="Total number of trips")
@@ -270,6 +348,19 @@ class TripSuggestionResponse(TripSageModel):
 class TripShareRequest(TripSageModel):
     """Request model for sharing a trip with other users."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "user_emails": [
+                    "friend@example.com",
+                    "planner@example.org",
+                ],
+                "permission_level": "edit",
+                "message": "Check out these plans!",
+            }
+        }
+    )
+
     user_emails: list[str] = Field(
         description="Email addresses of users to share with",
         min_length=0,
@@ -289,6 +380,20 @@ class TripShareRequest(TripSageModel):
 
 class TripCollaboratorResponse(TripSageModel):
     """Response model for trip collaborator information."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "user_id": "123e4567-e89b-12d3-a456-426614174000",
+                "email": "collaborator@example.com",
+                "name": "Alex Planner",
+                "permission_level": "edit",
+                "added_by": "123e4567-e89b-12d3-a456-426614174001",
+                "added_at": "2025-01-18T09:45:00Z",
+                "is_active": True,
+            }
+        }
+    )
 
     user_id: UUID = Field(description="Collaborator user ID")
     email: str = Field(description="Collaborator email")
@@ -312,6 +417,24 @@ class TripCollaboratorUpdateRequest(TripSageModel):
 
 class TripCollaboratorsListResponse(TripSageModel):
     """Response model for listing trip collaborators."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "collaborators": [
+                    {
+                        "user_id": "123e4567-e89b-12d3-a456-426614174000",
+                        "email": "collaborator@example.com",
+                        "permission_level": "view",
+                        "added_by": "123e4567-e89b-12d3-a456-426614174001",
+                        "added_at": "2025-01-18T09:45:00Z",
+                    }
+                ],
+                "total": 1,
+                "owner_id": "123e4567-e89b-12d3-a456-426614174001",
+            }
+        }
+    )
 
     collaborators: list[TripCollaboratorResponse] = Field(
         description="List of trip collaborators"

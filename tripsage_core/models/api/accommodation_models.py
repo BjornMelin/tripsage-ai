@@ -3,17 +3,33 @@
 from datetime import date
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.services.business.accommodation_service import (
     AccommodationListing,
+    AccommodationSearchRequest as ServiceAccommodationSearchRequest,
+    AccommodationSearchResponse as ServiceAccommodationSearchResponse,
     BookingStatus,
+    PropertyType,
 )
 
 
 class AccommodationDetailsRequest(TripSageModel):
     """Request model for retrieving accommodation details."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "listing_id": "listing-123",
+                "check_in": "2025-07-12",
+                "check_out": "2025-07-15",
+                "adults": 2,
+                "children": 1,
+                "source": "booking",
+            }
+        }
+    )
 
     listing_id: str = Field(description="Listing ID")
     check_in: date | None = Field(None, description="Check-in date")
@@ -38,6 +54,18 @@ class AccommodationDetailsRequest(TripSageModel):
 class SavedAccommodationRequest(TripSageModel):
     """Request model for saving an accommodation listing."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "listing_id": "listing-123",
+                "trip_id": "8c808086-7a9f-4a4a-8212-1c0857f0fa4f",
+                "check_in": "2025-07-12",
+                "check_out": "2025-07-15",
+                "notes": "Great location for conference",
+            }
+        }
+    )
+
     listing_id: str = Field(description="Accommodation listing ID")
     trip_id: UUID = Field(description="Trip ID to save the accommodation for")
     check_in: date = Field(description="Check-in date")
@@ -57,6 +85,29 @@ class SavedAccommodationRequest(TripSageModel):
 class AccommodationDetailsResponse(TripSageModel):
     """API response for accommodation details."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "listing": {
+                    "id": "listing-123",
+                    "name": "Central City Loft",
+                    "description": "Modern loft near downtown",
+                    "property_type": "apartment",
+                    "location": {
+                        "address": "123 Main St",
+                        "city": "New York",
+                        "country": "USA",
+                    },
+                    "price_per_night": 245.0,
+                    "currency": "USD",
+                    "max_guests": 2,
+                },
+                "availability": True,
+                "total_price": 985.0,
+            }
+        }
+    )
+
     listing: AccommodationListing = Field(description="Accommodation listing")
     availability: bool = Field(
         description="Whether the accommodation is available for the dates"
@@ -68,6 +119,34 @@ class AccommodationDetailsResponse(TripSageModel):
 
 class SavedAccommodationResponse(TripSageModel):
     """Response model for a saved accommodation listing."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "7b991b2c-6ce5-49e1-9960-1ef5a06979cd",
+                "user_id": "user-42",
+                "trip_id": "8c808086-7a9f-4a4a-8212-1c0857f0fa4f",
+                "listing": {
+                    "id": "listing-123",
+                    "name": "Central City Loft",
+                    "property_type": "apartment",
+                    "location": {
+                        "address": "123 Main St",
+                        "city": "New York",
+                        "country": "USA",
+                    },
+                    "price_per_night": 245.0,
+                    "currency": "USD",
+                    "max_guests": 2,
+                },
+                "check_in": "2025-07-12",
+                "check_out": "2025-07-15",
+                "saved_at": "2025-05-01",
+                "notes": "Request late checkout",
+                "status": "saved",
+            }
+        }
+    )
 
     id: UUID = Field(description="Saved accommodation ID")
     user_id: str = Field(description="User ID")
@@ -84,9 +163,71 @@ class SavedAccommodationResponse(TripSageModel):
     )
 
 
+class AccommodationSearchRequest(ServiceAccommodationSearchRequest):
+    """Canonical API request model for accommodation search queries."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "user_id": "user-42",
+                "trip_id": "8c808086-7a9f-4a4a-8212-1c0857f0fa4f",
+                "location": "San Francisco",
+                "check_in": "2025-08-10",
+                "check_out": "2025-08-14",
+                "guests": 2,
+                "property_types": [PropertyType.APARTMENT.value],
+                "max_price": 350.0,
+                "currency": "USD",
+                "amenities": ["wifi", "washer"],
+                "sort_by": "price",
+                "sort_order": "asc",
+            }
+        }
+    )
+
+
+class AccommodationSearchResponse(ServiceAccommodationSearchResponse):
+    """Canonical API response model for accommodation search results."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "search_id": "search-abc123",
+                "user_id": "user-42",
+                "trip_id": "8c808086-7a9f-4a4a-8212-1c0857f0fa4f",
+                "listings": [
+                    {
+                        "id": "listing-123",
+                        "name": "Central City Loft",
+                        "property_type": "apartment",
+                        "price_per_night": 245.0,
+                        "currency": "USD",
+                        "max_guests": 2,
+                    }
+                ],
+                "search_parameters": {
+                    "location": "San Francisco",
+                    "check_in": "2025-08-10",
+                    "check_out": "2025-08-14",
+                    "guests": 2,
+                },
+                "total_results": 42,
+                "results_returned": 10,
+                "min_price": 180.0,
+                "max_price": 410.0,
+                "avg_price": 265.0,
+                "search_duration_ms": 320,
+                "cached": False,
+            }
+        }
+    )
+
+
 __all__ = [
     "AccommodationDetailsRequest",
     "AccommodationDetailsResponse",
+    "AccommodationSearchRequest",
+    "AccommodationSearchResponse",
     "SavedAccommodationRequest",
     "SavedAccommodationResponse",
 ]

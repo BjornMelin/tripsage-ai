@@ -10,6 +10,10 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl, field_validator
 
+from typing import Final
+
+from tripsage_core.models.api._export_helpers import auto_all
+
 
 class EventVisibility(str, Enum):
     """Event visibility options."""
@@ -437,3 +441,8 @@ class TravelEventRequest(BaseModel):
         }
 
         return CreateEventRequest.model_validate(event_payload)
+
+
+__all__: Final[list[str]] = auto_all(  # pyright: ignore[reportUnsupportedDunderAll]
+    __name__, globals()
+)

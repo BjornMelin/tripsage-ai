@@ -19,12 +19,12 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.models.api.accommodation_models import (
     AccommodationDetailsRequest,
     AccommodationDetailsResponse,
+    AccommodationSearchRequest,
+    AccommodationSearchResponse,
     SavedAccommodationRequest,
     SavedAccommodationResponse,
 )
 from tripsage_core.services.business.accommodation_service import (
-    AccommodationSearchRequest as ServiceAccommodationSearchRequest,
-    AccommodationSearchResponse as ServiceAccommodationSearchResponse,
     AccommodationService,
     BookingStatus,
     get_accommodation_service,
@@ -36,9 +36,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/search", response_model=ServiceAccommodationSearchResponse)
+@router.post("/search", response_model=AccommodationSearchResponse)
 async def search_accommodations(
-    request: ServiceAccommodationSearchRequest,
+    request: AccommodationSearchRequest,
     principal: Principal = Depends(require_principal),
     accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
@@ -55,7 +55,10 @@ async def search_accommodations(
     user_id = get_principal_id(principal)
     # Ensure user context is attached to the canonical request
     service_request = request.model_copy(update={"user_id": user_id})
-    return await accommodation_service.search_accommodations(service_request)
+    service_response = await accommodation_service.search_accommodations(
+        service_request
+    )
+    return AccommodationSearchResponse.model_validate(service_response.model_dump())
 
 
 @router.post("/details", response_model=AccommodationDetailsResponse)
