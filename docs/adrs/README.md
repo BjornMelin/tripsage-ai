@@ -31,6 +31,11 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 | [ADR-0006](adr-0006-websocket-architecture.md) | Real-time Communication via WebSockets | Accepted | 2025-06-17 |
 | [ADR-0007](adr-0007-testing-strategy.md) | Modern Testing Strategy with Vitest and Playwright | Accepted | 2025-06-17 |
 | [ADR-0008](adr-0008-pydantic-v2-migration.md) | Migrate to Pydantic v2 | Accepted | 2025-06-17 |
+| [ADR-0013](adr-0013-adopt-next-js-16-proxy-and-async-apis-deprecate-middleware.md) | Adopt Next.js 16 proxy and async APIs; deprecate middleware | Accepted | 2025-10-23 |
+| [ADR-0014](adr-0014-migrate-supabase-auth-to-supabase-ssr-and-deprecate-auth-helpers-react.md) | Migrate Supabase auth to @supabase/ssr; deprecate auth-helpers-react | Accepted | 2025-10-23 |
+| [ADR-0015](adr-0015-upgrade-ai-sdk-to-v5-ai-sdk-react-and-usechat-redesign.md) | Upgrade AI SDK to v5 (@ai-sdk/react) and useChat redesign | Accepted | 2025-10-23 |
+| [ADR-0016](adr-0016-tailwind-css-v4-migration-css-first-config.md) | Tailwind CSS v4 migration (CSS-first config) | Accepted | 2025-10-23 |
+| [ADR-0017](adr-0017-adopt-node-js-v24-lts-baseline.md) | Adopt Node.js v24 LTS baseline | Accepted | 2025-10-23 |
 
 ## Creating a New ADR
 

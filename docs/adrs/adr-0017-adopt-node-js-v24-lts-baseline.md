@@ -1,0 +1,39 @@
+# ADR-0017: Adopt Node.js v24 LTS baseline
+
+**Date**: 2025-10-23
+
+## Status
+
+Accepted
+
+## Context
+
+Our frontend stack targets modern Node features and Next.js 16. Standardizing on Node 24 LTS improves consistency locally and in CI.
+
+## Decision
+
+- Set `engines.node` >=24 in package.json and add `.nvmrc`/`.node-version` to pin.
+
+## Consequences
+
+### Positive
+
+- Consistent developer and CI runtime; aligns with Next.js 16 docs.
+
+### Negative
+
+- Requires contributors to upgrade local Node.
+
+### Neutral
+
+- Toolchain remains unchanged (pnpm, Next, Vitest); only the runtime baseline is lifted.
+
+## Alternatives Considered
+
+### Alternative 1 — Keep Node 22 LTS
+
+Rejected: Next 16 benefits from newer Node features; alignment across environments is simplified with a single latest LTS.
+
+### Alternative 2 — Avoid engines and rely on local nvm/Volta only
+
+Rejected: engines field offers CI/automation parity and clear feedback for mismatched versions.
