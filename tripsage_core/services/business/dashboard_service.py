@@ -507,8 +507,7 @@ class DashboardService:
                     success_rate=service_usage.get("success_rate", 1.0),
                     avg_latency_ms=health_check.latency_ms,
                     active_keys=service_usage.get("active_keys", 0),
-                    last_health_check=health_check.checked_at
-                    or datetime.now(UTC),
+                    last_health_check=health_check.checked_at or datetime.now(UTC),
                     health_status=health_check.health_status
                     or ServiceHealthStatus.UNKNOWN,
                     rate_limit_hits=service_usage.get("rate_limit_hits", 0),
