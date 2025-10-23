@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Import after mocking dependencies
-let createClient: () => Promise<any>;
+let createServerSupabase: () => Promise<any>;
 
 // Mock modules
 vi.mock("@supabase/ssr", () => ({
@@ -28,7 +28,7 @@ describe("Supabase Server Client", () => {
 
     // Dynamically import after setting env vars
     const serverModule = await import("../server");
-    createClient = serverModule.createClient;
+    createServerSupabase = serverModule.createServerSupabase;
   });
 
   it("should create a server client with cookie handling", async () => {
@@ -47,7 +47,7 @@ describe("Supabase Server Client", () => {
     const mockClient = { auth: {}, from: vi.fn() };
     vi.mocked(createServerClient).mockReturnValue(mockClient as any);
 
-    const client = await createClient();
+    const client = await createServerSupabase();
 
     expect(cookies).toHaveBeenCalled();
     expect(createServerClient).toHaveBeenCalledWith(
@@ -78,7 +78,7 @@ describe("Supabase Server Client", () => {
       return { auth: {} } as any;
     });
 
-    await createClient();
+    await createServerSupabase();
 
     // Test getAll
     const getAllResult = capturedCookieHandlers.getAll();
@@ -107,7 +107,7 @@ describe("Supabase Server Client", () => {
     // Re-import module with missing env vars
     vi.resetModules();
     const serverModule = await import("../server");
-    createClient = serverModule.createClient;
+    createServerSupabase = serverModule.createServerSupabase;
 
     const mockCookieStore = {
       getAll: vi.fn().mockReturnValue([]),
@@ -115,7 +115,7 @@ describe("Supabase Server Client", () => {
     };
     vi.mocked(cookies).mockResolvedValue(mockCookieStore as any);
 
-    await expect(createClient()).rejects.toThrow(
+    await expect(createServerSupabase()).rejects.toThrow(
       "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
     );
   });
@@ -131,7 +131,7 @@ describe("Supabase Server Client", () => {
     const mockClient = { auth: {}, from: vi.fn() };
     vi.mocked(createServerClient).mockReturnValue(mockClient as any);
 
-    const client = await createClient();
+    const client = await createServerSupabase();
 
     expect(client).toBe(mockClient);
     expect(mockCookieStore.getAll).toHaveBeenCalled();

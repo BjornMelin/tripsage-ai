@@ -74,11 +74,13 @@ const MockWebSocketConstructor = vi.fn().mockImplementation((url: string) => {
   return mockWebSocketInstance;
 });
 
-// Copy constants from MockWebSocket to the constructor
-MockWebSocketConstructor.CONNECTING = 0;
-MockWebSocketConstructor.OPEN = 1;
-MockWebSocketConstructor.CLOSING = 2;
-MockWebSocketConstructor.CLOSED = 3;
+// Add WebSocket constants to the mock constructor
+Object.assign(MockWebSocketConstructor, {
+  CONNECTING: 0,
+  OPEN: 1,
+  CLOSING: 2,
+  CLOSED: 3,
+});
 
 Object.defineProperty(global, "WebSocket", {
   value: MockWebSocketConstructor,
