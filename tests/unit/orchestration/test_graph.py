@@ -315,54 +315,56 @@ class TestTripSageOrchestratorExtended:
     """Extended tests for TripSageOrchestrator."""
 
     @pytest.fixture
-    def comprehensive_mock_registry(self):
-        """Create a mock service registry."""
-        registry = MagicMock(spec=ServiceRegistry)
+    def comprehensive_mock_services(self):
+        """Create a mock application service container."""
+        services = create_mock_services(
+            {
+                "accommodation_service": AsyncMock(),
+                "flight_service": AsyncMock(),
+                "destination_service": AsyncMock(),
+                "itinerary_service": AsyncMock(),
+                "memory_service": AsyncMock(),
+                "chat_service": AsyncMock(),
+                "user_service": AsyncMock(),
+                "weather_service": AsyncMock(),
+                "memory_bridge": MagicMock(),
+            }
+        )
 
-        # Mock all services with proper async patterns
-        services = {
-            "accommodation_service": AsyncMock(),
-            "flight_service": AsyncMock(),
-            "budget_service": AsyncMock(),
-            "destination_service": AsyncMock(),
-            "itinerary_service": AsyncMock(),
-            "memory_service": AsyncMock(),
-            "chat_service": AsyncMock(),
-            "user_service": AsyncMock(),
-            "location_service": AsyncMock(),
-            "weather_service": AsyncMock(),
-        }
-
-        # Configure service behavior
-        services["flight_service"].search_flights = AsyncMock(
+        services.flight_service.search_flights = AsyncMock(  # type: ignore[attr-defined]
             return_value={"flights": [], "status": "success"}
         )
-        services["accommodation_service"].search_accommodations = AsyncMock(
+        services.accommodation_service.search_accommodations = AsyncMock(  # type: ignore[attr-defined]
             return_value={"listings": [], "status": "success"}
         )
-
-        registry.get_required_service = MagicMock(side_effect=services.get)
-        registry.get_optional_service = MagicMock(side_effect=services.get)
-        memory_bridge = MagicMock()
 
         def hydrate_identity(state):  # type: ignore
             return state
 
-        memory_bridge.hydrate_state = AsyncMock(side_effect=hydrate_identity)
-        memory_bridge.extract_and_persist_insights = AsyncMock(
+        services.memory_bridge.hydrate_state = AsyncMock(  # type: ignore[attr-defined]
+            side_effect=hydrate_identity
+        )
+        services.memory_bridge.extract_and_persist_insights = AsyncMock(  # type: ignore[attr-defined]
             return_value={"insights": "test"}
         )
-        registry.get_memory_bridge.return_value = memory_bridge
+
         checkpoint_service = MagicMock()
         checkpoint_service.get_async_checkpointer = AsyncMock(
             return_value=MemorySaver()
         )
-        registry.get_checkpoint_service.return_value = checkpoint_service
+        services.checkpoint_service = checkpoint_service
 
-        return registry
+        services.get_required_service = MagicMock(
+            side_effect=lambda name, **_: getattr(services, name)
+        )
+        services.get_optional_service = MagicMock(
+            side_effect=lambda name, **_: getattr(services, name, None)
+        )
+
+        return services
 
     @pytest.fixture
-    def enhanced_orchestrator(self, comprehensive_mock_registry):
+    def enhanced_orchestrator(self, comprehensive_mock_services):
         """Create an enhanced orchestrator with full mocking."""
         with (
             patch("tripsage.orchestration.graph.get_handoff_coordinator") as mock_coord,
@@ -371,7 +373,7 @@ class TestTripSageOrchestratorExtended:
             mock_coord.return_value.determine_next_agent = MagicMock(return_value=None)
 
             return TripSageOrchestrator(
-                service_registry=comprehensive_mock_registry,
+                services=comprehensive_mock_services,
                 checkpointer=MemorySaver(),
             )
 
@@ -591,17 +593,22 @@ class TestTripSageOrchestratorExtended:
             patch("tripsage.orchestration.graph.get_handoff_coordinator"),
             patch("tripsage.orchestration.graph.get_default_config"),
         ):
-            mock_registry = MagicMock(spec=ServiceRegistry)
-            mock_registry.get_required_service = MagicMock(return_value=MagicMock())
-            mock_registry.get_memory_bridge.return_value = MagicMock()
+            services = create_mock_services(
+                {
+                    "memory_bridge": MagicMock(),
+                }
+            )
             checkpoint_service = MagicMock()
             checkpoint_service.get_async_checkpointer = AsyncMock(
                 return_value=MemorySaver()
             )
-            mock_registry.get_checkpoint_service.return_value = checkpoint_service
+            services.checkpoint_service = checkpoint_service
+            services.get_required_service = MagicMock(
+                side_effect=lambda name, **_: getattr(services, name)
+            )
 
             orchestrator = TripSageOrchestrator(
-                config=custom_config, service_registry=mock_registry
+                config=custom_config, services=services
             )
 
             assert orchestrator.config == custom_config

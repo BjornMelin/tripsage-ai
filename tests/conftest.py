@@ -294,23 +294,6 @@ def mock_openai_client():
     return client
 
 
-@pytest.fixture
-def mock_service_registry():
-    """Create mock service registry."""
-    from tripsage.agents.service_registry import ServiceRegistry
-
-    registry = ServiceRegistry()
-
-    # Add commonly used services
-    registry.register("database", AsyncMock())
-    registry.register("cache", AsyncMock())
-    registry.register("openai", AsyncMock())
-    registry.register("memory", AsyncMock())
-    registry.register("websocket", AsyncMock())
-
-    return registry
-
-
 # Markers for test categorization
 def pytest_configure(config):
     """Configure pytest with custom markers."""
