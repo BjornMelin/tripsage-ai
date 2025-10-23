@@ -10,12 +10,7 @@ export default defineConfig({
     setupFiles: ["./src/test-setup.ts"],
     exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*", "**/*.spec.*"],
     // Enable browser mode for advanced testing
-    browser: {
-      enabled: false, // Can be enabled for specific tests
-      name: "chromium",
-      provider: "playwright",
-      headless: true,
-    },
+    // browser runner is disabled by default
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
@@ -42,15 +37,10 @@ export default defineConfig({
           statements: 90,
         },
       },
-      all: true,
+      // 'all' moved/unsupported in current @vitest/coverage-v8 types; omit for build
     },
     // Performance optimizations
-    pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true, // Better for memory-constrained environments
-      },
-    },
+    // pool option signatures have changed; use defaults for compatibility
     isolate: true, // Ensure test isolation
     clearMocks: true, // Clear all mocks between tests
     restoreMocks: true, // Restore original implementations
