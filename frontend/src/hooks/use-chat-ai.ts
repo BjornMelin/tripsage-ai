@@ -351,20 +351,11 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     },
   });
 
-  // Helper to extract plain text from AI SDK v5 message parts
-  const messageToText = (m: any): string => {
-    try {
-      if (Array.isArray(m.parts)) {
-        return m.parts
-          .filter((p: any) => p?.type === "text" && typeof p.text === "string")
-          .map((p: any) => p.text)
-          .join("");
-      }
-      return (m as any).content ?? "";
-    } catch {
-      return "";
-    }
-  };
+  const partsToText = (parts?: { type: string; text?: string }[]) =>
+    (parts || [])
+      .filter((p) => p?.type === "text" && typeof p.text === "string")
+      .map((p) => p.text as string)
+      .join("");
 
   // Sync AI SDK messages to our store
   useEffect(() => {
@@ -376,16 +367,13 @@ export function useChatAi(options: UseChatAiOptions = {}) {
       sessions.find((s) => s.id === sessionIdRef.current)?.messages || [];
     const existingMessage = sessionMessages.find((m) => m.id === lastMessage.id);
 
+    const content = partsToText((lastMessage as any).parts) || (lastMessage as any).content || "";
+    const role = lastMessage.role as MessageRole;
     if (existingMessage) {
-      // Update existing message
-      const content = messageToText(lastMessage);
       if (existingMessage.content !== content) {
         updateMessage(sessionIdRef.current, lastMessage.id, { content });
       }
     } else {
-      // Add new message
-      const role = lastMessage.role as MessageRole;
-      const content = messageToText(lastMessage);
       addMessage(sessionIdRef.current, { role, content });
     }
   }, [aiSdkMessages, sessions, addMessage, updateMessage]);

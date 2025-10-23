@@ -31,6 +31,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
+function partsToText(parts?: { type: string; text?: string }[]): string | undefined {
+  if (!parts) return undefined;
+  try {
+    return parts
+      .filter((p) => p && p.type === "text" && typeof p.text === "string")
+      .map((p) => p.text as string)
+      .join("");
+  } catch {
+    return undefined;
+  }
+}
 import type { Message, ToolCall, ToolResult } from "@/types/chat";
 import { MessageAttachments } from "./message-attachments";
 import { MessageBubble } from "./message-bubble";
@@ -153,13 +165,12 @@ export function MessageItem({
 
   // Handle copy message content
   const handleCopyMessage = useCallback(() => {
-    const content = message.content;
-    if (content) {
-      startTransition(() => {
-        navigator.clipboard.writeText(content);
-      });
-    }
-  }, [message.content]);
+    const content = partsToText((message as any).parts) ?? message.content;
+    if (!content) return;
+    startTransition(() => {
+      navigator.clipboard.writeText(content);
+    });
+  }, [message]);
 
   const RoleAvatar = ({ config }: { config: typeof avatarConfig }) => {
     const IconComponent = config.icon;
