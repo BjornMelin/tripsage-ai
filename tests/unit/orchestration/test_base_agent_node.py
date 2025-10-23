@@ -11,9 +11,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from tripsage.agents.service_registry import ServiceRegistry
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState, create_initial_state
+from tests.unit.orchestration.test_utils import create_mock_services
 
 
 class TestableAgentNode(BaseAgentNode):
@@ -21,7 +22,7 @@ class TestableAgentNode(BaseAgentNode):
 
     def __init__(
         self,
-        service_registry: ServiceRegistry,
+        services: AppServiceContainer,
         process_func=None,
         initialize_func=None,
         config: dict[str, Any] | None = None,
@@ -29,7 +30,7 @@ class TestableAgentNode(BaseAgentNode):
         """Initialize with optional custom functions."""
         self.process_func = process_func
         self.initialize_func = initialize_func
-        super().__init__("test_agent", service_registry, config)
+        super().__init__("test_agent", services, config)
 
     def _initialize_tools(self) -> None:
         """Initialize tools for testing."""
@@ -59,12 +60,20 @@ class TestBaseAgentNode:
     """Test suite for BaseAgentNode."""
 
     @pytest.fixture
-    def mock_service_registry(self):
-        """Create a mock service registry."""
-        registry = MagicMock(spec=ServiceRegistry)
-        registry.get_required_service = MagicMock(return_value=MagicMock())
-        registry.get_optional_service = MagicMock(return_value=None)
-        return registry
+    def mock_services(self):
+        """Create a mock service container."""
+        services = create_mock_services(
+            {
+                "memory_service": MagicMock(),
+            }
+        )
+        services.get_required_service = MagicMock(
+            side_effect=lambda name, **_: getattr(services, name)
+        )
+        services.get_optional_service = MagicMock(
+            side_effect=lambda name, **_: getattr(services, name, None)
+        )
+        return services
 
     @pytest.fixture
     def sample_state(self):
@@ -72,23 +81,23 @@ class TestBaseAgentNode:
         return create_initial_state("user-123", "Help me plan a trip to Tokyo")
 
     @pytest.fixture
-    def test_node(self, mock_service_registry):
+    def test_node(self, mock_services):
         """Create a testable agent node."""
-        return TestableAgentNode(mock_service_registry)
+        return TestableAgentNode(mock_services)
 
-    def test_node_initialization(self, mock_service_registry):
+    def test_node_initialization(self, mock_services):
         """Test basic node initialization."""
         config = {"test_config": "value"}
-        node = TestableAgentNode(mock_service_registry, config=config)
+        node = TestableAgentNode(mock_services, config=config)
 
         assert node.node_name == "test_agent"
         assert node.name == "test_agent"  # Property alias
-        assert node.service_registry == mock_service_registry
+        assert node.services == mock_services
         assert node.config == config
         assert hasattr(node, "logger")
         assert hasattr(node, "test_tool")
 
-    def test_custom_tool_initialization(self, mock_service_registry):
+    def test_custom_tool_initialization(self, mock_services):
         """Test custom tool initialization."""
         initialized = False
 
@@ -96,7 +105,7 @@ class TestBaseAgentNode:
             nonlocal initialized
             initialized = True
 
-        _node = TestableAgentNode(mock_service_registry, initialize_func=custom_init)
+        _node = TestableAgentNode(mock_services, initialize_func=custom_init)
 
         assert initialized is True
 
@@ -119,7 +128,7 @@ class TestBaseAgentNode:
         assert result["updated_at"] is not None
 
     @pytest.mark.asyncio
-    async def test_custom_processing(self, mock_service_registry, sample_state):
+    async def test_custom_processing(self, mock_services, sample_state):
         """Test node with custom processing function."""
 
         async def custom_process(state):
@@ -133,20 +142,20 @@ class TestBaseAgentNode:
             )
             return state
 
-        node = TestableAgentNode(mock_service_registry, process_func=custom_process)
+        node = TestableAgentNode(mock_services, process_func=custom_process)
         result = await node(sample_state)
 
         assert result["custom_field"] == "custom_value"
         assert result["messages"][-1]["content"] == "Custom response"
 
     @pytest.mark.asyncio
-    async def test_error_handling(self, mock_service_registry, sample_state):
+    async def test_error_handling(self, mock_services, sample_state):
         """Test error handling during processing."""
 
         async def failing_process(state):
             raise ValueError("Processing failed")
 
-        node = TestableAgentNode(mock_service_registry, process_func=failing_process)
+        node = TestableAgentNode(mock_services, process_func=failing_process)
 
         # Process should handle error gracefully
         result = await node(sample_state)
@@ -166,14 +175,14 @@ class TestBaseAgentNode:
 
     @pytest.mark.asyncio
     async def test_multiple_errors_increment_count(
-        self, mock_service_registry, sample_state
+        self, mock_services, sample_state
     ):
         """Test that multiple errors increment the error count correctly."""
 
         async def failing_process(state):
             raise RuntimeError("Another error")
 
-        node = TestableAgentNode(mock_service_registry, process_func=failing_process)
+        node = TestableAgentNode(mock_services, process_func=failing_process)
 
         # First error
         result1 = await node(sample_state)
