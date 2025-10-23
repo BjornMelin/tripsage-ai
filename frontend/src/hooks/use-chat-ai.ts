@@ -1,6 +1,5 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
@@ -10,7 +9,6 @@ import type {
   Attachment,
   ChatSession,
   Message,
-  MessageRole,
   ToolCall,
   ToolResult,
 } from "@/types/chat";
@@ -81,7 +79,6 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     setCurrentSession,
     createSession,
     addMessage,
-    updateMessage,
     updateAgentStatus,
     stopStreaming,
   } = useChatStore();
@@ -263,120 +260,11 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     [addToolCall, addToolResult]
   );
 
-  // Set up Vercel AI SDK chat (only if initialized)
-  const {
-    messages: aiSdkMessages,
-    sendMessage: sendChatMessage,
-    status,
-    error,
-    stop,
-    regenerate,
-  } = useChat({
-    id: sessionIdRef.current,
-    onFinish: ({ message }) => {
-      // Update message with tool call information
-      if (activeToolCalls.size > 0) {
-        const toolCallsArray = Array.from(activeToolCalls.values()).map((toolCall) => ({
-          id: toolCall.id,
-          name: toolCall.name,
-          arguments: toolCall.arguments || {},
-          state: "call" as const,
-        }));
-        const toolResultsArray = Array.from(toolResults.values()).map((toolResult) => ({
-          callId: toolResult.callId,
-          result: toolResult.result || null, // Ensure result is present
-        }));
-
-        updateMessage(sessionIdRef.current, message.id, {
-          toolCalls: toolCallsArray,
-          toolResults: toolResultsArray,
-        });
-      }
-
-      // Set agent to idle when message is complete
-      updateAgentStatus(sessionIdRef.current, {
-        isActive: false,
-        statusMessage: "",
-      });
-
-      // Clear active tool calls for next message
-      setActiveToolCalls(new Map());
-      setToolResults(new Map());
-    },
-    onError: (error) => {
-      console.error("Chat error:", error);
-
-      // Parse error for specific handling
-      let errorMessage = "An error occurred while processing your request";
-      // let errorStatus = "error"; // Future use
-
-      if (error.message) {
-        // Check for specific error patterns
-        if (error.message.includes("timeout") || error.message.includes("TIMEOUT")) {
-          errorMessage = "Request timed out. Please try again.";
-          // errorStatus = "timeout"; // Future use
-        } else if (
-          error.message.includes("Authentication required") ||
-          error.message.includes("AUTH_REQUIRED")
-        ) {
-          errorMessage = "Authentication required. Please check your API keys.";
-          // errorStatus = "auth_error"; // Future use
-        } else if (
-          error.message.includes("Rate limited") ||
-          error.message.includes("RATE_LIMITED")
-        ) {
-          errorMessage = "Too many requests. Please wait a moment and try again.";
-          // errorStatus = "rate_limited"; // Future use
-        } else if (
-          error.message.includes("Service unavailable") ||
-          error.message.includes("SERVICE_UNAVAILABLE")
-        ) {
-          errorMessage =
-            "AI service is temporarily unavailable. Please try again later.";
-          // errorStatus = "service_unavailable"; // Future use
-        } else if (error.message.includes("Model not available")) {
-          errorMessage =
-            "The selected AI model is not available. Please try a different model.";
-          // errorStatus = "model_unavailable"; // Future use
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
-      updateAgentStatus(sessionIdRef.current, {
-        isActive: false,
-        statusMessage: errorMessage,
-      });
-    },
-  });
-
-  const partsToText = (parts?: { type: string; text?: string }[]) =>
-    (parts || [])
-      .filter((p) => p?.type === "text" && typeof p.text === "string")
-      .map((p) => p.text as string)
-      .join("");
-
-  // Sync AI SDK messages to our store
-  useEffect(() => {
-    const lastMessage = aiSdkMessages[aiSdkMessages.length - 1];
-
-    if (!lastMessage) return;
-
-    const sessionMessages =
-      sessions.find((s) => s.id === sessionIdRef.current)?.messages || [];
-    const existingMessage = sessionMessages.find((m) => m.id === lastMessage.id);
-
-    const content =
-      partsToText((lastMessage as any).parts) || (lastMessage as any).content || "";
-    const role = lastMessage.role as MessageRole;
-    if (existingMessage) {
-      if (existingMessage.content !== content) {
-        updateMessage(sessionIdRef.current, lastMessage.id, { content });
-      }
-    } else {
-      addMessage(sessionIdRef.current, { role, content });
-    }
-  }, [aiSdkMessages, sessions, addMessage, updateMessage]);
+  // Local loading/error state now that we call backend directly
+  const [sendingStatus, setSendingStatus] = useState<
+    "idle" | "submitting" | "streaming"
+  >("idle");
+  const [localError, setLocalError] = useState<string | null>(null);
 
   // Handle sending a user message
   const sendMessage = useCallback(
@@ -411,8 +299,69 @@ export function useChatAi(options: UseChatAiOptions = {}) {
           attachments: validatedAttachments,
         });
 
-        // Send via AI SDK v5
-        void sendChatMessage({ text: validatedContent });
+        // Send to backend FastAPI chat endpoint
+        void (async () => {
+          try {
+            setSendingStatus("submitting");
+            setLocalError(null);
+
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+            const endpoint = `${apiUrl.replace(/\/$/, "")}/api/v1/chat/`;
+
+            // Build a minimal ChatRequest payload using recent session messages
+            const session = sessions.find((s) => s.id === sessionIdRef.current);
+            const recent = (session?.messages || []).slice(-20).map((m) => ({
+              role: m.role,
+              content: m.content,
+            }));
+            const body = JSON.stringify({ messages: recent });
+
+            const response = await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body,
+            });
+
+            if (!response.ok) {
+              const err = await response.json().catch(() => ({}));
+              throw new Error(
+                err?.detail || err?.error || `Chat failed (${response.status})`
+              );
+            }
+
+            const data = (await response.json()) as {
+              message?: { role?: string; content?: string };
+            };
+            const assistant = data?.message?.content || "";
+
+            if (assistant) {
+              addMessage(sessionIdRef.current, {
+                role: "assistant",
+                content: assistant,
+              });
+            }
+
+            // Done
+            setSendingStatus("idle");
+            updateAgentStatus(sessionIdRef.current, {
+              isActive: false,
+              statusMessage: "",
+            });
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : "Chat request failed";
+            setLocalError(msg);
+            updateAgentStatus(sessionIdRef.current, {
+              isActive: false,
+              statusMessage: msg,
+            });
+            setSendingStatus("idle");
+          } finally {
+            // Clear tool-call tracking between messages
+            setActiveToolCalls(new Map());
+            setToolResults(new Map());
+          }
+        })();
       } catch (error) {
         // Handle Zod validation errors
         if (error instanceof z.ZodError) {
@@ -424,32 +373,22 @@ export function useChatAi(options: UseChatAiOptions = {}) {
         return;
       }
     },
-    [
-      addMessage,
-      sendChatMessage,
-      updateAgentStatus,
-      isInitialized,
-      isAuthenticated,
-      isApiKeyValid,
-    ]
+    [addMessage, updateAgentStatus, isInitialized, isAuthenticated, isApiKeyValid]
   );
 
   // Handle stopping the generation
   const stopGeneration = useCallback(() => {
-    stop();
+    // No streaming cancel with direct backend call; just clear status/UI
     stopStreaming();
-    updateAgentStatus(sessionIdRef.current, {
-      isActive: false,
-      statusMessage: "",
-    });
-  }, [stop, stopStreaming, updateAgentStatus]);
+    updateAgentStatus(sessionIdRef.current, { isActive: false, statusMessage: "" });
+  }, [stopStreaming, updateAgentStatus]);
 
   return {
     // Chat state
     sessionId: sessionIdRef.current,
     messages: sessions.find((s) => s.id === sessionIdRef.current)?.messages || [],
-    isLoading: status === "submitted" || status === "streaming",
-    error: error || authError || storeAuthError,
+    isLoading: sendingStatus !== "idle",
+    error: localError || authError || storeAuthError,
 
     // Auth state
     isAuthenticated,
@@ -464,7 +403,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     // Actions
     sendMessage,
     stopGeneration,
-    reload: regenerate,
+    reload: () => undefined,
 
     // Tool call actions
     retryToolCall,

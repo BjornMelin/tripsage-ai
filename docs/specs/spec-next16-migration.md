@@ -45,4 +45,5 @@ Upgrade the app to Next.js 16 by migrating middleware -> proxy, enforcing async 
 
 - Route handlers reviewed: `app/api/chat/route.ts`, `app/api/chat/attachments/route.ts`, and `app/auth/confirm/route.ts`. The confirm handler is the only Supabase call site and defers to `createServerSupabase()`, which awaits `cookies()` before invoking Supabase APIs to opt out of public caching. Route handlers without Supabase dependencies do not access `cookies()`/`headers()` directly and operate purely on request payloads.
 - `app/api/chat/attachments/route.ts` now revalidates the `attachments` cache tag for both single and batch payloads right before returning, using the `profile="max"` option to mark cache entries stale without blocking.citeturn0view0
+- Chat: the native Next.js chat route has been removed; the UI calls the canonical FastAPI endpoints at `${NEXT_PUBLIC_API_URL}/api/v1/chat/`. If a BFF is needed in the future, it must be a thin forwarder only.
 - The attachments endpoint remains annotated with `"use cache: private"` so uploads stay user-scoped while allowing follow-up fetches to reuse cached metadata where appropriate.
