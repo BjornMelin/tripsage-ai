@@ -21,7 +21,7 @@ if (typeof TransformStream === "undefined") {
 }
 
 // Mock environment variables
-process.env.NEXT_PUBLIC_API_URL = "http://localhost:8000";
+process.env.NEXT_PUBLIC_API_URL = "http://localhost:8001";
 process.env.API_TIMEOUT = "5000";
 
 describe("/api/chat route", () => {
@@ -78,7 +78,7 @@ describe("/api/chat route", () => {
 
       // Assert
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8000/api/v1/chat/",
+        "http://localhost:8001/api/v1/chat/",
         expect.objectContaining({
           method: "POST",
           headers: expect.objectContaining({

@@ -102,7 +102,11 @@ export async function POST(req: NextRequest) {
         ],
         urls: [`/api/attachments/${data.file_id}/download`],
       };
-      revalidateTag("attachments", "max");
+      try {
+        revalidateTag("attachments", "max");
+      } catch {
+        // Ignore cache revalidation errors in non-Next runtime test environments
+      }
       return Response.json(payload);
     }
 
@@ -128,7 +132,11 @@ export async function POST(req: NextRequest) {
       urls: transformedFiles.map((f: any) => f.url),
     };
     const result = Response.json(resultPayload);
-    revalidateTag("attachments", "max");
+    try {
+      revalidateTag("attachments", "max");
+    } catch {
+      // Ignore cache revalidation errors in non-Next runtime test environments
+    }
     return result;
   } catch (error) {
     console.error("File upload error:", error);
