@@ -1,8 +1,10 @@
+"use cache: private";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
 // Environment variables
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Prefer unified backend URL; default matches FastAPI default port 8001.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 const API_TIMEOUT = Number.parseInt(process.env.API_TIMEOUT || "30000", 10);
 
 // Request validation schema
@@ -54,7 +56,7 @@ async function forwardToBackend(
       headers.Authorization = `Bearer ${process.env.API_KEY}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/chat/`, {
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: "POST",
       headers,
       body: JSON.stringify({

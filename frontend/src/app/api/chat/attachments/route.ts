@@ -1,8 +1,10 @@
+"use cache: private";
+import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
 const MAX_FILES_PER_REQUEST = 5;
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8000";
+const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8001";
 
 export async function POST(req: NextRequest) {
   try {
@@ -100,6 +102,8 @@ export async function POST(req: NextRequest) {
         ],
         urls: [`/api/attachments/${data.file_id}/download`],
       });
+      // Invalidate any views that consume attachments lists
+      revalidateTag("attachments", "max");
     }
 
     // Batch response
@@ -119,10 +123,12 @@ export async function POST(req: NextRequest) {
       status: file.processing_status,
     }));
 
-    return Response.json({
+    const result = Response.json({
       files: transformedFiles,
       urls: transformedFiles.map((f: any) => f.url),
     });
+    revalidateTag("attachments", "max");
+    return result;
   } catch (error) {
     console.error("File upload error:", error);
     return Response.json(

@@ -1,14 +1,5 @@
 "use client";
 
-import { SecurityDashboard } from "@/components/features/security/security-dashboard";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
-import { useAuth } from "@/contexts/auth-context";
 import {
   AlertTriangle,
   Bell,
@@ -23,6 +14,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { SecurityDashboard } from "@/components/features/security/security-dashboard";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/contexts/auth-context";
 
 interface SecuritySettings {
   twoFactorEnabled: boolean;
@@ -397,5 +397,4 @@ export default function SecuritySettingsPage() {
   );
 }
 
-// Force dynamic rendering for authenticated pages
-export const dynamic = 'force-dynamic';
+// caching handled at app level via cacheComponents; no per-file directive

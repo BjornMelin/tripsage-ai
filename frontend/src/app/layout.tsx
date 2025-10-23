@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { Navbar } from "@/components/layouts/navbar";
 import { PerformanceMonitor } from "@/components/providers/performance-provider";
 import { TanStackQueryProvider } from "@/components/providers/query-provider";
+import { SupabaseProvider } from "@/components/providers/supabase-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -55,11 +57,15 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-              <div className="flex flex-col min-h-screen">
-                <Navbar />
-                <main className="flex-1">{children}</main>
-              </div>
-              <Toaster />
+              <SupabaseProvider>
+                <div className="flex flex-col min-h-screen">
+                  <Suspense fallback={null}>
+                    <Navbar />
+                  </Suspense>
+                  <main className="flex-1">{children}</main>
+                </div>
+                <Toaster />
+              </SupabaseProvider>
             </ThemeProvider>
           </TanStackQueryProvider>
         </PerformanceMonitor>
