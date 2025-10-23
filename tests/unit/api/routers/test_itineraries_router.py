@@ -35,7 +35,6 @@ from tripsage_core.models.api.itinerary_models import (
     ItineraryOptimizeRequest,
     ItinerarySearchRequest,
     ItineraryUpdateRequest,
-    Location,
     OptimizationSetting,
     TimeSlot,
 )
@@ -271,7 +270,10 @@ class TestItinerariesRouter:  # pylint: disable=too-many-public-methods
         self, mock_principal, mock_itinerary_service, sample_search_request
     ):
         """Test successful itinerary search."""
-        from tripsage_core.models.api.itinerary_models import ItineraryResponse, ItinerarySearchResponse
+        from tripsage_core.models.api.itinerary_models import (
+            ItineraryResponse,
+            ItinerarySearchResponse,
+        )
 
         expected_response = ItinerarySearchResponse(
             items=[

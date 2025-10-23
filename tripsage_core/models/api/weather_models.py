@@ -460,6 +460,6 @@ class SeasonalWeather(BaseModel):
     travel_tips: list[str]
 
 
-__all__: Final[list[str]] = auto_all(  # pyright: ignore[reportUnsupportedDunderAll]
-    __name__, globals()
+__all__: Final[tuple[str, ...]] = tuple(  # pyright: ignore[reportUnsupportedDunderAll]
+    auto_all(__name__, globals())
 )

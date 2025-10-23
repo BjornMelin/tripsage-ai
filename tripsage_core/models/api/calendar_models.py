@@ -6,11 +6,9 @@ including event management, reminders, and travel-specific features.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Final
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl, field_validator
-
-from typing import Final
 
 from tripsage_core.models.api._export_helpers import auto_all
 
@@ -443,6 +441,6 @@ class TravelEventRequest(BaseModel):
         return CreateEventRequest.model_validate(event_payload)
 
 
-__all__: Final[list[str]] = auto_all(  # pyright: ignore[reportUnsupportedDunderAll]
-    __name__, globals()
+__all__: Final[tuple[str, ...]] = tuple(  # pyright: ignore[reportUnsupportedDunderAll]
+    auto_all(__name__, globals())
 )

@@ -32,6 +32,7 @@ from tripsage_core.models.api.itinerary_models import (
     ItinerarySearchResponse as ApiItinerarySearchResponse,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.models.schemas_common.base_models import PaginationMeta
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
@@ -207,11 +208,22 @@ class ItineraryService:
                 )
             )
 
-        return ApiItinerarySearchResponse(
-            items=serialized,
+        total_items = len(rows)
+        total_pages = (total_items + page_size - 1) // page_size
+        pagination = PaginationMeta(
             page=page,
-            page_size=page_size,
-            total=len(rows),
+            per_page=page_size,
+            total_items=total_items,
+            total_pages=total_pages,
+            has_next=end_idx < total_items,
+            has_prev=start_idx > 0,
+        )
+
+        return ApiItinerarySearchResponse(
+            success=True,
+            message=None,
+            data=serialized,
+            pagination=pagination,
         )
 
     async def get_itinerary(self, user_id: str, itinerary_id: str) -> dict[str, Any]:
