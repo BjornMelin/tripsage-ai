@@ -7,65 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- frontend: Next.js 16 compliance hardening
-  - Supabase SSR client now validates env and guards cookie writes with try/catch
-  - Proxy cookie writes hardened
-  - use-chat-ai: AbortController + 60s timeout added; session handling fixed; immutable Map updates
-  - Verified revalidateTag('attachments', 'max') under Next.js 16 and left in place
-  - Attachments API route validated; Authorization forwarded; cache tag revalidation retained
-
 ### Added
 
-- Added Supabase typed helpers (`insertSingle`, `updateSingle`) with unit tests
-- Added trips repository tests and `use-chat-ai` smoke test
-- Added ADR-0019 Canonicalize chat via FastAPI; updated AI SDK spec to match
-- Added session resume spec to simplify context restore
-- Added native AI SDK v5 chat route at `src/app/api/chat/route.ts` (streams UI messages via toUIMessageStreamResponse)
-- Added example AI SDK tool (`confirm`) with Zod input schema in chat route
-- Added Next.js 16 caching defaults: enabled `cacheComponents` in `next.config.ts`; turned on `turbopackFileSystemCacheForDev`
-- Added Supabase auth confirmation route at `src/app/auth/confirm/route.ts` using `@supabase/ssr`
-- Added Upstash Redis helper `src/lib/redis.ts` with `getRedis()` and `incrCounter()` utilities (uses REST client for Edge compatibility)
-- Added suspense wrappers on app and dashboard layouts to satisfy Next 16 prerender rules with Cache Components
-- Added trip repository `src/lib/repositories/trips-repo.ts` for typed Supabase CRUD and UI mapping
-- Added DuffelProvider (httpx, Duffel API v2) for flight search and booking; returns raw provider dicts mapped to canonical `FlightOffer` via the existing mapper (`tripsage_core.models.mappers.flights_mapper`)
-- Added optional Duffel auto‑wiring in `get_flight_service()` when `DUFFEL_ACCESS_TOKEN` (or legacy `DUFFEL_API_TOKEN`) is present
-- Added unit tests: provider (no‑network) and FlightService+provider mapping/booking paths; deterministic and isolated
-- Added ADR-0012 documenting canonical flights DTOs and provider convergence
-- Added dashboard regression coverages: async unit tests for `DashboardService`, refreshed HTTP router tests, and an integration harness exercising the new schema
-- Added async unit tests for accommodation tools covering search/detail/booking flows via `ToolContext` mocks
-- Added Supabase initialization regression tests covering connection verification, schema discovery, and sample data helpers (no-network stubs)
+- FastAPI SSE chat endpoint `POST /api/chat/stream` (streams token deltas; `text/event-stream`)
+- Next.js route `GET /api/attachments/files` with `next: { tags: ['attachments'] }` for SSR reads
+- Upstash rate limiting for attachments upload route (enabled when `UPSTASH_REDIS_REST_URL|TOKEN` are set)
+- Supabase typed helpers (`insertSingle`, `updateSingle`) with unit tests
+- Trips repository tests and `use-chat-ai` smoke test
+- ADR-0019 Canonicalize chat via FastAPI; updated AI SDK spec to match
+- Session resume spec to simplify context restore
+- Native AI SDK v5 chat route at `src/app/api/chat/route.ts` (streams UI messages via toUIMessageStreamResponse)
+- Example AI SDK tool (`confirm`) with Zod input schema in chat route
+- Next.js 16 caching defaults: enabled `cacheComponents` in `next.config.ts`; turned on `turbopackFileSystemCacheForDev`
+- Supabase auth confirmation route at `src/app/auth/confirm/route.ts` using `@supabase/ssr`
+- Upstash Redis helper `src/lib/redis.ts` with `getRedis()` and `incrCounter()` utilities (uses REST client for Edge compatibility)
+- Suspense wrappers on app and dashboard layouts to satisfy Next 16 prerender rules with Cache Components
+- Trip repository `src/lib/repositories/trips-repo.ts` for typed Supabase CRUD and UI mapping
+- DuffelProvider (httpx, Duffel API v2) for flight search and booking; returns raw provider dicts mapped to canonical `FlightOffer` via the existing mapper (`tripsage_core.models.mappers.flights_mapper`)
+- Optional Duffel auto‑wiring in `get_flight_service()` when `DUFFEL_ACCESS_TOKEN` (or legacy `DUFFEL_API_TOKEN`) is present
+- Unit tests: provider (no‑network) and FlightService+provider mapping/booking paths; deterministic and isolated
+- ADR-0012 documenting canonical flights DTOs and provider convergence
+- Dashboard regression coverages: async unit tests for `DashboardService`, refreshed HTTP router tests, and an integration harness exercising the new schema
+- Async unit tests for accommodation tools covering search/detail/booking flows via `ToolContext` mocks
+- Supabase initialization regression tests covering connection verification, schema discovery, and sample data helpers (no-network stubs)
 
 ### Changed
 
-- Updated Tailwind v4: replaced `bg-opacity-75` with `bg-black/75` in agent health UI
-- Updated Tailwind v4: ran upgrade tool and verified CSS-first config; postcss plugin in place
-- Updated frontend deps: upgraded to Zod v4 and @hookform/resolvers v5; adapted code to new error and record APIs
-- Updated AI SDK route: fixed error handler to use `onError` returning string
-- Updated Supabase client usage in store: corrected imports, aligned with centralized repo functions
-- Updated Tailwind v4 verification fixes: replaced `<img>` with `next/image` for MFA QR code; converted interactive `<div>`s to `<button>`s in message attachments; added explicit radix to `Number.parseInt` calls
-- Updated additional `<img>` tags with `next/image` in search cards; added unique IDs via `useId` for inputs
-- Updated Tailwind CSS v4: Ran `npx @tailwindcss/upgrade` and confirmed CSS-first setup via `@import "tailwindcss";` in `src/app/globals.css`. Kept `@tailwindcss/postcss` and removed legacy Turbopack flags from `dev` script
-- Updated minor Tailwind v4 compatibility: updated some `outline-none` usages to `outline-hidden` in UI components
-- Updated frontend API routes now default to FastAPI at `http://localhost:8001` and unified paths (`/api/chat`, `/api/attachments/*`)
-- Updated attachments API now revalidates the `attachments` cache tag for both single and batch uploads before returning responses
-- Updated chat domain canonicalized on FastAPI ChatService; removed the Next.js native chat route. Frontend hook now calls `${NEXT_PUBLIC_API_URL}/api/v1/chat/` directly and preserves authentication via credentials
-- Updated dynamic year rendering on the home page to a small client component to avoid server prerender time coupling under Cache Components
-- Updated centralized Supabase typed insert/update via `src/lib/supabase/typed-helpers.ts`; updated hooks to use helpers
-- Updated chat UI prefers `message.parts` when present; removed ad-hoc adapter in `use-chat-ai` sync
-- Updated trip store now routes create/update through the typed repository; removed direct Supabase writes from store
-- Updated `tripsage.agents.base.BaseAgent` around LangGraph orchestration with ChatOpenAI fallback execution, memory hydration, and periodic conversation summarization
-- Updated `ChatAgent` to delegate to the new base workflow while exposing async history/clearing helpers backed by `ChatService` with local fallbacks
-- Updated flight agent result formatting to use canonical offer fields (airlines, outbound_segments, currency/price)
-- Updated documentation (developers/operators/architecture) to "Duffel API v2 via thin provider," headers and env var usage modernized, and examples aligned to canonical mapping
-- Updated dashboard analytics stack simplified: `DashboardService` emits only modern dataclasses, FastAPI routers consume the `metrics/services/top_users` schema directly, and rate limiting now tolerates missing infrastructure dependencies
-- Updated `tripsage.tools.accommodations_tools` now accepts `ToolContext` inputs, validates registry dependencies, and exposes tool wrappers alongside plain coroutine helpers
-- Updated web search tooling replaced ad-hoc fallbacks with strict Agents SDK usage and literal-typed context sizing; batch helper now guards cache failures
-- Updated web crawl helpers simplified to use `WebCrawlService` exclusively, centralizing error normalization and metrics recording
-- Updated OTEL decorators use overload-friendly typing so async/sync instrumentation survives pyright + pylint enforcement
-- Updated database bootstrap hardens Supabase RPC handling, runs migrations via lazy imports, and scopes discovery to `supabase/migrations` with offline recording
-- Updated accommodation stack now normalizes MCP client calls (keyword-only), propagates canonical booking/search metadata, and validates external listings via `model_validate`
-- Updated WebSocket router refactored around a shared `MessageContext`, consolidated handlers, and IDNA-aware origin validation while keeping dependencies Supabase-only
-- Updated API service DI now uses the global `ServiceRegistry` in `tripsage/config/service_registry.py`:
+- Supabase SSR client: validate `NEXT_PUBLIC_SUPABASE_URL|ANON_KEY`; wrap `cookies().setAll` in try/catch
+- Next proxy: guard cookie writes with try/catch
+- Chat hook (`use-chat-ai`):
+  - Switch to streaming via `/api/chat/stream`
+  - Add `AbortController` with 60s timeout
+  - Fix session ID assignment after `createSession`
+  - Use immutable Map updates; include `sessions` in `sendMessage` deps
+- Attachments upload route: keep `revalidateTag('attachments', 'max')`; forward `Authorization` header
+- Tailwind v4: replaced `bg-opacity-75` with `bg-black/75` in agent health UI
+- Tailwind v4: ran upgrade tool and verified CSS-first config; postcss plugin in place
+- Frontend deps: upgraded to Zod v4 and @hookform/resolvers v5; adapted code to new error and record APIs
+- AI SDK route: fixed error handler to use `onError` returning string
+- Supabase client usage in store: corrected imports, aligned with centralized repo functions
+- Tailwind v4 verification fixes: replaced `<img>` with `next/image` for MFA QR code; converted interactive `<div>`s to `<button>`s in message attachments; added explicit radix to `Number.parseInt` calls
+- Additional `<img>` tags with `next/image` in search cards; added unique IDs via `useId` for inputs
+- Tailwind CSS v4: Ran `npx @tailwindcss/upgrade` and confirmed CSS-first setup via `@import "tailwindcss";` in `src/app/globals.css`. Kept `@tailwindcss/postcss` and removed legacy Turbopack flags from `dev` script
+- Minor Tailwind v4 compatibility: updated some `outline-none` usages to `outline-hidden` in UI components
+- Frontend API routes now default to FastAPI at `http://localhost:8001` and unified paths (`/api/chat`, `/api/attachments/*`)
+- Attachments API now revalidates the `attachments` cache tag for both single and batch uploads before returning responses
+- Chat domain canonicalized on FastAPI ChatService; removed the Next.js native chat route. Frontend hook now calls `${NEXT_PUBLIC_API_URL}/api/v1/chat/` directly and preserves authentication via credentials
+- Dynamic year rendering on the home page to a small client component to avoid server prerender time coupling under Cache Components
+- Centralized Supabase typed insert/update via `src/lib/supabase/typed-helpers.ts`; updated hooks to use helpers
+- Chat UI prefers `message.parts` when present; removed ad-hoc adapter in `use-chat-ai` sync
+- Trip store now routes create/update through the typed repository; removed direct Supabase writes from store
+- `tripsage.agents.base.BaseAgent` around LangGraph orchestration with ChatOpenAI fallback execution, memory hydration, and periodic conversation summarization
+- `ChatAgent` to delegate to the new base workflow while exposing async history/clearing helpers backed by `ChatService` with local fallbacks
+- Flight agent result formatting to use canonical offer fields (airlines, outbound_segments, currency/price)
+- Documentation (developers/operators/architecture) to "Duffel API v2 via thin provider," headers and env var usage modernized, and examples aligned to canonical mapping
+- Dashboard analytics stack simplified: `DashboardService` emits only modern dataclasses, FastAPI routers consume the `metrics/services/top_users` schema directly, and rate limiting now tolerates missing infrastructure dependencies
+- `tripsage.tools.accommodations_tools` now accepts `ToolContext` inputs, validates registry dependencies, and exposes tool wrappers alongside plain coroutine helpers
+- Web search tooling replaced ad-hoc fallbacks with strict Agents SDK usage and literal-typed context sizing; batch helper now guards cache failures
+- Web crawl helpers simplified to use `WebCrawlService` exclusively, centralizing error normalization and metrics recording
+- OTEL decorators use overload-friendly typing so async/sync instrumentation survives pyright + pylint enforcement
+- Database bootstrap hardens Supabase RPC handling, runs migrations via lazy imports, and scopes discovery to `supabase/migrations` with offline recording
+- Accommodation stack now normalizes MCP client calls (keyword-only), propagates canonical booking/search metadata, and validates external listings via `model_validate`
+- WebSocket router refactored around a shared `MessageContext`, consolidated handlers, and IDNA-aware origin validation while keeping dependencies Supabase-only
+- API service DI now uses the global `ServiceRegistry` in `tripsage/config/service_registry.py`:
   - Lifespan registers singletons for `cache` and `google_maps`
   - New adapters provide `activity` and `location` services from registry-managed deps
   - API dependency providers (`tripsage/api/core/dependencies.py`) resolve via registry (no `app.state` coupling for these services)
