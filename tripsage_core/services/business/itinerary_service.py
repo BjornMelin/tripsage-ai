@@ -6,7 +6,7 @@ This service performs the following responsibilities:
 * Provide the small set of operations required by the FastAPI routers.
 * Offer lightweight validation (date ranges, ownership checks) and conflict
   detection for overlapping itinerary items.
-* Return data in shapes compatible with ``tripsage.api.schemas.itineraries``.
+* Return data in shapes compatible with ``tripsage_core.models.api.itinerary_models``.
 """
 
 from __future__ import annotations

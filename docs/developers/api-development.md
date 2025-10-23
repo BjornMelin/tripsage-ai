@@ -327,7 +327,7 @@ async def refresh_token(current_user: User = Depends(get_current_user)):
 ### **Pydantic Models with Validation**
 
 ```python
-# tripsage/api/schemas/trips.py
+# tripsage_core/models/api/trip_models.py
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date

@@ -12,15 +12,15 @@ from fastapi import APIRouter, Depends, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.accommodations import (
+from tripsage_core.exceptions import CoreTripSageError
+from tripsage_core.exceptions.exceptions import (
+    CoreResourceNotFoundError as ResourceNotFoundError,
+)
+from tripsage_core.models.api.accommodation_models import (
     AccommodationDetailsRequest,
     AccommodationDetailsResponse,
     SavedAccommodationRequest,
     SavedAccommodationResponse,
-)
-from tripsage_core.exceptions import CoreTripSageError
-from tripsage_core.exceptions.exceptions import (
-    CoreResourceNotFoundError as ResourceNotFoundError,
 )
 from tripsage_core.services.business.accommodation_service import (
     AccommodationSearchRequest as ServiceAccommodationSearchRequest,

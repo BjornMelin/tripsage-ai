@@ -30,11 +30,11 @@ from tripsage.api.routers.trips import (
     share_trip,
     update_trip,
 )
-from tripsage.api.schemas.trips import TripShareRequest, UpdateTripRequest
 from tripsage_core.exceptions.exceptions import (
     CoreAuthorizationError,
     CoreSecurityError,
 )
+from tripsage_core.models.api.trip_models import TripShareRequest, UpdateTripRequest
 from tripsage_core.models.schemas_common.enums import (
     TripVisibility,
 )

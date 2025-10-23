@@ -24,7 +24,8 @@ from tripsage.api.routers.itineraries import (
     update_itinerary,
     update_itinerary_item,
 )
-from tripsage.api.schemas.itineraries import (
+from tripsage_core.exceptions.exceptions import CoreResourceNotFoundError
+from tripsage_core.models.api.itinerary_models import (
     ItineraryCreateRequest,
     ItineraryItemCreateRequest,
     ItineraryItemUpdateRequest,
@@ -32,7 +33,6 @@ from tripsage.api.schemas.itineraries import (
     ItinerarySearchRequest,
     ItineraryUpdateRequest,
 )
-from tripsage_core.exceptions.exceptions import CoreResourceNotFoundError
 from tripsage_core.services.business.itinerary_service import ItineraryService
 
 
@@ -103,7 +103,7 @@ class TestItinerariesRouter:
         """Sample itinerary item creation request."""
         from datetime import date, time
 
-        from tripsage.api.schemas.itineraries import (
+        from tripsage_core.models.api.itinerary_models import (
             ItineraryItemType,
             Location,
             TimeSlot,
@@ -130,7 +130,7 @@ class TestItinerariesRouter:
     @pytest.fixture
     def sample_optimize_request(self):
         """Sample itinerary optimization request."""
-        from tripsage.api.schemas.itineraries import OptimizationSetting
+        from tripsage_core.models.api.itinerary_models import OptimizationSetting
 
         return ItineraryOptimizeRequest(
             itinerary_id="itinerary123", settings=OptimizationSetting.TIME

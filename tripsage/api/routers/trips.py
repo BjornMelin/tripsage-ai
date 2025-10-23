@@ -16,9 +16,14 @@ from pydantic import BaseModel, ValidationError
 
 from tripsage.api.core.dependencies import require_principal
 from tripsage.api.middlewares.authentication import Principal
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthorizationError,
+    CoreSecurityError,
+    CoreServiceError,
+)
 
 # Import schemas
-from tripsage.api.schemas.trips import (
+from tripsage_core.models.api.trip_models import (
     CreateTripRequest,
     TripCollaboratorResponse,
     TripCollaboratorsListResponse,
@@ -31,11 +36,6 @@ from tripsage.api.schemas.trips import (
     TripSuggestionResponse,
     TripSummaryResponse,
     UpdateTripRequest,
-)
-from tripsage_core.exceptions.exceptions import (
-    CoreAuthorizationError,
-    CoreSecurityError,
-    CoreServiceError,
 )
 from tripsage_core.models.schemas_common.enums import TripType, TripVisibility
 from tripsage_core.models.schemas_common.geographic import Coordinates
@@ -997,7 +997,7 @@ async def get_trip_itinerary(
             itinerary_service = await get_itinerary_service()
 
             # Search for itinerary associated with this trip
-            from tripsage_core.services.business.itinerary_service import (
+            from tripsage_core.models.api.itinerary_models import (
                 ItinerarySearchRequest,
             )
 
@@ -1006,12 +1006,20 @@ async def get_trip_itinerary(
                 {"query": str(trip_id), "limit": 1}
             )
 
-            itineraries = await itinerary_service.search_itineraries(
+            itinerary_search = await itinerary_service.search_itineraries(
                 user_id=principal.user_id, search_request=search_request
             )
 
-            if itineraries and len(itineraries) > 0:
-                itinerary_data = itineraries[0]
+            itinerary_items: list[Any] = []
+            if isinstance(itinerary_search, dict):
+                itinerary_items = cast(
+                    list[Any], itinerary_search.get("items", [])
+                )
+            elif isinstance(itinerary_search, list):
+                itinerary_items = itinerary_search
+
+            if itinerary_items:
+                itinerary_data = itinerary_items[0]
 
                 items: list[_ItineraryItem] = [
                     _ItineraryItem(
