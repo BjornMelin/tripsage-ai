@@ -27,21 +27,12 @@ This section contains high-level system design and architectural documentation f
 
 ### Core System Architecture
 
-- **[System Overview](system-overview.md)** - Complete system architecture with component interactions
-- **[Technology Stack](technology-stack.md)** - Architecture-level technology decisions and rationale
-- **[Data Architecture](data-architecture.md)** - Database design patterns and storage decisions
+- **[System Overview](system-overview.md)** - Complete system architecture with component interactions, data flow, and technology stack
+- **[Data Architecture](data-architecture.md)** - Database design patterns, storage decisions, and vector search optimization
 
-### Communication Architecture  
+### Specialized Architecture
 
-- **[Real-time Communication](real-time-communication.md)** - WebSocket and real-time messaging patterns
-- **[API Architecture](api-architecture.md)** - High-level API design patterns and consumer strategies
-- **[Integration Patterns](integration-patterns.md)** - External service integration architecture
-
-### Cross-cutting Concerns
-
-- **[Performance Architecture](performance-architecture.md)** - Caching, optimization, and scalability patterns
-- **[Security Architecture](security-architecture.md)** - Authentication, authorization, and data protection patterns
-- **[Monitoring Architecture](monitoring-architecture.md)** - Observability and system health patterns
+- **[Storage Architecture](storage-architecture.md)** - File storage, bucket organization, and security patterns
 
 ## 🎯 Architecture Principles
 
@@ -67,12 +58,57 @@ Direct SDK integrations replacing complex abstraction layers, reducing latency a
 
 WebSocket-based architecture enabling live trip planning, agent status updates, and multi-user collaboration with conflict resolution.
 
+## 🏗️ Project Structure
+
+```text
+tripsage-ai/
+├── tripsage/                   # API application (FastAPI)
+├── tripsage_core/              # Core business logic and services
+├── frontend/                   # Next.js application
+├── tests/                      # Test suite (unit, integration, e2e, performance, security)
+├── scripts/                    # Database and deployment scripts
+├── docker/                     # Runtime compose files and Dockerfiles
+├── docs/                       # Documentation
+└── supabase/                   # Supabase configuration
+```
+
+### Module Organization
+
+#### `tripsage/api/`
+
+FastAPI application entry point and core API logic with consumer-aware design.
+
+#### `tripsage_core/`
+
+Core business logic, services, models, and shared utilities:
+
+- `config.py` - Configuration management
+- `exceptions.py` - Custom exception handling
+- `models/` - Pydantic models and Supabase schemas
+- `services/business/` - Business logic services
+- `services/external_apis/` - Direct SDK integrations
+- `services/infrastructure/` - Database, cache, WebSocket services
+
+#### `frontend/`
+
+Next.js 15 application with App Router and modern React patterns.
+
+#### `tests/`
+
+Comprehensive test suite with 90%+ coverage:
+
+- `unit/` - Unit tests for individual components
+- `integration/` - Service integration tests
+- `e2e/` - End-to-end Playwright tests
+- `performance/` - Performance and load tests
+- `security/` - Security and compliance tests
+
 ## 🔗 Related Documentation
 
 - **[Developers Guide](../developers/)** - Implementation details, code examples, testing
-- **[Operators Guide](../operators/)** - Deployment, monitoring, maintenance procedures
-- **[API Reference](../api-reference/)** - Detailed API specifications and endpoints
-- **[Configuration](../configuration/)** - System configuration and environment setup
+- **[API Documentation](../api/)** - API specifications, endpoints, and WebSocket protocols
+- **[Testing Guide](../../tests/README.md)** - Test organization and best practices
+- **[Deployment](../operators/)** - Infrastructure, monitoring, and operations
 
 ## 📊 Architecture Metrics
 
@@ -82,7 +118,7 @@ Current production architecture achievements:
 |--------|--------|----------|------------|
 | Cache Performance | <10ms latency | **Edge/Global** | Upstash Redis |
 | Concurrent Connections | 1000+ | **1500+** | WebSocket |
-| API Response Time | <100ms | **<50ms** | FastAPI + DragonflyDB |
+| API Response Time | <100ms | **<50ms** | FastAPI |
 | Database Connections | 500+ | **1000+** | Supabase PostgreSQL |
 | Storage Cost Reduction | 50% | **80%** | Unified Architecture |
 
