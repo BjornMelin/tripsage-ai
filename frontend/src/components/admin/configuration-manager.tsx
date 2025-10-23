@@ -576,17 +576,17 @@ export default function ConfigurationManager() {
                 <div className="space-y-2">
                   <Label htmlFor={maxTokensId}>Max Tokens</Label>
                   <Input
-                          id={maxTokensId}
-                          type="number"
-                          value={editedConfig.max_tokens || ""}
-                          onChange={(e) =>
-                            handleConfigChange(
-                              "max_tokens",
-                              Number.parseInt(e.target.value, 10)
-                            )
-                          }
-                          min={1}
-                          max={8000}
+                    id={maxTokensId}
+                    type="number"
+                    value={editedConfig.max_tokens || ""}
+                    onChange={(e) =>
+                      handleConfigChange(
+                        "max_tokens",
+                        Number.parseInt(e.target.value, 10)
+                      )
+                    }
+                    min={1}
+                    max={8000}
                   />
                   <p className="text-xs text-muted-foreground">
                     Maximum number of tokens in the response (1-8000)
@@ -620,17 +620,17 @@ export default function ConfigurationManager() {
                 <div className="space-y-2">
                   <Label htmlFor={timeoutId}>Timeout (seconds)</Label>
                   <Input
-                          id={timeoutId}
-                          type="number"
-                          value={editedConfig.timeout_seconds || ""}
-                          onChange={(e) =>
-                            handleConfigChange(
-                              "timeout_seconds",
-                              Number.parseInt(e.target.value, 10)
-                            )
-                          }
-                          min={5}
-                          max={300}
+                    id={timeoutId}
+                    type="number"
+                    value={editedConfig.timeout_seconds || ""}
+                    onChange={(e) =>
+                      handleConfigChange(
+                        "timeout_seconds",
+                        Number.parseInt(e.target.value, 10)
+                      )
+                    }
+                    min={5}
+                    max={300}
                   />
                   <p className="text-xs text-muted-foreground">
                     Request timeout in seconds (5-300)
@@ -641,10 +641,10 @@ export default function ConfigurationManager() {
                 <div className="space-y-2">
                   <Label htmlFor={descriptionId}>Description (Optional)</Label>
                   <Input
-                          id={descriptionId}
-                          value={editedConfig.description || ""}
-                          onChange={(e) => handleConfigChange("description", e.target.value)}
-                          placeholder="Describe this configuration..."
+                    id={descriptionId}
+                    value={editedConfig.description || ""}
+                    onChange={(e) => handleConfigChange("description", e.target.value)}
+                    placeholder="Describe this configuration..."
                   />
                 </div>
 

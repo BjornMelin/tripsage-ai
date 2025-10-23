@@ -1,7 +1,7 @@
 import { openai } from "@ai-sdk/openai";
 import { convertToModelMessages, streamText, tool } from "ai";
-import { z } from "zod";
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 
 /**
  * Native AI SDK v5 route: streams UIMessage responses.

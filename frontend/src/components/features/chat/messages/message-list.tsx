@@ -42,7 +42,7 @@ import type { Message, ToolCall, ToolResult } from "@/types/chat";
 import { TypingIndicator } from "../typing-indicator";
 import { MessageItem } from "./message-item";
 
-function MessageListEmptyState() {
+function _MessageListEmptyState() {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -66,11 +66,22 @@ function MessageListEmptyState() {
                   "radial-gradient(circle, rgba(147,51,234,0.1) 0%, rgba(59,130,246,0.1) 100%)",
                 ],
               }}
-              transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
+              transition={{
+                duration: 4,
+                repeat: Number.POSITIVE_INFINITY,
+                repeatType: "reverse",
+              }}
             >
               <div className="w-32 h-32 rounded-full" />
             </motion.div>
-            <motion.div animate={{ y: [-5, 5, -5], rotate: [-2, 2, -2] }} transition={{ duration: 6, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}>
+            <motion.div
+              animate={{ y: [-5, 5, -5], rotate: [-2, 2, -2] }}
+              transition={{
+                duration: 6,
+                repeat: Number.POSITIVE_INFINITY,
+                ease: "easeInOut",
+              }}
+            >
               <Bot className="relative w-20 h-20 mx-auto text-primary drop-shadow-lg" />
             </motion.div>
           </div>
