@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Frontend deps: upgraded to Zod v4 and @hookform/resolvers v5; adapted code to new error and record APIs.
+- AI SDK route: fixed error handler to use `onError` returning string.
+- Supabase client usage in store: corrected imports, aligned with centralized repo functions.
+- Tailwind v4 verification fixes: replaced `<img>` with `next/image` for MFA QR code; converted interactive `<div>`s to `<button>`s in message attachments; added explicit radix to `Number.parseInt` calls.
+
+### Docs
+
+- Updated docs/specs/spec-tailwind-v4.md with verification results.
+
 ### Added
 
 - Next.js 16 caching defaults: enabled `cacheComponents` in `next.config.ts`; turned on `turbopackFileSystemCacheForDev`.
