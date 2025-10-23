@@ -43,7 +43,7 @@ const ComplexFormSchema = z.object({
     phone: z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number"),
   }),
   preferences: z.object({
-    theme: z.enum(["light", "dark"], { required_error: "Theme is required" }),
+    theme: z.enum(["light", "dark"], { error: "Theme is required" }),
     notifications: z.boolean(),
     language: z.string().default("en"),
   }),

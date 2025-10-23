@@ -13,7 +13,7 @@ import { useAuthenticatedApi } from "./use-authenticated-api";
 
 // Zod schemas for validation
 const ApiQueryParamsSchema = z
-  .record(z.union([z.string(), z.number(), z.boolean()]))
+  .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
   .optional();
 
 const EndpointSchema = z.string().min(1, "Endpoint cannot be empty");

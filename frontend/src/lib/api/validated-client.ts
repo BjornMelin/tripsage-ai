@@ -422,6 +422,7 @@ export class ValidatedApiClient {
           status: z.enum(["healthy", "degraded", "unhealthy"]),
           timestamp: z.string(),
           services: z.record(
+            z.string(),
             z.object({
               status: z.enum(["up", "down", "unknown"]),
               responseTime: z.number().optional(),

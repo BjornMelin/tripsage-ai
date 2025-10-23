@@ -104,7 +104,7 @@ export function useZodForm<T extends FieldValues>(
 
   // Initialize React Hook Form with Zod resolver
   const form = useForm<T>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema as any),
     mode: options.validateMode || "onChange",
     reValidateMode: options.reValidateMode || "onChange",
     ...formOptions,

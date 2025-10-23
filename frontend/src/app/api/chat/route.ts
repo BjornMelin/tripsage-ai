@@ -1,5 +1,5 @@
-import { convertToModelMessages, streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
+import { convertToModelMessages, streamText } from "ai";
 import type { NextRequest } from "next/server";
 
 /**
@@ -18,6 +18,10 @@ export async function POST(req: NextRequest) {
   return result.toUIMessageStreamResponse({
     originalMessages: messages || [],
     generateMessageId: () => crypto.randomUUID(),
-    onError: () => ({ errorCode: "STREAM_ERROR", message: "Chat streaming failed" }),
+    onError: (error: unknown) => {
+      if (typeof error === "string") return error;
+      if (error && typeof (error as any).message === "string") return (error as any).message;
+      return "Chat streaming failed";
+    },
   });
 }

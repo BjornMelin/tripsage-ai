@@ -15,7 +15,7 @@ const UserResponseSchema = z.object({
   name: z.string().min(1),
   age: z.number().int().min(0).max(150),
   isActive: z.boolean(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

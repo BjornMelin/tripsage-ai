@@ -672,7 +672,7 @@ describe("WebSocket Integration", () => {
         timestamp: z.string(),
         user_id: z.string().optional(),
         session_id: z.string().optional(),
-        payload: z.record(z.unknown()),
+        payload: z.record(z.string(), z.unknown()),
       });
 
       const result = WebSocketEventSchema.safeParse(validEvent);
@@ -693,7 +693,7 @@ describe("WebSocket Integration", () => {
         timestamp: z.string(),
         user_id: z.string().optional(),
         session_id: z.string().optional(),
-        payload: z.record(z.unknown()),
+        payload: z.record(z.string(), z.unknown()),
       });
 
       const result = WebSocketEventSchema.safeParse(invalidEvent);

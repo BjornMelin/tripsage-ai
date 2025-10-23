@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createClient } from "@/lib/supabase/client";
 import type { Trip as DatabaseTrip } from "@/lib/supabase/database.types";
 
 export interface Destination {
@@ -145,10 +146,9 @@ export const useTripStore = create<TripState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const { createTrip: repoCreateTrip } = await import(
-            "@/lib/repositories/trips-repo"
-          );
+          const { createClient } = await import("@/lib/supabase/client");
 
+          const supabase = createClient();
           const { data: trips, error } = await supabase
             .from("trips")
             .select("*")
@@ -193,7 +193,7 @@ export const useTripStore = create<TripState>()(
         try {
           // Import hook will need to be used in component that calls this
           // For now, we'll use the supabase client directly
-          const { updateTrip: repoUpdateTrip } = await import(
+          const { createTrip: repoCreateTrip, updateTrip: repoUpdateTrip } = await import(
             "@/lib/repositories/trips-repo"
           );
 
@@ -258,6 +258,7 @@ export const useTripStore = create<TripState>()(
 
         try {
           const { createClient } = await import("@/lib/supabase/client");
+          const { updateTrip: repoUpdateTrip } = await import("@/lib/repositories/trips-repo");
           const supabase = createClient();
 
           const updateData: any = {};
@@ -292,7 +293,7 @@ export const useTripStore = create<TripState>()(
 
           const updated = await repoUpdateTrip(
             Number.parseInt(id),
-            (get().currentTrip as any)?.user_id || "",
+            (_get().currentTrip as any)?.user_id || "",
             updateData
           );
           const frontendTrip: Partial<Trip> = updated as any;

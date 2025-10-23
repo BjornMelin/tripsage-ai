@@ -26,7 +26,7 @@ const SearchMetricsSchema = z.object({
 const SearchContextSchema = z.object({
   searchId: z.string(),
   searchType: SearchTypeSchema,
-  searchParams: z.record(z.unknown()),
+  searchParams: z.record(z.string(), z.unknown()),
   startedAt: z.string(),
   completedAt: z.string().optional(),
   metrics: SearchMetricsSchema.optional(),
@@ -35,7 +35,7 @@ const SearchContextSchema = z.object({
 const ErrorDetailsSchema = z.object({
   code: z.string().optional(),
   message: z.string(),
-  details: z.record(z.unknown()).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
   retryable: z.boolean().default(true),
   occurredAt: z.string(),
 });
