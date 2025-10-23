@@ -42,3 +42,6 @@ Rejected: increases maintenance burden, reduces compatibility with SDK UI primit
 ## References
 
 - AI SDK v5 quickstart for Next app router; `useChat` reference; v5 migration guide.
+  - <https://ai-sdk.dev/docs/getting-started/nextjs-app-router>
+  - <https://ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat>
+  - <https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0>
