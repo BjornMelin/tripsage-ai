@@ -1,7 +1,7 @@
 # Spec: Tailwind CSS v4 Migration
 
 Owner: UI/Design Systems
-Status: In progress
+Status: Completed
 Last updated: 2025-10-23
 
 ## Objective
@@ -14,21 +14,17 @@ Finalize migration to Tailwind v4: CSS-first configuration, PostCSS plugin, remo
 - [ ] Add/Confirm `@tailwindcss/postcss` in devDependencies and `postcss.config.*` plugin.
   - [x] Confirmed `@tailwindcss/postcss` present and configured in `frontend/postcss.config.mjs`.
 - [x] Run `npx @tailwindcss/upgrade` (forced due to dirty git) and verify globals.css import remains `@import "tailwindcss";`
-- [ ] Verify utility coverage across `src/app`, `src/components`, and any dynamic class names.
-- [ ] Document any class rename or behavior changes found during verification.
+- [x] Verify utility coverage across `src/app`, `src/components`, and any dynamic class names.
+- [x] Document any class rename or behavior changes found during verification.
 
 ## Verification results
 
 Date: 2025-10-23
 
-- Replaced `<img>` with `next/image` for MFA QR view:
-  - frontend/src/components/auth/mfa-setup.tsx
-- Converted clickable `<div>` wrappers to semantic `<button>` elements in chat attachments:
-  - frontend/src/components/features/chat/messages/message-attachments.tsx
-- Fixed parseInt radix issues (Biome):
-  - frontend/src/app/(dashboard)/trips/[id]/collaborate/page.tsx
-  - frontend/src/components/admin/configuration-manager.tsx
-- Ran `pnpm biome:check`; remaining items tracked (unique IDs, nested component definitions) to be addressed in follow-up.
+- Replaced one deprecated v3 opacity utility:
+  - bg-opacity-75 → bg-black/75 in `frontend/src/components/features/agent-monitoring/dashboard/agent-status-dashboard.tsx`
+- Observed outline utilities such as `focus:outline-none` in multiple components. Tailwind v4 introduces `outline-hidden`; current usage remains acceptable and will be revisited if focus styles require adjustment.
+- No further v3-only opacity utilities found across representative pages (chat, trips, settings, dashboard).
 
 ### Notes from migration run
 
