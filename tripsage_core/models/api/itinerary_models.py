@@ -3,7 +3,7 @@
 from datetime import date, time
 from enum import Enum
 
-from pydantic import Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 
@@ -68,6 +68,21 @@ class TimeSlot(TripSageModel):
 class ItineraryCreateRequest(TripSageModel):
     """Request model for creating a new itinerary."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "Tokyo Adventure",
+                "description": "5-day itinerary across Tokyo",
+                "start_date": "2025-05-01",
+                "end_date": "2025-05-05",
+                "destinations": ["Tokyo"],
+                "total_budget": 4500.0,
+                "currency": "USD",
+                "tags": ["culture", "food"],
+            }
+        }
+    )
+
     title: str = Field(
         description="Title of the itinerary",
         min_length=1,
@@ -109,6 +124,16 @@ class ItineraryCreateRequest(TripSageModel):
 
 class ItineraryUpdateRequest(TripSageModel):
     """Request model for updating an existing itinerary."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "Updated Tokyo Adventure",
+                "status": "active",
+                "tags": ["culture", "nightlife"],
+            }
+        }
+    )
 
     title: str | None = Field(
         None,
@@ -157,6 +182,23 @@ class ItineraryUpdateRequest(TripSageModel):
 
 class ItineraryItemCreateRequest(TripSageModel):
     """Request model for adding an item to an itinerary."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "item_type": "activity",
+                "title": "Visit Tokyo Tower",
+                "description": "Iconic landmark with city views",
+                "item_date": "2025-05-02",
+                "time_slot": {
+                    "start_time": "10:00",
+                    "end_time": "12:00",
+                },
+                "cost": 100.0,
+                "currency": "USD",
+            }
+        }
+    )
 
     item_type: ItineraryItemType = Field(description="Type of itinerary item")
     title: str = Field(
@@ -342,20 +384,77 @@ class ItineraryOptimizeRequest(TripSageModel):
 class ItineraryItemResponse(TripSageModel):
     """Response model for itinerary item."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "item-123",
+                "item_type": "activity",
+                "title": "Visit Tokyo Tower",
+                "description": "Iconic landmark with city views",
+                "item_date": "2025-05-02",
+                "start_time": "10:00",
+                "end_time": "12:00",
+                "cost": 100.0,
+                "currency": "USD",
+                "booking_reference": "ABC123",
+                "notes": "Wear comfortable shoes",
+                "is_flexible": False,
+                "created_at": "2025-04-01T09:00:00Z",
+                "updated_at": "2025-04-01T09:00:00Z",
+            }
+        }
+    )
+
     id: str = Field(description="Unique identifier for the itinerary item")
     item_type: str = Field(description="Type of itinerary item")
     title: str = Field(description="Title or name of the item")
     description: str | None = Field(None, description="Description of the item")
     item_date: date = Field(description="Date of the itinerary item")
+    start_time: str | None = Field(
+        None, description="Start time (HH:MM) for the itinerary item"
+    )
+    end_time: str | None = Field(
+        None, description="End time (HH:MM) for the itinerary item"
+    )
     cost: float | None = Field(None, description="Cost of the item")
     currency: str | None = Field(None, description="Currency code for the cost")
     booking_reference: str | None = Field(None, description="Booking reference")
     notes: str | None = Field(None, description="Additional notes")
     is_flexible: bool = Field(False, description="Whether item time is flexible")
+    created_at: str | None = Field(None, description="Creation timestamp")
+    updated_at: str | None = Field(None, description="Last update timestamp")
 
 
 class ItineraryResponse(TripSageModel):
     """Response model for itinerary."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "itinerary-123",
+                "title": "Tokyo Adventure",
+                "description": "5-day itinerary",
+                "start_date": "2025-05-01",
+                "end_date": "2025-05-05",
+                "status": "active",
+                "total_budget": 4500.0,
+                "currency": "USD",
+                "tags": ["culture", "food"],
+                "items": [
+                    {
+                        "id": "item-123",
+                        "item_type": "activity",
+                        "title": "Visit Tokyo Tower",
+                        "item_date": "2025-05-02",
+                        "start_time": "10:00",
+                        "end_time": "12:00",
+                    }
+                ],
+                "created_at": "2025-04-01T09:00:00Z",
+                "updated_at": "2025-04-01T09:00:00Z",
+            }
+        }
+    )
 
     id: str = Field(description="Itinerary identifier")
     title: str = Field(description="Itinerary title")
@@ -375,6 +474,26 @@ class ItineraryResponse(TripSageModel):
 
 class ItinerarySearchResponse(TripSageModel):
     """Response model for itinerary search results."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "items": [
+                    {
+                        "id": "itinerary-123",
+                        "title": "Tokyo Adventure",
+                        "start_date": "2025-05-01",
+                        "end_date": "2025-05-05",
+                        "status": "active",
+                        "items": [],
+                    }
+                ],
+                "page": 1,
+                "page_size": 25,
+                "total": 1,
+            }
+        }
+    )
 
     items: list[ItineraryResponse] = Field(
         default_factory=list, description="List of itineraries in the current page"

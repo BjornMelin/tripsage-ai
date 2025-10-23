@@ -1010,47 +1010,33 @@ async def get_trip_itinerary(
                 user_id=principal.user_id, search_request=search_request
             )
 
-            itinerary_items: list[Any] = []
-            if isinstance(itinerary_search, dict):
-                itinerary_items = cast(
-                    list[Any], itinerary_search.get("items", [])
-                )
-            elif isinstance(itinerary_search, list):
-                itinerary_items = itinerary_search
+            itinerary_items = getattr(itinerary_search, "items", [])
 
             if itinerary_items:
                 itinerary_data = itinerary_items[0]
 
-                items: list[_ItineraryItem] = [
-                    _ItineraryItem(
-                        id=(str(item.id) if getattr(item, "id", None) else None),
-                        name=str(getattr(item, "name", "")),
-                        description=getattr(item, "description", None),
-                        start_time=(
-                            (
-                                f"{getattr(day, 'date', '')}T"
-                                f"{getattr(item, 'start_time', '')}:00Z"
-                            )
-                            if getattr(item, "start_time", None)
-                            else None
-                        ),
-                        end_time=(
-                            (
-                                f"{getattr(day, 'date', '')}T"
-                                f"{getattr(item, 'end_time', '')}:00Z"
-                            )
-                            if getattr(item, "end_time", None)
-                            else None
-                        ),
-                        location=(
-                            str(getattr(item, "location", ""))
-                            if getattr(item, "location", None)
-                            else None
-                        ),
+                items: list[_ItineraryItem] = []
+                for item in getattr(itinerary_data, "items", []):
+                    start_time_value = (
+                        f"{item.item_date.isoformat()}T{item.start_time}:00Z"
+                        if getattr(item, "start_time", None)
+                        else None
                     )
-                    for day in getattr(itinerary_data, "days", [])
-                    for item in getattr(day, "items", [])
-                ]
+                    end_time_value = (
+                        f"{item.item_date.isoformat()}T{item.end_time}:00Z"
+                        if getattr(item, "end_time", None)
+                        else None
+                    )
+                    items.append(
+                        _ItineraryItem(
+                            id=str(item.id) if getattr(item, "id", None) else None,
+                            name=getattr(item, "title", ""),
+                            description=getattr(item, "description", None),
+                            start_time=start_time_value,
+                            end_time=end_time_value,
+                            location=None,
+                        )
+                    )
 
                 itinerary = _ItineraryResponse(
                     id=str(itinerary_data.id)
