@@ -197,30 +197,28 @@ class ApiKeyResponse(TripSageModel):
         return max(0, delta.days)
 
 
-class ValidationResult(TripSageModel):
-    """Validation result with Pydantic V2 optimizations."""
+class ApiValidationResult(TripSageModel):
+    """Unified result model for API key validation and service health checks."""
 
     model_config = ConfigDict(
         str_strip_whitespace=True,
         validate_assignment=True,
         use_enum_values=True,
-        # Performance optimizations
         validate_default=True,
-        frozen=True,  # Immutable validation results
-        extra="ignore",  # Allow computed fields during serialization
-        # Fast validation for hot paths
+        frozen=True,
+        extra="ignore",
         arbitrary_types_allowed=False,
     )
 
-    is_valid: bool
-    status: ValidationStatus
+    is_valid: bool | None = Field(default=None)
+    status: ValidationStatus | None = Field(default=None)
+    health_status: ServiceHealthStatus | None = Field(default=None)
     service: ServiceType
     message: str
     details: dict[str, Any] = Field(default_factory=dict)
     latency_ms: float = Field(default=0.0)
-    validated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-
-    # Metadata enrichment
+    validated_at: datetime | None = Field(default_factory=lambda: datetime.now(UTC))
+    checked_at: datetime | None = Field(default=None)
     rate_limit_info: dict[str, Any] | None = Field(default=None)
     quota_info: dict[str, Any] | None = Field(default=None)
     capabilities: list[str] = Field(default_factory=list)
@@ -228,36 +226,20 @@ class ValidationResult(TripSageModel):
     @computed_field
     @property
     def success_rate_category(self) -> str:
-        """Categorize based on success."""
-        return "success" if self.is_valid else "failure"
-
-
-class ServiceHealthCheck(TripSageModel):
-    """Health check result for a service."""
-
-    model_config = ConfigDict(
-        str_strip_whitespace=True,
-        validate_assignment=True,
-        use_enum_values=True,
-        # Performance optimizations
-        validate_default=True,
-        frozen=True,  # Immutable health check results
-        extra="forbid",
-        arbitrary_types_allowed=False,
-    )
-
-    service: ServiceType
-    status: ServiceHealthStatus
-    latency_ms: float
-    message: str
-    details: dict[str, Any] = Field(default_factory=dict)
-    checked_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+        """Categorize validation success or mark as unknown when not applicable."""
+        if self.is_valid:
+            return "success"
+        if self.is_valid is False:
+            return "failure"
+        return "unknown"
 
     @computed_field
     @property
-    def is_healthy(self) -> bool:
-        """Simple health check."""
-        return self.status == ServiceHealthStatus.HEALTHY
+    def is_healthy(self) -> bool | None:
+        """Report health status when available."""
+        if self.health_status is None:
+            return None
+        return self.health_status == ServiceHealthStatus.HEALTHY
 
 
 class ApiKeyService:
@@ -393,7 +375,11 @@ class ApiKeyService:
                 "expires_at": key_data.expires_at.isoformat()
                 if key_data.expires_at
                 else None,
-                "last_validated": validation_result.validated_at.isoformat(),
+                "last_validated": (
+                    validation_result.validated_at.isoformat()
+                    if validation_result.validated_at
+                    else None
+                ),
                 "usage_count": 0,
             }
 
@@ -517,7 +503,7 @@ class ApiKeyService:
         service: ServiceType,
         key_value: str,
         user_id: str | None = None,
-    ) -> ValidationResult:
+    ) -> ApiValidationResult:
         """Validate an API key with retry patterns and caching.
 
         This method implements a robust validation pipeline:
@@ -540,7 +526,7 @@ class ApiKeyService:
                 limiting. When provided, enables user-specific tracking.
 
         Returns:
-            ValidationResult: Validation response containing:
+            ApiValidationResult: Validation response containing:
                 - is_valid: Boolean validation status
                 - status: Detailed status (VALID, INVALID, RATE_LIMITED, etc.)
                 - message: Human-readable validation message
@@ -588,8 +574,8 @@ class ApiKeyService:
             # Calculate latency and create new result with latency included
             latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
-            # Create new ValidationResult with latency (since original is frozen)
-            result_with_latency = ValidationResult(
+            # Create new ApiValidationResult with latency (since original is frozen)
+            result_with_latency = ApiValidationResult(
                 is_valid=result.is_valid,
                 status=result.status,
                 service=result.service,
@@ -620,7 +606,7 @@ class ApiKeyService:
                 },
             )
 
-            return ValidationResult(
+            return ApiValidationResult(
                 is_valid=False,
                 status=ValidationStatus.SERVICE_ERROR,
                 service=service,
@@ -628,14 +614,35 @@ class ApiKeyService:
                 latency_ms=(datetime.now(UTC) - start_time).total_seconds() * 1000,
             )
 
-    async def check_service_health(self, service: ServiceType) -> ServiceHealthCheck:
+    async def _request_with_backoff(
+        self, method: str, url: str, **kwargs: Any
+    ) -> httpx.Response:
+        """Execute HTTP requests with backoff helper and safe fallback."""
+        try:
+            from tripsage_core.utils.outbound import request_with_backoff
+
+            return await request_with_backoff(self.client, method, url, **kwargs)
+        except (RuntimeError, ImportError) as error:
+            logger.warning(
+                "request_with_backoff unavailable; using direct client call",
+                extra={"error": str(error), "url": url},
+            )
+            client_method = getattr(self.client, method.lower())
+            try:
+                return await client_method(url, **kwargs)
+            except Exception as request_error:
+                raise httpx.HTTPError(str(request_error)) from request_error
+
+    async def check_service_health(self, service: ServiceType) -> ApiValidationResult:
         """Check the health of an external service.
 
         Args:
             service: The service to check
 
         Returns:
-            Health check result
+            ApiValidationResult populated with health-specific metadata. Validation
+            fields (`is_valid`, `status`, `validated_at`) are set to ``None`` while
+            `health_status` and `checked_at` describe the probe outcome.
         """
         start_time = datetime.now(UTC)
 
@@ -646,26 +653,33 @@ class ApiKeyService:
                 return await self._check_weather_health()
             elif service == ServiceType.GOOGLEMAPS:
                 return await self._check_googlemaps_health()
-            else:
-                return ServiceHealthCheck(
-                    service=service,
-                    status=ServiceHealthStatus.UNKNOWN,
-                    latency_ms=0,
-                    message="Health check not implemented for this service",
-                )
+            return ApiValidationResult(
+                service=service,
+                is_valid=None,
+                status=None,
+                health_status=ServiceHealthStatus.UNKNOWN,
+                message="Health check not implemented for this service",
+                latency_ms=0,
+                validated_at=None,
+                checked_at=datetime.now(UTC),
+            )
 
         except RECOVERABLE_ERRORS as error:
             latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
-            return ServiceHealthCheck(
+            return ApiValidationResult(
                 service=service,
-                status=ServiceHealthStatus.UNHEALTHY,
-                latency_ms=latency_ms,
+                is_valid=None,
+                status=None,
+                health_status=ServiceHealthStatus.UNHEALTHY,
                 message=f"Health check failed: {error!s}",
                 details={"error": str(error)},
+                latency_ms=latency_ms,
+                validated_at=None,
+                checked_at=datetime.now(UTC),
             )
 
-    async def check_all_services_health(self) -> dict[ServiceType, ServiceHealthCheck]:
+    async def check_all_services_health(self) -> dict[ServiceType, ApiValidationResult]:
         """Check health of all supported services concurrently.
 
         Returns:
@@ -677,16 +691,22 @@ class ApiKeyService:
         tasks = [self.check_service_health(service) for service in services]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        health_status = {}
+        health_status: dict[ServiceType, ApiValidationResult] = {}
         for service, result in zip(services, results, strict=False):
             if isinstance(result, Exception):
-                health_status[service] = ServiceHealthCheck(
+                health_status[service] = ApiValidationResult(
                     service=service,
-                    status=ServiceHealthStatus.UNHEALTHY,
+                    is_valid=None,
+                    status=None,
+                    health_status=ServiceHealthStatus.UNHEALTHY,
                     latency_ms=0,
                     message=f"Health check error: {result!s}",
+                    validated_at=None,
+                    checked_at=datetime.now(UTC),
                 )
             else:
+                if not isinstance(result, ApiValidationResult):
+                    raise TypeError("Unexpected health check result type") from None
                 health_status[service] = result
 
         return health_status
@@ -843,18 +863,18 @@ class ApiKeyService:
                 "Decryption failed - unable to recover API key"
             ) from error
 
-    async def _validate_openai_key(self, key_value: str) -> ValidationResult:
+    async def _validate_openai_key(self, key_value: str) -> ApiValidationResult:
         """Validate OpenAI API key with optimized error handling.
 
         Args:
             key_value: The API key to validate
 
         Returns:
-            ValidationResult with validation data
+            ApiValidationResult with validation data
         """
         # Fast format validation
         if not key_value.startswith("sk-"):
-            return ValidationResult(
+            return ApiValidationResult(
                 is_valid=False,
                 status=ValidationStatus.FORMAT_ERROR,
                 service=ServiceType.OPENAI,
@@ -862,10 +882,7 @@ class ApiKeyService:
             )
 
         try:
-            from tripsage_core.utils.outbound import request_with_backoff
-
-            response = await request_with_backoff(
-                self.client,
+            response = await self._request_with_backoff(
                 "GET",
                 "https://api.openai.com/v1/models",
                 headers={"Authorization": f"Bearer {key_value}"},
@@ -874,7 +891,7 @@ class ApiKeyService:
 
             # Optimized response handling with early returns
             if response.status_code == 401:
-                return ValidationResult(
+                return ApiValidationResult(
                     is_valid=False,
                     status=ValidationStatus.INVALID,
                     service=ServiceType.OPENAI,
@@ -888,7 +905,7 @@ class ApiKeyService:
                 return self._process_openai_success_response(response)
 
             # Default error case
-            return ValidationResult(
+            return ApiValidationResult(
                 is_valid=False,
                 status=ValidationStatus.SERVICE_ERROR,
                 service=ServiceType.OPENAI,
@@ -897,17 +914,17 @@ class ApiKeyService:
             )
 
         except httpx.TimeoutException:
-            return ValidationResult(
+            return ApiValidationResult(
                 is_valid=False,
                 status=ValidationStatus.SERVICE_ERROR,
                 service=ServiceType.OPENAI,
                 message="Validation request timed out",
             )
 
-    async def _validate_weather_key(self, key_value: str) -> ValidationResult:
+    async def _validate_weather_key(self, key_value: str) -> ApiValidationResult:
         """Validate weather API key."""
         if len(key_value) < 16:
-            return ValidationResult(
+            return ApiValidationResult(
                 is_valid=False,
                 status=ValidationStatus.FORMAT_ERROR,
                 service=ServiceType.WEATHER,
@@ -915,10 +932,7 @@ class ApiKeyService:
             )
 
         try:
-            from tripsage_core.utils.outbound import request_with_backoff
-
-            response = await request_with_backoff(
-                self.client,
+            response = await self._request_with_backoff(
                 "GET",
                 "https://api.openweathermap.org/data/2.5/weather",
                 params={"q": "London", "appid": key_value},
@@ -936,7 +950,7 @@ class ApiKeyService:
                         "remaining": response.headers.get("X-RateLimit-Remaining"),
                     }
 
-                return ValidationResult(
+                return ApiValidationResult(
                     is_valid=True,
                     status=ValidationStatus.VALID,
                     service=ServiceType.WEATHER,
@@ -950,7 +964,7 @@ class ApiKeyService:
                 )
 
             elif response.status_code == 401:
-                return ValidationResult(
+                return ApiValidationResult(
                     is_valid=False,
                     status=ValidationStatus.INVALID,
                     service=ServiceType.WEATHER,
@@ -958,7 +972,7 @@ class ApiKeyService:
                 )
 
             elif response.status_code == 429:
-                return ValidationResult(
+                return ApiValidationResult(
                     is_valid=False,
                     status=ValidationStatus.RATE_LIMITED,
                     service=ServiceType.WEATHER,
@@ -966,7 +980,7 @@ class ApiKeyService:
                 )
 
             else:
-                return ValidationResult(
+                return ApiValidationResult(
                     is_valid=False,
                     status=ValidationStatus.SERVICE_ERROR,
                     service=ServiceType.WEATHER,
@@ -974,17 +988,17 @@ class ApiKeyService:
                 )
 
         except httpx.TimeoutException:
-            return ValidationResult(
+            return ApiValidationResult(
                 is_valid=False,
                 status=ValidationStatus.SERVICE_ERROR,
                 service=ServiceType.WEATHER,
                 message="Validation request timed out",
             )
 
-    async def _validate_googlemaps_key(self, key_value: str) -> ValidationResult:
+    async def _validate_googlemaps_key(self, key_value: str) -> ApiValidationResult:
         """Validate Google Maps API key."""
         if len(key_value) < 20:
-            return ValidationResult(
+            return ApiValidationResult(
                 is_valid=False,
                 status=ValidationStatus.FORMAT_ERROR,
                 service=ServiceType.GOOGLEMAPS,
@@ -992,7 +1006,8 @@ class ApiKeyService:
             )
 
         try:
-            response = await self.client.get(
+            response = await self._request_with_backoff(
+                "GET",
                 "https://maps.googleapis.com/maps/api/geocode/json",
                 params={
                     "address": "1600 Amphitheatre Parkway, Mountain View, CA",
@@ -1008,7 +1023,7 @@ class ApiKeyService:
                 # Capability checking
                 capabilities = await self._check_googlemaps_capabilities(key_value)
 
-                return ValidationResult(
+                return ApiValidationResult(
                     is_valid=True,
                     status=ValidationStatus.VALID,
                     service=ServiceType.GOOGLEMAPS,
@@ -1022,7 +1037,7 @@ class ApiKeyService:
 
             elif status == "REQUEST_DENIED":
                 error_message = data.get("error_message", "API key is invalid")
-                return ValidationResult(
+                return ApiValidationResult(
                     is_valid=False,
                     status=ValidationStatus.INVALID,
                     service=ServiceType.GOOGLEMAPS,
@@ -1031,7 +1046,7 @@ class ApiKeyService:
                 )
 
             elif status == "OVER_QUERY_LIMIT":
-                return ValidationResult(
+                return ApiValidationResult(
                     is_valid=False,
                     status=ValidationStatus.RATE_LIMITED,
                     service=ServiceType.GOOGLEMAPS,
@@ -1039,7 +1054,7 @@ class ApiKeyService:
                 )
 
             else:
-                return ValidationResult(
+                return ApiValidationResult(
                     is_valid=False,
                     status=ValidationStatus.SERVICE_ERROR,
                     service=ServiceType.GOOGLEMAPS,
@@ -1048,23 +1063,23 @@ class ApiKeyService:
                 )
 
         except httpx.TimeoutException:
-            return ValidationResult(
+            return ApiValidationResult(
                 is_valid=False,
                 status=ValidationStatus.SERVICE_ERROR,
                 service=ServiceType.GOOGLEMAPS,
                 message="Validation request timed out",
             )
 
-    async def _validate_flights_key(self, key_value: str) -> ValidationResult:
+    async def _validate_flights_key(self, key_value: str) -> ApiValidationResult:
         """Validate flights API key (placeholder for specific implementation)."""
         return await self._validate_generic_key(ServiceType.FLIGHTS, key_value)
 
     async def _validate_generic_key(
         self, service: ServiceType, key_value: str
-    ) -> ValidationResult:
+    ) -> ApiValidationResult:
         """Generic validation for services without specific implementation."""
         if len(key_value) < 10:
-            return ValidationResult(
+            return ApiValidationResult(
                 is_valid=False,
                 status=ValidationStatus.FORMAT_ERROR,
                 service=service,
@@ -1072,7 +1087,7 @@ class ApiKeyService:
             )
 
         # Generic validation
-        return ValidationResult(
+        return ApiValidationResult(
             is_valid=True,
             status=ValidationStatus.VALID,
             service=service,
@@ -1080,7 +1095,7 @@ class ApiKeyService:
             details={"validation_type": "generic", "key_length": len(key_value)},
         )
 
-    async def _check_openai_health(self) -> ServiceHealthCheck:
+    async def _check_openai_health(self) -> ApiValidationResult:
         """Check OpenAI service health."""
         start_time = datetime.now(UTC)
 
@@ -1103,35 +1118,48 @@ class ApiKeyService:
                 else:
                     health_status = ServiceHealthStatus.UNHEALTHY
 
-                return ServiceHealthCheck(
+                return ApiValidationResult(
                     service=ServiceType.OPENAI,
-                    status=health_status,
+                    is_valid=None,
+                    status=None,
+                    health_status=health_status,
                     latency_ms=latency_ms,
                     message=data.get("status", {}).get("description", "Unknown"),
                     details={
                         "indicator": status_indicator,
                         "updated_at": data.get("page", {}).get("updated_at"),
                     },
+                    validated_at=None,
+                    checked_at=datetime.now(UTC),
                 )
-            else:
-                return ServiceHealthCheck(
-                    service=ServiceType.OPENAI,
-                    status=ServiceHealthStatus.UNKNOWN,
-                    latency_ms=latency_ms,
-                    message=f"Status check returned {response.status_code}",
-                )
+
+            return ApiValidationResult(
+                service=ServiceType.OPENAI,
+                is_valid=None,
+                status=None,
+                health_status=ServiceHealthStatus.UNKNOWN,
+                latency_ms=latency_ms,
+                message=f"Status check returned {response.status_code}",
+                validated_at=None,
+                checked_at=datetime.now(UTC),
+            )
 
         except RECOVERABLE_ERRORS as error:
             latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
-            return ServiceHealthCheck(
+            return ApiValidationResult(
                 service=ServiceType.OPENAI,
-                status=ServiceHealthStatus.UNKNOWN,
+                is_valid=None,
+                status=None,
+                health_status=ServiceHealthStatus.UNKNOWN,
                 latency_ms=latency_ms,
                 message=f"Health check error: {error!s}",
+                details={"error": str(error)},
+                validated_at=None,
+                checked_at=datetime.now(UTC),
             )
 
-    async def _check_weather_health(self) -> ServiceHealthCheck:
+    async def _check_weather_health(self) -> ApiValidationResult:
         """Check weather service health."""
         start_time = datetime.now(UTC)
 
@@ -1146,31 +1174,44 @@ class ApiKeyService:
 
             # Service is healthy if it returns 401 (unauthorized) - means it's up
             if response.status_code in [200, 401]:
-                return ServiceHealthCheck(
+                return ApiValidationResult(
                     service=ServiceType.WEATHER,
-                    status=ServiceHealthStatus.HEALTHY,
+                    is_valid=None,
+                    status=None,
+                    health_status=ServiceHealthStatus.HEALTHY,
                     latency_ms=latency_ms,
                     message="Weather API is operational",
+                    validated_at=None,
+                    checked_at=datetime.now(UTC),
                 )
-            else:
-                return ServiceHealthCheck(
-                    service=ServiceType.WEATHER,
-                    status=ServiceHealthStatus.DEGRADED,
-                    latency_ms=latency_ms,
-                    message=f"Unexpected status code: {response.status_code}",
-                )
+
+            return ApiValidationResult(
+                service=ServiceType.WEATHER,
+                is_valid=None,
+                status=None,
+                health_status=ServiceHealthStatus.DEGRADED,
+                latency_ms=latency_ms,
+                message=f"Unexpected status code: {response.status_code}",
+                details={"status_code": response.status_code},
+                validated_at=None,
+                checked_at=datetime.now(UTC),
+            )
 
         except httpx.TimeoutException:
             latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
-            return ServiceHealthCheck(
+            return ApiValidationResult(
                 service=ServiceType.WEATHER,
-                status=ServiceHealthStatus.UNHEALTHY,
+                is_valid=None,
+                status=None,
+                health_status=ServiceHealthStatus.UNHEALTHY,
                 latency_ms=latency_ms,
                 message="Service timeout",
+                validated_at=None,
+                checked_at=datetime.now(UTC),
             )
 
-    async def _check_googlemaps_health(self) -> ServiceHealthCheck:
+    async def _check_googlemaps_health(self) -> ApiValidationResult:
         """Check Google Maps service health."""
         start_time = datetime.now(UTC)
 
@@ -1187,28 +1228,40 @@ class ApiKeyService:
             if response.status_code == 200:
                 data = response.json()
                 if data.get("status") in ["REQUEST_DENIED", "INVALID_REQUEST"]:
-                    return ServiceHealthCheck(
+                    return ApiValidationResult(
                         service=ServiceType.GOOGLEMAPS,
-                        status=ServiceHealthStatus.HEALTHY,
+                        is_valid=None,
+                        status=None,
+                        health_status=ServiceHealthStatus.HEALTHY,
                         latency_ms=latency_ms,
                         message="Google Maps API is operational",
+                        validated_at=None,
+                        checked_at=datetime.now(UTC),
                     )
 
-            return ServiceHealthCheck(
+            return ApiValidationResult(
                 service=ServiceType.GOOGLEMAPS,
-                status=ServiceHealthStatus.DEGRADED,
+                is_valid=None,
+                status=None,
+                health_status=ServiceHealthStatus.DEGRADED,
                 latency_ms=latency_ms,
                 message="Service may be experiencing issues",
+                validated_at=None,
+                checked_at=datetime.now(UTC),
             )
 
         except httpx.TimeoutException:
             latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
-            return ServiceHealthCheck(
+            return ApiValidationResult(
                 service=ServiceType.GOOGLEMAPS,
-                status=ServiceHealthStatus.UNHEALTHY,
+                is_valid=None,
+                status=None,
+                health_status=ServiceHealthStatus.UNHEALTHY,
                 latency_ms=latency_ms,
                 message="Service timeout",
+                validated_at=None,
+                checked_at=datetime.now(UTC),
             )
 
     async def _check_googlemaps_capabilities(self, key_value: str) -> list[str]:
@@ -1249,7 +1302,7 @@ class ApiKeyService:
 
     def _handle_rate_limit_response(
         self, response: httpx.Response, service: ServiceType
-    ) -> ValidationResult:
+    ) -> ApiValidationResult:
         """Handle rate limit responses efficiently.
 
         Args:
@@ -1257,10 +1310,10 @@ class ApiKeyService:
             service: Service type being validated
 
         Returns:
-            ValidationResult for rate limit scenario
+            ApiValidationResult for rate limit scenario
         """
         headers = response.headers
-        return ValidationResult(
+        return ApiValidationResult(
             is_valid=False,
             status=ValidationStatus.RATE_LIMITED,
             service=service,
@@ -1275,33 +1328,31 @@ class ApiKeyService:
 
     def _process_openai_success_response(
         self, response: httpx.Response
-    ) -> ValidationResult:
+    ) -> ApiValidationResult:
         """Process successful OpenAI API response efficiently.
 
         Args:
             response: Successful HTTP response from OpenAI
 
         Returns:
-            ValidationResult with model capabilities
+            ApiValidationResult with model capabilities
         """
         data = response.json()
         models = [model["id"] for model in data.get("data", [])]
 
-        # Optimized capability detection using sets
         model_set = set(models)
-        capabilities = []
-
-        capability_checks = [
-            ("gpt-4", lambda: any("gpt-4" in model for model in model_set)),
-            ("gpt-3.5", lambda: any("gpt-3.5" in model for model in model_set)),
-            ("image-generation", lambda: any("dall-e" in model for model in model_set)),
+        capability_patterns = [
+            ("gpt-4", "gpt-4"),
+            ("gpt-3.5", "gpt-3.5"),
+            ("image-generation", "dall-e"),
+        ]
+        capabilities = [
+            capability
+            for capability, marker in capability_patterns
+            if any(marker in model for model in model_set)
         ]
 
-        for capability, check_func in capability_checks:
-            if check_func():
-                capabilities.append(capability)
-
-        return ValidationResult(
+        return ApiValidationResult(
             is_valid=True,
             status=ValidationStatus.VALID,
             service=ServiceType.OPENAI,
@@ -1315,7 +1366,7 @@ class ApiKeyService:
 
     async def _get_cached_validation(
         self, service: ServiceType, key_value: str
-    ) -> ValidationResult | None:
+    ) -> ApiValidationResult | None:
         """Get cached validation result if available using optimized JSON validation."""
         if not self.cache:
             return None
@@ -1330,7 +1381,7 @@ class ApiKeyService:
             cached_data = await self.cache.get(cache_key)
             if cached_data:
                 # Use Pydantic V2 optimized JSON validation
-                return ValidationResult.model_validate_json(cached_data)
+                return ApiValidationResult.model_validate_json(cached_data)
 
         except RECOVERABLE_ERRORS as error:
             logger.warning("Cache retrieval error: %s", error)
@@ -1338,7 +1389,7 @@ class ApiKeyService:
         return None
 
     async def _cache_validation_result(
-        self, service: ServiceType, key_value: str, result: ValidationResult
+        self, service: ServiceType, key_value: str, result: ApiValidationResult
     ) -> None:
         """Cache validation result with optimized JSON serialization."""
         if not self.cache:
@@ -1367,7 +1418,7 @@ class ApiKeyService:
         key_id: str,
         user_id: str,
         key_data: ApiKeyCreateRequest,
-        validation_result: ValidationResult,
+        validation_result: ApiValidationResult,
     ) -> None:
         """Fire-and-forget audit logging for key creation."""
         try:

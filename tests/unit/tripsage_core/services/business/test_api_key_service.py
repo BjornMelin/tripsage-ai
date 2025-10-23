@@ -4,18 +4,22 @@ This module provides full test coverage for the modern API key service
 including validation, storage, rotation, and monitoring functionality.
 """
 
+from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
+import httpx
 import pytest
 
 from tripsage_core.services.business.api_key_service import (
     ApiKeyCreateRequest,
     ApiKeyResponse,
     ApiKeyService,
+    ApiValidationResult,
+    ServiceHealthStatus,
     ServiceType,
-    ValidationResult,
     ValidationStatus,
     get_api_key_service,
 )
@@ -85,7 +89,11 @@ class TestApiKeyService:
     @pytest.fixture
     def mock_cache_service(self):
         """Mock cache service."""
-        return AsyncMock()
+        cache = AsyncMock()
+        cache.get = AsyncMock(return_value=None)
+        cache.set = AsyncMock(return_value=True)
+        cache.delete = AsyncMock(return_value=1)
+        return cache
 
     @pytest.fixture
     def mock_audit_service(self):
@@ -96,7 +104,9 @@ class TestApiKeyService:
     def mock_settings(self):
         """Mock settings."""
         settings = Mock()
-        settings.secret_key = "test_secret_key_for_encryption"
+        settings.secret_key = Mock(
+            get_secret_value=Mock(return_value="test_secret_key_for_encryption")
+        )
         return settings
 
     @pytest.fixture
@@ -109,11 +119,13 @@ class TestApiKeyService:
     @pytest.fixture
     def sample_create_request(self):
         """Sample API key creation request."""
-        return ApiKeyCreateRequest(
-            name="OpenAI API Key",
-            service=ServiceType.OPENAI,
-            key_value="sk-test_key_for_unit_tests",
-            description="Key for GPT-4 access",
+        return ApiKeyCreateRequest.model_validate(
+            {
+                "name": "OpenAI API Key",
+                "service": ServiceType.OPENAI,
+                "key": "sk-test_key_for_unit_tests",
+                "description": "Key for GPT-4 access",
+            }
         )
 
     @pytest.fixture
@@ -159,7 +171,7 @@ class TestApiKeyService:
 
         # Mock successful validation
         with patch.object(api_key_service, "validate_api_key") as mock_validate:
-            mock_validate.return_value = ValidationResult(
+            mock_validate.return_value = ApiValidationResult(
                 is_valid=True,
                 status=ValidationStatus.VALID,
                 service=ServiceType.OPENAI,
@@ -190,7 +202,7 @@ class TestApiKeyService:
 
         # Mock validation failure
         with patch.object(api_key_service, "validate_api_key") as mock_validate:
-            mock_validate.return_value = ValidationResult(
+            mock_validate.return_value = ApiValidationResult(
                 is_valid=False,
                 status=ValidationStatus.INVALID,
                 service=ServiceType.OPENAI,
@@ -206,13 +218,15 @@ class TestApiKeyService:
     @pytest.mark.asyncio
     async def test_validate_api_key_openai_success(self, api_key_service):
         """Test successful OpenAI API key validation."""
-        with patch("httpx.AsyncClient.get") as mock_get:
-            # Mock successful OpenAI response
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {"data": [{"id": "model-1"}]}
-            mock_get.return_value = mock_response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": [{"id": "model-1"}]}
 
+        with patch.object(
+            api_key_service,
+            "_request_with_backoff",
+            AsyncMock(return_value=mock_response),
+        ):
             result = await api_key_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test_key", str(uuid4())
             )
@@ -224,13 +238,15 @@ class TestApiKeyService:
     @pytest.mark.asyncio
     async def test_validate_api_key_openai_invalid(self, api_key_service):
         """Test invalid OpenAI API key validation."""
-        with patch("httpx.AsyncClient.get") as mock_get:
-            # Mock invalid key response
-            mock_response = Mock()
-            mock_response.status_code = 401
-            mock_response.json.return_value = {"error": {"message": "Invalid API key"}}
-            mock_get.return_value = mock_response
+        mock_response = Mock()
+        mock_response.status_code = 401
+        mock_response.json.return_value = {"error": {"message": "Invalid API key"}}
 
+        with patch.object(
+            api_key_service,
+            "_request_with_backoff",
+            AsyncMock(return_value=mock_response),
+        ):
             result = await api_key_service.validate_api_key(
                 ServiceType.OPENAI, "sk-invalid_key", str(uuid4())
             )
@@ -251,12 +267,14 @@ class TestApiKeyService:
     @pytest.mark.asyncio
     async def test_validate_api_key_rate_limited(self, api_key_service):
         """Test API key validation when rate limited."""
-        with patch("httpx.AsyncClient.get") as mock_get:
-            # Mock rate limit response
-            mock_response = Mock()
-            mock_response.status_code = 429
-            mock_get.return_value = mock_response
+        mock_response = Mock()
+        mock_response.status_code = 429
 
+        with patch.object(
+            api_key_service,
+            "_request_with_backoff",
+            AsyncMock(return_value=mock_response),
+        ):
             result = await api_key_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test_key", str(uuid4())
             )
@@ -267,12 +285,14 @@ class TestApiKeyService:
     @pytest.mark.asyncio
     async def test_validate_api_key_service_error(self, api_key_service):
         """Test API key validation with service error."""
-        with patch("httpx.AsyncClient.get") as mock_get:
-            # Mock service error response
-            mock_response = Mock()
-            mock_response.status_code = 500
-            mock_get.return_value = mock_response
+        mock_response = Mock()
+        mock_response.status_code = 500
 
+        with patch.object(
+            api_key_service,
+            "_request_with_backoff",
+            AsyncMock(return_value=mock_response),
+        ):
             result = await api_key_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test_key", str(uuid4())
             )
@@ -351,7 +371,16 @@ class TestApiKeyService:
         result = await api_key_service.check_service_health(ServiceType.OPENAI)
 
         assert result.service == ServiceType.OPENAI
-        assert result.status in ["healthy", "degraded", "unhealthy", "unknown"]
+        assert result.health_status in {
+            ServiceHealthStatus.HEALTHY,
+            ServiceHealthStatus.DEGRADED,
+            ServiceHealthStatus.UNHEALTHY,
+            ServiceHealthStatus.UNKNOWN,
+        }
+        assert result.is_valid is None
+        assert result.status is None
+        assert result.checked_at is not None
+        assert result.validated_at is None
 
     # Note: monitor_key method doesn't exist in the actual implementation
     # This functionality is covered by check_service_health
@@ -374,7 +403,7 @@ class TestApiKeyService:
     async def test_cache_operations(self, api_key_service, mock_cache_service):
         """Test cache operations for validation results."""
         key_value = "sk-test_key"
-        validation_result = ValidationResult(
+        validation_result = ApiValidationResult(
             is_valid=True,
             status=ValidationStatus.VALID,
             service=ServiceType.OPENAI,
@@ -412,6 +441,40 @@ class TestApiKeyService:
         assert result is not None
         assert result.is_valid is True
 
+    @pytest.mark.asyncio
+    async def test_cache_miss_returns_none(self, api_key_service, mock_cache_service):
+        """Return None when no cached validation exists."""
+        mock_cache_service.get.return_value = None
+
+        result = await api_key_service._get_cached_validation(
+            ServiceType.OPENAI, "sk-miss"
+        )
+
+        mock_cache_service.get.assert_called_once()
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_cache_error_is_swallowed(self, api_key_service, mock_cache_service):
+        """Handle cache set/get failures gracefully."""
+        mock_cache_service.get.side_effect = ValueError("cache offline")
+
+        result = await api_key_service._get_cached_validation(
+            ServiceType.OPENAI, "sk-error"
+        )
+        assert result is None
+
+        mock_cache_service.set.side_effect = ValueError("cache offline")
+        await api_key_service._cache_validation_result(
+            ServiceType.OPENAI,
+            "sk-error",
+            ApiValidationResult(
+                is_valid=True,
+                status=ValidationStatus.VALID,
+                service=ServiceType.OPENAI,
+                message="ok",
+            ),
+        )
+
     # Note: _is_rate_limited method doesn't exist in the actual implementation
     # Rate limiting is handled differently in the current service
 
@@ -424,10 +487,11 @@ class TestApiKeyService:
     @pytest.mark.asyncio
     async def test_error_handling_network_failure(self, api_key_service):
         """Test error handling when network requests fail."""
-        with patch("httpx.AsyncClient.get") as mock_get:
-            # Mock network failure
-            mock_get.side_effect = Exception("Network error")
-
+        with patch.object(
+            api_key_service,
+            "_request_with_backoff",
+            AsyncMock(side_effect=httpx.HTTPError("Network error")),
+        ):
             result = await api_key_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test_key", str(uuid4())
             )
@@ -438,14 +502,16 @@ class TestApiKeyService:
     @pytest.mark.asyncio
     async def test_service_specific_validation_weather(self, api_key_service):
         """Test weather service specific validation."""
-        with patch("httpx.AsyncClient.get") as mock_get:
-            # Mock successful weather API response
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {"current": {"temp_c": 20}}
-            mock_response.headers = {}
-            mock_get.return_value = mock_response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"current": {"temp_c": 20}}
+        mock_response.headers = {}
 
+        with patch.object(
+            api_key_service,
+            "_request_with_backoff",
+            AsyncMock(return_value=mock_response),
+        ):
             result = await api_key_service.validate_api_key(
                 ServiceType.WEATHER, "test_weather_key_123456789", str(uuid4())
             )
@@ -456,17 +522,20 @@ class TestApiKeyService:
     @pytest.mark.asyncio
     async def test_service_specific_validation_google_maps(self, api_key_service):
         """Test Google Maps service specific validation."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"status": "OK", "results": []}
+
         with (
-            patch("httpx.AsyncClient.get") as mock_get,
+            patch.object(
+                api_key_service,
+                "_request_with_backoff",
+                AsyncMock(return_value=mock_response),
+            ),
             patch.object(
                 api_key_service, "_check_googlemaps_capabilities"
             ) as mock_capabilities,
         ):
-            # Mock successful Google Maps API response
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {"status": "OK", "results": []}
-            mock_get.return_value = mock_response
             mock_capabilities.return_value = ["geocoding", "places"]
 
             result = await api_key_service.validate_api_key(
@@ -486,6 +555,19 @@ class TestApiKeyService:
         assert ServiceType.OPENAI in results
         assert ServiceType.WEATHER in results
         assert ServiceType.GOOGLEMAPS in results
+
+        for result in results.values():
+            assert isinstance(result, ApiValidationResult)
+            assert result.is_valid is None
+            assert result.status is None
+            assert result.health_status in {
+                ServiceHealthStatus.HEALTHY,
+                ServiceHealthStatus.DEGRADED,
+                ServiceHealthStatus.UNHEALTHY,
+                ServiceHealthStatus.UNKNOWN,
+            }
+            assert result.checked_at is not None
+            assert result.validated_at is None
 
     @pytest.mark.asyncio
     async def test_get_api_key_service_dependency(
@@ -512,12 +594,15 @@ class TestApiKeyService:
         # Mock cache miss first
         mock_cache_service.get.return_value = None
 
-        with patch("httpx.AsyncClient.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {"data": [{"id": "model-1"}]}
-            mock_get.return_value = mock_response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": [{"id": "model-1"}]}
 
+        with patch.object(
+            api_key_service,
+            "_request_with_backoff",
+            AsyncMock(return_value=mock_response),
+        ):
             # First validation should hit the API
             result1 = await api_key_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test_key", str(uuid4())

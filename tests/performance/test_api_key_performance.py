@@ -29,8 +29,8 @@ from fastapi.exceptions import HTTPException
 from tripsage_core.services.business.api_key_service import (
     ApiKeyCreateRequest,
     ApiKeyService,
+    ApiValidationResult,
     ServiceType,
-    ValidationResult,
     ValidationStatus,
 )
 
@@ -120,27 +120,57 @@ class TestApiKeyPerformance:
     def mock_cache_service(self):
         """Mock cache service with realistic performance characteristics."""
         cache = AsyncMock()
+        cache_storage: dict[str, object] = {}
 
-        # Simulate cache operations with realistic latencies
         async def mock_get_with_latency(key):
-            await asyncio.sleep(0.0001)  # 0.1ms cache latency
+            await asyncio.sleep(0.0001)
+            return cache_storage.get(key)
 
         async def mock_set_with_latency(key, value, ex=None):
-            await asyncio.sleep(0.0001)  # 0.1ms cache write latency
+            await asyncio.sleep(0.0001)
+            cache_storage[key] = value
+            return True
+
+        async def mock_delete_with_latency(key):
+            await asyncio.sleep(0.0001)
+            return 1 if cache_storage.pop(key, None) is not None else 0
+
+        async def mock_get_json(key):
+            value = cache_storage.get(key)
+            return json.loads(value) if isinstance(value, str) else value
+
+        async def mock_set_json(key, value, ttl=None):
+            cache_storage[key] = json.dumps(value)
             return True
 
         cache.get = mock_get_with_latency
         cache.set = mock_set_with_latency
+        cache.delete = mock_delete_with_latency
+        cache.get_json = mock_get_json
+        cache.set_json = mock_set_json
         return cache
 
     @pytest.fixture
     def api_key_service(self, mock_db_service, mock_cache_service):
         """Create ApiKeyService instance for performance testing."""
-        return ApiKeyService(
+        service = ApiKeyService(
             db=mock_db_service,
             cache=mock_cache_service,
             validation_timeout=5,
         )
+        service._audit_key_creation = AsyncMock()  # type: ignore[attr-defined]
+        service._audit_key_deletion = AsyncMock()  # type: ignore[attr-defined]
+        return service
+
+    @pytest.fixture
+    def mock_cache(self, mock_cache_service):
+        """Alias to reuse cache mock in tests expecting mock_cache."""
+        return mock_cache_service
+
+    @pytest.fixture
+    def mock_db(self, mock_db_service):
+        """Alias to reuse database mock in tests expecting mock_db."""
+        return mock_db_service
 
     @pytest.fixture
     def sample_api_keys(self):
@@ -193,7 +223,7 @@ class TestApiKeyPerformance:
 
         # Mock successful validation to focus on service performance
         with patch.object(api_key_service, "validate_api_key") as mock_validate:
-            mock_validate.return_value = ValidationResult(
+            mock_validate.return_value = ApiValidationResult(
                 is_valid=True,
                 status=ValidationStatus.VALID,
                 service=ServiceType.OPENAI,
@@ -218,14 +248,19 @@ class TestApiKeyPerformance:
         """Benchmark API key validation performance."""
 
         async def validate_operation():
-            with patch("httpx.AsyncClient.get") as mock_get:
-                mock_response = Mock()
-                mock_response.status_code = 200
-                mock_response.json.return_value = {"data": [{"id": "model-1"}]}
-                mock_get.return_value = mock_response
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {"data": [{"id": "model-1"}]}
 
+            with patch.object(
+                api_key_service,
+                "_request_with_backoff",
+                AsyncMock(return_value=mock_response),
+            ):
                 return await api_key_service.validate_api_key(
-                    ServiceType.OPENAI, "sk-benchmark_validation_key", str(uuid.uuid4())
+                    ServiceType.OPENAI,
+                    "sk-benchmark_validation_key",
+                    str(uuid.uuid4()),
                 )
 
         result = await benchmark.pedantic(
@@ -244,12 +279,15 @@ class TestApiKeyPerformance:
         start_time = time.time()
 
         # Mock HTTP responses for all requests
-        with patch("httpx.AsyncClient.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {"data": [{"id": "model-1"}]}
-            mock_get.return_value = mock_response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": [{"id": "model-1"}]}
 
+        with patch.object(
+            api_key_service,
+            "_request_with_backoff",
+            AsyncMock(return_value=mock_response),
+        ):
             # Create validation tasks
             tasks = [
                 api_key_service.validate_api_key(
@@ -266,7 +304,7 @@ class TestApiKeyPerformance:
 
             # Analyze results
             successful_validations = sum(
-                1 for r in results if isinstance(r, ValidationResult) and r.is_valid
+                bool(isinstance(r, ApiValidationResult) and r.is_valid) for r in results
             )
             failed_validations = len(results) - successful_validations
 
@@ -288,6 +326,48 @@ class TestApiKeyPerformance:
             print(f"Throughput: {throughput:.2f} requests/second")
             print(f"Average latency: {avg_latency * 1000:.2f}ms")
 
+    @pytest.mark.asyncio
+    async def test_validation_error_profiles(self, api_key_service):
+        """Exercise validation under common error scenarios."""
+        scenarios = [
+            (
+                ValidationStatus.INVALID,
+                "Invalid API key format",
+            ),
+            (
+                ValidationStatus.RATE_LIMITED,
+                "Rate limit exceeded",
+            ),
+            (
+                ValidationStatus.SERVICE_ERROR,
+                "Service unavailable",
+            ),
+        ]
+
+        for status, message in scenarios:
+            with patch.object(
+                api_key_service,
+                "validate_api_key",
+                AsyncMock(
+                    return_value=ApiValidationResult(
+                        is_valid=False,
+                        status=status,
+                        service=ServiceType.OPENAI,
+                        message=message,
+                    )
+                ),
+            ) as mock_validate:
+                results = [
+                    await api_key_service.validate_api_key(
+                        ServiceType.OPENAI, "test-key", str(uuid.uuid4())
+                    )
+                    for _ in range(5)
+                ]
+
+                assert all(result.status == status for result in results)
+                assert all(result.message == message for result in results)
+                assert mock_validate.await_count == 5
+
     # pylint: disable=too-many-statements
     async def test_database_performance_under_load(
         self, api_key_service, sample_users, sample_api_keys
@@ -297,7 +377,7 @@ class TestApiKeyPerformance:
 
         # Mock validation for all operations
         with patch.object(api_key_service, "validate_api_key") as mock_validate:
-            mock_validate.return_value = ValidationResult(
+            mock_validate.return_value = ApiValidationResult(
                 is_valid=True,
                 status=ValidationStatus.VALID,
                 service=ServiceType.OPENAI,
@@ -386,12 +466,15 @@ class TestApiKeyPerformance:
         # Perform repeated validations of same keys
         test_keys = ["sk-cache_test_1", "sk-cache_test_2", "sk-cache_test_3"]
 
-        with patch("httpx.AsyncClient.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {"data": [{"id": "model-1"}]}
-            mock_get.return_value = mock_response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": [{"id": "model-1"}]}
 
+        with patch.object(
+            api_key_service,
+            "_request_with_backoff",
+            AsyncMock(return_value=mock_response),
+        ):
             start_time = time.time()
 
             # First round - should be cache misses
@@ -441,13 +524,15 @@ class TestApiKeyPerformance:
         initial_memory = process.memory_info().rss / 1024 / 1024  # MB
 
         # Perform memory-intensive operations
-        with patch("httpx.AsyncClient.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {"data": [{"id": "model-1"}]}
-            mock_get.return_value = mock_response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": [{"id": "model-1"}]}
 
-            # Create many validation tasks
+        with patch.object(
+            api_key_service,
+            "_request_with_backoff",
+            AsyncMock(return_value=mock_response),
+        ):
             tasks = [
                 api_key_service.validate_api_key(
                     ServiceType.OPENAI,
@@ -457,7 +542,6 @@ class TestApiKeyPerformance:
                 for i in range(100)
             ]
 
-            # Execute and measure memory
             await asyncio.gather(*tasks)
 
             peak_memory = process.memory_info().rss / 1024 / 1024  # MB
@@ -482,13 +566,15 @@ class TestApiKeyPerformance:
         failed_ops = 0
         timeouts = 0
 
-        with patch("httpx.AsyncClient.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {"data": [{"id": "model-1"}]}
-            mock_get.return_value = mock_response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": [{"id": "model-1"}]}
 
-            # Create extreme load: 200 concurrent operations
+        with patch.object(
+            api_key_service,
+            "_request_with_backoff",
+            AsyncMock(return_value=mock_response),
+        ):
             tasks = [
                 api_key_service.validate_api_key(
                     ServiceType.OPENAI, f"sk-stress_test_{i}", str(uuid.uuid4())
@@ -512,7 +598,7 @@ class TestApiKeyPerformance:
                             timeouts += 1
                         else:
                             failed_ops += 1
-                    elif isinstance(result, ValidationResult):
+                    elif isinstance(result, ApiValidationResult):
                         if result.is_valid:
                             successful_ops += 1
                         else:
@@ -561,17 +647,20 @@ class TestApiKeyPerformance:
     @pytest.mark.asyncio
     async def test_service_health_check_performance(self, api_key_service):
         """Test performance of service health checks."""
-        with patch("httpx.AsyncClient.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "status": {
-                    "indicator": "none",
-                    "description": "All systems operational",
-                }
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "status": {
+                "indicator": "none",
+                "description": "All systems operational",
             }
-            mock_get.return_value = mock_response
+        }
 
+        with patch.object(
+            api_key_service,
+            "_request_with_backoff",
+            AsyncMock(return_value=mock_response),
+        ):
             start_time = time.time()
 
             # Test health checks for multiple services
@@ -600,7 +689,7 @@ class TestApiKeyPerformance:
         BASELINE_CREATION_TIME = 0.05  # 50ms
 
         with patch.object(api_key_service, "validate_api_key") as mock_validate:
-            mock_validate.return_value = ValidationResult(
+            mock_validate.return_value = ApiValidationResult(
                 is_valid=True,
                 status=ValidationStatus.VALID,
                 service=ServiceType.OPENAI,
@@ -1567,12 +1656,15 @@ class TestApiKeyPerformance:
             # Test 2: Validation performance with external API mocking
             print("  Testing validation performance...")
 
-            with patch("httpx.AsyncClient.get") as mock_get:
-                mock_response = Mock()
-                mock_response.status_code = 200
-                mock_response.json.return_value = {"data": [{"id": "gpt-4"}]}
-                mock_get.return_value = mock_response
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {"data": [{"id": "gpt-4"}]}
 
+            with patch.object(
+                api_key_service,
+                "_request_with_backoff",
+                AsyncMock(return_value=mock_response),
+            ):
                 validation_times = []
                 validation_errors = 0
 
@@ -1601,7 +1693,7 @@ class TestApiKeyPerformance:
 
             # Mock validation for throughput testing
             with patch.object(api_key_service, "validate_api_key") as mock_validate:
-                mock_validate.return_value = ValidationResult(
+                mock_validate.return_value = ApiValidationResult(
                     is_valid=True,
                     status=ValidationStatus.VALID,
                     service=ServiceType.OPENAI,
