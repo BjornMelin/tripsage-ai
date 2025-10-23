@@ -37,3 +37,10 @@ Rejected: Next 16 benefits from newer Node features; alignment across environmen
 ### Alternative 2 — Avoid engines and rely on local nvm/Volta only
 
 Rejected: engines field offers CI/automation parity and clear feedback for mismatched versions.
+
+## References
+
+- Node.js releases and LTS schedule
+  - <https://nodejs.org/en/about/previous-releases>
+- Next.js 16 runtime guidance
+  - <https://nextjs.org/docs/app/guides/upgrading/version-16#nodejs-runtime-and-browser-support>

@@ -1,238 +1,146 @@
-# 🔌 TripSage API Documentation
+# TripSage API Documentation
 
-> **Build on TripSage Platform**  
-> Complete API reference for developers integrating with TripSage's travel planning services
+Internal API documentation for the TripSage travel planning platform. This API serves both the frontend application and AI agents with endpoints for authentication, trip management, flight/accommodation search, chat, and real-time communication.
 
 ## 🚀 Quick Start
 
-### Getting Your API Key
-
-1. **Sign up** at [app.tripsage.ai](https://app.tripsage.ai)
-2. Navigate to **Settings → API Keys**
-3. Click **"Generate New Key"**
-4. Copy and secure your key
-
-### Your First API Call
+### Development Environment
 
 ```bash
-curl https://api.tripsage.ai/v1/health \
-  -H "Authorization: Bearer YOUR_API_KEY"
+# Start the API server
+uv run python -m tripsage.api.main
+
+# API available at:
+# - Main API: http://localhost:8000
+# - Documentation: http://localhost:8000/docs
+# - Alternative docs: http://localhost:8000/redoc
+```
+
+### First API Call
+
+```bash
+# Health check (no auth required)
+curl http://localhost:8000/api/health
+
+# Response:
+# {"status": "healthy", "timestamp": "...", "version": "1.0.0"}
 ```
 
 ## 📚 API Documentation
 
 ### Core References
 
-| Document | Description | Type |
-|----------|-------------|------|
-| **[Quick Start Examples](usage-examples.md)** | Practical code snippets and API calls | 🔧 Quick Reference |
-| **[REST API Reference](rest-endpoints.md)** | Complete endpoint documentation | 📖 Reference |
-| **[WebSocket API](websocket-api.md)** | Real-time communication | 🔄 Reference |
-| **[Authentication & API Keys](authentication.md)** | Auth flows, JWT tokens, and BYOK support | 🔐 Reference |
-| **[Complete Integration Guide](examples.md)** | Full tutorials, workflows & SDKs | 📚 Tutorial |
-| **[Error Codes](error-codes.md)** | Error handling guide | ⚠️ Reference |
+| Document | Description | Focus |
+|----------|-------------|-------|
+| **[REST API Reference](rest-endpoints.md)** | Complete endpoint documentation | All endpoints |
+| **[Authentication Guide](authentication.md)** | JWT tokens, API keys, BYOK support | Auth & security |
+| **[WebSocket API](websocket-api.md)** | Real-time communication | WebSocket endpoints |
+| **[Usage Examples](usage-examples.md)** | Practical code snippets | Quick reference |
+| **[Error Codes](error-codes.md)** | Error handling reference | Troubleshooting |
 
-### Integration Guides
+### Specialized Guides
 
-- **[Getting Started](getting-started.md)** - First steps with the API
-- **[SDK Installation](sdk-guide.md)** - Language-specific SDKs
-- **[Webhooks](webhooks.md)** - Event subscriptions
-- **[Rate Limits](rate-limits.md)** - Usage quotas and limits
-- **[Best Practices](best-practices.md)** - Performance tips
-
-## ⚡ Quick Integration Patterns
-
-### 5-Minute Setup
-
-```bash
-# 1. Get your API key at app.tripsage.ai
-# 2. Test connection
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-  https://api.tripsage.ai/api/health
-
-# 3. Create your first trip
-curl -X POST https://api.tripsage.ai/api/trips \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Weekend Getaway", "start_date": "2025-07-01", "end_date": "2025-07-03"}'
-```
-
-### Common Integration Scenarios
-
-#### Travel Agency Dashboard
-
-```javascript
-// Real-time trip updates for customer dashboard
-const ws = new WebSocket('wss://api.tripsage.ai/api/chat/ws?token=JWT_TOKEN');
-ws.onmessage = (event) => {
-  const update = JSON.parse(event.data);
-  if (update.type === 'trip_update') {
-    updateCustomerTrip(update.trip_id, update.changes);
-  }
-};
-```
-
-#### Corporate Travel Tool
-
-```python
-# Batch create trips for team
-import requests
-
-headers = {"Authorization": "Bearer API_KEY"}
-team_trips = [
-    {"title": "Q1 Conference", "start_date": "2025-03-15"},
-    {"title": "Client Visit", "start_date": "2025-04-10"}
-]
-
-for trip in team_trips:
-    response = requests.post(
-        "https://api.tripsage.ai/api/trips", 
-        json=trip, 
-        headers=headers
-    )
-    print(f"Created trip: {response.json()['id']}")
-```
-
-#### Travel Blog Automation
-
-```javascript
-// Auto-generate content from trip data
-const trip = await fetch(`/api/trips/${tripId}`, {headers});
-const itinerary = await fetch(`/api/trips/${tripId}/itinerary`, {headers});
-const content = generateBlogPost(trip.data, itinerary.data);
-```
-
-## 🔧 Available SDKs
-
-### Official SDKs
-
-| Language | Package | Status | Install |
-|----------|---------|---------|---------|
-| **Python** | `tripsage-python` | ✅ Stable | `pip install tripsage` |
-| **JavaScript** | `@tripsage/sdk` | ✅ Stable | `npm install @tripsage/sdk` |
-| **TypeScript** | `@tripsage/sdk` | ✅ Stable | `npm install @tripsage/sdk` |
-| **Go** | `tripsage-go` | 🚧 Beta | `go get github.com/tripsage/go-sdk` |
-| **Ruby** | `tripsage-ruby` | 📅 Planned | Coming soon |
-
-### Community SDKs
-
-- **PHP**: [tripsage-php](https://github.com/community/tripsage-php)
-- **Java**: [tripsage-java](https://github.com/community/tripsage-java)
-- **C#**: [TripSage.NET](https://github.com/community/tripsage-dotnet)
-
-## 🌐 API Endpoints Overview
-
-### Core Services
-
-#### Travel Planning
-
-- `POST /v1/trips` - Create a new trip
-- `GET /v1/trips/{id}` - Get trip details
-- `PUT /v1/trips/{id}` - Update trip
-- `DELETE /v1/trips/{id}` - Delete trip
-
-#### Flight Search
-
-- `POST /v1/flights/search` - Search flights
-- `GET /v1/flights/{id}` - Get flight details
-- `POST /v1/flights/book` - Book flight
-- `POST /v1/flights/track` - Track prices
-
-#### Accommodations
-
-- `POST /v1/hotels/search` - Search hotels
-- `GET /v1/hotels/{id}` - Get hotel details
-- `POST /v1/hotels/book` - Book hotel
-- `GET /v1/hotels/availability` - Check availability
-
-#### AI Assistant
-
-- `POST /v1/chat` - Send message to AI
-- `GET /v1/chat/history` - Get conversation
-- `POST /v1/chat/plan` - AI trip planning
-- `WS /v1/chat/stream` - Real-time chat
-
-## 💰 Pricing & Plans
-
-### API Rate Limits by Plan
-
-| Plan | Requests/Hour | Requests/Month | WebSocket | Support |
-|------|---------------|----------------|-----------|----------|
-| **Free** | 100 | 1,000 | ❌ | Community |
-| **Developer** | 1,000 | 50,000 | ✅ 1 connection | Email |
-| **Business** | 10,000 | 500,000 | ✅ 10 connections | Priority |
-| **Enterprise** | Unlimited | Unlimited | ✅ Unlimited | Dedicated |
-
-### Usage Monitoring
-
-Track your API usage:
-
-- Dashboard: [app.tripsage.ai/api/usage](https://app.tripsage.ai/api/usage)
-- API: `GET /v1/usage`
-- Headers: `X-RateLimit-*` in responses
+- **[WebSocket Guide](websocket-guide.md)** - Connection management patterns
+- **[Real-time Guide](realtime-guide.md)** - Real-time features and collaboration
+- **[Dashboard API](dashboard-api.md)** - Monitoring and analytics endpoints
+- **[Trip Security Examples](trip-security-usage-examples.md)** - Security-focused examples
 
 ## 🔐 Authentication
 
-### API Key Authentication
+### JWT Authentication (Primary)
 
 ```bash
-curl https://api.tripsage.ai/v1/endpoint \
-  -H "Authorization: Bearer YOUR_API_KEY"
+# Register user
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "secure_password"}'
+
+# Login to get JWT
+curl -X POST http://localhost:8000/api/v1/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username": "user@example.com", "password": "secure_password"}'
+
+# Use JWT token
+curl http://localhost:8000/api/v1/trips \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-### OAuth 2.0 (User Context)
+### API Key Authentication (BYOK)
 
 ```bash
-curl https://api.tripsage.ai/v1/user/trips \
-  -H "Authorization: Bearer USER_ACCESS_TOKEN"
+# Create API key
+curl -X POST http://localhost:8000/api/v1/keys \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"service": "duffel", "api_key": "user_key", "description": "Flight API"}'
+
+# Use API key
+curl http://localhost:8000/api/v1/flights/search \
+  -H "X-API-Key: YOUR_API_KEY"
 ```
 
-### JWT Tokens
+## 🌐 Core Endpoints
 
-For user-specific operations:
+### Trip Management
 
-1. Obtain JWT via `/v1/auth/login`
-2. Include in Authorization header
-3. Refresh before expiration
+- `GET /api/v1/trips` - List user trips
+- `POST /api/v1/trips` - Create new trip
+- `GET /api/v1/trips/{id}` - Get trip details
+- `PUT /api/v1/trips/{id}` - Update trip
+- `DELETE /api/v1/trips/{id}` - Delete trip
+
+### Flight Operations
+
+- `POST /api/v1/flights/search` - Search flights
+- `GET /api/v1/flights/{id}` - Get flight details
+- `POST /api/v1/flights/{id}/book` - Book flight
+- `GET /api/v1/flights/bookings` - List user bookings
+
+### Accommodation Operations
+
+- `POST /api/v1/accommodations/search` - Search accommodations
+- `GET /api/v1/accommodations/{id}` - Get details
+- `POST /api/v1/accommodations/{id}/book` - Book accommodation
+
+### AI & Chat
+
+- `POST /api/v1/chat/completions` - AI chat interface
+- `POST /api/v1/memory/conversation` - Store conversation
+- `GET /api/v1/memory/context` - Get user context
+
+### Real-time Communication
+
+- `WS /api/v1/ws/trip/{trip_id}` - Trip collaboration
+- `WS /api/v1/ws/chat/{session_id}` - Real-time chat
+- `WS /api/v1/ws/status` - Agent progress updates
 
 ## 🛠️ Development Tools
 
-### API Explorer
+### Interactive Documentation
 
-Interactive API testing:
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+- **OpenAPI Schema**: `http://localhost:8000/openapi.json`
 
-- Swagger UI: [api.tripsage.ai/docs](https://api.tripsage.ai/docs)
-- GraphQL Playground: [api.tripsage.ai/graphql](https://api.tripsage.ai/graphql)
-- Postman Collection: [Download](https://api.tripsage.ai/postman)
+### Testing
 
-### Testing Environment
+```bash
+# Run API tests
+uv run pytest tests/unit/tripsage/api/ --cov=tripsage.api
 
-Sandbox for development:
-
-- Base URL: `https://sandbox.tripsage.ai/v1`
-- Test API Key: Provided on signup
-- Reset: Daily at 00:00 UTC
-- No charges for bookings
-
-### Debugging Tools
-
-- Request ID tracking
-- Detailed error responses
-- Request/response logging
-- Performance metrics
+# Run integration tests
+uv run pytest tests/integration/api/
+```
 
 ## 📊 Response Formats
 
-### Successful Response
+### Success Response
 
 ```json
 {
-  "success": true,
-  "data": {
-    // Response data
-  },
+  "data": {...},
   "meta": {
-    "request_id": "req_123abc",
+    "request_id": "req_123",
     "timestamp": "2025-06-17T10:30:00Z"
   }
 }
@@ -242,122 +150,27 @@ Sandbox for development:
 
 ```json
 {
-  "success": false,
   "error": {
-    "code": "INVALID_REQUEST",
-    "message": "Missing required parameter: destination",
-    "details": {
-      "field": "destination",
-      "reason": "required"
-    }
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid request parameters",
+    "details": {...}
   },
   "meta": {
-    "request_id": "req_456def",
+    "request_id": "req_456",
     "timestamp": "2025-06-17T10:30:00Z"
   }
 }
 ```
 
-## 🌟 Featured Integrations
-
-### Popular Use Cases
-
-#### Travel Agencies
-
-- White-label booking platform
-- Custom travel planning tools
-- Client management systems
-- Revenue optimization
-
-#### Corporate Travel
-
-- Expense management integration
-- Policy enforcement
-- Approval workflows
-- Reporting dashboards
-
-#### Content Creators
-
-- Travel blog automation
-- Social media integration
-- Itinerary visualization
-- SEO optimization
-
-## 🚨 Quick Troubleshooting
-
-### Common Issues & Fixes
+## 🚨 Troubleshooting
 
 | Issue | Solution | Reference |
 |-------|----------|-----------|
-| `401 Unauthorized` | Check Authorization header format | [Auth Guide](authentication.md#jwt-tokens) |
-| `422 Validation Error` | Verify required fields and formats | [Error Codes](error-codes.md#validation-errors) |
-| `429 Rate Limited` | Implement retry logic with backoff | [Rate Limiting](error-codes.md#rate-limiting-errors) |
-| Empty search results | Check date formats and airport codes | [Troubleshooting](error-codes.md#practical-troubleshooting-scenarios) |
-| WebSocket disconnect | Implement reconnection logic | [WebSocket Guide](websocket-api.md#connection-management) |
-
-### Debug Checklist
-
-```bash
-# ✅ Verify API key
-curl -H "Authorization: Bearer YOUR_KEY" https://api.tripsage.ai/api/health
-
-# ✅ Check request format
-echo '{"test": "json"}' | jq .  # Validate JSON
-
-# ✅ Monitor rate limits
-curl -i https://api.tripsage.ai/api/trips | grep X-RateLimit
-```
-
-## 🆘 Getting Help
-
-### Resources
-
-- **📖 [Full Documentation](https://docs.tripsage.ai)** - Complete guides
-- **💬 [Developer Discord](https://discord.gg/tripsage-dev)** - Community support
-- **📧 [API Support](mailto:api@tripsage.ai)** - Technical help
-- **🎥 [Video Tutorials](https://youtube.com/@tripsage-dev)** - Visual learning
-
-### Support Levels
-
-#### Community Support
-
-- Discord community
-- Stack Overflow tag: `tripsage-api`
-- GitHub discussions
-
-#### Developer Support
-
-- Email response within 24h
-- Code review assistance
-- Integration guidance
-
-#### Enterprise Support
-
-- Dedicated Slack channel
-- Phone support
-- Custom training
-- SLA guarantees
-
-## 🚀 What's New
-
-### Recent Updates (v1.5.0)
-
-- 🆕 GraphQL API (Beta)
-- 🆕 Batch operations support
-- 🆕 Webhook event filtering
-- 🔧 Improved error messages
-- ⚡ 30% faster response times
-
-### Coming Soon
-
-- 📱 Mobile SDKs (iOS/Android)
-- 🌐 More language SDKs
-- 🤖 AI model selection
-- 📊 Analytics API
-- 🔐 OAuth provider support
+| `401 Unauthorized` | Check JWT token format | [Auth Guide](authentication.md) |
+| `422 Validation Error` | Verify required fields | [Error Codes](error-codes.md) |
+| `429 Rate Limited` | Check rate limits | [Usage Examples](usage-examples.md) |
+| WebSocket disconnect | Implement reconnection | [WebSocket Guide](websocket-guide.md) |
 
 ---
 
-**Ready to build?** Start with our [Usage Examples](usage-examples.md) or dive into the [REST API Reference](rest-endpoints.md)!
-
-> Questions? Join our [Developer Discord](https://discord.gg/tripsage-dev) or email [api@tripsage.ai](mailto:api@tripsage.ai)
+**Need help?** Check the [Usage Examples](usage-examples.md) for practical code samples or the [REST API Reference](rest-endpoints.md) for complete endpoint documentation.

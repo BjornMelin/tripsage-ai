@@ -23,7 +23,7 @@ Upgrade the app to Next.js 16 by migrating middleware -> proxy, enforcing async 
   - [ ] For each usage of `cookies()`, `headers()`, ensure async patterns.
   - [ ] For `params`/`searchParams`, use async props or Next typegen helpers where applicable.
 - [ ] SSR auth page fixes:
-  - [ ] Create `src/lib/supabase/server.ts` with `createServerClient` wrapper.
+  - [x] `src/lib/supabase/server.ts` exists with `createServerSupabase()` wrapper.
   - [ ] Update `app/(auth)/reset-password/page.tsx` to server-read auth with the server client (no `useAuth` hook in server). If client interactivity is required, split into server + client child.
   - [ ] Validate build no longer fails at prerender.
 - [ ] Docs
@@ -34,3 +34,7 @@ Upgrade the app to Next.js 16 by migrating middleware -> proxy, enforcing async 
 
 - Proxy defaults to Node runtime; avoid edge-only assumptions.
 - Use matchers to limit proxy scope.
+- Async Request APIs are mandatory in v16; consider using `npx next typegen` to adopt `PageProps` helpers for `params/searchParams` typing.
+- References:
+  - <https://nextjs.org/docs/app/guides/upgrading/version-16>
+  - <https://nextjs.org/docs/app/api-reference/file-conventions/proxy>

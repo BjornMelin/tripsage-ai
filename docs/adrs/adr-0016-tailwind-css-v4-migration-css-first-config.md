@@ -43,3 +43,5 @@ Rejected; higher implementation cost and loss of utility workflow ergonomics use
 ## References
 
 - Tailwind v4 upgrade guide and announcement.
+  - <https://tailwindcss.com/docs/upgrade-guide>
+  - <https://tailwindcss.com/blog/tailwindcss-v4>

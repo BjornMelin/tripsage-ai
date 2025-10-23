@@ -43,3 +43,5 @@ Rejected: `@supabase/ssr` already provides first-class utilities; bespoke handli
 ## References
 
 - Supabase SSR docs; Next.js SSR guidance for auth and cookies.
+  - <https://supabase.com/docs/guides/auth/server-side/nextjs>
+  - <https://supabase.com/docs/guides/auth/server-side#supabasessr>

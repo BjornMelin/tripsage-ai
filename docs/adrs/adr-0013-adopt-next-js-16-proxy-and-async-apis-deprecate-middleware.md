@@ -44,3 +44,5 @@ Rejected. Delays access to v16 improvements (Turbopack default, routing/navigati
 ## References
 
 - Next.js 16 upgrade guide and proxy file-convention documentation.
+  - <https://nextjs.org/docs/app/guides/upgrading/version-16>
+  - <https://nextjs.org/docs/app/api-reference/file-conventions/proxy>
