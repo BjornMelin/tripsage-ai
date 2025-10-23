@@ -1010,7 +1010,7 @@ async def get_trip_itinerary(
                 user_id=principal.user_id, search_request=search_request
             )
 
-            itinerary_items = getattr(itinerary_search, "items", [])
+            itinerary_items = itinerary_search.data
 
             if itinerary_items:
                 itinerary_data = itinerary_items[0]

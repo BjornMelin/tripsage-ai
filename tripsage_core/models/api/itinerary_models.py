@@ -6,6 +6,7 @@ from enum import Enum
 from pydantic import ConfigDict, Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.models.schemas_common.base_models import PaginatedResponse
 
 
 class ItineraryItemType(str, Enum):
@@ -472,35 +473,42 @@ class ItineraryResponse(TripSageModel):
     updated_at: str | None = Field(None, description="Last update timestamp")
 
 
-class ItinerarySearchResponse(TripSageModel):
-    """Response model for itinerary search results."""
+class ItinerarySearchResponse(PaginatedResponse[ItineraryResponse]):
+    """Paginated itinerary search response following canonical pagination schema."""
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "items": [
+                "success": True,
+                "message": None,
+                "timestamp": "2025-04-01T09:00:00Z",
+                "data": [
                     {
                         "id": "itinerary-123",
                         "title": "Tokyo Adventure",
+                        "description": "5-day itinerary",
                         "start_date": "2025-05-01",
                         "end_date": "2025-05-05",
                         "status": "active",
+                        "total_budget": 4500.0,
+                        "currency": "USD",
+                        "tags": ["culture"],
                         "items": [],
+                        "created_at": "2025-04-01T09:00:00Z",
+                        "updated_at": "2025-04-01T09:00:00Z",
                     }
                 ],
-                "page": 1,
-                "page_size": 25,
-                "total": 1,
+                "pagination": {
+                    "page": 1,
+                    "per_page": 25,
+                    "total_items": 1,
+                    "total_pages": 1,
+                    "has_next": False,
+                    "has_prev": False,
+                },
             }
         }
     )
-
-    items: list[ItineraryResponse] = Field(
-        default_factory=list, description="List of itineraries in the current page"
-    )
-    page: int = Field(description="Current page number", ge=1)
-    page_size: int = Field(description="Number of items per page", ge=1, le=100)
-    total: int = Field(description="Total itineraries matching the filters", ge=0)
 
 
 class ItineraryConflictCheckResponse(TripSageModel):
