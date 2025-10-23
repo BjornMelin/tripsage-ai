@@ -25,10 +25,10 @@ import { ServiceSelector } from "./service-selector";
 // Define form schema with Zod
 const formSchema = z.object({
   service: z.string({
-    required_error: "Please select a service",
+    error: "Please select a service",
   }),
   apiKey: z.string().min(1, {
-    message: "API key is required",
+    error: "API key is required",
   }),
   save: z.boolean(),
 });

@@ -17,6 +17,19 @@ Finalize migration to Tailwind v4: CSS-first configuration, PostCSS plugin, remo
 - [ ] Verify utility coverage across `src/app`, `src/components`, and any dynamic class names.
 - [ ] Document any class rename or behavior changes found during verification.
 
+## Verification results
+
+Date: 2025-10-23
+
+- Replaced <img> with next/image for MFA QR view:
+  - frontend/src/components/auth/mfa-setup.tsx
+- Converted clickable <div> wrappers to semantic <button> elements in chat attachments:
+  - frontend/src/components/features/chat/messages/message-attachments.tsx
+- Fixed parseInt radix issues (Biome):
+  - frontend/src/app/(dashboard)/trips/[id]/collaborate/page.tsx
+  - frontend/src/components/admin/configuration-manager.tsx
+- Ran `pnpm biome:check`; remaining items tracked (unique IDs, nested component definitions) to be addressed in follow-up.
+
 ### Notes from migration run
 
 - @tailwindcss/postcss is configured in `frontend/postcss.config.mjs` and present in devDependencies.

@@ -214,9 +214,11 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
           {/* QR Code */}
           <div className="flex justify-center">
             <div className="p-4 bg-white rounded-lg border">
-              <img
+              <Image
                 src={setupData.qrCodeUrl}
                 alt="QR Code for MFA setup"
+                width={192}
+                height={192}
                 className="w-48 h-48"
               />
             </div>
