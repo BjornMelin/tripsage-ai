@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 from slowapi import extension as slowapi_extension
 
+
 # SlowAPI's decorator validates function signatures at import-time, causing
 # unrelated routers to explode in tests. Neutralize the decorator so imports
 # succeed without pulling those routers into this suite.

@@ -227,9 +227,11 @@ class ApiValidationResult(TripSageModel):
     @property
     def success_rate_category(self) -> str:
         """Categorize validation success or mark as unknown when not applicable."""
-        if self.is_valid is True:
+        if self.is_valid:
             return "success"
-        return "failure" if self.is_valid is False else "unknown"
+        if self.is_valid is False:
+            return "failure"
+        return "unknown"
 
     @computed_field
     @property
@@ -647,9 +649,9 @@ class ApiKeyService:
         try:
             if service == ServiceType.OPENAI:
                 return await self._check_openai_health()
-            if service == ServiceType.WEATHER:
+            elif service == ServiceType.WEATHER:
                 return await self._check_weather_health()
-            if service == ServiceType.GOOGLEMAPS:
+            elif service == ServiceType.GOOGLEMAPS:
                 return await self._check_googlemaps_health()
             return ApiValidationResult(
                 service=service,
@@ -691,9 +693,7 @@ class ApiKeyService:
 
         health_status: dict[ServiceType, ApiValidationResult] = {}
         for service, result in zip(services, results, strict=False):
-            if isinstance(result, ApiValidationResult):
-                health_status[service] = result
-            else:
+            if isinstance(result, Exception):
                 health_status[service] = ApiValidationResult(
                     service=service,
                     is_valid=None,
@@ -704,6 +704,10 @@ class ApiKeyService:
                     validated_at=None,
                     checked_at=datetime.now(UTC),
                 )
+            else:
+                if not isinstance(result, ApiValidationResult):
+                    raise TypeError("Unexpected health check result type") from None
+                health_status[service] = result
 
         return health_status
 
@@ -1002,7 +1006,8 @@ class ApiKeyService:
             )
 
         try:
-            response = await self.client.get(
+            response = await self._request_with_backoff(
+                "GET",
                 "https://maps.googleapis.com/maps/api/geocode/json",
                 params={
                     "address": "1600 Amphitheatre Parkway, Mountain View, CA",
