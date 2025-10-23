@@ -5,10 +5,11 @@
 
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
 import { useSupabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 
 type TripInsert = Database["public"]["Tables"]["trips"]["Insert"];
 type TripUpdate = Database["public"]["Tables"]["trips"]["Update"];
@@ -109,11 +110,10 @@ export function useCreateTrip() {
         throw new Error("User not authenticated");
       }
 
-      const { data, error } = await supabase
-        .from("trips")
-        .insert({ ...tripData, user_id: user.id })
-        .select()
-        .single();
+      const { data, error } = await insertSingle(supabase, "trips", {
+        ...tripData,
+        user_id: user.id,
+      });
 
       if (error) {
         throw error;
@@ -140,18 +140,17 @@ export function useUpdateTrip() {
     mutationFn: async ({
       tripId,
       updates,
-    }: { tripId: number; updates: TripUpdate }) => {
+    }: {
+      tripId: number;
+      updates: TripUpdate;
+    }) => {
       if (!user?.id) {
         throw new Error("User not authenticated");
       }
 
-      const { data, error } = await supabase
-        .from("trips")
-        .update(updates)
-        .eq("id", tripId)
-        .eq("user_id", user.id)
-        .select()
-        .single();
+      const { data, error } = await updateSingle(supabase, "trips", updates, (qb) =>
+        (qb as any).eq("id", tripId).eq("user_id", user.id)
+      );
 
       if (error) {
         throw error;
@@ -162,7 +161,12 @@ export function useUpdateTrip() {
     onSuccess: (data) => {
       // Invalidate trips list and specific trip
       queryClient.invalidateQueries({ queryKey: ["trips", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["trip", data.id, user?.id] });
+      if (data) {
+        // data can be null if update didn't return a row due to RLS
+        queryClient.invalidateQueries({
+          queryKey: ["trip", (data as any).id, user?.id],
+        });
+      }
     },
   });
 }
@@ -274,7 +278,10 @@ export function useRemoveTripCollaborator() {
     mutationFn: async ({
       tripId: _tripId,
       collaboratorId: _collaboratorId,
-    }: { tripId: number; collaboratorId: number }) => {
+    }: {
+      tripId: number;
+      collaboratorId: number;
+    }) => {
       if (!user?.id) {
         throw new Error("User not authenticated");
       }

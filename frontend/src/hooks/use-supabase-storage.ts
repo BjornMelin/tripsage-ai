@@ -1,5 +1,7 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { useSupabase } from "@/lib/supabase/client";
 import type {
@@ -8,9 +10,8 @@ import type {
   FileAttachmentUpdate,
   UploadStatus,
   VirusScanStatus,
-} from "@/lib/supabase/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+} from "@/lib/supabase/database.types";
+import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 
 interface UploadProgress {
   fileId: string;
@@ -109,6 +110,10 @@ export function useSupabaseStorage() {
       queryFn: async () => {
         if (!user?.id) throw new Error("User not authenticated");
 
+        type FileStatRow = Pick<
+          FileAttachment,
+          "file_size" | "mime_type" | "upload_status"
+        >;
         const { data: files, error } = await supabase
           .from("file_attachments")
           .select("file_size, mime_type, upload_status")
@@ -116,8 +121,9 @@ export function useSupabaseStorage() {
 
         if (error) throw error;
 
-        const totalSize = files.reduce((sum, file) => sum + file.file_size, 0);
-        const filesByType = files.reduce(
+        const typedFiles = (files ?? []) as FileStatRow[];
+        const totalSize = typedFiles.reduce((sum, file) => sum + file.file_size, 0);
+        const filesByType = typedFiles.reduce(
           (acc, file) => {
             const type = file.mime_type.split("/")[0] || "other";
             acc[type] = (acc[type] || 0) + 1;
@@ -126,7 +132,7 @@ export function useSupabaseStorage() {
           {} as Record<string, number>
         );
 
-        const filesByStatus = files.reduce(
+        const filesByStatus = typedFiles.reduce(
           (acc, file) => {
             acc[file.upload_status] = (acc[file.upload_status] || 0) + 1;
             return acc;
@@ -225,11 +231,11 @@ export function useSupabaseStorage() {
           },
         };
 
-        const { data: attachmentRecord, error: attachmentError } = await supabase
-          .from("file_attachments")
-          .insert(attachmentData)
-          .select()
-          .single();
+        const { data: attachmentRecord, error: attachmentError } = await insertSingle(
+          supabase,
+          "file_attachments",
+          attachmentData
+        );
 
         if (attachmentError) throw attachmentError;
 
@@ -319,9 +325,10 @@ export function useSupabaseStorage() {
       if (fetchError) throw fetchError;
 
       // Delete from storage
+      const attachmentTyped = attachment as FileAttachment;
       const { error: storageError } = await supabase.storage
-        .from(attachment.bucket_name)
-        .remove([attachment.file_path]);
+        .from(attachmentTyped.bucket_name)
+        .remove([attachmentTyped.file_path]);
 
       if (storageError) throw storageError;
 
@@ -350,12 +357,12 @@ export function useSupabaseStorage() {
       id: string;
       updates: FileAttachmentUpdate;
     }) => {
-      const { data, error } = await supabase
-        .from("file_attachments")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
+      const { data, error } = await updateSingle(
+        supabase,
+        "file_attachments",
+        updates,
+        (qb) => (qb as any).eq("id", id)
+      );
 
       if (error) throw error;
       return data as FileAttachment;
