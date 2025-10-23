@@ -150,7 +150,13 @@ export function BudgetForm({
     reValidateMode: "onChange",
     transformSubmitData: (data) => {
       // Transform data before submission - remove UI-specific fields
-      const { autoAllocate, enableAlerts, alertThreshold, notes, ...budgetData } = data;
+      const {
+        autoAllocate: _autoAllocate,
+        enableAlerts: _enableAlerts,
+        alertThreshold: _alertThreshold,
+        notes: _notes,
+        ...budgetData
+      } = data;
       return budgetData;
     },
     onValidationError: (errors) => {

@@ -3,7 +3,7 @@
 import { AlertCircle, Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +41,9 @@ export function RegisterForm({
     email: "",
     password: "",
   });
+  const fullNameInputId = useId();
+  const emailInputId = useId();
+  const passwordInputId = useId();
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -151,9 +154,9 @@ export function RegisterForm({
 
           {/* Name Field */}
           <div className="space-y-2">
-            <Label htmlFor="fullName">Full Name</Label>
+            <Label htmlFor={fullNameInputId}>Full Name</Label>
             <Input
-              id="fullName"
+              id={fullNameInputId}
               name="fullName"
               type="text"
               placeholder="John Doe"
@@ -168,9 +171,9 @@ export function RegisterForm({
 
           {/* Email Field */}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor={emailInputId}>Email</Label>
             <Input
-              id="email"
+              id={emailInputId}
               name="email"
               type="email"
               placeholder="john@example.com"
@@ -185,10 +188,10 @@ export function RegisterForm({
 
           {/* Password Field with Strength Indicator */}
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor={passwordInputId}>Password</Label>
             <div className="relative">
               <Input
-                id="password"
+                id={passwordInputId}
                 name="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Create a strong password"

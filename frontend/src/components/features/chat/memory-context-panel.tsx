@@ -124,7 +124,8 @@ export default function MemoryContextPanel({
   const renderRecentMemories = (memories: Memory[]) => (
     <div className="space-y-2">
       {memories.slice(0, 5).map((memory) => (
-        <div
+        <button
+          type="button"
           key={memory.id}
           className="p-2 rounded-lg border bg-card cursor-pointer hover:bg-accent transition-colors"
           onClick={() => onMemorySelect?.(memory)}
@@ -143,7 +144,7 @@ export default function MemoryContextPanel({
               </div>
             </div>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );
