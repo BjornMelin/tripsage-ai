@@ -14,7 +14,7 @@ import pytest
 from fastapi import HTTPException
 
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.trips import (
+from tripsage_core.models.api.trip_models import (
     CreateTripRequest,
     TripPreferencesRequest,
     UpdateTripRequest,

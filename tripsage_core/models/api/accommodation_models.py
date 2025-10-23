@@ -1,22 +1,18 @@
-"""Accommodation API schemas.
-
-Final-only consolidation: re-export canonical service/domain models from
-``tripsage_core`` and keep only API-specific compositions.
-"""
+"""Canonical accommodation request and response models for the API layer."""
 
 from datetime import date
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
 
-# Canonical request/response and entities from the business service layer
+from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.services.business.accommodation_service import (
     AccommodationListing,
     BookingStatus,
 )
 
 
-class AccommodationDetailsRequest(BaseModel):
+class AccommodationDetailsRequest(TripSageModel):
     """Request model for retrieving accommodation details."""
 
     listing_id: str = Field(description="Listing ID")
@@ -31,19 +27,15 @@ class AccommodationDetailsRequest(BaseModel):
 
     @field_validator("check_out")
     @classmethod
-    def validate_dates(cls, v: date | None, info) -> date | None:
-        """Validate that check-out date is after check-in when both provided."""
-        if (
-            v is not None
-            and "check_in" in info.data
-            and info.data["check_in"] is not None
-            and v <= info.data["check_in"]
-        ):
+    def validate_dates(cls, value: date | None, info) -> date | None:
+        """Ensure check-out is after check-in when both provided."""
+        check_in = info.data.get("check_in")
+        if value is not None and check_in and value <= check_in:
             raise ValueError("Check-out date must be after check-in date")
-        return v
+        return value
 
 
-class SavedAccommodationRequest(BaseModel):
+class SavedAccommodationRequest(TripSageModel):
     """Request model for saving an accommodation listing."""
 
     listing_id: str = Field(description="Accommodation listing ID")
@@ -54,18 +46,16 @@ class SavedAccommodationRequest(BaseModel):
 
     @field_validator("check_out")
     @classmethod
-    def validate_dates(cls, v: date, info) -> date:
+    def validate_dates(cls, value: date, info) -> date:
         """Validate that check-out date is after check-in date."""
-        if "check_in" in info.data and v <= info.data["check_in"]:
+        check_in = info.data.get("check_in")
+        if check_in and value <= check_in:
             raise ValueError("Check-out date must be after check-in date")
-        return v
+        return value
 
 
-class AccommodationDetailsResponse(BaseModel):
-    """API response for accommodation details.
-
-    Kept API-local since the service exposes listing retrieval directly.
-    """
+class AccommodationDetailsResponse(TripSageModel):
+    """API response for accommodation details."""
 
     listing: AccommodationListing = Field(description="Accommodation listing")
     availability: bool = Field(
@@ -76,7 +66,7 @@ class AccommodationDetailsResponse(BaseModel):
     )
 
 
-class SavedAccommodationResponse(BaseModel):
+class SavedAccommodationResponse(TripSageModel):
     """Response model for a saved accommodation listing."""
 
     id: UUID = Field(description="Saved accommodation ID")
@@ -92,3 +82,11 @@ class SavedAccommodationResponse(BaseModel):
     status: BookingStatus = Field(
         default=BookingStatus.SAVED, description="Booking status"
     )
+
+
+__all__ = [
+    "AccommodationDetailsRequest",
+    "AccommodationDetailsResponse",
+    "SavedAccommodationRequest",
+    "SavedAccommodationResponse",
+]

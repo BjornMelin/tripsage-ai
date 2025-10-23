@@ -223,7 +223,9 @@ class TestAccommodationRouterBehavior:
 
     def test_accommodation_search_request_structure(self):
         """Test that the search request model has the expected structure."""
-        from tripsage.api.schemas.accommodations import AccommodationSearchRequest
+        from tripsage_core.services.business.accommodation_service import (
+            AccommodationSearchRequest,
+        )
 
         # Test with minimal valid data
         request_data = {
@@ -251,7 +253,7 @@ class TestAccommodationRouterBehavior:
 
     def test_accommodation_search_response_structure(self):
         """Test that the search response model has the expected structure."""
-        from tripsage.api.schemas.accommodations import (
+        from tripsage_core.services.business.accommodation_service import (
             AccommodationSearchRequest,
             AccommodationSearchResponse,
         )
