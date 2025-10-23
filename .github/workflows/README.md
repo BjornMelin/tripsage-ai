@@ -1,9 +1,5 @@
 # TripSage CI/CD Architecture (2025)
 
-## Overview
-
-This directory contains the modern CI/CD pipeline for TripSage, following 2025 best practices for GitHub Actions. The architecture has been streamlined from 7 workflows to 3 main workflows with reusable components.
-
 ## Architecture
 
 ### Main Workflows
@@ -55,7 +51,7 @@ Located in `.github/actions/`:
 
 ### Performance
 
-- Advanced multi-level caching
+- Multi-level caching
 - Matrix builds with intelligent exclusions
 - Parallel test execution
 - Path filtering to run only necessary jobs
