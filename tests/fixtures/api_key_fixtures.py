@@ -22,8 +22,8 @@ from tripsage_core.services.business.api_key_service import (
     ApiKeyCreateRequest,
     ApiKeyResponse,
     ApiKeyService,
+    ApiValidationResult,
     ServiceType,
-    ValidationResult,
     ValidationStatus,
 )
 from tripsage_core.services.infrastructure.key_monitoring_service import (
@@ -108,11 +108,13 @@ def sample_api_key_create():
 @pytest.fixture
 def sample_api_key_create_request():
     """Create sample API key creation request for service layer."""
-    return ApiKeyCreateRequest(
-        name="Test OpenAI Key",
-        service=ServiceType.OPENAI,
-        key_value="sk-test_key_for_unit_testing_12345",
-        description="Test key for unit testing",
+    return ApiKeyCreateRequest.model_validate(
+        {
+            "name": "Test OpenAI Key",
+            "service": ServiceType.OPENAI,
+            "key": "sk-test_key_for_unit_testing_12345",
+            "description": "Test key for unit testing",
+        }
     )
 
 
@@ -159,7 +161,7 @@ def multiple_api_key_responses():
 @pytest.fixture
 def sample_validation_result():
     """Create sample validation result."""
-    return ValidationResult(
+    return ApiValidationResult(
         is_valid=True,
         status=ValidationStatus.VALID,
         service=ServiceType.OPENAI,
@@ -171,31 +173,31 @@ def sample_validation_result():
 def validation_results_various():
     """Create various validation results for testing."""
     return {
-        "valid": ValidationResult(
+        "valid": ApiValidationResult(
             is_valid=True,
             status=ValidationStatus.VALID,
             service=ServiceType.OPENAI,
             message="Key is valid and functional",
         ),
-        "invalid": ValidationResult(
+        "invalid": ApiValidationResult(
             is_valid=False,
             status=ValidationStatus.INVALID,
             service=ServiceType.OPENAI,
             message="Invalid API key format or credentials",
         ),
-        "format_error": ValidationResult(
+        "format_error": ApiValidationResult(
             is_valid=False,
             status=ValidationStatus.FORMAT_ERROR,
             service=ServiceType.OPENAI,
             message="Key format does not match expected pattern",
         ),
-        "rate_limited": ValidationResult(
+        "rate_limited": ApiValidationResult(
             is_valid=False,
             status=ValidationStatus.RATE_LIMITED,
             service=ServiceType.OPENAI,
             message="Rate limit exceeded for validation requests",
         ),
-        "service_error": ValidationResult(
+        "service_error": ApiValidationResult(
             is_valid=False,
             status=ValidationStatus.SERVICE_ERROR,
             service=ServiceType.OPENAI,
@@ -328,36 +330,6 @@ def mock_cache_service():
 
 
 @pytest.fixture
-def mock_audit_service():
-    """Create mock audit service for testing."""
-    audit = AsyncMock()
-
-    # Configure audit operations
-    audit.log_operation = AsyncMock()
-    audit.log_access = AsyncMock()
-    audit.log_error = AsyncMock()
-    audit.get_logs = AsyncMock(return_value=[])
-
-    return audit
-
-
-@pytest.fixture
-async def api_key_service_with_mocks(
-    mock_database_service,
-    mock_cache_service,
-    mock_audit_service,
-):
-    """Create API key service with all mocked dependencies."""
-    service = ApiKeyService()
-    service.db = mock_database_service
-    service.cache = mock_cache_service
-    service.audit = mock_audit_service
-
-    await service.initialize()
-    return service
-
-
-@pytest.fixture
 def sample_rotate_request():
     """Create sample key rotation request."""
     return ApiKeyRotateRequest(new_key="sk-rotated_key_for_testing_67890")
@@ -369,7 +341,6 @@ def sample_validate_request():
     return ApiKeyValidateRequest(
         service="openai",
         key="sk-validate_test_key_12345",
-        save=False,
     )
 
 

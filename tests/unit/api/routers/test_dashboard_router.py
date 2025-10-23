@@ -14,7 +14,7 @@ from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.routers import dashboard as dashboard_router
 from tripsage_core.services.business.api_key_service import (
-    ServiceHealthCheck,
+    ApiValidationResult,
     ServiceHealthStatus,
     ServiceType,
 )
@@ -204,19 +204,25 @@ def _mock_dashboard_service(
     service.get_dashboard_data.return_value = payload
 
     health_checks = {
-        ServiceType.OPENAI: ServiceHealthCheck(
+        ServiceType.OPENAI: ApiValidationResult(
             service=ServiceType.OPENAI,
-            status=ServiceHealthStatus.HEALTHY,
+            is_valid=None,
+            status=None,
+            health_status=ServiceHealthStatus.HEALTHY,
             latency_ms=120.0,
             message="Healthy",
             checked_at=datetime.now(UTC),
+            validated_at=None,
         ),
-        ServiceType.WEATHER: ServiceHealthCheck(
+        ServiceType.WEATHER: ApiValidationResult(
             service=ServiceType.WEATHER,
-            status=ServiceHealthStatus.DEGRADED,
+            is_valid=None,
+            status=None,
+            health_status=ServiceHealthStatus.DEGRADED,
             latency_ms=320.0,
             message="Latency high",
             checked_at=datetime.now(UTC),
+            validated_at=None,
         ),
     }
     api_key_service = AsyncMock()
