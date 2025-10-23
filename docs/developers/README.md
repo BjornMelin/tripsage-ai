@@ -16,21 +16,18 @@ Internal developer resources and guidelines.
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
-| [API Development](api-development.md) | Backend API development with FastAPI | Backend developers |
-| [API Key Service](api-key-service.md) | Internal API key service implementation guide | Backend developers |
+| [**Backend Development Guide**](backend-development.md) | 🏗️ API development, integrations, and architecture | Backend developers |
+| [**Database & Architecture Guide**](database-architecture.md) | 🗄️ Database design, schema, and system architecture | Backend developers |
 | [Frontend Development](frontend-development.md) | Next.js frontend development guide | Frontend developers |
-| [**Unified Database Guide**](unified-database-guide.md) | 🗄️ Complete database development reference | Backend developers |
 | [Data Models](data-models.md) | Pydantic models and TypeScript interfaces | All developers |
 | [**Branch Conventions**](branch-conventions.md) | 🏗️ Git workflow and branch naming standards | All developers |
 
-### In-Depth Topics
+### Specialized Topics
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
-| [Architecture Guide](architecture-guide.md) | System design & database architecture | Senior developers |
-| [**Performance Optimization**](performance-optimization.md) | ⚡ Search, caching, and profiling techniques | Senior developers |
-| [External Integrations](external-integrations.md) | Third-party API integrations | Backend developers |
-| [Debugging Guide](debugging-guide.md) | Debugging techniques & troubleshooting | All developers |
+| [**Debugging & Performance Guide**](debugging-performance.md) | 🐛 Debugging techniques, profiling, and optimization | All developers |
+| [CI Overview](ci-overview.md) | Continuous integration and deployment | All developers |
 
 ## Quick Start
 
@@ -130,12 +127,12 @@ pnpm test:coverage # Coverage report
 ## 🆘 Getting Help
 
 - **New Developer Setup**: Start with [Quick Start Guide](quick-start-guide.md)
-- **Database Questions**: Reference [Unified Database Guide](unified-database-guide.md)
-- **Performance Issues**: Check [Performance Optimization](performance-optimization.md)
-- **Architecture Questions**: See [Architecture Guide](architecture-guide.md)
-- **Code Issues**: Check [Debugging Guide](debugging-guide.md)
-- **API Questions**: Reference [API Development](api-development.md)
-- **API Key Issues**: See [API Key Service Guide](api-key-service.md)
+- **Database Questions**: Reference [Database & Architecture Guide](database-architecture.md)
+- **Performance Issues**: Check [Debugging & Performance Guide](debugging-performance.md)
+- **Architecture Questions**: See [Database & Architecture Guide](database-architecture.md)
+- **Code Issues**: Check [Debugging & Performance Guide](debugging-performance.md)
+- **API Questions**: Reference [Backend Development Guide](backend-development.md)
+- **API Key Issues**: See [Database & Architecture Guide](database-architecture.md)
 - **Testing Issues**: Consult [Testing Guide](testing-guide.md)
 
 ---
