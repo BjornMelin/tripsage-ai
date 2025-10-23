@@ -48,7 +48,7 @@ const ChatSessionInsertSchema = z
   .object({
     title: z.string().optional(),
     trip_id: z.number().nullable().optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .partial();
 

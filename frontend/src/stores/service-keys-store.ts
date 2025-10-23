@@ -42,7 +42,7 @@ export const ServiceKeySchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   expiresAt: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   usage: z
     .object({
       requestCount: z.number().default(0),
@@ -78,7 +78,7 @@ export const ValidationResultSchema = z.object({
   isValid: z.boolean(),
   status: ServiceKeyStatusSchema,
   message: z.string().optional(),
-  details: z.record(z.unknown()).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
   testedAt: z.string(),
   responseTime: z.number().optional(),
 });

@@ -419,7 +419,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
       } catch (error) {
         // Handle Zod validation errors
         if (error instanceof z.ZodError) {
-          const errorMessage = error.errors.map((e) => e.message).join(", ");
+          const errorMessage = error.issues.map((e) => e.message).join(", ");
           setAuthError(`Invalid input: ${errorMessage}`);
         } else {
           setAuthError("An error occurred while processing your message");

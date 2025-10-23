@@ -59,7 +59,7 @@ export const agentSchema = z.object({
   tasks: z.array(agentTaskSchema),
   createdAt: dateStringSchema,
   updatedAt: dateStringSchema,
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 // Agent activity schema
@@ -71,7 +71,7 @@ export const agentActivitySchema = z.object({
     .string()
     .min(1, "Activity message is required")
     .max(1000, "Message too long"),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   timestamp: dateStringSchema,
 });
 
@@ -123,7 +123,7 @@ export const agentConfigSchema = z.object({
   priority: z.enum(["low", "normal", "high", "critical"]),
   enableLogging: z.boolean(),
   enableMetrics: z.boolean(),
-  customSettings: z.record(z.unknown()).optional(),
+  customSettings: z.record(z.string(), z.unknown()).optional(),
   createdAt: dateStringSchema,
   updatedAt: dateStringSchema,
 });
@@ -162,7 +162,7 @@ export const createAgentTaskRequestSchema = z.object({
   title: z.string().min(1, "Task title is required").max(200, "Title too long"),
   description: z.string().max(1000, "Description too long"),
   priority: z.enum(["low", "normal", "high", "critical"]).default("normal"),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const updateAgentTaskRequestSchema = z.object({
@@ -188,7 +188,7 @@ export const createAgentRequestSchema = z.object({
       enableMetrics: z.boolean().default(true),
     })
     .optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const updateAgentRequestSchema = z.object({
@@ -196,7 +196,7 @@ export const updateAgentRequestSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional(),
   status: agentStatusTypeSchema.optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const createWorkflowRequestSchema = z.object({

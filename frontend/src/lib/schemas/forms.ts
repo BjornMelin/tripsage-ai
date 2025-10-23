@@ -410,7 +410,7 @@ export const sendMessageFormSchema = z.object({
     )
     .max(5, "Too many attachments")
     .optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const createConversationFormSchema = z.object({

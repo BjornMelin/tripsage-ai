@@ -64,7 +64,7 @@ const WebSocketEventSchema = z.object({
   timestamp: z.string(),
   user_id: z.string().optional(),
   session_id: z.string().optional(),
-  payload: z.record(z.unknown()),
+  payload: z.record(z.string(), z.unknown()),
 });
 
 const WebSocketAuthResponseSchema = z.object({
@@ -83,7 +83,7 @@ const WebSocketMessageSchema = z.object({
   session_id: z.string().optional(),
   user_id: z.string().optional(),
   timestamp: z.string(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   tool_calls: z.array(z.unknown()).optional(),
   is_partial: z.boolean().default(false),
   chunk_index: z.number().optional(),

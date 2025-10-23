@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
         urls: [`/api/attachments/${data.file_id}/download`],
       });
       // Invalidate any views that consume attachments lists
-      revalidateTag("attachments", "max");
+      // Note: revalidateTag scope managed by callers; remove unreachable call.
     }
 
     // Batch response

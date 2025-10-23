@@ -145,9 +145,7 @@ export function demonstrateErrorHandling() {
         .max(120, "Age must be realistic"),
     }),
     preferences: z.object({
-      theme: z.enum(["light", "dark"], {
-        errorMap: () => ({ message: "Theme must be either 'light' or 'dark'" }),
-      }),
+      theme: z.enum(["light", "dark"]),
       notifications: z.boolean(),
     }),
     metadata: z.record(z.string(), z.unknown()).optional(),

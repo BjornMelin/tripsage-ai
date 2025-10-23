@@ -178,7 +178,7 @@ const sessionDataSchema = z.object({
           z.object({
             id: z.string(),
             name: z.string(),
-            arguments: z.record(z.unknown()),
+            arguments: z.record(z.string(), z.unknown()),
             state: z.enum(["call", "partial-call", "result"]),
           })
         )

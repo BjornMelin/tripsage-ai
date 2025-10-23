@@ -156,7 +156,7 @@ export type AgentConfigResponse = z.infer<typeof AgentConfigResponseSchema>;
 export const ConfigurationVersionSchema = z.object({
   version_id: VersionIdSchema,
   agent_type: AgentTypeEnum,
-  configuration: z.record(z.any()),
+  configuration: z.record(z.string(), z.any()),
   scope: ConfigurationScopeEnum,
   created_at: z.string().datetime(),
   created_by: z.string(),
@@ -176,7 +176,7 @@ export const PerformanceMetricsSchema = z.object({
   average_response_time: z.number().min(0),
   success_rate: z.number().min(0).max(1),
   error_rate: z.number().min(0).max(1),
-  token_usage: z.record(z.number().int()),
+  token_usage: z.record(z.string(), z.number().int()),
   cost_estimate: z.string(), // Decimal as string
   measured_at: z.string().datetime(),
   sample_size: z.number().int().min(1),
@@ -219,7 +219,7 @@ export type ConfigurationValidationResponse = z.infer<
 export const WebSocketConfigMessageSchema = z.object({
   type: z.string(),
   agent_type: AgentTypeEnum.optional(),
-  configuration: z.record(z.any()).optional(),
+  configuration: z.record(z.string(), z.any()).optional(),
   version_id: VersionIdSchema.optional(),
   updated_by: z.string().optional(),
   timestamp: z.string().datetime(),
@@ -298,8 +298,8 @@ export const ConfigurationExportSchema = z.object({
   export_id: z.string(),
   environment: z.string(),
   agent_configurations: z.record(AgentTypeEnum, AgentConfigResponseSchema),
-  feature_flags: z.record(z.boolean()),
-  global_defaults: z.record(z.any()),
+  feature_flags: z.record(z.string(), z.boolean()),
+  global_defaults: z.record(z.string(), z.any()),
   exported_at: z.string().datetime(),
   exported_by: z.string(),
   format: z.enum(["json", "yaml"]).default("json"),
@@ -329,14 +329,14 @@ export const getFieldErrorMessage = (
   error: z.ZodError,
   fieldName: string
 ): string | undefined => {
-  const fieldError = error.errors.find((err) => err.path.includes(fieldName));
+  const fieldError = error.issues.find((err) => err.path.includes(fieldName));
   return fieldError?.message;
 };
 
 export const getFormErrors = (error: z.ZodError): Record<string, string> => {
   const errors: Record<string, string> = {};
 
-  error.errors.forEach((err) => {
+  error.issues.forEach((err) => {
     const field = err.path.join(".");
     errors[field] = err.message;
   });

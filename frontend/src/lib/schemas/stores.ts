@@ -78,7 +78,7 @@ export const userStoreStateSchema = z.object({
       timezone: z.string().optional(),
       language: z.string().optional(),
       currency: z.string().length(3).optional(),
-      preferences: z.record(z.unknown()).optional(),
+      preferences: z.record(z.string(), z.unknown()).optional(),
     })
     .nullable(),
   ...loadingStateSchema.shape,
@@ -98,14 +98,14 @@ export const searchStoreStateSchema = z.object({
   currentSearchType: z
     .enum(["flight", "accommodation", "activity", "destination"])
     .nullable(),
-  currentParams: z.record(z.unknown()).nullable(),
+  currentParams: z.record(z.string(), z.unknown()).nullable(),
   results: z.object({
     flights: z.array(z.unknown()).optional(),
     accommodations: z.array(z.unknown()).optional(),
     activities: z.array(z.unknown()).optional(),
     destinations: z.array(z.unknown()).optional(),
   }),
-  filters: z.record(z.unknown()),
+  filters: z.record(z.string(), z.unknown()),
   sorting: z
     .object({
       field: z.string(),
@@ -117,7 +117,7 @@ export const searchStoreStateSchema = z.object({
     z.object({
       id: z.string(),
       type: z.enum(["flight", "accommodation", "activity", "destination"]),
-      params: z.record(z.unknown()),
+      params: z.record(z.string(), z.unknown()),
       timestamp: timestampSchema,
     })
   ),
@@ -126,7 +126,7 @@ export const searchStoreStateSchema = z.object({
       id: z.string(),
       name: z.string(),
       type: z.enum(["flight", "accommodation", "activity", "destination"]),
-      params: z.record(z.unknown()),
+      params: z.record(z.string(), z.unknown()),
       createdAt: timestampSchema,
       lastUsed: timestampSchema.optional(),
     })
@@ -248,7 +248,7 @@ export const chatStoreStateSchema = z.object({
           role: z.enum(["user", "assistant", "system"]),
           content: z.string(),
           timestamp: timestampSchema,
-          metadata: z.record(z.unknown()).optional(),
+          metadata: z.record(z.string(), z.unknown()).optional(),
         })
       ),
       status: z.enum(["active", "archived", "deleted"]),
@@ -295,6 +295,7 @@ export const uiStoreStateSchema = z.object({
     width: z.number().positive(),
   }),
   modals: z.record(
+    z.string(),
     z.object({
       isOpen: z.boolean(),
       data: z.unknown().optional(),
@@ -367,12 +368,14 @@ export const uiStoreActionsSchema = z.object({
 // Budget store schema
 export const budgetStoreStateSchema = z.object({
   budgets: z.record(
+    z.string(),
     z.object({
       tripId: uuidSchema,
       total: positiveNumberSchema,
       spent: nonNegativeNumberSchema,
       currency: z.string().length(3),
       categories: z.record(
+        z.string(),
         z.object({
           allocated: nonNegativeNumberSchema,
           spent: nonNegativeNumberSchema,
@@ -398,11 +401,11 @@ export const budgetStoreStateSchema = z.object({
       total: positiveNumberSchema,
       spent: nonNegativeNumberSchema,
       currency: z.string().length(3),
-      categories: z.record(z.unknown()),
+      categories: z.record(z.string(), z.unknown()),
       expenses: z.array(z.unknown()),
     })
     .nullable(),
-  exchangeRates: z.record(z.number().positive()),
+  exchangeRates: z.record(z.string(), z.number().positive()),
   ...loadingStateSchema.shape,
 });
 
@@ -435,6 +438,7 @@ export const apiKeyStoreStateSchema = z.object({
     })
   ),
   services: z.record(
+    z.string(),
     z.object({
       name: z.string(),
       description: z.string(),

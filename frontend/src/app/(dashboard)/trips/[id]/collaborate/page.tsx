@@ -248,7 +248,7 @@ export default function TripCollaborationPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <OptimisticTripUpdates tripId={Number.parseInt(tripId)} />
+              <OptimisticTripUpdates tripId={Number.parseInt(tripId, 10)} />
             </CardContent>
           </Card>
 
@@ -367,7 +367,7 @@ export default function TripCollaborationPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Active Collaborators */}
-          <CollaborationIndicator tripId={Number.parseInt(tripId)} />
+          <CollaborationIndicator tripId={Number.parseInt(tripId, 10)} />
 
           {/* Recent Activity */}
           <Card>
