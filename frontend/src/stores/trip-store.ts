@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { createClient } from "@/lib/supabase/client";
 import type { Trip as DatabaseTrip } from "@/lib/supabase/database.types";
 
 export interface Destination {
@@ -193,9 +192,8 @@ export const useTripStore = create<TripState>()(
         try {
           // Import hook will need to be used in component that calls this
           // For now, we'll use the supabase client directly
-          const { createTrip: repoCreateTrip, updateTrip: repoUpdateTrip } = await import(
-            "@/lib/repositories/trips-repo"
-          );
+          const { createTrip: repoCreateTrip, updateTrip: repoUpdateTrip } =
+            await import("@/lib/repositories/trips-repo");
 
           const tripData = {
             title: data.title || data.name || "Untitled Trip",
@@ -258,8 +256,10 @@ export const useTripStore = create<TripState>()(
 
         try {
           const { createClient } = await import("@/lib/supabase/client");
-          const { updateTrip: repoUpdateTrip } = await import("@/lib/repositories/trips-repo");
-          const supabase = createClient();
+          const { updateTrip: repoUpdateTrip } = await import(
+            "@/lib/repositories/trips-repo"
+          );
+          const _supabase = createClient();
 
           const updateData: any = {};
 

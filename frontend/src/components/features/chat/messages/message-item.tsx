@@ -43,6 +43,7 @@ function partsToText(parts?: { type: string; text?: string }[]): string | undefi
     return undefined;
   }
 }
+
 import type { Message, ToolCall, ToolResult } from "@/types/chat";
 import { MessageAttachments } from "./message-attachments";
 import { MessageBubble } from "./message-bubble";

@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
     generateMessageId: () => crypto.randomUUID(),
     onError: (error: unknown) => {
       if (typeof error === "string") return error;
-      if (error && typeof (error as any).message === "string") return (error as any).message;
+      if (error && typeof (error as any).message === "string")
+        return (error as any).message;
       return "Chat streaming failed";
     },
   });

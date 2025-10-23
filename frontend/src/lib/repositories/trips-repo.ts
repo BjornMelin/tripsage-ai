@@ -1,7 +1,7 @@
 /**
  * @fileoverview Trip repository: typed Supabase CRUD + UI mapping.
  */
-import { createClient, useSupabase } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import type { InsertTables, Tables, UpdateTables } from "@/lib/supabase/database.types";
 import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 
@@ -32,24 +32,19 @@ export function mapTripRowToUI(row: TripRow) {
   };
 }
 
-export async function createTrip(data: Omit<TripInsert, "user_id"> & { user_id: string }) {
+export async function createTrip(
+  data: Omit<TripInsert, "user_id"> & { user_id: string }
+) {
   const supabase = createClient();
   const { data: row, error } = await insertSingle(supabase, "trips", data);
   if (error || !row) throw error || new Error("Failed to create trip");
   return mapTripRowToUI(row);
 }
 
-export async function updateTrip(
-  id: number,
-  userId: string,
-  updates: TripUpdate
-) {
+export async function updateTrip(id: number, userId: string, updates: TripUpdate) {
   const supabase = createClient();
-  const { data, error } = await updateSingle(
-    supabase,
-    "trips",
-    updates,
-    (qb) => (qb as any).eq("id", id).eq("user_id", userId)
+  const { data, error } = await updateSingle(supabase, "trips", updates, (qb) =>
+    (qb as any).eq("id", id).eq("user_id", userId)
   );
   if (error || !data) throw error || new Error("Failed to update trip");
   return mapTripRowToUI(data);

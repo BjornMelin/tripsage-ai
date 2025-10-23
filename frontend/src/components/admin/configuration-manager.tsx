@@ -577,7 +577,10 @@ export default function ConfigurationManager() {
                     type="number"
                     value={editedConfig.max_tokens || ""}
                     onChange={(e) =>
-                      handleConfigChange("max_tokens", Number.parseInt(e.target.value, 10))
+                      handleConfigChange(
+                        "max_tokens",
+                        Number.parseInt(e.target.value, 10)
+                      )
                     }
                     min={1}
                     max={8000}
