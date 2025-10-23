@@ -120,27 +120,57 @@ class TestApiKeyPerformance:
     def mock_cache_service(self):
         """Mock cache service with realistic performance characteristics."""
         cache = AsyncMock()
+        cache_storage: dict[str, object] = {}
 
-        # Simulate cache operations with realistic latencies
         async def mock_get_with_latency(key):
-            await asyncio.sleep(0.0001)  # 0.1ms cache latency
+            await asyncio.sleep(0.0001)
+            return cache_storage.get(key)
 
         async def mock_set_with_latency(key, value, ex=None):
-            await asyncio.sleep(0.0001)  # 0.1ms cache write latency
+            await asyncio.sleep(0.0001)
+            cache_storage[key] = value
+            return True
+
+        async def mock_delete_with_latency(key):
+            await asyncio.sleep(0.0001)
+            return 1 if cache_storage.pop(key, None) is not None else 0
+
+        async def mock_get_json(key):
+            value = cache_storage.get(key)
+            return json.loads(value) if isinstance(value, str) else value
+
+        async def mock_set_json(key, value, ttl=None):
+            cache_storage[key] = json.dumps(value)
             return True
 
         cache.get = mock_get_with_latency
         cache.set = mock_set_with_latency
+        cache.delete = mock_delete_with_latency
+        cache.get_json = mock_get_json
+        cache.set_json = mock_set_json
         return cache
 
     @pytest.fixture
     def api_key_service(self, mock_db_service, mock_cache_service):
         """Create ApiKeyService instance for performance testing."""
-        return ApiKeyService(
+        service = ApiKeyService(
             db=mock_db_service,
             cache=mock_cache_service,
             validation_timeout=5,
         )
+        service._audit_key_creation = AsyncMock()  # type: ignore[attr-defined]
+        service._audit_key_deletion = AsyncMock()  # type: ignore[attr-defined]
+        return service
+
+    @pytest.fixture
+    def mock_cache(self, mock_cache_service):
+        """Alias to reuse cache mock in tests expecting mock_cache."""
+        return mock_cache_service
+
+    @pytest.fixture
+    def mock_db(self, mock_db_service):
+        """Alias to reuse database mock in tests expecting mock_db."""
+        return mock_db_service
 
     @pytest.fixture
     def sample_api_keys(self):
@@ -266,7 +296,7 @@ class TestApiKeyPerformance:
 
             # Analyze results
             successful_validations = sum(
-                1 for r in results if isinstance(r, ApiValidationResult) and r.is_valid
+                bool(isinstance(r, ApiValidationResult) and r.is_valid) for r in results
             )
             failed_validations = len(results) - successful_validations
 
@@ -287,6 +317,48 @@ class TestApiKeyPerformance:
             print(f"Total time: {total_time:.2f}s")
             print(f"Throughput: {throughput:.2f} requests/second")
             print(f"Average latency: {avg_latency * 1000:.2f}ms")
+
+    @pytest.mark.asyncio
+    async def test_validation_error_profiles(self, api_key_service):
+        """Exercise validation under common error scenarios."""
+        scenarios = [
+            (
+                ValidationStatus.INVALID,
+                "Invalid API key format",
+            ),
+            (
+                ValidationStatus.RATE_LIMITED,
+                "Rate limit exceeded",
+            ),
+            (
+                ValidationStatus.SERVICE_ERROR,
+                "Service unavailable",
+            ),
+        ]
+
+        for status, message in scenarios:
+            with patch.object(
+                api_key_service,
+                "validate_api_key",
+                AsyncMock(
+                    return_value=ApiValidationResult(
+                        is_valid=False,
+                        status=status,
+                        service=ServiceType.OPENAI,
+                        message=message,
+                    )
+                ),
+            ) as mock_validate:
+                results = [
+                    await api_key_service.validate_api_key(
+                        ServiceType.OPENAI, "test-key", str(uuid.uuid4())
+                    )
+                    for _ in range(5)
+                ]
+
+                assert all(result.status == status for result in results)
+                assert all(result.message == message for result in results)
+                assert mock_validate.await_count == 5
 
     # pylint: disable=too-many-statements
     async def test_database_performance_under_load(

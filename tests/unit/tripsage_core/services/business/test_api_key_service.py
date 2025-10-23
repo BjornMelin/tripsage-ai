@@ -86,7 +86,11 @@ class TestApiKeyService:
     @pytest.fixture
     def mock_cache_service(self):
         """Mock cache service."""
-        return AsyncMock()
+        cache = AsyncMock()
+        cache.get = AsyncMock(return_value=None)
+        cache.set = AsyncMock(return_value=True)
+        cache.delete = AsyncMock(return_value=1)
+        return cache
 
     @pytest.fixture
     def mock_audit_service(self):
@@ -97,7 +101,9 @@ class TestApiKeyService:
     def mock_settings(self):
         """Mock settings."""
         settings = Mock()
-        settings.secret_key = Mock(get_secret_value=Mock(return_value="test_secret_key_for_encryption"))
+        settings.secret_key = Mock(
+            get_secret_value=Mock(return_value="test_secret_key_for_encryption")
+        )
         return settings
 
     @pytest.fixture
@@ -423,6 +429,40 @@ class TestApiKeyService:
         )
         assert result is not None
         assert result.is_valid is True
+
+    @pytest.mark.asyncio
+    async def test_cache_miss_returns_none(self, api_key_service, mock_cache_service):
+        """Return None when no cached validation exists."""
+        mock_cache_service.get.return_value = None
+
+        result = await api_key_service._get_cached_validation(
+            ServiceType.OPENAI, "sk-miss"
+        )
+
+        mock_cache_service.get.assert_called_once()
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_cache_error_is_swallowed(self, api_key_service, mock_cache_service):
+        """Handle cache set/get failures gracefully."""
+        mock_cache_service.get.side_effect = ValueError("cache offline")
+
+        result = await api_key_service._get_cached_validation(
+            ServiceType.OPENAI, "sk-error"
+        )
+        assert result is None
+
+        mock_cache_service.set.side_effect = ValueError("cache offline")
+        await api_key_service._cache_validation_result(
+            ServiceType.OPENAI,
+            "sk-error",
+            ApiValidationResult(
+                is_valid=True,
+                status=ValidationStatus.VALID,
+                service=ServiceType.OPENAI,
+                message="ok",
+            ),
+        )
 
     # Note: _is_rate_limited method doesn't exist in the actual implementation
     # Rate limiting is handled differently in the current service

@@ -54,7 +54,7 @@ class ServiceStatus(BaseModel):
     service: str
     status: str  # healthy, degraded, unhealthy
     latency_ms: float | None = None
-    last_check: datetime
+    last_check: datetime | None = None
     error_rate: float
     uptime_percentage: float
     message: str | None = None
@@ -246,6 +246,8 @@ async def get_services_status(
                 status_str = "degraded"
             elif health_check.health_status == ServiceHealthStatus.UNHEALTHY:
                 status_str = "unhealthy"
+            elif health_check.health_status == ServiceHealthStatus.UNKNOWN:
+                status_str = "unknown"
 
             details = health_check.details or {}
             error_rate = float(details.get("error_rate", 0.0))
@@ -256,7 +258,7 @@ async def get_services_status(
                     service=service_type.value,
                     status=status_str,
                     latency_ms=health_check.latency_ms,
-                    last_check=health_check.checked_at or datetime.now(UTC),
+                    last_check=health_check.checked_at,
                     error_rate=error_rate,
                     uptime_percentage=uptime_percentage,
                     message=health_check.message,

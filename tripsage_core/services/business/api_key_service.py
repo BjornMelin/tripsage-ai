@@ -229,9 +229,7 @@ class ApiValidationResult(TripSageModel):
         """Categorize validation success or mark as unknown when not applicable."""
         if self.is_valid is True:
             return "success"
-        if self.is_valid is False:
-            return "failure"
-        return "unknown"
+        return "failure" if self.is_valid is False else "unknown"
 
     @computed_field
     @property
@@ -630,7 +628,7 @@ class ApiKeyService:
             client_method = getattr(self.client, method.lower())
             try:
                 return await client_method(url, **kwargs)
-            except Exception as request_error:  # noqa: BLE001
+            except Exception as request_error:
                 raise httpx.HTTPError(str(request_error)) from request_error
 
     async def check_service_health(self, service: ServiceType) -> ApiValidationResult:
@@ -1337,19 +1335,17 @@ class ApiKeyService:
         data = response.json()
         models = [model["id"] for model in data.get("data", [])]
 
-        # Optimized capability detection using sets
         model_set = set(models)
-        capabilities = []
-
-        capability_checks = [
-            ("gpt-4", lambda: any("gpt-4" in model for model in model_set)),
-            ("gpt-3.5", lambda: any("gpt-3.5" in model for model in model_set)),
-            ("image-generation", lambda: any("dall-e" in model for model in model_set)),
+        capability_patterns = [
+            ("gpt-4", "gpt-4"),
+            ("gpt-3.5", "gpt-3.5"),
+            ("image-generation", "dall-e"),
         ]
-
-        for capability, check_func in capability_checks:
-            if check_func():
-                capabilities.append(capability)
+        capabilities = [
+            capability
+            for capability, marker in capability_patterns
+            if any(marker in model for model in model_set)
+        ]
 
         return ApiValidationResult(
             is_valid=True,
