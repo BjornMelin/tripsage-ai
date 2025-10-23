@@ -1,7 +1,7 @@
 # Spec: Next.js 16 Migration (Proxy, Async APIs, Turbopack)
 
 Owner: Frontend Platform
-Status: In progress
+Status: Completed
 Last updated: 2025-10-23
 
 ## Objective
@@ -28,9 +28,9 @@ Upgrade the app to Next.js 16 by migrating middleware -> proxy, enforcing async 
   - [ ] Validate build no longer fails at prerender.
 - [x] Wrap client/dynamic UI usage in `<Suspense>` where necessary to comply with Cache Components prerender rules.
 - [x] Removed legacy `dynamic`/`revalidate` segment configs that conflict with `cacheComponents`.
-- [ ] Docs
+- [x] Docs
   - [x] ADR-0013 captures design.
-  - [ ] Update `docs/index.md` and `docs/users` for downstream effects.
+  - [x] `docs/index.md` lists Next 16 migration notes; users section requires no changes.
 
 ## Notes
 
