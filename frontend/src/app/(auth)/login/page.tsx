@@ -1,6 +1,6 @@
-import { LoginForm } from "@/components/auth/login-form";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = {
   title: "Sign In - TripSage",
@@ -18,8 +18,8 @@ export default async function LoginPage({
   return (
     <div className="min-h-screen flex">
       {/* Left side - Branding and imagery */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/10 via-primary/5 to-background relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-white/10 bg-grid-16 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]" />
+      <div className="hidden lg:flex lg:w-1/2 bg-linear-to-br from-primary/10 via-primary/5 to-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-white/10 bg-grid-16 mask-[radial-gradient(ellipse_at_center,transparent_20%,black)]" />
 
         <div className="relative z-10 flex flex-col justify-between p-12 text-white">
           <div>

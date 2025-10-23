@@ -1,3 +1,5 @@
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type {
   Budget,
   BudgetAlert,
@@ -8,8 +10,6 @@ import type {
   Expense,
   ExpenseCategory,
 } from "@/types/budget";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 // Helper functions
 const generateId = () =>

@@ -1,7 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import type { Accommodation } from "@/types/search";
 import {
   Car,
   Coffee,
@@ -12,6 +8,10 @@ import {
   Waves,
   Wifi,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import type { Accommodation } from "@/types/search";
 
 interface AccommodationCardProps {
   accommodation: Accommodation;

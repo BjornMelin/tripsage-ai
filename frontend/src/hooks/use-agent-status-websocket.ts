@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type WebSocketClient,
   WebSocketClientFactory,
@@ -7,7 +8,6 @@ import {
 } from "@/lib/websocket/websocket-client";
 import { useAuthStore } from "@/stores";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
-import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Hook for managing agent status via WebSocket connection

@@ -1,6 +1,6 @@
-import type { DealType } from "@/types/deals";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DealType } from "@/types/deals";
 import { useDealAlerts, useDeals, useFeaturedDeals, useSavedDeals } from "../use-deals";
 
 // Mock current timestamp for consistent testing

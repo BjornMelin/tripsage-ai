@@ -52,7 +52,7 @@ Object.defineProperty(window, "navigator", {
 });
 
 // Mock window.matchMedia for theme detection - ensure global consistency
-const createMatchMediaMock = (defaultMatches = false) => 
+const createMatchMediaMock = (defaultMatches = false) =>
   vi.fn().mockImplementation((query: string) => ({
     matches: query === "(prefers-color-scheme: dark)" ? defaultMatches : false,
     media: query,

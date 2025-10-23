@@ -1,5 +1,7 @@
 "use client";
 
+import { Activity, Brain, Network, Settings, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   AgentCollaborationHub,
   AgentStatusDashboard,
@@ -12,8 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Brain, Network, Settings, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
 
 // Mock data for demonstration
 const mockAgentMetrics = [

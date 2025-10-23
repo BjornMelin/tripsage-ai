@@ -1,6 +1,6 @@
-import type { ApiKey } from "@/types/api-keys";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ApiKey } from "@/types/api-keys";
 
 // Un-mock the api-key-store if it was mocked globally
 vi.unmock("@/stores/api-key-store");

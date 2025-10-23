@@ -1,5 +1,7 @@
 "use client";
 
+import { Filter, Grid, List, Plus, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
 import { TripCard } from "@/components/features/trips";
 import { Button } from "@/components/ui/button";
@@ -20,8 +22,6 @@ import {
 } from "@/components/ui/select";
 import { useTripsWithRealtime } from "@/hooks/use-trips-with-realtime";
 import { type Trip, useTripStore } from "@/stores/trip-store";
-import { Filter, Grid, List, Plus, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
 
 type SortOption = "name" | "date" | "budget" | "destinations";
 type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";

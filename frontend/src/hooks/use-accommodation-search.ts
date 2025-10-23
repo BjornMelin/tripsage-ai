@@ -1,11 +1,11 @@
 "use client";
 
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api } from "@/lib/api/client";
 import { useSearchParamsStore } from "@/stores/search-params-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 import type { Accommodation, AccommodationSearchParams } from "@/types/search";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
 
 export interface AccommodationSearchResponse {
   results: Accommodation[];

@@ -8,6 +8,20 @@
  */
 
 import {
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  Eye,
+  History,
+  RotateCcw,
+  Save,
+  Settings,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -49,21 +63,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-
-import {
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  DollarSign,
-  Eye,
-  History,
-  RotateCcw,
-  Save,
-  Settings,
-} from "lucide-react";
 
 // Types
 interface AgentConfig {

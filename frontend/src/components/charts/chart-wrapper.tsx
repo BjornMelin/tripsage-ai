@@ -1,8 +1,8 @@
 "use client";
 
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import dynamic from "next/dynamic";
 import type { ComponentProps, ComponentType } from "react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 // Type-safe dynamic import wrapper for Recharts components
 const createDynamicComponent = <P extends object>(

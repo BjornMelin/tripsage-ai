@@ -1,8 +1,8 @@
 "use client";
 
+import { User } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { User } from "lucide-react";
 
 interface TypingUser {
   userId: string;

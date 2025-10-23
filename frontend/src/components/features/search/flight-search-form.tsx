@@ -1,5 +1,21 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  AlertCircle,
+  ArrowRight,
+  Calendar,
+  Clock,
+  Loader2,
+  MapPin,
+  Plane,
+  Search,
+  Sparkles,
+  TrendingDown,
+  Users,
+} from "lucide-react";
+import React, { useOptimistic, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,22 +41,6 @@ import { Separator } from "@/components/ui/separator";
 import { type FlightSearchFormData, flightSearchFormSchema } from "@/lib/schemas/forms";
 import { cn } from "@/lib/utils";
 import { formatValidationErrors, validateFormData } from "@/lib/validation";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  AlertCircle,
-  ArrowRight,
-  Calendar,
-  Clock,
-  Loader2,
-  MapPin,
-  Plane,
-  Search,
-  Sparkles,
-  TrendingDown,
-  Users,
-} from "lucide-react";
-import React, { useOptimistic, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
 
 // Use validated flight search params from schemas
 export type ModernFlightSearchParams = FlightSearchFormData;
@@ -462,7 +462,7 @@ export function FlightSearchForm({
             {showSmartBundles && (
               <>
                 <Separator />
-                <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
+                <div className="bg-linear-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-5 w-5 text-blue-600" />

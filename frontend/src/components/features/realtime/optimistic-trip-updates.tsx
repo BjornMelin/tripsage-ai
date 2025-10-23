@@ -13,7 +13,10 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useTripRealtime } from "@/hooks";
 // TODO: Implement useUpdateTrip hook or replace with proper mutation
-import type { Trip, TripUpdate } from "@/lib/supabase/types";
+import type { Trip, UpdateTables } from "@/lib/supabase/database.types";
+
+type TripUpdate = UpdateTables<"trips">;
+
 import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,

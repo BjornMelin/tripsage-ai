@@ -23,7 +23,7 @@ const emailSchema = z
 
 const phoneSchema = z
   .string()
-  .regex(/^\+?[\d\s\-\(\)]{10,20}$/, "Please enter a valid phone number")
+  .regex(/^\+?[\d\s\-()]{10,20}$/, "Please enter a valid phone number")
   .optional();
 
 const nameSchema = z
@@ -31,7 +31,7 @@ const nameSchema = z
   .min(1, "Name is required")
   .max(50, "Name too long")
   .regex(
-    /^[a-zA-Z\s\-'\.]+$/,
+    /^[a-zA-Z\s\-'.]+$/,
     "Name can only contain letters, spaces, hyphens, apostrophes, and periods"
   );
 
@@ -431,7 +431,7 @@ export const apiKeyFormSchema = z.object({
     .string()
     .min(1, "API key is required")
     .max(500, "API key too long")
-    .regex(/^[a-zA-Z0-9\-_\.]+$/, "Invalid API key format"),
+    .regex(/^[a-zA-Z0-9\-_.]+$/, "Invalid API key format"),
   description: z.string().max(200, "Description too long").optional(),
 });
 

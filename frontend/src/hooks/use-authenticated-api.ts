@@ -1,8 +1,8 @@
+import { useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { type FetchOptions, fetchApi } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/error-types";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
-import { useCallback, useMemo, useRef } from "react";
 
 /**
  * Hook for making authenticated API calls that automatically include Supabase JWT tokens.

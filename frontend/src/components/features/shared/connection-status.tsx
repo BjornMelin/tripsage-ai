@@ -1,17 +1,5 @@
 "use client";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -34,6 +22,18 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 export type ConnectionStatus =
   | "connecting"
@@ -337,7 +337,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   if (variant === "minimal") {
     return (
       <div className={cn("flex items-center gap-1.5", className)}>
-        <div className={cn("flex-shrink-0", config.color)}>{config.icon}</div>
+        <div className={cn("shrink-0", config.color)}>{config.icon}</div>
         <span className={cn("text-xs font-medium", config.color)}>
           {status === "connected" ? "Online" : config.label}
         </span>
@@ -435,7 +435,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <motion.div
-              className={cn("flex-shrink-0", config.color)}
+              className={cn("shrink-0", config.color)}
               animate={isAnimating ? { rotate: 360 } : {}}
               transition={{
                 duration: 1,

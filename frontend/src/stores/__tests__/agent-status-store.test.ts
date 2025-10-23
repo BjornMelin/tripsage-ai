@@ -1,10 +1,10 @@
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AgentActivity,
   AgentStatusType,
   ResourceUsage,
 } from "@/types/agent-status";
-import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAgentStatusStore } from "../agent-status-store";
 
 // Mock Date.now for consistent timestamps

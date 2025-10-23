@@ -1,7 +1,7 @@
-import type { SearchResults, SearchType } from "@/types/search";
 import { z } from "zod";
-import { type StateCreator, create } from "zustand";
+import { create, type StateCreator } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import type { SearchResults, SearchType } from "@/types/search";
 
 // Validation schemas for search results
 const SearchStatusSchema = z.enum([

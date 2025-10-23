@@ -3,12 +3,12 @@
  * Tests trip data synchronization with real-time updates and connection monitoring.
  */
 
-import type { AppError } from "@/lib/api/error-types";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AppError } from "@/lib/api/error-types";
 
 // Mock functions must be defined before vi.mock calls
 const mockUser = { id: "test-user-123", email: "test@example.com" };
@@ -236,14 +236,6 @@ vi.mock("../use-supabase-realtime", () => ({
   useTripRealtime: vi.fn(() => mockTripRealtime),
 }));
 
-// Import the hooks after mocking
-import {
-  useTripCollaboration,
-  useTripWithRealtime,
-  useTripsConnectionStatus,
-  useTripsWithRealtime,
-} from "../use-trips-with-realtime";
-
 import { useAuth } from "@/contexts/auth-context";
 import { useTripRealtime } from "../use-supabase-realtime";
 import { useTrips } from "../use-trips";
@@ -253,6 +245,13 @@ import {
   useTripCollaborators,
   useTripData,
 } from "../use-trips-supabase";
+// Import the hooks after mocking
+import {
+  useTripCollaboration,
+  useTripsConnectionStatus,
+  useTripsWithRealtime,
+  useTripWithRealtime,
+} from "../use-trips-with-realtime";
 
 // Test wrapper with QueryClient
 const createWrapper = () => {

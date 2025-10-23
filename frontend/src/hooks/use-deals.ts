@@ -1,8 +1,8 @@
 "use client";
 
+import { useCallback, useEffect, useMemo } from "react";
 import { useDealsStore } from "@/stores/deals-store";
 import type { Deal, DealAlert, DealState, DealType } from "@/types/deals";
-import { useCallback, useEffect, useMemo } from "react";
 
 /**
  * Custom hook for accessing and managing deals

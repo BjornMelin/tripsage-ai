@@ -1,3 +1,5 @@
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as apiHooks from "@/hooks/use-api-keys";
 import type { MutationContext } from "@/hooks/use-api-query";
 import { ApiError, type AppError } from "@/lib/api/error-types";
@@ -12,8 +14,6 @@ import type {
   DeleteKeyResponse,
   ValidateKeyResponse,
 } from "@/types/api-keys";
-import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiKeyForm } from "../api-key-form";
 import { ApiKeyInput } from "../api-key-input";
 import { ApiKeyList } from "../api-key-list";

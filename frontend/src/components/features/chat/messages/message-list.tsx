@@ -1,5 +1,24 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  ArrowUp,
+  Bot,
+  Calendar,
+  Camera,
+  Compass,
+  Copy,
+  Globe,
+  Loader2,
+  MapPin,
+  MessageSquare,
+  Plane,
+  Sparkles,
+  Star,
+  Volume2,
+  Zap,
+} from "lucide-react";
+import React, { startTransition, useCallback, useEffect, useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -20,25 +39,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chat-store";
 import type { Message, ToolCall, ToolResult } from "@/types/chat";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  ArrowUp,
-  Bot,
-  Calendar,
-  Camera,
-  Compass,
-  Copy,
-  Globe,
-  Loader2,
-  MapPin,
-  MessageSquare,
-  Plane,
-  Sparkles,
-  Star,
-  Volume2,
-  Zap,
-} from "lucide-react";
-import React, { useEffect, useRef, useCallback, useMemo, startTransition } from "react";
 import { TypingIndicator } from "../typing-indicator";
 import { MessageItem } from "./message-item";
 
@@ -237,7 +237,7 @@ export function MessageList({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent"
+              className="text-4xl md:text-5xl font-bold bg-linear-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent"
             >
               Welcome to TripSage AI
             </motion.h1>
@@ -304,7 +304,7 @@ export function MessageList({
               <Card
                 className={cn(
                   "border-dashed hover:border-solid transition-all duration-300 hover:shadow-lg cursor-pointer",
-                  "bg-gradient-to-br",
+                  "bg-linear-to-br",
                   bgGradient
                 )}
               >
@@ -404,7 +404,7 @@ export function MessageList({
                             <Card
                               className={cn(
                                 "cursor-pointer transition-all duration-300 hover:shadow-lg",
-                                "bg-gradient-to-br",
+                                "bg-linear-to-br",
                                 category.gradient,
                                 "border-2 border-transparent hover:border-primary/20"
                               )}
@@ -590,7 +590,7 @@ export function MessageList({
                     transition={{ duration: 0.3, ease: "easeOut" }}
                     className="mx-4"
                   >
-                    <Card className="bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20 border-dashed">
+                    <Card className="bg-linear-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20 border-dashed">
                       <CardContent className="p-4">
                         <TypingIndicator
                           typingUsers={typingUsers}
@@ -612,7 +612,7 @@ export function MessageList({
                     transition={{ duration: 0.4, ease: "easeOut" }}
                     className="mx-4"
                   >
-                    <Card className="bg-gradient-to-r from-emerald-50/50 to-blue-50/50 dark:from-emerald-950/20 dark:to-blue-950/20 border border-primary/20">
+                    <Card className="bg-linear-to-r from-emerald-50/50 to-blue-50/50 dark:from-emerald-950/20 dark:to-blue-950/20 border border-primary/20">
                       <CardContent className="py-6">
                         <div className="flex items-center justify-center space-x-4">
                           <div className="relative">

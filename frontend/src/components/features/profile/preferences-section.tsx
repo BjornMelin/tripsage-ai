@@ -1,5 +1,9 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Globe, Zap } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,10 +32,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { useCurrencyStore } from "@/stores/currency-store";
 import { useUserProfileStore } from "@/stores/user-store";
 import type { CurrencyCode } from "@/types/currency";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Globe, Zap } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 const preferencesSchema = z.object({
   language: z.string().min(1, "Please select a language"),
@@ -404,7 +404,9 @@ export function PreferencesSection() {
             </div>
             <Switch
               defaultChecked={true}
-              onCheckedChange={(enabled) => toggleAdditionalSetting("analytics", enabled)}
+              onCheckedChange={(enabled) =>
+                toggleAdditionalSetting("analytics", enabled)
+              }
             />
           </div>
         </CardContent>

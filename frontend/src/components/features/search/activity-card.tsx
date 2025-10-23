@@ -1,10 +1,10 @@
 "use client";
 
+import { Clock, MapPin, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import type { Activity } from "@/types/search";
-import { Clock, MapPin, Star } from "lucide-react";
 
 interface ActivityCardProps {
   activity: Activity;

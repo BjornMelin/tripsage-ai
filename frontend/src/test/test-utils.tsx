@@ -1,16 +1,15 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { RenderOptions } from "@testing-library/react";
+import { render } from "@testing-library/react";
+import type { ComponentProps, ReactElement, ReactNode } from "react";
+import { vi } from "vitest";
 import { ThemeProvider } from "@/components/providers/theme-provider";
-import { AuthProvider } from "@/contexts/auth-context";
 import type { User } from "@/contexts/auth-context";
+import { AuthProvider } from "@/contexts/auth-context";
 import {
   type ValidatedThemeProviderProps,
   validateThemeProviderProps,
 } from "@/schemas/theme-provider";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { RenderOptions } from "@testing-library/react";
-import { render } from "@testing-library/react";
-import type { ReactElement, ReactNode } from "react";
-import type { ComponentProps } from "react";
-import { vi } from "vitest";
 
 // Type for next-themes provider props
 type NextThemesProviderProps = ComponentProps<typeof ThemeProvider>;

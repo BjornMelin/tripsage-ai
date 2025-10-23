@@ -1,6 +1,6 @@
-import { useCurrencyStore } from "@/stores/currency-store";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useCurrencyStore } from "@/stores/currency-store";
 import {
   useCurrency,
   useCurrencyActions,

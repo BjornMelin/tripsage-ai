@@ -182,7 +182,8 @@ export const createMockUseQueryResult = <T, E = Error>(
     refetch: vi.fn().mockResolvedValue({ data, error }),
     isInitialLoading: isLoading,
     promise: Promise.resolve(data as T),
-  }) as UseQueryResult<T, E>;
+    isEnabled: !isLoading,
+  }) as unknown as UseQueryResult<T, E>;
 
 // error mock - matches the real ApiError interface
 export class MockApiError extends Error {

@@ -2,11 +2,11 @@
  * Unit tests for chat authentication integration.
  */
 
-import { useChatAi } from "@/hooks/use-chat-ai";
-import { useApiKeyStore } from "@/stores/api-key-store";
 import { render, screen } from "@testing-library/react";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useChatAi } from "@/hooks/use-chat-ai";
+import { useApiKeyStore } from "@/stores/api-key-store";
 import { ChatContainer } from "../chat-container";
 
 // Mock the API key store

@@ -1,5 +1,9 @@
 "use client";
 
+import { useChat } from "@ai-sdk/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
 import { useApiKeyStore } from "@/stores/api-key-store";
 import { useChatStore } from "@/stores/chat-store";
 import type {
@@ -10,10 +14,6 @@ import type {
   ToolCall,
   ToolResult,
 } from "@/types/chat";
-import { type Message as AiMessage, useChat } from "ai/react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
-import { z } from "zod";
 
 // Zod schemas for validation
 // const SessionIdSchema = z.string().min(1, "Session ID cannot be empty").optional(); // Future validation
@@ -231,7 +231,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   );
 
   // Handle streaming tool call chunks
-  const handleToolCallChunk = useCallback(
+  const _handleToolCallChunk = useCallback(
     (chunk: string) => {
       try {
         if (chunk.startsWith("9:")) {
@@ -264,81 +264,17 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     [addToolCall, addToolResult]
   );
 
-  // Convert our messages to AI SDK format
-  const aiMessages: AiMessage[] =
-    sessions
-      .find((s) => s.id === sessionIdRef.current)
-      ?.messages.map((msg) => ({
-        id: msg.id,
-        role: msg.role.toLowerCase() as "user" | "assistant" | "system",
-        content: msg.content,
-      })) || [];
-
   // Set up Vercel AI SDK chat (only if initialized)
   const {
     messages: aiSdkMessages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
+    sendMessage: sendChatMessage,
+    status,
     error,
     stop,
-    reload,
+    regenerate,
   } = useChat({
-    api: "/api/chat",
-    initialMessages: aiMessages,
     id: sessionIdRef.current,
-    headers: {
-      ...(token && { Authorization: `Bearer ${token}` }),
-    },
-    onResponse: (response) => {
-      // Check for rate limit headers
-      const retryAfter = response.headers.get("X-RateLimit-Reset");
-      if (response.status === 429 && retryAfter) {
-        const resetTime = new Date(Number.parseInt(retryAfter) * 1000);
-        updateAgentStatus(sessionIdRef.current, {
-          isActive: false,
-          statusMessage: `Rate limited. Try again after ${resetTime.toLocaleTimeString()}`,
-        });
-        return;
-      }
-
-      // Set agent to processing when we get a response
-      updateAgentStatus(sessionIdRef.current, {
-        isActive: true,
-        statusMessage: "Processing your request...",
-      });
-
-      // Handle streaming tool calls
-      if (response.body) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        const processChunk = async () => {
-          try {
-            const { done, value } = await reader.read();
-            if (done) return;
-
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split("\n");
-
-            for (const line of lines) {
-              if (line.trim()) {
-                handleToolCallChunk(line.trim());
-              }
-            }
-
-            // Continue processing
-            processChunk();
-          } catch (error) {
-            console.warn("Error processing stream chunk:", error);
-          }
-        };
-
-        processChunk();
-      }
-    },
-    onFinish: (message) => {
+    onFinish: ({ message }) => {
       // Update message with tool call information
       if (activeToolCalls.size > 0) {
         const toolCallsArray = Array.from(activeToolCalls.values()).map((toolCall) => ({
@@ -415,6 +351,21 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     },
   });
 
+  // Helper to extract plain text from AI SDK v5 message parts
+  const messageToText = (m: any): string => {
+    try {
+      if (Array.isArray(m.parts)) {
+        return m.parts
+          .filter((p: any) => p?.type === "text" && typeof p.text === "string")
+          .map((p: any) => p.text)
+          .join("");
+      }
+      return (m as any).content ?? "";
+    } catch {
+      return "";
+    }
+  };
+
   // Sync AI SDK messages to our store
   useEffect(() => {
     const lastMessage = aiSdkMessages[aiSdkMessages.length - 1];
@@ -427,19 +378,15 @@ export function useChatAi(options: UseChatAiOptions = {}) {
 
     if (existingMessage) {
       // Update existing message
-      if (existingMessage.content !== lastMessage.content) {
-        updateMessage(sessionIdRef.current, lastMessage.id, {
-          content: lastMessage.content,
-        });
+      const content = messageToText(lastMessage);
+      if (existingMessage.content !== content) {
+        updateMessage(sessionIdRef.current, lastMessage.id, { content });
       }
     } else {
       // Add new message
       const role = lastMessage.role as MessageRole;
-
-      addMessage(sessionIdRef.current, {
-        role,
-        content: lastMessage.content,
-      });
+      const content = messageToText(lastMessage);
+      addMessage(sessionIdRef.current, { role, content });
     }
   }, [aiSdkMessages, sessions, addMessage, updateMessage]);
 
@@ -479,21 +426,8 @@ export function useChatAi(options: UseChatAiOptions = {}) {
           attachments: validatedAttachments,
         });
 
-        // Submit the message through AI SDK
-        // This will trigger the AI response
-        const submitEvent = {
-          preventDefault: () => {},
-          currentTarget: {
-            elements: {
-              // Create a mock form with the message as input
-              input: {
-                value: validatedContent,
-              },
-            },
-          },
-        } as unknown as React.FormEvent<HTMLFormElement>;
-
-        handleSubmit(submitEvent);
+        // Send via AI SDK v5
+        void sendChatMessage({ text: validatedContent });
       } catch (error) {
         // Handle Zod validation errors
         if (error instanceof z.ZodError) {
@@ -507,7 +441,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     },
     [
       addMessage,
-      handleSubmit,
+      sendChatMessage,
       updateAgentStatus,
       isInitialized,
       isAuthenticated,
@@ -529,7 +463,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     // Chat state
     sessionId: sessionIdRef.current,
     messages: sessions.find((s) => s.id === sessionIdRef.current)?.messages || [],
-    isLoading,
+    isLoading: status === "submitted" || status === "streaming",
     error: error || authError || storeAuthError,
 
     // Auth state
@@ -542,14 +476,10 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     activeToolCalls: Array.from(activeToolCalls.values()),
     toolResults: Array.from(toolResults.values()),
 
-    // Input state (from AI SDK)
-    input,
-    handleInputChange,
-
     // Actions
     sendMessage,
     stopGeneration,
-    reload,
+    reload: regenerate,
 
     // Tool call actions
     retryToolCall,

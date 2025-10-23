@@ -5,6 +5,7 @@
  * cleanup, error handling, and integration with the Zustand store.
  */
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ConnectionStatus,
   type EventHandler,
@@ -14,7 +15,6 @@ import {
   WebSocketEventType,
   type WebSocketMessage,
 } from "@/lib/websocket/websocket-client";
-import { useCallback, useEffect, useRef, useState } from "react";
 
 // Re-export from separate hooks for backwards compatibility
 export { useAgentStatus } from "./use-agent-status";

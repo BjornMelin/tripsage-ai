@@ -1,8 +1,5 @@
 "use client";
 
-import { useAuth } from "@/contexts/auth-context";
-import { useSupabase } from "@/lib/supabase/client";
-import type { Database } from "@/lib/supabase/types";
 import {
   type UseInfiniteQueryOptions,
   type UseQueryOptions,
@@ -11,6 +8,9 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { useAuth } from "@/contexts/auth-context";
+import { useSupabase } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/database.types";
 
 // Zod schemas for validation
 const TableNameSchema = z.string().min(1, "Table name cannot be empty");

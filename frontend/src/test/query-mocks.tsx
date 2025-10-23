@@ -11,6 +11,7 @@ interface MutationContext<TVariables = unknown> {
   optimisticData?: unknown;
   variables?: TVariables;
 }
+
 /**
  * React Query mock utilities for testing React Query v5
  */
@@ -278,7 +279,8 @@ export function createControlledQuery<TData = unknown, TError = Error>(): {
         data: currentData,
         error: currentError,
       } as any),
-    } as UseQueryResult<TData, TError>)
+      isEnabled: !isPending,
+    } as unknown as UseQueryResult<TData, TError>)
   );
 
   const query = {
@@ -310,7 +312,8 @@ export function createControlledQuery<TData = unknown, TError = Error>(): {
       data: currentData,
       error: currentError,
     } as any),
-  } as UseQueryResult<TData, TError>;
+    isEnabled: !isPending,
+  } as unknown as UseQueryResult<TData, TError>;
 
   const controller: QueryController<TData, TError> = {
     triggerLoading: () => {
@@ -505,7 +508,8 @@ export function createControlledInfiniteQuery<TData = unknown, TError = Error>()
       data: pages.length > 0 ? { pages, pageParams: [] } : undefined,
       error: currentError,
     }),
-  } as UseInfiniteQueryResult<any, TError>;
+    isEnabled: !isPending,
+  } as unknown as UseInfiniteQueryResult<any, TError>;
 
   const controller = {
     triggerLoading: () => {

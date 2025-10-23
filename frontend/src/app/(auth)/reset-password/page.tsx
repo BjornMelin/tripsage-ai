@@ -1,6 +1,6 @@
-import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 
 export const metadata: Metadata = {
   title: "Reset Password - TripSage",
@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-8 bg-gradient-to-br from-background to-muted/20">
+    <div className="min-h-screen flex items-center justify-center p-8 bg-linear-to-br from-background to-muted/20">
       {/* Background pattern */}
-      <div className="absolute inset-0 bg-grid-white/10 bg-grid-16 [mask-image:radial-gradient(ellipse_at_center,white,transparent_70%)]" />
+      <div className="absolute inset-0 bg-grid-white/10 bg-grid-16 mask-[radial-gradient(ellipse_at_center,white,transparent_70%)]" />
 
       {/* Content */}
       <div className="relative z-10 w-full max-w-md space-y-8">

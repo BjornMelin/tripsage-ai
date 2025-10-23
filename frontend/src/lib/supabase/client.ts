@@ -20,6 +20,10 @@ function getSupabaseBrowserClient(): TypedSupabaseClient {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
+    // During SSR/prerender, avoid throwing to allow pages to build
+    if (typeof window === "undefined") {
+      return (client ?? ({} as unknown)) as TypedSupabaseClient;
+    }
     throw new Error(
       "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
     );

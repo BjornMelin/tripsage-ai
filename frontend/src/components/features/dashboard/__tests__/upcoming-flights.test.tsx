@@ -5,12 +5,11 @@
  * patterns and behavioral validation. Following ULTRATHINK methodology.
  */
 
-import { render, screen } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { UpcomingFlights } from "../upcoming-flights";
-
 // Mock trip store
 import type { Trip } from "@/stores/trip-store";
+import { render, screen } from "@/test/test-utils";
+import { UpcomingFlights } from "../upcoming-flights";
 
 const mockTripStore = {
   trips: [] as Trip[],

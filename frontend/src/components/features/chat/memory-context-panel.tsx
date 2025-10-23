@@ -1,12 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useMemoryContext, useMemoryInsights } from "@/hooks/use-memory";
-import { cn } from "@/lib/utils";
-import type { Memory, MemoryContextPanelProps, UserPreferences } from "@/types/memory";
 import {
   Brain,
   ChevronDown,
@@ -19,6 +12,13 @@ import {
   User,
 } from "lucide-react";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMemoryContext, useMemoryInsights } from "@/hooks/use-memory";
+import { cn } from "@/lib/utils";
+import type { Memory, MemoryContextPanelProps, UserPreferences } from "@/types/memory";
 
 export default function MemoryContextPanel({
   userId,

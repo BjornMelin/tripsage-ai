@@ -9,8 +9,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   type BudgetFormData,
-  type ExpenseCategory,
   budgetFormSchema,
+  type ExpenseCategory,
   expenseCategorySchema,
 } from "@/lib/schemas/budget";
 import { BudgetForm } from "../budget-form";
@@ -139,9 +139,7 @@ describe("BudgetForm", () => {
 
   describe("Component Rendering", () => {
     it("renders budget form with all required fields", () => {
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       expect(screen.getByLabelText(/budget name/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/currency/i)).toBeInTheDocument();
@@ -151,9 +149,7 @@ describe("BudgetForm", () => {
     });
 
     it("displays budget allocation summary", () => {
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       expect(screen.getByText(/budget allocation/i)).toBeInTheDocument();
       expect(screen.getByText(/total budget/i)).toBeInTheDocument();
@@ -174,9 +170,7 @@ describe("BudgetForm", () => {
       });
       mockUseZodForm.mockReturnValue(incompleteForm);
 
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       expect(
         screen.getByText(/please complete all required fields/i)
@@ -190,9 +184,7 @@ describe("BudgetForm", () => {
     it("handles auto-allocation toggle", async () => {
       const user = userEvent.setup();
 
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       const autoAllocateSwitch = screen.getByRole("switch", { name: /auto-allocate/i });
       await user.click(autoAllocateSwitch);
@@ -203,9 +195,7 @@ describe("BudgetForm", () => {
     it("adds new expense category", async () => {
       const user = userEvent.setup();
 
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       const addButton = screen.getByRole("button", { name: /add category/i });
       await user.click(addButton);
@@ -234,9 +224,7 @@ describe("BudgetForm", () => {
       });
       mockUseZodForm.mockReturnValue(overAllocatedForm);
 
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       expect(
         screen.getByText(/you've allocated more than your total budget/i)
@@ -250,9 +238,7 @@ describe("BudgetForm", () => {
       const handleSubmit = vi.fn();
       mockForm.handleSubmitSafe.mockReturnValue(handleSubmit);
 
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       const submitButton = screen.getByRole("button", { name: /create budget/i });
       await user.click(submitButton);
@@ -273,9 +259,7 @@ describe("BudgetForm", () => {
       mockUseZodForm.mockReturnValue(formWithTransform);
 
       const user = userEvent.setup();
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       const submitButton = screen.getByRole("button", { name: /create budget/i });
       await user.click(submitButton);
@@ -299,9 +283,7 @@ describe("BudgetForm", () => {
       mockUseZodForm.mockReturnValue(errorHandlingForm);
 
       const user = userEvent.setup();
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       const submitButton = screen.getByRole("button", { name: /create budget/i });
       await user.click(submitButton);
@@ -313,9 +295,7 @@ describe("BudgetForm", () => {
 
   describe("Accessibility", () => {
     it("provides proper form labels", () => {
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       // Check that all form fields have accessible labels
       expect(screen.getByLabelText(/budget name/i)).toBeInTheDocument();
@@ -335,9 +315,7 @@ describe("BudgetForm", () => {
       });
       mockUseZodForm.mockReturnValue(errorForm);
 
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       // Error alert should be accessible
       const errorAlert = screen.getByRole("alert");
@@ -348,9 +326,7 @@ describe("BudgetForm", () => {
 
   describe("Currency Handling", () => {
     it("displays correct currency symbols", () => {
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       // Should display USD symbol by default
       expect(screen.getAllByText("$")).toHaveLength(2); // Total amount + categories
@@ -365,9 +341,7 @@ describe("BudgetForm", () => {
       });
       mockUseZodForm.mockReturnValue(eurForm);
 
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       expect(screen.getAllByText("€")).toHaveLength(2);
     });
@@ -390,18 +364,14 @@ describe("BudgetForm", () => {
       });
       mockUseZodForm.mockReturnValue(calculationForm);
 
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       // Remaining should be 1000 - 400 - 300 = 300
       expect(screen.getByText("$300.00")).toBeInTheDocument();
     });
 
     it("shows allocation percentage", () => {
-      render(
-        <BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />
-      );
+      render(<BudgetForm onSubmit={mockOnSubmit} currencies={mockCurrencies} />);
 
       // Should show percentage allocation
       expect(screen.getByText(/90\.0%/)).toBeInTheDocument(); // 900/1000 = 90%

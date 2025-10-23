@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom";
-import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils";
 import { ResetPasswordForm, ResetPasswordFormSkeleton } from "../reset-password-form";
 
 // Mock next/navigation

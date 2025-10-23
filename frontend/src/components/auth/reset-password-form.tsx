@@ -1,5 +1,9 @@
 "use client";
 
+import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import React from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,10 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
-import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React from "react";
 
 interface ResetPasswordFormProps {
   className?: string;

@@ -6,11 +6,11 @@
  * relevant information on the main dashboard page.
  */
 
-export { RecentTrips } from "./recent-trips";
-export { UpcomingFlights } from "./upcoming-flights";
-export { TripSuggestions } from "./trip-suggestions";
 export {
   QuickActions,
   QuickActionsCompact,
   QuickActionsList,
 } from "./quick-actions";
+export { RecentTrips } from "./recent-trips";
+export { TripSuggestions } from "./trip-suggestions";
+export { UpcomingFlights } from "./upcoming-flights";

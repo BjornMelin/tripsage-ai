@@ -1,5 +1,9 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Check, Mail, Trash2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,10 +37,6 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Mail, Trash2 } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 const emailUpdateSchema = z.object({
   email: z.string().email("Please enter a valid email address"),

@@ -1,14 +1,14 @@
 "use client";
 
+import { AlertCircle, Key, PanelRightOpen, Wifi } from "lucide-react";
+import Link from "next/link";
+import React, { startTransition, useCallback, useEffect, useOptimistic } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useChatAi } from "@/hooks/use-chat-ai";
 import { cn } from "@/lib/utils";
 import { useAuthStore, useChatStore } from "@/stores";
 import type { Message } from "@/types/chat";
-import { AlertCircle, Key, PanelRightOpen, Wifi } from "lucide-react";
-import Link from "next/link";
-import React, { useCallback, useEffect, useOptimistic, startTransition } from "react";
 import { ConnectionStatus } from "../shared/connection-status";
 import { AgentStatusPanel } from "./agent-status-panel";
 import { MessageInput } from "./message-input";
@@ -33,8 +33,6 @@ export function ChatContainer({
     messages: baseMessages,
     isLoading,
     error,
-    input,
-    handleInputChange,
     sendMessage,
     stopGeneration,
     isAuthenticated,
@@ -224,8 +222,9 @@ export function ChatContainer({
         <MessageInput
           disabled={isLoading && !isStreaming}
           placeholder="Send a message..."
-          value={input}
-          onChange={handleInputChange}
+          // Controlled input managed by MessageInput internally
+          value={""}
+          onChange={() => {}}
           onSend={handleSendMessage}
           onCancel={handleCancel}
           isStreaming={isStreaming}

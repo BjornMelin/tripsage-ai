@@ -5,10 +5,10 @@
  * Provides access to the ConfigurationManager component with proper authentication.
  */
 
-import ConfigurationManager from "@/components/admin/configuration-manager";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import ConfigurationManager from "@/components/admin/configuration-manager";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export const metadata: Metadata = {
   title: "Agent Configuration - TripSage Admin",

@@ -1,11 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { useSearchFiltersStore } from "../search-filters-store";
 import type {
   FilterValue,
   ValidatedFilterOption,
   ValidatedSortOption,
 } from "../search-filters-store";
+import { useSearchFiltersStore } from "../search-filters-store";
 
 describe("Search Filters Store", () => {
   beforeEach(() => {

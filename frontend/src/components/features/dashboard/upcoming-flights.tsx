@@ -1,5 +1,7 @@
 "use client";
 
+import { Clock, Plane } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,8 +14,6 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type UpcomingFlight, useUpcomingFlights } from "@/hooks/use-trips";
-import { Clock, Plane } from "lucide-react";
-import Link from "next/link";
 
 interface UpcomingFlightsProps {
   limit?: number;

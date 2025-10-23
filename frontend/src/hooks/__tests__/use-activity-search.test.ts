@@ -2,14 +2,14 @@
  * @vitest-environment jsdom
  */
 
+import { renderHook, waitFor } from "@testing-library/react";
+import React, { type ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api/client";
 import { useSearchParamsStore } from "@/stores/search-params-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 import { AllTheProviders } from "@/test/test-utils";
 import type { ActivitySearchParams } from "@/types/search";
-import { renderHook, waitFor } from "@testing-library/react";
-import React, { type ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useActivitySearch } from "../use-activity-search";
 
 // Mock the API client

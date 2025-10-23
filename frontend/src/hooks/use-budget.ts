@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import {
   useApiDeleteMutation,
   useApiMutation,
@@ -17,7 +18,6 @@ import type {
   UpdateBudgetRequest,
   UpdateExpenseRequest,
 } from "@/types/budget";
-import { useEffect } from "react";
 
 /**
  * Hook for using the budget store

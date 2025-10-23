@@ -3,15 +3,17 @@
  * Demonstrates runtime type safety for store state and mutations
  */
 
+import { create } from "zustand";
+import { devtools, subscribeWithSelector } from "zustand/middleware";
 import {
-  type SearchParams,
-  type SearchResponse,
-  type SearchResults,
-  type SearchType,
   accommodationSearchParamsSchema,
   activitySearchParamsSchema,
   destinationSearchParamsSchema,
   flightSearchParamsSchema,
+  type SearchParams,
+  type SearchResponse,
+  type SearchResults,
+  type SearchType,
   searchResponseSchema,
   searchTypeSchema,
 } from "@/lib/schemas/search";
@@ -21,8 +23,6 @@ import {
   validateStoreState,
   validateStrict,
 } from "@/lib/validation";
-import { create } from "zustand";
-import { devtools, subscribeWithSelector } from "zustand/middleware";
 
 // Combined store interface with state and actions
 interface ValidatedSearchStore {

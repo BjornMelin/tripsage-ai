@@ -1,21 +1,5 @@
 "use client";
 
-import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import type { Message, ToolCall, ToolResult } from "@/types/chat";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -32,6 +16,22 @@ import {
   Zap,
 } from "lucide-react";
 import { startTransition, useCallback, useMemo } from "react";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import type { Message, ToolCall, ToolResult } from "@/types/chat";
 import { MessageAttachments } from "./message-attachments";
 import { MessageBubble } from "./message-bubble";
 import { MessageToolCalls } from "./message-tool-calls";
@@ -109,7 +109,7 @@ export function MessageItem({
       return {
         icon: Bot,
         className:
-          "bg-gradient-to-br from-emerald-500/20 to-blue-500/20 text-emerald-600 dark:text-emerald-400",
+          "bg-linear-to-br from-emerald-500/20 to-blue-500/20 text-emerald-600 dark:text-emerald-400",
         gradient: "from-emerald-500 to-blue-500",
         badgeText: "AI",
         badgeVariant: "secondary" as const,
@@ -121,7 +121,7 @@ export function MessageItem({
       return {
         icon: Shield,
         className:
-          "bg-gradient-to-br from-yellow-500/20 to-orange-500/20 text-yellow-600 dark:text-yellow-400",
+          "bg-linear-to-br from-yellow-500/20 to-orange-500/20 text-yellow-600 dark:text-yellow-400",
         gradient: "from-yellow-500 to-orange-500",
         badgeText: "System",
         badgeVariant: "outline" as const,
@@ -133,7 +133,7 @@ export function MessageItem({
       return {
         icon: Activity,
         className:
-          "bg-gradient-to-br from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-400",
+          "bg-linear-to-br from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-400",
         gradient: "from-purple-500 to-pink-500",
         badgeText: "Tool",
         badgeVariant: "outline" as const,
@@ -220,8 +220,8 @@ export function MessageItem({
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  "w-8 h-8 rounded-full bg-gradient-to-r flex items-center justify-center",
-                  `bg-gradient-to-r ${config.gradient}`
+                  "w-8 h-8 rounded-full bg-linear-to-r flex items-center justify-center",
+                  `bg-linear-to-r ${config.gradient}`
                 )}
               >
                 <IconComponent className="w-4 h-4 text-white" />
