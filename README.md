@@ -19,12 +19,12 @@
 ---
 
 TripSage AI is an travel planning platform that combines the power of modern AI agents with rich
-all-in-one travel services. Built with FastAPI, Next.js, LangGraph, Supabase, and Redis, with multi-agent AI orchestration, it provides personalized travel recommendations,
+all-in-one travel services. Built with FastAPI, Next.js, LangGraph, Supabase, and Upstash Redis, with multi-agent AI orchestration, it provides personalized travel recommendations,
 real-time booking capabilities, and intelligent memory management.
 
 ## ✨ Key Features
 
-- **AI-Powered Planning**: LangGraph agents with GPT-4 for intelligent
+- **AI-Powered Planning**: LangGraph agents with GPT-5 for intelligent
   trip recommendations
 - **Flight Integration**: Direct Duffel API integration for real-time
   flight search and booking
@@ -122,9 +122,7 @@ tripsage-ai/
 ├── scripts/                    # Database and deployment scripts
 ├── docker/                     # Runtime compose files and Dockerfiles
 ├── docs/                       # Documentation
-├── supabase/                   # Supabase configuration
-├── legacy_tripsage/            # Legacy orchestration and agent code
-└── legacy_tripsage_core/       # Legacy core business logic
+└── supabase/                   # Supabase configuration
 ```
 
 ---

@@ -1,13 +1,13 @@
-# TripSage Unified API
+# TripSage API
 
 A FastAPI implementation that serves both frontend applications and AI agents for the TripSage travel planning platform.
 
 ## Overview
 
-The TripSage API provides a unified interface that supports:
+The TripSage API provides endpoints for:
 
 - **Frontend Applications** - Next.js 15 web application with real-time features
-- **AI Agents** - LangGraph-based travel planning agents with rich context
+- **AI Agents** - LangGraph-based travel planning agents with context
 - **External Integrations** - Third-party services and travel platforms
 - **WebSocket Communication** - Real-time updates and collaboration
 
@@ -19,46 +19,53 @@ The TripSage API provides a unified interface that supports:
 - **Flight Search & Booking** - Multi-provider flight search and comparison
 - **Accommodation Search** - Hotel and alternative lodging search
 - **Destination Research** - AI-powered destination insights and recommendations
-- **Itinerary Building** - Intelligent trip optimization and scheduling
+- **Itinerary Building** - Trip optimization and scheduling
 - **Memory & Context** - Conversation memory and user preference learning
 - **Real-time Communication** - WebSocket support for live updates
 
-## Unified Architecture
+## Architecture
 
 The API implements a dual-consumer architecture serving both frontend and agent clients:
 
-```text
-┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   AI Agents     │
-│   (Next.js)     │    │   (LangGraph)   │
-└─────────┬───────┘    └─────────┬───────┘
-          │                      │
-          └──────────┬───────────┘
-                     │
-           ┌─────────▼─────────┐
-           │   Unified API     │
-           │   (FastAPI)       │
-           └─────────┬─────────┘
-                     │
-           ┌─────────▼─────────┐
-           │   TripSage Core   │
-           │  (Shared Layer)   │
-           └─────────┬─────────┘
-                     │
-           ┌─────────▼─────────┐
-           │ External Services │
-           │ & Infrastructure  │
-           └───────────────────┘
+```mermaid
+graph TD
+    A[Frontend<br/>Next.js] --> C[API<br/>FastAPI]
+    B[AI Agents<br/>LangGraph] --> C
+    C --> D[TripSage Core<br/>Shared Layer]
+    D --> E[External Services<br/>& Infrastructure]
+
+    subgraph "Consumers"
+        A
+        B
+    end
+
+    subgraph "API Layer"
+        C
+    end
+
+    subgraph "Core Layer"
+        D
+    end
+
+    subgraph "Infrastructure"
+        E
+    end
+
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#fff3e0
+    style D fill:#e8f5e8
+    style E fill:#fafafa
 ```
 
-### Consumer-Aware Design
+### Consumer-Specific Design
 
 The API automatically adapts responses based on the consumer type:
 
 #### Frontend Consumers
 
 - **User-friendly error messages** - Simplified, actionable error descriptions
-- **Rich response metadata** - UI state information and display hints
+- **Response metadata** - UI state information and display hints
 - **Rate limiting** - Standard user-based limits
 - **Sanitized data** - Secure, filtered data appropriate for frontend display
 
@@ -67,7 +74,7 @@ The API automatically adapts responses based on the consumer type:
 - **Detailed error context** - Technical error information for agent decision-making
 - **Raw data access** - Unfiltered data for AI processing
 - **Higher rate limits** - Increased limits for agent operations
-- **Tool integration data** - Rich context for agent tool calling
+- **Tool integration data** - Context for agent tool calling
 
 ## Directory Structure
 
@@ -80,7 +87,7 @@ tripsage/api/
 ├── middlewares/            # Cross-cutting concerns
 │   ├── authentication.py  # JWT and API key authentication
 │   ├── logging.py         # Structured logging and observability
-│   └── rate_limiting.py   # Consumer-aware rate limiting
+│   └── rate_limiting.py   # Rate limiting by consumer type
 ├── routers/               # API endpoints organized by domain
 │   ├── auth.py           # Authentication and authorization
 │   ├── keys.py           # BYOK API key management
@@ -116,7 +123,7 @@ tripsage/api/
 
 ### Multi-Modal Authentication
 
-The API supports multiple authentication methods optimized for different consumers:
+The API supports multiple authentication methods for different consumer types:
 
 #### JWT Authentication (Primary for Frontend)
 
@@ -272,7 +279,7 @@ GET /api/v1/flights/search
 - `WS /api/v1/ws/trip/{trip_id}` - Trip planning collaboration
 - `WS /api/v1/ws/status` - Agent status and progress updates
 
-## Consumer-Specific Features
+## Consumer-Specific Behavior
 
 ### Frontend Optimization
 
@@ -311,7 +318,7 @@ GET /api/v1/flights/search
 
 ### Agent Optimization
 
-**Rich Context Responses:**
+**Context Responses:**
 
 ```json
 {
@@ -344,13 +351,13 @@ GET /api/v1/flights/search
 
 ### Caching Strategy
 
-- **Multi-tier caching** with DragonflyDB (25x performance improvement)
-- **Intelligent TTL** based on data volatility
-- **Consumer-specific cache keys** for optimized retrieval
+- **Multi-tier caching** with Upstash Redis
+- **TTL-based expiration** based on data volatility
+- **Cache keys by consumer type** for retrieval
 
 ### Rate Limiting
 
-- **Consumer-aware limits** - Higher limits for agents
+- **Limits by consumer type** - Higher limits for agents
 - **Principal-based tracking** - Per-user and per-API key limits
 - **Graceful degradation** - Progressive limiting with warnings
 
@@ -414,7 +421,8 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-supabase-key
 
 # Caching
-DRAGONFLY_URL=redis://localhost:6379
+UPSTASH_REDIS_REST_URL=your-upstash-url
+UPSTASH_REDIS_REST_TOKEN=your-upstash-token
 
 # Authentication
 JWT_SECRET_KEY=your-secret-key
@@ -475,4 +483,4 @@ async def search_flights(criteria: FlightSearchRequest):
 - **External API availability**
 - **Memory usage and performance**
 
-The TripSage Unified API provides a robust, scalable foundation for both human users through the frontend and AI agents through direct integration, enabling sophisticated travel planning workflows with real-time collaboration and intelligent automation.
+The TripSage API serves both frontend applications and AI agents, providing endpoints for travel planning, authentication, and real-time communication.
