@@ -1,5 +1,6 @@
-// Export all stores for easy import
-
+/**
+ * @fileoverview Central barrel exporting Zustand stores and selectors.
+ */
 export { useAgentStatusStore } from "./agent-status-store";
 export * from "./auth-store";
 export { useAuthStore } from "./auth-store";
@@ -17,8 +18,7 @@ export {
   useSearchResultsStore,
   useSearchStore,
 } from "./search-store";
-export * from "./service-keys-store";
-export { useServiceKeysStore } from "./service-keys-store";
+// Note: service-keys-store removed; use `api-key-store` for key management
 // Feature stores
 export { useTripStore } from "./trip-store";
 // Export commonly used utility selectors from foundation stores
