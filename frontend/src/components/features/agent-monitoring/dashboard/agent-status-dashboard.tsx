@@ -158,7 +158,7 @@ const AgentHealthIndicator: React.FC<{ agent: AgentMetrics }> = ({ agent }) => {
       >
         <Heart className="h-6 w-6 text-white" />
       </div>
-      <div className="absolute -bottom-1 -right-1 text-xs font-bold text-white bg-black bg-opacity-75 rounded-full px-1.5 py-0.5">
+      <div className="absolute -bottom-1 -right-1 text-xs font-bold text-white bg-black/75 rounded-full px-1.5 py-0.5">
         {agent.healthScore}%
       </div>
     </div>
