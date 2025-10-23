@@ -13,11 +13,11 @@ import pytest
 from fastapi import HTTPException, status
 
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.trips import TripShareRequest
 from tripsage_core.exceptions import (
     CoreAuthorizationError as ServicePermissionError,
     CoreResourceNotFoundError as NotFoundError,
 )
+from tripsage_core.models.api.trip_models import TripShareRequest
 from tripsage_core.models.db.trip_collaborator import TripCollaboratorDB
 from tripsage_core.services.business.trip_service import TripService
 

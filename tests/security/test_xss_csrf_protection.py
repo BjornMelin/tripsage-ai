@@ -15,7 +15,8 @@ from fastapi.testclient import TestClient
 
 from tripsage.api.main import app
 from tripsage_core.services.business.api_key_service import (
-    ValidationResult,
+    ApiValidationResult,
+    ServiceType,
     ValidationStatus,
 )
 
@@ -116,7 +117,8 @@ class TestXSSProtection:
             mock_service.return_value = mock_key_service
 
             # Mock validation to succeed
-            mock_key_service.validate_key.return_value = ValidationResult(
+            mock_key_service.validate_key.return_value = ApiValidationResult(
+                service=ServiceType.OPENAI,
                 is_valid=True,
                 status=ValidationStatus.VALID,
                 message="Valid key",
@@ -165,7 +167,8 @@ class TestXSSProtection:
             mock_key_service = AsyncMock()
             mock_service.return_value = mock_key_service
 
-            mock_key_service.validate_key.return_value = ValidationResult(
+            mock_key_service.validate_key.return_value = ApiValidationResult(
+                service=ServiceType.OPENAI,
                 is_valid=True,
                 status=ValidationStatus.VALID,
                 message="Valid key",
@@ -209,7 +212,8 @@ class TestXSSProtection:
 
             # Mock validation to fail with error message containing payload
             for payload in html_injection_payloads:
-                mock_key_service.validate_key.return_value = ValidationResult(
+                mock_key_service.validate_key.return_value = ApiValidationResult(
+                    service=ServiceType.OPENAI,
                     is_valid=False,
                     status=ValidationStatus.INVALID,
                     message=f"Invalid key: {payload}",

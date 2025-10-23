@@ -1,23 +1,40 @@
-"""Trip API schemas using Pydantic V2.
-
-This module defines Pydantic models for trip-related API requests and responses.
-Consolidates both request and response schemas for trip operations.
-"""
+"""Canonical trip request and response models for API consumption."""
 
 from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
+from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.models.schemas_common.travel import TripDestination, TripPreferences
 
 
-# ===== Request Schemas =====
-
-
-class CreateTripRequest(BaseModel):
+class CreateTripRequest(TripSageModel):
     """Request model for creating a trip."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "European Highlights",
+                "description": "Ten-day cultural tour",
+                "start_date": "2025-06-01",
+                "end_date": "2025-06-10",
+                "destinations": [
+                    {
+                        "name": "Paris",
+                        "country": "France",
+                        "city": "Paris",
+                    },
+                    {
+                        "name": "Rome",
+                        "country": "Italy",
+                        "city": "Rome",
+                    },
+                ],
+            }
+        }
+    )
 
     title: str = Field(
         description="Trip title",
@@ -48,8 +65,26 @@ class CreateTripRequest(BaseModel):
         return self
 
 
-class UpdateTripRequest(BaseModel):
+class UpdateTripRequest(TripSageModel):
     """Request model for updating a trip."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "Updated European Highlights",
+                "description": "Added day trips",
+                "start_date": "2025-06-02",
+                "end_date": "2025-06-12",
+                "destinations": [
+                    {
+                        "name": "Florence",
+                        "country": "Italy",
+                        "city": "Florence",
+                    }
+                ],
+            }
+        }
+    )
 
     title: str | None = Field(
         default=None,
@@ -81,10 +116,7 @@ class TripPreferencesRequest(TripPreferences):
     """Request model for updating trip preferences."""
 
 
-# ===== Response Schemas =====
-
-
-class TripResponse(BaseModel):
+class TripResponse(TripSageModel):
     """Response model for trip details."""
 
     model_config = ConfigDict(
@@ -105,52 +137,9 @@ class TripResponse(BaseModel):
                         "arrival_date": "2025-06-01",
                         "departure_date": "2025-06-05",
                         "duration_days": 4,
-                    },
-                    {
-                        "name": "Rome",
-                        "country": "Italy",
-                        "city": "Rome",
-                        "arrival_date": "2025-06-05",
-                        "departure_date": "2025-06-10",
-                        "duration_days": 5,
-                    },
-                    {
-                        "name": "Barcelona",
-                        "country": "Spain",
-                        "city": "Barcelona",
-                        "arrival_date": "2025-06-10",
-                        "departure_date": "2025-06-15",
-                        "duration_days": 5,
-                    },
+                    }
                 ],
-                "preferences": {
-                    "budget": {
-                        "total": 5000,
-                        "currency": "USD",
-                        "accommodation_budget": 2000,
-                        "transportation_budget": 1500,
-                        "food_budget": 1000,
-                        "activities_budget": 500,
-                    },
-                    "accommodation": {
-                        "type": "hotel",
-                        "min_rating": 4.0,
-                        "amenities": ["wifi", "breakfast", "air_conditioning"],
-                        "location_preference": "city_center",
-                    },
-                    "transportation": {
-                        "flight_preferences": {
-                            "seat_class": "economy",
-                            "max_stops": 1,
-                            "preferred_airlines": [],
-                            "time_window": "flexible",
-                        },
-                        "local_transportation": ["public_transport", "walking"],
-                    },
-                    "activities": ["sightseeing", "museums", "food_tours", "shopping"],
-                    "dietary_restrictions": [],
-                    "accessibility_needs": [],
-                },
+                "preferences": {},
                 "itinerary_id": "123e4567-e89b-12d3-a456-426614174001",
                 "status": "planning",
                 "created_at": "2025-01-15T14:30:00Z",
@@ -178,8 +167,23 @@ class TripResponse(BaseModel):
     updated_at: datetime = Field(description="Last update timestamp")
 
 
-class TripListItem(BaseModel):
+class TripListItem(TripSageModel):
     """Response model for trip list items."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "123e4567-e89b-12d3-a456-426614174000",
+                "title": "Summer Vacation",
+                "start_date": "2025-06-01",
+                "end_date": "2025-06-10",
+                "duration_days": 10,
+                "destinations": ["Paris", "Rome"],
+                "status": "planning",
+                "created_at": "2025-01-15T14:30:00Z",
+            }
+        }
+    )
 
     id: UUID = Field(description="Trip ID")
     title: str = Field(description="Trip title")
@@ -191,8 +195,30 @@ class TripListItem(BaseModel):
     created_at: datetime = Field(description="Creation timestamp")
 
 
-class TripListResponse(BaseModel):
+class TripListResponse(TripSageModel):
     """Response model for a list of trips."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "items": [
+                    {
+                        "id": "123e4567-e89b-12d3-a456-426614174000",
+                        "title": "Summer Vacation",
+                        "start_date": "2025-06-01",
+                        "end_date": "2025-06-10",
+                        "duration_days": 10,
+                        "destinations": ["Paris", "Rome"],
+                        "status": "planning",
+                        "created_at": "2025-01-15T14:30:00Z",
+                    }
+                ],
+                "total": 1,
+                "skip": 0,
+                "limit": 10,
+            }
+        }
+    )
 
     items: list[TripListItem] = Field(description="List of trips")
     total: int = Field(description="Total number of trips")
@@ -200,7 +226,7 @@ class TripListResponse(BaseModel):
     limit: int = Field(description="Maximum number of trips returned")
 
 
-class TripSummaryResponse(BaseModel):
+class TripSummaryResponse(TripSageModel):
     """Response model for trip summary."""
 
     model_config = ConfigDict(
@@ -215,18 +241,7 @@ class TripSummaryResponse(BaseModel):
                 "transportation_summary": (
                     "Economy flights with 1 connection, local transit"
                 ),
-                "budget_summary": {
-                    "total": 5000,
-                    "currency": "USD",
-                    "spent": 0,
-                    "remaining": 5000,
-                    "breakdown": {
-                        "accommodation": {"budget": 2000, "spent": 0},
-                        "transportation": {"budget": 1500, "spent": 0},
-                        "food": {"budget": 1000, "spent": 0},
-                        "activities": {"budget": 500, "spent": 0},
-                    },
-                },
+                "budget_summary": {},
                 "has_itinerary": True,
                 "completion_percentage": 60,
             }
@@ -255,7 +270,7 @@ class TripSummaryResponse(BaseModel):
     )
 
 
-class TripSuggestionResponse(BaseModel):
+class TripSuggestionResponse(TripSageModel):
     """Response model for trip suggestions."""
 
     model_config = ConfigDict(
@@ -330,11 +345,21 @@ class TripSuggestionResponse(BaseModel):
     )
 
 
-# ===== Trip Collaboration Schemas =====
-
-
-class TripShareRequest(BaseModel):
+class TripShareRequest(TripSageModel):
     """Request model for sharing a trip with other users."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "user_emails": [
+                    "friend@example.com",
+                    "planner@example.org",
+                ],
+                "permission_level": "edit",
+                "message": "Check out these plans!",
+            }
+        }
+    )
 
     user_emails: list[str] = Field(
         description="Email addresses of users to share with",
@@ -353,8 +378,22 @@ class TripShareRequest(BaseModel):
     )
 
 
-class TripCollaboratorResponse(BaseModel):
+class TripCollaboratorResponse(TripSageModel):
     """Response model for trip collaborator information."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "user_id": "123e4567-e89b-12d3-a456-426614174000",
+                "email": "collaborator@example.com",
+                "name": "Alex Planner",
+                "permission_level": "edit",
+                "added_by": "123e4567-e89b-12d3-a456-426614174001",
+                "added_at": "2025-01-18T09:45:00Z",
+                "is_active": True,
+            }
+        }
+    )
 
     user_id: UUID = Field(description="Collaborator user ID")
     email: str = Field(description="Collaborator email")
@@ -367,7 +406,7 @@ class TripCollaboratorResponse(BaseModel):
     )
 
 
-class TripCollaboratorUpdateRequest(BaseModel):
+class TripCollaboratorUpdateRequest(TripSageModel):
     """Request model for updating collaborator permissions."""
 
     permission_level: str = Field(
@@ -376,11 +415,45 @@ class TripCollaboratorUpdateRequest(BaseModel):
     )
 
 
-class TripCollaboratorsListResponse(BaseModel):
+class TripCollaboratorsListResponse(TripSageModel):
     """Response model for listing trip collaborators."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "collaborators": [
+                    {
+                        "user_id": "123e4567-e89b-12d3-a456-426614174000",
+                        "email": "collaborator@example.com",
+                        "permission_level": "view",
+                        "added_by": "123e4567-e89b-12d3-a456-426614174001",
+                        "added_at": "2025-01-18T09:45:00Z",
+                    }
+                ],
+                "total": 1,
+                "owner_id": "123e4567-e89b-12d3-a456-426614174001",
+            }
+        }
+    )
 
     collaborators: list[TripCollaboratorResponse] = Field(
         description="List of trip collaborators"
     )
     total: int = Field(description="Total number of collaborators")
     owner_id: UUID = Field(description="Trip owner user ID")
+
+
+__all__ = [
+    "CreateTripRequest",
+    "TripCollaboratorResponse",
+    "TripCollaboratorUpdateRequest",
+    "TripCollaboratorsListResponse",
+    "TripListItem",
+    "TripListResponse",
+    "TripPreferencesRequest",
+    "TripResponse",
+    "TripShareRequest",
+    "TripSuggestionResponse",
+    "TripSummaryResponse",
+    "UpdateTripRequest",
+]
