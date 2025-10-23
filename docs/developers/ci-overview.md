@@ -1,6 +1,6 @@
-# CI Overview (Simplified)
+# CI Overview
 
-This repository uses a minimal GitHub Actions setup:
+TripSage uses a minimal GitHub Actions setup for quality and security:
 
 - `CI` (`.github/workflows/ci.yml`): runs on PRs and pushes. Two jobs:
   - Backend: ruff lint, pyright (temporarily soft-fail), unit tests (temporarily soft-fail).
