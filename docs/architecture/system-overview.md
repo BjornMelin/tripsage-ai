@@ -59,6 +59,33 @@ graph TD
     LG --> EX
 ```
 
+## Technology Stack
+
+### Technology Selection Principles
+
+1. **Production-Proven**: Technologies with demonstrated reliability at scale
+2. **Developer Experience**: Tools that enhance productivity and reduce complexity
+3. **Performance First**: Technologies delivering measurable performance benefits
+4. **Cost Efficient**: Solutions optimizing infrastructure and operational costs
+5. **Future-Proof**: Technologies with strong communities and long-term viability
+
+### Core Technologies
+
+- **Backend**: FastAPI (Python 3.11+) - Async performance, type safety, auto-documentation
+- **Database**: Supabase PostgreSQL - Unified platform with pgvector for AI workloads
+- **Cache**: Upstash Redis (HTTP) - Serverless, connectionless HTTP client
+- **AI Framework**: LangGraph - Production-ready agent orchestration with state persistence
+- **Memory System**: Mem0 + pgvector - Intelligent context management
+- **Frontend**: Next.js 15 - Server components, App Router, TypeScript
+- **Testing**: pytest, vitest, Playwright - Comprehensive test coverage (90%+)
+
+### External Integrations
+
+- **Flight API**: Duffel SDK - Direct integration, 70% latency reduction
+- **Maps**: Google Maps Platform SDK - Location services and geocoding
+- **Weather**: OpenWeatherMap API - Real-time weather data
+- **Browser Automation**: Playwright - Headless browser operations
+
 ## Architecture Components
 
 ### Presentation Layer
@@ -142,11 +169,25 @@ Unified service design in TripSage Core:
 
 #### LangGraph Orchestration
 
-- Graph-based Workflows: Multi-step planning
-- PostgreSQL Checkpointing: State management
-- Memory Bridge: Integration for relationship data
-- Handoff Coordination: Agent collaboration
-- Error Recovery: Retry and fallback mechanisms
+- **Graph-based Workflows**: Deterministic multi-step planning processes
+- **PostgreSQL Checkpointing**: Persistent state management across sessions
+- **Memory Bridge**: Mem0 integration for contextual relationship data
+- **Handoff Coordination**: Seamless agent collaboration and state transfer
+- **Error Recovery**: Built-in retry mechanisms and graceful degradation
+
+#### Specialized Agent Nodes
+
+**Router Node**: Intelligent request routing based on conversation analysis and intent classification.
+
+**Flight Agent**: Multi-airline search, price comparison, route optimization, and booking assistance with user preference learning.
+
+**Accommodation Agent**: Hotel/Airbnb search, property comparison, amenity filtering, and location-based recommendations.
+
+**Budget Agent**: Expense tracking, cost optimization, multi-currency support, and personalized spending recommendations.
+
+**Destination Research Agent**: Local insights, activity recommendations, weather integration, and personalized destination guidance.
+
+**Itinerary Agent**: Day-by-day planning, scheduling optimization, calendar integration, and logistics coordination.
 
 ### Infrastructure Layer
 
