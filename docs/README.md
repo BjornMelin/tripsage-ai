@@ -1,6 +1,6 @@
 # TripSage Documentation
 
-**AI-powered travel planning platform documentation**
+## **AI-powered travel planning platform documentation**
 
 Concise, task-focused documentation for users, developers, and operators.
 

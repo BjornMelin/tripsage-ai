@@ -1,45 +1,123 @@
 # TripSage Frontend
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Modern Next.js 16 application with React 19, TypeScript, and AI-powered travel planning features.
 
-## Documentation
+## Tech Stack
 
-For historical development documentation and implementation summaries, see:
-- **Development Summaries**: `/docs/archive/frontend/development-summaries/`
-- **Integration Guides**: `/docs/archive/frontend/integration-guides/`
-- **Test Artifacts**: `/docs/archive/frontend/test-artifacts/`
+- **Framework**: Next.js 16.0.0 with App Router
+- **React**: React 19.2.0 with concurrent features
+- **Language**: TypeScript 5.9.3 with strict mode
+- **Styling**: Tailwind CSS v4.1.15 with CSS-first config
+- **State Management**: Zustand 5.0.8
+- **Data Fetching**: TanStack Query 5.90.5
+- **UI Components**: Radix UI primitives with Tailwind
+- **AI Integration**: AI SDK v5.0.76 (@ai-sdk/react)
+- **Backend**: Supabase with SSR auth
+- **Testing**: Vitest 4.0.1 with Playwright E2E
+- **Linting**: Biome 2.2.7
+- **Package Manager**: pnpm ≥9.0.0
+- **Runtime**: Node.js ≥24
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js ≥24
+- pnpm ≥9.0.0
+
+### Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Install dependencies
+pnpm install
+
+# Start development server
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Development Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Core Commands
 
-## Learn More
+```bash
+pnpm dev          # Start development server
+pnpm build        # Production build
+pnpm build:analyze # Build with bundle analyzer
+pnpm start        # Start production server
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Code Quality
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm type-check   # TypeScript type checking
+pnpm biome:check  # Lint and format check
+pnpm biome:fix    # Auto-fix linting issues
+pnpm format:check # Check formatting
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Testing
 
-## Deploy on Vercel
+```bash
+pnpm test         # Run unit tests
+pnpm test:run     # Run tests once
+pnpm test:coverage # Run tests with coverage
+pnpm test:e2e     # Run E2E tests with Playwright
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Maintenance
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm lint         # ESLint check
+pnpm prepare      # Set up Husky git hooks
+```
+
+## Project Structure
+
+```text
+frontend/
+├── src/
+│   ├── app/           # Next.js App Router pages
+│   ├── components/    # Reusable UI components
+│   ├── contexts/      # React context providers
+│   ├── hooks/         # Custom React hooks
+│   ├── lib/           # Utilities and configurations
+│   ├── proxy.ts       # Next.js proxy configuration
+│   ├── schemas/       # Zod validation schemas
+│   ├── stores/        # Zustand state stores
+│   ├── styles/        # Global styles and CSS
+│   ├── types/         # TypeScript type definitions
+│   ├── __tests__/     # Unit and integration tests
+│   └── test-utils/    # Testing utilities
+├── e2e/               # End-to-end tests
+├── playwright.config.ts
+├── vitest.config.ts
+└── biome.json
+```
+
+## Environment Variables
+
+Create a `.env.local` file with:
+
+```bash
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# API
+NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# Optional: Analytics
+NEXT_PUBLIC_VERCEL_ANALYTICS_ID=your_analytics_id
+```
+
+## Documentation
+
+- **[Frontend Development Guide](../docs/developers/frontend-development.md)** - Complete development setup and patterns
+- **[API Documentation](../docs/api/README.md)** - Backend API reference
+- **[Architecture Overview](../docs/architecture/README.md)** - System design and data flow
+
+## Deployment
+
+Deploy to Vercel with the [deployment guide](../.github/DEPLOYMENT.md) or check our [production deployment docs](../docs/operators/deployment-guide.md).
