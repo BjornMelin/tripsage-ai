@@ -69,7 +69,6 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     isAuthenticated,
     isApiKeyValid,
     authError: storeAuthError,
-    token,
     loadKeys,
     validateKey,
     setAuthError: setStoreAuthError,
@@ -404,9 +403,6 @@ export function useChatAi(options: UseChatAiOptions = {}) {
           isActive: true,
           statusMessage: "Thinking...",
         });
-
-        // Create a unique ID for this message
-        uuidv4(); // Generated for future message tracking
 
         // Add the user message to our store
         addMessage(sessionIdRef.current, {
