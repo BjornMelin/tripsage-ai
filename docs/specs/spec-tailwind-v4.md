@@ -21,9 +21,9 @@ Finalize migration to Tailwind v4: CSS-first configuration, PostCSS plugin, remo
 
 Date: 2025-10-23
 
-- Replaced <img> with next/image for MFA QR view:
+- Replaced `<img>` with `next/image` for MFA QR view:
   - frontend/src/components/auth/mfa-setup.tsx
-- Converted clickable <div> wrappers to semantic <button> elements in chat attachments:
+- Converted clickable `<div>` wrappers to semantic `<button>` elements in chat attachments:
   - frontend/src/components/features/chat/messages/message-attachments.tsx
 - Fixed parseInt radix issues (Biome):
   - frontend/src/app/(dashboard)/trips/[id]/collaborate/page.tsx
