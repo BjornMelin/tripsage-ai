@@ -6,9 +6,11 @@ including current conditions, forecasts, and travel-specific features.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Final
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, TypeAdapter
+
+from tripsage_core.models.api._export_helpers import auto_all
 
 
 _HTTP_URL_ADAPTER: TypeAdapter[HttpUrl] = TypeAdapter(HttpUrl)
@@ -456,3 +458,8 @@ class SeasonalWeather(BaseModel):
     typical_conditions: list[str]
     best_activities: list[str]
     travel_tips: list[str]
+
+
+__all__: Final[tuple[str, ...]] = tuple(  # pyright: ignore[reportUnsupportedDunderAll]
+    auto_all(__name__, globals())
+)

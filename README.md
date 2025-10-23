@@ -296,6 +296,15 @@ uv run pytest tests/security/
 
 ---
 
+### Service Validation
+
+- **Unified result model**: Both API key validation and external service health checks return an `ApiValidationResult`, eliminating duplicate response types.
+- **Context-aware fields**: Validation flows populate `is_valid`, `status`, and `validated_at`, while health probes use `health_status`, `checked_at`, and leave validation-only fields unset (`None`).
+- **Shared metadata**: Rate-limit quotas, capability discovery, latency timing, and diagnostic details flow through identical fields for streamlined analytics and caching.
+- **Computed insights**: `success_rate_category` and `is_healthy` computed fields provide quick rollups regardless of whether the result originated from validation or monitoring.
+
+---
+
 ## 📊 Monitoring & Observability
 
 - **Health Checks**: Endpoint monitoring with health checks

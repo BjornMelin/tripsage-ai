@@ -8,13 +8,20 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from slowapi import extension as slowapi_extension
+
+
+# SlowAPI's decorator validates function signatures at import-time, causing
+# unrelated routers to explode in tests. Neutralize the decorator so imports
+# succeed without pulling those routers into this suite.
+slowapi_extension.Limiter.limit = lambda *args, **kwargs: (lambda func: func)
 
 from tripsage.api.core import dependencies as core_dependencies
 from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.routers import dashboard as dashboard_router
 from tripsage_core.services.business.api_key_service import (
-    ServiceHealthCheck,
+    ApiValidationResult,
     ServiceHealthStatus,
     ServiceType,
 )
@@ -213,19 +220,45 @@ def _patch_dependencies(
 
     api_key_service = AsyncMock()
     api_key_service.check_all_services_health.return_value = {
-        ServiceType.OPENAI: ServiceHealthCheck(
+        ServiceType.OPENAI: ApiValidationResult(
             service=ServiceType.OPENAI,
-            status=ServiceHealthStatus.HEALTHY,
+            is_valid=None,
+            status=None,
+            health_status=ServiceHealthStatus.HEALTHY,
             latency_ms=110.0,
             message="Operating normally",
             checked_at=datetime.now(UTC),
+            validated_at=None,
         ),
-        ServiceType.WEATHER: ServiceHealthCheck(
+        ServiceType.WEATHER: ApiValidationResult(
             service=ServiceType.WEATHER,
-            status=ServiceHealthStatus.DEGRADED,
+            is_valid=None,
+            status=None,
+            health_status=ServiceHealthStatus.DEGRADED,
             latency_ms=210.0,
             message="Latency elevated",
             checked_at=datetime.now(UTC),
+            validated_at=None,
+        ),
+        ServiceType.GOOGLEMAPS: ApiValidationResult(
+            service=ServiceType.GOOGLEMAPS,
+            is_valid=None,
+            status=None,
+            health_status=ServiceHealthStatus.UNHEALTHY,
+            latency_ms=510.0,
+            message="Service unavailable",
+            checked_at=datetime.now(UTC),
+            validated_at=None,
+        ),
+        ServiceType.EMAIL: ApiValidationResult(
+            service=ServiceType.EMAIL,
+            is_valid=None,
+            status=None,
+            health_status=ServiceHealthStatus.UNKNOWN,
+            latency_ms=0.0,
+            message="Health status unknown",
+            checked_at=None,
+            validated_at=None,
         ),
     }
     dashboard_service.api_key_service = api_key_service
@@ -260,8 +293,14 @@ def test_overview_and_services_flow(client: TestClient, principal: Principal) ->
     )
 
     services_body = services.json()
-    assert len(services_body) == 2
-    assert {item["service"] for item in services_body} == {"openai", "weather"}
+    assert len(services_body) == 4
+    services_index = {item["service"]: item for item in services_body}
+
+    assert services_index["openai"]["status"] == "healthy"
+    assert services_index["weather"]["status"] == "degraded"
+    assert services_index["googlemaps"]["status"] == "unhealthy"
+    assert services_index["email"]["status"] == "unknown"
+    assert services_index["email"]["last_check"] is None
 
 
 def test_metrics_and_rate_limits(client: TestClient, principal: Principal) -> None:

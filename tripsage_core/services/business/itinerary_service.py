@@ -6,7 +6,7 @@ This service performs the following responsibilities:
 * Provide the small set of operations required by the FastAPI routers.
 * Offer lightweight validation (date ranges, ownership checks) and conflict
   detection for overlapping itinerary items.
-* Return data in shapes compatible with ``tripsage.api.schemas.itineraries``.
+* Return data in shapes compatible with ``tripsage_core.models.api.itinerary_models``.
 """
 
 from __future__ import annotations
@@ -27,7 +27,12 @@ from tripsage_core.exceptions import (
     CoreServiceError,
     CoreValidationError,
 )
+from tripsage_core.models.api.itinerary_models import (
+    ItineraryResponse as ApiItineraryResponse,
+    ItinerarySearchResponse as ApiItinerarySearchResponse,
+)
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.models.schemas_common.base_models import PaginationMeta
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
@@ -168,7 +173,7 @@ class ItineraryService:
         self,
         user_id: str,
         search_request: SupportsModelDump | Mapping[str, Any],
-    ) -> dict[str, Any]:
+    ) -> ApiItinerarySearchResponse:
         """Search itineraries for ``user_id`` with very light filtering.
 
         The search honours ``status`` and ``destinations`` filters, falling back to
@@ -193,18 +198,33 @@ class ItineraryService:
         end_idx = start_idx + page_size
         paginated_rows = rows[start_idx:end_idx]
 
-        serialized = []
+        serialized: list[ApiItineraryResponse] = []
         for raw in paginated_rows:
             itinerary = self._build_itinerary_from_row(raw)
             items = await self._load_items_for_itinerary(itinerary.id)
-            serialized.append(self._serialize_itinerary(itinerary, items))
+            serialized.append(
+                ApiItineraryResponse.model_validate(
+                    self._serialize_itinerary(itinerary, items)
+                )
+            )
 
-        return {
-            "items": serialized,
-            "page": page,
-            "page_size": page_size,
-            "total": len(rows),
-        }
+        total_items = len(rows)
+        total_pages = (total_items + page_size - 1) // page_size
+        pagination = PaginationMeta(
+            page=page,
+            per_page=page_size,
+            total_items=total_items,
+            total_pages=total_pages,
+            has_next=end_idx < total_items,
+            has_prev=start_idx > 0,
+        )
+
+        return ApiItinerarySearchResponse(
+            success=True,
+            message=None,
+            data=serialized,
+            pagination=pagination,
+        )
 
     async def get_itinerary(self, user_id: str, itinerary_id: str) -> dict[str, Any]:
         """Fetch a single itinerary ensuring the caller owns it."""
