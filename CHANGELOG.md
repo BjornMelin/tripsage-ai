@@ -38,6 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New adapters provide `activity` and `location` services from registry-managed deps.
   - API dependency providers (`tripsage/api/core/dependencies.py`) resolve via registry (no `app.state` coupling for these services).
 
+### Refactor
+
+- **Models:** Merged ValidationResult and ServiceHealthCheck into ApiValidationResult for DRY compliance.
+Verification:
+Single model used in both validation and health methods; tests cover all fields without duplication errors.
+
 ### Deprecated
 
 ### Removed
