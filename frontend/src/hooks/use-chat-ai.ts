@@ -367,7 +367,8 @@ export function useChatAi(options: UseChatAiOptions = {}) {
       sessions.find((s) => s.id === sessionIdRef.current)?.messages || [];
     const existingMessage = sessionMessages.find((m) => m.id === lastMessage.id);
 
-    const content = partsToText((lastMessage as any).parts) || (lastMessage as any).content || "";
+    const content =
+      partsToText((lastMessage as any).parts) || (lastMessage as any).content || "";
     const role = lastMessage.role as MessageRole;
     if (existingMessage) {
       if (existingMessage.content !== content) {
