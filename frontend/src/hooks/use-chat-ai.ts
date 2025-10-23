@@ -1,3 +1,9 @@
+/**
+ * @fileoverview React hook for managing AI chat functionality.
+ * Provides a comprehensive interface for sending messages, handling streaming responses,
+ * managing tool calls, and maintaining chat session state with authentication validation.
+ */
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -16,8 +22,10 @@ import type {
 // Zod schemas for validation
 // const SessionIdSchema = z.string().min(1, "Session ID cannot be empty").optional(); // Future validation
 
+/** Schema for validating message content. */
 const MessageContentSchema = z.string().min(1, "Message content cannot be empty");
 
+/** Schema for validating attachment arrays. */
 const AttachmentArraySchema = z
   .array(
     z.object({
@@ -30,6 +38,9 @@ const AttachmentArraySchema = z
   )
   .default([]);
 
+/**
+ * Options for configuring the useChatAi hook.
+ */
 interface UseChatAiOptions {
   /**
    * The ID of the chat session. If not provided, a new one will be created.
@@ -47,6 +58,35 @@ interface UseChatAiOptions {
   onNewSession?: (session: ChatSession) => void;
 }
 
+/**
+ * React hook for managing AI chat functionality with streaming responses.
+ *
+ * This hook provides a complete interface for interacting with AI chat services,
+ * including message sending, streaming response handling, tool call management,
+ * and session state management. It includes authentication validation and
+ * automatic session creation.
+ *
+ * @param options - Configuration options for the chat hook.
+ * @param options.sessionId - Optional session ID. If not provided, generates a new one.
+ * @param options.initialMessages - Initial messages to populate the chat session.
+ * @param options.onNewSession - Callback invoked when a new session is created.
+ * @returns Object containing chat state, actions, and authentication status.
+ * @returns .sessionId - Current chat session ID.
+ * @returns .messages - Array of messages in the current session.
+ * @returns .isLoading - Whether a message is currently being sent.
+ * @returns .error - Current error message if any.
+ * @returns .isAuthenticated - Whether the user is authenticated.
+ * @returns .isInitialized - Whether the hook has completed initialization.
+ * @returns .isApiKeyValid - Whether a valid API key is configured.
+ * @returns .authError - Authentication-related error message.
+ * @returns .activeToolCalls - Currently executing tool calls.
+ * @returns .toolResults - Results from completed tool calls.
+ * @returns .sendMessage - Function to send a new message.
+ * @returns .stopGeneration - Function to stop ongoing message generation.
+ * @returns .reload - Placeholder for reload functionality.
+ * @returns .retryToolCall - Function to retry a failed tool call.
+ * @returns .cancelToolCall - Function to cancel an active tool call.
+ */
 export function useChatAi(options: UseChatAiOptions = {}) {
   const { sessionId: providedSessionId, initialMessages = [], onNewSession } = options;
 
@@ -79,6 +119,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     setCurrentSession,
     createSession,
     addMessage,
+    updateMessage,
     updateAgentStatus,
     stopStreaming,
   } = useChatStore();
@@ -312,7 +353,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
             setLocalError(null);
 
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-            const endpoint = `${apiUrl.replace(/\/$/, "")}/api/v1/chat/`;
+            const endpoint = `${apiUrl.replace(/\/$/, "")}/api/chat/stream`;
 
             // Build a minimal ChatRequest payload using recent session messages
             const session = sessions.find((s) => s.id === sessionIdRef.current);
@@ -333,29 +374,69 @@ export function useChatAi(options: UseChatAiOptions = {}) {
 
             const response = await fetch(endpoint, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "text/event-stream",
+              },
               credentials: "include",
               body,
               signal,
             });
 
-            if (!response.ok) {
+            if (!response.ok || !response.body) {
               const err = await response.json().catch(() => ({}));
               throw new Error(
                 err?.detail || err?.error || `Chat failed (${response.status})`
               );
             }
+            // Prepare streaming decode
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
 
-            const data = (await response.json()) as {
-              message?: { role?: string; content?: string };
-            };
-            const assistant = data?.message?.content || "";
+            // Create placeholder assistant message to progressively update
+            const placeholderId = addMessage(sessionIdRef.current, {
+              role: "assistant",
+              content: "",
+            });
 
-            if (assistant) {
-              addMessage(sessionIdRef.current, {
-                role: "assistant",
-                content: assistant,
-              });
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              buffer += chunk;
+
+              // Process complete SSE events separated by double newline
+              let idx;
+              while ((idx = buffer.indexOf("\n\n")) !== -1) {
+                const raw = buffer.slice(0, idx).trim();
+                buffer = buffer.slice(idx + 2);
+
+                if (raw.startsWith("data:")) {
+                  const dataStr = raw.slice(5).trim();
+                  if (dataStr === "[DONE]") {
+                    break;
+                  }
+                  try {
+                    const evt = JSON.parse(dataStr) as {
+                      type?: string;
+                      content?: string;
+                    };
+                    if (evt.type === "delta" && evt.content) {
+                      // Append token to placeholder content
+                      const current =
+                        sessions
+                          .find((s) => s.id === sessionIdRef.current)
+                          ?.messages.find((m) => m.id === placeholderId)?.content || "";
+                      updateMessage(sessionIdRef.current, placeholderId, {
+                        content: current + evt.content,
+                      });
+                    }
+                  } catch {
+                    // ignore malformed data
+                  }
+                }
+              }
             }
 
             // Done
