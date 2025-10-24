@@ -7,7 +7,7 @@ for all authentication events.
 """
 
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
 from fastapi import Request, Response
@@ -51,8 +51,6 @@ class Principal(BaseModel):
         populate_by_name=True,
         validate_assignment=True,
         extra="ignore",
-        # Use exclude_unset to avoid potential serialization issues
-        exclude_unset=True,
     )
 
     @property
@@ -109,7 +107,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         self._services_initialized = True
 
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Response]
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """Process the request and handle authentication with enhanced security.
 
@@ -667,8 +665,8 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     return ip
 
         # Fall back to direct connection IP
-        if hasattr(request.client, "host"):
-            return request.client.host
+        if request.client is not None and getattr(request.client, "host", None):
+            return request.client.host  # type: ignore[no-any-return]
 
         return "unknown"
 

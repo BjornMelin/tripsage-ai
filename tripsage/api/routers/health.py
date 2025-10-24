@@ -119,7 +119,7 @@ async def comprehensive_health_check(
     )
 
 
-@router.get("/health/liveness")
+@router.get("/health/liveness", response_model=dict)
 @limiter.exempt
 @trace_span(name="api.health.liveness")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
@@ -220,7 +220,7 @@ async def readiness_check(
     )
 
 
-@router.get("/health/database")
+@router.get("/health/database", response_model=ComponentHealth)
 @trace_span(name="api.health.database")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def database_health_check(request: Request, db_service: DatabaseDep):
@@ -258,7 +258,7 @@ async def database_health_check(request: Request, db_service: DatabaseDep):
     return health
 
 
-@router.get("/health/cache")
+@router.get("/health/cache", response_model=ComponentHealth)
 @trace_span(name="api.health.cache")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def cache_health_check(request: Request, cache_service: CacheDep):

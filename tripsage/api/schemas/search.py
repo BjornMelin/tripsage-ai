@@ -98,3 +98,14 @@ class UnifiedSearchAggregateResponse(BaseModel):
 
 # Backward-compatible alias expected by core services
 UnifiedSearchResponse = UnifiedSearchAggregateResponse
+
+
+class SearchAnalyticsResponse(BaseModel):
+    """Per-day analytics summary for a user's searches."""
+
+    date: str
+    total_searches: int
+    cache_hit_rate: float
+    cache_hits: int
+    cache_misses: int
+    popular_queries: list[dict[str, str | int]]

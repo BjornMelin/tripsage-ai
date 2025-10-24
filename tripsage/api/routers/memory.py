@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["memory"])
 
 
-@router.post("/conversation")
+@router.post("/conversation", response_model=dict)
 @limiter.limit("30/minute")
 async def add_conversation_memory(
     payload: ConversationMemoryRequest,
@@ -164,7 +164,7 @@ async def search_memories(
         ) from e
 
 
-@router.put("/preferences")
+@router.put("/preferences", response_model=dict)
 async def update_preferences(
     payload: UpdatePreferencesRequest,
     principal: RequiredPrincipalDep,
@@ -196,7 +196,7 @@ async def update_preferences(
         ) from e
 
 
-@router.post("/preference")
+@router.post("/preference", response_model=dict)
 @limiter.limit("30/minute")
 async def add_preference(  # pylint: disable=too-many-positional-arguments
     key: str,
@@ -241,7 +241,7 @@ async def add_preference(  # pylint: disable=too-many-positional-arguments
         ) from e
 
 
-@router.delete("/memory/{memory_id}")
+@router.delete("/memory/{memory_id}", response_model=dict)
 async def delete_memory(
     memory_id: str,
     principal: RequiredPrincipalDep,
@@ -280,7 +280,7 @@ async def delete_memory(
         ) from e
 
 
-@router.get("/stats")
+@router.get("/stats", response_model=dict)
 async def get_memory_stats(
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
@@ -308,7 +308,7 @@ async def get_memory_stats(
         ) from e
 
 
-@router.delete("/clear")
+@router.delete("/clear", response_model=dict)
 async def clear_user_memory(
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
