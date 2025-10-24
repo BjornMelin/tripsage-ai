@@ -2,6 +2,8 @@
 
 Quick Start: run `python scripts/testing/test_runner.py` to verify environment setup.
 
+Common utilities: Use `python scripts/cl_add.py` to add changelog entries.
+
 Automation scripts and utilities for TripSage development, deployment, and operations. Organized by functional area for easy discovery and maintenance.
 
 ## Directory Structure
@@ -9,6 +11,10 @@ Automation scripts and utilities for TripSage development, deployment, and opera
 ### `/automation/` - Deployment Scripts
 
 - **`deploy_extensions.py`** - Deploy Supabase extensions and automation features
+
+### `/changelog/` - Changelog Management
+
+- **`cl_add.py`** - Add entries to CHANGELOG.md under the [Unreleased] section
 
 ### `/database/` - Database Management
 
@@ -74,6 +80,22 @@ python scripts/security/security_validation.py
 
 # Performance benchmarking
 python scripts/benchmarks/benchmark.py --quick
+```
+
+### Changelog Management
+
+```bash
+# Add a new feature entry
+python scripts/cl_add.py -s Added -e "Add new user authentication feature"
+
+# Add multiple entries at once
+python scripts/cl_add.py -s Fixed -e "Fix login timeout issue" -e "Resolve memory leak in chat handler"
+
+# Use section aliases (add, fix, change, etc.)
+python scripts/cl_add.py -s add -e "Implement new API endpoint"
+
+# Get help
+python scripts/cl_add.py --help
 ```
 
 ### Performance Testing
@@ -251,5 +273,3 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     main()
 ```
-
-This consolidated documentation provides essential information while eliminating redundancy and over-engineering. For detailed implementation specifics, refer to individual script docstrings and subdirectory READMEs.
