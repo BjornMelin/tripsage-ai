@@ -3,6 +3,8 @@
 **Version**: 1.0.0
 **Status**: Accepted
 **Date**: 2025-10-23
+**Category**: platform
+**Domain**: Node.js 24
 
 ## Context
 

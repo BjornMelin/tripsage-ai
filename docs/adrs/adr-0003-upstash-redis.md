@@ -3,6 +3,8 @@
 **Version**: 1.0.0
 **Status**: Accepted
 **Date**: 2025-10-22
+**Category**: platform
+**Domain**: Upstash Redis
 
 ## Context
 

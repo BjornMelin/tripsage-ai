@@ -3,6 +3,8 @@
 **Version**: 1.0.0
 **Status**: Accepted
 **Date**: 2025-10-24
+**Category**: security
+**Domain**: Rate Limiting (Upstash/SlowAPI)
 
 ## Context
 

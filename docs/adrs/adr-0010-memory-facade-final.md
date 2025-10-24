@@ -3,6 +3,8 @@
 **Version**: 1.0.0
 **Status**: Accepted
 **Date**: 2025-10-21
+**Category**: backend
+**Domain**: Memory / LangGraph
 
 ## Context
 
