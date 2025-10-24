@@ -126,6 +126,7 @@ class TestDatabaseService:
         class TransactionContext:
             def __init__(self, ops):
                 self.ops = ops
+                self.parent = None  # type: Any
 
             def insert(self, table: str, data: dict[str, Any]):
                 self.ops.append(("insert", table, data))
@@ -500,7 +501,7 @@ class TestApiKeyFullStackIntegration:
             request = ApiKeyCreateRequest(
                 name="Transaction Test Key",
                 service=ServiceType.OPENAI,
-                key_value="sk-transaction_test_key",
+                key="sk-transaction_test_key",
                 description="Test transaction rollback",
             )
 
@@ -578,7 +579,7 @@ class TestApiKeyFullStackIntegration:
             request = ApiKeyCreateRequest(
                 name=f"Concurrent Key {index}",
                 service=ServiceType.OPENAI,
-                key_value=f"sk-concurrent_test_{index}_{uuid.uuid4().hex[:8]}",
+                key=f"sk-concurrent_test_{index}_{uuid.uuid4().hex[:8]}",
                 description=f"Concurrent test key {index}",
             )
 
@@ -749,7 +750,7 @@ class TestApiKeyFullStackIntegration:
             request = ApiKeyCreateRequest(
                 name="Encryption Test Key",
                 service=ServiceType.OPENAI,
-                key_value=original_key,
+                key=original_key,
                 description="Test encryption",
             )
 
@@ -790,7 +791,7 @@ class TestApiKeyFullStackIntegration:
                 request = ApiKeyCreateRequest(
                     name="Audit Test Key",
                     service=ServiceType.OPENAI,
-                    key_value="sk-audit_test_key",
+                    key="sk-audit_test_key",
                     description="Test audit logging",
                 )
 
@@ -948,7 +949,7 @@ class TestApiKeyPerformance:
                 request = ApiKeyCreateRequest(
                     name=f"Bulk Key {i}",
                     service=ServiceType.OPENAI,
-                    key_value=f"sk-bulk_test_{i}_{uuid.uuid4().hex[:8]}",
+                    key=f"sk-bulk_test_{i}_{uuid.uuid4().hex[:8]}",
                     description=f"Bulk test key {i}",
                 )
                 tasks.append(api_key_service.create_api_key(user_id, request))

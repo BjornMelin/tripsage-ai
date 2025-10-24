@@ -13,9 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.models.db.user import User
+from tripsage_core.models.db.user import User, UserRole
 from tripsage_core.models.schemas_common.enums import TripStatus, TripType
-from tripsage_core.models.trip import Trip
+from tripsage_core.models.trip import Budget, Trip
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.business.user_service import UserService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
@@ -36,9 +36,11 @@ class TestApiDatabaseFlow:
             id=12345,  # Use integer ID as required by User model
             email="test@example.com",
             name="testuser",
-            role="user",
+            password_hash="hashed_password",
+            role=UserRole.USER,
             is_admin=False,
             is_disabled=False,
+            preferences={},
         )
 
     @pytest.fixture
@@ -57,14 +59,17 @@ class TestApiDatabaseFlow:
     def mock_trip(self):
         """Mock trip for testing."""
         from datetime import date
+        from uuid import uuid4
 
         return Trip(
-            id=67890,  # Use integer ID as required by Trip model
-            name="Test Trip",
+            id=uuid4(),
+            user_id=uuid4(),
+            title="Test Trip",
+            description="Test trip description",
             destination="Test Location",
             start_date=date(2024, 6, 1),
             end_date=date(2024, 6, 7),
-            budget=1000.0,
+            budget_breakdown=Budget(total=1000.0),
             travelers=2,
             status=TripStatus.PLANNING,
             trip_type=TripType.LEISURE,
