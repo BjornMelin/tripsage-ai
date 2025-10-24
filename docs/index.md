@@ -1,119 +1,119 @@
-# Documentation Index
+# TripSage AI API Documentation
 
-This index lists all documentation files under `docs/` by section.
+Welcome to the official API documentation for **TripSage AI**, an AI-powered travel planning system that integrates multiple data sources to provide comprehensive travel recommendations and itineraries.
 
-## Platform Overview
+## What is TripSage AI?
 
-- [Project Overview](README.md)
+TripSage AI is a sophisticated travel planning platform that leverages artificial intelligence to:
 
-## Specifications
+- **Multi-source Data Integration**: Combines flight data, hotel information, activities, and user preferences
+- **Personalized Recommendations**: Uses AI to suggest optimal travel options based on your needs
+- **Real-time Updates**: Provides live pricing, availability, and travel alerts
+- **Collaborative Planning**: Enables group trip planning with shared itineraries
 
-- [AI SDK v5 Migration](specs/0001-spec-ai-sdk-v5.md)
-- [Next.js 16 Migration Notes](specs/0002-spec-next16-migration.md)
-- [Session Resume Spec](specs/0003-spec-session-resume.md)
-- [Supabase SSR Typing](specs/0004-spec-supabase-ssr-typing.md)
-- [Tailwind CSS v4 Migration](specs/0005-spec-tailwind-v4.md)
-- [Zod v4 Migration](specs/0006-spec-zod-v4-migration.md)
-- [SSE Chat Streaming](specs/0007-spec-sse-chat-streaming.md)
-- [Rate Limiting](specs/0008-spec-rate-limiting.md)
-- [Attachments SSR Listing & Cache Tags](specs/0009-spec-attachments-ssr-listing-and-cache-tags.md)
+## Documentation Overview
 
-## Examples
+This documentation site provides everything you need to integrate with the TripSage AI API:
 
-- [Python 3.13 Features Demo](examples/python313_features_demo.py)
+### [Getting Started](api/README.md)
 
-## Observability
+- [API Overview](api/README.md) - Learn about the API structure and capabilities
+- [Authentication](api/auth.md) - Set up authentication and API keys
+- [Quick Start](api/usage-examples.md) - Code examples to get you running quickly
 
-- [Logging](observability/logging.md)
-- [Metrics](observability/metrics.md)
+### [API Reference](api/rest-endpoints.md)
 
-## API
+- [REST Endpoints](api/rest-endpoints.md) - Complete REST API reference
+- [WebSocket API](api/websocket-realtime-api.md) - Real-time communication
+- [Dashboard API](api/dashboard-api.md) - Administrative endpoints
+- [Error Codes](api/error-codes.md) - Error handling reference
 
-- [README](api/README.md)
-- [Dashboard API](api/dashboard-api.md)
-- [Error Codes](api/error-codes.md)
-- [REST Endpoints](api/rest-endpoints.md)
-- [Usage Examples](api/usage-examples.md)
-- [WebSocket and Real-time API](api/websocket-realtime-api.md)
-- [WebSocket Connection Guide](api/websocket-connection-guide.md)
-- [WebSocket Events Guide](api/websocket-events-guide.md)
-- [WebSocket Integration Guide](api/websocket-integration-guide.md)
+### [Interactive API](openapi.md)
 
-## Architecture
+- Full OpenAPI 3.0 specification
+- Interactive API explorer
+- Client SDK generation
 
-- [README](architecture/README.md)
-- [Data Architecture](architecture/data-architecture.md)
-- [Storage Architecture](architecture/storage-architecture.md)
-- [System Overview](architecture/system-overview.md)
+### [Code Reference](reference/)
 
-## Developers
+- Auto-generated API documentation from source code
+- Complete module and class references
 
-- **Onboarding**
-  - [Developer README](developers/README.md)
-  - [Quick Start Guide](developers/quick-start-guide.md)
-  - [Code Standards](developers/code-standards.md)
-- **Core Development**
-  - [Backend Development](developers/backend-development.md)
-  - [Database Architecture](developers/database-architecture.md)
-  - [Frontend Development](developers/frontend-development.md)
-  - [Data Models](developers/data-models.md)
-- **Quality & Operations**
-  - [Testing Guide](developers/testing-guide.md)
-  - [Debugging & Performance](developers/debugging-performance.md)
-  - [CI Overview](developers/ci-overview.md)
-  - [Branch Conventions](developers/branch-conventions.md)
+## 🔧 Development Setup
 
-## Operators
+### Prerequisites
 
-- [README](operators/README.md)
-- [Admin Guide](operators/admin-guide.md)
-- [Authentication Guide](operators/authentication-guide.md)
-- [Deployment Guide Full](operators/deployment-guide-full.md)
-- [Configuration Management](operators/configuration-management.md)
-- [Deployment Guide](operators/deployment-guide.md)
-- [Environment Configuration](operators/environment-configuration.md)
-- [Installation Guide](operators/installation-guide.md)
-- [Security Guide](operators/security-guide.md)
-- [Settings Reference](operators/settings-reference.md)
-- [Supabase Configuration](operators/supabase-configuration.md)
+- Python 3.13+
+- Node.js 18+ (for frontend)
+- Docker & Docker Compose (for local development)
 
-## Users
+### Quick Setup
 
-- [README](users/README.md)
-- [Feature Reference](users/feature-reference.md)
-- [Collaboration](users/collaboration.md)
-- [FAQ](users/faq.md)
-- [Getting Started](users/getting-started.md)
-- [Travel Planning Guide](users/travel-planning-guide.md)
-- [Web App Guide](users/web-app-guide.md)
+```bash
+# Clone the repository
+git clone https://github.com/tripsage-ai/tripsage-ai.git
+cd tripsage-ai
 
-## ADRs
+# Install Python dependencies
+uv sync
 
-- [README](adrs/README.md)
-- [ADR-0001 LangGraph Orchestration](adrs/adr-0001-langgraph-orchestration.md)
-- [ADR-0002 Supabase Platform](adrs/adr-0002-supabase-platform.md)
-- [ADR-0003 Upstash Redis Caching](adrs/adr-0003-upstash-redis.md)
-- [ADR-0004 FastAPI Backend](adrs/adr-0004-fastapi-backend.md)
-- [ADR-0005 Next.js React 19](adrs/adr-0005-nextjs-react19.md)
-- [ADR-0006 WebSocket Architecture](adrs/adr-0006-websocket-architecture.md)
-- [ADR-0007 Testing Strategy](adrs/adr-0007-testing-strategy.md)
-- [ADR-0008 Pydantic v2 Migration](adrs/adr-0008-pydantic-v2-migration.md)
-- [ADR-0009 CI Consolidation](adrs/adr-0009-consolidate-ci-to-two-workflows-and-remove-custom-composites.md)
-- [ADR-0010 Memory Facade Final](adrs/adr-0010-memory-facade-final.md)
-- [ADR-0011 Tenacity Only Resilience](adrs/adr-0011-tenacity-only-resilience.md)
-- [ADR-0012 Flights Canonical DTO](adrs/adr-0012-flights-canonical-dto.md)
-- [ADR-0012 SlowAPI AIOLimiter Migration](adrs/adr-0012-slowapi-aiolimiter-migration.md)
-- [ADR-0013 Adopt Next.js 16 Proxy and Async APIs](adrs/adr-0013-adopt-next-js-16-proxy-and-async-apis-deprecate-middleware.md)
-- [ADR-0014 Migrate Supabase Auth to Supabase SSR](adrs/adr-0014-migrate-supabase-auth-to-supabase-ssr-and-deprecate-auth-helpers-react.md)
-- [ADR-0015 Upgrade AI SDK to v5](adrs/adr-0015-upgrade-ai-sdk-to-v5-ai-sdk-react-and-usechat-redesign.md)
-- [ADR-0016 Tailwind CSS v4 Migration](adrs/adr-0016-tailwind-css-v4-migration-css-first-config.md)
-- [ADR-0017 Adopt Node.js v24 LTS](adrs/adr-0017-adopt-node-js-v24-lts-baseline.md)
-- [ADR-0018 Centralize Supabase Typed Helpers](adrs/adr-0018-centralize-supabase-typed-helpers-for-crud.md)
-- [ADR-0019 Canonicalize Chat Service FastAPI](adrs/adr-0019-canonicalize-chat-service-fastapi.md)
-- [ADR Template](adrs/template.md)
+# Install documentation dependencies
+uv sync --group docs
 
-## Deployments
+# Start the development environment
+docker-compose up -d
 
-- [README](deployments/README.md)
+# Run the API server
+uv run python -m tripsage.api.main
 
-<!-- Archive intentionally omitted from index; see .gitignore rule for docs/archive/ -->
+# Build documentation (in another terminal)
+mkdocs serve
+```
+
+### API Endpoints
+
+- **API Server**: `http://localhost:8000`
+- **Documentation**: `http://localhost:8001`
+- **Frontend**: `http://localhost:3000`
+
+## Key Concepts
+
+### Authentication
+
+The API uses JWT-based authentication with Supabase integration. All requests require a valid Bearer token.
+
+### Rate Limiting
+
+API calls are rate-limited to prevent abuse. Check the response headers for rate limit information.
+
+### WebSocket Real-time Updates
+
+For real-time features like live pricing updates and collaborative planning, use the WebSocket API.
+
+### Error Handling
+
+All errors follow a consistent JSON format with appropriate HTTP status codes.
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](../CONTRIBUTING.md) for details on:
+
+- Reporting bugs
+- Requesting features
+- Submitting pull requests
+- Code style guidelines
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+
+## 📞 Support
+
+- **Documentation Issues**: [GitHub Issues](https://github.com/tripsage-ai/tripsage-ai/issues)
+- **API Support**: [Support Forum](https://github.com/tripsage-ai/tripsage-ai/discussions)
+- **Security Issues**: [security@tripsage.ai](mailto:security@tripsage.ai)
+
+---
+
+!!! tip "Need Help?"
+Can't find what you're looking for? Check the [FAQ](faq.md) or [contact support](support.md).
