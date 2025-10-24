@@ -67,6 +67,14 @@ observability = [
     "opentelemetry-instrumentation-redis>=0.59b0,<0.60",
 ]
 
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.26.0",
+    "mkdocs-gen-files>=0.5.0",
+    "mkdocs-literate-nav>=0.6.0",
+]
+
 test = [
     # Core testing framework
     "pytest>=8.4.2",
