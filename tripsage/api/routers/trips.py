@@ -958,7 +958,7 @@ async def search_trips(
         ) from e
 
 
-@router.get("/{trip_id}/itinerary")
+@router.get("/{trip_id}/itinerary", response_model=_ItineraryResponse)
 async def get_trip_itinerary(
     trip_id: UUID,
     trip_service: TripServiceDep,
@@ -1077,7 +1077,7 @@ async def get_trip_itinerary(
         ) from e
 
 
-@router.post("/{trip_id}/export")
+@router.post("/{trip_id}/export", response_model=_ExportResponse)
 async def export_trip(
     trip_id: UUID,
     trip_service: TripServiceDep,

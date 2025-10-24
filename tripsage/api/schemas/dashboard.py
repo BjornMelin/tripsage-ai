@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class TimeRange(str, Enum):
@@ -82,13 +82,15 @@ class DashboardQueryParams(BaseModel):
     time_range_hours: int | None = Field(default=None, ge=1, le=168)
     service: str | None = Field(default=None, max_length=50)
 
-    @validator("time_range_hours")
-    def validate_time_range_hours(cls, v, values):
-        """Validate time_range_hours based on time_range."""
-        if v is not None:
-            return v
+    @model_validator(mode="after")
+    def _set_time_range_hours_default(self) -> "DashboardQueryParams":
+        """Populate ``time_range_hours`` when not provided using ``time_range``.
 
-        time_range = values.get("time_range", TimeRange.LAST_24_HOURS)
+        Pydantic v2 model-level validator used for cross-field defaulting.
+        """
+        if self.time_range_hours is not None:
+            return self
+
         time_range_mapping = {
             TimeRange.LAST_HOUR: 1,
             TimeRange.LAST_6_HOURS: 6,
@@ -96,7 +98,10 @@ class DashboardQueryParams(BaseModel):
             TimeRange.LAST_7_DAYS: 168,
             TimeRange.LAST_30_DAYS: 720,
         }
-        return time_range_mapping.get(time_range, 24)
+        self.time_range_hours = time_range_mapping.get(
+            self.time_range or TimeRange.LAST_24_HOURS, 24
+        )
+        return self
 
 
 class MetricsQueryParams(DashboardQueryParams):
@@ -248,13 +253,18 @@ class RateLimitInfoResponse(BaseModel):
     percentage_used: float = Field(
         ..., ge=0.0, le=100.0, description="Percentage of quota used"
     )
-    is_approaching_limit: bool = Field(..., description="Whether approaching the limit")
+    is_approaching_limit: bool = Field(
+        default=False, description="Whether approaching the limit"
+    )
 
-    @validator("is_approaching_limit", always=True)
-    def calculate_approaching_limit(cls, v, values):
-        """Calculate if approaching limit based on percentage used."""
-        percentage = values.get("percentage_used", 0.0)
-        return percentage >= 80.0
+    @model_validator(mode="after")
+    def _compute_is_approaching_limit(self) -> "RateLimitInfoResponse":
+        """Derive ``is_approaching_limit`` from ``percentage_used``.
+
+        Uses a fixed 80% threshold.
+        """
+        self.is_approaching_limit = self.percentage_used >= 80.0
+        return self
 
 
 class AlertInfoResponse(BaseModel):
@@ -349,32 +359,35 @@ class TrendDataResponse(BaseModel):
     max_value: float = Field(..., description="Maximum value in period")
     avg_value: float = Field(..., description="Average value in period")
     trend_direction: str = Field(
-        ..., description="Overall trend direction (up, down, stable)"
+        default="stable", description="Overall trend direction (up, down, stable)"
     )
 
-    @validator("trend_direction", always=True)
-    def calculate_trend_direction(cls, v, values):
-        """Calculate trend direction from data points."""
-        data_points = values.get("data_points", [])
-        if len(data_points) < 2:
-            return "stable"
+    @model_validator(mode="after")
+    def _compute_trend_direction(self) -> "TrendDataResponse":
+        """Calculate trend direction from data points using a simple heuristic."""
+        if len(self.data_points) < 2:
+            self.trend_direction = "stable"
+            return self
 
-        first_half = data_points[: len(data_points) // 2]
-        second_half = data_points[len(data_points) // 2 :]
+        first_half = self.data_points[: len(self.data_points) // 2]
+        second_half = self.data_points[len(self.data_points) // 2 :]
 
         if not first_half or not second_half:
-            return "stable"
+            self.trend_direction = "stable"
+            return self
 
         first_avg = sum(p.value for p in first_half) / len(first_half)
         second_avg = sum(p.value for p in second_half) / len(second_half)
 
         difference_threshold = 0.05  # 5% change
         if second_avg > first_avg * (1 + difference_threshold):
-            return "up"
+            self.trend_direction = "up"
         elif second_avg < first_avg * (1 - difference_threshold):
-            return "down"
+            self.trend_direction = "down"
         else:
-            return "stable"
+            self.trend_direction = "stable"
+
+        return self
 
 
 class AnalyticsSummaryResponse(BaseModel):

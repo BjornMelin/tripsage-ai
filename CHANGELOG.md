@@ -47,6 +47,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Orchestration]:** LangGraph tools register the shared services container via `set_tool_services`, removing the final `ServiceRegistry` usage and guaranteeing tool invocations reuse the same singletons as the API.
 - **Agents/DI:** Standardized on FastAPI app.state singletons, eliminating ServiceRegistry for simpler, lifespan-managed dependencies.
 - **API/Schemas:** Centralized memory and attachments request/response models under `tripsage/api/schemas`, added health schemas, and moved trip search params to schemas; routers import these models and declare explicit `response_model`s.
+- **API/Schemas (feature-first):** Completed migration from `schemas/{requests,responses}` to feature-first modules for memory, attachments, trips, activities, search, and realtime dashboard. Deleted legacy split directories and updated all imports.
+- **Realtime Dashboard:** Centralized realtime DTOs and added typed responses for broadcast/connection endpoints.
+- **Search Router:** UnifiedSearchRequest moved to feature-first schema with back-compat fields; analytics endpoint returns `SearchAnalyticsResponse`.
+- **Attachments Router:** List endpoint now returns typed `FileListResponse` with `FileMetadataResponse` entries (service results adapted safely).
+- **Trip Security:** Tightened types and returns for `TripAccessResult`; fixed permission comparison typing.
+- **Middlewares:** Corrected type annotations (Awaitable[Response]) and Pydantic ConfigDict usage to satisfy pyright and Pydantic v2.
 
 ### Fixed (DI migration sweep)
 

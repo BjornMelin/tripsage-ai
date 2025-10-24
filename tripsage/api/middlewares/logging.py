@@ -7,7 +7,7 @@ with structured logging support.
 import logging
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -33,7 +33,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
 
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Response]
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """Process the request/response and log details.
 

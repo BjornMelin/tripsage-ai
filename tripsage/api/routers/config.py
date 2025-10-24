@@ -5,6 +5,7 @@ versioning, and real-time updates following 2025 best practices.
 """
 
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
@@ -269,7 +270,7 @@ async def rollback_agent_config(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/environment")
+@router.get("/environment", response_model=dict[str, Any])
 async def get_environment_config():
     """Get current environment configuration summary."""
     settings = get_settings()

@@ -261,7 +261,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.pyright]
-include = ["tripsage", "tripsage_core", "scripts", "tests"]
+include = ["tripsage", "tripsage_core"]
 exclude = [
     "build",
     "dist",
@@ -279,6 +279,8 @@ exclude = [
     ".ruff_cache",
     ".mypy_cache",
     ".venv",
+    "tests",
+    "scripts",
 ]
 pythonVersion = "3.13"
 typeCheckingMode = "basic"

@@ -15,6 +15,7 @@ from tripsage.api.core.dependencies import (
     require_principal,
 )
 from tripsage.api.schemas.search import (
+    SearchAnalyticsResponse,
     UnifiedSearchAggregateResponse as UnifiedSearchResponse,
     UnifiedSearchRequest,
 )
@@ -376,7 +377,7 @@ async def bulk_search(
         ) from e
 
 
-@router.get("/analytics")
+@router.get("/analytics", response_model=SearchAnalyticsResponse)
 async def get_search_analytics(
     request: Request,
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
@@ -419,14 +420,14 @@ async def get_search_analytics(
             query_counts.items(), key=lambda x: x[1], reverse=True
         )[:10]
 
-        return {
-            "date": date,
-            "total_searches": total_searches,
-            "cache_hit_rate": cache_hits / max(total_searches, 1),
-            "cache_hits": cache_hits,
-            "cache_misses": cache_misses,
-            "popular_queries": [{"query": q, "count": c} for q, c in popular_queries],
-        }
+        return SearchAnalyticsResponse(
+            date=date,
+            total_searches=total_searches,
+            cache_hit_rate=cache_hits / max(total_searches, 1),
+            cache_hits=cache_hits,
+            cache_misses=cache_misses,
+            popular_queries=[{"query": q, "count": c} for q, c in popular_queries],
+        )
 
     except Exception as e:
         logger.exception("Failed to get search analytics")
