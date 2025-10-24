@@ -1,16 +1,16 @@
-# 🔌 TripSage REST API Endpoints
+# TripSage REST API Endpoints
 
 > **Complete API Reference**  
 > Documentation for all TripSage REST API endpoints including trip collaboration, real-time features, and data management.
 
-## 📋 API Overview
+## API Overview
 
 - **Base URL**: `https://api.tripsage.ai` (Production), `http://localhost:8001` (Development)
 - **Authentication**: Bearer JWT token, API key
 - **Content-Type**: `application/json`
 - **Rate Limiting**: 1000 requests/hour (standard tier)
 
-## 🔐 Authentication
+## Authentication
 
 All API endpoints require authentication via JWT token:
 
@@ -20,7 +20,7 @@ Authorization: Bearer your-jwt-token
 Content-Type: application/json
 ```
 
-## 🗺️ Trip Management
+## Trip Management
 
 ### Create Trip
 
@@ -248,7 +248,7 @@ GET /api/trips/suggestions?limit=4&budget_max=3000&category=culture
 ]
 ```
 
-## 🤝 Trip Collaboration
+## Trip Collaboration
 
 ### Share Trip
 
@@ -330,7 +330,7 @@ DELETE /api/trips/{trip_id}/collaborators/{user_id}
 
 **Response:** `204 No Content`
 
-## 🔍 Search & Discovery
+## Search & Discovery
 
 ### Search Destinations
 
@@ -465,7 +465,7 @@ GET /api/accommodations/search
 GET /api/activities/search?destination=paris&category=museums&date=2025-06-01
 ```
 
-## 💬 Chat & AI
+## Chat & AI
 
 ### Start Chat Session
 
@@ -536,7 +536,7 @@ POST /api/chat/sessions/{session_id}/messages
 GET /api/chat/sessions/{session_id}/messages?limit=50
 ```
 
-## 🧠 Memory & Preferences
+## Memory & Preferences
 
 ### Get User Memory
 
@@ -561,7 +561,7 @@ PUT /api/memory/preferences
 }
 ```
 
-## 🔑 API Key Management
+## API Key Management
 
 ### List API Keys
 
@@ -617,7 +617,7 @@ PUT /api/keys/{key_id}
 DELETE /api/keys/{key_id}
 ```
 
-## 🎯 Attachments & Files
+## Attachments & Files
 
 ### Upload File
 
@@ -669,7 +669,7 @@ GET /api/attachments/files
 - Adds `next: { tags: ['attachments'] }` on the server fetch.
 - Invalidated by upload handlers calling `revalidateTag('attachments','max')`.
 
-## 📊 Analytics & Insights
+## Analytics & Insights
 
 ### Trip Analytics
 
@@ -683,7 +683,7 @@ GET /api/trips/{trip_id}/analytics
 GET /api/users/insights
 ```
 
-## 🚨 Error Responses
+## Error Responses
 
 All endpoints return consistent error responses. For complete error handling information, see the [Error Codes Reference](error-codes.md).
 
@@ -698,7 +698,7 @@ All endpoints return consistent error responses. For complete error handling inf
 
 For detailed error response formats and troubleshooting, see [Error Codes](error-codes.md).
 
-## 📈 Rate Limiting
+## Rate Limiting
 
 All endpoints are subject to rate limiting:
 
@@ -709,7 +709,7 @@ X-RateLimit-Reset: 1640995200
 X-RateLimit-Window: 3600
 ```
 
-## 📝 Request/Response Examples
+## Request/Response Examples
 
 ### Complete Trip Planning Flow
 
@@ -751,13 +751,13 @@ X-RateLimit-Window: 3600
 
 ---
 
-## 🔗 Related Documentation
+## Related Documentation
 
 ### Getting Started
 
 - **[API Overview](README.md)** - Complete API documentation index
 - **[Getting Started Guide](getting-started.md)** - First steps with the API
-- **[Authentication Guide](README.md#🔐-authentication)** - Setup JWT tokens and API keys
+- **[Authentication Guide](README.md#authentication)** - Setup JWT tokens and API keys
 
 ### Code Examples
 

@@ -1,0 +1,16 @@
+# Summary
+
+- [Home](index.md)
+- [Getting Started](api/README.md)
+  - [Authentication](api/auth.md)
+  - [Quick Start](api/usage-examples.md)
+- [API Reference](api/rest-endpoints.md)
+  - [REST Endpoints](api/rest-endpoints.md)
+  - [WebSocket API](api/websocket-realtime-api.md)
+    - [Connection Guide](api/websocket-connection-guide.md)
+    - [Events Guide](api/websocket-events-guide.md)
+    - [Integration Guide](api/websocket-integration-guide.md)
+  - [Dashboard API](api/dashboard-api.md)
+  - [Error Codes](api/error-codes.md)
+- [Interactive API](openapi.md)
+- [Code Reference](reference/)
