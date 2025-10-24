@@ -30,54 +30,189 @@ curl http://localhost:8000/api/health
 
 ### Core References
 
-| Document | Description | Focus |
-|----------|-------------|-------|
-| **[REST API Reference](rest-endpoints.md)** | Complete endpoint documentation | All endpoints |
-| **[Authentication Guide](authentication.md)** | JWT tokens, API keys, BYOK support | Auth & security |
-| **[WebSocket API](websocket-api.md)** | Real-time communication | WebSocket endpoints |
-| **[Usage Examples](usage-examples.md)** | Practical code snippets | Quick reference |
-| **[Error Codes](error-codes.md)** | Error handling reference | Troubleshooting |
+| Document                                                     | Description                               | Focus               |
+| ------------------------------------------------------------ | ----------------------------------------- | ------------------- |
+| **[REST API Reference](rest-endpoints.md)**                  | Complete endpoint documentation           | All endpoints       |
+| **[WebSocket and Real-time API](websocket-realtime-api.md)** | Real-time communication and collaboration | WebSocket endpoints |
+| **[Usage Examples](usage-examples.md)**                      | Practical code snippets                   | Quick reference     |
+| **[Error Codes](error-codes.md)**                            | Error handling reference                  | Troubleshooting     |
 
 ### Specialized Guides
 
-- **[WebSocket Guide](websocket-guide.md)** - Connection management patterns
-- **[Real-time Guide](realtime-guide.md)** - Real-time features and collaboration
 - **[Dashboard API](dashboard-api.md)** - Monitoring and analytics endpoints
-- **[Trip Security Examples](trip-security-usage-examples.md)** - Security-focused examples
 
 ## 🔐 Authentication
 
+TripSage supports multiple authentication approaches:
+
+| Method     | Use Case                 | Security | Expiration                         |
+| ---------- | ------------------------ | -------- | ---------------------------------- |
+| JWT Tokens | User apps                | High     | 1 hour (access), 30 days (refresh) |
+| API Keys   | Server-to-server         | High     | Configurable (up to 1 year)        |
+| OAuth 2.0  | Third-party integrations | High     | Provider-specific                  |
+
 ### JWT Authentication (Primary)
+
+#### User Login Flow
 
 ```bash
 # Register user
-curl -X POST http://localhost:8000/api/v1/auth/register \
+curl -X POST http://localhost:8000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "password": "secure_password"}'
 
 # Login to get JWT
-curl -X POST http://localhost:8000/api/v1/auth/token \
+curl -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "user@example.com", "password": "secure_password"}'
+  -d '{"email": "user@example.com", "password": "secure_password"}'
 
 # Use JWT token
-curl http://localhost:8000/api/v1/trips \
+curl http://localhost:8000/api/trips \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
+#### Token Management
+
+- **Access tokens**: Short-lived (1 hour), used for API requests
+- **Refresh tokens**: Long-lived (30 days), used to get new access tokens
+- **Automatic refresh**: Implement in your client application
+
 ### API Key Authentication (BYOK)
 
+#### Bring Your Own Keys
+
+Store and manage third-party API keys securely:
+
 ```bash
-# Create API key
-curl -X POST http://localhost:8000/api/v1/keys \
+# Add API key
+curl -X POST http://localhost:8000/api/keys \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"service": "duffel", "api_key": "user_key", "description": "Flight API"}'
+  -d '{
+    "name": "My Duffel API Key",
+    "service": "duffel",
+    "key": "duffel_test_your_api_key_here"
+  }'
 
 # Use API key
-curl http://localhost:8000/api/v1/flights/search \
-  -H "X-API-Key: YOUR_API_KEY"
+curl http://localhost:8000/api/flights/search \
+  -H "X-API-Key: YOUR_STORED_API_KEY"
 ```
+
+#### Supported Services
+
+- **duffel**: Flight search and booking
+- **google_maps**: Maps and location services
+- **openweather**: Weather information
+
+### Security Best Practices
+
+#### Token Security
+
+- Store tokens securely (httpOnly cookies, secure storage)
+- Implement automatic token refresh
+- Validate tokens on each request
+- Use HTTPS in production
+
+#### API Key Management
+
+- Rotate keys regularly
+- Use descriptive names for organization
+- Set appropriate expiration dates
+- Monitor usage patterns
+
+#### Rate Limiting
+
+Default limits (requests per minute):
+
+- Unauthenticated: 10
+- JWT tokens: 100
+- API keys: 200-1000 (based on tier)
+
+### Implementation Examples
+
+#### Frontend (React/Next.js)
+
+```typescript
+// JWT authentication
+const login = async (email: string, password: string) => {
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const { access_token } = await response.json();
+  localStorage.setItem("token", access_token);
+};
+
+// API requests with auth
+const apiRequest = async (url: string, options = {}) => {
+  const token = localStorage.getItem("token");
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+```
+
+#### Backend (Python)
+
+```python
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBearer
+
+security = HTTPBearer()
+
+async def get_current_user(credentials = Depends(security)):
+    # Validate JWT token and return user
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY)
+        return payload['sub']
+    except:
+        raise HTTPException(status_code=401, detail="Invalid token")
+```
+
+### Common Issues
+
+#### Token Expired
+
+```json
+{
+  "error": true,
+  "message": "Token has expired",
+  "code": "TOKEN_EXPIRED"
+}
+```
+
+**Solution**: Use refresh token to get new access token
+
+#### Invalid API Key
+
+```json
+{
+  "error": true,
+  "message": "API key not found",
+  "code": "API_KEY_NOT_FOUND"
+}
+```
+
+**Solution**: Verify API key is stored and valid
+
+#### Rate Limited
+
+```json
+{
+  "error": true,
+  "message": "Rate limit exceeded",
+  "code": "RATE_LIMIT_EXCEEDED"
+}
+```
+
+**Solution**: Implement exponential backoff and respect rate limits
 
 ## 🌐 Core Endpoints
 
@@ -104,7 +239,8 @@ curl http://localhost:8000/api/v1/flights/search \
 
 ### AI & Chat
 
-- `POST /api/v1/chat/completions` - AI chat interface
+- `POST /api/v1/chat/completions` - AI chat interface (non-streaming)
+- `POST /api/chat/stream` - Streaming chat via Server-Sent Events (`text/event-stream`)
 - `POST /api/v1/memory/conversation` - Store conversation
 - `GET /api/v1/memory/context` - Get user context
 
@@ -164,12 +300,12 @@ uv run pytest tests/integration/api/
 
 ## 🚨 Troubleshooting
 
-| Issue | Solution | Reference |
-|-------|----------|-----------|
-| `401 Unauthorized` | Check JWT token format | [Auth Guide](authentication.md) |
-| `422 Validation Error` | Verify required fields | [Error Codes](error-codes.md) |
-| `429 Rate Limited` | Check rate limits | [Usage Examples](usage-examples.md) |
-| WebSocket disconnect | Implement reconnection | [WebSocket Guide](websocket-guide.md) |
+| Issue                  | Solution               | Reference                                                |
+| ---------------------- | ---------------------- | -------------------------------------------------------- |
+| `401 Unauthorized`     | Check JWT token format | [Authentication](#-authentication)                       |
+| `422 Validation Error` | Verify required fields | [Error Codes](error-codes.md)                            |
+| `429 Rate Limited`     | Check rate limits      | [Authentication](#-authentication)                       |
+| WebSocket disconnect   | Implement reconnection | [WebSocket and Real-time API](websocket-realtime-api.md) |
 
 ---
 

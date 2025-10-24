@@ -5,8 +5,8 @@ This document describes the dashboard monitoring API endpoints that provide real
 > **Related Documentation:**
 >
 > - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation
-> - [Authentication](authentication.md) - API authentication guide
-> - [WebSocket API](websocket-api.md) - Real-time WebSocket connections
+> - [Authentication](README.md#🔐-authentication) - API authentication guide
+> - [WebSocket API](websocket-realtime-api.md) - Real-time WebSocket connections
 > - [Error Codes](error-codes.md) - API error reference
 > - [Performance Optimization](../developers/performance-optimization.md) - System performance tuning
 
@@ -31,13 +31,13 @@ All dashboard endpoints require authenticated access. Only users with appropriat
 - **Admin Access**: Required for full dashboard functionality
 - **Agent Access**: Not permitted for dashboard endpoints
 
-For detailed authentication information, see the [Authentication Guide](authentication.md).
+For detailed authentication information, see the [Authentication Guide](README.md#🔐-authentication).
 
 > **Related Documentation:**
 >
-> - [Authentication Guide](authentication.md) - Complete authentication setup and usage
+> - [Authentication Guide](README.md#🔐-authentication) - Complete authentication setup and usage
 > - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation details
-> - [WebSocket API](websocket-api.md) - Real-time features and WebSocket connections
+> - [WebSocket API](websocket-realtime-api.md) - Real-time features and WebSocket connections
 
 ## Base URL
 
@@ -512,16 +512,18 @@ for rate_limit in response.json():
 
 ```javascript
 // Connect to WebSocket for real-time updates
-const ws = new WebSocket('ws://api.tripsage.com/api/dashboard/realtime/ws/user_123');
+const ws = new WebSocket(
+  "ws://api.tripsage.com/api/dashboard/realtime/ws/user_123"
+);
 
-ws.onmessage = function(event) {
-    const data = JSON.parse(event.data);
-    
-    if (data.type === 'alert') {
-        showAlert(data.data);
-    } else if (data.type === 'metrics') {
-        updateMetrics(data.data);
-    }
+ws.onmessage = function (event) {
+  const data = JSON.parse(event.data);
+
+  if (data.type === "alert") {
+    showAlert(data.data);
+  } else if (data.type === "metrics") {
+    updateMetrics(data.data);
+  }
 };
 ```
 
@@ -531,6 +533,6 @@ This dashboard API provides monitoring capabilities for maintaining system healt
 
 - [Error Codes](error-codes.md) - Complete API error reference
 - [REST Endpoints](rest-endpoints.md) - Core API endpoints
-- [WebSocket Guide](websocket-guide.md) - Real-time communication setup
+- [WebSocket and Real-time API](websocket-realtime-api.md) - Real-time communication setup
 - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation
 - [Performance Optimization](../developers/performance-optimization.md) - System performance guides
