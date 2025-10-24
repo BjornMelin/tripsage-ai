@@ -1,10 +1,8 @@
 # ADR-0014: Migrate Supabase auth to @supabase/ssr; deprecate auth-helpers-react
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-10-23
-
-## Status
-
-Accepted
 
 ## Context
 
@@ -45,3 +43,7 @@ Rejected: `@supabase/ssr` already provides first-class utilities; bespoke handli
 - Supabase SSR docs; Next.js SSR guidance for auth and cookies.
   - <https://supabase.com/docs/guides/auth/server-side/nextjs>
   - <https://supabase.com/docs/guides/auth/server-side#supabasessr>
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

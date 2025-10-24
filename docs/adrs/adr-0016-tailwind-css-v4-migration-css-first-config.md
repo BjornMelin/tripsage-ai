@@ -1,10 +1,8 @@
 # ADR-0016: Tailwind CSS v4 migration (CSS-first configuration)
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-10-23
-
-## Status
-
-Accepted
 
 ## Context
 
@@ -45,3 +43,7 @@ Rejected; higher implementation cost and loss of utility workflow ergonomics use
 - Tailwind v4 upgrade guide and announcement.
   - <https://tailwindcss.com/docs/upgrade-guide>
   - <https://tailwindcss.com/blog/tailwindcss-v4>
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

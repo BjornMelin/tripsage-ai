@@ -1,10 +1,8 @@
 # ADR-0007: Modern Testing Strategy with Vitest and Playwright
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-06-17
-
-## Status
-
-Accepted
 
 ## Context
 
@@ -66,6 +64,10 @@ We will adopt a modern testing strategy:
 - **Tool Fragmentation**: Different tools for different test types
 
 ### Neutral
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.
 
 - Different configuration and setup patterns
 - New test organization structure needed

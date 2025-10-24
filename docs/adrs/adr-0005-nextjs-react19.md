@@ -1,10 +1,8 @@
 # ADR-0005: Next.js 15 with React 19 for Frontend
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-06-17
-
-## Status
-
-Accepted
 
 ## Context
 
@@ -51,6 +49,10 @@ This technology stack provides:
 - **Lock-in**: Some Next.js specific patterns and optimizations
 
 ### Neutral
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.
 
 - Requires Node.js 18+ for optimal performance
 - Different mental model from traditional SPAs

@@ -1,10 +1,8 @@
 # ADR-0013: Adopt Next.js 16 proxy and async APIs; deprecate middleware
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-10-23
-
-## Status
-
-Accepted
 
 ## Context
 
@@ -46,3 +44,7 @@ Rejected. Delays access to v16 improvements (Turbopack default, routing/navigati
 - Next.js 16 upgrade guide and proxy file-convention documentation.
   - <https://nextjs.org/docs/app/guides/upgrading/version-16>
   - <https://nextjs.org/docs/app/api-reference/file-conventions/proxy>
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

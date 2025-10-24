@@ -1,10 +1,8 @@
 # ADR-0002: Adopt Supabase as Primary Database and Auth Platform
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-06-17
-
-## Status
-
-Accepted
 
 ## Context
 
@@ -38,6 +36,10 @@ We will specifically migrate from custom JWT authentication to Supabase Auth imm
 - **Cost Effective**: Free up to 50,000 MAUs; saves ~$90,000 over 5 years vs custom auth
 - **Feature Complete**: MFA, OAuth, magic links, session management out-of-box
 - **Developer Experience**: Excellent SDKs, auto-generated APIs, TypeScript support
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.
 - **Integration**: Row Level Security (RLS) provides automatic data isolation
 - **Open Source**: Can self-host if needed; not locked to cloud service
 
