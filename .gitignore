@@ -240,6 +240,7 @@ frontend/*.temp.*
 **/debug/
 
 # Documentation generation artifacts
+site/
 docs/**/temp/
 docs/**/*.backup
 docs/**/*-backup.*
