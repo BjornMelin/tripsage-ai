@@ -3,6 +3,8 @@
 Version: 1.0.0
 Status: Deprecated
 Date: 2025-10-24
+**Category**: backend
+**Domain**: SlowAPI / Aiolimiter
 Owner: Platform
 
 ## Context

@@ -3,6 +3,8 @@
 **Version**: 1.1.0
 **Status**: Accepted
 **Date**: 2025-10-24
+**Category**: backend
+**Domain**: Chat Service / Streaming
 
 ## Context
 
