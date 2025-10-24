@@ -61,7 +61,26 @@ describe("useTrips", () => {
 
 ## Backend Testing
 
-### Backend Unit Testing
+### Unit Testing
+
+Unit tests validate individual functions, classes, and modules in isolation.
+
+#### Isolation Principles
+
+- No external dependencies (all mocked)
+- No database access (mocked)
+- No network calls (mocked)
+- Fast execution (<100ms per test)
+- Deterministic results
+
+#### Mocking Strategies
+
+- Use `unittest.mock` for service dependencies
+- Use `AsyncMock` for async operations
+- Leverage pytest fixtures for reusable mocks
+- Use `@patch` for targeted mocking
+
+#### Service Testing Example
 
 ```python
 import pytest
@@ -119,55 +138,7 @@ Validate database schema, RLS policies, and constraints.
 ```bash
 # Schema integration tests
 uv run pytest tests/integration/test_supabase_collaboration_schema.py -v
-pytest tests/performance/test_collaboration_performance.py --durations=10
-```
-
-## Unit Testing
-
-Unit tests validate individual functions, classes, and modules in isolation.
-
-### Isolation Principles
-
-- No external dependencies (all mocked)
-- No database access (mocked)
-- No network calls (mocked)
-- Fast execution (<100ms per test)
-- Deterministic results
-
-### Mocking Strategies
-
-- Use `unittest.mock` for service dependencies
-- Use `AsyncMock` for async operations
-- Leverage pytest fixtures for reusable mocks
-- Use `@patch` for targeted mocking
-
-### Test Structure
-
-```text
-tests/unit/
-├── api/           # API endpoint tests
-├── agents/        # AI agent class tests
-├── services/      # Business logic service tests
-├── models/        # Data model validation tests
-├── tools/         # Tool function tests
-└── utils/         # Utility function tests
-```
-
-### Running Unit Tests
-
-```bash
-# All unit tests
-uv run pytest tests/unit/
-
-# Specific component tests
-uv run pytest tests/unit/services/ -v
-uv run pytest tests/unit/api/ -v
-
-# Unit tests with coverage
-uv run pytest tests/unit/ --cov=tripsage --cov-report=html
-
-# Fast unit tests only
-uv run pytest -m "unit and not slow"
+uv run pytest tests/performance/test_collaboration_performance.py --durations=10
 ```
 
 ## End-to-End Testing
@@ -232,10 +203,10 @@ tests/
 └── fixtures/      # Test data and fixtures
 ```
 
-### All Tests
+### Complete Test Suite
 
 ```bash
-# Run complete test suite
+# Run all tests
 uv run pytest
 
 # Run with coverage report
@@ -275,6 +246,12 @@ uv run pytest tests/unit/api/ tests/integration/test_api*.py
 
 # Agent tests
 uv run pytest tests/unit/agents/ tests/integration/agents/
+
+# Model validation tests
+uv run pytest tests/unit/models/ -v
+
+# Service tests
+uv run pytest tests/unit/services/ -v
 ```
 
 ### Using Markers
@@ -292,8 +269,11 @@ uv run pytest -m e2e
 # Run tests that don't require database
 uv run pytest -m "not database"
 
-# Run fast tests only
+# Run fast tests only (skip slow tests)
 uv run pytest -m "not slow"
+
+# Run tests requiring external services
+uv run pytest -m external
 ```
 
 ### Coverage Analysis
@@ -307,10 +287,246 @@ uv run pytest --cov=tripsage --cov-report=html
 
 # Generate XML for CI tools
 uv run pytest --cov=tripsage --cov-report=xml
+
+# Check coverage threshold (fails if below 90%)
+uv run pytest --cov=tripsage --cov-fail-under=90
+```
+
+### Debugging Tests
+
+```bash
+# Show test execution order and fixtures
+uv run pytest --setup-show
+
+# List all available fixtures
+uv run pytest --fixtures
+
+# Run specific test with verbose output
+uv run pytest tests/unit/services/test_trip_service.py::TestTripService::test_create_trip -v
+
+# Run tests matching pattern
+uv run pytest -k "trip" -v
+
+# Show slowest tests
+uv run pytest --durations=10
+```
+
+## Development Workflow
+
+### Setup and Bootstrap
+
+```bash
+# Install Python dependencies
+uv sync
+
+# Install frontend dependencies
+cd frontend && pnpm install
+
+# Run quality gates before committing
+ruff format . && ruff check . --fix
+uv run pyright
+uv run pylint tripsage tripsage_core
+```
+
+### Pre-commit Quality Checks
+
+```bash
+# Format code
+uv run ruff format .
+
+# Lint and fix issues
+uv run ruff check . --fix
+
+# Type checking
+uv run pyright
+
+# Code quality analysis
+uv run pylint tripsage tripsage_core
+```
+
+### Running Tests in Development
+
+```bash
+# Quick unit test run during development
+uv run pytest tests/unit/ -x --tb=short
+
+# Run specific test file
+uv run pytest tests/unit/services/test_trip_service.py -v
+
+# Run tests with coverage (development)
+uv run pytest --cov=tripsage --cov-report=term-missing -x
 ```
 
 ## Test Coverage Requirements
 
-- Backend: 90%+ coverage required
+- Backend: 90%+ coverage required (CI enforced)
 - Frontend: 85%+ coverage target
 - Critical paths: 100% coverage for business logic
+
+## Test Fixtures Reference
+
+### Root Fixtures (`tests/conftest.py`)
+
+#### Environment & Configuration
+
+- `setup_test_environment` (session, autouse): Sets test environment variables
+- `mock_cache_globally` (session, autouse): Mocks Redis/DragonflyDB globally
+- `mock_settings`: Mock settings object with test values
+- `mock_database_service`: Mock database service for unit tests
+- `mock_cache_service`: Mock cache service for unit tests
+
+#### Test Data
+
+- `sample_user_id`: Generates UUID for user ID
+- `sample_trip_id`: Generates UUID for trip ID
+- `sample_timestamp`: Returns current UTC timestamp
+- `sample_user_data`: Dict with user fields (id, email, username, etc.)
+- `sample_trip_data`: Dict with trip fields (id, user_id, name, dates, etc.)
+
+#### Validation & Serialization
+
+- `validation_helper`: Utilities for Pydantic validation testing
+- `serialization_helper`: Utilities for model serialization testing
+- `edge_case_data`: Edge case inputs for security testing
+
+### API Key Fixtures (`tests/fixtures/api_key_fixtures.py`)
+
+#### Core Data
+
+- `sample_user_id`: UUID string
+- `sample_key_id`: UUID string
+- `mock_principal`: Authenticated user principal
+- `multiple_principals`: List of principals for concurrent testing
+
+#### API Key Objects
+
+- `sample_api_key_create`: ApiKeyCreate request
+- `sample_api_key_create_request`: ApiKeyCreateRequest for service layer
+- `sample_api_key_response`: ApiKeyResponse object
+- `multiple_api_key_responses`: List of responses for bulk testing
+
+#### Validation
+
+- `sample_validation_result`: ValidationResult object
+- `validation_results_various`: Dict of different validation scenarios
+
+#### Database
+
+- `sample_db_result`: Dict representing DB row
+- `multiple_db_results`: List of DB results for bulk testing
+
+#### Services
+
+- `mock_api_key_service`: Mock ApiKeyService with async methods
+- `mock_key_monitoring_service`: Mock KeyMonitoringService
+- `mock_database_service`: Mock database operations
+- `mock_cache_service`: Mock cache operations
+- `mock_audit_service`: Mock audit logging
+- `api_key_service_with_mocks`: Service with all dependencies mocked
+
+#### Requests
+
+- `sample_rotate_request`: ApiKeyRotateRequest
+- `sample_validate_request`: ApiKeyValidateRequest
+
+#### Monitoring
+
+- `monitoring_data_samples`: Health monitoring data
+- `audit_log_samples`: Audit log entries
+
+#### Testing Data
+
+- `error_scenarios`: Various error conditions
+- `performance_test_data`: Data for performance testing
+- `security_test_inputs`: Security test inputs
+
+#### Property-Based Testing
+
+- `api_key_strategies`: Hypothesis strategies for API keys
+- `service_type_strategy`: Strategy for ServiceType enum
+- `user_id_strategy`: Strategy for user IDs
+- `key_name_strategy`: Strategy for key names
+- `description_strategy`: Strategy for descriptions
+- `timestamp_strategy`: Strategy for timestamps
+
+### Trip Fixtures (`tests/fixtures/trip_fixtures.py`)
+
+#### Core Objects
+
+- `core_trip_response`: CoreTripResponse with minimal valid fields
+
+#### Mocks
+
+- `mock_audit_service`: Mock audit service for trip operations
+
+### Integration Fixtures (`tests/integration/conftest.py`)
+
+#### MCP Mocks
+
+- `mock_mcp_manager`: Mock MCPBridge for external service calls
+- `mock_mcp_registry`: Mock MCPClientRegistry
+- `mock_mcp_wrapper`: Generic mock MCP wrapper
+
+#### Responses
+
+- `mock_successful_response`: TestResponse with success data
+- `mock_error_response`: TestResponse with error data
+
+#### Async
+
+- `event_loop`: Asyncio event loop for tests
+
+#### Web Cache
+
+- `mock_web_operations_cache`: Mock WebOperationsCache
+
+#### Environment
+
+- `mock_settings_and_redis`: Mocks settings and Redis client
+
+### E2E Fixtures (`tests/e2e/conftest.py`)
+
+#### Client
+
+- `test_client`: AsyncClient with FastAPI app and mocked dependencies
+
+### Usage Examples
+
+#### Basic Unit Test
+
+```python
+def test_api_key_creation(mock_api_key_service, sample_api_key_create_request):
+    result = await mock_api_key_service.create_key(sample_api_key_create_request)
+    assert result.is_valid
+```
+
+#### Integration Test
+
+```python
+async def test_api_endpoint(test_client):
+    response = await test_client.get("/api/v1/health")
+    assert response.status_code == 200
+```
+
+#### With Mocks
+
+```python
+def test_with_mcp(mock_mcp_manager):
+    mock_mcp_manager.invoke.return_value = {"weather": "sunny"}
+    result = await call_weather_service()
+    assert result["weather"] == "sunny"
+```
+
+### Scopes
+
+- `session`: Once per test run (expensive setup)
+- `module`: Once per test file
+- `function`: Once per test (default)
+
+### Best Practices
+
+1. Use appropriate scope to avoid unnecessary setup
+2. Mock external dependencies in unit tests
+3. Use `yield` for proper cleanup
+4. Keep fixtures focused and composable
+5. Document fixture purpose and dependencies

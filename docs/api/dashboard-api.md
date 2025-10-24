@@ -5,7 +5,7 @@ This document describes the dashboard monitoring API endpoints that provide real
 > **Related Documentation:**
 >
 > - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation
-> - [Authentication](README.md#🔐-authentication) - API authentication guide
+> - [Authentication](README.md#authentication) - API authentication guide
 > - [WebSocket API](websocket-realtime-api.md) - Real-time WebSocket connections
 > - [Error Codes](error-codes.md) - API error reference
 > - [Performance Optimization](../developers/performance-optimization.md) - System performance tuning
@@ -31,11 +31,11 @@ All dashboard endpoints require authenticated access. Only users with appropriat
 - **Admin Access**: Required for full dashboard functionality
 - **Agent Access**: Not permitted for dashboard endpoints
 
-For detailed authentication information, see the [Authentication Guide](README.md#🔐-authentication).
+For detailed authentication information, see the [Authentication Guide](README.md#authentication).
 
 > **Related Documentation:**
 >
-> - [Authentication Guide](README.md#🔐-authentication) - Complete authentication setup and usage
+> - [Authentication Guide](README.md#authentication) - Complete authentication setup and usage
 > - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation details
 > - [WebSocket API](websocket-realtime-api.md) - Real-time features and WebSocket connections
 

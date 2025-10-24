@@ -241,6 +241,12 @@ frontend/*.temp.*
 
 # Documentation generation artifacts
 site/
+docs/site/
+.mkdocs/
+docs/openapi.json
+docs/swagger.json
+docs/openapi.yaml
+docs/swagger.yaml
 docs/**/temp/
 docs/**/*.backup
 docs/**/*-backup.*

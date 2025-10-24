@@ -1,33 +1,33 @@
-# 🔌 API Usage Examples
+# API Usage Examples
 
 > **Quick Reference for TripSage API Integration**  
 > Practical code snippets for REST API, WebSocket, and authentication
-> **💡 Looking for complete tutorials?** Check out our [**Complete Integration Guide**](examples.md) for full workflows, SDKs, and advanced patterns.
+> **Looking for complete tutorials?** Check out our [**Complete Integration Guide**](examples.md) for full workflows, SDKs, and advanced patterns.
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [🚀 Quick Start](#-quick-start)
-- [🔑 Authentication](#-authentication)
-- [✈️ Flight Search](#️-flight-search)
-- [🏨 Accommodation Search](#-accommodation-search)
-- [💬 WebSocket Chat](#-websocket-chat)
-- [🗺️ Trip Management](#️-trip-management)
+- [Quick Start](#quick-start)
+- [Authentication](#authentication)
+- [Flight Search](#flight-search)
+- [Accommodation Search](#accommodation-search)
+- [WebSocket Chat](#websocket-chat)
+- [Trip Management](#trip-management)
 - [🧠 AI Memory System](#-ai-memory-system)
-- [📊 Rate Limiting](#-rate-limiting)
-- [🐛 Error Handling](#-error-handling)
-- [🔧 SDKs & Libraries](#-sdks--libraries)
+- [Rate Limiting](#rate-limiting)
+- [Error Handling](#error-handling)
+- [SDKs & Libraries](#sdks--libraries)
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### **Interactive Documentation**
 
 TripSage provides automatic interactive API documentation:
 
-- **📚 Swagger UI**: `http://localhost:8001/api/docs`
-- **📖 ReDoc**: `http://localhost:8001/api/redoc`
-- **🔧 OpenAPI Schema**: `http://localhost:8001/api/openapi.json`
+- **Swagger UI**: `http://localhost:8001/api/docs`
+- **ReDoc**: `http://localhost:8001/api/redoc`
+- **OpenAPI Schema**: `http://localhost:8001/api/openapi.json`
 
 ### **Health Check**
 
@@ -55,7 +55,7 @@ curl http://localhost:8001/api/health
 
 ---
 
-## 🔑 Authentication
+## Authentication
 
 ### **JWT Authentication**
 
@@ -138,7 +138,7 @@ curl -X DELETE http://localhost:8001/api/user/keys/key-456 \
 
 ---
 
-## ✈️ Flight Search
+## Flight Search
 
 ### **Basic Flight Search**
 
@@ -234,7 +234,7 @@ curl -X POST http://localhost:8001/api/flights/alerts \
 
 ---
 
-## 🏨 Accommodation Search
+## Accommodation Search
 
 ### **Hotel Search**
 
@@ -310,7 +310,7 @@ curl -X POST http://localhost:8001/api/accommodations/search \
 
 ---
 
-## 💬 WebSocket Chat
+## WebSocket Chat
 
 ### **JavaScript WebSocket Connection**
 
@@ -445,7 +445,7 @@ asyncio.run(chat_client())
 
 ---
 
-## 🗺️ Trip Management
+## Trip Management
 
 ### **Create Trip**
 
@@ -580,7 +580,7 @@ curl http://localhost:8001/api/memory/summary \
 
 ---
 
-## 📊 Rate Limiting
+## Rate Limiting
 
 ### **Check Rate Limit Status**
 
@@ -625,7 +625,7 @@ async function makeAPICall(url, options) {
 
 ---
 
-## 🐛 Error Handling
+## Error Handling
 
 ### **Standard Error Response**
 
@@ -695,7 +695,7 @@ async function handleAPIResponse(response) {
 
 ---
 
-## 🔧 SDKs & Libraries
+## SDKs & Libraries
 
 ### **Python SDK (Coming Soon)**
 
@@ -1226,28 +1226,28 @@ def test_trip_endpoint_security(client: TestClient):
 
 ---
 
-## �🔗 Additional Resources
+## Additional Resources
 
 ### **API Documentation**
 
-- **[📚 Complete API Reference](rest-endpoints.md)** - Full endpoint documentation
-- **[🔧 Interactive Docs](http://localhost:8001/api/docs)** - Test endpoints in browser
-- **[📖 OpenAPI Schema](http://localhost:8001/api/openapi.json)** - Machine-readable API spec
+- **[Complete API Reference](rest-endpoints.md)** - Full endpoint documentation
+- **[Interactive Docs](http://localhost:8001/api/docs)** - Test endpoints in browser
+- **[OpenAPI Schema](http://localhost:8001/api/openapi.json)** - Machine-readable API spec
 
 ### **Development Resources**
 
-- **[👨‍💻 Developer Guide](../04_DEVELOPMENT_GUIDE/README.md)** - Setup and development
-- **[🔧 Configuration](../07_CONFIGURATION/README.md)** - Environment setup
-- **[🚀 Getting Started](../01_GETTING_STARTED/README.md)** - Quick start guide
+- **[Developer Guide](../04_DEVELOPMENT_GUIDE/README.md)** - Setup and development
+- **[Configuration](../07_CONFIGURATION/README.md)** - Environment setup
+- **[Getting Started](../01_GETTING_STARTED/README.md)** - Quick start guide
 
 ### **Support**
 
-- **[❓ FAQ](FAQ.md)** - Common questions and answers
-- **[💬 Discord](https://discord.gg/tripsage)** - Developer community
-- **[📧 Email](mailto:developers@tripsage.ai)** - Direct developer support
+- **[FAQ](FAQ.md)** - Common questions and answers
+- **[Discord](https://discord.gg/tripsage)** - Developer community
+- **[Email](mailto:developers@tripsage.ai)** - Direct developer support
 
 ---
 
-**Ready to build amazing travel experiences?** Start with our [interactive API documentation](http://localhost:8001/api/docs) and join our [developer community](https://discord.gg/tripsage)! 🚀
+**Ready to build amazing travel experiences?** Start with our [interactive API documentation](http://localhost:8001/api/docs) and join our [developer community](https://discord.gg/tripsage)!
 
 > _Last updated: June 16, 2025_

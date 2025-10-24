@@ -2,7 +2,7 @@
 
 Internal API documentation for the TripSage travel planning platform. This API serves both the frontend application and AI agents with endpoints for authentication, trip management, flight/accommodation search, chat, and real-time communication.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Development Environment
 
@@ -26,7 +26,7 @@ curl http://localhost:8000/api/health
 # {"status": "healthy", "timestamp": "...", "version": "1.0.0"}
 ```
 
-## 📚 API Documentation
+## API Documentation
 
 ### Core References
 
@@ -41,7 +41,7 @@ curl http://localhost:8000/api/health
 
 - **[Dashboard API](dashboard-api.md)** - Monitoring and analytics endpoints
 
-## 🔐 Authentication
+## Authentication
 
 TripSage supports multiple authentication approaches:
 
@@ -214,7 +214,7 @@ async def get_current_user(credentials = Depends(security)):
 
 **Solution**: Implement exponential backoff and respect rate limits
 
-## 🌐 Core Endpoints
+## Core Endpoints
 
 ### Trip Management
 
@@ -250,7 +250,7 @@ async def get_current_user(credentials = Depends(security)):
 - `WS /api/v1/ws/chat/{session_id}` - Real-time chat
 - `WS /api/v1/ws/status` - Agent progress updates
 
-## 🛠️ Development Tools
+## Development Tools
 
 ### Interactive Documentation
 
@@ -268,7 +268,7 @@ uv run pytest tests/unit/tripsage/api/ --cov=tripsage.api
 uv run pytest tests/integration/api/
 ```
 
-## 📊 Response Formats
+## Response Formats
 
 ### Success Response
 
@@ -298,13 +298,13 @@ uv run pytest tests/integration/api/
 }
 ```
 
-## 🚨 Troubleshooting
+## Troubleshooting
 
 | Issue                  | Solution               | Reference                                                |
 | ---------------------- | ---------------------- | -------------------------------------------------------- |
-| `401 Unauthorized`     | Check JWT token format | [Authentication](#-authentication)                       |
+| `401 Unauthorized`     | Check JWT token format | [Authentication](#authentication)                        |
 | `422 Validation Error` | Verify required fields | [Error Codes](error-codes.md)                            |
-| `429 Rate Limited`     | Check rate limits      | [Authentication](#-authentication)                       |
+| `429 Rate Limited`     | Check rate limits      | [Authentication](#authentication)                        |
 | WebSocket disconnect   | Implement reconnection | [WebSocket and Real-time API](websocket-realtime-api.md) |
 
 ---

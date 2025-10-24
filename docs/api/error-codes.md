@@ -1,9 +1,9 @@
-# 🚨 TripSage API Error Codes
+# TripSage API Error Codes
 
 > **Complete Error Reference**  
 > Guide to HTTP status codes, error types, and troubleshooting for TripSage API
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Error Response Format](#error-response-format)
 - [HTTP Status Codes](#http-status-codes)
@@ -39,15 +39,15 @@ All TripSage API errors follow a consistent JSON structure for predictable error
 
 ### Error Response Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `error` | boolean | Always `true` for error responses |
-| `message` | string | Human-readable error description |
-| `code` | string | Machine-readable error code |
-| `type` | string | Error category for programmatic handling |
-| `details` | object | Additional error-specific information |
-| `request_id` | string | Unique request identifier for support |
-| `timestamp` | string | ISO 8601 timestamp of the error |
+| Field        | Type    | Description                              |
+| ------------ | ------- | ---------------------------------------- |
+| `error`      | boolean | Always `true` for error responses        |
+| `message`    | string  | Human-readable error description         |
+| `code`       | string  | Machine-readable error code              |
+| `type`       | string  | Error category for programmatic handling |
+| `details`    | object  | Additional error-specific information    |
+| `request_id` | string  | Unique request identifier for support    |
+| `timestamp`  | string  | ISO 8601 timestamp of the error          |
 
 ---
 
@@ -55,48 +55,48 @@ All TripSage API errors follow a consistent JSON structure for predictable error
 
 ### Success Codes (2xx)
 
-| Code | Status | Description | Usage |
-|------|--------|-------------|-------|
-| `200` | OK | Request completed successfully | GET, PUT, DELETE operations |
-| `201` | Created | Resource created successfully | POST operations |
-| `202` | Accepted | Request accepted for processing | Async operations |
-| `204` | No Content | Request successful, no content returned | DELETE operations |
+| Code  | Status     | Description                             | Usage                       |
+| ----- | ---------- | --------------------------------------- | --------------------------- |
+| `200` | OK         | Request completed successfully          | GET, PUT, DELETE operations |
+| `201` | Created    | Resource created successfully           | POST operations             |
+| `202` | Accepted   | Request accepted for processing         | Async operations            |
+| `204` | No Content | Request successful, no content returned | DELETE operations           |
 
 ### Client Error Codes (4xx)
 
-| Code | Status | Description | Common Causes |
-|------|--------|-------------|---------------|
-| `400` | Bad Request | Invalid request parameters | Malformed JSON, missing required fields |
-| `401` | Unauthorized | Missing or invalid authentication | No token, expired token, invalid API key |
-| `403` | Forbidden | Insufficient permissions | Wrong scope, account suspended |
-| `404` | Not Found | Resource doesn't exist | Invalid trip ID, deleted resource |
-| `405` | Method Not Allowed | HTTP method not supported | Using POST on GET-only endpoint |
-| `409` | Conflict | Resource conflict | Duplicate trip name, booking conflict |
-| `422` | Unprocessable Entity | Validation errors | Invalid date format, business rule violations |
-| `429` | Too Many Requests | Rate limit exceeded | API quota exceeded |
+| Code  | Status               | Description                       | Common Causes                                 |
+| ----- | -------------------- | --------------------------------- | --------------------------------------------- |
+| `400` | Bad Request          | Invalid request parameters        | Malformed JSON, missing required fields       |
+| `401` | Unauthorized         | Missing or invalid authentication | No token, expired token, invalid API key      |
+| `403` | Forbidden            | Insufficient permissions          | Wrong scope, account suspended                |
+| `404` | Not Found            | Resource doesn't exist            | Invalid trip ID, deleted resource             |
+| `405` | Method Not Allowed   | HTTP method not supported         | Using POST on GET-only endpoint               |
+| `409` | Conflict             | Resource conflict                 | Duplicate trip name, booking conflict         |
+| `422` | Unprocessable Entity | Validation errors                 | Invalid date format, business rule violations |
+| `429` | Too Many Requests    | Rate limit exceeded               | API quota exceeded                            |
 
 ### Server Error Codes (5xx)
 
-| Code | Status | Description | Action |
-|------|--------|-------------|--------|
-| `500` | Internal Server Error | Server-side error | Retry request, contact support |
-| `502` | Bad Gateway | Upstream service error | Retry request |
-| `503` | Service Unavailable | Service temporarily unavailable | Retry with exponential backoff |
-| `504` | Gateway Timeout | Request timeout | Retry request |
+| Code  | Status                | Description                     | Action                         |
+| ----- | --------------------- | ------------------------------- | ------------------------------ |
+| `500` | Internal Server Error | Server-side error               | Retry request, contact support |
+| `502` | Bad Gateway           | Upstream service error          | Retry request                  |
+| `503` | Service Unavailable   | Service temporarily unavailable | Retry with exponential backoff |
+| `504` | Gateway Timeout       | Request timeout                 | Retry request                  |
 
 ---
 
-## 🔧 Quick Error Reference
+## Quick Error Reference
 
 ### Most Common Issues
 
-| Error | Quick Fix | Code Example |
-|-------|-----------|--------------|
-| `401 Unauthorized` | Check your Authorization header | `curl -H "Authorization: Bearer your_token"` |
-| `400 Bad Request` | Validate JSON format | Use `JSON.stringify()` or validate with schema |
-| `422 Validation` | Check required fields | Include all required parameters |
-| `429 Rate Limited` | Add retry logic | Wait for `Retry-After` header value |
-| `500 Server Error` | Retry with backoff | Implement exponential backoff |
+| Error              | Quick Fix                       | Code Example                                   |
+| ------------------ | ------------------------------- | ---------------------------------------------- |
+| `401 Unauthorized` | Check your Authorization header | `curl -H "Authorization: Bearer your_token"`   |
+| `400 Bad Request`  | Validate JSON format            | Use `JSON.stringify()` or validate with schema |
+| `422 Validation`   | Check required fields           | Include all required parameters                |
+| `429 Rate Limited` | Add retry logic                 | Wait for `Retry-After` header value            |
+| `500 Server Error` | Retry with backoff              | Implement exponential backoff                  |
 
 ---
 
@@ -104,13 +104,13 @@ All TripSage API errors follow a consistent JSON structure for predictable error
 
 ### Authentication Errors (`authentication`)
 
-| Code | Message | Solution |
-|------|---------|----------|
-| `INVALID_TOKEN` | Invalid or malformed token | Check token format and validity |
-| `TOKEN_EXPIRED` | Token has expired | Refresh token or re-authenticate |
-| `INVALID_API_KEY` | Invalid API key | Verify API key is correct |
-| `API_KEY_EXPIRED` | API key has expired | Generate new API key |
-| `MISSING_AUTHORIZATION` | Authorization header missing | Include Authorization header |
+| Code                    | Message                      | Solution                         |
+| ----------------------- | ---------------------------- | -------------------------------- |
+| `INVALID_TOKEN`         | Invalid or malformed token   | Check token format and validity  |
+| `TOKEN_EXPIRED`         | Token has expired            | Refresh token or re-authenticate |
+| `INVALID_API_KEY`       | Invalid API key              | Verify API key is correct        |
+| `API_KEY_EXPIRED`       | API key has expired          | Generate new API key             |
+| `MISSING_AUTHORIZATION` | Authorization header missing | Include Authorization header     |
 
 **Example:**
 
@@ -129,51 +129,51 @@ All TripSage API errors follow a consistent JSON structure for predictable error
 
 ### Authorization Errors (`authorization`)
 
-| Code | Message | Solution |
-|------|---------|----------|
-| `INSUFFICIENT_PERMISSIONS` | Insufficient permissions for this operation | Check API key scopes |
-| `ACCOUNT_SUSPENDED` | Account has been suspended | Contact support |
-| `RESOURCE_ACCESS_DENIED` | Access denied to this resource | Verify ownership or permissions |
-| `PLAN_LIMIT_EXCEEDED` | Plan limit exceeded | Upgrade plan or reduce usage |
+| Code                       | Message                                     | Solution                        |
+| -------------------------- | ------------------------------------------- | ------------------------------- |
+| `INSUFFICIENT_PERMISSIONS` | Insufficient permissions for this operation | Check API key scopes            |
+| `ACCOUNT_SUSPENDED`        | Account has been suspended                  | Contact support                 |
+| `RESOURCE_ACCESS_DENIED`   | Access denied to this resource              | Verify ownership or permissions |
+| `PLAN_LIMIT_EXCEEDED`      | Plan limit exceeded                         | Upgrade plan or reduce usage    |
 
 ### Validation Errors (`validation`)
 
-| Code | Message | Solution |
-|------|---------|----------|
-| `REQUIRED_FIELD` | Required field is missing | Include all required fields |
-| `INVALID_FORMAT` | Field format is invalid | Check field format requirements |
-| `INVALID_DATE_RANGE` | Invalid date range | Ensure start date is before end date |
-| `INVALID_COORDINATES` | Invalid coordinates | Use valid latitude/longitude |
-| `BUDGET_TOO_LOW` | Budget is below minimum | Increase budget amount |
+| Code                  | Message                   | Solution                             |
+| --------------------- | ------------------------- | ------------------------------------ |
+| `REQUIRED_FIELD`      | Required field is missing | Include all required fields          |
+| `INVALID_FORMAT`      | Field format is invalid   | Check field format requirements      |
+| `INVALID_DATE_RANGE`  | Invalid date range        | Ensure start date is before end date |
+| `INVALID_COORDINATES` | Invalid coordinates       | Use valid latitude/longitude         |
+| `BUDGET_TOO_LOW`      | Budget is below minimum   | Increase budget amount               |
 
 ### Rate Limiting Errors (`ratelimit`)
 
-| Code | Message | Solution |
-|------|---------|----------|
-| `RATE_LIMIT_EXCEEDED` | Rate limit exceeded | Wait and retry |
-| `QUOTA_EXCEEDED` | Monthly quota exceeded | Upgrade plan or wait for reset |
-| `CONCURRENT_LIMIT_EXCEEDED` | Too many concurrent requests | Reduce concurrent requests |
+| Code                        | Message                      | Solution                       |
+| --------------------------- | ---------------------------- | ------------------------------ |
+| `RATE_LIMIT_EXCEEDED`       | Rate limit exceeded          | Wait and retry                 |
+| `QUOTA_EXCEEDED`            | Monthly quota exceeded       | Upgrade plan or wait for reset |
+| `CONCURRENT_LIMIT_EXCEEDED` | Too many concurrent requests | Reduce concurrent requests     |
 
 ### External Service Errors (`external`)
 
-| Code | Message | Solution |
-|------|---------|----------|
-| `FLIGHT_API_UNAVAILABLE` | Flight search service unavailable | Retry later |
-| `ACCOMMODATION_API_ERROR` | Accommodation service error | Try different search parameters |
-| `PAYMENT_GATEWAY_ERROR` | Payment processing error | Retry payment |
-| `WEATHER_API_TIMEOUT` | Weather service timeout | Weather data may be unavailable |
+| Code                      | Message                           | Solution                        |
+| ------------------------- | --------------------------------- | ------------------------------- |
+| `FLIGHT_API_UNAVAILABLE`  | Flight search service unavailable | Retry later                     |
+| `ACCOMMODATION_API_ERROR` | Accommodation service error       | Try different search parameters |
+| `PAYMENT_GATEWAY_ERROR`   | Payment processing error          | Retry payment                   |
+| `WEATHER_API_TIMEOUT`     | Weather service timeout           | Weather data may be unavailable |
 
 ### Internal Errors (`internal`)
 
-| Code | Message | Solution |
-|------|---------|----------|
-| `DATABASE_ERROR` | Database operation failed | Retry request, contact support |
-| `CACHE_ERROR` | Cache operation failed | Request may be slower |
-| `AI_SERVICE_ERROR` | AI service unavailable | AI features temporarily unavailable |
+| Code               | Message                   | Solution                            |
+| ------------------ | ------------------------- | ----------------------------------- |
+| `DATABASE_ERROR`   | Database operation failed | Retry request, contact support      |
+| `CACHE_ERROR`      | Cache operation failed    | Request may be slower               |
+| `AI_SERVICE_ERROR` | AI service unavailable    | AI features temporarily unavailable |
 
 ---
 
-## 🛠️ Practical Troubleshooting Scenarios
+## Practical Troubleshooting Scenarios
 
 ### Scenario 1: "My API calls are failing with 401"
 
@@ -212,14 +212,14 @@ curl -X POST https://api.tripsage.ai/api/auth/login \
 
 ```javascript
 // 1. Validate airport codes
-const validCodes = await fetch('/api/destinations/search?q=NYC');
+const validCodes = await fetch("/api/destinations/search?q=NYC");
 
 // 2. Check date format and future dates
 const searchParams = {
   origin: "JFK",
   destination: "LAX",
   departure_date: "2025-12-01", // YYYY-MM-DD format
-  return_date: "2025-12-08"
+  return_date: "2025-12-08",
 };
 
 // 3. Handle empty results gracefully
@@ -260,18 +260,18 @@ if (response.results.length === 0) {
 ```javascript
 function validateTripData(tripData) {
   const errors = [];
-  
+
   // Check dates
   const startDate = new Date(tripData.start_date);
   if (startDate < new Date()) {
     errors.push("Start date must be in the future");
   }
-  
+
   // Check destinations
   if (!tripData.destinations || tripData.destinations.length === 0) {
     errors.push("At least one destination is required");
   }
-  
+
   // Check coordinates if provided
   tripData.destinations.forEach((dest, index) => {
     if (dest.coordinates) {
@@ -284,7 +284,7 @@ function validateTripData(tripData) {
       }
     }
   });
-  
+
   return errors;
 }
 ```
@@ -307,17 +307,22 @@ class TripSageWebSocket {
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 1000;
   }
-  
+
   connect() {
-    this.ws = new WebSocket(`wss://api.tripsage.ai/api/chat/ws?token=${this.token}`);
-    
+    this.ws = new WebSocket(
+      `wss://api.tripsage.ai/api/chat/ws?token=${this.token}`
+    );
+
     this.ws.onopen = () => {
-      console.log('Connected to TripSage WebSocket');
+      console.log("Connected to TripSage WebSocket");
       this.reconnectAttempts = 0;
     };
-    
+
     this.ws.onclose = (event) => {
-      if (event.code === 1006 && this.reconnectAttempts < this.maxReconnectAttempts) {
+      if (
+        event.code === 1006 &&
+        this.reconnectAttempts < this.maxReconnectAttempts
+      ) {
         // Unexpected close, attempt reconnection
         setTimeout(() => {
           this.reconnectAttempts++;
@@ -325,9 +330,9 @@ class TripSageWebSocket {
         }, this.reconnectDelay * Math.pow(2, this.reconnectAttempts));
       }
     };
-    
+
     this.ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error("WebSocket error:", error);
     };
   }
 }
@@ -339,22 +344,22 @@ class TripSageWebSocket {
 
 ```javascript
 function monitorRateLimit(response) {
-  const limit = response.headers.get('X-RateLimit-Limit');
-  const remaining = response.headers.get('X-RateLimit-Remaining');
-  const reset = response.headers.get('X-RateLimit-Reset');
-  
+  const limit = response.headers.get("X-RateLimit-Limit");
+  const remaining = response.headers.get("X-RateLimit-Remaining");
+  const reset = response.headers.get("X-RateLimit-Reset");
+
   console.log(`Rate limit: ${remaining}/${limit} remaining`);
-  
+
   if (remaining < 10) {
-    console.warn('Approaching rate limit!');
+    console.warn("Approaching rate limit!");
   }
-  
+
   if (response.status === 429) {
-    const retryAfter = response.headers.get('Retry-After');
+    const retryAfter = response.headers.get("Retry-After");
     console.log(`Rate limited. Retry after ${retryAfter} seconds`);
     return retryAfter;
   }
-  
+
   return null;
 }
 
@@ -364,39 +369,39 @@ class RateLimitedClient {
     this.queue = [];
     this.processing = false;
   }
-  
+
   async request(url, options) {
     return new Promise((resolve, reject) => {
       this.queue.push({ url, options, resolve, reject });
       this.processQueue();
     });
   }
-  
+
   async processQueue() {
     if (this.processing || this.queue.length === 0) return;
-    
+
     this.processing = true;
-    
+
     while (this.queue.length > 0) {
       const { url, options, resolve, reject } = this.queue.shift();
-      
+
       try {
         const response = await fetch(url, options);
         const retryAfter = monitorRateLimit(response);
-        
+
         if (retryAfter) {
           // Re-queue the request
           this.queue.unshift({ url, options, resolve, reject });
-          await new Promise(r => setTimeout(r, retryAfter * 1000));
+          await new Promise((r) => setTimeout(r, retryAfter * 1000));
           continue;
         }
-        
+
         resolve(response);
       } catch (error) {
         reject(error);
       }
     }
-    
+
     this.processing = false;
   }
 }
@@ -438,14 +443,14 @@ For `422` responses, detailed validation errors are provided in the `errors` arr
 
 ### Common Validation Error Types
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `value_error.missing` | Required field missing | Missing `title` field |
-| `value_error.str.max_length` | String too long | Title exceeds 100 characters |
-| `value_error.number.not_gt` | Number not greater than minimum | Budget less than 0 |
-| `value_error.date.past` | Date is in the past | Start date before today |
-| `value_error.email` | Invalid email format | Malformed email address |
-| `value_error.url` | Invalid URL format | Malformed webhook URL |
+| Type                         | Description                     | Example                      |
+| ---------------------------- | ------------------------------- | ---------------------------- |
+| `value_error.missing`        | Required field missing          | Missing `title` field        |
+| `value_error.str.max_length` | String too long                 | Title exceeds 100 characters |
+| `value_error.number.not_gt`  | Number not greater than minimum | Budget less than 0           |
+| `value_error.date.past`      | Date is in the past             | Start date before today      |
+| `value_error.email`          | Invalid email format            | Malformed email address      |
+| `value_error.url`            | Invalid URL format              | Malformed webhook URL        |
 
 ---
 
@@ -607,18 +612,18 @@ async function apiRequest(url, options, maxRetries = 3) {
   for (let i = 0; i < maxRetries; i++) {
     try {
       const response = await fetch(url, options);
-      
+
       if (response.status === 429) {
-        const retryAfter = response.headers.get('Retry-After');
+        const retryAfter = response.headers.get("Retry-After");
         await sleep(retryAfter * 1000);
         continue;
       }
-      
+
       if (response.status >= 500) {
         await sleep(Math.pow(2, i) * 1000); // Exponential backoff
         continue;
       }
-      
+
       return response;
     } catch (error) {
       if (i === maxRetries - 1) throw error;
@@ -633,22 +638,22 @@ async function apiRequest(url, options, maxRetries = 3) {
 ```javascript
 async function handleApiError(response) {
   const error = await response.json();
-  
+
   switch (error.type) {
-    case 'authentication':
+    case "authentication":
       // Refresh token or redirect to login
       break;
-    case 'validation':
+    case "validation":
       // Show field-specific errors to user
       break;
-    case 'ratelimit':
+    case "ratelimit":
       // Implement backoff strategy
       break;
-    case 'external':
+    case "external":
       // Show service unavailable message
       break;
     default:
-      // Generic error handling
+    // Generic error handling
   }
 }
 ```
