@@ -37,8 +37,8 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 | [ADR-0016](adr-0016-tailwind-css-v4-migration-css-first-config.md) | Tailwind CSS v4 migration (CSS-first config) | Accepted | 2025-10-23 |
 | [ADR-0017](adr-0017-adopt-node-js-v24-lts-baseline.md) | Adopt Node.js v24 LTS baseline | Accepted | 2025-10-23 |
 | [ADR-0018](adr-0018-centralize-supabase-typed-helpers-for-crud.md) | Centralize Supabase typed helpers for CRUD | Accepted | 2025-10-23 |
-| [ADR-0019](adr-0019-canonicalize-chat-service-fastapi.md) | Canonicalize chat service via FastAPI backend | Accepted | 2025-10-23 |
-| [ADR-0018](adr-0018-centralize-supabase-typed-helpers-for-crud.md) | Centralize Supabase typed helpers for CRUD | Accepted | 2025-10-23 |
+| [ADR-0019](adr-0019-canonicalize-chat-service-fastapi.md) | Canonicalize chat service via FastAPI backend | Accepted | 2025-10-24 |
+| [ADR-0020](adr-0020-rate-limiting-strategy.md) | Rate limiting strategy (Next @upstash/ratelimit + FastAPI SlowAPI) | Accepted | 2025-10-24 |
 
 ## Creating a New ADR
 

@@ -1,10 +1,8 @@
 # ADR-0019: Canonicalize chat service via FastAPI backend
 
-**Date**: 2025-10-23
-
-## Status
-
-Accepted
+**Version**: 1.1.0
+**Status**: Accepted
+**Date**: 2025-10-24
 
 ## Context
 
@@ -15,7 +13,7 @@ Recent Next.js 16 guidance clarifies proxy.ts as the network boundary and encour
 ## Decision
 
 - The FastAPI `/api/v1/chat/` endpoint is the single source of truth for all chat functionality (sessions, messages, WebSockets, agents).
-- The Next.js native chat Route Handler is fully removed; the frontend calls the FastAPI backend directly using `${NEXT_PUBLIC_API_URL}/api/v1/chat/`, with credentials included for auth.
+- The Next.js native chat Route Handler is fully removed; the frontend calls the FastAPI backend directly using `${NEXT_PUBLIC_API_URL}/api/v1/chat/`, with credentials included for auth. For streaming, the canonical endpoint is `POST /api/chat/stream` returning `text/event-stream`.
 - The `use-chat-ai` hook interfaces directly with the FastAPI backend, handling auth via `credentials: 'include'` and using the public API URL.
 - If a local BFF Route Handler is ever reintroduced, it must only forward requests, propagate auth headers, statuses, and minimally adapt stream output to the AI SDK `UIMessage` format—never re-implementing backend domain logic.
 - All unused AI SDK client dependencies and chat Route Handler code in Next.js are removed unless still required for other features.
@@ -47,5 +45,13 @@ Rejected for now due to duplication risk and added maintenance. Could be reconsi
 
 - FastAPI service docs (internal)
 - Frontend implementation: `frontend/src/hooks/use-chat-ai.ts`
-- Next.js 16 blog (proxy.ts, caching/tagging updates, SWR via `revalidateTag(tag, profile)`).
+- Next.js 16 (proxy.ts, caching/tagging updates; `revalidateTag(tag, 'max')`).
 - AI SDK v5 server streaming and `toUIMessageStreamResponse` examples.
+
+## Changelog
+
+- 1.1.0 (2025-10-24)
+  - Documented SSE endpoint (`/api/chat/stream`) as the canonical streaming path.
+  - Added versioned metadata and changelog.
+- 1.0.0 (2025-10-23)
+  - Initial adoption of FastAPI as the single chat backend; removal of Next.js chat route.

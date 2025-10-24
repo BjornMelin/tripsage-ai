@@ -8,12 +8,15 @@ This index lists all documentation files under `docs/` by section.
 
 ## Specifications
 
-- [AI SDK v5 Migration](specs/spec-ai-sdk-v5.md)
-- [Next.js 16 Migration Notes](specs/spec-next16-migration.md)
-- [Session Resume Spec](specs/spec-session-resume.md)
-- [Supabase SSR Typing](specs/spec-supabase-ssr-typing.md)
-- [Tailwind CSS v4 Migration](specs/spec-tailwind-v4.md)
-- [Zod v4 Migration](specs/spec-zod-v4-migration.md)
+- [AI SDK v5 Migration](specs/0001-spec-ai-sdk-v5.md)
+- [Next.js 16 Migration Notes](specs/0002-spec-next16-migration.md)
+- [Session Resume Spec](specs/0003-spec-session-resume.md)
+- [Supabase SSR Typing](specs/0004-spec-supabase-ssr-typing.md)
+- [Tailwind CSS v4 Migration](specs/0005-spec-tailwind-v4.md)
+- [Zod v4 Migration](specs/0006-spec-zod-v4-migration.md)
+- [SSE Chat Streaming](specs/0007-spec-sse-chat-streaming.md)
+- [Rate Limiting](specs/0008-spec-rate-limiting.md)
+- [Attachments SSR Listing & Cache Tags](specs/0009-spec-attachments-ssr-listing-and-cache-tags.md)
 
 ## Examples
 

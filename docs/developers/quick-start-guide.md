@@ -57,16 +57,16 @@ cp .env.example .env
 Required in `.env`:
 
 ```bash
-# Supabase Database
-DATABASE_URL=postgresql://user:password@host:5432/db
+# Backend (FastAPI)
+NEXT_PUBLIC_API_URL=http://localhost:8001
 
-# Upstash Redis
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# Optional: Upstash Redis (enables Next.js route rate limits)
 UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your-token
-
-# Supabase Auth
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
 ```
 
 ## Start Development
@@ -87,6 +87,11 @@ curl http://localhost:8000/api/health
 
 # Test frontend
 open http://localhost:3000
+
+## Feature Check
+
+- Streaming chat: open the chat UI, send a prompt; the assistant message should update progressively (SSE via `/api/chat/stream`).
+- Attachments SSR listing: after uploading, the attachments list route (`/api/attachments/files`) is revalidated by `revalidateTag('attachments','max')`.
 ```
 
 ## Development Workflow
