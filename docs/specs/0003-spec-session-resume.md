@@ -1,8 +1,8 @@
 # Spec: Session Resume — TripSage Frontend
 
-Owner: Frontend Platform
-Status: Completed
-Last updated: 2025-10-23
+**Version**: 1.1.0
+**Status**: Accepted
+**Date**: 2025-10-24
 
 ## Scope
 
@@ -23,5 +23,10 @@ This document records the active phases, remaining tasks, and validation command
 
 ### Notes
 
-- Canonical chat is FastAPI `/api/v1/chat/` (ADR-0019). The hook `use-chat-ai` posts directly and appends an assistant message from JSON.
+- Canonical chat is FastAPI (`/api/chat/stream` for streaming; `/api/v1/chat/` legacy JSON). The hook `use-chat-ai` posts to the streaming endpoint and updates a placeholder assistant message with deltas.
 - Tailwind v4: one v3 opacity utility replaced (bg-opacity-75 → bg-black/75). Outline utilities remain as-is; revisit if needed.
+
+## Changelog
+
+- 1.1.0 (2025-10-24) — Clarified streaming endpoint and hook behavior; added version metadata.
+- 1.0.0 (2025-10-23) — Initial session resume scope and validation steps.
