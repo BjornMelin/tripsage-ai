@@ -7,10 +7,12 @@ Tests the memory router endpoints using 2025 FastAPI testing patterns:
 - Direct function testing and HTTP endpoint testing
 """
 
+from datetime import UTC, datetime
+from inspect import unwrap
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Response, status
 from httpx import ASGITransport, AsyncClient
 
 from tripsage.api.core.dependencies import get_memory_service, require_principal
@@ -29,7 +31,15 @@ from tripsage.api.routers.memory import (
     search_memories,
     update_preferences,
 )
-from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.services.business.memory_service import (
+    MemorySearchResult,
+    MemoryService,
+)
+
+
+ADD_CONVERSATION_MEMORY_FN = unwrap(add_conversation_memory)
+SEARCH_MEMORIES_FN = unwrap(search_memories)
+ADD_PREFERENCE_FN = unwrap(add_preference)
 
 
 class TestMemoryRouter:
@@ -56,6 +66,13 @@ class TestMemoryRouter:
         service.get_memory_stats = AsyncMock()
         service.clear_user_memory = AsyncMock()
         return service
+
+    # request_builder provided by tests/conftest.py (global fixture)
+
+    @pytest.fixture
+    def response(self) -> Response:
+        """Reusable Response object for SlowAPI header injection."""
+        return Response()
 
     @pytest.fixture
     async def async_client(self, mock_principal, mock_memory_service):
@@ -105,7 +122,12 @@ class TestMemoryRouter:
 
     # Direct function tests (legacy compatibility)
     async def test_add_conversation_memory_success(
-        self, mock_principal, mock_memory_service, sample_conversation_request
+        self,
+        mock_principal,
+        mock_memory_service,
+        sample_conversation_request,
+        request_builder,
+        response,
     ):
         """Test successful conversation memory addition."""
         # Mock response
@@ -117,8 +139,12 @@ class TestMemoryRouter:
         }
         mock_memory_service.add_conversation_memory.return_value = expected_result
 
-        result = await add_conversation_memory(
-            sample_conversation_request, mock_principal, mock_memory_service
+        result = await ADD_CONVERSATION_MEMORY_FN(
+            sample_conversation_request,
+            principal=mock_principal,
+            memory_service=mock_memory_service,
+            response=response,
+            request=request_builder("POST", "/api/memory/conversation"),
         )
 
         # Verify service call - router passes ConversationMemoryRequest object
@@ -175,7 +201,7 @@ class TestMemoryRouter:
         assert data["messages_stored"] == 2
 
     async def test_add_conversation_memory_without_session_id(
-        self, mock_principal, mock_memory_service
+        self, mock_principal, mock_memory_service, request_builder, response
     ):
         """Test conversation memory addition without session ID."""
         request = ConversationMemoryRequest(
@@ -190,8 +216,12 @@ class TestMemoryRouter:
         }
         mock_memory_service.add_conversation_memory.return_value = expected_result
 
-        result = await add_conversation_memory(
-            request, mock_principal, mock_memory_service
+        result = await ADD_CONVERSATION_MEMORY_FN(
+            request,
+            principal=mock_principal,
+            memory_service=mock_memory_service,
+            response=response,
+            request=request_builder("POST", "/api/memory/conversation"),
         )
 
         # Verify service call - should pass None for session_id
@@ -206,7 +236,12 @@ class TestMemoryRouter:
         assert result == expected_result
 
     async def test_add_conversation_memory_service_error(
-        self, mock_principal, mock_memory_service, sample_conversation_request
+        self,
+        mock_principal,
+        mock_memory_service,
+        sample_conversation_request,
+        request_builder,
+        response,
     ):
         """Test conversation memory addition with service error."""
         mock_memory_service.add_conversation_memory.side_effect = Exception(
@@ -214,8 +249,12 @@ class TestMemoryRouter:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            await add_conversation_memory(
-                sample_conversation_request, mock_principal, mock_memory_service
+            await ADD_CONVERSATION_MEMORY_FN(
+                sample_conversation_request,
+                principal=mock_principal,
+                memory_service=mock_memory_service,
+                response=response,
+                request=request_builder("POST", "/api/memory/conversation"),
             )
 
         assert exc_info.value.status_code == 500
@@ -225,11 +264,13 @@ class TestMemoryRouter:
         """Test successful user context retrieval."""
         expected_context = {
             "user_id": "user123",
-            "preferences": {
-                "budget_range": "medium",
-                "accommodation_type": "hotel",
-                "travel_style": "balanced",
-            },
+            "preferences": [
+                {
+                    "budget_range": "medium",
+                    "accommodation_type": "hotel",
+                    "travel_style": "balanced",
+                }
+            ],
             "travel_history": [
                 {
                     "destination": "Tokyo, Japan",
@@ -243,7 +284,9 @@ class TestMemoryRouter:
         }
         mock_memory_service.get_user_context.return_value = expected_context
 
-        result = await get_user_context(mock_principal, mock_memory_service)
+        result = await get_user_context(
+            principal=mock_principal, memory_service=mock_memory_service
+        )
 
         mock_memory_service.get_user_context.assert_called_once_with("user123")
         assert result == expected_context
@@ -260,59 +303,88 @@ class TestMemoryRouter:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_user_context(mock_principal, mock_memory_service)
+            await get_user_context(
+                principal=mock_principal, memory_service=mock_memory_service
+            )
 
         assert exc_info.value.status_code == 500
         assert "Failed to get user context" in str(exc_info.value.detail)
 
     async def test_search_memories_success(
-        self, mock_principal, mock_memory_service, sample_search_request
+        self,
+        mock_principal,
+        mock_memory_service,
+        sample_search_request,
+        request_builder,
+        response,
     ):
         """Test successful memory search."""
         expected_memories = [
-            {
-                "id": "mem1",
-                "content": "Tokyo hotel preferences",
-                "type": "conversation",
-                "relevance_score": 0.9,
-                "created_at": "2024-01-01T00:00:00Z",
-            },
-            {
-                "id": "mem2",
-                "content": "Budget discussion for Tokyo trip",
-                "type": "preference",
-                "relevance_score": 0.8,
-                "created_at": "2024-01-02T00:00:00Z",
-            },
+            MemorySearchResult(
+                id="mem1",
+                memory="Tokyo hotel preferences",
+                metadata={},
+                categories=["conversation"],
+                similarity=0.9,
+                created_at=datetime(2024, 1, 1, tzinfo=UTC),
+                user_id="user123",
+            ),
+            MemorySearchResult(
+                id="mem2",
+                memory="Budget discussion for Tokyo trip",
+                metadata={},
+                categories=["preference"],
+                similarity=0.8,
+                created_at=datetime(2024, 1, 2, tzinfo=UTC),
+                user_id="user123",
+            ),
         ]
         mock_memory_service.search_memories.return_value = expected_memories
 
-        result = await search_memories(
-            sample_search_request, mock_principal, mock_memory_service
+        result = await SEARCH_MEMORIES_FN(
+            sample_search_request,
+            principal=mock_principal,
+            memory_service=mock_memory_service,
+            response=response,
+            request=request_builder("POST", "/api/memory/search"),
         )
 
-        mock_memory_service.search_memories.assert_called_once_with(
-            "user123", "Tokyo travel preferences", 5
-        )
-        assert result["memories"] == expected_memories
-        assert result["count"] == 2
+        mock_memory_service.search_memories.assert_called_once()
+        call_args = mock_memory_service.search_memories.call_args
+        assert call_args[0][0] == "user123"
+        search_request = call_args[0][1]
+        assert search_request.query == sample_search_request.query
+        assert search_request.limit == sample_search_request.limit
+        assert result.results == expected_memories
+        assert result.total == len(expected_memories)
+        assert result.query == sample_search_request.query
 
     async def test_search_memories_no_results(
-        self, mock_principal, mock_memory_service
+        self, mock_principal, mock_memory_service, request_builder, response
     ):
         """Test memory search with no results."""
         search_request = SearchMemoryRequest(query="nonexistent topic", limit=10)
         mock_memory_service.search_memories.return_value = []
 
-        result = await search_memories(
-            search_request, mock_principal, mock_memory_service
+        result = await SEARCH_MEMORIES_FN(
+            search_request,
+            principal=mock_principal,
+            memory_service=mock_memory_service,
+            response=response,
+            request=request_builder("POST", "/api/memory/search"),
         )
 
-        assert result["memories"] == []
-        assert result["count"] == 0
+        assert result.results == []
+        assert result.total == 0
+        assert result.query == search_request.query
 
     async def test_search_memories_service_error(
-        self, mock_principal, mock_memory_service, sample_search_request
+        self,
+        mock_principal,
+        mock_memory_service,
+        sample_search_request,
+        request_builder,
+        response,
     ):
         """Test memory search with service error."""
         mock_memory_service.search_memories.side_effect = Exception(
@@ -320,8 +392,12 @@ class TestMemoryRouter:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            await search_memories(
-                sample_search_request, mock_principal, mock_memory_service
+            await SEARCH_MEMORIES_FN(
+                sample_search_request,
+                principal=mock_principal,
+                memory_service=mock_memory_service,
+                response=response,
+                request=request_builder("POST", "/api/memory/search"),
             )
 
         assert exc_info.value.status_code == 500
@@ -340,7 +416,9 @@ class TestMemoryRouter:
         mock_memory_service.update_user_preferences.return_value = expected_result
 
         result = await update_preferences(
-            sample_preferences_request, mock_principal, mock_memory_service
+            sample_preferences_request,
+            principal=mock_principal,
+            memory_service=mock_memory_service,
         )
 
         mock_memory_service.update_user_preferences.assert_called_once_with(
@@ -363,13 +441,17 @@ class TestMemoryRouter:
 
         with pytest.raises(HTTPException) as exc_info:
             await update_preferences(
-                sample_preferences_request, mock_principal, mock_memory_service
+                sample_preferences_request,
+                principal=mock_principal,
+                memory_service=mock_memory_service,
             )
 
         assert exc_info.value.status_code == 500
         assert "Failed to update preferences" in str(exc_info.value.detail)
 
-    async def test_add_preference_success(self, mock_principal, mock_memory_service):
+    async def test_add_preference_success(
+        self, mock_principal, mock_memory_service, request_builder, response
+    ):
         """Test successful single preference addition."""
         expected_preference = {
             "key": "dietary_restrictions",
@@ -379,12 +461,14 @@ class TestMemoryRouter:
         }
         mock_memory_service.add_user_preference.return_value = expected_preference
 
-        result = await add_preference(
+        result = await ADD_PREFERENCE_FN(
             "dietary_restrictions",
             "vegetarian",
-            "food",
-            mock_principal,
-            mock_memory_service,
+            principal=mock_principal,
+            memory_service=mock_memory_service,
+            response=response,
+            category="food",
+            request=request_builder("POST", "/api/memory/preference"),
         )
 
         mock_memory_service.add_user_preference.assert_called_once_with(
@@ -393,7 +477,7 @@ class TestMemoryRouter:
         assert result == expected_preference
 
     async def test_add_preference_default_category(
-        self, mock_principal, mock_memory_service
+        self, mock_principal, mock_memory_service, request_builder, response
     ):
         """Test preference addition with default category."""
         expected_preference = {
@@ -404,12 +488,13 @@ class TestMemoryRouter:
         }
         mock_memory_service.add_user_preference.return_value = expected_preference
 
-        result = await add_preference(
+        result = await ADD_PREFERENCE_FN(
             "language",
             "english",
-            "general",  # Default category
-            mock_principal,
-            mock_memory_service,
+            principal=mock_principal,
+            memory_service=mock_memory_service,
+            response=response,
+            request=request_builder("POST", "/api/memory/preference"),
         )
 
         mock_memory_service.add_user_preference.assert_called_once_with(
@@ -418,7 +503,7 @@ class TestMemoryRouter:
         assert result == expected_preference
 
     async def test_add_preference_service_error(
-        self, mock_principal, mock_memory_service
+        self, mock_principal, mock_memory_service, request_builder, response
     ):
         """Test preference addition with service error."""
         mock_memory_service.add_user_preference.side_effect = Exception(
@@ -426,8 +511,13 @@ class TestMemoryRouter:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            await add_preference(
-                "test_key", "test_value", "general", mock_principal, mock_memory_service
+            await ADD_PREFERENCE_FN(
+                "test_key",
+                "test_value",
+                principal=mock_principal,
+                memory_service=mock_memory_service,
+                response=response,
+                request=request_builder("POST", "/api/memory/preference"),
             )
 
         assert exc_info.value.status_code == 500
@@ -438,7 +528,11 @@ class TestMemoryRouter:
         memory_id = "mem123"
         mock_memory_service.delete_memory.return_value = True
 
-        result = await delete_memory(memory_id, mock_principal, mock_memory_service)
+        result = await delete_memory(
+            memory_id,
+            principal=mock_principal,
+            memory_service=mock_memory_service,
+        )
 
         mock_memory_service.delete_memory.assert_called_once_with("user123", memory_id)
         assert result["message"] == "Memory deleted successfully"
@@ -449,7 +543,11 @@ class TestMemoryRouter:
         mock_memory_service.delete_memory.return_value = False
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_memory(memory_id, mock_principal, mock_memory_service)
+            await delete_memory(
+                memory_id,
+                principal=mock_principal,
+                memory_service=mock_memory_service,
+            )
 
         assert exc_info.value.status_code == 404
         assert "Memory not found" in str(exc_info.value.detail)
@@ -464,7 +562,11 @@ class TestMemoryRouter:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_memory(memory_id, mock_principal, mock_memory_service)
+            await delete_memory(
+                memory_id,
+                principal=mock_principal,
+                memory_service=mock_memory_service,
+            )
 
         assert exc_info.value.status_code == 500
         assert "Failed to delete memory" in str(exc_info.value.detail)
@@ -481,7 +583,9 @@ class TestMemoryRouter:
         }
         mock_memory_service.get_memory_stats.return_value = expected_stats
 
-        result = await get_memory_stats(mock_principal, mock_memory_service)
+        result = await get_memory_stats(
+            principal=mock_principal, memory_service=mock_memory_service
+        )
 
         mock_memory_service.get_memory_stats.assert_called_once_with("user123")
         assert result == expected_stats
@@ -498,7 +602,9 @@ class TestMemoryRouter:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_memory_stats(mock_principal, mock_memory_service)
+            await get_memory_stats(
+                principal=mock_principal, memory_service=mock_memory_service
+            )
 
         assert exc_info.value.status_code == 500
         assert "Failed to get memory stats" in str(exc_info.value.detail)
@@ -512,7 +618,11 @@ class TestMemoryRouter:
         }
         mock_memory_service.clear_user_memory.return_value = expected_result
 
-        result = await clear_user_memory(True, mock_principal, mock_memory_service)
+        result = await clear_user_memory(
+            principal=mock_principal,
+            memory_service=mock_memory_service,
+            confirm=True,
+        )
 
         mock_memory_service.clear_user_memory.assert_called_once_with("user123", True)
         assert result == expected_result
@@ -527,7 +637,11 @@ class TestMemoryRouter:
         }
         mock_memory_service.clear_user_memory.return_value = expected_result
 
-        result = await clear_user_memory(False, mock_principal, mock_memory_service)
+        result = await clear_user_memory(
+            principal=mock_principal,
+            memory_service=mock_memory_service,
+            confirm=False,
+        )
 
         mock_memory_service.clear_user_memory.assert_called_once_with("user123", False)
         assert result == expected_result
@@ -541,7 +655,11 @@ class TestMemoryRouter:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            await clear_user_memory(True, mock_principal, mock_memory_service)
+            await clear_user_memory(
+                principal=mock_principal,
+                memory_service=mock_memory_service,
+                confirm=True,
+            )
 
         assert exc_info.value.status_code == 500
         assert "Failed to clear memory" in str(exc_info.value.detail)
@@ -552,8 +670,7 @@ class TestMemoryRouter:
     ):
         """Test successful user context retrieval via HTTP endpoint."""
         expected_context = {
-            "user_id": "user123",
-            "preferences": {"budget_range": "medium"},
+            "preferences": [{"budget_range": "medium"}],
             "travel_history": [{"destination": "Tokyo, Japan"}],
         }
         mock_memory_service.get_user_context.return_value = expected_context
@@ -567,20 +684,23 @@ class TestMemoryRouter:
         # Assert
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["user_id"] == "user123"
         assert "preferences" in data
-        assert "travel_history" in data
+        assert "past_trips" in data
 
     async def test_search_memories_endpoint_success(
         self, async_client, mock_memory_service
     ):
         """Test successful memory search via HTTP endpoint."""
         expected_memories = [
-            {
-                "id": "mem1",
-                "content": "Tokyo hotel preferences",
-                "relevance_score": 0.9,
-            }
+            MemorySearchResult(
+                id="mem1",
+                memory="Tokyo hotel preferences",
+                metadata={},
+                categories=["conversation"],
+                similarity=0.9,
+                created_at=datetime(2024, 1, 1, tzinfo=UTC),
+                user_id="user123",
+            )
         ]
         mock_memory_service.search_memories.return_value = expected_memories
 
@@ -594,10 +714,11 @@ class TestMemoryRouter:
         # Assert
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert "memories" in data
-        assert "count" in data
-        assert data["count"] == 1
-        assert data["memories"][0]["id"] == "mem1"
+        assert "results" in data
+        assert "total" in data
+        assert data["total"] == 1
+        assert data["results"][0]["id"] == "mem1"
+        assert data["results"][0]["memory"] == "Tokyo hotel preferences"
 
     async def test_update_preferences_endpoint_success(
         self, async_client, mock_memory_service
@@ -833,10 +954,19 @@ class TestMemoryRouter:
             ("PUT", "/api/memory/preferences", {"invalid": "payload"}),
         ]
 
-        for _method, endpoint, json_data in invalid_payloads:
-            response = await async_client.post(
-                endpoint,
-                json=json_data,
-                headers={"Authorization": "Bearer test-token"},
-            )
+        for method, endpoint, json_data in invalid_payloads:
+            if method == "POST":
+                response = await async_client.post(
+                    endpoint,
+                    json=json_data,
+                    headers={"Authorization": "Bearer test-token"},
+                )
+            elif method == "PUT":
+                response = await async_client.put(
+                    endpoint,
+                    json=json_data,
+                    headers={"Authorization": "Bearer test-token"},
+                )
+            else:
+                raise AssertionError(f"Unsupported method {method}")
             assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

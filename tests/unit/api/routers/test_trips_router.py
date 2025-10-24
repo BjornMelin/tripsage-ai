@@ -14,7 +14,6 @@ from fastapi import HTTPException
 
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.routers.trips import (
-    _TripSearchParams,
     create_trip,
     delete_trip,
     duplicate_trip,
@@ -28,6 +27,7 @@ from tripsage.api.routers.trips import (
     update_trip,
     update_trip_preferences,
 )
+from tripsage.api.schemas.trips import TripSearchParams
 from tripsage_core.exceptions import (
     CoreAuthorizationError as ServicePermissionError,
     CoreResourceNotFoundError as NotFoundError,
@@ -429,7 +429,7 @@ class TestTripsRouterComprehensive:
         """Test that trip search includes shared trips."""
         mock_trip_service.search_trips.return_value = [sample_shared_trip_response]
 
-        params = _TripSearchParams(q="Tokyo", status=None, skip=0, limit=10)
+        params = TripSearchParams(q="Tokyo", status=None, skip=0, limit=10)
         result = await search_trips(
             params=params,
             principal=mock_secondary_principal,
@@ -606,7 +606,7 @@ class TestTripsRouterComprehensive:
         """Test trip search with detailed filtering."""
         mock_trip_service.search_trips.return_value = [sample_shared_trip_response]
 
-        params = _TripSearchParams(
+        params = TripSearchParams(
             q="Tokyo cultural experience", status="planning", skip=0, limit=10
         )
         result = await search_trips(
@@ -896,7 +896,7 @@ class TestTripsRouterComprehensive:
         """Test search with no results."""
         mock_trip_service.search_trips.return_value = []
 
-        params = _TripSearchParams(
+        params = TripSearchParams(
             q="nonexistent destination", status=None, skip=0, limit=10
         )
         result = await search_trips(

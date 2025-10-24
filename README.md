@@ -157,6 +157,55 @@ See [Testing Guide](docs/developers/testing-guide.md) and [Code Standards](docs/
 
 ---
 
+## Dependency Injection
+
+TripSage standardises dependency injection on FastAPI `app.state` singletons managed by
+[`tripsage/app_state.py`](tripsage/app_state.py).
+
+- Lifespan-managed services: `initialise_app_state()` builds an `AppServiceContainer`
+  that wires the database, caches, external providers, and domain services. The
+  container is stored on `app.state.services` and cleaned up on shutdown.
+- Typed accessors: call `services.get_required_service("flight_service", expected_type=FlightService)`
+  for safe retrieval and better type-checking.
+- API dependencies: `tripsage/api/core/dependencies.py` exposes `Annotated` helpers
+  (e.g. `TripServiceDep`, `MemoryServiceDep`) that resolve services from the container.
+- Request handlers: use `request: Request` to access `request.app.state.services` when
+  needed. Prefer dependency helpers to keep handlers declarative.
+- Rate limiting (SlowAPI): any endpoint decorated with `@limiter.limit(...)` must accept
+  `request: Request` (and `response: Response` if headers are injected). For unit tests,
+  either invoke via HTTP client or unwrap decorators and pass a synthetic `Request`.
+  Example snippet used by tests:
+
+  ```py
+  from fastapi import Request
+
+  def build_request(method: str, path: str) -> Request:
+      scope = {
+          "type": "http", "method": method, "path": path, "scheme": "http",
+          "headers": [], "client": ("127.0.0.1", 12345), "server": ("test", 80),
+          "query_string": b"",
+      }
+      async def receive():
+          return {"type": "http.request", "body": b"", "more_body": False}
+      return Request(scope, receive)
+  ```
+- Orchestration tools: LangGraph tools call `set_tool_services(container)` during startup
+  so shared utilities reuse the same singletons (no ad-hoc instantiation inside tools).
+- Testing: pytest fixtures construct lightweight containers with typed mocks. See
+  `tests/unit/orchestration/test_utils.py::create_mock_services`.
+
+The legacy `ServiceRegistry` abstraction has been removed. All new modules and tests use
+the `AppServiceContainer` pattern to keep DI consistent and explicit.
+
+Schema policy (routers vs. schemas):
+- Routers must not declare Pydantic `BaseModel` classes. Place request/response
+  models under `tripsage/api/schemas/requests|responses` (or `schemas/*.py` when shared).
+- Every endpoint declares a `response_model` and returns instances/serializable
+  shapes matching the schema. Prefer enum types and validated fields.
+- Centralized schemas avoid drift and enable accurate OpenAPI for client codegen.
+
+---
+
 ## 🚢 Deployment
 
 ### Docker Deployment

@@ -33,16 +33,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Database bootstrap hardens Supabase RPC handling, runs migrations via lazy imports, and scopes discovery to `supabase/migrations` with offline recording.
 - Accommodation stack now normalizes MCP client calls (keyword-only), propagates canonical booking/search metadata, and validates external listings via `model_validate`.
 - WebSocket router refactored around a shared `MessageContext`, consolidated handlers, and IDNA-aware origin validation while keeping dependencies Supabase-only.
-- API service DI now uses the global `ServiceRegistry` in `tripsage/config/service_registry.py`:
-  - Lifespan registers singletons for `cache` and `google_maps`.
-  - New adapters provide `activity` and `location` services from registry-managed deps.
-  - API dependency providers (`tripsage/api/core/dependencies.py`) resolve via registry (no `app.state` coupling for these services).
+- API service DI now uses FastAPI `app.state` singletons via `tripsage/app_state.AppServiceContainer`:
+  - Lifespan constructs and tears down cache, Google Maps, database, and related services in a typed container.
+  - Dependency providers (`tripsage/api/core/dependencies.py`) retrieve services from the container, eliminating bespoke registry lookups.
+  - A shared `ChatAgent` instance is initialised during lifespan and exposed through `app.state.chat_agent` for WebSocket handlers.
 
 ### Refactor
 
 - **[Models]:** Consolidated all duplicated data models for Trip, Itinerary, and Accommodation into canonical representations within `tripsage_core`. API schemas in `tripsage/api/schemas/` have been removed to enforce a single source of truth.
   - Merged ValidationResult and ServiceHealthCheck into ApiValidationResult for DRY compliance.
   - Verification: Single model used in both validation and health methods; tests cover all fields without duplication errors.
+- **[API]:** All routers now rely on dependency helpers (e.g., `TripServiceDep`, `MemoryServiceDep`) sourced from the lifespan-managed `AppServiceContainer`, eliminating inline service instantiation across agents, attachments, accommodations, flights, itineraries, keys, destinations, and trips.
+- **[Orchestration]:** LangGraph tools register the shared services container via `set_tool_services`, removing the final `ServiceRegistry` usage and guaranteeing tool invocations reuse the same singletons as the API.
+- **Agents/DI:** Standardized on FastAPI app.state singletons, eliminating ServiceRegistry for simpler, lifespan-managed dependencies.
+- **API/Schemas:** Centralized memory and attachments request/response models under `tripsage/api/schemas`, added health schemas, and moved trip search params to schemas; routers import these models and declare explicit `response_model`s.
+
+### Fixed (DI migration sweep)
+
+- Memory router endpoints updated for SlowAPI: rate-limited routes accept `request` and
+  where applicable `response`; unit tests unwrap decorators and pass synthetic Request
+  objects to avoid false negatives.
+- Keys router status mapping aligned to domain validation: RATE_LIMITED → 429,
+  INVALID/FORMAT_ERROR → 400, SERVICE_ERROR → 500; metrics endpoint now returns `{}` on
+  provider failure instead of raising in tests.
+- Orchestration tools (geocode/weather/web_search) resolve DI singletons from the
+  shared container instead of instantiating services, ensuring consistent configuration
+  and testability.
+- Trips smoke test stub returns a UUID string, fixing response adaptation.
+- Test configuration: removed non-existent `pytest-slowapi`; added `benchmark` marker to
+  satisfy `--strict-markers`.
 
 ### Deprecated
 
@@ -67,7 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New Pydantic models (`tripsage_core/models/api/maps_models.py`).
   - `GoogleMapsService` now returns typed models and removes custom HTTP logic.
   - `LocationService` and `ActivityService` refactored to consume typed API only (no legacy code) and use constructor DI.
-  - `tripsage/agents/service_registry.py` wires `ActivityService` via injected `GoogleMapsService` and `CacheService`.
+  - DI wiring now lives in `tripsage/app_state.AppServiceContainer`, which injects `GoogleMapsService` and `CacheService` into `ActivityService`.
   - `tripsage/api/routers/activities.py` constructs services explicitly (no globals).
   - Unit/integration tests rewritten for typed returns; deprecated suites removed.
 

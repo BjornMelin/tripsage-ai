@@ -27,6 +27,7 @@ from tripsage.orchestration.nodes.itinerary_agent import ItineraryAgentNode
 from tripsage.orchestration.nodes.memory_update import MemoryUpdateNode
 from tripsage.orchestration.routing import RouterNode
 from tripsage.orchestration.state import TravelPlanningState, create_initial_state
+from tripsage.orchestration.tools.tools import set_tool_services
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -52,6 +53,7 @@ class TripSageOrchestrator:
             config: Optional configuration object (defaults to environment config)
         """
         self.services = services
+        set_tool_services(self.services)
         self.config = config or get_default_config()
         try:
             self.checkpoint_service = self.services.get_required_service(
@@ -116,7 +118,7 @@ class TripSageOrchestrator:
         router_node = RouterNode(self.services)
         graph.add_node("router", router_node)
 
-        # Add specialized agent nodes with service registry
+        # Add specialized agent nodes with service container
         flight_agent_node = FlightAgentNode(self.services)
         accommodation_agent_node = AccommodationAgentNode(self.services)
         budget_agent_node = BudgetAgentNode(self.services)
@@ -132,7 +134,7 @@ class TripSageOrchestrator:
         # General purpose agent for unrouted requests
         graph.add_node("general_agent", self._create_general_agent())
 
-        # Add utility nodes with service registry
+        # Add utility nodes with service container
         memory_update_node = MemoryUpdateNode(self.services)
         error_recovery_node = ErrorRecoveryNode(self.services)
         graph.add_node("memory_update", memory_update_node)

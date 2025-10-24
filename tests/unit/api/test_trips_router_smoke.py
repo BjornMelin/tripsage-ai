@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from tripsage.api.core.dependencies import require_principal
+from tripsage.api.core.dependencies import get_trip_service, require_principal
 from tripsage.api.routers import trips as trips_router
 
 
@@ -28,7 +28,10 @@ class _TripSvc:
 
             def __init__(self):
                 """Initialize the response."""
-                self.id = "t1"
+                # Return a UUID-compatible id string
+                import uuid
+
+                self.id = str(uuid.uuid4())
                 self.user_id = user_id
                 self.title = trip_data.title
                 self.description = trip_data.description
@@ -60,7 +63,7 @@ def _app() -> FastAPI:
     app.include_router(trips_router.router, prefix="/api/trips")
     # pylint: disable=unnecessary-lambda
     app.dependency_overrides[require_principal] = lambda: _P()
-    app.dependency_overrides[trips_router.get_trip_service] = lambda: _TripSvc()
+    app.dependency_overrides[get_trip_service] = lambda: _TripSvc()
     return app
 
 

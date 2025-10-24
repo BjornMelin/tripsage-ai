@@ -192,7 +192,7 @@ class BaseAgentNode(ABC):
         return message
 
     def get_service(self, service_name: str):
-        """Get a required service from the registry.
+        """Get a required service from the DI container.
 
         Args:
             service_name: Name of the service to retrieve
@@ -206,7 +206,7 @@ class BaseAgentNode(ABC):
         return self.services.get_required_service(service_name)
 
     def get_optional_service(self, service_name: str):
-        """Get an optional service from the registry.
+        """Get an optional service from the DI container.
 
         Args:
             service_name: Name of the service to retrieve

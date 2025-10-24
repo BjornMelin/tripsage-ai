@@ -41,6 +41,7 @@ dependencies = [
     "slowapi>=0.1.9",
     "aiolimiter>=1.1.0",
     "cashews>=7.4.0,<8.0.0",
+    "limits[redis]>=5.6.0",
     # Web scraping and automation
     "crawl4ai>=0.7.4,<0.8.0",
     "playwright>=1.55.0,<1.56.0",
@@ -138,6 +139,10 @@ addopts = [
     "--cov-branch",
     "--no-cov-on-fail",
     "-ra"
+]
+
+markers = [
+    "benchmark: performance benchmarks",
 ]
 
 [tool.ruff]

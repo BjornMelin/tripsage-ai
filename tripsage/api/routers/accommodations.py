@@ -10,7 +10,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
+from tripsage.api.core.dependencies import (
+    AccommodationServiceDep,
+    get_principal_id,
+    require_principal,
+)
 from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.exceptions import CoreTripSageError
 from tripsage_core.exceptions.exceptions import (
@@ -24,11 +28,7 @@ from tripsage_core.models.api.accommodation_models import (
     SavedAccommodationRequest,
     SavedAccommodationResponse,
 )
-from tripsage_core.services.business.accommodation_service import (
-    AccommodationService,
-    BookingStatus,
-    get_accommodation_service,
-)
+from tripsage_core.services.business.accommodation_service import BookingStatus
 
 
 logger = logging.getLogger(__name__)
@@ -39,8 +39,8 @@ router = APIRouter()
 @router.post("/search", response_model=AccommodationSearchResponse)
 async def search_accommodations(
     request: AccommodationSearchRequest,
+    accommodation_service: AccommodationServiceDep,
     principal: Principal = Depends(require_principal),
-    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """Search for accommodations based on the provided criteria.
 
@@ -64,8 +64,8 @@ async def search_accommodations(
 @router.post("/details", response_model=AccommodationDetailsResponse)
 async def get_accommodation_details(
     request: AccommodationDetailsRequest,
+    accommodation_service: AccommodationServiceDep,
     principal: Principal = Depends(require_principal),
-    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """Get details of a specific accommodation listing.
 
@@ -106,8 +106,8 @@ async def get_accommodation_details(
 )
 async def save_accommodation(
     request: SavedAccommodationRequest,
+    accommodation_service: AccommodationServiceDep,
     principal: Principal = Depends(require_principal),
-    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """Save an accommodation listing for a trip.
 
@@ -174,8 +174,8 @@ async def save_accommodation(
 )
 async def delete_saved_accommodation(
     saved_accommodation_id: UUID,
+    accommodation_service: AccommodationServiceDep,
     principal: Principal = Depends(require_principal),
-    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """Delete a saved accommodation.
 
@@ -201,9 +201,9 @@ async def delete_saved_accommodation(
 
 @router.get("/saved", response_model=list[SavedAccommodationResponse])
 async def list_saved_accommodations(
+    accommodation_service: AccommodationServiceDep,
     trip_id: UUID | None = None,
     principal: Principal = Depends(require_principal),
-    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """List saved accommodations for a user, optionally filtered by trip.
 
@@ -277,8 +277,8 @@ async def list_saved_accommodations(
 async def update_saved_accommodation_status(
     saved_accommodation_id: UUID,
     status: BookingStatus,
+    accommodation_service: AccommodationServiceDep,
     principal: Principal = Depends(require_principal),
-    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """Update the status of a saved accommodation.
 

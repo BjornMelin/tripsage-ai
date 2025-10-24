@@ -12,10 +12,16 @@ from typing import Any, Protocol, TypedDict, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
-from tripsage.api.core.dependencies import require_principal
+from tripsage.api.core.dependencies import (
+    MemoryServiceDep,
+    TripServiceDep,
+    UserServiceDep,
+    require_principal,
+)
 from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.schemas.trips import TripSearchParams
 from tripsage_core.exceptions.exceptions import (
     CoreAuthorizationError,
     CoreSecurityError,
@@ -57,16 +63,16 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditSeverity,
     audit_security_event,
 )
+from tripsage_core.services.business.memory_service import MemorySearchRequest
 
 # Import core service and models
 from tripsage_core.services.business.trip_service import (
     TripCreateRequest,
     TripLocation,
     TripResponse as CoreTripResponse,
-    TripService,
     TripUpdateRequest as CoreTripUpdateRequest,
-    get_trip_service,
 )
+from tripsage_core.services.business.user_service import UserService
 
 
 logger = logging.getLogger(__name__)
@@ -150,12 +156,12 @@ def _ensure_date(value: datetime | date | str) -> date:
     return _ensure_datetime(value).date()
 
 
-async def _get_user_details_by_id(user_id: str) -> tuple[str | None, str | None]:
+async def _get_user_details_by_id(
+    user_id: str,
+    user_service: "UserService",
+) -> tuple[str | None, str | None]:
     """Retrieve user email and name for a given identifier."""
     try:
-        from tripsage_core.services.business.user_service import get_user_service
-
-        user_service = await get_user_service()
         user = await user_service.get_user_by_id(user_id)
         if user:
             return user.email, getattr(user, "full_name", None)
@@ -164,12 +170,12 @@ async def _get_user_details_by_id(user_id: str) -> tuple[str | None, str | None]
     return None, None
 
 
-async def _resolve_user_by_email(email: str) -> tuple[str | None, str | None]:
+async def _resolve_user_by_email(
+    email: str,
+    user_service: "UserService",
+) -> tuple[str | None, str | None]:
     """Resolve a user ID and name from an email address."""
     try:
-        from tripsage_core.services.business.user_service import get_user_service
-
-        user_service = await get_user_service()
         user = await user_service.get_user_by_email(email)
         if user:
             return str(user.id), getattr(user, "full_name", None)
@@ -222,8 +228,8 @@ async def _record_trip_audit_event(
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def create_trip(
     trip_request: CreateTripRequest,
+    trip_service: TripServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """Create a new trip.
 
@@ -394,8 +400,8 @@ async def create_trip(
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_trip(
     trip_id: UUID,
+    trip_service: TripServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """Get a trip by ID.
 
@@ -436,12 +442,13 @@ async def get_trip(
 @trace_span(name="api.trips.list")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def list_trips(
+    trip_service: TripServiceDep,
+    principal: Principal = Depends(require_principal),
+    *,
     skip: int = Query(default=0, ge=0, description="Number of trips to skip"),
     limit: int = Query(
         default=10, ge=1, le=100, description="Number of trips to return"
     ),
-    principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """List trips for the current user.
 
@@ -500,8 +507,8 @@ async def list_trips(
 async def update_trip(
     trip_id: UUID,
     trip_request: UpdateTripRequest,
+    trip_service: TripServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """Update a trip.
 
@@ -597,8 +604,8 @@ async def update_trip(
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def delete_trip(
     trip_id: UUID,
+    trip_service: TripServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """Delete a trip.
 
@@ -652,8 +659,8 @@ async def delete_trip(
 @router.get("/{trip_id}/summary", response_model=TripSummaryResponse)
 async def get_trip_summary(
     trip_id: UUID,
+    trip_service: TripServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """Get trip summary.
 
@@ -755,8 +762,8 @@ async def get_trip_summary(
 async def update_trip_preferences(
     trip_id: UUID,
     preferences_request: TripPreferencesRequest,
+    trip_service: TripServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """Update trip preferences.
 
@@ -814,8 +821,8 @@ async def update_trip_preferences(
 )
 async def duplicate_trip(
     trip_id: UUID,
+    trip_service: TripServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """Duplicate a trip.
 
@@ -874,13 +881,6 @@ async def duplicate_trip(
         ) from e
 
 
-class _TripSearchParams(BaseModel):
-    q: str | None = None
-    status: str | None = None
-    skip: int = 0
-    limit: int = 10
-
-
 def _get_trip_search_params(
     q: str | None = Query(default=None, description="Search query"),
     status: str | None = Query(
@@ -890,15 +890,15 @@ def _get_trip_search_params(
     limit: int = Query(
         default=10, ge=1, le=100, description="Number of trips to return"
     ),
-) -> _TripSearchParams:
-    return _TripSearchParams(q=q, status=status, skip=skip, limit=limit)
+) -> TripSearchParams:
+    return TripSearchParams(q=q, status=status, skip=skip, limit=limit)
 
 
 @router.get("/search", response_model=TripListResponse)
 async def search_trips(
-    params: _TripSearchParams = Depends(_get_trip_search_params),
+    trip_service: TripServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
+    params: TripSearchParams = Depends(_get_trip_search_params),
 ):
     """Search trips.
 
@@ -961,8 +961,8 @@ async def search_trips(
 @router.get("/{trip_id}/itinerary")
 async def get_trip_itinerary(
     trip_id: UUID,
+    trip_service: TripServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ) -> _ItineraryResponse:
     """Get trip itinerary.
 
@@ -1080,9 +1080,10 @@ async def get_trip_itinerary(
 @router.post("/{trip_id}/export")
 async def export_trip(
     trip_id: UUID,
-    export_format: str = Query(default="pdf", description="Export format"),
+    trip_service: TripServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
+    *,
+    export_format: str = Query(default="pdf", description="Export format"),
     format_: str | None = None,  # test harness passes 'format' kw
 ) -> _ExportResponse:
     """Export trip.
@@ -1166,11 +1167,12 @@ async def export_trip(
 # Core endpoints
 @router.get("/suggestions", response_model=list[TripSuggestionResponse])
 async def get_trip_suggestions(
+    memory_service: MemoryServiceDep,
+    principal: Principal = Depends(require_principal),
+    *,
     limit: int = Query(4, ge=1, le=20, description="Number of suggestions to return"),
     budget_max: float | None = Query(None, description="Maximum budget filter"),
     category: str | None = Query(None, description="Filter by category"),
-    principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """Get personalized trip suggestions based on user preferences and history.
 
@@ -1179,7 +1181,7 @@ async def get_trip_suggestions(
         budget_max: Optional maximum budget filter
         category: Optional category filter
         principal: Current authenticated principal
-        trip_service: Injected trip service
+        memory_service: Injected memory service
 
     Returns:
         List of trip suggestions
@@ -1291,12 +1293,6 @@ async def get_trip_suggestions(
     suggestions = base_suggestions
 
     try:
-        from tripsage_core.services.business.memory_service import (
-            MemorySearchRequest,
-            get_memory_service,
-        )
-
-        memory_service = await get_memory_service()
         memory_search = MemorySearchRequest(
             query="travel preferences destinations budget",
             limit=10,
@@ -1407,8 +1403,9 @@ def _adapt_trip_response(
 async def share_trip(
     trip_id: UUID,
     share_request: TripShareRequest,
+    trip_service: TripServiceDep,
+    user_service: UserServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """Share a trip with other users.
 
@@ -1419,6 +1416,7 @@ async def share_trip(
         share_request: Share request with user emails and permissions
         principal: Current authenticated principal
         trip_service: Trip service instance
+        user_service: User service used to resolve collaborator identities
 
     Returns:
         List of successfully added collaborators
@@ -1438,10 +1436,16 @@ async def share_trip(
             full_name: str | None = None
             if "@" in identifier:
                 email_val = identifier
-                user_id_val, full_name = await _resolve_user_by_email(email_val)
+                user_id_val, full_name = await _resolve_user_by_email(
+                    email_val,
+                    user_service,
+                )
             else:
                 user_id_val = identifier
-                email_val, full_name = await _get_user_details_by_id(user_id_val)
+                email_val, full_name = await _get_user_details_by_id(
+                    user_id_val,
+                    user_service,
+                )
 
             if not user_id_val:
                 # Skip unresolved identifiers silently
@@ -1506,8 +1510,9 @@ async def share_trip(
 @router.get("/{trip_id}/collaborators", response_model=TripCollaboratorsListResponse)
 async def list_trip_collaborators(
     trip_id: UUID,
+    trip_service: TripServiceDep,
+    user_service: UserServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """List all collaborators for a trip.
 
@@ -1517,6 +1522,7 @@ async def list_trip_collaborators(
         trip_id: Trip ID
         principal: Current authenticated principal
         trip_service: Trip service instance
+        user_service: User service used to hydrate collaborator metadata
 
     Returns:
         List of trip collaborators with their permissions
@@ -1551,7 +1557,10 @@ async def list_trip_collaborators(
 
         response_collaborators: list[TripCollaboratorResponse] = []
         for collab in collaborator_records:
-            email, full_name = await _get_user_details_by_id(str(collab.get("user_id")))
+            email, full_name = await _get_user_details_by_id(
+                str(collab.get("user_id")),
+                user_service,
+            )
             added_at_value = collab.get("added_at")
             added_at = (
                 _ensure_datetime(added_at_value)
@@ -1603,9 +1612,11 @@ async def list_trip_collaborators(
 async def update_collaborator_permissions(
     trip_id: UUID,
     user_id: UUID,
+    trip_service: TripServiceDep,
+    user_service: UserServiceDep,
+    *,
     update_request: TripCollaboratorUpdateRequest,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """Update collaborator permissions for a trip.
 
@@ -1617,6 +1628,7 @@ async def update_collaborator_permissions(
         update_request: New permission level
         principal: Current authenticated principal
         trip_service: Trip service instance
+        user_service: User service used to fetch collaborator details
 
     Returns:
         Updated collaborator information
@@ -1674,7 +1686,7 @@ async def update_collaborator_permissions(
             await database_service.get_trip_collaborator(str(trip_id), str(user_id))
             or existing_collaborator
         )
-        email, full_name = await _get_user_details_by_id(str(user_id))
+        email, full_name = await _get_user_details_by_id(str(user_id), user_service)
         added_at_value = (
             updated_collaborator.get("added_at") if updated_collaborator else None
         )
@@ -1710,8 +1722,8 @@ async def update_collaborator_permissions(
 async def remove_collaborator(
     trip_id: UUID,
     user_id: UUID,
+    trip_service: TripServiceDep,
     principal: Principal = Depends(require_principal),
-    trip_service: TripService = Depends(get_trip_service),
 ):
     """Remove a collaborator from a trip.
 
@@ -1773,20 +1785,3 @@ async def remove_collaborator(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to remove collaborator",
         ) from e
-
-
-async def _get_user_name_safely(user_id: str) -> str | None:
-    """Safely get user name with authorization check.
-
-    Args:
-        user_id: User ID to lookup
-
-    Returns:
-        User's full name or None if not found/error
-    """
-    try:
-        _, full_name = await _get_user_details_by_id(user_id)
-        return full_name
-    except (AttributeError, ValueError, CoreServiceError):
-        logger.exception("Failed to get user name")
-        return None

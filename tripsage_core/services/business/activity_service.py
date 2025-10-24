@@ -9,12 +9,10 @@ import asyncio
 import uuid
 from datetime import datetime
 
-from tripsage.api.schemas.requests.activities import (
-    ActivitySearchRequest,
-)
-from tripsage.api.schemas.responses.activities import (
+from tripsage.api.schemas.activities import (
     ActivityCoordinates,
     ActivityResponse,
+    ActivitySearchRequest,
     ActivitySearchResponse,
 )
 from tripsage.tools.web_tools import CachedWebSearchTool
@@ -631,6 +629,7 @@ class ActivityService:
         )
 
 
-"""Note: Use dependency injection. Construct ActivityService in the composition
-root (e.g., ServiceRegistry or API router) with injected GoogleMapsService and
-CacheService. This module intentionally provides no module-level singletons."""
+"""Note: Use dependency injection. Construct ActivityService in a composition
+root (e.g., FastAPI lifespan app.state container or API router) with injected
+GoogleMapsService and CacheService. This module intentionally provides no
+module-level singletons."""

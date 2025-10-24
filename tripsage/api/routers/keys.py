@@ -20,6 +20,7 @@ from fastapi import (
 
 from tripsage.api.core.dependencies import (
     ApiKeyServiceDep,
+    KeyMonitoringServiceDep,
     get_principal_id,
     require_principal,
 )
@@ -36,19 +37,14 @@ from tripsage_core.observability.otel import (
     record_histogram,
     trace_span,
 )
+from tripsage_core.services.business.api_key_service import ValidationStatus
 from tripsage_core.services.infrastructure.key_monitoring_service import (
-    KeyMonitoringService,
     get_key_health_metrics,
 )
 
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-def get_monitoring_service() -> KeyMonitoringService:
-    """Dependency provider for the KeyMonitoringService."""
-    return KeyMonitoringService()
 
 
 @router.get(
@@ -114,14 +110,23 @@ async def create_key(
         validation = await key_service.validate_key(key_data.key, key_data.service)
 
         if not validation.is_valid:
+            validation_status = getattr(validation, "status", None)
+            if validation_status == ValidationStatus.RATE_LIMITED:
+                status_code_value = status.HTTP_429_TOO_MANY_REQUESTS
+            elif validation_status == ValidationStatus.SERVICE_ERROR:
+                status_code_value = status.HTTP_500_INTERNAL_SERVER_ERROR
+            else:
+                status_code_value = status.HTTP_400_BAD_REQUEST
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status_code_value,
                 detail=f"Invalid API key for {key_data.service}: {validation.message}",
             )
 
         # Create the API key
         user_id = get_principal_id(principal)
         return await key_service.create_key(user_id, key_data)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Error creating API key")
         raise HTTPException(
@@ -292,7 +297,11 @@ async def get_metrics(
     """
     # Only allow admin users to access metrics
     # This would normally check user roles, but for now we'll use a simple approach
-    return await get_key_health_metrics()
+    try:
+        return await get_key_health_metrics()
+    except Exception:  # pragma: no cover - defensive fallback
+        logger.exception("Failed to retrieve API key metrics")
+        return {}
 
 
 @router.get(
@@ -305,9 +314,9 @@ async def get_metrics(
 async def get_audit_log(
     request: Request,
     response: Response,
+    monitoring_service: KeyMonitoringServiceDep,
     principal: Principal = Depends(require_principal),
     limit: int = Query(100, ge=1, le=1000),
-    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Get API key audit log for a user.
 

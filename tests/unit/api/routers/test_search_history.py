@@ -15,7 +15,7 @@ from tripsage.api.routers.search import (
     get_recent_searches,
     save_search,
 )
-from tripsage.api.schemas.requests.search import UnifiedSearchRequest
+from tripsage.api.schemas.search import UnifiedSearchRequest
 from tripsage_core.services.business.search_history_service import SearchHistoryService
 
 

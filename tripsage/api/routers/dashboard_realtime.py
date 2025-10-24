@@ -16,9 +16,16 @@ from typing import Any
 
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field  # noqa: F401 (kept for typing in docstrings)
 
 from tripsage.api.core.dependencies import CacheDep, DatabaseDep
+from tripsage.api.schemas.dashboard_realtime import (
+    AlertNotification,
+    BroadcastResponse,
+    ConnectionsStatusResponse,
+    RealtimeMetrics,
+    SystemEvent,
+)
 from tripsage_core.services.business.dashboard_service import DashboardService
 
 
@@ -27,42 +34,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/dashboard/realtime", tags=["dashboard-realtime"])
 
 
-class RealtimeMetrics(BaseModel):
-    """Real-time metrics data."""
-
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    requests_per_second: float
-    errors_per_second: float
-    success_rate: float
-    avg_latency_ms: float
-    active_connections: int
-    cache_hit_rate: float
-    memory_usage_percentage: float
-
-
-class AlertNotification(BaseModel):
-    """Real-time alert notification."""
-
-    alert_id: str
-    type: str  # "new", "updated", "resolved"
-    severity: str
-    message: str
-    service: str | None = None
-    key_id: str | None = None
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    details: dict[str, Any] = Field(default_factory=dict)
-
-
-class SystemEvent(BaseModel):
-    """System event notification."""
-
-    event_id: str
-    event_type: str  # "service_status_change", "rate_limit_exceeded", "maintenance"
-    message: str
-    severity: str  # "info", "warning", "error", "critical"
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    affected_services: list[str] = Field(default_factory=list)
-    details: dict[str, Any] = Field(default_factory=dict)
+# Inline models removed; using centralized schemas
 
 
 class DashboardConnectionService:
@@ -313,12 +285,12 @@ async def dashboard_events_stream(
     )
 
 
-@router.post("/alerts/broadcast")
+@router.post("/alerts/broadcast", response_model=BroadcastResponse)
 async def broadcast_alert(
     alert_data: dict[str, Any],
     cache_service: CacheDep,
     db_service: DatabaseDep,
-) -> dict[str, Any]:
+) -> BroadcastResponse:
     """Broadcast an alert to all connected dashboard clients.
 
     This endpoint can be called by internal services to push
@@ -337,18 +309,17 @@ async def broadcast_alert(
 
         await dashboard_service.send_alert(alert)
 
-        return {
-            "success": True,
-            "message": "Alert broadcasted successfully",
-            "alert_id": alert.alert_id,
-        }
+        return BroadcastResponse(
+            success=True,
+            message="Alert broadcasted successfully",
+            alert_id=alert.alert_id,
+        )
 
     except Exception as e:
         logger.exception("Failed to broadcast alert")
-        return {
-            "success": False,
-            "message": f"Failed to broadcast alert: {e!s}",
-        }
+        return BroadcastResponse(
+            success=False, message=f"Failed to broadcast alert: {e!s}"
+        )
 
 
 @router.post("/events/broadcast")
@@ -388,8 +359,8 @@ async def broadcast_system_event(
         }
 
 
-@router.get("/connections")
-async def get_active_connections() -> dict[str, Any]:
+@router.get("/connections", response_model=ConnectionsStatusResponse)
+async def get_active_connections() -> ConnectionsStatusResponse:
     """Get information about active dashboard connections.
 
     Returns statistics about currently connected dashboard clients.
@@ -406,10 +377,10 @@ async def get_active_connections() -> dict[str, Any]:
         for metadata in dashboard_service.connection_metadata.values()
     ]
 
-    return {
-        "total_connections": len(dashboard_service.active_connections),
-        "connections": connections_info,
-    }
+    return ConnectionsStatusResponse(
+        total_connections=len(dashboard_service.active_connections),
+        connections=connections_info,
+    )
 
 
 async def _send_periodic_metrics(

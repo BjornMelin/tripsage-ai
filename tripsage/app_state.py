@@ -8,15 +8,15 @@ construction, provides typed accessors, and exposes startup/shutdown helpers.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from fastapi import FastAPI
 
-from tripsage.orchestration.graph import TripSageOrchestrator
 from tripsage.orchestration.memory_bridge import SessionMemoryBridge
 from tripsage_core.config import get_settings
 from tripsage_core.services.airbnb_mcp import AirbnbMCP
 from tripsage_core.services.business.accommodation_service import AccommodationService
+from tripsage_core.services.business.activity_service import ActivityService
 from tripsage_core.services.business.api_key_service import ApiKeyService
 from tripsage_core.services.business.chat_service import ChatService
 from tripsage_core.services.business.destination_service import DestinationService
@@ -27,6 +27,7 @@ from tripsage_core.services.business.flight_service import FlightService
 from tripsage_core.services.business.itinerary_service import ItineraryService
 from tripsage_core.services.business.memory_service import MemoryService
 from tripsage_core.services.business.trip_service import TripService
+from tripsage_core.services.business.unified_search_service import UnifiedSearchService
 from tripsage_core.services.business.user_service import UserService
 from tripsage_core.services.external_apis import (
     DocumentAnalyzer,
@@ -51,10 +52,15 @@ from tripsage_core.services.infrastructure.database_service import (
 from tripsage_core.utils.logging_utils import get_logger
 
 
+if TYPE_CHECKING:  # pragma: no cover - import only for type checking
+    from tripsage.orchestration.graph import TripSageOrchestrator
+
+
 logger = get_logger(__name__)
 ServiceT = TypeVar("ServiceT")
 
 
+# pylint: disable=too-many-instance-attributes
 @dataclass(slots=True)
 class AppServiceContainer:
     """Typed container for application-wide service singletons."""
@@ -62,6 +68,7 @@ class AppServiceContainer:
     # Business services
     accommodation_service: AccommodationService | None = None
     chat_service: ChatService | None = None
+    activity_service: ActivityService | None = None
     destination_service: DestinationService | None = None
     file_processing_service: FileProcessingService | None = None
     flight_service: FlightService | None = None
@@ -70,6 +77,7 @@ class AppServiceContainer:
     memory_service: MemoryService | None = None
     trip_service: TripService | None = None
     user_service: UserService | None = None
+    unified_search_service: UnifiedSearchService | None = None
 
     # External API services
     calendar_service: GoogleCalendarService | None = None
@@ -128,9 +136,10 @@ class AppServiceContainer:
         return cast(ServiceT, service)
 
 
-async def initialise_app_state(app: FastAPI) -> tuple[AppServiceContainer, TripSageOrchestrator]:
+async def initialise_app_state(
+    app: FastAPI,
+) -> tuple[AppServiceContainer, TripSageOrchestrator]:
     """Initialise application services and attach them to app.state."""
-
     settings = get_settings()
 
     # Infrastructure
@@ -173,6 +182,10 @@ async def initialise_app_state(app: FastAPI) -> tuple[AppServiceContainer, TripS
         ai_analysis_service=document_analyzer,
     )
     accommodation_service = AccommodationService(database_service=database_service)
+    activity_service = ActivityService(
+        google_maps_service=google_maps_service,
+        cache_service=cache_service,
+    )
     destination_service = DestinationService(
         database_service=database_service,
         weather_service=weather_service,
@@ -182,6 +195,13 @@ async def initialise_app_state(app: FastAPI) -> tuple[AppServiceContainer, TripS
     trip_service = TripService(
         database_service=database_service,
         user_service=user_service,
+    )
+    unified_search_service = UnifiedSearchService(
+        cache_service=cache_service,
+        destination_service=destination_service,
+        activity_service=activity_service,
+        flight_service=flight_service,
+        accommodation_service=accommodation_service,
     )
 
     # Orchestration helpers
@@ -199,6 +219,7 @@ async def initialise_app_state(app: FastAPI) -> tuple[AppServiceContainer, TripS
     services = AppServiceContainer(
         accommodation_service=accommodation_service,
         chat_service=chat_service,
+        activity_service=activity_service,
         destination_service=destination_service,
         file_processing_service=file_processing_service,
         flight_service=flight_service,
@@ -207,6 +228,7 @@ async def initialise_app_state(app: FastAPI) -> tuple[AppServiceContainer, TripS
         memory_service=memory_service,
         trip_service=trip_service,
         user_service=user_service,
+        unified_search_service=unified_search_service,
         calendar_service=calendar_service,
         document_analyzer=document_analyzer,
         google_maps_service=google_maps_service,
@@ -224,6 +246,8 @@ async def initialise_app_state(app: FastAPI) -> tuple[AppServiceContainer, TripS
         mcp_bridge=mcp_bridge,
         mcp_service=mcp_service,
     )
+
+    from tripsage.orchestration.graph import TripSageOrchestrator
 
     orchestrator = TripSageOrchestrator(services=services)
 
@@ -243,7 +267,6 @@ async def initialise_app_state(app: FastAPI) -> tuple[AppServiceContainer, TripS
 
 async def shutdown_app_state(app: FastAPI) -> None:
     """Clean up application services stored on app.state."""
-
     services: AppServiceContainer | None = getattr(app.state, "services", None)
 
     if services is None:

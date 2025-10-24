@@ -7,15 +7,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from tripsage.api.core.dependencies import (
     CacheDep,
+    DatabaseDep,
     UnifiedSearchServiceDep,
     get_cache_service_dep,
     get_current_principal,
-    get_db,
     get_principal_id,
     require_principal,
 )
-from tripsage.api.schemas.requests.search import UnifiedSearchRequest
-from tripsage.api.schemas.responses.search import UnifiedSearchResponse
+from tripsage.api.schemas.search import (
+    UnifiedSearchAggregateResponse as UnifiedSearchResponse,
+    UnifiedSearchRequest,
+)
 from tripsage_core.services.business.search_history_service import SearchHistoryService
 from tripsage_core.services.business.unified_search_service import (
     UnifiedSearchServiceError,
@@ -172,6 +174,8 @@ async def search_suggestions(
 
 @router.get("/recent", response_model=list[dict[str, Any]])
 async def get_recent_searches(
+    request: Request,
+    db_service: DatabaseDep,
     limit: int = Query(
         10, ge=1, le=50, description="Maximum number of searches to return"
     ),
@@ -185,8 +189,7 @@ async def get_recent_searches(
     logger.info("Get recent searches request for user: %s (limit: %s)", user_id, limit)
 
     try:
-        db = await get_db()
-        search_history_service = SearchHistoryService(db)
+        search_history_service = SearchHistoryService(db_service)
         searches = await search_history_service.get_recent_searches(
             user_id, limit=limit
         )
@@ -204,6 +207,8 @@ async def get_recent_searches(
 
 @router.post("/save", response_model=dict[str, str])
 async def save_search(
+    http_request: Request,
+    db_service: DatabaseDep,
     request: UnifiedSearchRequest,
     principal=Depends(require_principal),
 ):
@@ -216,8 +221,7 @@ async def save_search(
     logger.info("Save search request for user %s: %s", user_id, request.query)
 
     try:
-        db = await get_db()
-        search_history_service = SearchHistoryService(db)
+        search_history_service = SearchHistoryService(db_service)
         saved_search = await search_history_service.save_search(user_id, request)
 
         logger.info("Saved search %s for user: %s", saved_search["id"], user_id)
@@ -236,6 +240,8 @@ async def save_search(
 
 @router.delete("/saved/{search_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_search(
+    request: Request,
+    db_service: DatabaseDep,
     search_id: str,
     principal=Depends(require_principal),
 ):
@@ -247,8 +253,7 @@ async def delete_saved_search(
     logger.info("Delete saved search request from user %s: %s", user_id, search_id)
 
     try:
-        db = await get_db()
-        search_history_service = SearchHistoryService(db)
+        search_history_service = SearchHistoryService(db_service)
         deleted = await search_history_service.delete_saved_search(user_id, search_id)
 
         if not deleted:
@@ -385,7 +390,7 @@ async def get_search_analytics(
     logger.info("Search analytics request for %s by user: %s", date, user_id)
 
     try:
-        cache_service = await get_cache_service_dep(request)
+        cache_service = get_cache_service_dep(request)
         analytics_key = f"analytics:search:{date}"
 
         analytics_data = await cache_service.get_json(analytics_key) or []
