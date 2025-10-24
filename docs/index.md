@@ -30,15 +30,14 @@ This index lists all documentation files under `docs/` by section.
 ## API
 
 - [README](api/README.md)
-- [Authentication](api/authentication.md)
 - [Dashboard API](api/dashboard-api.md)
 - [Error Codes](api/error-codes.md)
-- [Realtime Guide](api/realtime-guide.md)
 - [REST Endpoints](api/rest-endpoints.md)
-- [Trip Security Usage Examples](api/trip-security-usage-examples.md)
 - [Usage Examples](api/usage-examples.md)
-- [WebSocket API](api/websocket-api.md)
-- [WebSocket Guide](api/websocket-guide.md)
+- [WebSocket and Real-time API](api/websocket-realtime-api.md)
+- [WebSocket Connection Guide](api/websocket-connection-guide.md)
+- [WebSocket Events Guide](api/websocket-events-guide.md)
+- [WebSocket Integration Guide](api/websocket-integration-guide.md)
 
 ## Architecture
 

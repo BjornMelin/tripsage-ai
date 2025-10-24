@@ -1,10 +1,8 @@
 # ADR-0006: Real-time Communication via WebSockets
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-06-17
-
-## Status
-
-Accepted
 
 ## Context
 
@@ -52,6 +50,10 @@ The architecture supports:
 - **Infrastructure**: Requires sticky sessions or Redis for scaling
 
 ### Neutral
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.
 
 - Different deployment considerations for WebSocket endpoints
 - Requires WebSocket-compatible hosting infrastructure

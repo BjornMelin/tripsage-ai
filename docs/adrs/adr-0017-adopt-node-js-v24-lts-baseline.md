@@ -1,10 +1,8 @@
 # ADR-0017: Adopt Node.js v24 LTS baseline
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-10-23
-
-## Status
-
-Accepted
 
 ## Context
 
@@ -27,6 +25,10 @@ Our frontend stack targets modern Node features and Next.js 16. Standardizing on
 ### Neutral
 
 - Toolchain remains unchanged (pnpm, Next, Vitest); only the runtime baseline is lifted.
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.
 
 ## Alternatives Considered
 

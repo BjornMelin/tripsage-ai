@@ -1,10 +1,8 @@
 # ADR-0004: FastAPI as Backend Framework
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-06-17
-
-## Status
-
-Accepted
 
 ## Context
 
@@ -95,3 +93,7 @@ JavaScript/TypeScript backend frameworks.
 - [Coding Standards](../04_DEVELOPMENT_GUIDE/CODING_STANDARDS.md)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [System Architecture](../03_ARCHITECTURE/SYSTEM_OVERVIEW.md)
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

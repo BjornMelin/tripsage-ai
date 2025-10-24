@@ -1,10 +1,8 @@
 # ADR-0018: Centralize Supabase typed helpers for CRUD
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-10-23
-
-## Status
-
-Accepted
 
 ## Context
 
@@ -54,3 +52,7 @@ Deferred. May be valuable later, but the helper approach yields 80% of the benef
 
 - Supabase SSR for Next.js (server-side client & cookies). See docs.
 - Generated types pattern (`Database`, `Tables`, `InsertTables`, `UpdateTables`).
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

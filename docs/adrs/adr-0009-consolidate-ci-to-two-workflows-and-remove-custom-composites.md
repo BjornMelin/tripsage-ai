@@ -1,10 +1,8 @@
 # ADR-0009: Consolidate CI to two workflows and remove custom composites
 
+**Version**: 1.0.0
+**Status**: Proposed
 **Date**: 2025-10-18
-
-## Status
-
-Proposed
 
 ## Context
 
@@ -54,3 +52,7 @@ Partial simplification with some utility steps. Rejected: still adds maintenance
 
 - GitHub Docs: secret_scanning.yml paths-ignore (UNVERIFIED)
 - Internal CI analysis and security scanning review (this PR)
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

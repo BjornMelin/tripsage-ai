@@ -1,10 +1,8 @@
 # ADR-0010: Final Memory Facade with LangGraph Alignment
 
-Date: 2025-10-21
-
-## Status
-
-Accepted
+**Version**: 1.0.0
+**Status**: Accepted
+**Date**: 2025-10-21
 
 ## Context
 
@@ -34,3 +32,7 @@ Adopt a single, final implementation:
 ## Alternatives Considered
 
 - Transitional thin adapters first, façade later. Rejected to satisfy FINAL-ONLY directive and reduce code churn.
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

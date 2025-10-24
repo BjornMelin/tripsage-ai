@@ -1,10 +1,8 @@
 # ADR-0015: Upgrade AI SDK to v5 (@ai-sdk/react) and useChat redesign
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-10-23
-
-## Status
-
-Accepted
 
 ## Context
 
@@ -44,4 +42,8 @@ Rejected: increases maintenance burden, reduces compatibility with SDK UI primit
 - AI SDK v5 quickstart for Next app router; `useChat` reference; v5 migration guide.
   - <https://ai-sdk.dev/docs/getting-started/nextjs-app-router>
   - <https://ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat>
-  - <https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0>
+- <https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0>
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.
