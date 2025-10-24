@@ -41,6 +41,39 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 | [ADR-0020](adr-0020-rate-limiting-strategy.md) | Rate limiting strategy (Next @upstash/ratelimit + FastAPI SlowAPI) | Accepted | 2025-10-24 |
 | [ADR-0021](adr-0021-slowapi-aiolimiter-migration-historic.md) | SlowAPI + Aiolimiter Migration (Historic) | Deprecated | 2025-10-24 |
 
+## By Category
+
+Frontend
+- ADR-0005: Next.js 15 with React 19 for Frontend
+- ADR-0013: Adopt Next.js 16 proxy and async APIs; deprecate middleware
+- ADR-0014: Migrate Supabase auth to @supabase/ssr; deprecate auth-helpers-react
+- ADR-0015: Upgrade AI SDK to v5 (@ai-sdk/react) and useChat redesign
+- ADR-0016: Tailwind CSS v4 migration (CSS-first config)
+- ADR-0018: Centralize Supabase typed helpers for CRUD
+
+Backend
+- ADR-0001: Use LangGraph for Agent Orchestration
+- ADR-0004: FastAPI as Backend Framework
+- ADR-0010: Memory Facade Final
+- ADR-0011: Tenacity-only Resilience
+- ADR-0019: Canonicalize chat service via FastAPI backend
+- ADR-0021: SlowAPI + Aiolimiter Migration (Historic)
+
+Platform
+- ADR-0002: Adopt Supabase as Primary Database and Auth Platform
+- ADR-0017: Adopt Node.js v24 LTS baseline
+
+Security
+- ADR-0020: Rate limiting strategy (Next @upstash/ratelimit + FastAPI SlowAPI)
+
+Data
+- ADR-0012: Flights Canonical DTO
+
+Ops
+- ADR-0003: Use Upstash Redis (HTTP) for Caching
+- ADR-0007: Modern Testing Strategy with Vitest and Playwright
+- ADR-0009: Consolidate CI to two workflows and remove custom composites
+
 ## Creating a New ADR
 
 When creating a new ADR:
