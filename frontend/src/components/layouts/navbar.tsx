@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { name: "Home", href: "/" },
   { name: "Trips", href: "/trips", icon: <MapPin className="h-4 w-4 mr-2" /> },
+  { name: "Attachments", href: "/attachments" },
   {
     name: "Itinerary",
     href: "/itinerary",

@@ -10,7 +10,6 @@ import { GET } from "../route";
 
 // Mock global fetch
 const mockFetch = vi.fn();
-// @ts-ignore - test override
 (globalThis as any).fetch = mockFetch;
 
 describe("/api/attachments/files route (SSR, tagged)", () => {

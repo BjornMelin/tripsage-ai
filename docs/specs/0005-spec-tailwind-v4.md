@@ -1,6 +1,5 @@
 # Spec: Tailwind CSS v4 Migration
 
-Owner: UI/Design Systems
 Status: Completed
 Last updated: 2025-10-23
 

@@ -443,6 +443,15 @@ spec:
 
 ## Security Configuration
 
+### Optional: Upstash for Edge Rate Limits
+
+If you deploy the Next.js frontend on Vercel (or another edge-capable platform) and want request rate limiting on Route Handlers without managing a TCP Redis, you can enable Upstash REST Redis. This is optional and only read at runtime by the attachments upload route.
+
+- Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in the frontend environment.
+- When set, `@upstash/ratelimit@2.0.6` + `@upstash/redis` are used to protect `POST /api/chat/attachments` using a sliding window (20 req / minute) keyed by bearer token and client IP.
+- If unset, the route runs without Upstash limiting. Backend SlowAPI still protects FastAPI endpoints.
+
+
 ### Production Security Checklist
 
 - [ ] **Secrets Management**: Use secret management service (AWS Secrets Manager, etc.)

@@ -1,6 +1,5 @@
 # Spec: Zod v3 -> v4 Migration (Planned Branch)
 
-Owner: Frontend Platform
 Status: Completed
 Last updated: 2025-10-23
 

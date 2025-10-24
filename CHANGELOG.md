@@ -78,6 +78,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Deleted broken duplicate ADR file `docs/adrs/adr-0012-slowapi-aiolimiter-migration.md` (superseded by ADR-0021)
+
 - Removed unused AI SDK client dependencies (`ai`, `@ai-sdk/react`, `@ai-sdk/openai`) from frontend/package.json
 - Removed legacy middleware tests referencing `middleware.ts` after migrating to the Next 16 `proxy` convention (final-only policy, no legacy paths retained)
 - Removed the entire `tripsage/models/` directory, removing all legacy data models associated with the deprecated MCP architecture to eliminate duplication
@@ -200,3 +202,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [Unreleased]: https://github.com/BjornMelin/tripsage-ai/compare/v2.1.0...HEAD
 [2.1.0]: https://github.com/BjornMelin/tripsage-ai/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/BjornMelin/tripsage-ai/releases/tag/v2.0.0
+- Navigation: added "/attachments" link in main navbar
+- ADR index grouped By Category in docs/adrs/README.md
+- Docs: SSE client expectations note in docs/users/feature-reference.md
+- Docs: Upstash optional edge rate-limit section in docs/operators/deployment-guide-full.md
+- Upload routes: confirm Next 16 API `revalidateTag('attachments', 'max')` for Route Handlers
+- Frontend copy/comments updated to reference two-arg `revalidateTag` where applicable
+- Corrected `revalidateTag` usage in attachments upload handler and docs
