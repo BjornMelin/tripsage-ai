@@ -1033,13 +1033,13 @@ class DatabaseService:
     # ---- RPC / SQL ----
 
     async def execute_sql(
-        self, sql: str, params: dict[str, Any] | None = None, user_id: str | None = None
+        self, sql: str, *params: Any, user_id: str | None = None
     ) -> list[dict[str, Any]]:
         """Execute raw SQL through a trusted RPC wrapper.
 
         Args:
             sql: SQL text to execute. Use parameter placeholders handled by the RPC.
-            params: Parameter mapping supplied to the RPC wrapper.
+            *params: Parameter values. Can be a single dict or positional args.
             user_id: Optional user attribution.
 
         Returns:
@@ -1048,6 +1048,12 @@ class DatabaseService:
         Raises:
             CoreDatabaseError: If the SQL execution fails.
         """
+        # Handle params
+        if len(params) == 1 and isinstance(params[0], dict):
+            params_dict = params[0]
+        else:
+            params_dict = {str(i + 1): param for i, param in enumerate(params)}
+
         await self.ensure_connected()
         if self.enable_security:
             self._check_sql_injection(sql)
@@ -1055,7 +1061,7 @@ class DatabaseService:
             try:
                 result: Any = await asyncio.to_thread(
                     self.client.rpc(
-                        "execute_sql", {"sql": sql, "params": params or {}}
+                        "execute_sql", {"sql": sql, "params": params_dict}
                     ).execute
                 )
                 return result.data

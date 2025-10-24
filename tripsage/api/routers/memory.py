@@ -210,7 +210,7 @@ async def update_preferences(
 async def add_preference(  # pylint: disable=too-many-positional-arguments
     key: str,
     value: str,
-    http_request: Request,
+    request: Request,
     http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
@@ -222,7 +222,7 @@ async def add_preference(  # pylint: disable=too-many-positional-arguments
         key: Preference key
         value: Preference value
         category: Preference category
-        http_request: Raw HTTP request (required by SlowAPI for headers)
+        request: Raw HTTP request (required by SlowAPI for headers)
         http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service

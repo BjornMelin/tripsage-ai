@@ -255,19 +255,30 @@ COMMIT;
         user_id = uuid4()
 
         # Test Memory model with valid UUID
+        from datetime import datetime
+
         memory = Memory(
             id=uuid4(),
             user_id=user_id,
             memory="Test memory content",
-            created_at="2025-01-01T00:00:00Z",
-            updated_at="2025-01-01T00:00:00Z",
+            embedding=None,
+            metadata={},
+            categories=[],
+            created_at=datetime(2025, 1, 1),
+            updated_at=datetime(2025, 1, 1),
+            is_deleted=False,
+            version=1,
+            hash=None,
+            relevance_score=1.0,
         )
 
         assert memory.user_id == user_id
         assert isinstance(memory.user_id, type(user_id))
 
         # Test MemoryCreate model with valid UUID
-        memory_create = MemoryCreate(user_id=user_id, memory="Test memory for creation")
+        memory_create = MemoryCreate(
+            user_id=user_id, memory="Test memory for creation", relevance_score=1.0
+        )
 
         assert memory_create.user_id == user_id
         assert isinstance(memory_create.user_id, type(user_id))
@@ -281,7 +292,13 @@ COMMIT;
 
         for invalid_uuid in invalid_uuids:
             with pytest.raises(ValidationError) as exc_info:
-                MemoryCreate(user_id=invalid_uuid, memory="Test memory")
+                from typing import Any, cast
+
+                MemoryCreate(
+                    user_id=cast(Any, invalid_uuid),
+                    memory="Test memory",
+                    relevance_score=1.0,
+                )
 
             error_msg = str(exc_info.value).lower()
             assert "uuid" in error_msg
