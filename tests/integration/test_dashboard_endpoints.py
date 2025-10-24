@@ -300,7 +300,8 @@ def test_overview_and_services_flow(client: TestClient, principal: Principal) ->
     assert services_index["weather"]["status"] == "degraded"
     assert services_index["googlemaps"]["status"] == "unhealthy"
     assert services_index["email"]["status"] == "unknown"
-    assert services_index["email"]["last_check"] is None
+    # In the centralized schema, last_check is a datetime; allow any ISO string
+    assert isinstance(services_index["email"]["last_check"], str)
 
 
 def test_metrics_and_rate_limits(client: TestClient, principal: Principal) -> None:

@@ -327,7 +327,7 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
         )
 
     def _get_memory_service(self) -> MemoryService | None:
-        """Return the optional memory service from the registry."""
+        """Return the optional memory service from the DI container."""
         try:
             return self.services.get_optional_service(
                 "memory_service",

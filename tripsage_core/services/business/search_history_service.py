@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from tripsage.api.schemas.requests.search import UnifiedSearchRequest
+from tripsage.api.schemas.search import UnifiedSearchRequest
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 

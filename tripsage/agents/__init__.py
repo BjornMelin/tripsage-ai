@@ -13,8 +13,8 @@ from fastapi import Request
 from tripsage.agents.base import BaseAgent
 from tripsage.agents.chat import ChatAgent
 from tripsage.app_state import AppServiceContainer
-from tripsage_core.config import get_settings
 from tripsage.orchestration.graph import TripSageOrchestrator
+from tripsage_core.config import get_settings
 
 
 settings = get_settings()
@@ -40,7 +40,6 @@ def create_agent(
     Raises:
         ValueError: If required services are missing or the agent type is unknown.
     """
-
     services = cast(
         AppServiceContainer,
         getattr(request.app.state, "services", None),

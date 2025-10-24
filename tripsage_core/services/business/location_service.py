@@ -253,5 +253,5 @@ class LocationService:
             raise LocationServiceError(f"Timezone request failed: {e}") from e
 
 
-# Note: Use dependency injection. Construct LocationService in composition
-# roots (e.g., ServiceRegistry or app lifespan) and pass to callers.
+# Note: Use dependency injection. Construct LocationService in a composition
+# root (e.g., FastAPI lifespan app.state container) and pass to callers.

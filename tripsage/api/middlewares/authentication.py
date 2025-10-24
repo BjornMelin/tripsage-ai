@@ -17,6 +17,7 @@ from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette.types import ASGIApp
 
 from tripsage.api.core.config import Settings, get_settings
+from tripsage.app_state import AppServiceContainer
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
     CoreKeyValidationError as KeyValidationError,
@@ -90,27 +91,22 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # Lazy initialization of services
         self._services_initialized = False
 
-    async def _ensure_services(self):
-        """Ensure services are initialized (lazy loading)."""
-        if not self._services_initialized:
-            if self.key_service is None:
-                from tripsage_core.config import get_settings
-                from tripsage_core.services.business.api_key_service import (
-                    ApiKeyService,
+    async def _ensure_services(self, request: Request) -> None:
+        """Ensure services are initialised from the lifespan container."""
+        if self._services_initialized:
+            return
+        if self.key_service is None:
+            services = getattr(request.app.state, "services", None)
+            if not isinstance(services, AppServiceContainer):
+                raise RuntimeError(
+                    "AppServiceContainer is not initialised; authentication requires "
+                    "app.state.services to be available.",
                 )
-                from tripsage_core.services.infrastructure.cache_service import (
-                    get_cache_service,
-                )
-                from tripsage_core.services.infrastructure.database_service import (
-                    get_database_service,
-                )
-
-                db = await get_database_service()
-                cache = await get_cache_service()
-                settings = get_settings()
-                self.key_service = ApiKeyService(db=db, cache=cache, settings=settings)
-
-            self._services_initialized = True
+            self.key_service = services.get_required_service(
+                "api_key_service",
+                expected_type=ApiKeyService,
+            )
+        self._services_initialized = True
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Response]
@@ -129,7 +125,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Ensure services are initialized
-        await self._ensure_services()
+        await self._ensure_services(request)
 
         # Perform header validation for security
         if not self._validate_request_headers(request):

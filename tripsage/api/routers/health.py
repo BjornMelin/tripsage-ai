@@ -10,12 +10,17 @@ This module provides health check endpoints including:
 import asyncio
 import logging
 from datetime import UTC, datetime
+from typing import Any, cast
 
 from fastapi import APIRouter, Request, Response
-from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import CacheDep, DatabaseDep, SettingsDep
 from tripsage.api.limiting import limiter
+from tripsage.api.schemas.health import (
+    ComponentHealth,
+    ReadinessCheck,
+    SystemHealth,
+)
 from tripsage_core.observability.otel import (
     http_route_attr_fn,
     record_histogram,
@@ -26,35 +31,6 @@ from tripsage_core.observability.otel import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["health"])
-
-
-class ComponentHealth(BaseModel):
-    """Health status of a system component."""
-
-    name: str
-    status: str  # healthy, degraded, unhealthy
-    latency_ms: float | None = None
-    message: str | None = None
-    details: dict = Field(default_factory=dict)
-
-
-class SystemHealth(BaseModel):
-    """Overall system health status."""
-
-    status: str  # healthy, degraded, unhealthy
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    version: str = "1.0.0"
-    environment: str
-    components: list[ComponentHealth]
-
-
-class ReadinessCheck(BaseModel):
-    """Readiness check result."""
-
-    ready: bool
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    checks: dict[str, bool]
-    details: dict[str, str] = Field(default_factory=dict)
 
 
 @router.get("/health", response_model=SystemHealth)
@@ -272,7 +248,10 @@ async def database_health_check(request: Request, db_service: DatabaseDep):
             else:
                 pool_stats = _maybe
             if isinstance(pool_stats, dict):
-                health.details.update(pool_stats)
+                # Assign to avoid pylint misdetection of Pydantic FieldInfo
+                current = dict(health.details or {})
+                current.update(pool_stats)
+                health.details = current
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to get pool stats: %s", e)
 
@@ -300,16 +279,16 @@ async def cache_health_check(request: Request, cache_service: CacheDep):
     # Add more detailed cache metrics if available
     if hasattr(cache_service, "info"):
         try:
-            from typing import Any, cast
-
             info = await cast(Any, cache_service).info()
-            health.details.update(
+            current = dict(health.details or {})
+            current.update(
                 {
                     "used_memory": info.get("used_memory_human"),
                     "connected_clients": info.get("connected_clients"),
                     "total_commands_processed": info.get("total_commands_processed"),
                 }
             )
+            health.details = current
         except Exception as e:  # noqa: BLE001
             logger.warning("Failed to get cache info: %s", e)
 

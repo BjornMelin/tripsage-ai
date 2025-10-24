@@ -15,12 +15,13 @@ from typing import TYPE_CHECKING, Any, Final
 from langchain_core.tools import BaseTool, tool
 from pydantic import BaseModel, Field
 
+from tripsage.app_state import AppServiceContainer
 from tripsage.tools.memory_tools import (
     add_conversation_memory as _add_conversation_memory_raw,
     search_user_memories as _search_user_memories_raw,
 )
 from tripsage.tools.models import ConversationMessage
-from tripsage_core.services.airbnb_mcp import default_airbnb_mcp
+from tripsage_core.services.airbnb_mcp import AirbnbMCP, default_airbnb_mcp
 from tripsage_core.services.business.flight_service import FlightService
 from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsService,
@@ -39,7 +40,52 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-mcp_service: Final = default_airbnb_mcp
+_services_container: AppServiceContainer | None = None
+_default_mcp_service: Final = default_airbnb_mcp
+_mcp_service: AirbnbMCP | None = None
+
+
+def set_tool_services(services: AppServiceContainer) -> None:
+    """Provide the lifespan-managed services to the tools module."""
+    global _services_container  # pylint: disable=global-statement
+    global _mcp_service  # pylint: disable=global-statement
+
+    _services_container = services
+    try:
+        _mcp_service = services.get_optional_service(
+            "mcp_service",
+            expected_type=AirbnbMCP,
+        )
+    except TypeError:
+        _mcp_service = None
+
+
+def _require_services() -> AppServiceContainer:
+    """Return the active service container or raise if missing."""
+    if _services_container is None:
+        raise RuntimeError(
+            "AppServiceContainer not initialised for orchestration tools; "
+            "set_tool_services must be called during application startup.",
+        )
+    return _services_container
+
+
+def _get_service_from_container[ServiceT](
+    service_name: str,
+    expected_type: type[ServiceT],
+) -> ServiceT:
+    """Fetch a required service from the container with type validation."""
+    services = _require_services()
+    return services.get_required_service(
+        service_name,
+        expected_type=expected_type,
+    )
+
+
+def _get_mcp_service() -> AirbnbMCP:
+    """Return the configured MCP service singleton."""
+    return _mcp_service or _default_mcp_service
+
 
 AddMemoryFn = Callable[..., Awaitable[dict[str, Any]]]
 SearchMemoryFn = Callable[["MemorySearchQuery"], Awaitable[list[dict[str, Any]]]]
@@ -114,8 +160,7 @@ async def search_flights(
             FlightSearchRequest,
         )
 
-        db = await _ensure_database_service()
-        service = FlightService(database_service=db)
+        service = _get_service_from_container("flight_service", FlightService)
         pax = [FlightPassenger(type="adult") for _ in range(max(1, passengers))]  # type: ignore[call-arg]
         req = FlightSearchRequest(  # type: ignore[call-arg]
             origin=origin,
@@ -154,7 +199,10 @@ async def search_accommodations(
         if price_max is not None:
             params["price_max"] = price_max
 
-        result = await mcp_service.invoke(method_name="search_listings", params=params)
+        result = await _get_mcp_service().invoke(
+            method_name="search_listings",
+            params=params,
+        )
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
@@ -166,7 +214,7 @@ async def search_accommodations(
 async def geocode_location(location: str) -> str:
     """Get geographic coordinates and details for a location via GoogleMapsService."""
     try:
-        svc = GoogleMapsService()
+        svc = _get_service_from_container("google_maps_service", GoogleMapsService)
         await svc.connect()
         places = await svc.geocode(location)
         return json.dumps([p.model_dump() for p in places], ensure_ascii=False)
@@ -179,7 +227,7 @@ async def geocode_location(location: str) -> str:
 async def get_weather(location: str) -> str:
     """Get current weather information for a location using WeatherService."""
     try:
-        svc = WeatherService()
+        svc = _get_service_from_container("weather_service", WeatherService)
         await svc.connect()
         # WeatherService signature may vary; pass location as a plain string
         # pylint: disable=no-value-for-parameter
@@ -194,7 +242,7 @@ async def get_weather(location: str) -> str:
 async def web_search(query: str, location: str | None = None) -> str:
     """Search the web for travel-related information using WebCrawlService."""
     try:
-        svc = WebCrawlService()
+        svc = _get_service_from_container("webcrawl_service", WebCrawlService)
         await svc.connect()
         params: WebCrawlParams = WebCrawlParams(
             javascript_enabled=False, extract_markdown=True, extract_html=False
@@ -330,7 +378,7 @@ async def health_check() -> dict[str, Any]:
     unhealthy = []
 
     try:
-        status = await mcp_service.health_check()
+        status = await _get_mcp_service().health_check()
         if status.get("status") == "healthy":
             healthy.append("airbnb_mcp")
         else:
@@ -363,14 +411,6 @@ __all__ = [
     "search_accommodations",
     "search_flights",
     "search_memories",
+    "set_tool_services",
     "web_search",
 ]
-
-
-async def _ensure_database_service():
-    """Get a database service instance for tools that require persistence."""
-    from tripsage_core.services.infrastructure.database_service import (
-        get_database_service,
-    )
-
-    return await get_database_service()

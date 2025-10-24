@@ -4,9 +4,16 @@ Provides common mocking utilities for LangChain and OpenAI API calls.
 """
 
 from typing import Any
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 from tripsage.app_state import AppServiceContainer
+from tripsage_core.services.airbnb_mcp import AirbnbMCP
+from tripsage_core.services.business.activity_service import ActivityService
+from tripsage_core.services.business.flight_service import FlightService
+from tripsage_core.services.business.unified_search_service import UnifiedSearchService
+from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
+from tripsage_core.services.external_apis.weather_service import WeatherService
+from tripsage_core.services.external_apis.webcrawl_service import WebCrawlService
 
 
 class MockLLMResponse:
@@ -197,56 +204,53 @@ def patch_openai_in_module(module_path: str):
     return patch(f"{module_path}.ChatOpenAI", MockChatOpenAI)
 
 
-def create_mock_services(overrides: dict[str, Any] | None = None) -> AppServiceContainer:
+def create_mock_services(
+    overrides: dict[str, Any] | None = None,
+) -> AppServiceContainer:
     """Create an AppServiceContainer populated with mock services."""
+    container = AppServiceContainer(
+        accommodation_service=Mock(),
+        chat_service=Mock(),
+        destination_service=Mock(),
+        file_processing_service=Mock(),
+        flight_service=MagicMock(spec=FlightService),
+        activity_service=MagicMock(spec=ActivityService),
+        itinerary_service=Mock(),
+        api_key_service=Mock(),
+        memory_service=Mock(),
+        trip_service=Mock(),
+        user_service=Mock(),
+        unified_search_service=MagicMock(spec=UnifiedSearchService),
+        calendar_service=Mock(),
+        document_analyzer=Mock(),
+        google_maps_service=MagicMock(spec=GoogleMapsService),
+        playwright_service=Mock(),
+        time_service=Mock(),
+        weather_service=MagicMock(spec=WeatherService),
+        webcrawl_service=MagicMock(spec=WebCrawlService),
+        cache_service=Mock(),
+        database_service=Mock(),
+        key_monitoring_service=Mock(),
+        websocket_broadcaster=Mock(),
+        websocket_manager=Mock(),
+        checkpoint_service=Mock(),
+        memory_bridge=Mock(),
+        mcp_bridge=Mock(),
+        mcp_service=MagicMock(spec=AirbnbMCP),
+    )
 
-    default_services: dict[str, Any] = {
-        "flight_service": Mock(),
-        "accommodation_service": Mock(),
-        "memory_service": Mock(),
-        "user_service": Mock(),
-        "chat_service": Mock(),
-        "destination_service": Mock(),
-        "itinerary_service": Mock(),
-        "budget_service": Mock(),
-        "checkpoint_service": Mock(),
-        "memory_bridge": Mock(),
-        "mcp_service": Mock(),
-        "mcp_bridge": Mock(),
-        "cache_service": Mock(),
-        "websocket_manager": Mock(),
-        "websocket_broadcaster": Mock(),
-        "database_service": Mock(),
-    }
+    container.google_maps_service.connect = AsyncMock(return_value=None)
+    container.google_maps_service.geocode = AsyncMock(return_value=[])
+    container.weather_service.connect = AsyncMock(return_value=None)
+    container.weather_service.get_current_weather = AsyncMock(return_value={})
+    container.webcrawl_service.connect = AsyncMock(return_value=None)
+    container.webcrawl_service.search_web = AsyncMock(return_value={"results": []})
 
     if overrides:
-        default_services.update(overrides)
-
-    container = AppServiceContainer()
-    for name, service in default_services.items():
-        setattr(container, name, service)
+        for name, value in overrides.items():
+            setattr(container, name, value)
 
     return container
-
-    # Override with provided services
-    if services:
-        default_services.update(services)
-
-    # Set up service methods
-    for service_name, service_mock in default_services.items():
-        setattr(registry, service_name, service_mock)
-
-    # Mock get_service and get_optional_service methods
-    def get_service(name: str):
-        return default_services.get(name)
-
-    def get_optional_service(name: str):
-        return default_services.get(name)
-
-    registry.get_service = Mock(side_effect=get_service)
-    registry.get_optional_service = Mock(side_effect=get_optional_service)
-
-    return registry
 
 
 def create_mock_tool_registry():

@@ -4,6 +4,7 @@ Tests the actual implemented API key management functionality.
 Follows TripSage standards for focused, actionable testing.
 """
 
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -33,6 +34,15 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
 class TestKeysRouter:
     """Test keys router functionality by testing functions directly."""
 
+    _request: Any
+    _response: Any
+
+    @pytest.fixture(autouse=True)
+    def _set_router_context(self, mock_request, mock_response):
+        """Store reusable request/response stubs for router calls."""
+        self._request = mock_request
+        self._response = mock_response
+
     @pytest.fixture
     def mock_principal(self):
         """Mock authenticated principal."""
@@ -61,13 +71,27 @@ class TestKeysRouter:
         return service
 
     @pytest.fixture
+    def mock_request(self):
+        """Provide a minimal request stub for SlowAPI compatibility."""
+        return MagicMock()
+
+    @pytest.fixture
+    def mock_response(self):
+        """Provide a minimal response stub for SlowAPI compatibility."""
+        return MagicMock()
+
+    @pytest.fixture
     def sample_key_data(self):
         """Sample API key creation data."""
         return ApiKeyCreate(
             service="openai", key="sk-test123456789", name="Test OpenAI Key"
         )
 
-    async def test_list_keys_success(self, mock_principal, mock_key_service):
+    async def test_list_keys_success(
+        self,
+        mock_principal,
+        mock_key_service,
+    ):
         """Test successful API key listing."""
         # Mock response
         expected_keys = [
@@ -81,22 +105,39 @@ class TestKeysRouter:
         ]
         mock_key_service.list_user_keys.return_value = expected_keys
 
-        result = await list_keys(mock_principal, mock_key_service)
+        result = await list_keys(
+            self._request,
+            self._response,
+            mock_key_service,
+            mock_principal,
+        )
 
         mock_key_service.list_user_keys.assert_called_once_with("user123")
         assert result == expected_keys
 
-    async def test_list_keys_empty(self, mock_principal, mock_key_service):
+    async def test_list_keys_empty(
+        self,
+        mock_principal,
+        mock_key_service,
+    ):
         """Test listing keys when user has no keys."""
         mock_key_service.list_user_keys.return_value = []
 
-        result = await list_keys(mock_principal, mock_key_service)
+        result = await list_keys(
+            self._request,
+            self._response,
+            mock_key_service,
+            mock_principal,
+        )
 
         assert result == []
         mock_key_service.list_user_keys.assert_called_once_with("user123")
 
     async def test_create_key_success(
-        self, mock_principal, mock_key_service, sample_key_data
+        self,
+        mock_principal,
+        mock_key_service,
+        sample_key_data,
     ):
         """Test successful API key creation."""
         # Mock validation success
@@ -114,7 +155,13 @@ class TestKeysRouter:
         }
         mock_key_service.create_key.return_value = expected_key
 
-        result = await create_key(sample_key_data, mock_principal, mock_key_service)
+        result = await create_key(
+            self._request,
+            self._response,
+            sample_key_data,
+            mock_key_service,
+            mock_principal,
+        )
 
         # Verify validation was called
         mock_key_service.validate_key.assert_called_once_with(
@@ -127,7 +174,10 @@ class TestKeysRouter:
         assert result == expected_key
 
     async def test_create_key_invalid_validation(
-        self, mock_principal, mock_key_service, sample_key_data
+        self,
+        mock_principal,
+        mock_key_service,
+        sample_key_data,
     ):
         """Test API key creation with invalid key."""
         # Mock validation failure
@@ -137,7 +187,13 @@ class TestKeysRouter:
         mock_key_service.validate_key.return_value = mock_validation
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_key(sample_key_data, mock_principal, mock_key_service)
+            await create_key(
+                self._request,
+                self._response,
+                sample_key_data,
+                mock_key_service,
+                mock_principal,
+            )
 
         # The router catches the 400 and re-raises as 500, so check for 500
         assert exc_info.value.status_code == 500
@@ -146,23 +202,43 @@ class TestKeysRouter:
         # Should not call create_key if validation fails
         mock_key_service.create_key.assert_not_called()
 
-    async def test_delete_key_success(self, mock_principal, mock_key_service):
+    async def test_delete_key_success(
+        self,
+        mock_principal,
+        mock_key_service,
+    ):
         """Test successful API key deletion."""
         # Mock key exists and belongs to user
         mock_key = {"user_id": "user123", "service": "openai"}
         mock_key_service.get_key.return_value = mock_key
 
-        await delete_key("key123", mock_principal, mock_key_service)
+        await delete_key(
+            self._request,
+            self._response,
+            mock_key_service,
+            mock_principal,
+            "key123",
+        )
 
         mock_key_service.get_key.assert_called_once_with("key123")
         mock_key_service.delete_key.assert_called_once_with("key123")
 
-    async def test_delete_key_not_found(self, mock_principal, mock_key_service):
+    async def test_delete_key_not_found(
+        self,
+        mock_principal,
+        mock_key_service,
+    ):
         """Test deleting non-existent API key."""
         mock_key_service.get_key.return_value = None
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_key("nonexistent", mock_principal, mock_key_service)
+            await delete_key(
+                self._request,
+                self._response,
+                mock_key_service,
+                mock_principal,
+                "nonexistent",
+            )
 
         assert exc_info.value.status_code == 404
         assert "API key not found" in str(exc_info.value.detail)
@@ -170,14 +246,24 @@ class TestKeysRouter:
         # Should not call delete if key doesn't exist
         mock_key_service.delete_key.assert_not_called()
 
-    async def test_delete_key_forbidden(self, mock_principal, mock_key_service):
+    async def test_delete_key_forbidden(
+        self,
+        mock_principal,
+        mock_key_service,
+    ):
         """Test deleting API key belonging to another user."""
         # Mock key exists but belongs to different user
         mock_key = {"user_id": "other_user", "service": "openai"}
         mock_key_service.get_key.return_value = mock_key
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_key("key123", mock_principal, mock_key_service)
+            await delete_key(
+                self._request,
+                self._response,
+                mock_key_service,
+                mock_principal,
+                "key123",
+            )
 
         assert exc_info.value.status_code == 403
         assert "You do not have permission" in str(exc_info.value.detail)
@@ -185,7 +271,13 @@ class TestKeysRouter:
         # Should not call delete if user doesn't own key
         mock_key_service.delete_key.assert_not_called()
 
-    async def test_validate_key_success(self, mock_principal, mock_key_service):
+    async def test_validate_key_success(
+        self,
+        mock_request,
+        mock_response,
+        mock_principal,
+        mock_key_service,
+    ):
         """Test successful API key validation."""
         key_data = ApiKeyValidateRequest(service="openai", key="sk-test123", save=False)
 
@@ -194,14 +286,26 @@ class TestKeysRouter:
         expected_validation.message = "Valid key"
         mock_key_service.validate_key.return_value = expected_validation
 
-        result = await validate_key(key_data, mock_principal, mock_key_service)
+        result = await validate_key(
+            mock_request,
+            mock_response,
+            key_data,
+            mock_key_service,
+            mock_principal,
+        )
 
         mock_key_service.validate_key.assert_called_once_with(
             "sk-test123", "openai", "user123"
         )
         assert result == expected_validation
 
-    async def test_rotate_key_success(self, mock_principal, mock_key_service):
+    async def test_rotate_key_success(
+        self,
+        mock_request,
+        mock_response,
+        mock_principal,
+        mock_key_service,
+    ):
         """Test successful API key rotation."""
         # Mock existing key
         mock_key = {"user_id": "user123", "service": "openai"}
@@ -217,7 +321,14 @@ class TestKeysRouter:
         mock_key_service.rotate_key.return_value = expected_rotated_key
 
         key_data = ApiKeyRotateRequest(new_key="sk-newkey123")
-        result = await rotate_key(key_data, "key123", mock_principal, mock_key_service)
+        result = await rotate_key(
+            mock_request,
+            mock_response,
+            key_data,
+            mock_key_service,
+            mock_principal,
+            "key123",
+        )
 
         # Verify all calls
         mock_key_service.get_key.assert_called_once_with("key123")
@@ -230,19 +341,38 @@ class TestKeysRouter:
 
         assert result == expected_rotated_key
 
-    async def test_rotate_key_not_found(self, mock_principal, mock_key_service):
+    async def test_rotate_key_not_found(
+        self,
+        mock_request,
+        mock_response,
+        mock_principal,
+        mock_key_service,
+    ):
         """Test rotating non-existent API key."""
         mock_key_service.get_key.return_value = None
 
         key_data = ApiKeyRotateRequest(new_key="sk-newkey123")
 
         with pytest.raises(HTTPException) as exc_info:
-            await rotate_key(key_data, "nonexistent", mock_principal, mock_key_service)
+            await rotate_key(
+                mock_request,
+                mock_response,
+                key_data,
+                mock_key_service,
+                mock_principal,
+                "nonexistent",
+            )
 
         assert exc_info.value.status_code == 404
         assert "API key not found" in str(exc_info.value.detail)
 
-    async def test_rotate_key_invalid_new_key(self, mock_principal, mock_key_service):
+    async def test_rotate_key_invalid_new_key(
+        self,
+        mock_request,
+        mock_response,
+        mock_principal,
+        mock_key_service,
+    ):
         """Test rotating with invalid new key."""
         # Mock existing key
         mock_key = {"user_id": "user123", "service": "openai"}
@@ -257,7 +387,14 @@ class TestKeysRouter:
         key_data = ApiKeyRotateRequest(new_key="invalid-key")
 
         with pytest.raises(HTTPException) as exc_info:
-            await rotate_key(key_data, "key123", mock_principal, mock_key_service)
+            await rotate_key(
+                mock_request,
+                mock_response,
+                key_data,
+                mock_key_service,
+                mock_principal,
+                "key123",
+            )
 
         assert exc_info.value.status_code == 400
         assert "Invalid API key for openai" in str(exc_info.value.detail)
@@ -265,31 +402,60 @@ class TestKeysRouter:
         # Should not call rotate if validation fails
         mock_key_service.rotate_key.assert_not_called()
 
-    async def test_get_metrics_success(self, mock_principal):
+    async def test_get_metrics_success(
+        self,
+        mock_request,
+        mock_response,
+        mock_principal,
+        monkeypatch,
+    ):
         """Test getting API key metrics."""
-        # This would normally test the get_key_health_metrics function
-        # For now, we'll test that the function can be called
-        result = await get_metrics(mock_principal)
+        monkeypatch.setattr(
+            "tripsage.api.routers.keys.get_key_health_metrics",
+            AsyncMock(return_value={"status": "ok"}),
+        )
 
-        # The function should return some metrics data
-        # Since this calls an actual function, we'll just verify it doesn't crash
-        assert result is not None or result == {}
+        result = await get_metrics(mock_request, mock_response, mock_principal)
 
-    async def test_get_audit_log_success(self, mock_principal, mock_monitoring_service):
+        assert result == {"status": "ok"}
+
+    async def test_get_audit_log_success(
+        self,
+        mock_request,
+        mock_response,
+        mock_principal,
+        mock_monitoring_service,
+    ):
         """Test getting audit log with default limit."""
         # The function is incomplete in the router, so it returns None
-        result = await get_audit_log(mock_principal, 100, mock_monitoring_service)
+        result = await get_audit_log(
+            mock_request,
+            mock_response,
+            mock_principal,
+            100,
+            mock_monitoring_service,
+        )
 
         # Since the function has no implementation, it returns None
         assert result is None
 
     async def test_get_audit_log_custom_limit(
-        self, mock_principal, mock_monitoring_service
+        self,
+        mock_request,
+        mock_response,
+        mock_principal,
+        mock_monitoring_service,
     ):
         """Test getting audit log with custom limit."""
         mock_monitoring_service.get_audit_log.return_value = []
 
-        await get_audit_log(mock_principal, 50, mock_monitoring_service)
+        await get_audit_log(
+            mock_request,
+            mock_response,
+            mock_principal,
+            50,
+            mock_monitoring_service,
+        )
 
         # Verify the custom limit was used
         # Note: The actual audit log call would be tested in the monitoring service

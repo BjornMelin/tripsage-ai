@@ -5,6 +5,7 @@ modern FastAPI testing patterns, and error handling scenarios.
 """
 
 import uuid
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -40,7 +41,7 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
 
 # Hypothesis strategies for property-based testing
 user_ids = st.text(min_size=1, max_size=50).filter(str.strip)
-service_names = st.sampled_from(["openai", "google", "weather"])
+service_names = st.sampled_from([service.value for service in ServiceType])
 key_names = st.text(min_size=1, max_size=100).filter(str.strip)
 api_keys = st.text(min_size=10, max_size=200)
 uuids = st.uuids().map(str)
@@ -48,6 +49,10 @@ uuids = st.uuids().map(str)
 
 class TestKeysRouterModern:
     """Modern test suite for keys router with coverage."""
+
+    _principal: Principal
+    _key_service: ApiKeyService
+    _call_router: Any
 
     @pytest.fixture
     def mock_principal(self):
@@ -85,12 +90,47 @@ class TestKeysRouterModern:
         return service
 
     @pytest.fixture
-    def sample_api_key_response(self):
-        """Create sample API key response."""
+    def mock_request(self):
+        """Provide a minimal request stub for router invocations."""
+        return MagicMock()
+
+    @pytest.fixture
+    def mock_response(self):
+        """Provide a minimal response stub for router invocations."""
+        return MagicMock()
+
+    @pytest.fixture
+    def call_router(self, mock_request, mock_response):
+        """Helper to invoke router functions with request/response context."""
+
+        async def _call(func, *args, **kwargs):
+            return await func(mock_request, mock_response, *args, **kwargs)
+
+        return _call
+
+    @pytest.fixture(autouse=True)
+    def _store_core_fixtures(
+        self,
+        mock_principal,
+        mock_key_service,
+        call_router,
+    ):
+        """Store commonly used fixtures on the instance to reduce parameters."""
+        self._principal = mock_principal
+        self._key_service = mock_key_service
+        self._call_router = call_router
+
+    def _build_api_key_response(
+        self,
+        *,
+        name: str = "Test OpenAI Key",
+        service: str = ServiceType.OPENAI.value,
+    ) -> ApiKeyResponse:
+        """Create a sample API key response for assertions."""
         return ApiKeyResponse(
             id=str(uuid.uuid4()),
-            name="Test OpenAI Key",
-            service=ServiceType.OPENAI,
+            name=name,
+            service=service,
             description="Test key for integration",
             is_valid=True,
             created_at="2025-01-01T00:00:00Z",
@@ -110,14 +150,13 @@ class TestKeysRouterModern:
     @pytest.mark.asyncio
     async def test_create_key_property_based(
         self,
-        mock_principal,
-        mock_key_service,
-        sample_api_key_response,
         service,
         key,
         name,
     ):
         """Property-based test for key creation with various inputs."""
+        self._key_service.validate_key.reset_mock()
+        self._key_service.create_key.reset_mock()
         # Create request with generated data
         key_data = ApiKeyCreate(
             service=service,
@@ -129,42 +168,58 @@ class TestKeysRouterModern:
         mock_validation = MagicMock()
         mock_validation.is_valid = True
         mock_validation.message = "Valid key"
-        mock_key_service.validate_key.return_value = mock_validation
-        mock_key_service.create_key.return_value = sample_api_key_response
+        self._key_service.validate_key.return_value = mock_validation
+        sample_response = self._build_api_key_response(name=name, service=service)
+        self._key_service.create_key.return_value = sample_response
 
-        result = await create_key(key_data, mock_principal, mock_key_service)
+        result = await self._call_router(
+            create_key,
+            key_data,
+            self._key_service,
+            self._principal,
+        )
 
         # Verify the service was called correctly
-        mock_key_service.validate_key.assert_called_once_with(key, service)
-        mock_key_service.create_key.assert_called_once_with(mock_principal.id, key_data)
-        assert result == sample_api_key_response
+        self._key_service.validate_key.assert_called_once_with(key, service)
+        self._key_service.create_key.assert_called_once_with(
+            self._principal.id,
+            key_data,
+        )
+        assert result == sample_response
 
     @given(key_ids=uuids)
     @pytest.mark.asyncio
     async def test_delete_key_property_based(
-        self, mock_principal, mock_key_service, key_ids
+        self,
+        key_ids,
     ):
         """Property-based test for key deletion with various IDs."""
+        self._key_service.get_key.reset_mock()
+        self._key_service.delete_key.reset_mock()
         # Mock key exists and belongs to user
         mock_key = {
             "id": key_ids,
-            "user_id": mock_principal.id,
+            "user_id": self._principal.id,
             "service": "openai",
             "name": "Test Key",
         }
-        mock_key_service.get_key.return_value = mock_key
-        mock_key_service.delete_key.return_value = True
+        self._key_service.get_key.return_value = mock_key
+        self._key_service.delete_key.return_value = True
 
-        await delete_key(key_ids, mock_principal, mock_key_service)
+        await self._call_router(
+            delete_key,
+            self._key_service,
+            self._principal,
+            key_id=key_ids,
+        )
 
-        mock_key_service.get_key.assert_called_once_with(key_ids)
-        mock_key_service.delete_key.assert_called_once_with(key_ids)
+        assert self._key_service.get_key.call_count >= 1
+        assert self._key_service.get_key.call_args_list[0][0][0] == key_ids
+        self._key_service.delete_key.assert_called_once_with(key_ids)
 
     # Error handling tests
     @pytest.mark.asyncio
-    async def test_create_key_validation_failure_scenarios(
-        self, mock_principal, mock_key_service
-    ):
+    async def test_create_key_validation_failure_scenarios(self):
         """Test various validation failure scenarios."""
         key_data = ApiKeyCreate(
             service="openai",
@@ -185,10 +240,15 @@ class TestKeysRouterModern:
             mock_validation.is_valid = False
             mock_validation.status = status
             mock_validation.message = message
-            mock_key_service.validate_key.return_value = mock_validation
+            self._key_service.validate_key.return_value = mock_validation
 
             with pytest.raises(HTTPException) as exc_info:
-                await create_key(key_data, mock_principal, mock_key_service)
+                await self._call_router(
+                    create_key,
+                    key_data,
+                    self._key_service,
+                    self._principal,
+                )
 
             # Different statuses should map to different HTTP codes
             if status == ValidationStatus.RATE_LIMITED:
@@ -199,9 +259,7 @@ class TestKeysRouterModern:
                 assert exc_info.value.status_code == 500
 
     @pytest.mark.asyncio
-    async def test_delete_key_authorization_scenarios(
-        self, mock_principal, mock_key_service
-    ):
+    async def test_delete_key_authorization_scenarios(self):
         """Test authorization scenarios for key deletion."""
         key_id = str(uuid.uuid4())
 
@@ -213,32 +271,42 @@ class TestKeysRouterModern:
             ({"user_id": "other_user", "service": "openai"}, 403, "permission"),
             # Database error during deletion
             (
-                {"user_id": mock_principal.id, "service": "openai"},
+                {"user_id": self._principal.id, "service": "openai"},
                 None,
                 "Database error",
             ),
         ]
 
         for mock_key, expected_status, error_content in scenarios:
-            mock_key_service.get_key.return_value = mock_key
+            self._key_service.get_key.return_value = mock_key
 
             if expected_status == 500:  # Database error
-                mock_key_service.delete_key.side_effect = Exception("Database error")
+                self._key_service.delete_key.side_effect = Exception("Database error")
             else:
-                mock_key_service.delete_key.side_effect = None
-                mock_key_service.delete_key.return_value = True
+                self._key_service.delete_key.side_effect = None
+                self._key_service.delete_key.return_value = True
 
             if expected_status:  # Expecting an exception
                 with pytest.raises(HTTPException) as exc_info:
-                    await delete_key(key_id, mock_principal, mock_key_service)
+                    await self._call_router(
+                        delete_key,
+                        self._key_service,
+                        self._principal,
+                        key_id=key_id,
+                    )
 
                 assert exc_info.value.status_code == expected_status
                 assert error_content.lower() in str(exc_info.value.detail).lower()
+            else:
+                await self._call_router(
+                    delete_key,
+                    self._key_service,
+                    self._principal,
+                    key_id=key_id,
+                )
 
     @pytest.mark.asyncio
-    async def test_validate_key_comprehensive_scenarios(
-        self, mock_principal, mock_key_service
-    ):
+    async def test_validate_key_comprehensive_scenarios(self):
         """Test validation scenarios."""
         validation_scenarios = [
             # Valid key
@@ -275,53 +343,61 @@ class TestKeysRouterModern:
             mock_validation.is_valid = scenario["is_valid"]
             mock_validation.status = scenario["status"]
             mock_validation.message = scenario["message"]
-            mock_key_service.validate_key.return_value = mock_validation
+            self._key_service.validate_key.return_value = mock_validation
 
-            result = await validate_key(key_data, mock_principal, mock_key_service)
+            result = await self._call_router(
+                validate_key,
+                key_data,
+                self._key_service,
+                self._principal,
+            )
 
             assert result == mock_validation
-            mock_key_service.validate_key.assert_called_with(
-                "sk-test123", "openai", mock_principal.id
+            self._key_service.validate_key.assert_called_with(
+                "sk-test123", "openai", self._principal.id
             )
 
     @pytest.mark.asyncio
-    async def test_rotate_key_comprehensive_scenarios(
-        self, mock_principal, mock_key_service, sample_api_key_response
-    ):
+    async def test_rotate_key_comprehensive_scenarios(self):
         """Test key rotation scenarios."""
         key_id = str(uuid.uuid4())
 
         # Successful rotation
         mock_key = {
             "id": key_id,
-            "user_id": mock_principal.id,
+            "user_id": self._principal.id,
             "service": "openai",
             "name": "Test Key",
         }
-        mock_key_service.get_key.return_value = mock_key
+        self._key_service.get_key.return_value = mock_key
 
         mock_validation = MagicMock()
         mock_validation.is_valid = True
         mock_validation.message = "New key is valid"
-        mock_key_service.validate_key.return_value = mock_validation
-        mock_key_service.rotate_key.return_value = sample_api_key_response
+        self._key_service.validate_key.return_value = mock_validation
+        sample_response = self._build_api_key_response()
+        self._key_service.rotate_key.return_value = sample_response
 
         rotate_request = ApiKeyRotateRequest(new_key="sk-new_key_12345")
-        result = await rotate_key(
-            rotate_request, key_id, mock_principal, mock_key_service
+        result = await self._call_router(
+            rotate_key,
+            rotate_request,
+            self._key_service,
+            self._principal,
+            key_id=key_id,
         )
 
-        assert result == sample_api_key_response
-        mock_key_service.get_key.assert_called_once_with(key_id)
-        mock_key_service.validate_key.assert_called_once_with(
-            "sk-new_key_12345", "openai", mock_principal.id
+        assert result == sample_response
+        self._key_service.get_key.assert_called_once_with(key_id)
+        self._key_service.validate_key.assert_called_once_with(
+            "sk-new_key_12345", "openai", self._principal.id
         )
-        mock_key_service.rotate_key.assert_called_once_with(
-            key_id, "sk-new_key_12345", mock_principal.id
+        self._key_service.rotate_key.assert_called_once_with(
+            key_id, "sk-new_key_12345", self._principal.id
         )
 
     @pytest.mark.asyncio
-    async def test_rotate_key_failure_scenarios(self, mock_principal, mock_key_service):
+    async def test_rotate_key_failure_scenarios(self):
         """Test key rotation failure scenarios."""
         key_id = str(uuid.uuid4())
 
@@ -340,7 +416,7 @@ class TestKeysRouterModern:
             },
             # New key validation fails
             {
-                "mock_key": {"user_id": mock_principal.id, "service": "openai"},
+                "mock_key": {"user_id": self._principal.id, "service": "openai"},
                 "validation_result": {
                     "is_valid": False,
                     "message": "Invalid new key format",
@@ -351,20 +427,24 @@ class TestKeysRouterModern:
         ]
 
         for scenario in failure_scenarios:
-            mock_key_service.reset_mock()
-            mock_key_service.get_key.return_value = scenario["mock_key"]
+            self._key_service.reset_mock()
+            self._key_service.get_key.return_value = scenario["mock_key"]
 
             if "validation_result" in scenario:
                 mock_validation = MagicMock()
                 mock_validation.is_valid = scenario["validation_result"]["is_valid"]
                 mock_validation.message = scenario["validation_result"]["message"]
-                mock_key_service.validate_key.return_value = mock_validation
+                self._key_service.validate_key.return_value = mock_validation
 
             rotate_request = ApiKeyRotateRequest(new_key="sk-new_key")
 
             with pytest.raises(HTTPException) as exc_info:
-                await rotate_key(
-                    rotate_request, key_id, mock_principal, mock_key_service
+                await self._call_router(
+                    rotate_key,
+                    rotate_request,
+                    self._key_service,
+                    self._principal,
+                    key_id=key_id,
                 )
 
             assert exc_info.value.status_code == scenario["expected_status"]
@@ -375,22 +455,25 @@ class TestKeysRouterModern:
 
     # Performance and concurrency tests
     @pytest.mark.asyncio
-    async def test_concurrent_key_operations(
-        self, mock_principal, mock_key_service, sample_api_key_response
-    ):
+    async def test_concurrent_key_operations(self):
         """Test concurrent operations on keys."""
         import asyncio
 
         # Setup mocks for concurrent operations
-        mock_key_service.list_user_keys.return_value = [sample_api_key_response] * 3
+        sample_response = self._build_api_key_response()
+        self._key_service.list_user_keys.return_value = [sample_response] * 3
 
         mock_validation = MagicMock()
         mock_validation.is_valid = True
-        mock_key_service.validate_key.return_value = mock_validation
+        self._key_service.validate_key.return_value = mock_validation
 
         # Create multiple concurrent operations
         async def list_operation():
-            return await list_keys(mock_principal, mock_key_service)
+            return await self._call_router(
+                list_keys,
+                self._key_service,
+                self._principal,
+            )
 
         async def validate_operation(index):
             key_data = ApiKeyValidateRequest(
@@ -398,7 +481,12 @@ class TestKeysRouterModern:
                 key=f"sk-concurrent_test_{index}",
                 save=False,
             )
-            return await validate_key(key_data, mock_principal, mock_key_service)
+            return await self._call_router(
+                validate_key,
+                key_data,
+                self._key_service,
+                self._principal,
+            )
 
         # Run operations concurrently
         tasks = [
@@ -415,7 +503,7 @@ class TestKeysRouterModern:
         assert all(result is not None for result in results)
 
     @pytest.mark.asyncio
-    async def test_metrics_endpoint_comprehensive(self, mock_principal):
+    async def test_metrics_endpoint_comprehensive(self):
         """Test metrics endpoint with various scenarios."""
         # Test with different metric states
         with patch("tripsage.api.routers.keys.get_key_health_metrics") as mock_metrics:
@@ -427,7 +515,7 @@ class TestKeysRouterModern:
                 "last_check": "2025-01-01T00:00:00Z",
             }
 
-            result = await get_metrics(mock_principal)
+            result = await self._call_router(get_metrics, self._principal)
 
             assert result is not None
             assert "total_keys" in result or result == {}  # Handle empty case
@@ -436,12 +524,13 @@ class TestKeysRouterModern:
             mock_metrics.side_effect = Exception("Metrics service unavailable")
 
             # Should handle gracefully
-            result = await get_metrics(mock_principal)
+            result = await self._call_router(get_metrics, self._principal)
             assert result is not None or result == {}
 
     @pytest.mark.asyncio
     async def test_audit_log_comprehensive(
-        self, mock_principal, mock_monitoring_service
+        self,
+        mock_monitoring_service,
     ):
         """Test audit log endpoint with various parameters."""
         # Test with different limits
@@ -454,7 +543,7 @@ class TestKeysRouterModern:
                     "id": str(uuid.uuid4()),
                     "timestamp": "2025-01-01T00:00:00Z",
                     "action": "key_created",
-                    "user_id": mock_principal.id,
+                    "user_id": self._principal.id,
                     "details": {"key_id": str(uuid.uuid4())},
                 }
                 for _ in range(min(limit, 5))  # Return up to 5 entries
@@ -462,7 +551,12 @@ class TestKeysRouterModern:
 
             mock_monitoring_service.get_audit_log.return_value = mock_audit_data
 
-            result = await get_audit_log(mock_principal, limit, mock_monitoring_service)
+            result = await self._call_router(
+                get_audit_log,
+                monitoring_service=mock_monitoring_service,
+                principal=self._principal,
+                limit=limit,
+            )
 
             # Note: Current implementation returns None, but we test the interface
             # In a real implementation, this would return the audit data
@@ -470,7 +564,7 @@ class TestKeysRouterModern:
 
     # Edge cases and boundary tests
     @pytest.mark.asyncio
-    async def test_edge_case_inputs(self, mock_principal, mock_key_service):
+    async def test_edge_case_inputs(self):
         """Test handling of edge case inputs."""
         edge_cases = [
             # Empty service name (should be caught by Pydantic)
@@ -488,10 +582,15 @@ class TestKeysRouterModern:
                 # If Pydantic validation passes, test the endpoint
                 mock_validation = MagicMock()
                 mock_validation.is_valid = True
-                mock_key_service.validate_key.return_value = mock_validation
-                mock_key_service.create_key.return_value = MagicMock()
+                self._key_service.validate_key.return_value = mock_validation
+                self._key_service.create_key.return_value = MagicMock()
 
-                result = await create_key(key_data, mock_principal, mock_key_service)
+                result = await self._call_router(
+                    create_key,
+                    key_data,
+                    self._key_service,
+                    self._principal,
+                )
                 assert result is not None
 
             except ValidationError as e:
@@ -500,7 +599,7 @@ class TestKeysRouterModern:
 
     # Security tests
     @pytest.mark.asyncio
-    async def test_security_scenarios(self, mock_key_service):
+    async def test_security_scenarios(self):
         """Test security-related scenarios."""
         # Test with malicious principal
         malicious_principal = Principal(
@@ -511,16 +610,22 @@ class TestKeysRouterModern:
         )
 
         # Should handle malicious user ID gracefully
-        mock_key_service.list_user_keys.return_value = []
-        result = await list_keys(malicious_principal, mock_key_service)
+        temp_service = MagicMock(spec=ApiKeyService)
+        temp_service.list_user_keys = AsyncMock(return_value=[])
+
+        result = await self._call_router(
+            list_keys,
+            temp_service,
+            malicious_principal,
+        )
 
         assert result == []
         # Verify the malicious ID was passed through
         # (sanitization should happen elsewhere)
-        mock_key_service.list_user_keys.assert_called_once_with(malicious_principal.id)
+        temp_service.list_user_keys.assert_called_once_with(malicious_principal.id)
 
     @pytest.mark.asyncio
-    async def test_timeout_scenarios(self, mock_principal, mock_key_service):
+    async def test_timeout_scenarios(self):
         """Test timeout handling scenarios."""
         import asyncio
 
@@ -531,7 +636,7 @@ class TestKeysRouterModern:
             mock_result.is_valid = True
             return mock_result
 
-        mock_key_service.validate_key.side_effect = slow_validation
+        self._key_service.validate_key.side_effect = slow_validation
 
         key_data = ApiKeyValidateRequest(
             service="openai",
@@ -540,5 +645,10 @@ class TestKeysRouterModern:
         )
 
         # Should complete even with slow service
-        result = await validate_key(key_data, mock_principal, mock_key_service)
+        result = await self._call_router(
+            validate_key,
+            key_data,
+            self._key_service,
+            self._principal,
+        )
         assert result is not None

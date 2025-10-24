@@ -104,7 +104,7 @@ class MetricsQueryParams(DashboardQueryParams):
 
     metric_type: MetricType | None = Field(default=None)
     interval_minutes: int | None = Field(default=60, ge=5, le=1440)
-    aggregation: str | None = Field(default="avg", regex="^(avg|sum|min|max|count)$")
+    aggregation: str | None = Field(default="avg", pattern="^(avg|sum|min|max|count)$")
 
 
 class AlertsQueryParams(BaseModel):
@@ -121,12 +121,12 @@ class AlertsQueryParams(BaseModel):
 class UserActivityQueryParams(DashboardQueryParams):
     """Query parameters for user activity endpoints."""
 
-    user_type: str | None = Field(default=None, regex="^(user|agent|admin)$")
+    user_type: str | None = Field(default=None, pattern="^(user|agent|admin)$")
     limit: int | None = Field(default=20, ge=1, le=100)
     sort_by: str | None = Field(
-        default="request_count", regex="^(request_count|error_count|last_activity)$"
+        default="request_count", pattern="^(request_count|error_count|last_activity)$"
     )
-    sort_order: str | None = Field(default="desc", regex="^(asc|desc)$")
+    sort_order: str | None = Field(default="desc", pattern="^(asc|desc)$")
 
 
 class RateLimitQueryParams(BaseModel):
@@ -442,10 +442,10 @@ class BulkAlertActionRequest(BaseModel):
     """Request for bulk alert actions."""
 
     alert_ids: list[str] = Field(
-        ..., min_items=1, max_items=100, description="Alert IDs to process"
+        ..., min_length=1, max_length=100, description="Alert IDs to process"
     )
     action: str = Field(
-        ..., regex="^(acknowledge|dismiss)$", description="Action to perform"
+        ..., pattern="^(acknowledge|dismiss)$", description="Action to perform"
     )
     note: str | None = Field(default=None, max_length=500, description="Action note")
 
@@ -469,11 +469,11 @@ class ExportRequest(BaseModel):
 
     data_type: str = Field(
         ...,
-        regex="^(metrics|alerts|usage|trends)$",
+        pattern="^(metrics|alerts|usage|trends)$",
         description="Type of data to export",
     )
     format: str = Field(
-        default="json", regex="^(json|csv|excel)$", description="Export format"
+        default="json", pattern="^(json|csv|excel)$", description="Export format"
     )
     time_range_hours: int = Field(
         default=24, ge=1, le=8760, description="Time range in hours"
