@@ -478,7 +478,7 @@ POST /api/chat/sessions
 ```json
 {
   "title": "Tokyo Trip Planning",
-  "metadata": {"origin": "SFO"}
+  "metadata": { "origin": "SFO" }
 }
 ```
 
@@ -495,7 +495,7 @@ Returns 201 Created.
   "created_at": "2025-01-16T10:00:00Z",
   "updated_at": "2025-01-16T10:00:00Z",
   "ended_at": null,
-  "metadata": {"origin": "SFO"},
+  "metadata": { "origin": "SFO" },
   "message_count": 0,
   "last_message_at": null
 }
@@ -657,6 +657,18 @@ GET /api/attachments/{attachment_id}
 DELETE /api/attachments/{attachment_id}
 ```
 
+### Frontend SSR Attachments Listing (Next.js)
+
+The frontend exposes a server-side list endpoint that proxies to the backend and participates in Next.js tag-based invalidation.
+
+```http
+GET /api/attachments/files
+```
+
+- Forwards `Authorization` when present.
+- Adds `next: { tags: ['attachments'] }` on the server fetch.
+- Invalidated by upload handlers calling `revalidateTag('attachments','max')`.
+
 ## 📊 Analytics & Insights
 
 ### Trip Analytics
@@ -673,21 +685,7 @@ GET /api/users/insights
 
 ## 🚨 Error Responses
 
-All endpoints return consistent error responses:
-
-```json
-{
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid request parameters",
-    "details": {
-      "field": "departure_date",
-      "issue": "Date must be in the future"
-    },
-    "request_id": "req_abc123"
-  }
-}
-```
+All endpoints return consistent error responses. For complete error handling information, see the [Error Codes Reference](error-codes.md).
 
 ### Common Error Codes
 
@@ -697,6 +695,8 @@ All endpoints return consistent error responses:
 - `NOT_FOUND` (404): Resource not found
 - `RATE_LIMIT_EXCEEDED` (429): Too many requests
 - `INTERNAL_ERROR` (500): Server error
+
+For detailed error response formats and troubleshooting, see [Error Codes](error-codes.md).
 
 ## 📈 Rate Limiting
 
@@ -757,7 +757,7 @@ X-RateLimit-Window: 3600
 
 - **[API Overview](README.md)** - Complete API documentation index
 - **[Getting Started Guide](getting-started.md)** - First steps with the API
-- **[Authentication Guide](authentication.md)** - Setup JWT tokens and API keys
+- **[Authentication Guide](README.md#🔐-authentication)** - Setup JWT tokens and API keys
 
 ### Code Examples
 
@@ -767,8 +767,8 @@ X-RateLimit-Window: 3600
 
 ### Real-time Features
 
-- **[WebSocket API](websocket-api.md)** - Real-time chat and collaboration
-- **[Real-time Guide](realtime-guide.md)** - Real-time patterns
+- **[WebSocket API](websocket-realtime-api.md)** - Real-time chat and collaboration
+- **[WebSocket and Real-time API](websocket-realtime-api.md)** - Real-time patterns and WebSocket connections
 
 ### Support
 
@@ -778,4 +778,4 @@ X-RateLimit-Window: 3600
 
 ---
 
-_This documentation covers all REST API endpoints available in TripSage. For real-time features, see the [WebSocket API documentation](websocket-api.md)._
+_This documentation covers all REST API endpoints available in TripSage. For real-time features, see the [WebSocket and Real-time API documentation](websocket-realtime-api.md)._
