@@ -4,7 +4,7 @@ import type {
   AgentActivity,
   AgentStatusType,
   ResourceUsage,
-} from "@/types/agent-status";
+} from "@/lib/schemas/agent-status";
 import { useAgentStatusStore } from "../agent-status-store";
 
 // Mock Date.now for consistent timestamps

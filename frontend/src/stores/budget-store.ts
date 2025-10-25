@@ -5,11 +5,11 @@ import type {
   BudgetAlert,
   BudgetCategory,
   BudgetSummary,
-  CurrencyCode,
   CurrencyRate,
   Expense,
   ExpenseCategory,
-} from "@/types/budget";
+} from "@/lib/schemas/budget";
+import type { CurrencyCode } from "@/types/currency";
 
 // Helper functions
 const generateId = () =>

@@ -1,6 +1,5 @@
 /**
- * Zod schemas for Agent Status tracking
- * Runtime validation for all agent-related data types
+ * @fileoverview Zod schemas for agent status tracking and validation.
  */
 
 import { z } from "zod";

@@ -1,6 +1,5 @@
 /**
- * Zod schemas for Budget management
- * Runtime validation for all budget-related data types
+ * @fileoverview Zod schemas for budget entities and validation.
  */
 
 import { z } from "zod";
