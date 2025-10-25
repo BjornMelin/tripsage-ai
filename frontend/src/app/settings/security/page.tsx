@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Security settings page.
+ *
+ * Manages account security preferences including 2FA, passwords, API keys,
+ * notifications, privacy settings, and account deletion.
+ */
+
 "use client";
 
 import {
@@ -22,19 +29,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { useAuth } from "@/contexts/auth-context";
 
+/**
+ * Interface defining security settings configuration.
+ */
 interface SecuritySettings {
+  /** Whether two-factor authentication is enabled. */
   twoFactorEnabled: boolean;
+  /** Whether to send security-related email notifications. */
   emailNotifications: boolean;
+  /** Whether to send alerts for suspicious security activity. */
   securityAlerts: boolean;
+  /** Whether to notify on new login events. */
   loginNotifications: boolean;
+  /** Whether to track device information for security monitoring. */
   deviceTracking: boolean;
+  /** Whether sensitive data is encrypted at rest. */
   dataEncryption: boolean;
 }
 
+/**
+ * Security settings page component.
+ *
+ * Displays interface for managing authentication, notifications, privacy settings,
+ * and account management.
+ *
+ * @returns The security settings page JSX element
+ */
 export default function SecuritySettingsPage() {
-  const { user: _user } = useAuth();
   const [settings, setSettings] = useState<SecuritySettings>({
     twoFactorEnabled: false,
     emailNotifications: true,
@@ -45,6 +67,12 @@ export default function SecuritySettingsPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  /**
+   * Handles updating security settings.
+   *
+   * @param key - The setting key to update
+   * @param value - The new value for the setting
+   */
   const handleSettingChange = async (key: keyof SecuritySettings, value: boolean) => {
     setIsLoading(true);
     try {
@@ -60,6 +88,9 @@ export default function SecuritySettingsPage() {
     }
   };
 
+  /**
+   * Handles downloading user security data export.
+   */
   const handleDownloadSecurityData = async () => {
     try {
       // TODO: Implement security data export
@@ -69,6 +100,9 @@ export default function SecuritySettingsPage() {
     }
   };
 
+  /**
+   * Handles account deletion request.
+   */
   const handleDeleteAccount = async () => {
     try {
       // TODO: Implement account deletion
