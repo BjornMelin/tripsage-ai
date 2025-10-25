@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Authentication page tests.
+ */
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { useRouter } from "next/navigation";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
