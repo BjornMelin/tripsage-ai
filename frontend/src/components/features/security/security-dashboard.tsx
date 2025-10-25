@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Security dashboard component.
+ *
+ * Displays security metrics, active sessions, security events, OAuth accounts,
+ * and security recommendations.
+ */
+
 "use client";
 
 import {
@@ -20,11 +27,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/contexts/auth-context";
 import { useApiKeys } from "@/hooks/use-api-keys";
 
+/**
+ * Represents a security-related event in the user's account.
+ */
 interface SecurityEvent {
+  /** Unique identifier for the security event. */
   id: string;
+  /** Type of security event that occurred. */
   type:
     | "login_success"
     | "login_failure"
@@ -32,35 +43,67 @@ interface SecurityEvent {
     | "password_change"
     | "api_key_created"
     | "suspicious_activity";
+  /** Human-readable description of the event. */
   description: string;
+  /** ISO timestamp when the event occurred. */
   timestamp: string;
+  /** IP address associated with the event. */
   ip_address: string;
+  /** Optional location information derived from IP. */
   location?: string;
+  /** Optional device/browser information. */
   device?: string;
+  /** Risk level assessment of the event. */
   risk_level: "low" | "medium" | "high";
 }
 
+/**
+ * Represents an active user session.
+ */
 interface ActiveSession {
+  /** Unique identifier for the session. */
   id: string;
+  /** Device name or type. */
   device: string;
+  /** Browser and version information. */
   browser: string;
+  /** Location derived from IP address. */
   location: string;
+  /** IP address of the session. */
   ip_address: string;
+  /** ISO timestamp of last activity. */
   last_activity: string;
+  /** Whether this is the current user's session. */
   is_current: boolean;
 }
 
+/**
+ * Security metrics and statistics for the user account.
+ */
 interface SecurityMetrics {
+  /** ISO timestamp of the last successful login. */
   last_login: string;
+  /** Number of failed login attempts in the last 24 hours. */
   failed_login_attempts: number;
+  /** Number of currently active sessions. */
   active_sessions: number;
+  /** Total number of API keys associated with the account. */
   api_keys_count: number;
+  /** List of connected OAuth providers. */
   oauth_connections: string[];
+  /** Overall security score out of 100. */
   security_score: number;
 }
 
+/**
+ * Security dashboard component.
+ *
+ * Displays security metrics, active sessions, security events, and recommendations.
+ * Integrates with API keys hook for data.
+ *
+ * @returns The security dashboard JSX element
+ */
 export function SecurityDashboard() {
-  const { user: _user } = useAuth();
   const apiKeysQuery = useApiKeys();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
@@ -69,6 +112,9 @@ export function SecurityDashboard() {
 
   // Mock data for demonstration - replace with real API calls
   useEffect(() => {
+    /**
+     * Loads security data from mock API endpoints.
+     */
     const loadSecurityData = async () => {
       try {
         // Simulate API calls
@@ -152,6 +198,12 @@ export function SecurityDashboard() {
     loadSecurityData();
   }, [apiKeysQuery.data]);
 
+  /**
+   * Returns CSS classes for risk level styling.
+   *
+   * @param level - Risk level (low, medium, high)
+   * @returns CSS classes for the risk level
+   */
   const getRiskColor = (level: string) => {
     switch (level) {
       case "high":
@@ -165,6 +217,12 @@ export function SecurityDashboard() {
     }
   };
 
+  /**
+   * Returns the appropriate icon component for security event types.
+   *
+   * @param type - Security event type
+   * @returns Icon component for the event type
+   */
   const getEventIcon = (type: string) => {
     switch (type) {
       case "login_success":
@@ -184,10 +242,21 @@ export function SecurityDashboard() {
     }
   };
 
+  /**
+   * Formats ISO timestamp for display.
+   *
+   * @param timestamp - ISO timestamp string
+   * @returns Formatted timestamp string
+   */
   const formatTimestamp = (timestamp: string) => {
     return new Date(timestamp).toLocaleString();
   };
 
+  /**
+   * Terminates an active user session.
+   *
+   * @param sessionId - ID of the session to terminate
+   */
   const handleTerminateSession = async (sessionId: string) => {
     try {
       // TODO: Implement session termination
