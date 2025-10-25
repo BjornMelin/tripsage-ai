@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Loading state types and schemas for UI components.
+ */
 import { z } from "zod";
 
 /**

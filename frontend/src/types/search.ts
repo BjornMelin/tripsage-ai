@@ -1,5 +1,5 @@
 /**
- * Types for Search functionality
+ * @fileoverview Types for search parameters, results, and related entities.
  */
 
 // Base search parameters interface

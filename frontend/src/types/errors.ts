@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Error info and reporting types used by error boundaries and
+ * logging services. Backed by Zod for runtime validation.
+ */
 import { z } from "zod";
 
 /**

@@ -1,5 +1,5 @@
 /**
- * Types for Deals functionality
+ * @fileoverview Types and schemas for travel deals.
  */
 import { z } from "zod";
 
