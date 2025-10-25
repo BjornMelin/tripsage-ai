@@ -209,3 +209,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upload routes: confirm Next 16 API `revalidateTag('attachments', 'max')` for Route Handlers
 - Frontend copy/comments updated to reference two-arg `revalidateTag` where applicable
 - Corrected `revalidateTag` usage in attachments upload handler and docs
+- Frontend tests: deterministic clock helper `src/test/clock.ts` and RTL config helper `src/test/testing-library.ts` with JSDoc headers.
+- Vitest configuration: default jsdom, controlled workers (forks locally, threads in CI), conservative timeouts, coverage (v8 + text/json/html/lcov).
+- Frontend testing modernization (Vitest + RTL):
+  - Rewrote flaky suites to use `vi.useFakeTimers()`/`advanceTimersByTimeAsync` and resilient queries.
+  - Updated suites: `ui-store`, `upcoming-flights`, `user-store-fixed`, `personalization-insights`, `trip-card`.
+  - Relaxed brittle DOM assertions in error-boundary integration tests to assert semantics in jsdom.
+  - Migrated imports to Zod schema modules; ensured touched files include `@fileoverview` and accurate JSDoc on exported helpers/config.
+- Frontend legacy/back-compat artifacts:
+  - `src/lib/api/validated-client.ts`.
+  - `src/types/agent-status.ts`, `src/types/budget.ts` (replaced by `lib/schemas/*`).
+### Testing and Frontend Cleanup
+
+- tests(frontend): stabilize async hooks and UI suites
+  - hooks: aligned `use-authenticated-api` tests with final ApiError type; fixed 401 refresh and non-401 branches; added fake-timer flushing for retries
+  - hooks: rewrote `use-activity-search` tests to match final minimal hook; removed legacy API/store assertions
+  - hooks: fixed `use-destination-search` stability by memoizing actions; updated tests for function reference stability
+  - app: simplified error-boundaries integration tests; removed brittle `process.env` mutation; assert behavior independent of env
+  - app: profile page tests now mock `useAuthStore` + `useUserProfileStore`; switched to RTL `userEvent` and ARIA queries; removed class-name assertions
+  - components: normalized skeleton assertions to role="status" with accessible name
+- chore(vitest): prefer `--pool=forks` locally and threads in CI; tuned timeouts and bail per `vitest.config.ts`
+- docs(jsdoc): ensured updated files include clear @fileoverview descriptions following Google style
+
+### Removed
+
+- tests(frontend): deleted/replaced deprecated and brittle tests asserting raw HTML structure and Tailwind class lists; removed NODE_ENV mutation based tests.

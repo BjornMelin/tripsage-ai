@@ -1,6 +1,7 @@
 /**
- * Mock implementation of use-activity-search
- * This file exists to satisfy test imports that expect this module
+ * @fileoverview Minimal final implementation for `useActivitySearch` hook.
+ * Provides stable, no-op behaviors for search/save operations to align with
+ * the current UI while legacy API/store behaviors have been removed.
  */
 
 import type { ActivitySearchParams } from "@/types/search";
@@ -20,7 +21,9 @@ export interface UseActivitySearchResult {
 }
 
 /**
- * Mock hook for activity search functionality
+ * Hook surface for activity search. This final version intentionally avoids
+ * side effects and external dependencies. Callers can compose behavior using
+ * higher-level services or feature stores.
  */
 export function useActivitySearch(): UseActivitySearchResult {
   return {

@@ -14,17 +14,6 @@ vi.mock("@/lib/supabase/client", () => ({
 
 vi.mock("@/lib/api/client", () => ({
   fetchApi: vi.fn(),
-  ApiError: class MockApiError extends Error {
-    status: number;
-    data: any;
-
-    constructor(message: string, status: number, data?: any) {
-      super(message);
-      this.name = "ApiError";
-      this.status = status;
-      this.data = data;
-    }
-  },
 }));
 
 describe("useAuthenticatedApi", () => {
@@ -58,7 +47,7 @@ describe("useAuthenticatedApi", () => {
     const { useAuth } = await import("@/contexts/auth-context");
     const { createClient } = await import("@/lib/supabase/client");
     const { fetchApi } = await import("@/lib/api/client");
-    const apiModule = await import("@/lib/api/client");
+    const apiModule = await import("@/lib/api/error-types");
 
     mockUseAuth = vi.mocked(useAuth);
     mockCreateBrowserClient = vi.mocked(createClient);
@@ -237,7 +226,7 @@ describe("useAuthenticatedApi", () => {
 
     it("should retry request after token refresh on 401 error", async () => {
       mockFetchApi
-        .mockRejectedValueOnce(new ApiError("Unauthorized", 401))
+        .mockRejectedValueOnce(new ApiError({ message: "Unauthorized", status: 401 }))
         .mockResolvedValueOnce({ success: true });
 
       mockRefreshSession.mockResolvedValue({
@@ -260,7 +249,9 @@ describe("useAuthenticatedApi", () => {
     });
 
     it("should sign out on 401 error when refresh fails", async () => {
-      mockFetchApi.mockRejectedValue(new ApiError("Unauthorized", 401));
+      mockFetchApi.mockRejectedValue(
+        new ApiError({ message: "Unauthorized", status: 401 })
+      );
       mockRefreshSession.mockResolvedValue({
         data: { session: null },
         error: { message: "Refresh failed" },
@@ -475,7 +466,9 @@ describe("useAuthenticatedApi", () => {
     });
 
     it("should handle non-401 API errors", async () => {
-      mockFetchApi.mockRejectedValue(new ApiError("Server Error", 500));
+      mockFetchApi.mockRejectedValue(
+        new ApiError({ message: "Server Error", status: 500 })
+      );
 
       const { result } = renderHook(() => useAuthenticatedApi());
 
@@ -488,7 +481,9 @@ describe("useAuthenticatedApi", () => {
     });
 
     it("should handle refresh error during 401 retry", async () => {
-      mockFetchApi.mockRejectedValue(new ApiError("Unauthorized", 401));
+      mockFetchApi.mockRejectedValue(
+        new ApiError({ message: "Unauthorized", status: 401 })
+      );
       mockRefreshSession.mockRejectedValue(new Error("Refresh error"));
 
       const { result } = renderHook(() => useAuthenticatedApi());
