@@ -160,6 +160,7 @@ describe("useApiQuery with Zod validation", () => {
     });
 
     it("should support retry configuration", async () => {
+      vi.useFakeTimers();
       let callCount = 0;
       mockMakeAuthenticatedRequest.mockImplementation(() => {
         callCount++;
@@ -177,12 +178,15 @@ describe("useApiQuery with Zod validation", () => {
         { wrapper }
       );
 
+      // Advance timers to allow react-query retries to run
+      await vi.advanceTimersByTimeAsync(3000);
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
 
       expect(callCount).toBe(3);
       expect(result.current.data).toEqual({ data: "success" });
+      vi.useRealTimers();
     });
   });
 
@@ -231,7 +235,6 @@ describe("useApiQuery with Zod validation", () => {
 
       // Invalidate query
       await queryClient.invalidateQueries({ queryKey });
-
       await waitFor(() => {
         expect(result.current.data).toEqual({ data: "updated" });
       });
@@ -414,6 +417,7 @@ describe("useApiMutation with Zod", () => {
     });
 
     it("should retry server errors", async () => {
+      vi.useFakeTimers();
       let callCount = 0;
 
       const { result } = renderHook(
@@ -437,12 +441,15 @@ describe("useApiMutation with Zod", () => {
 
       result.current.mutate({ name: "Test" });
 
+      // Flush mutation retries
+      await vi.advanceTimersByTimeAsync(3000);
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
 
       expect(callCount).toBe(3); // Initial + 2 retries
       expect(result.current.data).toEqual({ id: 1, name: "Success" });
+      vi.useRealTimers();
     });
   });
 });
