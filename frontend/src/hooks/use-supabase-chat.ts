@@ -1,3 +1,10 @@
+/**
+ * @fileoverview React hooks for Supabase chat functionality.
+ *
+ * Provides hooks for managing chat sessions, messages, tool calls,
+ * and real-time updates with optimistic UI.
+ */
+
 "use client";
 
 import {
@@ -6,9 +13,8 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { useAuth } from "@/contexts/auth-context";
 import { useSupabase } from "@/lib/supabase/client";
 import type {
   ChatMessage,
@@ -22,6 +28,31 @@ import type {
 } from "@/lib/supabase/database.types";
 import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 import { useChatRealtime } from "./use-supabase-realtime";
+
+function useUserId(): string | null {
+  const supabase = useSupabase();
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    let isMounted = true;
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (isMounted) setUserId(data.user?.id ?? null);
+      })
+      .catch(() => {
+        if (isMounted) setUserId(null);
+      });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (isMounted) setUserId(session?.user?.id ?? null);
+    });
+    const sub = data.subscription;
+    return () => {
+      isMounted = false;
+      sub.unsubscribe();
+    };
+  }, [supabase]);
+  return userId;
+}
 
 // Zod schemas for validation
 const SessionIdSchema = z.string().min(1, "Session ID cannot be empty");
@@ -53,13 +84,12 @@ const ChatSessionInsertSchema = z
   .partial();
 
 /**
- * Hook for managing chat sessions and messages with Supabase
- * Includes real-time updates and optimistic UI features
+ * Hook for managing chat sessions and messages with Supabase.
  */
 export function useSupabaseChat() {
   const supabase = useSupabase();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const userId = useUserId();
 
   // Fetch user's chat sessions
   const getChatSessionsQuery = useCallback(
@@ -67,14 +97,14 @@ export function useSupabaseChat() {
       // Validate input with Zod
       const validatedTripId = TripIdSchema.parse(tripId);
 
-      const queryKey = ["chat-sessions", user?.id, validatedTripId];
+      const queryKey = ["chat-sessions", userId, validatedTripId];
       const queryFn = async () => {
-        if (!user?.id) throw new Error("User not authenticated");
+        if (!userId) throw new Error("User not authenticated");
 
         let query = supabase
           .from("chat_sessions")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .order("updated_at", { ascending: false });
 
         if (validatedTripId) {
@@ -86,9 +116,9 @@ export function useSupabaseChat() {
         return data as ChatSession[];
       };
 
-      return { queryKey, queryFn, enabled: !!user?.id, staleTime: 1000 * 60 * 5 };
+      return { queryKey, queryFn, enabled: !!userId, staleTime: 1000 * 60 * 5 };
     },
-    [supabase, user?.id]
+    [supabase, userId]
   );
 
   // Fetch single chat session
@@ -150,7 +180,7 @@ export function useSupabaseChat() {
   const createChatSession = useMutation({
     mutationFn: async (sessionData: Partial<ChatSessionInsert>) => {
       try {
-        if (!user?.id) throw new Error("User not authenticated");
+        if (!userId) throw new Error("User not authenticated");
 
         // Validate input with Zod
         const validatedSessionData = ChatSessionInsertSchema.parse(sessionData);
@@ -159,7 +189,7 @@ export function useSupabaseChat() {
         const prepared: ChatSessionInsert = {
           ...(validatedSessionData as any),
           metadata: (validatedSessionData.metadata as unknown as Json) ?? undefined,
-          user_id: user.id,
+          user_id: userId,
         };
         const { data, error } = await insertSingle(supabase, "chat_sessions", [
           prepared,
@@ -240,7 +270,7 @@ export function useSupabaseChat() {
         content,
         created_at: new Date().toISOString(),
         metadata: {},
-      };
+      } as any;
 
       queryClient.setQueryData(["chat-messages", sessionId], (old: any) => {
         if (!old) return { pages: [{ data: [optimisticMessage] }], pageParams: [0] };
@@ -350,6 +380,28 @@ export function useSupabaseChat() {
     },
   });
 
+  // Delete chat session and all messages
+  const deleteChatSession = useMutation({
+    mutationFn: async (sessionId: string) => {
+      // Delete all messages first (if needed) could be cascaded in DB
+      const { error: delMessagesError } = await supabase
+        .from("chat_messages")
+        .delete()
+        .eq("session_id", sessionId);
+      if (delMessagesError) throw delMessagesError;
+      const { error } = await supabase
+        .from("chat_sessions")
+        .delete()
+        .eq("id", sessionId);
+      if (error) throw error;
+      return sessionId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["chat-messages"] });
+    },
+  });
+
   // End chat session
   const endChatSession = useMutation({
     mutationFn: async (sessionId: string) => {
@@ -380,35 +432,6 @@ export function useSupabaseChat() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chat-sessions"] });
-    },
-  });
-
-  // Delete chat session and all messages
-  const deleteChatSession = useMutation({
-    mutationFn: async (sessionId: string) => {
-      try {
-        // Validate input with Zod
-        const validatedSessionId = SessionIdSchema.parse(sessionId);
-
-        const { error } = await supabase
-          .from("chat_sessions")
-          .delete()
-          .eq("id", validatedSessionId);
-
-        if (error) throw error;
-        return validatedSessionId;
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          throw new Error(
-            `Validation failed: ${error.issues.map((i) => i.message).join(", ")}`
-          );
-        }
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["chat-sessions"] });
-      queryClient.invalidateQueries({ queryKey: ["chat-messages"] });
     },
   });
 
@@ -453,7 +476,9 @@ export function useSupabaseChat() {
 }
 
 /**
- * Hook that combines chat functionality with real-time updates
+ * Hook that combines chat functionality with real-time updates.
+ *
+ * @param sessionId - Chat session ID to monitor
  */
 export function useChatWithRealtime(sessionId: string | null) {
   const chat = useSupabaseChat();
@@ -483,22 +508,22 @@ export function useChatWithRealtime(sessionId: string | null) {
 }
 
 /**
- * Hook for chat session statistics
+ * Hook for chat session statistics.
  */
 export function useChatStats() {
   const supabase = useSupabase();
-  const { user } = useAuth();
+  const userId = useUserId();
 
   return useQuery({
-    queryKey: ["chat-stats", user?.id],
+    queryKey: ["chat-stats", userId],
     queryFn: async () => {
-      if (!user?.id) throw new Error("User not authenticated");
+      if (!userId) throw new Error("User not authenticated");
 
       // Get session counts
       const { data: sessions, error: sessionsError } = await supabase
         .from("chat_sessions")
         .select("id, created_at, ended_at")
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
 
       if (sessionsError) throw sessionsError;
 
@@ -535,7 +560,7 @@ export function useChatStats() {
             : 0,
       };
     },
-    enabled: !!user?.id,
+    enabled: !!userId,
     staleTime: 1000 * 60 * 15, // 15 minutes
   });
 }

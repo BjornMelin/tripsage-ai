@@ -1,8 +1,14 @@
+/**
+ * @fileoverview React hooks for Supabase Storage file management.
+ *
+ * Provides hooks for file uploads, downloads, storage stats,
+ * and file attachment management with progress tracking.
+ */
+
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
-import { useAuth } from "@/contexts/auth-context";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSupabase } from "@/lib/supabase/client";
 import type {
   FileAttachment,
@@ -30,14 +36,29 @@ interface UploadOptions {
   allowedTypes?: string[];
 }
 
+function useUserId(): string | null {
+  const supabase = useSupabase();
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    const isMounted = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (isMounted) setUserId(data.user?.id ?? null);
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (isMounted) setUserId(session?.user?.id ?? null);
+    });
+    return () => data.subscription.unsubscribe();
+  }, [supabase]);
+  return userId;
+}
+
 /**
- * Hook for managing file uploads and attachments with Supabase Storage
- * Provides upload progress tracking, virus scanning, and file management
+ * Hook for managing file uploads and attachments with Supabase Storage.
  */
 export function useSupabaseStorage() {
   const supabase = useSupabase();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const userId = useUserId();
   const [uploadProgress, setUploadProgress] = useState<Record<string, UploadProgress>>(
     {}
   );
@@ -50,14 +71,14 @@ export function useSupabaseStorage() {
     virusScanStatus?: VirusScanStatus;
   }) => {
     return useQuery({
-      queryKey: ["file-attachments", user?.id, filters],
+      queryKey: ["file-attachments", userId, filters],
       queryFn: async () => {
-        if (!user?.id) throw new Error("User not authenticated");
+        if (!userId) throw new Error("User not authenticated");
 
         let query = supabase
           .from("file_attachments")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .order("created_at", { ascending: false });
 
         if (filters?.tripId) {
@@ -77,7 +98,7 @@ export function useSupabaseStorage() {
         if (error) throw error;
         return data as FileAttachment[];
       },
-      enabled: !!user?.id,
+      enabled: !!userId,
       staleTime: 1000 * 60 * 5, // 5 minutes
     });
   };
@@ -106,9 +127,9 @@ export function useSupabaseStorage() {
   // Get storage usage statistics
   const useStorageStats = () => {
     return useQuery({
-      queryKey: ["storage-stats", user?.id],
+      queryKey: ["storage-stats", userId],
       queryFn: async () => {
-        if (!user?.id) throw new Error("User not authenticated");
+        if (!userId) throw new Error("User not authenticated");
 
         type FileStatRow = Pick<
           FileAttachment,
@@ -117,7 +138,7 @@ export function useSupabaseStorage() {
         const { data: files, error } = await supabase
           .from("file_attachments")
           .select("file_size, mime_type, upload_status")
-          .eq("user_id", user.id);
+          .eq("user_id", userId);
 
         if (error) throw error;
 
@@ -148,7 +169,7 @@ export function useSupabaseStorage() {
           filesByStatus,
         };
       },
-      enabled: !!user?.id,
+      enabled: !!userId,
       staleTime: 1000 * 60 * 15, // 15 minutes
     });
   };
@@ -162,7 +183,7 @@ export function useSupabaseStorage() {
       file: File;
       options?: UploadOptions;
     }) => {
-      if (!user?.id) throw new Error("User not authenticated");
+      if (!userId) throw new Error("User not authenticated");
 
       const {
         bucket = "attachments",
@@ -188,7 +209,7 @@ export function useSupabaseStorage() {
       const fileId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const fileExt = file.name.split(".").pop();
       const fileName = `${fileId}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
+      const filePath = `${userId}/${fileName}`;
 
       // Track upload progress
       setUploadProgress((prev) => ({
@@ -214,7 +235,7 @@ export function useSupabaseStorage() {
 
         // Create file attachment record
         const attachmentData: FileAttachmentInsert = {
-          user_id: user.id,
+          user_id: userId,
           trip_id: tripId || null,
           chat_message_id: chatMessageId || null,
           filename: fileName,
@@ -451,7 +472,7 @@ export function useSupabaseStorage() {
 }
 
 /**
- * Hook for file type utilities and validation
+ * Hook for file type utilities and validation.
  */
 export function useFileTypeUtils() {
   const getFileIcon = useCallback((mimeType: string) => {
