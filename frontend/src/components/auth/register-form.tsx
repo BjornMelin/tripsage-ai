@@ -1,81 +1,181 @@
 /**
- * @fileoverview User registration form component.
- *
- * Supabase Auth UI for account creation with email/password and OAuth options.
- * Handles redirects and session management.
+ * @fileoverview Registration component for email/password sign-up and
+ * Supabase social OAuth (GitHub, Google). Sends confirmation links to
+ * `/auth/confirm` for email verification.
  */
 
 "use client";
 
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useId, useMemo, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
-/**
- * Props for the RegisterForm component.
- */
+/** Props for the RegisterForm component. */
 interface RegisterFormProps {
-  /** URL to redirect to after successful registration. */
+  /** URL to redirect after successful session detection. */
   redirectTo?: string;
-  /** Additional CSS classes for styling. */
+  /** Additional class names for the root card. */
   className?: string;
 }
 
 /**
- * Registration form component.
+ * Registration form with email/password and social providers.
  *
- * Supabase Auth UI with email/password and OAuth providers. Redirects authenticated
- * users and manages sessions.
+ * - Creates accounts via `supabase.auth.signUp` and sends a confirmation link.
+ * - Initiates OAuth with `supabase.auth.signInWithOAuth` for GitHub/Google.
+ * - Redirects authenticated users to `redirectTo`.
  *
- * @param props - Component props
- * @param props.redirectTo - URL to redirect after registration (default: "/dashboard")
- * @param props.className - Additional CSS classes
- * @returns The registration form JSX element
+ * @param redirectTo Path to redirect if already authenticated.
+ * @param className Optional card class name.
+ * @returns Registration form JSX element.
  */
-export function RegisterForm({
-  redirectTo = "/dashboard",
-  className,
-}: RegisterFormProps) {
+export function RegisterForm({ redirectTo = "/dashboard", className }: RegisterFormProps) {
   const router = useRouter();
+  const search = useSearchParams();
+  const nextParam = search?.get("next") || "";
 
-  // If user is already authenticated, redirect on mount by checking session
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const emailId = useId();
+  const passwordId = useId();
+  const confirmId = useId();
+
+  const supabase = useMemo(() => createClient(), []);
+
   useEffect(() => {
     const checkSession = async () => {
-      const supabase = createClient();
       const {
         data: { session },
       } = await supabase.auth.getSession();
       if (session) router.push(redirectTo);
     };
     void checkSession();
-  }, [router, redirectTo]);
+  }, [router, redirectTo, supabase]);
 
-  const supabase = createClient();
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const nextSuffix = nextParam ? `&next=${encodeURIComponent(nextParam)}` : "";
+
+  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    setMessage(null);
+
+    if (password !== confirm) {
+      setError("Passwords do not match");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${origin}/auth/confirm?type=email${nextSuffix}`,
+        },
+      });
+      if (signUpError) throw signUpError;
+      setMessage("Check your email for a confirmation link to complete registration.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSocialLogin = async (provider: "github" | "google") => {
+    setError(null);
+    const { error: oAuthError } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${origin}/auth/callback${nextParam ? `?next=${encodeURIComponent(nextParam)}` : ""}`,
+      },
+    });
+    if (oAuthError) setError(oAuthError.message);
+  };
 
   return (
     <Card className={className}>
       <CardHeader className="space-y-2 pb-4">
-        <CardTitle className="text-2xl font-bold text-center">
-          Create your account
-        </CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">Create your account</CardTitle>
       </CardHeader>
-      <CardContent>
-        <Auth
-          supabaseClient={supabase as unknown as any}
-          appearance={{ theme: ThemeSupa }}
-          providers={["github"]}
-          redirectTo={`${typeof window !== "undefined" ? window.location.origin : ""}/auth/confirm`}
-          onlyThirdPartyProviders={false}
-          view="sign_up"
-          localization={{
-            variables: {
-              sign_up: { email_label: "Email", password_label: "Password" },
-            },
-          }}
-        />
+      <CardContent className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        {message && (
+          <Alert>
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSignUp} className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor={emailId}>Email</Label>
+            <Input
+              id={emailId}
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={passwordId}>Password</Label>
+            <Input
+              id={passwordId}
+              type="password"
+              autoComplete="new-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={confirmId}>Confirm password</Label>
+            <Input
+              id={confirmId}
+              type="password"
+              autoComplete="new-password"
+              required
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Creating account..." : "Sign up"}
+          </Button>
+        </form>
+
+        <div className="relative py-2 text-center text-xs text-muted-foreground">
+          <span>or continue with</span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2">
+          <Button type="button" variant="outline" onClick={() => handleSocialLogin("github")}>
+            Continue with GitHub
+          </Button>
+          <Button type="button" variant="outline" onClick={() => handleSocialLogin("google")}>
+            Continue with Google
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

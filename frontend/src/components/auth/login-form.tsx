@@ -1,75 +1,157 @@
 /**
- * @fileoverview Authentication components for user login and registration.
- *
- * Supabase Auth UI components with consistent styling and navigation handling.
+ * @fileoverview Authentication component for user login with email/password and
+ * Supabase social OAuth (GitHub, Google). Uses `supabase-js` client-side and
+ * redirects to the server-side callback for session exchange.
  */
 
 "use client";
 
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useId, useMemo, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
-/**
- * Props for the LoginForm component.
- */
+/** Props for the LoginForm component. */
 interface LoginFormProps {
-  /** URL to redirect to after successful login. */
+  /** URL to redirect after successful login. */
   redirectTo?: string;
-  /** Additional CSS classes for styling. */
+  /** Additional class names for the root card. */
   className?: string;
 }
 
 /**
- * Login form component.
+ * Login form with email/password and social providers.
  *
- * Supabase Auth UI with email/password and OAuth providers. Redirects authenticated
- * users and manages sessions.
+ * - Submits credentials via `supabase.auth.signInWithPassword`.
+ * - Initiates OAuth with `supabase.auth.signInWithOAuth` for GitHub/Google.
+ * - Redirects authenticated users to `redirectTo`.
  *
- * @param props - Component props
- * @param props.redirectTo - URL to redirect after login (default: "/dashboard")
- * @param props.className - Additional CSS classes
- * @returns The login form JSX element
+ * @param redirectTo Path to redirect after login (defaults to "/dashboard").
+ * @param className Optional card class name.
+ * @returns Login form JSX element.
  */
 export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormProps) {
   const router = useRouter();
+  const search = useSearchParams();
+  const nextParam = search?.get("next") || "";
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // If user is already authenticated, redirect on mount by checking session
+  const emailId = useId();
+  const passwordId = useId();
+
+  const supabase = useMemo(() => createClient(), []);
+
   useEffect(() => {
     const checkSession = async () => {
-      const supabase = createClient();
       const {
         data: { session },
       } = await supabase.auth.getSession();
       if (session) router.push(redirectTo);
     };
     void checkSession();
-  }, [router, redirectTo]);
+  }, [router, redirectTo, supabase]);
 
-  const supabase = createClient();
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const nextSuffix = nextParam ? `?next=${encodeURIComponent(nextParam)}` : "";
+
+  const handleEmailLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) throw signInError;
+      router.push(redirectTo);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSocialLogin = async (provider: "github" | "google") => {
+    setError(null);
+    const { error: oAuthError } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${origin}/auth/callback${nextSuffix}`,
+      },
+    });
+    if (oAuthError) setError(oAuthError.message);
+  };
 
   return (
     <Card className={className}>
       <CardHeader className="space-y-2 pb-4">
         <CardTitle className="text-2xl font-bold text-center">Sign in</CardTitle>
       </CardHeader>
-      <CardContent>
-        <Auth
-          supabaseClient={supabase as unknown as any}
-          appearance={{ theme: ThemeSupa }}
-          providers={["github"]}
-          redirectTo={`${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`}
-          onlyThirdPartyProviders={false}
-          view="sign_in"
-          localization={{
-            variables: {
-              sign_in: { email_label: "Email", password_label: "Password" },
-            },
-          }}
-        />
+      <CardContent className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleEmailLogin} className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor={emailId}>Email</Label>
+            <Input
+              id={emailId}
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={passwordId}>Password</Label>
+            <Input
+              id={passwordId}
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Signing in..." : "Sign in"}
+          </Button>
+        </form>
+
+        <div className="relative py-2 text-center text-xs text-muted-foreground">
+          <span>or continue with</span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleSocialLogin("github")}
+          >
+            Continue with GitHub
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleSocialLogin("google")}
+          >
+            Continue with Google
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
