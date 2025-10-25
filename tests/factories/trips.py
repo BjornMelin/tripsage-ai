@@ -5,10 +5,12 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, timedelta
 
 from polyfactory.factories.pydantic_factory import ModelFactory
+from polyfactory.pytest_plugin import register_fixture
 
 from tripsage_core.models.trip import Trip
 
 
+@register_fixture
 class TripFactory(ModelFactory[Trip]):
     """Polyfactory factory for :class:`Trip`."""
 
