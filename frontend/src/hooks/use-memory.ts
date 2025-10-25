@@ -1,3 +1,10 @@
+/**
+ * @fileoverview React hooks for memory and conversation management.
+ *
+ * Provides hooks for managing user memories, conversation context, search,
+ * insights, and memory statistics.
+ */
+
 "use client";
 
 import { useApiMutation, useApiQuery } from "@/hooks/use-api-query";
@@ -14,7 +21,10 @@ import type {
 } from "@/types/memory";
 
 /**
- * Hook for fetching user memory context
+ * Hook for fetching user memory context.
+ *
+ * @param userId - User ID to fetch memory context for
+ * @param enabled - Whether the query should run (default: true)
  */
 export function useMemoryContext(userId: string, enabled = true) {
   return useApiQuery<MemoryContextResponse>(
@@ -29,7 +39,7 @@ export function useMemoryContext(userId: string, enabled = true) {
 }
 
 /**
- * Hook for searching user memories
+ * Hook for searching user memories.
  */
 export function useSearchMemories() {
   return useApiMutation<SearchMemoriesResponse, SearchMemoriesRequest>(
@@ -38,7 +48,9 @@ export function useSearchMemories() {
 }
 
 /**
- * Hook for updating user preferences
+ * Hook for updating user preferences.
+ *
+ * @param userId - User ID to update preferences for
  */
 export function useUpdatePreferences(userId: string) {
   return useApiMutation<UpdatePreferencesResponse, UpdatePreferencesRequest>(
@@ -47,7 +59,10 @@ export function useUpdatePreferences(userId: string) {
 }
 
 /**
- * Hook for getting memory insights
+ * Hook for getting memory insights.
+ *
+ * @param userId - User ID to fetch insights for
+ * @param enabled - Whether the query should run (default: true)
  */
 export function useMemoryInsights(userId: string, enabled = true) {
   return useApiQuery<MemoryInsightsResponse>(
@@ -62,7 +77,7 @@ export function useMemoryInsights(userId: string, enabled = true) {
 }
 
 /**
- * Hook for adding conversation memory
+ * Hook for adding conversation memory.
  */
 export function useAddConversationMemory() {
   return useApiMutation<AddConversationMemoryResponse, AddConversationMemoryRequest>(
@@ -71,14 +86,19 @@ export function useAddConversationMemory() {
 }
 
 /**
- * Hook for deleting user memories
+ * Hook for deleting user memories.
+ *
+ * @param userId - User ID to delete memories for
  */
 export function useDeleteUserMemories(userId: string) {
   return useApiMutation<DeleteUserMemoriesResponse, void>(`/api/memory/user/${userId}`);
 }
 
 /**
- * Hook for getting memory statistics
+ * Hook for getting memory statistics.
+ *
+ * @param userId - User ID to fetch stats for
+ * @param enabled - Whether the query should run (default: true)
  */
 export function useMemoryStats(userId: string, enabled = true) {
   return useApiQuery<{

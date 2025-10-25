@@ -1,3 +1,10 @@
+/**
+ * @fileoverview React hooks for managing API keys.
+ *
+ * Provides hooks for fetching, adding, validating, and deleting API keys
+ * with caching and optimistic updates.
+ */
+
 "use client";
 
 import { useEffect } from "react";
@@ -17,7 +24,7 @@ import type {
 } from "@/types/api-keys";
 
 /**
- * Hook for fetching all user API keys with enhanced caching and error handling
+ * Hook for fetching all user API keys.
  */
 export function useApiKeys() {
   const { setKeys, setSupportedServices } = useApiKeyStore();
@@ -44,7 +51,7 @@ export function useApiKeys() {
 }
 
 /**
- * Hook for adding a new API key with optimistic updates
+ * Hook for adding a new API key.
  */
 export function useAddApiKey() {
   const { updateKey } = useApiKeyStore();
@@ -71,7 +78,7 @@ export function useAddApiKey() {
 }
 
 /**
- * Hook for validating an API key without saving it
+ * Hook for validating an API key without saving it.
  */
 export function useValidateApiKey() {
   return useApiMutation<ValidateKeyResponse, AddKeyRequest>("/api/user/keys/validate", {
@@ -83,7 +90,7 @@ export function useValidateApiKey() {
 }
 
 /**
- * Hook for deleting an API key with optimistic updates
+ * Hook for deleting an API key.
  */
 export function useDeleteApiKey() {
   const { removeKey } = useApiKeyStore();
