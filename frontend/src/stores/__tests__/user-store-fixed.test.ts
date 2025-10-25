@@ -12,11 +12,6 @@ vi.mock("zustand/middleware", () => ({
   devtools: (fn: any) => fn,
 }));
 
-// Mock setTimeout to make tests run faster
-vi.mock("global", () => ({
-  setTimeout: vi.fn((fn) => fn()),
-}));
-
 describe("User Profile Store - Fixed", () => {
   let mockProfile: UserProfile;
 
