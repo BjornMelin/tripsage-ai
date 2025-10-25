@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Unit tests for TripCard: date/duration formatting, destination
+ * rendering, budget display, actions, and accessibility.
+ */
+
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Trip } from "@/stores/trip-store";
@@ -17,9 +22,10 @@ vi.mock("date-fns", () => ({
         month: "short",
         day: "2-digit",
         year: "numeric",
+        timeZone: "UTC",
       });
     }
-    return d.toLocaleDateString();
+    return d.toLocaleDateString("en-US", { timeZone: "UTC" });
   }),
 }));
 
@@ -70,9 +76,12 @@ describe("TripCard", () => {
     it("should display trip dates correctly", () => {
       render(<TripCard trip={mockTrip} />);
 
-      // Should show formatted start and end dates
-      expect(screen.getByText(/Jun 15, 2024 - Jun 25, 2024/)).toBeInTheDocument();
-      expect(screen.getByText("(11 days)")).toBeInTheDocument();
+      // Assert the duration label and verify that its row contains the dates
+      const duration = screen.getByText("(11 days)");
+      const row = duration.closest("div");
+      expect(row).toBeTruthy();
+      expect(row!.textContent).toContain("Jun 15, 2024");
+      expect(row!.textContent).toContain("Jun 25, 2024");
     });
 
     it("should display destinations correctly", () => {

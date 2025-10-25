@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Zustand store for user profile state and actions. Derived
+ * values (display name, profile completeness, upcoming expirations) are
+ * computed and stored to ensure deterministic reads in tests and UI.
+ */
+
 import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
@@ -214,6 +220,13 @@ const getUpcomingDocumentExpirations = (
   });
 };
 
+// Compute derived fields for a given profile
+const computeDerived = (profile: UserProfile | null) => ({
+  displayName: getDisplayName(profile),
+  hasCompleteProfile: hasCompleteProfile(profile),
+  upcomingDocumentExpirations: getUpcomingDocumentExpirations(profile),
+});
+
 export const useUserProfileStore = create<UserProfileState>()(
   devtools(
     persist(
@@ -230,22 +243,14 @@ export const useUserProfileStore = create<UserProfileState>()(
         error: null,
         uploadError: null,
 
-        // Computed properties
-        get displayName() {
-          return getDisplayName(get().profile);
-        },
-
-        get hasCompleteProfile() {
-          return hasCompleteProfile(get().profile);
-        },
-
-        get upcomingDocumentExpirations() {
-          return getUpcomingDocumentExpirations(get().profile);
-        },
+        // Derived fields (stored for deterministic reads/testing)
+        displayName: "",
+        hasCompleteProfile: false,
+        upcomingDocumentExpirations: [],
 
         // Profile management actions
         setProfile: (profile: UserProfile | null) => {
-          set({ profile });
+          set({ profile, ...computeDerived(profile) });
         },
 
         updatePersonalInfo: async (info: Partial<PersonalInfo>) => {
@@ -275,6 +280,7 @@ export const useUserProfileStore = create<UserProfileState>()(
             set({
               profile: updatedProfile,
               isUpdatingProfile: false,
+              ...computeDerived(updatedProfile),
             });
 
             return true;
@@ -317,6 +323,7 @@ export const useUserProfileStore = create<UserProfileState>()(
             set({
               profile: updatedProfile,
               isUpdatingProfile: false,
+              ...computeDerived(updatedProfile),
             });
 
             return true;
@@ -361,6 +368,7 @@ export const useUserProfileStore = create<UserProfileState>()(
             set({
               profile: updatedProfile,
               isUpdatingProfile: false,
+              ...computeDerived(updatedProfile),
             });
 
             return true;
@@ -398,13 +406,15 @@ export const useUserProfileStore = create<UserProfileState>()(
 
             const { profile } = get();
             if (profile) {
+              const nextProfile = {
+                ...profile,
+                avatarUrl,
+                updatedAt: getCurrentTimestamp(),
+              } as UserProfile;
               set({
-                profile: {
-                  ...profile,
-                  avatarUrl,
-                  updatedAt: getCurrentTimestamp(),
-                },
+                profile: nextProfile,
                 isUploadingAvatar: false,
+                ...computeDerived(nextProfile),
               });
             }
 
@@ -430,13 +440,15 @@ export const useUserProfileStore = create<UserProfileState>()(
             // Mock API call
             await new Promise((resolve) => setTimeout(resolve, 500));
 
+            const nextProfile = {
+              ...profile,
+              avatarUrl: undefined,
+              updatedAt: getCurrentTimestamp(),
+            } as UserProfile;
             set({
-              profile: {
-                ...profile,
-                avatarUrl: undefined,
-                updatedAt: getCurrentTimestamp(),
-              },
+              profile: nextProfile,
               isUpdatingProfile: false,
+              ...computeDerived(nextProfile),
             });
 
             return true;
@@ -459,28 +471,26 @@ export const useUserProfileStore = create<UserProfileState>()(
             visitCount: 0,
           };
 
-          set({
-            profile: {
-              ...profile,
-              favoriteDestinations: [...profile.favoriteDestinations, newDestination],
-              updatedAt: getCurrentTimestamp(),
-            },
-          });
+          const nextProfile = {
+            ...profile,
+            favoriteDestinations: [...profile.favoriteDestinations, newDestination],
+            updatedAt: getCurrentTimestamp(),
+          } as UserProfile;
+          set({ profile: nextProfile, ...computeDerived(nextProfile) });
         },
 
         removeFavoriteDestination: (destinationId: string) => {
           const { profile } = get();
           if (!profile) return;
 
-          set({
-            profile: {
-              ...profile,
-              favoriteDestinations: profile.favoriteDestinations.filter(
-                (d: FavoriteDestination) => d.id !== destinationId
-              ),
-              updatedAt: getCurrentTimestamp(),
-            },
-          });
+          const nextProfile = {
+            ...profile,
+            favoriteDestinations: profile.favoriteDestinations.filter(
+              (d: FavoriteDestination) => d.id !== destinationId
+            ),
+            updatedAt: getCurrentTimestamp(),
+          } as UserProfile;
+          set({ profile: nextProfile, ...computeDerived(nextProfile) });
         },
 
         updateFavoriteDestination: (
@@ -490,16 +500,15 @@ export const useUserProfileStore = create<UserProfileState>()(
           const { profile } = get();
           if (!profile) return;
 
-          set({
-            profile: {
-              ...profile,
-              favoriteDestinations: profile.favoriteDestinations.map(
-                (d: FavoriteDestination) =>
-                  d.id === destinationId ? { ...d, ...updates } : d
-              ),
-              updatedAt: getCurrentTimestamp(),
-            },
-          });
+          const nextProfile = {
+            ...profile,
+            favoriteDestinations: profile.favoriteDestinations.map(
+              (d: FavoriteDestination) =>
+                d.id === destinationId ? { ...d, ...updates } : d
+            ),
+            updatedAt: getCurrentTimestamp(),
+          } as UserProfile;
+          set({ profile: nextProfile, ...computeDerived(nextProfile) });
         },
 
         incrementDestinationVisit: (destinationId: string) => {
@@ -508,18 +517,17 @@ export const useUserProfileStore = create<UserProfileState>()(
 
           const now = getCurrentTimestamp();
 
-          set({
-            profile: {
-              ...profile,
-              favoriteDestinations: profile.favoriteDestinations.map(
-                (d: FavoriteDestination) =>
-                  d.id === destinationId
-                    ? { ...d, visitCount: d.visitCount + 1, lastVisited: now }
-                    : d
-              ),
-              updatedAt: now,
-            },
-          });
+          const nextProfile = {
+            ...profile,
+            favoriteDestinations: profile.favoriteDestinations.map(
+              (d: FavoriteDestination) =>
+                d.id === destinationId
+                  ? { ...d, visitCount: d.visitCount + 1, lastVisited: now }
+                  : d
+            ),
+            updatedAt: now,
+          } as UserProfile;
+          set({ profile: nextProfile, ...computeDerived(nextProfile) });
         },
 
         // Travel documents
@@ -532,28 +540,26 @@ export const useUserProfileStore = create<UserProfileState>()(
             id: generateId(),
           };
 
-          set({
-            profile: {
-              ...profile,
-              travelDocuments: [...profile.travelDocuments, newDocument],
-              updatedAt: getCurrentTimestamp(),
-            },
-          });
+          const nextProfile = {
+            ...profile,
+            travelDocuments: [...profile.travelDocuments, newDocument],
+            updatedAt: getCurrentTimestamp(),
+          } as UserProfile;
+          set({ profile: nextProfile, ...computeDerived(nextProfile) });
         },
 
         removeTravelDocument: (documentId: string) => {
           const { profile } = get();
           if (!profile) return;
 
-          set({
-            profile: {
-              ...profile,
-              travelDocuments: profile.travelDocuments.filter(
-                (d: TravelDocument) => d.id !== documentId
-              ),
-              updatedAt: getCurrentTimestamp(),
-            },
-          });
+          const nextProfile = {
+            ...profile,
+            travelDocuments: profile.travelDocuments.filter(
+              (d: TravelDocument) => d.id !== documentId
+            ),
+            updatedAt: getCurrentTimestamp(),
+          } as UserProfile;
+          set({ profile: nextProfile, ...computeDerived(nextProfile) });
         },
 
         updateTravelDocument: (
@@ -563,15 +569,14 @@ export const useUserProfileStore = create<UserProfileState>()(
           const { profile } = get();
           if (!profile) return;
 
-          set({
-            profile: {
-              ...profile,
-              travelDocuments: profile.travelDocuments.map((d: TravelDocument) =>
-                d.id === documentId ? { ...d, ...updates } : d
-              ),
-              updatedAt: getCurrentTimestamp(),
-            },
-          });
+          const nextProfile = {
+            ...profile,
+            travelDocuments: profile.travelDocuments.map((d: TravelDocument) =>
+              d.id === documentId ? { ...d, ...updates } : d
+            ),
+            updatedAt: getCurrentTimestamp(),
+          } as UserProfile;
+          set({ profile: nextProfile, ...computeDerived(nextProfile) });
         },
 
         // Utility actions
@@ -595,7 +600,7 @@ export const useUserProfileStore = create<UserProfileState>()(
             if (importData.profile) {
               const result = UserProfileSchema.safeParse(importData.profile);
               if (result.success) {
-                set({ profile: result.data });
+                set({ profile: result.data, ...computeDerived(result.data) });
                 return true;
               }
               throw new Error("Invalid profile data");
@@ -622,6 +627,9 @@ export const useUserProfileStore = create<UserProfileState>()(
             isUploadingAvatar: false,
             error: null,
             uploadError: null,
+            displayName: "",
+            hasCompleteProfile: false,
+            upcomingDocumentExpirations: [],
           });
         },
       }),
@@ -637,21 +645,56 @@ export const useUserProfileStore = create<UserProfileState>()(
   )
 );
 
-// Utility selectors for common use cases
+/**
+ * Returns the full user profile object.
+ * @returns The current `UserProfile` or `null` if not set.
+ */
 export const useUserProfile = () => useUserProfileStore((state) => state.profile);
+/**
+ * Returns the computed display name for the current profile.
+ * @returns A non-empty string when available, otherwise an empty string.
+ */
 export const useUserDisplayName = () =>
   useUserProfileStore((state) => state.displayName);
+/**
+ * Returns the `personalInfo` section of the profile.
+ * @returns `PersonalInfo` or `undefined` when absent.
+ */
 export const useUserPersonalInfo = () =>
   useUserProfileStore((state) => state.profile?.personalInfo);
+/**
+ * Returns the `travelPreferences` section of the profile.
+ * @returns `TravelPreferences` or `undefined` when absent.
+ */
 export const useUserTravelPreferences = () =>
   useUserProfileStore((state) => state.profile?.travelPreferences);
+/**
+ * Returns the `privacySettings` section of the profile.
+ * @returns `PrivacySettings` or `undefined` when absent.
+ */
 export const useUserPrivacySettings = () =>
   useUserProfileStore((state) => state.profile?.privacySettings);
+/**
+ * Returns the list of favorite destinations.
+ * @returns An array of `FavoriteDestination` (possibly empty).
+ */
 export const useFavoriteDestinations = () =>
   useUserProfileStore((state) => state.profile?.favoriteDestinations || []);
+/**
+ * Returns the list of travel documents.
+ * @returns An array of `TravelDocument` (possibly empty).
+ */
 export const useTravelDocuments = () =>
   useUserProfileStore((state) => state.profile?.travelDocuments || []);
+/**
+ * Returns travel documents expiring within 60 days.
+ * @returns An array of `TravelDocument` expiring soon.
+ */
 export const useUpcomingDocumentExpirations = () =>
   useUserProfileStore((state) => state.upcomingDocumentExpirations);
+/**
+ * Indicates whether the profile meets completeness criteria.
+ * @returns `true` when complete, otherwise `false`.
+ */
 export const useHasCompleteProfile = () =>
   useUserProfileStore((state) => state.hasCompleteProfile);

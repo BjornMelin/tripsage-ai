@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Account settings section: email update, verification, and
+ * notification preferences. UI only; server actions are stubbed.
+ */
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,6 +48,10 @@ const emailUpdateSchema = z.object({
 
 type EmailUpdateFormData = z.infer<typeof emailUpdateSchema>;
 
+/**
+ * Account settings panel component.
+ * @returns A settings section with email and notification controls.
+ */
 export function AccountSettingsSection() {
   const { profile, updatePersonalInfo: _updatePersonalInfo } = useUserProfileStore();
   const { toast } = useToast();
@@ -55,6 +63,7 @@ export function AccountSettingsSection() {
     },
   });
 
+  // TODO: Wire to auth email change; reflect verification state.
   const onEmailUpdate = async (_data: EmailUpdateFormData) => {
     try {
       // Simulate API call
@@ -74,6 +83,7 @@ export function AccountSettingsSection() {
     }
   };
 
+  // TODO: Trigger verification email via auth provider.
   const handleEmailVerification = async () => {
     try {
       // Simulate sending verification email
@@ -92,6 +102,7 @@ export function AccountSettingsSection() {
     }
   };
 
+  // TODO: Replace with real account deletion request.
   const handleAccountDeletion = async () => {
     try {
       // Simulate account deletion
@@ -110,6 +121,7 @@ export function AccountSettingsSection() {
     }
   };
 
+  // TODO: Persist notification preferences to backend.
   const toggleNotificationSetting = async (setting: string, enabled: boolean) => {
     try {
       // Simulate API call to update notification settings

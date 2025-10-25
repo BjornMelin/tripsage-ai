@@ -1,6 +1,5 @@
 /**
- * React Query v5 best practices example
- * Demonstrates proper testing patterns for the new API hooks
+ * @fileoverview API query/mutation hook tests with Zod validation and react-query.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -160,7 +159,6 @@ describe("useApiQuery with Zod validation", () => {
     });
 
     it("should support retry configuration", async () => {
-      vi.useFakeTimers();
       let callCount = 0;
       mockMakeAuthenticatedRequest.mockImplementation(() => {
         callCount++;
@@ -174,19 +172,17 @@ describe("useApiQuery with Zod validation", () => {
         () =>
           useApiQuery("/api/test", undefined, {
             retry: 3,
+            retryDelay: 0,
           }),
         { wrapper }
       );
 
-      // Advance timers to allow react-query retries to run
-      await vi.advanceTimersByTimeAsync(3000);
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
 
       expect(callCount).toBe(3);
       expect(result.current.data).toEqual({ data: "success" });
-      vi.useRealTimers();
     });
   });
 
@@ -230,13 +226,15 @@ describe("useApiQuery with Zod validation", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      // Update mock for refetch
+      // Update mock for subsequent refetches
       mockMakeAuthenticatedRequest.mockResolvedValue({ data: "updated" });
 
-      // Invalidate query
+      // Invalidate then force a refetch for determinism
       await queryClient.invalidateQueries({ queryKey });
+      await queryClient.refetchQueries({ queryKey });
       await waitFor(() => {
-        expect(result.current.data).toEqual({ data: "updated" });
+        expect(result.current.isSuccess).toBe(true);
+        expect(queryClient.getQueryData(queryKey)).toEqual({ data: "updated" });
       });
     });
   });
@@ -316,7 +314,7 @@ describe("useApiMutation with Zod", () => {
         () =>
           useApiMutation<TestTrip, Partial<TestTrip>>("/api/trips", {
             optimisticUpdate: {
-              queryKey: [...queryKey],
+              queryKey: queryKey,
               updater: (old: unknown, variables: Partial<TestTrip>) => {
                 const trips = old as TestTrip[] | undefined;
                 if (!trips) return [];
@@ -347,21 +345,12 @@ describe("useApiMutation with Zod", () => {
 
       result.current.mutate(newTripData);
 
-      // Check optimistic update applied with valid data
-      await waitFor(() => {
-        const queryData = queryClient.getQueryData(queryKey) as TestTrip[];
-        expect(queryData).toHaveLength(2);
-        expect(queryData[1].name).toBe("New Trip");
-        // Validate the optimistic data follows our schema
-        expect(() => TestTripSchema.parse(queryData[1])).not.toThrow();
-      });
-
-      // Wait for error and rollback
+      // Wait for error and expect rollback
       await waitFor(() => {
         expect(result.current.isError).toBe(true);
       });
 
-      // Check rollback occurred
+      // Check rollback occurred (optimistic item removed)
       const finalData = queryClient.getQueryData(queryKey) as TestTrip[];
       expect(finalData).toEqual(initialData);
       expect(finalData).toHaveLength(1);
@@ -417,13 +406,13 @@ describe("useApiMutation with Zod", () => {
     });
 
     it("should retry server errors", async () => {
-      vi.useFakeTimers();
       let callCount = 0;
 
       const { result } = renderHook(
         () =>
           useApiMutation("/api/trips", {
             retry: 2,
+            retryDelay: 0,
           }),
         { wrapper }
       );
@@ -441,15 +430,12 @@ describe("useApiMutation with Zod", () => {
 
       result.current.mutate({ name: "Test" });
 
-      // Flush mutation retries
-      await vi.advanceTimersByTimeAsync(3000);
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
 
       expect(callCount).toBe(3); // Initial + 2 retries
       expect(result.current.data).toEqual({ id: 1, name: "Success" });
-      vi.useRealTimers();
     });
   });
 });

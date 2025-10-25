@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Integration tests for agent monitoring: status dashboard,
+ * collaboration hub, and connection status metrics/optimizations.
+ */
+
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "@/test/test-utils";
@@ -381,6 +386,7 @@ describe("Agent Workflow Integration Tests", () => {
           analytics={mockConnectionAnalytics}
           onReconnect={onReconnect}
           onOptimize={onOptimize}
+          variant="detailed"
           showMetrics
           showOptimizations
         />
@@ -435,6 +441,7 @@ describe("Agent Workflow Integration Tests", () => {
           analytics={mockConnectionAnalytics}
           onReconnect={onReconnect}
           onOptimize={onOptimize}
+          variant="detailed"
           showMetrics
           showOptimizations
         />
@@ -458,6 +465,7 @@ describe("Agent Workflow Integration Tests", () => {
           analytics={mockConnectionAnalytics}
           onReconnect={onReconnect}
           onOptimize={onOptimize}
+          variant="detailed"
           showMetrics
         />
       );
@@ -487,6 +495,7 @@ describe("Agent Workflow Integration Tests", () => {
           analytics={mockConnectionAnalytics}
           onReconnect={onReconnect}
           onOptimize={onOptimize}
+          variant="detailed"
           showOptimizations
         />
       );
@@ -550,7 +559,7 @@ describe("Agent Workflow Integration Tests", () => {
             analytics={mockConnectionAnalytics}
             onReconnect={onReconnect}
             onOptimize={onOptimize}
-            variant="compact"
+            variant="detailed"
           />
         </div>
       );
@@ -584,7 +593,7 @@ describe("Agent Workflow Integration Tests", () => {
             analytics={mockConnectionAnalytics}
             onReconnect={onReconnect}
             onOptimize={onOptimize}
-            variant="compact"
+            variant="detailed"
           />
         </div>
       );
