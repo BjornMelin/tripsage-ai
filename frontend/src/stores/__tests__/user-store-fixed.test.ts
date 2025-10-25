@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Deterministic tests for user profile store: derived fields
+ * (displayName, hasCompleteProfile, expirations) and core actions.
+ */
+
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -151,6 +156,7 @@ describe("User Profile Store - Fixed", () => {
       expect(result.current.displayName).toBe("");
 
       // Profile with display name
+      const { rerender } = renderHook(() => useUserProfileStore());
       act(() => {
         result.current.setProfile({
           ...mockProfile,
@@ -159,7 +165,7 @@ describe("User Profile Store - Fixed", () => {
           },
         });
       });
-
+      rerender();
       expect(result.current.displayName).toBe("Custom Name");
 
       // Profile with first and last name
@@ -172,7 +178,7 @@ describe("User Profile Store - Fixed", () => {
           },
         });
       });
-
+      rerender();
       expect(result.current.displayName).toBe("John Doe");
 
       // Profile with only first name
@@ -184,7 +190,7 @@ describe("User Profile Store - Fixed", () => {
           },
         });
       });
-
+      rerender();
       expect(result.current.displayName).toBe("Jane");
 
       // Profile with only email
@@ -195,7 +201,7 @@ describe("User Profile Store - Fixed", () => {
           personalInfo: undefined,
         });
       });
-
+      rerender();
       expect(result.current.displayName).toBe("username");
     });
 
@@ -206,6 +212,7 @@ describe("User Profile Store - Fixed", () => {
       expect(result.current.hasCompleteProfile).toBe(false);
 
       // Incomplete profile
+      const { rerender: rerender2 } = renderHook(() => useUserProfileStore());
       act(() => {
         result.current.setProfile({
           ...mockProfile,
@@ -214,7 +221,7 @@ describe("User Profile Store - Fixed", () => {
           },
         });
       });
-
+      rerender2();
       expect(result.current.hasCompleteProfile).toBe(false);
 
       // Complete profile
@@ -243,7 +250,7 @@ describe("User Profile Store - Fixed", () => {
           },
         });
       });
-
+      rerender2();
       expect(result.current.hasCompleteProfile).toBe(true);
     });
   });

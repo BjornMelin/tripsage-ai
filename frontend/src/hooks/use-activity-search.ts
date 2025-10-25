@@ -1,7 +1,6 @@
 /**
- * @fileoverview Minimal final implementation for `useActivitySearch` hook.
- * Provides stable, no-op behaviors for search/save operations to align with
- * the current UI while legacy API/store behaviors have been removed.
+ * @fileoverview Hook for activity search state. Exposes search/save methods,
+ * loading flags, errors, and cached lists without performing side effects.
  */
 
 import type { ActivitySearchParams } from "@/types/search";
@@ -21,9 +20,8 @@ export interface UseActivitySearchResult {
 }
 
 /**
- * Hook surface for activity search. This final version intentionally avoids
- * side effects and external dependencies. Callers can compose behavior using
- * higher-level services or feature stores.
+ * Hook surface for activity search.
+ * @returns Stable actions, flags, and caches for activity search.
  */
 export function useActivitySearch(): UseActivitySearchResult {
   return {

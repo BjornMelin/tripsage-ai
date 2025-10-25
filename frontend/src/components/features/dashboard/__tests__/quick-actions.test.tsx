@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Tests for QuickActions components covering grid/list/compact
+ * layouts, link targets, and basic accessibility semantics.
+ */
+
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils";
@@ -257,9 +262,15 @@ describe("QuickActions Accessibility", () => {
   it("maintains focus styles", () => {
     render(<QuickActions />);
 
-    // Check that buttons have proper button styling
-    const buttons = document.querySelectorAll("button, [role='button']");
-    expect(buttons.length).toBeGreaterThan(0);
+    // Check that interactive links include focus-visible ring classes
+    const links = Array.from(document.querySelectorAll<HTMLAnchorElement>("a[href]"));
+    expect(links.length).toBeGreaterThan(0);
+    const hasFocusRing = links.some(
+      (el) =>
+        el.className.includes("focus-visible:ring-2") &&
+        el.className.includes("focus-visible:ring-offset-2")
+    );
+    expect(hasFocusRing).toBe(true);
   });
 });
 

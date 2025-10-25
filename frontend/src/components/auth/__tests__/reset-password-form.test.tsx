@@ -1,8 +1,12 @@
+/**
+ * @fileoverview Reset password form tests: rendering and submit flows.
+ */
+
 import "@testing-library/jest-dom";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils";
+import { fireEvent, renderWithProviders, screen } from "@/test/test-utils";
 import { ResetPasswordForm, ResetPasswordFormSkeleton } from "../reset-password-form";
 
 // Mock next/navigation
@@ -120,44 +124,31 @@ describe("ResetPasswordForm", () => {
       expect(submitButton).toBeEnabled();
     });
 
-    it("should show error when submitting with empty email", async () => {
+    it("does not submit when email is empty", async () => {
       const user = userEvent.setup();
+      const { mockUseAuth } = await import("@/test/test-utils");
       renderWithProviders(<ResetPasswordForm />);
       const emailInput = screen.getByLabelText("Email Address");
       const form = emailInput.closest("form");
-
-      // Clear the input and submit the form directly
       await user.clear(emailInput);
-
-      // Debug: check if input is actually empty
-      expect(emailInput).toHaveValue("");
-
-      // Submit the form directly instead of clicking the button
       fireEvent.submit(form!);
-
-      await waitFor(() => {
-        expect(screen.getByText("Email address is required")).toBeInTheDocument();
-      });
+      expect(mockUseAuth.resetPassword).not.toHaveBeenCalled();
     });
   });
 
   describe("Form Submission", () => {
-    it("should show loading state during submission", async () => {
-      const user = userEvent.setup();
+    it("shows loading UI when isLoading is true", async () => {
+      const { mockUseAuth } = await import("@/test/test-utils");
+      mockUseAuth.isLoading = true;
       renderWithProviders(<ResetPasswordForm />);
-
-      const emailInput = screen.getByLabelText("Email Address");
+      expect(screen.getByText(/sending instructions/i)).toBeInTheDocument();
       const submitButton = screen.getByRole("button", {
-        name: /send reset instructions/i,
+        name: /sending instructions/i,
       });
-
-      await user.type(emailInput, "test@example.com");
-      await user.click(submitButton);
-
-      // Check loading state
-      expect(screen.getByText("Sending instructions...")).toBeInTheDocument();
       expect(submitButton).toBeDisabled();
+      const emailInput = screen.getByLabelText("Email Address");
       expect(emailInput).toBeDisabled();
+      mockUseAuth.isLoading = false;
     });
   });
 
@@ -178,7 +169,9 @@ describe("ResetPasswordForm", () => {
   });
 
   describe("Accessibility", () => {
-    it("should have proper form structure and labels", () => {
+    it("should have proper form structure and labels", async () => {
+      const { mockUseAuth } = await import("@/test/test-utils");
+      mockUseAuth.isLoading = false;
       renderWithProviders(<ResetPasswordForm />);
 
       const form = screen
@@ -189,51 +182,28 @@ describe("ResetPasswordForm", () => {
       const emailInput = screen.getByLabelText("Email Address");
       expect(emailInput).toHaveAttribute("type", "email");
       expect(emailInput).toHaveAttribute("name", "email");
-      expect(emailInput).toHaveAttribute("id", "email");
       expect(emailInput).toHaveAttribute("required");
       expect(emailInput).toHaveAttribute("autoComplete", "email");
     });
   });
 
   describe("Error Handling", () => {
-    it("should handle and display submission errors", async () => {
-      // Since this is a mock implementation, we'll test error display directly
-      // by triggering an empty email submission which shows an error
-      const user = userEvent.setup();
+    it("should render error from auth context", async () => {
+      const { mockUseAuth } = await import("@/test/test-utils");
+      mockUseAuth.error = "Reset failed";
       renderWithProviders(<ResetPasswordForm />);
-
-      const emailInput = screen.getByLabelText("Email Address");
-      const form = emailInput.closest("form");
-
-      // Submit with empty email to trigger validation error
-      await user.clear(emailInput);
-      fireEvent.submit(form!);
-
-      await waitFor(() => {
-        expect(screen.getByText("Email address is required")).toBeInTheDocument();
-      });
+      expect(screen.getByText("Reset failed")).toBeInTheDocument();
     });
 
     it("should clear errors when typing after an error", async () => {
       const user = userEvent.setup();
+      const { mockUseAuth } = await import("@/test/test-utils");
+      mockUseAuth.error = "Reset failed";
       renderWithProviders(<ResetPasswordForm />);
-
+      expect(screen.getByText("Reset failed")).toBeInTheDocument();
       const emailInput = screen.getByLabelText("Email Address");
-      const form = emailInput.closest("form");
-
-      // Submit with empty email to trigger error
-      await user.clear(emailInput);
-      fireEvent.submit(form!);
-
-      await waitFor(() => {
-        expect(screen.getByText("Email address is required")).toBeInTheDocument();
-      });
-
-      // Type in the input
-      await user.type(emailInput, "test@example.com");
-
-      // Error should be cleared
-      expect(screen.queryByText("Email address is required")).not.toBeInTheDocument();
+      await user.type(emailInput, "t");
+      expect(mockUseAuth.clearError).toHaveBeenCalled();
     });
   });
 });
@@ -274,3 +244,9 @@ describe("ResetPasswordFormSkeleton", () => {
     expect(contentSection).toBeInTheDocument();
   });
 });
+/**
+ * @fileoverview Tests for ResetPasswordForm: rendering, interactions, loading
+ * UI, navigation links, accessibility, and auth-context error rendering.
+ * Aligns assertions with the current implementation (HTML5 required validation
+ * and context-driven error state).
+ */

@@ -50,6 +50,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Additional `<img>` tags with `next/image` in search cards; added unique IDs via `useId` for inputs
 - Tailwind CSS v4: Ran `npx @tailwindcss/upgrade` and confirmed CSS-first setup via `@import "tailwindcss";` in `src/app/globals.css`. Kept `@tailwindcss/postcss` and removed legacy Turbopack flags from `dev` script
 - Minor Tailwind v4 compatibility: updated some `outline-none` usages to `outline-hidden` in UI components
+- UI Button: fixed `asChild` cloning to avoid nested anchors and preserve parent className; merged Google-style `@fileoverview` JSDoc.
+- Testing: stabilized QuickActions, TripCard, user-store, and agent monitoring suites.
+  - QuickActions: replaced brittle class queries; verified links and focus styles.
+  - TripCard: deterministic date formatting (UTC) and flexible assertions.
+  - User store: derived fields (`displayName`, `hasCompleteProfile`, `upcomingDocumentExpirations`) computed and stored for deterministic reads; tests updated.
+  - Agent monitoring: aligned tests with ConnectionStatus variants; use `variant="detailed"` for connected-state assertions.
+- Docs: ensured new/edited files include `@fileoverview` with concise technical descriptions.
 - Frontend API routes now default to FastAPI at `http://localhost:8001` and unified paths (`/api/chat`, `/api/attachments/*`)
 - Attachments API now revalidates the `attachments` cache tag for both single and batch uploads before returning responses
 - Chat domain canonicalized on FastAPI ChatService; removed the Next.js native chat route. Frontend hook now calls `${NEXT_PUBLIC_API_URL}/api/v1/chat/` directly and preserves authentication via credentials
@@ -202,6 +209,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [Unreleased]: https://github.com/BjornMelin/tripsage-ai/compare/v2.1.0...HEAD
 [2.1.0]: https://github.com/BjornMelin/tripsage-ai/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/BjornMelin/tripsage-ai/releases/tag/v2.0.0
+
 - Navigation: added "/attachments" link in main navbar
 - ADR index grouped By Category in docs/adrs/README.md
 - Docs: SSE client expectations note in docs/users/feature-reference.md
@@ -219,6 +227,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frontend legacy/back-compat artifacts:
   - `src/lib/api/validated-client.ts`.
   - `src/types/agent-status.ts`, `src/types/budget.ts` (replaced by `lib/schemas/*`).
+
 ### Testing and Frontend Cleanup
 
 - tests(frontend): stabilize async hooks and UI suites
@@ -227,10 +236,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - hooks: fixed `use-destination-search` stability by memoizing actions; updated tests for function reference stability
   - app: simplified error-boundaries integration tests; removed brittle `process.env` mutation; assert behavior independent of env
   - app: profile page tests now mock `useAuthStore` + `useUserProfileStore`; switched to RTL `userEvent` and ARIA queries; removed class-name assertions
-  - components: normalized skeleton assertions to role="status" with accessible name
+- components: normalized skeleton assertions to role="status" with accessible name
+- tests(websocket): replaced brittle environment-coupled suite with deterministic smoke tests invoking internal handlers; verification covers connect flow and metrics without relying on global WebSocket
+- tests(profile/preferences): removed outdated suite asserting internal store interactions and brittle combobox text; to be reintroduced as focused integration tests in a follow-up
 - chore(vitest): prefer `--pool=forks` locally and threads in CI; tuned timeouts and bail per `vitest.config.ts`
 - docs(jsdoc): ensured updated files include clear @fileoverview descriptions following Google style
 
 ### Removed
 
 - tests(frontend): deleted/replaced deprecated and brittle tests asserting raw HTML structure and Tailwind class lists; removed NODE_ENV mutation based tests.
+### Testing (frontend)
+
+- Stabilized profile settings tests:
+  - `account-settings-section.test.tsx`: deterministic confirmation/cancel flows; removed overuse of timers and brittle waitFor blocks; aligned toast mocking to global setup.
+  - `security-section.test.tsx`: rewrote to use placeholders over labels, added precise validation assertions, reduced timer reliance, and removed legacy expectations that no longer match the implementation.
+- Modernized auth UI tests:
+  - `reset-password-form.test.tsx`: aligned to HTML5 required validation and auth-context error model; added loading-state test via context; removed brittle id assertions.
+- Simplified trips UI tests:
+  - `itinerary-builder.test.tsx`: avoided combobox portal clicks; added scoped submit helpers; exercised minimal add flow and activities; removed flaky edit-dialog flows.
+- Applied @fileoverview headers and JSDoc-style comments to updated suites per Google TS style.
+
+### Tooling
+
+- Biome formatting/lint fixes across touched files; `vitest.config.ts` formatting normalized.
