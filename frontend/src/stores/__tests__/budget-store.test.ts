@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Budget, BudgetCategory, Expense } from "@/types/budget";
+import type { Budget, BudgetCategory, Expense } from "@/lib/schemas/budget";
 import {
   useActiveBudget,
   useBudgetStore,

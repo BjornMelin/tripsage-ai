@@ -1,4 +1,7 @@
-// Memory-related types for frontend integration with Mem0 backend
+/**
+ * @fileoverview Memory-related types for frontend integration with the Mem0
+ * backend.
+ */
 
 export interface Memory {
   id: string;
