@@ -86,8 +86,9 @@ test = [
     "pytest-benchmark>=5.1.0",
     "pytest-httpx>=0.35.0",
     "fakeredis>=2.32.0",
+    "polyfactory>=2.16.0",
     "nest-asyncio>=1.6.0",
-    "hypothesis>=6.142.2",
+    "hypothesis>=6.142.3",
     "python-dotenv>=1.1.1",
     # Performance and load testing
     "locust>=2.42.0",
@@ -97,7 +98,7 @@ test = [
 
 lint = [
     # Code formatting and linting
-    "ruff>=0.14.1",
+    "ruff>=0.14.2",
     "mypy>=1.18.2",
 ]
 
@@ -128,7 +129,7 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 pythonpath = ["."]
-asyncio_mode = "auto"
+asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 log_cli = true
 log_cli_level = "INFO"
@@ -145,6 +146,7 @@ addopts = [
     "--cov-fail-under=90",
     "--cov-branch",
     "--no-cov-on-fail",
+    "--timeout=60",
     "-ra"
 ]
 
