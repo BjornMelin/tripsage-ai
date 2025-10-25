@@ -1,12 +1,14 @@
 /**
- * Supabase-specific hooks for trip management
- * Provides real-time synchronization and collaboration features
+ * @fileoverview Supabase-specific hooks for trip management.
+ *
+ * Provides hooks for trips, collaborators, and CRUD operations
+ * with real-time synchronization.
  */
 
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/auth-context";
+import { useEffect, useState } from "react";
 import { useSupabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
@@ -33,24 +35,40 @@ interface TripCollaboratorInsert {
   email?: string;
 }
 
+function useUserId(): string | null {
+  const supabase = useSupabase();
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    const mounted = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (mounted) setUserId(data.user?.id ?? null);
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) setUserId(session?.user?.id ?? null);
+    });
+    return () => data.subscription.unsubscribe();
+  }, [supabase]);
+  return userId;
+}
+
 /**
- * Hook to fetch all trips for the authenticated user
+ * Hook to fetch all trips for the authenticated user.
  */
 export function useTrips() {
-  const { user } = useAuth();
+  const userId = useUserId();
   const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ["trips", user?.id],
+    queryKey: ["trips", userId],
     queryFn: async () => {
-      if (!user?.id) {
+      if (!userId) {
         throw new Error("User not authenticated");
       }
 
       const { data, error } = await supabase
         .from("trips")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .order("updated_at", { ascending: false });
 
       if (error) {
@@ -59,22 +77,24 @@ export function useTrips() {
 
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
 /**
- * Hook to fetch a specific trip by ID
+ * Hook to fetch a specific trip by ID.
+ *
+ * @param tripId - Trip ID to fetch
  */
 export function useTripData(tripId: number | null) {
-  const { user } = useAuth();
+  const userId = useUserId();
   const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ["trip", tripId, user?.id],
+    queryKey: ["trip", tripId, userId],
     queryFn: async () => {
-      if (!user?.id || !tripId) {
+      if (!userId || !tripId) {
         return null;
       }
 
@@ -82,7 +102,7 @@ export function useTripData(tripId: number | null) {
         .from("trips")
         .select("*")
         .eq("id", tripId)
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .single();
 
       if (error) {
@@ -91,28 +111,28 @@ export function useTripData(tripId: number | null) {
 
       return data;
     },
-    enabled: !!user?.id && !!tripId,
+    enabled: !!userId && !!tripId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
 /**
- * Hook to create a new trip
+ * Hook to create a new trip.
  */
 export function useCreateTrip() {
-  const { user } = useAuth();
+  const userId = useUserId();
   const supabase = useSupabase();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (tripData: Omit<TripInsert, "user_id">) => {
-      if (!user?.id) {
+      if (!userId) {
         throw new Error("User not authenticated");
       }
 
       const { data, error } = await insertSingle(supabase, "trips", {
         ...tripData,
-        user_id: user.id,
+        user_id: userId,
       });
 
       if (error) {
@@ -123,16 +143,16 @@ export function useCreateTrip() {
     },
     onSuccess: () => {
       // Invalidate trips list
-      queryClient.invalidateQueries({ queryKey: ["trips", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["trips", userId] });
     },
   });
 }
 
 /**
- * Hook to update a trip
+ * Hook to update a trip.
  */
 export function useUpdateTrip() {
-  const { user } = useAuth();
+  const userId = useUserId();
   const supabase = useSupabase();
   const queryClient = useQueryClient();
 
@@ -144,12 +164,12 @@ export function useUpdateTrip() {
       tripId: number;
       updates: TripUpdate;
     }) => {
-      if (!user?.id) {
+      if (!userId) {
         throw new Error("User not authenticated");
       }
 
       const { data, error } = await updateSingle(supabase, "trips", updates, (qb) =>
-        (qb as any).eq("id", tripId).eq("user_id", user.id)
+        (qb as any).eq("id", tripId).eq("user_id", userId)
       );
 
       if (error) {
@@ -160,11 +180,11 @@ export function useUpdateTrip() {
     },
     onSuccess: (data) => {
       // Invalidate trips list and specific trip
-      queryClient.invalidateQueries({ queryKey: ["trips", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["trips", userId] });
       if (data) {
         // data can be null if update didn't return a row due to RLS
         queryClient.invalidateQueries({
-          queryKey: ["trip", (data as any).id, user?.id],
+          queryKey: ["trip", (data as any).id, userId],
         });
       }
     },
@@ -172,16 +192,16 @@ export function useUpdateTrip() {
 }
 
 /**
- * Hook to delete a trip
+ * Hook to delete a trip.
  */
 export function useDeleteTrip() {
-  const { user } = useAuth();
+  const userId = useUserId();
   const supabase = useSupabase();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (tripId: number) => {
-      if (!user?.id) {
+      if (!userId) {
         throw new Error("User not authenticated");
       }
 
@@ -189,7 +209,7 @@ export function useDeleteTrip() {
         .from("trips")
         .delete()
         .eq("id", tripId)
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
 
       if (error) {
         throw error;
@@ -199,22 +219,24 @@ export function useDeleteTrip() {
     },
     onSuccess: () => {
       // Invalidate trips list
-      queryClient.invalidateQueries({ queryKey: ["trips", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["trips", userId] });
     },
   });
 }
 
 /**
- * Hook to fetch trip collaborators
+ * Hook to fetch trip collaborators.
+ *
+ * @param tripId - Trip ID to fetch collaborators for
  */
 export function useTripCollaborators(tripId: number) {
-  const { user } = useAuth();
+  const userId = useUserId();
   const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ["trip-collaborators", tripId, user?.id],
+    queryKey: ["trip-collaborators", tripId, userId],
     queryFn: async () => {
-      if (!user?.id || !tripId) {
+      if (!userId || !tripId) {
         return [];
       }
 
@@ -223,7 +245,7 @@ export function useTripCollaborators(tripId: number) {
         .from("trips")
         .select("id")
         .eq("id", tripId)
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .single();
 
       if (tripError || !trip) {
@@ -234,22 +256,22 @@ export function useTripCollaborators(tripId: number) {
       // For now, return empty array
       return [] as TripCollaborator[];
     },
-    enabled: !!user?.id && !!tripId,
+    enabled: !!userId && !!tripId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
 /**
- * Hook to add a trip collaborator
+ * Hook to add a trip collaborator.
  */
 export function useAddTripCollaborator() {
-  const { user } = useAuth();
+  const userId = useUserId();
   useSupabase(); // Access Supabase client
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (_collaboratorData: TripCollaboratorInsert) => {
-      if (!user?.id) {
+      if (!userId) {
         throw new Error("User not authenticated");
       }
 
@@ -260,17 +282,17 @@ export function useAddTripCollaborator() {
     onSuccess: (_data, variables) => {
       // Invalidate collaborators list
       queryClient.invalidateQueries({
-        queryKey: ["trip-collaborators", variables.trip_id, user?.id],
+        queryKey: ["trip-collaborators", variables.trip_id, userId],
       });
     },
   });
 }
 
 /**
- * Hook to remove a trip collaborator
+ * Hook to remove a trip collaborator.
  */
 export function useRemoveTripCollaborator() {
-  const { user } = useAuth();
+  const userId = useUserId();
   useSupabase(); // Access Supabase client
   const queryClient = useQueryClient();
 
@@ -282,7 +304,7 @@ export function useRemoveTripCollaborator() {
       tripId: number;
       collaboratorId: number;
     }) => {
-      if (!user?.id) {
+      if (!userId) {
         throw new Error("User not authenticated");
       }
 
@@ -293,7 +315,7 @@ export function useRemoveTripCollaborator() {
     onSuccess: (_data, variables) => {
       // Invalidate collaborators list
       queryClient.invalidateQueries({
-        queryKey: ["trip-collaborators", variables.tripId, user?.id],
+        queryKey: ["trip-collaborators", variables.tripId, userId],
       });
     },
   });
