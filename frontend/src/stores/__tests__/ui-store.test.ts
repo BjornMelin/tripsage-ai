@@ -19,16 +19,6 @@ Object.defineProperty(window, "matchMedia", {
 
 import { type Theme, useUIStore } from "../ui-store";
 
-// Mock setTimeout to make tests run faster
-vi.mock("global", () => ({
-  setTimeout: vi.fn((fn, delay) => {
-    if (delay) {
-      return setTimeout(fn, 0); // Execute immediately for tests
-    }
-    return fn();
-  }),
-}));
-
 describe("UI Store", () => {
   beforeEach(() => {
     // Clear all state before each test
@@ -377,6 +367,7 @@ describe("UI Store", () => {
     });
 
     it("adds notification with duration and auto-removes", async () => {
+      vi.useFakeTimers();
       const { result } = renderHook(() => useUIStore());
 
       const notification = {
@@ -392,13 +383,9 @@ describe("UI Store", () => {
 
       expect(result.current.notifications).toHaveLength(1);
 
-      // Since setTimeout is mocked to execute immediately, check if removal was scheduled
-      await new Promise((resolve) => {
-        setTimeout(() => {
-          expect(result.current.notifications).toHaveLength(0);
-          resolve(undefined);
-        }, 0);
-      });
+      await vi.advanceTimersByTimeAsync(100);
+      expect(result.current.notifications).toHaveLength(0);
+      vi.useRealTimers();
     });
 
     it("removes notification by ID", () => {

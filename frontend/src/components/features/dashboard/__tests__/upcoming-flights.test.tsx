@@ -5,7 +5,7 @@
  * patterns and behavioral validation. Following ULTRATHINK methodology.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 // Mock trip store
 import type { Trip } from "@/stores/trip-store";
 import { render, screen } from "@/test/test-utils";
@@ -33,6 +33,14 @@ vi.mock("next/link", () => ({
 }));
 
 describe("UpcomingFlights", () => {
+  beforeAll(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-01T09:00:00Z"));
+  });
+
+  afterAll(() => {
+    vi.useRealTimers();
+  });
   // Helper to create future date
   const getFutureDate = (daysFromNow: number) => {
     const date = new Date();
