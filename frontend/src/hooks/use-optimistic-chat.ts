@@ -1,3 +1,10 @@
+/**
+ * @fileoverview React hook for optimistic chat updates.
+ *
+ * Provides optimistic UI updates for chat messages, showing messages
+ * immediately while sending in the background.
+ */
+
 "use client";
 
 import { useCallback, useOptimistic, useState } from "react";
@@ -24,6 +31,17 @@ export interface UseOptimisticChatReturn {
   error: string | null;
 }
 
+/**
+ * Hook for optimistic chat message updates.
+ *
+ * Shows messages immediately in UI while sending in background.
+ *
+ * @param options - Hook configuration options
+ * @param options.messages - Current chat messages
+ * @param options.sendMessage - Function to send messages
+ * @param options.currentUser - Current user information
+ * @returns Object with optimistic messages and send function
+ */
 export function useOptimisticChat({
   messages,
   sendMessage,

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Next.js route `src/app/auth/callback/route.ts` exchanges OAuth `code` for session
+- Login/Register use `@supabase/auth-ui-react` blocks (email/password + OAuth)
 - FastAPI SSE chat endpoint `POST /api/chat/stream` (streams token deltas; `text/event-stream`)
 - Next.js route `GET /api/attachments/files` with `next: { tags: ['attachments'] }` for SSR reads
 - Upstash rate limiting for attachments upload route (enabled when `UPSTASH_REDIS_REST_URL|TOKEN` are set)
@@ -33,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Next.js middleware uses `@supabase/ssr` `createServerClient` + `auth.getUser()` with cookie sync
+- Frontend hooks derive user via `supabase.auth.getUser()` (no React auth context)
+- `useAuthenticatedApi` injects `Authorization` from supabase-js session/refresh
 - Supabase SSR client: validate `NEXT_PUBLIC_SUPABASE_URL|ANON_KEY`; wrap `cookies().setAll` in try/catch
 - Next proxy: guard cookie writes with try/catch
 - Chat hook (`use-chat-ai`):
@@ -85,6 +90,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Deleted `frontend/src/contexts/auth-context.tsx` and all imports
+- Deleted `frontend/src/components/providers/supabase-provider.tsx` and layout wrapper
+- Removed legacy callback page `frontend/src/app/(auth)/callback/page.tsx` and context-dependent tests
 - Deleted broken duplicate ADR file `docs/adrs/adr-0012-slowapi-aiolimiter-migration.md` (superseded by ADR-0021)
 
 - Removed unused AI SDK client dependencies (`ai`, `@ai-sdk/react`, `@ai-sdk/openai`) from frontend/package.json
@@ -101,6 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- FastAPI AuthenticationMiddleware: corrected typing, Pydantic v2 config, Supabase token validation via `auth.get_user`, unified responses
 - Fixed base agent node logging now emits the full exception message, keeping orchestration diagnostics actionable
 - Fixed consolidated, typed Google Maps integration:
   - New Pydantic models (`tripsage_core/models/api/maps_models.py`)
@@ -120,6 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
+- Removed React auth context; SSR + route handlers are required for auth; OAuth and email confirm flows now terminate in server routes
 - **ChatService Alignment**: ChatService finalized to DI-only (no globals/event-loop hacks); public methods now directly call DatabaseService helpers: `create_chat_session`, `create_chat_message`, `get_user_chat_sessions`, `get_session_messages`, `get_chat_session`, `get_message_tool_calls`, `update_tool_call`, `update_session_timestamp`, `end_chat_session`
 - **ChatService Alignment**: Removed router-compat wrappers (`list_sessions`, `create_message`, `delete_session`) and legacy parameter orders; canonical signatures are:
   - `get_session(session_id, user_id)`, `get_messages(session_id, user_id, limit|offset)`, `add_message(session_id, user_id, MessageCreateRequest)`

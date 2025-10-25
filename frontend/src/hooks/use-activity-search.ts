@@ -1,6 +1,8 @@
 /**
- * @fileoverview Hook for activity search state. Exposes search/save methods,
- * loading flags, errors, and cached lists without performing side effects.
+ * @fileoverview Mock implementation of activity search hook.
+ *
+ * Placeholder implementation for activity search functionality.
+ * Provides interface for search methods and state management.
  */
 
 import type { ActivitySearchParams } from "@/types/search";
@@ -20,8 +22,9 @@ export interface UseActivitySearchResult {
 }
 
 /**
- * Hook surface for activity search.
- * @returns Stable actions, flags, and caches for activity search.
+ * Hook for activity search functionality.
+ *
+ * @returns Object with search methods and state
  */
 export function useActivitySearch(): UseActivitySearchResult {
   return {
