@@ -45,8 +45,6 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@supabase/auth-ui-react": "^0.4.7",
-    "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/postgrest-js": "^2.76.1",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.76.1",
