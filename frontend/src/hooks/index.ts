@@ -1,4 +1,7 @@
-// Export all hooks for easy import
+/**
+ * @fileoverview Central export barrel for React hooks. Prefer importing
+ * from this module to keep paths stable across refactors.
+ */
 
 export * from "./use-accommodation-search";
 export * from "./use-activity-search";

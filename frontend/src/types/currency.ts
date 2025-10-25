@@ -1,5 +1,5 @@
 /**
- * Types for Currency management and exchange rates
+ * @fileoverview Types and schemas for currency management and exchange rates.
  */
 import { z } from "zod";
 

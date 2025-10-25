@@ -1,6 +1,6 @@
 /**
- * Environment setup and validation for TripSage frontend
- * Validates environment variables at startup and provides type-safe access
+ * @fileoverview Environment setup and validation for the frontend. Validates
+ * environment variables at startup and exposes type-safe accessors.
  */
 
 import type { ClientEnv, EnvironmentInfo, ServerEnv } from "./schemas/env";

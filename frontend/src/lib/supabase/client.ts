@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Browser Supabase client factory and React hook.
+ * Provides a singleton typed client for the Database schema.
+ */
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useMemo } from "react";

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Server-side Supabase client factory with cookie wiring for
+ * Next.js App Router handlers. Creates a typed client per request.
+ */
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";

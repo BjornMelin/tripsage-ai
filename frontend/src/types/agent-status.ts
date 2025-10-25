@@ -1,8 +1,8 @@
 /**
- * Agent Status tracking types - now using Zod schemas for runtime validation
+ * @fileoverview Agent status types re-exported from Zod schemas for runtime
+ * validation. Prefer importing schemas from `lib/schemas/agent-status`.
  *
- * @deprecated Direct type imports - use Zod schemas from /lib/schemas/agent-status.ts instead
- * This file now re-exports types from the Zod schemas for backward compatibility
+ * @deprecated Use Zod schemas from /lib/schemas/agent-status.ts instead.
  */
 
 // Re-export types from Zod schemas for backward compatibility

@@ -1,6 +1,6 @@
 /**
- * Query factory functions for consistent query creation and management
- * Following React Query v5 best practices for query organization
+ * @fileoverview Query factory functions for consistent query creation and
+ * management. Encodes caching, staleness, and invalidation patterns.
  */
 
 import type {

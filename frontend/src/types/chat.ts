@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Chat types and enums used across messaging features.
+ * Includes Zod-backed role/schema helpers for validation.
+ */
 import { z } from "zod";
 
 // Message role schema
