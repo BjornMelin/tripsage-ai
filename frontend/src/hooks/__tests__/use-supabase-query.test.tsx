@@ -4,7 +4,6 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils";
-import React from "react";
 
 /**
  * Test component to render trip count using useSupabaseQuery.
@@ -16,7 +15,7 @@ function UsersList() {
     table: "trips" as any,
     columns: "id",
   });
-  return <div aria-label="count">{isSuccess ? (data?.length || 0) : "-"}</div>;
+  return <div data-testid="count">{isSuccess ? data?.length || 0 : "-"}</div>;
 }
 
 describe("useSupabaseQuery", () => {
@@ -26,7 +25,9 @@ describe("useSupabaseQuery", () => {
       useSupabase: () => ({
         auth: {
           getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })),
-          onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+          onAuthStateChange: vi.fn(() => ({
+            data: { subscription: { unsubscribe: vi.fn() } },
+          })),
         },
         from: vi.fn(() => ({
           select: vi.fn(async () => ({ data: [{ id: 1 }, { id: 2 }], error: null })),
@@ -34,7 +35,7 @@ describe("useSupabaseQuery", () => {
       }),
     }));
 
-    const { findByLabelText } = render(<UsersList />);
-    expect(await findByLabelText("count")).toHaveTextContent("2");
+    const { findByTestId } = render(<UsersList />);
+    expect(await findByTestId("count")).toHaveTextContent("2");
   });
 });
