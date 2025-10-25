@@ -1,3 +1,10 @@
+/**
+ * @fileoverview React hook for accommodation search functionality.
+ *
+ * Provides hooks for searching accommodations, managing search parameters,
+ * and handling search results with caching and error handling.
+ */
+
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -14,6 +21,14 @@ export interface AccommodationSearchResponse {
   metadata?: Record<string, string | number | boolean | Record<string, unknown>>;
 }
 
+/**
+ * Hook for accommodation search functionality.
+ *
+ * Provides methods for searching accommodations, managing search state,
+ * and accessing search suggestions.
+ *
+ * @returns Object with search methods and state
+ */
 export function useAccommodationSearch() {
   const { updateAccommodationParams } = useSearchParamsStore();
   const { startSearch, setSearchResults, setSearchError, completeSearch } =

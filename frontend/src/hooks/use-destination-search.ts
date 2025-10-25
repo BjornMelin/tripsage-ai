@@ -1,6 +1,8 @@
 /**
- * @fileoverview Hook for destination search state. Provides memoized actions
- * and loading/error state without performing network calls.
+ * @fileoverview Mock implementation of destination search hook.
+ *
+ * Placeholder implementation for destination search functionality.
+ * Provides interface for search methods and state management.
  */
 
 import { useCallback, useState } from "react";
@@ -19,8 +21,9 @@ export interface UseDestinationSearchResult {
 }
 
 /**
- * Hook surface for destination search.
- * @returns Actions and flags for destination search without side effects.
+ * Hook for destination search functionality.
+ *
+ * @returns Object with search methods and state
  */
 export function useDestinationSearch(): UseDestinationSearchResult {
   const [isSearching, setIsSearching] = useState(false);

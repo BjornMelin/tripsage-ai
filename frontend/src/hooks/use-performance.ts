@@ -1,3 +1,10 @@
+/**
+ * @fileoverview React hooks for performance monitoring.
+ *
+ * Provides hooks for measuring page load times, component render times,
+ * and web vitals tracking.
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,6 +16,13 @@ interface PerformanceMetrics {
   isHydrated: boolean;
 }
 
+/**
+ * Hook for measuring page performance metrics.
+ *
+ * Tracks load time, render time, bundle size, and hydration status.
+ *
+ * @returns Performance metrics object
+ */
 export function usePerformance() {
   const [metrics, setMetrics] = useState<PerformanceMetrics>({
     loadTime: 0,
@@ -61,7 +75,13 @@ export function usePerformance() {
   return metrics;
 }
 
-// Hook to measure component render time
+/**
+ * Hook to measure component render time.
+ *
+ * Logs render time to console in development mode.
+ *
+ * @param componentName - Name of the component for logging
+ */
 export function useComponentPerformance(componentName: string) {
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
@@ -75,7 +95,12 @@ export function useComponentPerformance(componentName: string) {
   }, [componentName]);
 }
 
-// Hook to report Web Vitals
+/**
+ * Hook to report Web Vitals metrics.
+ *
+ * Dynamically imports and initializes web-vitals library to track
+ * Core Web Vitals (CLS, INP, FCP, LCP, TTFB).
+ */
 export function useWebVitals() {
   useEffect(() => {
     if (typeof window === "undefined") return;

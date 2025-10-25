@@ -1,7 +1,8 @@
 /**
- * @fileoverview React hook for managing AI chat functionality.
- * Provides a comprehensive interface for sending messages, handling streaming responses,
- * managing tool calls, and maintaining chat session state with authentication validation.
+ * @fileoverview React hook for AI chat functionality.
+ *
+ * Provides interface for sending messages, handling streaming responses,
+ * managing tool calls, and maintaining chat session state.
  */
 
 "use client";
