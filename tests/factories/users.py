@@ -10,6 +10,8 @@ from tripsage_core.models.db.user import User
 
 @register_fixture
 class UserFactory(ModelFactory[User]):
-    """Polyfactory factory for :class:`User`."""
+    """Polyfactory factory for :class:`User` with stable defaults."""
 
     __model__ = User
+    __use_defaults__ = True
+    __random_seed__ = 2025
