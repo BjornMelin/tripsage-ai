@@ -34,7 +34,10 @@ interface RegisterFormProps {
  * @param className Optional card class name.
  * @returns Registration form JSX element.
  */
-export function RegisterForm({ redirectTo = "/dashboard", className }: RegisterFormProps) {
+export function RegisterForm({
+  redirectTo = "/dashboard",
+  className,
+}: RegisterFormProps) {
   const router = useRouter();
   const search = useSearchParams();
   const nextParam = search?.get("next") || "";
@@ -108,7 +111,9 @@ export function RegisterForm({ redirectTo = "/dashboard", className }: RegisterF
   return (
     <Card className={className}>
       <CardHeader className="space-y-2 pb-4">
-        <CardTitle className="text-2xl font-bold text-center">Create your account</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">
+          Create your account
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
@@ -169,10 +174,18 @@ export function RegisterForm({ redirectTo = "/dashboard", className }: RegisterF
         </div>
 
         <div className="grid grid-cols-1 gap-2">
-          <Button type="button" variant="outline" onClick={() => handleSocialLogin("github")}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleSocialLogin("github")}
+          >
             Continue with GitHub
           </Button>
-          <Button type="button" variant="outline" onClick={() => handleSocialLogin("google")}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleSocialLogin("google")}
+          >
             Continue with Google
           </Button>
         </div>
