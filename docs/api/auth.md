@@ -99,12 +99,45 @@ if response.status_code == 401:
     response = requests.get(url, headers=headers)
 ```
 
+## Next.js SSR Integration
+
+- We use `@supabase/ssr` for server-safe authentication with PKCE and cookie storage.
+- Middleware refreshes sessions: `createServerClient(...).auth.getUser()`; avoid using `getSession()` on the server for gating.
+- Server Components and Route Handlers should instantiate a server client and call `auth.getUser()` to guard pages and fetch user info.
+
+```ts
+// app/auth/callback/route.ts
+import { NextResponse, type NextRequest } from "next/server";
+import { createServerSupabase } from "@/lib/supabase/server";
+
+export async function GET(request: NextRequest) {
+  const { searchParams, origin } = new URL(request.url);
+  const code = searchParams.get("code");
+  if (code) {
+    const supabase = await createServerSupabase();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) return NextResponse.redirect(`${origin}/dashboard`);
+  }
+  return NextResponse.redirect(`${origin}/login?error=oauth_failed`);
+}
+```
+
+## Email Confirmation & OTP
+
+- Confirm signup emails should link to `/auth/confirm?token_hash={{ .TokenHash }}&type=email`.
+- The `auth/confirm` route handler calls `supabase.auth.verifyOtp({ type, token_hash })` and redirects to the app.
+
+## Server Validation (Backend)
+
+- We no longer decode JWTs locally. The backend validates access tokens with Supabase using `supabase.auth.get_user(token)`.
+- This centralizes verification and removes custom JWT parsing.
+
 ## Security Best Practices
 
 ### Token Storage
 
 - **Never store tokens in localStorage** (vulnerable to XSS)
-- Use secure httpOnly cookies for server-side storage
+- Use secure cookies for server-side storage (SSR approach)
 - Use Supabase's built-in session management
 
 ### Token Transmission
