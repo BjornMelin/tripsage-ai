@@ -1,3 +1,10 @@
+/**
+ * @fileoverview React hooks for managing loading states.
+ *
+ * Provides hooks for loading state management with timeout, progress tracking,
+ * debouncing, and async operation handling.
+ */
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -40,7 +47,10 @@ export interface UseLoadingReturn {
 }
 
 /**
- * Hook for managing loading states with optional timeout
+ * Hook for managing loading states with optional timeout.
+ *
+ * @param options - Configuration options
+ * @returns Loading state and control functions
  */
 export function useLoading(options: UseLoadingOptions = {}): UseLoadingReturn {
   const { initialLoading = false, initialMessage, timeout, onTimeout } = options;
@@ -151,7 +161,11 @@ export function useLoading(options: UseLoadingOptions = {}): UseLoadingReturn {
 }
 
 /**
- * Hook for managing multiple async operations with loading states
+ * Hook for managing async operations with loading states.
+ *
+ * @template T - Return type of the async function
+ * @param asyncFn - Async function to execute
+ * @returns Loading state and execution function
  */
 export interface UseAsyncLoadingReturn<T> {
   data?: T;
@@ -204,7 +218,10 @@ export function useAsyncLoading<T>(
 }
 
 /**
- * Hook for managing loading state with debounced updates
+ * Hook for managing loading state with debounced updates.
+ *
+ * @param delay - Debounce delay in milliseconds (default: 300)
+ * @returns Loading state with debounced start/stop functions
  */
 export function useDebouncedLoading(delay = 300): UseLoadingReturn {
   const loading = useLoading();

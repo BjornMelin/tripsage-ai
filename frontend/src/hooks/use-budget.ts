@@ -1,3 +1,10 @@
+/**
+ * @fileoverview React hooks for budget and expense management.
+ *
+ * Provides hooks for managing budgets, expenses, alerts, and currency conversion
+ * with local state management and API synchronization.
+ */
+
 "use client";
 
 import { useEffect } from "react";
@@ -20,7 +27,7 @@ import type {
 import { useBudgetStore } from "@/stores/budget-store";
 
 /**
- * Hook for using the budget store
+ * Hook for accessing budget store state.
  */
 export function useBudget() {
   const {
@@ -43,7 +50,7 @@ export function useBudget() {
 }
 
 /**
- * Hook for budget management actions
+ * Hook for budget management actions.
  */
 export function useBudgetActions() {
   const {
@@ -66,7 +73,9 @@ export function useBudgetActions() {
 }
 
 /**
- * Hook for expense management
+ * Hook for expense management.
+ *
+ * @param budgetId - Optional budget ID to filter expenses
  */
 export function useExpenses(budgetId?: string) {
   const { expenses, addExpense, updateExpense, removeExpense } = useBudgetStore();
@@ -81,7 +90,9 @@ export function useExpenses(budgetId?: string) {
 }
 
 /**
- * Hook for alerts management
+ * Hook for alerts management.
+ *
+ * @param budgetId - Optional budget ID to filter alerts
  */
 export function useAlerts(budgetId?: string) {
   const { alerts, addAlert, markAlertAsRead, clearAlerts } = useBudgetStore();
@@ -98,7 +109,7 @@ export function useAlerts(budgetId?: string) {
 // API hooks for server interaction
 
 /**
- * Hook for fetching all budgets for the current user
+ * Hook for fetching all budgets for the current user.
  */
 export function useFetchBudgets() {
   const { setBudgets } = useBudgetStore();
@@ -124,7 +135,9 @@ export function useFetchBudgets() {
 }
 
 /**
- * Hook for fetching a single budget
+ * Hook for fetching a single budget.
+ *
+ * @param id - Budget ID to fetch
  */
 export function useFetchBudget(id: string) {
   const { addBudget } = useBudgetStore();
@@ -147,7 +160,7 @@ export function useFetchBudget(id: string) {
 }
 
 /**
- * Hook for creating a new budget
+ * Hook for creating a new budget.
  */
 export function useCreateBudget() {
   const { addBudget } = useBudgetStore();
@@ -164,7 +177,7 @@ export function useCreateBudget() {
 }
 
 /**
- * Hook for updating a budget
+ * Hook for updating a budget.
  */
 export function useUpdateBudget() {
   const { updateBudget } = useBudgetStore();
@@ -181,7 +194,7 @@ export function useUpdateBudget() {
 }
 
 /**
- * Hook for deleting a budget
+ * Hook for deleting a budget.
  */
 export function useDeleteBudget() {
   const { removeBudget } = useBudgetStore();
@@ -200,7 +213,9 @@ export function useDeleteBudget() {
 }
 
 /**
- * Hook for fetching expenses for a budget
+ * Hook for fetching expenses for a budget.
+ *
+ * @param budgetId - Budget ID to fetch expenses for
  */
 export function useFetchExpenses(budgetId: string) {
   const { setExpenses } = useBudgetStore();
@@ -223,7 +238,7 @@ export function useFetchExpenses(budgetId: string) {
 }
 
 /**
- * Hook for adding an expense
+ * Hook for adding an expense.
  */
 export function useAddExpense() {
   const { addExpense } = useBudgetStore();
@@ -240,7 +255,7 @@ export function useAddExpense() {
 }
 
 /**
- * Hook for updating an expense
+ * Hook for updating an expense.
  */
 export function useUpdateExpense() {
   const { updateExpense } = useBudgetStore();
@@ -257,7 +272,7 @@ export function useUpdateExpense() {
 }
 
 /**
- * Hook for deleting an expense
+ * Hook for deleting an expense.
  */
 export function useDeleteExpense() {
   const { removeExpense } = useBudgetStore();
@@ -277,7 +292,9 @@ export function useDeleteExpense() {
 }
 
 /**
- * Hook for fetching budget alerts
+ * Hook for fetching budget alerts.
+ *
+ * @param budgetId - Budget ID to fetch alerts for
  */
 export function useFetchAlerts(budgetId: string) {
   const { setAlerts } = useBudgetStore();
@@ -300,7 +317,7 @@ export function useFetchAlerts(budgetId: string) {
 }
 
 /**
- * Hook for creating a budget alert
+ * Hook for creating a budget alert.
  */
 export function useCreateAlert() {
   const { addAlert } = useBudgetStore();
@@ -317,7 +334,7 @@ export function useCreateAlert() {
 }
 
 /**
- * Hook for marking an alert as read
+ * Hook for marking an alert as read.
  */
 export function useMarkAlertAsRead() {
   const { markAlertAsRead } = useBudgetStore();
@@ -337,7 +354,7 @@ export function useMarkAlertAsRead() {
 }
 
 /**
- * Hook for fetching currency exchange rates
+ * Hook for fetching currency exchange rates.
  */
 export function useFetchCurrencyRates() {
   const { setCurrencies } = useBudgetStore();
