@@ -1,6 +1,6 @@
 /**
- * Error type definitions for React Query integration
- * Provides proper TypeScript error handling across the application
+ * @fileoverview Error type definitions and helpers for API and React Query
+ * integration. Includes rich error classes, guards, and user-facing messages.
  */
 
 export interface ApiErrorResponse {

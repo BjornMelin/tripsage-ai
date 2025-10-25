@@ -1,8 +1,6 @@
 /**
- * Error Boundary Components - Export index
- *
- * This module provides error handling components for React applications,
- * including error boundaries, fallback UI components, and error reporting services.
+ * @fileoverview Error boundary components and utilities export barrel. Includes
+ * error boundaries, fallback UI components, and the error reporting service.
  */
 
 export { useErrorHandler } from "@/hooks/use-error-handler";

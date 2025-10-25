@@ -1,5 +1,5 @@
 /**
- * Types for API Key management
+ * @fileoverview Types for API key management.
  */
 
 export interface ApiKey {

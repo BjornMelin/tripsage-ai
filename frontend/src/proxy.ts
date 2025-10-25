@@ -1,6 +1,17 @@
+/**
+ * @fileoverview Next.js middleware helpers for Supabase session refresh and
+ * simple proxy-style handling. This runs at the edge and ensures the session
+ * cookie state is kept in sync for Server Components.
+ */
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
+/**
+ * Refresh the Supabase session and propagate any updated cookies.
+ *
+ * @param request Incoming Next.js request.
+ * @returns A `NextResponse` that includes any cookie mutations.
+ */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -48,11 +59,19 @@ export async function updateSession(request: NextRequest) {
   return supabaseResponse;
 }
 
+/**
+ * Middleware entrypoint to ensure auth state is refreshed.
+ *
+ * @param request Incoming Next.js request.
+ * @returns Response from `updateSession`.
+ */
 export async function proxy(request: NextRequest) {
-  // Handle Supabase auth for all routes first
   return await updateSession(request);
 }
 
+/**
+ * Middleware matcher configuration to exclude static assets and public files.
+ */
 export const config = {
   matcher: [
     /*

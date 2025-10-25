@@ -1,5 +1,5 @@
 /**
- * Schema adapters for frontend API compatibility.
+ * @fileoverview Schema adapters for frontend API compatibility.
  *
  * Handles conversion between different field naming conventions:
  * - Backend snake_case vs Frontend camelCase

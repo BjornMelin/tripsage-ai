@@ -1,6 +1,5 @@
 /**
- * React Hook Form integration with Zod validation
- * Provides type-safe form handling with error management
+ * @fileoverview Form helpers that integrate Zod validation with React Hook Form.
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";

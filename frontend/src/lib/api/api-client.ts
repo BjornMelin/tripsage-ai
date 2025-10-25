@@ -1,6 +1,7 @@
 /**
- * API client with Zod validation.
- * Provides runtime type safety for all API interactions.
+ * @fileoverview API client with Zod validation. Provides runtime type safety
+ * for requests and responses, request/response interceptors, and retry/timeout
+ * behavior suitable for browser runtimes.
  */
 
 import type { z } from "zod";

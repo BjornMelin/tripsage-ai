@@ -1,9 +1,7 @@
 /**
- * WebSocket client with auto-reconnection and event handling
- *
- * Provides WebSocket management for real-time communication
- * with the TripSage backend, including authentication, reconnection logic,
- * and typed event handling.
+ * @fileoverview WebSocket client with auto-reconnection and typed events.
+ * Manages authentication, channel subscriptions, and resilient reconnects for
+ * real-time features used across the app.
  */
 
 import { z } from "zod";

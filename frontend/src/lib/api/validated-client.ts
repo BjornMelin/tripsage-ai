@@ -1,6 +1,6 @@
 /**
- * Validated API client with runtime type safety
- * All API calls are validated with Zod schemas
+ * @fileoverview Validated API client with runtime type safety using Zod
+ * schemas. Encapsulates fetch, timeouts, retries, and response validation.
  */
 
 import { z } from "zod";
