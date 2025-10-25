@@ -96,10 +96,3 @@ export function useMemoryStats(userId: string, enabled = true) {
     }
   );
 }
-
-/**
- * Hook for storing conversation memory (alias for backwards compatibility)
- */
-export function useStoreConversation() {
-  return useAddConversationMemory();
-}

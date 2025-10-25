@@ -8,7 +8,7 @@ import type {
   AgentStatusType,
   AgentTask,
   ResourceUsage,
-} from "@/types/agent-status";
+} from "@/lib/schemas/agent-status";
 
 interface AgentStatusState {
   agents: Agent[];

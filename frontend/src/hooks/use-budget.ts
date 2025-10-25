@@ -7,7 +7,6 @@ import {
   useApiPutMutation,
   useApiQuery,
 } from "@/hooks/use-api-query";
-import { useBudgetStore } from "@/stores/budget-store";
 import type {
   AddExpenseRequest,
   Budget,
@@ -17,7 +16,8 @@ import type {
   Expense,
   UpdateBudgetRequest,
   UpdateExpenseRequest,
-} from "@/types/budget";
+} from "@/lib/schemas/budget";
+import { useBudgetStore } from "@/stores/budget-store";
 
 /**
  * Hook for using the budget store

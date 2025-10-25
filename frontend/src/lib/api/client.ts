@@ -156,6 +156,3 @@ export const api = {
       body: formData,
     }),
 };
-
-// Export as apiClient for backwards compatibility
-export const apiClient = api;
