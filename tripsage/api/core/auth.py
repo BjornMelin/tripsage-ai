@@ -1,13 +1,16 @@
-"""JWT authentication for TripSage API.
+"""Supabase-authenticated user extraction for TripSage API.
 
-This module provides clean, maintainable authentication following FastAPI
-best practices. Replaces complex middleware with simple dependency injection.
+This module replaces local JWT decoding with Supabase's official Python SDK
+for token validation and user resolution. It provides clean, maintainable
+FastAPI dependencies aligned with library-native behavior (KISS/DRY).
 """
+
+from __future__ import annotations
 
 import logging
 
-import jwt
 from fastapi import Header, HTTPException, status
+from supabase import Client, create_client
 
 from tripsage_core.config import get_settings
 
@@ -15,19 +18,31 @@ from tripsage_core.config import get_settings
 logger = logging.getLogger(__name__)
 
 
-async def get_current_user_id(authorization: str | None = Header(None)) -> str:
-    """Verify JWT token and return user ID.
-
-    Maintainable authentication dependency following FastAPI best practices.
-
-    Args:
-        authorization: Authorization header with Bearer token
+def _supabase_client() -> Client:
+    """Create a Supabase client using service role credentials.
 
     Returns:
-        User ID string from JWT sub claim
+        Client: Supabase admin client for server-side auth operations.
+    """
+    settings = get_settings()
+    return create_client(
+        # pylint: disable=no-member # type: ignore
+        settings.database_url,
+        settings.database_service_key.get_secret_value(),
+    )
+
+
+async def get_current_user_id(authorization: str | None = Header(None)) -> str:
+    """Validate Authorization bearer token with Supabase and return user ID.
+
+    Args:
+        authorization: Authorization header with Bearer token.
+
+    Returns:
+        The authenticated user's UUID string.
 
     Raises:
-        HTTPException: 401 if token is missing, invalid, or expired
+        HTTPException: 401 if token is missing or invalid.
     """
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
@@ -36,44 +51,36 @@ async def get_current_user_id(authorization: str | None = Header(None)) -> str:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = authorization.replace("Bearer ", "")
-    settings = get_settings()
+    token = authorization.replace("Bearer ", "", 1).strip()
 
     try:
-        payload = jwt.decode(
-            token,
-            settings.database_jwt_secret.get_secret_value(),
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
-        user_id = payload.get("sub")
-        if not user_id:
+        supabase = _supabase_client()
+        user_resp = supabase.auth.get_user(token)
+        user = getattr(user_resp, "user", None)
+        if not user or not getattr(user, "id", None):
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
             )
-        return user_id
-    except jwt.ExpiredSignatureError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired"
-        ) from e
-    except jwt.InvalidTokenError as e:
+        return str(user.id)
+    except HTTPException:
+        raise
+    except Exception as exc:  # Catch SDK/HTTP errors explicitly at boundary
+        logger.warning("Supabase auth validation failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        ) from e
+        ) from exc
 
 
 async def get_optional_user_id(
     authorization: str | None = Header(None),
 ) -> str | None:
-    """Get user ID if authenticated, None otherwise.
-
-    For endpoints that work with or without authentication.
+    """Get user ID if authenticated; return None otherwise.
 
     Args:
-        authorization: Authorization header with Bearer token
+        authorization: Authorization header with Bearer token.
 
     Returns:
-        User ID string if authenticated, None otherwise
+        Authenticated user UUID string, or None when unauthenticated/invalid.
     """
     if not authorization:
         return None
