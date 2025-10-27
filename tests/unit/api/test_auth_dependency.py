@@ -1,55 +1,53 @@
-"""Unit tests for get_current_user_id dependency using claims-first verification."""
+"""Unit tests for principal-based auth dependencies."""
 
-from typing import Any
+import pytest
+from starlette.requests import Request
 
-from fastapi import Depends, FastAPI
-from fastapi.testclient import TestClient
-
-from tripsage.api.core.auth import get_current_user_id
-
-
-def create_app(monkeypatch: Any) -> FastAPI:
-    """Create a minimal FastAPI app with patched claim verification.
-
-    Args:
-        monkeypatch: Pytest monkeypatch fixture.
-
-    Returns:
-        FastAPI: Configured app exposing /me endpoint.
-    """
-    app = FastAPI()
-
-    async def fake_verify(jwt: str):
-        return {"sub": "user-123", "email": "u@example.com", "aud": "authenticated"}
-
-    from tripsage.api.core import auth
-
-    monkeypatch.setattr(auth, "verify_and_get_claims", fake_verify)
-
-    @app.get("/me")
-    async def me(user_id: str = Depends(get_current_user_id)):  # pyright: ignore[reportUnusedFunction]
-        return {"user_id": user_id}
-
-    return app
+from tripsage.api.core.dependencies import (
+    get_current_principal,
+    get_principal_id,
+    require_principal,
+)
+from tripsage.api.middlewares.authentication import Principal
+from tripsage_core.exceptions.exceptions import CoreAuthenticationError
 
 
-def test_get_current_user_id_success(monkeypatch: Any) -> None:
-    """Return 200 and the expected user id when Authorization header is valid."""
-    app = create_app(monkeypatch)
-    client = TestClient(app)
-    res = client.get("/me", headers={"Authorization": "Bearer tok"})
-    assert res.status_code == 200
-    assert res.json()["user_id"] == "user-123"
+def _make_request_with_principal(principal: Principal | None) -> Request:
+    scope: dict[str, object] = {
+        "type": "http",
+        "method": "GET",
+        "path": "/",
+        "headers": [],
+    }
+    req = Request(scope)  # type: ignore[arg-type]
+    if principal is not None:
+        req.state.principal = principal
+    return req
 
 
-def test_get_current_user_id_missing() -> None:
-    """Return 401 when Authorization header is missing."""
-    app = FastAPI()
+@pytest.mark.asyncio
+async def test_require_principal_success() -> None:
+    """require_principal returns the principal when present on request.state."""
+    principal = Principal(id="user-123", type="user", auth_method="jwt")
+    req = _make_request_with_principal(principal)
+    result = await require_principal(req)
+    assert result.id == "user-123"
+    assert get_principal_id(result) == "user-123"
 
-    @app.get("/me")
-    async def me(user_id: str = Depends(get_current_user_id)):  # pyright: ignore[reportUnusedFunction]
-        return {"user_id": user_id}
 
-    client = TestClient(app)
-    res = client.get("/me")
-    assert res.status_code == 401
+@pytest.mark.asyncio
+async def test_require_principal_missing_raises() -> None:
+    """require_principal raises CoreAuthenticationError when unauthenticated."""
+    req = _make_request_with_principal(None)
+    with pytest.raises(CoreAuthenticationError):
+        await require_principal(req)
+
+
+@pytest.mark.asyncio
+async def test_get_current_principal_optional() -> None:
+    """get_current_principal returns principal or None without raising."""
+    principal = Principal(id="user-xyz", type="user", auth_method="jwt")
+    req = _make_request_with_principal(principal)
+    assert await get_current_principal(req) is principal
+    req2 = _make_request_with_principal(None)
+    assert await get_current_principal(req2) is None

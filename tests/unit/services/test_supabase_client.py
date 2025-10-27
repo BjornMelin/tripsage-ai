@@ -27,6 +27,11 @@ def reset_clients(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(supabase_client, "get_settings", _fake_settings)
 
+    def _client_options(*args: object, **kwargs: object) -> SimpleNamespace:
+        return SimpleNamespace(args=args, kwargs=kwargs)
+
+    monkeypatch.setattr(supabase_client, "ClientOptions", _client_options)
+
 
 @pytest.mark.asyncio
 async def test_get_admin_client_caches_instance(
