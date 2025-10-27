@@ -11,7 +11,6 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from tripsage.api.core import auth
 from tripsage.api.core.dependencies import get_chat_service, require_principal
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.chat import ChatRequest, ChatResponse
@@ -118,9 +117,13 @@ def _principal_stub() -> Principal:
 def config_overrides(app: FastAPI) -> Iterator[None]:
     """Stub authentication to simplify configuration flows."""
     overrides = cast(dict[Any, Any], app.dependency_overrides)
-    overrides[auth.get_current_user_id] = lambda: "user-123"
+    async def _principal_override():
+        class _P:
+            id = "user-123"
+        return _P()
+    overrides[require_principal] = _principal_override
     yield
-    overrides.pop(auth.get_current_user_id, None)
+    overrides.pop(require_principal, None)
 
 
 @pytest.mark.e2e
