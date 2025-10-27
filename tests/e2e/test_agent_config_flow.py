@@ -117,10 +117,13 @@ def _principal_stub() -> Principal:
 def config_overrides(app: FastAPI) -> Iterator[None]:
     """Stub authentication to simplify configuration flows."""
     overrides = cast(dict[Any, Any], app.dependency_overrides)
+
     async def _principal_override():
         class _P:
             id = "user-123"
+
         return _P()
+
     overrides[require_principal] = _principal_override
     yield
     overrides.pop(require_principal, None)

@@ -14,6 +14,7 @@ import { PerformanceMonitor } from "@/components/providers/performance-provider"
 import { TanStackQueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
+import { RealtimeAuthProvider } from "@/components/providers/realtime-auth-provider";
 
 /**
  * Primary sans-serif font configuration.
@@ -85,6 +86,8 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
+              {/* Keep Supabase Realtime authorized with the current access token */}
+              <RealtimeAuthProvider />
               <div className="flex flex-col min-h-screen">
                 <Suspense fallback={null}>
                   <Navbar />
