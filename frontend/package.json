@@ -103,7 +103,7 @@
     "tailwindcss": "^4",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5",
-    "vitest": "^3.1.4"
+    "vitest": "^4.0.3"
   },
   "pnpm": {
     "overrides": {
