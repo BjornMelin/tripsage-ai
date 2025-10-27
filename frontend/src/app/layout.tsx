@@ -12,9 +12,9 @@ import "./globals.css";
 import { Navbar } from "@/components/layouts/navbar";
 import { PerformanceMonitor } from "@/components/providers/performance-provider";
 import { TanStackQueryProvider } from "@/components/providers/query-provider";
+import { RealtimeAuthProvider } from "@/components/providers/realtime-auth-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
-import { RealtimeAuthProvider } from "@/components/providers/realtime-auth-provider";
 
 /**
  * Primary sans-serif font configuration.
