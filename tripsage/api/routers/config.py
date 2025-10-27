@@ -2,20 +2,27 @@
 
 Provides RESTful endpoints for managing agent configurations with validation,
 versioning, and real-time updates following 2025 best practices.
+
 """
+# pyright: reportUnknownVariableType=false
 
 from datetime import UTC, datetime
+from typing import Any, TypedDict, cast
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
-from tripsage.api.core.auth import get_current_user_id
+from tripsage.api.core.dependencies import (
+    RequiredPrincipalDep,
+    get_principal_id,
+)
 from tripsage.api.schemas.config import (
     AgentConfigRequest,
     AgentConfigResponse,
     AgentType,
     ConfigurationScope,
     ConfigurationVersion,
+    ModelName,
     WebSocketConfigMessage,
 )
 from tripsage_core.config import get_settings
@@ -23,8 +30,19 @@ from tripsage_core.observability.otel import record_histogram, trace_span
 from tripsage_core.utils.logging_utils import get_logger
 
 
+# Strongly-typed default agent configuration
+class AgentConfig(TypedDict):
+    """Typed shape for agent configuration defaults used in this router."""
+
+    temperature: float
+    max_tokens: int
+    top_p: float
+    timeout_seconds: int
+    model: ModelName
+
+
 # Default agent configurations
-DEFAULT_AGENT_CONFIGS = {
+DEFAULT_AGENT_CONFIGS: dict[AgentType, AgentConfig] = {
     AgentType.BUDGET_AGENT: {
         "temperature": 0.1,
         "max_tokens": 1000,
@@ -49,7 +67,7 @@ DEFAULT_AGENT_CONFIGS = {
 }
 
 
-logger = get_logger(__name__)
+logger: Any = get_logger(__name__)
 
 router = APIRouter(prefix="/config", tags=["configuration"])
 
@@ -115,10 +133,10 @@ async def get_agent_config(agent_type: str):
 
         return AgentConfigResponse(
             agent_type=agent_type_enum,
-            temperature=config["temperature"],
-            max_tokens=config["max_tokens"],
-            top_p=config["top_p"],
-            timeout_seconds=config["timeout_seconds"],
+            temperature=float(config["temperature"]),
+            max_tokens=int(config["max_tokens"]),
+            top_p=float(config["top_p"]),
+            timeout_seconds=int(config["timeout_seconds"]),
             model=config["model"],
             scope=ConfigurationScope.AGENT_SPECIFIC,
             updated_at=datetime.now(UTC),
@@ -134,7 +152,7 @@ async def get_agent_config(agent_type: str):
 async def update_agent_config(
     agent_type: str,
     config_update: AgentConfigRequest,
-    current_user: str = Depends(get_current_user_id),
+    principal: RequiredPrincipalDep,
 ):
     """Update configuration for a specific agent type."""
     # Validate agent type
@@ -166,8 +184,9 @@ async def update_agent_config(
             updates["model"] = config_update.model
 
         # Apply updates to get new config
-        updated_config = {**current_config, **updates}
+        updated_config = cast(AgentConfig, {**current_config, **updates})
 
+        current_user = get_principal_id(principal)
         # TODO: Persist to database here
         # await _persist_agent_config(agent_type, updated_config, current_user)
 
@@ -179,7 +198,7 @@ async def update_agent_config(
         message = WebSocketConfigMessage(
             type="agent_config_updated",
             agent_type=AgentType(agent_type),
-            configuration=updated_config,
+            configuration=dict(updated_config),
             updated_by=current_user,
         )
         await ws_manager.broadcast_update(message)
@@ -188,10 +207,10 @@ async def update_agent_config(
 
         return AgentConfigResponse(
             agent_type=AgentType(agent_type),
-            temperature=updated_config["temperature"],
-            max_tokens=updated_config["max_tokens"],
-            top_p=updated_config["top_p"],
-            timeout_seconds=updated_config["timeout_seconds"],
+            temperature=float(updated_config["temperature"]),
+            max_tokens=int(updated_config["max_tokens"]),
+            top_p=float(updated_config["top_p"]),
+            timeout_seconds=int(updated_config["timeout_seconds"]),
             model=updated_config["model"],
             scope=ConfigurationScope.AGENT_SPECIFIC,
             updated_at=datetime.now(UTC),
@@ -207,7 +226,9 @@ async def update_agent_config(
 
 @router.get("/agents/{agent_type}/versions", response_model=list[ConfigurationVersion])
 async def get_agent_config_versions(
-    agent_type: str, limit: int = 10, current_user: str = Depends(get_current_user_id)
+    agent_type: str,
+    principal: RequiredPrincipalDep,
+    limit: int = 10,
 ):
     """Get configuration version history for an agent type."""
     # Validate agent type
@@ -219,11 +240,12 @@ async def get_agent_config_versions(
         )
 
     try:
-        # TODO: Implement database query for version history
+        _ = get_principal_id(principal)
+        # TODO: Implement database query for version history (user id available)
         # versions = await _get_config_versions(agent_type, limit)
 
         # Placeholder response
-        return []
+        return cast(list[ConfigurationVersion], [])
 
     except Exception as e:
         logger.exception("Error getting config versions for %s", agent_type)
@@ -232,7 +254,7 @@ async def get_agent_config_versions(
 
 @router.post("/agents/{agent_type}/rollback/{version_id}")
 async def rollback_agent_config(
-    agent_type: str, version_id: str, current_user: str = Depends(get_current_user_id)
+    agent_type: str, version_id: str, principal: RequiredPrincipalDep
 ):
     """Rollback agent configuration to a specific version."""
     # Validate agent type
@@ -244,6 +266,7 @@ async def rollback_agent_config(
         )
 
     try:
+        current_user = get_principal_id(principal)
         # TODO: Implement version rollback
         # config = await _rollback_to_version(agent_type, version_id, current_user)
 
