@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from tripsage.api.core.auth import get_current_user_id
+from tripsage.api.core.dependencies import require_principal
 
 
 @pytest.mark.asyncio
@@ -39,10 +39,12 @@ async def test_update_agent_config_overrides_fields(
 ) -> None:
     """PUT /config/agents/{agent_type} should merge provided updates."""
 
-    async def _user_override() -> str:
-        return "user-123"
+    async def _principal_override():
+        class _P:
+            id = "user-123"
+        return _P()  # minimal object with id
 
-    app.dependency_overrides[get_current_user_id] = _user_override
+    app.dependency_overrides[require_principal] = _principal_override
     try:
         payload = {"temperature": 0.42, "model": "gpt-4o-mini"}
         response = await async_client.put(
@@ -50,7 +52,7 @@ async def test_update_agent_config_overrides_fields(
             json=payload,
         )
     finally:
-        app.dependency_overrides.pop(get_current_user_id, None)
+        app.dependency_overrides.pop(require_principal, None)
 
     assert response.status_code == 200
     data: dict[str, Any] = response.json()
