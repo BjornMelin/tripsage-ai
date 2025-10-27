@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dashboard regression coverages: async unit tests for `DashboardService`, refreshed HTTP router tests, and an integration harness exercising the new schema
 - Async unit tests for accommodation tools covering search/detail/booking flows via `ToolContext` mocks
 - Supabase initialization regression tests covering connection verification, schema discovery, and sample data helpers (no-network stubs)
+- Supabase Realtime Authorization policies and helpers (private channels, topic helpers, indexes):
+  - supabase/migrations/20251027_01_realtime_policies.sql
+  - supabase/migrations/20251027_02_realtime_helpers.sql
+- Frontend Realtime singleton client: `getBrowserClient()` exported from `frontend/src/lib/supabase/client.ts` to unify token and channel behavior across the app.
+- Realtime token lifecycle: `RealtimeAuthProvider` now calls `supabase.realtime.setAuth(token)` on login and clears on logout/unmount.
+- Chat store Realtime wiring with typed subscriptions for `chat:message`, `chat:message_chunk`, `chat:typing`, and `agent_status_update`.
 
 ### Changed
 
@@ -74,6 +80,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Flight agent result formatting to use canonical offer fields (airlines, outbound_segments, currency/price)
 - Documentation (developers/operators/architecture) to "Duffel API v2 via thin provider," headers and env var usage modernized, and examples aligned to canonical mapping
 - Dashboard analytics stack simplified: `DashboardService` emits only modern dataclasses, FastAPI routers consume the `metrics/services/top_users` schema directly, and rate limiting now tolerates missing infrastructure dependencies
+- Migrated chat messaging from custom WebSocket client to Supabase Realtime broadcast channels with private topics (`user:{sub}`, `session:{uuid}`).
+- Updated hooks to use the shared browser Supabase client:
+  - `use-realtime-channel`, `use-websocket-chat`, `use-agent-status-websocket` now import `getBrowserClient()`.
+- Chat UI connection behavior: resubscribe on session changes to avoid stale channel topics.
+- Admin configuration manager: removed browser WebSocket and simplified to save-and-refresh (Option A) pending optional Realtime wiring.
+- Backend OpenAPI/README documentation updated to describe Supabase Realtime (custom WS endpoints removed from docs).
 - `tripsage.tools.accommodations_tools` now accepts `ToolContext` inputs, validates registry dependencies, and exposes tool wrappers alongside plain coroutine helpers
 - Web search tooling replaced ad-hoc fallbacks with strict Agents SDK usage and literal-typed context sizing; batch helper now guards cache failures
 - Web crawl helpers simplified to use `WebCrawlService` exclusively, centralizing error normalization and metrics recording
@@ -142,6 +154,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Tailwind v4 verification of utility coverage is in progress; further class name adjustments
   will be tracked in the Tailwind v4 spec and reflected here upon completion.
+- For server-originated events, use Supabase Realtime REST API or Postgres functions (`realtime.send`) with RLS-backed policies.
+- Presence is not yet used; typing indicators use broadcast. Presence can be adopted later without API changes.
 
 ## [2.1.0] - 2025-10-20
 
@@ -255,6 +269,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - tests(frontend): deleted/replaced deprecated and brittle tests asserting raw HTML structure and Tailwind class lists; removed NODE_ENV mutation based tests.
+
 ### Testing (frontend)
 
 - Stabilized profile settings tests:
