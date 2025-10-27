@@ -12,7 +12,7 @@ import type {
   AgentTask,
   ResourceUsage,
 } from "@/lib/schemas/agent-status";
-import { createClient } from "@/lib/supabase/client";
+import { getBrowserClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 
@@ -78,7 +78,7 @@ interface AgentStatusWebSocketControls {
  * @returns {AgentStatusWebSocketControls} Realtime connection state and control handlers.
  */
 export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
   const { user } = useAuthStore();
   const {
     currentSession,

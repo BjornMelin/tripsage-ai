@@ -5,9 +5,9 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getBrowserClient } from "@/lib/supabase/client";
 
-type SupabaseChannelFactory = ReturnType<typeof createClient>;
+type SupabaseChannelFactory = ReturnType<typeof getBrowserClient>;
 
 type ChannelInstance = ReturnType<SupabaseChannelFactory["channel"]>;
 type ChannelSendRequest = Parameters<ChannelInstance["send"]>[0];
@@ -65,7 +65,7 @@ export function useRealtimeChannel<T = unknown>(
   topic: string,
   opts: UseRealtimeChannelOptions = { private: true }
 ): UseRealtimeChannelResult<T> {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<ChannelInstance | null>(null);

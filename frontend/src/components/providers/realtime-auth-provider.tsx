@@ -6,7 +6,7 @@
  */
 
 import { useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getBrowserClient } from "@/lib/supabase/client";
 import { getAccessToken } from "@/lib/supabase/token";
 
 /**
@@ -17,7 +17,7 @@ import { getAccessToken } from "@/lib/supabase/token";
  */
 export function RealtimeAuthProvider(): null {
   useEffect(() => {
-    const supabase = createClient();
+    const supabase = getBrowserClient();
 
     let isMounted = true;
 
