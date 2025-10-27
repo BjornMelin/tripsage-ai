@@ -38,6 +38,7 @@ async def test_update_agent_config_overrides_fields(
     async_client: AsyncClient, app: FastAPI
 ) -> None:
     """PUT /config/agents/{agent_type} should merge provided updates."""
+
     async def _user_override() -> str:
         return "user-123"
 

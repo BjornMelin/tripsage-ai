@@ -1,8 +1,8 @@
 """Supabase-authenticated user extraction for TripSage API.
 
-This module replaces local JWT decoding with Supabase's official Python SDK
-for token validation and user resolution. It provides clean, maintainable
-FastAPI dependencies aligned with library-native behavior (KISS/DRY).
+Uses Supabase's async SDK to validate tokens via JWKS (claims-first) and
+return the current user's id. This avoids per-request calls to the Auth server
+and eliminates blocking I/O in async code paths.
 """
 
 from __future__ import annotations
@@ -10,26 +10,13 @@ from __future__ import annotations
 import logging
 
 from fastapi import Header, HTTPException, status
-from supabase import Client, create_client
 
-from tripsage_core.config import get_settings
+from tripsage_core.services.infrastructure.supabase_client import (
+    verify_and_get_claims,
+)
 
 
 logger = logging.getLogger(__name__)
-
-
-def _supabase_client() -> Client:
-    """Create a Supabase client using service role credentials.
-
-    Returns:
-        Client: Supabase admin client for server-side auth operations.
-    """
-    settings = get_settings()
-    return create_client(
-        # pylint: disable=no-member # type: ignore
-        settings.database_url,
-        settings.database_service_key.get_secret_value(),
-    )
 
 
 async def get_current_user_id(authorization: str | None = Header(None)) -> str:
@@ -54,18 +41,17 @@ async def get_current_user_id(authorization: str | None = Header(None)) -> str:
     token = authorization.replace("Bearer ", "", 1).strip()
 
     try:
-        supabase = _supabase_client()
-        user_resp = supabase.auth.get_user(token)
-        user = getattr(user_resp, "user", None)
-        if not user or not getattr(user, "id", None):
+        claims = await verify_and_get_claims(token)
+        user_id = claims.get("sub")
+        if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
             )
-        return str(user.id)
+        return str(user_id)
     except HTTPException:
         raise
     except Exception as exc:  # Catch SDK/HTTP errors explicitly at boundary
-        logger.warning("Supabase auth validation failed: %s", exc)
+        logger.warning("Supabase claim verification failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         ) from exc

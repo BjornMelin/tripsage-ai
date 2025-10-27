@@ -34,7 +34,6 @@ class _AssertAllCalled(Protocol):
         ...
 
 
-
 @pytest.fixture()
 def mock_external_request(httpx_mock: HTTPXMock) -> MockResponseAdder:
     """Return a helper to stub outbound HTTP requests deterministically.

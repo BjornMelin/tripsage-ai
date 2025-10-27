@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import TracebackType
 from typing import Any, cast
 
 import pytest
 
+from tripsage_core.config import Settings
 from tripsage_core.services.business.api_key_service import (
     ApiKeyCreateRequest,
     ApiKeyService,
@@ -17,46 +19,57 @@ from tripsage_core.services.business.api_key_service import (
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
+class _TransactionContext:
+    """Async context manager representing a database transaction."""
+
+    def __init__(self, row: dict[str, Any]):
+        """Initialize the transaction context."""
+        self.row = row
+
+    async def __aenter__(self) -> _TransactionContext:
+        """Enter the transaction context."""
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> bool:
+        """Exit the transaction context."""
+        return False
+
+    def insert(self, *_args: Any, **_kwargs: Any) -> None:
+        """Record an insert operation."""
+        return
+
+    async def execute(self) -> list[list[dict[str, Any]]]:
+        """Execute the transaction and return rows."""
+        return [[self.row]]
+
+
 class _PerfDb:
+    """In-memory database stub for performance testing."""
+
     def __init__(self, result: dict[str, Any]):
         """Initialize the performance database."""
         self._result = result
 
-    def transaction(self):
-        """Create a new transaction."""
+    def transaction(self) -> _TransactionContext:
+        """Create a new transaction context."""
+        return _TransactionContext(self._result)
 
-        class _Tx:
-            def __init__(self, row: dict[str, Any]):
-                """Initialize the transaction."""
-                self.row = row
-
-            async def __aenter__(self):
-                """Enter the transaction."""
-                return self
-
-            async def __aexit__(self, exc_type, exc, tb):
-                """Exit the transaction."""
-                return False
-
-            def insert(self, *_args, **_kwargs):
-                """Record an insert operation."""
-                return
-
-            async def execute(self):
-                """Execute the transaction."""
-                return [[self.row]]
-
-        return _Tx(self._result)
-
-    async def get_user_api_keys(self, *_args, **_kwargs):
+    async def get_user_api_keys(self, *_args: Any, **_kwargs: Any) -> list[Any]:
         """Get user keys."""
         return []
 
-    async def get_api_key_for_service(self, *_args, **_kwargs):
+    async def get_api_key_for_service(
+        self, *_args: Any, **_kwargs: Any
+    ) -> dict[str, Any] | None:
         """Get API key for service."""
         return
 
-    async def update_api_key_last_used(self, *_args, **_kwargs):
+    async def update_api_key_last_used(self, *_args: Any, **_kwargs: Any) -> None:
         """Update API key last used."""
         return
 
@@ -65,7 +78,9 @@ class _PerfDb:
 @pytest.mark.perf
 @pytest.mark.timeout(0.5)
 @pytest.mark.asyncio
-async def test_create_api_key_completes_within_latency_budget(test_settings):
+async def test_create_api_key_completes_within_latency_budget(
+    test_settings: Settings,
+) -> None:
     """Assert API key creation stays within the sub-250ms latency budget."""
     now = datetime.now(UTC).isoformat()
     db_result = {
