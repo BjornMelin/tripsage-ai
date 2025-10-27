@@ -1,13 +1,7 @@
 // Agent Monitoring Dashboard Components
 
-export type {
-  ConnectionStatus as WebSocketConnectionStatus,
-  UseWebSocketAgentReturn,
-  WebSocketAgentConfig,
-  WebSocketMessage,
-} from "../../../hooks/use-websocket-agent";
-// Hook Exports
-export { useWebSocketAgent } from "../../../hooks/use-websocket-agent";
+// Hook Exports (Realtime-only)
+export { useAgentStatusWebSocket as useWebSocketAgent } from "../../../hooks/use-agent-status-websocket";
 // Type Exports
 export type {
   ConnectionAnalytics,

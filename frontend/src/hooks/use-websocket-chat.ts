@@ -6,13 +6,12 @@
 
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getBrowserClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores";
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
-type ChannelInstance = ReturnType<ReturnType<typeof createClient>["channel"]>;
-type ChannelSendRequest = Parameters<ChannelInstance["send"]>[0];
+type ChannelSendRequest = Parameters<RealtimeChannel["send"]>[0];
 
 type ChatMessageBroadcastPayload = {
   id?: string;
@@ -97,7 +96,7 @@ export function useWebSocketChat({
   topicType = "user",
   sessionId,
 }: WebSocketChatOptions = {}): UseWebSocketChatReturn {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);

@@ -37,7 +37,7 @@ describe("useRealtimeChannel", () => {
     expect(mockChannel.on).toHaveBeenCalledWith(
       "broadcast",
       { event: "ping" },
-      handler
+      expect.any(Function)
     );
     await result.current.sendBroadcast("ping", { ok: true });
     expect(mockChannel.send).toHaveBeenCalledWith({

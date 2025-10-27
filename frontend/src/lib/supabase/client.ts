@@ -15,7 +15,12 @@ let client: TypedSupabaseClient | undefined;
  * Create a singleton Supabase client for browser use
  * This ensures we only have one client instance throughout the app
  */
-function getSupabaseBrowserClient(): TypedSupabaseClient {
+/**
+ * Return the browser singleton Supabase client.
+ * Exported so non-React modules (e.g., Zustand stores) can reuse the same
+ * instance that the RealtimeAuthProvider authenticates.
+ */
+export function getBrowserClient(): TypedSupabaseClient {
   if (client) {
     return client;
   }
@@ -42,7 +47,7 @@ function getSupabaseBrowserClient(): TypedSupabaseClient {
  * Memoizes the client to prevent unnecessary re-renders
  */
 export function useSupabase(): TypedSupabaseClient {
-  return useMemo(getSupabaseBrowserClient, []);
+  return useMemo(getBrowserClient, []);
 }
 
 /**
