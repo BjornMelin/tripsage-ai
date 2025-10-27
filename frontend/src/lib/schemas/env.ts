@@ -16,8 +16,7 @@ const baseEnvSchema = z.object({
 const nextEnvSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
-  NEXT_PUBLIC_APP_VERSION: z.string().optional(),
-  NEXT_PUBLIC_API_BASE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_API_URL: z.string().url().optional(),
   NEXT_PUBLIC_WS_URL: z.string().url().optional(),
 });
 
@@ -213,8 +212,7 @@ const envSchema = baseEnvSchema
 const clientEnvSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
-  NEXT_PUBLIC_APP_VERSION: z.string().optional(),
-  NEXT_PUBLIC_API_BASE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_API_URL: z.string().url().optional(),
   NEXT_PUBLIC_WS_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),

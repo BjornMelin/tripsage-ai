@@ -231,7 +231,7 @@ export function getConfig(): {
   const envInfo = getEnvInfo();
 
   return {
-    apiBaseUrl: clientEnv.NEXT_PUBLIC_API_BASE_URL || "/api",
+    apiBaseUrl: clientEnv.NEXT_PUBLIC_API_URL ? `${clientEnv.NEXT_PUBLIC_API_URL}/api` : "/api",
     wsUrl: clientEnv.NEXT_PUBLIC_WS_URL,
     supabaseUrl: clientEnv.NEXT_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,

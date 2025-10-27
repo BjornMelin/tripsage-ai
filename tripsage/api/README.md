@@ -430,7 +430,7 @@ JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # External APIs (Optional - use BYOK instead)
-DUFFEL_API_TOKEN=your-duffel-token
+DUFFEL_ACCESS_TOKEN=your-duffel-access-token
 GOOGLE_MAPS_API_KEY=your-google-maps-key
 OPENWEATHERMAP_API_KEY=your-weather-key
 ```

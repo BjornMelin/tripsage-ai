@@ -302,9 +302,9 @@ def prepare_instrumentation(
     settings: Settings,
 ) -> tuple[bool, Callable[[FastAPI], None] | None]:
     """Determine instrumentation strategy and return ASGI toggle plus FastAPI hook."""
-    enable_asgi = settings.enable_asgi_instrumentation
+    enable_asgi = "asgi" in settings.otel_instrumentation.split(",")
     fastapi_instrument_app: Callable[[FastAPI], None] | None = None
-    if settings.enable_fastapi_instrumentation:
+    if "fastapi" in settings.otel_instrumentation.split(","):
         try:
             import importlib
 
@@ -388,8 +388,8 @@ def configure_observability(settings: Settings, enable_asgi: bool) -> None:
         environment=settings.environment,
         enable_fastapi=False,  # instrument FastAPI via instrument_app below
         enable_asgi=enable_asgi,
-        enable_httpx=settings.enable_httpx_instrumentation,
-        enable_redis=settings.enable_redis_instrumentation,
+        enable_httpx="httpx" in settings.otel_instrumentation.split(","),
+        enable_redis="redis" in settings.otel_instrumentation.split(","),
     )
 
 

@@ -4,7 +4,7 @@ from functools import lru_cache
 from typing import Literal
 from urllib.parse import urlparse
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -130,15 +130,10 @@ class Settings(BaseSettings):
         default=10, description="Default burst size for token bucket"
     )
 
-    # Algorithm configuration
-    rate_limit_enable_sliding_window: bool = Field(
-        default=True, description="Enable sliding window rate limiting"
-    )
-    rate_limit_enable_token_bucket: bool = Field(
-        default=True, description="Enable token bucket rate limiting"
-    )
-    rate_limit_enable_burst_protection: bool = Field(
-        default=True, description="Enable burst protection"
+    # Rate limiting strategy (comma-separated values)
+    rate_limit_strategy: str = Field(
+        default="sliding_window,token_bucket,burst_protection",
+        description="Rate limiting strategy as comma-separated values",
     )
 
     # Integration with monitoring
@@ -184,18 +179,15 @@ class Settings(BaseSettings):
 
     # Metrics Configuration (OTEL-only)
 
-    # OpenTelemetry Instrumentation Flags
-    enable_fastapi_instrumentation: bool = Field(
-        default=False, description="Enable FastAPI OTEL auto-instrumentation"
+    # Consolidated OTEL instrumentation (comma-separated: fastapi,asgi,httpx,redis)
+    otel_instrumentation: str = Field(
+        default="", description="OTEL instrumentation as comma-separated values"
     )
-    enable_asgi_instrumentation: bool = Field(
-        default=False, description="Enable ASGI OTEL auto-instrumentation"
-    )
-    enable_httpx_instrumentation: bool = Field(
-        default=False, description="Enable httpx OTEL auto-instrumentation"
-    )
-    enable_redis_instrumentation: bool = Field(
-        default=False, description="Enable Redis OTEL auto-instrumentation"
+
+    # LangGraph features configuration
+    langgraph_features: str = Field(
+        default="conversation_memory,advanced_routing,memory_updates,error_recovery",
+        description="LangGraph features as comma-separated values",
     )
 
     # Google Maps Platform configuration
@@ -245,36 +237,7 @@ class Settings(BaseSettings):
         """Check if running in test environment."""
         return self.environment in ("test", "testing")
 
-    @property
-    def ENABLE_WEBSOCKETS(self) -> bool:
-        """Uppercase alias for enable_websockets (for test compatibility)."""
-        return self.enable_websockets
-
-    @ENABLE_WEBSOCKETS.setter
-    def ENABLE_WEBSOCKETS(self, value: bool):
-        """Setter for uppercase alias."""
-        self.enable_websockets = value
-
-    @property
-    def WEBSOCKET_TIMEOUT(self) -> int:
-        """Uppercase alias for websocket_timeout (for test compatibility)."""
-        return self.websocket_timeout
-
-    @WEBSOCKET_TIMEOUT.setter
-    def WEBSOCKET_TIMEOUT(self, value: int):
-        """Setter for uppercase alias."""
-        self.websocket_timeout = value
-
-    @property
-    def MAX_WEBSOCKET_CONNECTIONS(self) -> int:
-        """Uppercase alias for max_websocket_connections (for test compatibility)."""
-        return self.max_websocket_connections
-
-    @MAX_WEBSOCKET_CONNECTIONS.setter
-    def MAX_WEBSOCKET_CONNECTIONS(self, value: int):
-        """Setter for uppercase alias."""
-        self.max_websocket_connections = value
-
+    @computed_field
     @property
     def effective_postgres_url(self) -> str:
         """Get the effective PostgreSQL URL, converting from Supabase URL if needed.
