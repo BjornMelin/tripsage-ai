@@ -99,9 +99,7 @@ async def key_validation_error_handler(
     )
 
 
-async def rate_limit_error_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def rate_limit_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle rate limit errors."""
     error = cast(CoreRateLimitError, exc)
     logger.warning(
@@ -139,9 +137,7 @@ async def rate_limit_error_handler(
     )
 
 
-async def external_api_error_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def external_api_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle external API errors."""
     error = cast(CoreExternalAPIError, exc)
     logger.exception("External API error", extra={"path": request.url.path})
@@ -151,9 +147,7 @@ async def external_api_error_handler(
     )
 
 
-async def validation_error_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def validation_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle validation errors."""
     error = cast(CoreValidationError, exc)
     logger.warning(
@@ -167,9 +161,7 @@ async def validation_error_handler(
     )
 
 
-async def core_tripsage_error_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def core_tripsage_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle all other core TripSage exceptions."""
     error = cast(CoreTripSageError, exc)
     logger.exception("Core error", extra={"path": request.url.path})
@@ -512,9 +504,10 @@ async def lifespan(app: FastAPI):
         app: The FastAPI application
     """
     await startup_services(app)
-    yield  # Application runs here
-
-    await shutdown_services(app)
+    try:
+        yield  # Application runs here
+    finally:
+        await shutdown_services(app)
 
 
 def create_app() -> FastAPI:  # pylint: disable=too-many-statements
