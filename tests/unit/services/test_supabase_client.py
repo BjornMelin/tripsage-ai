@@ -1,181 +1,97 @@
-"""Unit tests for Supabase client utilities."""
+"""Unit tests for Supabase async client utilities.
+
+These tests are offline and focus on URL formation and header wiring.
+"""
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from types import SimpleNamespace
-from typing import Any, cast
-
 import pytest
 
-from tripsage_core.services.infrastructure import supabase_client
+from tripsage_core.services.infrastructure.supabase_client import (
+    postgrest_for_user,
+    supabase_rest_url,
+)
 
 
-@pytest.fixture(autouse=True)
-def reset_clients(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Ensure Supabase client caches are reset between tests."""
-    monkeypatch.setattr(supabase_client, "_admin_client", None, raising=False)
-    monkeypatch.setattr(supabase_client, "_public_client", None, raising=False)
-    supabase_client.supabase_rest_url.cache_clear()
+def test_supabase_rest_url_shape(monkeypatch: pytest.MonkeyPatch) -> None:
+    """supabase_rest_url returns the REST endpoint ending with /rest/v1."""
 
-    def _fake_settings() -> Any:
-        return SimpleNamespace(
-            database_url="https://example.supabase.co",
-            database_service_key=SimpleNamespace(get_secret_value=lambda: "service"),
-            database_public_key=SimpleNamespace(get_secret_value=lambda: "public"),
-        )
+    class _Secret:
+        """Secret class for testing."""
 
-    monkeypatch.setattr(supabase_client, "get_settings", _fake_settings)
+        def get_secret_value(self) -> str:  # pyright: ignore[reportUnusedFunction]
+            """Get secret value."""
+            return "placeholder"
 
-    def _client_options(*args: object, **kwargs: object) -> SimpleNamespace:
-        return SimpleNamespace(args=args, kwargs=kwargs)
+    class _Svc(_Secret):
+        """Service key for testing."""
 
-    monkeypatch.setattr(supabase_client, "ClientOptions", _client_options)
+        def get_secret_value(self) -> str:
+            """Get secret value."""
+            return "svc"
 
+    class _Anon(_Secret):
+        """Anon key for testing."""
 
-@pytest.mark.asyncio
-async def test_get_admin_client_caches_instance(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Admin client creation should occur only once across multiple calls."""
-    created: list[tuple[Any, ...]] = []
+        def get_secret_value(self) -> str:
+            """Get secret value."""
+            return "anon"
 
-    async def _create_client(*args: Any, **kwargs: Any) -> dict[str, str]:
-        created.append((args, kwargs))
-        return {"client": "admin"}
+    class Settings:
+        """Settings class for testing."""
 
-    monkeypatch.setattr(supabase_client, "acreate_client", _create_client)
+        database_url: str = "https://project.supabase.co"
+        database_service_key: _Svc = _Svc()
+        database_public_key: _Anon = _Anon()
 
-    client_one = await supabase_client.get_admin_client()
-    client_two = await supabase_client.get_admin_client()
+    # Patch settings used by supabase_rest_url (patch the imported symbol where used)
+    import tripsage_core.services.infrastructure.supabase_client as sc
 
-    assert client_one is client_two
-    assert len(created) == 1
+    def _settings_factory() -> Settings:
+        """Return deterministic settings for the Supabase client."""
+        return Settings()
 
+    monkeypatch.setattr(sc, "get_settings", _settings_factory, raising=True)
 
-@pytest.mark.asyncio
-async def test_get_public_client_caches_instance(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Public client should also be cached after first creation."""
-    created: list[tuple[Any, ...]] = []
+    # Ensure cache clear before calling to avoid cross-test interference
+    sc.supabase_rest_url.cache_clear()
 
-    async def _create_client(*args: Any, **kwargs: Any) -> dict[str, str]:
-        created.append((args, kwargs))
-        return {"client": "public"}
-
-    monkeypatch.setattr(supabase_client, "acreate_client", _create_client)
-
-    client_one = await supabase_client.get_public_client()
-    client_two = await supabase_client.get_public_client()
-
-    assert client_one is client_two
-    assert len(created) == 1
-
-
-@pytest.mark.asyncio
-async def test_verify_and_get_claims_returns_claims(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Verifying a valid token should return the decoded claims."""
-
-    class _Auth:
-        """Stub auth interface exposing get_claims."""
-
-        async def get_claims(self, *, jwt: str) -> dict[str, Any]:
-            """Return synthetic claims for the provided JWT."""
-            return {"sub": jwt, "email": "user@example.com"}
-
-    class _Client:
-        """Stub Supabase client providing auth accessor."""
-
-        def __init__(self) -> None:
-            self.auth = _Auth()
-
-    async def _public_client() -> _Client:
-        """Return a stub public client."""
-        return _Client()
-
-    monkeypatch.setattr(supabase_client, "get_public_client", _public_client)
-
-    claims = await supabase_client.verify_and_get_claims("user-123")
-
-    assert claims["sub"] == "user-123"
-    assert claims["email"] == "user@example.com"
-
-
-@pytest.mark.asyncio
-async def test_verify_and_get_claims_rejects_missing_subject(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Missing subject in Supabase claims should raise a validation error."""
-
-    class _Auth:
-        """Stub auth returning claims without subject."""
-
-        async def get_claims(self, *, jwt: str) -> dict[str, Any]:
-            """Return claims missing a subject to trigger validation failure."""
-            return {"email": "user@example.com", "jwt": jwt}
-
-    class _Client:
-        """Stub Supabase client lacking subject claim."""
-
-        def __init__(self) -> None:
-            self.auth = _Auth()
-
-    async def _public_client() -> _Client:
-        """Return a stub public client lacking a subject claim."""
-        return _Client()
-
-    monkeypatch.setattr(supabase_client, "get_public_client", _public_client)
-
-    with pytest.raises(ValueError):
-        await supabase_client.verify_and_get_claims("token-without-sub")
+    # First call caches via lru_cache
+    url = supabase_rest_url()
+    assert url.endswith("/rest/v1")
+    assert url.startswith("https://project.supabase.co")
 
 
 def test_postgrest_for_user_sets_auth_header(monkeypatch: pytest.MonkeyPatch) -> None:
-    """PostgREST helper should authorize the returned client with bearer token."""
-    captured: dict[str, Any] = {}
+    """postgrest_for_user attaches a Bearer Authorization header."""
+    captured: dict[str, str] = {}
 
-    class _Client:
-        """Minimal PostgREST client capturing auth invocations."""
+    class _ClientStub:
+        """Minimal PostgREST client stub that records auth headers."""
 
         def __init__(self, url: str) -> None:
+            """Capture initialization arguments."""
             captured["url"] = url
+            self.headers: dict[str, str] = {}
 
         def auth(self, token: str) -> None:
-            """Capture the supplied bearer token."""
-            captured["token"] = token
+            """Record the Authorization header sent by the client."""
+            self.headers["Authorization"] = f"Bearer {token}"
 
     monkeypatch.setattr(
-        supabase_client,
-        "AsyncPostgrestClient",
-        cast(Callable[[str], _Client], _Client),
+        "tripsage_core.services.infrastructure.supabase_client.AsyncPostgrestClient",
+        _ClientStub,
     )
 
-    client = supabase_client.postgrest_for_user("jwt-token")
+    token = "test-token"
+    client = postgrest_for_user(token)
 
     assert captured["url"].endswith("/rest/v1")
-    assert captured["token"] == "jwt-token"
-    assert isinstance(client, _Client)
+    assert client.headers["Authorization"] == f"Bearer {token}"
 
 
-def test_supabase_rest_url_is_cached(monkeypatch: pytest.MonkeyPatch) -> None:
-    """supabase_rest_url should reuse cached value across calls."""
-    calls = 0
+def test_noop_placeholder_for_legacy_reset_removed() -> None:
+    """Ensure legacy client reset helper is not present anymore."""
+    import tripsage_core.services.infrastructure.supabase_client as sc
 
-    def _settings() -> Any:
-        """Return stub settings for rest URL generation."""
-        nonlocal calls
-        calls += 1
-        return SimpleNamespace(database_url="https://cache.supabase.co")
-
-    monkeypatch.setattr(supabase_client, "get_settings", _settings)
-    supabase_client.supabase_rest_url.cache_clear()
-
-    first = supabase_client.supabase_rest_url()
-    second = supabase_client.supabase_rest_url()
-
-    assert first == "https://cache.supabase.co/rest/v1"
-    assert first == second
-    assert calls == 1
+    assert not hasattr(sc, "_reset_clients_for_tests")

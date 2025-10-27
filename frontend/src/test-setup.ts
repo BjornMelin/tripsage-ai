@@ -1,8 +1,26 @@
+/**
+ * @fileoverview Vitest global test setup configuration.
+ *
+ * Global test configuration and setup for the TripSage frontend test suite.
+ * Configures Vitest environment with comprehensive mocks, cleanup utilities,
+ * and shared test infrastructure for consistent and reliable testing across
+ * React components, hooks, and integration tests.
+ */
+
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 import "@testing-library/jest-dom";
 
-// Mock useToast hook BEFORE anything else
+/**
+ * Mock toast function for testing toast notifications.
+ *
+ * Creates a mock implementation of the toast function that generates unique IDs
+ * and provides mock dismiss/update methods for testing toast behavior without
+ * actual UI rendering.
+ *
+ * @param _props - Toast properties (unused in mock)
+ * @returns Mock toast object with id and control methods
+ */
 const mockToast = vi.fn((_props: any) => ({
   id: `toast-${Date.now()}`,
   dismiss: vi.fn(),
@@ -34,6 +52,11 @@ afterEach(() => {
   cleanup();
 });
 
+// Also restore all spies/stubs between tests to avoid cross-test pollution.
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 // Mock window.location
 Object.defineProperty(window, "location", {
   value: {
@@ -51,7 +74,16 @@ Object.defineProperty(window, "navigator", {
   writable: true,
 });
 
-// Mock window.matchMedia for theme detection - ensure global consistency
+/**
+ * Creates a mock implementation of the window.matchMedia API.
+ *
+ * Provides a mock matchMedia function for testing responsive design and theme
+ * detection logic. Specifically handles dark mode preference queries while
+ * defaulting to false for other media queries.
+ *
+ * @param defaultMatches - Default value for dark mode preference queries
+ * @returns Mock matchMedia function that returns MediaQueryList-like objects
+ */
 const createMatchMediaMock = (defaultMatches = false) =>
   vi.fn().mockImplementation((query: string) => ({
     matches: query === "(prefers-color-scheme: dark)" ? defaultMatches : false,
@@ -72,7 +104,13 @@ Object.defineProperty(globalThis.window, "matchMedia", {
   value: createMatchMediaMock(false),
 });
 
-// Mock storage
+/**
+ * Mock storage implementation for localStorage and sessionStorage.
+ *
+ * Provides a mock Storage API implementation with Vitest spies for testing
+ * components that interact with browser storage APIs without affecting
+ * actual browser state.
+ */
 const mockStorage = {
   getItem: vi.fn(),
   setItem: vi.fn(),
@@ -105,8 +143,14 @@ global.console = {
 // Make test utils available globally
 import * as testUtils from "./test/test-utils";
 
-// Type-safe global assignment
+/**
+ * Global type declarations for test utilities.
+ *
+ * Extends the global scope with test utility functions that are made available
+ * to all test files for consistent testing setup and component rendering.
+ */
 declare global {
+  /** Global test utility for rendering React components with all required providers */
   var renderWithProviders: typeof testUtils.renderWithProviders;
 }
 
