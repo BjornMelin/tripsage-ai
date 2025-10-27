@@ -2,7 +2,7 @@ import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import type { ChatCompletionRequest, ChatCompletionResponse } from "@/types/chat";
 
 // The base URL for API requests
-// const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""; // Future use
+// const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""; // Future use
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {

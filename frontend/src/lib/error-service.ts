@@ -171,8 +171,8 @@ class ErrorService {
 // Default error service instance
 export const errorService = new ErrorService({
   enabled: process.env.NODE_ENV === "production",
-  endpoint: process.env.NEXT_PUBLIC_ERROR_REPORTING_ENDPOINT,
-  apiKey: process.env.NEXT_PUBLIC_ERROR_REPORTING_API_KEY,
+  endpoint: undefined,
+  apiKey: undefined,
   maxRetries: 3,
   enableLocalStorage: true,
 });

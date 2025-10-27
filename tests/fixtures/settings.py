@@ -23,10 +23,7 @@ def test_settings() -> Settings:
         enable_security_monitoring=False,
         enable_auto_recovery=False,
         enable_websockets=False,
-        enable_fastapi_instrumentation=False,
-        enable_asgi_instrumentation=False,
-        enable_httpx_instrumentation=False,
-        enable_redis_instrumentation=False,
+        otel_instrumentation="",
     )
 
 

@@ -116,7 +116,7 @@ The BYOK system allows users to provide their own API keys for external services
 # Provider configuration (used by the built-in DuffelProvider)
 DUFFEL_ACCESS_TOKEN=your_duffel_access_token
 # Optional legacy alias also supported by the DI factory:
-# DUFFEL_API_TOKEN=your_duffel_access_token
+# DUFFEL_ACCESS_TOKEN=your_duffel_access_token
 # Base URL and timeouts are sensible defaults; override only if needed.
 # DUFFEL_BASE_URL=https://api.duffel.com
 # DUFFEL_TIMEOUT=30
