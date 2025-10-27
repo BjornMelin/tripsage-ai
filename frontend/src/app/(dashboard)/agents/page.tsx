@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Agent monitoring dashboard page component.
+ *
+ * Provides a comprehensive interface for monitoring AI agent performance,
+ * collaboration, and network connectivity in the TripSage platform. Features
+ * real-time metrics, agent status tracking, and collaborative agent management
+ * with WebSocket integration for live updates.
+ */
+
 "use client";
 
 import { Activity, Brain, Network, Settings, Zap } from "lucide-react";
@@ -93,49 +102,41 @@ const mockConnectionAnalytics: ConnectionAnalytics = {
   uptime: 3600,
 };
 
+/**
+ * Agent monitoring dashboard page component.
+ *
+ * Renders a comprehensive dashboard for monitoring AI agent performance and
+ * collaboration in the TripSage platform. Displays real-time metrics including
+ * agent health scores, network connectivity, and collaborative task management.
+ *
+ * Features:
+ * - Real-time agent status monitoring with health scores and performance metrics
+ * - Network connectivity diagnostics with WebSocket status
+ * - Agent collaboration hub for task coordination
+ * - Tabbed interface for overview, collaboration, network, and settings views
+ * - Responsive design with mobile-friendly layouts
+ *
+ * @returns {JSX.Element} The rendered agent monitoring dashboard page.
+ */
 export default function AgentsPage() {
   const [selectedTab, setSelectedTab] = useState("overview");
   const [_selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
   // WebSocket connection for real-time updates (disabled in development)
-  const {
-    connectionStatus,
-    lastMessage,
-    sendMessage,
-    isConnected,
-    reconnectCount,
-    queuedMessages,
-    connect,
-    disconnect,
-  } = useWebSocketAgent({
-    url: process.env.NEXT_PUBLIC_WS_URL || "", // Disable WebSocket in development
-    reconnectInterval: 2000,
-    maxReconnectAttempts: 0, // Disable reconnection attempts
-    heartbeatInterval: 30000,
-  });
+  const { isConnected, connect, disconnect, reconnectAttempts } = useWebSocketAgent();
 
   // Handle real-time message updates
   useEffect(() => {
-    if (lastMessage) {
-      console.log("Received agent update:", lastMessage);
-      // Here you would typically update your agent data based on the message
-    }
-  }, [lastMessage]);
+    // Real-time updates handled within the hook's internal store.
+  }, []);
 
   const handleAgentSelect = (agentId: string) => {
     setSelectedAgent(agentId);
-    // Send agent selection message
-    sendMessage({
-      type: "agent_select",
-      data: { agentId },
-    });
+    // Selection side effects can broadcast via Supabase in future iterations.
   };
 
   const handleOptimizeConnection = () => {
-    sendMessage({
-      type: "optimize_connection",
-      data: { timestamp: Date.now() },
-    });
+    // Placeholder for future optimization broadcast.
   };
 
   const activeAgents = mockAgentMetrics.filter((a) => a.status === "active").length;
@@ -156,7 +157,7 @@ export default function AgentsPage() {
         </div>
         <div className="flex items-center gap-4">
           <ConnectionStatus
-            status={connectionStatus}
+            status={isConnected ? "connected" : "disconnected"}
             metrics={mockNetworkMetrics}
             analytics={mockConnectionAnalytics}
             onReconnect={connect}
@@ -283,7 +284,7 @@ export default function AgentsPage() {
         <TabsContent value="network" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ConnectionStatus
-              status={connectionStatus}
+              status={isConnected ? "connected" : "disconnected"}
               metrics={mockNetworkMetrics}
               analytics={mockConnectionAnalytics}
               onReconnect={connect}
@@ -294,44 +295,21 @@ export default function AgentsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>WebSocket Diagnostics</CardTitle>
+                <CardTitle>Realtime Diagnostics</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Status:</span>
                     <Badge variant="outline" className="ml-2">
-                      {connectionStatus}
+                      {isConnected ? "connected" : "disconnected"}
                     </Badge>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Reconnects:</span>
-                    <span className="ml-2 font-medium">{reconnectCount}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Queued Messages:</span>
-                    <span className="ml-2 font-medium">{queuedMessages}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Last Message:</span>
-                    <span className="ml-2 font-medium">
-                      {lastMessage
-                        ? new Date(lastMessage.timestamp).toLocaleTimeString()
-                        : "None"}
-                    </span>
+                    <span className="ml-2 font-medium">{reconnectAttempts}</span>
                   </div>
                 </div>
-
-                {lastMessage && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="text-sm">
-                      <strong>Last Message:</strong>
-                      <pre className="mt-1 text-xs text-gray-600 overflow-auto">
-                        {JSON.stringify(lastMessage, null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>

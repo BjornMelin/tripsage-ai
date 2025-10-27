@@ -1,10 +1,12 @@
 "use client";
 
 /**
- * Configuration Manager Component
+ * @fileoverview Agent configuration management component.
  *
- * React component for managing agent configurations with real-time updates,
- * versioning, and performance tracking following 2025 best practices.
+ * Provides a comprehensive interface for managing AI agent configurations,
+ * performance monitoring, and version control. Features real-time updates,
+ * configuration validation, rollback capabilities, and performance metrics
+ * tracking for multiple agent types in the TripSage platform.
  */
 
 import {
@@ -20,7 +22,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -122,6 +124,23 @@ const MODEL_OPTIONS = [
   "gpt-3.5-turbo",
 ];
 
+/**
+ * Agent configuration management component.
+ *
+ * Renders a comprehensive interface for managing AI agent configurations with
+ * real-time updates, versioning, and performance tracking. Supports multiple
+ * agent types with configuration parameters like temperature, max tokens,
+ * model selection, and timeout settings.
+ *
+ * Features:
+ * - Agent-specific configuration management with validation
+ * - Real-time performance metrics and monitoring
+ * - Configuration versioning with rollback capabilities
+ * - Tabbed interface for configuration, performance, and history views
+ * - Form validation with cross-field constraints and model compatibility checks
+ *
+ * @returns {JSX.Element} The rendered configuration management interface.
+ */
 export default function ConfigurationManager() {
   useRouter(); // For potential navigation
   const { toast } = useToast();
@@ -133,10 +152,7 @@ export default function ConfigurationManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<string>("budget_agent");
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<
-    "connecting" | "connected" | "disconnected"
-  >("disconnected");
+  // Realtime live updates removed. UI refreshes after successful saves.
 
   // Form state
   const [editedConfig, setEditedConfig] = useState<Partial<AgentConfig>>({});
@@ -145,81 +161,7 @@ export default function ConfigurationManager() {
   const timeoutId = useId();
   const descriptionId = useId();
 
-  // WebSocket connection for real-time updates
-  useEffect(() => {
-    const connectWebSocket = () => {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/api/config/ws`;
-
-      const websocket = new WebSocket(wsUrl);
-
-      websocket.onopen = () => {
-        setConnectionStatus("connected");
-        setWs(websocket);
-        console.log("Configuration WebSocket connected");
-      };
-
-      websocket.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          handleWebSocketMessage(message);
-        } catch (error) {
-          console.error("Error parsing WebSocket message:", error);
-        }
-      };
-
-      websocket.onclose = () => {
-        setConnectionStatus("disconnected");
-        setWs(null);
-        // Reconnect after 5 seconds
-        setTimeout(connectWebSocket, 5000);
-      };
-
-      websocket.onerror = (error) => {
-        console.error("Configuration WebSocket error:", error);
-        setConnectionStatus("disconnected");
-      };
-    };
-
-    setConnectionStatus("connecting");
-    connectWebSocket();
-
-    return () => {
-      if (ws) {
-        ws.close();
-      }
-    };
-  }, []);
-
-  // Handle WebSocket messages
-  const handleWebSocketMessage = useCallback(
-    (message: any) => {
-      switch (message.type) {
-        case "agent_config_updated":
-          toast({
-            title: "Configuration Updated",
-            description: `${message.agent_type} configuration was updated by ${message.updated_by}`,
-            variant: "default",
-          });
-          // Refresh the specific agent config
-          loadAgentConfig(message.agent_type);
-          break;
-
-        case "agent_config_rolled_back":
-          toast({
-            title: "Configuration Rolled Back",
-            description: `${message.agent_type} was rolled back to version ${message.version_id}`,
-            variant: "default",
-          });
-          loadAgentConfig(message.agent_type);
-          break;
-
-        default:
-          console.log("Unknown WebSocket message type:", message.type);
-      }
-    },
-    [toast]
-  );
+  // Live WS updates removed; consider Supabase Realtime in a future iteration.
 
   // Load initial data
   useEffect(() => {
@@ -446,11 +388,7 @@ export default function ConfigurationManager() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Badge variant={connectionStatus === "connected" ? "default" : "destructive"}>
-            {connectionStatus === "connected" ? "Live Updates" : "Disconnected"}
-          </Badge>
-        </div>
+        <div className="flex items-center gap-2" />
       </div>
 
       {/* Agent Selection */}

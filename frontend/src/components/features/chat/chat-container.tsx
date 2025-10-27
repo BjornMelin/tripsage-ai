@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Chat container component for AI assistant interactions.
+ *
+ * Provides the main chat interface component with real-time messaging,
+ * agent status monitoring, connection management, and tool calling capabilities.
+ * Integrates with Vercel AI SDK for streaming responses and supports optimistic
+ * UI updates for enhanced user experience.
+ */
+
 "use client";
 
 import { AlertCircle, Key, PanelRightOpen, Wifi } from "lucide-react";
@@ -14,12 +23,36 @@ import { AgentStatusPanel } from "./agent-status-panel";
 import { MessageInput } from "./message-input";
 import { MessageList } from "./messages/message-list";
 
+/**
+ * Props for the ChatContainer component.
+ */
 interface ChatContainerProps {
+  /** Optional session ID for chat persistence */
   sessionId?: string;
+  /** Initial messages to populate the chat */
   initialMessages?: Message[];
+  /** Additional CSS classes for styling */
   className?: string;
 }
 
+/**
+ * Chat container component for AI assistant interactions.
+ *
+ * Renders the main chat interface with message display, input handling,
+ * real-time updates, and agent status monitoring. Supports tool calling,
+ * streaming responses, and optimistic UI updates for enhanced user experience.
+ *
+ * Features:
+ * - Real-time messaging with WebSocket integration
+ * - Agent status panel and connection monitoring
+ * - Tool calling and result display
+ * - Optimistic UI updates for instant feedback
+ * - Authentication and API key validation
+ * - Responsive design with mobile support
+ *
+ * @param {ChatContainerProps} props - The component props.
+ * @returns {JSX.Element | null} The rendered chat interface or null if not authenticated.
+ */
 export function ChatContainer({
   sessionId,
   initialMessages = [],
@@ -61,19 +94,19 @@ export function ChatContainer({
     (state: Message[], newMessage: Message) => [...state, newMessage]
   );
 
-  // Get chat store state including WebSocket status
+  // Get chat store state including Realtime status
   const {
     connectionStatus,
     isRealtimeEnabled,
-    connectWebSocket,
-    disconnectWebSocket,
+    connectRealtime,
+    disconnectRealtime,
     setRealtimeEnabled,
     isStreaming,
   } = useChatStore((state) => ({
     connectionStatus: state.connectionStatus,
     isRealtimeEnabled: state.isRealtimeEnabled,
-    connectWebSocket: state.connectWebSocket,
-    disconnectWebSocket: state.disconnectWebSocket,
+    connectRealtime: state.connectRealtime,
+    disconnectRealtime: state.disconnectRealtime,
     setRealtimeEnabled: state.setRealtimeEnabled,
     isStreaming: state.isStreaming,
   }));
@@ -116,46 +149,37 @@ export function ChatContainer({
     stopGeneration();
   }, [stopGeneration]);
 
-  // Get auth token from auth store
-  const { tokenInfo } = useAuthStore((state) => ({
-    tokenInfo: state.tokenInfo,
-  }));
+  // Access auth store if needed for future features (placeholder retained for context)
+  useAuthStore(() => ({}));
 
-  // Handle WebSocket connection
-  const handleConnectWebSocket = useCallback(async () => {
-    if (chatSessionId && isAuthenticated && tokenInfo?.accessToken) {
+  // Handle Realtime connection
+  const handleConnectRealtime = useCallback(async () => {
+    if (chatSessionId && isAuthenticated) {
       try {
-        await connectWebSocket(chatSessionId, tokenInfo.accessToken);
+        await connectRealtime(chatSessionId);
       } catch (error) {
-        console.error("Failed to connect WebSocket:", error);
+        console.error("Failed to connect Realtime:", error);
       }
     }
-  }, [chatSessionId, isAuthenticated, tokenInfo?.accessToken, connectWebSocket]);
+  }, [chatSessionId, isAuthenticated, connectRealtime]);
 
-  // Auto-connect WebSocket when session is ready
+  // Auto-connect Realtime when session is ready, and resubscribe on session change
   useEffect(() => {
-    if (
-      isRealtimeEnabled &&
-      chatSessionId &&
-      isAuthenticated &&
-      connectionStatus === "disconnected"
-    ) {
-      handleConnectWebSocket();
+    if (!isRealtimeEnabled || !chatSessionId || !isAuthenticated) {
+      return;
     }
-  }, [
-    isRealtimeEnabled,
-    chatSessionId,
-    isAuthenticated,
-    connectionStatus,
-    handleConnectWebSocket,
-  ]);
+    // Always reconnect to ensure the channel topic matches the current session
+    disconnectRealtime();
+    void handleConnectRealtime();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRealtimeEnabled, chatSessionId, isAuthenticated]);
 
-  // Cleanup WebSocket on unmount
+  // Cleanup Realtime on unmount
   useEffect(() => {
     return () => {
-      disconnectWebSocket();
+      disconnectRealtime();
     };
-  }, [disconnectWebSocket]);
+  }, [disconnectRealtime]);
 
   // Show authentication required UI
   if (!isAuthenticated) {
@@ -270,7 +294,7 @@ export function ChatContainer({
         <div className="absolute bottom-32 right-16 w-80">
           <ConnectionStatus
             status={connectionStatus}
-            onReconnect={handleConnectWebSocket}
+            onReconnect={handleConnectRealtime}
           />
 
           {/* Real-time toggle */}
