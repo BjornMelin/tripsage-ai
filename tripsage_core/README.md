@@ -123,13 +123,13 @@ from tripsage_core.services.external_apis import (
 
 ### Infrastructure Services (`services/infrastructure/`)
 
-Database, caching, and communication management:
+Database, caching, and monitoring:
 
 ```python
 from tripsage_core.services.infrastructure import (
     DatabaseService,
     CacheService,
-    WebSocketManager
+    KeyMonitoringService,
 )
 ```
 
@@ -137,9 +137,9 @@ from tripsage_core.services.infrastructure import (
 
 - `DatabaseService` - Supabase operations and transactions
 - `CacheService` - Upstash Redis caching
-- `WebSocketManager` - Real-time communication
-- `WebSocketBroadcaster` - Message broadcasting
 - `KeyMonitoringService` - API key usage monitoring
+
+Realtime is handled client-side via Supabase Realtime (private channels + RLS).
 
 ### Utilities (`utils/`)
 

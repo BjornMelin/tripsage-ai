@@ -9,20 +9,21 @@ This document provides an overview of TripSage's system architecture, focusing o
 ```mermaid
 graph TD
     subgraph "Presentation Layer"
-        F[Frontend<br/>Next.js 15<br/>• React Server<br/>Components<br/>• Real-time UI<br/>• WebSocket<br/>• State Mgmt]
+        F[Frontend<br/>Next.js 15<br/>• React Server<br/>Components<br/>• Real-time UI<br/>• Supabase Realtime<br/>• State Mgmt]
         A[AI Agents<br/>LangGraph<br/>• Planning<br/>• Flight Agent<br/>• Hotel Agent<br/>• Budget Agent<br/>• Memory Agent]
         E[External APIs<br/>Travel Partners<br/>• Flight APIs<br/>• Hotel APIs<br/>• Maps APIs<br/>• Weather APIs<br/>• Calendar APIs]
     end
 
     subgraph "Unified API Layer<br/>FastAPI with<br/>Consumer Support"
-        G[API Gateway<br/>• Frontend Adapter<br/>• Agent Adapter<br/>• Auth Middleware<br/>• WebSocket Manager]
+        G[API Gateway<br/>• Frontend Adapter<br/>• Agent Adapter<br/>• Auth Middleware]
         R["API Routers<br/>Auth | Chat | Trips | Flights |<br/>Hotels | Destinations |<br/>Memory | WS"]
     end
 
     subgraph "Business Logic Layer<br/>TripSage Core"
         BS[Business Services<br/>• Auth Service<br/>• Memory Svc<br/>• Chat Service<br/>• Flight Svc<br/>• Hotel Service]
         ES[External API Services<br/>• Google Maps<br/>• Weather API<br/>• Calendar API<br/>• Document AI<br/>• Crawl4AI]
-        IS[Infrastructure Services<br/>• Database Service<br/>• Cache Service<br/>Upstash Redis (HTTP)<br/>• WebSocket Manager<br/>• Key Monitoring<br/>Service<br/>• Security Service]
+        IS[Infrastructure Services<br/>• Database Service<br/>• Cache Service<br/>Upstash Redis (HTTP)<br/>• Key Monitoring
+Service<br/>• Security Service]
         LG["LangGraph Orchestration<br/>PostgreSQL Checkpointing |<br/>Memory Bridge |<br/>Handoff Coordination"]
     end
 
@@ -94,7 +95,7 @@ graph TD
 
 - App Router: Routing with server-side rendering
 - React Server Components: Server-side rendering
-- Real-time Features: WebSocket integration
+- Real-time Features: Supabase Realtime (private channels + RLS)
 - State Management: Zustand stores with persistence
 - Component Architecture: Modular components
 - Performance: Code splitting and lazy loading

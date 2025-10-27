@@ -9,7 +9,7 @@ versioning, and real-time updates following 2025 best practices.
 from datetime import UTC, datetime
 from typing import Any, TypedDict, cast
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from tripsage.api.core.dependencies import (
@@ -23,7 +23,6 @@ from tripsage.api.schemas.config import (
     ConfigurationScope,
     ConfigurationVersion,
     ModelName,
-    WebSocketConfigMessage,
 )
 from tripsage_core.config import get_settings
 from tripsage_core.observability.otel import record_histogram, trace_span
@@ -70,38 +69,6 @@ DEFAULT_AGENT_CONFIGS: dict[AgentType, AgentConfig] = {
 logger: Any = get_logger(__name__)
 
 router = APIRouter(prefix="/config", tags=["configuration"])
-
-
-# WebSocket connection manager
-class ConfigurationWebSocketManager:
-    """Manages WebSocket connections for real-time configuration updates."""
-
-    def __init__(self):
-        """Initialize Config."""
-        self.active_connections: list[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        """Accept and track WebSocket connection."""
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        """Remove WebSocket from tracking."""
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-
-    async def broadcast_update(self, message: WebSocketConfigMessage):
-        """Broadcast configuration update to all connected clients."""
-        for connection in self.active_connections.copy():
-            try:
-                await connection.send_json(message.model_dump())
-            except (OSError, RuntimeError):
-                # Network/connection errors during WebSocket send
-                self.disconnect(connection)
-
-
-# Global WebSocket manager using the imported schema
-ws_manager = ConfigurationWebSocketManager()
 
 
 @router.get("/agents", response_model=list[str])
@@ -194,15 +161,6 @@ async def update_agent_config(
         # TODO: Save version to database
         # await _create_config_version(agent_type, updated_config, current_user)
 
-        # Broadcast update to connected clients
-        message = WebSocketConfigMessage(
-            type="agent_config_updated",
-            agent_type=AgentType(agent_type),
-            configuration=dict(updated_config),
-            updated_by=current_user,
-        )
-        await ws_manager.broadcast_update(message)
-
         logger.info("Agent config updated for %s by %s", agent_type, current_user)
 
         return AgentConfigResponse(
@@ -266,18 +224,9 @@ async def rollback_agent_config(
         )
 
     try:
-        current_user = get_principal_id(principal)
+        _ = get_principal_id(principal)
         # TODO: Implement version rollback
         # config = await _rollback_to_version(agent_type, version_id, current_user)
-
-        # Broadcast rollback to connected clients
-        message = WebSocketConfigMessage(
-            type="agent_config_rolled_back",
-            agent_type=AgentType(agent_type),
-            version_id=version_id,
-            updated_by=current_user,
-        )
-        await ws_manager.broadcast_update(message)
 
         return JSONResponse(
             content={
@@ -303,7 +252,7 @@ async def get_environment_config():
         "feature_flags": {
             "enable_advanced_agents": True,
             "enable_memory_system": True,
-            "enable_real_time": settings.enable_websockets,
+            "enable_real_time": True,
             "enable_vector_search": True,
             "enable_monitoring": True,
         },
@@ -315,18 +264,3 @@ async def get_environment_config():
             "model": settings.openai_model,
         },
     }
-
-
-@router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for real-time configuration updates."""
-    await ws_manager.connect(websocket)
-    try:
-        while True:
-            # Keep connection alive
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        ws_manager.disconnect(websocket)
-    except Exception:
-        logger.exception("Configuration WebSocket error")
-        ws_manager.disconnect(websocket)
