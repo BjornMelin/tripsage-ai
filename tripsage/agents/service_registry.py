@@ -37,8 +37,6 @@ from tripsage_core.services.infrastructure import (
     CacheService,
     DatabaseService,
     KeyMonitoringService,
-    WebSocketBroadcaster,
-    WebSocketManager,
 )
 
 
@@ -85,8 +83,6 @@ class ServiceRegistry:
     cache_service: CacheService | None = None
     database_service: DatabaseService | None = None
     key_monitoring_service: KeyMonitoringService | None = None
-    websocket_broadcaster: WebSocketBroadcaster | None = None
-    websocket_manager: WebSocketManager | None = None
 
     # Orchestration lifecycle services
     checkpoint_service: SupabaseCheckpointService | None = None
@@ -109,8 +105,6 @@ class ServiceRegistry:
         """
         # Initialize infrastructure services first
         cache_service = CacheService()
-        websocket_manager = WebSocketManager()
-        websocket_broadcaster = WebSocketBroadcaster()
         key_monitoring_service = KeyMonitoringService()
 
         # Initialize external API services
@@ -185,8 +179,6 @@ class ServiceRegistry:
             cache_service=cache_service,
             database_service=db_service,
             key_monitoring_service=key_monitoring_service,
-            websocket_broadcaster=websocket_broadcaster,
-            websocket_manager=websocket_manager,
             checkpoint_service=checkpoint_service,
             memory_bridge=memory_bridge,
             mcp_bridge=mcp_bridge,

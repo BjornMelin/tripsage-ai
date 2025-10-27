@@ -3,7 +3,6 @@
 This module provides core infrastructure services across TripSage:
 - Database operations (Supabase/PostgreSQL)
 - Caching (DragonflyDB)
-- WebSocket management
 - API key monitoring
 """
 
@@ -14,8 +13,6 @@ from .key_monitoring_service import (
     KeyOperation,
     monitor_key_operation,
 )
-from .websocket_broadcaster import WebSocketBroadcaster
-from .websocket_manager import WebSocketManager
 
 
 __all__ = [
@@ -26,9 +23,6 @@ __all__ = [
     # Key Monitoring
     "KeyMonitoringService",
     "KeyOperation",
-    "WebSocketBroadcaster",
-    # WebSocket
-    "WebSocketManager",
     "get_cache_service",
     "get_database_service",
     "monitor_key_operation",

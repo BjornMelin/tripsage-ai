@@ -165,16 +165,6 @@ async def get_cache_service_dep(request: Request) -> CacheService:
     return request.app.state.cache_service  # type: ignore[attr-defined]
 
 
-async def get_websocket_manager_dep(request: Request):
-    """Get DI-managed WebSocket manager instance."""
-    return request.app.state.websocket_manager  # type: ignore[attr-defined]
-
-
-async def get_websocket_broadcaster_dep(request: Request):
-    """Get DI-managed WebSocket broadcaster instance."""
-    return request.app.state.websocket_broadcaster  # type: ignore[attr-defined]
-
-
 # Google Maps service dependency (DI-managed in app lifespan)
 async def get_maps_service_dep(request: Request) -> GoogleMapsService:
     """Get DI-managed Google Maps service instance."""

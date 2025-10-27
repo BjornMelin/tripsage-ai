@@ -38,7 +38,6 @@ from tripsage.api.routers import (
     search,
     trips,
     users,
-    websocket,
 )
 
 # Removed ServiceRegistry: use direct lifespan-managed instances
@@ -52,10 +51,6 @@ from tripsage_core.exceptions.exceptions import (
 )
 from tripsage_core.observability.otel import setup_otel
 from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
-from tripsage_core.services.infrastructure.websocket_broadcaster import (
-    WebSocketBroadcaster,
-)
-from tripsage_core.services.infrastructure.websocket_manager import WebSocketManager
 
 
 logger: "logging.Logger" = logging.getLogger(__name__)  # pylint: disable=no-member
@@ -115,24 +110,9 @@ async def lifespan(app: FastAPI):
     except Exception:  # noqa: BLE001 - do not break startup if monitor fails
         logger.warning("DatabaseConnectionMonitor initialization failed")
 
-    logger.info("Starting WebSocket Broadcaster")
-    app.state.websocket_broadcaster = WebSocketBroadcaster()
-    await app.state.websocket_broadcaster.start()
-
-    # Initialize WebSocket Manager with broadcaster integration
-    logger.info("Starting WebSocket Manager with broadcaster integration")
-    app.state.websocket_manager = WebSocketManager()
-    app.state.websocket_manager.broadcaster = app.state.websocket_broadcaster
-    await app.state.websocket_manager.start()
-
     yield  # Application runs here
 
     # Shutdown: Clean up resources (reverse order)
-    logger.info("Stopping WebSocket Manager")
-    await app.state.websocket_manager.stop()
-
-    logger.info("Stopping WebSocket Broadcaster")
-    await app.state.websocket_broadcaster.stop()
 
     logger.info("Disconnecting Cache service")
     await app.state.cache_service.disconnect()
@@ -390,8 +370,6 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
     app.include_router(search.router, prefix="/api/search", tags=["search"])
     app.include_router(memory.router, prefix="/api", tags=["memory"])
-    app.include_router(websocket.router, prefix="/api", tags=["websocket"])
-
     app.include_router(users.router, prefix="/api/users", tags=["users"])
     app.include_router(config.router, prefix="/api", tags=["configuration"])
 
