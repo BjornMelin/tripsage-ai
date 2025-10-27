@@ -92,22 +92,26 @@ export function useAuthenticatedApi() {
           signal: abortControllerRef.current.signal,
         });
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401) {
-          try {
-            const {
-              data: { session },
-            } = await supabase.auth.refreshSession();
-            if (session?.access_token) {
-              return await fetchApi<T>(endpoint, {
-                ...options,
-                auth: `Bearer ${session.access_token}`,
-                signal: abortControllerRef.current?.signal,
-              });
+        // Preserve existing ApiError details for non-401 cases
+        if (error instanceof ApiError) {
+          if (error.status === 401) {
+            try {
+              const {
+                data: { session },
+              } = await supabase.auth.refreshSession();
+              if (session?.access_token) {
+                return await fetchApi<T>(endpoint, {
+                  ...options,
+                  auth: `Bearer ${session.access_token}`,
+                  signal: abortControllerRef.current?.signal,
+                });
+              }
+              await supabase.auth.signOut();
+            } catch {
+              await supabase.auth.signOut();
             }
-            await supabase.auth.signOut();
-          } catch {
-            await supabase.auth.signOut();
           }
+          throw error;
         }
         if (error instanceof DOMException && error.name === "AbortError") {
           throw new ApiError({

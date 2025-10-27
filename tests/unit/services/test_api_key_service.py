@@ -260,8 +260,7 @@ async def test_get_service_value_accepts_strings(test_settings: Settings) -> Non
     ) as service:
         assert cast(Any, service)._get_service_value(ServiceType.OPENAI) == "openai"
         assert (
-            cast(Any, service)._get_service_value("custom-service")
-            == "custom-service"
+            cast(Any, service)._get_service_value("custom-service") == "custom-service"
         )
 
 

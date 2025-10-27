@@ -6,12 +6,15 @@ with authenticated entity information. Includes audit logging
 for all authentication events.
 """
 
+from __future__ import annotations
+
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import Request, Response
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette.types import ASGIApp
@@ -26,13 +29,24 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
     AuditOutcome,
     AuditSeverity,
-    audit_api_key,
-    audit_authentication,
-    audit_security_event,
+    audit_api_key as _audit_api_key,  # pyright: ignore[reportUnknownVariableType]
+    audit_authentication as _audit_authentication,  # pyright: ignore[reportUnknownVariableType]
+    audit_security_event as _audit_security_event,  # pyright: ignore[reportUnknownVariableType]
+)
+from tripsage_core.services.infrastructure.supabase_client import (
+    verify_and_get_claims,
 )
 
 
 logger = logging.getLogger(__name__)
+# Help pyright with partially-typed audit functions
+audit_api_key: Any
+audit_authentication: Any
+audit_security_event: Any
+
+audit_api_key = _audit_api_key  # type: ignore[reportUnknownVariableType]
+audit_authentication = _audit_authentication  # type: ignore[reportUnknownVariableType]
+audit_security_event = _audit_security_event  # type: ignore[reportUnknownVariableType]
 
 
 class Principal(BaseModel):
@@ -43,15 +57,13 @@ class Principal(BaseModel):
     email: str | None = None
     service: str | None = None  # For API keys
     auth_method: str  # "jwt" or "api_key"
-    scopes: list[str] = []
-    metadata: dict = {}
+    scopes: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(
         populate_by_name=True,
         validate_assignment=True,
         extra="ignore",
-        # Use exclude_unset to avoid potential serialization issues
-        exclude_unset=True,
     )
 
     @property
@@ -94,10 +106,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         """Ensure services are initialized (lazy loading)."""
         if not self._services_initialized:
             if self.key_service is None:
-                from tripsage_core.config import get_settings
-                from tripsage_core.services.business.api_key_service import (
-                    ApiKeyService,
-                )
+                from tripsage_core.config import get_settings as _get_s
                 from tripsage_core.services.infrastructure.cache_service import (
                     get_cache_service,
                 )
@@ -107,13 +116,13 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
                 db = await get_database_service()
                 cache = await get_cache_service()
-                settings = get_settings()
+                settings = _get_s()
                 self.key_service = ApiKeyService(db=db, cache=cache, settings=settings)
 
             self._services_initialized = True
 
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Response]
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """Process the request and handle authentication with enhanced security.
 
@@ -131,27 +140,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # Ensure services are initialized
         await self._ensure_services()
 
-        # Perform header validation for security
-        if not self._validate_request_headers(request):
-            # Log suspicious header activity
-            await audit_security_event(
-                event_type=AuditEventType.SECURITY_SUSPICIOUS_ACTIVITY,
-                severity=AuditSeverity.HIGH,
-                message="Suspicious request headers detected",
-                actor_id="unknown",
-                ip_address=self._get_client_ip(request),
-                target_resource=request.url.path,
-                risk_score=70,
-                user_agent=request.headers.get("User-Agent"),
-                method=request.method,
-                headers_count=len(request.headers),
-            )
-
-            return Response(
-                content="Invalid request headers",
-                status_code=HTTP_401_UNAUTHORIZED,
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        # Header sanitation removed in favor of SDK-driven verification
 
         # Try to authenticate the request
         principal = None
@@ -161,10 +150,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         authorization_header = request.headers.get("Authorization")
         if authorization_header and authorization_header.startswith("Bearer "):
             try:
-                token = authorization_header.replace("Bearer ", "")
-                # Validate token format to enforce security
-                if not self._validate_token_format(token):
-                    raise AuthenticationError("Invalid token format")
+                token = authorization_header.replace("Bearer ", "", 1).strip()
                 principal = await self._authenticate_jwt(token)
 
                 # Log successful JWT authentication
@@ -364,10 +350,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         return any(path.startswith(skip_path) for skip_path in skip_paths)
 
     async def _authenticate_jwt(self, token: str) -> Principal:
-        """Authenticate using JWT token.
+        """Authenticate using Supabase access token.
 
         Args:
-            token: JWT token
+            token: Access token from Supabase
 
         Returns:
             Authenticated principal
@@ -376,47 +362,26 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             AuthenticationError: If authentication fails
         """
         try:
-            # Use the new Supabase auth validation
-            import jwt
-
-            from tripsage_core.config import get_settings
-
-            settings = get_settings()
-
-            # Local JWT validation for performance
-            payload = jwt.decode(
-                token,
-                settings.database_jwt_secret.get_secret_value(),
-                algorithms=["HS256"],
-                audience="authenticated",
-                leeway=30,  # Allow 30 seconds clock skew
-            )
-
-            # Extract user data from token
-            user_id = payload["sub"]
-            email = payload.get("email")
-            role = payload.get("role", "authenticated")
-
-            # Create principal from token data
+            claims = await verify_and_get_claims(token)
+            sub = str(claims.get("sub"))
+            if not sub:
+                raise AuthenticationError("Invalid token")
             return Principal(
-                id=user_id,
+                id=sub,
                 type="user",
-                email=email,
+                email=claims.get("email"),
                 auth_method="jwt",
                 scopes=[],
                 metadata={
-                    "role": role,
-                    "aud": payload.get("aud", "authenticated"),
+                    "role": claims.get("role", "authenticated"),
+                    "aud": claims.get("aud", "authenticated"),
                 },
             )
 
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationError("Token has expired") from None
-        except jwt.InvalidTokenError:
-            logger.exception("JWT InvalidTokenError")
-            raise AuthenticationError("Invalid token") from None
+        except AuthenticationError:
+            raise
         except Exception as e:
-            logger.exception("JWT authentication error")
+            logger.exception("Supabase token authentication error")
             raise AuthenticationError("Invalid authentication token") from e
 
     async def _authenticate_api_key(self, api_key: str) -> Principal:
@@ -532,89 +497,8 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-    def _validate_request_headers(self, request: Request) -> bool:
-        """Validate request headers for security.
-
-        Args:
-            request: The HTTP request
-
-        Returns:
-            True if headers are valid, False otherwise
-        """
-        # Check for excessively long headers (potential DoS)
-        for name, value in request.headers.items():
-            if len(name) > 256 or len(value) > 8192:
-                logger.warning(
-                    "Excessively long header detected",
-                    extra={
-                        "header_name": name[:100],
-                        "header_length": len(value),
-                        "ip_address": self._get_client_ip(request),
-                    },
-                )
-                return False
-
-            # Check for suspicious patterns in headers
-            suspicious_patterns = [
-                "<script",
-                "javascript:",
-                "data:",
-                "eval(",
-                "DROP TABLE",
-                "UNION SELECT",
-                "../",
-                "\x00",
-            ]
-
-            combined_header = f"{name}:{value}".lower()
-            for pattern in suspicious_patterns:
-                if pattern.lower() in combined_header:
-                    logger.warning(
-                        "Suspicious pattern in header",
-                        extra={
-                            "header_name": name,
-                            "pattern": pattern,
-                            "ip_address": self._get_client_ip(request),
-                        },
-                    )
-                    return False
-
-        return True
-
-    def _validate_token_format(self, token: str) -> bool:
-        """Validate JWT token format.
-
-        Args:
-            token: JWT token string
-
-        Returns:
-            True if format is valid, False otherwise
-        """
-        if not token or not isinstance(token, str):
-            return False
-
-        # Check length bounds
-        if len(token) < 20 or len(token) > 4096:
-            return False
-
-        # Check for null bytes and control characters
-        if "\x00" in token or any(ord(c) < 32 for c in token if c not in "\t\n\r"):
-            return False
-
-        # Basic JWT format check (three parts separated by dots)
-        parts = token.split(".")
-        if len(parts) != 3:
-            return False
-
-        # Each part should be base64url encoded (basic check)
-        base64url_chars = (
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
-        )
-        for part in parts:
-            if not part or not all(c in base64url_chars for c in part):
-                return False
-
-        return True
+    # Removed _validate_request_headers and _validate_token_format in favor of
+    # SDK-driven verification using claims
 
     def _validate_api_key_format(self, api_key: str) -> bool:
         """Validate API key format.
@@ -625,7 +509,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         Returns:
             True if format is valid, False otherwise
         """
-        if not api_key or not isinstance(api_key, str):
+        if not api_key:
             return False
 
         # Check length bounds
@@ -671,7 +555,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     return ip
 
         # Fall back to direct connection IP
-        if hasattr(request.client, "host"):
+        if request.client and getattr(request.client, "host", None):
             return request.client.host
 
         return "unknown"
@@ -686,11 +570,11 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             True if valid IP format, False otherwise
         """
         try:
-            from ipaddress import AddressValueError, ip_address
+            from ipaddress import ip_address
 
             ip_address(ip)
             return True
-        except (ValueError, AddressValueError):
+        except ValueError:
             return False
 
     def _add_security_headers(self, response: Response) -> None:

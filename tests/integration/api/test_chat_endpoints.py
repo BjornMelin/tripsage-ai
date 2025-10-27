@@ -44,6 +44,7 @@ async def test_chat_completion_returns_response(
     app: FastAPI, async_client: AsyncClient
 ) -> None:
     """POST /chat should invoke the chat service and return its payload."""
+
     async def _principal_override() -> Principal:
         return _principal_stub()
 
