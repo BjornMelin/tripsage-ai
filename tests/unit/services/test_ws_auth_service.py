@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+from tripsage_core.exceptions.exceptions import CoreAuthorizationError
 from tripsage_core.services.infrastructure.websocket_auth_service import (
     WebSocketAuthService,
 )
@@ -25,3 +26,12 @@ async def test_authenticate_token_success(monkeypatch: Any) -> None:
     assert result["valid"] is True
     assert result["user_id"] == "11111111-1111-1111-1111-111111111111"
     assert "channels" in result
+
+
+@pytest.mark.asyncio
+async def test_verify_channel_access_denied_for_other_user() -> None:
+    """Deny access when attempting to join another user's channel."""
+    svc = WebSocketAuthService()
+    user_id = "11111111-1111-1111-1111-111111111111"
+    with pytest.raises(CoreAuthorizationError):
+        await svc.verify_channel_access(user_id, "user:someone-else")
