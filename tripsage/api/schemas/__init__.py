@@ -13,7 +13,6 @@ This package contains consolidated Pydantic V2 schemas organized by domain:
 - itineraries.py   : Itinerary planning schemas
 - trips.py         : Trip management schemas
 - users.py         : User management schemas
-- websocket.py     : WebSocket communication schemas
 
 Import directly from the consolidated schema files:
 

@@ -9,7 +9,7 @@ The TripSage API provides endpoints for:
 - **Frontend Applications** - Next.js 15 web application with real-time features
 - **AI Agents** - LangGraph-based travel planning agents with context
 - **External Integrations** - Third-party services and travel platforms
-- **WebSocket Communication** - Real-time updates and collaboration
+**Real-time Communication** - Supabase Realtime private channels with RLS authorization (no custom WebSocket endpoints).
 
 ### Core Capabilities
 
@@ -21,7 +21,7 @@ The TripSage API provides endpoints for:
 - **Destination Research** - AI-powered destination insights and recommendations
 - **Itinerary Building** - Trip optimization and scheduling
 - **Memory & Context** - Conversation memory and user preference learning
-- **Real-time Communication** - WebSocket support for live updates
+**Real-time Communication** - Supabase Realtime (no custom WebSocket endpoints)
 
 ## Architecture
 
@@ -99,7 +99,7 @@ tripsage/api/
 │   ├── itineraries.py    # Itinerary building and optimization
 │   ├── memory.py         # Memory and context management
 │   ├── attachments.py    # File upload and processing
-│   ├── websocket.py      # Real-time communication
+│   ├── realtime.md       # Realtime (Supabase) concepts and usage
 │   └── health.py         # Health checks and monitoring
 ├── schemas/              # API-specific compositions and re-exports
 │   ├── requests/         # Input validation schemas (API-only)

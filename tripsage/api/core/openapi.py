@@ -4,6 +4,9 @@ This module provides configuration for OpenAPI documentation, including
 custom examples, tags, and extensions.
 """
 
+from typing import Any, TypedDict, cast
+
+from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
 from tripsage.api.core.config import get_settings
@@ -174,11 +177,8 @@ The API returns consumer-specific error formats:
 
 ## Real-time Features
 
-WebSocket endpoints for live communication:
-
-* `WS /api/v1/ws/chat/{session_id}` - Real-time chat with agents
-* `WS /api/v1/ws/trip/{trip_id}` - Trip planning collaboration
-* `WS /api/v1/ws/status` - Agent status and progress updates
+Real-time messaging is provided via Supabase Realtime private channels with RLS
+authorization (no custom WebSocket endpoints).
 
 ## Integration with TripSage Core
 
@@ -228,7 +228,7 @@ TAG_DESCRIPTIONS = [
         "name": "trips",
         "description": (
             "Trip planning and management endpoints. Supports travel "
-            "itinerary creation, optimization, and collaboration features."
+            "itinerary creation and optimization."
         ),
     },
     {
@@ -308,7 +308,17 @@ TAG_DESCRIPTIONS = [
 
 
 # Example responses for different endpoints
-EXAMPLES = {
+
+
+class OpenAPIExample(TypedDict, total=False):
+    """Typed mapping for OpenAPI example entries."""
+
+    summary: str
+    description: str
+    value: dict[str, Any]
+
+
+EXAMPLES: dict[str, OpenAPIExample] = {
     "auth_token": {
         "summary": "User authentication response",
         "description": "Response when user authentication is successful",
@@ -377,7 +387,7 @@ EXAMPLES = {
 }
 
 
-def custom_openapi(app):
+def custom_openapi(app: FastAPI) -> dict[str, Any]:
     """Create a custom OpenAPI schema for the FastAPI application.
 
     Args:
@@ -409,7 +419,9 @@ def custom_openapi(app):
     if "examples" not in openapi_schema["components"]:
         openapi_schema["components"]["examples"] = {}
 
-    openapi_schema["components"]["examples"].update(EXAMPLES)
+    components = cast(dict[str, Any], openapi_schema["components"])
+    examples = cast(dict[str, Any], components.setdefault("examples", {}))
+    examples.update(EXAMPLES)
 
     # Add security schemes
     if "securitySchemes" not in openapi_schema["components"]:

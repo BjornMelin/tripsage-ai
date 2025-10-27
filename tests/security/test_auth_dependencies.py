@@ -5,90 +5,80 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from fastapi import HTTPException, status as http_status
+from starlette.requests import Request
 
-import tripsage.api.core.auth as auth_dep
+from tripsage.api.core.dependencies import get_current_principal, require_principal
+from tripsage.api.middlewares.authentication import Principal
+
+
+def _http_scope() -> dict[str, Any]:
+    """Return a minimal ASGI scope for HTTP requests."""
+    headers: list[tuple[bytes, bytes]] = []
+    return {
+        "type": "http",
+        "method": "GET",
+        "path": "/",
+        "headers": headers,
+    }
 
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_get_current_user_id_requires_bearer_header() -> None:
+async def test_require_principal_requires_bearer() -> None:
     """Reject requests missing the required Bearer token header."""
-    with pytest.raises(HTTPException) as exc:
-        await auth_dep.get_current_user_id(authorization=None)
+    from tripsage_core.exceptions.exceptions import CoreAuthenticationError
 
-    assert exc.value.status_code == http_status.HTTP_401_UNAUTHORIZED
-
-
-@pytest.mark.security
-@pytest.mark.asyncio
-async def test_get_current_user_id_invalid_token(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Ensure invalid tokens raise authentication errors via Supabase SDK."""
-
-    async def _raise_error(_token: str) -> dict[str, Any]:
-        raise RuntimeError("invalid token")
-
-    monkeypatch.setattr(auth_dep, "verify_and_get_claims", _raise_error)
-
-    with pytest.raises(HTTPException):
-        await auth_dep.get_current_user_id(authorization="Bearer invalid")
+    with pytest.raises(CoreAuthenticationError):
+        await require_principal(Request(_http_scope()))
 
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_get_current_user_id_returns_subject(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Return the Supabase user id when the token is valid."""
-
-    async def _return_claims(_token: str) -> dict[str, Any]:
-        return {"sub": "user-123", "email": "u@example.com"}
-
-    monkeypatch.setattr(auth_dep, "verify_and_get_claims", _return_claims)
-
-    user_id = await auth_dep.get_current_user_id(authorization="Bearer test-token")
-    assert user_id == "user-123"
+async def test_get_current_principal_optional() -> None:
+    """get_current_principal returns None if principal is not set."""
+    req = Request(_http_scope())
+    assert await get_current_principal(req) is None
 
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_get_current_user_id_handles_supabase_errors(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Supabase SDK exceptions should be translated into HTTP 401 responses."""
-
-    async def _raise_network(_token: str) -> dict[str, Any]:
-        raise RuntimeError("network error")
-
-    monkeypatch.setattr(auth_dep, "verify_and_get_claims", _raise_network)
-
-    with pytest.raises(HTTPException) as exc:
-        await auth_dep.get_current_user_id(authorization="Bearer bad-token")
-
-    assert exc.value.status_code == http_status.HTTP_401_UNAUTHORIZED
+async def test_require_principal_returns_subject() -> None:
+    """require_principal yields state principal when present."""
+    principal = Principal(id="user-123", type="user", auth_method="jwt")
+    req = Request(_http_scope())
+    req.state.principal = principal
+    p = await require_principal(req)
+    assert p.id == "user-123"
 
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_get_optional_user_id_gracefully_handles_missing_header() -> None:
-    """Optional dependency should return None when Authorization is absent."""
-    result = await auth_dep.get_optional_user_id(authorization=None)
-    assert result is None
+async def test_require_principal_error_shape() -> None:
+    """require_principal should surface an HTTP-like error when missing."""
+    req = Request(_http_scope())
+    from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+
+    with pytest.raises(CoreAuthenticationError):
+        await require_principal(req)
 
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_get_optional_user_id_returns_subject(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Optional dependency should reuse the core helper when token valid."""
+async def test_get_current_principal_after_state_set() -> None:
+    """get_current_principal returns principal when present on state."""
+    principal = Principal(id="optional-999", type="user", auth_method="jwt")
+    req = Request(_http_scope())
+    req.state.principal = principal
+    result = await get_current_principal(req)
+    assert result and result.id == "optional-999"
 
-    async def _claims(_token: str) -> dict[str, Any]:
-        return {"sub": "optional-999"}
 
-    monkeypatch.setattr(auth_dep, "verify_and_get_claims", _claims)
-
-    result = await auth_dep.get_optional_user_id(authorization="Bearer ok")
-    assert result == "optional-999"
+@pytest.mark.security
+@pytest.mark.asyncio
+async def test_get_current_principal_returns_subject() -> None:
+    """get_current_principal returns id from state principal when present."""
+    principal = Principal(id="optional-999", type="user", auth_method="jwt")
+    req = Request(_http_scope())
+    req.state.principal = principal
+    result = await get_current_principal(req)
+    assert result and result.id == "optional-999"

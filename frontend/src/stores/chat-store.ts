@@ -1,98 +1,224 @@
+/**
+ * @fileoverview Chat store implementation using Zustand.
+ *
+ * State management for chat functionality including sessions,
+ * messages, real-time connections, memory integration, and agent status tracking.
+ * Provides persistent storage, optimistic updates, and WebSocket integration
+ * for the TripSage AI assistant platform.
+ */
+
 import { z } from "zod";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import {
-  ConnectionStatus,
-  type WebSocketClient,
-  type WebSocketEvent,
-  WebSocketEventType,
-} from "@/lib/websocket/websocket-client";
+
+/**
+ * Connection status enumeration for real-time communications.
+ *
+ * Defines the possible states of WebSocket/realtime connections in the chat system.
+ * Used for UI state management and connection status indicators.
+ */
+export enum ConnectionStatus {
+  CONNECTING = "connecting",
+  CONNECTED = "connected",
+  DISCONNECTED = "disconnected",
+  RECONNECTING = "reconnecting",
+  ERROR = "error",
+}
+
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { getBrowserClient } from "@/lib/supabase/client";
 import type { ConversationMessage, MemoryContextResponse } from "@/types/memory";
 
-// Message type with support for tool calls and attachments
+/**
+ * Message interface with support for tool calls and attachments.
+ *
+ * Represents a chat message in the conversation with support for advanced
+ * features like tool calling, file attachments, and streaming responses.
+ */
 export interface Message {
+  /** Unique identifier for the message */
   id: string;
+  /** Role of the message sender */
   role: "user" | "assistant" | "system";
+  /** Text content of the message */
   content: string;
+  /** ISO timestamp when the message was created */
   timestamp: string;
 
-  // Additional fields for advanced features
+  /** Optional tool calls initiated by the assistant */
   toolCalls?: ToolCall[];
+  /** Optional results from executed tool calls */
   toolResults?: ToolResult[];
+  /** Optional file attachments */
   attachments?: Attachment[];
+  /** Whether the message is currently being streamed */
   isStreaming?: boolean;
 }
 
+/**
+ * Tool call interface for AI function calling.
+ *
+ * Represents a function call initiated by an AI assistant, including
+ * the function name, arguments, and execution state.
+ */
 export interface ToolCall {
+  /** Unique identifier for the tool call */
   id: string;
+  /** Name of the function being called */
   name: string;
+  /** Arguments passed to the function */
   arguments: Record<string, unknown>;
+  /** Current state of the tool call execution */
   state: "call" | "partial-call" | "result";
 }
 
+/**
+ * Tool result interface for function call responses.
+ *
+ * Represents the result of executing a tool call, linking back to the
+ * original call and containing the execution outcome.
+ */
 export interface ToolResult {
+  /** ID of the tool call this result corresponds to */
   callId: string;
+  /** The result data from the tool execution */
   result: unknown;
 }
 
+/**
+ * Attachment interface for file uploads.
+ *
+ * Represents a file attachment in a chat message with metadata
+ * for display and processing.
+ */
 export interface Attachment {
+  /** Unique identifier for the attachment */
   id: string;
+  /** URL or data URL of the attachment */
   url: string;
+  /** Optional display name for the attachment */
   name?: string;
+  /** MIME content type of the attachment */
   contentType?: string;
+  /** File size in bytes */
   size?: number;
 }
 
+/**
+ * Chat session interface for conversation management.
+ *
+ * Represents a complete chat conversation session with messages, metadata,
+ * agent status, and memory integration for persistent conversations.
+ */
 export interface ChatSession {
+  /** Unique identifier for the chat session */
   id: string;
+  /** Display title for the conversation */
   title: string;
+  /** Array of messages in the conversation */
   messages: Message[];
+  /** ISO timestamp when the session was created */
   createdAt: string;
+  /** ISO timestamp when the session was last updated */
   updatedAt: string;
+  /** Current status of the AI agent for this session */
   agentStatus?: AgentStatus;
 
-  // Memory integration
+  /** Memory context for conversation continuity */
   memoryContext?: MemoryContextResponse;
+  /** User ID associated with the session */
   userId?: string;
+  /** Last time memory was synchronized */
   lastMemorySync?: string;
 }
 
+/**
+ * Agent status interface for AI assistant state tracking.
+ *
+ * Tracks the current operational status of AI agents including activity state,
+ * current tasks, progress indicators, and status messages.
+ */
 export interface AgentStatus {
+  /** Whether the agent is currently active/processing */
   isActive: boolean;
+  /** Description of the current task being performed */
   currentTask?: string;
+  /** Progress percentage (0-100) of current task */
   progress: number;
+  /** Human-readable status message */
   statusMessage?: string;
 }
 
-// Request options for sending messages
+/**
+ * Options for sending chat messages.
+ *
+ * Configuration options for message sending including file attachments,
+ * system prompts, AI parameters, and tool availability.
+ */
 export interface SendMessageOptions {
+  /** Optional file attachments to include with the message */
   attachments?: File[];
+  /** Custom system prompt to override defaults */
   systemPrompt?: string;
+  /** AI temperature parameter for response creativity */
   temperature?: number;
+  /** Available tools/functions for the AI to use */
   tools?: Record<string, unknown>[];
 }
 
-// WebSocket event types
+/**
+ * WebSocket message event for real-time chat updates.
+ *
+ * Event structure for WebSocket messages containing chat content,
+ * session identification, and metadata for real-time message streaming.
+ */
 export interface WebSocketMessageEvent {
+  /** Event type identifier */
   type: "chat_message" | "chat_message_chunk";
+  /** Session ID this event belongs to */
   sessionId: string;
+  /** Message ID for chunked/streaming messages */
   messageId?: string;
+  /** Text content of the message */
   content: string;
+  /** Role of the message sender */
   role?: "user" | "assistant" | "system";
+  /** Tool calls included in the message */
   toolCalls?: ToolCall[];
+  /** File attachments in the message */
   attachments?: Attachment[];
+  /** Whether this is the final chunk of a streaming message */
   isComplete?: boolean;
 }
 
+/**
+ * WebSocket agent status update event.
+ *
+ * Event structure for real-time agent status updates including activity state,
+ * current tasks, and progress information for UI synchronization.
+ */
 export interface WebSocketAgentStatusEvent {
+  /** Event type identifier */
   type: "agent_status_update";
+  /** Session ID this status update belongs to */
   sessionId: string;
+  /** Whether the agent is currently active */
   isActive: boolean;
+  /** Current task description */
   currentTask?: string;
+  /** Progress percentage of current task */
   progress: number;
+  /** Human-readable status message */
   statusMessage?: string;
 }
 
+/**
+ * Internal chat store state interface.
+ *
+ * Defines the complete state structure for the chat store including sessions,
+ * real-time connection status, memory integration, and all action handlers.
+ * Used internally by Zustand for type-safe state management.
+ */
 interface ChatState {
   sessions: ChatSession[];
   currentSessionId: string | null;
@@ -107,10 +233,10 @@ interface ChatState {
   memoryEnabled: boolean;
   autoSyncMemory: boolean;
 
-  // WebSocket integration
-  websocketClient: WebSocketClient | null;
+  // Realtime integration state
   connectionStatus: ConnectionStatus;
   isRealtimeEnabled: boolean;
+  realtimeChannel: RealtimeChannel | null;
   typingUsers: Record<string, { userId: string; username?: string; timestamp: string }>;
   pendingMessages: Message[];
 
@@ -150,9 +276,9 @@ interface ChatState {
   setMemoryEnabled: (enabled: boolean) => void;
   setAutoSyncMemory: (enabled: boolean) => void;
 
-  // WebSocket actions
-  connectWebSocket: (sessionId: string, token: string) => Promise<void>;
-  disconnectWebSocket: () => void;
+  // Realtime actions (no direct WS usage)
+  connectRealtime: (sessionId: string) => Promise<void>;
+  disconnectRealtime: () => void;
   setRealtimeEnabled: (enabled: boolean) => void;
   handleRealtimeMessage: (event: WebSocketMessageEvent) => void;
   handleAgentStatusUpdate: (event: WebSocketAgentStatusEvent) => void;
@@ -202,6 +328,33 @@ const sessionDataSchema = z.object({
 // Abort controller for canceling stream requests
 let abortController: AbortController | null = null;
 
+/**
+ * Zustand store hook for comprehensive chat state management.
+ *
+ * Provides centralized state management for chat functionality including:
+ * - Session management (create, update, delete conversations)
+ * - Message handling with optimistic updates and streaming
+ * - Real-time WebSocket integration with Supabase Realtime
+ * - Agent status tracking and progress monitoring
+ * - Memory integration for conversation continuity
+ * - Persistent storage with Zustand persist middleware
+ *
+ * Features optimistic UI updates, automatic reconnection, typing indicators,
+ * and comprehensive error handling for robust chat experiences.
+ *
+ * @returns {ChatState} The chat store state and actions
+ *
+ * @example
+ * ```typescript
+ * const {
+ *   sessions,
+ *   currentSession,
+ *   sendMessage,
+ *   createSession,
+ *   connectRealtime
+ * } = useChatStore();
+ * ```
+ */
 export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({
@@ -215,8 +368,8 @@ export const useChatStore = create<ChatState>()(
       memoryEnabled: true,
       autoSyncMemory: true,
 
-      // WebSocket integration defaults
-      websocketClient: null,
+      // Realtime integration defaults
+      realtimeChannel: null,
       connectionStatus: ConnectionStatus.DISCONNECTED,
       isRealtimeEnabled: true,
       typingUsers: {},
@@ -327,13 +480,7 @@ export const useChatStore = create<ChatState>()(
       },
 
       sendMessage: async (content, options = {}) => {
-        const {
-          currentSessionId,
-          currentSession,
-          websocketClient,
-          isRealtimeEnabled,
-          connectionStatus,
-        } = get();
+        const { currentSessionId, currentSession } = get();
 
         // Create a new session if none exists
         let sessionId = currentSessionId;
@@ -356,34 +503,7 @@ export const useChatStore = create<ChatState>()(
 
         set({ isLoading: true, error: null });
 
-        // Use WebSocket if available and connected
-        if (
-          isRealtimeEnabled &&
-          websocketClient &&
-          connectionStatus === ConnectionStatus.CONNECTED
-        ) {
-          try {
-            await websocketClient.send("chat_message", {
-              content,
-              sessionId,
-              attachments: options.attachments?.map((file) => ({
-                name: file.name,
-                contentType: file.type,
-                size: file.size,
-              })),
-              systemPrompt: options.systemPrompt,
-              temperature: options.temperature,
-              tools: options.tools,
-            });
-
-            // WebSocket will handle the response via event handlers
-            set({ isLoading: false });
-            return;
-          } catch (error) {
-            console.warn("WebSocket send failed, falling back to HTTP:", error);
-            // Fall through to HTTP implementation
-          }
-        }
+        // Final-Only: No direct socket send from the store; rely on HTTP or hooks.
 
         try {
           // Update agent status to show it's processing
@@ -765,136 +885,101 @@ export const useChatStore = create<ChatState>()(
         set({ autoSyncMemory: enabled });
       },
 
-      // WebSocket actions
-      connectWebSocket: async (sessionId, token) => {
-        const { websocketClient } = get();
-
-        // Disconnect existing connection if any
-        if (websocketClient) {
-          websocketClient.disconnect();
+      // Realtime actions
+      connectRealtime: async (sessionId) => {
+        const supabase = getBrowserClient();
+        const prev = get().realtimeChannel;
+        if (prev) {
+          prev.unsubscribe();
         }
 
         try {
-          // Import WebSocketClient dynamically to avoid SSR issues
-          const { WebSocketClient } = await import("@/lib/websocket/websocket-client");
-
-          // Construct proper WebSocket URL with /api prefix
-          const wsBaseUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/api";
-          const newClient = new WebSocketClient({
-            url: `${wsBaseUrl}/ws/chat/${sessionId}`,
-            token,
-            sessionId,
-            channels: [`session:${sessionId}`],
-            reconnectAttempts: 5,
-            reconnectDelay: 1000,
-            heartbeatInterval: 30000,
-            debug: process.env.NODE_ENV === "development",
-          });
-
-          // Set up event handlers
-          newClient.on("connect", () => {
-            set({ connectionStatus: ConnectionStatus.CONNECTED });
-            console.log("WebSocket connected successfully");
-          });
-
-          newClient.on("disconnect", () => {
-            set({ connectionStatus: ConnectionStatus.DISCONNECTED });
-          });
-
-          newClient.on("error", (error) => {
-            console.error("WebSocket error:", error);
-            set({
-              connectionStatus: ConnectionStatus.ERROR,
-              error:
-                error instanceof Error ? error.message : "WebSocket connection error",
-            });
-          });
-
-          newClient.on(
-            "reconnect",
-            (data: { attempt: number; maxAttempts: number }) => {
-              set({ connectionStatus: ConnectionStatus.RECONNECTING });
-              console.log(
-                `WebSocket reconnecting... Attempt ${data.attempt}/${data.maxAttempts}`
-              );
-            }
-          );
-
-          // Handle incoming messages
-          newClient.on(WebSocketEventType.CHAT_MESSAGE, (event: WebSocketEvent) => {
-            const message = event.payload.message as
-              | { content?: string; role?: string; id?: string }
-              | undefined;
-            get().handleRealtimeMessage({
-              type: "chat_message",
-              sessionId,
-              content: message?.content || "",
-              role: (message?.role as "user" | "assistant" | "system") || "assistant",
-              messageId: message?.id,
-            });
-          });
-
-          newClient.on(
-            WebSocketEventType.CHAT_MESSAGE_CHUNK,
-            (event: WebSocketEvent) => {
+          set({ connectionStatus: ConnectionStatus.CONNECTING });
+          const channel = supabase
+            .channel(`session:${sessionId}`, { config: { private: true } })
+            .on("broadcast", { event: "chat:message" }, (payload) => {
+              const data = payload.payload as
+                | { content?: string; role?: string; id?: string }
+                | undefined;
+              get().handleRealtimeMessage({
+                type: "chat_message",
+                sessionId,
+                content: data?.content || "",
+                role: (data?.role as "user" | "assistant" | "system") || "assistant",
+                messageId: data?.id,
+              });
+            })
+            .on("broadcast", { event: "chat:message_chunk" }, (payload) => {
+              const data = payload.payload as
+                | { content?: string; id?: string; is_final?: boolean }
+                | undefined;
               get().handleRealtimeMessage({
                 type: "chat_message_chunk",
                 sessionId,
-                content: (event.payload.content as string) || "",
-                messageId: event.id,
-                isComplete: (event.payload.is_final as boolean) || false,
+                content: data?.content || "",
+                messageId: data?.id,
+                isComplete: Boolean(data?.is_final),
               });
-            }
-          );
-
-          newClient.on(
-            WebSocketEventType.AGENT_STATUS_UPDATE,
-            (event: WebSocketEvent) => {
+            })
+            .on("broadcast", { event: "chat:typing" }, (payload) => {
+              const data = payload.payload as
+                | { userId?: string; isTyping?: boolean; username?: string }
+                | undefined;
+              if (!data?.userId) return;
+              if (data.isTyping) {
+                get().setUserTyping(sessionId, data.userId, data.username);
+              } else {
+                get().removeUserTyping(sessionId, data.userId);
+              }
+            })
+            .on("broadcast", { event: "agent_status_update" }, (payload) => {
+              const p = payload.payload as
+                | {
+                    isActive?: boolean;
+                    currentTask?: string;
+                    progress?: number;
+                    statusMessage?: string;
+                  }
+                | undefined;
               get().handleAgentStatusUpdate({
                 type: "agent_status_update",
                 sessionId,
-                isActive: (event.payload.is_active as boolean) || false,
-                currentTask: event.payload.current_task as string | undefined,
-                progress: (event.payload.progress as number) || 0,
-                statusMessage: event.payload.status_message as string | undefined,
+                isActive: Boolean(p?.isActive),
+                currentTask: p?.currentTask,
+                progress: Number(p?.progress ?? 0),
+                statusMessage: p?.statusMessage,
+              });
+            });
+
+          channel.subscribe((state, err) => {
+            if (state === "SUBSCRIBED") {
+              set({ connectionStatus: ConnectionStatus.CONNECTED });
+            }
+            if (err) {
+              set({
+                connectionStatus: ConnectionStatus.ERROR,
+                error: err.message ?? "Realtime subscription error",
               });
             }
-          );
-
-          newClient.on(WebSocketEventType.CHAT_TYPING_START, () => {
-            // Handle typing indicator start
-            set({ isStreaming: true });
           });
 
-          newClient.on(WebSocketEventType.CHAT_TYPING_STOP, () => {
-            // Handle typing indicator stop
-            set({ isStreaming: false });
-          });
-
-          // Store client and connect
-          set({
-            websocketClient: newClient,
-            connectionStatus: ConnectionStatus.CONNECTING,
-          });
-          await newClient.connect();
+          set({ realtimeChannel: channel });
         } catch (error) {
-          console.error("Failed to connect WebSocket:", error);
+          console.error("Failed to connect Realtime:", error);
           set({
             connectionStatus: ConnectionStatus.ERROR,
-            error:
-              error instanceof Error ? error.message : "Failed to connect WebSocket",
+            error: error instanceof Error ? error.message : "Realtime connection error",
           });
         }
       },
 
-      disconnectWebSocket: () => {
-        const { websocketClient } = get();
-        if (websocketClient) {
-          websocketClient.disconnect();
+      disconnectRealtime: () => {
+        const { realtimeChannel } = get();
+        if (realtimeChannel) {
+          realtimeChannel.unsubscribe();
         }
-        // Always update state to disconnected, regardless of client existence
         set({
-          websocketClient: null,
+          realtimeChannel: null,
           connectionStatus: ConnectionStatus.DISCONNECTED,
           typingUsers: {},
           pendingMessages: [],
@@ -905,7 +990,7 @@ export const useChatStore = create<ChatState>()(
         set({ isRealtimeEnabled: enabled });
 
         if (!enabled) {
-          get().disconnectWebSocket();
+          get().disconnectRealtime();
         }
       },
 
