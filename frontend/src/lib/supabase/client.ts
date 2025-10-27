@@ -50,5 +50,19 @@ export function useSupabase(): TypedSupabaseClient {
  * Use useSupabase() hook in components instead
  */
 export function createClient(): TypedSupabaseClient {
-  return getSupabaseBrowserClient();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // For SSR/prerender safety, mimic the singleton behavior when missing envs
+    if (typeof window === "undefined") {
+      return ({} as unknown) as TypedSupabaseClient;
+    }
+    throw new Error(
+      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    );
+  }
+
+  // Intentionally create a fresh client (used by utility code that expects non-singleton behavior)
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
 }
