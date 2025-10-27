@@ -42,6 +42,7 @@ async def test_update_agent_config_overrides_fields(
     async def _principal_override():
         class _P:
             id = "user-123"
+
         return _P()  # minimal object with id
 
     app.dependency_overrides[require_principal] = _principal_override

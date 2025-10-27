@@ -15,7 +15,6 @@ __all__ = [
     "chat",
     "config",
     "dashboard",
-    "dashboard_realtime",
     "destinations",
     "flights",
     "health",
@@ -25,7 +24,6 @@ __all__ = [
     "search",
     "trips",
     "users",
-    "websocket",
 ]
 
 if TYPE_CHECKING:
@@ -37,7 +35,6 @@ if TYPE_CHECKING:
         chat,
         config,
         dashboard,
-        dashboard_realtime,
         destinations,
         flights,
         health,
@@ -47,7 +44,6 @@ if TYPE_CHECKING:
         search,
         trips,
         users,
-        websocket,
     )
 
 for _module_name in __all__:

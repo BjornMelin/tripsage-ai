@@ -33,7 +33,7 @@ real-time booking capabilities, and intelligent memory management.
 - **Ultra-Fast Caching**: Upstash Redis (HTTP) for low-latency serverless caching
 - **Enterprise Security**: RLS policies and JWT authentication
 - **Modern Frontend**: Next.js 15 with React 19 and TypeScript
-- **Real-time Collaboration**: WebSocket-powered trip sharing and updates
+- **Real-time Collaboration**: Supabase Realtime (private channels + RLS)
 
 ## Quick Start
 
@@ -223,22 +223,15 @@ POST /api/memory/conversation     # Store conversation
 GET  /api/memory/context          # Get user context
 ```
 
-### WebSocket Connection
+### Realtime Client (private channel)
 
-```javascript
-// Real-time trip collaboration
-const ws = new WebSocket('ws://localhost:8000/ws/trip/123e4567-e89b-12d3-a456-426614174000');
-
-ws.onmessage = (event) => {
-  const message = JSON.parse(event.data);
-  console.log('Trip update:', message);
-};
-
-// Send trip updates
-ws.send(JSON.stringify({
-  type: 'trip_update',
-  data: { title: 'Updated Trip Name' }
-}));
+```ts
+import { createClient } from '@supabase/supabase-js'
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+// authorize realtime with access token via RealtimeAuthProvider in app
+const channel = supabase.channel(`user:${userId}`, { config: { private: true } })
+channel.on('broadcast', { event: 'chat:message' }, ({ payload }) => console.log(payload))
+channel.subscribe()
 ```
 
 ---
