@@ -77,13 +77,13 @@ pnpm prepare      # Set up Husky git hooks
 
 ```text
 frontend/
+├── middleware.ts    # Next.js SSR cookie-sync with @supabase/ssr
 ├── src/
 │   ├── app/           # Next.js App Router pages
 │   ├── components/    # Reusable UI components
 │   ├── contexts/      # React context providers
 │   ├── hooks/         # Custom React hooks
 │   ├── lib/           # Utilities and configurations
-│   ├── proxy.ts       # Next.js proxy configuration
 │   ├── schemas/       # Zod validation schemas
 │   ├── stores/        # Zustand state stores
 │   ├── styles/        # Global styles and CSS
