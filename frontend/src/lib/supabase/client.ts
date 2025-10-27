@@ -56,10 +56,10 @@ export function createClient(): TypedSupabaseClient {
   if (!supabaseUrl || !supabaseAnonKey) {
     // For SSR/prerender safety, mimic the singleton behavior when missing envs
     if (typeof window === "undefined") {
-      return ({} as unknown) as TypedSupabaseClient;
+      return {} as unknown as TypedSupabaseClient;
     }
     throw new Error(
-      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
     );
   }
 
