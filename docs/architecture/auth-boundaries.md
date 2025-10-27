@@ -19,6 +19,17 @@
   - Dependencies: `tripsage/api/core/dependencies.py` exposes `get_current_principal` / `require_principal` for routes and services.
   - Supabase clients: `tripsage_core/services/infrastructure/supabase_client.py` provides async clients and `postgrest_for_user(token)`.
 
+## Realtime
+
+- Private channels enforced by RLS on `realtime.messages` (see migration `20251027_01_realtime_policies.sql`).
+- Topic conventions:
+  - `user:{sub}`: only the subject user may broadcast/listen.
+  - `session:{uuid}`: session owner and trip collaborators may broadcast/listen.
+- Frontend:
+  - Authorize realtime with `supabase.realtime.setAuth(access_token)`; wired by `RealtimeAuthProvider` in `frontend/src/components/providers/realtime-auth-provider.tsx`.
+  - Join channels with `{ config: { private: true } }`.
+  - Hooks: `useAgentStatusWebSocket` and `useWebSocketChat` now use Supabase Realtime under the hood.
+
 ## Rules of Engagement
 
 1. Prefer direct supabase-js for read/write operations that are purely RLS-governed and safe to run from the browser.
