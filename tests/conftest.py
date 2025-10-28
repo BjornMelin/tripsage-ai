@@ -6,6 +6,16 @@ FastAPI app instance, and reusable Principal + helpers.
 
 from __future__ import annotations
 
+# Ensure OpenTelemetry exporters are disabled as early as possible
+import os as _os
+
+
+_os.environ.setdefault("OTEL_TRACES_EXPORTER", "none")
+_os.environ.setdefault("OTEL_METRICS_EXPORTER", "none")
+_os.environ.setdefault("OTEL_LOGS_EXPORTER", "none")
+_os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+_os.environ.setdefault("OTEL_SDK_DISABLED", "true")
+
 
 # Keep plugin autoload minimal to avoid heavy app imports during unit tests
 pytest_plugins: list[str] = []
@@ -172,10 +182,40 @@ def set_testing_env() -> None:
     Ensures instrumentation and heavy services keep a light footprint.
     Uses os.environ directly to avoid monkeypatch scope issues at session level.
     """
-    import os
-
-    os.environ["ENVIRONMENT"] = "testing"
+    _os.environ["ENVIRONMENT"] = "testing"
+    # Disable OpenTelemetry exporters during tests (no network, no side effects)
+    _os.environ["OTEL_TRACES_EXPORTER"] = "none"
+    _os.environ["OTEL_METRICS_EXPORTER"] = "none"
+    _os.environ["OTEL_LOGS_EXPORTER"] = "none"
+    # Ensure no implicit OTLP endpoint is used
+    _os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
     _install_fake_otel()
+
+
+@pytest.fixture()
+def otel_inmemory(monkeypatch: pytest.MonkeyPatch):
+    """Optional in-memory OTEL exporter for span assertions.
+
+    Most tests keep instrumentation disabled via ``set_testing_env``. When a
+    test needs to assert span emission, use this fixture to switch to the
+    SDK's in-memory exporter for the test scope.
+    """
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    trace.set_tracer_provider(provider)
+
+    yield exporter
+
+    # Clear spans after assertion to avoid leakage across tests
+    exporter.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -277,17 +317,32 @@ def async_client_factory() -> Callable[[FastAPI], AsyncClient]:
 
 
 @pytest.fixture()
+def fake_redis():
+    """Provide an isolated fakeredis client for tests that need cache access."""
+    try:
+        import fakeredis.aioredis as faredis  # type: ignore[import-not-found]
+    except ImportError:  # pragma: no cover
+        pytest.skip("fakeredis not available")
+    return faredis.FakeRedis()
+
+
+@pytest.fixture()
 def app() -> FastAPI:
     """Return a FastAPI app with routers for integration tests."""
     app = build_minimal_app()
     # Include routers needed for integration tests
     from tripsage.api.routers import (
         accommodations,
+        activities,
         attachments,
         chat,
         config,
+        destinations,
         health,
+        itineraries,
         keys,
+        memory,
+        search,
         trips,
     )
 
@@ -296,12 +351,50 @@ def app() -> FastAPI:
     app.include_router(keys.router, prefix="/api/keys", tags=["api_keys"])
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+    app.include_router(memory.router, prefix="/api", tags=["memory"])
+    app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
+    app.include_router(
+        destinations.router, prefix="/api/destinations", tags=["destinations"]
+    )
+    app.include_router(
+        itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
+    )
+    # Search router defines root-level paths (e.g., /unified, /suggest)
+    app.include_router(search.router, prefix="", tags=["search"])
     app.include_router(
         accommodations.router, prefix="/api/accommodations", tags=["accommodations"]
     )
     app.include_router(
         attachments.router, prefix="/api/attachments", tags=["attachments"]
     )
+    # Dependency overrides for health endpoints to avoid full DI container
+    from tripsage.api.core import dependencies as dep
+
+    class _DB:
+        async def health_check(self) -> bool:
+            """DB is healthy."""
+            return True
+
+        def get_pool_stats(self) -> dict[str, object]:
+            """Return empty pool stats."""
+            return {}
+
+    class _Cache:
+        async def health_check(self) -> bool:
+            """Cache is healthy."""
+            return True
+
+    def _provide_db(request: Any | None = None) -> _DB:  # type: ignore[unused-argument]
+        """Provide a minimal healthy DB stub for integration tests."""
+        return _DB()
+
+    def _provide_cache(request: Any | None = None) -> _Cache:  # type: ignore[unused-argument]
+        """Provide a minimal healthy cache stub for integration tests."""
+        return _Cache()
+
+    app.dependency_overrides[dep.get_db] = _provide_db  # type: ignore[assignment]
+    app.dependency_overrides[dep.get_cache_service_dep] = _provide_cache  # type: ignore[assignment]
+
     return app
 
 
