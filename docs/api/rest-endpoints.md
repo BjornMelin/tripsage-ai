@@ -767,8 +767,8 @@ X-RateLimit-Window: 3600
 
 ### Real-time Features
 
-- **[WebSocket API](websocket-realtime-api.md)** - Real-time chat and collaboration
-- **[WebSocket and Real-time API](websocket-realtime-api.md)** - Real-time patterns and WebSocket connections
+- **[Realtime (Supabase) Guide](websocket-realtime-api.md)** - Private channels + RLS for chat/collaboration
+- **[Realtime (Supabase) Guide](websocket-realtime-api.md)** - Real-time patterns and channel usage
 
 ### Support
 

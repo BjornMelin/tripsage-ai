@@ -289,7 +289,7 @@ function validateTripData(tripData) {
 }
 ```
 
-### Scenario 4: "WebSocket connection keeps dropping"
+### Scenario 4: "Realtime channel keeps unsubscribing"
 
 **Common Issues:**
 
@@ -297,43 +297,24 @@ function validateTripData(tripData) {
 - Authentication token expiration
 - Server-side connection limits
 
-**Robust WebSocket Implementation:**
+**Robust Realtime Implementation:**
 
 ```javascript
-class TripSageWebSocket {
-  constructor(token) {
-    this.token = token;
-    this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
-    this.reconnectDelay = 1000;
+import { createClient } from '@supabase/supabase-js'
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
+
+class TripSageRealtime {
+  constructor(accessToken) {
+    this.accessToken = accessToken
+    this.channel = null
   }
 
-  connect() {
-    this.ws = new WebSocket(
-      `wss://api.tripsage.ai/api/chat/ws?token=${this.token}`
-    );
-
-    this.ws.onopen = () => {
-      console.log("Connected to TripSage WebSocket");
-      this.reconnectAttempts = 0;
-    };
-
-    this.ws.onclose = (event) => {
-      if (
-        event.code === 1006 &&
-        this.reconnectAttempts < this.maxReconnectAttempts
-      ) {
-        // Unexpected close, attempt reconnection
-        setTimeout(() => {
-          this.reconnectAttempts++;
-          this.connect();
-        }, this.reconnectDelay * Math.pow(2, this.reconnectAttempts));
-      }
-    };
-
-    this.ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
+  connect(sessionId) {
+    supabase.realtime.setAuth(this.accessToken)
+    this.channel = supabase.channel(`session:${sessionId}`, { config: { private: true } })
+    this.channel.subscribe((status) => {
+      console.log('Realtime status:', status)
+    })
   }
 }
 ```

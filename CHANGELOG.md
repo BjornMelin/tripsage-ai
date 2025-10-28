@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Supabase Realtime Authorization policies and helpers (private channels, topic helpers, indexes):
   - supabase/migrations/20251027_01_realtime_policies.sql
   - supabase/migrations/20251027_02_realtime_helpers.sql
+- Edge Functions deployed to new project (vcfpldtbehtwulxtgpxl):
+  - trip-notifications, file-processing, cache-invalidation, file-processor
+- Migration prepared to upsert webhook_config endpoints to deployed functions (inactive by default):
+  - supabase/migrations/20251028_01_update_webhook_configs.sql
 - Frontend Realtime singleton client: `getBrowserClient()` exported from `frontend/src/lib/supabase/client.ts` to unify token and channel behavior across the app.
 - Realtime token lifecycle: `RealtimeAuthProvider` now calls `supabase.realtime.setAuth(token)` on login and clears on logout/unmount.
 - Chat store Realtime wiring with typed subscriptions for `chat:message`, `chat:message_chunk`, `chat:typing`, and `agent_status_update`.
@@ -148,6 +152,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed linting/typing issues in touched flight tests and orchestration node; pyright/pylint clean on changed scope
 - Updated Realtime integration/unit test suites aligned to Supabase Realtime channels (no custom WebSocket router)
 - Supabase config.toml updated for CLI v2 compatibility (removed invalid keys; normalized [auth.email] flags; set db.major_version=17). Idempotent fixes to avoid `experimental.webhooks` error by leaving undefined.
+- Supabase config.toml: disabled unused OAuth providers by default ([auth.external.google/github].enabled=false) to reduce CLI warnings in CI.
 - Realtime policy migration made idempotent (guard with `pg_policies` checks). Session policies created only when `public.chat_sessions` exists.
 - Storage migration guarded to work on a fresh project: wraps policies referencing `public.file_attachments` and `public.trips` in conditional DO blocks; functions reference application tables at runtime only.
 - Realtime helpers/policies and storage migration filenames normalized to 2025-10-27 timestamps.
