@@ -15,10 +15,13 @@ from tripsage_core.models.api.itinerary_models import ItineraryItemResponse
 
 class _ItinSvc:
     """Itinerary service stub for integration tests."""
+
     def __init__(self) -> None:
         self.items: dict[tuple[str, str], ItineraryItemResponse] = {}
 
-    async def add_item_to_itinerary(self, user_id: str, itinerary_id: str, request: Any) -> ItineraryItemResponse:  # noqa: E501
+    async def add_item_to_itinerary(
+        self, user_id: str, itinerary_id: str, request: Any
+    ) -> ItineraryItemResponse:
         """Create and store a minimal itinerary item for the given itinerary.
 
         Args:
@@ -40,7 +43,9 @@ class _ItinSvc:
         self.items[(itinerary_id, item.id)] = item
         return item
 
-    async def get_item(self, user_id: str, itinerary_id: str, item_id: str) -> ItineraryItemResponse:  # noqa: E501
+    async def get_item(
+        self, user_id: str, itinerary_id: str, item_id: str
+    ) -> ItineraryItemResponse:
         """Return an item or raise CoreResourceNotFoundError when absent."""
         try:
             return self.items[(itinerary_id, item_id)]
@@ -63,11 +68,13 @@ async def test_itineraries_create_and_get_404(
     from tripsage.api.core import dependencies as dep
 
     def _provide_principal() -> Any:
+        """Provide principal instance for DI."""
         return principal
 
     svc = _ItinSvc()
 
     def _provide_itinerary_service() -> _ItinSvc:
+        """Provide itinerary service stub for DI."""
         return svc
 
     app.dependency_overrides[dep.require_principal] = _provide_principal  # type: ignore[assignment]

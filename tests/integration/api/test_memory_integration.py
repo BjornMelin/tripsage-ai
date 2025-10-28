@@ -11,7 +11,9 @@ from httpx import AsyncClient
 
 
 class _MemSvc:
-    async def add_conversation_memory(self, user_id: str, payload: Any) -> dict[str, object]:  # noqa: E501
+    async def add_conversation_memory(
+        self, user_id: str, payload: Any
+    ) -> dict[str, object]:
         """Persist a conversation memory and echo minimal confirmation.
 
         Args:
