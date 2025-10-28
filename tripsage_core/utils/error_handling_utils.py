@@ -12,7 +12,6 @@ from tripsage_core.exceptions import (
     CoreExternalAPIError,
     CoreTripSageError,
     CoreValidationError,
-    ErrorDetails,
     safe_execute as core_safe_execute,
     with_error_handling as core_with_error_handling,
 )
@@ -103,50 +102,6 @@ def with_error_handling_and_logging(
 
 
 # Factory functions for creating specific TripSage exceptions
-def create_mcp_error(
-    message: str,
-    server: str,
-    tool: str | None = None,
-    params: dict[str, Any] | None = None,
-    category: str = "unknown",
-    status_code: int | None = None,
-) -> CoreExternalAPIError:
-    """Create an MCP error with TripSage-specific formatting.
-
-    Args:
-        message: Error message
-        server: Name of the MCP server that failed
-        tool: Name of the tool that failed, if applicable
-        params: Tool parameters, if applicable
-        category: Error category for better classification
-        status_code: HTTP status code, if applicable
-
-    Returns:
-        CoreMCPError instance
-    """
-    details = ErrorDetails(
-        service=server,
-        operation=None,
-        resource_id=None,
-        user_id=None,
-        request_id=None,
-        additional_context={
-            "tool": tool,
-            "params": params,
-            "category": category,
-            "status_code": status_code,
-        },
-    )
-
-    # Map legacy MCP error into external API error semantics
-    return CoreExternalAPIError(
-        message=message,
-        code=f"{server.upper()}_MCP_ERROR",
-        api_service=server,
-        api_status_code=status_code,
-        api_response={"tool": tool, "params": params},
-        details=details,
-    )
 
 
 def create_api_error(
@@ -302,7 +257,6 @@ __all__ = [
     "TripSageErrorContext",
     "create_api_error",
     "create_database_error",
-    "create_mcp_error",
     "create_validation_error",
     "log_exception",
     "safe_execute_with_logging",

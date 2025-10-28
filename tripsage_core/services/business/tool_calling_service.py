@@ -96,16 +96,8 @@ class ToolCallService:
     with proper validation, error handling, and result formatting.
     """
 
-    def __init__(self, mcp_manager: Any | None = None):
-        """Initialize tool calling service.
-
-        Args:
-            mcp_manager: MCP manager instance (deprecated - removed in BJO-161)
-        """
-        # MCP manager removed as part of BJO-161 MCP abstraction removal
-        if mcp_manager is not None:
-            logger.warning("MCP manager parameter is deprecated and will be ignored")
-        self.mcp_manager = None
+    def __init__(self):
+        """Initialize tool calling service."""
         # Error recovery removed - over-engineered stub
         self.execution_history: list[ToolCallResponse] = []
         self.rate_limits: dict[str, list[float]] = {}

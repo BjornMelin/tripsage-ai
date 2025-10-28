@@ -1,6 +1,4 @@
-"""Dashboard Service.
-
-Provides dashboard metrics by aggregating data from ApiKeyService and the database.
+"""Dashboard Service aggregates metrics from ApiKeyService and the database.
 
 Provides:
 - Real-time API usage analytics and service health tracking
@@ -8,6 +6,8 @@ Provides:
 - Alert management with severity classification
 - Live rate-limit status information
 """
+
+# pylint: disable=too-many-instance-attributes
 
 from __future__ import annotations
 
@@ -100,6 +100,11 @@ def _percentile(values: Sequence[float], quantile: float, default: float) -> flo
         return default
 
 
+def _empty_str_set() -> set[str]:
+    """Return a typed empty set of strings."""
+    return set()
+
+
 @dataclass(slots=True)
 class _UserAggregate:
     """Aggregate data for user activity calculations."""
@@ -108,10 +113,10 @@ class _UserAggregate:
     error_count: int = 0
     latency_sum: float = 0.0
     latency_count: int = 0
-    services: set[str] = field(default_factory=set)
+    services: set[str] = field(default_factory=_empty_str_set)
     first_activity: datetime | None = None
     last_activity: datetime | None = None
-    api_keys: set[str] = field(default_factory=set)
+    api_keys: set[str] = field(default_factory=_empty_str_set)
 
 
 @dataclass(slots=True)
@@ -126,7 +131,7 @@ class _ServiceUsageSnapshot:
     quota_usage: float = 0.0
 
 
-class DashboardService:
+class DashboardService:  # pylint: disable=too-many-instance-attributes
     """Production-ready dashboard service with real analytics."""
 
     def __init__(
@@ -138,7 +143,6 @@ class DashboardService:
         """Initialize dashboard service with dependencies."""
         self.cache = cache_service
         self.db = database_service
-        self.settings = settings
 
         # Initialize API key service for health checks and validation when possible
         self.api_key_service: ApiKeyService | None = None
@@ -781,6 +785,7 @@ class DashboardService:
         severity: AlertSeverity,
         title: str,
         message: str,
+        *,
         extra_fields: Mapping[str, Any] | None = None,
     ) -> AlertData:
         """Create a new system alert."""
