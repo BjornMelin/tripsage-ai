@@ -22,15 +22,6 @@ from tripsage.tools.memory_tools import (
 )
 from tripsage.tools.models import ConversationMessage
 from tripsage_core.services.airbnb_mcp import AirbnbMCP, default_airbnb_mcp
-from tripsage_core.services.business.flight_service import FlightService
-from tripsage_core.services.external_apis.google_maps_service import (
-    GoogleMapsService,
-)
-from tripsage_core.services.external_apis.weather_service import WeatherService
-from tripsage_core.services.external_apis.webcrawl_service import (
-    WebCrawlParams,
-    WebCrawlService,
-)
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -70,16 +61,14 @@ def _require_services() -> AppServiceContainer:
     return _services_container
 
 
-def _get_service_from_container[ServiceT](
-    service_name: str,
-    expected_type: type[ServiceT],
-) -> ServiceT:
-    """Fetch a required service from the container with type validation."""
+def _get_service_from_container(service_name: str) -> Any:
+    """Fetch a required service from the container.
+
+    Type validation is intentionally avoided to prevent importing heavy
+    submodules during test collection and lightweight environments.
+    """
     services = _require_services()
-    return services.get_required_service(
-        service_name,
-        expected_type=expected_type,
-    )
+    return services.get_required_service(service_name)
 
 
 def _get_mcp_service() -> AirbnbMCP:
@@ -160,7 +149,7 @@ async def search_flights(
             FlightSearchRequest,
         )
 
-        service = _get_service_from_container("flight_service", FlightService)
+        service = _get_service_from_container("flight_service")
         pax = [FlightPassenger(type="adult") for _ in range(max(1, passengers))]  # type: ignore[call-arg]
         req = FlightSearchRequest(  # type: ignore[call-arg]
             origin=origin,
@@ -214,7 +203,7 @@ async def search_accommodations(
 async def geocode_location(location: str) -> str:
     """Get geographic coordinates and details for a location via GoogleMapsService."""
     try:
-        svc = _get_service_from_container("google_maps_service", GoogleMapsService)
+        svc = _get_service_from_container("google_maps_service")
         await svc.connect()
         places = await svc.geocode(location)
         return json.dumps([p.model_dump() for p in places], ensure_ascii=False)
@@ -227,7 +216,7 @@ async def geocode_location(location: str) -> str:
 async def get_weather(location: str) -> str:
     """Get current weather information for a location using WeatherService."""
     try:
-        svc = _get_service_from_container("weather_service", WeatherService)
+        svc = _get_service_from_container("weather_service")
         await svc.connect()
         # WeatherService signature may vary; pass location as a plain string
         # pylint: disable=no-value-for-parameter
@@ -242,11 +231,13 @@ async def get_weather(location: str) -> str:
 async def web_search(query: str, location: str | None = None) -> str:
     """Search the web for travel-related information using WebCrawlService."""
     try:
-        svc = _get_service_from_container("webcrawl_service", WebCrawlService)
+        svc = _get_service_from_container("webcrawl_service")
         await svc.connect()
-        params: WebCrawlParams = WebCrawlParams(
-            javascript_enabled=False, extract_markdown=True, extract_html=False
-        )
+        params = {
+            "javascript_enabled": False,
+            "extract_markdown": True,
+            "extract_html": False,
+        }
         # Use a generic search engine wrapper if available; else crawl query URL
         # For now, just return an empty result to satisfy interface if not implemented.
         # Some builds may not expose `search_web`; tolerate via pylint hint

@@ -10,14 +10,17 @@ import json
 import logging
 from collections.abc import Awaitable
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage_core.services.business.memory_service import (
-    ConversationMemoryRequest,
-    MemoryService,
-    UserContextResponse,
-)
+
+
+if TYPE_CHECKING:  # pragma: no cover - import only for typing
+    from tripsage_core.services.business.memory_service import (
+        ConversationMemoryRequest,  # noqa: F401
+        MemoryService,
+        UserContextResponse,  # noqa: F401
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -39,6 +42,9 @@ class SessionMemoryBridge:
     async def _get_service(self) -> MemoryService:
         """Get or create a MemoryService instance (lazy)."""
         if self._memory_service is None:
+            # Deferred import to avoid heavy pydantic model import during module load
+            from tripsage_core.services.business.memory_service import MemoryService
+
             self._memory_service = MemoryService()
         await cast(Awaitable[None], self._memory_service.connect())
         return self._memory_service
@@ -60,6 +66,11 @@ class SessionMemoryBridge:
         try:
             logger.debug("Hydrating state for user: %s", user_id)
             svc = await self._get_service()
+            # Deferred import for typing only; at runtime we just use the dict
+            from tripsage_core.services.business.memory_service import (
+                UserContextResponse,
+            )
+
             context = await cast(
                 Awaitable[UserContextResponse], svc.get_user_context(user_id)
             )
@@ -129,6 +140,10 @@ class SessionMemoryBridge:
             if insights:
                 # Persist insights via MemoryService as a structured note
                 svc = await self._get_service()
+                from tripsage_core.services.business.memory_service import (
+                    ConversationMemoryRequest,
+                )
+
                 payload = ConversationMemoryRequest(
                     messages=[
                         {
@@ -343,6 +358,10 @@ class SessionMemoryBridge:
 
             # Store in session memory as checkpoint reference
             svc = await self._get_service()
+            from tripsage_core.services.business.memory_service import (
+                ConversationMemoryRequest,
+            )
+
             payload = ConversationMemoryRequest(
                 messages=[
                     {

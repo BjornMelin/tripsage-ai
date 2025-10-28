@@ -172,14 +172,16 @@ class UserResponse(BaseModel):
     is_verified: bool = Field(
         default=False, description="Whether user account is verified"
     )
-    preferences: dict | None = Field(default=None, description="User preferences")
+    preferences: dict[str, object] | None = Field(
+        default=None, description="User preferences"
+    )
 
 
 class UserPreferencesResponse(BaseModel):
     """User preferences response model."""
 
     user_id: str = Field(description="User ID")
-    preferences: dict = Field(description="User preferences dictionary")
+    preferences: dict[str, object] = Field(description="User preferences dictionary")
     updated_at: datetime = Field(description="Last update timestamp")
 
 
@@ -188,7 +190,9 @@ class MessageResponse(BaseModel):
 
     message: str = Field(description="Response message")
     success: bool = Field(default=True, description="Whether operation was successful")
-    details: dict | None = Field(default=None, description="Additional details")
+    details: dict[str, object] | None = Field(
+        default=None, description="Additional details"
+    )
 
 
 class AuthResponse(BaseModel):

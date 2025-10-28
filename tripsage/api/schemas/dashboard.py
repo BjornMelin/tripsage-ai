@@ -183,9 +183,7 @@ class SystemOverviewResponse(BaseModel):
     active_api_keys: int = Field(..., description="Active API keys")
 
     # Component health
-    components: list[ComponentHealth] = Field(
-        default_factory=list, description="Component health status"
-    )
+    components: list[ComponentHealth] = []
 
 
 class ServiceStatusResponse(BaseModel):
@@ -227,9 +225,7 @@ class UsageMetricsResponse(BaseModel):
     unique_endpoints: int = Field(
         ..., description="Number of unique endpoints accessed"
     )
-    top_endpoints: list[dict[str, Any]] = Field(
-        default_factory=list, description="Top accessed endpoints"
-    )
+    top_endpoints: list[dict[str, Any]] = []
     error_breakdown: dict[str, int] = Field(
         default_factory=dict, description="Error count by type"
     )
@@ -318,12 +314,8 @@ class UserActivityResponse(BaseModel):
     last_activity: datetime = Field(..., description="Last activity timestamp")
 
     # Usage patterns
-    services_used: list[str] = Field(
-        default_factory=list, description="Services accessed"
-    )
-    top_endpoints: list[dict[str, Any]] = Field(
-        default_factory=list, description="Most used endpoints"
-    )
+    services_used: list[str] = []
+    top_endpoints: list[dict[str, Any]] = []
     avg_latency_ms: float = Field(default=0.0, description="Average response latency")
 
     # Time-based analysis
@@ -411,10 +403,8 @@ class AnalyticsSummaryResponse(BaseModel):
     trends: dict[str, Any] = Field(..., description="Trend analysis summary")
 
     # Insights and recommendations
-    insights: list[str] = Field(default_factory=list, description="Key insights")
-    recommendations: list[str] = Field(
-        default_factory=list, description="Improvement recommendations"
-    )
+    insights: list[str] = []
+    recommendations: list[str] = []
 
 
 # Action request schemas
@@ -443,9 +433,7 @@ class ConfigureAlertRequest(BaseModel):
     alert_type: AlertType = Field(..., description="Type of alert to configure")
     threshold: float = Field(..., description="Alert threshold value")
     enabled: bool = Field(default=True, description="Whether alert is enabled")
-    notification_channels: list[str] = Field(
-        default_factory=list, description="Notification channels"
-    )
+    notification_channels: list[str] = []
 
 
 # Bulk operation schemas
@@ -469,9 +457,7 @@ class BulkAlertActionResponse(BaseModel):
     processed: int = Field(..., description="Number of alerts processed")
     successful: int = Field(..., description="Number of successful operations")
     failed: int = Field(..., description="Number of failed operations")
-    errors: list[dict[str, str]] = Field(
-        default_factory=list, description="Error details"
-    )
+    errors: list[dict[str, str]] = []
 
 
 # Export monitoring data schemas

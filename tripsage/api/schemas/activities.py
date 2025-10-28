@@ -82,7 +82,7 @@ class SavedActivityResponse(BaseModel):
 class ActivitySearchResponse(BaseModel):
     """Aggregate search results with metadata."""
 
-    activities: list[ActivityResponse] = Field(default_factory=list)
+    activities: list[ActivityResponse] = []
     total: int = Field(0, ge=0)
     skip: int = Field(0, ge=0)
     limit: int = Field(20, ge=1)

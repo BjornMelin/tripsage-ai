@@ -30,7 +30,9 @@ class SearchMemoryRequest(BaseModel):
 class UpdatePreferencesRequest(BaseModel):
     """Partial update of user preferences."""
 
-    preferences: dict = Field(..., description="User preferences to update")
+    preferences: dict[str, object] = Field(
+        ..., description="User preferences to update"
+    )
 
 
 class MemorySearchResponse(BaseModel):
