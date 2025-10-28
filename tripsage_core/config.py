@@ -116,6 +116,11 @@ class Settings(BaseSettings):
         default=True, description="Enable rate limit monitoring and analytics"
     )
 
+    # Outbound HTTP limits
+    outbound_default_qpm: float = Field(
+        default=60.0, description="Default queries per minute for outbound HTTP"
+    )
+
     # Feature Flags for Database Hardening
     enable_database_monitoring: bool = Field(
         default=True, description="Enable database connection monitoring"
