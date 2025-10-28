@@ -5,7 +5,7 @@ used across different storage backends.
 """
 
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 from pydantic import Field
 
@@ -47,7 +47,7 @@ class User(TripSageModel):
     @property
     def full_preferences(self) -> dict[str, Any]:
         """Get the full preferences dictionary with defaults."""
-        defaults = {
+        defaults: dict[str, Any] = {
             "theme": "light",
             "currency": "USD",
             "notifications_enabled": True,
@@ -64,7 +64,7 @@ class User(TripSageModel):
             return defaults
 
         # Deep merge preferences with defaults
-        result = defaults.copy()
+        result: dict[str, Any] = defaults.copy()
         for key, value in self.preferences_json.items():
             if (
                 isinstance(value, dict)
@@ -72,7 +72,9 @@ class User(TripSageModel):
                 and isinstance(result[key], dict)
             ):
                 # Merge nested dictionaries
-                result[key] = {**result[key], **value}
+                base_section = cast(dict[str, Any], result[key])
+                incoming_section = cast(dict[str, Any], value)
+                result[key] = {**base_section, **incoming_section}
             else:
                 # Override at top level
                 result[key] = value

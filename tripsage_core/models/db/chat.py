@@ -5,7 +5,7 @@ They are separate from the API models to maintain clean separation of concerns.
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -30,10 +30,10 @@ class ChatSessionDB(BaseModel):
     def ensure_dict(cls, v: Any) -> dict[str, Any]:
         """Ensure metadata is a dictionary."""
         if v is None:
-            return {}
+            return cast(dict[str, Any], {})
         if isinstance(v, dict):
-            return v
-        return {}
+            return cast(dict[str, Any], v)
+        return cast(dict[str, Any], {})
 
 
 class ChatMessageDB(BaseModel):
@@ -72,10 +72,10 @@ class ChatMessageDB(BaseModel):
     def ensure_dict(cls, v: Any) -> dict[str, Any]:
         """Ensure metadata is a dictionary."""
         if v is None:
-            return {}
+            return cast(dict[str, Any], {})
         if isinstance(v, dict):
-            return v
-        return {}
+            return cast(dict[str, Any], v)
+        return cast(dict[str, Any], {})
 
 
 class ChatToolCallDB(BaseModel):
@@ -112,10 +112,10 @@ class ChatToolCallDB(BaseModel):
     def ensure_dict_args(cls, v: Any) -> dict[str, Any]:
         """Ensure arguments is a dictionary."""
         if v is None:
-            return {}
+            return cast(dict[str, Any], {})
         if isinstance(v, dict):
-            return v
-        return {}
+            return cast(dict[str, Any], v)
+        return cast(dict[str, Any], {})
 
 
 class ChatSessionWithStats(ChatSessionDB):
