@@ -163,7 +163,6 @@ def test_settings() -> Settings:
         enable_database_monitoring=False,
         enable_security_monitoring=False,
         enable_auto_recovery=False,
-        enable_websockets=False,
         otel_instrumentation="",
     )
 

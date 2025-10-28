@@ -5,7 +5,7 @@ registry system with direct tool functions.
 """
 
 import json
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -30,7 +30,7 @@ from tripsage_core.services.business.flight_service import FlightService
 
 
 @pytest.fixture(autouse=True)
-def services():
+def services() -> Any:
     """Configure tool services container for each test."""
     container = create_mock_services()
     set_tool_services(container)
@@ -52,7 +52,7 @@ class TestTools:
     """Test the simple tool implementations."""
 
     @pytest.mark.asyncio
-    async def test_search_flights_tool(self, services):
+    async def test_search_flights_tool(self, services: Any):
         """Test the search_flights tool function."""
         mock_result = {
             "flights": [
@@ -67,7 +67,7 @@ class TestTools:
         set_tool_services(services)
 
         # Test the tool
-        result = await search_flights.ainvoke(
+        result = await cast(Any, search_flights).ainvoke(
             {
                 "origin": "NYC",
                 "destination": "LAX",
@@ -85,7 +85,7 @@ class TestTools:
 
     @pytest.mark.asyncio
     @patch("tripsage.orchestration.tools.tools._get_mcp_service")
-    async def test_search_accommodations_tool(self, mock_get_mcp_service):
+    async def test_search_accommodations_tool(self, mock_get_mcp_service: Any):
         """Test the search_accommodations tool function."""
         mock_mcp_service = MagicMock()
         mock_get_mcp_service.return_value = mock_mcp_service
@@ -96,7 +96,7 @@ class TestTools:
         }
         mock_mcp_service.invoke = AsyncMock(return_value=mock_result)
 
-        result = await search_accommodations.ainvoke(
+        result = await cast(Any, search_accommodations).ainvoke(
             {
                 "location": "San Francisco",
                 "check_in": "2024-03-15",
@@ -110,7 +110,7 @@ class TestTools:
         assert parsed_result["accommodations"][0]["name"] == "Hotel California"
 
     @pytest.mark.asyncio
-    async def test_geocode_location_tool(self, services):
+    async def test_geocode_location_tool(self, services: Any):
         """Test the geocode_location tool function."""
         place = MagicMock()
         place.model_dump.return_value = {
@@ -122,14 +122,16 @@ class TestTools:
         services.google_maps_service.geocode = AsyncMock(return_value=[place])
         set_tool_services(services)
 
-        result = await geocode_location.ainvoke({"location": "San Francisco"})
+        result = await cast(Any, geocode_location).ainvoke(
+            {"location": "San Francisco"}
+        )
 
         parsed_result = json.loads(result)[0]
         assert parsed_result["latitude"] == 37.7749
         assert parsed_result["longitude"] == -122.4194
 
     @pytest.mark.asyncio
-    async def test_get_weather_tool(self, services):
+    async def test_get_weather_tool(self, services: Any):
         """Test the get_weather tool function."""
         weather_payload = {"temperature": 68, "condition": "Sunny", "humidity": 45}
         services.weather_service.connect = AsyncMock(return_value=None)
@@ -138,14 +140,14 @@ class TestTools:
         )
         set_tool_services(services)
 
-        result = await get_weather.ainvoke({"location": "San Francisco"})
+        result = await cast(Any, get_weather).ainvoke({"location": "San Francisco"})
 
         parsed_result = json.loads(result)
         assert parsed_result["temperature"] == 68
         assert parsed_result["condition"] == "Sunny"
 
     @pytest.mark.asyncio
-    async def test_web_search_tool(self, services):
+    async def test_web_search_tool(self, services: Any):
         """Test the web_search tool function."""
         mock_result = {
             "results": [{"title": "Best time to visit Paris", "url": "example.com"}]
@@ -154,7 +156,7 @@ class TestTools:
         services.webcrawl_service.search_web = AsyncMock(return_value=mock_result)
         set_tool_services(services)
 
-        result = await web_search.ainvoke(
+        result = await cast(Any, web_search).ainvoke(
             {"query": "best time to visit Paris", "location": "Paris"}
         )
 
@@ -168,10 +170,10 @@ class TestTools:
     @patch("tripsage.orchestration.tools.tools._get_mcp_service")
     async def test_memory_tools(
         self,
-        mock_get_mcp_service,
-        mock_add_conversation_memory,
-        mock_search_user_memories,
-    ):
+        mock_get_mcp_service: Any,
+        mock_add_conversation_memory: Any,
+        mock_search_user_memories: Any,
+    ) -> None:
         """Test the memory add and search tools."""
         mock_mcp_service = MagicMock()
         mock_get_mcp_service.return_value = mock_mcp_service
@@ -182,7 +184,7 @@ class TestTools:
             "id": "mem_123",
         }
 
-        result = await add_memory.ainvoke(
+        result = await cast(Any, add_memory).ainvoke(
             {"content": "User prefers window seats", "category": "preferences"}
         )
 
@@ -194,14 +196,16 @@ class TestTools:
             {"content": "User prefers window seats", "category": "preferences"}
         ]
 
-        result = await search_memories.ainvoke({"content": "seat preferences"})
+        result = await cast(Any, search_memories).ainvoke(
+            {"content": "seat preferences"}
+        )
 
         parsed_result = json.loads(result)
         assert "results" in parsed_result
         assert len(parsed_result["results"]) == 1
 
     @pytest.mark.asyncio
-    async def test_tool_error_handling(self, services):
+    async def test_tool_error_handling(self, services: Any):
         """Test tool error handling."""
         failing_flight_service = MagicMock(spec=FlightService)
         failing_flight_service.search_flights = AsyncMock(
@@ -210,7 +214,7 @@ class TestTools:
         services.flight_service = failing_flight_service
         set_tool_services(services)
 
-        result = await search_flights.ainvoke(
+        result = await cast(Any, search_flights).ainvoke(
             {"origin": "NYC", "destination": "LAX", "departure_date": "2024-03-15"}
         )
 
@@ -270,7 +274,7 @@ class TestTools:
 
     @pytest.mark.asyncio
     @patch("tripsage.orchestration.tools.tools._get_mcp_service")
-    async def test_health_check(self, mock_get_mcp_service):
+    async def test_health_check(self, mock_get_mcp_service: Any):
         """Test the health check function."""
         # Mock successful health check
         mock_mcp_service = MagicMock()
@@ -288,7 +292,7 @@ class TestTools:
 
     @pytest.mark.asyncio
     @patch("tripsage.orchestration.tools.tools._get_mcp_service")
-    async def test_health_check_failure(self, mock_get_mcp_service):
+    async def test_health_check_failure(self, mock_get_mcp_service: Any):
         """Test health check when service is unavailable."""
         mock_mcp_service = MagicMock()
         mock_get_mcp_service.return_value = mock_mcp_service
@@ -350,7 +354,7 @@ class TestToolIntegration:
     """Integration tests for tool functionality."""
 
     @pytest.mark.asyncio
-    async def test_tool_chain_execution(self, services):
+    async def test_tool_chain_execution(self, services: Any):
         """Test chaining multiple tools together."""
         place = MagicMock()
         place.model_dump.return_value = {
@@ -385,17 +389,21 @@ class TestToolIntegration:
 
         # Execute a chain of tools
         # 1. Geocode location
-        geocode_result = await geocode_location.ainvoke({"location": "San Francisco"})
+        geocode_result = await cast(Any, geocode_location).ainvoke(
+            {"location": "San Francisco"}
+        )
         geocode_data = json.loads(geocode_result)[0]
         assert geocode_data["latitude"] == 37.7749
 
         # 2. Get weather
-        weather_result = await get_weather.ainvoke({"location": "San Francisco"})
+        weather_result = await cast(Any, get_weather).ainvoke(
+            {"location": "San Francisco"}
+        )
         weather_data = json.loads(weather_result)
         assert weather_data["temperature"] == 68
 
         # 3. Search flights
-        flight_result = await search_flights.ainvoke(
+        flight_result = await cast(Any, search_flights).ainvoke(
             {
                 "origin": "NYC",
                 "destination": "SFO",
