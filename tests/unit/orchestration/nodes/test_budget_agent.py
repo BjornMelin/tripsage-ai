@@ -39,6 +39,7 @@ async def test_compare_costs_guard_on_empty_options() -> None:
     )
     assert result.get("options_count") == 0
 
+
 @pytest.mark.asyncio
 @given(
     options=st.lists(
