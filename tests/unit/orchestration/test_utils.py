@@ -238,6 +238,7 @@ def create_mock_services(
         trip_service=cast(Any, Mock()),
         user_service=cast(Any, Mock()),
         unified_search_service=unified_search_service,
+        configuration_service=cast(Any, Mock()),
         calendar_service=cast(Any, Mock()),
         document_analyzer=cast(Any, Mock()),
         google_maps_service=google_maps_service,
@@ -271,7 +272,10 @@ def create_mock_services(
 
     if overrides:
         for name, value in overrides.items():
-            setattr(container, name, value)
+            try:
+                setattr(container, name, value)
+            except AttributeError:
+                object.__setattr__(container, name, value)
 
     return container
 

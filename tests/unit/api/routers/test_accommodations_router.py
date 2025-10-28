@@ -43,8 +43,9 @@ class TestAccommodationRouterValidation:
         # FastAPI checks auth before validation, so unauth requests return 401
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("location", ["", " "])  # Schema requires min_length=1
-    def test_search_accommodations_invalid_location(
+    async def test_search_accommodations_invalid_location(
         self, unauthenticated_test_client, location
     ):
         """Test accommodation search with invalid location."""
@@ -52,32 +53,36 @@ class TestAccommodationRouterValidation:
             "location": location,
             "check_in": "2024-03-15",
             "check_out": "2024-03-18",
-            "adults": 2,
+            "adults": 1,
         }
 
-        response = unauthenticated_test_client.post(
+        response = await unauthenticated_test_client.post(
             "/api/accommodations/search", json=search_request
         )
-        # FastAPI checks auth before validation, so unauthenticated requests return 401
+        # FastAPI checks auth before validation, so unauth requests return 401
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_search_accommodations_invalid_dates(self, unauthenticated_test_client):
-        """Test accommodation search with check-out date before check-in."""
+    @pytest.mark.asyncio
+    async def test_search_accommodations_invalid_dates(
+        self, unauthenticated_test_client
+    ):
+        """Test accommodation search with invalid dates."""
         search_request = {
             "location": "Tokyo",
-            "check_in": "2024-03-18",  # After check_out
+            "check_in": "2024-03-18",  # check_in after check_out
             "check_out": "2024-03-15",
-            "adults": 2,
+            "adults": 1,
         }
 
-        response = unauthenticated_test_client.post(
+        response = await unauthenticated_test_client.post(
             "/api/accommodations/search", json=search_request
         )
-        # FastAPI checks auth before validation, so unauthenticated requests return 401
+        # FastAPI checks auth before validation, so unauth requests return 401
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("children", [-1, 11])  # Schema allows 0-10
-    def test_search_accommodations_invalid_children(
+    async def test_search_accommodations_invalid_children(
         self, unauthenticated_test_client, children
     ):
         """Test accommodation search with invalid children count."""
@@ -89,7 +94,7 @@ class TestAccommodationRouterValidation:
             "children": children,
         }
 
-        response = unauthenticated_test_client.post(
+        response = await unauthenticated_test_client.post(
             "/api/accommodations/search", json=search_request
         )
         # FastAPI checks auth before validation, so unauthenticated requests return 401
