@@ -8,6 +8,8 @@ streaming responses, session management, and message operations.
 import asyncio
 import json
 import logging
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar, cast
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
@@ -34,27 +36,41 @@ from tripsage_core.observability.otel import (
 )
 
 
+EndpointCallable = TypeVar("EndpointCallable", bound=Callable[..., Awaitable[Any]])
+
+
+def rate_limit(
+    limit_value: str, **kwargs: Any
+) -> Callable[[EndpointCallable], EndpointCallable]:
+    """Typed wrapper around SlowAPI's limit decorator."""
+    typed_limit = cast(
+        Callable[..., Callable[[EndpointCallable], EndpointCallable]],
+        cast(Any, limiter).limit,
+    )
+    return typed_limit(limit_value, **kwargs)
+
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 @router.post("/", response_model=ChatResponse)
-@limiter.limit("20/minute")
+@rate_limit("20/minute")
 @trace_span(name="api.chat.completion")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def chat(
-    request: ChatRequest,
-    http_request: Request,
-    http_response: Response,
+    chat_request: ChatRequest,
+    request: Request,
+    response: Response,
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
 ):
     """Handle chat requests with optional streaming and session persistence.
 
     Args:
-        request: Chat request with messages and options
-        http_request: Raw HTTP request (required by SlowAPI for headers)
-        http_response: Raw HTTP response (required by SlowAPI for headers)
+        chat_request: Chat request with messages and options
+        request: Raw HTTP request (required by SlowAPI for headers)
+        response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         chat_service: Unified chat service
 
@@ -68,7 +84,7 @@ async def chat(
         user_id = get_principal_id(principal)
 
         # Delegate to unified chat service
-        return await chat_service.chat_completion(user_id, request)
+        return await chat_service.chat_completion(user_id, chat_request)
 
     except Exception as e:
         logger.exception("Chat request failed")
@@ -79,7 +95,7 @@ async def chat(
 
 
 @router.post("/stream")
-@limiter.limit("40/minute")
+@rate_limit("40/minute")
 @trace_span(name="api.chat.stream")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def chat_stream(
@@ -173,7 +189,9 @@ async def chat_stream(
     )
 
 
-@router.post("/sessions", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/sessions", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED
+)
 @trace_span(name="api.chat.sessions.create")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def create_session(
@@ -200,8 +218,12 @@ async def create_session(
         )
 
         # Convert API request to core request
+        metadata: dict[str, Any] | None = body.metadata
+
         session_request = ChatSessionCreateRequest(
-            title=body.title, metadata=body.metadata, trip_id=None
+            title=body.title,
+            metadata=metadata,
+            trip_id=None,
         )
 
         session = await chat_service.create_session(user_id, session_request)
@@ -215,7 +237,7 @@ async def create_session(
         ) from e
 
 
-@router.get("/sessions", response_model=list[dict])
+@router.get("/sessions", response_model=list[dict[str, Any]])
 @trace_span(name="api.chat.sessions.list")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def list_sessions(
@@ -251,7 +273,7 @@ async def list_sessions(
         ) from e
 
 
-@router.get("/sessions/{session_id}", response_model=dict)
+@router.get("/sessions/{session_id}", response_model=dict[str, Any])
 @trace_span(name="api.chat.sessions.get")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_session(
@@ -294,7 +316,7 @@ async def get_session(
         ) from e
 
 
-@router.get("/sessions/{session_id}/messages", response_model=list[dict])
+@router.get("/sessions/{session_id}/messages", response_model=list[dict[str, Any]])
 @trace_span(name="api.chat.messages.list")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_session_messages(  # pylint: disable=too-many-positional-arguments
@@ -331,7 +353,7 @@ async def get_session_messages(  # pylint: disable=too-many-positional-arguments
         ) from e
 
 
-@router.post("/sessions/{session_id}/messages", response_model=dict)
+@router.post("/sessions/{session_id}/messages", response_model=dict[str, Any])
 @trace_span(name="api.chat.messages.create")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def create_message(  # pylint: disable=too-many-positional-arguments

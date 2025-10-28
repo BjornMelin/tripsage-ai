@@ -121,6 +121,58 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
             self._services_initialized = True
 
+    async def _try_jwt_auth(
+        self, request: Request
+    ) -> tuple[Principal | None, AuthenticationError | None]:
+        """Try JWT authentication for the request."""
+        authorization_header = request.headers.get("Authorization")
+        if not authorization_header or not authorization_header.startswith("Bearer "):
+            return None, None
+
+        try:
+            token = authorization_header.replace("Bearer ", "", 1).strip()
+            principal = await self._authenticate_jwt(token)
+
+            # Log successful JWT authentication
+            if principal:
+                await audit_authentication(
+                    event_type=AuditEventType.AUTH_LOGIN_SUCCESS,
+                    outcome=AuditOutcome.SUCCESS,
+                    user_id=principal.id,
+                    ip_address=self._get_client_ip(request),
+                    user_agent=request.headers.get("User-Agent"),
+                    message="JWT authentication successful",
+                    endpoint=request.url.path,
+                    method=request.method,
+                )
+
+            return principal, None
+
+        except AuthenticationError as e:
+            # Log failed JWT authentication
+            await audit_authentication(
+                event_type=AuditEventType.AUTH_LOGIN_FAILED,
+                outcome=AuditOutcome.FAILURE,
+                user_id="unknown",
+                ip_address=self._get_client_ip(request),
+                user_agent=request.headers.get("User-Agent"),
+                message=f"JWT authentication failed: {e!s}",
+                endpoint=request.url.path,
+                method=request.method,
+                error_type=type(e).__name__,
+            )
+
+            logger.warning(
+                "JWT authentication failed: %s",
+                e,
+                extra={
+                    "ip_address": self._get_client_ip(request),
+                    "user_agent": request.headers.get("User-Agent", "Unknown")[:200],
+                    "path": request.url.path,
+                },
+            )
+            return None, e
+
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
@@ -147,52 +199,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         auth_error = None
 
         # Try JWT authentication first (Bearer token)
-        authorization_header = request.headers.get("Authorization")
-        if authorization_header and authorization_header.startswith("Bearer "):
-            try:
-                token = authorization_header.replace("Bearer ", "", 1).strip()
-                principal = await self._authenticate_jwt(token)
-
-                # Log successful JWT authentication
-                if principal:
-                    await audit_authentication(
-                        event_type=AuditEventType.AUTH_LOGIN_SUCCESS,
-                        outcome=AuditOutcome.SUCCESS,
-                        user_id=principal.id,
-                        ip_address=self._get_client_ip(request),
-                        user_agent=request.headers.get("User-Agent"),
-                        message="JWT authentication successful",
-                        endpoint=request.url.path,
-                        method=request.method,
-                    )
-
-            except AuthenticationError as e:
-                auth_error = e
-
-                # Log failed JWT authentication
-                await audit_authentication(
-                    event_type=AuditEventType.AUTH_LOGIN_FAILED,
-                    outcome=AuditOutcome.FAILURE,
-                    user_id="unknown",
-                    ip_address=self._get_client_ip(request),
-                    user_agent=request.headers.get("User-Agent"),
-                    message=f"JWT authentication failed: {e!s}",
-                    endpoint=request.url.path,
-                    method=request.method,
-                    error_type=type(e).__name__,
-                )
-
-                logger.warning(
-                    "JWT authentication failed: %s",
-                    e,
-                    extra={
-                        "ip_address": self._get_client_ip(request),
-                        "user_agent": request.headers.get("User-Agent", "Unknown")[
-                            :200
-                        ],
-                        "path": request.url.path,
-                    },
-                )
+        principal, auth_error = await self._try_jwt_auth(request)
 
         # Try API key authentication if JWT failed
         if not principal:
@@ -293,13 +300,12 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             if auth_error:
                 # Return specific error if we have one
                 return self._create_auth_error_response(auth_error)
-            else:
-                # Generic not authenticated error
-                return Response(
-                    content="Authentication required",
-                    status_code=HTTP_401_UNAUTHORIZED,
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
+            # Generic not authenticated error
+            return Response(
+                content="Authentication required",
+                status_code=HTTP_401_UNAUTHORIZED,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
         # Set authenticated principal in request state
         request.state.principal = principal
@@ -448,24 +454,23 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                         **key_metadata,  # Additional metadata
                     },
                 )
-            else:
-                # Fallback validation if key service is not available
-                if len(secret) < 20:
-                    raise KeyValidationError("Invalid API key")
+            # Fallback validation if key service is not available
+            if len(secret) < 20:
+                raise KeyValidationError("Invalid API key")
 
-                # Create principal with limited validation
-                return Principal(
-                    id=f"agent_{service}_{key_id}",
-                    type="agent",
-                    service=service,
-                    auth_method="api_key",
-                    scopes=[f"{service}:*"],
-                    metadata={
-                        "key_id": key_id,
-                        "service": service,
-                        "validation_mode": "fallback",
-                    },
-                )
+            # Create principal with limited validation
+            return Principal(
+                id=f"agent_{service}_{key_id}",
+                type="agent",
+                service=service,
+                auth_method="api_key",
+                scopes=[f"{service}:*"],
+                metadata={
+                    "key_id": key_id,
+                    "service": service,
+                    "validation_mode": "fallback",
+                },
+            )
 
         except (AuthenticationError, KeyValidationError):
             raise
@@ -490,15 +495,11 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 status_code=HTTP_401_UNAUTHORIZED,
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        else:
-            return Response(
-                content=f"Authentication failed: {error.message}",
-                status_code=HTTP_401_UNAUTHORIZED,
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-    # Removed _validate_request_headers and _validate_token_format in favor of
-    # SDK-driven verification using claims
+        return Response(
+            content=f"Authentication failed: {error.message}",
+            status_code=HTTP_401_UNAUTHORIZED,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     def _validate_api_key_format(self, api_key: str) -> bool:
         """Validate API key format.
