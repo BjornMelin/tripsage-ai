@@ -145,7 +145,7 @@ async def chat_stream(
             from tripsage_core.config import get_settings
 
             settings = get_settings()
-            model_name = getattr(request, "model", "gpt-4o-mini")
+            model_name = getattr(request, "model", "gpt-5-mini")
             temperature = getattr(request, "temperature", 0.7)
             max_tokens = getattr(request, "max_tokens", 4096)
 

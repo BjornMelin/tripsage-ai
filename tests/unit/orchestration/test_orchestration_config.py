@@ -35,8 +35,8 @@ def test_from_environment_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(k, raising=False)
 
     cfg = LangGraphConfig.from_environment()
-    assert cfg.default_model == "gpt-4o"
-    assert cfg.router_model == "gpt-4o-mini"
+    assert cfg.default_model == "gpt-5"
+    assert cfg.router_model == "gpt-5-mini"
     assert cfg.checkpoint_storage is CheckpointStorage.MEMORY
     assert cfg.temperature == approx(0.7)
     assert cfg.max_tokens == 4096

@@ -87,7 +87,7 @@ The configuration system includes several security features:
 | Variable | Type | Required | Description |
 |----------|------|----------|-------------|
 | `OPENAI_API_KEY` | Secret | Yes | OpenAI API key |
-| `OPENAI_MODEL` | string | `gpt-4o` | Default OpenAI model |
+| `OPENAI_MODEL` | string | `gpt-5` | Default OpenAI model |
 
 ## Usage Examples
 

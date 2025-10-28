@@ -85,11 +85,11 @@ MEMORY_GRAPH_STORE=supabase   # Unified storage approach
 ```bash
 # OpenAI Configuration
 OPENAI_API_KEY=sk-your-openai-api-key
-OPENAI_MODEL=gpt-4o
+OPENAI_MODEL=gpt-5
 
 # LangGraph Orchestration
 LANGGRAPH_FEATURES=conversation_memory,advanced_routing,memory_updates,error_recovery
-LANGGRAPH_DEFAULT_MODEL=gpt-4o
+LANGGRAPH_DEFAULT_MODEL=gpt-5
 LANGGRAPH_TEMPERATURE=0.7
 LANGGRAPH_MAX_TOKENS=4096
 

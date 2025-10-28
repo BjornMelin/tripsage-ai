@@ -44,14 +44,18 @@ class RouterNode(BaseAgentNode):
 
         # Initialize classifier model with improved configuration
         settings = get_settings()
-        api_key_config = settings.openai_api_key
-        if isinstance(api_key_config, SecretStr) or api_key_config is None:
-            secret_api_key = api_key_config
-        else:
-            secret_api_key = SecretStr(str(api_key_config))
+        api_key_value: str | None = (
+            settings.openai_api_key.get_secret_value()
+            if settings.openai_api_key
+            else None
+        )
+
+        secret_api_key: SecretStr | None = (
+            SecretStr(api_key_value) if api_key_value else None
+        )
 
         self.classifier = ChatOpenAI(
-            model="gpt-4o-mini",  # Use smaller, faster model for classification
+            model="gpt-5-mini",  # Use smaller, faster model for classification
             temperature=0.1,  # Low temperature for consistent routing decisions
             api_key=secret_api_key,
         )
@@ -231,12 +235,16 @@ class RouterNode(BaseAgentNode):
 
             response = await self.classifier.ainvoke(messages)
             # Handle different response formats
-            raw_content = response.content if hasattr(response, "content") else response
+            raw_resp: Any = cast(Any, response)
+            if hasattr(raw_resp, "content"):
+                raw_content: Any = raw_resp.content
+            else:
+                raw_content = raw_resp
             if isinstance(raw_content, (dict, list)):
-                content_str = json.dumps(raw_content)
+                content_str: str = json.dumps(raw_content)
             else:
                 content_str = cast(str, raw_content)
-            classification = json.loads(content_str)
+            classification: dict[str, Any] = json.loads(content_str)
 
             # Validate classification result
             if not self._validate_classification(classification):
@@ -314,7 +322,7 @@ class RouterNode(BaseAgentNode):
         Returns:
             Context dictionary with relevant information
         """
-        context = {}
+        context: dict[str, Any] = {}
 
         # Extract previous search patterns
         if state["flight_searches"]:
