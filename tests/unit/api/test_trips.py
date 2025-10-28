@@ -181,6 +181,7 @@ class _FakeTripService:
         user_id: str,
         query: str,
         filters: dict[str, Any] | None,
+        *,
         limit: int,
         offset: int,
     ):
@@ -251,13 +252,17 @@ def _override_dependencies(
     )
 
     # Resolve users quickly without hitting services or DI container
-    async def _resolve_user(email: str) -> tuple[str | None, str | None]:
+    async def _resolve_user(
+        email: str, *_args: object, **_kwargs: object
+    ) -> tuple[str | None, str | None]:
         """Resolve user id and name for a given email (async stub)."""
         if email.startswith("denied"):
             return "denied-user-id", "Friend"
         return "00000000-0000-0000-0000-000000000002", "Friend"
 
-    async def _user_details(uid: str) -> tuple[str | None, str | None]:
+    async def _user_details(
+        uid: str, *_args: object, **_kwargs: object
+    ) -> tuple[str | None, str | None]:
         """Get email and full name for a given user id (async stub)."""
         return ("friend@example.com", "Friend") if uid != "unknown" else (None, None)
 
@@ -269,7 +274,11 @@ def _override_dependencies(
     )
 
     # Avoid requiring app.state.services for UserService in DI
-    app.dependency_overrides[deps.get_user_service] = lambda: object()
+    def _provide_user_service() -> object:
+        """Provide a minimal placeholder user service."""
+        return object()
+
+    app.dependency_overrides[deps.get_user_service] = _provide_user_service
 
 
 # -----------------

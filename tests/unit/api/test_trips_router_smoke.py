@@ -1,5 +1,7 @@
 """Test the trips router smoke."""
 
+from typing import Any
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -20,7 +22,7 @@ class _P:
 
 
 class _TripSvc:
-    async def create_trip(self, user_id: str, trip_data):
+    async def create_trip(self, user_id: str, trip_data: Any) -> Any:
         """Create a trip."""
 
         class _R:  # pylint: disable=too-many-instance-attributes
@@ -44,11 +46,13 @@ class _TripSvc:
 
         return _R()
 
-    async def get_trip(self, trip_id: str, user_id: str):
+    async def get_trip(self, trip_id: str, user_id: str) -> Any:
         """Get a trip."""
         return
 
-    async def get_user_trips(self, user_id: str, limit: int, offset: int):
+    async def get_user_trips(
+        self, user_id: str, limit: int, offset: int
+    ) -> list[dict[str, Any]]:
         """Get user trips."""
         return []
 
@@ -61,9 +65,17 @@ def _app() -> FastAPI:
     """Create a test app."""
     app = FastAPI()
     app.include_router(trips_router.router, prefix="/api/trips")
-    # pylint: disable=unnecessary-lambda
-    app.dependency_overrides[require_principal] = lambda: _P()
-    app.dependency_overrides[get_trip_service] = lambda: _TripSvc()
+
+    def _provide_principal() -> _P:
+        """Provide principal stub."""
+        return _P()
+
+    def _provide_trip_service() -> _TripSvc:
+        """Provide trip service stub."""
+        return _TripSvc()
+
+    app.dependency_overrides[require_principal] = _provide_principal
+    app.dependency_overrides[get_trip_service] = _provide_trip_service
     return app
 
 
