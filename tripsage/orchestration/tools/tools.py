@@ -314,7 +314,7 @@ search_memories: BaseTool = tool("search_memories", args_schema=MemoryParams)(
     _search_memories_impl
 )
 
-AGENT_TOOLS: dict[str, list[BaseTool]] = {
+AGENT_TOOLS: dict[str, list[Any]] = {
     "flight_agent": [
         search_flights,
         geocode_location,
@@ -358,7 +358,7 @@ AGENT_TOOLS: dict[str, list[BaseTool]] = {
 }
 
 # All available tools list
-ALL_TOOLS: list[BaseTool] = [
+ALL_TOOLS: list[Any] = [
     search_flights,
     search_accommodations,
     geocode_location,
@@ -369,12 +369,12 @@ ALL_TOOLS: list[BaseTool] = [
 ]
 
 
-def get_tools_for_agent(agent_type: str) -> list[BaseTool]:
+def get_tools_for_agent(agent_type: str) -> list[Any]:
     """Get tools for a specific agent type."""
     return AGENT_TOOLS.get(agent_type, [])
 
 
-def get_all_tools() -> list[BaseTool]:
+def get_all_tools() -> list[Any]:
     """Get all available tools."""
     return ALL_TOOLS
 

@@ -9,6 +9,7 @@ from datetime import UTC, date, datetime
 from typing import Any, cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -49,16 +50,21 @@ class AccommodationSearchParameters(BaseModel):
     rating_min: float | None = Field(default=None, ge=0, le=5)
 
 
+def _empty_tool_list() -> list[BaseTool]:
+    """Return a typed empty tool list."""
+    return []
+
+
 @dataclass(slots=True)
 class _AgentRuntimeState:
     """Runtime state for accommodation agent."""
 
     llm: ChatOpenAI | None = None
-    llm_with_tools: Any | None = None
+    llm_with_tools: ChatOpenAI | None = None
     parameter_extractor: StructuredExtractor[AccommodationSearchParameters] | None = (
         None
     )
-    tools: list[Any] = field(default_factory=list)
+    tools: list[BaseTool] = field(default_factory=_empty_tool_list)
 
 
 class AccommodationAgentNode(BaseAgentNode):
@@ -97,7 +103,9 @@ class AccommodationAgentNode(BaseAgentNode):
         # Bind tools to LLM for direct use (if LLM is available)
         if self._runtime.llm:
             runtime_llm = cast(Any, self._runtime.llm)
-            self._runtime.llm_with_tools = runtime_llm.bind_tools(self._runtime.tools)
+            self._runtime.llm_with_tools = cast(
+                ChatOpenAI, runtime_llm.bind_tools(self._runtime.tools)
+            )
 
         logger.info(
             "Initialized accommodation agent with %s tools",
@@ -122,8 +130,8 @@ class AccommodationAgentNode(BaseAgentNode):
             )
             if self._runtime.tools:
                 runtime_llm = cast(Any, self._runtime.llm)
-                self._runtime.llm_with_tools = runtime_llm.bind_tools(
-                    self._runtime.tools
+                self._runtime.llm_with_tools = cast(
+                    ChatOpenAI, runtime_llm.bind_tools(self._runtime.tools)
                 )
 
             logger.info(
@@ -155,8 +163,8 @@ class AccommodationAgentNode(BaseAgentNode):
             )
             if self._runtime.tools:
                 runtime_llm = cast(Any, self._runtime.llm)
-                self._runtime.llm_with_tools = runtime_llm.bind_tools(
-                    self._runtime.tools
+                self._runtime.llm_with_tools = cast(
+                    ChatOpenAI, runtime_llm.bind_tools(self._runtime.tools)
                 )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:

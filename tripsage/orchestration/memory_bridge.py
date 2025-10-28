@@ -190,7 +190,9 @@ class SessionMemoryBridge:
         # Extract learned facts from interactions
         messages_list = state.get("messages", [])
         if messages_list:
-            insights["learned_facts"] = self._extract_facts_from_messages(messages_list)
+            facts = self._extract_facts_from_messages(messages_list)
+            if facts:
+                insights["learned_facts"] = facts
 
         # Extract search patterns
         search_history: list[dict[str, Any]] = []
@@ -217,7 +219,11 @@ class SessionMemoryBridge:
         if destination_info:
             insights["destination_preferences"] = destination_info
 
-        # Add session context
+        # If nothing meaningful was extracted, return an empty dict to avoid
+        # persisting no-op insights. Otherwise, append lightweight context.
+        if not insights:
+            return {}
+
         insights["session_context"] = {
             "timestamp": datetime.now(UTC).isoformat(),
             "session_id": state.get("session_id"),
