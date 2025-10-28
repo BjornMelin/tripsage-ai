@@ -1,7 +1,7 @@
 # API Usage Examples
 
 > **Quick Reference for TripSage API Integration**  
-> Practical code snippets for REST API, WebSocket, and authentication
+> Practical code snippets for REST API, Realtime, and authentication
 > **Looking for complete tutorials?** Check out our [**Complete Integration Guide**](examples.md) for full workflows, SDKs, and advanced patterns.
 
 ## Table of Contents
@@ -621,7 +621,7 @@ const hotels = await client.accommodations.search({
   guests: 2,
 });
 
-// WebSocket chat
+// Realtime chat (Supabase)
 const chat = client.chat.connect();
 chat.on("message", (message) => {
   console.log("AI:", message.content);
@@ -865,43 +865,43 @@ async def update_sensitive_data(
         )
 ```
 
-### **WebSocket Security**
+### **Realtime Security (Supabase)**
 
-```python
-from fastapi import WebSocket, WebSocketDisconnect
-from tripsage.api.core.trip_security import verify_trip_access, TripAccessContext
+Supabase Realtime uses Postgres RLS policies on `realtime.messages` with private channels. Clients must:
 
-@router.websocket("/trips/{trip_id}/live-updates")
-async def trip_live_updates(
-    websocket: WebSocket,
-    trip_id: str,
-    principal: RequiredPrincipalDep,
-    trip_service: TripServiceDep,
-):
-    """WebSocket endpoint with trip access verification."""
-    # Verify access before accepting connection
-    context = TripAccessContext(
-        trip_id=trip_id,
-        principal_id=principal.id,
-        required_level=TripAccessLevel.READ,
-        operation="websocket_connection",
-        ip_address=websocket.client.host if websocket.client else "unknown",
-    )
+- Authenticate and call `supabase.realtime.setAuth(access_token)` when the session changes.
+- Join private topics (for example, `session:{uuid}` or `user:{sub}`) that your policies allow.
 
-    access_result = await verify_trip_access(context, trip_service)
-    if not access_result.is_authorized:
-        await websocket.close(code=1008, reason="Access denied")
-        return
+```ts
+import { createClient } from "@supabase/supabase-js";
 
-    await websocket.accept()
-    try:
-        while True:
-            # Handle WebSocket communication
-            data = await websocket.receive_text()
-            await websocket.send_text(f"Echo: {data}")
-    except WebSocketDisconnect:
-        pass
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+// After sign-in (or token refresh)
+const { data: { session } } = await supabase.auth.getSession();
+const accessToken = session?.access_token;
+if (accessToken) supabase.realtime.setAuth(accessToken);
+
+// Join a private session channel
+const sessionId = "abc-123";
+const channel = supabase.channel(`session:${sessionId}`, { config: { private: true } });
+
+channel
+  .on("broadcast", { event: "chat:message" }, (payload) => {
+    console.log("message", payload);
+  })
+  .subscribe((status) => {
+    if (status === "SUBSCRIBED") {
+      // Optionally broadcast
+      channel.send({ type: "broadcast", event: "chat:message", payload: { text: "hello" } });
+    }
+  });
 ```
+
+Policy examples live in the Realtime migration files and the [Realtime API guide](realtime-api.md).
 
 ### **Updating Existing Trip Endpoints**
 

@@ -186,7 +186,7 @@ AIRBNB_MCP_RETRY_ATTEMPTS=3
 ```bash
 # Next.js Environment Variables
 NEXT_PUBLIC_API_URL=http://localhost:8000  # Backend API URL
-# Realtime uses supabase-js with project URL/anon key; no separate WebSocket URL required
+# Realtime uses supabase-js with project URL/anon key; no separate Realtime URL required
 NEXT_PUBLIC_ENVIRONMENT=development
 
 # Authentication

@@ -12,7 +12,7 @@ TripSage requires a modern, high-performance backend framework that can:
 
 - Handle concurrent AI agent operations efficiently
 - Provide automatic API documentation
-- Support WebSocket connections for real-time features
+- Support Realtime channels (Supabase Realtime) for real-time features
 - Integrate well with async Python libraries
 - Enable rapid API development with strong typing
 
@@ -27,7 +27,7 @@ FastAPI provides:
 - Native async/await support for high concurrency
 - Automatic OpenAPI/Swagger documentation generation
 - Pydantic integration for data validation
-- WebSocket support for real-time features
+- Realtime channel support for real-time features
 - Excellent performance (on par with Node.js/Go)
 - Strong typing with Python type hints
 
