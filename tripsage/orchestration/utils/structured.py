@@ -28,7 +28,8 @@ class StructuredExtractor[T_Result: BaseModel]:
     ) -> None:
         """Initialise the extractor with an LLM and structured schema."""
         self._schema = schema
-        self._structured_llm = llm.with_structured_output(schema)
+        # Treat structured LLM runnable as Any to avoid partial-unknown types
+        self._structured_llm: Any = cast(Any, llm).with_structured_output(schema)
         self._logger = logger or logging.getLogger(__name__)
 
     async def extract(self, messages: Sequence[BaseMessage]) -> T_Result | None:

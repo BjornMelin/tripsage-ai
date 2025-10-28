@@ -236,22 +236,16 @@ def disable_auth_audit_logging(monkeypatch: pytest.MonkeyPatch) -> None:
         _mock_get_audit_logger,
         raising=False,
     )
-    # Also patch re-exported imports used by API modules under test
-    monkeypatch.setattr(
-        "tripsage.api.core.trip_security.audit_security_event",
-        _noop,
-        raising=False,
-    )
-    monkeypatch.setattr(
-        "tripsage_core.services.business.audit_logging_service.audit_authentication",
-        _noop,
-        raising=False,
-    )
-    monkeypatch.setattr(
-        "tripsage_core.services.business.audit_logging_service.audit_api_key",
-        _noop,
-        raising=False,
-    )
+    # Also patch re-exported imports used by API modules under test, but only
+    # if those modules can be imported without triggering heavy side effects.
+    try:
+        import importlib
+
+        trip_sec = importlib.import_module("tripsage.api.core.trip_security")
+        monkeypatch.setattr(trip_sec, "audit_security_event", _noop, raising=False)
+    except (ImportError, AttributeError):
+        # Skip when unavailable; orchestration unit tests don't need API patches
+        pass
 
 
 @pytest.fixture()
@@ -288,6 +282,7 @@ def app() -> FastAPI:
     app = build_minimal_app()
     # Include routers needed for integration tests
     from tripsage.api.routers import (
+        accommodations,
         attachments,
         chat,
         config,
@@ -301,6 +296,9 @@ def app() -> FastAPI:
     app.include_router(keys.router, prefix="/api/keys", tags=["api_keys"])
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+    app.include_router(
+        accommodations.router, prefix="/api/accommodations", tags=["accommodations"]
+    )
     app.include_router(
         attachments.router, prefix="/api/attachments", tags=["attachments"]
     )
@@ -329,7 +327,7 @@ def request_builder() -> Callable[[str, str], Request]:
     """Build a synthetic FastAPI request for SlowAPI-dependent tests."""
 
     def _build(method: str, path: str) -> Request:
-        scope = {
+        scope: dict[str, Any] = {
             "type": "http",
             "method": method,
             "path": path,
@@ -341,6 +339,7 @@ def request_builder() -> Callable[[str, str], Request]:
         }
 
         async def receive() -> dict[str, object]:
+            """Receive request."""
             return {"type": "http.request", "body": b"", "more_body": False}
 
         return Request(scope, receive)

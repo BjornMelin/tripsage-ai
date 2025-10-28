@@ -56,23 +56,25 @@ class TripSageOrchestrator:
         set_tool_services(self.services)
         self.config = config or get_default_config()
         try:
-            self.checkpoint_service = self.services.get_required_service(
+            self.checkpoint_service: Any = self.services.get_required_service(
                 "checkpoint_service"
             )
         except ValueError as exc:
             raise ValueError(
                 "TripSageOrchestrator requires a configured checkpoint service."
             ) from exc
-        self.checkpointer = checkpointer
+        self.checkpointer: Any | None = checkpointer
         try:
-            self.memory_bridge = self.services.get_required_service("memory_bridge")
+            self.memory_bridge: Any = self.services.get_required_service(
+                "memory_bridge"
+            )
         except ValueError as exc:
             raise ValueError(
                 "TripSageOrchestrator requires a configured session memory bridge."
             ) from exc
         self.handoff_coordinator = get_handoff_coordinator()
-        self.graph = self._build_graph()
-        self.compiled_graph = None  # Will be set in async initialize
+        self.graph: Any = self._build_graph()
+        self.compiled_graph: Any | None = None  # Will be set in async initialize
         self._initialized = False
 
     async def initialize(self) -> None:
@@ -103,7 +105,7 @@ class TripSageOrchestrator:
 
         logger.info("TripSage LangGraph orchestrator initialized successfully")
 
-    def _build_graph(self) -> StateGraph:
+    def _build_graph(self) -> Any:
         """Construct the main orchestration graph.
 
         Returns:
@@ -112,7 +114,7 @@ class TripSageOrchestrator:
         logger.info("Building LangGraph orchestration graph")
 
         # Create the graph with our state schema
-        graph = StateGraph(TravelPlanningState)
+        graph: Any = StateGraph(TravelPlanningState)
 
         # Add the router node (entry point for all requests)
         router_node = RouterNode(self.services)

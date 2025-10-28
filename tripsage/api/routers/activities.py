@@ -1,6 +1,7 @@
 """Router for activity-related endpoints in the TripSage API."""
 
 import logging
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -28,6 +29,7 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditSeverity,
     audit_security_event,
 )
+from tripsage_core.types import JSONObject
 
 
 router = APIRouter()
@@ -123,9 +125,8 @@ async def save_activity(
     """
     logger.info("Save activity request: %s", request.activity_id)
 
+    user_id = get_principal_id(principal)
     try:
-        user_id = get_principal_id(principal)
-
         # Verify trip access if trip_id is provided
         if request.trip_id:
             trip = await trip_service.get_trip(trip_id=request.trip_id, user_id=user_id)
@@ -153,7 +154,7 @@ async def save_activity(
 
         # Save activity to itinerary_items table
         saved_at = datetime.now(UTC)
-        itinerary_data = {
+        itinerary_data: JSONObject = {
             "id": str(uuid4()),
             "trip_id": request.trip_id,
             "user_id": user_id,
@@ -246,16 +247,15 @@ async def get_saved_activities(
     """
     logger.info("Get saved activities request")
 
+    user_id = get_principal_id(principal)
     try:
-        user_id = get_principal_id(principal)
-
         # Query saved activities from itinerary_items table
         filters = {
             "user_id": user_id,
             "item_type": "activity",
         }
 
-        saved_items = await db_service.select(
+        saved_items: list[JSONObject] = await db_service.select(
             table="itinerary_items",
             columns="*",
             filters=filters,
@@ -266,9 +266,12 @@ async def get_saved_activities(
         )
 
         # Convert to SavedActivityResponse format
-        saved_activities = []
+        saved_activities: list[SavedActivityResponse] = []
         for item in saved_items:
-            metadata = item.get("metadata", {})
+            md_value = item.get("metadata", {})
+            metadata: Mapping[str, object] = (
+                md_value if isinstance(md_value, Mapping) else {}
+            )
             saved_activities.append(
                 SavedActivityResponse.model_validate(
                     {
@@ -345,9 +348,8 @@ async def delete_saved_activity(
     """
     logger.info("Delete saved activity request: %s", activity_id)
 
+    user_id = get_principal_id(principal)
     try:
-        user_id = get_principal_id(principal)
-
         # First, check if the saved activity exists and belongs to the user
         filters = {
             "user_id": user_id,
@@ -369,19 +371,22 @@ async def delete_saved_activity(
                 "item_type": "activity",
             }
 
-            all_items = await db_service.select(
+            all_items: list[JSONObject] = await db_service.select(
                 table="itinerary_items",
                 columns="*",
                 filters=metadata_filter,
                 user_id=user_id,
             )
 
-            # Find item with matching activity_id in metadata
-            existing_items = [
-                item
-                for item in all_items
-                if item.get("metadata", {}).get("activity_id") == activity_id
-            ]
+            # Find item with matching activity_id in metadata (only when mapping)
+            filtered: list[JSONObject] = []
+            for item in all_items:
+                md_val = item.get("metadata", {})
+                if not isinstance(md_val, Mapping):
+                    continue
+                if md_val.get("activity_id") == activity_id:
+                    filtered.append(item)
+            existing_items = filtered
 
         if not existing_items:
             await audit_security_event(
