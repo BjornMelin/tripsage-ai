@@ -5,7 +5,7 @@ implementing Mem0's memory system with pgvector for semantic search.
 """
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -81,8 +81,8 @@ class Memory(BaseModel):
         if not v:
             return []
         # Remove empty strings and duplicates while preserving order
-        seen = set()
-        cleaned = []
+        seen: set[str] = set()
+        cleaned: list[str] = []
         for category in v:
             if category and category.strip():
                 cleaned_category = category.strip().lower()
@@ -95,7 +95,7 @@ class Memory(BaseModel):
     @classmethod
     def validate_relevance_score(cls, v: float) -> float:
         """Validate relevance score is between 0.0 and 1.0."""
-        if not (0.0 <= v <= 1.0):
+        if not 0.0 <= v <= 1.0:
             raise ValueError("Relevance score must be between 0.0 and 1.0")
         return v
 
@@ -106,8 +106,9 @@ class Memory(BaseModel):
         if v is None:
             return {}
         if isinstance(v, dict):
-            return v
-        return {}
+            return cast(dict[str, Any], v)
+        metadata_default: dict[str, Any] = {}
+        return metadata_default
 
     @property
     def is_active(self) -> bool:
@@ -116,19 +117,41 @@ class Memory(BaseModel):
 
     def add_category(self, category: str) -> None:
         """Add a category to the memory."""
-        category = category.strip().lower()
-        if category and category not in self.categories:
-            self.categories.append(category)
+        category_normalized = category.strip().lower()
+        categories = self._categories_list()
+        if category_normalized and category_normalized not in categories:
+            categories.append(category_normalized)
 
     def remove_category(self, category: str) -> None:
         """Remove a category from the memory."""
-        category = category.strip().lower()
-        if category in self.categories:
-            self.categories.remove(category)
+        category_normalized = category.strip().lower()
+        categories = self._categories_list()
+        if category_normalized in categories:
+            categories.remove(category_normalized)
 
     def update_metadata(self, updates: dict[str, Any]) -> None:
         """Update memory metadata."""
-        self.metadata.update(updates)
+        metadata = self._metadata_dict()
+        metadata.update(updates)
+        self.metadata = metadata
+
+    def _metadata_dict(self) -> dict[str, Any]:
+        """Return metadata as a dictionary."""
+        metadata_any: Any | None = self.__dict__.get("metadata")
+        if metadata_any is None:
+            return {}
+        if not isinstance(metadata_any, dict):
+            raise TypeError("Memory.metadata must be a dictionary")
+        return cast(dict[str, Any], metadata_any)
+
+    def _categories_list(self) -> list[str]:
+        """Return categories as a list."""
+        categories_any: Any | None = self.__dict__.get("categories")
+        if categories_any is None:
+            return []
+        if not isinstance(categories_any, list):
+            raise TypeError("Memory.categories must be a list of strings")
+        return cast(list[str], categories_any)
 
 
 class SessionMemory(BaseModel):
@@ -215,10 +238,12 @@ class SessionMemory(BaseModel):
     def ensure_dict(cls, v: Any) -> dict[str, Any]:
         """Ensure metadata is a dictionary."""
         if v is None:
-            return {}
+            empty: dict[str, Any] = {}
+            return empty
         if isinstance(v, dict):
-            return v
-        return {}
+            return cast(dict[str, Any], v)
+        empty2: dict[str, Any] = {}
+        return empty2
 
     @property
     def is_expired(self) -> bool:
@@ -227,9 +252,8 @@ class SessionMemory(BaseModel):
         if expires_at.tzinfo is None:
             # If expires_at is naive, compare with naive now
             return datetime.now() > expires_at
-        else:
-            # If expires_at is timezone-aware, compare with timezone-aware now
-            return datetime.now(UTC) > expires_at
+        # If expires_at is timezone-aware, compare with timezone-aware now
+        return datetime.now(UTC) > expires_at
 
     def extend_expiry(self, hours: int = 24) -> None:
         """Extend the expiry time by the specified number of hours."""
@@ -242,32 +266,6 @@ class SessionMemory(BaseModel):
             self.expires_at = new_expiry.replace(tzinfo=None)
         else:
             self.expires_at = new_expiry
-
-
-class MemorySearchResult(BaseModel):
-    """Model for memory search results."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    memory: Memory = Field(description="The memory that matched the search")
-    similarity: float = Field(description="Similarity score (0.0 to 1.0)")
-    rank: int = Field(description="Rank in the search results")
-
-    @field_validator("similarity")
-    @classmethod
-    def validate_similarity(cls, v: float) -> float:
-        """Validate similarity score is between 0.0 and 1.0."""
-        if not (0.0 <= v <= 1.0):
-            raise ValueError("Similarity score must be between 0.0 and 1.0")
-        return v
-
-    @field_validator("rank")
-    @classmethod
-    def validate_rank(cls, v: int) -> int:
-        """Validate rank is positive."""
-        if v < 1:
-            raise ValueError("Rank must be positive")
-        return v
 
 
 class MemoryCreate(BaseModel):
@@ -322,8 +320,8 @@ class MemoryCreate(BaseModel):
         if not v:
             return []
         # Remove empty strings and duplicates while preserving order
-        seen = set()
-        cleaned = []
+        seen: set[str] = set()
+        cleaned: list[str] = []
         for category in v:
             if category and category.strip() and category not in seen:
                 cleaned_category = category.strip().lower()
@@ -335,7 +333,7 @@ class MemoryCreate(BaseModel):
     @classmethod
     def validate_relevance_score(cls, v: float) -> float:
         """Validate relevance score is between 0.0 and 1.0."""
-        if not (0.0 <= v <= 1.0):
+        if not 0.0 <= v <= 1.0:
             raise ValueError("Relevance score must be between 0.0 and 1.0")
         return v
 
@@ -344,10 +342,11 @@ class MemoryCreate(BaseModel):
     def ensure_dict(cls, v: Any) -> dict[str, Any]:
         """Ensure metadata is a dictionary."""
         if v is None:
-            return {}
+            empty3: dict[str, Any] = {}
+            return empty3
         if isinstance(v, dict):
-            return v
-        return {}
+            return cast(dict[str, Any], v)
+        return cast(dict[str, Any], {})
 
 
 class MemoryUpdate(BaseModel):
@@ -403,8 +402,8 @@ class MemoryUpdate(BaseModel):
             if not v:
                 return []
             # Remove empty strings and duplicates while preserving order
-            seen = set()
-            cleaned = []
+            seen: set[str] = set()
+            cleaned: list[str] = []
             for category in v:
                 if category and category.strip() and category not in seen:
                     cleaned_category = category.strip().lower()
@@ -417,7 +416,7 @@ class MemoryUpdate(BaseModel):
     @classmethod
     def validate_relevance_score(cls, v: float | None) -> float | None:
         """Validate relevance score is between 0.0 and 1.0 if provided."""
-        if v is not None and not (0.0 <= v <= 1.0):
+        if v is not None and not 0.0 <= v <= 1.0:
             raise ValueError("Relevance score must be between 0.0 and 1.0")
         return v
 
@@ -427,6 +426,7 @@ class MemoryUpdate(BaseModel):
         """Ensure metadata is a dictionary if provided."""
         if v is not None:
             if isinstance(v, dict):
-                return v
-            return {}
-        return v
+                return cast(dict[str, Any], v)
+            empty4: dict[str, Any] = {}
+            return empty4
+        return None

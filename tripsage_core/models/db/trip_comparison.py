@@ -4,12 +4,33 @@ This module provides the TripComparison model for storing
 comparison data between different trip options.
 """
 
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timedelta
+from typing import Any, TypeGuard, cast
 
 from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageModel
+
+
+def _is_option_dict(candidate: Any) -> TypeGuard[dict[str, Any]]:
+    """Determine whether a value is a dictionary suitable for option data."""
+    return isinstance(candidate, dict)
+
+
+def _extract_option_dicts(raw_options: Any) -> list[dict[str, Any]]:
+    """Normalize arbitrary option payloads into a list of dictionaries."""
+    if not isinstance(raw_options, list):
+        return []
+    typed_options: list[Any] = cast(list[Any], raw_options)
+    return [candidate for candidate in typed_options if _is_option_dict(candidate)]
+
+
+def _extract_list(raw_values: Any) -> list[Any]:
+    """Return a shallow list copy when the payload is list-like."""
+    if isinstance(raw_values, list):
+        typed_values: list[Any] = cast(list[Any], raw_values)
+        return typed_values.copy()
+    return []
 
 
 class TripComparison(TripSageModel):
@@ -31,104 +52,101 @@ class TripComparison(TripSageModel):
     @property
     def is_recent(self) -> bool:
         """Check if the comparison was created recently (within 24 hours)."""
-        from datetime import datetime as datetime_type, timedelta
-
-        return datetime_type.now() - self.timestamp < timedelta(hours=24)
+        comparison_timestamp = self._timestamp_as_datetime()
+        current_timestamp = (
+            datetime.now(tz=comparison_timestamp.tzinfo)
+            if comparison_timestamp.tzinfo is not None
+            else datetime.now()
+        )
+        return current_timestamp - comparison_timestamp < timedelta(hours=24)
 
     @property
     def formatted_timestamp(self) -> str:
         """Get the formatted timestamp for display."""
-        return self.timestamp.strftime("%Y-%m-%d %H:%M")
+        return self._timestamp_as_datetime().strftime("%Y-%m-%d %H:%M")
 
     @property
     def options_count(self) -> int:
         """Get the number of options being compared."""
-        options = self.comparison_json.get("options", [])
-        if isinstance(options, list):
-            return len(options)
-        return 0
+        return len(self._option_dicts())
 
     @property
     def has_selected_option(self) -> bool:
         """Check if a selected option is present."""
-        return "selected_option_id" in self.comparison_json
+        return self.selected_option_id is not None
 
     @property
     def selected_option_id(self) -> int | None:
         """Get the ID of the selected option."""
-        return self.comparison_json.get("selected_option_id")
+        selected_id = self._comparison_data().get("selected_option_id")
+        return selected_id if isinstance(selected_id, int) else None
 
     @property
     def comparison_type(self) -> str | None:
         """Get the type of comparison (flight, accommodation, etc.)."""
-        # Try to infer from options
-        options = self.comparison_json.get("options", [])
-        if options and isinstance(options, list) and len(options) > 0:
-            first_option = options[0]
-            if isinstance(first_option, dict):
-                return first_option.get("type")
+        options = self._option_dicts()
+        if options:
+            option_type = options[0].get("type")
+            if isinstance(option_type, str):
+                return option_type
         # Fallback to explicit type field
-        return self.comparison_json.get("type")
+        explicit_type = self._comparison_data().get("type")
+        return explicit_type if isinstance(explicit_type, str) else None
 
     @property
     def has_criteria(self) -> bool:
         """Check if comparison criteria are defined."""
-        criteria = self.comparison_json.get("criteria", [])
-        return isinstance(criteria, list) and len(criteria) > 0
+        return bool(self._criteria_values())
 
     @property
     def criteria_list(self) -> list[str]:
         """Get the list of comparison criteria."""
-        criteria = self.comparison_json.get("criteria", [])
-        if isinstance(criteria, list):
-            return criteria
-        return []
+        return [str(criteria) for criteria in self._criteria_values()]
 
     @property
     def has_flights(self) -> bool:
         """Check if the comparison includes flight options."""
-        return "flights" in self.comparison_json or any(
-            "flight" in option for option in self.comparison_json.get("options", [])
+        options = self._option_dicts()
+        comparison_data = self._comparison_data()
+        return "flights" in comparison_data or any(
+            "flight" in option for option in options
         )
 
     @property
     def has_accommodations(self) -> bool:
         """Check if the comparison includes accommodation options."""
-        return "accommodations" in self.comparison_json or any(
-            "accommodation" in option
-            for option in self.comparison_json.get("options", [])
+        options = self._option_dicts()
+        comparison_data = self._comparison_data()
+        return "accommodations" in comparison_data or any(
+            "accommodation" in option for option in options
         )
 
     @property
     def has_transportation(self) -> bool:
         """Check if the comparison includes transportation options."""
-        return "transportation" in self.comparison_json or any(
-            "transportation" in option
-            for option in self.comparison_json.get("options", [])
+        options = self._option_dicts()
+        comparison_data = self._comparison_data()
+        return "transportation" in comparison_data or any(
+            "transportation" in option for option in options
         )
 
     @property
     def has_complete_options(self) -> bool:
         """Check if comparison includes complete trip options with all components."""
-        options = self.comparison_json.get("options", [])
-        if not options or not isinstance(options, list):
+        options = self._option_dicts()
+        if not options:
             return False
 
         # Check if each option has flight, accommodation, and transportation
-        for option in options:
-            if not all(
-                key in option for key in ["flight", "accommodation", "transportation"]
-            ):
-                return False
-
-        return True
+        required_keys = ("flight", "accommodation", "transportation")
+        return all(all(key in option for key in required_keys) for option in options)
 
     @property
     def comparison_summary(self) -> str:
         """Get a summary of the comparison."""
         options_count = self.options_count
 
-        components = []
+        components: list[str] = []
         if self.has_flights:
             components.append("flights")
         if self.has_accommodations:
@@ -142,11 +160,9 @@ class TripComparison(TripSageModel):
 
     def get_option_by_id(self, option_id: int) -> dict[str, Any] | None:
         """Get an option by its ID."""
-        options = self.comparison_json.get("options", [])
-        if isinstance(options, list):
-            for option in options:
-                if isinstance(option, dict) and option.get("id") == option_id:
-                    return option
+        for option in self._option_dicts():
+            if option.get("id") == option_id:
+                return option
         return None
 
     def get_selected_option(self) -> dict[str, Any] | None:
@@ -155,3 +171,25 @@ class TripComparison(TripSageModel):
         if selected_id is not None:
             return self.get_option_by_id(selected_id)
         return None
+
+    def _option_dicts(self) -> list[dict[str, Any]]:
+        """Retrieve sanitized option dictionaries."""
+        return _extract_option_dicts(self._comparison_data().get("options"))
+
+    def _criteria_values(self) -> list[Any]:
+        """Retrieve criteria entries as a list."""
+        return _extract_list(self._comparison_data().get("criteria"))
+
+    def _timestamp_as_datetime(self) -> datetime:
+        """Return the timestamp as a datetime instance, validating the payload."""
+        timestamp_any: Any | None = self.__dict__.get("timestamp")
+        if not isinstance(timestamp_any, datetime):
+            raise TypeError("TripComparison.timestamp must be a datetime instance")
+        return timestamp_any
+
+    def _comparison_data(self) -> dict[str, Any]:
+        """Return the comparison JSON payload as a dictionary."""
+        comparison_data_any: Any | None = self.__dict__.get("comparison_json")
+        if not isinstance(comparison_data_any, dict):
+            raise TypeError("TripComparison.comparison_json must be a dictionary")
+        return cast(dict[str, Any], comparison_data_any)
