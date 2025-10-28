@@ -124,6 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Lifespan constructs and tears down cache, Google Maps, database, and related services in a typed container
   - Dependency providers (`tripsage/api/core/dependencies.py`) retrieve services from the container, eliminating bespoke registry lookups
   - A shared `ChatAgent` instance initialises during lifespan and is exposed through `app.state.chat_agent` for WebSocket handlers
+- Dashboard Service refactored to eliminate N+1 queries, added 5-minute TTL caching, safe percentile calculations, removed redundant factory functions and duplicate model definitions, added cached computed properties; reduced from ~1200 to 846 lines
 
 ### Refactor
 
