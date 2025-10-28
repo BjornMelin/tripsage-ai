@@ -71,15 +71,26 @@ services:
     environment:
       - ENVIRONMENT=development
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-tripsage_dev_password}@supabase:5432/${POSTGRES_DB:-tripsage_dev}
+      # Bind API to container network and align port with EXPOSE/compose mapping
+      - TRIPSAGE_API_HOST=0.0.0.0
+      - TRIPSAGE_API_PORT=8080
+      # Backend cache/limiter uses TCP Redis (optional in dev). If unset, limiter falls back to memory.
+      # - REDIS_URL=${REDIS_URL}
       - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL:-}
       - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN:-}
+      # Supabase (local) for scripts/tools; API services read DATABASE_* fields below
       - SUPABASE_URL=http://supabase:8000
-      - SUPABASE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-your-service-role-key}
-      - MEM0_CONFIG=${MEM0_CONFIG:-'{"vector_store":{"provider":"pgvector"}}'}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-your-service-role-key}
+      # Settings-aligned secrets for backend services (map from Supabase vars when present)
+      - DATABASE_PUBLIC_KEY=${SUPABASE_ANON_KEY:-your-anon-key}
+      - DATABASE_SERVICE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-your-service-role-key}
+      - DATABASE_JWT_SECRET=${SUPABASE_JWT_SECRET:-dev-jwt-secret}
+      # Optional providers
       - DUFFEL_ACCESS_TOKEN=${DUFFEL_ACCESS_TOKEN}
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
       - OPENWEATHERMAP_API_KEY=${OPENWEATHERMAP_API_KEY}
-      - CRAWL4AI_API_KEY=${CRAWL4AI_API_KEY:-}
+      # Crawl4AI MCP nested settings expect CRAWL4AI_MCP__API_KEY if used
+      - CRAWL4AI_MCP__API_KEY=${CRAWL4AI_API_KEY:-}
     ports:
       - "8080:8080"
     volumes:
@@ -88,6 +99,11 @@ services:
     depends_on:
       supabase:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     restart: unless-stopped
     networks:
       - tripsage-network
@@ -220,5 +236,3 @@ networks:
 volumes:
   supabase_data:
     name: tripsage_supabase_data
-  dragonfly_data:
-    name: tripsage_dragonfly_data
