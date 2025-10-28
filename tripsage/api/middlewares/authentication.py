@@ -16,7 +16,7 @@ from typing import Any
 from fastapi import Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.status import HTTP_401_UNAUTHORIZED
+from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_503_SERVICE_UNAVAILABLE
 from starlette.types import ASGIApp
 
 from tripsage.api.core.config import Settings, get_settings
@@ -102,24 +102,22 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # Lazy initialization of services
         self._services_initialized = False
 
-    async def _ensure_services(self):
-        """Ensure services are initialized (lazy loading)."""
-        if not self._services_initialized:
-            if self.key_service is None:
-                from tripsage_core.config import get_settings as _get_s
-                from tripsage_core.services.infrastructure.cache_service import (
-                    get_cache_service,
-                )
-                from tripsage_core.services.infrastructure.database_service import (
-                    get_database_service,
-                )
+    async def _ensure_services(self, request: Request) -> None:
+        """Ensure authentication dependencies are available."""
+        if self._services_initialized:
+            return
 
-                db = await get_database_service()
-                cache = await get_cache_service()
-                settings = _get_s()
-                self.key_service = ApiKeyService(db=db, cache=cache, settings=settings)
+        if self.key_service is None:
+            app_service = getattr(request.app.state, "api_key_service", None)
+            if isinstance(app_service, ApiKeyService):
+                self.key_service = app_service
+            else:
+                logger.error("API key service is unavailable for authentication")
+                request.app.state.security_ready = False
+                raise AuthenticationError("Authentication service unavailable")
 
-            self._services_initialized = True
+        request.app.state.security_ready = True
+        self._services_initialized = True
 
     async def _try_jwt_auth(
         self, request: Request
@@ -189,9 +187,6 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         if self._should_skip_auth(request.url.path):
             return await call_next(request)
 
-        # Ensure services are initialized
-        await self._ensure_services()
-
         # Header sanitation removed in favor of SDK-driven verification
 
         # Try to authenticate the request
@@ -203,6 +198,23 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
         # Try API key authentication if JWT failed
         if not principal:
+            try:
+                await self._ensure_services(request)
+            except AuthenticationError:
+                logger.exception(
+                    "Authentication services unavailable",
+                    extra={
+                        "path": request.url.path,
+                        "ip_address": self._get_client_ip(request),
+                    },
+                )
+                request.app.state.security_ready = False
+                return Response(
+                    content="Authentication service unavailable",
+                    status_code=HTTP_503_SERVICE_UNAVAILABLE,
+                    headers={"Retry-After": "30"},
+                )
+
             api_key_header = request.headers.get("X-API-Key")
             if api_key_header:
                 try:
@@ -454,23 +466,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                         **key_metadata,  # Additional metadata
                     },
                 )
-            # Fallback validation if key service is not available
-            if len(secret) < 20:
-                raise KeyValidationError("Invalid API key")
-
-            # Create principal with limited validation
-            return Principal(
-                id=f"agent_{service}_{key_id}",
-                type="agent",
-                service=service,
-                auth_method="api_key",
-                scopes=[f"{service}:*"],
-                metadata={
-                    "key_id": key_id,
-                    "service": service,
-                    "validation_mode": "fallback",
-                },
-            )
+            raise AuthenticationError("API key service unavailable")
 
         except (AuthenticationError, KeyValidationError):
             raise
@@ -531,14 +527,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         return all(32 <= ord(c) <= 126 for c in api_key)
 
     def _get_client_ip(self, request: Request) -> str:
-        """Get client IP address with proper header precedence.
-
-        Args:
-            request: The HTTP request
-
-        Returns:
-            Client IP address
-        """
+        """Get client IP address with proper header precedence."""
         # Check forwarded headers in order of preference
         forwarded_headers = [
             "X-Forwarded-For",

@@ -4,14 +4,18 @@ This module provides clean, modern dependency injection using Annotated types
 for unified authentication across JWT (frontend) and API keys (agents).
 """
 
-from typing import Annotated
+from collections.abc import Iterable
+from typing import Annotated, Any, cast
 
 from fastapi import Depends, Request
 
 from tripsage.api.core.config import Settings, get_settings
 from tripsage.api.core.protocols import ApiKeyServiceProto, ChatServiceProto
 from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthenticationError,
+    CoreAuthorizationError,
+)
 from tripsage_core.services.airbnb_mcp import AirbnbMCP
 from tripsage_core.services.business.accommodation_service import (
     AccommodationService,
@@ -37,7 +41,7 @@ from tripsage_core.services.business.memory_service import (
 )
 from tripsage_core.services.business.trip_service import TripService, get_trip_service
 from tripsage_core.services.business.unified_search_service import UnifiedSearchService
-from tripsage_core.services.business.user_service import UserService, get_user_service
+from tripsage_core.services.business.user_service import UserService
 from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
 from tripsage_core.services.infrastructure import CacheService
 from tripsage_core.services.infrastructure.cache_service import get_cache_service
@@ -62,6 +66,14 @@ async def get_db():
     The name is kept for compatibility but the return type has changed.
     """
     return await get_database_service()
+
+
+async def get_user_service_dep(
+    database_service: DatabaseService | None = None,
+) -> UserService:
+    """Typed wrapper around core user service dependency."""
+    resolved_db = database_service or await get_database_service()
+    return UserService(database_service=resolved_db)
 
 
 # Session memory dependency
@@ -121,6 +133,45 @@ async def require_agent_principal(request: Request) -> Principal:
             details={"additional_context": {"current_auth": principal.type}},
         )
     return principal
+
+
+async def require_admin_principal(request: Request) -> Principal:
+    """Require a principal with admin privileges."""
+    principal = await require_principal(request)
+
+    if principal.type == "agent":
+        raise CoreAuthorizationError(
+            message="Admin privileges required",
+            code="ADMIN_AUTH_REQUIRED",
+            details={"additional_context": {"principal_type": principal.type}},
+        )
+
+    roles: set[str] = set()
+    primary_role = principal.metadata.get("role")
+    if isinstance(primary_role, str):
+        roles.add(primary_role.lower())
+
+    role_collection = principal.metadata.get("roles")
+    if isinstance(role_collection, (list, tuple, set)):
+        for role_item in cast(Iterable[Any], role_collection):
+            if isinstance(role_item, str):
+                roles.add(role_item.lower())
+            else:
+                roles.add(str(role_item).lower())
+
+    is_admin_flag = principal.metadata.get("is_admin")
+    if isinstance(is_admin_flag, bool) and is_admin_flag:
+        return principal
+
+    allowed_roles = {"admin", "superadmin", "site_admin"}
+    if roles.intersection(allowed_roles):
+        return principal
+
+    raise CoreAuthorizationError(
+        message="Admin privileges required",
+        code="ADMIN_AUTH_REQUIRED",
+        details={"additional_context": {"roles": sorted(roles)}},
+    )
 
 
 # Principal utilities
@@ -202,10 +253,17 @@ def get_mcp_service(request: Request) -> AirbnbMCP:
 # API Key service dependency
 async def get_api_key_service(request: Request) -> ApiKeyService:
     """Get the API key service instance as a dependency."""
+    service = getattr(request.app.state, "api_key_service", None)
+    if isinstance(service, ApiKeyService):
+        return service
+
     db = await get_database_service()
     cache = await get_cache_service_dep(request)
     settings = get_settings()
-    return ApiKeyService(db=db, cache=cache, settings=settings)
+    service = ApiKeyService(db=db, cache=cache, settings=settings)
+    request.app.state.api_key_service = service
+    request.app.state.security_ready = True
+    return service
 
 
 # Modern Annotated dependency types for 2025 best practices
@@ -225,6 +283,7 @@ CurrentPrincipalDep = Annotated[Principal | None, Depends(get_current_principal)
 RequiredPrincipalDep = Annotated[Principal, Depends(require_principal)]
 UserPrincipalDep = Annotated[Principal, Depends(require_user_principal)]
 AgentPrincipalDep = Annotated[Principal, Depends(require_agent_principal)]
+AdminPrincipalDep = Annotated[Principal, Depends(require_admin_principal)]
 
 # Business service dependencies
 AccommodationServiceDep = Annotated[
@@ -245,4 +304,4 @@ ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)
 ApiKeyServiceDep = Annotated[ApiKeyServiceProto, Depends(get_api_key_service)]
 MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
 TripServiceDep = Annotated[TripService, Depends(get_trip_service)]
-UserServiceDep = Annotated[UserService, Depends(get_user_service)]
+UserServiceDep = Annotated[UserService, Depends(get_user_service_dep)]

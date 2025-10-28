@@ -21,6 +21,7 @@ from tripsage.api.core.config import Settings, get_settings
 from tripsage.api.core.openapi import custom_openapi as build_openapi_schema
 from tripsage.api.limiting import install_rate_limiting
 from tripsage.api.middlewares import (
+    AuthenticationMiddleware,
     LoggingMiddleware,
 )
 from tripsage.api.routers import (
@@ -52,6 +53,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreValidationError,
 )
 from tripsage_core.observability.otel import setup_otel
+from tripsage_core.services.business.api_key_service import ApiKeyService
 from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
 
 
@@ -270,7 +272,7 @@ def register_app_routers(app: FastAPI) -> None:
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
     # dashboard_realtime router is temporarily excluded pending module finalization
-    app.include_router(keys.router, prefix="/api/user/keys", tags=["api_keys"])
+    app.include_router(keys.router, prefix="/api/keys", tags=["api_keys"])
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
     app.include_router(
@@ -361,6 +363,10 @@ def configure_middlewares(app: FastAPI, settings: Settings) -> None:
     )
 
     app.add_middleware(LoggingMiddleware)
+    app.add_middleware(
+        AuthenticationMiddleware,
+        settings=settings,
+    )
     install_rate_limiting(app, settings)
 
 
@@ -405,6 +411,7 @@ def initialize_fastapi_app(settings: Settings) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.settings = settings
+    app.state.security_ready = False
     return app
 
 
@@ -457,6 +464,27 @@ async def startup_services(app: FastAPI) -> None:
         await app.state.cache_service.connect()
         cleanup_callbacks.append(("Cache service", app.state.cache_service.disconnect))
 
+        logger.info("Initializing API key service")
+        from tripsage_core.services.infrastructure.database_service import (
+            get_database_service as _get_database_service,
+        )
+
+        db_service = await _get_database_service()
+        cache_service = app.state.cache_service
+        app.state.api_key_service = ApiKeyService(
+            db=db_service,
+            cache=cache_service,
+            settings=app.state.settings,
+        )
+
+        async def _close_api_key_service() -> None:
+            service: ApiKeyService | None = getattr(app.state, "api_key_service", None)
+            if service is not None:
+                await service.client.aclose()
+
+        cleanup_callbacks.append(("API key service", _close_api_key_service))
+        app.state.security_ready = True
+
         logger.info("Initializing Google Maps service")
         app.state.google_maps_service = GoogleMapsService()
         await app.state.google_maps_service.connect()
@@ -485,6 +513,7 @@ async def startup_services(app: FastAPI) -> None:
                 "DatabaseConnectionMonitor initialization failed", exc_info=True
             )
     except Exception:
+        app.state.security_ready = False
         await _run_cleanup_callbacks(cleanup_callbacks)
         raise
 
@@ -494,6 +523,7 @@ async def shutdown_services(app: FastAPI) -> None:
     callbacks = getattr(app.state, "shutdown_callbacks", [])
     await _run_cleanup_callbacks(callbacks)
     app.state.shutdown_callbacks = []
+    app.state.security_ready = False
 
 
 @asynccontextmanager
@@ -517,23 +547,15 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
         The configured FastAPI application
     """
     settings = get_settings()
-
     enable_asgi, fastapi_instrument_app = prepare_instrumentation(settings)
-
     configure_observability(settings, enable_asgi)
-
     app = initialize_fastapi_app(settings)
 
     finalize_fastapi_instrumentation(app, fastapi_instrument_app)
-
     install_log_correlation()
-
     configure_middlewares(app, settings)
-
     register_exception_handlers(app)
-
     register_app_routers(app)
-
     attach_custom_openapi(app)
 
     logger.info("FastAPI application configured with %s routes", len(app.routes))

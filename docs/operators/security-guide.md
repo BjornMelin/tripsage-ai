@@ -138,6 +138,20 @@ USING (
 }
 ```
 
+### October 2025 API Hardening Updates
+
+- `AuthenticationMiddleware` now fails closed if upstream authentication or key services are unavailable. The `/api/health/readiness` probe exposes a new `authentication` component that reports `503` until the middleware completes its dependency handshake.
+- A dedicated `require_admin_principal` dependency gates privileged routes. API key management (`/api/keys/**`) and configuration endpoints reject agent principals and require a JWT user with either `metadata.is_admin = true` or an admin role in `metadata.role`/`metadata.roles`.
+- Key management responses are sanitized by default: metrics emit aggregated `user_distribution` statistics without raw identifiers, and audit logs mask key IDs (`abcd***wxyz`).
+- The public API surface has converged on `/api/keys` (legacy `/api/user/keys` routes were removed). Update any operator scripts, monitors, or allowlists accordingly.
+- New integration tests cover the admin gate, metrics sanitization, malformed telemetry handling, and audit log masking to prevent regressions.
+
+### Operational checklist
+
+- Ensure all admin service accounts include an `admin` role scope in Supabase user metadata before enabling the new guard.
+- Refresh ingress or WAF rules that previously whitelisted `/api/user/keys*` paths so they target `/api/keys*`.
+- Add the `authentication` readiness check to deployment dashboards/alerts so rollouts block if auth dependencies misbehave.
+
 ### Rate Limiting Strategy
 
 | Authentication Level | Requests/Minute | Burst Limit |

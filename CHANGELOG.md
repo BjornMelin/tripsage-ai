@@ -64,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Next.js middleware uses `@supabase/ssr` `createServerClient` + `auth.getUser()` with cookie sync
 - Frontend hooks derive user via `supabase.auth.getUser()` (no React auth context)
 - `useAuthenticatedApi` injects `Authorization` from supabase-js session/refresh
+- API key management endpoints consolidated under `/api/keys`; `/api/user/keys` has been removed. Update downstream clients, firewall allowlists, and automation scripts to the new path before rollout.
 - Supabase SSR client: validate `NEXT_PUBLIC_SUPABASE_URL|ANON_KEY`; wrap `cookies().setAll` in try/catch
 - Next proxy: guard cookie writes with try/catch
 - Edge Functions: upgraded runtime deps and import strategy

@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from tripsage.api.core.dependencies import (
-    RequiredPrincipalDep,
+    AdminPrincipalDep,
     get_principal_id,
 )
 from tripsage.api.schemas.config import (
@@ -74,15 +74,16 @@ router = APIRouter(prefix="/config", tags=["configuration"])
 @router.get("/agents", response_model=list[str])
 @trace_span(name="api.config.agents.list")
 @record_histogram("api.op.duration", unit="s")
-async def list_agent_types():
+async def list_agent_types(principal: AdminPrincipalDep):
     """List all available agent types."""
+    _ = principal
     return ["budget_agent", "destination_research_agent", "itinerary_agent"]
 
 
 @router.get("/agents/{agent_type}", response_model=AgentConfigResponse)
 @trace_span(name="api.config.agents.get")
 @record_histogram("api.op.duration", unit="s")
-async def get_agent_config(agent_type: str):
+async def get_agent_config(agent_type: str, principal: AdminPrincipalDep):
     """Get current configuration for a specific agent type."""
     # Validate agent type
     valid_agents = ["budget_agent", "destination_research_agent", "itinerary_agent"]
@@ -93,6 +94,7 @@ async def get_agent_config(agent_type: str):
         )
 
     try:
+        _ = principal
         agent_type_enum = AgentType(agent_type)
         config = DEFAULT_AGENT_CONFIGS.get(agent_type_enum)
         if not config:
@@ -119,7 +121,7 @@ async def get_agent_config(agent_type: str):
 async def update_agent_config(
     agent_type: str,
     config_update: AgentConfigRequest,
-    principal: RequiredPrincipalDep,
+    principal: AdminPrincipalDep,
 ):
     """Update configuration for a specific agent type."""
     # Validate agent type
@@ -185,7 +187,7 @@ async def update_agent_config(
 @router.get("/agents/{agent_type}/versions", response_model=list[ConfigurationVersion])
 async def get_agent_config_versions(
     agent_type: str,
-    principal: RequiredPrincipalDep,
+    principal: AdminPrincipalDep,
     limit: int = 10,
 ):
     """Get configuration version history for an agent type."""
@@ -212,7 +214,7 @@ async def get_agent_config_versions(
 
 @router.post("/agents/{agent_type}/rollback/{version_id}")
 async def rollback_agent_config(
-    agent_type: str, version_id: str, principal: RequiredPrincipalDep
+    agent_type: str, version_id: str, principal: AdminPrincipalDep
 ):
     """Rollback agent configuration to a specific version."""
     # Validate agent type

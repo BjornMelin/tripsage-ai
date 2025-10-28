@@ -65,3 +65,21 @@ def test_jwt_success(app: FastAPI) -> None:
     )
     assert r.status_code == 200
     assert r.json()["id"] == "user-123"
+
+
+def test_api_key_service_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """API key requests should fail closed when the service is unavailable."""
+    import tripsage.api.middlewares.authentication as mw
+
+    api = FastAPI()
+
+    @api.get("/")
+    async def index() -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
+        return JSONResponse({"ok": True})
+
+    api.add_middleware(mw.AuthenticationMiddleware)
+
+    client = TestClient(api)
+    response = client.get("/", headers={"X-API-Key": "sk_test_123_supersecretvalue"})
+    assert response.status_code == 503
+    assert "Authentication service unavailable" in response.text

@@ -5,7 +5,7 @@ Own Key) functionality for user-provided API keys.
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from fastapi import (
     APIRouter,
@@ -19,6 +19,7 @@ from fastapi import (
 )
 
 from tripsage.api.core.dependencies import (
+    AdminPrincipalDep,
     ApiKeyServiceDep,
     get_principal_id,
     require_principal,
@@ -122,12 +123,12 @@ async def create_key(
         # Create the API key
         user_id = get_principal_id(principal)
         return await key_service.create_key(user_id, key_data)
-    except Exception as e:
+    except Exception:
         logger.exception("Error creating API key")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create API key: {e!s}",
-        ) from e
+            detail="Failed to create API key.",
+        ) from None
 
 
 @router.delete(
@@ -278,7 +279,7 @@ async def rotate_key(  # pylint: disable=too-many-positional-arguments
 async def get_metrics(
     request: Request,
     response: Response,
-    principal: Principal = Depends(require_principal),
+    principal: AdminPrincipalDep,
 ):
     """Get API key health metrics.
 
@@ -290,9 +291,34 @@ async def get_metrics(
     Returns:
         Key health metrics
     """
-    # Only allow admin users to access metrics
-    # This would normally check user roles, but for now we'll use a simple approach
-    return await get_key_health_metrics()
+    _ = principal  # Enforce admin gating
+    raw_metrics = await get_key_health_metrics()
+
+    if raw_metrics.get("error"):
+        return raw_metrics
+
+    raw_user_count = cast(
+        list[dict[str, Any]] | dict[str, Any] | None,
+        raw_metrics.pop("user_count", None),
+    )
+    user_count_value: list[dict[str, Any]] = []
+
+    if isinstance(raw_user_count, list):
+        user_count_value.extend(raw_user_count)
+    elif isinstance(raw_user_count, dict):
+        user_count_value.append(raw_user_count)
+
+    total_users = len(user_count_value)
+    total_keys = sum(int(entry.get("count", 0)) for entry in user_count_value)
+    average = (total_keys / total_users) if total_users else 0.0
+
+    raw_metrics["user_distribution"] = {
+        "unique_users": total_users,
+        "total_keys": total_keys,
+        "avg_keys_per_user": average,
+    }
+
+    return raw_metrics
 
 
 @router.get(
@@ -305,7 +331,7 @@ async def get_metrics(
 async def get_audit_log(
     request: Request,
     response: Response,
-    principal: Principal = Depends(require_principal),
+    principal: AdminPrincipalDep,
     limit: int = Query(100, ge=1, le=1000),
     monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
@@ -321,3 +347,29 @@ async def get_audit_log(
     Returns:
         List of audit log entries
     """
+    user_id = get_principal_id(principal)
+    entries = await monitoring_service.get_user_operations(user_id, limit)
+
+    def _mask_key_id(key_id: Any) -> str:
+        identifier = str(key_id)
+        if len(identifier) <= 8:
+            return "***"
+        return f"{identifier[:4]}***{identifier[-4:]}"
+
+    sanitized: list[dict[str, Any]] = []
+    for entry in entries:
+        record: dict[str, Any] = {
+            "timestamp": entry.get("timestamp"),
+            "operation": entry.get("operation"),
+            "service": entry.get("service"),
+            "success": entry.get("success"),
+            "metadata": entry.get("metadata", {}),
+        }
+
+        key_identifier = entry.get("key_id")
+        if isinstance(key_identifier, str) and key_identifier:
+            record["key_id"] = _mask_key_id(key_identifier)
+
+        sanitized.append(record)
+
+    return sanitized

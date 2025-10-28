@@ -291,11 +291,13 @@ def app() -> FastAPI:
         chat,
         config,
         health,
+        keys,
         trips,
     )
 
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(config.router, prefix="/api", tags=["configuration"])
+    app.include_router(keys.router, prefix="/api/keys", tags=["api_keys"])
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
     app.include_router(
