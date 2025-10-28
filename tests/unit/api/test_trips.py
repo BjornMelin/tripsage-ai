@@ -15,12 +15,12 @@ import pytest
 from fastapi import FastAPI, status
 from httpx import AsyncClient
 
-from tripsage.api.schemas.trips import (
+from tripsage_core.exceptions.exceptions import CoreAuthorizationError
+from tripsage_core.models.api.trip_models import (
     TripCollaboratorUpdateRequest,
     TripShareRequest,
     UpdateTripRequest,
 )
-from tripsage_core.exceptions.exceptions import CoreAuthorizationError
 from tripsage_core.models.schemas_common.enums import (
     TripStatus,
     TripType,
@@ -237,9 +237,8 @@ def _override_dependencies(
         return service
 
     app.dependency_overrides[deps.require_principal] = _provide_principal
-    app.dependency_overrides[trips_router_module.get_trip_service] = (
-        _provide_trip_service
-    )
+    # Override the TripService dependency using the modern DI function
+    app.dependency_overrides[deps.get_trip_service] = _provide_trip_service
 
     # Silence audit side-effects with typed no-op
     def _noop_audit(*_args: object, **_kwargs: object) -> None:  # pragma: no cover
@@ -251,7 +250,7 @@ def _override_dependencies(
         raising=False,
     )
 
-    # Resolve users quickly without hitting services
+    # Resolve users quickly without hitting services or DI container
     async def _resolve_user(email: str) -> tuple[str | None, str | None]:
         """Resolve user id and name for a given email (async stub)."""
         if email.startswith("denied"):
@@ -268,6 +267,9 @@ def _override_dependencies(
     monkeypatch.setattr(
         trips_router_module, "_get_user_details_by_id", _user_details, raising=False
     )
+
+    # Avoid requiring app.state.services for UserService in DI
+    app.dependency_overrides[deps.get_user_service] = lambda: object()
 
 
 # -----------------

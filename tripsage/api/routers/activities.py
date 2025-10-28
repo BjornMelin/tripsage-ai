@@ -4,21 +4,20 @@ import logging
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
 from tripsage.api.core.dependencies import (
     ActivityServiceDep,
+    DatabaseDep,
+    RequiredPrincipalDep,
+    TripServiceDep,
     get_principal_id,
-    require_principal,
 )
-from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.requests.activities import (
-    ActivitySearchRequest,
-    SaveActivityRequest,
-)
-from tripsage.api.schemas.responses.activities import (
+from tripsage.api.schemas.activities import (
     ActivityResponse,
+    ActivitySearchRequest,
     ActivitySearchResponse,
+    SaveActivityRequest,
     SavedActivityResponse,
 )
 from tripsage_core.services.business.activity_service import (
@@ -28,11 +27,6 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
     AuditSeverity,
     audit_security_event,
-)
-from tripsage_core.services.business.trip_service import TripService, get_trip_service
-from tripsage_core.services.infrastructure.database_service import (
-    DatabaseService,
-    get_database_service,
 )
 
 
@@ -115,9 +109,9 @@ async def get_activity_details(activity_id: str, activity_service: ActivityServi
 @router.post("/save", response_model=SavedActivityResponse)
 async def save_activity(
     request: SaveActivityRequest,
-    principal: Principal = Depends(require_principal),
-    db_service: DatabaseService = Depends(get_database_service),
-    trip_service: TripService = Depends(get_trip_service),
+    db_service: DatabaseDep,
+    trip_service: TripServiceDep,
+    principal: RequiredPrincipalDep,
 ):
     """Save an activity for a user.
 
@@ -199,13 +193,15 @@ async def save_activity(
 
         logger.info("Activity %s saved for user %s", request.activity_id, user_id)
 
-        return SavedActivityResponse(
-            activity_id=request.activity_id,
-            trip_id=request.trip_id,
-            user_id=user_id,
-            saved_at=saved_at.isoformat(),
-            notes=request.notes,
-            activity=None,
+        return SavedActivityResponse.model_validate(
+            {
+                "activity_id": request.activity_id,
+                "trip_id": request.trip_id,
+                "user_id": user_id,
+                "saved_at": saved_at.isoformat(),
+                "notes": request.notes,
+                "activity": None,
+            }
         )
 
     except HTTPException:
@@ -235,8 +231,8 @@ async def save_activity(
 
 @router.get("/saved", response_model=list[SavedActivityResponse])
 async def get_saved_activities(
-    principal: Principal = Depends(require_principal),
-    db_service: DatabaseService = Depends(get_database_service),
+    db_service: DatabaseDep,
+    principal: RequiredPrincipalDep,
     limit: int = 50,
     offset: int = 0,
 ):
@@ -274,15 +270,19 @@ async def get_saved_activities(
         for item in saved_items:
             metadata = item.get("metadata", {})
             saved_activities.append(
-                SavedActivityResponse(
-                    activity_id=metadata.get(
-                        "activity_id", item.get("external_id", "")
-                    ),
-                    trip_id=item.get("trip_id"),
-                    user_id=user_id,
-                    saved_at=item.get("created_at", datetime.now(UTC).isoformat()),
-                    notes=metadata.get("notes"),
-                    activity=None,
+                SavedActivityResponse.model_validate(
+                    {
+                        "activity_id": metadata.get(
+                            "activity_id", item.get("external_id", "")
+                        ),
+                        "trip_id": item.get("trip_id"),
+                        "user_id": user_id,
+                        "saved_at": item.get(
+                            "created_at", datetime.now(UTC).isoformat()
+                        ),
+                        "notes": metadata.get("notes"),
+                        "activity": None,
+                    }
                 )
             )
 
@@ -332,8 +332,8 @@ async def get_saved_activities(
 @router.delete("/saved/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_activity(
     activity_id: str,
-    principal: Principal = Depends(require_principal),
-    db_service: DatabaseService = Depends(get_database_service),
+    db_service: DatabaseDep,
+    principal: RequiredPrincipalDep,
 ):
     """Delete a saved activity for a user.
 

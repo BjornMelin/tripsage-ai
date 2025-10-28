@@ -1,18 +1,12 @@
-"""Itinerary API schemas using Pydantic V2.
-
-This module defines Pydantic models for itinerary-related API requests and responses.
-Consolidates both request and response schemas for itinerary operations.
-"""
+"""Canonical itinerary request and response models used by API routers."""
 
 from datetime import date, time
 from enum import Enum
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
-from tripsage_core.models.schemas_common import PaginatedResponse
-
-
-# ===== Enums =====
+from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.models.schemas_common.base_models import PaginatedResponse
 
 
 class ItineraryItemType(str, Enum):
@@ -48,10 +42,7 @@ class OptimizationSetting(str, Enum):
     CONVENIENCE = "convenience"
 
 
-# ===== Common Models =====
-
-
-class Location(BaseModel):
+class Location(TripSageModel):
     """Location information for itinerary items."""
 
     latitude: float = Field(description="Latitude coordinate", ge=-90, le=90)
@@ -59,7 +50,7 @@ class Location(BaseModel):
     name: str | None = Field(None, description="Name of the location")
 
 
-class TimeSlot(BaseModel):
+class TimeSlot(TripSageModel):
     """Time slot for itinerary items."""
 
     start_time: time = Field(description="Start time")
@@ -67,18 +58,31 @@ class TimeSlot(BaseModel):
 
     @field_validator("end_time")
     @classmethod
-    def validate_end_time(cls, v: time, info) -> time:
+    def validate_end_time(cls, value: time, info) -> time:
         """Validate that end_time is after start_time."""
-        if "start_time" in info.data and v <= info.data["start_time"]:
+        start = info.data.get("start_time")
+        if start and value <= start:
             raise ValueError("End time must be after start time")
-        return v
+        return value
 
 
-# ===== Request Schemas =====
-
-
-class ItineraryCreateRequest(BaseModel):
+class ItineraryCreateRequest(TripSageModel):
     """Request model for creating a new itinerary."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "Tokyo Adventure",
+                "description": "5-day itinerary across Tokyo",
+                "start_date": "2025-05-01",
+                "end_date": "2025-05-05",
+                "destinations": ["Tokyo"],
+                "total_budget": 4500.0,
+                "currency": "USD",
+                "tags": ["culture", "food"],
+            }
+        }
+    )
 
     title: str = Field(
         description="Title of the itinerary",
@@ -111,15 +115,26 @@ class ItineraryCreateRequest(BaseModel):
 
     @field_validator("end_date")
     @classmethod
-    def validate_dates(cls, v: date, info) -> date:
+    def validate_dates(cls, value: date, info) -> date:
         """Validate that end_date is after or equal to start_date."""
-        if "start_date" in info.data and v < info.data["start_date"]:
+        start = info.data.get("start_date")
+        if start and value < start:
             raise ValueError("End date must be after or equal to start date")
-        return v
+        return value
 
 
-class ItineraryUpdateRequest(BaseModel):
+class ItineraryUpdateRequest(TripSageModel):
     """Request model for updating an existing itinerary."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "Updated Tokyo Adventure",
+                "status": "active",
+                "tags": ["culture", "nightlife"],
+            }
+        }
+    )
 
     title: str | None = Field(
         None,
@@ -166,8 +181,25 @@ class ItineraryUpdateRequest(BaseModel):
     )
 
 
-class ItineraryItemCreateRequest(BaseModel):
+class ItineraryItemCreateRequest(TripSageModel):
     """Request model for adding an item to an itinerary."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "item_type": "activity",
+                "title": "Visit Tokyo Tower",
+                "description": "Iconic landmark with city views",
+                "item_date": "2025-05-02",
+                "time_slot": {
+                    "start_time": "10:00",
+                    "end_time": "12:00",
+                },
+                "cost": 100.0,
+                "currency": "USD",
+            }
+        }
+    )
 
     item_type: ItineraryItemType = Field(description="Type of itinerary item")
     title: str = Field(
@@ -209,7 +241,6 @@ class ItineraryItemCreateRequest(BaseModel):
         False,
         description="Whether this item's time is flexible",
     )
-    # Type-specific fields as they are conditionally needed
     flight_details: dict | None = Field(
         None,
         description="Flight-specific details if type is TRANSPORT",
@@ -228,7 +259,7 @@ class ItineraryItemCreateRequest(BaseModel):
     )
 
 
-class ItineraryItemUpdateRequest(BaseModel):
+class ItineraryItemUpdateRequest(TripSageModel):
     """Request model for updating an itinerary item."""
 
     title: str | None = Field(
@@ -274,7 +305,6 @@ class ItineraryItemUpdateRequest(BaseModel):
         None,
         description="Whether this item's time is flexible",
     )
-    # Type-specific details as they are conditionally needed
     flight_details: dict | None = Field(
         None,
         description="Flight-specific details if type is TRANSPORT",
@@ -293,7 +323,7 @@ class ItineraryItemUpdateRequest(BaseModel):
     )
 
 
-class ItinerarySearchRequest(BaseModel):
+class ItinerarySearchRequest(TripSageModel):
     """Request model for searching itineraries."""
 
     query: str | None = Field(
@@ -341,7 +371,7 @@ class ItinerarySearchRequest(BaseModel):
     )
 
 
-class ItineraryOptimizeRequest(BaseModel):
+class ItineraryOptimizeRequest(TripSageModel):
     """Request model for optimizing an itinerary."""
 
     itinerary_id: str = Field(
@@ -352,26 +382,80 @@ class ItineraryOptimizeRequest(BaseModel):
     )
 
 
-# ===== Response Schemas =====
-
-
-class ItineraryItemResponse(BaseModel):
+class ItineraryItemResponse(TripSageModel):
     """Response model for itinerary item."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "item-123",
+                "item_type": "activity",
+                "title": "Visit Tokyo Tower",
+                "description": "Iconic landmark with city views",
+                "item_date": "2025-05-02",
+                "start_time": "10:00",
+                "end_time": "12:00",
+                "cost": 100.0,
+                "currency": "USD",
+                "booking_reference": "ABC123",
+                "notes": "Wear comfortable shoes",
+                "is_flexible": False,
+                "created_at": "2025-04-01T09:00:00Z",
+                "updated_at": "2025-04-01T09:00:00Z",
+            }
+        }
+    )
 
     id: str = Field(description="Unique identifier for the itinerary item")
     item_type: str = Field(description="Type of itinerary item")
     title: str = Field(description="Title or name of the item")
     description: str | None = Field(None, description="Description of the item")
     item_date: date = Field(description="Date of the itinerary item")
+    start_time: str | None = Field(
+        None, description="Start time (HH:MM) for the itinerary item"
+    )
+    end_time: str | None = Field(
+        None, description="End time (HH:MM) for the itinerary item"
+    )
     cost: float | None = Field(None, description="Cost of the item")
     currency: str | None = Field(None, description="Currency code for the cost")
     booking_reference: str | None = Field(None, description="Booking reference")
     notes: str | None = Field(None, description="Additional notes")
     is_flexible: bool = Field(False, description="Whether item time is flexible")
+    created_at: str | None = Field(None, description="Creation timestamp")
+    updated_at: str | None = Field(None, description="Last update timestamp")
 
 
-class ItineraryResponse(BaseModel):
+class ItineraryResponse(TripSageModel):
     """Response model for itinerary."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "itinerary-123",
+                "title": "Tokyo Adventure",
+                "description": "5-day itinerary",
+                "start_date": "2025-05-01",
+                "end_date": "2025-05-05",
+                "status": "active",
+                "total_budget": 4500.0,
+                "currency": "USD",
+                "tags": ["culture", "food"],
+                "items": [
+                    {
+                        "id": "item-123",
+                        "item_type": "activity",
+                        "title": "Visit Tokyo Tower",
+                        "item_date": "2025-05-02",
+                        "start_time": "10:00",
+                        "end_time": "12:00",
+                    }
+                ],
+                "created_at": "2025-04-01T09:00:00Z",
+                "updated_at": "2025-04-01T09:00:00Z",
+            }
+        }
+    )
 
     id: str = Field(description="Itinerary identifier")
     title: str = Field(description="Itinerary title")
@@ -390,10 +474,44 @@ class ItineraryResponse(BaseModel):
 
 
 class ItinerarySearchResponse(PaginatedResponse[ItineraryResponse]):
-    """Response model for itinerary search results."""
+    """Paginated itinerary search response following canonical pagination schema."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "success": True,
+                "message": None,
+                "timestamp": "2025-04-01T09:00:00Z",
+                "data": [
+                    {
+                        "id": "itinerary-123",
+                        "title": "Tokyo Adventure",
+                        "description": "5-day itinerary",
+                        "start_date": "2025-05-01",
+                        "end_date": "2025-05-05",
+                        "status": "active",
+                        "total_budget": 4500.0,
+                        "currency": "USD",
+                        "tags": ["culture"],
+                        "items": [],
+                        "created_at": "2025-04-01T09:00:00Z",
+                        "updated_at": "2025-04-01T09:00:00Z",
+                    }
+                ],
+                "pagination": {
+                    "page": 1,
+                    "per_page": 25,
+                    "total_items": 1,
+                    "total_pages": 1,
+                    "has_next": False,
+                    "has_prev": False,
+                },
+            }
+        }
+    )
 
 
-class ItineraryConflictCheckResponse(BaseModel):
+class ItineraryConflictCheckResponse(TripSageModel):
     """Response model for checking conflicting items in an itinerary."""
 
     has_conflicts: bool = Field(
@@ -405,7 +523,7 @@ class ItineraryConflictCheckResponse(BaseModel):
     )
 
 
-class ItineraryOptimizeResponse(BaseModel):
+class ItineraryOptimizeResponse(TripSageModel):
     """Response model for optimized itinerary."""
 
     original_itinerary: ItineraryResponse = Field(
@@ -423,3 +541,24 @@ class ItineraryOptimizeResponse(BaseModel):
         ge=0,
         le=1,
     )
+
+
+__all__ = [
+    "ItineraryConflictCheckResponse",
+    "ItineraryCreateRequest",
+    "ItineraryItemCreateRequest",
+    "ItineraryItemResponse",
+    "ItineraryItemType",
+    "ItineraryItemUpdateRequest",
+    "ItineraryOptimizeRequest",
+    "ItineraryOptimizeResponse",
+    "ItineraryResponse",
+    "ItinerarySearchRequest",
+    "ItinerarySearchResponse",
+    "ItineraryShareSettings",
+    "ItineraryStatus",
+    "ItineraryUpdateRequest",
+    "Location",
+    "OptimizationSetting",
+    "TimeSlot",
+]

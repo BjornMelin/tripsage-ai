@@ -34,7 +34,7 @@ class CacheService:
     - Upstash is connectionless; ``connect()`` simply validates credentials via
       a ``PING`` and stores the client for reuse across calls.
     - API surface is intentionally minimal and aligned to used features.
-    """
+    """  # pylint: disable=too-many-public-methods
 
     def __init__(self, settings: Settings | None = None):
         """Initialize the cache service.
@@ -452,9 +452,14 @@ class CacheService:
             if info_callable is None or not callable(info_callable):
                 return {"available": False, "details": "info command unsupported"}
 
-            raw_info = await cast(Callable[[], Awaitable[Any]], info_callable)()
+            # Narrow type for type checkers; still guarded by callable() above.
+            typed_info: Callable[[], Awaitable[Any]] = cast(
+                Callable[[], Awaitable[Any]], info_callable
+            )
+            raw_info: Any = await typed_info()  # pylint: disable=not-callable
             if isinstance(raw_info, dict):
-                return raw_info
+                # raw_info is a mapping from the server; treat values as Any
+                return cast(dict[str, Any], raw_info)
             return {"raw": raw_info}
         except Exception as e:
             logger.exception("Failed to fetch cache info")

@@ -223,11 +223,17 @@ describe("API Key Management Components", () => {
       });
 
       vi.mocked(apiHooks.useDeleteApiKey).mockReturnValue(
-        mockUseMutation<DeleteKeyResponse, AppError, string>().mutation
+        mockUseMutation<DeleteKeyResponse, AppError, string, MutationContext<string>>()
+          .mutation
       );
 
       vi.mocked(apiHooks.useValidateApiKey).mockReturnValue(
-        mockUseMutation<ValidateKeyResponse, AppError, AddKeyRequest>().mutation
+        mockUseMutation<
+          ValidateKeyResponse,
+          AppError,
+          AddKeyRequest,
+          MutationContext<AddKeyRequest>
+        >().mutation
       );
     });
 
@@ -242,7 +248,12 @@ describe("API Key Management Components", () => {
 
     it("calls delete function when remove is confirmed", async () => {
       const deleteMock = vi.fn();
-      const deleteMutation = mockUseMutation<DeleteKeyResponse, AppError, string>();
+      const deleteMutation = mockUseMutation<
+        DeleteKeyResponse,
+        AppError,
+        string,
+        MutationContext<string>
+      >();
       deleteMutation.mutation.mutate = deleteMock;
       vi.mocked(apiHooks.useDeleteApiKey).mockReturnValue(deleteMutation.mutation);
 

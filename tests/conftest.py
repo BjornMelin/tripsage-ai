@@ -16,10 +16,11 @@ from types import ModuleType, TracebackType
 from typing import Any, ParamSpec, Self, TypeVar, cast
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from httpx import ASGITransport, AsyncClient
 
 from tripsage_core.config import Settings
+from tripsage_core.models.trip import Budget, BudgetBreakdown, Trip
 
 
 _P = ParamSpec("_P")
@@ -321,3 +322,56 @@ def build_minimal_app() -> FastAPI:
         FastAPI: Empty app ready to include target routers.
     """
     return FastAPI()
+
+
+@pytest.fixture
+def request_builder() -> Callable[[str, str], Request]:
+    """Build a synthetic FastAPI request for SlowAPI-dependent tests."""
+
+    def _build(method: str, path: str) -> Request:
+        scope = {
+            "type": "http",
+            "method": method,
+            "path": path,
+            "scheme": "http",
+            "headers": [],
+            "client": ("127.0.0.1", 12345),
+            "server": ("testserver", 80),
+            "query_string": b"",
+        }
+
+        async def receive() -> dict[str, object]:
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        return Request(scope, receive)
+
+    return _build
+
+
+@pytest.fixture()
+def core_trip_response() -> Trip:
+    """Return a sample Trip model instance for testing."""
+    from datetime import date
+    from uuid import uuid4
+
+    return Trip(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="Test Trip",
+        description="A test trip for unit tests",
+        start_date=date(2024, 6, 1),
+        end_date=date(2024, 6, 7),
+        destination="Tokyo, Japan",
+        budget_breakdown=Budget(
+            total=2000.0, currency="USD", spent=0.0, breakdown=BudgetBreakdown()
+        ),
+        travelers=2,
+    )
+
+
+@pytest.fixture()
+def unauthenticated_test_client(
+    app: FastAPI, async_client_factory: Callable[[FastAPI], AsyncClient]
+) -> AsyncClient:
+    """Return an AsyncClient without authentication headers."""
+    return async_client_factory(app)

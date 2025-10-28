@@ -6,8 +6,6 @@ with authenticated entity information. Includes audit logging
 for all authentication events.
 """
 
-from __future__ import annotations
-
 import logging
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
@@ -16,10 +14,11 @@ from typing import Any
 from fastapi import Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_503_SERVICE_UNAVAILABLE
+from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette.types import ASGIApp
 
 from tripsage.api.core.config import Settings, get_settings
+from tripsage.app_state import AppServiceContainer
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
     CoreKeyValidationError as KeyValidationError,
@@ -29,24 +28,13 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
     AuditOutcome,
     AuditSeverity,
-    audit_api_key as _audit_api_key,  # pyright: ignore[reportUnknownVariableType]
-    audit_authentication as _audit_authentication,  # pyright: ignore[reportUnknownVariableType]
-    audit_security_event as _audit_security_event,  # pyright: ignore[reportUnknownVariableType]
-)
-from tripsage_core.services.infrastructure.supabase_client import (
-    verify_and_get_claims,
+    audit_api_key,
+    audit_authentication,
+    audit_security_event,
 )
 
 
 logger = logging.getLogger(__name__)
-# Help pyright with partially-typed audit functions
-audit_api_key: Any
-audit_authentication: Any
-audit_security_event: Any
-
-audit_api_key = _audit_api_key  # type: ignore[reportUnknownVariableType]
-audit_authentication = _audit_authentication  # type: ignore[reportUnknownVariableType]
-audit_security_event = _audit_security_event  # type: ignore[reportUnknownVariableType]
 
 
 class Principal(BaseModel):
@@ -103,75 +91,23 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         self._services_initialized = False
 
     async def _ensure_services(self, request: Request) -> None:
-        """Ensure authentication dependencies are available."""
+        """Ensure services are initialised from the lifespan container."""
         if self._services_initialized:
             return
-
         if self.key_service is None:
-            app_service = getattr(request.app.state, "api_key_service", None)
-            if isinstance(app_service, ApiKeyService):
-                self.key_service = app_service
-            else:
-                logger.error("API key service is unavailable for authentication")
-                request.app.state.security_ready = False
-                raise AuthenticationError("Authentication service unavailable")
-
-        request.app.state.security_ready = True
+            services = getattr(request.app.state, "services", None)
+            if not isinstance(services, AppServiceContainer):
+                raise RuntimeError(
+                    "AppServiceContainer is not initialised; authentication requires "
+                    "app.state.services to be available.",
+                )
+            self.key_service = services.get_required_service(
+                "api_key_service",
+                expected_type=ApiKeyService,
+            )
         self._services_initialized = True
 
-    async def _try_jwt_auth(
-        self, request: Request
-    ) -> tuple[Principal | None, AuthenticationError | None]:
-        """Try JWT authentication for the request."""
-        authorization_header = request.headers.get("Authorization")
-        if not authorization_header or not authorization_header.startswith("Bearer "):
-            return None, None
-
-        try:
-            token = authorization_header.replace("Bearer ", "", 1).strip()
-            principal = await self._authenticate_jwt(token)
-
-            # Log successful JWT authentication
-            if principal:
-                await audit_authentication(
-                    event_type=AuditEventType.AUTH_LOGIN_SUCCESS,
-                    outcome=AuditOutcome.SUCCESS,
-                    user_id=principal.id,
-                    ip_address=self._get_client_ip(request),
-                    user_agent=request.headers.get("User-Agent"),
-                    message="JWT authentication successful",
-                    endpoint=request.url.path,
-                    method=request.method,
-                )
-
-            return principal, None
-
-        except AuthenticationError as e:
-            # Log failed JWT authentication
-            await audit_authentication(
-                event_type=AuditEventType.AUTH_LOGIN_FAILED,
-                outcome=AuditOutcome.FAILURE,
-                user_id="unknown",
-                ip_address=self._get_client_ip(request),
-                user_agent=request.headers.get("User-Agent"),
-                message=f"JWT authentication failed: {e!s}",
-                endpoint=request.url.path,
-                method=request.method,
-                error_type=type(e).__name__,
-            )
-
-            logger.warning(
-                "JWT authentication failed: %s",
-                e,
-                extra={
-                    "ip_address": self._get_client_ip(request),
-                    "user_agent": request.headers.get("User-Agent", "Unknown")[:200],
-                    "path": request.url.path,
-                },
-            )
-            return None, e
-
-    async def dispatch(
+    async def dispatch(  # pylint: disable=too-many-statements
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """Process the request and handle authentication with enhanced security.
@@ -187,34 +123,88 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         if self._should_skip_auth(request.url.path):
             return await call_next(request)
 
-        # Header sanitation removed in favor of SDK-driven verification
+        # Ensure services are initialized
+        await self._ensure_services(request)
+
+        # Perform header validation for security
+        if not self._validate_request_headers(request):
+            # Log suspicious header activity
+            await audit_security_event(
+                event_type=AuditEventType.SECURITY_SUSPICIOUS_ACTIVITY,
+                severity=AuditSeverity.HIGH,
+                message="Suspicious request headers detected",
+                actor_id="unknown",
+                ip_address=self._get_client_ip(request),
+                target_resource=request.url.path,
+                risk_score=70,
+                user_agent=request.headers.get("User-Agent"),
+                method=request.method,
+                headers_count=len(request.headers),
+            )
+
+            return Response(
+                content="Invalid request headers",
+                status_code=HTTP_401_UNAUTHORIZED,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
         # Try to authenticate the request
         principal = None
         auth_error = None
 
         # Try JWT authentication first (Bearer token)
-        principal, auth_error = await self._try_jwt_auth(request)
+        authorization_header = request.headers.get("Authorization")
+        if authorization_header and authorization_header.startswith("Bearer "):
+            try:
+                token = authorization_header.replace("Bearer ", "")
+                # Validate token format to enforce security
+                if not self._validate_token_format(token):
+                    raise AuthenticationError("Invalid token format")
+                principal = await self._authenticate_jwt(token)
+
+                # Log successful JWT authentication
+                if principal:
+                    await audit_authentication(
+                        event_type=AuditEventType.AUTH_LOGIN_SUCCESS,
+                        outcome=AuditOutcome.SUCCESS,
+                        user_id=principal.id,
+                        ip_address=self._get_client_ip(request),
+                        user_agent=request.headers.get("User-Agent"),
+                        message="JWT authentication successful",
+                        endpoint=request.url.path,
+                        method=request.method,
+                    )
+
+            except AuthenticationError as e:
+                auth_error = e
+
+                # Log failed JWT authentication
+                await audit_authentication(
+                    event_type=AuditEventType.AUTH_LOGIN_FAILED,
+                    outcome=AuditOutcome.FAILURE,
+                    user_id="unknown",
+                    ip_address=self._get_client_ip(request),
+                    user_agent=request.headers.get("User-Agent"),
+                    message=f"JWT authentication failed: {e!s}",
+                    endpoint=request.url.path,
+                    method=request.method,
+                    error_type=type(e).__name__,
+                )
+
+                logger.warning(
+                    "JWT authentication failed: %s",
+                    e,
+                    extra={
+                        "ip_address": self._get_client_ip(request),
+                        "user_agent": request.headers.get("User-Agent", "Unknown")[
+                            :200
+                        ],
+                        "path": request.url.path,
+                    },
+                )
 
         # Try API key authentication if JWT failed
         if not principal:
-            try:
-                await self._ensure_services(request)
-            except AuthenticationError:
-                logger.exception(
-                    "Authentication services unavailable",
-                    extra={
-                        "path": request.url.path,
-                        "ip_address": self._get_client_ip(request),
-                    },
-                )
-                request.app.state.security_ready = False
-                return Response(
-                    content="Authentication service unavailable",
-                    status_code=HTTP_503_SERVICE_UNAVAILABLE,
-                    headers={"Retry-After": "30"},
-                )
-
             api_key_header = request.headers.get("X-API-Key")
             if api_key_header:
                 try:
@@ -368,10 +358,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         return any(path.startswith(skip_path) for skip_path in skip_paths)
 
     async def _authenticate_jwt(self, token: str) -> Principal:
-        """Authenticate using Supabase access token.
+        """Authenticate using JWT token.
 
         Args:
-            token: Access token from Supabase
+            token: JWT token
 
         Returns:
             Authenticated principal
@@ -380,26 +370,46 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             AuthenticationError: If authentication fails
         """
         try:
-            claims = await verify_and_get_claims(token)
-            sub = str(claims.get("sub"))
-            if not sub:
-                raise AuthenticationError("Invalid token")
+            # Use the new Supabase auth validation
+            import jwt
+
+            settings = get_settings()
+
+            # Local JWT validation for performance
+            payload = jwt.decode(
+                token,
+                # pylint: disable=no-member
+                settings.database_jwt_secret.get_secret_value(),
+                algorithms=["HS256"],
+                audience="authenticated",
+                leeway=30,  # Allow 30 seconds clock skew
+            )
+
+            # Extract user data from token
+            user_id = payload["sub"]
+            email = payload.get("email")
+            role = payload.get("role", "authenticated")
+
+            # Create principal from token data
             return Principal(
-                id=sub,
+                id=user_id,
                 type="user",
-                email=claims.get("email"),
+                email=email,
                 auth_method="jwt",
                 scopes=[],
                 metadata={
-                    "role": claims.get("role", "authenticated"),
-                    "aud": claims.get("aud", "authenticated"),
+                    "role": role,
+                    "aud": payload.get("aud", "authenticated"),
                 },
             )
 
-        except AuthenticationError:
-            raise
+        except jwt.ExpiredSignatureError:  # type: ignore[possibly-unbound]
+            raise AuthenticationError("Token has expired") from None
+        except jwt.InvalidTokenError:  # type: ignore[reportPossiblyUnboundVariable]
+            logger.exception("JWT InvalidTokenError")
+            raise AuthenticationError("Invalid token") from None
         except Exception as e:
-            logger.exception("Supabase token authentication error")
+            logger.exception("JWT authentication error")
             raise AuthenticationError("Invalid authentication token") from e
 
     async def _authenticate_api_key(self, api_key: str) -> Principal:
@@ -466,7 +476,23 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                         **key_metadata,  # Additional metadata
                     },
                 )
-            raise AuthenticationError("API key service unavailable")
+            # Fallback validation if key service is not available
+            if len(secret) < 20:
+                raise KeyValidationError("Invalid API key")
+
+            # Create principal with limited validation
+            return Principal(
+                id=f"agent_{service}_{key_id}",
+                type="agent",
+                service=service,
+                auth_method="api_key",
+                scopes=[f"{service}:*"],
+                metadata={
+                    "key_id": key_id,
+                    "service": service,
+                    "validation_mode": "fallback",
+                },
+            )
 
         except (AuthenticationError, KeyValidationError):
             raise
@@ -496,6 +522,90 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             status_code=HTTP_401_UNAUTHORIZED,
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    def _validate_request_headers(self, request: Request) -> bool:
+        """Validate request headers for security.
+
+        Args:
+            request: The HTTP request
+
+        Returns:
+            True if headers are valid, False otherwise
+        """
+        # Check for excessively long headers (potential DoS)
+        for name, value in request.headers.items():
+            if len(name) > 256 or len(value) > 8192:
+                logger.warning(
+                    "Excessively long header detected",
+                    extra={
+                        "header_name": name[:100],
+                        "header_length": len(value),
+                        "ip_address": self._get_client_ip(request),
+                    },
+                )
+                return False
+
+            # Check for suspicious patterns in headers
+            suspicious_patterns = [
+                "<script",
+                "javascript:",
+                "data:",
+                "eval(",
+                "DROP TABLE",
+                "UNION SELECT",
+                "../",
+                "\x00",
+            ]
+
+            combined_header = f"{name}:{value}".lower()
+            for pattern in suspicious_patterns:
+                if pattern.lower() in combined_header:
+                    logger.warning(
+                        "Suspicious pattern in header",
+                        extra={
+                            "header_name": name,
+                            "pattern": pattern,
+                            "ip_address": self._get_client_ip(request),
+                        },
+                    )
+                    return False
+
+        return True
+
+    def _validate_token_format(self, token: str) -> bool:
+        """Validate JWT token format.
+
+        Args:
+            token: JWT token string
+
+        Returns:
+            True if format is valid, False otherwise
+        """
+        if not token:
+            return False
+
+        # Check length bounds
+        if len(token) < 20 or len(token) > 4096:
+            return False
+
+        # Check for null bytes and control characters
+        if "\x00" in token or any(ord(c) < 32 for c in token if c not in "\t\n\r"):
+            return False
+
+        # Basic JWT format check (three parts separated by dots)
+        parts = token.split(".")
+        if len(parts) != 3:
+            return False
+
+        # Each part should be base64url encoded (basic check)
+        base64url_chars = (
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
+        )
+        for part in parts:
+            if not part or not all(c in base64url_chars for c in part):
+                return False
+
+        return True
 
     def _validate_api_key_format(self, api_key: str) -> bool:
         """Validate API key format.
@@ -545,20 +655,13 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     return ip
 
         # Fall back to direct connection IP
-        if request.client and getattr(request.client, "host", None):
-            return request.client.host
+        if request.client is not None and getattr(request.client, "host", None):
+            return request.client.host  # type: ignore[no-any-return]
 
         return "unknown"
 
     def _is_valid_ip_format(self, ip: str) -> bool:
-        """Check if string is a valid IP address format.
-
-        Args:
-            ip: IP address string
-
-        Returns:
-            True if valid IP format, False otherwise
-        """
+        """Check if string is a valid IP address format."""
         try:
             from ipaddress import ip_address
 

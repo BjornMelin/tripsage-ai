@@ -9,9 +9,11 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from tripsage.api.core.dependencies import require_principal
+from tripsage.api.core.dependencies import (
+    get_file_processing_service,
+    require_principal,
+)
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.routers.attachments import get_file_processing_service
 from tripsage_core.services.business.file_processing_service import (
     FileUploadRequest,
     ProcessingStatus,

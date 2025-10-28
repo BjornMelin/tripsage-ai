@@ -6,11 +6,10 @@ in the database.
 
 import logging
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any
 from uuid import uuid4
 
-from tripsage.api.schemas.requests.search import UnifiedSearchRequest
-from tripsage_core.exceptions import CoreServiceError
+from tripsage.api.schemas.search import UnifiedSearchRequest
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
@@ -42,22 +41,18 @@ class SearchHistoryService:
         """
         try:
             # Query recent searches for the user
-            rows: list[dict[str, Any]] = await self.db_service.select(
+            rows = await self.db_service.select(
                 "search_parameters",
                 "id, user_id, search_type, parameter_json, created_at",
-                filters={"user_id": user_id},
+                {"user_id": user_id},
                 limit=limit,
                 order_by="created_at DESC",
             )
 
-            searches: list[dict[str, Any]] = []
+            searches = []
             for row in rows:
                 # Extract search parameters from JSON
-                params: dict[str, Any] = (
-                    cast(dict[str, Any], row.get("parameter_json"))
-                    if row.get("parameter_json")
-                    else {}
-                )
+                params = row["parameter_json"] or {}
 
                 search_entry = {
                     "id": str(row["id"]),
@@ -66,7 +61,7 @@ class SearchHistoryService:
                     "resource_types": params.get("resource_types", []),
                     "filters": params.get("filters", {}),
                     "destination": params.get("destination"),
-                    "created_at": cast(datetime, row["created_at"]).isoformat(),
+                    "created_at": row["created_at"].isoformat(),
                 }
                 searches.append(search_entry)
 
@@ -89,31 +84,29 @@ class SearchHistoryService:
             The saved search entry
         """
         try:
-            # Safely extract attributes to satisfy static typing
-            resource_types = getattr(search_request, "resource_types", None)
-            query = getattr(search_request, "query", "")
-            filters_val = getattr(search_request, "filters", None)
-            destination = getattr(search_request, "destination", None)
-            location = getattr(search_request, "location", None)
-            start_date = getattr(search_request, "start_date", None)
-            end_date = getattr(search_request, "end_date", None)
-            guests = getattr(search_request, "guests", None)
-
             # Determine search type based on resource types
-            search_type = self._determine_search_type(resource_types)
+            search_type = self._determine_search_type(search_request.resource_types)
 
             # Prepare search parameters
             search_params = {
-                "query": query,
-                "resource_types": resource_types,
-                "filters": filters_val,
-                "destination": destination,
-                "location": location,
+                "query": search_request.query,
+                "resource_types": search_request.resource_types,
+                "filters": search_request.filters,
+                "destination": search_request.destination,
+                "location": search_request.location,
                 "date_range": {
-                    "start": (start_date.isoformat() if start_date else None),
-                    "end": (end_date.isoformat() if end_date else None),
+                    "start": (
+                        search_request.start_date.isoformat()
+                        if search_request.start_date
+                        else None
+                    ),
+                    "end": (
+                        search_request.end_date.isoformat()
+                        if search_request.end_date
+                        else None
+                    ),
                 },
-                "guests": guests,
+                "guests": search_request.guests,
             }
 
             # Remove None values
@@ -136,7 +129,7 @@ class SearchHistoryService:
 
             row = result[0] if result else None
             if not row:
-                raise CoreServiceError("Failed to insert search")
+                raise Exception("Failed to insert search")
 
             return {
                 "id": str(row["id"]),
@@ -196,3 +189,6 @@ class SearchHistoryService:
             return type_map.get(resource_types[0], "unified")
 
         return "unified"
+
+
+# FINAL-ONLY: Removed factory; construct via DI with explicit DatabaseService.

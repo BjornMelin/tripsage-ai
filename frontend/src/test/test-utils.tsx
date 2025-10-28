@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { RenderOptions } from "@testing-library/react";
 import { render } from "@testing-library/react";
 import type { ComponentProps, ReactElement, ReactNode } from "react";
-import { vi } from "vitest";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import {
   type ValidatedThemeProviderProps,
@@ -16,75 +15,9 @@ import {
 /** Type for next-themes provider props. */
 type NextThemesProviderProps = ComponentProps<typeof ThemeProvider>;
 
-// Mock the useSupabase hook for tests
-vi.mock("@/lib/supabase/client", () => ({
-  useSupabase: vi.fn(() => ({
-    auth: {
-      onAuthStateChange: vi.fn(() => ({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      })),
-      getSession: vi.fn(() =>
-        Promise.resolve({ data: { session: null }, error: null })
-      ),
-      signInWithPassword: vi.fn(),
-      signUp: vi.fn(),
-      signInWithOAuth: vi.fn(),
-      signOut: vi.fn(),
-      resetPasswordForEmail: vi.fn(),
-      updateUser: vi.fn(),
-      getUser: vi.fn(),
-    },
-  })),
-  createClient: vi.fn(() => ({
-    auth: {
-      onAuthStateChange: vi.fn(() => ({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      })),
-      getSession: vi.fn(() =>
-        Promise.resolve({ data: { session: null }, error: null })
-      ),
-      getUser: vi.fn(() => Promise.resolve({ data: { user: null } })),
-    },
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-      })),
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        })),
-      })),
-      update: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          select: vi.fn(() => ({
-            single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-          })),
-        })),
-      })),
-      delete: vi.fn(() => ({
-        eq: vi.fn(() => Promise.resolve({ error: null })),
-      })),
-    })),
-  })),
-}));
-
-// Mock next/navigation
-vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(() => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    refresh: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    prefetch: vi.fn(),
-  })),
-  usePathname: vi.fn(() => "/"),
-  useSearchParams: vi.fn(() => new URLSearchParams()),
-}));
-
 /**
  * Creates a test QueryClient with disabled retries and caching.
- * @return A configured QueryClient for testing.
+ * @returns A configured QueryClient for testing.
  */
 export const createTestQueryClient = () =>
   new QueryClient({
@@ -115,7 +48,7 @@ export interface RenderWithProvidersOptions extends Omit<RenderOptions, "wrapper
 /**
  * Component that provides all necessary providers for testing.
  * @param props The props for the providers.
- * @return JSX element with providers wrapped around children.
+ * @returns JSX element with providers wrapped around children.
  */
 export const AllTheProviders = ({
   children,
@@ -126,7 +59,7 @@ export const AllTheProviders = ({
     disableTransitionOnChange: true,
   },
   queryClient,
-}: ProvidersProps) => {
+}: ProvidersProps): ReactElement => {
   const client = queryClient || createTestQueryClient();
 
   const validatedTheme = theme
@@ -147,7 +80,14 @@ export const AllTheProviders = ({
 
   return (
     <QueryClientProvider client={client}>
-      <ThemeProvider {...(validatedTheme as NextThemesProviderProps)}>
+      <ThemeProvider
+        {...((validatedTheme ?? {
+          attribute: "class" as const,
+          defaultTheme: "system",
+          enableSystem: true,
+          disableTransitionOnChange: true,
+        }) as NextThemesProviderProps)}
+      >
         {children}
       </ThemeProvider>
     </QueryClientProvider>
@@ -158,7 +98,7 @@ export const AllTheProviders = ({
  * Renders a React element with all necessary providers.
  * @param ui The React element to render.
  * @param options Options for rendering, including theme and query client.
- * @return The rendered result from testing-library.
+ * @returns The rendered result from testing-library.
  */
 export const renderWithProviders = (
   ui: ReactElement,

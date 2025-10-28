@@ -1,413 +1,294 @@
-import type {
-  QueryClient,
-  UseInfiniteQueryResult,
-  UseMutationResult,
-  UseQueryResult,
-} from "@tanstack/react-query";
+/**
+ * @fileoverview Lightweight typed mocks for TanStack Query primitives used in tests.
+ */
 
-// MutationContext type matching the one from use-api-query.ts
-interface MutationContext<TVariables = unknown> {
-  previousData?: unknown;
-  optimisticData?: unknown;
-  variables?: TVariables;
+import type {
+  MutateOptions,
+  QueryClient,
+  UseMutationResult,
+} from "@tanstack/react-query";
+import { QueryClient as TanStackQueryClient } from "@tanstack/react-query";
+import { vi } from "vitest";
+import { createMockUseQueryResult } from "@/test/mock-helpers";
+
+type MutationState<TData, TError, TVariables> = {
+  data: TData | undefined;
+  error: TError | null;
+  status: "idle" | "pending" | "success" | "error";
+  variables: TVariables | undefined;
+};
+
+type QueryState<TData, TError> = {
+  data: TData | undefined;
+  error: TError | null;
+  status: "pending" | "success" | "error";
+};
+
+/**
+ * Controller that allows tests to drive mutation state transitions manually.
+ */
+export interface MutationController<TData, TError, TVariables> {
+  /** Set the mutation into a pending/loading state. */
+  triggerMutate: (variables: TVariables) => void;
+  /** Resolve the mutation with data. */
+  triggerSuccess: (data: TData) => void;
+  /** Reject the mutation with an error. */
+  triggerError: (error: TError) => void;
+  /** Reset the mutation back to the idle state. */
+  reset: () => void;
 }
 
 /**
- * React Query mock utilities for testing React Query v5
+ * Controller that allows tests to drive query state transitions manually.
  */
-import { vi } from "vitest";
-
-// Helper to manually trigger mutation lifecycle
-export interface MutationController<
-  TData = unknown,
-  TError = Error,
-  TVariables = unknown,
-> {
-  triggerMutate: (variables: TVariables) => void;
-  triggerSuccess: (data: TData) => void;
-  triggerError: (error: TError) => void;
-  reset: () => void;
-}
-
-// Helper to manually trigger query lifecycle
-export interface QueryController<TData = unknown, TError = Error> {
+export interface QueryController<TData, TError> {
+  /** Set the query to loading/pending. */
   triggerLoading: () => void;
+  /** Resolve the query with data. */
   triggerSuccess: (data: TData) => void;
+  /** Reject the query with an error. */
   triggerError: (error: TError) => void;
+  /** Invoke the mock refetch handler. */
   triggerRefetch: () => void;
+  /** Reset the query back to pending with no data. */
   reset: () => void;
 }
 
-// Create a controlled mock mutation
+/**
+ * Create a test QueryClient with retries disabled and zero cache persistence.
+ * @returns QueryClient configured for deterministic unit tests.
+ */
+export const createMockQueryClient = (): QueryClient =>
+  new TanStackQueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0, staleTime: 0 },
+      mutations: { retry: false },
+    },
+  });
+
+/**
+ * Build a controlled mutation result along with its controller helpers.
+ * @returns A tuple containing the mutation result and controller.
+ */
 export function createControlledMutation<
-  TData = unknown,
+  TData,
   TError = Error,
-  TVariables = unknown,
+  TVariables = void,
   TContext = unknown,
->(): {
-  mutation: UseMutationResult<TData, TError, TVariables, TContext>;
-  controller: MutationController<TData, TError, TVariables>;
-} {
-  let currentData: TData | undefined;
-  let currentError: TError | null = null;
-  let isPending = false;
-  let isError = false;
-  let isSuccess = false;
-  let variables: TVariables | undefined;
+>() {
+  const state: MutationState<TData, TError, TVariables> = {
+    data: undefined,
+    error: null,
+    status: "idle",
+    variables: undefined,
+  };
 
-  // Callbacks
-  let onMutateCallback: ((vars: TVariables) => void) | undefined;
-  let onSuccessCallback: ((data: TData, vars: TVariables) => void) | undefined;
-  let onErrorCallback: ((error: TError, vars: TVariables) => void) | undefined;
-
-  const mutate = vi.fn((vars: TVariables, options?: any) => {
-    variables = vars;
-    isPending = true;
-    isError = false;
-    isSuccess = false;
-    currentError = null;
-
-    // Call onMutate if provided
-    if (onMutateCallback) {
-      onMutateCallback(vars);
+  const mutate = vi.fn(
+    (
+      variables: TVariables,
+      _options?: MutateOptions<TData, TError, TVariables, TContext>
+    ) => {
+      state.variables = variables;
+      state.status = "pending";
+      state.error = null;
     }
+  );
 
-    if (options?.onMutate) {
-      options.onMutate(vars);
+  const mutateAsync = vi.fn(
+    async (
+      variables: TVariables,
+      options?: MutateOptions<TData, TError, TVariables, TContext>
+    ) => {
+      mutate(variables, options);
+      return state.data as TData;
     }
-  });
-
-  const mutateAsync = vi.fn((vars: TVariables) => {
-    mutate(vars);
-    return new Promise<TData>((resolve, reject) => {
-      // Store resolve/reject for manual control
-      (mutateAsync as any)._resolve = resolve;
-      (mutateAsync as any)._reject = reject;
-    });
-  });
+  );
 
   const reset = vi.fn(() => {
-    currentData = undefined;
-    currentError = null;
-    isPending = false;
-    isError = false;
-    isSuccess = false;
-    variables = undefined;
+    state.data = undefined;
+    state.error = null;
+    state.status = "idle";
+    state.variables = undefined;
   });
 
   const mutation: UseMutationResult<TData, TError, TVariables, TContext> = {
-    data: currentData,
-    error: currentError,
-    isError,
-    isIdle: !isPending && !isError && !isSuccess,
-    isPending,
-    isSuccess,
+    data: state.data,
+    error: state.error,
     failureCount: 0,
-    failureReason: currentError,
+    failureReason: null,
+    isError: false,
+    isIdle: true,
+    isPending: false,
     isPaused: false,
-    variables,
-    status: isPending ? "pending" : isError ? "error" : isSuccess ? "success" : "idle",
+    isSuccess: false,
+    status: "idle",
+    variables: state.variables,
     mutate,
     mutateAsync,
     reset,
     context: undefined as TContext,
     isLoadingError: false,
     isRefetchError: false,
-    submittedAt: 0,
-    promise: Promise.resolve({
-      data: currentData,
-      error: currentError,
-    }),
+    submittedAt: Date.now(),
+    promise: Promise.resolve({ data: state.data, error: state.error }),
   } as UseMutationResult<TData, TError, TVariables, TContext>;
 
-  // Controller functions
   const controller: MutationController<TData, TError, TVariables> = {
-    triggerMutate: (vars: TVariables) => {
-      mutate(vars);
+    triggerMutate: (variables: TVariables) => {
+      mutate(variables);
+      Object.assign(mutation, {
+        status: "pending" as const,
+        isPending: true,
+        isIdle: false,
+        isError: false,
+        isSuccess: false,
+        variables,
+        error: null,
+      });
     },
     triggerSuccess: (data: TData) => {
-      currentData = data;
-      currentError = null;
-      isPending = false;
-      isError = false;
-      isSuccess = true;
-
-      // Update mutation object
+      state.data = data;
+      state.error = null;
+      state.status = "success";
       Object.assign(mutation, {
-        data: currentData,
-        error: currentError,
-        isError,
-        isPending,
-        isSuccess,
-        status: "success",
+        data,
+        error: null,
+        status: "success" as const,
+        isPending: false,
+        isSuccess: true,
+        isError: false,
+        isIdle: false,
       });
-
-      // Call success callbacks
-      if (onSuccessCallback && variables) {
-        onSuccessCallback(data, variables);
-      }
-
-      // Resolve async promise if exists
-      if ((mutateAsync as any)._resolve) {
-        (mutateAsync as any)._resolve(data);
-      }
     },
     triggerError: (error: TError) => {
-      currentData = undefined;
-      currentError = error;
-      isPending = false;
-      isError = true;
-      isSuccess = false;
-
-      // Update mutation object
+      state.data = undefined;
+      state.error = error;
+      state.status = "error";
       Object.assign(mutation, {
-        data: currentData,
-        error: currentError,
-        isError,
-        isPending,
-        isSuccess,
-        status: "error",
+        data: undefined,
+        error,
+        status: "error" as const,
+        isPending: false,
+        isSuccess: false,
+        isError: true,
+        isIdle: false,
         failureReason: error,
+        failureCount: 1,
       });
-
-      // Call error callbacks
-      if (onErrorCallback && variables) {
-        onErrorCallback(error, variables);
-      }
-
-      // Reject async promise if exists
-      if ((mutateAsync as any)._reject) {
-        (mutateAsync as any)._reject(error);
-      }
     },
     reset: () => {
       reset();
       Object.assign(mutation, {
         data: undefined,
         error: null,
-        isError: false,
+        status: "idle" as const,
         isPending: false,
         isSuccess: false,
-        status: "idle",
+        isError: false,
+        isIdle: true,
         variables: undefined,
       });
     },
   };
 
-  // Store callbacks on mutation for use by controller
-  (mutation as any)._setCallbacks = (callbacks: {
-    onMutate?: (vars: TVariables) => void;
-    onSuccess?: (data: TData, vars: TVariables) => void;
-    onError?: (error: TError, vars: TVariables) => void;
-  }) => {
-    onMutateCallback = callbacks.onMutate;
-    onSuccessCallback = callbacks.onSuccess;
-    onErrorCallback = callbacks.onError;
-  };
-
-  return { mutation, controller };
-}
-
-// Mock useMutation hook
-export function mockUseMutation<
-  TData = unknown,
-  TError = Error,
-  TVariables = unknown,
-  TContext = MutationContext<TVariables>,
->(options?: {
-  onMutate?: (variables: TVariables) => void;
-  onSuccess?: (data: TData, variables: TVariables) => void;
-  onError?: (error: TError, variables: TVariables) => void;
-}) {
-  const { mutation, controller } = createControlledMutation<
-    TData,
-    TError,
-    TVariables,
-    TContext
-  >();
-
-  // Store callbacks
-  if (options) {
-    (mutation as any)._setCallbacks(options);
-  }
-
   return { mutation, controller };
 }
 
 /**
- * Create a controlled mock query for testing
+ * Convenience helper returning only the mutation result for simple tests.
+ * @returns A mocked mutation result along with its controller.
  */
-export function createControlledQuery<TData = unknown, TError = Error>(): {
-  query: UseQueryResult<TData, TError>;
-  controller: QueryController<TData, TError>;
-} {
-  let currentData: TData | undefined;
-  let currentError: TError | null = null;
-  let isPending = true;
-  let isError = false;
-  let isSuccess = false;
-  let isLoading = true;
-  let isFetching = false;
+export function mockUseMutation<TData, TError, TVariables, TContext = unknown>() {
+  return createControlledMutation<TData, TError, TVariables, TContext>();
+}
 
-  const refetch = vi.fn(() =>
-    Promise.resolve({
-      data: currentData,
-      error: currentError,
-      status: isPending ? "pending" : isError ? "error" : "success",
-      fetchStatus: isFetching ? "fetching" : "idle",
-      isPending,
-      isError,
-      isSuccess,
-      isLoading,
-      isFetching,
-      isLoadingError: false,
-      isRefetchError: false,
-      isFetched: !isPending,
-      isFetchedAfterMount: !isPending,
-      isRefetching: false,
-      isStale: false,
-      isPlaceholderData: false,
-      failureCount: 0,
-      failureReason: currentError,
-      errorUpdatedAt: 0,
-      dataUpdatedAt: Date.now(),
-      errorUpdateCount: 0,
-      isInitialLoading: isPending,
-      isPaused: false,
-      refetch,
-      promise: Promise.resolve({
-        data: currentData,
-        error: currentError,
-      } as any),
-      isEnabled: !isPending,
-    } as unknown as UseQueryResult<TData, TError>)
-  );
+/**
+ * Build a controlled query result together with a controller.
+ * @returns A tuple containing the query result and controller.
+ */
+export function createControlledQuery<TData, TError = Error>() {
+  const state: QueryState<TData, TError> = {
+    data: undefined,
+    error: null,
+    status: "pending",
+  };
 
-  const query = {
-    data: currentData,
-    error: currentError,
-    isError,
-    isPending,
-    isLoading,
-    isSuccess,
-    isFetching,
-    isLoadingError: false,
-    isRefetchError: false,
-    isFetched: !isPending,
-    isFetchedAfterMount: !isPending,
-    isRefetching: false,
-    isStale: false,
-    isPlaceholderData: false,
-    status: isPending ? "pending" : isError ? "error" : "success",
-    fetchStatus: isFetching ? "fetching" : "idle",
-    refetch,
-    failureCount: 0,
-    failureReason: currentError,
-    errorUpdatedAt: 0,
-    dataUpdatedAt: Date.now(),
-    errorUpdateCount: 0,
-    isInitialLoading: isPending,
-    isPaused: false,
-    promise: Promise.resolve({
-      data: currentData,
-      error: currentError,
-    } as any),
-    isEnabled: !isPending,
-  } as unknown as UseQueryResult<TData, TError>;
+  const query = createMockUseQueryResult<TData, TError>(null, null, true, false);
+  query.status = "pending";
+  query.fetchStatus = "idle";
+  query.isPending = true;
+  query.isInitialLoading = true;
+  query.isLoading = true;
+  query.isFetching = false;
+  query.isSuccess = false;
+  query.isError = false;
+  query.data = undefined;
+  query.error = null;
 
   const controller: QueryController<TData, TError> = {
     triggerLoading: () => {
-      isPending = true;
-      isLoading = true;
-      isFetching = true;
-      isError = false;
-      isSuccess = false;
-      currentError = null;
-
+      state.status = "pending";
       Object.assign(query, {
-        isPending,
-        isLoading,
-        isFetching,
-        isError,
-        isSuccess,
-        error: currentError,
-        status: "pending",
-        fetchStatus: "fetching",
+        status: "pending" as const,
+        isPending: true,
+        isLoading: true,
+        isFetching: true,
+        isSuccess: false,
+        isError: false,
       });
     },
     triggerSuccess: (data: TData) => {
-      currentData = data;
-      currentError = null;
-      isPending = false;
-      isLoading = false;
-      isFetching = false;
-      isError = false;
-      isSuccess = true;
-
+      state.data = data;
+      state.error = null;
+      state.status = "success";
       Object.assign(query, {
-        data: currentData,
-        error: currentError,
-        isPending,
-        isLoading,
-        isFetching,
-        isError,
-        isSuccess,
-        status: "success",
-        fetchStatus: "idle",
+        data,
+        error: null,
+        status: "success" as const,
+        isPending: false,
+        isLoading: false,
+        isFetching: false,
         isFetched: true,
         isFetchedAfterMount: true,
-        dataUpdatedAt: Date.now(),
+        isSuccess: true,
+        isError: false,
       });
     },
     triggerError: (error: TError) => {
-      currentData = undefined;
-      currentError = error;
-      isPending = false;
-      isLoading = false;
-      isFetching = false;
-      isError = true;
-      isSuccess = false;
-
+      state.data = undefined;
+      state.error = error;
+      state.status = "error";
       Object.assign(query, {
-        data: currentData,
-        error: currentError,
-        isPending,
-        isLoading,
-        isFetching,
-        isError,
-        isSuccess,
-        status: "error",
-        fetchStatus: "idle",
-        failureReason: error,
-        errorUpdatedAt: Date.now(),
+        data: undefined,
+        error,
+        status: "error" as const,
+        isPending: false,
+        isLoading: false,
+        isFetching: false,
+        isSuccess: false,
+        isError: true,
+        isLoadingError: true,
       });
     },
     triggerRefetch: () => {
-      isFetching = true;
-      Object.assign(query, {
-        isFetching,
-        fetchStatus: "fetching",
-      });
+      void query.refetch();
     },
     reset: () => {
-      currentData = undefined;
-      currentError = null;
-      isPending = true;
-      isLoading = true;
-      isFetching = false;
-      isError = false;
-      isSuccess = false;
-
+      state.data = undefined;
+      state.error = null;
+      state.status = "pending";
       Object.assign(query, {
         data: undefined,
         error: null,
+        status: "pending" as const,
         isPending: true,
         isLoading: true,
         isFetching: false,
-        isError: false,
         isSuccess: false,
-        status: "pending",
-        fetchStatus: "idle",
+        isError: false,
+        isLoadingError: false,
+        isFetched: false,
+        isFetchedAfterMount: false,
       });
     },
   };
@@ -416,248 +297,24 @@ export function createControlledQuery<TData = unknown, TError = Error>(): {
 }
 
 /**
- * Create a mock QueryClient for testing
+ * Simplified query mock for components that only need success/error toggling.
+ * @param initialData Optional data to seed the query with.
+ * @param initialError Optional error to seed the query with.
+ * @returns The mocked query result and controller.
  */
-export function createMockQueryClient(): QueryClient {
-  const mockClient = {
-    getQueryData: vi.fn(),
-    setQueryData: vi.fn(),
-    invalidateQueries: vi.fn(),
-    removeQueries: vi.fn(),
-    prefetchQuery: vi.fn(),
-    fetchQuery: vi.fn(),
-    cancelQueries: vi.fn(),
-    resetQueries: vi.fn(),
-    clear: vi.fn(),
-    mount: vi.fn(),
-    unmount: vi.fn(),
-    isFetching: vi.fn(() => 0),
-    isMutating: vi.fn(() => 0),
-    getDefaultOptions: vi.fn(() => ({})),
-    setDefaultOptions: vi.fn(),
-    setQueryDefaults: vi.fn(),
-    getQueryDefaults: vi.fn(),
-    setMutationDefaults: vi.fn(),
-    getMutationDefaults: vi.fn(),
-    getQueryCache: vi.fn(),
-    getMutationCache: vi.fn(),
-    resumePausedMutations: vi.fn(),
-  } as unknown as QueryClient;
-
-  return mockClient;
-}
-
-/**
- * Create a mock infinite query
- */
-export function createControlledInfiniteQuery<TData = unknown, TError = Error>(): {
-  query: UseInfiniteQueryResult<any, TError>;
-  controller: {
-    triggerLoading: () => void;
-    triggerSuccess: (pages: TData[][]) => void;
-    triggerError: (error: TError) => void;
-    triggerFetchNextPage: () => void;
-    reset: () => void;
-  };
-} {
-  let pages: TData[][] = [];
-  let currentError: TError | null = null;
-  let isPending = true;
-  let isError = false;
-  let isSuccess = false;
-  let hasNextPage = false;
-  let isFetchingNextPage = false;
-
-  const fetchNextPage = vi.fn();
-  const fetchPreviousPage = vi.fn();
-
-  const query = {
-    data: pages.length > 0 ? { pages, pageParams: [] } : undefined,
-    error: currentError,
-    isError,
-    isPending,
-    isLoading: isPending,
-    isSuccess,
-    isFetching: isPending,
-    isFetchingNextPage,
-    isFetchingPreviousPage: false,
-    hasNextPage,
-    hasPreviousPage: false,
-    fetchNextPage,
-    fetchPreviousPage,
-    isLoadingError: false,
-    isRefetchError: false,
-    isFetched: !isPending,
-    isFetchedAfterMount: !isPending,
-    isRefetching: false,
-    isStale: false,
-    isPlaceholderData: false,
-    status: isPending ? "pending" : isError ? "error" : "success",
-    fetchStatus: isPending ? "fetching" : "idle",
-    refetch: vi.fn(),
-    failureCount: 0,
-    failureReason: currentError,
-    errorUpdatedAt: 0,
-    dataUpdatedAt: Date.now(),
-    isFetchNextPageError: false,
-    isFetchPreviousPageError: false,
-    errorUpdateCount: 0,
-    isInitialLoading: isPending,
-    isPaused: false,
-    promise: Promise.resolve({
-      data: pages.length > 0 ? { pages, pageParams: [] } : undefined,
-      error: currentError,
-    }),
-    isEnabled: !isPending,
-  } as unknown as UseInfiniteQueryResult<any, TError>;
-
-  const controller = {
-    triggerLoading: () => {
-      isPending = true;
-      isError = false;
-      isSuccess = false;
-      currentError = null;
-      Object.assign(query, {
-        isPending,
-        isLoading: true,
-        isFetching: true,
-        isError,
-        isSuccess,
-        error: currentError,
-        status: "pending",
-      });
-    },
-    triggerSuccess: (newPages: TData[][]) => {
-      pages = newPages;
-      currentError = null;
-      isPending = false;
-      isError = false;
-      isSuccess = true;
-      hasNextPage = true; // Assume there's more data
-
-      Object.assign(query, {
-        data: { pages, pageParams: [] },
-        error: currentError,
-        isPending,
-        isLoading: false,
-        isFetching: false,
-        isError,
-        isSuccess,
-        hasNextPage,
-        status: "success",
-      });
-    },
-    triggerError: (error: TError) => {
-      currentError = error;
-      isPending = false;
-      isError = true;
-      isSuccess = false;
-
-      Object.assign(query, {
-        error: currentError,
-        isPending,
-        isLoading: false,
-        isFetching: false,
-        isError,
-        isSuccess,
-        status: "error",
-      });
-    },
-    triggerFetchNextPage: () => {
-      isFetchingNextPage = true;
-      Object.assign(query, {
-        isFetchingNextPage,
-      });
-    },
-    reset: () => {
-      pages = [];
-      currentError = null;
-      isPending = true;
-      isError = false;
-      isSuccess = false;
-      hasNextPage = false;
-      isFetchingNextPage = false;
-
-      Object.assign(query, {
-        data: undefined,
-        error: null,
-        isPending: true,
-        isLoading: true,
-        isFetching: false,
-        isError: false,
-        isSuccess: false,
-        hasNextPage: false,
-        isFetchingNextPage: false,
-        status: "pending",
-      });
-    },
-  };
-
-  return { query, controller };
-}
-
-/**
- * Mock useQuery hook with enhanced v5 features
- */
-export function mockUseQuery<TData = unknown, TError = Error>(
+export function mockUseQuery<TData, TError>(
   initialData?: TData,
   initialError?: TError
 ) {
   const { query, controller } = createControlledQuery<TData, TError>();
 
-  if (initialData) {
+  if (initialData !== undefined) {
     controller.triggerSuccess(initialData);
   }
 
-  if (initialError) {
+  if (initialError !== undefined) {
     controller.triggerError(initialError);
   }
 
   return { query, controller };
-}
-
-/**
- * Mock useInfiniteQuery hook
- */
-export function mockUseInfiniteQuery<TData = unknown, TError = Error>(
-  initialPages?: TData[][]
-) {
-  const { query, controller } = createControlledInfiniteQuery<TData, TError>();
-
-  if (initialPages) {
-    controller.triggerSuccess(initialPages);
-  }
-
-  return { query, controller };
-}
-
-/**
- * Utility to create query test wrapper
- */
-export function createQueryTestWrapper(queryClient?: QueryClient) {
-  const _client = queryClient || createMockQueryClient();
-
-  return ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="query-wrapper">{children}</div>
-  );
-}
-
-// Helper to wait for React updates
-export async function waitForReactUpdate() {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
-/**
- * Helper to wait for query state changes
- */
-export async function waitForQueryUpdate(controller: QueryController<any, any>) {
-  await waitForReactUpdate();
-  return controller;
-}
-
-/**
- * Helper to simulate network delay in tests
- */
-export function simulateNetworkDelay(ms = 100) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

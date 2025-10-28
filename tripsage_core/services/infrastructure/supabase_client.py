@@ -13,9 +13,14 @@ from functools import lru_cache
 from typing import Any, cast
 
 from postgrest import AsyncPostgrestClient
-from supabase import AsyncClient as SupabaseAsyncClient, acreate_client
-from supabase.lib.client_options import AsyncClientOptions
+from supabase.lib.client_options import (
+    AsyncClientOptions,  # pylint: disable=no-name-in-module
+)
 
+from supabase import (  # pylint: disable=no-name-in-module
+    AsyncClient as SupabaseAsyncClient,
+    acreate_client,
+)
 from tripsage_core.config import get_settings
 
 

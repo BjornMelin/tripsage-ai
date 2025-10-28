@@ -326,6 +326,34 @@ def truncate_string(max_length: int):
     return validator
 
 
+def passwords_match(password: str, password_confirm: str) -> None:
+    """Validate that two passwords match.
+
+    Args:
+        password: The primary password
+        password_confirm: The confirmation password
+
+    Raises:
+        ValueError: If passwords don't match
+    """
+    if password != password_confirm:
+        raise ValueError("Passwords do not match")
+
+
+def passwords_different(current_password: str, new_password: str) -> None:
+    """Validate that new password is different from current password.
+
+    Args:
+        current_password: The current password
+        new_password: The new password
+
+    Raises:
+        ValueError: If passwords are the same
+    """
+    if current_password == new_password:
+        raise ValueError("New password must be different from current password")
+
+
 # Pre-configured common validators using Annotated types for reusability
 AirportCode = Annotated[str, AfterValidator(validate_airport_code)]
 Rating = Annotated[float | None, AfterValidator(validate_rating_range)]
@@ -349,65 +377,3 @@ LongString = Annotated[
 # Truncating string validators for user input
 TruncatedShortString = Annotated[str, BeforeValidator(truncate_string(50))]
 TruncatedMediumString = Annotated[str, BeforeValidator(truncate_string(255))]
-
-
-class CommonValidators:
-    """Collection of common validators for TripSage models.
-
-    This class provides static methods and pre-configured Annotated types
-    for consistent validation across the application.
-    """
-
-    # Validator functions
-    airport_code = validate_airport_code
-    rating_range = validate_rating_range
-    email_lowercase = validate_email_lowercase
-    positive_integer = validate_positive_integer
-    non_negative_number = validate_non_negative_number
-    currency_code = validate_currency_code
-    password_strength = validate_password_strength
-    latitude = validate_latitude
-    longitude = validate_longitude
-
-    # Factory functions
-    string_length_range = validate_string_length_range
-    enum_validator = create_enum_validator
-    truncation = truncate_string
-
-    @staticmethod
-    def passwords_match(password: str, password_confirm: str) -> tuple[str, str]:
-        """Validate that two passwords match.
-
-        Args:
-            password: The primary password
-            password_confirm: The confirmation password
-
-        Returns:
-            Tuple of (password, password_confirm)
-
-        Raises:
-            ValueError: If passwords don't match
-        """
-        if password != password_confirm:
-            raise ValueError("Passwords do not match")
-        return password, password_confirm
-
-    @staticmethod
-    def passwords_different(
-        current_password: str, new_password: str
-    ) -> tuple[str, str]:
-        """Validate that new password is different from current password.
-
-        Args:
-            current_password: The current password
-            new_password: The new password
-
-        Returns:
-            Tuple of (current_password, new_password)
-
-        Raises:
-            ValueError: If passwords are the same
-        """
-        if current_password == new_password:
-            raise ValueError("New password must be different from current password")
-        return current_password, new_password

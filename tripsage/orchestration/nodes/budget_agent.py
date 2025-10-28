@@ -10,6 +10,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.utils.structured import StructuredExtractor, model_to_dict
@@ -45,11 +46,11 @@ class BudgetAgentNode(BaseAgentNode):
     integration.
     """
 
-    def __init__(self, service_registry, **config_overrides):
+    def __init__(self, services: AppServiceContainer, **config_overrides):
         """Initialize the budget agent node with dynamic configuration.
 
         Args:
-            service_registry: Service registry for dependency injection
+            services: Application service container for dependency injection
             **config_overrides: Runtime configuration overrides (e.g., temperature=0.5)
         """
         # Get configuration service for database-backed config
@@ -64,7 +65,7 @@ class BudgetAgentNode(BaseAgentNode):
         self._parameter_extractor: StructuredExtractor[BudgetParameters] | None = None
         self.llm_with_tools = None
 
-        super().__init__("budget_agent", service_registry)
+        super().__init__("budget_agent", services)
 
     def _initialize_tools(self) -> None:
         """Initialize budget-specific tools using simple tool catalog."""

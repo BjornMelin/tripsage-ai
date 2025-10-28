@@ -2,7 +2,6 @@
 
 This package contains consolidated Pydantic V2 schemas organized by domain:
 
-- accommodations.py : Accommodation search and booking schemas
 - api_keys.py      : API key management schemas
 - auth.py          : Authentication schemas
 - chat.py          : Chat interaction schemas
@@ -10,9 +9,10 @@ This package contains consolidated Pydantic V2 schemas organized by domain:
 - dashboard.py     : Dashboard monitoring and analytics schemas
 - destinations.py  : Destination search and info schemas
 - flights.py       : Flight search and booking schemas
-- itineraries.py   : Itinerary planning schemas
-- trips.py         : Trip management schemas
 - users.py         : User management schemas
+
+Trip, itinerary, and accommodation schemas now live in
+``tripsage_core.models.api`` as the canonical definitions.
 
 Import directly from the consolidated schema files:
 

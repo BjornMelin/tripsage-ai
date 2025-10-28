@@ -9,7 +9,6 @@ from typing import Any
 from agents.tool_context import ToolContext
 
 from agents import function_tool
-from tripsage.agents.service_registry import ServiceRegistry
 from tripsage_core.services.business.accommodation_service import (
     AccommodationBookingRequest,
     AccommodationSearchRequest,
@@ -44,29 +43,28 @@ def _coerce_property_types(
     return normalized
 
 
-def _get_service_registry(
-    ctx: ToolContext[Any],
-) -> ServiceRegistry:
-    registry = ctx.context.get("service_registry")
-    if registry is None:
-        raise ValueError("service_registry missing from tool context")
-    if not hasattr(registry, "get_required_service"):
-        raise TypeError("tool context service_registry is missing required API")
-    return registry
-
-
 def _get_accommodation_service(
     ctx: ToolContext[Any],
 ) -> AccommodationService:
-    registry = _get_service_registry(ctx)
-    service = registry.get_required_service("accommodation_service")
+    service = ctx.context.get("accommodation_service")
+    if service is None:
+        services_container = ctx.context.get("services")
+        if services_container is not None:
+            if hasattr(services_container, "get_required_service"):
+                service = services_container.get_required_service(
+                    "accommodation_service"
+                )
+            else:
+                service = getattr(services_container, "accommodation_service", None)
+    if service is None:
+        raise ValueError("accommodation_service missing from tool context")
     required_methods = (
         "search_accommodations",
         "get_listing_details",
         "book_accommodation",
     )
     if not all(hasattr(service, method) for method in required_methods):
-        raise TypeError("service_registry did not provide an AccommodationService")
+        raise TypeError("tool context did not provide a valid AccommodationService")
     return service
 
 
