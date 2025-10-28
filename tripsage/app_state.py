@@ -98,7 +98,6 @@ class AppServiceContainer:
     # Orchestration lifecycle helpers
     checkpoint_service: Any | None = None
     memory_bridge: SessionMemoryBridge | None = None
-    mcp_bridge: Any | None = None
     mcp_service: AirbnbMCP | None = None
 
     def get_required_service(
@@ -164,10 +163,7 @@ async def initialise_app_state(
     from tripsage_core.services.business.user_service import UserService
     from tripsage_core.services.external_apis import (
         DocumentAnalyzer,
-        GoogleCalendarService,
         GoogleMapsService,
-        PlaywrightService,
-        TimeService,
         WeatherService,
         WebCrawlService,
     )
@@ -193,10 +189,7 @@ async def initialise_app_state(
     await google_maps_service.connect()
 
     weather_service = WeatherService()
-    time_service = TimeService()
-    calendar_service = GoogleCalendarService()
     document_analyzer = DocumentAnalyzer()
-    playwright_service = PlaywrightService()
     webcrawl_service = WebCrawlService()
 
     # Business services
@@ -238,15 +231,11 @@ async def initialise_app_state(
 
     # Orchestration helpers
     from tripsage.orchestration.checkpoint_service import SupabaseCheckpointService
-    from tripsage.orchestration.mcp_bridge import AirbnbMCPBridge
 
     checkpoint_service = SupabaseCheckpointService()
     memory_bridge = SessionMemoryBridge(memory_service=memory_service)
     mcp_service = AirbnbMCP()
     await mcp_service.initialize()
-
-    mcp_bridge = AirbnbMCPBridge(mcp_service=mcp_service)
-    await mcp_bridge.initialize()
 
     services = AppServiceContainer(
         accommodation_service=accommodation_service,
@@ -256,25 +245,17 @@ async def initialise_app_state(
         file_processing_service=file_processing_service,
         flight_service=flight_service,
         itinerary_service=itinerary_service,
-        api_key_service=api_key_service,
         memory_service=memory_service,
         trip_service=trip_service,
-        user_service=user_service,
         unified_search_service=unified_search_service,
-        calendar_service=calendar_service,
-        document_analyzer=document_analyzer,
-        google_maps_service=google_maps_service,
-        playwright_service=playwright_service,
-        time_service=time_service,
-        weather_service=weather_service,
-        webcrawl_service=webcrawl_service,
-        cache_service=cache_service,
+        user_service=user_service,
         database_service=database_service,
+        cache_service=cache_service,
         key_monitoring_service=key_monitoring_service,
         checkpoint_service=checkpoint_service,
         memory_bridge=memory_bridge,
-        mcp_bridge=mcp_bridge,
         mcp_service=mcp_service,
+        webcrawl_service=webcrawl_service,
     )
 
     from tripsage.orchestration.graph import TripSageOrchestrator

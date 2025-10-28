@@ -244,7 +244,6 @@ def create_mock_services(
         key_monitoring_service=cast(Any, Mock()),
         checkpoint_service=cast(Any, Mock()),
         memory_bridge=cast(Any, Mock()),
-        mcp_bridge=cast(Any, Mock()),
         mcp_service=mcp_service,
     )
 
