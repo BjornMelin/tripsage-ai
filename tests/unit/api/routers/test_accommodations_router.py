@@ -24,8 +24,9 @@ class TestAccommodationRouterValidation:
 
     # === VALIDATION TESTS (These work reliably) ===
 
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("adults", [0, -1, 17])  # Schema allows 1-16
-    def test_search_accommodations_invalid_adults(
+    async def test_search_accommodations_invalid_adults(
         self, unauthenticated_test_client, adults
     ):
         """Test accommodation search with invalid adults count."""
@@ -36,7 +37,7 @@ class TestAccommodationRouterValidation:
             "adults": adults,
         }
 
-        response = unauthenticated_test_client.post(
+        response = await unauthenticated_test_client.post(
             "/api/accommodations/search", json=search_request
         )
         # FastAPI checks auth before validation, so unauth requests return 401

@@ -188,7 +188,7 @@
           "dashboard"
         ],
         "summary": "Get Services Status",
-        "description": "Get status of all external services.\n\nReturns health status for all integrated external services:\n- OpenAI\n- Weather API\n- Google Maps\n- Other configured services",
+        "description": "Get status of all external services.\n\nReturns health status for all integrated external services:\n- OpenAI, Weather API, Google Maps, and other configured services",
         "operationId": "get_services_status_api_dashboard_services_get",
         "responses": {
           "200": {
@@ -278,7 +278,7 @@
           "dashboard"
         ],
         "summary": "Get Rate Limits Status",
-        "description": "Get rate limit status for API keys.\n\nReturns current rate limit status for active API keys including:\n- Current usage vs limits\n- Remaining quota\n- Reset times",
+        "description": "Get rate limit status for API keys.\n\nReturns current rate limit status for active API keys including:\n- Current usage vs limits, remaining quota, and reset times",
         "operationId": "get_rate_limits_status_api_dashboard_rate_limits_get",
         "parameters": [
           {
@@ -329,7 +329,7 @@
           "dashboard"
         ],
         "summary": "Get Alerts",
-        "description": "Get system alerts and notifications.\n\nReturns alerts filtered by severity and acknowledgment status:\n- Security alerts\n- Performance alerts\n- Error rate alerts\n- Anomaly detection alerts",
+        "description": "Get system alerts and notifications.\n\nReturns alerts filtered by severity and acknowledgment status:\n- Security, performance, error rate, and anomaly detection alerts",
         "operationId": "get_alerts_api_dashboard_alerts_get",
         "parameters": [
           {
@@ -412,7 +412,7 @@
           "dashboard"
         ],
         "summary": "Acknowledge Alert",
-        "description": "Acknowledge an alert.\n\nMarks an alert as acknowledged by the current user.",
+        "description": "Acknowledge an alert.",
         "operationId": "acknowledge_alert_api_dashboard_alerts__alert_id__acknowledge_post",
         "parameters": [
           {
@@ -458,7 +458,7 @@
           "dashboard"
         ],
         "summary": "Dismiss Alert",
-        "description": "Dismiss an alert.\n\nRemoves an alert from the active alerts list.",
+        "description": "Dismiss an alert.",
         "operationId": "dismiss_alert_api_dashboard_alerts__alert_id__delete",
         "parameters": [
           {
@@ -567,7 +567,7 @@
           "dashboard"
         ],
         "summary": "Get Trend Data",
-        "description": "Get trend data for specified metric.\n\nReturns time series data for metrics like:\n- request_count\n- error_rate\n- latency\n- active_users",
+        "description": "Get trend data for specified metric.\n\nReturns time series data for metrics like:\n- request_count, error_rate, latency, and active_users",
         "operationId": "get_trend_data_api_dashboard_trends__metric_type__get",
         "parameters": [
           {
@@ -12306,14 +12306,12 @@
               "type": "string"
             },
             "type": "array",
-            "title": "Scopes",
-            "default": []
+            "title": "Scopes"
           },
           "metadata": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Metadata",
-            "default": {}
+            "title": "Metadata"
           }
         },
         "type": "object",

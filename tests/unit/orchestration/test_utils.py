@@ -1,9 +1,13 @@
-"""Test utilities for orchestration tests.
+"""Test utilities for orchestration workflows.
 
-Provides common mocking utilities for LangChain and OpenAI API calls.
+Provides reusable mocks for LangChain and external API integrations while keeping
+type information explicit so static analysers remain satisfied.
 """
 
-from typing import Any
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 from tripsage.app_state import AppServiceContainer
@@ -19,22 +23,22 @@ from tripsage_core.services.external_apis.webcrawl_service import WebCrawlServic
 class MockLLMResponse:
     """Mock response for LLM calls."""
 
-    def __init__(self, content: str):
+    def __init__(self, content: str) -> None:
         """Store mock content returned by the LLM."""
-        self.content = content
+        self.content: str = content
 
 
 class MockChatOpenAI:
     """Mock ChatOpenAI that doesn't make real API calls."""
 
-    def __init__(self, *args, **kwargs):
-        """Initialize mock without making API calls."""
-        self.model = kwargs.get("model", "gpt-3.5-turbo")
-        self.temperature = kwargs.get("temperature", 0.7)
+    def __init__(self, *_: Any, **kwargs: Any) -> None:
+        """Initialise mock without making API calls."""
+        self.model: str = str(kwargs.get("model", "gpt-3.5-turbo"))
+        self.temperature: float = float(kwargs.get("temperature", 0.7))
         # Store responses for different scenarios
-        self._responses = {}
-        self._default_response = "I understand your request."
-        self._bound_tools = []
+        self._responses: dict[str, str] = {}
+        self._default_response: str = "I understand your request."
+        self._bound_tools: list[Any] = []
 
     def set_response(self, key: str, response: str):
         """Set a specific response for a key."""
@@ -45,15 +49,19 @@ class MockChatOpenAI:
         self._default_response = response
 
     async def ainvoke(
-        self, messages: list[dict[str, str]], **kwargs
+        self,
+        messages: Sequence[Mapping[str, str] | str],
+        **__: Any,
     ) -> MockLLMResponse:
         """Mock async invoke."""
+        response_content: str = self._default_response
+
         # Extract content from messages
         if messages:
             last_message = messages[-1]
             content = (
                 last_message.get("content", "")
-                if isinstance(last_message, dict)
+                if isinstance(last_message, Mapping)
                 else str(last_message)
             )
 
@@ -61,124 +69,123 @@ class MockChatOpenAI:
             if "extract" in content.lower() and "parameters" in content.lower():
                 # Parameter extraction responses
                 if "accommodation" in content.lower():
-                    return MockLLMResponse(
+                    response_content = (
                         '{"location": "Paris", "check_in": "2024-06-15", '
                         '"check_out": "2024-06-20"}'
                     )
                 elif "flight" in content.lower():
-                    return MockLLMResponse(
+                    response_content = (
                         '{"origin": "NYC", "destination": "LAX", '
                         '"departure_date": "2024-06-15"}'
                     )
                 elif "budget" in content.lower():
                     # Check if it's asking about a specific budget amount
-                    if "$2000" in content:
-                        return MockLLMResponse(
-                            '{"operation": "optimize", "total_budget": 2000, '
-                            '"trip_length": 7}'
-                        )
-                    else:
-                        return MockLLMResponse(
-                            '{"operation": "optimize", "total_budget": 2000, '
-                            '"trip_length": 7}'
-                        )
+                    response_content = (
+                        '{"operation": "optimize", "total_budget": 2000, '
+                        '"trip_length": 7}'
+                    )
                 elif "destination" in content.lower():
-                    return MockLLMResponse(
+                    response_content = (
                         '{"destination": "Tokyo", "research_type": "overview"}'
                     )
                 elif "itinerary" in content.lower():
-                    return MockLLMResponse(
+                    response_content = (
                         '{"operation": "create", "destination": "Rome", "duration": 5}'
                     )
                 else:
-                    return MockLLMResponse("null")
+                    response_content = "null"
 
             # Intent classification for router
-            if "classify" in content.lower() and "intent" in content.lower():
+            elif "classify" in content.lower() and "intent" in content.lower():
                 if "flight" in content.lower():
-                    return MockLLMResponse(
+                    response_content = (
                         '{"agent": "flight_agent", "confidence": 0.9, '
                         '"reasoning": "User mentioned flights"}'
                     )
                 elif "hotel" in content.lower() or "accommodation" in content.lower():
-                    return MockLLMResponse(
+                    response_content = (
                         '{"agent": "accommodation_agent", "confidence": 0.9, '
                         '"reasoning": "User mentioned hotels"}'
                     )
                 elif "budget" in content.lower():
-                    return MockLLMResponse(
+                    response_content = (
                         '{"agent": "budget_agent", "confidence": 0.9, '
                         '"reasoning": "User mentioned budget"}'
                     )
                 else:
-                    return MockLLMResponse(
+                    response_content = (
                         '{"agent": "general_agent", "confidence": 0.3, '
                         '"reasoning": "Unclear intent"}'
                     )
 
             # Response generation for agents
-            if (
+            elif (
                 "provide a helpful response" in content.lower()
                 or "general" in content.lower()
             ):
                 if "accommodation" in content.lower():
-                    return MockLLMResponse(
+                    response_content = (
                         "I'd be happy to help you find accommodations! "
                         "Could you please tell me your destination, "
                         "check-in and check-out dates?"
                     )
                 elif "flight" in content.lower():
-                    return MockLLMResponse(
+                    response_content = (
                         "I'd be happy to help you find flights! "
                         "Could you please tell me your departure city, "
                         "destination, and travel dates?"
                     )
                 elif "budget" in content.lower():
-                    return MockLLMResponse(
+                    response_content = (
                         "I'd be happy to help optimize your travel budget! "
                         "Could you please share your total budget and trip details?"
                     )
 
             # Response generation
-            if "generate" in content.lower() and "response" in content.lower():
+            elif "generate" in content.lower() and "response" in content.lower():
                 if "accommodation" in content.lower():
-                    return MockLLMResponse("I found great hotels in Paris for you!")
+                    response_content = "I found great hotels in Paris for you!"
                 elif "flight" in content.lower():
-                    return MockLLMResponse(
-                        "I found several flight options from NYC to LAX."
-                    )
+                    response_content = "I found several flight options from NYC to LAX."
                 elif "budget" in content.lower():
-                    return MockLLMResponse(
+                    response_content = (
                         "I've optimized your $2000 budget for a 7-day trip."
                     )
                 elif "destination" in content.lower():
-                    return MockLLMResponse(
+                    response_content = (
                         "Tokyo is an amazing destination with rich culture!"
                     )
                 elif "itinerary" in content.lower():
-                    return MockLLMResponse("I've created a 5-day itinerary for Rome.")
+                    response_content = "I've created a 5-day itinerary for Rome."
 
             # Check for custom responses
-            for key, response in self._responses.items():
-                if key in content:
-                    return MockLLMResponse(response)
+            else:
+                for key, response in self._responses.items():
+                    if key in content:
+                        response_content = response
+                        break
 
-        # Default response
-        return MockLLMResponse(self._default_response)
+        return MockLLMResponse(response_content)
 
-    def invoke(self, messages: list[dict[str, str]], **kwargs) -> MockLLMResponse:
+    def invoke(
+        self,
+        messages: Sequence[Mapping[str, str] | str],
+        **kwargs: Any,
+    ) -> MockLLMResponse:
         """Mock sync invoke."""
         import asyncio
 
         return asyncio.run(self.ainvoke(messages, **kwargs))
 
-    def with_structured_output(self, schema):
+    def with_structured_output(self, schema: Any) -> MockChatOpenAI:
         """Return self to emulate LangChain structured output wrapper."""
+        _unused_schema = schema
+        del _unused_schema
         return self
 
-    def bind_tools(self, tools):
+    def bind_tools(self, tools: Sequence[Any] | None) -> MockChatOpenAI:
         """Return self to emulate tool binding."""
-        self._bound_tools = tools
+        self._bound_tools = list(tools or [])
         return self
 
 
@@ -189,7 +196,7 @@ def create_mock_llm(default_response: str = "Test response") -> MockChatOpenAI:
     return mock_llm
 
 
-def patch_openai_in_module(module_path: str):
+def patch_openai_in_module(module_path: str) -> Callable[..., Any]:
     """Create a patch decorator for mocking ChatOpenAI in a specific module.
 
     Args:
@@ -208,43 +215,59 @@ def create_mock_services(
     overrides: dict[str, Any] | None = None,
 ) -> AppServiceContainer:
     """Create an AppServiceContainer populated with mock services."""
+    flight_service = cast(FlightService, MagicMock(spec=FlightService))
+    activity_service = cast(ActivityService, MagicMock(spec=ActivityService))
+    unified_search_service = cast(
+        UnifiedSearchService, MagicMock(spec=UnifiedSearchService)
+    )
+    google_maps_service = cast(GoogleMapsService, MagicMock(spec=GoogleMapsService))
+    weather_service = cast(WeatherService, MagicMock(spec=WeatherService))
+    webcrawl_service = cast(WebCrawlService, MagicMock(spec=WebCrawlService))
+    mcp_service = cast(AirbnbMCP, MagicMock(spec=AirbnbMCP))
+
     container = AppServiceContainer(
-        accommodation_service=Mock(),
-        chat_service=Mock(),
-        destination_service=Mock(),
-        file_processing_service=Mock(),
-        flight_service=MagicMock(spec=FlightService),
-        activity_service=MagicMock(spec=ActivityService),
-        itinerary_service=Mock(),
-        api_key_service=Mock(),
-        memory_service=Mock(),
-        trip_service=Mock(),
-        user_service=Mock(),
-        unified_search_service=MagicMock(spec=UnifiedSearchService),
-        calendar_service=Mock(),
-        document_analyzer=Mock(),
-        google_maps_service=MagicMock(spec=GoogleMapsService),
-        playwright_service=Mock(),
-        time_service=Mock(),
-        weather_service=MagicMock(spec=WeatherService),
-        webcrawl_service=MagicMock(spec=WebCrawlService),
-        cache_service=Mock(),
-        database_service=Mock(),
-        key_monitoring_service=Mock(),
-        websocket_broadcaster=Mock(),
-        websocket_manager=Mock(),
-        checkpoint_service=Mock(),
-        memory_bridge=Mock(),
-        mcp_bridge=Mock(),
-        mcp_service=MagicMock(spec=AirbnbMCP),
+        accommodation_service=cast(Any, Mock()),
+        chat_service=cast(Any, Mock()),
+        destination_service=cast(Any, Mock()),
+        file_processing_service=cast(Any, Mock()),
+        flight_service=flight_service,
+        activity_service=activity_service,
+        itinerary_service=cast(Any, Mock()),
+        api_key_service=cast(Any, Mock()),
+        memory_service=cast(Any, Mock()),
+        trip_service=cast(Any, Mock()),
+        user_service=cast(Any, Mock()),
+        unified_search_service=unified_search_service,
+        calendar_service=cast(Any, Mock()),
+        document_analyzer=cast(Any, Mock()),
+        google_maps_service=google_maps_service,
+        playwright_service=cast(Any, Mock()),
+        time_service=cast(Any, Mock()),
+        weather_service=weather_service,
+        webcrawl_service=webcrawl_service,
+        cache_service=cast(Any, Mock()),
+        database_service=cast(Any, Mock()),
+        key_monitoring_service=cast(Any, Mock()),
+        checkpoint_service=cast(Any, Mock()),
+        memory_bridge=cast(Any, Mock()),
+        mcp_bridge=cast(Any, Mock()),
+        mcp_service=mcp_service,
     )
 
-    container.google_maps_service.connect = AsyncMock(return_value=None)
-    container.google_maps_service.geocode = AsyncMock(return_value=[])
-    container.weather_service.connect = AsyncMock(return_value=None)
-    container.weather_service.get_current_weather = AsyncMock(return_value={})
-    container.webcrawl_service.connect = AsyncMock(return_value=None)
-    container.webcrawl_service.search_web = AsyncMock(return_value={"results": []})
+    assert container.google_maps_service is not None
+    google_maps_mock = cast(Any, container.google_maps_service)
+    google_maps_mock.connect = AsyncMock(return_value=None)
+    google_maps_mock.geocode = AsyncMock(return_value=[])
+
+    assert container.weather_service is not None
+    weather_mock = cast(Any, container.weather_service)
+    weather_mock.connect = AsyncMock(return_value=None)
+    weather_mock.get_current_weather = AsyncMock(return_value={})
+
+    assert container.webcrawl_service is not None
+    webcrawl_mock = cast(Any, container.webcrawl_service)
+    webcrawl_mock.connect = AsyncMock(return_value=None)
+    webcrawl_mock.search_web = AsyncMock(return_value={"results": []})
 
     if overrides:
         for name, value in overrides.items():
