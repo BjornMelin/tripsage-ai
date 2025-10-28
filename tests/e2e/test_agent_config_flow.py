@@ -11,7 +11,11 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from tripsage.api.core.dependencies import get_chat_service, require_principal
+from tripsage.api.core.dependencies import (
+    get_chat_service,
+    require_admin_principal,
+    require_principal,
+)
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.chat import ChatRequest, ChatResponse
 from tripsage_core.models.schemas_common.enums import (
@@ -118,14 +122,23 @@ def config_overrides(app: FastAPI) -> Iterator[None]:
     """Stub authentication to simplify configuration flows."""
     overrides = cast(dict[Any, Any], app.dependency_overrides)
 
-    async def _principal_override():
-        class _P:
-            id = "user-123"
+    admin_principal = Principal(
+        id="user-123",
+        type="user",
+        email="admin@example.com",
+        service=None,
+        auth_method="jwt",
+        scopes=["admin"],
+        metadata={"role": "admin", "roles": ["admin"]},
+    )
 
-        return _P()
+    async def _principal_override() -> Principal:
+        return admin_principal
 
     overrides[require_principal] = _principal_override
+    overrides[require_admin_principal] = _principal_override
     yield
+    overrides.pop(require_admin_principal, None)
     overrides.pop(require_principal, None)
 
 

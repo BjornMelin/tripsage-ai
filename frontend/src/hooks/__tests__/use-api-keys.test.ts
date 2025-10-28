@@ -1,5 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { queryKeys } from "@/lib/query-keys";
 import {
   useAddApiKey,
   useApiKeys,
@@ -7,12 +8,26 @@ import {
   useValidateApiKey,
 } from "../use-api-keys";
 
-// Mock the dependencies
-const mockSetKeys = vi.fn();
-const mockSetSupportedServices = vi.fn();
-const mockUpdateKey = vi.fn();
-const mockRemoveKey = vi.fn();
-const mockInvalidateQueries = vi.fn();
+// Mock the dependencies (must be hoisted before the vi.mock factories run)
+const {
+  mockSetKeys,
+  mockSetSupportedServices,
+  mockUpdateKey,
+  mockRemoveKey,
+  mockInvalidateQueries,
+  mockUseApiQuery,
+  mockUseApiMutation,
+  mockUseApiDeleteMutation,
+} = vi.hoisted(() => ({
+  mockSetKeys: vi.fn(),
+  mockSetSupportedServices: vi.fn(),
+  mockUpdateKey: vi.fn(),
+  mockRemoveKey: vi.fn(),
+  mockInvalidateQueries: vi.fn(),
+  mockUseApiQuery: vi.fn(),
+  mockUseApiMutation: vi.fn(),
+  mockUseApiDeleteMutation: vi.fn(),
+}));
 
 vi.mock("@/stores/api-key-store", () => ({
   useApiKeyStore: vi.fn(() => ({
@@ -28,11 +43,6 @@ vi.mock("@tanstack/react-query", () => ({
     invalidateQueries: mockInvalidateQueries,
   })),
 }));
-
-// Mock the API hooks
-const mockUseApiQuery = vi.fn();
-const mockUseApiMutation = vi.fn();
-const mockUseApiDeleteMutation = vi.fn();
 
 vi.mock("@/hooks/use-api-query", () => ({
   useApiQuery: mockUseApiQuery,
@@ -57,7 +67,15 @@ describe("useApiKeys", () => {
 
     renderHook(() => useApiKeys());
 
-    expect(mockUseApiQuery).toHaveBeenCalledWith("/api/user/keys", {});
+    expect(mockUseApiQuery).toHaveBeenCalledWith(
+      "/api/keys",
+      undefined,
+      expect.objectContaining({
+        queryKey: queryKeys.auth.apiKeys(),
+        staleTime: 5 * 60 * 1000,
+        gcTime: 15 * 60 * 1000,
+      })
+    );
   });
 
   it("should update store when data is received", async () => {
@@ -140,7 +158,12 @@ describe("useAddApiKey", () => {
 
     renderHook(() => useAddApiKey());
 
-    expect(mockUseApiMutation).toHaveBeenCalledWith("/api/user/keys");
+    expect(mockUseApiMutation).toHaveBeenCalledWith(
+      "/api/keys",
+      expect.objectContaining({
+        invalidateQueries: [queryKeys.auth.apiKeys()],
+      })
+    );
   });
 
   it("should update store and invalidate queries when data is received", async () => {
@@ -163,6 +186,17 @@ describe("useAddApiKey", () => {
 
     renderHook(() => useAddApiKey());
 
+    const [, options] = mockUseApiMutation.mock.calls[0] ?? [];
+    options?.onSuccess?.(
+      mockData as any,
+      undefined as any,
+      undefined as any,
+      undefined as any
+    );
+    options?.invalidateQueries?.forEach((key: readonly unknown[]) => {
+      mockInvalidateQueries({ queryKey: key });
+    });
+
     await waitFor(() => {
       expect(mockUpdateKey).toHaveBeenCalledWith("google-maps", {
         is_valid: true,
@@ -171,7 +205,7 @@ describe("useAddApiKey", () => {
         last_validated: expect.any(String),
       });
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["/api/user/keys"],
+        queryKey: queryKeys.auth.apiKeys(),
       });
     });
   });
@@ -234,7 +268,10 @@ describe("useValidateApiKey", () => {
 
     renderHook(() => useValidateApiKey());
 
-    expect(mockUseApiMutation).toHaveBeenCalledWith("/api/user/keys/validate");
+    expect(mockUseApiMutation).toHaveBeenCalledWith(
+      "/api/keys/validate",
+      expect.any(Object)
+    );
   });
 
   it("should return mutation result", () => {
@@ -295,7 +332,12 @@ describe("useDeleteApiKey", () => {
 
     renderHook(() => useDeleteApiKey());
 
-    expect(mockUseApiDeleteMutation).toHaveBeenCalledWith("/api/user/keys");
+    expect(mockUseApiDeleteMutation).toHaveBeenCalledWith(
+      "/api/keys",
+      expect.objectContaining({
+        invalidateQueries: [queryKeys.auth.apiKeys()],
+      })
+    );
   });
 
   it("should update store and invalidate queries when successful", async () => {
@@ -318,10 +360,21 @@ describe("useDeleteApiKey", () => {
 
     renderHook(() => useDeleteApiKey());
 
+    const [, deleteOptions] = mockUseApiDeleteMutation.mock.calls[0] ?? [];
+    deleteOptions?.onSuccess?.(
+      mockData as any,
+      undefined as any,
+      undefined as any,
+      undefined as any
+    );
+    deleteOptions?.invalidateQueries?.forEach((key: readonly unknown[]) => {
+      mockInvalidateQueries({ queryKey: key });
+    });
+
     await waitFor(() => {
       expect(mockRemoveKey).toHaveBeenCalledWith("google-maps");
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["/api/user/keys"],
+        queryKey: queryKeys.auth.apiKeys(),
       });
     });
   });
@@ -445,7 +498,9 @@ describe("Integration Tests", () => {
     };
 
     mockUseApiQuery.mockReturnValue(fetchResult);
-    mockUseApiMutation.mockReturnValue(addResult);
+    mockUseApiMutation
+      .mockReturnValueOnce(addResult)
+      .mockReturnValueOnce(validateResult);
     mockUseApiDeleteMutation.mockReturnValue(deleteResult);
 
     // Render all hooks
@@ -453,6 +508,36 @@ describe("Integration Tests", () => {
     const { result: addHook } = renderHook(() => useAddApiKey());
     const { result: validateHook } = renderHook(() => useValidateApiKey());
     const { result: deleteHook } = renderHook(() => useDeleteApiKey());
+
+    const [, addOptions] = mockUseApiMutation.mock.calls[0] ?? [];
+    addOptions?.onSuccess?.(
+      addResult.data as any,
+      undefined as any,
+      undefined as any,
+      undefined as any
+    );
+    addOptions?.invalidateQueries?.forEach((key: readonly unknown[]) => {
+      mockInvalidateQueries({ queryKey: key });
+    });
+
+    const [, validateOptions] = mockUseApiMutation.mock.calls[1] ?? [];
+    validateOptions?.onSuccess?.(
+      validateResult.data as any,
+      undefined as any,
+      undefined as any,
+      undefined as any
+    );
+
+    const [, deleteOptions] = mockUseApiDeleteMutation.mock.calls[0] ?? [];
+    deleteOptions?.onSuccess?.(
+      deleteResult.data as any,
+      undefined as any,
+      undefined as any,
+      undefined as any
+    );
+    deleteOptions?.invalidateQueries?.forEach((key: readonly unknown[]) => {
+      mockInvalidateQueries({ queryKey: key });
+    });
 
     await waitFor(() => {
       // Verify fetch hook updated store
@@ -471,6 +556,9 @@ describe("Integration Tests", () => {
       expect(mockRemoveKey).toHaveBeenCalledWith("google-maps");
 
       // Verify invalidation was called for both add and delete
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: queryKeys.auth.apiKeys(),
+      });
       expect(mockInvalidateQueries).toHaveBeenCalledTimes(2);
     });
 

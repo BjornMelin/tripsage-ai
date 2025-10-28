@@ -29,7 +29,7 @@ import type {
 export function useApiKeys() {
   const { setKeys, setSupportedServices } = useApiKeyStore();
 
-  const query = useApiQuery<AllKeysResponse>("/api/user/keys", undefined, {
+  const query = useApiQuery<AllKeysResponse>("/api/keys", undefined, {
     queryKey: queryKeys.auth.apiKeys(),
     staleTime: 5 * 60 * 1000, // 5 minutes - API keys don't change often
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
@@ -56,7 +56,7 @@ export function useApiKeys() {
 export function useAddApiKey() {
   const { updateKey } = useApiKeyStore();
 
-  const mutation = useApiMutation<AddKeyResponse, AddKeyRequest>("/api/user/keys", {
+  const mutation = useApiMutation<AddKeyResponse, AddKeyRequest>("/api/keys", {
     invalidateQueries: [[...queryKeys.auth.apiKeys()]],
     onSuccess: (data) => {
       updateKey(data.service, {
@@ -81,7 +81,7 @@ export function useAddApiKey() {
  * Hook for validating an API key without saving it.
  */
 export function useValidateApiKey() {
-  return useApiMutation<ValidateKeyResponse, AddKeyRequest>("/api/user/keys/validate", {
+  return useApiMutation<ValidateKeyResponse, AddKeyRequest>("/api/keys/validate", {
     retry: (_failureCount, _error) => {
       // Don't retry validation calls - they should be immediate
       return false;
@@ -95,7 +95,7 @@ export function useValidateApiKey() {
 export function useDeleteApiKey() {
   const { removeKey } = useApiKeyStore();
 
-  const mutation = useApiDeleteMutation<DeleteKeyResponse, string>("/api/user/keys", {
+  const mutation = useApiDeleteMutation<DeleteKeyResponse, string>("/api/keys", {
     invalidateQueries: [[...queryKeys.auth.apiKeys()]],
     optimisticUpdate: {
       queryKey: [...queryKeys.auth.apiKeys()],

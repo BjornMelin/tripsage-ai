@@ -98,7 +98,7 @@ curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
 #### **Generate API Key**
 
 ```bash
-curl -X POST http://localhost:8001/api/user/keys \
+curl -X POST http://localhost:8001/api/keys \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -125,14 +125,14 @@ curl -X POST http://localhost:8001/api/user/keys \
 #### **List API Keys**
 
 ```bash
-curl http://localhost:8001/api/user/keys \
+curl http://localhost:8001/api/keys \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 #### **Revoke API Key**
 
 ```bash
-curl -X DELETE http://localhost:8001/api/user/keys/key-456 \
+curl -X DELETE http://localhost:8001/api/keys/key-456 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 

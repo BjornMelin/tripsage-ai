@@ -19,6 +19,10 @@
 - [Security Guide](./security-guide.md) - Security implementation
 - [Authentication Guide](./authentication-guide.md) - OAuth setup and troubleshooting
 
+### Operations Bulletins
+
+- [API key route migration notice](./api-keys-route-migration.md) - Required updates for the `/api/keys` rollout (October 28, 2025)
+
 ### Configuration Details
 
 - [Settings Reference](./settings-reference.md) - Pydantic settings and technical configuration

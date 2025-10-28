@@ -6,13 +6,18 @@ from starlette.requests import Request
 from tripsage.api.core.dependencies import (
     get_current_principal,
     get_principal_id,
+    require_admin_principal,
     require_principal,
 )
 from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthenticationError,
+    CoreAuthorizationError,
+)
 
 
 def _make_request_with_principal(principal: Principal | None) -> Request:
+    """Make a request with a principal."""
     scope: dict[str, object] = {
         "type": "http",
         "method": "GET",
@@ -51,3 +56,46 @@ async def test_get_current_principal_optional() -> None:
     assert await get_current_principal(req) is principal
     req2 = _make_request_with_principal(None)
     assert await get_current_principal(req2) is None
+
+
+@pytest.mark.asyncio
+async def test_require_admin_principal_accepts_admin_roles() -> None:
+    """require_admin_principal allows principals with admin role metadata."""
+    principal = Principal(
+        id="admin-1",
+        type="user",
+        auth_method="jwt",
+        metadata={"role": "admin"},
+    )
+    req = _make_request_with_principal(principal)
+    result = await require_admin_principal(req)
+    assert result.id == "admin-1"
+
+
+@pytest.mark.asyncio
+async def test_require_admin_principal_rejects_non_admin_users() -> None:
+    """Non-admin principals should trigger CoreAuthorizationError."""
+    principal = Principal(
+        id="user-1",
+        type="user",
+        auth_method="jwt",
+        metadata={"role": "editor"},
+    )
+    req = _make_request_with_principal(principal)
+    with pytest.raises(CoreAuthorizationError):
+        await require_admin_principal(req)
+
+
+@pytest.mark.asyncio
+async def test_require_admin_principal_rejects_agents() -> None:
+    """API key principals (agents) should not satisfy admin requirements."""
+    principal = Principal(
+        id="agent-openai",
+        type="agent",
+        service="openai",
+        auth_method="api_key",
+        metadata={"service": "openai"},
+    )
+    req = _make_request_with_principal(principal)
+    with pytest.raises(CoreAuthorizationError):
+        await require_admin_principal(req)
