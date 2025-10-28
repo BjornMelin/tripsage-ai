@@ -75,7 +75,7 @@ class MemoryUpdateNode(BaseAgentNode):
         Returns:
             List of insights to store in memory
         """
-        insights = []
+        insights: list[str] = []
 
         # Extract budget preferences from user_preferences or analyses
         prefs = state.get("user_preferences")
@@ -92,9 +92,11 @@ class MemoryUpdateNode(BaseAgentNode):
         # Extract user preferences
         if isinstance(prefs, dict):
             insights.extend(
-                f"Travel preference - {pref_type}: {value}"
-                for pref_type, value in prefs.items()
-                if pref_type not in {"budget_total", "budget_currency"}
+                [
+                    f"Travel preference - {pref_type!s}: {value!s}"
+                    for pref_type, value in prefs.items()
+                    if pref_type not in {"budget_total", "budget_currency"}
+                ]
             )
 
         # Extract destination interests
@@ -141,7 +143,7 @@ class MemoryUpdateNode(BaseAgentNode):
         Returns:
             List of search-related insights
         """
-        insights = []
+        insights: list[str] = []
 
         # Flight search patterns
         if state.get("flight_searches"):
@@ -154,7 +156,7 @@ class MemoryUpdateNode(BaseAgentNode):
                 if params.get("origin") and params.get("destination")
             }
 
-            insights.extend(f"Searched flight route: {route}" for route in routes)
+            insights.extend([f"Searched flight route: {route}" for route in routes])
 
             # Analyze search frequency
             if len(flight_searches) > 1:
@@ -172,7 +174,7 @@ class MemoryUpdateNode(BaseAgentNode):
             }
 
             insights.extend(
-                f"Searched accommodation in: {location}" for location in locations
+                [f"Searched accommodation in: {location}" for location in locations]
             )
 
         # Activity search patterns
@@ -187,8 +189,10 @@ class MemoryUpdateNode(BaseAgentNode):
             }
 
             insights.extend(
-                f"Interested in activity type: {activity_type}"
-                for activity_type in activity_types
+                [
+                    f"Interested in activity type: {activity_type}"
+                    for activity_type in activity_types
+                ]
             )
 
         return insights
@@ -202,16 +206,18 @@ class MemoryUpdateNode(BaseAgentNode):
         Returns:
             List of interaction-related insights
         """
-        insights = []
+        insights: list[str] = []
 
         # Analyze agent usage patterns
         agent_history = state.get("agent_history", [])
         if agent_history:
             agent_counts = Counter(agent_history)
             insights.extend(
-                f"Frequently used {agent} ({count} times)"
-                for agent, count in agent_counts.items()
-                if count > 1
+                [
+                    f"Frequently used {agent} ({count} times)"
+                    for agent, count in agent_counts.items()
+                    if count > 1
+                ]
             )
 
         # Analyze conversation length and complexity
@@ -248,8 +254,11 @@ class MemoryUpdateNode(BaseAgentNode):
             # Add observations to the user entity
             memory_data = {"entity_name": entity_name, "observations": insights}
 
-            # Execute memory update
-            await self.memory_tool._arun(**memory_data)
+            # Execute memory update using public async API if available
+            if hasattr(self.memory_tool, "ainvoke"):
+                await self.memory_tool.ainvoke(memory_data)  # type: ignore[call-arg]
+            else:
+                await self.memory_tool.arun(**memory_data)  # type: ignore[attr-defined]
             logger.info("Updated knowledge graph with %s insights", len(insights))
 
         except Exception:

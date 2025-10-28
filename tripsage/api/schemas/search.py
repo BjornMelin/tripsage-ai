@@ -84,11 +84,21 @@ class SearchMetadata(BaseModel):
     provider_errors: dict[str, str] | None = None
 
 
+def _empty_results() -> list[SearchResultItem]:
+    """Typed default factory for results list."""
+    return []
+
+
+def _empty_facets() -> list[SearchFacet]:
+    """Typed default factory for facets list."""
+    return []
+
+
 class UnifiedSearchAggregateResponse(BaseModel):
     """Aggregate response for unified search."""
 
-    results: list[SearchResultItem] = []
-    facets: list[SearchFacet] = []
+    results: list[SearchResultItem] = Field(default_factory=_empty_results)
+    facets: list[SearchFacet] = Field(default_factory=_empty_facets)
     metadata: SearchMetadata
     results_by_type: dict[str, list[SearchResultItem]] | None = None
     did_you_mean: str | None = None

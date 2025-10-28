@@ -11,14 +11,28 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
-from typing import Any, cast
+from typing import cast
 
 from upstash_redis.asyncio import Redis as UpstashRedis
 
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.types import JSONObject, JSONValue
+
+
+def _coerce_json_value(value: object) -> JSONValue:
+    """Coerce arbitrary objects into JSON-compatible values."""
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, Mapping):
+        mapping = cast(Mapping[object, object], value)
+        return {str(key): _coerce_json_value(val) for key, val in mapping.items()}
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        seq = cast(Sequence[object], value)
+        return [_coerce_json_value(item) for item in seq]
+    return str(value)
 
 
 logger = logging.getLogger(__name__)
@@ -107,7 +121,9 @@ class CacheService:
             await self.connect()
 
     # JSON operations
-    async def set_json(self, key: str, value: Any, ttl: int | None = None) -> bool:
+    async def set_json(
+        self, key: str, value: JSONValue, ttl: int | None = None
+    ) -> bool:
         """Store a JSON-serializable value in cache.
 
         Args:
@@ -134,7 +150,9 @@ class CacheService:
                 details={"key": key, "error": str(e)},
             ) from e
 
-    async def get_json(self, key: str, default: Any = None) -> Any:
+    async def get_json(
+        self, key: str, default: JSONValue | None = None
+    ) -> JSONValue | None:
         """Retrieve and deserialize a JSON value from cache.
 
         Args:
@@ -150,7 +168,7 @@ class CacheService:
             value = await client.get(key)
             if value is None:
                 return default
-            return json.loads(value)
+            return cast(JSONValue, json.loads(value))
         except json.JSONDecodeError:
             logger.exception("Failed to decode JSON value for key %s", key)
             return default
@@ -443,7 +461,7 @@ class CacheService:
 
     # Cache management
 
-    async def info(self) -> dict[str, Any]:
+    async def info(self) -> JSONObject:
         """Return server information details if available."""
         await self.ensure_connected()
         try:
@@ -453,14 +471,16 @@ class CacheService:
                 return {"available": False, "details": "info command unsupported"}
 
             # Narrow type for type checkers; still guarded by callable() above.
-            typed_info: Callable[[], Awaitable[Any]] = cast(
-                Callable[[], Awaitable[Any]], info_callable
+            typed_info: Callable[[], Awaitable[object]] = cast(
+                Callable[[], Awaitable[object]], info_callable
             )
-            raw_info: Any = await typed_info()  # pylint: disable=not-callable
-            if isinstance(raw_info, dict):
-                # raw_info is a mapping from the server; treat values as Any
-                return cast(dict[str, Any], raw_info)
-            return {"raw": raw_info}
+            raw_info = await typed_info()  # pylint: disable=not-callable
+            if isinstance(raw_info, Mapping):
+                normalized: JSONObject = {}
+                for key, value in cast(Mapping[object, object], raw_info).items():
+                    normalized[str(key)] = _coerce_json_value(value)
+                return normalized
+            return {"raw": str(raw_info)}
         except Exception as e:
             logger.exception("Failed to fetch cache info")
             raise CoreServiceError(
@@ -505,7 +525,7 @@ class CacheService:
 
     # Convenience methods with TTL presets
 
-    async def set_short(self, key: str, value: Any) -> bool:
+    async def set_short(self, key: str, value: JSONValue) -> bool:
         """Set a value with short TTL (5 minutes by default).
 
         Args:
@@ -517,7 +537,7 @@ class CacheService:
         """
         return await self.set_json(key, value, ttl=300)  # Short TTL (5 minutes)
 
-    async def set_medium(self, key: str, value: Any) -> bool:
+    async def set_medium(self, key: str, value: JSONValue) -> bool:
         """Set a value with medium TTL (1 hour by default).
 
         Args:
@@ -529,7 +549,7 @@ class CacheService:
         """
         return await self.set_json(key, value, ttl=3600)  # Medium TTL (1 hour)
 
-    async def set_long(self, key: str, value: Any) -> bool:
+    async def set_long(self, key: str, value: JSONValue) -> bool:
         """Set a value with long TTL (24 hours by default).
 
         Args:

@@ -12,47 +12,49 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from fastapi import FastAPI
 
-from tripsage.orchestration.memory_bridge import SessionMemoryBridge
-from tripsage_core.config import get_settings
-from tripsage_core.services.airbnb_mcp import AirbnbMCP
-from tripsage_core.services.business.accommodation_service import AccommodationService
-from tripsage_core.services.business.activity_service import ActivityService
-from tripsage_core.services.business.api_key_service import ApiKeyService
-from tripsage_core.services.business.chat_service import ChatService
-from tripsage_core.services.business.destination_service import DestinationService
-from tripsage_core.services.business.file_processing_service import (
-    FileProcessingService,
-)
-from tripsage_core.services.business.flight_service import FlightService
-from tripsage_core.services.business.itinerary_service import ItineraryService
-from tripsage_core.services.business.memory_service import MemoryService
-from tripsage_core.services.business.trip_service import TripService
-from tripsage_core.services.business.unified_search_service import UnifiedSearchService
-from tripsage_core.services.business.user_service import UserService
-from tripsage_core.services.configuration_service import ConfigurationService
-from tripsage_core.services.external_apis import (
-    DocumentAnalyzer,
-    GoogleCalendarService,
-    GoogleMapsService,
-    PlaywrightService,
-    TimeService,
-    WeatherService,
-    WebCrawlService,
-)
-from tripsage_core.services.infrastructure import (
-    CacheService,
-    DatabaseService,
-    KeyMonitoringService,
-)
 from tripsage_core.services.infrastructure.database_service import (
     close_database_service,
-    get_database_service,
 )
 from tripsage_core.utils.logging_utils import get_logger
 
 
 if TYPE_CHECKING:  # pragma: no cover - import only for type checking
     from tripsage.orchestration.graph import TripSageOrchestrator
+    from tripsage.orchestration.memory_bridge import SessionMemoryBridge
+    from tripsage_core.services.airbnb_mcp import AirbnbMCP
+    from tripsage_core.services.business.accommodation_service import (
+        AccommodationService,
+    )
+    from tripsage_core.services.business.activity_service import ActivityService
+    from tripsage_core.services.business.api_key_service import ApiKeyService
+    from tripsage_core.services.business.chat_service import ChatService
+    from tripsage_core.services.business.destination_service import DestinationService
+    from tripsage_core.services.business.file_processing_service import (
+        FileProcessingService,
+    )
+    from tripsage_core.services.business.flight_service import FlightService
+    from tripsage_core.services.business.itinerary_service import ItineraryService
+    from tripsage_core.services.business.memory_service import MemoryService
+    from tripsage_core.services.business.trip_service import TripService
+    from tripsage_core.services.business.unified_search_service import (
+        UnifiedSearchService,
+    )
+    from tripsage_core.services.business.user_service import UserService
+    from tripsage_core.services.configuration_service import ConfigurationService
+    from tripsage_core.services.external_apis import (
+        DocumentAnalyzer,
+        GoogleCalendarService,
+        GoogleMapsService,
+        PlaywrightService,
+        TimeService,
+        WeatherService,
+        WebCrawlService,
+    )
+    from tripsage_core.services.infrastructure import (
+        CacheService,
+        DatabaseService,
+        KeyMonitoringService,
+    )
 
 
 logger = get_logger(__name__)
@@ -138,6 +140,45 @@ async def initialise_app_state(
     app: FastAPI,
 ) -> tuple[AppServiceContainer, TripSageOrchestrator]:
     """Initialise application services and attach them to app.state."""
+    # Localised imports to avoid heavy module initialisation at import time
+    from tripsage.orchestration.memory_bridge import SessionMemoryBridge
+    from tripsage_core.config import get_settings
+    from tripsage_core.services.airbnb_mcp import AirbnbMCP
+    from tripsage_core.services.business.accommodation_service import (
+        AccommodationService,
+    )
+    from tripsage_core.services.business.activity_service import ActivityService
+    from tripsage_core.services.business.api_key_service import ApiKeyService
+    from tripsage_core.services.business.chat_service import ChatService
+    from tripsage_core.services.business.destination_service import DestinationService
+    from tripsage_core.services.business.file_processing_service import (
+        FileProcessingService,
+    )
+    from tripsage_core.services.business.flight_service import FlightService
+    from tripsage_core.services.business.itinerary_service import ItineraryService
+    from tripsage_core.services.business.memory_service import MemoryService
+    from tripsage_core.services.business.trip_service import TripService
+    from tripsage_core.services.business.unified_search_service import (
+        UnifiedSearchService,
+    )
+    from tripsage_core.services.business.user_service import UserService
+    from tripsage_core.services.external_apis import (
+        DocumentAnalyzer,
+        GoogleCalendarService,
+        GoogleMapsService,
+        PlaywrightService,
+        TimeService,
+        WeatherService,
+        WebCrawlService,
+    )
+    from tripsage_core.services.infrastructure import (
+        CacheService,
+        KeyMonitoringService,
+    )
+    from tripsage_core.services.infrastructure.database_service import (
+        get_database_service,
+    )
+
     settings = get_settings()
 
     # Infrastructure

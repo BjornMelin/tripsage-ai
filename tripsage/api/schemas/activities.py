@@ -79,10 +79,15 @@ class SavedActivityResponse(BaseModel):
     activity: ActivityResponse | None = Field(None, description="Full activity details")
 
 
+def _empty_activities() -> list[ActivityResponse]:
+    """Return an empty list of activities for default factory."""
+    return []
+
+
 class ActivitySearchResponse(BaseModel):
     """Aggregate search results with metadata."""
 
-    activities: list[ActivityResponse] = []
+    activities: list[ActivityResponse] = Field(default_factory=_empty_activities)
     total: int = Field(0, ge=0)
     skip: int = Field(0, ge=0)
     limit: int = Field(20, ge=1)
