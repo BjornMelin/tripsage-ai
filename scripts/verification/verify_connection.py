@@ -10,12 +10,8 @@ Usage: python verify_connection.py
 import asyncio
 import sys
 
-from tripsage_core.services.business.auth_service import get_supabase_client
-from tripsage_core.utils.logging_utils import configure_logging
+from tripsage.db.initialize import get_supabase_client
 
-
-# Configure logging
-logger = configure_logging(__name__)
 
 # Tables that should exist
 REQUIRED_TABLES = [
