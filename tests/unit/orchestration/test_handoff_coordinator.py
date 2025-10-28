@@ -66,6 +66,42 @@ def test_keyword_condition_detects_recent_messages(
     )
 
 
+def test_has_flights_and_accommodation_flags(
+    state_factory: Callable[..., TravelPlanningState],
+) -> None:
+    """has_flights/has_accommodation conditions should reflect state flags."""
+    coord = AgentHandoffCoordinator()
+    st = state_factory(extra={"flight_selections": [{"id": 1}]})
+    assert coord._evaluate_conditions({"has_flights": True}, st)  # type: ignore[reportPrivateUsage]  # pylint: disable=protected-access
+    assert not coord._evaluate_conditions({"has_flights": False}, st)  # type: ignore[reportPrivateUsage]  # pylint: disable=protected-access
+
+    st2 = state_factory(extra={"accommodation_selections": [{"id": 1}]})
+    assert coord._evaluate_conditions({"has_accommodation": True}, st2)  # type: ignore[reportPrivateUsage]  # pylint: disable=protected-access
+    assert not coord._evaluate_conditions({"has_accommodation": False}, st2)  # type: ignore[reportPrivateUsage]  # pylint: disable=protected-access
+
+
+def test_determine_next_agent_and_context_preservation(
+    state_factory: Callable[..., TravelPlanningState],
+) -> None:
+    """determine_next_agent should select accommodation_agent on hotel keyword."""
+    coord = AgentHandoffCoordinator()
+    st = state_factory(
+        current_agent="general_agent",
+        extra={
+            "messages": [{"role": "user", "content": "Looking for a hotel"}],
+            "travel_dates": {"departure_date": "2025-01-01"},
+            "destination": "Paris",
+        },
+    )
+    result = coord.determine_next_agent(current_agent="general_agent", state=st)
+    assert result is not None
+    to_agent, ctx = result
+    assert to_agent == "accommodation_agent"
+    dumped = ctx.model_dump()
+    assert dumped["from_agent"] == "general_agent"
+    assert dumped["to_agent"] == "accommodation_agent"
+
+
 @given(
     operator=st.sampled_from([">=", "<=", "=="]),
     threshold=st.integers(min_value=0, max_value=5),
