@@ -1,6 +1,7 @@
 """Router for unified search endpoints in the TripSage API."""
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -14,6 +15,7 @@ from tripsage.api.core.dependencies import (
     get_principal_id,
     require_principal,
 )
+from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import UnifiedSearchResponse
 from tripsage_core.services.business.search_history_service import SearchHistoryService
@@ -27,13 +29,14 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/unified", response_model=UnifiedSearchResponse)
+# pylint: disable=too-many-positional-arguments
 async def unified_search(
     request_: Request,
     request: UnifiedSearchRequest,
     search_service: UnifiedSearchServiceDep,
     cache_service: CacheDep,
     use_cache: bool = Query(True, description="Whether to use cached results"),
-    principal=Depends(get_current_principal),
+    principal: Principal | None = Depends(get_current_principal),
 ):
     """Perform a unified search across multiple resource types with caching.
 
@@ -105,29 +108,35 @@ async def unified_search(
 
 
 async def _track_search_analytics(
-    user_id: str | None, query: str, cache_status: str, cache_service
-):
+    user_id: str | None, query: str, cache_status: str, cache_service: CacheDep
+) -> None:
     """Track search analytics for monitoring and optimization."""
     try:
-        from datetime import datetime
-
-        analytics_data = {
+        analytics_data: dict[str, Any] = {
             "user_id": user_id,
             "query": query,
             "cache_status": cache_status,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         # Store analytics in cache with daily key
-        date_key = datetime.utcnow().strftime("%Y-%m-%d")
+        date_key = datetime.now(UTC).strftime("%Y-%m-%d")
         analytics_key = f"analytics:search:{date_key}"
 
         # Get existing analytics or create new
-        existing_analytics = await cache_service.get(analytics_key) or []
-        existing_analytics.append(analytics_data)
+        existing_data = await cache_service.get(analytics_key)
+        existing_analytics: list[dict[str, Any]] = (
+            existing_data if isinstance(existing_data, list) else []
+        )
+        existing_analytics_list: list[dict[str, Any]] = list(existing_analytics)
+        existing_analytics_list.append(analytics_data)
 
-        # Store back with 24-hour TTL
-        await cache_service.set(analytics_key, existing_analytics, ttl=86400)
+        # Store back with 24-hour TTL (cache service accepts JSON despite str type hint)
+        await cache_service.set(
+            analytics_key,
+            existing_analytics_list,  # type: ignore[arg-type]
+            ttl=86400,
+        )
 
     except (OSError, RuntimeError, ValueError, TypeError) as e:
         logger.warning("Failed to track search analytics: %s", e)
@@ -175,8 +184,8 @@ async def get_recent_searches(
     limit: int = Query(
         10, ge=1, le=50, description="Maximum number of searches to return"
     ),
-    principal=Depends(require_principal),
-):
+    principal: Principal = Depends(require_principal),
+) -> list[dict[str, Any]]:
     """Get recent searches for the authenticated user.
 
     Returns the user's search history ordered by most recent first.
@@ -205,7 +214,7 @@ async def get_recent_searches(
 @router.post("/save", response_model=dict[str, str])
 async def save_search(
     request: UnifiedSearchRequest,
-    principal=Depends(require_principal),
+    principal: Principal = Depends(require_principal),
 ):
     """Save a search query for the authenticated user.
 
@@ -237,7 +246,7 @@ async def save_search(
 @router.delete("/saved/{search_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_search(
     search_id: str,
-    principal=Depends(require_principal),
+    principal: Principal = Depends(require_principal),
 ):
     """Delete a saved search for the authenticated user.
 
@@ -271,14 +280,15 @@ async def delete_saved_search(
 
 
 @router.post("/bulk", response_model=list[UnifiedSearchResponse])
+# pylint: disable=too-many-positional-arguments
 async def bulk_search(
     request: Request,
     requests: list[UnifiedSearchRequest],
     search_service: UnifiedSearchServiceDep,
     cache_service: CacheDep,
     use_cache: bool = Query(True, description="Whether to use cached results"),
-    principal=Depends(get_current_principal),
-):
+    principal: Principal | None = Depends(get_current_principal),
+) -> list[UnifiedSearchResponse]:
     """Perform multiple searches in a single request for efficiency.
 
     Useful for comparing multiple destinations or search variations.
@@ -297,7 +307,9 @@ async def bulk_search(
         import asyncio
         # cache_service not required explicitly here; UnifiedSearchService is DI
 
-        async def process_single_search(request: UnifiedSearchRequest):
+        async def process_single_search(
+            request: UnifiedSearchRequest,
+        ) -> UnifiedSearchResponse:
             """Process a single search with caching."""
             cache_key = f"search:unified:{hash(str(request.model_dump()))}"
 
@@ -344,10 +356,14 @@ async def bulk_search(
         results = await asyncio.gather(
             *[process_single_search(req) for req in requests], return_exceptions=True
         )
+        # Type narrow the results for safety
+        typed_results: list[UnifiedSearchResponse | Exception] = [
+            r for r in results if isinstance(r, (UnifiedSearchResponse, Exception))
+        ]
 
         # Filter out exceptions and return successful results
-        successful_results = []
-        for i, result in enumerate(results):
+        successful_results: list[UnifiedSearchResponse | None] = []
+        for i, result in enumerate(typed_results):
             if isinstance(result, Exception):
                 logger.exception("Search %s failed: %s", i, result)
                 # Add placeholder for failed search
@@ -356,7 +372,9 @@ async def bulk_search(
                 successful_results.append(result)
 
         # Remove None values
-        valid_results = [r for r in successful_results if r is not None]
+        valid_results: list[UnifiedSearchResponse] = [
+            r for r in successful_results if r is not None
+        ]
 
         logger.info(
             "Bulk search completed: %s/%s successful", len(valid_results), len(requests)
@@ -375,8 +393,8 @@ async def bulk_search(
 async def get_search_analytics(
     request: Request,
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
-    principal=Depends(require_principal),
-):
+    principal: Principal = Depends(require_principal),
+) -> dict[str, str | int | float | list[dict[str, str | int]]]:
     """Get search analytics for a specific date.
 
     Only available to authenticated users for their own analytics.
@@ -388,10 +406,19 @@ async def get_search_analytics(
         cache_service = await get_cache_service_dep(request)
         analytics_key = f"analytics:search:{date}"
 
-        analytics_data = await cache_service.get_json(analytics_key) or []
+        analytics_data_raw = await cache_service.get_json(analytics_key)
+        # Cache returns unknown type, use type: ignore for dynamic data structures
+        if isinstance(analytics_data_raw, list):
+            analytics_data: list[dict[str, Any]] = [
+                item  # type: ignore[misc]
+                for item in analytics_data_raw  # type: ignore[union-attr]
+                if isinstance(item, dict)
+            ]
+        else:
+            analytics_data = []
 
         # Filter to user's own analytics
-        user_analytics = [
+        user_analytics: list[dict[str, Any]] = [
             data for data in analytics_data if data.get("user_id") == user_id
         ]
 
@@ -405,12 +432,13 @@ async def get_search_analytics(
         )
 
         # Most common queries
-        query_counts = {}
+        query_counts: dict[str, int] = {}
         for data in user_analytics:
             query = data.get("query", "")
-            query_counts[query] = query_counts.get(query, 0) + 1
+            if isinstance(query, str):
+                query_counts[query] = query_counts.get(query, 0) + 1
 
-        popular_queries = sorted(
+        popular_queries: list[tuple[str, int]] = sorted(
             query_counts.items(), key=lambda x: x[1], reverse=True
         )[:10]
 

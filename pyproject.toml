@@ -282,8 +282,9 @@ exclude = [
     ".pytest_cache",
     ".ruff_cache",
     ".mypy_cache",
-    ".venv",
 ]
+venvPath = "."
+venv = ".venv"
 pythonVersion = "3.13"
 typeCheckingMode = "strict"
 reportMissingImports = "warning"
@@ -323,6 +324,7 @@ disable = [
     "too-many-locals",
     "too-many-branches",
     "consider-using-dict-items",
+    "fixme",
 ]
 
 [tool.coverage.run]
