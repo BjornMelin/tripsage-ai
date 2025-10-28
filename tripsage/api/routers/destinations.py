@@ -32,29 +32,6 @@ async def search_destinations(
     return await destination_service.search_destinations(request)
 
 
-@router.get("/{destination_id}", response_model=Destination)
-async def get_destination_details(
-    destination_id: str,
-    destination_service: DestinationServiceDep,
-    principal: RequiredPrincipalDep,
-) -> Destination:
-    """Retrieve detailed information about a destination."""
-    destination = await destination_service.get_destination_details(
-        destination_id,
-        include_weather=True,
-        include_pois=True,
-        include_advisory=True,
-    )
-
-    if destination is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Destination '{destination_id}' not found",
-        )
-
-    return destination
-
-
 @router.post(
     "/saved",
     response_model=SavedDestination,
@@ -102,3 +79,27 @@ async def get_destination_recommendations(
         user_id=user_id,
         recommendation_request=request,
     )
+
+
+@router.get("/{destination_id}", response_model=Destination)
+async def get_destination_details(
+    destination_id: str,
+    destination_service: DestinationServiceDep,
+    principal: RequiredPrincipalDep,
+) -> Destination:
+    """Retrieve detailed information about a destination."""
+    _ = principal
+    destination = await destination_service.get_destination_details(
+        destination_id,
+        include_weather=True,
+        include_pois=True,
+        include_advisory=True,
+    )
+
+    if destination is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Destination '{destination_id}' not found",
+        )
+
+    return destination
