@@ -95,7 +95,7 @@ UPSTASH_REDIS_REST_URL=your-url
 UPSTASH_REDIS_REST_TOKEN=your-token
 
 # External APIs (Direct SDK integrations)
-DUFFEL_API_KEY=your_duffel_api_key
+DUFFEL_ACCESS_TOKEN=your_duffel_access_token
 GOOGLE_MAPS_API_KEY=your_google_maps_key
 OPENWEATHERMAP_API_KEY=your_weather_key
 

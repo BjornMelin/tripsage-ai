@@ -104,6 +104,38 @@ Object.defineProperty(globalThis.window, "matchMedia", {
   value: createMatchMediaMock(false),
 });
 
+// ResizeObserver mock (used by charts, virtualized lists, etc.)
+// Matches minimal API surface to keep tests deterministic.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(global as any).ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
+// IntersectionObserver mock
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(global as any).IntersectionObserver = class IntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  /** Return an empty set of entries for tests */
+  takeRecords(): unknown[] { return []; }
+  /** Root element (unused in tests) */
+  root: unknown = null;
+  /** Root margin (unused in tests) */
+  rootMargin = "";
+  /** Thresholds (unused in tests) */
+  thresholds: number[] = [];
+};
+
+// CSS.supports mock for components checking feature support
+Object.defineProperty(global, "CSS", {
+  value: {
+    supports: vi.fn().mockReturnValue(false),
+  },
+});
+
 /**
  * Mock storage implementation for localStorage and sessionStorage.
  *
