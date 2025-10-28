@@ -28,7 +28,7 @@ Modernize and reorganize the Python `tests/` hierarchy to align with the 2025 py
   - Database fixtures relying on lightweight SQLite/asyncpg test engines without full Supabase bootstrap.
 - [ ] Register Polyfactory-backed factories as pytest fixtures for domain models (API keys, trips, accommodations, chat messages) to avoid hand-written object builders.
 - [ ] Ensure root `tests/conftest.py` exposes shared pytest plugins (markers, fakeredis, polyfactory, monkeypatch helpers) without side effects.
-- [ ] Cull or rewrite oversized legacy suites (e.g., `test_api_key_performance.py`, `test_websocket_error_recovery.py`) to match modern patterns; remove any reliance on sleeps, threads, or benchmark plugins.
+- [ ] Cull or rewrite oversized legacy suites (e.g., `test_api_key_performance.py`) to match modern patterns; remove any reliance on sleeps, threads, or benchmark plugins.
 - [ ] Add coverage guards and quality gates:
   - Enforce Ruff formatting/checking and Pyright strict mode for `tests/` via pre-commit or CI.
   - Document minimum backend test coverage (≥90%) and ensure `uv run pytest --maxfail=1 --durations=10` stays under 60s locally.

@@ -14,7 +14,7 @@ Recent Next.js 16 guidance clarifies proxy.ts as the network boundary and encour
 
 ## Decision
 
-- The FastAPI `/api/v1/chat/` endpoint is the single source of truth for all chat functionality (sessions, messages, WebSockets, agents).
+- The FastAPI `/api/v1/chat/` endpoint is the single source of truth for all chat functionality (sessions, messages, Supabase Realtime channels integration, agents).
 - The Next.js native chat Route Handler is fully removed; the frontend calls the FastAPI backend directly using `${NEXT_PUBLIC_API_URL}/api/v1/chat/`, with credentials included for auth. For streaming, the canonical endpoint is `POST /api/chat/stream` returning `text/event-stream`.
 - The `use-chat-ai` hook interfaces directly with the FastAPI backend, handling auth via `credentials: 'include'` and using the public API URL.
 - If a local BFF Route Handler is ever reintroduced, it must only forward requests, propagate auth headers, statuses, and minimally adapt stream output to the AI SDK `UIMessage` format—never re-implementing backend domain logic.

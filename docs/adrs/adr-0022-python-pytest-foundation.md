@@ -8,7 +8,7 @@
 
 ## Context
 
-The Python `tests/` tree accumulated large, inconsistent suites over multiple migrations (Supabase, FastAPI, WebSockets). Many files still rely on legacy patterns:
+The Python `tests/` tree accumulated large, inconsistent suites over multiple migrations (Supabase, FastAPI, Realtime). Many files still rely on legacy patterns:
 
 - Blocking sleeps, manual benchmark loops, and heavyweight mocks instead of deterministic async tests.
 - Multiple `conftest.py` variants with divergent fixtures and conflicting state.
