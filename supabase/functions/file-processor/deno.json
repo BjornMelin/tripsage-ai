@@ -1,0 +1,12 @@
+{
+  "lock": true,
+  "imports": {
+    "std/": "https://deno.land/std@0.224.0/",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.75.1",
+    "@supabase/functions-js": "https://esm.sh/@supabase/functions-js@2.1.5",
+    "@supabase/gotrue-js": "https://esm.sh/@supabase/gotrue-js@2.60.0",
+    "@supabase/postgrest-js": "https://esm.sh/@supabase/postgrest-js@1.21.4",
+    "@supabase/realtime-js": "https://esm.sh/@supabase/realtime-js@2.76.1",
+    "@supabase/storage-js": "https://esm.sh/@supabase/storage-js@2.76.1"
+  }
+}
