@@ -120,7 +120,9 @@ Object.defineProperty(globalThis.window, "matchMedia", {
   unobserve() {}
   disconnect() {}
   /** Return an empty set of entries for tests */
-  takeRecords(): unknown[] { return []; }
+  takeRecords(): unknown[] {
+    return [];
+  }
   /** Root element (unused in tests) */
   root: unknown = null;
   /** Root margin (unused in tests) */
