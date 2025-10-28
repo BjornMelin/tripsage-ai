@@ -4,9 +4,12 @@ This module provides endpoints for secure file uploads, processing, and AI analy
 of travel documents, following KISS principles and security best practices.
 """
 
+import io
 import logging
+from typing import Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal
@@ -172,8 +175,8 @@ async def upload_files_batch(
             ),
         )
 
-    processed_files = []
-    errors = []
+    processed_files: list[FileUploadResponse] = []
+    errors: list[str] = []
     user_id = get_principal_id(principal)
 
     # Process each file individually for better error isolation
@@ -182,6 +185,7 @@ async def upload_files_batch(
             # Validate file
             validation_result = await validate_file(file)
             if not validation_result.is_valid:
+                assert file.filename is not None
                 errors.append(f"{file.filename}: {validation_result.error_message}")
                 continue
 
@@ -211,6 +215,7 @@ async def upload_files_batch(
 
         except Exception:
             logger.exception("Failed to process file %s", file.filename)
+            assert file.filename is not None
             errors.append(f"{file.filename}: Processing failed")
 
     if errors and not processed_files:
@@ -301,9 +306,9 @@ async def delete_file(
 async def list_user_files(
     principal: Principal = require_principal_module_dep,
     service: FileProcessingService = get_file_processing_service_dep,
-    limit: int = 50,
-    offset: int = 0,
-):
+    limit: int = Query(50),
+    offset: int = Query(0),
+) -> dict[str, Any]:
     """List files uploaded by the current user with pagination."""
     try:
         user_id = get_principal_id(principal)
@@ -321,7 +326,7 @@ async def list_user_files(
         }
 
     except Exception as e:
-        logger.exception("Failed to list files for user %s", user_id)
+        logger.exception("Failed to list files for user %s", principal.id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve file list",
@@ -333,17 +338,13 @@ async def download_file(
     file_id: str,
     principal: Principal = require_principal_module_dep,
     service: FileProcessingService = get_file_processing_service_dep,
-):
+) -> StreamingResponse:
     """Download a file securely.
 
     Only allows download of files owned by the current user.
     Returns the file content with appropriate headers for download.
     """
     try:
-        import io
-
-        from fastapi.responses import StreamingResponse
-
         user_id = get_principal_id(principal)
 
         # Get file metadata and verify ownership
@@ -361,9 +362,6 @@ async def download_file(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="File content not found",
             )
-
-        # Create streaming response
-        _file_stream = io.BytesIO(file_content)
 
         headers = {
             "Content-Disposition": (
@@ -391,14 +389,15 @@ async def download_file(
 
 
 @router.get("/trips/{trip_id}/attachments")
+# pylint: disable=too-many-positional-arguments
 async def list_trip_attachments(
     trip_id: str,
     principal: Principal = require_principal_module_dep,
     service: FileProcessingService = get_file_processing_service_dep,
     trip_service: TripService = get_trip_service_dep,
-    limit: int = 50,
-    offset: int = 0,
-):
+    limit: int = Query(50),
+    offset: int = Query(0),
+) -> dict[str, Any]:
     """List all attachments for a specific trip.
 
     Only returns attachments for trips the user has access to.
@@ -408,9 +407,9 @@ async def list_trip_attachments(
     - Audit logging for access attempts
     - Authorization error handling
     """
-    try:
-        user_id = get_principal_id(principal)
+    user_id = get_principal_id(principal)
 
+    try:
         # Verify user has access to the trip
         trip = await trip_service.get_trip(trip_id=trip_id, user_id=user_id)
         if not trip:

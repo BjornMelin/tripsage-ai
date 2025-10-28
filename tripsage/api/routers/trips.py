@@ -18,6 +18,7 @@ from tripsage.api.core.dependencies import require_principal
 from tripsage.api.middlewares.authentication import Principal
 
 # Import schemas
+from tripsage.api.schemas.itineraries import ItinerarySearchRequest
 from tripsage.api.schemas.trips import (
     CreateTripRequest,
     TripCollaboratorResponse,
@@ -55,7 +56,7 @@ from tripsage_core.observability.otel import (
 from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
     AuditSeverity,
-    audit_security_event,
+    audit_security_event,  # type: ignore[assignment]
 )
 
 # Import core service and models
@@ -137,7 +138,7 @@ def _ensure_datetime(value: datetime | date | str) -> datetime:
         return value
     if isinstance(value, date):
         return datetime.combine(value, datetime.min.time(), tzinfo=UTC)
-    normalized = value if isinstance(value, str) else str(value)
+    normalized = str(value)
     if normalized.endswith("Z"):
         normalized = f"{normalized[:-1]}+00:00"
     return datetime.fromisoformat(normalized)
@@ -153,7 +154,9 @@ def _ensure_date(value: datetime | date | str) -> date:
 async def _get_user_details_by_id(user_id: str) -> tuple[str | None, str | None]:
     """Retrieve user email and name for a given identifier."""
     try:
-        from tripsage_core.services.business.user_service import get_user_service
+        from tripsage_core.services.business.user_service import (
+            get_user_service,  # type: ignore[assignment]
+        )
 
         user_service = await get_user_service()
         user = await user_service.get_user_by_id(user_id)
@@ -167,7 +170,9 @@ async def _get_user_details_by_id(user_id: str) -> tuple[str | None, str | None]
 async def _resolve_user_by_email(email: str) -> tuple[str | None, str | None]:
     """Resolve a user ID and name from an email address."""
     try:
-        from tripsage_core.services.business.user_service import get_user_service
+        from tripsage_core.services.business.user_service import (
+            get_user_service,  # type: ignore[assignment]
+        )
 
         user_service = await get_user_service()
         user = await user_service.get_user_by_email(email)
@@ -552,7 +557,7 @@ async def update_trip(
                     coordinates=coordinates,  # type: ignore[arg-type]
                     timezone=None,
                 )
-                trip_locations.append(trip_location)
+                trip_locations.append(trip_location)  # type: ignore[arg-type]
             updates["destinations"] = trip_locations
 
         # Build core update request model
@@ -997,10 +1002,6 @@ async def get_trip_itinerary(
             itinerary_service = await get_itinerary_service()
 
             # Search for itinerary associated with this trip
-            from tripsage_core.services.business.itinerary_service import (
-                ItinerarySearchRequest,
-            )
-
             # Search request lacks trip_id; fall back to query
             search_request = ItinerarySearchRequest.model_validate(
                 {"query": str(trip_id), "limit": 1}
@@ -1011,7 +1012,7 @@ async def get_trip_itinerary(
             )
 
             if itineraries and len(itineraries) > 0:
-                itinerary_data = itineraries[0]
+                itinerary_data = itineraries[0]  # type: ignore[assignment]
 
                 items: list[_ItineraryItem] = [
                     _ItineraryItem(
@@ -1361,8 +1362,8 @@ def _adapt_trip_response(
         coordinates = None
         if isinstance(coordinates_dict, dict):
             coordinates = Coordinates(
-                latitude=float(coordinates_dict.get("lat", 0.0)),
-                longitude=float(coordinates_dict.get("lng", 0.0)),
+                latitude=float(coordinates_dict.get("lat", 0.0)),  # type: ignore[arg-type]
+                longitude=float(coordinates_dict.get("lng", 0.0)),  # type: ignore[arg-type]
                 altitude=None,
             )
         api_destinations.append(
@@ -1550,7 +1551,7 @@ async def list_trip_collaborators(
             )
 
         # Get collaborators via database service (TripService doesn't expose directly)
-        database_service = cast(Any, trip_service.db)
+        database_service = cast(Any, trip_service.db)  # type: ignore[assignment]
         collaborator_records = await database_service.get_trip_collaborators(
             str(trip_id)
         )
@@ -1656,7 +1657,7 @@ async def update_collaborator_permissions(
                 detail="Only trip owner can update collaborator permissions",
             )
 
-        database_service = cast(Any, trip_service.db)
+        database_service = cast(Any, trip_service.db)  # type: ignore[assignment]
         existing_collaborator = await database_service.get_trip_collaborator(
             str(trip_id), str(user_id)
         )
@@ -1779,20 +1780,3 @@ async def remove_collaborator(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to remove collaborator",
         ) from e
-
-
-async def _get_user_name_safely(user_id: str) -> str | None:
-    """Safely get user name with authorization check.
-
-    Args:
-        user_id: User ID to lookup
-
-    Returns:
-        User's full name or None if not found/error
-    """
-    try:
-        _, full_name = await _get_user_details_by_id(user_id)
-        return full_name
-    except (AttributeError, ValueError, CoreServiceError):
-        logger.exception("Failed to get user name")
-        return None

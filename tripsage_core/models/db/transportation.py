@@ -91,9 +91,8 @@ class Transportation(TripSageModel):
         # Can only cancel if booked and the pickup date hasn't passed
         if self.booking_status != BookingStatus.BOOKED:
             return False
-        from datetime import datetime as datetime_type
 
-        return datetime_type.now() < self.pickup_date
+        return datetime.now() < self.pickup_date
 
     def update_status(self, new_status: BookingStatus) -> bool:
         """Update the transportation status with validation.

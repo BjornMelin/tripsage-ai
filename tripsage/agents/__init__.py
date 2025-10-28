@@ -4,6 +4,13 @@ This module provides factory functions for creating various specialized agents
 for the TripSage application.
 """
 
+from __future__ import annotations
+
+from typing import Any, cast
+
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_openai import ChatOpenAI
+
 from tripsage.agents.base import BaseAgent
 from tripsage.agents.chat import ChatAgent
 from tripsage.agents.service_registry import ServiceRegistry
@@ -19,7 +26,7 @@ def create_agent(
     name: str | None = None,
     model: str | None = None,
     temperature: float | None = None,
-    **kwargs,
+    **kwargs: dict[str, Any],
 ) -> BaseAgent:
     """Create an agent of the specified type.
 
@@ -46,15 +53,34 @@ def create_agent(
         raise ValueError("service_registry is required")
 
     if agent_type == "base":
+        instructions: str | None = cast(str | None, kwargs.pop("instructions", None))
+        summary_interval: int = cast(int, kwargs.pop("summary_interval", 10))
+        llm: BaseChatModel | None = cast(BaseChatModel | None, kwargs.pop("llm", None))
+
+        if llm is None:
+            api_key_raw = settings.openai_api_key
+            secret_key = api_key_raw  # Already SecretStr from settings
+            llm = ChatOpenAI(model=model, temperature=temperature, api_key=secret_key)
+
+        if kwargs:
+            raise ValueError(
+                f"Unsupported keyword arguments for BaseAgent: {list(kwargs)}"
+            )
+
         return BaseAgent(
             name=name or "TripSage Assistant",
             service_registry=service_registry,
-            **kwargs,
+            instructions=instructions,
+            llm=llm,
+            summary_interval=summary_interval,
         )
-    elif agent_type == "chat":
+
+    if agent_type == "chat":
+        if kwargs:
+            raise ValueError(f"ChatAgent does not support extra kwargs: {list(kwargs)}")
         return ChatAgent(service_registry)
-    else:
-        raise ValueError(f"Unknown agent type: {agent_type}")
+
+    raise ValueError(f"Unknown agent type: {agent_type}")
 
 
 __all__ = [

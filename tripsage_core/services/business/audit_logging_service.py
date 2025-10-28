@@ -29,10 +29,10 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
-from tripsage_core.utils.logging_utils import get_logger
+from tripsage_core.utils.logging_utils import get_logger  # type: ignore[import-untyped]
 
 
-logger = get_logger(__name__)
+logger = get_logger(__name__)  # type: ignore[var-annotated]
 
 LOGGING_ERRORS = (
     OSError,
@@ -220,7 +220,7 @@ class AuditEvent(TripSageModel):
 
     @field_validator("risk_score")
     @classmethod
-    def validate_risk_score(cls, v: int) -> int:
+    def validate_risk_score(cls, v: int | None) -> int | None:
         """Validate the risk score."""
         if v is not None and not 0 <= v <= 100:
             raise ValueError("Risk score must be between 0 and 100")
@@ -291,7 +291,7 @@ class AuditLogConfig(BaseModel):
     data_residency_region: str | None = None
 
 
-class SecurityAuditLogger:
+class SecurityAuditLogger:  # pylint: disable=too-many-instance-attributes
     """Production-ready security audit logging service.
 
     This service provides audit logging capabilities with:
@@ -309,8 +309,8 @@ class SecurityAuditLogger:
         self._buffer: list[AuditEvent] = []
         self._buffer_lock = asyncio.Lock()
         self._is_running = False
-        self._flush_task: asyncio.Task | None = None
-        self._cleanup_task: asyncio.Task | None = None
+        self._flush_task: asyncio.Task[None] | None = None
+        self._cleanup_task: asyncio.Task[None] | None = None
 
         # Performance tracking
         self._events_per_second = 0
@@ -320,7 +320,7 @@ class SecurityAuditLogger:
         self._circuit_breaker_next_attempt = 0
 
         # Statistics
-        self.stats = {
+        self.stats: dict[str, Any] = {
             "total_events_logged": 0,
             "events_by_type": defaultdict(int),
             "events_by_severity": defaultdict(int),
@@ -436,8 +436,10 @@ class SecurityAuditLogger:
 
             # Update statistics
             self.stats["total_events_logged"] += 1
-            self.stats["events_by_type"][event.event_type] += 1
-            self.stats["events_by_severity"][event.severity] += 1
+            events_by_type = self.stats["events_by_type"]  # type: ignore[assignment]
+            events_by_type[event.event_type.value] += 1
+            events_by_severity = self.stats["events_by_severity"]  # type: ignore[assignment]
+            events_by_severity[event.severity.value] += 1
 
             if self.config.async_logging:
                 # Add to buffer for async processing
@@ -454,12 +456,12 @@ class SecurityAuditLogger:
             return True
 
         except LOGGING_ERRORS:
-            self.stats["errors"] += 1
+            self.stats["errors"] = self.stats.get("errors", 0) + 1  # type: ignore[assignment,operator]
             self._handle_circuit_breaker_failure()
             logger.exception("Failed to log audit event")
             return False
 
-    async def log_authentication_event(
+    async def log_authentication_event(  # pylint: disable=too-many-positional-arguments
         self,
         event_type: AuditEventType,
         outcome: AuditOutcome,
@@ -486,7 +488,7 @@ class SecurityAuditLogger:
 
         return await self.log_event(event)
 
-    async def log_api_key_event(
+    async def log_api_key_event(  # pylint: disable=too-many-positional-arguments
         self,
         event_type: AuditEventType,
         outcome: AuditOutcome,
@@ -518,7 +520,7 @@ class SecurityAuditLogger:
 
         return await self.log_event(event)
 
-    async def log_security_event(
+    async def log_security_event(  # pylint: disable=too-many-positional-arguments
         self,
         event_type: AuditEventType,
         severity: AuditSeverity,
@@ -548,7 +550,7 @@ class SecurityAuditLogger:
 
         return await self.log_event(event)
 
-    async def log_configuration_change(
+    async def log_configuration_change(  # pylint: disable=too-many-positional-arguments
         self,
         config_key: str,
         old_value: Any,
@@ -578,7 +580,7 @@ class SecurityAuditLogger:
 
         return await self.log_event(event)
 
-    async def query_events(
+    async def query_events(  # pylint: disable=too-many-positional-arguments
         self,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
@@ -595,7 +597,7 @@ class SecurityAuditLogger:
         # This is a simplified implementation that reads from log files
         # In production, you'd want to use a proper search backend
 
-        events = []
+        events: list[AuditEvent] = []
         log_dir = Path(self.config.log_directory)
 
         # Get date range for file filtering
@@ -687,7 +689,7 @@ class SecurityAuditLogger:
             for event in events_to_flush:
                 await self._write_event(event)
 
-            self.stats["buffer_flushes"] += 1
+            self.stats["buffer_flushes"] = self.stats.get("buffer_flushes", 0) + 1  # type: ignore[assignment,operator]
 
         except LOGGING_ERRORS:
             logger.exception("Failed to flush events")
@@ -710,7 +712,7 @@ class SecurityAuditLogger:
                 await self._forward_to_external(event)
 
         except LOGGING_ERRORS:
-            self.stats["errors"] += 1
+            self.stats["errors"] = self.stats.get("errors", 0) + 1  # type: ignore[assignment,operator]
             raise
 
     async def _forward_to_external(self, event: AuditEvent):
@@ -736,7 +738,9 @@ class SecurityAuditLogger:
                         if response.status >= 400:
                             raise RuntimeError(f"HTTP {response.status}")
 
-                        self.stats["external_forwards"] += 1
+                        self.stats["external_forwards"] = (
+                            self.stats.get("external_forwards", 0) + 1
+                        )  # type: ignore[assignment,operator]
 
             except (
                 TimeoutError,
@@ -745,7 +749,9 @@ class SecurityAuditLogger:
                 ValueError,
                 RuntimeError,
             ) as error:
-                self.stats["external_forward_errors"] += 1
+                self.stats["external_forward_errors"] = (
+                    self.stats.get("external_forward_errors", 0) + 1
+                )  # type: ignore[assignment,operator]
                 logger.warning("Failed to forward to %s: %s", endpoint, error)
 
     async def _cleanup_loop(self):
@@ -878,6 +884,7 @@ async def shutdown_audit_logger():
 
 
 # Convenience functions for common audit events
+# pylint: disable=too-many-positional-arguments
 async def audit_authentication(
     event_type: AuditEventType,
     outcome: AuditOutcome,
@@ -885,7 +892,7 @@ async def audit_authentication(
     ip_address: str,
     user_agent: str | None = None,
     message: str | None = None,
-    **metadata,
+    **metadata: Any,
 ) -> bool:
     """Log authentication audit event."""
     audit_logger = await get_audit_logger()
@@ -894,6 +901,7 @@ async def audit_authentication(
     )
 
 
+# pylint: disable=too-many-positional-arguments
 async def audit_api_key(
     event_type: AuditEventType,
     outcome: AuditOutcome,
@@ -901,7 +909,7 @@ async def audit_api_key(
     service: str,
     ip_address: str,
     message: str | None = None,
-    **metadata,
+    **metadata: Any,
 ) -> bool:
     """Log API key audit event."""
     audit_logger = await get_audit_logger()
@@ -918,7 +926,7 @@ async def audit_security_event(
     ip_address: str,
     target_resource: str | None = None,
     risk_score: int | None = None,
-    **metadata,
+    **metadata: Any,
 ) -> bool:
     """Log security audit event."""
     audit_logger = await get_audit_logger()
@@ -934,13 +942,14 @@ async def audit_security_event(
     )
 
 
+# pylint: disable=too-many-positional-arguments
 async def audit_config_change(
     config_key: str,
     old_value: Any,
     new_value: Any,
     changed_by: str,
     ip_address: str,
-    **metadata,
+    **metadata: Any,
 ) -> bool:
     """Log configuration change audit event."""
     audit_logger = await get_audit_logger()
