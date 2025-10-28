@@ -125,7 +125,7 @@ TripSage uses a modern data stack:
 **Current Status:**
 
 - **📚 REST API**: Complete OpenAPI 3.0 specification
-- **🔌 WebSocket API**: Real-time chat and updates
+- **⚡ Realtime (Supabase)**: Private channels with RLS for chat, typing, and status updates
 - **📖 Interactive Docs**: Swagger UI and ReDoc available
 
 **In Development:**

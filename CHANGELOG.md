@@ -146,7 +146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed obsolete integration test referencing the removed HTTP client (`tests/integration/external/test_duffel_integration.py`)
 - Fixed dashboard compatibility shims (legacy `DashboardData` fields, `ApiKeyValidator`/`ApiKeyMonitoringService` aliases) and the unused flights mapper module (`tripsage_core.models.mappers`)
 - Fixed linting/typing issues in touched flight tests and orchestration node; pyright/pylint clean on changed scope
-- Fixed WebSocket integration/unit test suites updated for the refactored router
+- Updated Realtime integration/unit test suites aligned to Supabase Realtime channels (no custom WebSocket router)
 - Supabase config.toml updated for CLI v2 compatibility (removed invalid keys; normalized [auth.email] flags; set db.major_version=17). Idempotent fixes to avoid `experimental.webhooks` error by leaving undefined.
 - Realtime policy migration made idempotent (guard with `pg_policies` checks). Session policies created only when `public.chat_sessions` exists.
 - Storage migration guarded to work on a fresh project: wraps policies referencing `public.file_attachments` and `public.trips` in conditional DO blocks; functions reference application tables at runtime only.

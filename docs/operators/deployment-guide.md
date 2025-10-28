@@ -59,7 +59,7 @@ uv run python -m tripsage.api.main
 
 - Vector search latency: Target <20ms
 - Database connection pool: Target <80% utilization
-- WebSocket connections: Monitor heartbeat failures
+- Realtime channels: Monitor authorization errors and reconnect rates
 - Memory usage: Target <512MB per service
 - Cache hit rate: Target >90%
 
@@ -68,7 +68,7 @@ uv run python -m tripsage.api.main
 - Health check: `GET /api/health`
 - Metrics: `GET /api/metrics`
 - Database status: `GET /api/health/database`
-- WebSocket status: `GET /api/health/websocket`
+- Realtime status: use Supabase Dashboard Realtime metrics; backend exposes only `GET /api/health`
 
 ## Troubleshooting
 
@@ -84,18 +84,13 @@ python scripts/verification/verify_connection.py
 docker restart tripsage-database
 ```
 
-#### WebSocket Connection Failures
+#### Realtime Subscription Failures
 
 ```bash
-# Check Redis connectivity
-redis-cli ping
-
-# Verify WebSocket endpoint
-curl -i -N -H "Connection: Upgrade" \
-     -H "Upgrade: websocket" \
-     -H "Sec-WebSocket-Key: test" \
-     -H "Sec-WebSocket-Version: 13" \
-     http://localhost:8000/api/ws/chat/test
+# Common causes
+# 1) Missing/expired access token in supabase.realtime.setAuth()
+# 2) Topic not authorized by RLS policies (see supabase/migrations/20251027_01_realtime_policies.sql)
+# 3) Realtime Authorization disabled in Supabase project settings
 ```
 
 #### Performance Degradation
@@ -133,7 +128,7 @@ python scripts/database/rollback_migrations.py --to-version <previous_version>
 ### Production Security Settings
 
 - CORS origins restricted to production domains
-- WebSocket origin validation enabled
+- Supabase Realtime Authorization enabled (private channels only)
 - Rate limiting configured for production load
 - API keys rotated and secured
 - Database connection strings encrypted

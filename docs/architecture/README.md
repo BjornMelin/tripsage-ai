@@ -87,7 +87,7 @@ Core business logic, services, models, and shared utilities:
 - `models/` - Pydantic models and Supabase schemas
 - `services/business/` - Business logic services
 - `services/external_apis/` - Direct SDK integrations
-- `services/infrastructure/` - Database, cache, WebSocket services
+- `services/infrastructure/` - Database, cache, Supabase Realtime integration
 
 #### `frontend/`
 
@@ -106,7 +106,7 @@ Comprehensive test suite with 90%+ coverage:
 ## 🔗 Related Documentation
 
 - **[Developers Guide](../developers/)** - Implementation details, code examples, testing
-- **[API Documentation](../api/)** - API specifications, endpoints, and WebSocket protocols
+- **[API Documentation](../api/)** - REST specifications and Supabase Realtime guide
 - **[Testing Guide](../../tests/README.md)** - Test organization and best practices
 - **[Deployment](../operators/)** - Infrastructure, monitoring, and operations
 
@@ -128,7 +128,7 @@ Current production architecture achievements:
 
 - ✅ Unified Supabase architecture implementation
 - ✅ Upstash Redis serverless caching  
-- ✅ WebSocket real-time communication
+- ✅ Supabase Realtime communication
 - ✅ Service consolidation and SDK migration
 - ✅ Consumer-aware API design
 

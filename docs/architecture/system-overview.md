@@ -136,7 +136,7 @@ The API adapts responses based on consumer type:
 - Authentication: JWT for users, API keys for agents, BYOK
   support
 - Rate Limiting: Limits with principal tracking
-- WebSocket Support: Real-time communication
+- Realtime (Supabase): Private channels with RLS for live updates
 - Error Handling: Error processing with context
 - Response Formatting: Response adaptation
 
@@ -165,7 +165,7 @@ Unified service design in TripSage Core:
 
 - DatabaseService with transaction management
 - CacheService with Upstash Redis (HTTP) integration
-- WebSocketManager for real-time communication
+- Realtime integration (Supabase) for client channels; backend publishes via DB functions/REST when needed
 - KeyMonitoringService for security
 
 #### LangGraph Orchestration
