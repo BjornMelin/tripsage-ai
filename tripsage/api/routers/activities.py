@@ -70,44 +70,6 @@ async def search_activities(
         ) from e
 
 
-@router.get("/{activity_id}", response_model=ActivityResponse)
-async def get_activity_details(activity_id: str, activity_service: ActivityServiceDep):
-    """Get detailed information about a specific activity.
-
-    Retrieves details for an activity including enhanced
-    information from Google Maps Places API.
-    """
-    logger.info("Get activity details request: %s", activity_id)
-
-    try:
-        activity = await activity_service.get_activity_details(activity_id)
-
-        if not activity:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Activity with ID {activity_id} not found",
-            )
-
-        logger.info("Retrieved details for activity: %s", activity_id)
-        return activity
-
-    except ActivityServiceError as e:
-        logger.exception("Activity service error")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get activity details: {e.message}",
-        ) from e
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
-    except Exception as e:
-        logger.exception("Unexpected error getting activity details")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while retrieving activity details",
-        ) from e
-
-
 @router.post("/save", response_model=SavedActivityResponse)
 async def save_activity(
     request: SaveActivityRequest,
@@ -475,4 +437,42 @@ async def delete_saved_activity(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete saved activity",
+        ) from e
+
+
+@router.get("/{activity_id}", response_model=ActivityResponse)
+async def get_activity_details(activity_id: str, activity_service: ActivityServiceDep):
+    """Get detailed information about a specific activity.
+
+    Retrieves details for an activity including enhanced
+    information from Google Maps Places API.
+    """
+    logger.info("Get activity details request: %s", activity_id)
+
+    try:
+        activity = await activity_service.get_activity_details(activity_id)
+
+        if not activity:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Activity with ID {activity_id} not found",
+            )
+
+        logger.info("Retrieved details for activity: %s", activity_id)
+        return activity
+
+    except ActivityServiceError as e:
+        logger.exception("Activity service error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get activity details: {e.message}",
+        ) from e
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error getting activity details")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while retrieving activity details",
         ) from e

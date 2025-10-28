@@ -9,7 +9,7 @@ Mem0 SDK — no graph/neo4j code remains here (final implementation only).
 import asyncio
 import logging
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, cast
 
 
 logger = logging.getLogger(__name__)
@@ -22,8 +22,7 @@ def get_supabase_client() -> Any:
         Client: Initialized Supabase client using configured URL and anon key.
     """
     # Local import to avoid hard dependency at module import time for linters.
-    from supabase import create_client  # pylint: disable=import-error
-
+    from supabase import create_client  # pylint: disable=import-error,no-name-in-module
     from tripsage_core.config import get_settings  # pylint: disable=import-error
 
     settings = get_settings()
@@ -114,11 +113,12 @@ async def verify_database_schema() -> dict[str, Any]:
 
         existing_tables: list[str] = []
         if isinstance(data, Sequence):
-            existing_tables = [
-                str(row["tablename"])  # type: ignore[index]
-                for row in data
-                if isinstance(row, Mapping) and "tablename" in row
+            rows: list[Mapping[str, Any]] = [
+                cast(Mapping[str, Any], raw_row)
+                for raw_row in cast(Sequence[Any], data)
+                if isinstance(raw_row, Mapping) and "tablename" in raw_row
             ]
+            existing_tables = [str(row["tablename"]) for row in rows]
 
         results["sql"]["tables"] = existing_tables
         results["sql"]["missing_tables"] = [

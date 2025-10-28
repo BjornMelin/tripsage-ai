@@ -97,6 +97,7 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleStatusUpdate = useCallback(
     (payload: BroadcastEnvelope<AgentStatusUpdatePayload>) => {
@@ -184,6 +185,10 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
     }
     setIsConnected(false);
     setReconnectAttempts(0);
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
   }, []);
 
   const connect = useCallback(async () => {
@@ -222,6 +227,18 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
         if (!err) {
           setConnectionError(`Realtime channel status: ${status}`);
         }
+        // Explicitly unsubscribe and schedule reconnect with backoff
+        if (channelRef.current) {
+          channelRef.current.unsubscribe();
+          channelRef.current = null;
+        }
+        const attempt = reconnectAttempts + 1;
+        setReconnectAttempts(attempt);
+        const delay = Math.min(30000, 1000 * 2 ** Math.min(5, attempt));
+        if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = setTimeout(() => {
+          void connect();
+        }, delay);
       }
     });
 
@@ -289,6 +306,10 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
     void connect();
 
     return () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       disconnect();
     };
   }, [connect, currentSession, disconnect, endSession, user?.id]);

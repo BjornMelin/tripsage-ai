@@ -155,16 +155,7 @@ class Settings(BaseSettings):
         default=False, description="Enable caching for API key validations"
     )
 
-    # WebSocket Configuration
-    enable_websockets: bool = Field(
-        default=True, description="Enable WebSocket functionality"
-    )
-    websocket_timeout: int = Field(
-        default=300, description="WebSocket connection timeout in seconds"
-    )
-    max_websocket_connections: int = Field(
-        default=1000, description="Maximum concurrent WebSocket connections"
-    )
+    # WebSocket configuration removed (Supabase Realtime is used exclusively)
 
     # Monitoring Configuration
     db_health_check_interval: float = Field(
