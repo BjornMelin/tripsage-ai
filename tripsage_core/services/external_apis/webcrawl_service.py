@@ -8,7 +8,7 @@ error handling, and logging.
 import asyncio
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
 from pydantic import BaseModel, Field
@@ -18,7 +18,10 @@ from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError as CoreAPIError,
     CoreServiceError,
 )
-from tripsage_core.services.external_apis.base_service import AsyncServiceLifecycle
+from tripsage_core.services.external_apis.base_service import (
+    AsyncServiceLifecycle,
+    sanitize_response,
+)
 
 
 class WebCrawlServiceError(CoreAPIError):
@@ -53,7 +56,9 @@ class WebCrawlParams(BaseModel):
     css_selector: str | None = Field(
         default=None, description="CSS selector for content extraction"
     )
-    excluded_tags: list | None = Field(default=None, description="HTML tags to exclude")
+    excluded_tags: list[str] | None = Field(
+        default=None, description="HTML tags to exclude"
+    )
     screenshot: bool = Field(default=False, description="Take screenshot")
     pdf: bool = Field(default=False, description="Generate PDF")
     timeout: int = Field(default=30, description="Request timeout in seconds")
@@ -185,7 +190,8 @@ class WebCrawlService(AsyncServiceLifecycle):
                 # Perform the crawl
                 assert self._browser_config is not None
                 async with AsyncWebCrawler(config=self._browser_config) as crawler:
-                    result = await crawler.arun(url=url, config=run_config)
+                    crawler_any: Any = crawler
+                    result: Any = await crawler_any.arun(url=url, config=run_config)
 
                     # Calculate performance metrics
                     end_time = time.time()
@@ -233,7 +239,7 @@ class WebCrawlService(AsyncServiceLifecycle):
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Convert exceptions to failed results
-            final_results = []
+            final_results: list[WebCrawlResult] = []
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     final_results.append(
@@ -248,7 +254,7 @@ class WebCrawlService(AsyncServiceLifecycle):
                         )
                     )
                 else:
-                    final_results.append(result)
+                    final_results.append(cast(WebCrawlResult, result))
 
             return final_results
 
@@ -266,12 +272,8 @@ class WebCrawlService(AsyncServiceLifecycle):
         Returns:
             Configured CrawlerRunConfig
         """
-        # Set cache mode - use setting default if not specified in params
-        use_cache = (
-            params.use_cache
-            if params.use_cache is not None
-            else self.config.cache_enabled
-        )
+        # Set cache mode (boolean field)
+        use_cache = params.use_cache
         cache_mode = CacheMode.ENABLED if use_cache else CacheMode.BYPASS
 
         # Build configuration
@@ -359,10 +361,11 @@ class WebCrawlService(AsyncServiceLifecycle):
                 and crawl_result.extracted_content
             ):
                 try:
-                    import json
-
-                    structured_data = json.loads(crawl_result.extracted_content)
-                except (json.JSONDecodeError, TypeError):
+                    structured_any = sanitize_response(crawl_result.extracted_content)
+                    structured_data = (
+                        structured_any if isinstance(structured_any, dict) else None
+                    )
+                except (ValueError, TypeError):
                     structured_data = {"raw_content": crawl_result.extracted_content}
 
             # Build metadata
@@ -375,7 +378,8 @@ class WebCrawlService(AsyncServiceLifecycle):
 
             # Add any additional metadata from crawl result
             if hasattr(crawl_result, "metadata") and crawl_result.metadata:
-                metadata.update(crawl_result.metadata)
+                meta_any = sanitize_response(crawl_result.metadata)
+                metadata.update(meta_any if isinstance(meta_any, dict) else {})
 
             return WebCrawlResult(
                 success=True,
