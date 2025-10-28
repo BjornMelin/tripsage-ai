@@ -350,7 +350,7 @@ Create `frontend/.env.production`:
 ```bash
 # Frontend Configuration
 NEXT_PUBLIC_API_URL=https://api.your-domain.com
-NEXT_PUBLIC_WS_URL=wss://api.your-domain.com/ws
+# Supabase Realtime uses the project URL and anon key via supabase-js; no separate WS URL required
 NEXT_PUBLIC_ENVIRONMENT=production
 
 # Supabase Frontend

@@ -288,16 +288,16 @@ The memory system uses a context pipeline:
 
 ## Real-time Communication Architecture
 
-### WebSocket Management
+### Realtime Management (Supabase)
 
-The system uses WebSocket for real-time features:
+The system uses Supabase Realtime for real-time features:
 
 - Consumer-Aware Connections: Handling for frontend vs
   agent connections
-- Connection Pooling: Management of concurrent connections
+- Channel Management: Join/leave private topics; presence/broadcast APIs
 - Message Routing: Routing based on message type and consumer
 - Graceful Disconnection: Cleanup and state preservation
-- Error Recovery: Reconnection strategies with backoff
+- Error Recovery: supabase-js connection lifecycle handling and resubscribe
 
 ### Real-time Features
 

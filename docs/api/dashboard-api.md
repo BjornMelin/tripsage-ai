@@ -6,7 +6,7 @@ This document describes the dashboard monitoring API endpoints that provide real
 >
 > - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation
 > - [Authentication](README.md#authentication) - API authentication guide
-> - [WebSocket API](websocket-realtime-api.md) - Real-time WebSocket connections
+> - [Realtime (Supabase)](websocket-realtime-api.md) - Real-time private channels
 > - [Error Codes](error-codes.md) - API error reference
 > - [Performance Optimization](../developers/performance-optimization.md) - System performance tuning
 
@@ -389,12 +389,12 @@ Get an analytics summary.
 
 ## Real-time Features
 
-### WebSocket Connection
+### Realtime
 
 Connect to real-time dashboard updates:
 
 ```text
-/api/dashboard/realtime/ws/{user_id}
+Supabase Realtime private topic: `user:{sub}`
 ```
 
 **Message Types:**
@@ -403,7 +403,7 @@ Connect to real-time dashboard updates:
 - `alert`: New or updated alerts
 - `system_event`: System status changes
 
-**Example WebSocket Message:**
+**Example Realtime Broadcast:**
 
 ```json
 {
@@ -511,10 +511,13 @@ for rate_limit in response.json():
 ### Real-time Monitoring
 
 ```javascript
-// Connect to WebSocket for real-time updates
-const ws = new WebSocket(
-  "ws://api.tripsage.com/api/dashboard/realtime/ws/user_123"
-);
+// Connect to Supabase Realtime (using supabase-js v2)
+const channel = supabase
+  .channel(`user:${user.id}`, { config: { private: true } })
+  .on('broadcast', { event: 'dashboard:update' }, (payload) => {
+    console.log('dashboard:update', payload);
+  })
+  .subscribe();
 
 ws.onmessage = function (event) {
   const data = JSON.parse(event.data);
@@ -533,6 +536,6 @@ This dashboard API provides monitoring capabilities for maintaining system healt
 
 - [Error Codes](error-codes.md) - Complete API error reference
 - [REST Endpoints](rest-endpoints.md) - Core API endpoints
-- [WebSocket and Real-time API](websocket-realtime-api.md) - Real-time communication setup
+- [Realtime (Supabase)](websocket-realtime-api.md) - Real-time private channels
 - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation
 - [Performance Optimization](../developers/performance-optimization.md) - System performance guides

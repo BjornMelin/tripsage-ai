@@ -24,82 +24,97 @@ ALTER TABLE IF EXISTS "realtime"."messages" ENABLE ROW LEVEL SECURITY;
 -- =============================
 
 -- Allow the subject user to read broadcast/presence on user:{sub}
-CREATE POLICY "rtm_user_topic_read"
-ON "realtime"."messages"
-FOR SELECT
-TO authenticated
-USING (
-  (split_part((SELECT realtime.topic()), ':', 1) = 'user')
-  AND (split_part((SELECT realtime.topic()), ':', 2) = auth.uid()::text)
-  AND ("realtime"."messages"."extension" IN ('broadcast', 'presence'))
-);
+DO $do$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'realtime' AND tablename = 'messages' AND policyname = 'rtm_user_topic_read'
+  ) THEN
+    EXECUTE $pol$
+      CREATE POLICY "rtm_user_topic_read"
+      ON "realtime"."messages"
+      FOR SELECT
+      TO authenticated
+      USING (
+        (split_part((SELECT realtime.topic()), ':', 1) = 'user')
+        AND (split_part((SELECT realtime.topic()), ':', 2) = auth.uid()::text)
+        AND ("realtime"."messages"."extension" IN ('broadcast', 'presence'))
+      )
+    $pol$;
+  END IF;
+END $do$;
 
 -- Allow the subject user to write (broadcast/presence) on user:{sub}
-CREATE POLICY "rtm_user_topic_write"
-ON "realtime"."messages"
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  (split_part((SELECT realtime.topic()), ':', 1) = 'user')
-  AND (split_part((SELECT realtime.topic()), ':', 2) = auth.uid()::text)
-  AND ("realtime"."messages"."extension" IN ('broadcast', 'presence'))
-);
+DO $do$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'realtime' AND tablename = 'messages' AND policyname = 'rtm_user_topic_write'
+  ) THEN
+    EXECUTE $pol$
+      CREATE POLICY "rtm_user_topic_write"
+      ON "realtime"."messages"
+      FOR INSERT
+      TO authenticated
+      WITH CHECK (
+        (split_part((SELECT realtime.topic()), ':', 1) = 'user')
+        AND (split_part((SELECT realtime.topic()), ':', 2) = auth.uid()::text)
+        AND ("realtime"."messages"."extension" IN ('broadcast', 'presence'))
+      )
+    $pol$;
+  END IF;
+END $do$;
 
 -- =============================
 -- session:{uuid} channel policies
 -- =============================
 
--- Read policy: session owner, trip owner, or collaborators can receive
-CREATE POLICY "rtm_session_topic_read"
-ON "realtime"."messages"
-FOR SELECT
-TO authenticated
-USING (
-  (split_part((SELECT realtime.topic()), ':', 1) = 'session')
-  AND (
-    EXISTS (
-      SELECT 1
-      FROM public.chat_sessions cs
-      LEFT JOIN public.trips t ON t.id = cs.trip_id
-      LEFT JOIN public.trip_collaborators tc
-        ON tc.trip_id = cs.trip_id
-       AND tc.user_id = auth.uid()
-      WHERE cs.id = (split_part((SELECT realtime.topic()), ':', 2))::uuid
+DO $do$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='chat_sessions') THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies
+      WHERE schemaname = 'realtime' AND tablename = 'messages' AND policyname = 'rtm_session_topic_read'
+    ) THEN
+      EXECUTE $pol$CREATE POLICY "rtm_session_topic_read"
+      ON "realtime"."messages" FOR SELECT TO authenticated
+      USING (
+        (split_part((SELECT realtime.topic()), ':', 1) = 'session')
         AND (
-          cs.user_id = auth.uid()
-          OR t.user_id = auth.uid()
-          OR tc.user_id IS NOT NULL
+          EXISTS (
+            SELECT 1 FROM public.chat_sessions cs
+            LEFT JOIN public.trips t ON t.id = cs.trip_id
+            LEFT JOIN public.trip_collaborators tc ON tc.trip_id = cs.trip_id AND tc.user_id = auth.uid()
+            WHERE cs.id = (split_part((SELECT realtime.topic()), ':', 2))::uuid
+              AND (cs.user_id = auth.uid() OR t.user_id = auth.uid() OR tc.user_id IS NOT NULL)
+          )
         )
-    )
-  )
-  AND ("realtime"."messages"."extension" IN ('broadcast', 'presence'))
-);
+        AND ("realtime"."messages"."extension" IN ('broadcast', 'presence'))
+      );$pol$;
+    END IF;
 
--- Write policy: session owner, trip owner, or collaborators can send
-CREATE POLICY "rtm_session_topic_write"
-ON "realtime"."messages"
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  (split_part((SELECT realtime.topic()), ':', 1) = 'session')
-  AND (
-    EXISTS (
-      SELECT 1
-      FROM public.chat_sessions cs
-      LEFT JOIN public.trips t ON t.id = cs.trip_id
-      LEFT JOIN public.trip_collaborators tc
-        ON tc.trip_id = cs.trip_id
-       AND tc.user_id = auth.uid()
-      WHERE cs.id = (split_part((SELECT realtime.topic()), ':', 2))::uuid
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies
+      WHERE schemaname = 'realtime' AND tablename = 'messages' AND policyname = 'rtm_session_topic_write'
+    ) THEN
+      EXECUTE $pol$CREATE POLICY "rtm_session_topic_write"
+      ON "realtime"."messages" FOR INSERT TO authenticated
+      WITH CHECK (
+        (split_part((SELECT realtime.topic()), ':', 1) = 'session')
         AND (
-          cs.user_id = auth.uid()
-          OR t.user_id = auth.uid()
-          OR tc.user_id IS NOT NULL
+          EXISTS (
+            SELECT 1 FROM public.chat_sessions cs
+            LEFT JOIN public.trips t ON t.id = cs.trip_id
+            LEFT JOIN public.trip_collaborators tc ON tc.trip_id = cs.trip_id AND tc.user_id = auth.uid()
+            WHERE cs.id = (split_part((SELECT realtime.topic()), ':', 2))::uuid
+              AND (cs.user_id = auth.uid() OR t.user_id = auth.uid() OR tc.user_id IS NOT NULL)
+          )
         )
-    )
-  )
-  AND ("realtime"."messages"."extension" IN ('broadcast', 'presence'))
-);
+        AND ("realtime"."messages"."extension" IN ('broadcast', 'presence'))
+      );$pol$;
+    END IF;
+  END IF;
+END $do$;
 
 -- Notes:
 -- - Realtime evaluates these policies at channel join and on access_token refresh.
@@ -111,4 +126,3 @@ DO $$
 BEGIN
   RAISE NOTICE '✅ Realtime authorization policies installed: user:{sub}, session:{uuid} (broadcast/presence)';
 END $$;
-

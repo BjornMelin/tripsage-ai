@@ -1,12 +1,12 @@
 # TripSage Supabase Project
 
-Supabase infrastructure for TripSage, including database schemas, edge functions, storage configuration, and migrations. Built with modern best practices for scalability and maintainability.
+Supabase infrastructure for TripSage, including CLI migrations (source of truth), edge functions, and supporting config. Built with modern best practices for scalability and maintainability.
 
 ## 🏗️ Project Structure
 
 ```text
 supabase/
-├── schemas/                    # Declarative schema files
+├── schemas/                    # Legacy reference SQL (do not apply directly)
 │   ├── 00_extensions.sql      # PostgreSQL extensions
 │   ├── 01_tables.sql          # Core table definitions
 │   ├── 02_indexes.sql         # Performance indexes
@@ -27,7 +27,7 @@ supabase/
 │   ├── cache-invalidation/   # Cache management
 │   ├── file-processing/      # File operations
 │   └── README.md             # Detailed documentation
-├── storage/                   # Storage configuration
+├── storage/                   # Legacy storage SQL (superseded by migrations)
 │   ├── buckets.sql           # Bucket definitions
 │   ├── policies.sql          # Storage RLS
 │   └── README.md             # Storage guide
@@ -70,7 +70,7 @@ cp .env.example .env
 nano .env
 ```
 
-### 2. Local Development
+### 2. Local Development (migrations are authoritative)
 
 ```bash
 # Initialize Supabase
@@ -80,13 +80,13 @@ supabase init
 supabase start
 
 # Apply database schema
-supabase db reset
+supabase db reset --debug
 
 # Serve edge functions
 supabase functions serve
 ```
 
-### 3. Production Deployment
+### 3. Production Deployment (CLI migrations)
 
 ```bash
 # Link to production project
@@ -103,9 +103,10 @@ supabase secrets set OPENAI_API_KEY=your_key
 supabase secrets set RESEND_API_KEY=your_key
 ```
 
-### Alternative: Automated Deployment
+### Notes on legacy SQL
 
-For complex deployments, use our automated scripts:
+- The `schemas/` and `storage/` folders contain historical SQL. They are not applied by the CLI and are kept for reference only while we complete migration parity.
+- All changes must be expressed as timestamped files under `supabase/migrations/`.
 
 ```bash
 # Validate schema integrity
@@ -491,7 +492,7 @@ supabase db diff --file new_migration_name
 supabase db pull
 
 # Reset local database
-supabase db reset
+supabase db reset --debug
 
 # View migration status
 supabase migration list
@@ -579,7 +580,7 @@ GITHUB_CLIENT_ID=your-github-oauth-id
 python3 validate_database_schema.py
 
 # Test migrations locally
-supabase db reset --debug
+supabase db reset --debug --debug
 ```
 
 ### Integration Testing

@@ -126,7 +126,7 @@ Routes are organized by domain in the `endpoints/` directory. Each module handle
 - **CRUD Operations**: Standard Create, Read, Update, Delete for resources
 - **Search Endpoints**: Complex filtering with query parameters
 - **Bulk Operations**: Batch processing for efficiency
-- **Real-time Updates**: WebSocket integration for live data
+- **Real-time Updates**: Supabase Realtime (private channels)
 
 ## Authentication & Authorization
 
