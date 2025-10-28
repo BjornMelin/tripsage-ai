@@ -56,13 +56,13 @@ enable_confirmations = true
 
 # OAuth providers (configure in Supabase Dashboard)
 [auth.external.google]
-enabled = true
+enabled = false
 client_id = "env(GOOGLE_CLIENT_ID)"
 secret = "env(GOOGLE_CLIENT_SECRET)"
 redirect_uri = "http://localhost:54321/auth/v1/callback"
 
 [auth.external.github]
-enabled = true
+enabled = false
 client_id = "env(GITHUB_CLIENT_ID)"
 secret = "env(GITHUB_CLIENT_SECRET)"
 redirect_uri = "http://localhost:54321/auth/v1/callback"
