@@ -17,7 +17,6 @@ from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.utils.structured import StructuredExtractor, model_to_dict
 from tripsage_core.config import get_settings
-from tripsage_core.services import configuration_service as configuration_service_module
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -57,14 +56,9 @@ class ItineraryAgentNode(BaseAgentNode):
             services: Application service container for dependency injection
             **config_overrides: Runtime configuration overrides (e.g., temperature=0.6)
         """
-        # Get configuration service for database-backed config
-        self.config_service = cast(
-            Any, configuration_service_module
-        ).get_configuration_service()
-
         # Store overrides for async config loading
         self.config_overrides: dict[str, Any] = dict(config_overrides)
-        self.agent_config: dict[str, Any] | None = None
+        self.agent_config: dict[str, Any] = {}
         self.llm: ChatOpenAI | None = None
         self._parameter_extractor: StructuredExtractor[ItineraryParameters] | None = (
             None
@@ -73,6 +67,9 @@ class ItineraryAgentNode(BaseAgentNode):
         self.llm_with_tools: Any | None = None
 
         super().__init__("itinerary_agent", services)
+
+        # Get configuration service for database-backed config
+        self.config_service: Any = self.get_service("configuration_service")
 
     def _initialize_tools(self) -> None:
         """Initialize itinerary-specific tools using simple tool catalog."""
@@ -97,24 +94,15 @@ class ItineraryAgentNode(BaseAgentNode):
             self.agent_config = await self.config_service.get_agent_config(
                 "itinerary_agent", **self.config_overrides
             )
-            if self.agent_config is None:
+            if not self.agent_config:
                 raise RuntimeError("Itinerary agent configuration is missing")
 
             # Initialize LLM with loaded configuration
-            llm_kwargs: dict[str, Any] = {
-                "model": self.agent_config["model"],
-                "temperature": self.agent_config["temperature"],
-                "top_p": self.agent_config["top_p"],
-                "api_key": self.agent_config["api_key"],
-            }
-            if "max_tokens" in self.agent_config:
-                llm_kwargs["max_tokens"] = self.agent_config["max_tokens"]
-
-            self.llm = ChatOpenAI(**llm_kwargs)
+            self.llm = self._create_llm_from_config()
             self._parameter_extractor = StructuredExtractor(
                 self.llm, ItineraryParameters, logger=logger
             )
-            if hasattr(self, "available_tools"):
+            if self.available_tools:
                 self.llm_with_tools = cast(Any, self.llm).bind_tools(
                     self.available_tools
                 )
@@ -145,15 +133,11 @@ class ItineraryAgentNode(BaseAgentNode):
                 "top_p": 1.0,
             }
 
-            self.llm = ChatOpenAI(
-                model=fallback.default_model,
-                temperature=fallback.temperature,
-                api_key=api_key,  # type: ignore
-            )
+            self.llm = self._create_llm_from_config()
             self._parameter_extractor = StructuredExtractor(
                 self.llm, ItineraryParameters, logger=logger
             )
-            if hasattr(self, "available_tools"):
+            if self.available_tools:
                 self.llm_with_tools = cast(Any, self.llm).bind_tools(
                     self.available_tools
                 )
@@ -168,7 +152,7 @@ class ItineraryAgentNode(BaseAgentNode):
             Updated state with itinerary planning results and response
         """
         # Ensure configuration is loaded before processing
-        if self.agent_config is None:
+        if not self.agent_config:
             await self._load_configuration()
 
         user_message = state["messages"][-1]["content"] if state["messages"] else ""

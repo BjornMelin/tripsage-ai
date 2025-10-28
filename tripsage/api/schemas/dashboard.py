@@ -11,6 +11,26 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 
+def _empty_components() -> list["ComponentHealth"]:  # type: ignore[name-defined]
+    """Return an empty list of component health."""
+    return []
+
+
+def _empty_dict_list() -> list[dict[str, Any]]:
+    """Return an empty list of dictionaries."""
+    return []
+
+
+def _empty_str_list() -> list[str]:
+    """Return an empty list of strings."""
+    return []
+
+
+def _empty_strdict_list() -> list[dict[str, str]]:
+    """Return an empty list of dictionaries with strings as keys and values."""
+    return []
+
+
 class TimeRange(str, Enum):
     """Predefined time ranges for dashboard queries."""
 
@@ -183,7 +203,9 @@ class SystemOverviewResponse(BaseModel):
     active_api_keys: int = Field(..., description="Active API keys")
 
     # Component health
-    components: list[ComponentHealth] = []
+    components: list[ComponentHealth] = Field(
+        default_factory=_empty_components, description="Component health status"
+    )
 
 
 class ServiceStatusResponse(BaseModel):
@@ -225,7 +247,9 @@ class UsageMetricsResponse(BaseModel):
     unique_endpoints: int = Field(
         ..., description="Number of unique endpoints accessed"
     )
-    top_endpoints: list[dict[str, Any]] = []
+    top_endpoints: list[dict[str, Any]] = Field(
+        default_factory=_empty_dict_list, description="Top accessed endpoints"
+    )
     error_breakdown: dict[str, int] = Field(
         default_factory=dict, description="Error count by type"
     )
@@ -314,8 +338,12 @@ class UserActivityResponse(BaseModel):
     last_activity: datetime = Field(..., description="Last activity timestamp")
 
     # Usage patterns
-    services_used: list[str] = []
-    top_endpoints: list[dict[str, Any]] = []
+    services_used: list[str] = Field(
+        default_factory=_empty_str_list, description="Services accessed"
+    )
+    top_endpoints: list[dict[str, Any]] = Field(
+        default_factory=_empty_dict_list, description="Most used endpoints"
+    )
     avg_latency_ms: float = Field(default=0.0, description="Average response latency")
 
     # Time-based analysis
@@ -403,8 +431,12 @@ class AnalyticsSummaryResponse(BaseModel):
     trends: dict[str, Any] = Field(..., description="Trend analysis summary")
 
     # Insights and recommendations
-    insights: list[str] = []
-    recommendations: list[str] = []
+    insights: list[str] = Field(
+        default_factory=_empty_str_list, description="Key insights"
+    )
+    recommendations: list[str] = Field(
+        default_factory=_empty_str_list, description="Improvement recommendations"
+    )
 
 
 # Action request schemas
@@ -433,7 +465,9 @@ class ConfigureAlertRequest(BaseModel):
     alert_type: AlertType = Field(..., description="Type of alert to configure")
     threshold: float = Field(..., description="Alert threshold value")
     enabled: bool = Field(default=True, description="Whether alert is enabled")
-    notification_channels: list[str] = []
+    notification_channels: list[str] = Field(
+        default_factory=_empty_str_list, description="Notification channels"
+    )
 
 
 # Bulk operation schemas
@@ -457,7 +491,9 @@ class BulkAlertActionResponse(BaseModel):
     processed: int = Field(..., description="Number of alerts processed")
     successful: int = Field(..., description="Number of successful operations")
     failed: int = Field(..., description="Number of failed operations")
-    errors: list[dict[str, str]] = []
+    errors: list[dict[str, str]] = Field(
+        default_factory=_empty_strdict_list, description="Error details"
+    )
 
 
 # Export monitoring data schemas
