@@ -1,4 +1,4 @@
-"""Cache façade built on cashews with Redis/Dragonfly support."""
+"""Cache façade built on cashews with Redis (Upstash) support."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ import json
 import logging
 from collections.abc import AsyncIterator, Callable, Iterable
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Final
 
-from cashews import cache as _cache
+from cashews import Cache, cache
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
 
@@ -25,12 +25,14 @@ logger = logging.getLogger(__name__)
 # Setup (one-time)
 # --------------------------------------------------------------------------------------
 _settings = get_settings()
-if getattr(_settings, "is_testing", False):
-    _CACHE_URL = "mem://"
-else:
-    _CACHE_URL = _settings.redis_url or "mem://"
-_CACHE_PREFIX = "tripsage"
-_cache.setup(_CACHE_URL)
+_CACHE_URL: str = (
+    "mem://"
+    if getattr(_settings, "is_testing", False)
+    else (_settings.redis_url or "mem://")
+)
+_CACHE_PREFIX: Final[str] = "tripsage"
+_cache: Cache = cache
+_cache.setup(_CACHE_URL)  # pyright: ignore[reportUnknownMemberType]
 
 # Local lock registry for mem backend
 _LOCAL_LOCKS: dict[str, asyncio.Lock] = {}
@@ -161,10 +163,13 @@ async def batch_cache_get(
     keys: Iterable[str], *, namespace: str | None = None
 ) -> dict[str, Any]:
     """Get multiple keys concurrently (best-effort)."""
-    tasks = {
-        key: asyncio.create_task(_cache.get(_ns_key(key, namespace))) for key in keys
-    }
-    return {key: await task for key, task in tasks.items()}
+    tasks: dict[str, asyncio.Task[Any]] = {}
+    for key in keys:
+        tasks[key] = asyncio.create_task(_cache.get(_ns_key(key, namespace)))
+    results: dict[str, Any] = {}
+    for key, task in tasks.items():
+        results[key] = await task
+    return results
 
 
 async def prefetch_cache_keys(
@@ -181,14 +186,14 @@ async def invalidate_pattern(pattern: str, *, namespace: str | None = None) -> i
     Falls back to a no-op when not backed by Redis/Dragonfly.
     """
     if _CACHE_URL.startswith(("redis://", "rediss://")):
-        redis = Redis.from_url(_CACHE_URL)
+        redis: Redis = Redis.from_url(_CACHE_URL)  # pyright: ignore[reportUnknownMemberType]
         ns = (namespace or _CACHE_PREFIX) + ":"
         full_pattern = ns + pattern
         cursor = 0
         deleted = 0
         try:
             while True:
-                cursor, keys = await redis.scan(
+                cursor, keys = await redis.scan(  # pyright: ignore[reportUnknownMemberType]
                     cursor=cursor, match=full_pattern, count=1000
                 )
                 if keys:
@@ -221,7 +226,7 @@ async def cache_lock(
 ) -> AsyncIterator[None]:
     """Distributed lock using Redis when available; local lock otherwise."""
     if _CACHE_URL.startswith(("redis://", "rediss://")):
-        redis = Redis.from_url(_CACHE_URL)
+        redis: Redis = Redis.from_url(_CACHE_URL)  # pyright: ignore[reportUnknownMemberType]
         lock = redis.lock(_ns_key(f"lock:{name}", namespace), timeout=timeout)
         try:
             acquired = await lock.acquire(blocking=True, blocking_timeout=timeout)
@@ -232,7 +237,7 @@ async def cache_lock(
                 yield
         finally:
             try:
-                if lock.locked():
+                if await lock.locked():
                     await lock.release()
             finally:
                 await redis.aclose()
