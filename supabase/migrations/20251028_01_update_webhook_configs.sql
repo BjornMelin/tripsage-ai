@@ -7,7 +7,7 @@ BEGIN
   INSERT INTO public.webhook_configs(name, url, events, headers, is_active)
   VALUES (
     'trip_notifications',
-    'https://vcfpldtbehtwulxtgpxl.supabase.co/functions/v1/trip-notifications',
+    'https://<PROJECT_REF>.supabase.co/functions/v1/trip-notifications',
     ARRAY['trip.reminder','collaborator.invited','booking.confirmed'],
     '{}'::jsonb,
     false
@@ -21,7 +21,7 @@ BEGIN
   INSERT INTO public.webhook_configs(name, url, events, headers, is_active)
   VALUES (
     'file_processing',
-    'https://vcfpldtbehtwulxtgpxl.supabase.co/functions/v1/file-processing',
+    'https://<PROJECT_REF>.supabase.co/functions/v1/file-processing',
     ARRAY['storage.file.uploaded','storage.file.updated'],
     '{}'::jsonb,
     false
@@ -35,7 +35,7 @@ BEGIN
   INSERT INTO public.webhook_configs(name, url, events, headers, is_active)
   VALUES (
     'cache_invalidation',
-    'https://vcfpldtbehtwulxtgpxl.supabase.co/functions/v1/cache-invalidation',
+    'https://<PROJECT_REF>.supabase.co/functions/v1/cache-invalidation',
     ARRAY['content.published','content.updated','content.deleted'],
     '{}'::jsonb,
     false
@@ -45,4 +45,3 @@ BEGIN
       events = EXCLUDED.events,
       headers = EXCLUDED.headers;
 END$$;
-
