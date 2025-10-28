@@ -24,7 +24,7 @@ This documentation site provides everything you need to integrate with the TripS
 ### [API Reference](api/rest-endpoints.md)
 
 - [REST Endpoints](api/rest-endpoints.md) - Complete REST API reference
-- [WebSocket API](api/websocket-realtime-api.md) - Real-time communication
+- [Realtime (Supabase)](api/websocket-realtime-api.md) - Private channels + RLS
 - [Dashboard API](api/dashboard-api.md) - Administrative endpoints
 - [Error Codes](api/error-codes.md) - Error handling reference
 
@@ -86,9 +86,9 @@ The API uses JWT-based authentication with Supabase integration. All requests re
 
 API calls are rate-limited to prevent abuse. Check the response headers for rate limit information.
 
-### WebSocket Real-time Updates
+### Realtime Updates (Supabase)
 
-For real-time features like live pricing updates and collaborative planning, use the WebSocket API.
+For real-time features like live pricing updates and collaborative planning, use Supabase Realtime with private channels.
 
 ### Error Handling
 

@@ -38,6 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frontend Realtime singleton client: `getBrowserClient()` exported from `frontend/src/lib/supabase/client.ts` to unify token and channel behavior across the app.
 - Realtime token lifecycle: `RealtimeAuthProvider` now calls `supabase.realtime.setAuth(token)` on login and clears on logout/unmount.
 - Chat store Realtime wiring with typed subscriptions for `chat:message`, `chat:message_chunk`, `chat:typing`, and `agent_status_update`.
+- Base schema consolidated into authoritative migration and applied:
+  - supabase/migrations/20251027174600_base_schema.sql
+- Storage infrastructure migration (guarded) with buckets, queues, versioning, and RLS:
+  - supabase/migrations/202510271702_storage_infrastructure.sql
+  - Helpers moved to `public.*` schema to avoid storage schema ACL issues
+- Repo linked to new Supabase project ref via CLI: `npx supabase link --project-ref vcfpldtbehtwulxtgpxl`
 
 ### Changed
 
@@ -102,6 +108,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Legacy Supabase schema sources and scripts removed:
+  - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
+  - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
+
+
 - Deleted `frontend/src/contexts/auth-context.tsx` and all imports
 - Deleted `frontend/src/components/providers/supabase-provider.tsx` and layout wrapper
 - Removed legacy callback page `frontend/src/app/(auth)/callback/page.tsx` and context-dependent tests
@@ -135,7 +146,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed obsolete integration test referencing the removed HTTP client (`tests/integration/external/test_duffel_integration.py`)
 - Fixed dashboard compatibility shims (legacy `DashboardData` fields, `ApiKeyValidator`/`ApiKeyMonitoringService` aliases) and the unused flights mapper module (`tripsage_core.models.mappers`)
 - Fixed linting/typing issues in touched flight tests and orchestration node; pyright/pylint clean on changed scope
-- Fixed WebSocket integration/unit test suites updated for the refactored router (async dependency overrides, Supabase wiring, Unicode homograph coverage)
+- Fixed WebSocket integration/unit test suites updated for the refactored router
+- Supabase config.toml updated for CLI v2 compatibility (removed invalid keys; normalized [auth.email] flags; set db.major_version=17). Idempotent fixes to avoid `experimental.webhooks` error by leaving undefined.
+- Realtime policy migration made idempotent (guard with `pg_policies` checks). Session policies created only when `public.chat_sessions` exists.
+- Storage migration guarded to work on a fresh project: wraps policies referencing `public.file_attachments` and `public.trips` in conditional DO blocks; functions reference application tables at runtime only.
+- Realtime helpers/policies and storage migration filenames normalized to 2025-10-27 timestamps.
+ (async dependency overrides, Supabase wiring, Unicode homograph coverage)
 
 ### Security
 
@@ -174,6 +190,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Legacy Supabase schema sources and scripts removed:
+  - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
+  - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
+
+
 - Removed dict-shaped responses in list/search paths; replaced with typed response models
 - Removed scattered UUID/datetime parsing; centralized to helpers
 
@@ -209,6 +230,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated observability unified with metrics and health endpoints across services
 
 ### Removed
+
+- Legacy Supabase schema sources and scripts removed:
+  - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
+  - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
+
 
 - Removed complex tool registry and redundant orchestration/abstraction layers
 - Removed nested configuration classes and legacy database service implementations
@@ -267,6 +293,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(jsdoc): ensured updated files include clear @fileoverview descriptions following Google style
 
 ### Removed
+
+- Legacy Supabase schema sources and scripts removed:
+  - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
+  - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
+
 
 - tests(frontend): deleted/replaced deprecated and brittle tests asserting raw HTML structure and Tailwind class lists; removed NODE_ENV mutation based tests.
 

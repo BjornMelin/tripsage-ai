@@ -56,7 +56,7 @@ Direct SDK integrations replacing complex abstraction layers, reducing latency a
 
 ### 5. **Real-time Collaboration**
 
-WebSocket-based architecture enabling live trip planning, agent status updates, and multi-user collaboration with conflict resolution.
+Supabase Realtime-based architecture enabling live trip planning, agent status updates, and multi-user collaboration with conflict resolution.
 
 ## 🏗️ Project Structure
 
@@ -117,7 +117,7 @@ Current production architecture achievements:
 | Metric | Target | Achieved | Technology |
 |--------|--------|----------|------------|
 | Cache Performance | <10ms latency | **Edge/Global** | Upstash Redis |
-| Concurrent Connections | 1000+ | **1500+** | WebSocket |
+| Concurrent Connections | 1000+ | **1500+** | Supabase Realtime |
 | API Response Time | <100ms | **<50ms** | FastAPI |
 | Database Connections | 500+ | **1000+** | Supabase PostgreSQL |
 | Storage Cost Reduction | 50% | **80%** | Unified Architecture |

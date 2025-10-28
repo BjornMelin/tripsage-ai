@@ -10,7 +10,7 @@
 - [Authentication](#authentication)
 - [Flight Search](#flight-search)
 - [Accommodation Search](#accommodation-search)
-- [WebSocket Chat](#websocket-chat)
+- [Realtime Chat](#realtime-chat-supabase)
 - [Trip Management](#trip-management)
 - [🧠 AI Memory System](#-ai-memory-system)
 - [Rate Limiting](#rate-limiting)
@@ -310,140 +310,16 @@ curl -X POST http://localhost:8001/api/accommodations/search \
 
 ---
 
-## WebSocket Chat
+## Realtime Chat (Supabase)
 
-### **JavaScript WebSocket Connection**
-
-```javascript
-// Connect to WebSocket
-const ws = new WebSocket("ws://localhost:8001/api/chat/ws?token=YOUR_TOKEN");
-
-ws.onopen = function (event) {
-  console.log("Connected to TripSage Chat");
-
-  // Send initial message
-  ws.send(
-    JSON.stringify({
-      type: "user_message",
-      content: "I want to plan a trip to Japan for 2 weeks",
-      session_id: "session-123",
-      metadata: {
-        user_id: "user-456",
-        preferences: {
-          budget: 5000,
-          interests: ["culture", "food", "technology"],
-        },
-      },
-    })
-  );
-};
-
-ws.onmessage = function (event) {
-  const message = JSON.parse(event.data);
-  console.log("Received:", message);
-
-  switch (message.type) {
-    case "ai_response":
-      displayAIMessage(message.content);
-      break;
-    case "system_notification":
-      showNotification(message.content);
-      break;
-    case "typing_indicator":
-      showTypingIndicator(message.agent);
-      break;
-  }
-};
-
-ws.onerror = function (error) {
-  console.error("WebSocket error:", error);
-};
-
-ws.onclose = function (event) {
-  console.log("WebSocket connection closed:", event.code, event.reason);
-};
+```ts
+const channel = supabase
+  .channel(`session:${sessionId}`, { config: { private: true } })
+  .on('broadcast', { event: 'chat:message' }, ({ payload }) => {
+    console.log('message', payload);
+  })
+  .subscribe();
 ```
-
-### **Message Types**
-
-#### **User Message**
-
-```json
-{
-  "type": "user_message",
-  "content": "Plan a 7-day trip to Paris with a budget of $3000",
-  "session_id": "session-123",
-  "timestamp": "2025-06-16T10:30:00Z",
-  "metadata": {
-    "user_id": "user-456",
-    "message_id": "msg-789"
-  }
-}
-```
-
-#### **AI Response**
-
-```json
-{
-  "type": "ai_response",
-  "content": "I'd be happy to help plan your Paris trip! Based on your $3000 budget for 7 days, here's what I recommend...",
-  "session_id": "session-123",
-  "timestamp": "2025-06-16T10:30:15Z",
-  "metadata": {
-    "agent": "destination_research_agent",
-    "confidence": 0.95,
-    "sources": ["duffel", "booking.com", "google_maps"]
-  }
-}
-```
-
-#### **System Notification**
-
-```json
-{
-  "type": "system_notification",
-  "content": "Flight prices updated for your Paris trip - found 3 cheaper options!",
-  "session_id": "session-123",
-  "timestamp": "2025-06-16T10:31:00Z",
-  "metadata": {
-    "notification_type": "price_alert",
-    "action_url": "/trips/trip-123/flights"
-  }
-}
-```
-
-### **Python WebSocket Client**
-
-```python
-import asyncio
-import websockets
-import json
-
-async def chat_client():
-    uri = "ws://localhost:8001/api/chat/ws?token=YOUR_TOKEN"
-
-    async with websockets.connect(uri) as websocket:
-        # Send message
-        message = {
-            "type": "user_message",
-            "content": "Find me flights from NYC to Tokyo",
-            "session_id": "session-456"
-        }
-        await websocket.send(json.dumps(message))
-
-        # Listen for responses
-        async for message in websocket:
-            data = json.loads(message)
-            print(f"Received: {data}")
-
-            if data['type'] == 'ai_response':
-                print(f"AI: {data['content']}")
-
-# Run the client
-asyncio.run(chat_client())
-```
-
----
 
 ## Trip Management
 

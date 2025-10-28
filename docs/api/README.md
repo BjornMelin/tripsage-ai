@@ -33,7 +33,7 @@ curl http://localhost:8000/api/health
 | Document                                                     | Description                               | Focus               |
 | ------------------------------------------------------------ | ----------------------------------------- | ------------------- |
 | **[REST API Reference](rest-endpoints.md)**                  | Complete endpoint documentation           | All endpoints       |
-| **[WebSocket and Real-time API](websocket-realtime-api.md)** | Real-time communication and collaboration | WebSocket endpoints |
+| **[Realtime (Supabase)](websocket-realtime-api.md)** | Real-time communication and collaboration | Private channels (Supabase Realtime) |
 | **[Usage Examples](usage-examples.md)**                      | Practical code snippets                   | Quick reference     |
 | **[Error Codes](error-codes.md)**                            | Error handling reference                  | Troubleshooting     |
 
