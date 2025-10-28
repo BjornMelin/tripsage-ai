@@ -3,7 +3,7 @@
 This module provides health check endpoints including:
 - Basic application health
 - Database connectivity checks
-- Cache (DragonflyDB) health
+- Cache (Redis) health
 - Detailed readiness checks
 """
 
@@ -250,7 +250,7 @@ async def database_health_check(request: Request, db_service: DatabaseDep):
             if isinstance(pool_stats, dict):
                 # Assign to avoid pylint misdetection of Pydantic FieldInfo
                 current = dict(health.details or {})
-                current.update(pool_stats)
+                current.update(cast(dict[str, object], pool_stats))
                 health.details = current
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to get pool stats: %s", e)
@@ -262,7 +262,7 @@ async def database_health_check(request: Request, db_service: DatabaseDep):
 @trace_span(name="api.health.cache")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def cache_health_check(request: Request, cache_service: CacheDep):
-    """Detailed cache (DragonflyDB) health check.
+    """Detailed cache (Redis) health check.
 
     Returns cache health information including:
     - Connection status

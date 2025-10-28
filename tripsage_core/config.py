@@ -74,7 +74,7 @@ class Settings(BaseSettings):
         description="Application secret key for encryption and signing",
     )
 
-    # Redis/Cache (DragonflyDB)
+    # Redis/Cache
     redis_url: str | None = None
     redis_password: str | None = None
     redis_max_connections: int = Field(
@@ -112,9 +112,7 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = Field(
         default=True, description="Enable rate limiting middleware"
     )
-    rate_limit_use_dragonfly: bool = Field(
-        default=True, description="Use DragonflyDB for distributed rate limiting"
-    )
+    # Dragonfly toggle removed; Redis is the standard backend for limiting
 
     # Default rate limits (can be overridden per API key/user)
     rate_limit_requests_per_minute: int = Field(

@@ -3,7 +3,7 @@
 # pylint: disable=import-error
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.tools import Tool
 from pydantic import BaseModel, Field
@@ -149,8 +149,10 @@ class AirbnbMCPBridge:
                 tool_name = f"airbnb_{method}"
                 self._tool_metadata[tool_name] = AirbnbToolWrapper(
                     name=tool_name,
-                    description=tool_metadata[primary_method]["description"],
-                    parameters=tool_metadata[primary_method]["parameters"],
+                    description=cast(str, tool_metadata[primary_method]["description"]),
+                    parameters=cast(
+                        dict[str, Any], tool_metadata[primary_method]["parameters"]
+                    ),
                     mcp_method=method,
                 )
 
@@ -163,7 +165,7 @@ class AirbnbMCPBridge:
         if not self._initialized:
             await self.initialize()
 
-        tools = []
+        tools: list[Tool] = []
         for tool_name, metadata in self._tool_metadata.items():
             if tool_name not in self._tool_cache:
                 # Create LangGraph tool
@@ -184,7 +186,7 @@ class AirbnbMCPBridge:
             LangGraph Tool instance
         """
 
-        async def tool_function(**kwargs) -> str:
+        async def tool_function(**kwargs: Any) -> str:
             """Execute Airbnb tool via MCPBridge."""
             try:
                 logger.debug(
@@ -207,7 +209,7 @@ class AirbnbMCPBridge:
         # Create LangGraph tool with proper metadata
         return Tool(
             name=metadata.name,
-            description=metadata.description,
+            description=str(metadata.description),
             func=tool_function,
             args_schema=self._create_args_schema(metadata.parameters),
         )
@@ -225,14 +227,17 @@ class AirbnbMCPBridge:
             return None
 
         # Create annotations and fields for dynamic Pydantic model
-        annotations = {}
-        field_defaults = {}
+        annotations: dict[str, Any] = {}
+        field_defaults: dict[str, Any] = {}
 
         for param_name, param_info in parameters.items():
             if isinstance(param_info, dict):
-                param_type = param_info.get("type", "string")
-                param_desc = param_info.get("description", f"{param_name} parameter")
-                required = param_info.get("required", False)
+                info = cast(dict[str, Any], param_info)
+                param_type: str = str(info.get("type", "string"))
+                param_desc: str = str(
+                    info.get("description", f"{param_name} parameter")
+                )
+                required: bool = bool(info.get("required", False))
 
                 # Map JSON schema types to Python types
                 if param_type == "string":
