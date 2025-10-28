@@ -15,11 +15,12 @@ Features:
 
 import asyncio
 import contextlib
+import logging
 import time
 from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
@@ -32,10 +33,9 @@ from tripsage_core.services.business.audit_logging_service import (
     audit_security_event,
     get_audit_logger,
 )
-from tripsage_core.utils.logging_utils import get_logger
 
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ThreatLevel(str, Enum):
@@ -96,7 +96,9 @@ class SecurityIncident(TripSageModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # Analysis
-    indicators: list[ThreatIndicator] = Field(default_factory=list)
+    indicators: list[ThreatIndicator] = Field(
+        default_factory=lambda: cast(list[ThreatIndicator], [])
+    )
     risk_score: int = Field(default=0, ge=0, le=100)
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
 
@@ -137,7 +139,7 @@ class ActivityPattern(BaseModel):
     escalate_threshold: float = 0.9
 
 
-class SecurityMonitoringService:
+class SecurityMonitoringService:  # pylint: disable=too-many-instance-attributes
     """Real-time security monitoring and threat detection service.
 
     This service continuously analyzes audit events to detect suspicious
@@ -148,18 +150,22 @@ class SecurityMonitoringService:
         """Initialize the security monitoring service."""
         self.audit_logger = audit_logger
         self._is_running = False
-        self._monitoring_task: asyncio.Task | None = None
+        self._monitoring_task: asyncio.Task[None] | None = None
 
         # Detection state
-        self._event_buffer: deque = deque(maxlen=10000)
+        self._event_buffer: deque[AuditEvent] = deque(maxlen=10000)
         self._active_incidents: dict[str, SecurityIncident] = {}
         self._threat_indicators: dict[str, ThreatIndicator] = {}
 
         # Pattern tracking
         self._patterns = self._initialize_patterns()
-        self._actor_activity: dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
-        self._ip_activity: dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
-        self._service_activity: dict[str, deque] = defaultdict(
+        self._actor_activity: dict[str, deque[AuditEvent]] = defaultdict(
+            lambda: deque(maxlen=1000)
+        )
+        self._ip_activity: dict[str, deque[AuditEvent]] = defaultdict(
+            lambda: deque(maxlen=1000)
+        )
+        self._service_activity: dict[str, deque[AuditEvent]] = defaultdict(
             lambda: deque(maxlen=1000)
         )
 
@@ -318,7 +324,7 @@ class SecurityMonitoringService:
                 self._service_activity[service].append(event)
 
         # Detect threats using patterns
-        threats = []
+        threats: list[ThreatIndicator] = []
         for pattern in self._patterns:
             if event.event_type in pattern.event_types:
                 threat = await self._check_pattern(event, pattern)
@@ -344,10 +350,10 @@ class SecurityMonitoringService:
         cutoff_time = now - time_window
 
         # Get relevant events based on pattern criteria
-        relevant_events = []
+        relevant_events: list[AuditEvent] = []
 
         if pattern.same_actor:
-            actor_events = [
+            actor_events: list[AuditEvent] = [
                 e
                 for e in self._actor_activity[event.actor.actor_id]
                 if e.timestamp >= cutoff_time and e.event_type in pattern.event_types
@@ -355,7 +361,7 @@ class SecurityMonitoringService:
             relevant_events.extend(actor_events)
 
         if pattern.same_ip:
-            ip_events = [
+            ip_events: list[AuditEvent] = [
                 e
                 for e in self._ip_activity[event.source.ip_address]
                 if e.timestamp >= cutoff_time and e.event_type in pattern.event_types
@@ -369,7 +375,7 @@ class SecurityMonitoringService:
                 else None
             )
             if service:
-                service_events = [
+                service_events: list[AuditEvent] = [
                     e
                     for e in self._service_activity[service]
                     if e.timestamp >= cutoff_time
@@ -425,7 +431,7 @@ class SecurityMonitoringService:
 
     async def _detect_anomalies(self, event: AuditEvent) -> list[ThreatIndicator]:
         """Detect anomalies using statistical analysis."""
-        threats = []
+        threats: list[ThreatIndicator] = []
 
         # Time-based anomaly detection
         hour_of_day = event.timestamp.hour
@@ -497,14 +503,15 @@ class SecurityMonitoringService:
         # Simple heuristic: activity outside business hours (9-17) on weekdays
         # or any activity on weekends might be suspicious for some actors
 
-        actor_events = list(self._actor_activity[actor_id])
+        actor_events: list[AuditEvent] = list(self._actor_activity[actor_id])
         if len(actor_events) < 10:  # Not enough data
             return False
 
         # Count activity by hour
-        hour_counts = defaultdict(int)
-        for event in actor_events[-100:]:  # Last 100 events
-            hour_counts[event.timestamp.hour] += 1
+        hour_counts: dict[int, int] = {}
+        for e in actor_events[-100:]:  # Last 100 events
+            h = e.timestamp.hour
+            hour_counts[h] = hour_counts.get(h, 0) + 1
 
         # If this hour has < 5% of total activity, it's unusual
         total_activity = sum(hour_counts.values())
@@ -519,10 +526,10 @@ class SecurityMonitoringService:
             return False
 
         # Get historical countries
-        historical_countries = set()
-        for event in actor_events[-50:]:  # Last 50 events
-            if event.source.country:
-                historical_countries.add(event.source.country)
+        historical_countries: set[str] = set()
+        for e in actor_events[-50:]:  # Last 50 events
+            if e.source.country:
+                historical_countries.add(e.source.country)
 
         # If country hasn't been seen before and we have significant history
         return country not in historical_countries and len(historical_countries) > 0
@@ -677,7 +684,7 @@ class SecurityMonitoringService:
         self, threat: ThreatIndicator, incident: SecurityIncident
     ):
         """Take automated defensive actions based on threat."""
-        actions_taken = []
+        actions_taken: list[str] = []
 
         # Rate limiting or blocking based on threat type
         if threat.threat_category in [
@@ -871,7 +878,7 @@ _monitoring_service: SecurityMonitoringService | None = None
 
 async def get_monitoring_service() -> SecurityMonitoringService:
     """Get or create the global monitoring service instance."""
-    global _monitoring_service
+    global _monitoring_service  # pylint: disable=global-statement
 
     if _monitoring_service is None:
         _monitoring_service = SecurityMonitoringService()
@@ -882,7 +889,7 @@ async def get_monitoring_service() -> SecurityMonitoringService:
 
 async def shutdown_monitoring_service():
     """Shutdown the global monitoring service instance."""
-    global _monitoring_service
+    global _monitoring_service  # pylint: disable=global-statement
 
     if _monitoring_service is not None:
         await _monitoring_service.stop()

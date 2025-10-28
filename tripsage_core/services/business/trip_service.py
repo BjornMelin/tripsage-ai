@@ -4,12 +4,14 @@ This service handles all trip-related business logic including trip creation,
 retrieval, updates, sharing, and collaboration features.
 """
 
+from __future__ import annotations
+
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import Field, ValidationInfo, field_validator
 
 from tripsage_core.exceptions.exceptions import (
     CoreAuthorizationError,
@@ -51,7 +53,8 @@ class TripCreateRequest(TripSageModel):
     end_date: datetime = Field(..., description="Trip end date")
     destination: str = Field(..., description="Primary destination")
     destinations: list[TripLocation] = Field(
-        default_factory=list, description="Trip destinations"
+        default_factory=lambda: cast(list[TripLocation], []),
+        description="Trip destinations",
     )
     budget: Budget = Field(..., description="Trip budget with breakdown")
     travelers: int = Field(default=1, ge=1, description="Number of travelers")
@@ -64,7 +67,7 @@ class TripCreateRequest(TripSageModel):
 
     @field_validator("end_date")
     @classmethod
-    def validate_dates(cls, v, info):
+    def validate_dates(cls, v: datetime, info: ValidationInfo) -> datetime:
         """Validate that end_date is after start_date."""
         if "start_date" in info.data and v <= info.data["start_date"]:
             raise ValueError("End date must be after start date")
@@ -100,7 +103,8 @@ class TripResponse(TripSageModel):
     end_date: datetime = Field(..., description="Trip end date")
     destination: str = Field(..., description="Primary destination")
     destinations: list[TripLocation] = Field(
-        default_factory=list, description="Trip destinations"
+        default_factory=lambda: cast(list[TripLocation], []),
+        description="Trip destinations",
     )
     budget: Budget = Field(..., description="Trip budget with breakdown")
     travelers: int = Field(..., description="Number of travelers")
@@ -124,7 +128,18 @@ class TripResponse(TripSageModel):
 class TripService:
     """Service for managing trips."""
 
-    def __init__(self, database_service=None, user_service=None):
+    if TYPE_CHECKING:
+        # Imported for typing only to avoid import cycles at runtime
+        from tripsage_core.services.business.user_service import UserService
+        from tripsage_core.services.infrastructure.database_service import (
+            DatabaseService,
+        )
+
+    def __init__(
+        self,
+        database_service: DatabaseService | None = None,
+        user_service: UserService | None = None,
+    ) -> None:
         """Initialize trip service with dependencies.
 
         Args:
@@ -143,8 +158,9 @@ class TripService:
 
             user_service = UserService()
 
-        self.db = database_service
-        self.user_service = user_service
+        # Explicit typing helps pyright infer method return types
+        self.db: DatabaseService = database_service
+        self.user_service: UserService = user_service
 
     async def create_trip(
         self, user_id: str, trip_data: TripCreateRequest
@@ -233,6 +249,7 @@ class TripService:
     async def get_user_trips(
         self,
         user_id: str,
+        *,
         status: TripStatus | None = None,
         visibility: TripVisibility | None = None,
         tag: str | None = None,
@@ -272,7 +289,7 @@ class TripService:
                 order_by="-created_at",
             )
 
-            trips = []
+            trips: list[TripResponse] = []
             for result in results:
                 trip = await self._build_trip_response(result)
                 trips.append(trip)
@@ -556,7 +573,7 @@ class TripService:
                 "trip_collaborators", "*", filters={"user_id": user_id}
             )
 
-            trips = []
+            trips: list[TripResponse] = []
             for collab in collaborations:
                 result = await self.db.get_trip_by_id(collab["trip_id"])
                 if result:
@@ -577,6 +594,7 @@ class TripService:
         self,
         user_id: str,
         query: str,
+        *,
         filters: dict[str, Any] | None = None,
         limit: int = 50,
         offset: int = 0,
@@ -605,7 +623,7 @@ class TripService:
                 search_filters, limit=limit, offset=offset
             )
 
-            trips = []
+            trips: list[TripResponse] = []
             for result in results:
                 # Check access
                 if await self._check_trip_access(result["id"], user_id):
@@ -647,7 +665,9 @@ class TripService:
             return False
 
         # Check if collaborator
-        collaborators = await self.db.get_trip_collaborators(trip_id)
+        collaborators: list[dict[str, Any]] = await self.db.get_trip_collaborators(
+            trip_id
+        )
         for collab in collaborators:
             if collab["user_id"] == user_id:
                 return True
@@ -665,18 +685,26 @@ class TripService:
             Trip response model
         """
         # Get related counts
-        counts = await self.db.get_trip_related_counts(trip_data["id"])
+        counts: dict[str, int] = await self.db.get_trip_related_counts(trip_data["id"])
 
         # Get shared user IDs
-        collaborators = await self.db.get_trip_collaborators(trip_data["id"])
-        shared_with = [c["user_id"] for c in collaborators]
+        collaborators: list[dict[str, Any]] = await self.db.get_trip_collaborators(
+            trip_data["id"]
+        )
+        shared_with: list[str] = [c["user_id"] for c in collaborators]
 
         # Build destinations
-        destinations = [
-            TripLocation(**dest_data)
-            for dest_data in trip_data.get("destinations", [])
-            if isinstance(dest_data, dict)
-        ]
+        destinations: list[TripLocation] = []
+        raw_destinations = trip_data.get("destinations", [])
+        if isinstance(raw_destinations, list):
+            for dest_data in cast(list[Any], raw_destinations):
+                if isinstance(dest_data, TripLocation):
+                    destinations.append(dest_data)
+                    continue
+
+                if isinstance(dest_data, dict):
+                    destination_payload = cast(dict[str, Any], dest_data)
+                    destinations.append(TripLocation(**destination_payload))
 
         return TripResponse(
             id=UUID(trip_data["id"]),
@@ -696,9 +724,10 @@ class TripService:
             preferences=TripPreferences(**trip_data.get("preferences_extended", {})),
             created_at=trip_data["created_at"],
             updated_at=trip_data["updated_at"],
-            note_count=counts.get("notes", 0),
-            attachment_count=counts.get("attachments", 0),
-            collaborator_count=counts.get("collaborators", 0),
+            # Map known keys with safe fallbacks
+            note_count=int(counts.get("notes", counts.get("messages", 0))),
+            attachment_count=int(counts.get("attachments", 0)),
+            collaborator_count=int(counts.get("collaborators", 0)),
             shared_with=shared_with,
         )
 

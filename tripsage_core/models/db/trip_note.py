@@ -4,7 +4,7 @@ This module provides the TripNote model for storing notes
 and comments associated with trips.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from pydantic import Field, field_validator
 
@@ -37,14 +37,19 @@ class TripNote(TripSageModel):
     @property
     def is_recent(self) -> bool:
         """Check if the note was created recently (within 24 hours)."""
-        from datetime import datetime as datetime_type, timedelta
-
-        return datetime_type.now() - self.timestamp < timedelta(hours=24)
+        note_timestamp = self._timestamp_as_datetime()
+        current_timestamp = (
+            datetime.now(tz=note_timestamp.tzinfo)
+            if note_timestamp.tzinfo is not None
+            else datetime.now()
+        )
+        return current_timestamp - note_timestamp < timedelta(hours=24)
 
     @property
     def formatted_timestamp(self) -> str:
         """Get the formatted timestamp for display."""
-        return self.timestamp.strftime("%Y-%m-%d %H:%M")
+        note_timestamp = self._timestamp_as_datetime()
+        return note_timestamp.strftime("%Y-%m-%d %H:%M")
 
     @property
     def content_snippet(self) -> str:
@@ -84,3 +89,8 @@ class TripNote(TripSageModel):
 
         self.content = new_content
         return True
+
+    def _timestamp_as_datetime(self) -> datetime:
+        """Return the timestamp as a datetime instance, validating the payload."""
+        timestamp_value: datetime = self.timestamp
+        return timestamp_value
