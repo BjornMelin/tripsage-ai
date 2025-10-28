@@ -9,7 +9,7 @@ import logging
 from datetime import UTC, datetime
 from enum import Enum
 from functools import lru_cache
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -338,7 +338,7 @@ class AgentHandoffCoordinator:
         self, condition_key: str, condition_value: Any, state: TravelPlanningState
     ) -> bool:
         """Return True when a handoff condition is satisfied."""
-        result = True
+        result: bool = True
 
         if condition_key == "keywords":
             result = self._has_keywords(condition_value, state)
@@ -354,11 +354,31 @@ class AgentHandoffCoordinator:
                 result = False
 
         elif condition_key == "error_count":
-            error_history = state.get("error_history", [])
-            error_count = len(error_history)
+            # error_info is a structured dict in state;
+            # fall back to history list if present.
+            error_info = state.get("error_info", {})
+            error_history = error_info.get("error_history", [])
+            error_count = (
+                len(cast(list[dict[str, Any]], error_history))
+                if isinstance(error_history, list)
+                else 0
+            )
 
             if isinstance(condition_value, dict):
-                for operator, threshold in condition_value.items():
+                # Build a typed operator→threshold map from possibly unknown dict views
+                raw: dict[object, object] = cast(dict[object, object], condition_value)
+                cond_map: dict[str, int] = {}
+                for k, v in raw.items():
+                    key_str: str = str(k)
+                    if isinstance(v, (int, str)):
+                        try:
+                            val_int: int = int(v)
+                        except ValueError:
+                            continue
+                        cond_map[key_str] = val_int
+                if not cond_map:
+                    return False
+                for operator, threshold in cond_map.items():
                     if operator == ">=" and error_count < threshold:
                         result = False
                         break
@@ -368,11 +388,20 @@ class AgentHandoffCoordinator:
                     if operator == "==" and error_count != threshold:
                         result = False
                         break
+            # Single-threshold comparison
+            elif isinstance(condition_value, (int, str)):
+                try:
+                    threshold_int = int(condition_value)
+                    result = error_count == threshold_int
+                except ValueError:
+                    result = False
             else:
-                result = error_count == condition_value
+                result = False
 
         elif condition_key in state:
-            result = state[condition_key] == condition_value
+            # Avoid passing Unknown to bool(); compare directly to produce a bool
+            state_val: Any = state.get(condition_key)
+            result = state_val == condition_value
 
         return result
 
@@ -419,7 +448,7 @@ class AgentHandoffCoordinator:
             HandoffContext with preserved information
         """
         # Extract preserved context based on rule
-        preserved_context = {}
+        preserved_context: dict[str, Any] = {}
         for key in rule.context_keys:
             if key in state:
                 preserved_context[key] = state[key]

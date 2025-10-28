@@ -2,7 +2,7 @@
 
 This module provides core infrastructure services across TripSage:
 - Database operations (Supabase/PostgreSQL)
-- Caching (DragonflyDB)
+- Caching (Redis)
 - API key monitoring
 """
 

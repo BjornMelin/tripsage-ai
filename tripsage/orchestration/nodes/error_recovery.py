@@ -6,7 +6,7 @@ and improved recovery strategies.
 """
 
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any
 
 from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
@@ -44,9 +44,9 @@ class ErrorRecoveryNode(BaseAgentNode):
         """
         # Get error info from enhanced state structure
         error_info = ErrorInfo.model_validate(state.get("error_info", {}))
-        current_agent_value = state.get("current_agent")
+        current_agent_value: Any = state.get("current_agent")
         current_agent = (
-            cast(str, current_agent_value) if current_agent_value else "router"
+            current_agent_value if isinstance(current_agent_value, str) else "router"
         )
 
         logger.info(
@@ -77,7 +77,7 @@ class ErrorRecoveryNode(BaseAgentNode):
         """
         current_agent_value = state.get("current_agent")
         current_agent = (
-            cast(str, current_agent_value) if current_agent_value else "router"
+            current_agent_value if isinstance(current_agent_value, str) else "router"
         )
         retry_count = error_info.retry_attempts.get(current_agent, 0)
 
@@ -153,7 +153,7 @@ class ErrorRecoveryNode(BaseAgentNode):
         """
         current_agent_value = state.get("current_agent")
         current_agent = (
-            cast(str, current_agent_value) if current_agent_value else "router"
+            current_agent_value if isinstance(current_agent_value, str) else "router"
         )
 
         logger.info("Attempting fallback strategy for %s", current_agent)

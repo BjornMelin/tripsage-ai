@@ -78,7 +78,7 @@ def _get_service_from_container(service_name: str) -> Any:
 
 def _get_mcp_service() -> AirbnbMCP:
     """Return the configured MCP service singleton."""
-    return _mcp_service or _default_mcp_service
+    return _mcp_service if _mcp_service is not None else _default_mcp_service
 
 
 AddMemoryFn = Callable[..., Awaitable[dict[str, Any]]]

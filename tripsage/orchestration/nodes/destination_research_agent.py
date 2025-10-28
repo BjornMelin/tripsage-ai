@@ -17,7 +17,6 @@ from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.utils.structured import StructuredExtractor, model_to_dict
 from tripsage_core.config import get_settings
-from tripsage_core.services import configuration_service as configuration_service_module
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -57,14 +56,9 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             services: Application service container for dependency injection
             **config_overrides: Runtime configuration overrides (e.g., temperature=0.8)
         """
-        # Get configuration service for database-backed config
-        self.config_service = cast(
-            Any, configuration_service_module
-        ).get_configuration_service()
-
         # Store overrides for async config loading
         self.config_overrides = config_overrides
-        self.agent_config: dict[str, Any] | None = None
+        self.agent_config: dict[str, Any] = {}
         self.llm: ChatOpenAI | None = None
         self.available_tools: list[BaseTool] | None = None
         self.tool_map: dict[str, BaseTool] = {}
@@ -73,6 +67,9 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
         ) = None
         self.llm_with_tools = None
         super().__init__("destination_research_agent", services)
+
+        # Get configuration service for database-backed config
+        self.config_service: Any = self.get_service("configuration_service")
 
     def _initialize_tools(self) -> None:
         """Initialize destination research tools using simple tool catalog."""
@@ -84,7 +81,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
 
         # Bind tools to LLM for direct use
         if self.llm:
-            self.llm_with_tools = self.llm.bind_tools(self.available_tools)
+            self.llm_with_tools = cast(Any, self.llm).bind_tools(self.available_tools)
 
         logger.info(
             "Initialized destination research agent with %s tools",
@@ -104,35 +101,23 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             self.agent_config = await self.config_service.get_agent_config(
                 "destination_research_agent", **self.config_overrides
             )
-            if self.agent_config is None:
+            if not self.agent_config:
                 raise RuntimeError(
                     "Destination research configuration could not be loaded"
                 )
-            fallback = get_default_config()
-            model_name = str(self.agent_config.get("model", fallback.default_model))
-            temperature = float(
-                self.agent_config.get("temperature", fallback.temperature)
-            )
-            # type: ignore # pylint: disable=no-member
-            api_key = (
-                self.agent_config.get("api_key")
-                or get_settings().openai_api_key.get_secret_value()
-            )
 
-            self.llm = ChatOpenAI(
-                model=model_name,
-                temperature=temperature,
-                api_key=api_key,  # type: ignore
-            )
+            self.llm = self._create_llm_from_config()
             self._parameter_extractor = StructuredExtractor(
                 self.llm, DestinationResearchParameters, logger=logger
             )
-            if hasattr(self, "available_tools"):
-                self.llm_with_tools = self.llm.bind_tools(self.available_tools)
+            if self.available_tools:
+                self.llm_with_tools = cast(Any, self.llm).bind_tools(
+                    self.available_tools
+                )
 
             logger.info(
                 "Loaded destination research agent config (temp=%s)",
-                temperature,
+                self.agent_config.get("temperature"),
             )
 
         except Exception:
@@ -154,16 +139,14 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
                 "top_p": 1.0,
             }
 
-            self.llm = ChatOpenAI(
-                model=fallback.default_model,
-                temperature=fallback.temperature,
-                api_key=api_key,  # type: ignore
-            )
+            self.llm = self._create_llm_from_config()
             self._parameter_extractor = StructuredExtractor(
                 self.llm, DestinationResearchParameters, logger=logger
             )
-            if hasattr(self, "available_tools"):
-                self.llm_with_tools = self.llm.bind_tools(self.available_tools)
+            if self.available_tools:
+                self.llm_with_tools = cast(Any, self.llm).bind_tools(
+                    self.available_tools
+                )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
         """Process destination research requests.
@@ -175,7 +158,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             Updated state with destination research and response
         """
         # Ensure configuration is loaded before processing
-        if self.agent_config is None:
+        if not self.agent_config:
             await self._load_configuration()
 
         if self.llm is None:
@@ -272,9 +255,14 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
         params = model_to_dict(result)
 
         if params.get("destination"):
-            interests = params.get("specific_interests")
-            if isinstance(interests, list):
-                params["specific_interests"] = [str(item) for item in interests if item]
+            interests_any = params.get("specific_interests")
+            if isinstance(interests_any, list):
+                interests_seq: list[object] = cast(list[object], interests_any)
+                params["specific_interests"] = [
+                    str(item)
+                    for item in interests_seq
+                    if isinstance(item, (str, int, float))
+                ]
             return params
         return None
 
@@ -295,7 +283,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
         specific_interests = params.get("specific_interests", [])
 
         try:
-            research_results = {
+            research_results: dict[str, Any] = {
                 "destination": destination,
                 "research_type": research_type,
                 "overview": {},
@@ -354,7 +342,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             webcrawl_tool = self._get_tool("webcrawl_search")
             if webcrawl_tool:
                 query = f"{destination} travel guide overview tourism information"
-                result = await webcrawl_tool.ainvoke({"query": query})
+                result = await cast(Any, webcrawl_tool).ainvoke({"query": query})
                 return {"overview_data": result, "sources": "web_research"}
             return {
                 "overview_data": f"Overview research for {destination}",
@@ -373,7 +361,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             if webcrawl_tool:
                 interest_str = " ".join(interests) if interests else "top attractions"
                 query = f"{destination} {interest_str} landmarks must-see attractions"
-                result = await webcrawl_tool.ainvoke({"query": query})
+                result = await cast(Any, webcrawl_tool).ainvoke({"query": query})
 
                 if isinstance(result, str):
                     return [
@@ -410,7 +398,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
                 query = (
                     f"{destination} {interest_str} things to do activities experiences"
                 )
-                result = await webcrawl_tool.ainvoke({"query": query})
+                result = await cast(Any, webcrawl_tool).ainvoke({"query": query})
                 if isinstance(result, str):
                     return [
                         {
@@ -441,7 +429,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
                     f"{destination} travel practical information currency "
                     f"transportation visa requirements"
                 )
-                result = await webcrawl_tool.ainvoke({"query": query})
+                result = await cast(Any, webcrawl_tool).ainvoke({"query": query})
                 return {"practical_data": result, "sources": "web_research"}
             return {
                 "currency": "Local currency",
@@ -463,7 +451,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
                     f"{destination} culture customs etiquette local traditions "
                     f"social norms"
                 )
-                result = await webcrawl_tool.ainvoke({"query": query})
+                result = await cast(Any, webcrawl_tool).ainvoke({"query": query})
                 return {"cultural_data": result, "sources": "web_research"}
             return {
                 "customs": "Local customs",
@@ -482,7 +470,9 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
         try:
             weather_tool = self._get_tool("get_weather")
             if weather_tool:
-                result = await weather_tool.ainvoke({"location": destination})
+                result = await cast(Any, weather_tool).ainvoke(
+                    {"location": destination}
+                )
                 return {"weather_data": result, "travel_dates": travel_dates}
             return {
                 "climate": "Climate information",
@@ -499,7 +489,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
         try:
             maps_tool = self._get_tool("search_places")
             if maps_tool:
-                result = await maps_tool.ainvoke({"location": destination})
+                result = await cast(Any, maps_tool).ainvoke({"location": destination})
                 return {"location_data": result, "sources": "google_maps"}
             return {
                 "coordinates": "Location coordinates",
@@ -725,8 +715,15 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             ]
 
             response = await self.llm.ainvoke(messages)
-            raw_content = response.content
-            content = raw_content if isinstance(raw_content, str) else str(raw_content)
+            raw_resp: Any = cast(Any, response)
+            if hasattr(raw_resp, "content"):
+                raw_content: Any = raw_resp.content
+            else:
+                raw_content = raw_resp
+            if isinstance(raw_content, str):
+                content: str = raw_content
+            else:
+                content = str(raw_content)
 
         except Exception:
             logger.exception("Error generating research response")
