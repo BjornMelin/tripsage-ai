@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr = Field(
         default=SecretStr("sk-test-1234567890"), description="OpenAI API key"
     )
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-5"
     model_temperature: float = Field(
         default=0.7,
         ge=0.0,

@@ -21,7 +21,7 @@ class CheckpointStorage(Enum):
 
 
 @dataclass
-class LangGraphConfig:
+class LangGraphConfig:  # pylint: disable=too-many-instance-attributes
     """Configuration for LangGraph orchestration system.
 
     This class encapsulates all configuration options for the LangGraph-based
@@ -29,12 +29,12 @@ class LangGraphConfig:
     """
 
     # Core LLM settings
-    default_model: str = "gpt-4o"
+    default_model: str = "gpt-5"
     temperature: float = 0.7
     max_tokens: int = 4096
 
     # Router-specific settings
-    router_model: str = "gpt-4o-mini"
+    router_model: str = "gpt-5-mini"
     router_temperature: float = 0.1
 
     # Checkpointing and state management
@@ -77,11 +77,11 @@ class LangGraphConfig:
         """
         return cls(
             # Core LLM settings
-            default_model=os.getenv("LANGGRAPH_DEFAULT_MODEL", "gpt-4o"),
+            default_model=os.getenv("LANGGRAPH_DEFAULT_MODEL", "gpt-5"),
             temperature=float(os.getenv("LANGGRAPH_TEMPERATURE", "0.7")),
             max_tokens=int(os.getenv("LANGGRAPH_MAX_TOKENS", "4096")),
             # Router settings
-            router_model=os.getenv("LANGGRAPH_ROUTER_MODEL", "gpt-4o-mini"),
+            router_model=os.getenv("LANGGRAPH_ROUTER_MODEL", "gpt-5-mini"),
             router_temperature=float(os.getenv("LANGGRAPH_ROUTER_TEMPERATURE", "0.1")),
             # Checkpointing
             checkpoint_storage=CheckpointStorage(

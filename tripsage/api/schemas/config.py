@@ -28,8 +28,8 @@ ModelName = Annotated[
     str,
     StringConstraints(
         pattern=(
-            r"^(gpt-4|gpt-4-turbo|gpt-4o|gpt-4o-mini|gpt-3.5-turbo|"
-            r"claude-3-sonnet|claude-3-haiku)$"
+            r"^(gpt-4|gpt-4-turbo|gpt-4o|gpt-4o-mini|gpt-5|gpt-5-mini|gpt-5-nano|"
+            r"claude-4.5-sonnet|claude-4.5-haiku)$"
         )
     ),
 ]
@@ -177,7 +177,7 @@ class AgentConfigRequest(BaseConfigModel):
                 "gpt-3.5-turbo": 4096,
                 "gpt-4": 8192,
                 "gpt-4-turbo": 8192,
-                "gpt-4o": 8192,
+                "gpt-5": 8192,
                 "claude-3-haiku": 4096,
                 "claude-3-sonnet": 8192,
             }
@@ -206,7 +206,7 @@ class AgentConfigRequest(BaseConfigModel):
         """Get list of fields that changed compared to another configuration."""
         return [
             field_name
-            for field_name in self.model_dump()
+            for field_name in list(self.__class__.model_fields)
             if getattr(self, field_name) != getattr(other, field_name)
         ]
 
@@ -237,9 +237,11 @@ class AgentConfigResponse(BaseConfigModel):
             "gpt-4-turbo": Decimal("0.010"),
             "gpt-4o": Decimal("0.005"),
             "gpt-4o-mini": Decimal("0.002"),
-            "gpt-3.5-turbo": Decimal("0.0015"),
-            "claude-3-sonnet": Decimal("0.015"),
-            "claude-3-haiku": Decimal("0.0025"),
+            "gpt-5": Decimal("0.005"),
+            "gpt-5-mini": Decimal("0.002"),
+            "gpt-5-nano": Decimal("0.001"),
+            "claude-4.5-sonnet": Decimal("0.015"),
+            "claude-4.5-haiku": Decimal("0.0025"),
         }
         return model_costs.get(self.model, Decimal("0.010"))
 
@@ -271,11 +273,15 @@ class AgentConfigResponse(BaseConfigModel):
     @property
     def performance_tier(self) -> str:
         """Determine performance tier based on model and settings."""
-        if self.model in ["gpt-4o", "gpt-4-turbo"]:
+        if self.model in ["gpt-5-mini", "gpt-4o", "claude-4.5-haiku"]:
             return "High Performance"
-        if self.model in ["gpt-4", "claude-3-sonnet"]:
+        if self.model in ["gpt-5", "claude-4.5-sonnet"]:
             return "Premium"
-        if self.model in ["gpt-4o-mini", "gpt-3.5-turbo", "claude-3-haiku"]:
+        if self.model in [
+            "gpt-5-nano",
+            "gpt-4o-mini",
+            "claude-4.5-sonnet",
+        ]:
             return "Efficient"
         return "Standard"
 
@@ -337,12 +343,11 @@ class ConfigurationVersion(BaseConfigModel):
     def age_in_days(self) -> int:
         """Calculate age of this version in days."""
         now = datetime.now(UTC)
-        # pylint: disable=no-member
-        if self.created_at.tzinfo is None:  # pylint: disable=no-member
-            created_at = self.created_at.replace(tzinfo=UTC)  # pylint: disable=no-member
+        if self.created_at.tzinfo is None:
+            created_at = self.created_at.replace(tzinfo=UTC)
         else:
-            created_at = self.created_at  # pylint: disable=no-member
-        return (now - created_at).days  # pylint: disable=no-member
+            created_at = self.created_at
+        return (now - created_at).days
 
     @computed_field
     @property
@@ -407,7 +412,7 @@ class PerformanceMetrics(BaseConfigModel):
     @property
     def tokens_per_second(self) -> float:
         """Calculate tokens processed per second."""
-        total_tokens = self.token_usage.get("total", 0)  # pylint: disable=no-member
+        total_tokens = self.token_usage.get("total", 0)
         if self.average_response_time > 0:
             return total_tokens / self.average_response_time
         return 0.0
@@ -516,7 +521,7 @@ class ConfigurationValidationError(BaseConfigModel):
     def error_code(self) -> str:
         """Generate standardized error code."""
         field_code = self.field.upper().replace("_", "")
-        severity_code = self.severity.upper()[:1]  # pylint: disable=no-member
+        severity_code = self.severity.upper()[:1]
         return f"CFG{severity_code}{field_code}"
 
 

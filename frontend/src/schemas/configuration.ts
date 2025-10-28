@@ -52,9 +52,11 @@ export const ModelNameSchema = z.enum([
   "gpt-4-turbo",
   "gpt-4o",
   "gpt-4o-mini",
-  "gpt-3.5-turbo",
-  "claude-3-sonnet",
-  "claude-3-haiku",
+  "gpt-5",
+  "gpt-5-mini",
+  "gpt-5-nano",
+  "claude-4.5-sonnet",
+  "claude-4.5-haiku",
 ] as const);
 
 /** TypeScript type for model names inferred from ModelNameSchema. */

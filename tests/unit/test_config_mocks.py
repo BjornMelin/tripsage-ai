@@ -44,7 +44,7 @@ class MockSettings:
 
         # AI Services (flat structure)
         self.openai_api_key = SecretStr("sk-test-openai-key-1234567890abcdef")
-        self.openai_model = "gpt-4o"
+        self.openai_model = "gpt-5"
 
         # Rate Limiting (flat structure)
         self.rate_limit_requests = 100
