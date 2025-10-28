@@ -8,7 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
 
-from tests.unit.orchestration.test_utils import create_mock_services
+from tests.unit.orchestration.test_utils import (
+    create_mock_services,
+    patch_openai_in_module,
+)
 from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.graph import TripSageOrchestrator
 from tripsage.orchestration.state import TravelPlanningState, create_initial_state
@@ -55,6 +58,7 @@ def _make_orchestrator(services: AppServiceContainer) -> TripSageOrchestrator:
 
 
 @pytest.mark.asyncio
+@patch_openai_in_module("tripsage.orchestration.routing")
 async def test_initialize_fallback_to_memory_saver() -> None:
     """When checkpoint service fails, initialize should use MemorySaver fallback."""
     services = _make_services(checkpoint=None)
@@ -105,6 +109,7 @@ def test_handle_recovery_thresholds() -> None:
 
 
 @pytest.mark.asyncio
+@patch_openai_in_module("tripsage.orchestration.routing")
 async def test_process_message_hydration_error_and_response_pick() -> None:
     """process_message should handle hydration errors and return assistant reply."""
     services = _make_services(checkpoint=MagicMock())
