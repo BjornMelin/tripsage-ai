@@ -6,7 +6,7 @@ This document describes the dashboard monitoring API endpoints that provide real
 >
 > - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation
 > - [Authentication](README.md#authentication) - API authentication guide
-> - [Realtime (Supabase)](websocket-realtime-api.md) - Real-time private channels
+> - [Realtime (Supabase)](realtime-api.md) - Real-time private channels
 > - [Error Codes](error-codes.md) - API error reference
 > - [Performance Optimization](../developers/performance-optimization.md) - System performance tuning
 
@@ -37,7 +37,7 @@ For detailed authentication information, see the [Authentication Guide](README.m
 >
 > - [Authentication Guide](README.md#authentication) - Complete authentication setup and usage
 > - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation details
-> - [WebSocket API](websocket-realtime-api.md) - Real-time features and WebSocket connections
+> - [Realtime API](realtime-api.md) - Real-time features and channel usage
 
 ## Base URL
 
@@ -458,7 +458,7 @@ Dashboard endpoints are subject to rate limiting:
 
 - **Standard Users**: 100 requests per minute
 - **Admin Users**: 500 requests per minute
-- **WebSocket Connections**: Limited to 5 concurrent connections per user
+- **Realtime Connections**: Managed by Supabase Realtime; refer to your plan’s limits and best practices (use private channels, avoid global topics).
 
 For complete rate limiting configuration and implementation details, see the [Rate Limiting Guide](../developers/rate-limiting.md).
 
@@ -536,6 +536,6 @@ This dashboard API provides monitoring capabilities for maintaining system healt
 
 - [Error Codes](error-codes.md) - Complete API error reference
 - [REST Endpoints](rest-endpoints.md) - Core API endpoints
-- [Realtime (Supabase)](websocket-realtime-api.md) - Real-time private channels
+- [Realtime (Supabase)](realtime-api.md) - Real-time private channels
 - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation
 - [Performance Optimization](../developers/performance-optimization.md) - System performance guides

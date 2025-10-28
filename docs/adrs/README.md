@@ -28,7 +28,7 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 | [ADR-0003](adr-0003-upstash-redis.md) | Use Upstash Redis (HTTP) for Caching | Accepted | 2025-10-22 |
 | [ADR-0004](adr-0004-fastapi-backend.md) | FastAPI as Backend Framework | Accepted | 2025-06-17 |
 | [ADR-0005](adr-0005-nextjs-react19.md) | Next.js 15 with React 19 for Frontend | Accepted | 2025-06-17 |
-| [ADR-0006](adr-0006-websocket-architecture.md) | Real-time Communication via WebSockets | Accepted | 2025-06-17 |
+| [ADR-0006](adr-0006-websocket-architecture.md) | Superseded: legacy socket architecture (replaced by Supabase Realtime) | Superseded | 2025-06-17 |
 | [ADR-0007](adr-0007-testing-strategy.md) | Modern Testing Strategy with Vitest and Playwright | Accepted | 2025-06-17 |
 | [ADR-0008](adr-0008-pydantic-v2-migration.md) | Migrate to Pydantic v2 | Accepted | 2025-06-17 |
 | [ADR-0013](adr-0013-adopt-next-js-16-proxy-and-async-apis-deprecate-middleware.md) | Adopt Next.js 16 proxy and async APIs; deprecate middleware | Accepted | 2025-10-23 |

@@ -33,7 +33,7 @@ curl http://localhost:8000/api/health
 | Document                                                     | Description                               | Focus               |
 | ------------------------------------------------------------ | ----------------------------------------- | ------------------- |
 | **[REST API Reference](rest-endpoints.md)**                  | Complete endpoint documentation           | All endpoints       |
-| **[Realtime (Supabase)](websocket-realtime-api.md)** | Real-time communication and collaboration | Private channels (Supabase Realtime) |
+| **[Realtime (Supabase)](realtime-api.md)** | Real-time communication and collaboration | Private channels (Supabase Realtime) |
 | **[Usage Examples](usage-examples.md)**                      | Practical code snippets                   | Quick reference     |
 | **[Error Codes](error-codes.md)**                            | Error handling reference                  | Troubleshooting     |
 
@@ -305,7 +305,7 @@ uv run pytest tests/integration/api/
 | `401 Unauthorized`     | Check JWT token format | [Authentication](#authentication)                        |
 | `422 Validation Error` | Verify required fields | [Error Codes](error-codes.md)                            |
 | `429 Rate Limited`     | Check rate limits      | [Authentication](#authentication)                        |
-| Realtime channel disconnect | Refresh access token and resubscribe | [Supabase Realtime Guide](websocket-realtime-api.md) |
+| Realtime channel disconnect | Refresh access token and resubscribe | [Supabase Realtime Guide](realtime-api.md) |
 
 ---
 

@@ -767,8 +767,8 @@ X-RateLimit-Window: 3600
 
 ### Real-time Features
 
-- **[Realtime (Supabase) Guide](websocket-realtime-api.md)** - Private channels + RLS for chat/collaboration
-- **[Realtime (Supabase) Guide](websocket-realtime-api.md)** - Real-time patterns and channel usage
+- **[Realtime (Supabase) Guide](realtime-api.md)** - Private channels + RLS for chat/collaboration
+- **[Realtime (Supabase) Guide](realtime-api.md)** - Real-time patterns and channel usage
 
 ### Support
 
@@ -778,4 +778,4 @@ X-RateLimit-Window: 3600
 
 ---
 
-_This documentation covers all REST API endpoints available in TripSage. For real-time features, see the [WebSocket and Real-time API documentation](websocket-realtime-api.md)._
+_This documentation covers all REST API endpoints available in TripSage. For real-time features, see the [Realtime (Supabase) API documentation](realtime-api.md)._

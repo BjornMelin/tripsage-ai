@@ -1,6 +1,6 @@
 # Supabase Realtime Guide
 
-This guide describes TripSage’s final real‑time architecture built on Supabase Realtime with private channels and Row Level Security (RLS). No custom WebSocket server is used.
+This guide describes TripSage’s final real‑time architecture built on Supabase Realtime with private channels and Row Level Security (RLS). No custom socket server is used.
 
 ## Concepts
 

@@ -159,7 +159,7 @@ bandit -r . -f json -o security_report.json
 - Monitor Core Web Vitals
 - Implement proper caching headers
 
-### WebSocket Optimization
+### Realtime Optimization
 
 - Monitor connection count
 - Use Redis pub/sub for scaling

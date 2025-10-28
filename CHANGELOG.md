@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Supabase Realtime Authorization policies and helpers (private channels, topic helpers, indexes):
   - supabase/migrations/20251027_01_realtime_policies.sql
   - supabase/migrations/20251027_02_realtime_helpers.sql
-- Edge Functions deployed to new project (vcfpldtbehtwulxtgpxl):
+- Edge Functions deployed to new project (<PROJECT_REF>):
   - trip-notifications, file-processing, cache-invalidation, file-processor
 - Migration prepared to upsert webhook_config endpoints to deployed functions (inactive by default):
   - supabase/migrations/20251028_01_update_webhook_configs.sql
@@ -47,7 +47,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Storage infrastructure migration (guarded) with buckets, queues, versioning, and RLS:
   - supabase/migrations/202510271702_storage_infrastructure.sql
   - Helpers moved to `public.*` schema to avoid storage schema ACL issues
-- Repo linked to new Supabase project ref via CLI: `npx supabase link --project-ref vcfpldtbehtwulxtgpxl`
+- Repo linked to new Supabase project ref via CLI: `npx supabase link --project-ref <PROJECT_REF>`
+
+- Makefile targets to drive Supabase workflows end-to-end:
+  - `supa.link`, `supa.secrets-min`, `supa.secrets-upstash`, `supa.secrets-webhooks`, `supa.db.push`,
+    `supa.migration.list`, `supa.migration.repair`, `supa.functions.deploy-all`, `supa.fn.deploy`, `supa.fn.logs`.
+  - Includes deploy helper to rename `deno.lock -> deno.lock.v5` for the CLI bundler.
+- Operator runbooks (developer-focused, command-first):
+  - `docs/operators/supabase-project-setup.md` — create/link/configure project; secrets; migrations; deploy; verify.
+  - `docs/operators/supabase-repro-deploy.md` — single-pass reproducible deployment sequence.
+- Per-function Deno import maps + lockfiles:
+  - Added `deno.json` and generated `deno.lock.v5` for: `trip-notifications`, `file-processing`, `cache-invalidation`, `file-processor`.
 
 ### Changed
 
@@ -56,6 +66,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `useAuthenticatedApi` injects `Authorization` from supabase-js session/refresh
 - Supabase SSR client: validate `NEXT_PUBLIC_SUPABASE_URL|ANON_KEY`; wrap `cookies().setAll` in try/catch
 - Next proxy: guard cookie writes with try/catch
+- Edge Functions: upgraded runtime deps and import strategy
+  - Deno std pinned to `0.224.0`; `@supabase/supabase-js` pinned to `2.76.1`.
+  - Refactored function imports to use import-map aliases (`std/http/server.ts`, `@supabase/supabase-js`).
+  - Simplified per-function import maps to rely on `supabase-js` for internals; removed unnecessary explicit @supabase sub-packages from maps.
+  - Redeployed all functions (trip-notifications, file-processing, cache-invalidation, file-processor).
+- Documentation: added setup and reproducible deployment guides and linked them from `docs/index.md`.
 - Chat hook (`use-chat-ai`):
   - Switch to streaming via `/api/chat/stream`
   - Add `AbortController` with 60s timeout
@@ -115,8 +131,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Legacy Supabase schema sources and scripts removed:
   - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
   - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
-
-
 - Deleted `frontend/src/contexts/auth-context.tsx` and all imports
 - Deleted `frontend/src/components/providers/supabase-provider.tsx` and layout wrapper
 - Removed legacy callback page `frontend/src/app/(auth)/callback/page.tsx` and context-dependent tests
@@ -151,11 +165,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed dashboard compatibility shims (legacy `DashboardData` fields, `ApiKeyValidator`/`ApiKeyMonitoringService` aliases) and the unused flights mapper module (`tripsage_core.models.mappers`)
 - Fixed linting/typing issues in touched flight tests and orchestration node; pyright/pylint clean on changed scope
 - Updated Realtime integration/unit test suites aligned to Supabase Realtime channels (no custom WebSocket router)
+- Supabase migrations: reconciled remote/local history and documented `migration repair` workflow to resolve mismatched version formats (8–12 digit IDs).
 - Supabase config.toml updated for CLI v2 compatibility (removed invalid keys; normalized [auth.email] flags; set db.major_version=17). Idempotent fixes to avoid `experimental.webhooks` error by leaving undefined.
 - Supabase config.toml: disabled unused OAuth providers by default ([auth.external.google/github].enabled=false) to reduce CLI warnings in CI.
 - Realtime policy migration made idempotent (guard with `pg_policies` checks). Session policies created only when `public.chat_sessions` exists.
 - Storage migration guarded to work on a fresh project: wraps policies referencing `public.file_attachments` and `public.trips` in conditional DO blocks; functions reference application tables at runtime only.
 - Realtime helpers/policies and storage migration filenames normalized to 2025-10-27 timestamps.
+- Edge Functions toolchain:
+  - Standardized per-function import maps (`deno.json`) using `std@0.224.0` and `@supabase/supabase-js@2.76.1`.
+  - Regenerated Deno v5 lockfiles (`deno.lock.v5`) for all functions; preserved for deterministic local dev; CLI bundler ignores v5 locks.
+  - Unified deploy workflow via Makefile; CLI updated to v2.54.x on local env.
  (async dependency overrides, Supabase wiring, Unicode homograph coverage)
 
 ### Security
@@ -302,8 +321,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Legacy Supabase schema sources and scripts removed:
   - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
   - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
-
-
 - tests(frontend): deleted/replaced deprecated and brittle tests asserting raw HTML structure and Tailwind class lists; removed NODE_ENV mutation based tests.
 
 ### Testing (frontend)

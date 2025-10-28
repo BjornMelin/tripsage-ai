@@ -333,3 +333,4 @@ scan-results/
 
 # Project specific files
 .agent/
+supabase/.temp/

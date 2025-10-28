@@ -24,7 +24,9 @@ This documentation site provides everything you need to integrate with the TripS
 ### [API Reference](api/rest-endpoints.md)
 
 - [REST Endpoints](api/rest-endpoints.md) - Complete REST API reference
-- [Realtime (Supabase)](api/websocket-realtime-api.md) - Private channels + RLS
+- [Realtime (Supabase)](api/realtime-api.md) - Private channels + RLS
+- [Supabase Project Setup](operators/supabase-project-setup.md) - Create, link, configure, and verify a new project
+- [Supabase Reproducible Deployment](operators/supabase-repro-deploy.md) - Single-pass CLI sequence to deploy DB + Edge Functions
 - [Dashboard API](api/dashboard-api.md) - Administrative endpoints
 - [Error Codes](api/error-codes.md) - Error handling reference
 
