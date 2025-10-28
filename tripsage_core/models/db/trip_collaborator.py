@@ -171,13 +171,13 @@ class TripCollaboratorUpdate(BaseModel):
         """Check if there are any updates to apply."""
         return self.permission_level is not None
 
-    def get_update_fields(self) -> dict:
+    def get_update_fields(self) -> dict[str, PermissionLevel]:
         """Get only the fields that have updates.
 
         Returns:
             Dictionary containing only non-None fields for updating
         """
-        updates = {}
+        updates: dict[str, PermissionLevel] = {}
         if self.permission_level is not None:
             updates["permission_level"] = self.permission_level
         return updates
