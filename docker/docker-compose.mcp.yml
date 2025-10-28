@@ -76,7 +76,7 @@ services:
       - SUPABASE_URL=http://supabase:8000
       - SUPABASE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-your-service-role-key}
       - MEM0_CONFIG=${MEM0_CONFIG:-'{"vector_store":{"provider":"pgvector"}}'}
-      - DUFFEL_API_KEY=${DUFFEL_API_KEY}
+      - DUFFEL_ACCESS_TOKEN=${DUFFEL_ACCESS_TOKEN}
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
       - OPENWEATHERMAP_API_KEY=${OPENWEATHERMAP_API_KEY}
       - CRAWL4AI_API_KEY=${CRAWL4AI_API_KEY:-}

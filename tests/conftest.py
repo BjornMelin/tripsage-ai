@@ -206,10 +206,27 @@ def disable_auth_audit_logging(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
     # Also patch the logger creation to prevent file system access
-    def _mock_get_audit_logger() -> Any:
+    async def _mock_get_audit_logger() -> Any:
+        """Mock audit logger."""
+
         class MockLogger:
+            """Mock logger."""
+
             async def log_event(self, *args: Any, **kwargs: Any) -> None:
-                pass
+                """Log event."""
+                return
+
+            async def log_authentication_event(self, *args: Any, **kwargs: Any) -> None:
+                """Log authentication event."""
+                return
+
+            async def log_security_event(self, *args: Any, **kwargs: Any) -> None:
+                """Log security event."""
+                return
+
+            async def log_api_key_event(self, *args: Any, **kwargs: Any) -> None:
+                """Log API key event."""
+                return
 
         return MockLogger()
 
@@ -262,6 +279,37 @@ def async_client_factory() -> Callable[[FastAPI], AsyncClient]:
         return AsyncClient(transport=transport, base_url="http://test")
 
     return _factory
+
+
+@pytest.fixture()
+def app() -> FastAPI:
+    """Return a FastAPI app with routers for integration tests."""
+    app = build_minimal_app()
+    # Include routers needed for integration tests
+    from tripsage.api.routers import (
+        attachments,
+        chat,
+        config,
+        health,
+        trips,
+    )
+
+    app.include_router(health.router, prefix="/api", tags=["health"])
+    app.include_router(config.router, prefix="/api", tags=["configuration"])
+    app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
+    app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+    app.include_router(
+        attachments.router, prefix="/api/attachments", tags=["attachments"]
+    )
+    return app
+
+
+@pytest.fixture()
+def async_client(
+    app: FastAPI, async_client_factory: Callable[[FastAPI], AsyncClient]
+) -> AsyncClient:
+    """Return an AsyncClient bound to the test app."""
+    return async_client_factory(app)
 
 
 def build_minimal_app() -> FastAPI:
