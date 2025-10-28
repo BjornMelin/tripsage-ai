@@ -29,6 +29,7 @@ from tripsage_core.services.business.memory_service import MemoryService
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.business.unified_search_service import UnifiedSearchService
 from tripsage_core.services.business.user_service import UserService
+from tripsage_core.services.configuration_service import ConfigurationService
 from tripsage_core.services.external_apis import (
     DocumentAnalyzer,
     GoogleCalendarService,
@@ -76,6 +77,7 @@ class AppServiceContainer:
     trip_service: TripService | None = None
     user_service: UserService | None = None
     unified_search_service: UnifiedSearchService | None = None
+    configuration_service: ConfigurationService | None = None
 
     # External API services
     calendar_service: GoogleCalendarService | None = None
