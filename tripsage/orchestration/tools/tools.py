@@ -76,11 +76,6 @@ def _get_service_from_container(service_name: str) -> Any:
     return _cast(Any, services.get_required_service(service_name))
 
 
-def _get_mcp_service() -> AirbnbMCP:
-    """Return the configured MCP service singleton."""
-    return _mcp_service if _mcp_service is not None else _default_mcp_service
-
-
 AddMemoryFn = Callable[..., Awaitable[dict[str, Any]]]
 SearchMemoryFn = Callable[["MemorySearchQuery"], Awaitable[list[dict[str, Any]]]]
 
@@ -191,7 +186,7 @@ async def _search_accommodations_impl(
         if price_max is not None:
             params["price_max"] = price_max
 
-        result = await _get_mcp_service().invoke(
+        result = await _default_mcp_service.invoke(
             method_name="search_listings",
             params=params,
         )
@@ -385,7 +380,7 @@ async def health_check() -> dict[str, Any]:
     unhealthy: list[dict[str, Any]] = []
 
     try:
-        status = await _get_mcp_service().health_check()
+        status = await _default_mcp_service.health_check()
         if status.get("status") == "healthy":
             healthy.append("airbnb_mcp")
         else:

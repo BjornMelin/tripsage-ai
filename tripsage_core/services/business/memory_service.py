@@ -250,7 +250,7 @@ class MemoryService:
                 "llm": {
                     "provider": "openai",
                     "config": {
-                        "model": "gpt-4o-mini",
+                        "model": "gpt-5-mini",
                         "temperature": 0.1,
                         "max_tokens": 500,
                         "api_key": settings.openai_api_key,
