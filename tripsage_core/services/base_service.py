@@ -57,6 +57,7 @@ class BaseService:
     def __init__(
         self,
         database_service: Any | None = None,
+        *,
         external_service_module: str | None = None,
         external_service_class: str | None = None,
         cache_service: Any | None = None,
@@ -282,7 +283,7 @@ class BaseService:
         Returns:
             Health status information for the service and its dependencies
         """
-        health_status = {
+        health_status: dict[str, Any] = {
             "service": self.service_name,
             "status": "healthy",
             "dependencies": {},

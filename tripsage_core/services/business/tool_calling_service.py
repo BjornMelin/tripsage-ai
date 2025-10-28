@@ -5,20 +5,17 @@ with validation, error handling, and result formatting.
 """
 
 import asyncio
+import logging
 import time
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, Field, field_validator
 
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
-
-# MCPBridge removed as part of BJO-161 MCP abstraction removal
-# from tripsage_core.mcp_abstraction.manager import MCPBridge
 from tripsage_core.utils.decorator_utils import with_error_handling
-from tripsage_core.utils.logging_utils import get_logger
 
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ToolCallError(TripSageError):
@@ -99,7 +96,7 @@ class ToolCallService:
     with proper validation, error handling, and result formatting.
     """
 
-    def __init__(self, mcp_manager=None):
+    def __init__(self, mcp_manager: Any | None = None):
         """Initialize tool calling service.
 
         Args:
@@ -153,9 +150,8 @@ class ToolCallService:
                 )
 
             # Execute tool call with retries
-            result = await self._execute_with_retries(
-                request, validation.sanitized_params
-            )
+            sanitized_params: dict[str, Any] = validation.sanitized_params or {}
+            result = await self._execute_with_retries(request, sanitized_params)
 
             response = ToolCallResponse(
                 id=request.id,
@@ -220,8 +216,8 @@ class ToolCallService:
             responses = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Convert exceptions to error responses
-            processed_responses = [
-                response
+            final_responses: list[ToolCallResponse] = [
+                cast(ToolCallResponse, response)
                 if not isinstance(response, Exception)
                 else ToolCallResponse(
                     id=requests[i].id,
@@ -234,8 +230,8 @@ class ToolCallService:
                 for i, response in enumerate(responses)
             ]
 
-            logger.info("Completed %s parallel tool calls", len(processed_responses))
-            return processed_responses
+            logger.info("Completed %s parallel tool calls", len(final_responses))
+            return final_responses
 
         except Exception as e:
             logger.exception("Parallel tool call execution failed")
@@ -252,7 +248,7 @@ class ToolCallService:
         Returns:
             Validation result with sanitized parameters
         """
-        errors = []
+        errors: list[str] = []
         sanitized_params = request.params.copy()
 
         # Service-specific validation
@@ -302,21 +298,21 @@ class ToolCallService:
             }
 
         # Format successful results by service type
-        if response.service == "duffel_flights":
-            return await self._format_flight_results(response.result)
-        elif response.service == "airbnb":
-            return await self._format_accommodation_results(response.result)
-        elif response.service == "google_maps":
-            return await self._format_maps_results(response.result)
-        elif response.service == "weather":
-            return await self._format_weather_results(response.result)
-        else:
-            return {
-                "type": "data",
-                "service": response.service,
-                "data": response.result,
-                "execution_time": response.execution_time,
-            }
+        formatters = {
+            "duffel_flights": self._format_flight_results,
+            "airbnb": self._format_accommodation_results,
+            "google_maps": self._format_maps_results,
+            "weather": self._format_weather_results,
+        }
+        formatter = formatters.get(response.service)
+        if formatter:
+            return await formatter(response.result)
+        return {
+            "type": "data",
+            "service": response.service,
+            "data": response.result,
+            "execution_time": response.execution_time,
+        }
 
     async def get_execution_history(
         self, limit: int = 100, service: str | None = None
@@ -343,7 +339,7 @@ class ToolCallService:
         Returns:
             Dictionary with error statistics and system health metrics
         """
-        base_stats = self.error_recovery.get_error_statistics()
+        base_stats = await self.get_error_statistics()
 
         # Add tool calling specific metrics
         total_calls = len(self.execution_history)
@@ -407,7 +403,7 @@ class ToolCallService:
 
     async def _sanitize_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """Sanitize parameters to remove potentially harmful content."""
-        sanitized = {}
+        sanitized: dict[str, Any] = {}
         for key, value in params.items():
             if isinstance(value, str):
                 # Remove potentially harmful characters
@@ -446,41 +442,51 @@ class ToolCallService:
             return ["'location' parameter is required"]
         return []
 
-    async def _format_flight_results(self, result: dict[str, Any]) -> dict[str, Any]:
+    async def _format_flight_results(
+        self, result: dict[str, Any] | None
+    ) -> dict[str, Any]:
         """Format flight search results for chat display."""
+        data: dict[str, Any] = result or {}
         return {
             "type": "flights",
             "title": "Flight Search Results",
-            "data": result,
+            "data": data,
             "actions": ["book", "compare", "save"],
         }
 
     async def _format_accommodation_results(
-        self, result: dict[str, Any]
+        self, result: dict[str, Any] | None
     ) -> dict[str, Any]:
         """Format accommodation search results for chat display."""
+        data: dict[str, Any] = result or {}
         return {
             "type": "accommodations",
             "title": "Accommodation Options",
-            "data": result,
+            "data": data,
             "actions": ["book", "favorite", "share"],
         }
 
-    async def _format_maps_results(self, result: dict[str, Any]) -> dict[str, Any]:
+    async def _format_maps_results(
+        self, result: dict[str, Any] | None
+    ) -> dict[str, Any]:
         """Format maps API results for chat display."""
+        data: dict[str, Any] = result or {}
         return {
             "type": "location",
             "title": "Location Information",
-            "data": result,
+            "data": data,
             "actions": ["navigate", "save", "share"],
         }
 
-    async def _format_weather_results(self, result: dict[str, Any]) -> dict[str, Any]:
+    async def _format_weather_results(
+        self, result: dict[str, Any] | None
+    ) -> dict[str, Any]:
         """Format weather API results for chat display."""
+        data: dict[str, Any] = result or {}
         return {
             "type": "weather",
             "title": "Weather Information",
-            "data": result,
+            "data": data,
             "actions": ["save", "alert"],
         }
 
