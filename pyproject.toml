@@ -294,8 +294,9 @@ venvPath = "."
 venv = ".venv"
 pythonVersion = "3.13"
 typeCheckingMode = "strict"
+useLibraryCodeForTypes = true
+stubPath = "typings"
 reportMissingImports = "warning"
-reportMissingTypeStubs = false
 
 [tool.uv]
 managed = true

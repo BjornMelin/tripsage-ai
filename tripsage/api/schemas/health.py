@@ -25,7 +25,7 @@ class ComponentHealth(BaseModel):
     status: str
     latency_ms: float | None = None
     message: str | None = None
-    details: dict = Field(default_factory=dict)
+    details: dict[str, object] = Field(default_factory=dict)
 
 
 class SystemHealth(BaseModel):

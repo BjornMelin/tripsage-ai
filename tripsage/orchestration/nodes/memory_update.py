@@ -77,22 +77,24 @@ class MemoryUpdateNode(BaseAgentNode):
         """
         insights = []
 
-        # Extract budget preferences
-        if state.get("budget_constraints"):
-            budget_info = state["budget_constraints"]
-            if isinstance(budget_info, dict):
-                insights.extend(
-                    f"Budget preference - {key}: {value}"
-                    for key, value in budget_info.items()
-                )
-            else:
-                insights.append(f"Budget constraint: {budget_info}")
+        # Extract budget preferences from user_preferences or analyses
+        prefs = state.get("user_preferences")
+        if isinstance(prefs, dict):
+            if "budget_total" in prefs:
+                insights.append(f"Budget total: {prefs['budget_total']}")
+            if "budget_currency" in prefs:
+                insights.append(f"Budget currency: {prefs['budget_currency']}")
+        if state.get("budget_analyses"):
+            insights.append(
+                f"Performed {len(state['budget_analyses'])} budget analysis operations"
+            )
 
         # Extract user preferences
-        if state.get("user_preferences"):
+        if isinstance(prefs, dict):
             insights.extend(
                 f"Travel preference - {pref_type}: {value}"
-                for pref_type, value in state["user_preferences"].items()
+                for pref_type, value in prefs.items()
+                if pref_type not in {"budget_total", "budget_currency"}
             )
 
         # Extract destination interests

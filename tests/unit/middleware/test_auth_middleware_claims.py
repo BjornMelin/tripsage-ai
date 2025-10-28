@@ -23,14 +23,21 @@ def make_app(monkeypatch: Any, key_service: ApiKeyService) -> FastAPI:
     Returns:
         FastAPI: App with AuthenticationMiddleware and a protected route.
     """
+    import jwt
+
+    from tripsage.api.core.config import get_settings
+
     app = FastAPI()
 
-    async def fake_verify(jwt: str):
-        return {"sub": "user-xyz", "email": "x@example.com", "aud": "authenticated"}
+    # Create a valid JWT token for testing
+    settings = get_settings()
+    payload = {"sub": "user-xyz", "email": "x@example.com", "aud": "authenticated"}
+    token = jwt.encode(
+        payload, settings.database_jwt_secret.get_secret_value(), algorithm="HS256"
+    )
 
-    import tripsage.api.middlewares.authentication as mw
-
-    monkeypatch.setattr(mw, "verify_and_get_claims", fake_verify, raising=True)
+    # Store the token so the test can use it
+    app.state.test_jwt = token
 
     app.add_middleware(AuthenticationMiddleware, key_service=key_service)
 
@@ -48,7 +55,8 @@ def test_middleware_jwt_success(
     """Requests with valid Bearer token succeed and return 200."""
     app = make_app(monkeypatch, cast(ApiKeyService, dummy_api_key_service))
     client = TestClient(app)
-    res = client.get("/protected", headers={"Authorization": "Bearer x"})
+    token = app.state.test_jwt
+    res = client.get("/protected", headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 200
     assert res.json()["ok"] is True
 

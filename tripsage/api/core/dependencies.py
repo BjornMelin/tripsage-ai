@@ -4,7 +4,7 @@ This module provides clean, modern dependency injection using Annotated types
 for unified authentication across JWT (frontend) and API keys (agents).
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable as TypingIterable
 from typing import Annotated, cast
 
 from fastapi import Depends, Request
@@ -154,10 +154,11 @@ async def require_admin_principal(request: Request) -> Principal:
         roles.add(primary_role.lower())
 
     role_collection = principal.metadata.get("roles")
-    if isinstance(role_collection, Iterable) and not isinstance(
+    if isinstance(role_collection, TypingIterable) and not isinstance(
         role_collection, (str, bytes)
     ):
-        for role_item in role_collection:
+        # Cast to an iterable of opaque objects to satisfy the type checker
+        for role_item in cast(TypingIterable[object], role_collection):
             if isinstance(role_item, str):
                 roles.add(role_item.lower())
             else:
@@ -264,7 +265,9 @@ def get_mcp_service(request: Request) -> AirbnbMCP:
 # API Key service dependency
 def get_api_key_service(request: Request) -> ApiKeyServiceProto:
     """Get the API key service singleton."""
-    service = _get_required_service(request, "api_key_service", ApiKeyService)
+    service: ApiKeyService = _get_required_service(
+        request, "api_key_service", ApiKeyService
+    )
     return cast(ApiKeyServiceProto, service)
 
 

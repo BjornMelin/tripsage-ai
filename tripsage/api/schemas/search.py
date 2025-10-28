@@ -87,8 +87,8 @@ class SearchMetadata(BaseModel):
 class UnifiedSearchAggregateResponse(BaseModel):
     """Aggregate response for unified search."""
 
-    results: list[SearchResultItem] = Field(default_factory=list)
-    facets: list[SearchFacet] = Field(default_factory=list)
+    results: list[SearchResultItem] = []
+    facets: list[SearchFacet] = []
     metadata: SearchMetadata
     results_by_type: dict[str, list[SearchResultItem]] | None = None
     did_you_mean: str | None = None

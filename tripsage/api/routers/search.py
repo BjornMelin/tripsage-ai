@@ -65,7 +65,7 @@ async def unified_search(
                     await _track_search_analytics(
                         user_id, request.query, "cache_hit", cache_service
                     )
-                    return cached_result
+                    return UnifiedSearchResponse.model_validate(cached_result)
             except (OSError, RuntimeError, ValueError, TypeError) as e:
                 logger.warning("Cache retrieval failed: %s", e)
 
@@ -75,7 +75,7 @@ async def unified_search(
         # Cache the result for 5 minutes
         if use_cache:
             try:
-                await cache_service.set_json(cache_key, result, ttl=300)
+                await cache_service.set_json(cache_key, result.model_dump(), ttl=300)
             except (OSError, RuntimeError, ValueError, TypeError) as e:
                 logger.warning("Cache storage failed: %s", e)
 
@@ -327,7 +327,7 @@ async def bulk_search(
                         await _track_search_analytics(
                             user_id, request.query, "cache_hit", cache_service
                         )
-                        return cached_result
+                        return UnifiedSearchResponse.model_validate(cached_result)
                 except (OSError, RuntimeError, ValueError, TypeError) as cache_error:
                     logger.warning(
                         "Cache lookup failed for key %s: %s",
@@ -341,7 +341,9 @@ async def bulk_search(
             # Cache result
             if use_cache:
                 try:
-                    await cache_service.set_json(cache_key, result, ttl=300)
+                    await cache_service.set_json(
+                        cache_key, result.model_dump(), ttl=300
+                    )
                 except (OSError, RuntimeError, ValueError, TypeError) as cache_error:
                     logger.warning(
                         "Cache write failed for key %s: %s",

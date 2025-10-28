@@ -48,7 +48,7 @@ async def comprehensive_health_check(
 
     Returns detailed health status of the application and all its dependencies.
     """
-    components = []
+    components: list[ComponentHealth] = []
     overall_status = "healthy"
 
     # 1. Application health
@@ -119,11 +119,11 @@ async def comprehensive_health_check(
     )
 
 
-@router.get("/health/liveness", response_model=dict)
+@router.get("/health/liveness", response_model=dict[str, object])
 @limiter.exempt
 @trace_span(name="api.health.liveness")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def liveness_check(request: Request, response: Response):
+async def liveness_check(request: Request, response: Response) -> dict[str, object]:
     """Basic liveness check for container orchestration.
 
     Returns 200 if the application is alive and can respond to requests.
@@ -150,8 +150,8 @@ async def readiness_check(
     Returns whether the application is ready to serve traffic.
     Checks critical dependencies but with shorter timeouts.
     """
-    checks = {}
-    details = {}
+    checks: dict[str, bool] = {}
+    details: dict[str, str] = {}
 
     # Check database (with timeout) via monitor or direct probe
     try:

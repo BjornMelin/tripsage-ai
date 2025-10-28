@@ -20,10 +20,21 @@ def services() -> AppServiceContainer:
         return_value=MagicMock(name="checkpoint")
     )
     memory_bridge = MagicMock()
+    configuration_service = MagicMock()
+    configuration_service.get_agent_config = AsyncMock(
+        return_value={
+            "model": "gpt-3.5-turbo",
+            "temperature": 0.7,
+            "top_p": 1.0,
+            "api_key": "test-key",
+            "max_tokens": 1000,
+        }
+    )
     return create_mock_services(
         {
             "checkpoint_service": checkpoint_service,
             "memory_bridge": memory_bridge,
+            "configuration_service": configuration_service,
         }
     )
 
@@ -39,14 +50,15 @@ def orchestrator(services: AppServiceContainer) -> TripSageOrchestrator:
         return TripSageOrchestrator(services=services)
 
 
+@pytest.mark.asyncio
 async def test_initialize_compiles_graph(
     orchestrator: TripSageOrchestrator,
 ) -> None:
     """Initialize should compile the graph and mark orchestrator as ready."""
     await orchestrator.initialize()
 
-    assert orchestrator._initialized is True
-    assert orchestrator.compiled_graph is not None
+    assert orchestrator._initialized is True  # type: ignore[reportPrivateUsage]
+    assert orchestrator.compiled_graph is not None  # type: ignore[reportUnknownMemberType]
 
 
 def test_route_to_agent_handles_unknown(orchestrator: TripSageOrchestrator) -> None:
@@ -55,7 +67,7 @@ def test_route_to_agent_handles_unknown(orchestrator: TripSageOrchestrator) -> N
     state["current_agent"] = "nonexistent"
     state["error_info"]["error_count"] = 0
 
-    agent = orchestrator._route_to_agent(state)
+    agent = orchestrator._route_to_agent(state)  # type: ignore[reportPrivateUsage]
 
     assert agent == "general_agent"
 
