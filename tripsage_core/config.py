@@ -152,6 +152,11 @@ class Settings(BaseSettings):
         default=True, description="Enable automatic database recovery"
     )
 
+    # API Key Service Feature Flags
+    enable_api_key_caching: bool = Field(
+        default=False, description="Enable caching for API key validations"
+    )
+
     # WebSocket Configuration
     enable_websockets: bool = Field(
         default=True, description="Enable WebSocket functionality"
@@ -177,11 +182,10 @@ class Settings(BaseSettings):
         default=5.0, description="Delay between recovery attempts in seconds"
     )
 
-    # Metrics Configuration (OTEL-only)
-
-    # Consolidated OTEL instrumentation (comma-separated: fastapi,asgi,httpx,redis)
+    # Instrumentation Configuration (OTEL)
     otel_instrumentation: str = Field(
-        default="", description="OTEL instrumentation as comma-separated values"
+        default="",
+        description="OTEL instrumentation as comma-separated values",
     )
 
     # LangGraph features configuration
@@ -236,6 +240,46 @@ class Settings(BaseSettings):
     def is_testing(self) -> bool:
         """Check if running in test environment."""
         return self.environment in ("test", "testing")
+
+    @property
+    def enable_fastapi_instrumentation(self) -> bool:
+        """Check if FastAPI instrumentation is enabled."""
+        instrumentation_str: str = str(self.otel_instrumentation)
+        return "fastapi" in [
+            item.strip().lower()
+            for item in instrumentation_str.split(",")
+            if item.strip()
+        ]
+
+    @property
+    def enable_asgi_instrumentation(self) -> bool:
+        """Check if ASGI instrumentation is enabled."""
+        instrumentation_str: str = str(self.otel_instrumentation)
+        return "asgi" in [
+            item.strip().lower()
+            for item in instrumentation_str.split(",")
+            if item.strip()
+        ]
+
+    @property
+    def enable_httpx_instrumentation(self) -> bool:
+        """Check if HTTPX instrumentation is enabled."""
+        instrumentation_str: str = str(self.otel_instrumentation)
+        return "httpx" in [
+            item.strip().lower()
+            for item in instrumentation_str.split(",")
+            if item.strip()
+        ]
+
+    @property
+    def enable_redis_instrumentation(self) -> bool:
+        """Check if Redis instrumentation is enabled."""
+        instrumentation_str: str = str(self.otel_instrumentation)
+        return "redis" in [
+            item.strip().lower()
+            for item in instrumentation_str.split(",")
+            if item.strip()
+        ]
 
     @computed_field
     @property

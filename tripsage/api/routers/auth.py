@@ -6,10 +6,10 @@ login, token refresh, logout, and user information.
 
 import logging
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 
+from tripsage.api.core.dependencies import UserServiceDep
 from tripsage.api.schemas.auth import RegisterRequest, UserResponse
-from tripsage_core.services.business.user_service import UserService, get_user_service
 
 
 router = APIRouter()
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 )
 async def register(
     user_data: RegisterRequest,
-    user_service: UserService = Depends(get_user_service),
+    user_service: UserServiceDep,
 ):
     """Register a new user.
 

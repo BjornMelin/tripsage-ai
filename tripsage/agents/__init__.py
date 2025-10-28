@@ -1,19 +1,19 @@
 """TripSage agents module.
 
-This module provides factory functions for creating various specialized agents
-for the TripSage application.
+This module provides factory helpers for creating TripSage agents backed by the
+FastAPI ``app.state`` service singletons.
 """
 
 from __future__ import annotations
 
 from typing import Any, cast
 
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_openai import ChatOpenAI
+from fastapi import Request
 
 from tripsage.agents.base import BaseAgent
 from tripsage.agents.chat import ChatAgent
-from tripsage.agents.service_registry import ServiceRegistry
+from tripsage.app_state import AppServiceContainer
+from tripsage.orchestration.graph import TripSageOrchestrator
 from tripsage_core.config import get_settings
 
 
@@ -21,64 +21,52 @@ settings = get_settings()
 
 
 def create_agent(
+    request: Request,
     agent_type: str,
-    service_registry: ServiceRegistry | None = None,
     name: str | None = None,
-    model: str | None = None,
-    temperature: float | None = None,
-    **kwargs: dict[str, Any],
+    **kwargs: Any,
 ) -> BaseAgent:
-    """Create an agent of the specified type.
+    """Create an agent of the specified type using app.state singletons.
 
     Args:
-        agent_type: Type of agent to create
-        service_registry: Service registry instance (required for modern agents)
-        name: Optional custom name for the agent
-        model: Optional model name to use
-        temperature: Optional temperature for model sampling
-        **kwargs: Additional agent-specific parameters
+        request: Incoming FastAPI request exposing ``app.state``.
+        agent_type: Agent identifier (``base`` or ``chat`` are supported).
+        name: Optional custom agent name.
+        **kwargs: Additional keyword arguments passed to the agent constructor.
 
     Returns:
-        The created agent instance
+        The instantiated agent.
 
     Raises:
-        ValueError: If the agent type is not recognized
+        ValueError: If required services are missing or the agent type is unknown.
     """
-    # Default to settings if not provided
-    model = model or settings.openai_model
-    temperature = temperature or settings.model_temperature
+    services = cast(
+        AppServiceContainer | None,
+        getattr(request.app.state, "services", None),
+    )
+    orchestrator = cast(
+        TripSageOrchestrator | None,
+        getattr(request.app.state, "orchestrator", None),
+    )
 
-    # Create the appropriate agent type
-    if not service_registry:
-        raise ValueError("service_registry is required")
-
-    if agent_type == "base":
-        instructions: str | None = cast(str | None, kwargs.pop("instructions", None))
-        summary_interval: int = cast(int, kwargs.pop("summary_interval", 10))
-        llm: BaseChatModel | None = cast(BaseChatModel | None, kwargs.pop("llm", None))
-
-        if llm is None:
-            api_key_raw = settings.openai_api_key
-            secret_key = api_key_raw  # Already SecretStr from settings
-            llm = ChatOpenAI(model=model, temperature=temperature, api_key=secret_key)
-
-        if kwargs:
-            raise ValueError(
-                f"Unsupported keyword arguments for BaseAgent: {list(kwargs)}"
-            )
-
-        return BaseAgent(
-            name=name or "TripSage Assistant",
-            service_registry=service_registry,
-            instructions=instructions,
-            llm=llm,
-            summary_interval=summary_interval,
+    if services is None or orchestrator is None:
+        raise ValueError(
+            "Application services are not initialised; ensure initialise_app_state "
+            "runs during FastAPI startup."
         )
 
+    if agent_type == "base":
+        return BaseAgent(
+            name=name or "TripSage Assistant",
+            services=services,
+            orchestrator=orchestrator,
+            **kwargs,
+        )
     if agent_type == "chat":
-        if kwargs:
-            raise ValueError(f"ChatAgent does not support extra kwargs: {list(kwargs)}")
-        return ChatAgent(service_registry)
+        return ChatAgent(
+            services=services,
+            orchestrator=orchestrator,
+        )
 
     raise ValueError(f"Unknown agent type: {agent_type}")
 

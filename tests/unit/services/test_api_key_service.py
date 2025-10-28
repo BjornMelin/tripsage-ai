@@ -16,8 +16,8 @@ from tripsage_core.services.business.api_key_service import (
     ApiKeyCreateRequest,
     ApiKeyResponse,
     ApiKeyService,
+    ApiValidationResult,
     ServiceType,
-    ValidationResult,
     ValidationStatus,
 )
 from tripsage_core.services.infrastructure.cache_service import CacheService
@@ -118,11 +118,36 @@ class _StubCache:
         self.set_calls: list[tuple[str, str, dict[str, Any]]] = []
 
     async def get(self, key: str) -> str | None:
+        """Get a value from the cache."""
         return self.storage.get(key)
 
     async def set(self, key: str, value: str, **kwargs: Any) -> None:
+        """Set a value in the cache."""
         self.storage[key] = value
         self.set_calls.append((key, value, kwargs))
+
+    async def get_json(self, key: str, default: Any = None) -> Any:
+        """Get and parse JSON value from cache."""
+        import json
+
+        value = self.storage.get(key)
+        if value is None:
+            return default
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return default
+
+    async def set_json(self, key: str, value: Any, **kwargs: Any) -> bool:
+        """Store JSON-serializable value in cache."""
+        import json
+
+        try:
+            json_value = json.dumps(value)
+            await self.set(key, json_value, **kwargs)
+            return True
+        except (TypeError, ValueError):
+            return False
 
 
 @pytest.mark.asyncio
@@ -153,7 +178,7 @@ async def test_create_api_key_persists_record(test_settings: Settings) -> None:
     async with ApiKeyService(
         db=cast(DatabaseService, db), cache=None, settings=test_settings
     ) as service:
-        validation = ValidationResult(
+        validation = ApiValidationResult(
             is_valid=True,
             status=ValidationStatus.VALID,
             service=ServiceType.OPENAI,
@@ -166,7 +191,7 @@ async def test_create_api_key_persists_record(test_settings: Settings) -> None:
 
         cast(Any, service)._audit_key_creation = _audit
 
-        async def _validate(*_args: Any, **_kwargs: Any) -> ValidationResult:
+        async def _validate(*_args: Any, **_kwargs: Any) -> ApiValidationResult:
             """Validate API key."""
             return validation
 
@@ -270,7 +295,8 @@ async def test_validate_api_key_returns_cached_result(test_settings: Settings) -
     cache = _StubCache()
     api_key = "sk-cached-xyz"
     cache_hash = hashlib.sha256(f"openai:{api_key}".encode()).hexdigest()
-    cache.storage[f"api_validation:v3:{cache_hash}"] = ValidationResult(
+    cache_key = f"api_validation:v3:{cache_hash}"
+    cache.storage[cache_key] = ApiValidationResult(
         is_valid=True,
         status=ValidationStatus.VALID,
         service=ServiceType.OPENAI,
@@ -279,16 +305,19 @@ async def test_validate_api_key_returns_cached_result(test_settings: Settings) -
 
     db = _StubDatabase(transaction_result=_db_row())
 
+    # Enable caching for this test
+    test_settings.enable_api_key_caching = True
+
     async with ApiKeyService(
         db=cast(DatabaseService, db),
         cache=cast(CacheService, cache),
         settings=test_settings,
     ) as service:
 
-        async def _fail(*_args: Any, **_kwargs: Any) -> ValidationResult:
+        async def _fail(*_args: Any, **_kwargs: Any) -> ApiValidationResult:
             raise AssertionError("Validation should use cached data")
 
-        cast(Any, service)._validate_openai_key = _fail
+        cast(Any, service)._validate_api_key = _fail
 
         result = await service.validate_api_key(ServiceType.OPENAI, api_key)
 
@@ -305,22 +334,25 @@ async def test_validate_api_key_caches_successful_result(
     db = _StubDatabase(transaction_result=_db_row())
     api_key = "sk-cache-me"
 
+    # Enable caching for this test
+    test_settings.enable_api_key_caching = True
+
     async with ApiKeyService(
         db=cast(DatabaseService, db),
         cache=cast(CacheService, cache),
         settings=test_settings,
     ) as service:
-        validation = ValidationResult(
+        validation = ApiValidationResult(
             is_valid=True,
             status=ValidationStatus.VALID,
             service=ServiceType.OPENAI,
             message="ok",
         )
 
-        async def _validate(*_args: Any, **_kwargs: Any) -> ValidationResult:
+        async def _validate(*_args: Any, **_kwargs: Any) -> ApiValidationResult:
             return validation
 
-        cast(Any, service)._validate_openai_key = _validate
+        cast(Any, service)._validate_api_key = _validate
 
         await service.validate_api_key(ServiceType.OPENAI, api_key)
 

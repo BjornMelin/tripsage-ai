@@ -11,7 +11,7 @@ Shared library providing common components, services, and utilities for the Trip
 - **Data Models** - Supabase-compatible models for users, trips, flights, and chat
 - **Business Services** - Core logic for authentication, flights, accommodations, and AI memory
 - **External API Integration** - Direct SDK integrations (Duffel, Google Maps, Weather, etc.)
-- **Infrastructure Services** - Database, caching, and WebSocket management
+- **Infrastructure Services** - Database, caching, and Realtime (Supabase) management
 - **Utilities** - Common functionality for caching, logging, and error handling
 
 ## Architecture

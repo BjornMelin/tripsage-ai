@@ -152,6 +152,23 @@ class _Cache:
         """Set a value in the cache."""
         self.data[key] = value
 
+    async def get_json(
+        self, key: str
+    ) -> dict[str, Any] | None:  # pragma: no cover - exercised via service
+        """Get a JSON value from the cache."""
+        import json
+
+        value = self.data.get(key)
+        return json.loads(value) if value else None
+
+    async def set_json(
+        self, key: str, value: dict[str, Any], **_kwargs: Any
+    ) -> None:  # pragma: no cover - exercised via service
+        """Set a JSON value in the cache."""
+        import json
+
+        self.data[key] = json.dumps(value)
+
 
 class _Resp:
     """Minimal httpx-like response stub."""
@@ -256,19 +273,26 @@ async def test_validate_openai_success_caches_result(
     db = _DB()
     cache = _Cache()
 
+    test_settings.enable_api_key_caching = True
     async with ApiKeyService(
         db=cast(DatabaseService, db), cache=cast(Any, cache), settings=test_settings
     ) as svc:
-        # Patch request_with_backoff to avoid outbound requests
-        async def _fake_rwb(
-            _client: Any, _method: str, _url: str, **_kwargs: Any
-        ) -> _Resp:
-            # Successful OpenAI models response
-            return _Resp(200, {"data": [{"id": "gpt-4-turbo"}]})
+        # Patch OpenAI client to avoid outbound requests
+        class _FakeModels:
+            """Fake models API for testing."""
 
-        monkeypatch.setattr(
-            "tripsage_core.utils.outbound.request_with_backoff", _fake_rwb
-        )
+            async def list(self):
+                """Return fake models list."""
+                return type("List", (), {"data": [{"id": "gpt-4-turbo"}]})()
+
+        class _FakeOpenAI:
+            """Fake OpenAI client for testing."""
+
+            def __init__(self, api_key: str) -> None:
+                """Initialize fake OpenAI client."""
+                self.models = _FakeModels()
+
+        monkeypatch.setattr("openai.AsyncOpenAI", _FakeOpenAI)
 
         result = await svc.validate_api_key(ServiceType.OPENAI, "sk-live-abc")
 

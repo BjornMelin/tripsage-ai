@@ -2,41 +2,84 @@
  * @fileoverview Tests for the useSupabaseStorage hook.
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { waitFor } from "@testing-library/react";
+import type { FileAttachment } from "@/lib/supabase/database.types";
+import { useSupabaseStorage } from "@/hooks/use-supabase-storage";
+import { createMockSupabaseClient } from "@/test/mock-helpers";
 import { render } from "@/test/test-utils";
+import type { Mock } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-/**
- * Test component to render file attachment count using useSupabaseStorage.
- * @return JSX element displaying the count of file attachments.
- */
+const supabase = createMockSupabaseClient();
+const fromMock = supabase.from as unknown as Mock;
+
+vi.mock("@/lib/supabase/client", () => ({
+  useSupabase: () => supabase,
+  getBrowserClient: () => supabase,
+  createClient: () => supabase,
+}));
+
+const createQueryBuilder = (rows: FileAttachment[]) => {
+  const result = { data: rows, error: null };
+  const builder = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockImplementation((column: string, value: unknown) => {
+      if (column === "user_id") {
+        expect(value).toBe("mock-user-id");
+      }
+      return builder;
+    }),
+    order: vi.fn().mockImplementation(() => builder),
+    then: (
+      onFulfilled?: (value: typeof result) => unknown,
+      onRejected?: (reason: unknown) => unknown
+    ) => Promise.resolve(result).then(onFulfilled, onRejected),
+  };
+  return builder;
+};
+
+const createAttachment = (overrides: Partial<FileAttachment> = {}): FileAttachment => ({
+  id: overrides.id ?? "attachment-1",
+  user_id: overrides.user_id ?? "mock-user-id",
+  trip_id: overrides.trip_id ?? null,
+  chat_message_id: overrides.chat_message_id ?? null,
+  filename: overrides.filename ?? "file.pdf",
+  original_filename: overrides.original_filename ?? "file.pdf",
+  file_size: overrides.file_size ?? 1024,
+  mime_type: overrides.mime_type ?? "application/pdf",
+  file_path: overrides.file_path ?? "mock/file.pdf",
+  bucket_name: overrides.bucket_name ?? "attachments",
+  upload_status: overrides.upload_status ?? "completed",
+  virus_scan_status: overrides.virus_scan_status ?? "clean",
+  virus_scan_result: overrides.virus_scan_result ?? {},
+  metadata: overrides.metadata ?? {},
+  created_at: overrides.created_at ?? new Date(0).toISOString(),
+  updated_at: overrides.updated_at ?? new Date(0).toISOString(),
+});
+
 function FileCount() {
-  const { useSupabaseStorage } = require("@/hooks/use-supabase-storage");
   const { useFileAttachments } = useSupabaseStorage();
   const { data, isSuccess } = useFileAttachments();
-  return <div data-testid="files">{isSuccess ? data?.length || 0 : "-"}</div>;
+  return <div data-testid="files">{isSuccess ? data?.length ?? 0 : "-"}</div>;
 }
 
 describe("useSupabaseStorage", () => {
-  it("lists attachments for current user", async () => {
-    vi.doMock("@/lib/supabase/client", () => ({
-      useSupabase: () => ({
-        auth: {
-          getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })),
-          onAuthStateChange: vi.fn(() => ({
-            data: { subscription: { unsubscribe: vi.fn() } },
-          })),
-        },
-        from: vi.fn(() => ({
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              order: vi.fn(async () => ({ data: [{ id: "a1" }], error: null })),
-            })),
-          })),
-        })),
-      }),
-    }));
+  beforeEach(() => {
+    fromMock.mockReset();
+  });
 
-    const { findByTestId } = render(<FileCount />);
-    expect(await findByTestId("files")).toHaveTextContent("1");
+  it("lists attachments for current user", async () => {
+    const attachments = [createAttachment()];
+
+    fromMock.mockImplementationOnce((table: string) => {
+      expect(table).toBe("file_attachments");
+      return createQueryBuilder(attachments);
+    });
+
+    const { getByTestId } = render(<FileCount />);
+
+    await waitFor(() => {
+      expect(getByTestId("files")).toHaveTextContent("1");
+    });
   });
 });

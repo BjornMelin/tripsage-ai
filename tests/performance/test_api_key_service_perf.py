@@ -12,8 +12,8 @@ from tripsage_core.config import Settings
 from tripsage_core.services.business.api_key_service import (
     ApiKeyCreateRequest,
     ApiKeyService,
+    ApiValidationResult,
     ServiceType,
-    ValidationResult,
     ValidationStatus,
 )
 from tripsage_core.services.infrastructure.database_service import DatabaseService
@@ -107,14 +107,14 @@ async def test_create_api_key_completes_within_latency_budget(
     async with ApiKeyService(
         db=cast(DatabaseService, db), cache=None, settings=test_settings
     ) as service:
-        validation = ValidationResult(
+        validation = ApiValidationResult(
             is_valid=True,
             status=ValidationStatus.VALID,
             service=ServiceType.OPENAI,
             message="ok",
         )
 
-        async def _validate(*_args: Any, **_kwargs: Any) -> ValidationResult:
+        async def _validate(*_args: Any, **_kwargs: Any) -> ApiValidationResult:
             """Validate API key."""
             return validation
 

@@ -185,9 +185,9 @@ GET /api/v1/flights/search
 
 ## Schema Strategy
 
-- API schemas in `tripsage/api/schemas/` avoid duplicating domain models.
-- Canonical data structures come from `tripsage_core/models/` and `tripsage_core/services/business/*`.
-- API files may compose or re-export these models, and define only request/response wrappers that are truly API-specific.
+- API routers consume canonical models from `tripsage_core/models/` without maintaining duplicates.
+- Trip, itinerary, and accommodation schemas live in `tripsage_core/models/api/` and act as the single source of truth for data contracts.
+- Additional request/response wrappers in the API layer only adapt canonical models for HTTP concerns (pagination, headers, error formats).
 
 ## API Endpoints
 
@@ -273,7 +273,7 @@ GET /api/v1/flights/search
 
 ### Real-time Communication
 
-#### WebSocket Endpoints
+#### Realtime (Supabase) Endpoints
 
 - `WS /api/v1/ws/chat/{session_id}` - Real-time chat communication
 - `WS /api/v1/ws/trip/{trip_id}` - Trip planning collaboration

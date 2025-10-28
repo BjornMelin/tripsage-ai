@@ -1,22 +1,40 @@
-"""Activity response schemas using Pydantic V2.
+"""Activities API schemas (feature-first)."""
 
-This module defines Pydantic models for activity-related API responses.
-"""
+from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class ActivityCoordinates(BaseModel):
-    """Geographic coordinates."""
+class PriceRange(BaseModel):
+    """Price range filter."""
 
-    lat: float = Field(..., ge=-90, le=90, description="Latitude")
-    lng: float = Field(..., ge=-180, le=180, description="Longitude")
+    min: float = Field(ge=0, description="Minimum price")
+    max: float = Field(ge=0, description="Maximum price")
+
+
+class ActivitySearchRequest(BaseModel):
+    """Activity search request parameters."""
+
+    destination: str
+    start_date: date
+    end_date: date | None = None
+    adults: int = Field(1, ge=1, le=20)
+    children: int = Field(0, ge=0, le=20)
+    infants: int = Field(0, ge=0, le=10)
+    categories: list[str] | None = None
+    duration: int | None = Field(None, ge=1, le=1440)
+    price_range: PriceRange | None = None
+    rating: float | None = Field(None, ge=0, le=5)
+    wheelchair_accessible: bool | None = None
+    instant_confirmation: bool | None = None
+    free_cancellation: bool | None = None
 
 
 class ActivityResponse(BaseModel):
-    """Activity response model."""
+    """Activity response model (matches legacy API shape)."""
 
     id: str = Field(..., description="Activity ID")
     name: str = Field(..., description="Activity name")
@@ -35,6 +53,12 @@ class ActivityResponse(BaseModel):
     # Additional details
     provider: str | None = Field(None, description="Activity provider name")
     availability: str | None = Field(None, description="Availability status")
+    wheelchair_accessible: bool | None = Field(
+        None, description="Wheelchair accessibility"
+    )
+    instant_confirmation: bool | None = Field(
+        None, description="Instant confirmation available"
+    )
     cancellation_policy: str | None = Field(None, description="Cancellation policy")
     included: list[str] | None = Field(None, description="What's included")
     excluded: list[str] | None = Field(None, description="What's not included")
@@ -42,43 +66,42 @@ class ActivityResponse(BaseModel):
     languages: list[str] | None = Field(None, description="Available languages")
     max_participants: int | None = Field(None, description="Maximum participants")
     min_participants: int | None = Field(None, description="Minimum participants")
-    wheelchair_accessible: bool | None = Field(
-        None, description="Wheelchair accessibility"
-    )
-    instant_confirmation: bool | None = Field(
-        None, description="Instant confirmation available"
-    )
-
-
-class ActivitySearchResponse(BaseModel):
-    """Activity search response model."""
-
-    activities: list[ActivityResponse] = Field(
-        default_factory=list, description="List of activities"
-    )
-    total: int = Field(0, ge=0, description="Total number of results")
-    skip: int = Field(0, ge=0, description="Number of results skipped")
-    limit: int = Field(20, ge=1, description="Results per page")
-    filters_applied: dict[str, Any] | None = Field(
-        None, description="Applied search filters"
-    )
-
-    # Search metadata
-    search_id: str | None = Field(None, description="Search session ID")
-    cached: bool | None = Field(None, description="Whether results are from cache")
-    provider_responses: dict[str, int] | None = Field(
-        None, description="Number of results from each provider"
-    )
 
 
 class SavedActivityResponse(BaseModel):
-    """Saved activity response model."""
+    """Saved activity entry in a user's trip context."""
 
     activity_id: str = Field(..., description="Activity ID")
     trip_id: str | None = Field(None, description="Associated trip ID")
     user_id: str = Field(..., description="User ID who saved the activity")
     saved_at: str = Field(..., description="When activity was saved (ISO format)")
     notes: str | None = Field(None, description="User notes about the activity")
-
-    # Optional activity details (for list views)
     activity: ActivityResponse | None = Field(None, description="Full activity details")
+
+
+class ActivitySearchResponse(BaseModel):
+    """Aggregate search results with metadata."""
+
+    activities: list[ActivityResponse] = Field(default_factory=list)
+    total: int = Field(0, ge=0)
+    skip: int = Field(0, ge=0)
+    limit: int = Field(20, ge=1)
+    filters_applied: dict[str, Any] | None = None
+    search_id: str | None = None
+    cached: bool | None = None
+    provider_responses: dict[str, int] | None = None
+
+
+class ActivityCoordinates(BaseModel):
+    """Geographic coordinates."""
+
+    lat: float = Field(..., ge=-90, le=90, description="Latitude")
+    lng: float = Field(..., ge=-180, le=180, description="Longitude")
+
+
+class SaveActivityRequest(BaseModel):
+    """Request body to save an activity to a trip."""
+
+    activity_id: str
+    trip_id: str | None = None
+    notes: str | None = Field(None, max_length=1000)

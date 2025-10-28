@@ -10,7 +10,7 @@ import sys
 from collections.abc import MutableMapping
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from tripsage_core.config import get_settings
 
@@ -19,7 +19,7 @@ from tripsage_core.config import get_settings
 _loggers: dict[str, logging.Logger] = {}
 
 
-class ContextAdapter(logging.LoggerAdapter):
+class ContextAdapter(logging.LoggerAdapter[logging.Logger]):
     """Adapter that adds context information to log records."""
 
     def process(
@@ -35,15 +35,19 @@ class ContextAdapter(logging.LoggerAdapter):
             Tuple of (modified message, modified kwargs)
         """
         # Extract extra context if provided
-        context = self.extra.get("context", {}) if self.extra else {}
+        context: dict[str, Any] = {}
+        if self.extra and isinstance(self.extra, dict):
+            context_value = self.extra.get("context")
+            if isinstance(context_value, dict):
+                context = cast(dict[str, Any], context_value)
 
         # Add context to extra if provided
         if "extra" not in kwargs:
             kwargs["extra"] = {}
 
-        # Only update if context is a dict
-        if isinstance(context, dict):
-            kwargs["extra"].update(context)
+        # Update kwargs extra with context
+        extra_dict = cast(dict[str, Any], kwargs["extra"])
+        extra_dict.update(context)
 
         return msg, kwargs
 
@@ -67,7 +71,7 @@ def configure_logging(
     log_to_file: bool = True,
     log_dir: str = "logs",
     context: dict[str, Any] | None = None,
-) -> logging.LoggerAdapter:
+) -> ContextAdapter:
     """Configure and return a logger with standardized settings.
 
     Args:
@@ -123,7 +127,7 @@ def configure_logging(
 
 def get_logger(
     name: str, level: int | None = None, context: dict[str, Any] | None = None
-) -> logging.Logger | logging.LoggerAdapter:
+) -> logging.Logger | ContextAdapter:
     """Get a logger for a module.
 
     This is a convenience function that should be used in each module:

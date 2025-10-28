@@ -6,16 +6,19 @@ Simplified authentication using direct JWT verification.
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
+from tripsage.api.core.dependencies import (
+    RequiredPrincipalDep,
+    UserServiceDep,
+    get_principal_id,
+)
 from tripsage.api.schemas.users import UserPreferencesRequest, UserPreferencesResponse
 from tripsage_core.observability.otel import (
     http_route_attr_fn,
     record_histogram,
     trace_span,
 )
-from tripsage_core.services.business.user_service import UserService, get_user_service
 
 
 router = APIRouter()
@@ -26,8 +29,8 @@ logger = logging.getLogger(__name__)
 @trace_span(name="api.users.preferences.get")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_user_preferences(
-    principal=Depends(require_principal),
-    user_service: UserService = Depends(get_user_service),
+    user_service: UserServiceDep,
+    principal: RequiredPrincipalDep,
 ) -> UserPreferencesResponse:
     """Get the authenticated user's preferences.
 
@@ -71,8 +74,8 @@ async def get_user_preferences(
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def update_user_preferences(
     preferences_request: UserPreferencesRequest,
-    principal=Depends(require_principal),
-    user_service: UserService = Depends(get_user_service),
+    user_service: UserServiceDep,
+    principal: RequiredPrincipalDep,
 ) -> UserPreferencesResponse:
     """Update the authenticated user's preferences.
 

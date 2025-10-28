@@ -9,7 +9,6 @@ from typing import Any, cast
 
 from fastapi import (
     APIRouter,
-    Depends,
     HTTPException,
     Path,
     Query,
@@ -21,10 +20,10 @@ from fastapi import (
 from tripsage.api.core.dependencies import (
     AdminPrincipalDep,
     ApiKeyServiceDep,
+    KeyMonitoringServiceDep,
+    RequiredPrincipalDep,
     get_principal_id,
-    require_principal,
 )
-from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.api_keys import (
     ApiKeyCreate,
     ApiKeyResponse,
@@ -37,19 +36,14 @@ from tripsage_core.observability.otel import (
     record_histogram,
     trace_span,
 )
+from tripsage_core.services.business.api_key_service import ValidationStatus
 from tripsage_core.services.infrastructure.key_monitoring_service import (
-    KeyMonitoringService,
     get_key_health_metrics,
 )
 
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-def get_monitoring_service() -> KeyMonitoringService:
-    """Dependency provider for the KeyMonitoringService."""
-    return KeyMonitoringService()
 
 
 @router.get(
@@ -63,7 +57,7 @@ async def list_keys(
     request: Request,
     response: Response,
     key_service: ApiKeyServiceDep,
-    principal: Principal = Depends(require_principal),
+    principal: RequiredPrincipalDep,
 ):
     """List all API keys for the current user.
 
@@ -93,7 +87,7 @@ async def create_key(
     response: Response,
     key_data: ApiKeyCreate,
     key_service: ApiKeyServiceDep,
-    principal: Principal = Depends(require_principal),
+    principal: RequiredPrincipalDep,
 ):
     """Create a new API key.
 
@@ -115,20 +109,29 @@ async def create_key(
         validation = await key_service.validate_key(key_data.key, key_data.service)
 
         if not validation.is_valid:
+            validation_status = getattr(validation, "status", None)
+            if validation_status == ValidationStatus.RATE_LIMITED:
+                status_code_value = status.HTTP_429_TOO_MANY_REQUESTS
+            elif validation_status == ValidationStatus.SERVICE_ERROR:
+                status_code_value = status.HTTP_500_INTERNAL_SERVER_ERROR
+            else:
+                status_code_value = status.HTTP_400_BAD_REQUEST
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status_code_value,
                 detail=f"Invalid API key for {key_data.service}: {validation.message}",
             )
 
         # Create the API key
         user_id = get_principal_id(principal)
         return await key_service.create_key(user_id, key_data)
-    except Exception:
+    except HTTPException:
+        raise
+    except Exception as e:
         logger.exception("Error creating API key")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create API key.",
-        ) from None
+            detail=f"Failed to create API key: {e!s}",
+        ) from e
 
 
 @router.delete(
@@ -142,7 +145,7 @@ async def delete_key(
     request: Request,
     response: Response,
     key_service: ApiKeyServiceDep,
-    principal: Principal = Depends(require_principal),
+    principal: RequiredPrincipalDep,
     key_id: str = Path(..., description="The API key ID"),
 ):
     """Delete an API key.
@@ -189,7 +192,7 @@ async def validate_key(
     response: Response,
     key_data: ApiKeyValidateRequest,
     key_service: ApiKeyServiceDep,
-    principal: Principal = Depends(require_principal),
+    principal: RequiredPrincipalDep,
 ):
     """Validate an API key with the service.
 
@@ -219,7 +222,7 @@ async def rotate_key(  # pylint: disable=too-many-positional-arguments
     response: Response,
     key_data: ApiKeyRotateRequest,
     key_service: ApiKeyServiceDep,
-    principal: Principal = Depends(require_principal),
+    principal: RequiredPrincipalDep,
     key_id: str = Path(..., description="The API key ID"),
 ):
     """Rotate an API key.
@@ -291,7 +294,7 @@ async def get_metrics(
     Returns:
         Key health metrics
     """
-    _ = principal  # Enforce admin gating
+    _ = principal  # Enforce admin gating (principal is validated upstream)
     raw_metrics = await get_key_health_metrics()
 
     if raw_metrics.get("error"):
@@ -331,9 +334,9 @@ async def get_metrics(
 async def get_audit_log(
     request: Request,
     response: Response,
+    monitoring_service: KeyMonitoringServiceDep,
     principal: AdminPrincipalDep,
-    limit: int = Query(100, ge=1, le=1000),
-    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
+    limit: int = Query(20, ge=1, le=100),
 ):
     """Get API key audit log for a user.
 

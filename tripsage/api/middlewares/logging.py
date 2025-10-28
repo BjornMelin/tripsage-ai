@@ -30,7 +30,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         Args:
             app: The ASGI application
         """
-        self.app = app
+        super().__init__(app)
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]

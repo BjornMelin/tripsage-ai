@@ -7,19 +7,20 @@ This module provides health check endpoints including:
 - Detailed readiness checks
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
-from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime
 from typing import Any, cast
 
 from fastapi import APIRouter, Request, Response
-from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import CacheDep, DatabaseDep, SettingsDep
 from tripsage.api.limiting import limiter
+from tripsage.api.schemas.health import (
+    ComponentHealth,
+    ReadinessCheck,
+    SystemHealth,
+)
 from tripsage_core.observability.otel import (
     http_route_attr_fn,
     record_histogram,
@@ -31,47 +32,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["health"])
 
-AsyncCallable = Callable[..., Awaitable[Any]]
-LimiterDecorator = Callable[[AsyncCallable], AsyncCallable]
-_limiter_exempt = cast(LimiterDecorator, cast(Any, limiter).exempt)
-
-
-def limiter_exempt(func: AsyncCallable) -> AsyncCallable:
-    """Typed wrapper that preserves the callable signature for limiter exemption."""
-    return _limiter_exempt(func)
-
-
-class ComponentHealth(BaseModel):
-    """Health status of a system component."""
-
-    name: str
-    status: str  # healthy, degraded, unhealthy
-    latency_ms: float | None = None
-    message: str | None = None
-    details: dict[str, Any] = Field(default_factory=dict)
-
-
-class SystemHealth(BaseModel):
-    """Overall system health status."""
-
-    status: str  # healthy, degraded, unhealthy
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    version: str = "1.0.0"
-    environment: str
-    components: list[ComponentHealth]
-
-
-class ReadinessCheck(BaseModel):
-    """Readiness check result."""
-
-    ready: bool
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    checks: dict[str, bool]
-    details: dict[str, str] = Field(default_factory=dict)
-
 
 @router.get("/health", response_model=SystemHealth)
-@limiter_exempt
+@limiter.exempt
 @trace_span(name="api.health")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def comprehensive_health_check(
@@ -85,7 +48,7 @@ async def comprehensive_health_check(
 
     Returns detailed health status of the application and all its dependencies.
     """
-    components: list[ComponentHealth] = []
+    components = []
     overall_status = "healthy"
 
     # 1. Application health
@@ -106,12 +69,6 @@ async def comprehensive_health_check(
             snapshot = monitor.get_current_health()
         latency_ms = (snapshot.latency_s * 1000) if snapshot else None
         db_status = snapshot.status.value if snapshot else "unhealthy"
-        snapshot_details: dict[str, Any] = {}
-        if snapshot is not None:
-            raw_details = getattr(snapshot, "details", None)
-            if isinstance(raw_details, Mapping):
-                typed_details = cast(Mapping[str, Any], raw_details)
-                snapshot_details.update(dict(typed_details))
         db_health = ComponentHealth(
             name="database",
             status=db_status,
@@ -121,7 +78,7 @@ async def comprehensive_health_check(
                 if db_status == "healthy"
                 else "Database not healthy"
             ),
-            details=snapshot_details,
+            details=(snapshot.details if snapshot else {}),
         )
     else:
         # Fallback to direct service probe
@@ -131,6 +88,7 @@ async def comprehensive_health_check(
             status="healthy" if ok else "unhealthy",
             latency_ms=None,
             message=("Database is responsive" if ok else "Database not healthy"),
+            details={},
         )
     components.append(db_health)
     if db_health.status != "healthy":
@@ -148,6 +106,7 @@ async def comprehensive_health_check(
         status="healthy" if ok_cache else "unhealthy",
         latency_ms=None,
         message=("Cache is responsive" if ok_cache else "Cache not healthy"),
+        details={},
     )
     components.append(cache_health)
     if cache_health.status != "healthy" and overall_status == "healthy":
@@ -160,8 +119,8 @@ async def comprehensive_health_check(
     )
 
 
-@router.get("/health/liveness")
-@limiter_exempt
+@router.get("/health/liveness", response_model=dict)
+@limiter.exempt
 @trace_span(name="api.health.liveness")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def liveness_check(request: Request, response: Response):
@@ -177,7 +136,7 @@ async def liveness_check(request: Request, response: Response):
 
 
 @router.get("/health/readiness", response_model=ReadinessCheck)
-@limiter_exempt
+@limiter.exempt
 @trace_span(name="api.health.readiness")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def readiness_check(
@@ -191,8 +150,8 @@ async def readiness_check(
     Returns whether the application is ready to serve traffic.
     Checks critical dependencies but with shorter timeouts.
     """
-    checks: dict[str, bool] = {}
-    details: dict[str, str] = {}
+    checks = {}
+    details = {}
 
     # Check database (with timeout) via monitor or direct probe
     try:
@@ -252,12 +211,6 @@ async def readiness_check(
         checks["cache"] = False
         details["cache"] = f"Cache check failed: {e!s}"
 
-    # Authentication readiness (middleware + services)
-    auth_ready = bool(getattr(request.app.state, "security_ready", False))
-    checks["authentication"] = auth_ready
-    if not auth_ready:
-        details.setdefault("authentication", "Authentication services unavailable")
-
     # Determine overall readiness
     ready = all(checks.values())
     return ReadinessCheck(
@@ -267,7 +220,7 @@ async def readiness_check(
     )
 
 
-@router.get("/health/database")
+@router.get("/health/database", response_model=ComponentHealth)
 @trace_span(name="api.health.database")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def database_health_check(request: Request, db_service: DatabaseDep):
@@ -294,18 +247,18 @@ async def database_health_check(request: Request, db_service: DatabaseDep):
                 pool_stats = await _maybe
             else:
                 pool_stats = _maybe
-            if isinstance(pool_stats, Mapping):
-                typed_pool_stats = cast(Mapping[str, Any], pool_stats)
-                merged_details = dict(health.details)
-                merged_details.update(dict(typed_pool_stats))
-                health.details = merged_details
+            if isinstance(pool_stats, dict):
+                # Assign to avoid pylint misdetection of Pydantic FieldInfo
+                current = dict(health.details or {})
+                current.update(pool_stats)
+                health.details = current
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to get pool stats: %s", e)
 
     return health
 
 
-@router.get("/health/cache")
+@router.get("/health/cache", response_model=ComponentHealth)
 @trace_span(name="api.health.cache")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def cache_health_check(request: Request, cache_service: CacheDep):
@@ -324,17 +277,18 @@ async def cache_health_check(request: Request, cache_service: CacheDep):
     )
 
     # Add more detailed cache metrics if available
-    if cache_service and hasattr(cache_service, "info"):
+    if hasattr(cache_service, "info"):
         try:
-            info_callable = cast(Callable[[], Awaitable[Any]], cache_service.info)
-            info_result = await info_callable()
-            if isinstance(info_result, Mapping):
-                info_dict = dict(cast(Mapping[str, Any], info_result))
-                health.details["used_memory"] = info_dict.get("used_memory_human")
-                health.details["connected_clients"] = info_dict.get("connected_clients")
-                health.details["total_commands_processed"] = info_dict.get(
-                    "total_commands_processed"
-                )
+            info = await cast(Any, cache_service).info()
+            current = dict(health.details or {})
+            current.update(
+                {
+                    "used_memory": info.get("used_memory_human"),
+                    "connected_clients": info.get("connected_clients"),
+                    "total_commands_processed": info.get("total_commands_processed"),
+                }
+            )
+            health.details = current
         except Exception as e:  # noqa: BLE001
             logger.warning("Failed to get cache info: %s", e)
 
@@ -346,7 +300,7 @@ async def cache_health_check(request: Request, cache_service: CacheDep):
 
 
 @router.get("/health/ratelimit", response_model=dict)
-@limiter_exempt
+@limiter.exempt
 async def ratelimit_status(request: Request, response: Response):
     """Show current rate-limiting backend information (operators)."""
     lim = getattr(request.app.state, "limiter", None)

@@ -7,10 +7,11 @@ using modern LangGraph @tool patterns for simplicity and maintainability.
 from typing import Any, Literal, cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.tools import Tool
+from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.config import get_default_config
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
@@ -49,11 +50,11 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
     information using MCP tool integration.
     """
 
-    def __init__(self, service_registry, **config_overrides):
+    def __init__(self, services: AppServiceContainer, **config_overrides: Any):
         """Initialize the destination research agent node with dynamic configuration.
 
         Args:
-            service_registry: Service registry for dependency injection
+            services: Application service container for dependency injection
             **config_overrides: Runtime configuration overrides (e.g., temperature=0.8)
         """
         # Get configuration service for database-backed config
@@ -65,13 +66,13 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
         self.config_overrides = config_overrides
         self.agent_config: dict[str, Any] | None = None
         self.llm: ChatOpenAI | None = None
-        self.tool_map: dict[str, Tool] = {}
+        self.available_tools: list[BaseTool] | None = None
+        self.tool_map: dict[str, BaseTool] = {}
         self._parameter_extractor: (
             StructuredExtractor[DestinationResearchParameters] | None
         ) = None
         self.llm_with_tools = None
-
-        super().__init__("destination_research_agent", service_registry)
+        super().__init__("destination_research_agent", services)
 
     def _initialize_tools(self) -> None:
         """Initialize destination research tools using simple tool catalog."""
@@ -80,8 +81,6 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
         # Get tools for destination research agent using simple catalog
         self.available_tools = get_tools_for_agent("destination_research_agent")
         self.tool_map = {tool.name: tool for tool in self.available_tools}
-        self._alias_tool("webcrawl_search", "web_search")
-        self._alias_tool("search_places", "geocode_location")
 
         # Bind tools to LLM for direct use
         if self.llm:
@@ -92,13 +91,7 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             len(self.available_tools),
         )
 
-    def _alias_tool(self, alias: str, canonical: str) -> None:
-        """Map a legacy tool alias to a canonical registered tool."""
-        tool = self.tool_map.get(canonical)
-        if tool:
-            self.tool_map[alias] = tool
-
-    def _get_tool(self, name: str) -> Tool | None:
+    def _get_tool(self, name: str) -> BaseTool | None:
         """Return LangGraph tool by name with logging when missing."""
         tool = self.tool_map.get(name)
         if tool is None:
@@ -371,7 +364,9 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             logger.exception("Overview research failed")
             return {"error": str(exc)}
 
-    async def _research_attractions(self, destination: str, interests: list) -> list:
+    async def _research_attractions(
+        self, destination: str, interests: list[str]
+    ) -> list[dict[str, Any]]:
         """Research attractions and landmarks in a destination."""
         try:
             webcrawl_tool = self._get_tool("webcrawl_search")
@@ -402,7 +397,9 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             logger.exception("Attractions research failed")
             return [{"error": str(exc)}]
 
-    async def _research_activities(self, destination: str, interests: list) -> list:
+    async def _research_activities(
+        self, destination: str, interests: list[str]
+    ) -> list[dict[str, Any]]:
         """Research activities and experiences in a destination."""
         try:
             webcrawl_tool = self._get_tool("webcrawl_search")

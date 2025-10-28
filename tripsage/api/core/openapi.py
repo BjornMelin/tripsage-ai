@@ -49,7 +49,7 @@ This API is designed to serve multiple consumer types with adapted responses:
 ### AI & Communication
 * **Chat System** - Conversation management with AI agents
 * **Memory & Context** - Persistent conversation memory and user learning
-* **Real-time Communication** - WebSocket support for live updates
+* **Real-time Communication** - Realtime (Supabase) support for live updates
 * **File Processing** - Document analysis and travel document extraction
 
 ### Authentication & Security
@@ -178,14 +178,14 @@ The API returns consumer-specific error formats:
 ## Real-time Features
 
 Real-time messaging is provided via Supabase Realtime private channels with RLS
-authorization (no custom WebSocket endpoints).
+authorization (no custom Realtime (Supabase) endpoints).
 
 ## Integration with TripSage Core
 
 This API leverages the `tripsage_core` shared library for:
 
 * **Business Services** - Flight, accommodation, memory, and chat services
-* **Infrastructure Services** - Database, caching, and WebSocket management
+* **Infrastructure Services** - Database, caching, and Realtime (Supabase) management
 * **External API Integration** - Standardized patterns for third-party services
 * **Security & Configuration** - Centralized settings and encryption
 """
@@ -281,13 +281,6 @@ TAG_DESCRIPTIONS = [
         "description": (
             "File upload and processing endpoints. Supports travel document analysis, "
             "image processing, and document extraction with AI-powered insights."
-        ),
-    },
-    {
-        "name": "websocket",
-        "description": (
-            "Real-time communication endpoints via WebSocket. Enables live updates "
-            "for chat, trip planning collaboration, and agent status monitoring."
         ),
     },
     {

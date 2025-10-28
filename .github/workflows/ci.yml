@@ -52,12 +52,12 @@ jobs:
       contains(github.event_name, 'push') ||
       contains(github.event_name, 'workflow_dispatch')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -92,7 +92,7 @@ jobs:
     name: Frontend (lint, type, unit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Node
         uses: actions/setup-node@v6

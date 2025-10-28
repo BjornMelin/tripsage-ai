@@ -251,7 +251,3 @@ class LocationService:
         except GoogleMapsServiceError as e:
             logger.exception("Timezone request failed for location %s", location)
             raise LocationServiceError(f"Timezone request failed: {e}") from e
-
-
-# Note: Use dependency injection. Construct LocationService in composition
-# roots (e.g., ServiceRegistry or app lifespan) and pass to callers.

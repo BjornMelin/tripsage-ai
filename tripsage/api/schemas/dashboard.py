@@ -6,7 +6,7 @@ including validation schemas for monitoring and analytics endpoints.
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, cast
+from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -83,18 +83,24 @@ class DashboardQueryParams(BaseModel):
     service: str | None = Field(default=None, max_length=50)
 
     @model_validator(mode="after")
-    def _set_time_range_hours(self) -> "DashboardQueryParams":
-        """Derive ``time_range_hours`` from ``time_range`` when not provided."""
-        if self.time_range_hours is None:
-            mapping: dict[TimeRange, int] = {
-                TimeRange.LAST_HOUR: 1,
-                TimeRange.LAST_6_HOURS: 6,
-                TimeRange.LAST_24_HOURS: 24,
-                TimeRange.LAST_7_DAYS: 168,
-                TimeRange.LAST_30_DAYS: 720,
-            }
-            tr = self.time_range or TimeRange.LAST_24_HOURS
-            self.time_range_hours = mapping.get(tr, 24)
+    def _set_time_range_hours_default(self) -> "DashboardQueryParams":
+        """Populate ``time_range_hours`` when not provided using ``time_range``.
+
+        Pydantic v2 model-level validator used for cross-field defaulting.
+        """
+        if self.time_range_hours is not None:
+            return self
+
+        time_range_mapping = {
+            TimeRange.LAST_HOUR: 1,
+            TimeRange.LAST_6_HOURS: 6,
+            TimeRange.LAST_24_HOURS: 24,
+            TimeRange.LAST_7_DAYS: 168,
+            TimeRange.LAST_30_DAYS: 720,
+        }
+        self.time_range_hours = time_range_mapping.get(
+            self.time_range or TimeRange.LAST_24_HOURS, 24
+        )
         return self
 
 
@@ -178,8 +184,7 @@ class SystemOverviewResponse(BaseModel):
 
     # Component health
     components: list[ComponentHealth] = Field(
-        default_factory=lambda: cast(list[ComponentHealth], []),
-        description="Component health status",
+        default_factory=list, description="Component health status"
     )
 
 
@@ -223,8 +228,7 @@ class UsageMetricsResponse(BaseModel):
         ..., description="Number of unique endpoints accessed"
     )
     top_endpoints: list[dict[str, Any]] = Field(
-        default_factory=lambda: cast(list[dict[str, Any]], []),
-        description="Top accessed endpoints",
+        default_factory=list, description="Top accessed endpoints"
     )
     error_breakdown: dict[str, int] = Field(
         default_factory=dict, description="Error count by type"
@@ -249,11 +253,16 @@ class RateLimitInfoResponse(BaseModel):
     percentage_used: float = Field(
         ..., ge=0.0, le=100.0, description="Percentage of quota used"
     )
-    is_approaching_limit: bool = Field(..., description="Whether approaching the limit")
+    is_approaching_limit: bool = Field(
+        default=False, description="Whether approaching the limit"
+    )
 
     @model_validator(mode="after")
-    def _calculate_approaching(self) -> "RateLimitInfoResponse":
-        """Calculate whether the usage approaches the set limit."""
+    def _compute_is_approaching_limit(self) -> "RateLimitInfoResponse":
+        """Derive ``is_approaching_limit`` from ``percentage_used``.
+
+        Uses a fixed 80% threshold.
+        """
         self.is_approaching_limit = self.percentage_used >= 80.0
         return self
 
@@ -313,8 +322,7 @@ class UserActivityResponse(BaseModel):
         default_factory=list, description="Services accessed"
     )
     top_endpoints: list[dict[str, Any]] = Field(
-        default_factory=lambda: cast(list[dict[str, Any]], []),
-        description="Most used endpoints",
+        default_factory=list, description="Most used endpoints"
     )
     avg_latency_ms: float = Field(default=0.0, description="Average response latency")
 
@@ -351,19 +359,19 @@ class TrendDataResponse(BaseModel):
     max_value: float = Field(..., description="Maximum value in period")
     avg_value: float = Field(..., description="Average value in period")
     trend_direction: str = Field(
-        ..., description="Overall trend direction (up, down, stable)"
+        default="stable", description="Overall trend direction (up, down, stable)"
     )
 
     @model_validator(mode="after")
-    def _calculate_trend_direction(self) -> "TrendDataResponse":
-        """Derive a coarse-grained trend direction from the series."""
-        points = self.data_points
-        if len(points) < 2:
+    def _compute_trend_direction(self) -> "TrendDataResponse":
+        """Calculate trend direction from data points using a simple heuristic."""
+        if len(self.data_points) < 2:
             self.trend_direction = "stable"
             return self
 
-        first_half = points[: len(points) // 2]
-        second_half = points[len(points) // 2 :]
+        first_half = self.data_points[: len(self.data_points) // 2]
+        second_half = self.data_points[len(self.data_points) // 2 :]
+
         if not first_half or not second_half:
             self.trend_direction = "stable"
             return self
@@ -378,6 +386,7 @@ class TrendDataResponse(BaseModel):
             self.trend_direction = "down"
         else:
             self.trend_direction = "stable"
+
         return self
 
 
@@ -461,8 +470,7 @@ class BulkAlertActionResponse(BaseModel):
     successful: int = Field(..., description="Number of successful operations")
     failed: int = Field(..., description="Number of failed operations")
     errors: list[dict[str, str]] = Field(
-        default_factory=lambda: cast(list[dict[str, str]], []),
-        description="Error details",
+        default_factory=list, description="Error details"
     )
 
 

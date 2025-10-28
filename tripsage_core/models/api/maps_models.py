@@ -7,10 +7,11 @@ to minimize translation and duplication while keeping strong typing.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Final
 
 from pydantic import Field
 
+from tripsage_core.models.api._export_helpers import auto_all
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.models.schemas_common.geographic import (
     Coordinates,
@@ -125,3 +126,8 @@ class ElevationPoint(TripSageModel):
 
     location: Coordinates
     elevation_meters: float
+
+
+__all__: Final[tuple[str, ...]] = tuple(  # pyright: ignore[reportUnsupportedDunderAll]
+    auto_all(__name__, globals())
+)

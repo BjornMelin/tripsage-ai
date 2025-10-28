@@ -11,10 +11,10 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from tripsage.api.schemas.requests.search import UnifiedSearchRequest
-from tripsage.api.schemas.responses.search import (
+from tripsage.api.schemas.search import (
     SearchFacet,
     SearchResultItem,
+    UnifiedSearchRequest,
     UnifiedSearchResponse,
 )
 from tripsage_core.exceptions.exceptions import CoreServiceError
@@ -311,7 +311,7 @@ class UnifiedSearchService(
                 return []
 
             # Create activity search request
-            from tripsage.api.schemas.requests.activities import ActivitySearchRequest
+            from tripsage.api.schemas.activities import ActivitySearchRequest
 
             activity_request = ActivitySearchRequest.model_validate(
                 {

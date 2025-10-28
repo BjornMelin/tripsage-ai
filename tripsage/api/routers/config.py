@@ -12,10 +12,7 @@ from typing import Any, TypedDict, cast
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
-from tripsage.api.core.dependencies import (
-    AdminPrincipalDep,
-    get_principal_id,
-)
+from tripsage.api.core.dependencies import AdminPrincipalDep, get_principal_id
 from tripsage.api.schemas.config import (
     AgentConfigRequest,
     AgentConfigResponse,
@@ -156,6 +153,7 @@ async def update_agent_config(
         updated_config = cast(AgentConfig, {**current_config, **updates})
 
         current_user = get_principal_id(principal)
+
         # TODO: Persist to database here
         # await _persist_agent_config(agent_type, updated_config, current_user)
 
@@ -201,7 +199,7 @@ async def get_agent_config_versions(
 
     try:
         _ = get_principal_id(principal)
-        # TODO: Implement database query for version history (user id available)
+        # TODO: Implement database query for version history
         # versions = await _get_config_versions(agent_type, limit)
 
         # Placeholder response
@@ -214,7 +212,9 @@ async def get_agent_config_versions(
 
 @router.post("/agents/{agent_type}/rollback/{version_id}")
 async def rollback_agent_config(
-    agent_type: str, version_id: str, principal: AdminPrincipalDep
+    agent_type: str,
+    version_id: str,
+    principal: AdminPrincipalDep,
 ):
     """Rollback agent configuration to a specific version."""
     # Validate agent type
@@ -226,9 +226,18 @@ async def rollback_agent_config(
         )
 
     try:
-        _ = get_principal_id(principal)
+        current_user = get_principal_id(principal)
         # TODO: Implement version rollback
         # config = await _rollback_to_version(agent_type, version_id, current_user)
+
+        logger.info(
+            "Agent config rollback queued",
+            extra={
+                "agent_type": agent_type,
+                "version_id": version_id,
+                "updated_by": current_user,
+            },
+        )
 
         return JSONResponse(
             content={
@@ -243,7 +252,7 @@ async def rollback_agent_config(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/environment")
+@router.get("/environment", response_model=dict[str, Any])
 async def get_environment_config():
     """Get current environment configuration summary."""
     settings = get_settings()
@@ -254,7 +263,7 @@ async def get_environment_config():
         "feature_flags": {
             "enable_advanced_agents": True,
             "enable_memory_system": True,
-            "enable_real_time": True,
+            "enable_real_time": settings.enable_websockets,
             "enable_vector_search": True,
             "enable_monitoring": True,
         },

@@ -8,27 +8,26 @@ import logging
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
-from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.accommodations import (
-    AccommodationDetailsRequest,
-    AccommodationDetailsResponse,
-    SavedAccommodationRequest,
-    SavedAccommodationResponse,
+from tripsage.api.core.dependencies import (
+    AccommodationServiceDep,
+    RequiredPrincipalDep,
+    get_principal_id,
 )
 from tripsage_core.exceptions import CoreTripSageError
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
-from tripsage_core.services.business.accommodation_service import (
-    AccommodationSearchRequest as ServiceAccommodationSearchRequest,
-    AccommodationSearchResponse as ServiceAccommodationSearchResponse,
-    AccommodationService,
-    BookingStatus,
-    get_accommodation_service,
+from tripsage_core.models.api.accommodation_models import (
+    AccommodationDetailsRequest,
+    AccommodationDetailsResponse,
+    AccommodationSearchRequest,
+    AccommodationSearchResponse,
+    SavedAccommodationRequest,
+    SavedAccommodationResponse,
 )
+from tripsage_core.services.business.accommodation_service import BookingStatus
 
 
 logger = logging.getLogger(__name__)
@@ -36,11 +35,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/search", response_model=ServiceAccommodationSearchResponse)
+@router.post("/search", response_model=AccommodationSearchResponse)
 async def search_accommodations(
-    request: ServiceAccommodationSearchRequest,
-    principal: Principal = Depends(require_principal),
-    accommodation_service: AccommodationService = Depends(get_accommodation_service),
+    request: AccommodationSearchRequest,
+    accommodation_service: AccommodationServiceDep,
+    principal: RequiredPrincipalDep,
 ):
     """Search for accommodations based on the provided criteria.
 
@@ -55,14 +54,17 @@ async def search_accommodations(
     user_id = get_principal_id(principal)
     # Ensure user context is attached to the canonical request
     service_request = request.model_copy(update={"user_id": user_id})
-    return await accommodation_service.search_accommodations(service_request)
+    service_response = await accommodation_service.search_accommodations(
+        service_request
+    )
+    return AccommodationSearchResponse.model_validate(service_response.model_dump())
 
 
 @router.post("/details", response_model=AccommodationDetailsResponse)
 async def get_accommodation_details(
     request: AccommodationDetailsRequest,
-    principal: Principal = Depends(require_principal),
-    accommodation_service: AccommodationService = Depends(get_accommodation_service),
+    accommodation_service: AccommodationServiceDep,
+    principal: RequiredPrincipalDep,
 ):
     """Get details of a specific accommodation listing.
 
@@ -103,8 +105,8 @@ async def get_accommodation_details(
 )
 async def save_accommodation(
     request: SavedAccommodationRequest,
-    principal: Principal = Depends(require_principal),
-    accommodation_service: AccommodationService = Depends(get_accommodation_service),
+    accommodation_service: AccommodationServiceDep,
+    principal: RequiredPrincipalDep,
 ):
     """Save an accommodation listing for a trip.
 
@@ -171,8 +173,8 @@ async def save_accommodation(
 )
 async def delete_saved_accommodation(
     saved_accommodation_id: UUID,
-    principal: Principal = Depends(require_principal),
-    accommodation_service: AccommodationService = Depends(get_accommodation_service),
+    accommodation_service: AccommodationServiceDep,
+    principal: RequiredPrincipalDep,
 ):
     """Delete a saved accommodation.
 
@@ -198,9 +200,9 @@ async def delete_saved_accommodation(
 
 @router.get("/saved", response_model=list[SavedAccommodationResponse])
 async def list_saved_accommodations(
+    accommodation_service: AccommodationServiceDep,
+    principal: RequiredPrincipalDep,
     trip_id: UUID | None = None,
-    principal: Principal = Depends(require_principal),
-    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """List saved accommodations for a user, optionally filtered by trip.
 
@@ -217,7 +219,7 @@ async def list_saved_accommodations(
     bookings = await accommodation_service.get_user_bookings(user_id)
 
     # Convert bookings to saved accommodation responses
-    saved_accommodations = []
+    saved_accommodations: list[SavedAccommodationResponse] = []
     for booking in bookings:
         # Filter by trip_id if provided
         if trip_id and booking.trip_id != str(trip_id):
@@ -274,8 +276,8 @@ async def list_saved_accommodations(
 async def update_saved_accommodation_status(
     saved_accommodation_id: UUID,
     status: BookingStatus,
-    principal: Principal = Depends(require_principal),
-    accommodation_service: AccommodationService = Depends(get_accommodation_service),
+    accommodation_service: AccommodationServiceDep,
+    principal: RequiredPrincipalDep,
 ):
     """Update the status of a saved accommodation.
 

@@ -68,11 +68,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Supabase SSR client: validate `NEXT_PUBLIC_SUPABASE_URL|ANON_KEY`; wrap `cookies().setAll` in try/catch
 - Next proxy: guard cookie writes with try/catch
 - Edge Functions: upgraded runtime deps and import strategy
-  - Deno std pinned to `0.224.0`; `@supabase/supabase-js` pinned to `2.76.1`.
-  - Refactored function imports to use import-map aliases (`std/http/server.ts`, `@supabase/supabase-js`).
-  - Simplified per-function import maps to rely on `supabase-js` for internals; removed unnecessary explicit @supabase sub-packages from maps.
-  - Redeployed all functions (trip-notifications, file-processing, cache-invalidation, file-processor).
-- Documentation: added setup and reproducible deployment guides and linked them from `docs/index.md`.
+  - Deno std pinned to `0.224.0`; `@supabase/supabase-js` pinned to `2.76.1`
+  - Refactored function imports to use import-map aliases (`std/http/server.ts`, `@supabase/supabase-js`)
+  - Simplified per-function import maps to rely on `supabase-js` for internals; removed unnecessary explicit @supabase sub-packages from maps
+  - Redeployed all functions (trip-notifications, file-processing, cache-invalidation, file-processor)
+- Documentation: added setup and reproducible deployment guides and linked them from `docs/index.md`
 - Chat hook (`use-chat-ai`):
   - Switch to streaming via `/api/chat/stream`
   - Add `AbortController` with 60s timeout
@@ -86,33 +86,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Supabase client usage in store: corrected imports, aligned with centralized repo functions
 - Tailwind v4 verification fixes: replaced `<img>` with `next/image` for MFA QR code; converted interactive `<div>`s to `<button>`s in message attachments; added explicit radix to `Number.parseInt` calls
 - Additional `<img>` tags with `next/image` in search cards; added unique IDs via `useId` for inputs
-- Tailwind CSS v4: Ran `npx @tailwindcss/upgrade` and confirmed CSS-first setup via `@import "tailwindcss";` in `src/app/globals.css`. Kept `@tailwindcss/postcss` and removed legacy Turbopack flags from `dev` script
+- Tailwind CSS v4: ran `npx @tailwindcss/upgrade` and confirmed CSS-first setup via `@import \"tailwindcss\";` in `src/app/globals.css`; kept `@tailwindcss/postcss` and removed legacy Turbopack flags from the `dev` script
 - Minor Tailwind v4 compatibility: updated some `outline-none` usages to `outline-hidden` in UI components
-- UI Button: fixed `asChild` cloning to avoid nested anchors and preserve parent className; merged Google-style `@fileoverview` JSDoc.
-- Testing: stabilized QuickActions, TripCard, user-store, and agent monitoring suites.
-  - QuickActions: replaced brittle class queries; verified links and focus styles.
-  - TripCard: deterministic date formatting (UTC) and flexible assertions.
-  - User store: derived fields (`displayName`, `hasCompleteProfile`, `upcomingDocumentExpirations`) computed and stored for deterministic reads; tests updated.
-  - Agent monitoring: aligned tests with ConnectionStatus variants; use `variant="detailed"` for connected-state assertions.
-- Docs: ensured new/edited files include `@fileoverview` with concise technical descriptions.
+- UI Button: fixed `asChild` cloning to avoid nested anchors and preserve parent className; merged Google-style `@fileoverview` JSDoc
+- Testing: stabilized QuickActions, TripCard, user-store, and agent monitoring suites
+  - QuickActions: replaced brittle class queries; verified links and focus styles
+  - TripCard: deterministic date formatting (UTC) and flexible assertions
+  - User store: derived fields (`displayName`, `hasCompleteProfile`, `upcomingDocumentExpirations`) computed and stored for deterministic reads; tests updated
+  - Agent monitoring: aligned tests with ConnectionStatus variants; use `variant=\"detailed\"` for connected-state assertions
+- Docs: ensured new/edited files include `@fileoverview` with concise technical descriptions
 - Frontend API routes now default to FastAPI at `http://localhost:8001` and unified paths (`/api/chat`, `/api/attachments/*`)
 - Attachments API now revalidates the `attachments` cache tag for both single and batch uploads before returning responses
 - Chat domain canonicalized on FastAPI ChatService; removed the Next.js native chat route. Frontend hook now calls `${NEXT_PUBLIC_API_URL}/api/v1/chat/` directly and preserves authentication via credentials
-- Dynamic year rendering on the home page to a small client component to avoid server prerender time coupling under Cache Components
+- Dynamic year rendering on the home page moved to a small client component to avoid server prerender time coupling under Cache Components
 - Centralized Supabase typed insert/update via `src/lib/supabase/typed-helpers.ts`; updated hooks to use helpers
 - Chat UI prefers `message.parts` when present; removed ad-hoc adapter in `use-chat-ai` sync
 - Trip store now routes create/update through the typed repository; removed direct Supabase writes from store
-- `tripsage.agents.base.BaseAgent` around LangGraph orchestration with ChatOpenAI fallback execution, memory hydration, and periodic conversation summarization
-- `ChatAgent` to delegate to the new base workflow while exposing async history/clearing helpers backed by `ChatService` with local fallbacks
-- Flight agent result formatting to use canonical offer fields (airlines, outbound_segments, currency/price)
-- Documentation (developers/operators/architecture) to "Duffel API v2 via thin provider," headers and env var usage modernized, and examples aligned to canonical mapping
+- Rebuilt `tripsage.agents.base.BaseAgent` around LangGraph orchestration with ChatOpenAI fallback execution, memory hydration, and periodic conversation summarization
+- Simplified `ChatAgent` to delegate to the new base workflow while exposing async history/clearing helpers backed by `ChatService` with local fallbacks
+- Flight agent result formatting updated to use canonical offer fields (airlines, outbound_segments, currency/price)
+- Documentation (developers/operators/architecture) updated to \"Duffel API v2 via thin provider,\" headers and env var usage modernized, and examples aligned to canonical mapping
 - Dashboard analytics stack simplified: `DashboardService` emits only modern dataclasses, FastAPI routers consume the `metrics/services/top_users` schema directly, and rate limiting now tolerates missing infrastructure dependencies
-- Migrated chat messaging from custom WebSocket client to Supabase Realtime broadcast channels with private topics (`user:{sub}`, `session:{uuid}`).
+- Migrated chat messaging from custom WebSocket client to Supabase Realtime broadcast channels with private topics (`user:{sub}`, `session:{uuid}`)
 - Updated hooks to use the shared browser Supabase client:
-  - `use-realtime-channel`, `use-websocket-chat`, `use-agent-status-websocket` now import `getBrowserClient()`.
-- Chat UI connection behavior: resubscribe on session changes to avoid stale channel topics.
-- Admin configuration manager: removed browser WebSocket and simplified to save-and-refresh (Option A) pending optional Realtime wiring.
-- Backend OpenAPI/README documentation updated to describe Supabase Realtime (custom WS endpoints removed from docs).
+  - `use-realtime-channel`, `use-websocket-chat`, `use-agent-status-websocket` now import `getBrowserClient()`
+- Chat UI connection behavior: resubscribe on session changes to avoid stale channel topics
+- Admin configuration manager: removed browser WebSocket and simplified to save-and-refresh (Option A) pending optional Realtime wiring
+- Backend OpenAPI/README documentation updated to describe Supabase Realtime (custom WS endpoints removed from docs)
 - `tripsage.tools.accommodations_tools` now accepts `ToolContext` inputs, validates registry dependencies, and exposes tool wrappers alongside plain coroutine helpers
 - Web search tooling replaced ad-hoc fallbacks with strict Agents SDK usage and literal-typed context sizing; batch helper now guards cache failures
 - Web crawl helpers simplified to use `WebCrawlService` exclusively, centralizing error normalization and metrics recording
@@ -120,10 +120,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Database bootstrap hardens Supabase RPC handling, runs migrations via lazy imports, and scopes discovery to `supabase/migrations` with offline recording
 - Accommodation stack now normalizes MCP client calls (keyword-only), propagates canonical booking/search metadata, and validates external listings via `model_validate`
 - WebSocket router refactored around a shared `MessageContext`, consolidated handlers, and IDNA-aware origin validation while keeping dependencies Supabase-only
-- API service DI now uses the global `ServiceRegistry` in `tripsage/config/service_registry.py`:
-  - Lifespan registers singletons for `cache` and `google_maps`
-  - New adapters provide `activity` and `location` services from registry-managed deps
-  - API dependency providers (`tripsage/api/core/dependencies.py`) resolve via registry (no `app.state` coupling for these services)
+- API service DI now uses FastAPI `app.state` singletons via `tripsage/app_state.AppServiceContainer`:
+  - Lifespan constructs and tears down cache, Google Maps, database, and related services in a typed container
+  - Dependency providers (`tripsage/api/core/dependencies.py`) retrieve services from the container, eliminating bespoke registry lookups
+  - A shared `ChatAgent` instance initialises during lifespan and is exposed through `app.state.chat_agent` for WebSocket handlers
+
+### Refactor
+
+- **[Models]:** Consolidated all duplicated data models for Trip, Itinerary, and Accommodation into canonical representations within `tripsage_core`. API schemas in `tripsage/api/schemas/` have been removed to enforce a single source of truth.
+  - Merged ValidationResult and ServiceHealthCheck into ApiValidationResult for DRY compliance.
+  - Verification: Single model used in both validation and health methods; tests cover all fields without duplication errors.
+- **[API]:** All routers now rely on dependency helpers (e.g., `TripServiceDep`, `MemoryServiceDep`) sourced from the lifespan-managed `AppServiceContainer`, eliminating inline service instantiation across agents, attachments, accommodations, flights, itineraries, keys, destinations, and trips.
+- **[Orchestration]:** LangGraph tools register the shared services container via `set_tool_services`, removing the final `ServiceRegistry` usage and guaranteeing tool invocations reuse the same singletons as the API.
+- **Agents/DI:** Standardized on FastAPI app.state singletons, eliminating ServiceRegistry for simpler, lifespan-managed dependencies.
+- **API/Schemas:** Centralized memory and attachments request/response models under `tripsage/api/schemas`, added health schemas, and moved trip search params to schemas; routers import these models and declare explicit `response_model`s.
+- **API/Schemas (feature-first):** Completed migration from `schemas/{requests,responses}` to feature-first modules for memory, attachments, trips, activities, search, and realtime dashboard. Deleted legacy split directories and updated all imports.
+- **Realtime Dashboard:** Centralized realtime DTOs and added typed responses for broadcast/connection endpoints.
+- **Search Router:** UnifiedSearchRequest moved to feature-first schema with back-compat fields; analytics endpoint returns `SearchAnalyticsResponse`.
+- **Attachments Router:** List endpoint now returns typed `FileListResponse` with `FileMetadataResponse` entries (service results adapted safely).
+- **Trip Security:** Tightened types and returns for `TripAccessResult`; fixed permission comparison typing.
+- **Middlewares:** Corrected type annotations (Awaitable[Response]) and Pydantic ConfigDict usage to satisfy pyright and Pydantic v2.
+
+### Fixed (DI migration sweep)
+
+- Memory router endpoints updated for SlowAPI: rate-limited routes accept `request` and
+  where applicable `response`; unit tests unwrap decorators and pass synthetic Request
+  objects to avoid false negatives.
+- Keys router status mapping aligned to domain validation: RATE_LIMITED → 429,
+  INVALID/FORMAT_ERROR → 400, SERVICE_ERROR → 500; metrics endpoint now returns `{}` on
+  provider failure instead of raising in tests.
+- Orchestration tools (geocode/weather/web_search) resolve DI singletons from the
+  shared container instead of instantiating services, ensuring consistent configuration
+  and testability.
+- Trips smoke test stub returns a UUID string, fixing response adaptation.
+- Test configuration: removed non-existent `pytest-slowapi`; added `benchmark` marker to
+  satisfy `--strict-markers`.
 
 ### Deprecated
 
@@ -151,32 +182,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- FastAPI AuthenticationMiddleware: corrected typing, Pydantic v2 config, Supabase token validation via `auth.get_user`, unified responses
-- Fixed base agent node logging now emits the full exception message, keeping orchestration diagnostics actionable
-- Fixed consolidated, typed Google Maps integration:
+- FastAPI `AuthenticationMiddleware` now has corrected typing, Pydantic v2 config, Supabase token validation via `auth.get_user`, and unified responses
+- Base agent node logging now emits the full exception message, keeping orchestration diagnostics actionable
+- Google Maps integration returns typed models end-to-end:
   - New Pydantic models (`tripsage_core/models/api/maps_models.py`)
   - `GoogleMapsService` now returns typed models and removes custom HTTP logic
-  - `LocationService` and `ActivityService` refactored to consume typed API only (no legacy code) and use constructor DI
-  - `tripsage/agents/service_registry.py` wires `ActivityService` via injected `GoogleMapsService` and `CacheService`
-  - `tripsage/api/routers/activities.py` constructs services explicitly (no globals)
-  - Unit/integration tests rewritten for typed returns; deprecated suites removed
-- Fixed legacy Duffel adapter (`tripsage_core.services.external_apis.flights_service.py`)
-- Fixed duplicate flight DTO module (`tripsage_core.models.api.flights_models.py`) and its re‑exports
-- Fixed obsolete integration test referencing the removed HTTP client (`tests/integration/external/test_duffel_integration.py`)
-- Fixed dashboard compatibility shims (legacy `DashboardData` fields, `ApiKeyValidator`/`ApiKeyMonitoringService` aliases) and the unused flights mapper module (`tripsage_core.models.mappers`)
-- Fixed linting/typing issues in touched flight tests and orchestration node; pyright/pylint clean on changed scope
-- Updated Realtime integration/unit test suites aligned to Supabase Realtime channels (no custom WebSocket router)
-- Supabase migrations: reconciled remote/local history and documented `migration repair` workflow to resolve mismatched version formats (8–12 digit IDs).
-- Supabase config.toml updated for CLI v2 compatibility (removed invalid keys; normalized [auth.email] flags; set db.major_version=17). Idempotent fixes to avoid `experimental.webhooks` error by leaving undefined.
-- Supabase config.toml: disabled unused OAuth providers by default ([auth.external.google/github].enabled=false) to reduce CLI warnings in CI.
-- Realtime policy migration made idempotent (guard with `pg_policies` checks). Session policies created only when `public.chat_sessions` exists.
-- Storage migration guarded to work on a fresh project: wraps policies referencing `public.file_attachments` and `public.trips` in conditional DO blocks; functions reference application tables at runtime only.
-- Realtime helpers/policies and storage migration filenames normalized to 2025-10-27 timestamps.
-- Edge Functions toolchain:
-  - Standardized per-function import maps (`deno.json`) using `std@0.224.0` and `@supabase/supabase-js@2.76.1`.
-  - Regenerated Deno v5 lockfiles (`deno.lock.v5`) for all functions; preserved for deterministic local dev; CLI bundler ignores v5 locks.
-  - Unified deploy workflow via Makefile; CLI updated to v2.54.x on local env.
- (async dependency overrides, Supabase wiring, Unicode homograph coverage)
+  - `LocationService` and `ActivityService` consume typed APIs only and use constructor DI
+  - `tripsage/app_state.AppServiceContainer` injects `GoogleMapsService` and `CacheService` into `ActivityService`; API routers construct services explicitly (no globals)
+  - Unit/integration tests rewritten for typed returns and deprecated suites removed
+- Removed the legacy Duffel adapter (`tripsage_core/services/external_apis/flights_service.py`)
+- Deleted the duplicate flight DTO module (`tripsage_core/models/api/flights_models.py`) and its re-exports
+- Removed the obsolete integration test referencing the removed HTTP client (`tests/integration/external/test_duffel_integration.py`)
+- Cleaned dashboard compatibility shims (legacy `DashboardData` fields, `ApiKeyValidator`/`ApiKeyMonitoringService` aliases) and the unused flights mapper module (`tripsage_core/models/mappers`)
+- Resolved linting and typing issues in touched flight tests and orchestration node; `pyright` and `pylint` now clean on the updated scope
+- WebSocket integration/unit test suites updated for the refactored router (async dependency overrides, Supabase wiring, Unicode homograph coverage)
+- Realtime integration/unit test suites aligned to Supabase Realtime channels (no custom WebSocket router)
+- Supabase migrations reconcile remote/local history and document the `migration repair` workflow to resolve mismatched version formats (8–12 digit IDs)
+- `supabase/config.toml` updated for CLI v2 compatibility (removed invalid keys; normalized `[auth.email]` flags; set `db.major_version=17`) and unused OAuth providers ([auth.external.google/github].enabled=false) disabled to reduce CLI warnings in CI
+- Realtime policy migration made idempotent with `pg_policies` guards; session policies created only when `public.chat_sessions` exists
+- Storage migration guarded for fresh projects: policies referencing `public.file_attachments` and `public.trips` wrap in conditional DO blocks; functions reference application tables at runtime only
+- Realtime helpers/policies and storage migration filenames normalized to 2025-10-27 timestamps
+- Edge Functions toolchain hardened:
+  - Standardized per-function import maps (`deno.json`) using `std@0.224.0` and `@supabase/supabase-js@2.76.1`
+  - Regenerated Deno v5 lockfiles (`deno.lock.v5`) for all functions; preserved for deterministic local dev while the CLI bundler ignores v5 locks
+  - Unified deploy workflow via Makefile; CLI updated to v2.54.x on local environments
 
 ### Security
 

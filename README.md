@@ -97,7 +97,7 @@ and scalability:
 | **[Complete Documentation](docs/README.md)** | **Organized documentation hub** |
 | **[User Guide](docs/users/README.md)** | Complete user manual with API usage examples |
 | **[Developer Guide](docs/developers/README.md)** | Development setup, architecture, and best practices |
-| **[API Reference](docs/api/README.md)** | Complete REST API and WebSocket documentation |
+| **[API Reference](docs/api/README.md)** | Complete REST API and Supabase Realtime documentation |
 | **[Security Guide](docs/operators/security-guide.md)** | Security implementation and best practices |
 | **[Architecture Guide](docs/architecture/README.md)** | System design and technical architecture |
 
@@ -152,6 +152,57 @@ uv run python scripts/verification/verify_setup.py  # Verify installation
 ## Development Standards
 
 See [Testing Guide](docs/developers/testing-guide.md) and [Code Standards](docs/developers/code-standards.md) for details on testing, linting, and quality gates.
+
+---
+
+## Dependency Injection
+
+TripSage standardises dependency injection on FastAPI `app.state` singletons managed by
+[`tripsage/app_state.py`](tripsage/app_state.py).
+
+- Lifespan-managed services: `initialise_app_state()` builds an `AppServiceContainer`
+  that wires the database, caches, external providers, and domain services. The
+  container is stored on `app.state.services` and cleaned up on shutdown.
+- Typed accessors: call `services.get_required_service("flight_service", expected_type=FlightService)`
+  for safe retrieval and better type-checking.
+- API dependencies: `tripsage/api/core/dependencies.py` exposes `Annotated` helpers
+  (e.g. `TripServiceDep`, `MemoryServiceDep`) that resolve services from the container.
+- Request handlers: use `request: Request` to access `request.app.state.services` when
+  needed. Prefer dependency helpers to keep handlers declarative.
+- Rate limiting (SlowAPI): any endpoint decorated with `@limiter.limit(...)` must accept
+  `request: Request` (and `response: Response` if headers are injected). For unit tests,
+  either invoke via HTTP client or unwrap decorators and pass a synthetic `Request`.
+  Example snippet used by tests:
+
+  ```py
+  from fastapi import Request
+
+  def build_request(method: str, path: str) -> Request:
+      scope = {
+          "type": "http", "method": method, "path": path, "scheme": "http",
+          "headers": [], "client": ("127.0.0.1", 12345), "server": ("test", 80),
+          "query_string": b"",
+      }
+      async def receive():
+          return {"type": "http.request", "body": b"", "more_body": False}
+      return Request(scope, receive)
+  ```
+
+- Orchestration tools: LangGraph tools call `set_tool_services(container)` during startup
+  so shared utilities reuse the same singletons (no ad-hoc instantiation inside tools).
+- Testing: pytest fixtures construct lightweight containers with typed mocks. See
+  `tests/unit/orchestration/test_utils.py::create_mock_services`.
+
+The legacy `ServiceRegistry` abstraction has been removed. All new modules and tests use
+the `AppServiceContainer` pattern to keep DI consistent and explicit.
+
+Schema policy (routers vs. schemas):
+
+- Routers must not declare Pydantic `BaseModel` classes. Place request/response
+  models under `tripsage/api/schemas/requests|responses` (or `schemas/*.py` when shared).
+- Every endpoint declares a `response_model` and returns instances/serializable
+  shapes matching the schema. Prefer enum types and validated fields.
+- Centralized schemas avoid drift and enable accurate OpenAPI for client codegen.
 
 ---
 
@@ -223,7 +274,7 @@ POST /api/memory/conversation     # Store conversation
 GET  /api/memory/context          # Get user context
 ```
 
-### Realtime Client (private channel)
+### Realtime Client (Supabase Realtime only - private channel)
 
 ```ts
 import { createClient } from '@supabase/supabase-js'
@@ -284,6 +335,15 @@ git grep -i "fallback-secret\|development-only" .  # Should return empty
 # Run security tests
 uv run pytest tests/security/
 ```
+
+---
+
+### Service Validation
+
+- **Unified result model**: Both API key validation and external service health checks return an `ApiValidationResult`, eliminating duplicate response types.
+- **Context-aware fields**: Validation flows populate `is_valid`, `status`, and `validated_at`, while health probes use `health_status`, `checked_at`, and leave validation-only fields unset (`None`).
+- **Shared metadata**: Rate-limit quotas, capability discovery, latency timing, and diagnostic details flow through identical fields for streamlined analytics and caching.
+- **Computed insights**: `success_rate_category` and `is_healthy` computed fields provide quick rollups regardless of whether the result originated from validation or monitoring.
 
 ---
 

@@ -12,10 +12,12 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.utils.structured import StructuredExtractor, model_to_dict
 from tripsage_core.config import get_settings
+from tripsage_core.services import configuration_service as configuration_service_module
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -48,52 +50,113 @@ class ItineraryAgentNode(BaseAgentNode):
     modification, and calendar integration using MCP tool integration.
     """
 
-    def __init__(self, service_registry, **config_overrides):
+    def __init__(self, services: AppServiceContainer, **config_overrides: Any):
         """Initialize the itinerary agent node with dynamic configuration.
 
         Args:
-            service_registry: Service registry for dependency injection
+            services: Application service container for dependency injection
             **config_overrides: Runtime configuration overrides (e.g., temperature=0.6)
         """
-        # Get dynamic configuration for itinerary agent
-        settings = get_settings()
-        agent_config = cast(Any, settings).get_agent_config(
-            "itinerary_agent", **config_overrides
+        # Get configuration service for database-backed config
+        self.config_service = cast(
+            Any, configuration_service_module
+        ).get_configuration_service()
+
+        # Store overrides for async config loading
+        self.config_overrides: dict[str, Any] = dict(config_overrides)
+        self.agent_config: dict[str, Any] | None = None
+        self.llm: ChatOpenAI | None = None
+        self._parameter_extractor: StructuredExtractor[ItineraryParameters] | None = (
+            None
         )
+        self.available_tools: list[Any] = []
+        self.llm_with_tools: Any | None = None
 
-        # Initialize LLM with dynamic configuration (needed by _initialize_tools)
-        llm_kwargs: dict[str, Any] = {
-            "model": agent_config["model"],
-            "temperature": agent_config["temperature"],
-            "top_p": agent_config["top_p"],
-            "api_key": agent_config["api_key"],
-        }
-        if "max_tokens" in agent_config:
-            llm_kwargs["max_tokens"] = agent_config["max_tokens"]
-
-        self.llm = ChatOpenAI(**llm_kwargs)
-        self._parameter_extractor = StructuredExtractor(
-            self.llm, ItineraryParameters, logger=logger
-        )
-
-        # Store config for monitoring/debugging
-        self.agent_config = agent_config
-
-        super().__init__("itinerary_agent", service_registry)
+        super().__init__("itinerary_agent", services)
 
     def _initialize_tools(self) -> None:
         """Initialize itinerary-specific tools using simple tool catalog."""
         from tripsage.orchestration.tools.tools import get_tools_for_agent
 
         # Get tools for itinerary agent using simple catalog
-        self.available_tools = get_tools_for_agent("itinerary_agent")
+        self.available_tools = list(get_tools_for_agent("itinerary_agent"))
 
-        # Bind tools to LLM for direct use
-        self.llm_with_tools = self.llm.bind_tools(self.available_tools)
+        # Bind tools to LLM for direct use (if LLM is available)
+        if self.llm:
+            # Casting to Any to avoid partial Unknown types from langchain stubs
+            self.llm_with_tools = cast(Any, self.llm).bind_tools(self.available_tools)
 
         logger.info(
             "Initialized itinerary agent with %s tools", len(self.available_tools)
         )
+
+    async def _load_configuration(self) -> None:
+        """Load agent configuration from database with fallback to settings."""
+        try:
+            # Get configuration from database with runtime overrides
+            self.agent_config = await self.config_service.get_agent_config(
+                "itinerary_agent", **self.config_overrides
+            )
+            if self.agent_config is None:
+                raise RuntimeError("Itinerary agent configuration is missing")
+
+            # Initialize LLM with loaded configuration
+            llm_kwargs: dict[str, Any] = {
+                "model": self.agent_config["model"],
+                "temperature": self.agent_config["temperature"],
+                "top_p": self.agent_config["top_p"],
+                "api_key": self.agent_config["api_key"],
+            }
+            if "max_tokens" in self.agent_config:
+                llm_kwargs["max_tokens"] = self.agent_config["max_tokens"]
+
+            self.llm = ChatOpenAI(**llm_kwargs)
+            self._parameter_extractor = StructuredExtractor(
+                self.llm, ItineraryParameters, logger=logger
+            )
+            if hasattr(self, "available_tools"):
+                self.llm_with_tools = cast(Any, self.llm).bind_tools(
+                    self.available_tools
+                )
+
+            logger.info(
+                "Loaded itinerary agent configuration from database: temp=%s",
+                self.agent_config["temperature"],
+            )
+
+        except Exception:
+            logger.exception("Failed to load database configuration, using fallback")
+
+            # Fallback to settings-based configuration
+            from tripsage.orchestration.config import get_default_config
+
+            fallback = get_default_config()
+            settings = get_settings()
+            api_key = (
+                # pylint: disable=no-member
+                settings.openai_api_key.get_secret_value()
+                if settings.openai_api_key
+                else ""
+            )
+            self.agent_config = {
+                "model": fallback.default_model,
+                "temperature": fallback.temperature,
+                "api_key": api_key,
+                "top_p": 1.0,
+            }
+
+            self.llm = ChatOpenAI(
+                model=fallback.default_model,
+                temperature=fallback.temperature,
+                api_key=api_key,  # type: ignore
+            )
+            self._parameter_extractor = StructuredExtractor(
+                self.llm, ItineraryParameters, logger=logger
+            )
+            if hasattr(self, "available_tools"):
+                self.llm_with_tools = cast(Any, self.llm).bind_tools(
+                    self.available_tools
+                )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
         """Process itinerary-related requests.
@@ -104,6 +167,10 @@ class ItineraryAgentNode(BaseAgentNode):
         Returns:
             Updated state with itinerary planning results and response
         """
+        # Ensure configuration is loaded before processing
+        if self.agent_config is None:
+            await self._load_configuration()
+
         user_message = state["messages"][-1]["content"] if state["messages"] else ""
 
         # Extract itinerary parameters from user message and context
@@ -216,6 +283,10 @@ class ItineraryAgentNode(BaseAgentNode):
         """
 
         try:
+            if self._parameter_extractor is None or self.llm is None:
+                raise RuntimeError("Itinerary parameter extractor is not initialised")
+
+            assert self._parameter_extractor is not None
             result = await self._parameter_extractor.extract_from_prompts(
                 system_prompt=(
                     "You are an itinerary planning parameter extraction assistant."
@@ -313,14 +384,14 @@ class ItineraryAgentNode(BaseAgentNode):
         destination: str,
         duration: int,
         start_date: str,
-        attractions: list[dict],
-        activities: list[dict],
+        attractions: list[dict[str, Any]],
+        activities: list[dict[str, Any]],
         interests: list[str],
         pace: str,
         budget_per_day: float,
     ) -> list[dict[str, Any]]:
         """Generate a daily schedule for the itinerary."""
-        daily_schedule = []
+        daily_schedule: list[dict[str, Any]] = []
 
         # Determine activities per day based on pace
         pace_multiplier = {"relaxed": 0.7, "moderate": 1.0, "busy": 1.3}
@@ -330,10 +401,10 @@ class ItineraryAgentNode(BaseAgentNode):
         )
 
         # Combine and filter attractions/activities based on interests
-        all_options = attractions + activities
+        all_options: list[dict[str, Any]] = attractions + activities
         if interests:
             # Filter based on interests (simple keyword matching)
-            filtered_options = []
+            filtered_options: list[dict[str, Any]] = []
             for option in all_options:
                 name = option.get("name", "").lower()
                 description = option.get("description", "").lower()
@@ -363,7 +434,7 @@ class ItineraryAgentNode(BaseAgentNode):
         for day in range(duration):
             day_date = (current_date + timedelta(days=day)).strftime("%Y-%m-%d")
 
-            day_activities = []
+            day_activities: list[dict[str, Any]] = []
             start_idx = day * activities_per_day
             end_idx = min(start_idx + activities_per_day, len(all_options))
 
@@ -399,10 +470,12 @@ class ItineraryAgentNode(BaseAgentNode):
                 },
             )
 
-            day_schedule = {
+            day_schedule: dict[str, Any] = {
                 "day": day + 1,
                 "date": day_date,
-                "activities": sorted(day_activities, key=lambda x: x["time"]),
+                "activities": sorted(
+                    day_activities, key=lambda x: str(x.get("time", ""))
+                ),
                 "notes": f"Day {day + 1} in {destination}",
             }
 
@@ -411,14 +484,14 @@ class ItineraryAgentNode(BaseAgentNode):
         return daily_schedule
 
     async def _optimize_schedule_logistics(
-        self, daily_schedule: list[dict], destination: str
-    ) -> list[dict]:
+        self, daily_schedule: list[dict[str, Any]], destination: str
+    ) -> list[dict[str, Any]]:
         """Optimize the schedule for logistics and travel times."""
         # This would use Google Maps API to calculate travel times and optimize routes
         # For now, we'll add basic logistics information
 
         for day in daily_schedule:
-            activities = day.get("activities", [])
+            activities: list[dict[str, Any]] = list(day.get("activities", []))
             for i, activity in enumerate(activities):
                 if i > 0 and activity.get("type") != "meal":
                     # Add travel time information
@@ -431,16 +504,20 @@ class ItineraryAgentNode(BaseAgentNode):
         return daily_schedule
 
     def _calculate_estimated_cost(
-        self, daily_schedule: list[dict], budget_per_day: float
+        self, daily_schedule: list[dict[str, Any]], budget_per_day: float
     ) -> dict[str, float | list[float]]:
         """Calculate estimated costs for the itinerary."""
-        total_cost = 0
-        daily_costs = []
+        total_cost: float = 0.0
+        daily_costs: list[float] = []
 
         for day in daily_schedule:
-            day_cost = 0
+            day_cost: float = 0.0
             for activity in day.get("activities", []):
-                day_cost += activity.get("estimated_cost", 0)
+                try:
+                    est = float(activity.get("estimated_cost", 0) or 0)
+                except (TypeError, ValueError):
+                    est = 0.0
+                day_cost += est
             daily_costs.append(day_cost)
             total_cost += day_cost
 
@@ -478,17 +555,19 @@ class ItineraryAgentNode(BaseAgentNode):
 
         try:
             # Get the daily schedule
-            daily_schedule = existing_itinerary.get("daily_schedule", [])
+            daily_schedule: list[dict[str, Any]] = list(
+                existing_itinerary.get("daily_schedule", [])
+            )
 
             # Optimize each day for better flow
-            optimized_schedule = []
+            optimized_schedule: list[dict[str, Any]] = []
             for day in daily_schedule:
-                activities = day.get("activities", [])
+                activities: list[dict[str, Any]] = list(day.get("activities", []))
 
                 # Sort activities by time for better flow
                 # Group nearby activities together (simplified logic)
                 optimized_activities = sorted(
-                    activities, key=lambda x: x.get("time", "00:00")
+                    activities, key=lambda x: str(x.get("time", "00:00"))
                 )
 
                 optimized_day = {
@@ -538,7 +617,9 @@ class ItineraryAgentNode(BaseAgentNode):
             return {"error": "Itinerary not found for modification"}
 
         try:
-            daily_schedule = existing_itinerary.get("daily_schedule", [])
+            daily_schedule: list[dict[str, Any]] = list(
+                existing_itinerary.get("daily_schedule", [])
+            )
 
             if modification_type == "add":
                 # Add new activity to specified day
@@ -553,10 +634,13 @@ class ItineraryAgentNode(BaseAgentNode):
                         "duration": activity_details.get("duration", "1-2 hours"),
                         "estimated_cost": activity_details.get("estimated_cost", 0),
                     }
-                    daily_schedule[day_index]["activities"].append(new_activity)
-                    daily_schedule[day_index]["activities"].sort(
-                        key=lambda x: x.get("time", "00:00")
+                    current_day = cast(dict[str, Any], daily_schedule[day_index])
+                    activities_for_day = list(
+                        cast(list[dict[str, Any]], current_day.get("activities", []))
                     )
+                    activities_for_day.append(new_activity)
+                    activities_for_day.sort(key=lambda x: str(x.get("time", "00:00")))
+                    daily_schedule[day_index]["activities"] = activities_for_day
 
             elif modification_type == "remove":
                 # Remove activity from specified day
@@ -564,7 +648,10 @@ class ItineraryAgentNode(BaseAgentNode):
                 activity_name = activity_details.get("name", "")
                 if 1 <= day_number <= len(daily_schedule):
                     day_index = day_number - 1
-                    activities = daily_schedule[day_index]["activities"]
+                    current_day = cast(dict[str, Any], daily_schedule[day_index])
+                    activities: list[dict[str, Any]] = list(
+                        cast(list[dict[str, Any]], current_day.get("activities", []))
+                    )
                     daily_schedule[day_index]["activities"] = [
                         act
                         for act in activities
@@ -609,7 +696,7 @@ class ItineraryAgentNode(BaseAgentNode):
 
         try:
             daily_schedule = existing_itinerary.get("daily_schedule", [])
-            calendar_events = []
+            calendar_events: list[dict[str, Any]] = []
 
             for day in daily_schedule:
                 date = day.get("date", "")
@@ -838,12 +925,13 @@ class ItineraryAgentNode(BaseAgentNode):
             ]
 
             response = await self.llm.ainvoke(messages)
-            raw_content = response.content
-            content = raw_content if isinstance(raw_content, str) else str(raw_content)
+            resp_any: Any = response
+            raw: Any = resp_any.content
+            text: str = str(raw)
 
         except Exception:
             logger.exception("Error generating itinerary response")
-            content = (
+            text = (
                 "I'd be happy to help you create a detailed itinerary! To get started, "
                 "I'll need to know your destination, travel dates, interests, and "
                 "preferred pace (relaxed, moderate, or busy). I can create day-by-day "
@@ -852,4 +940,4 @@ class ItineraryAgentNode(BaseAgentNode):
                 "What destination are you planning to visit?"
             )
 
-        return self._create_response_message(content)
+        return self._create_response_message(text)
