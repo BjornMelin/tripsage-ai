@@ -11,13 +11,6 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 from tripsage.app_state import AppServiceContainer
-from tripsage_core.services.airbnb_mcp import AirbnbMCP
-from tripsage_core.services.business.activity_service import ActivityService
-from tripsage_core.services.business.flight_service import FlightService
-from tripsage_core.services.business.unified_search_service import UnifiedSearchService
-from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
-from tripsage_core.services.external_apis.weather_service import WeatherService
-from tripsage_core.services.external_apis.webcrawl_service import WebCrawlService
 
 
 class MockLLMResponse:
@@ -215,15 +208,15 @@ def create_mock_services(
     overrides: dict[str, Any] | None = None,
 ) -> AppServiceContainer:
     """Create an AppServiceContainer populated with mock services."""
-    flight_service = cast(FlightService, MagicMock(spec=FlightService))
-    activity_service = cast(ActivityService, MagicMock(spec=ActivityService))
-    unified_search_service = cast(
-        UnifiedSearchService, MagicMock(spec=UnifiedSearchService)
-    )
-    google_maps_service = cast(GoogleMapsService, MagicMock(spec=GoogleMapsService))
-    weather_service = cast(WeatherService, MagicMock(spec=WeatherService))
-    webcrawl_service = cast(WebCrawlService, MagicMock(spec=WebCrawlService))
-    mcp_service = cast(AirbnbMCP, MagicMock(spec=AirbnbMCP))
+    # Use unspecialised mocks to avoid importing heavy dependencies during
+    # test collection
+    flight_service = cast(Any, MagicMock())
+    activity_service = cast(Any, MagicMock())
+    unified_search_service = cast(Any, MagicMock())
+    google_maps_service = cast(Any, MagicMock())
+    weather_service = cast(Any, MagicMock())
+    webcrawl_service = cast(Any, MagicMock())
+    mcp_service = cast(Any, MagicMock())
 
     container = AppServiceContainer(
         accommodation_service=cast(Any, Mock()),
