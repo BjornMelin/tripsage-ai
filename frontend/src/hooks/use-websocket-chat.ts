@@ -49,13 +49,11 @@ export interface ChatMessage {
  * Configuration flags for the websocket chat hook.
  *
  * @interface WebSocketChatOptions
- * @property {string=} url Legacy property retained for compatibility; currently ignored.
  * @property {boolean=} autoConnect Whether the hook should auto-connect on mount (default `true`).
  * @property {"user" | "session"=} topicType Determines topic prefix: `user:{id}` or `session:{id}`.
  * @property {string=} sessionId Session identifier when `topicType` equals `"session"`.
  */
 export interface WebSocketChatOptions {
-  url?: string;
   autoConnect?: boolean;
   topicType?: "user" | "session";
   sessionId?: string;
@@ -103,6 +101,8 @@ export function useWebSocketChat({
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [reconnectVersion, setReconnectVersion] = useState(0);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!autoConnect) {
@@ -156,14 +156,37 @@ export function useWebSocketChat({
     channel.subscribe((state, err) => {
       if (state === "SUBSCRIBED") {
         setStatus("connected");
+        reconnectAttemptsRef.current = 0;
       }
-      if (err) {
+      if (
+        state === "TIMED_OUT" ||
+        state === "CHANNEL_ERROR" ||
+        state === "CLOSED" ||
+        err
+      ) {
         setStatus("error");
+        // clear current channel
+        if (channelRef.current === channel) {
+          channelRef.current = null;
+        }
+        // schedule reconnect with simple exponential backoff
+        if (autoConnect) {
+          const attempt = ++reconnectAttemptsRef.current;
+          const delay = Math.min(30000, 1000 * 2 ** Math.min(5, attempt));
+          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = setTimeout(() => {
+            setReconnectVersion((v) => v + 1);
+          }, delay);
+        }
       }
     });
 
     return () => {
       channel.unsubscribe();
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       if (channelRef.current === channel) {
         channelRef.current = null;
       }

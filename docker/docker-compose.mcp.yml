@@ -124,7 +124,6 @@ services:
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://tripsage-api:8080
-      - NEXT_PUBLIC_WS_URL=ws://tripsage-api:8080
     ports:
       - "3000:3000"
     volumes:

@@ -8,10 +8,15 @@ Final implementation (no legacy aliases/paths):
 
 import asyncio
 import hashlib
+import importlib
 import logging
 import re
-from datetime import datetime
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
+
+from tripsage_core.config import get_settings
 
 
 logger = logging.getLogger(__name__)
@@ -38,11 +43,13 @@ class MigrationRunner:
         self.project_id = project_id
         self.client = self._get_supabase_client()
 
-    def _get_supabase_client(self):  # -> Client
+    def _get_supabase_client(self) -> Any:
         """Create a Supabase client instance."""
-        from supabase import create_client  # pylint: disable=import-error
-
-        from tripsage_core.config import get_settings  # pylint: disable=import-error
+        supabase_module = importlib.import_module("supabase")
+        create_client = cast(
+            Callable[[str, str], Any],
+            supabase_module.create_client,  # type: ignore[attr-defined]
+        )
 
         settings = get_settings()
         return create_client(
@@ -54,7 +61,7 @@ class MigrationRunner:
         """Calculate SHA256 checksum of migration content."""
         return hashlib.sha256(content.encode()).hexdigest()
 
-    async def _execute_sql(self, sql: str) -> dict:
+    async def _execute_sql(self, sql: str) -> dict[str, Any]:
         """Execute raw SQL using Supabase client.
 
         Note: This uses the Supabase REST API to execute SQL.
@@ -126,7 +133,7 @@ class MigrationRunner:
                     {
                         "filename": filename,
                         "checksum": checksum,
-                        "applied_at": datetime.utcnow().isoformat(),
+                        "applied_at": datetime.now(UTC).isoformat(),
                     }
                 )
                 .execute()

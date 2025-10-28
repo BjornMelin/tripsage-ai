@@ -17,7 +17,6 @@ const nextEnvSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
   NEXT_PUBLIC_API_URL: z.string().url().optional(),
-  NEXT_PUBLIC_WS_URL: z.string().url().optional(),
 });
 
 // Supabase configuration
@@ -92,7 +91,6 @@ const monitoringEnvSchema = z.object({
 const featureEnvSchema = z.object({
   ENABLE_ANALYTICS: z.coerce.boolean().default(false),
   ENABLE_MONITORING: z.coerce.boolean().default(false),
-  ENABLE_WEBSOCKETS: z.coerce.boolean().default(true),
   ENABLE_AI_FEATURES: z.coerce.boolean().default(true),
   ENABLE_CACHING: z.coerce.boolean().default(true),
   MAX_FILE_SIZE_MB: z.coerce.number().positive().default(50),
@@ -213,7 +211,6 @@ const clientEnvSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
   NEXT_PUBLIC_API_URL: z.string().url().optional(),
-  NEXT_PUBLIC_WS_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
 });
@@ -335,7 +332,6 @@ export const getEnvironmentInfo = () => {
     features: {
       analytics: env.data.ENABLE_ANALYTICS,
       monitoring: env.data.ENABLE_MONITORING,
-      websockets: env.data.ENABLE_WEBSOCKETS,
       aiFeatures: env.data.ENABLE_AI_FEATURES,
       caching: env.data.ENABLE_CACHING,
     },
