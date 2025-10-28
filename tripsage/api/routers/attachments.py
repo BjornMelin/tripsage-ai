@@ -239,6 +239,8 @@ async def get_file_metadata(
 
         return file_info
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to get file info for %s", file_id)
         raise HTTPException(
@@ -269,6 +271,8 @@ async def delete_file(
         logger.info("File %s deleted by user %s", file_id, user_id)
         return DeleteFileResponse(message="File deleted successfully", file_id=file_id)
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to delete file %s", file_id)
         raise HTTPException(

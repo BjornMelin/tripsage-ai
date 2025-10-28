@@ -131,7 +131,7 @@ POST /api/v1/keys
 
 ## Performance Features
 
-* **Multi-tier Caching** - Redis with intelligent TTL
+* **Multi-tier Caching** - Upstash Redis with intelligent TTL
 * **Consumer-aware Rate Limiting** - Higher limits for agents vs. frontend
 * **Connection Pooling** - Optimized database and external API connections
 * **Query Optimization** - Indexed searches and prepared statements
