@@ -19,6 +19,8 @@ import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
+from tripsage_core.config import Settings
+
 
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
@@ -135,6 +137,33 @@ class Principal:
         return self.id
 
 
+@pytest.fixture(scope="session")
+def test_settings() -> Settings:
+    """Create application settings tailored for tests.
+
+    Returns:
+        Settings: Configuration object with monitoring and instrumentation disabled.
+    """
+    return Settings(
+        environment="testing",
+        debug=True,
+        rate_limit_enabled=False,
+        rate_limit_enable_monitoring=False,
+        enable_database_monitoring=False,
+        enable_security_monitoring=False,
+        enable_auto_recovery=False,
+        enable_websockets=False,
+        otel_instrumentation="",
+    )
+
+
+@pytest.fixture()
+def dummy_api_key_service() -> object:
+    """Provide a dummy API key service for middleware tests."""
+    # Simple mock object - middleware tests don't seem to call methods on it
+    return object()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def set_testing_env() -> None:
     """Force testing settings for the duration of the pytest session.
@@ -149,19 +178,44 @@ def set_testing_env() -> None:
 
 
 @pytest.fixture(autouse=True)
-def mute_audit(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Silence audit logging during tests to avoid FS writes.
+def disable_auth_audit_logging(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Silence audit logging during tests.
 
     Replaces audit helpers with async no-ops so tests can assert behavior
     without touching real log directories (e.g., /var/log/tripsage).
     """
 
-    async def _noop(**_kwargs: Any) -> bool:
-        return True
+    async def _noop(**_kwargs: Any) -> None:
+        return
 
+    # Patch the audit functions
     monkeypatch.setattr(
         "tripsage_core.services.business.audit_logging_service.audit_security_event",
         _noop,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "tripsage_core.services.business.audit_logging_service.audit_authentication",
+        _noop,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "tripsage_core.services.business.audit_logging_service.audit_api_key",
+        _noop,
+        raising=False,
+    )
+
+    # Also patch the logger creation to prevent file system access
+    def _mock_get_audit_logger() -> Any:
+        class MockLogger:
+            async def log_event(self, *args: Any, **kwargs: Any) -> None:
+                pass
+
+        return MockLogger()
+
+    monkeypatch.setattr(
+        "tripsage_core.services.business.audit_logging_service.get_audit_logger",
+        _mock_get_audit_logger,
         raising=False,
     )
     # Also patch re-exported imports used by API modules under test

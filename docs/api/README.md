@@ -305,7 +305,7 @@ uv run pytest tests/integration/api/
 | `401 Unauthorized`     | Check JWT token format | [Authentication](#authentication)                        |
 | `422 Validation Error` | Verify required fields | [Error Codes](error-codes.md)                            |
 | `429 Rate Limited`     | Check rate limits      | [Authentication](#authentication)                        |
-| WebSocket disconnect   | Implement reconnection | [WebSocket and Real-time API](websocket-realtime-api.md) |
+| Realtime channel disconnect | Refresh access token and resubscribe | [Supabase Realtime Guide](websocket-realtime-api.md) |
 
 ---
 
