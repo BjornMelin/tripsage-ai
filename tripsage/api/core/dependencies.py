@@ -35,7 +35,6 @@ from tripsage_core.services.business.user_service import UserService
 from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
 from tripsage_core.services.infrastructure import CacheService, KeyMonitoringService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
-from tripsage_core.utils.session_utils import SessionMemory
 
 
 def _get_services_container(request: Request) -> AppServiceContainer:
@@ -76,19 +75,6 @@ def get_db(request: Request) -> DatabaseService:
         "database_service",
         DatabaseService,
     )
-
-
-# Session memory dependency
-async def get_session_memory(request: Request) -> SessionMemory:
-    """Get session memory for the current request."""
-    if not hasattr(request.state, "session_memory"):
-        session_id = request.cookies.get("session_id", None)
-        if not session_id:
-            from uuid import uuid4
-
-            session_id = str(uuid4())
-        request.state.session_memory = SessionMemory(session_id=session_id)
-    return request.state.session_memory
 
 
 # Principal-based authentication
@@ -329,7 +315,6 @@ def get_user_service(request: Request) -> UserService:
 SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]
 DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
 CacheDep = Annotated[CacheService, Depends(get_cache_service_dep)]
-SessionMemoryDep = Annotated[SessionMemory, Depends(get_session_memory)]
 MCPServiceDep = Annotated[AirbnbMCP, Depends(get_mcp_service)]
 MapsServiceDep = Annotated[GoogleMapsService, Depends(get_maps_service_dep)]
 ActivityServiceDep = Annotated[ActivityService, Depends(get_activity_service_dep)]

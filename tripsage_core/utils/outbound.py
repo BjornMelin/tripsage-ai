@@ -17,14 +17,10 @@ from typing import Any
 import httpx
 from aiolimiter import AsyncLimiter
 
+from tripsage_core.config import get_settings
 
-_DEFAULT_QPM = float(  # default queries per minute if no override
-    asyncio.get_event_loop().run_until_complete(
-        asyncio.to_thread(
-            lambda: float(__import__("os").getenv("OUTBOUND_QPM_DEFAULT", "60"))
-        )
-    )
-)
+
+_DEFAULT_QPM = get_settings().outbound_default_qpm
 
 _limiters_by_loop: MutableMapping[int, MutableMapping[str, AsyncLimiter]] = {}
 
