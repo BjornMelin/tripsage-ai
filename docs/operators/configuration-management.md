@@ -73,9 +73,14 @@ The configuration system includes several security features:
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `REDIS_URL` | URL | None | Redis/DragonflyDB connection URL |
+| `REDIS_URL` | URL | None | Redis connection URL (use Upstash Redis TLS endpoint in production) |
 | `REDIS_PASSWORD` | Secret | None | Redis authentication password |
 | `REDIS_MAX_CONNECTIONS` | int | `50` | Maximum Redis connections (1-10000) |
+
+**Notes:**
+
+- Frontend/Edge runtimes use Upstash REST credentials: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
+- Backend rate limiting (SlowAPI/limits) requires a TCP Redis URL (e.g., `rediss://...`).
 
 ### AI Services
 

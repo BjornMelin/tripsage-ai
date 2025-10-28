@@ -152,7 +152,7 @@ rate_limits:
 | **Duffel** | API credentials, test mode | ✅ Active |
 | **Google Maps** | API key, quotas | ✅ Active |
 | **Supabase** | Project URL, service key | ✅ Active |
-| **DragonflyDB** | Connection string | ✅ Active |
+| **Redis** | Connection string | ✅ Active |
 
 **Webhook Configuration:**
 
@@ -356,7 +356,7 @@ alerts:
 
 ### Cache Operations
 
-**DragonflyDB Management:**
+**Redis Management:**
 
 - Memory usage monitoring
 - Key analysis

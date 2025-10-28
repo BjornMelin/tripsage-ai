@@ -20,7 +20,7 @@ This document covers TripSage's centralized configuration system using Pydantic'
 
 ## System Overview
 
-TripSage uses Pydantic's BaseSettings for configuration management across environments, supporting DragonflyDB caching, Mem0 memory system, and BYOK management.
+TripSage uses Pydantic's BaseSettings for configuration management across environments, supporting Redis caching, Mem0 memory system, and BYOK management.
 
 ### Architecture Principles
 
@@ -61,7 +61,7 @@ class AppSettings(BaseSettings):
     
     # Nested configuration models
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
-    dragonfly: DragonflyConfig = Field(default_factory=DragonflyConfig)
+    cache: CacheConfig = Field(default_factory=CacheConfig)
     mem0: Mem0Config = Field(default_factory=Mem0Config)
     external_services: ExternalServiceConfig = Field(default_factory=ExternalServiceConfig)
     airbnb_mcp: AirbnbMCPConfig = Field(default_factory=AirbnbMCPConfig)
@@ -86,8 +86,9 @@ class AppSettings(BaseSettings):
             if not self.external_services.openai_api_key.get_secret_value():
                 raise ValueError("OpenAI API key is required in production")
             
-            if "localhost" in self.dragonfly.url:
-                raise ValueError("DragonflyDB must not use localhost in production")
+            # Use managed Redis (e.g., Upstash) for production caching
+            if not getattr(self, "cache", None):
+                raise ValueError("Cache configuration is required in production")
                 
         return self
 ```
@@ -139,48 +140,27 @@ class DatabaseConfig(BaseSettings):
     )
 ```
 
-### 2. DragonflyDB Configuration
+### 2. Cache (Redis / Upstash) Configuration
 
 ```python
-class DragonflyConfig(BaseSettings):
-    """DragonflyDB configuration."""
-    
-    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_DRAGONFLY_')
-    
-    url: str = Field(
-        default="redis://localhost:6379/0",
-        description="DragonflyDB connection URL"
-    )
-    max_connections: int = Field(
-        default=10000,
-        ge=1,
-        le=50000,
-        description="Maximum connection pool size"
-    )
-    thread_count: int = Field(
-        default=4,
-        ge=1,
-        le=16,
-        description="Number of worker threads"
-    )
-    
-    # TTL configuration for different data types
-    ttl_short: int = Field(
-        default=300,
-        description="TTL for short-lived data (5 minutes)"
-    )
-    ttl_medium: int = Field(
-        default=3600,
-        description="TTL for medium-lived data (1 hour)"
-    )
-    ttl_long: int = Field(
-        default=86400,
-        description="TTL for long-lived data (24 hours)"
-    )
-    ttl_ultra_long: int = Field(
-        default=604800,
-        description="TTL for persistent data (7 days)"
-    )
+class CacheConfig(BaseSettings):
+    """Redis/Upstash cache configuration."""
+
+    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_CACHE_')
+
+    # TCP Redis URL (use Upstash "Redis (TLS)" endpoint in production)
+    # Example: rediss://default:password@<host>:<port>/0
+    redis_url: str | None = Field(default=None, description="Redis connection URL")
+
+    # Optional REST credentials for Upstash (used by Node/edge runtimes)
+    upstash_redis_rest_url: str | None = Field(default=None)
+    upstash_redis_rest_token: str | None = Field(default=None)
+
+    # Pool and TTLs
+    redis_max_connections: int = Field(default=1000, ge=1, le=50000)
+    cache_hot_ttl: int = Field(default=300, description="Hot TTL (seconds)")
+    cache_warm_ttl: int = Field(default=3600, description="Warm TTL (seconds)")
+    cache_cold_ttl: int = Field(default=86400, description="Cold TTL (seconds)")
 ```
 
 ### 3. Mem0 Memory System Configuration
@@ -358,12 +338,16 @@ TRIPSAGE_DB_SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 TRIPSAGE_DB_PGVECTOR_ENABLED="True"
 TRIPSAGE_DB_VECTOR_DIMENSIONS="1536"
 
-# DragonflyDB cache configuration
-TRIPSAGE_DRAGONFLY_URL="redis://dragonfly.example.com:6379/0"
-TRIPSAGE_DRAGONFLY_MAX_CONNECTIONS="10000"
-TRIPSAGE_DRAGONFLY_TTL_SHORT="300"
-TRIPSAGE_DRAGONFLY_TTL_MEDIUM="3600"
-TRIPSAGE_DRAGONFLY_TTL_LONG="86400"
+# Cache (Redis / Upstash)
+TRIPSAGE_CACHE_REDIS_URL="rediss://default:password@your-upstash-host:port/0"
+TRIPSAGE_CACHE_REDIS_MAX_CONNECTIONS="1000"
+CACHE_HOT_TTL="300"
+CACHE_WARM_TTL="3600"
+CACHE_COLD_TTL="86400"
+
+# Upstash REST (used by frontend/edge or Node tools)
+UPSTASH_REDIS_REST_URL="https://<id>.upstash.io"
+UPSTASH_REDIS_REST_TOKEN="<token>"
 
 # External service integrations (BYOK)
 TRIPSAGE_EXTERNAL_OPENAI_API_KEY="sk-your-openai-key"
@@ -461,10 +445,10 @@ async def create_database_pool():
     )
 
 # Configure cache client
-def create_dragonfly_client():
+def create_redis_client():
     return redis.from_url(
-        settings.dragonfly.url,
-        max_connections=settings.dragonfly.max_connections,
+        settings.redis_url,
+        max_connections=settings.redis_max_connections,
         decode_responses=True
     )
 ```
@@ -632,8 +616,8 @@ data:
   TRIPSAGE_ENVIRONMENT: "production"
   TRIPSAGE_DEBUG: "False"
   TRIPSAGE_API_PORT: "8000"
-  TRIPSAGE_DRAGONFLY_TTL_SHORT: "300"
-  TRIPSAGE_DRAGONFLY_TTL_MEDIUM: "3600"
+  CACHE_HOT_TTL: "300"
+  CACHE_WARM_TTL: "3600"
 
 ---
 # Kubernetes Secret for sensitive config
@@ -673,7 +657,7 @@ async def validate_production_config():
     
     # Test cache connectivity
     try:
-        redis_client = redis.from_url(settings.dragonfly.url)
+        redis_client = redis.from_url(settings.cache.redis_url)
         await redis_client.ping()
     except Exception as e:
         errors.append(f"Cache connectivity failed: {e}")
@@ -696,7 +680,7 @@ class ConfigHealthCheck:
         issues = []
         
         # Check TTL values are within expected ranges
-        if settings.dragonfly.ttl_short > 600:  # 10 minutes
+        if settings.cache.cache_hot_ttl > 600:  # 10 minutes
             issues.append("Short TTL is high")
         
         # Check timeout values
@@ -721,3 +705,33 @@ class ConfigHealthCheck:
 ---
 
 This configuration system ensures type-safe, secure, and manageable configuration across deployment environments.
+
+### 5. Redis/Upstash Examples
+
+```python
+# Python (server): Upstash Redis via REST SDK (simple caching)
+from upstash_redis import Redis
+
+redis = Redis.from_env()  # uses UPSTASH_REDIS_REST_URL/TOKEN
+redis.set("a", "b")
+print(redis.get("a"))
+
+# Or asyncio
+from upstash_redis.asyncio import Redis as AsyncRedis
+aredis = AsyncRedis.from_env()
+await aredis.set("a", "b")
+print(await aredis.get("a"))
+```
+
+```ts
+// TypeScript (frontend/edge): Upstash Redis REST
+import { Redis } from "@upstash/redis";
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
+
+await redis.set("key", "value", { ex: 60 });
+const v = await redis.get<string>("key");
+```

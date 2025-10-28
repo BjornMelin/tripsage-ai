@@ -46,7 +46,7 @@ Functions, not via a Python script. Use the Supabase tooling under
 ### `/verification/` - Connection & Health Checks
 
 - **`verify_connection.py`** - Database connection validation
-- **`verify_dragonfly.py`** - DragonflyDB connection and performance testing
+- **`verify_upstash.py`** - Upstash Redis connection and validation
 - **`verify_extensions.py`** - Extension functionality verification
 - **`validate_schema_consistency.py`** - Schema validation across environments
 
@@ -66,7 +66,8 @@ python scripts/automation/deploy_extensions.py
 
 # 4. Verify setup
 python scripts/verification/verify_connection.py
-python scripts/verification/verify_dragonfly.py
+# Cache connectivity (Upstash Redis)
+python scripts/verification/verify_upstash.py
 ```
 
 ### Development Workflow
@@ -137,7 +138,6 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # Cache Configuration
 REDIS_URL=redis://localhost:6379
-DRAGONFLY_PASSWORD=your-dragonfly-password
 
 # Security Settings
 ENABLE_RLS_VALIDATION=true
@@ -178,7 +178,7 @@ pip install asyncpg supabase click pydantic pytest
 - **API Response Time**: <100ms (95th percentile)
 - **Database Operations**: <50ms (complex queries)
 - **Vector Search**: <10ms (with HNSW indexing)
-- **Cache Operations**: <5ms (DragonflyDB)
+- **Cache Operations**: <5ms (Upstash Redis)
 
 ### Coverage Requirements
 
@@ -197,7 +197,7 @@ pip install asyncpg supabase click pydantic pytest
 python scripts/verification/verify_connection.py
 
 # Check cache connectivity  
-python scripts/verification/verify_dragonfly.py
+python scripts/verification/verify_upstash.py
 ```
 
 #### **Migration Errors**

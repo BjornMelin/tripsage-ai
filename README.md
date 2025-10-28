@@ -238,11 +238,17 @@ kubectl get pods -l app=tripsage-ai
 | `SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
 | `OPENAI_API_KEY` | OpenAI API key for AI features | ✅ |
 | `DUFFEL_ACCESS_TOKEN` | Duffel API token for flights | ⚠️ |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | ⚠️ |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | ⚠️ |
+| `REDIS_URL` | Upstash Redis (TLS) URL for backend (rate limiting/cache) | ⚠️ |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL (frontend/edge) | ⚠️ |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token (frontend/edge) | ⚠️ |
 | `MEM0_API_KEY` | Mem0 API key for memory features | ⚠️ |
 
 ✅ Required | ⚠️ Optional (fallback available)
+
+**Notes:**
+
+- Backend (FastAPI) uses a TCP Redis connection for distributed rate limiting and caching. Use your Upstash Redis (TLS) URL in `REDIS_URL`.
+- Frontend/Edge (Next.js) uses Upstash REST credentials (`UPSTASH_REDIS_REST_URL`/`TOKEN`) for route-level limits or caching.
 
 ---
 

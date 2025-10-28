@@ -23,7 +23,7 @@ scripts/benchmarks/
 ├── metrics_collector.py         # Metrics collection
 ├── report_generator.py          # Reports (HTML/CSV)
 ├── config.py                    # Config and thresholds
-├── dragonfly_performance.py     # Cache-specific tests
+├── cache_performance.py         # Cache-specific tests (Redis)
 ├── Makefile                     # Automation helpers
 ```
 
@@ -38,7 +38,7 @@ python benchmark.py --quick
 ## Components
 
 - Database benchmarking: `benchmark.py`, `benchmark_runner.py`, `scenario_service.py`
-- Cache benchmarking: `dragonfly_performance.py`
+- Cache benchmarking: `cache_performance.py`
 - Metrics and reports: `metrics_collector.py`, `report_generator.py`
 
 ## Validation Examples
@@ -48,7 +48,7 @@ python benchmark.py --quick
 python benchmark.py --full-suite
 
 # Cache tests
-python dragonfly_performance.py --quick
+python cache_performance.py --quick
 ```
 
 ## CLI Reference
@@ -58,7 +58,7 @@ python dragonfly_performance.py --quick
 python benchmark.py [OPTIONS]
 
 # Cache-specific
-python dragonfly_performance.py [OPTIONS]
+python cache_performance.py [OPTIONS]
 ```
 
 Common options:
