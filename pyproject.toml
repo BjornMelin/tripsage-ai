@@ -249,6 +249,7 @@ convention = "google"
 "tripsage_core/services/business/auth_service.py" = ["B008"]
 "tests/conftest.py" = ["E402"]          # Allow imports-after-exec for env setup
 "scripts/**/*" = []
+"tripsage_core/types/**" = ["A005"]      # Package name overlaps stdlib 'types'
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -296,6 +297,7 @@ pythonVersion = "3.13"
 typeCheckingMode = "strict"
 useLibraryCodeForTypes = true
 stubPath = "typings"
+reportMissingTypeStubs = false
 reportMissingImports = "warning"
 
 [tool.uv]
@@ -333,7 +335,11 @@ disable = [
     "too-many-branches",
     "consider-using-dict-items",
     "fixme",
+    "duplicate-code",
 ]
+
+[tool.pylint.per-file-ignores]
+"tests/**/*.py" = ["wrong-import-position"]
 
 [tool.coverage.run]
 branch = true
