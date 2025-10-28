@@ -94,8 +94,11 @@ class LangGraphConfig:
             escalation_threshold=int(os.getenv("LANGGRAPH_ESCALATION_THRESHOLD", "5")),
             timeout_seconds=int(os.getenv("LANGGRAPH_TIMEOUT_SECONDS", "30")),
             # Monitoring
-            enable_langsmith=os.getenv("LANGGRAPH_ENABLE_LANGSMITH", "true").lower()
-            == "true",
+            enable_langsmith="langsmith"
+            in os.getenv(
+                "LANGGRAPH_FEATURES",
+                "conversation_memory,advanced_routing,memory_updates,error_recovery,langsmith",
+            ).split(","),
             langsmith_project=os.getenv("LANGSMITH_PROJECT", "tripsage-langgraph"),
             langsmith_api_key=os.getenv("LANGSMITH_API_KEY"),
             parallel_execution=os.getenv("LANGGRAPH_PARALLEL_EXECUTION", "true").lower()
