@@ -4,7 +4,7 @@ This module defines Pydantic models for chat-related API requests and responses.
 Consolidates both request and response schemas for chat operations.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -38,7 +38,7 @@ class SessionCreateRequest(BaseModel):
     """Request model for creating a new chat session."""
 
     title: str = Field(..., description="Session title")
-    metadata: dict | None = Field(None, description="Session metadata")
+    metadata: dict[str, Any] | None = Field(None, description="Session metadata")
 
 
 class CreateMessageRequest(BaseModel):
@@ -51,6 +51,11 @@ class CreateMessageRequest(BaseModel):
 # ===== Response Schemas =====
 
 
+def _utc_now() -> datetime:
+    """Return a timezone-aware UTC timestamp for response defaults."""
+    return datetime.now(UTC)
+
+
 class ChatResponse(BaseModel):
     """Chat API response for non-streaming requests."""
 
@@ -61,7 +66,7 @@ class ChatResponse(BaseModel):
     finish_reason: str = Field("stop", description="Finish reason")
     usage: dict[str, int] | None = Field(None, description="Token usage information")
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Response timestamp"
+        default_factory=_utc_now, description="Response timestamp"
     )
 
 
