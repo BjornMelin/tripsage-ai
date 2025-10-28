@@ -113,7 +113,7 @@ TripSage uses a modern data stack:
 
 - **🐘 PostgreSQL**: Primary database with Supabase
 - **🔍 pgvector**: Vector embeddings for AI features
-- **⚡ DragonflyDB**: High-performance Redis-compatible cache
+- **⚡ Redis (managed)**: High-performance managed caching (e.g., Upstash)
 - **📊 Analytics**: Optional integration with data warehouses
 
 ---
@@ -214,7 +214,7 @@ TripSage supports horizontal scaling:
 
 **⚡ Cache Scaling:**
 
-- DragonflyDB cluster mode
+- Redis cluster mode
 - Redis Sentinel for high availability
 - Distributed caching strategies
 

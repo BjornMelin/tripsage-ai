@@ -319,8 +319,13 @@ SUPABASE_TIMEOUT=30
 SUPABASE_POOL_SIZE=20
 SUPABASE_MAX_OVERFLOW=30
 
-# DragonflyDB Cache (Production)
-DRAGONFLY_URL=rediss://username:password@your-dragonfly-host:6380/0
+# Redis Cache (Production)
+# Use your Upstash Redis (TLS) endpoint for backend services and rate limiting
+REDIS_URL=rediss://default:password@your-upstash-host:6380/0
+
+# Frontend/Edge can use Upstash REST (set in frontend env)
+# UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
+# UPSTASH_REDIS_REST_TOKEN=<token>
 
 # Security
 SECRET_KEY=<strong-production-secret-key>
@@ -482,14 +487,14 @@ SUPABASE_POOL_RECYCLE=3600  # 1 hour
 
 ### 2. Cache Configuration
 
-**DragonflyDB Setup:**
+**Redis Setup:**
 
 ```bash
-# Production DragonflyDB configuration
-DRAGONFLY_URL=rediss://username:password@your-host:6380/0
-DRAGONFLY_POOL_SIZE=20
-DRAGONFLY_TIMEOUT=5
-DRAGONFLY_MAX_CONNECTIONS=100
+# Production Redis configuration
+REDIS_URL=rediss://default:password@your-host:6380/0
+REDIS_POOL_SIZE=20
+REDIS_TIMEOUT=5
+REDIS_MAX_CONNECTIONS=100
 
 # Multi-tier TTL strategy
 CACHE_HOT_TTL=300       # 5 minutes

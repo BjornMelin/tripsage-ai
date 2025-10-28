@@ -61,9 +61,9 @@ UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
 # For SSL/TLS (recommended for production)
 UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
 
-# Connection Pool Settings
-DRAGONFLY_POOL_SIZE=20
-DRAGONFLY_TIMEOUT=5
+# Connection Pool Settings (TCP Redis)
+REDIS_POOL_SIZE=20
+REDIS_POOL_TIMEOUT=5
 ```
 
 ## Memory System (Mem0)
@@ -289,9 +289,9 @@ SUPABASE_POOL_SIZE=20
 SUPABASE_MAX_OVERFLOW=30
 SUPABASE_POOL_TIMEOUT=30
 
-# Cache Connection Pool
-DRAGONFLY_POOL_SIZE=20
-DRAGONFLY_POOL_TIMEOUT=5
+# Cache Connection Pool (Redis)
+REDIS_POOL_SIZE=20
+REDIS_POOL_TIMEOUT=5
 ```
 
 ### Rate Limiting
@@ -299,7 +299,6 @@ DRAGONFLY_POOL_TIMEOUT=5
 ```bash
 # Rate Limiting Configuration
 RATE_LIMIT_ENABLED=true
-RATE_LIMIT_USE_DRAGONFLY=true
 
 # Default Rate Limits (per API key/user)
 RATE_LIMIT_REQUESTS_PER_MINUTE=60

@@ -40,10 +40,10 @@ const databaseEnvSchema = z.object({
   POSTGRES_PASSWORD: z.string().optional(),
 });
 
-// Cache configuration (DragonflyDB/Redis)
+// Cache configuration (Redis)
 const cacheEnvSchema = z.object({
   REDIS_URL: z.string().url().optional(),
-  DRAGONFLY_URL: z.string().url().optional(),
+  // Deprecated: DRAGONFLY_URL removed; use REDIS_URL
   CACHE_HOST: z.string().optional(),
   CACHE_PORT: z.coerce.number().int().positive().optional(),
   CACHE_PASSWORD: z.string().optional(),
@@ -341,9 +341,7 @@ export const getEnvironmentInfo = () => {
     },
     services: {
       hasDatabase: Boolean(env.data.DATABASE_URL || env.data.POSTGRES_HOST),
-      hasCache: Boolean(
-        env.data.REDIS_URL || env.data.DRAGONFLY_URL || env.data.CACHE_HOST
-      ),
+      hasCache: Boolean(env.data.REDIS_URL || env.data.CACHE_HOST),
       hasSupabase: Boolean(env.data.NEXT_PUBLIC_SUPABASE_URL),
       hasAiServices: Boolean(
         env.data.OPENAI_API_KEY ||

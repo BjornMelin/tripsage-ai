@@ -70,7 +70,7 @@
 - **uv**: Recommended but optional (modern Python package manager -
   10-100x faster than pip)
 - **Git**: For cloning the repository
-- **Docker**: Optional, for local DragonflyDB
+- **Docker**: Optional, for local development
 
 > **Note**: While `uv` is recommended for its speed and reliability,
 > you can use standard `pip` if preferred.
@@ -129,9 +129,9 @@ SUPABASE_URL=https://your-project-id.supabase.co
 SUPABASE_ANON_KEY=your_supabase_anon_key_here
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 
-# Cache - DragonflyDB (Local development)
-DRAGONFLY_URL=redis://localhost:6379
-DRAGONFLY_PASSWORD=your_secure_password
+# Cache - Redis (Local development)
+REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=your_secure_password
 
 # External APIs (Optional - for full functionality)
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
@@ -156,8 +156,8 @@ uv run python scripts/verification/verify_connection.py
 #### Option A: Development (Recommended)
 
 ```bash
-# Terminal 1: Start DragonflyDB (if not using external Redis)
-docker-compose up dragonfly
+# Terminal 1: Connect to managed Redis (e.g., Upstash) or run a local Redis container if needed
+# docker run -p 6379:6379 redis:7-alpine
 
 # Terminal 2: Start API server
 uv run python -m tripsage.api.main
@@ -198,7 +198,7 @@ cd frontend && pnpm dev
 ### Database Stack
 
 - **Supabase**: Primary database with pgvector for embeddings
-- **DragonflyDB**: 25x faster Redis-compatible caching
+- **Redis**: managed caching (e.g., Upstash) recommended
 - **No Neo4j**: Eliminated for simplified architecture
 
 ### API Integrations
@@ -369,14 +369,14 @@ uv run python scripts/verification/verify_connection.py
 grep -E "SUPABASE|DATABASE" .env
 ```
 
-**DragonflyDB/Redis Issues:**
+**Redis Issues:**
 
 ```bash
 # Test cache connection
-docker exec -it tripsage-dragonfly redis-cli ping
+docker exec -it redis redis-cli ping
 
 # Check cache configuration
-grep -E "DRAGONFLY|REDIS" .env
+grep -E "REDIS_URL|UPSTASH_REDIS" .env
 ```
 
 **Import Errors:**
@@ -409,7 +409,7 @@ pnpm build
 
 **Caching:**
 
-- Use DragonflyDB for 25x performance improvement
+- Use managed Redis for simpler operations and scalability
 - Configure appropriate TTL values
 - Monitor cache hit rates
 

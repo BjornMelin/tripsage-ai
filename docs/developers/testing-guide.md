@@ -370,7 +370,7 @@ uv run pytest --cov=tripsage --cov-report=term-missing -x
 #### Environment & Configuration
 
 - `setup_test_environment` (session, autouse): Sets test environment variables
-- `mock_cache_globally` (session, autouse): Mocks Redis/DragonflyDB globally
+- `mock_cache_globally` (session, autouse): Mocks Redis globally
 - `mock_settings`: Mock settings object with test values
 - `mock_database_service`: Mock database service for unit tests
 - `mock_cache_service`: Mock cache service for unit tests
