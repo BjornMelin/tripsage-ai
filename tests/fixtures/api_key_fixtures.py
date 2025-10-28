@@ -287,8 +287,8 @@ async def mock_key_monitoring_service():
     service = MagicMock(spec=KeyMonitoringService)
 
     # Configure async methods
-    service.get_audit_log = AsyncMock(return_value=[])
-    service.get_metrics = AsyncMock(return_value={})
+    service.get_user_operations = AsyncMock(return_value=[])
+    service.get_alerts = AsyncMock(return_value=[])
     service.track_usage = AsyncMock()
     service.track_validation = AsyncMock()
     service.get_health_status = AsyncMock(return_value="healthy")

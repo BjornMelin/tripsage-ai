@@ -11,7 +11,6 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.types import ASGIApp
 
 
 logger = logging.getLogger(__name__)
@@ -24,13 +23,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     including timing, status code, and correlation ID.
     """
 
-    def __init__(self, app: ASGIApp):
-        """Initialize LoggingMiddleware.
-
-        Args:
-            app: The ASGI application
-        """
-        super().__init__(app)
+    # No explicit __init__; BaseHTTPMiddleware handles app assignment.
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]

@@ -7,11 +7,13 @@ API key operations in TripSage.
 import inspect
 import secrets
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 from functools import wraps
-from typing import Any, TypeVar, cast
+from typing import ParamSpec, TypeVar, cast
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.services.infrastructure.cache_service import (
@@ -22,11 +24,13 @@ from tripsage_core.services.infrastructure.database_service import (
     DatabaseService,
     get_database_service,
 )
+from tripsage_core.types import JSONObject
 from tripsage_core.utils.logging_utils import get_logger
 
 
 # Type hints
-F = TypeVar("F", bound=Callable[..., Any])
+P = ParamSpec("P")
+ReturnT = TypeVar("ReturnT")
 
 # Create logger
 logger = get_logger("key_operations")
@@ -41,6 +45,68 @@ class KeyOperation(str, Enum):
     VALIDATE = "validate"
     ROTATE = "rotate"
     ACCESS = "access"
+
+
+class KeyOperationLogEntry(BaseModel):
+    """Structured log entry persisted for API key operations."""
+
+    model_config = ConfigDict(frozen=True)
+
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="Event timestamp"
+    )
+    operation: KeyOperation = Field(description="API key operation type")
+    user_id: str = Field(description="User performing the operation")
+    key_id: str | None = Field(default=None, description="API key identifier")
+    service: str | None = Field(default=None, description="Associated service name")
+    success: bool = Field(default=True, description="Whether the operation succeeded")
+    metadata: JSONObject = Field(
+        default_factory=dict, description="Supplemental operation metadata"
+    )
+    suspicious: bool = Field(
+        default=False, description="Flag indicating suspicious activity"
+    )
+
+
+class KeyOperationAlert(BaseModel):
+    """Structured alert entry stored when suspicious activity is detected."""
+
+    model_config = ConfigDict(frozen=True)
+
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="Alert timestamp"
+    )
+    message: str = Field(description="Human-readable alert message")
+    operation: KeyOperation = Field(description="Operation that triggered the alert")
+    user_id: str = Field(description="User associated with the alert")
+    data: JSONObject = Field(
+        default_factory=dict, description="Structured alert payload"
+    )
+
+
+class KeyHealthServiceCount(BaseModel):
+    """Service-level API key aggregate."""
+
+    service: str
+    count: int
+
+
+class KeyHealthUserCount(BaseModel):
+    """User-level API key aggregate."""
+
+    user_id: str
+    count: int
+
+
+class KeyHealthMetrics(BaseModel):
+    """Aggregate metrics for API keys."""
+
+    total_count: int
+    service_count: list[KeyHealthServiceCount]
+    expired_count: int
+    expiring_count: int
+    user_count: list[KeyHealthUserCount]
+    error: str | None = None
 
 
 class KeyMonitoringService:
@@ -79,10 +145,11 @@ class KeyMonitoringService:
         self,
         operation: KeyOperation,
         user_id: str,
+        *,
         key_id: str | None = None,
         service: str | None = None,
         success: bool = True,
-        metadata: dict[str, Any] | None = None,
+        metadata: JSONObject | None = None,
     ) -> None:
         """Log an API key operation with structured data.
 
@@ -100,16 +167,8 @@ class KeyMonitoringService:
         # Validate services for type checkers
         assert self.cache_service is not None
 
-        # Create a log entry
-        log_data = {
-            "timestamp": datetime.now(UTC).isoformat(),
-            "operation": operation.value,
-            "user_id": user_id,
-            "key_id": key_id,
-            "service": service,
-            "success": success,
-            "metadata": metadata or {},
-        }
+        timestamp = datetime.now(UTC)
+        metadata_payload: JSONObject = metadata or {}
 
         # Store operation in cache for pattern detection
         await self._store_operation_for_pattern_detection(operation, user_id)
@@ -117,8 +176,19 @@ class KeyMonitoringService:
         # Check for suspicious patterns
         suspicious = await self._check_suspicious_patterns(operation, user_id)
         if suspicious:
-            log_data["suspicious"] = True
             self.suspicious_patterns.add(f"{user_id}:{operation.value}")
+
+        entry = KeyOperationLogEntry(
+            timestamp=timestamp,
+            operation=operation,
+            user_id=user_id,
+            key_id=key_id,
+            service=service,
+            success=success,
+            metadata=metadata_payload,
+            suspicious=suspicious,
+        )
+        log_data = entry.model_dump(mode="json")
 
         # Log the operation with logging module
         if success:
@@ -136,21 +206,28 @@ class KeyMonitoringService:
 
         # Store the log in cache for persistence
         log_key = f"key_logs:{user_id}"
-        # Get existing logs
-        existing_logs = await self.cache_service.get_json(log_key) or []
-        # Append new log
-        existing_logs.append(log_data)
-        # Keep only last 1000 logs
-        if len(existing_logs) > 1000:
-            existing_logs = existing_logs[-1000:]
-        # Store back with TTL
+        existing_logs_raw = await self.cache_service.get_json(log_key, default=[])
+        logs: list[KeyOperationLogEntry] = []
+        if isinstance(existing_logs_raw, Sequence) and not isinstance(
+            existing_logs_raw, (str, bytes, bytearray)
+        ):
+            logs.extend(
+                KeyOperationLogEntry.model_validate(item)
+                for item in existing_logs_raw
+                if isinstance(item, Mapping)
+            )
+        logs.append(entry)
+        if len(logs) > 1000:
+            logs = logs[-1000:]
         await self.cache_service.set_json(
-            log_key, existing_logs, ttl=2592000
+            log_key,
+            [log.model_dump(mode="json") for log in logs],
+            ttl=2592000,
         )  # 30 days
 
         # If this is a suspicious pattern, send an alert
         if suspicious:
-            await self._send_alert(operation, user_id, log_data)
+            await self._send_alert(operation, user_id, entry)
 
     async def _store_operation_for_pattern_detection(
         self, operation: KeyOperation, user_id: str
@@ -165,17 +242,19 @@ class KeyMonitoringService:
         await self.initialize()
         assert self.cache_service is not None
         key = f"key_ops:{user_id}:{operation.value}"
-        # Get existing operations
-        existing_ops = await self.cache_service.get_json(key) or []
+        existing_ops_raw = await self.cache_service.get_json(key, default=[])
+        operations: list[str] = []
+        if isinstance(existing_ops_raw, list):
+            operations = [str(op) for op in existing_ops_raw]
         # Add new timestamp
-        existing_ops.append(datetime.now(UTC).isoformat())
+        operations.append(datetime.now(UTC).isoformat())
         # Keep only recent operations within timeframe
         cutoff_time = datetime.now(UTC) - timedelta(seconds=self.pattern_timeframe)
-        existing_ops = [
-            op for op in existing_ops if datetime.fromisoformat(op) > cutoff_time
+        operations = [
+            op for op in operations if datetime.fromisoformat(op) > cutoff_time
         ]
         # Store back
-        await self.cache_service.set_json(key, existing_ops, ttl=self.pattern_timeframe)
+        await self.cache_service.set_json(key, operations, ttl=self.pattern_timeframe)
 
     async def _check_suspicious_patterns(
         self, operation: KeyOperation, user_id: str
@@ -197,7 +276,10 @@ class KeyMonitoringService:
         await self.initialize()
         assert self.cache_service is not None
         key = f"key_ops:{user_id}:{operation.value}"
-        operations = await self.cache_service.get_json(key) or []
+        operations_raw = await self.cache_service.get_json(key, default=[])
+        operations: list[str] = []
+        if isinstance(operations_raw, list):
+            operations = [str(op) for op in operations_raw]
 
         # Count operations
         count = len(operations)
@@ -207,14 +289,14 @@ class KeyMonitoringService:
         return count >= threshold
 
     async def _send_alert(
-        self, operation: KeyOperation, user_id: str, log_data: dict[str, Any]
+        self, operation: KeyOperation, user_id: str, entry: KeyOperationLogEntry
     ) -> None:
         """Send an alert for suspicious key operations.
 
         Args:
             operation: The operation performed
             user_id: The user ID
-            log_data: The log data for the operation
+            entry: Structured log entry associated with the alert
         """
         # Create alert message
         alert_message = (
@@ -228,7 +310,7 @@ class KeyMonitoringService:
             extra={
                 "operation": operation.value,
                 "user_id": user_id,
-                "count": log_data.get("count"),
+                "count": entry.metadata.get("count"),
                 "timeframe": self.pattern_timeframe,
             },
         )
@@ -237,26 +319,36 @@ class KeyMonitoringService:
         await self.initialize()
         assert self.cache_service is not None
         alert_key = "key_alerts"
-        existing_alerts = await self.cache_service.get_json(alert_key) or []
-        existing_alerts.append(
-            {
-                "timestamp": datetime.now(UTC).isoformat(),
-                "message": alert_message,
-                "operation": operation.value,
-                "user_id": user_id,
-                "data": log_data,
-            }
+        existing_alerts_raw = await self.cache_service.get_json(alert_key, default=[])
+        alerts: list[KeyOperationAlert] = []
+        if isinstance(existing_alerts_raw, Sequence) and not isinstance(
+            existing_alerts_raw, (str, bytes, bytearray)
+        ):
+            alerts.extend(
+                KeyOperationAlert.model_validate(item)
+                for item in existing_alerts_raw
+                if isinstance(item, Mapping)
+            )
+        alerts.append(
+            KeyOperationAlert(
+                message=alert_message,
+                operation=operation,
+                user_id=user_id,
+                data=entry.model_dump(mode="json"),
+            )
         )
         # Keep only last 1000 alerts
-        if len(existing_alerts) > 1000:
-            existing_alerts = existing_alerts[-1000:]
+        if len(alerts) > 1000:
+            alerts = alerts[-1000:]
         await self.cache_service.set_json(
-            alert_key, existing_alerts, ttl=2592000
+            alert_key,
+            [alert.model_dump(mode="json") for alert in alerts],
+            ttl=2592000,
         )  # 30 days
 
     async def get_user_operations(
         self, user_id: str, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeyOperationLogEntry]:
         """Get recent key operations for a user.
 
         Args:
@@ -272,11 +364,19 @@ class KeyMonitoringService:
 
         # Get operations from cache
         log_key = f"key_logs:{user_id}"
-        logs = await self.cache_service.get_json(log_key) or []
-        # Return limited results
-        return logs[-limit:] if len(logs) > limit else logs
+        logs_raw = await self.cache_service.get_json(log_key, default=[])
+        entries: list[KeyOperationLogEntry] = []
+        if isinstance(logs_raw, Sequence) and not isinstance(
+            logs_raw, (str, bytes, bytearray)
+        ):
+            entries.extend(
+                KeyOperationLogEntry.model_validate(dict(item))
+                for item in logs_raw
+                if isinstance(item, Mapping)
+            )
+        return entries[-limit:] if len(entries) > limit else entries
 
-    async def get_alerts(self, limit: int = 100) -> list[dict[str, Any]]:
+    async def get_alerts(self, limit: int = 100) -> list[KeyOperationAlert]:
         """Get recent key operation alerts.
 
         Args:
@@ -290,8 +390,16 @@ class KeyMonitoringService:
         assert self.cache_service is not None
 
         # Get alerts from cache
-        alerts = await self.cache_service.get_json("key_alerts") or []
-        # Return limited results
+        alerts_raw = await self.cache_service.get_json("key_alerts", default=[])
+        alerts: list[KeyOperationAlert] = []
+        if isinstance(alerts_raw, Sequence) and not isinstance(
+            alerts_raw, (str, bytes, bytearray)
+        ):
+            alerts.extend(
+                KeyOperationAlert.model_validate(dict(item))
+                for item in alerts_raw
+                if isinstance(item, Mapping)
+            )
         return alerts[-limit:] if len(alerts) > limit else alerts
 
     async def is_rate_limited(self, user_id: str, operation: KeyOperation) -> bool:
@@ -330,23 +438,16 @@ class KeyMonitoringService:
 
 def monitor_key_operation(
     operation: KeyOperation,
-) -> Callable[[F], F]:
-    """Decorator to monitor API key operations.
+) -> Callable[[Callable[P, Awaitable[ReturnT]]], Callable[P, Awaitable[ReturnT]]]:
+    """Decorator to monitor API key operations."""
 
-    This decorator logs API key operations and checks for suspicious patterns.
-
-    Args:
-        operation: The operation to monitor
-
-    Returns:
-        Decorated function
-    """
-
-    def decorator(func: F) -> F:
+    def decorator(
+        func: Callable[P, Awaitable[ReturnT]],
+    ) -> Callable[P, Awaitable[ReturnT]]:
         @wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> ReturnT:
             # Get monitoring service from args or kwargs
-            monitoring_service = None
+            monitoring_service: KeyMonitoringService | None = None
             for arg in args:
                 if isinstance(arg, KeyMonitoringService):
                     monitoring_service = arg
@@ -363,35 +464,36 @@ def monitor_key_operation(
                 monitoring_service = KeyMonitoringService()
 
             # Get user ID from args or kwargs
-            user_id = kwargs.get("user_id")
+            user_id = cast(str | None, kwargs.get("user_id"))
             if not user_id:
                 # Try to find it in args using inspection
                 sig = inspect.signature(func)
                 params = list(sig.parameters.keys())
                 for i, param in enumerate(params):
                     if param == "user_id" and i < len(args):
-                        user_id = args[i]
+                        user_id = cast(str | None, args[i])
                         break
 
             # Get key ID from args or kwargs
-            key_id = kwargs.get("key_id")
+            key_id = cast(str | None, kwargs.get("key_id"))
             if not key_id:
                 # Try to find it in args using inspection
                 sig = inspect.signature(func)
                 params = list(sig.parameters.keys())
                 for i, param in enumerate(params):
                     if param == "key_id" and i < len(args):
-                        key_id = args[i]
+                        key_id = cast(str | None, args[i])
                         break
 
             # Get service from args or kwargs
-            service = kwargs.get("service")
+            service = cast(str | None, kwargs.get("service"))
+            key_data_obj = kwargs.get("key_data")
             if (
                 not service
-                and "key_data" in kwargs
-                and hasattr(kwargs["key_data"], "service")
+                and key_data_obj is not None
+                and hasattr(key_data_obj, "service")
             ):
-                service = kwargs["key_data"].service
+                service = cast(str | None, getattr(key_data_obj, "service", None))
 
             # Execute the function
             start_time = time.time()
@@ -434,7 +536,7 @@ def monitor_key_operation(
 
             return result
 
-        return cast(F, wrapper)
+        return wrapper
 
     return decorator
 
@@ -468,7 +570,7 @@ def constant_time_compare(a: str, b: str) -> bool:
     return secrets.compare_digest(a.encode(), b.encode())
 
 
-def clear_sensitive_data(data: dict[str, Any], keys: list[str]) -> dict[str, Any]:
+def clear_sensitive_data(data: JSONObject, keys: list[str]) -> JSONObject:
     """Clear sensitive data from a dictionary.
 
     Args:
@@ -487,7 +589,7 @@ def clear_sensitive_data(data: dict[str, Any], keys: list[str]) -> dict[str, Any
 
 async def check_key_expiration(
     monitoring_service: KeyMonitoringService, days_before: int = 7
-) -> list[dict[str, Any]]:
+) -> list[JSONObject]:
     """Check for API keys that are about to expire.
 
     Args:
@@ -513,20 +615,13 @@ async def check_key_expiration(
             "*",
             filters={"expires_at": {"lte": threshold.isoformat()}},
         )
-        normalized: list[dict[str, Any]] = []
-        if result:
-            for row in result:
-                if isinstance(row, dict):
-                    normalized.append(row)
-                else:
-                    normalized.append({"record": row})
-        return normalized
+        return list(result) if result else []
     except CoreServiceError:
         logger.exception("Failed to check key expiration")
         return []
 
 
-async def get_key_health_metrics() -> dict[str, Any]:
+async def get_key_health_metrics() -> KeyHealthMetrics:
     """Get health metrics for API keys.
 
     Returns:
@@ -545,11 +640,8 @@ async def get_key_health_metrics() -> dict[str, Any]:
         service_result = await db_service.select("api_keys", "service")
         service_count: dict[str, int] = {}
         if service_result:
-            for row in service_result:
-                if isinstance(row, dict):
-                    service = str(row.get("service", "unknown"))
-                else:
-                    service = str(row)
+            for mapping in service_result:
+                service = str(mapping.get("service", "unknown"))
                 service_count[service] = service_count.get(service, 0) + 1
 
         # Get count of expired keys
@@ -576,30 +668,31 @@ async def get_key_health_metrics() -> dict[str, Any]:
         user_result = await db_service.select("api_keys", "user_id")
         user_count: dict[str, int] = {}
         if user_result:
-            for row in user_result:
-                if isinstance(row, dict):
-                    user_id = str(row.get("user_id", "unknown"))
-                else:
-                    user_id = str(row)
+            for mapping in user_result:
+                user_id = str(mapping.get("user_id", "unknown"))
                 user_count[user_id] = user_count.get(user_id, 0) + 1
 
-        return {
-            "total_count": total_count,
-            "service_count": [
-                {"service": k, "count": v} for k, v in service_count.items()
+        return KeyHealthMetrics(
+            total_count=total_count,
+            service_count=[
+                KeyHealthServiceCount(service=service, count=count)
+                for service, count in service_count.items()
             ],
-            "expired_count": expired_count,
-            "expiring_count": expiring_count,
-            "user_count": [{"user_id": k, "count": v} for k, v in user_count.items()],
-        }
+            expired_count=expired_count,
+            expiring_count=expiring_count,
+            user_count=[
+                KeyHealthUserCount(user_id=user, count=count)
+                for user, count in user_count.items()
+            ],
+        )
 
     except CoreServiceError:
         logger.exception("Failed to get key health metrics")
-        return {
-            "error": "database_error",
-            "total_count": 0,
-            "service_count": [],
-            "expired_count": 0,
-            "expiring_count": 0,
-            "user_count": [],
-        }
+        return KeyHealthMetrics(
+            total_count=0,
+            service_count=[],
+            expired_count=0,
+            expiring_count=0,
+            user_count=[],
+            error="database_error",
+        )

@@ -5,7 +5,7 @@ Own Key) functionality for user-provided API keys.
 """
 
 import logging
-from typing import Any, cast
+from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -295,33 +295,29 @@ async def get_metrics(
         Key health metrics
     """
     _ = principal  # Enforce admin gating (principal is validated upstream)
-    raw_metrics = await get_key_health_metrics()
+    metrics = await get_key_health_metrics()
 
-    if raw_metrics.get("error"):
-        return raw_metrics
+    if metrics.error:
+        return metrics.model_dump(mode="json")
 
-    raw_user_count = cast(
-        list[dict[str, Any]] | dict[str, Any] | None,
-        raw_metrics.pop("user_count", None),
-    )
-    user_count_value: list[dict[str, Any]] = []
+    user_distribution: list[dict[str, int | str]] = [
+        {"user_id": entry.user_id, "count": int(entry.count)}
+        for entry in metrics.user_count
+    ]
 
-    if isinstance(raw_user_count, list):
-        user_count_value.extend(raw_user_count)
-    elif isinstance(raw_user_count, dict):
-        user_count_value.append(raw_user_count)
-
-    total_users = len(user_count_value)
-    total_keys = sum(int(entry.get("count", 0)) for entry in user_count_value)
+    total_users = len(user_distribution)
+    total_keys: int = sum(int(details["count"]) for details in user_distribution)
     average = (total_keys / total_users) if total_users else 0.0
 
-    raw_metrics["user_distribution"] = {
+    payload = metrics.model_dump(mode="json", exclude={"user_count"})
+    payload["user_distribution"] = {
         "unique_users": total_users,
         "total_keys": total_keys,
         "avg_keys_per_user": average,
+        "distribution": user_distribution,
     }
 
-    return raw_metrics
+    return payload
 
 
 @router.get(
@@ -353,8 +349,8 @@ async def get_audit_log(
     user_id = get_principal_id(principal)
     entries = await monitoring_service.get_user_operations(user_id, limit)
 
-    def _mask_key_id(key_id: Any) -> str:
-        identifier = str(key_id)
+    def _mask_key_id(key_id: str) -> str:
+        identifier = key_id
         if len(identifier) <= 8:
             return "***"
         return f"{identifier[:4]}***{identifier[-4:]}"
@@ -362,16 +358,15 @@ async def get_audit_log(
     sanitized: list[dict[str, Any]] = []
     for entry in entries:
         record: dict[str, Any] = {
-            "timestamp": entry.get("timestamp"),
-            "operation": entry.get("operation"),
-            "service": entry.get("service"),
-            "success": entry.get("success"),
-            "metadata": entry.get("metadata", {}),
+            "timestamp": entry.timestamp.isoformat(),
+            "operation": entry.operation.value,
+            "service": entry.service,
+            "success": entry.success,
+            "metadata": entry.metadata,
         }
 
-        key_identifier = entry.get("key_id")
-        if isinstance(key_identifier, str) and key_identifier:
-            record["key_id"] = _mask_key_id(key_identifier)
+        if entry.key_id:
+            record["key_id"] = _mask_key_id(entry.key_id)
 
         sanitized.append(record)
 
