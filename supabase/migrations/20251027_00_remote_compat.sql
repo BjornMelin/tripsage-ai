@@ -1,0 +1,2 @@
+-- NOOP placeholder to align local migration history with remote version 20251027
+-- This file intentionally has no statements.
