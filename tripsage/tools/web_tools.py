@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-from typing import Any, Literal
+from collections.abc import Awaitable, Callable
+from typing import Any, Literal, ParamSpec, TypeVar, cast
 
 from agents import WebSearchTool as _BaseWebSearchTool
 from tripsage_core.utils.cache_utils import (
@@ -22,6 +23,8 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 WEB_CACHE_NAMESPACE = "web-search"
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 
 def _infer_content_type(query: str) -> ContentType:
@@ -41,7 +44,7 @@ def _infer_content_type(query: str) -> ContentType:
 
 
 class CachedWebSearchTool(_BaseWebSearchTool):
-    """Web search tool with Redis/Dragonfly-backed caching."""
+    """Web search tool with Redis-backed caching (Upstash)."""
 
     def __init__(
         self,
@@ -74,11 +77,14 @@ class CachedWebSearchTool(_BaseWebSearchTool):
             cached_result = await get_cache(cache_key, namespace=self.namespace)
             if cached_result is not None:
                 logger.debug("Web search cache hit for %s", query)
-                return cached_result
+                return cast(dict[str, Any], cached_result)
 
         logger.debug("Web search cache miss for %s", query)
-        result = await super()._run(  # type: ignore[attr-defined]  # pylint: disable=no-member
-            query, **kwargs
+        result = cast(
+            dict[str, Any],
+            await super()._run(  # type: ignore[attr-defined]  # pylint: disable=no-member
+                query, **kwargs
+            ),  # pyright: ignore[reportPrivateUsage, reportAttributeAccessIssue]
         )
 
         content_type = _infer_content_type(query)
@@ -114,8 +120,10 @@ async def batch_web_search(
         return []
 
     tool = CachedWebSearchTool(namespace=WEB_CACHE_NAMESPACE)
-    tasks = [
-        asyncio.create_task(tool._run(query, skip_cache=skip_cache))
+    tasks: list[asyncio.Task[dict[str, Any]]] = [
+        asyncio.create_task(
+            tool._run(query, skip_cache=skip_cache)  # type: ignore[reportPrivateUsage]
+        )
         for query in queries
     ]
     try:
@@ -128,21 +136,27 @@ async def batch_web_search(
         ]
 
 
-def web_cached(content_type: ContentType, ttl: int | None = None):
+def web_cached(
+    content_type: ContentType, ttl: int | None = None
+) -> Callable[[Callable[_P, Awaitable[_R]]], Callable[_P, Awaitable[_R]]]:
     """Decorator that applies caching using the shared cache facade."""
 
-    def _decorator(func):
+    def _decorator(func: Callable[_P, Awaitable[_R]]) -> Callable[_P, Awaitable[_R]]:
+        func_identifier = getattr(
+            func, "__qualname__", getattr(func, "__name__", "callable")
+        )
+
         @with_error_handling()
-        async def _wrapper(*args: Any, **kwargs: Any):
+        async def _wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
             cache_key = generate_cache_key(
-                func.__name__,
-                args,
-                kwargs,
+                func_identifier,
+                args,  # type: ignore[arg-type]
+                kwargs,  # type: ignore[arg-type]
                 content_type=content_type.value,
             )
             cached_value = await get_cache(cache_key, namespace=WEB_CACHE_NAMESPACE)
             if cached_value is not None:
-                return cached_value
+                return cast(_R, cached_value)
 
             result = await func(*args, **kwargs)
             await set_cache(
