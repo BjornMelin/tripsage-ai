@@ -7,7 +7,9 @@ Refactored to support dependency injection and service-based architecture.
 
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
+
+from langchain_openai import ChatOpenAI
 
 from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.state import TravelPlanningState, update_state_timestamp
@@ -43,6 +45,8 @@ class BaseAgentNode(ABC):
         self.node_name = node_name
         self.services = services
         self.config = config or {}
+        # Allow subclasses to populate agent configuration lazily
+        self.agent_config: dict[str, Any] = {}
         self.logger = get_logger(f"orchestration.{node_name}")
 
         # Initialize node-specific tools
@@ -191,7 +195,7 @@ class BaseAgentNode(ABC):
 
         return message
 
-    def get_service(self, service_name: str):
+    def get_service(self, service_name: str) -> Any:
         """Get a required service from the DI container.
 
         Args:
@@ -203,9 +207,9 @@ class BaseAgentNode(ABC):
         Raises:
             ValueError: If the service is not available
         """
-        return self.services.get_required_service(service_name)
+        return cast(Any, self.services.get_required_service(service_name))
 
-    def get_optional_service(self, service_name: str):
+    def get_optional_service(self, service_name: str) -> Any | None:
         """Get an optional service from the DI container.
 
         Args:
@@ -214,4 +218,21 @@ class BaseAgentNode(ABC):
         Returns:
             The service instance or None if not available
         """
-        return self.services.get_optional_service(service_name)
+        return cast(Any | None, self.services.get_optional_service(service_name))
+
+    def _create_llm_from_config(self) -> ChatOpenAI:
+        """Create LLM instance from agent config.
+
+        Returns:
+            Configured ChatOpenAI instance
+        """
+        llm_kwargs: dict[str, Any] = {
+            "model": self.agent_config["model"],
+            "temperature": self.agent_config["temperature"],
+            "top_p": self.agent_config["top_p"],
+            "api_key": self.agent_config["api_key"],
+        }
+        if "max_tokens" in self.agent_config:
+            llm_kwargs["max_tokens"] = self.agent_config["max_tokens"]
+
+        return ChatOpenAI(**llm_kwargs)

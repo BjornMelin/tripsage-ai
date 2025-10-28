@@ -1,7 +1,14 @@
-"""LangGraph PostgreSQL checkpointer wired to project settings."""
+"""LangGraph PostgreSQL checkpointer wired to project settings.
 
+Provides sync/async checkpointers backed by PostgreSQL when available,
+with a safe in-memory fallback for development and tests.
+"""
+
+import importlib
 import logging
-from typing import Any
+
+# Imports are performed lazily inside methods to avoid hard dependency
+from langgraph.checkpoint.memory import MemorySaver
 
 from tripsage_core.config import get_settings
 from tripsage_core.utils.connection_utils import (
@@ -9,21 +16,6 @@ from tripsage_core.utils.connection_utils import (
     DatabaseURLParsingError,
 )
 from tripsage_core.utils.url_converters import DatabaseURLConverter, DatabaseURLDetector
-
-
-# Try to import PostgreSQL checkpoint classes, fallback to MemorySaver if not available
-try:
-    from langgraph.checkpoint.postgres import PostgresSaver
-    from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-
-    POSTGRES_AVAILABLE = True
-except ImportError:
-    from langgraph.checkpoint.memory import MemorySaver
-
-    # Fallback to in-memory saver when postgres package isn't available
-    PostgresSaver = MemorySaver  # type: ignore[assignment]
-    AsyncPostgresSaver = MemorySaver  # type: ignore[assignment]
-    POSTGRES_AVAILABLE = False
 
 
 logger = logging.getLogger(__name__)
@@ -34,8 +26,8 @@ class SupabaseCheckpointService:
 
     def __init__(self):
         """Initialize the checkpoint manager."""
-        self._checkpointer: Any | None = None
-        self._async_checkpointer: Any | None = None
+        self._checkpointer: object | None = None
+        self._async_checkpointer: object | None = None
         self._connection_string: str | None = None
 
     def _build_connection_string(self) -> str:
@@ -88,26 +80,27 @@ class SupabaseCheckpointService:
 
     # Legacy pool creation removed: checkpointers are created from connection strings.
 
-    async def get_async_checkpointer(self) -> Any:
+    async def get_async_checkpointer(self) -> object:
         """Get async Postgres checkpointer or in-memory fallback."""
         if self._async_checkpointer:
             return self._async_checkpointer
 
-        if not POSTGRES_AVAILABLE:
-            logger.warning("PostgreSQL checkpointing not available, using MemorySaver")
-            from langgraph.checkpoint.memory import MemorySaver
-
+        try:
+            # Try importing the async Postgres saver; fall back to memory on ImportError
+            logger.info("Initializing async PostgreSQL checkpointer")
+            _pg_aio = importlib.import_module("langgraph.checkpoint.postgres.aio")
+            _AsyncPostgresSaver = _pg_aio.AsyncPostgresSaver
+        except ImportError:
+            logger.warning("PostgreSQL checkpointer not available; using MemorySaver")
             self._async_checkpointer = MemorySaver()
             return self._async_checkpointer
 
         try:
-            logger.info("Initializing async PostgreSQL checkpointer")
             conn_string = self._build_connection_string()
-            # Safe: guarded by POSTGRES_AVAILABLE
-            self._async_checkpointer = await AsyncPostgresSaver.from_conn_string(  # type: ignore[attr-defined]
+            self._async_checkpointer = await _AsyncPostgresSaver.from_conn_string(
                 conn_string
-            )
-            await self._async_checkpointer.setup()  # type: ignore[reportOptionalMemberAccess]
+            )  # type: ignore[reportUnknownMemberType]
+            await self._async_checkpointer.setup()  # type: ignore[reportUnknownMemberType]
             logger.info("Async PostgreSQL checkpointer initialized successfully")
             return self._async_checkpointer
 
@@ -115,16 +108,24 @@ class SupabaseCheckpointService:
             logger.exception("Failed to initialize async checkpointer")
             raise
 
-    def get_sync_checkpointer(self) -> Any:
+    def get_sync_checkpointer(self) -> object:
         """Get sync Postgres checkpointer or in-memory fallback."""
         if self._checkpointer:
             return self._checkpointer
 
         try:
             logger.info("Initializing sync PostgreSQL checkpointer")
+            _pg = importlib.import_module("langgraph.checkpoint.postgres")
+            _PostgresSaver = _pg.PostgresSaver
+        except ImportError:
+            logger.warning("PostgreSQL checkpointer not available; using MemorySaver")
+            self._checkpointer = MemorySaver()
+            return self._checkpointer
+
+        try:
             conn_string = self._build_connection_string()
-            self._checkpointer = PostgresSaver.from_conn_string(conn_string)  # type: ignore[attr-defined]
-            self._checkpointer.setup()  # type: ignore[reportOptionalMemberAccess]
+            self._checkpointer = _PostgresSaver.from_conn_string(conn_string)  # type: ignore[reportUnknownMemberType]
+            self._checkpointer.setup()  # type: ignore[reportUnknownMemberType]
 
             logger.info("Sync PostgreSQL checkpointer initialized successfully")
             return self._checkpointer

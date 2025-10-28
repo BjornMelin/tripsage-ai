@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["memory"])
 
 
-@router.post("/conversation", response_model=dict)
+@router.post("/conversation", response_model=dict[str, object])
 @limiter.limit("30/minute")
 async def add_conversation_memory(
     payload: ConversationMemoryRequest,
@@ -38,7 +38,7 @@ async def add_conversation_memory(
     response: Response,
     *,
     request: Request,
-) -> dict:
+) -> dict[str, object]:
     """Add conversation messages to user memory.
 
     Args:
@@ -164,12 +164,12 @@ async def search_memories(
         ) from e
 
 
-@router.put("/preferences", response_model=dict)
+@router.put("/preferences", response_model=dict[str, object])
 async def update_preferences(
     payload: UpdatePreferencesRequest,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
-) -> dict:
+) -> dict[str, object]:
     """Update user preferences.
 
     Args:
@@ -196,7 +196,7 @@ async def update_preferences(
         ) from e
 
 
-@router.post("/preference", response_model=dict)
+@router.post("/preference", response_model=dict[str, object])
 @limiter.limit("30/minute")
 async def add_preference(  # pylint: disable=too-many-positional-arguments
     key: str,
@@ -207,7 +207,7 @@ async def add_preference(  # pylint: disable=too-many-positional-arguments
     category: str = "general",
     *,
     request: Request,
-) -> dict:
+) -> dict[str, object]:
     """Add or update a single user preference.
 
     Args:
@@ -241,12 +241,12 @@ async def add_preference(  # pylint: disable=too-many-positional-arguments
         ) from e
 
 
-@router.delete("/memory/{memory_id}", response_model=dict)
+@router.delete("/memory/{memory_id}", response_model=dict[str, object])
 async def delete_memory(
     memory_id: str,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
-) -> dict:
+) -> dict[str, object]:
     """Delete a specific memory.
 
     Args:
@@ -280,11 +280,11 @@ async def delete_memory(
         ) from e
 
 
-@router.get("/stats", response_model=dict)
+@router.get("/stats", response_model=dict[str, object])
 async def get_memory_stats(
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
-) -> dict:
+) -> dict[str, object]:
     """Get memory statistics for the user.
 
     Args:
@@ -308,12 +308,12 @@ async def get_memory_stats(
         ) from e
 
 
-@router.delete("/clear", response_model=dict)
+@router.delete("/clear", response_model=dict[str, object])
 async def clear_user_memory(
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
     confirm: bool = False,
-) -> dict:
+) -> dict[str, object]:
     """Clear all memories for the user.
 
     Args:
