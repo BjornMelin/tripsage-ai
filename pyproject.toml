@@ -338,8 +338,8 @@ disable = [
     "duplicate-code",
 ]
 
-[tool.pylint.per-file-ignores]
-"tests/**/*.py" = ["wrong-import-position"]
+[tool.pylint."tests/**/*"]
+disable = ["wrong-import-position"]
 
 [tool.coverage.run]
 branch = true
