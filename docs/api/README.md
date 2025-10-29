@@ -246,9 +246,7 @@ async def get_current_user(credentials = Depends(security)):
 
 ### Real-time Communication
 
-- `WS /api/v1/ws/trip/{trip_id}` - Trip collaboration
-- `WS /api/v1/ws/chat/{session_id}` - Real-time chat
-- `WS /api/v1/ws/status` - Agent progress updates
+TripSage uses Supabase Realtime with private channels and RLS. No custom WebSocket endpoints are exposed by the FastAPI backend. Clients authenticate with Supabase and subscribe to authorized channels.
 
 ## Development Tools
 
