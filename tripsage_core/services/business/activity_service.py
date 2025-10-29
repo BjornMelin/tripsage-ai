@@ -25,7 +25,7 @@ from tripsage_core.services.external_apis.google_maps_service import (
 from tripsage_core.services.infrastructure.cache_service import CacheService
 from tripsage_core.utils.cache_utils import cached
 from tripsage_core.utils.content_utils import ContentType
-from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -78,7 +78,7 @@ class ActivityService:
         self.cache_service = cache_service
         self.web_search_tool = CachedWebSearchTool(namespace="activity-search")
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     @cached(content_type=ContentType.SEMI_STATIC, ttl=3600)  # 1 hour cache
     async def search_activities(  # pylint: disable=too-many-statements, too-many-nested-blocks
         self, request: ActivitySearchRequest
@@ -151,7 +151,7 @@ class ActivityService:
                 )
             lat_f = float(coords.latitude)
             lng_f = float(coords.longitude)
-            search_location = (lat_f, lng_f)
+            search_location: tuple[float, float] = (lat_f, lng_f)
 
             logger.debug("Geocoded %s to (%s, %s)", request.destination, lat_f, lng_f)
 
@@ -161,7 +161,7 @@ class ActivityService:
             # Set search radius (default 10km, max 50km for activities)
             search_radius = 10000  # 10km
 
-            activities = []
+            activities: list[ActivityResponse] = []
 
             if place_types:
                 activities = await self._search_activities_by_types(
@@ -256,14 +256,13 @@ class ActivityService:
 
     async def _search_places_by_type(
         self,
-        location: tuple,
+        location: tuple[float, float],
         place_type: str,
         radius: int,
         request: ActivitySearchRequest,
     ) -> list[ActivityResponse]:
         """Search for places of a specific type."""
-        if self.google_maps_service is None:
-            raise ActivityServiceError("Google Maps service not initialized")
+        # google_maps_service is injected and required
 
         try:
             # Use Places API nearby search
@@ -302,9 +301,6 @@ class ActivityService:
         request: ActivitySearchRequest,
     ) -> list[ActivityResponse]:
         """Search activities for multiple place types."""
-        if self.google_maps_service is None:
-            raise ActivityServiceError("Google Maps service not initialized")
-
         activities: list[ActivityResponse] = []
         for place_type in place_types:
             try:
@@ -400,7 +396,7 @@ class ActivityService:
 
     def _get_place_types_for_categories(self, categories: list[str]) -> list[str]:
         """Get Google Places types for activity categories."""
-        place_types = []
+        place_types: list[str] = []
         for category in categories:
             if category.lower() in ACTIVITY_TYPE_MAPPING:
                 place_types.extend(ACTIVITY_TYPE_MAPPING[category.lower()])
@@ -498,7 +494,7 @@ class ActivityService:
 
         return filtered
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def get_activity_details(self, activity_id: str) -> ActivityResponse | None:
         """Get detailed information about a specific activity.
 

@@ -273,11 +273,7 @@ GET /api/v1/flights/search
 
 ### Real-time Communication
 
-#### Realtime (Supabase) Endpoints
-
-- `WS /api/v1/ws/chat/{session_id}` - Real-time chat communication
-- `WS /api/v1/ws/trip/{trip_id}` - Trip planning collaboration
-- `WS /api/v1/ws/status` - Agent status and progress updates
+TripSage uses Supabase Realtime with private channels and RLS authorization. There are no custom WebSocket endpoints exposed by the FastAPI app; clients authenticate with Supabase and join authorized channels directly.
 
 ## Consumer-Specific Behavior
 

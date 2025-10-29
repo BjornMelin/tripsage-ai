@@ -7,8 +7,9 @@ principles with proper dependency injection and error handling.
 
 import logging
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from passlib.context import CryptContext
 from pydantic import EmailStr, Field, field_validator
@@ -19,6 +20,7 @@ from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
@@ -118,7 +120,7 @@ class UserService:
     Dependencies are injected via constructor for better testability.
     """
 
-    def __init__(self, database_service=None):
+    def __init__(self, database_service: Any | None = None):
         """Initialize the user service.
 
         Args:
@@ -131,9 +133,10 @@ class UserService:
                 "database_service is required for UserService initialization"
             )
 
-        self.db = database_service
+        self.db: Any = database_service
         self._pwd_context = pwd_context
 
+    @tripsage_safe_execute()
     async def create_user(self, user_data: UserCreateRequest) -> UserResponse:
         """Create a new user account.
 
@@ -148,7 +151,11 @@ class UserService:
         """
         try:
             # Check if user already exists
-            existing_user = await self.get_user_by_email(user_data.email)
+            get_by_email = cast(
+                Callable[[str], Awaitable[UserResponse | None]],
+                self.get_user_by_email,
+            )
+            existing_user = await get_by_email(str(user_data.email))
             if existing_user:
                 raise ValidationError(
                     f"User with email {user_data.email} already exists"
@@ -156,7 +163,11 @@ class UserService:
 
             # Check username uniqueness if provided
             if user_data.username:
-                existing_username = await self.get_user_by_username(user_data.username)
+                get_by_username = cast(
+                    Callable[[str], Awaitable[UserResponse | None]],
+                    self.get_user_by_username,
+                )
+                existing_username = await get_by_username(user_data.username)
                 if existing_username:
                     raise ValidationError(
                         f"Username {user_data.username} already taken"
@@ -168,7 +179,7 @@ class UserService:
 
             # Prepare user data for database
             now = datetime.now(UTC)
-            db_user_data = {
+            db_user_data: dict[str, Any] = {
                 "id": user_id,
                 "email": str(user_data.email),
                 "hashed_password": hashed_password,
@@ -182,7 +193,7 @@ class UserService:
             }
 
             # Store in database
-            result = await self.db.create_user(db_user_data)
+            result: dict[str, Any] = await self.db.create_user(db_user_data)
 
             logger.info(
                 "User created successfully",
@@ -209,6 +220,7 @@ class UserService:
             )
             raise
 
+    @tripsage_safe_execute()
     async def get_user_by_id(self, user_id: str) -> UserResponse | None:
         """Retrieve user by ID.
 
@@ -219,7 +231,7 @@ class UserService:
             User information or None if not found
         """
         try:
-            result = await self.db.get_user_by_id(user_id)
+            result: dict[str, Any] | None = await self.db.get_user_by_id(user_id)
             if not result:
                 return None
 
@@ -241,6 +253,7 @@ class UserService:
             )
             return None
 
+    @tripsage_safe_execute()
     async def get_user_by_email(self, email: str) -> UserResponse | None:
         """Retrieve user by email address.
 
@@ -251,7 +264,7 @@ class UserService:
             User information or None if not found
         """
         try:
-            result = await self.db.get_user_by_email(email)
+            result: dict[str, Any] | None = await self.db.get_user_by_email(email)
             if not result:
                 return None
 
@@ -273,6 +286,7 @@ class UserService:
             )
             return None
 
+    @tripsage_safe_execute()
     async def get_user_by_username(self, username: str) -> UserResponse | None:
         """Retrieve user by username.
 
@@ -283,7 +297,7 @@ class UserService:
             User information or None if not found
         """
         try:
-            result = await self.db.get_user_by_username(username)
+            result: dict[str, Any] | None = await self.db.get_user_by_username(username)
             if not result:
                 return None
 
@@ -306,6 +320,7 @@ class UserService:
             )
             return None
 
+    @tripsage_safe_execute()
     async def update_user(
         self, user_id: str, update_data: UserUpdateRequest
     ) -> UserResponse:
@@ -324,15 +339,21 @@ class UserService:
         """
         try:
             # Verify user exists
-            existing_user = await self.get_user_by_id(user_id)
+            get_by_id = cast(
+                Callable[[str], Awaitable[UserResponse | None]],
+                self.get_user_by_id,
+            )
+            existing_user = await get_by_id(user_id)
             if not existing_user:
                 raise NotFoundError(f"User {user_id} not found")
 
             # Check username uniqueness if being updated
             if update_data.username and update_data.username != existing_user.username:
-                existing_username = await self.get_user_by_username(
-                    update_data.username
+                get_by_username = cast(
+                    Callable[[str], Awaitable[UserResponse | None]],
+                    self.get_user_by_username,
                 )
+                existing_username = await get_by_username(update_data.username)
                 if existing_username and existing_username.id != user_id:
                     raise ValidationError(
                         f"Username {update_data.username} already taken"
@@ -343,7 +364,7 @@ class UserService:
             db_update_data["updated_at"] = datetime.now(UTC).isoformat()
 
             # Update in database
-            result = await self.db.update_user(user_id, db_update_data)
+            result: dict[str, Any] = await self.db.update_user(user_id, db_update_data)
 
             logger.info(
                 "User updated successfully",
@@ -373,6 +394,7 @@ class UserService:
             )
             raise
 
+    @tripsage_safe_execute()
     async def change_password(
         self, user_id: str, password_data: PasswordChangeRequest
     ) -> bool:
@@ -421,6 +443,7 @@ class UserService:
             )
             raise
 
+    @tripsage_safe_execute()
     async def verify_user_credentials(
         self, identifier: str, password: str
     ) -> UserResponse | None:
@@ -472,6 +495,7 @@ class UserService:
             )
             return None
 
+    @tripsage_safe_execute()
     async def deactivate_user(self, user_id: str) -> bool:
         """Deactivate user account.
 
@@ -485,8 +509,12 @@ class UserService:
             NotFoundError: If user not found
         """
         try:
-            update_data = UserUpdateRequest(is_active=False)
-            await self.update_user(user_id, update_data)
+            update_data = UserUpdateRequest.model_validate({"is_active": False})
+            do_update = cast(
+                Callable[[str, UserUpdateRequest], Awaitable[UserResponse]],
+                self.update_user,
+            )
+            await do_update(user_id, update_data)
 
             logger.info("User deactivated", extra={"user_id": user_id})
             return True
@@ -500,6 +528,7 @@ class UserService:
             )
             return False
 
+    @tripsage_safe_execute()
     async def activate_user(self, user_id: str) -> bool:
         """Activate user account.
 
@@ -513,8 +542,12 @@ class UserService:
             NotFoundError: If user not found
         """
         try:
-            update_data = UserUpdateRequest(is_active=True)
-            await self.update_user(user_id, update_data)
+            update_data = UserUpdateRequest.model_validate({"is_active": True})
+            do_update = cast(
+                Callable[[str, UserUpdateRequest], Awaitable[UserResponse]],
+                self.update_user,
+            )
+            await do_update(user_id, update_data)
 
             logger.info("User activated", extra={"user_id": user_id})
             return True
@@ -527,6 +560,7 @@ class UserService:
             )
             return False
 
+    @tripsage_safe_execute()
     async def update_user_preferences(
         self, user_id: str, preferences: dict[str, Any]
     ) -> UserResponse:
@@ -544,12 +578,12 @@ class UserService:
         """
         try:
             # Get current user
-            user_data = await self.db.get_user_by_id(user_id)
+            user_data: dict[str, Any] | None = await self.db.get_user_by_id(user_id)
             if not user_data:
                 raise NotFoundError(f"User {user_id} not found")
 
             # Merge preferences (deep merge)
-            current_preferences = user_data.get("preferences", {})
+            current_preferences: dict[str, Any] = user_data.get("preferences", {})
             merged_preferences = self._merge_preferences(
                 current_preferences, preferences
             )
@@ -603,7 +637,9 @@ class UserService:
                 and isinstance(result[key], dict)
             ):
                 # Recursively merge nested dictionaries
-                result[key] = self._merge_preferences(result[key], value)
+                result[key] = self._merge_preferences(
+                    cast(dict[str, Any], result[key]), cast(dict[str, Any], value)
+                )
             else:
                 # Override at current level
                 result[key] = value
@@ -635,7 +671,7 @@ class UserService:
 
 
 # Dependency function for FastAPI
-async def get_user_service(database_service=None) -> UserService:
+async def get_user_service(database_service: Any | None = None) -> UserService:
     """Get user service instance for dependency injection.
 
     Args:
