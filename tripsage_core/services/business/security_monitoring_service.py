@@ -33,6 +33,7 @@ from tripsage_core.services.business.audit_logging_service import (
     audit_security_event,
     get_audit_logger,
 )
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
@@ -271,7 +272,8 @@ class SecurityMonitoringService:  # pylint: disable=too-many-instance-attributes
             ),
         ]
 
-    async def start(self):
+    @tripsage_safe_execute()
+    async def start(self) -> None:
         """Start the security monitoring service."""
         if self._is_running:
             return
@@ -287,7 +289,8 @@ class SecurityMonitoringService:  # pylint: disable=too-many-instance-attributes
 
         logger.info("Security monitoring service started")
 
-    async def stop(self):
+    @tripsage_safe_execute()
+    async def stop(self) -> None:
         """Stop the security monitoring service."""
         if not self._is_running:
             return
@@ -301,6 +304,7 @@ class SecurityMonitoringService:  # pylint: disable=too-many-instance-attributes
 
         logger.info("Security monitoring service stopped")
 
+    @tripsage_safe_execute()
     async def process_event(self, event: AuditEvent) -> list[ThreatIndicator]:
         """Process a single audit event and detect threats.
 
@@ -845,9 +849,10 @@ class SecurityMonitoringService:  # pylint: disable=too-many-instance-attributes
         )
         return indicators[:limit]
 
+    @tripsage_safe_execute()
     async def resolve_incident(
         self, incident_id: str, resolution: str, notes: str | None = None
-    ):
+    ) -> None:
         """Mark an incident as resolved."""
         if incident_id in self._active_incidents:
             incident = self._active_incidents[incident_id]
@@ -876,6 +881,7 @@ class SecurityMonitoringService:  # pylint: disable=too-many-instance-attributes
 _monitoring_service: SecurityMonitoringService | None = None
 
 
+@tripsage_safe_execute()
 async def get_monitoring_service() -> SecurityMonitoringService:
     """Get or create the global monitoring service instance."""
     global _monitoring_service  # pylint: disable=global-statement
@@ -887,7 +893,8 @@ async def get_monitoring_service() -> SecurityMonitoringService:
     return _monitoring_service
 
 
-async def shutdown_monitoring_service():
+@tripsage_safe_execute()
+async def shutdown_monitoring_service() -> None:
     """Shutdown the global monitoring service instance."""
     global _monitoring_service  # pylint: disable=global-statement
 

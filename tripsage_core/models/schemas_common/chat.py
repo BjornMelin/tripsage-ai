@@ -79,7 +79,7 @@ class ChatContext(BaseModel):
     """Common model for chat context and memory."""
 
     session_id: str = Field(..., description="Session ID")
-    messages: list[ChatMessage] = Field(
+    messages: list[ChatMessage] = Field(  # type: ignore[assignment]
         default_factory=list, description="Conversation messages"
     )
     system_prompt: str | None = Field(None, description="System prompt")

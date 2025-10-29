@@ -270,12 +270,10 @@ class TestTools:
         assert search_memories in AGENT_TOOLS["memory_update"]
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.tools._get_mcp_service")
-    async def test_health_check(self, mock_get_mcp_service: Any):
+    @patch("tripsage.orchestration.tools.tools._default_mcp_service")
+    async def test_health_check(self, mock_mcp_service: Any):
         """Test the health check function."""
         # Mock successful health check
-        mock_mcp_service = MagicMock()
-        mock_get_mcp_service.return_value = mock_mcp_service
         mock_mcp_service.health_check = AsyncMock(
             return_value={"status": "healthy", "service": "airbnb"}
         )
@@ -288,11 +286,9 @@ class TestTools:
         assert "timestamp" in result
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.tools._get_mcp_service")
-    async def test_health_check_failure(self, mock_get_mcp_service: Any):
+    @patch("tripsage.orchestration.tools.tools._default_mcp_service")
+    async def test_health_check_failure(self, mock_mcp_service: Any):
         """Test health check when service is unavailable."""
-        mock_mcp_service = MagicMock()
-        mock_get_mcp_service.return_value = mock_mcp_service
         mock_mcp_service.health_check = AsyncMock(
             return_value={"status": "error", "error": "Connection failed"}
         )
