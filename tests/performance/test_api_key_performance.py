@@ -1931,9 +1931,7 @@ class TestApiKeyPerformance:
         # Benchmark performance tests
         results = await asyncio.to_thread(
             lambda: benchmark(
-                lambda: asyncio.run(
-                    run_comprehensive_performance_tests()
-                )
+                lambda: asyncio.run(run_comprehensive_performance_tests())
             )
         )
 
