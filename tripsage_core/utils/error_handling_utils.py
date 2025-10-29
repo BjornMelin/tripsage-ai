@@ -8,8 +8,8 @@ import functools
 import inspect
 import logging
 import types
-from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar, cast
+from collections.abc import Awaitable as TypingAwaitable, Callable
+from typing import Any, ParamSpec, TypeVar, cast
 
 from tripsage_core.exceptions import (
     CoreDatabaseError,
@@ -25,6 +25,7 @@ from tripsage_core.utils.logging_utils import get_logger
 logger = get_logger(__name__)
 
 # Type variable for function return type
+P = ParamSpec("P")
 T = TypeVar("T")
 R = TypeVar("R")
 F = TypeVar("F", bound=Callable[..., Any])
@@ -195,28 +196,28 @@ def create_database_error(
 class TripSageErrorContext:
     """Context manager for enhanced error handling in TripSage operations."""
 
-    def __init__(
-        self,
-        operation: str,
-        service: str | None = None,
-        user_id: str | None = None,
-        request_id: str | None = None,
-        logger_instance: Any | None = None,
-    ):
+    class Config:
+        """Configuration for error context."""
+
+        def __init__(self, **kwargs: Any) -> None:
+            """Initialize configuration from keyword arguments."""
+            self.operation = kwargs.get("operation", "")
+            self.service = kwargs.get("service")
+            self.user_id = kwargs.get("user_id")
+            self.request_id = kwargs.get("request_id")
+            self.logger_instance = kwargs.get("logger_instance")
+
+    def __init__(self, config: Config):
         """Initialize the error context.
 
         Args:
-            operation: Name of the operation being performed
-            service: Name of the service performing the operation
-            user_id: User ID associated with the operation
-            request_id: Request ID for tracing
-            logger_instance: Optional logger instance
+            config: Configuration object containing all parameters
         """
-        self.operation = operation
-        self.service = service
-        self.user_id = user_id
-        self.request_id = request_id
-        self.logger = logger_instance or logger
+        self.operation = config.operation
+        self.service = config.service
+        self.user_id = config.user_id
+        self.request_id = config.request_id
+        self.logger = config.logger_instance or logger
 
     def __enter__(self):
         """Enter the error context."""
@@ -271,10 +272,10 @@ class TripSageErrorContext:
 
 def tripsage_safe_execute(
     exception_class: type[CoreTripSageError] = CoreTripSageError,
-    fallback: Any = None,
+    fallback: Any | None = None,
     logger_instance: Any | None = None,
     re_raise: bool = False,
-):
+) -> Callable[[F], F]:
     """Decorator to add TripSage error handling with CoreTripSageError raising.
 
     This decorator consolidates the common pattern of try/except blocks with logging
@@ -291,14 +292,14 @@ def tripsage_safe_execute(
         Decorator function
     """
 
-    def decorator(func: Callable[..., T] | Callable[..., Awaitable[T]]):
+    def decorator(func: F) -> F:
         log = logger_instance or logger
 
         if inspect.iscoroutinefunction(func):
-            async_func = cast(Callable[..., Awaitable[T]], func)
+            async_func = cast(Callable[..., TypingAwaitable[Any]], func)
 
             @functools.wraps(async_func)
-            async def async_wrapper(*args: Any, **kwargs: Any) -> T | Any:
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 try:
                     return await async_func(*args, **kwargs)
                 except Exception as e:
@@ -316,12 +317,12 @@ def tripsage_safe_execute(
                         },
                     ) from e
 
-            return async_wrapper
+            return cast(F, async_wrapper)
 
-        sync_func = cast(Callable[..., T], func)
+        sync_func = cast(Callable[..., Any], func)
 
         @functools.wraps(sync_func)
-        def sync_wrapper(*args: Any, **kwargs: Any) -> T | Any:
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return sync_func(*args, **kwargs)
             except Exception as e:
@@ -339,7 +340,7 @@ def tripsage_safe_execute(
                     },
                 ) from e
 
-        return sync_wrapper
+        return cast(F, sync_wrapper)
 
     return decorator
 

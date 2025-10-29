@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """XSS and CSRF protection tests for API endpoints.
 
 This module provides security testing for Cross-Site Scripting (XSS) and
@@ -8,11 +9,14 @@ header security configurations.
 Based on OWASP WSTG 2024 guidelines and FastAPI security best practices.
 """
 
+from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
+from tripsage.api.core.dependencies import get_api_key_service
 from tripsage.api.main import app
 from tripsage_core.services.business.api_key_service import (
     ApiValidationResult,
@@ -23,6 +27,11 @@ from tripsage_core.services.business.api_key_service import (
 
 class TestXSSProtection:
     """Test suite for Cross-Site Scripting (XSS) protection."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        """Create test client."""
+        return TestClient(app)
 
     @pytest.fixture
     def xss_payloads(self) -> list[str]:
@@ -97,7 +106,7 @@ class TestXSSProtection:
         )
 
     def test_api_key_name_xss_protection(
-        self, test_client, xss_payloads, mock_principal
+        self, client: TestClient, xss_payloads: list[str], mock_principal: Mock
     ):
         """Test XSS protection in API key name field."""
         with (
@@ -132,7 +141,7 @@ class TestXSSProtection:
                     "description": "Test key",
                 }
 
-                response = test_client.post("/api/keys", json=api_key_data)
+                response = client.post("/api/keys", json=api_key_data)
 
                 # Should not return XSS payload in response
                 response_text = response.text
@@ -148,7 +157,7 @@ class TestXSSProtection:
                     )
 
     def test_api_key_description_xss_protection(
-        self, test_client, xss_payloads, mock_principal
+        self, client: TestClient, xss_payloads: list[str], mock_principal: Mock
     ):
         """Test XSS protection in API key description field."""
         with (
@@ -182,7 +191,7 @@ class TestXSSProtection:
                     "description": payload,
                 }
 
-                response = test_client.post("/api/keys", json=api_key_data)
+                response = client.post("/api/keys", json=api_key_data)
 
                 # Should sanitize description field
                 response_text = response.text
@@ -191,7 +200,10 @@ class TestXSSProtection:
                 assert payload not in response_text or response.status_code >= 400
 
     def test_html_injection_in_error_messages(
-        self, test_client, html_injection_payloads, mock_principal
+        self,
+        client: TestClient,
+        html_injection_payloads: list[str],
+        mock_principal: Mock,
     ):
         """Test HTML injection protection in error messages."""
         with (
@@ -226,7 +238,7 @@ class TestXSSProtection:
                     "description": "Test",
                 }
 
-                response = test_client.post("/api/keys", json=api_key_data)
+                response = client.post("/api/keys", json=api_key_data)
 
                 # Error message should not contain raw HTML
                 response_text = response.text
@@ -235,7 +247,9 @@ class TestXSSProtection:
                 assert "<script>" not in response_text
                 assert "<meta" not in response_text
 
-    def test_xss_in_validation_request(self, test_client, xss_payloads, mock_principal):
+    def test_xss_in_validation_request(
+        self, client: TestClient, xss_payloads: list[str], mock_principal: Mock
+    ):
         """Test XSS protection in key validation requests."""
         with (
             patch(
@@ -256,7 +270,7 @@ class TestXSSProtection:
             for payload in xss_payloads:
                 validation_data = {"key": payload, "service": "openai"}
 
-                response = test_client.post("/api/keys/validate", json=validation_data)
+                response = client.post("/api/keys/validate", json=validation_data)
 
                 # Response should not contain unescaped XSS payload
                 response_text = response.text
@@ -264,7 +278,9 @@ class TestXSSProtection:
                 assert "<script>" not in response_text
                 assert "javascript:" not in response_text
 
-    def test_content_type_header_validation(self, test_client, mock_principal):
+    def test_content_type_header_validation(
+        self, test_client: TestClient, mock_principal: Mock
+    ):
         """Test Content-Type header validation prevents XSS."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -273,7 +289,7 @@ class TestXSSProtection:
             # Test with text/html content type (should be rejected)
             response = test_client.post(
                 "/api/keys",
-                data="<script>alert('XSS')</script>",
+                data=b"<script>alert('XSS')</script>",  # type: ignore[arg-type]
                 headers={"Content-Type": "text/html"},
             )
 
@@ -281,7 +297,9 @@ class TestXSSProtection:
             assert response.status_code in [400, 415, 422]
             assert "<script>" not in response.text
 
-    def test_user_agent_header_xss_protection(self, test_client, xss_payloads):
+    def test_user_agent_header_xss_protection(
+        self, test_client: TestClient, xss_payloads: list[str]
+    ) -> None:
         """Test User-Agent header XSS protection."""
         for payload in xss_payloads[:5]:  # Test subset for performance
             headers = {"User-Agent": payload}
@@ -293,7 +311,9 @@ class TestXSSProtection:
             assert payload not in response_text
             assert "<script>" not in response_text
 
-    def test_referer_header_xss_protection(self, test_client, xss_payloads):
+    def test_referer_header_xss_protection(
+        self, test_client: TestClient, xss_payloads: list[str]
+    ) -> None:
         """Test Referer header XSS protection."""
         for payload in xss_payloads[:5]:  # Test subset for performance
             headers = {"Referer": f"http://example.com/{payload}"}
@@ -326,7 +346,9 @@ class TestCSRFProtection:
             metadata={},
         )
 
-    def test_state_changing_operations_require_authentication(self, test_client):
+    def test_state_changing_operations_require_authentication(
+        self, test_client: TestClient
+    ) -> None:
         """Test that state-changing operations require authentication."""
         state_changing_endpoints = [
             (
@@ -340,16 +362,18 @@ class TestCSRFProtection:
         ]
 
         for method, endpoint, data in state_changing_endpoints:
+            response = None  # Initialize to prevent possibly-used-before-assignment
             if method == "POST":
                 response = test_client.post(endpoint, json=data)
             elif method == "DELETE":
                 response = test_client.delete(endpoint)
 
             # Should require authentication
+            assert response is not None, "Response was not set"
             assert response.status_code == 401
             assert "Authentication" in response.text or "Unauthorized" in response.text
 
-    def test_cors_preflight_request_handling(self, test_client):
+    def test_cors_preflight_request_handling(self, test_client: TestClient) -> None:
         """Test CORS preflight request handling for CSRF protection."""
         # Test preflight request
         response = test_client.options(
@@ -370,7 +394,9 @@ class TestCSRFProtection:
             # Should not allow arbitrary origins for state-changing operations
             assert origin != "*" or response.status_code >= 400
 
-    def test_content_type_csrf_protection(self, test_client, mock_principal):
+    def test_content_type_csrf_protection(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test Content-Type based CSRF protection."""
         with (
             patch(
@@ -385,30 +411,36 @@ class TestCSRFProtection:
             # Test with simple form content type (potential CSRF vector)
             response = test_client.post(
                 "/api/keys",
-                data="name=Test&service=openai&key=sk-test",
+                data=b"name=Test&service=openai&key=sk-test",  # type: ignore[arg-type]
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
 
             # Should reject form-encoded data for JSON API
             assert response.status_code in [400, 415, 422]
 
-    def test_csrf_via_json_with_text_plain(self, test_client, mock_principal):
+    def test_csrf_via_json_with_text_plain(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test CSRF protection against JSON with text/plain content type."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
             return_value=mock_principal,
         ):
             # Attempt CSRF with text/plain content type
-            malicious_json = '{"name":"hacked","service":"openai","key":"sk-hacked"}'
+            malicious_json = b'{"name":"hacked","service":"openai","key":"sk-hacked"}'
 
             response = test_client.post(
-                "/api/keys", data=malicious_json, headers={"Content-Type": "text/plain"}
+                "/api/keys",
+                data=malicious_json,  # type: ignore[arg-type]
+                headers={"Content-Type": "text/plain"},
             )
 
             # Should reject text/plain for JSON endpoints
             assert response.status_code in [400, 415, 422]
 
-    def test_same_origin_policy_enforcement(self, test_client, mock_principal):
+    def test_same_origin_policy_enforcement(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test enforcement of same-origin policy for state changes."""
         with (
             patch(
@@ -436,7 +468,9 @@ class TestCSRFProtection:
                     != "http://malicious-site.com"
                 )
 
-    def test_csrf_token_validation_if_implemented(self, test_client):
+    def test_csrf_token_validation_if_implemented(
+        self, test_client: TestClient
+    ) -> None:
         """Test CSRF token validation if CSRF protection is implemented."""
         # Attempt request without CSRF token
         response = test_client.post(
@@ -448,7 +482,9 @@ class TestCSRFProtection:
         # Should require authentication at minimum
         assert response.status_code in [401, 403]
 
-    def test_state_changing_get_requests_blocked(self, test_client, mock_principal):
+    def test_state_changing_get_requests_blocked(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test that state-changing operations cannot be performed via GET."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -460,7 +496,7 @@ class TestCSRFProtection:
             # GET should not create resources
             assert response.status_code in [404, 405]  # Method not allowed or not found
 
-    def test_referrer_policy_header(self, test_client):
+    def test_referrer_policy_header(self, test_client: TestClient) -> None:
         """Test Referrer-Policy header for CSRF protection."""
         response = test_client.get("/api/keys")
 
@@ -475,7 +511,9 @@ class TestCSRFProtection:
                 "no-referrer",
             ]
 
-    def test_authorization_header_csrf_mitigation(self, test_client):
+    def test_authorization_header_csrf_mitigation(
+        self, test_client: TestClient
+    ) -> None:
         """Test that Authorization header provides CSRF mitigation."""
         # Requests with Authorization header are less vulnerable to CSRF
         response = test_client.post(
@@ -496,7 +534,19 @@ class TestHTTPSecurityHeaders:
         """FastAPI test client for header testing."""
         return TestClient(app)
 
-    def test_content_security_policy_header(self, test_client):
+    @pytest.fixture
+    def mock_principal(self):
+        """Mock authenticated principal for authorization checks."""
+        return Mock(
+            id="test-user-123",
+            type="user",
+            email="test@example.com",
+            auth_method="jwt",
+            scopes=[],
+            metadata={},
+        )
+
+    def test_content_security_policy_header(self, test_client: TestClient) -> None:
         """Test Content-Security-Policy header configuration."""
         response = test_client.get("/api/keys")
 
@@ -509,7 +559,7 @@ class TestHTTPSecurityHeaders:
             assert "'unsafe-inline'" not in csp
             assert "'unsafe-eval'" not in csp
 
-    def test_x_frame_options_header(self, test_client):
+    def test_x_frame_options_header(self, test_client: TestClient) -> None:
         """Test X-Frame-Options header for clickjacking protection."""
         response = test_client.get("/api/keys")
 
@@ -518,7 +568,7 @@ class TestHTTPSecurityHeaders:
             # Should prevent framing
             assert frame_options in ["DENY", "SAMEORIGIN"]
 
-    def test_x_content_type_options_header(self, test_client):
+    def test_x_content_type_options_header(self, test_client: TestClient) -> None:
         """Test X-Content-Type-Options header for MIME sniffing protection."""
         response = test_client.get("/api/keys")
 
@@ -527,7 +577,7 @@ class TestHTTPSecurityHeaders:
             # Should prevent MIME sniffing
             assert content_type_options == "nosniff"
 
-    def test_x_xss_protection_header(self, test_client):
+    def test_x_xss_protection_header(self, test_client: TestClient) -> None:
         """Test X-XSS-Protection header configuration."""
         response = test_client.get("/api/keys")
 
@@ -538,7 +588,7 @@ class TestHTTPSecurityHeaders:
             # Should block rather than filter
             assert "mode=block" in xss_protection
 
-    def test_strict_transport_security_header(self, test_client):
+    def test_strict_transport_security_header(self, test_client: TestClient) -> None:
         """Test Strict-Transport-Security header for HTTPS enforcement."""
         response = test_client.get("/api/keys")
 
@@ -549,7 +599,7 @@ class TestHTTPSecurityHeaders:
             # Should include subdomains
             assert "includeSubDomains" in hsts
 
-    def test_referrer_policy_header(self, test_client):
+    def test_referrer_policy_header(self, test_client: TestClient) -> None:
         """Test Referrer-Policy header configuration."""
         response = test_client.get("/api/keys")
 
@@ -563,7 +613,9 @@ class TestHTTPSecurityHeaders:
                 "no-referrer",
             ]
 
-    def test_cache_control_for_sensitive_endpoints(self, test_client, mock_principal):
+    def test_cache_control_for_sensitive_endpoints(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test Cache-Control headers for sensitive endpoints."""
         with (
             patch(
@@ -582,7 +634,9 @@ class TestHTTPSecurityHeaders:
                 cache_control = response.headers["Cache-Control"]
                 assert "no-cache" in cache_control or "no-store" in cache_control
 
-    def test_server_header_information_disclosure(self, test_client):
+    def test_server_header_information_disclosure(
+        self, test_client: TestClient
+    ) -> None:
         """Test that Server header doesn't disclose sensitive information."""
         response = test_client.get("/api/keys")
 
@@ -596,7 +650,7 @@ class TestHTTPSecurityHeaders:
             # Minimal disclosure is acceptable, but detailed versions should be hidden
             assert len(disclosed_info) <= 1
 
-    def test_content_type_header_consistency(self, test_client):
+    def test_content_type_header_consistency(self, test_client: TestClient) -> None:
         """Test Content-Type header consistency for API responses."""
         response = test_client.get("/api/keys")
 
@@ -605,7 +659,7 @@ class TestHTTPSecurityHeaders:
             # API should return JSON
             assert "application/json" in content_type
 
-    def test_vary_header_for_security(self, test_client):
+    def test_vary_header_for_security(self, test_client: TestClient) -> None:
         """Test Vary header for caching security."""
         response = test_client.get("/api/keys")
 
@@ -639,7 +693,9 @@ class TestInputValidationSecurity:
             metadata={},
         )
 
-    def test_json_injection_protection(self, test_client, mock_principal):
+    def test_json_injection_protection(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test protection against JSON injection attacks."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -660,14 +716,16 @@ class TestInputValidationSecurity:
             for payload in malformed_payloads:
                 response = test_client.post(
                     "/api/keys",
-                    data=payload,
+                    data=payload.encode(),  # type: ignore[arg-type]
                     headers={"Content-Type": "application/json"},
                 )
 
                 # Should handle malformed JSON safely
                 assert response.status_code in [400, 422]
 
-    def test_parameter_pollution_protection(self, test_client, mock_principal):
+    def test_parameter_pollution_protection(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test protection against HTTP parameter pollution."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -684,7 +742,9 @@ class TestInputValidationSecurity:
                 # Should use the JSON body, not query parameters
                 assert "Evil" not in response.text
 
-    def test_large_payload_protection(self, test_client, mock_principal):
+    def test_large_payload_protection(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test protection against excessively large payloads."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -706,7 +766,9 @@ class TestInputValidationSecurity:
             # Should reject excessively large payloads
             assert response.status_code in [400, 413, 422]
 
-    def test_unicode_normalization_attack_protection(self, test_client, mock_principal):
+    def test_unicode_normalization_attack_protection(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test protection against Unicode normalization attacks."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -734,7 +796,9 @@ class TestInputValidationSecurity:
                         payload
                     )
 
-    def test_control_character_filtering(self, test_client, mock_principal):
+    def test_control_character_filtering(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test filtering of control characters in input."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -761,7 +825,9 @@ class TestInputValidationSecurity:
                     assert "\x00" not in response.text
                     assert "\x01" not in response.text
 
-    def test_path_traversal_in_service_field(self, test_client, mock_principal):
+    def test_path_traversal_in_service_field(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test protection against path traversal in service field."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -784,7 +850,9 @@ class TestInputValidationSecurity:
                 # Should reject path traversal attempts
                 assert response.status_code in [400, 422]
 
-    def test_sql_injection_in_string_fields(self, test_client, mock_principal):
+    def test_sql_injection_in_string_fields(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test protection against SQL injection in string fields."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -810,7 +878,9 @@ class TestInputValidationSecurity:
                     assert "DROP TABLE" not in response.text
                     assert "INSERT INTO" not in response.text
 
-    def test_command_injection_protection(self, test_client, mock_principal):
+    def test_command_injection_protection(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test protection against command injection."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -841,7 +911,9 @@ class TestInputValidationSecurity:
                     assert "root:" not in response.text
                     assert "/bin/bash" not in response.text
 
-    def test_ldap_injection_protection(self, test_client, mock_principal):
+    def test_ldap_injection_protection(
+        self, test_client: TestClient, mock_principal: Mock
+    ) -> None:
         """Test protection against LDAP injection."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -869,3 +941,62 @@ class TestInputValidationSecurity:
                 assert response.status_code in [200, 400, 422]
                 if response.status_code == 200:
                     assert payload not in response.text
+
+
+@pytest.fixture(autouse=True)
+def override_api_key_service_dependency():
+    """Provide a harmless API key service stub for tests that don't patch it."""
+
+    class _StubApiKeyService:
+        async def list_user_keys(self, _user_id: str) -> list[dict[str, Any]]:
+            """Return empty list for stub."""
+            return []
+
+        async def validate_key(
+            self, _key: str, _service: str, _user_id: str | None = None
+        ) -> ApiValidationResult:
+            """Return valid result for stub."""
+            return ApiValidationResult(
+                service=ServiceType.OPENAI,
+                is_valid=True,
+                status=ValidationStatus.VALID,
+                message="Validated",
+            )
+
+        async def create_key(self, _user_id: str, _key_data: Any) -> dict[str, Any]:
+            """Create a stub API key."""
+            now_iso = datetime.now(UTC).isoformat()
+            return {
+                "id": "stub-key-id",
+                "name": "sanitized",
+                "service": "openai",
+                "description": None,
+                "is_valid": True,
+                "created_at": now_iso,
+                "updated_at": now_iso,
+                "expires_at": None,
+                "last_used": None,
+                "last_validated": None,
+                "usage_count": 0,
+            }
+
+        async def rotate_key(
+            self, _key_id: str, _new_key: str, _user_id: str
+        ) -> dict[str, Any]:
+            """Rotate a stub API key."""
+            now_iso = datetime.now(UTC).isoformat()
+            return {
+                "id": _key_id,
+                "message": "rotated",
+                "updated_at": now_iso,
+            }
+
+        async def delete_key(self, _key_id: str) -> None:
+            """Delete a stub API key."""
+
+    service_stub = _StubApiKeyService()
+    app.dependency_overrides[get_api_key_service] = lambda: service_stub
+    try:
+        yield service_stub
+    finally:
+        app.dependency_overrides.pop(get_api_key_service, None)
