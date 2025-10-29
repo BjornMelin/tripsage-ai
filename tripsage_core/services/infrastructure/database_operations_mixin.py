@@ -237,6 +237,7 @@ class DatabaseOperationsMixin:
         entity_type: str,
         entity_id: str,
         updates: dict[str, Any],
+        *,
         user_id: str | None = None,
         update_func: Callable[..., Awaitable[Any]] | None = None,
     ) -> bool:
