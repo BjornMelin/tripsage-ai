@@ -10,7 +10,7 @@ from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
 from .base_models import BaseResponse
 from .common_validators import AirportCode
@@ -45,12 +45,13 @@ class FlightPassenger(BaseModel):
 
     @field_validator("age")
     @classmethod
-    def validate_age_for_type(cls, v: int | None, info) -> int | None:
+    def validate_age_for_type(cls, v: int | None, info: ValidationInfo) -> int | None:
         """Validate age is appropriate for passenger type."""
         if v is None:
             return v
 
-        passenger_type = info.data.get("type")
+        data = info.data
+        passenger_type = data.get("type")
         if passenger_type == PassengerType.CHILD and (v >= 18 or v < 2):
             raise ValueError("Child passengers must be between 2-17 years old")
         if passenger_type == PassengerType.INFANT and v >= 2:
@@ -115,11 +116,15 @@ class FlightSearchRequest(BaseModel):
     @field_validator("return_date")
     @classmethod
     def validate_return_date(
-        cls, v: date | datetime | None, info
+        cls, v: date | datetime | None, info: ValidationInfo
     ) -> date | datetime | None:
         """Validate that return date is after departure date if provided."""
-        if v and info.data.get("departure_date"):
-            departure = info.data["departure_date"]
+        if v:
+            data = info.data
+            departure_raw = data.get("departure_date")
+            if not isinstance(departure_raw, (date, datetime)):
+                return v
+            departure: date | datetime = departure_raw
             # Convert to date for comparison if needed
             dep_date = (
                 departure.date() if isinstance(departure, datetime) else departure

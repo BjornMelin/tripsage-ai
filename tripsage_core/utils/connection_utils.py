@@ -33,7 +33,9 @@ class ConnectionCredentials(BaseModel):
     hostname: str = Field(..., description="Database hostname")
     port: int = Field(default=5432, ge=1, le=65535, description="Database port")
     database: str = Field(default="postgres", description="Database name")
-    query_params: dict[str, str] = Field(default={}, description="Query parameters")
+    query_params: dict[str, str] = Field(
+        default_factory=dict, description="Query parameters"
+    )
 
     model_config = {"frozen": True}
 
@@ -45,9 +47,9 @@ class ConnectionCredentials(BaseModel):
             f"{self.scheme}://{encoded_username}:{password}"
             f"@{self.hostname}:{self.port}/{self.database}"
         )
-        query_params = dict(getattr(self, "query_params", {}))
+        query_params: dict[str, str] = dict(getattr(self, "query_params", {}))
         if query_params:
-            params = []
+            params: list[str] = []
             for k, v in query_params.items():
                 params.append(f"{quote_plus(k)}={quote_plus(v)}")
             query_string = "&".join(params)
@@ -92,8 +94,8 @@ class DatabaseURLParser:
             self.logger.exception(msg)
             raise DatabaseURLParsingError(msg) from e
 
-    def _validate_url_security(self, url: str) -> None:
-        if not url or not isinstance(url, str):
+    def _validate_url_security(self, url: object) -> None:
+        if not isinstance(url, str) or not url:
             raise DatabaseURLParsingError("URL must be a non-empty string")
         if url != url.strip():
             raise DatabaseURLParsingError("URL contains leading/trailing whitespace")
