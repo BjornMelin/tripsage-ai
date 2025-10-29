@@ -137,19 +137,67 @@ class AppServiceContainer:
         return cast(ServiceT, service)
 
 
-async def initialise_app_state(
-    app: FastAPI,
-) -> tuple[AppServiceContainer, TripSageOrchestrator]:
-    """Initialise application services and attach them to app.state."""
-    # Localised imports to avoid heavy module initialisation at import time
-    from tripsage.orchestration.memory_bridge import SessionMemoryBridge
-    from tripsage_core.config import get_settings
-    from tripsage_core.services.airbnb_mcp import AirbnbMCP
+async def _setup_infrastructure_services() -> tuple[
+    DatabaseService, CacheService, KeyMonitoringService
+]:
+    """Initialise infrastructure-layer services."""
+    from tripsage_core.services.infrastructure import (
+        CacheService,
+        KeyMonitoringService,
+    )
+    from tripsage_core.services.infrastructure.database_service import (
+        get_database_service,
+    )
+
+    database_service = await get_database_service()
+    cache_service = CacheService()
+    await cache_service.connect()
+    key_monitoring_service = KeyMonitoringService()
+    return (
+        database_service,
+        cache_service,
+        key_monitoring_service,
+    )
+
+
+async def _setup_external_services() -> tuple[
+    GoogleMapsService, DocumentAnalyzer, WeatherService, WebCrawlService
+]:
+    """Initialise external API clients."""
+    from tripsage_core.services.external_apis import (
+        DocumentAnalyzer,
+        GoogleMapsService,
+        WeatherService,
+        WebCrawlService,
+    )
+
+    google_maps_service = GoogleMapsService()
+    await google_maps_service.connect()
+
+    weather_service = WeatherService()
+    document_analyzer = DocumentAnalyzer()
+    webcrawl_service = WebCrawlService()
+    return google_maps_service, document_analyzer, weather_service, webcrawl_service
+
+
+async def _setup_business_services(
+    *,
+    database_service: DatabaseService,
+    cache_service: CacheService,
+    document_analyzer: DocumentAnalyzer,
+    weather_service: WeatherService,
+    google_maps_service: GoogleMapsService,
+    settings: Any,
+) -> dict[str, Any]:
+    """Initialise business-layer services."""
     from tripsage_core.services.business.accommodation_service import (
         AccommodationService,
     )
     from tripsage_core.services.business.activity_service import ActivityService
-    from tripsage_core.services.business.api_key_service import ApiKeyService
+    from tripsage_core.services.business.api_key_service import (
+        ApiKeyDatabaseProtocol,
+        ApiKeyService,
+    )
     from tripsage_core.services.business.chat_service import ChatService
     from tripsage_core.services.business.destination_service import DestinationService
     from tripsage_core.services.business.file_processing_service import (
@@ -163,55 +211,22 @@ async def initialise_app_state(
         UnifiedSearchService,
     )
     from tripsage_core.services.business.user_service import UserService
-    from tripsage_core.services.external_apis import (
-        DocumentAnalyzer,
-        GoogleMapsService,
-        WeatherService,
-        WebCrawlService,
-    )
-    from tripsage_core.services.infrastructure import (
-        CacheService,
-        KeyMonitoringService,
-    )
-    from tripsage_core.services.infrastructure.database_service import (
-        get_database_service,
+    from tripsage_core.services.infrastructure.database_operations_mixin import (
+        DatabaseServiceProtocol,
     )
 
-    settings = get_settings()
-
-    # Infrastructure
-    database_service = await get_database_service()
-    db_concrete: DatabaseService = database_service
-    cache_service = CacheService()
-    await cache_service.connect()
-
-    key_monitoring_service = KeyMonitoringService()
-
-    # External services
-    google_maps_service = GoogleMapsService()
-    await google_maps_service.connect()
-
-    weather_service = WeatherService()
-    document_analyzer = DocumentAnalyzer()
-    webcrawl_service = WebCrawlService()
-
-    # Business services
     user_service = UserService(database_service)
-    from tripsage_core.services.business.api_key_service import ApiKeyDatabaseProtocol
-
     api_key_service = ApiKeyService(
         db=cast(ApiKeyDatabaseProtocol, database_service),
         cache=cache_service,
         settings=settings,
     )
-    from tripsage_core.services.infrastructure.database_operations_mixin import (
-        DatabaseServiceProtocol,
-    )
 
     memory_service = MemoryService(
-        database_service=cast(DatabaseServiceProtocol, db_concrete)
+        database_service=cast(DatabaseServiceProtocol, database_service)
     )
     await memory_service.connect()
+
     chat_service = ChatService(database_service=database_service)
     file_processing_service = FileProcessingService(
         database_service=database_service,
@@ -226,10 +241,10 @@ async def initialise_app_state(
         database_service=database_service,
         weather_service=weather_service,
     )
-    flight_service = FlightService(database_service=db_concrete)
-    itinerary_service = ItineraryService(database_service=db_concrete)
+    flight_service = FlightService(database_service=database_service)
+    itinerary_service = ItineraryService(database_service=database_service)
     trip_service = TripService(
-        database_service=db_concrete,
+        database_service=database_service,
         user_service=user_service,
     )
     unified_search_service = UnifiedSearchService(
@@ -239,48 +254,106 @@ async def initialise_app_state(
         flight_service=flight_service,
         accommodation_service=accommodation_service,
     )
-
     search_facade = SearchFacade(
         destination_service=destination_service,
         activity_service=activity_service,
         unified_search_service=unified_search_service,
     )
 
-    # Orchestration helpers
+    return {
+        "accommodation_service": accommodation_service,
+        "activity_service": activity_service,
+        "api_key_service": api_key_service,
+        "chat_service": chat_service,
+        "destination_service": destination_service,
+        "file_processing_service": file_processing_service,
+        "flight_service": flight_service,
+        "itinerary_service": itinerary_service,
+        "memory_service": memory_service,
+        "search_facade": search_facade,
+        "trip_service": trip_service,
+        "unified_search_service": unified_search_service,
+        "user_service": user_service,
+    }
+
+
+async def _setup_orchestration_helpers(
+    memory_service: MemoryService,
+) -> dict[str, Any]:
+    """Initialise orchestration helpers."""
     from tripsage.orchestration.checkpoint_service import SupabaseCheckpointService
+    from tripsage.orchestration.memory_bridge import SessionMemoryBridge
+    from tripsage_core.services.airbnb_mcp import AirbnbMCP
 
     checkpoint_service = SupabaseCheckpointService()
     memory_bridge = SessionMemoryBridge(memory_service=memory_service)
     mcp_service = AirbnbMCP()
     await mcp_service.initialize()
+    return {
+        "checkpoint_service": checkpoint_service,
+        "memory_bridge": memory_bridge,
+        "mcp_service": mcp_service,
+    }
 
-    services = AppServiceContainer(
-        accommodation_service=accommodation_service,
-        chat_service=chat_service,
-        activity_service=activity_service,
-        destination_service=destination_service,
-        file_processing_service=file_processing_service,
-        flight_service=flight_service,
-        itinerary_service=itinerary_service,
-        memory_service=memory_service,
-        search_facade=search_facade,
-        trip_service=trip_service,
-        unified_search_service=unified_search_service,
-        user_service=user_service,
-        database_service=database_service,
-        cache_service=cache_service,
-        key_monitoring_service=key_monitoring_service,
-        checkpoint_service=checkpoint_service,
-        memory_bridge=memory_bridge,
-        mcp_service=mcp_service,
+
+def _build_service_container(
+    *,
+    business: dict[str, Any],
+    infrastructure: tuple[DatabaseService, CacheService, KeyMonitoringService],
+    external: tuple[
+        GoogleMapsService, DocumentAnalyzer, WeatherService, WebCrawlService
+    ],
+    orchestration: dict[str, Any],
+) -> AppServiceContainer:
+    """Assemble the AppServiceContainer with the provided components."""
+    database_service, cache_service, key_monitoring_service = infrastructure
+    (
+        google_maps_service,
+        document_analyzer,
+        weather_service,
+        webcrawl_service,
+    ) = external
+
+    return AppServiceContainer(
+        accommodation_service=business["accommodation_service"],
+        chat_service=business["chat_service"],
+        activity_service=business["activity_service"],
+        destination_service=business["destination_service"],
+        file_processing_service=business["file_processing_service"],
+        flight_service=business["flight_service"],
+        itinerary_service=business["itinerary_service"],
+        api_key_service=business["api_key_service"],
+        memory_service=business["memory_service"],
+        search_facade=business["search_facade"],
+        trip_service=business["trip_service"],
+        user_service=business["user_service"],
+        unified_search_service=business["unified_search_service"],
+        calendar_service=None,
+        document_analyzer=document_analyzer,
+        google_maps_service=google_maps_service,
+        weather_service=weather_service,
         webcrawl_service=webcrawl_service,
+        cache_service=cache_service,
+        database_service=database_service,
+        key_monitoring_service=key_monitoring_service,
+        checkpoint_service=orchestration["checkpoint_service"],
+        memory_bridge=orchestration["memory_bridge"],
+        mcp_service=orchestration["mcp_service"],
     )
 
-    from tripsage.orchestration.graph import TripSageOrchestrator
 
-    orchestrator = TripSageOrchestrator(services=services)
-
-    # Attach to app.state for DI
+def _attach_services_to_app_state(
+    *,
+    app: FastAPI,
+    services: AppServiceContainer,
+    database_service: DatabaseService,
+    cache_service: CacheService,
+    google_maps_service: GoogleMapsService,
+    api_key_service: ApiKeyService,
+    mcp_service: AirbnbMCP,
+    orchestrator: TripSageOrchestrator,
+) -> None:
+    """Attach commonly accessed services to ``app.state``."""
     app.state.services = services
     app.state.cache_service = cache_service
     app.state.google_maps_service = google_maps_service
@@ -288,6 +361,50 @@ async def initialise_app_state(
     app.state.api_key_service = api_key_service
     app.state.mcp_service = mcp_service
     app.state.orchestrator = orchestrator
+
+
+async def initialise_app_state(
+    app: FastAPI,
+) -> tuple[AppServiceContainer, TripSageOrchestrator]:
+    """Initialise application services and attach them to app.state."""
+    from tripsage.orchestration.graph import TripSageOrchestrator
+    from tripsage_core.config import get_settings
+
+    settings = get_settings()
+
+    infrastructure = await _setup_infrastructure_services()
+    external = await _setup_external_services()
+    business = await _setup_business_services(
+        database_service=infrastructure[0],
+        cache_service=infrastructure[1],
+        document_analyzer=external[1],
+        weather_service=external[2],
+        google_maps_service=external[0],
+        settings=settings,
+    )
+    orchestration = await _setup_orchestration_helpers(
+        memory_service=business["memory_service"]
+    )
+
+    services = _build_service_container(
+        business=business,
+        infrastructure=infrastructure,
+        external=external,
+        orchestration=orchestration,
+    )
+
+    orchestrator = TripSageOrchestrator(services=services)
+
+    _attach_services_to_app_state(
+        app=app,
+        services=services,
+        database_service=infrastructure[0],
+        cache_service=infrastructure[1],
+        google_maps_service=external[0],
+        api_key_service=business["api_key_service"],
+        mcp_service=orchestration["mcp_service"],
+        orchestrator=orchestrator,
+    )
 
     return services, orchestrator
 

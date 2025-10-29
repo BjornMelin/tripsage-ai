@@ -23,8 +23,8 @@ class _TraceContextFilter(logging.Filter):
             return True
         try:
             span = otel_trace.get_current_span()
-            ctx = span.get_span_context() if span is not None else None
-            if ctx and getattr(ctx, "is_valid", lambda: False)():
+            ctx = span.get_span_context()
+            if span.is_recording() and getattr(ctx, "is_valid", lambda: False)():
                 record.trace_id = f"{ctx.trace_id:032x}"
                 record.span_id = f"{ctx.span_id:016x}"
             else:

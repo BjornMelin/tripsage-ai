@@ -6,7 +6,7 @@ Provides direct integration with Crawl4AI SDK for web crawling and content extra
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Awaitable, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from typing import Any, cast
 
 from crawl4ai import AsyncWebCrawler
@@ -22,6 +22,7 @@ from crawl4ai.deep_crawling.filters import (
     DomainFilter,
     FilterChain,
     SEOFilter,
+    URLFilter,
     URLPatternFilter,
 )
 from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
@@ -137,7 +138,7 @@ class Crawl4AIClient:
                     max_depth=self.max_depth,
                     include_external=self.include_external,
                     max_pages=self.max_pages or 0,
-                    filter_chain=filter_chain or FilterChain([]),
+                    filter_chain=filter_chain or FilterChain([]),  # type: ignore[arg-type]
                     url_scorer=scorer,
                 )
 
@@ -149,11 +150,11 @@ class Crawl4AIClient:
                 max_depth=self.max_depth,
                 include_external=self.include_external,
                 max_pages=self.max_pages or 0,
-                filter_chain=filter_chain or FilterChain([]),
+                filter_chain=filter_chain or FilterChain([]),  # type: ignore[arg-type]
             )
 
         def _build_filter_chain(self) -> FilterChain | None:
-            filters = []
+            filters: list[URLFilter] = []
 
             # Apply domain gating first to reduce queue churn on disallowed hosts.
             if self.allowed_domains or self.blocked_domains:
@@ -250,11 +251,13 @@ class Crawl4AIClient:
         run_config = self._build_run_config(scrape_config)
 
         async with self._semaphore, AsyncWebCrawler(config=browser_config) as crawler:
-            crawl_result = await crawler.arun(url=url, config=run_config)
+            crawl_callable = cast(Callable[..., Awaitable[Any]], crawler.arun)  # type: ignore[arg-type]
+            crawl_result = await crawl_callable(url=url, config=run_config)
 
         if scrape_config.stream:
             if isinstance(crawl_result, list):
-                for item in crawl_result:
+                typed_crawl_result = cast(list[Any], crawl_result)
+                for item in typed_crawl_result:
                     yield item
                 return
 
@@ -387,16 +390,13 @@ class Crawl4AIClient:
             )
 
             # Extract memories using Mem0
-            memory_result = await cast(
-                Awaitable[dict[str, Any]],
-                memory_service.add_conversation_memory(
-                    user_id=user_id or "web_crawler",
-                    memory_request=memory_request,
-                ),
+            memory_result = await memory_service.add_conversation_memory(
+                user_id=user_id or "web_crawler",
+                memory_request=memory_request,
             )
 
             # Parse extracted insights
-            memory_payload = memory_result if isinstance(memory_result, dict) else {}
+            memory_payload = memory_result
             insights = self._parse_travel_insights(
                 memory_payload,
                 content,
@@ -579,7 +579,7 @@ class Crawl4AIClient:
             return base_config
 
         deep_strategy = config.deep_crawl.build_strategy()
-        return base_config.clone(deep_crawl_strategy=deep_strategy)
+        return base_config.model_copy(update={"deep_crawl_strategy": deep_strategy})
 
     def _format_aggregate(self, url: str, results: list[Any]) -> dict[str, Any]:
         """Format aggregated crawl results into a standardized payload."""

@@ -400,9 +400,12 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
                 # Add to total cost estimate (using first accommodation's
                 # nightly rate * 3 nights)
                 if sorted_accommodations:
-                    combined_results["total_estimated_cost"] += _coerce_float(
-                        sorted_accommodations[0].get("price_per_night", 0)
-                    ) * 3
+                    combined_results["total_estimated_cost"] += (
+                        _coerce_float(
+                            sorted_accommodations[0].get("price_per_night", 0)
+                        )
+                        * 3
+                    )
 
         # Process activity results
         activity_results = dict(search_input.activity_results or {})
@@ -442,9 +445,7 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
             # Extract travel tips
             tips_raw = destination_info.get("tips", [])
             if tips_raw:
-                combined_results["travel_tips"] = [
-                    str(item) for item in tips_raw[:3]
-                ]
+                combined_results["travel_tips"] = [str(item) for item in tips_raw[:3]]
 
         return {
             "success": True,

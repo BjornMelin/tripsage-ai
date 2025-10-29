@@ -5,6 +5,7 @@ Own Key) functionality for user-provided API keys.
 """
 
 import logging
+import re
 from typing import Any
 
 from fastapi import (
@@ -17,6 +18,7 @@ from fastapi import (
     status,
 )
 
+from tripsage.api.core.config import get_settings
 from tripsage.api.core.dependencies import (
     AdminPrincipalDep,
     ApiKeyServiceDep,
@@ -45,6 +47,85 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+_SERVICE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+_DISALLOWED_NAME_CHARS = set("*()|&`;$")
+_SUSPICIOUS_SERVICE_SEQUENCES = (
+    "../",
+    "..\\",
+    "%2f..",
+    "..%2f",
+    "%2e%2e%2f",
+    "%2e%2f",
+)
+_MAX_DESCRIPTION_LENGTH = 4096
+_MAX_KEY_LENGTH = 1024
+_ALLOWED_ORIGINS = frozenset(origin.lower() for origin in get_settings().cors_origins)
+
+
+def _contains_control_chars(value: str) -> bool:
+    """Return True when the input string holds ASCII control characters."""
+    return any(ord(char) < 32 and char not in ("\t", "\n", "\r") for char in value)
+
+
+def _is_origin_allowed(request: Request) -> bool:
+    """Return True when the request origin is empty or on the allow-list."""
+    origin_header = request.headers.get("Origin")
+    return not origin_header or origin_header.lower() in _ALLOWED_ORIGINS
+
+
+def _enforce_allowed_origin(request: Request) -> None:
+    """Reject requests from disallowed origins."""
+    if not _is_origin_allowed(request):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Origin not allowed for API key operations.",
+        )
+
+
+def _validate_service_identifier(service: str) -> None:
+    """Validate the service identifier for traversal and format issues."""
+    lowered = service.lower()
+    if _contains_control_chars(service):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Service contains control characters.",
+        )
+    if not _SERVICE_PATTERN.match(lowered):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid service identifier.",
+        )
+    if any(sequence in lowered for sequence in _SUSPICIOUS_SERVICE_SEQUENCES):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Potential path traversal detected in service identifier.",
+        )
+
+
+def _validate_create_payload(payload: ApiKeyCreate) -> None:
+    """Enforce payload constraints to mitigate injection vectors."""
+    if _contains_control_chars(payload.name):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Name contains control characters.",
+        )
+    if any(char in payload.name for char in _DISALLOWED_NAME_CHARS):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Name contains invalid characters.",
+        )
+    _validate_service_identifier(payload.service)
+    if len(payload.key) > _MAX_KEY_LENGTH:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="API key value is too large.",
+        )
+    if payload.description and len(payload.description) > _MAX_DESCRIPTION_LENGTH:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Description exceeds maximum length.",
+        )
+
 
 @router.get(
     "",
@@ -70,8 +151,36 @@ async def list_keys(
     Returns:
         List of API keys
     """
+    suspicious_params = {"key", "service", "name", "description"}
+    if any(param in request.query_params for param in suspicious_params):
+        raise HTTPException(
+            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+            detail="GET cannot be used for state-changing API key operations.",
+        )
     user_id = get_principal_id(principal)
     return await key_service.list_user_keys(user_id)
+
+
+@router.options(
+    "",
+    include_in_schema=False,
+)
+async def preflight_options(request: Request) -> Response:
+    """Handle CORS preflight checks for the API key collection endpoint."""
+    if not _is_origin_allowed(request):
+        return Response(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
+    response = Response(status_code=status.HTTP_200_OK)
+    origin_header = request.headers.get("Origin")
+    if origin_header:
+        response.headers["Access-Control-Allow-Origin"] = origin_header
+    response.headers.update(
+        {
+            "Allow": "GET,POST,OPTIONS",
+            "Access-Control-Allow-Methods": "POST,OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type,Authorization,X-API-Key",
+        }
+    )
+    return response
 
 
 @router.post(
@@ -104,9 +213,16 @@ async def create_key(
     Raises:
         HTTPException: If the key is invalid
     """
+    _enforce_allowed_origin(request)
+    user_id = get_principal_id(principal)
+    _validate_create_payload(key_data)
     try:
         # Validate the API key with the service
-        validation = await key_service.validate_key(key_data.key, key_data.service)
+        validation = await key_service.validate_key(
+            key_data.key,
+            key_data.service,
+            user_id,
+        )
 
         if not validation.is_valid:
             validation_status = getattr(validation, "status", None)
@@ -122,7 +238,6 @@ async def create_key(
             )
 
         # Create the API key
-        user_id = get_principal_id(principal)
         return await key_service.create_key(user_id, key_data)
     except HTTPException:
         raise
@@ -160,6 +275,7 @@ async def delete_key(
     Raises:
         HTTPException: If the key is not found or does not belong to the user
     """
+    _enforce_allowed_origin(request)
     # Check if the key exists and belongs to the user
     key = await key_service.get_key(key_id)
 
@@ -206,6 +322,18 @@ async def validate_key(
     Returns:
         Validation result
     """
+    _enforce_allowed_origin(request)
+    if _contains_control_chars(key_data.key):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="API key contains control characters.",
+        )
+    if len(key_data.key) > _MAX_KEY_LENGTH:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="API key value is too large.",
+        )
+    _validate_service_identifier(key_data.service)
     user_id = get_principal_id(principal)
     return await key_service.validate_key(key_data.key, key_data.service, user_id)
 
@@ -241,6 +369,12 @@ async def rotate_key(  # pylint: disable=too-many-positional-arguments
     Raises:
         HTTPException: If the key is not found or does not belong to the user
     """
+    _enforce_allowed_origin(request)
+    if len(key_data.new_key) > _MAX_KEY_LENGTH:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="API key value is too large.",
+        )
     # Check if the key exists and belongs to the user
     key = await key_service.get_key(key_id)
 
