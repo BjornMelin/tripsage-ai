@@ -18,9 +18,9 @@ from tripsage_core.exceptions.exceptions import (
     CoreServiceError,
 )
 from tripsage_core.services.external_apis.base_service import (
-    AsyncServiceLifecycle,
     AsyncServiceProvider,
 )
+from tripsage_core.utils.outbound import AsyncApiClient
 
 
 logger = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ class ScrapingResult(BaseModel):
     error: str | None = Field(None, description="Error message if failed")
 
 
-class PlaywrightService(AsyncServiceLifecycle):
+class PlaywrightService(AsyncApiClient):
     """Direct Playwright SDK service for complex web scraping with Core integration."""
 
     def __init__(
@@ -95,6 +95,7 @@ class PlaywrightService(AsyncServiceLifecycle):
             config: Playwright configuration options
             settings: Core application settings
         """
+        super().__init__()
         self.settings = settings or get_settings()
 
         # Build config from settings if not provided

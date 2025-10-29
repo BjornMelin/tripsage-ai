@@ -33,6 +33,7 @@ from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
@@ -605,6 +606,7 @@ class FileProcessingService:
         """Maximum aggregate upload size per batch in bytes."""
         return self._limits.max_session_size
 
+    @tripsage_safe_execute()
     async def upload_file(
         self, user_id: str, upload_request: FileUploadRequest
     ) -> ProcessedFile:
@@ -695,6 +697,7 @@ class FileProcessingService:
         )
         return processed_file
 
+    @tripsage_safe_execute()
     async def upload_batch(
         self, user_id: str, uploads: Iterable[FileUploadRequest]
     ) -> list[ProcessedFile]:
@@ -709,6 +712,7 @@ class FileProcessingService:
 
         return [await self.upload_file(user_id, request) for request in uploads_list]
 
+    @tripsage_safe_execute()
     async def get_file(
         self, file_id: str, user_id: str, *, check_access: bool = True
     ) -> ProcessedFile | None:
@@ -739,6 +743,7 @@ class FileProcessingService:
 
         return processed_file
 
+    @tripsage_safe_execute()
     async def get_file_content(self, file_id: str, user_id: str) -> bytes | None:
         """Return binary content for an accessible file."""
         processed_file = await self.get_file(file_id, user_id)
@@ -761,6 +766,7 @@ class FileProcessingService:
 
         return content
 
+    @tripsage_safe_execute()
     async def search_files(
         self, user_id: str, search_request: FileSearchRequest
     ) -> list[ProcessedFile]:
@@ -802,6 +808,7 @@ class FileProcessingService:
 
         return processed_files
 
+    @tripsage_safe_execute()
     async def delete_file(self, file_id: str, user_id: str) -> bool:
         """Delete file metadata and storage."""
         processed_file = await self.get_file(file_id, user_id)
@@ -820,6 +827,7 @@ class FileProcessingService:
 
         return await self._repo.delete(file_id)
 
+    @tripsage_safe_execute()
     async def get_usage_stats(self, user_id: str) -> FileUsageStats:
         """Return aggregate file usage statistics for a user."""
         try:
