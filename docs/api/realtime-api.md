@@ -17,7 +17,7 @@ import { getBrowserClient } from "@/lib/supabase/client";
 export function setRealtimeAuth(accessToken: string | null) {
   const supabase = getBrowserClient();
   if (accessToken) supabase.realtime.setAuth(accessToken);
-  else supabase.realtime.setAuth("" as any); // clears auth
+  else supabase.realtime.setAuth(null); // clears auth safely
 }
 
 // 2) Join a private channel

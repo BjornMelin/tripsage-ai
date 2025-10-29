@@ -774,7 +774,7 @@ async def process_trip_optimization(trip_id: str, user_id: str):
         
         # Notify listeners via Supabase Realtime only (publisher helper handles details)
         await publish_realtime_update(
-            channel=f"user:{userId}",
+            channel=f"user:{user_id}",
             event="optimization_complete",
             payload={"trip_id": trip_id, "data": optimized_itinerary},
         )
