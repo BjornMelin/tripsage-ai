@@ -502,9 +502,14 @@ class PlaywrightService:
         """Extract response metadata for the scraping result."""
         headers_any = getattr(response, "headers", None)
         content_type: str | None = None
-        if isinstance(headers_any, Mapping) or hasattr(headers_any, "get"):
-            headers_mapping = cast(Mapping[str, Any], headers_any)
-            content_type = cast(str | None, headers_mapping.get("content-type"))
+        if isinstance(headers_any, Mapping):
+            typed_headers = cast(Mapping[str, str], headers_any)
+            content_type = typed_headers.get("content-type")
+        elif headers_any is not None:
+            get_method = getattr(headers_any, "get", None)
+            if callable(get_method):
+                content_value = get_method("content-type")
+                content_type = cast(str | None, content_value)
         return {
             "status_code": getattr(response, "status", None),
             "content_type": content_type,
