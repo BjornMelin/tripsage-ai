@@ -184,9 +184,9 @@ class UnifiedSearchService(
             # Execute searches in parallel
             if search_tasks:
                 task_list = list(search_tasks.values())
-                search_results: list[list[SearchResultItem] | BaseException] = (
-                    await asyncio.gather(*task_list, return_exceptions=True)
-                )
+                search_results: list[
+                    list[SearchResultItem] | BaseException
+                ] = await asyncio.gather(*task_list, return_exceptions=True)
 
                 # Process results
                 all_results: list[SearchResultItem] = []

@@ -5,6 +5,8 @@ Simplified authentication using direct JWT verification.
 """
 
 import logging
+from collections.abc import Awaitable, Callable
+from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -48,15 +50,18 @@ async def get_user_preferences(
     logger.info("Getting preferences for user: %s", user_id)
 
     try:
-        user = await user_service.get_user_by_id(user_id)
-        if not user:
+        get_by_id = cast(
+            Callable[[str], Awaitable[Any | None]], user_service.get_user_by_id
+        )
+        user_obj = await get_by_id(user_id)
+        if not user_obj:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found",
             )
 
         # Return preferences or empty dict if none set
-        preferences = user.preferences or {}
+        preferences = cast(dict[str, Any], getattr(user_obj, "preferences", {}) or {})
         return UserPreferencesResponse(preferences=preferences)
 
     except HTTPException:
@@ -98,11 +103,15 @@ async def update_user_preferences(
 
     try:
         # Update preferences (service handles merging)
-        updated_user = await user_service.update_user_preferences(
-            user_id, preferences_request.preferences
+        update_prefs = cast(
+            Callable[[str, dict[str, Any]], Awaitable[Any]],
+            user_service.update_user_preferences,
         )
-
-        return UserPreferencesResponse(preferences=updated_user.preferences or {})
+        updated_user = await update_prefs(user_id, preferences_request.preferences)
+        updated_prefs = cast(
+            dict[str, Any], getattr(updated_user, "preferences", {}) or {}
+        )
+        return UserPreferencesResponse(preferences=updated_prefs)
 
     except Exception as e:
         logger.exception("Error updating user preferences")

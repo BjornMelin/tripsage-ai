@@ -178,7 +178,8 @@ async def get_environment_config() -> dict[str, Any]:
         "feature_flags": {
             "enable_advanced_agents": True,
             "enable_memory_system": True,
-            "enable_real_time": getattr(settings, "enable_websockets", False),
+            # Supabase Realtime is the only realtime transport; no custom WS
+            "enable_real_time": True,
             "enable_vector_search": True,
             "enable_monitoring": True,
         },

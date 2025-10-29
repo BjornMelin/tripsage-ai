@@ -4,7 +4,7 @@ This module provides clean, modern dependency injection using Annotated types
 for unified authentication across JWT (frontend) and API keys (agents).
 """
 
-from collections.abc import Iterable as TypingIterable
+from collections.abc import Awaitable, Callable, Iterable as TypingIterable
 from typing import Annotated, cast
 
 from fastapi import Depends, Request
@@ -29,6 +29,7 @@ from tripsage_core.services.business.file_processing_service import (
 from tripsage_core.services.business.flight_service import FlightService
 from tripsage_core.services.business.itinerary_service import ItineraryService
 from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.services.business.search_facade import SearchFacade
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.business.unified_search_service import UnifiedSearchService
 from tripsage_core.services.business.user_service import UserService
@@ -187,9 +188,17 @@ async def verify_service_access(
             # Without a DI-provided ApiKeyService, we cannot verify access.
             return False
         try:
-            keys = await key_service.list_user_keys(principal.id)
-            service_key = next((k for k in keys if k.service.value == service), None)
-            return service_key is not None
+            list_keys = cast(
+                Callable[[str], Awaitable[list[object]]],
+                key_service.list_user_keys,
+            )
+            keys_any = await list_keys(principal.id)
+            for k in keys_any:
+                svc = getattr(k, "service", None)
+                svc_value = getattr(svc, "value", None) if svc is not None else None
+                if svc_value == service:
+                    return True
+            return False
         except (OSError, ValueError, TypeError):
             return False
 
@@ -239,6 +248,16 @@ def get_unified_search_service_dep(request: Request) -> UnifiedSearchService:
         request,
         "unified_search_service",
         UnifiedSearchService,
+    )
+
+
+# Search facade dependency
+def get_search_facade(request: Request) -> SearchFacade:
+    """Return the SearchFacade singleton."""
+    return _get_required_service(
+        request,
+        "search_facade",
+        SearchFacade,
     )
 
 
@@ -321,6 +340,7 @@ ActivityServiceDep = Annotated[ActivityService, Depends(get_activity_service_dep
 UnifiedSearchServiceDep = Annotated[
     UnifiedSearchService, Depends(get_unified_search_service_dep)
 ]
+SearchFacadeDep = Annotated[SearchFacade, Depends(get_search_facade)]
 
 # Principal-based authentication dependencies
 CurrentPrincipalDep = Annotated[Principal | None, Depends(get_current_principal)]

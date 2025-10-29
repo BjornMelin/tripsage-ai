@@ -20,7 +20,6 @@ from tripsage_core.services.external_apis.base_service import (
     AsyncServiceProvider,
     sanitize_response,
 )
-from tripsage_core.utils.outbound import AsyncApiClient
 
 
 class DocumentAnalyzerError(CoreAPIError):
@@ -90,7 +89,7 @@ class DocumentAnalyzerConfig:
     pdf_extraction_enabled: bool
 
 
-class DocumentAnalyzer(AsyncApiClient):
+class DocumentAnalyzer:
     """Service for AI-powered analysis of travel documents with Core integration.
 
     Processes various document types to extract travel-relevant information
@@ -103,7 +102,6 @@ class DocumentAnalyzer(AsyncApiClient):
         Args:
             settings: Core application settings
         """
-        super().__init__()
         self.settings = settings or get_settings()
         self._connected = False
 
@@ -182,6 +180,10 @@ class DocumentAnalyzer(AsyncApiClient):
         """Clean up resources."""
         self.ai_client = None
         self._connected = False
+
+    async def close(self) -> None:
+        """Alias for disconnect for consistency."""
+        await self.disconnect()
 
     async def ensure_connected(self) -> None:
         """Ensure service is connected."""
@@ -767,7 +769,7 @@ class DocumentAnalyzer(AsyncApiClient):
 _document_analyzer_provider = AsyncServiceProvider(
     factory=DocumentAnalyzer,
     initializer=lambda service: service.connect(),
-    finalizer=lambda service: service.close(),
+    finalizer=lambda service: service.close(),  # type: ignore[arg-type]
 )
 
 

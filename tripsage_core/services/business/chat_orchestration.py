@@ -668,9 +668,7 @@ class ChatOrchestrationService:
         """
         try:
             mem = await get_memory_service()
-            count = (
-                len(cast(list[Any], results)) if isinstance(results, list) else 1
-            )
+            count = len(cast(list[Any], results)) if isinstance(results, list) else 1
             summary = (
                 f"{search_type} search stored (count={count}): {str(params)[:180]}"
             )

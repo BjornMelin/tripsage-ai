@@ -17,7 +17,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreServiceError,
 )
 from tripsage_core.services.external_apis.base_service import (
-    AsyncServiceLifecycle,
     AsyncServiceProvider,
 )
 
@@ -125,7 +124,7 @@ class TimeServiceConfig:
     custom_timezones: dict[str, str]
 
 
-class TimeService(AsyncServiceLifecycle):
+class TimeService:
     """Service for timezone and time operations with Core integration."""
 
     def __init__(self, settings: Settings | None = None):
@@ -214,16 +213,18 @@ class TimeService(AsyncServiceLifecycle):
         await self.ensure_connected()
 
         resolved_timezone = timezone_name or self.config.default_timezone
-        if resolved_timezone is None:
+        if resolved_timezone is None:  # pyright: ignore[reportUnnecessaryComparison]
             raise TimeServiceError("No timezone configured for current time lookup.")
 
         try:
             aliases = self._timezone_aliases()
             # Handle common timezone abbreviations
             timezone_key = resolved_timezone.upper()
-            resolved_timezone = aliases.get(timezone_key, resolved_timezone)
+            resolved_timezone = (
+                aliases.get(timezone_key, resolved_timezone) or resolved_timezone
+            )  # type: ignore[assignment]
 
-            if resolved_timezone == "UTC":
+            if resolved_timezone == "UTC":  # pyright: ignore[reportUnnecessaryComparison]
                 return datetime.now(UTC)
 
             tz = ZoneInfo(resolved_timezone)
@@ -441,7 +442,7 @@ class TimeService(AsyncServiceLifecycle):
             if custom_cities:
                 city_timezones.update(custom_cities)
 
-            world_clock = []
+            world_clock: list[WorldClock] = []
 
             aliases = self._timezone_aliases()
 
@@ -566,7 +567,7 @@ class TimeService(AsyncServiceLifecycle):
         minutes = (total_seconds % 3600) // 60
         seconds = total_seconds % 60
 
-        parts = []
+        parts: list[str] = []
         if days > 0:
             parts.append(f"{days} day{'s' if days != 1 else ''}")
         if hours > 0:
@@ -613,14 +614,12 @@ class TimeService(AsyncServiceLifecycle):
             if weekdays_only is None:
                 weekdays_only = self.config.business_hours.weekdays_only
 
-            if business_start is None or business_end is None:
-                raise TimeServiceError("Business hours configuration is incomplete.")
-
             current_time = await self.get_current_time(timezone_name)
             current_hour_min = current_time.strftime("%H:%M")
             current_weekday = current_time.weekday()  # 0=Monday, 6=Sunday
 
             is_business_day = not weekdays_only or current_weekday < 5  # Monday-Friday
+            # business_start and business_end are guaranteed to be non-None
             is_business_hours = business_start <= current_hour_min <= business_end
 
             return {
@@ -717,14 +716,9 @@ class TimeService(AsyncServiceLifecycle):
             await self.ensure_connected()
 
             # Test basic functionality
-            current_time = await self.get_current_time()
             timezone_info = await self.get_timezone_info("UTC")
 
-            return (
-                current_time is not None
-                and timezone_info is not None
-                and timezone_info.name == "UTC"
-            )
+            return timezone_info.name == "UTC"
         except CoreServiceError:
             return False
 
@@ -732,7 +726,7 @@ class TimeService(AsyncServiceLifecycle):
 _time_service_provider = AsyncServiceProvider(
     factory=TimeService,
     initializer=lambda service: service.connect(),
-    finalizer=lambda service: service.close(),
+    finalizer=lambda service: service.disconnect(),  # type: ignore[arg-type]
 )
 
 

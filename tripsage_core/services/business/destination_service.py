@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Destination service for destination management operations.
 
 This service consolidates destination-related business logic including destination
@@ -7,23 +8,47 @@ while maintaining proper data relationships.
 """
 
 import logging
+from collections.abc import Awaitable, Mapping
 from datetime import UTC, date, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from pydantic import Field
 
 from tripsage_core.exceptions import (
-    CoreDatabaseError,
     CoreExternalAPIError,
     CoreResourceNotFoundError as NotFoundError,
     CoreServiceError as ServiceError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.services.infrastructure.database_operations_mixin import (
+    DatabaseOperationsMixin,
+)
+from tripsage_core.services.infrastructure.in_memory_search_cache_mixin import (
+    InMemorySearchCacheMixin,
+)
+from tripsage_core.services.infrastructure.validation_mixin import ValidationMixin
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
+
+
+def _default_str_list() -> list[str]:
+    return []
+
+
+def _default_dest_images() -> list["DestinationImage"]:
+    return []
+
+
+def _default_dest_categories() -> list["DestinationCategory"]:
+    return []
+
+
+def _default_poi_list() -> list["PointOfInterest"]:
+    return []
 
 
 class DestinationCategory(str, Enum):
@@ -96,7 +121,7 @@ class PointOfInterest(TripSageModel):
         None, description="Opening hours by day"
     )
     images: list[DestinationImage] = Field(
-        default_factory=list, description="POI images"
+        default_factory=_default_dest_images, description="POI images"
     )
     website: str | None = Field(None, description="POI website URL")
     phone: str | None = Field(None, description="POI phone number")
@@ -194,7 +219,7 @@ class Destination(TripSageModel):
     long_description: str | None = Field(None, description="Detailed description")
 
     categories: list[DestinationCategory] = Field(
-        default_factory=list, description="Destination categories"
+        default_factory=_default_dest_categories, description="Destination categories"
     )
 
     # Geographic information
@@ -208,7 +233,7 @@ class Destination(TripSageModel):
 
     # Media
     images: list[DestinationImage] = Field(
-        default_factory=list, description="Destination images"
+        default_factory=_default_dest_images, description="Destination images"
     )
 
     # Ratings and reviews
@@ -222,18 +247,18 @@ class Destination(TripSageModel):
         None, description="Local transportation options"
     )
     popular_activities: list[str] = Field(
-        default_factory=list, description="Popular activities"
+        default_factory=_default_str_list, description="Popular activities"
     )
 
     # Points of interest
     points_of_interest: list[PointOfInterest] = Field(
-        default_factory=list, description="POIs"
+        default_factory=_default_poi_list, description="POIs"
     )
 
     # Weather and climate
     weather: DestinationWeather | None = Field(None, description="Weather information")
     best_time_to_visit: list[str] = Field(
-        default_factory=list, description="Best months to visit"
+        default_factory=_default_str_list, description="Best months to visit"
     )
 
     # Travel advisory
@@ -330,7 +355,9 @@ class DestinationRecommendation(TripSageModel):
     estimated_cost: dict[str, float] | None = Field(None, description="Estimated costs")
 
 
-class DestinationService:
+class DestinationService(
+    DatabaseOperationsMixin, ValidationMixin, InMemorySearchCacheMixin
+):
     """Comprehensive destination service for search, discovery, and management.
 
     This service handles:
@@ -343,8 +370,8 @@ class DestinationService:
 
     def __init__(
         self,
-        database_service=None,
-        weather_service=None,
+        database_service: Any,
+        weather_service: Any | None = None,
         cache_ttl: int = 3600,
     ):
         """Initialize the destination service.
@@ -354,11 +381,8 @@ class DestinationService:
             weather_service: Weather service for climate data
             cache_ttl: Cache TTL in seconds
         """
-        # Import here to avoid circular imports
-        if database_service is None:
-            from tripsage_core.services.infrastructure import get_database_service
-
-            database_service = get_database_service()
+        # Initialize mixin with cache TTL
+        super().__init__(cache_ttl=cache_ttl)
 
         if weather_service is None:
             try:
@@ -371,15 +395,21 @@ class DestinationService:
                 logger.warning("Weather service not available")
                 weather_service = None
 
-        self.db = database_service
+        # Store DB and expose via property expected by mixin
+        self._db: Any = database_service
         self.external_service = None  # No external destination service available
         self.weather_service = weather_service
         self.cache_ttl = cache_ttl
 
-        # In-memory cache for search results
-        self._search_cache: dict[str, tuple] = {}
-        self._destination_cache: dict[str, tuple] = {}
+        # In-memory cache for destination details (separate from search cache)
+        self._destination_cache: dict[str, tuple[Destination, float]] = {}
 
+    @property
+    def db(self) -> Any:  # type: ignore[override]
+        """Database accessor used by mixin operations."""
+        return self._db
+
+    @tripsage_safe_execute()
     async def search_destinations(
         self, search_request: DestinationSearchRequest
     ) -> DestinationSearchResponse:
@@ -476,6 +506,7 @@ class DestinationService:
             )
             raise ServiceError(f"Destination search failed: {e!s}") from e
 
+    @tripsage_safe_execute()
     async def get_destination_details(
         self,
         destination_id: str,
@@ -503,7 +534,9 @@ class DestinationService:
                 destination = cached_result
             else:
                 # Try to get from database
-                destination_data = await self.db.get_destination(destination_id)  # type: ignore
+                destination_data = await self._get_entity_by_id(
+                    "destination", destination_id
+                )
                 if destination_data:
                     destination = Destination(**destination_data)
                 else:
@@ -531,6 +564,7 @@ class DestinationService:
             )
             return None
 
+    @tripsage_safe_execute()
     async def save_destination(
         self, user_id: str, save_request: SavedDestinationRequest
     ) -> SavedDestination:
@@ -549,9 +583,11 @@ class DestinationService:
         """
         try:
             # Get destination details
-            destination = await self.get_destination_details(
-                save_request.destination_id
+            result_any = await cast(
+                Awaitable[Destination | None],
+                self.get_destination_details(save_request.destination_id),
             )
+            destination = result_any
             if not destination:
                 raise NotFoundError("Destination not found")
 
@@ -597,6 +633,7 @@ class DestinationService:
             )
             raise ServiceError(f"Failed to save destination: {e!s}") from e
 
+    @tripsage_safe_execute()
     async def get_saved_destinations(
         self, user_id: str, trip_id: str | None = None, limit: int = 50
     ) -> list[SavedDestination]:
@@ -611,11 +648,16 @@ class DestinationService:
             List of saved destinations
         """
         try:
+            # Validate user ID
+            self._validate_user_id(user_id)
+
             filters = {"user_id": user_id}
             if trip_id:
                 filters["trip_id"] = trip_id
 
-            results = await self.db.get_saved_destinations(filters, limit)  # type: ignore
+            results = await self._get_entities_with_filters(
+                "saved_destination", filters, limit
+            )
 
             return [SavedDestination(**result) for result in results]
 
@@ -626,6 +668,7 @@ class DestinationService:
             )
             return []
 
+    @tripsage_safe_execute()
     async def get_destination_recommendations(
         self, user_id: str, recommendation_request: DestinationRecommendationRequest
     ) -> list[DestinationRecommendation]:
@@ -641,7 +684,11 @@ class DestinationService:
         try:
             # Get user's travel history and preferences
             user_preferences = await self._get_user_travel_preferences(user_id)
-            saved_destinations = await self.get_saved_destinations(user_id)
+            saved_list_any = await cast(
+                Awaitable[list[SavedDestination]],
+                self.get_saved_destinations(user_id),
+            )
+            saved_destinations = saved_list_any
 
             # Generate recommendations based on interests and history
             recommendations = await self._generate_recommendations(
@@ -706,27 +753,35 @@ class DestinationService:
             },
         ]
 
-        return [
-            Destination(
+        results: list[Destination] = []
+        for row in mock_data[: search_request.limit]:
+            name = str(row["name"])  # type: ignore[index]
+            country = str(row["country"])  # type: ignore[index]
+            description = str(row["description"])  # type: ignore[index]
+            categories = cast(list[DestinationCategory], row["categories"])  # type: ignore[index]
+            lat = float(row["latitude"])  # type: ignore[index]
+            lon = float(row["longitude"])  # type: ignore[index]
+            rating = float(row["rating"])  # type: ignore[index]
+            safety = float(row["safety_rating"])  # type: ignore[index]
+
+            image_url = f"https://example.com/{name.lower().replace(' ', '_')}.jpg"
+            dest = Destination(
                 id=str(uuid4()),
-                name=data["name"],
-                country=data["country"],
+                name=name,
+                country=country,
                 region=None,
                 city=None,
-                description=data["description"],
+                description=description,
                 long_description=None,
-                categories=data["categories"],
-                latitude=data["latitude"],
-                longitude=data["longitude"],
+                categories=categories,
+                latitude=lat,
+                longitude=lon,
                 timezone=None,
                 currency=None,
                 languages=[],
                 images=[
                     DestinationImage(
-                        url=(
-                            f"https://example.com/"
-                            f"{data['name'].lower().replace(' ', '_')}.jpg"
-                        ),
+                        url=image_url,
                         caption=None,
                         is_primary=True,
                         attribution=None,
@@ -734,9 +789,9 @@ class DestinationService:
                         height=None,
                     )
                 ],
-                rating=data["rating"],
+                rating=rating,
                 review_count=None,
-                safety_rating=data["safety_rating"],
+                safety_rating=safety,
                 visa_requirements=None,
                 local_transportation=None,
                 popular_activities=[],
@@ -748,8 +803,9 @@ class DestinationService:
                 last_updated=datetime.now(UTC),
                 relevance_score=None,
             )
-            for data in mock_data[: search_request.limit]
-        ]
+            results.append(dest)
+
+        return results
 
     async def _enrich_with_weather(
         self, destinations: list[Destination]
@@ -766,19 +822,30 @@ class DestinationService:
                     )
 
                     if weather_data:
+                        wd = dict(cast(Mapping[str, Any], weather_data))
+                        best_months_raw = wd.get("best_months", [])
+                        months_list_typed = cast(
+                            list[Any],
+                            (
+                                best_months_raw
+                                if isinstance(best_months_raw, list)
+                                else []
+                            ),
+                        )
+                        best_months: list[str] = [str(m) for m in months_list_typed]
                         destination.weather = DestinationWeather(
-                            season=weather_data.get("season", "Unknown"),
-                            temperature_high_c=weather_data.get("temp_high_c", 0),
-                            temperature_low_c=weather_data.get("temp_low_c", 0),
+                            season=str(wd.get("season", "Unknown")),
+                            temperature_high_c=float(wd.get("temp_high_c", 0) or 0),
+                            temperature_low_c=float(wd.get("temp_low_c", 0) or 0),
                             temperature_high_f=None,
                             temperature_low_f=None,
-                            precipitation_mm=weather_data.get("precipitation", 0),
-                            humidity_percent=weather_data.get("humidity", 0),
-                            conditions=weather_data.get("conditions", "Unknown"),
+                            precipitation_mm=float(wd.get("precipitation", 0) or 0),
+                            humidity_percent=float(wd.get("humidity", 0) or 0),
+                            conditions=str(wd.get("conditions", "Unknown")),
                             climate_type=ClimateType(
-                                weather_data.get("climate_type", "temperate")
+                                str(wd.get("climate_type", "temperate"))
                             ),
-                            best_months=weather_data.get("best_months", []),
+                            best_months=best_months,
                         )
                 except CoreExternalAPIError as e:
                     logger.warning(
@@ -874,19 +941,26 @@ class DestinationService:
                 )
 
                 if weather_data:
+                    wd = dict(cast(Mapping[str, Any], weather_data))
+                    best_months_raw = wd.get("best_months", [])
+                    months_list_typed = cast(
+                        list[Any],
+                        best_months_raw if isinstance(best_months_raw, list) else [],
+                    )
+                    best_months: list[str] = [str(m) for m in months_list_typed]
                     destination.weather = DestinationWeather(
-                        season=weather_data.get("season", "Unknown"),
-                        temperature_high_c=weather_data.get("temp_high_c", 0),
-                        temperature_low_c=weather_data.get("temp_low_c", 0),
+                        season=str(wd.get("season", "Unknown")),
+                        temperature_high_c=float(wd.get("temp_high_c", 0) or 0),
+                        temperature_low_c=float(wd.get("temp_low_c", 0) or 0),
                         temperature_high_f=None,
                         temperature_low_f=None,
-                        precipitation_mm=weather_data.get("precipitation", 0),
-                        humidity_percent=weather_data.get("humidity", 0),
-                        conditions=weather_data.get("conditions", "Unknown"),
+                        precipitation_mm=float(wd.get("precipitation", 0) or 0),
+                        humidity_percent=float(wd.get("humidity", 0) or 0),
+                        conditions=str(wd.get("conditions", "Unknown")),
                         climate_type=ClimateType(
-                            weather_data.get("climate_type", "temperate")
+                            str(wd.get("climate_type", "temperate"))
                         ),
-                        best_months=weather_data.get("best_months", []),
+                        best_months=best_months,
                     )
             except CoreExternalAPIError as e:
                 logger.warning(
@@ -959,11 +1033,8 @@ class DestinationService:
 
     async def _get_user_travel_preferences(self, user_id: str) -> dict[str, Any]:
         """Get user travel preferences from database or defaults."""
-        try:
-            prefs = await self.db.get_user_travel_preferences(user_id)  # type: ignore
-            return prefs or {}
-        except CoreDatabaseError:
-            return {}
+        prefs = await self._get_entity_by_id("user_travel_preferences", user_id)
+        return prefs or {}
 
     async def _generate_recommendations(
         self,
@@ -1064,46 +1135,22 @@ class DestinationService:
             },
         ]
 
-        return [
-            DestinationRecommendation(
-                destination=rec_data["destination"],
-                match_score=rec_data["match_score"],
-                reasons=rec_data["reasons"],
-                best_for=rec_data["best_for"],
-                estimated_cost=None,
+        recs: list[DestinationRecommendation] = []
+        for rec_data in mock_recommendations[: request.limit]:
+            dest = cast(Destination, rec_data["destination"])  # type: ignore[index]
+            score = float(rec_data["match_score"])  # type: ignore[index]
+            reasons = cast(list[str], rec_data["reasons"])  # type: ignore[index]
+            best_for = cast(list[str], rec_data["best_for"])  # type: ignore[index]
+            recs.append(
+                DestinationRecommendation(
+                    destination=dest,
+                    match_score=score,
+                    reasons=reasons,
+                    best_for=best_for,
+                    estimated_cost=None,
+                )
             )
-            for rec_data in mock_recommendations[: request.limit]
-        ]
-
-    def _generate_search_cache_key(
-        self, search_request: DestinationSearchRequest
-    ) -> str:
-        """Generate cache key for search request."""
-        import hashlib
-
-        key_data = (
-            f"{search_request.query}:{search_request.categories}:"
-            f"{search_request.min_safety_rating}:{search_request.limit}"
-        )
-
-        return hashlib.sha256(key_data.encode()).hexdigest()[:16]
-
-    def _get_cached_search(self, cache_key: str) -> dict[str, Any] | None:
-        """Get cached search results if still valid."""
-        if cache_key in self._search_cache:
-            result, timestamp = self._search_cache[cache_key]
-            import time
-
-            if time.time() - timestamp < self.cache_ttl:
-                return result
-            del self._search_cache[cache_key]
-        return None
-
-    def _cache_search_results(self, cache_key: str, result: dict[str, Any]) -> None:
-        """Cache search results."""
-        import time
-
-        self._search_cache[cache_key] = (result, time.time())
+        return recs
 
     def _get_cached_destination(self, cache_key: str) -> Destination | None:
         """Get cached destination if still valid."""
@@ -1129,55 +1176,47 @@ class DestinationService:
         destinations: list[Destination],
     ) -> None:
         """Store search history in database."""
-        try:
-            search_data = {
-                "id": search_id,
-                "query": search_request.query,
-                "categories": [cat.value for cat in search_request.categories]
-                if search_request.categories
-                else [],
-                "destinations_count": len(destinations),
-                "search_timestamp": datetime.now(UTC).isoformat(),
-            }
+        search_data = {
+            "id": search_id,
+            "query": search_request.query,
+            "categories": [cat.value for cat in search_request.categories]
+            if search_request.categories
+            else [],
+            "destinations_count": len(destinations),
+            "search_timestamp": datetime.now(UTC).isoformat(),
+        }
 
-            await self.db.store_destination_search(search_data)  # type: ignore
-
-        except CoreDatabaseError as e:
+        result = await self._store_entity("destination_search", search_data)
+        if result is None:
             logger.warning(
                 "Failed to store search history",
-                extra={"search_id": search_id, "error": str(e)},
+                extra={"search_id": search_id},
             )
 
     async def _store_destination(self, destination: Destination) -> None:
         """Store destination in database."""
-        try:
-            destination_data = destination.model_dump()
-            destination_data["stored_at"] = datetime.now(UTC).isoformat()
-
-            await self.db.store_destination(destination_data)  # type: ignore
-
-        except CoreDatabaseError as e:
+        destination_data = destination.model_dump()
+        destination_data["stored_at"] = datetime.now(UTC).isoformat()
+        result = await self._store_entity("destination", destination_data)
+        if result is None:
             logger.warning(
                 "Failed to store destination",
-                extra={"destination_id": destination.id, "error": str(e)},
+                extra={"destination_id": destination.id},
             )
 
     async def _store_saved_destination(
         self, saved_destination: SavedDestination
     ) -> None:
         """Store saved destination in database."""
-        try:
-            saved_data = saved_destination.model_dump()
-            saved_data["created_at"] = datetime.now(UTC).isoformat()
+        saved_data = saved_destination.model_dump()
+        saved_data["created_at"] = datetime.now(UTC).isoformat()
 
-            await self.db.store_saved_destination(saved_data)  # type: ignore
-
-        except Exception as e:
+        result = await self._store_entity("saved_destination", saved_data)
+        if result is None:
             logger.exception(
                 "Failed to store saved destination",
-                extra={"saved_id": saved_destination.id, "error": str(e)},
+                extra={"saved_id": saved_destination.id},
             )
-            raise
 
 
 # Dependency function for FastAPI
@@ -1187,4 +1226,7 @@ async def get_destination_service() -> DestinationService:
     Returns:
         DestinationService instance
     """
-    return DestinationService()
+    from tripsage_core.services.infrastructure import get_database_service
+
+    db = await get_database_service()
+    return DestinationService(database_service=db)

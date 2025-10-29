@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from types import TracebackType
 from typing import Any, cast
 
 import googlemaps
@@ -47,7 +48,6 @@ from tripsage_core.models.schemas_common.geographic import (
     Route,
 )
 from tripsage_core.services.external_apis.base_service import sanitize_response
-from tripsage_core.utils.outbound import AsyncApiClient
 
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class GoogleMapsServiceError(CoreAPIError):
         self.original_error = original_error
 
 
-class GoogleMapsService(AsyncApiClient):
+class GoogleMapsService:
     """Google Maps API service with typed results and async support."""
 
     def __init__(self, settings: Settings | None = None) -> None:
@@ -76,10 +76,36 @@ class GoogleMapsService(AsyncApiClient):
         Args:
             settings: Core application settings.
         """
-        super().__init__()
         self.settings = settings or get_settings()
         self._client: googlemaps.Client | None = None
         self._connected = False
+
+    async def connect(self) -> None:
+        """Connect the service (lazy initialization)."""
+        self._connected = True
+
+    async def disconnect(self) -> None:
+        """Disconnect the service."""
+        self._client = None
+        self._connected = False
+
+    async def close(self) -> None:
+        """Close the service."""
+        await self.disconnect()
+
+    async def __aenter__(self) -> GoogleMapsService:
+        """Enter async context manager."""
+        await self.connect()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        """Exit async context manager."""
+        await self.close()
 
     @property
     def client(self) -> googlemaps.Client:
@@ -121,17 +147,6 @@ class GoogleMapsService(AsyncApiClient):
             logger.info("Initialized Google Maps client")
 
         return self._client
-
-    async def connect(self) -> None:
-        """Initialize the Google Maps client."""
-        # The client property handles initialization
-        _ = self.client
-
-    async def disconnect(self) -> None:
-        """Clean up resources."""
-        self._client = None
-        self._connected = False
-        logger.info("Google Maps service disconnected")
 
     async def ensure_connected(self) -> None:
         """Ensure service is connected."""
@@ -558,10 +573,6 @@ class GoogleMapsService(AsyncApiClient):
         except Exception:
             logger.exception("Google Maps API health check failed")
             return False
-
-    async def close(self) -> None:
-        """Close the service and clean up resources."""
-        await self.disconnect()
 
     # DI: Construct GoogleMapsService in composition root; no module singletons.
 

@@ -9,7 +9,7 @@ for all authentication events.
 import logging
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from fastapi import Request, Response
 from pydantic import BaseModel, ConfigDict, Field
@@ -450,17 +450,23 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     if service in [e.value for e in ServiceType]
                     else ServiceType.OPENAI
                 )
-                validation_result = await self.key_service.validate_api_key(
+                validate = cast(
+                    Callable[..., Awaitable[Any]], self.key_service.validate_api_key
+                )
+                validation_result = await validate(
                     service=service_type, key_value=full_key
                 )
 
-                if not validation_result.is_valid:
+                if not cast(bool | None, getattr(validation_result, "is_valid", None)):
                     raise KeyValidationError(
-                        validation_result.message or "Invalid API key"
+                        cast(str | None, getattr(validation_result, "message", None))
+                        or "Invalid API key"
                     )
 
                 # Retrieve key metadata if available
-                key_metadata = validation_result.details
+                key_metadata = cast(
+                    dict[str, Any], getattr(validation_result, "details", {}) or {}
+                )
 
                 # Create principal for validated API key
                 return Principal(

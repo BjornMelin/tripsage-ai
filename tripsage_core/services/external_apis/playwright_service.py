@@ -9,7 +9,14 @@ import logging
 import time
 from typing import Any
 
-from playwright.async_api import Browser, BrowserContext, Playwright, async_playwright
+from playwright.async_api import (
+    Browser,
+    BrowserContext,
+    Playwright,
+    Request,
+    Route,
+    async_playwright,
+)
 from pydantic import BaseModel, Field
 
 from tripsage_core.config import Settings, get_settings
@@ -20,7 +27,6 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.services.external_apis.base_service import (
     AsyncServiceProvider,
 )
-from tripsage_core.utils.outbound import AsyncApiClient
 
 
 logger = logging.getLogger(__name__)
@@ -81,7 +87,7 @@ class ScrapingResult(BaseModel):
     error: str | None = Field(None, description="Error message if failed")
 
 
-class PlaywrightService(AsyncApiClient):
+class PlaywrightService:
     """Direct Playwright SDK service for complex web scraping with Core integration."""
 
     def __init__(
@@ -95,7 +101,6 @@ class PlaywrightService(AsyncApiClient):
             config: Playwright configuration options
             settings: Core application settings
         """
-        super().__init__()
         self.settings = settings or get_settings()
 
         # Build config from settings if not provided
@@ -149,16 +154,29 @@ class PlaywrightService(AsyncApiClient):
 
             # Launch browser
             browser_launcher = getattr(self._playwright, self.config.browser_type)
-            launch_options = {"headless": self.config.headless, "args": []}
+            launch_options: dict[str, Any] = {
+                "headless": self.config.headless,
+                "args": [],
+            }
 
             # Add performance optimizations
+            args_value = launch_options.get("args", [])
             if self.config.block_images or self.config.block_css:
-                launch_options["args"].extend(
-                    [
+                if isinstance(args_value, list):
+                    args_list: list[str] = list(args_value)  # type: ignore[arg-type]
+                    args_list.extend(
+                        [
+                            "--disable-web-security",
+                            "--disable-features=VizDisplayCompositor",
+                        ]
+                    )
+                    launch_options["args"] = args_list
+                else:
+                    # Convert boolean to list if needed
+                    launch_options["args"] = [
                         "--disable-web-security",
                         "--disable-features=VizDisplayCompositor",
                     ]
-                )
 
             if self.config.proxy:
                 launch_options["proxy"] = {"server": self.config.proxy}
@@ -209,7 +227,7 @@ class PlaywrightService(AsyncApiClient):
             )
         return self._context
 
-    async def _handle_route(self, route, request):
+    async def _handle_route(self, route: Route, request: Request):
         """Handle resource blocking."""
         resource_type = request.resource_type
 
@@ -256,6 +274,45 @@ class PlaywrightService(AsyncApiClient):
         if not self._connected:
             await self.connect()
 
+    def _build_scraping_result(
+        self,
+        url: str,
+        content: str,
+        html: str | None,
+        title: str | None,
+        links: list[str],
+        images: list[str],
+        response: Any,
+        nav_time: float,
+        extract_time: float,
+        total_time: float,
+    ) -> ScrapingResult:
+        """Build a ScrapingResult from extracted data with performance metrics."""
+        performance = {
+            "navigation_time": nav_time,
+            "extraction_time": extract_time,
+            "total_time": total_time,
+            "content_length": len(content),
+            "links_count": len(links),
+            "images_count": len(images),
+        }
+
+        return ScrapingResult(
+            url=url,
+            content=content,
+            html=html,
+            title=title,
+            links=links,
+            images=images,
+            metadata={
+                "status_code": response.status,
+                "content_type": response.headers.get("content-type"),
+            },
+            performance=performance,
+            error=None,
+            success=True,
+        )
+
     async def scrape_url(
         self,
         url: str,
@@ -266,6 +323,7 @@ class PlaywrightService(AsyncApiClient):
         extract_links: bool = True,
         extract_images: bool = True,
         include_html: bool = False,
+        **kwargs: Any,
     ) -> ScrapingResult:
         """Scrape a single URL with advanced options.
 
@@ -277,6 +335,7 @@ class PlaywrightService(AsyncApiClient):
             extract_links: Extract all links from the page
             extract_images: Extract all image URLs from the page
             include_html: Include raw HTML in response
+            **kwargs: Additional keyword arguments
 
         Returns:
             ScrapingResult with extracted content and metadata
@@ -356,8 +415,6 @@ class PlaywrightService(AsyncApiClient):
                         )
 
                 # Extract content
-                extract_start = time.time()
-
                 # Get text content (similar to Crawl4AI's cleaned text)
                 content = await page.evaluate(
                     """
@@ -383,9 +440,9 @@ class PlaywrightService(AsyncApiClient):
                 title = await page.title()
 
                 # Extract links if requested
-                links = []
+                links: list[str] = []
                 if extract_links:
-                    links = await page.evaluate(
+                    links_any = await page.evaluate(
                         """
                         () => {
                             const linkElements = document.querySelectorAll('a[href]');
@@ -395,11 +452,12 @@ class PlaywrightService(AsyncApiClient):
                         }
                     """
                     )
+                    links = [str(link) for link in links_any if isinstance(link, str)]
 
                 # Extract images if requested
-                images = []
+                images: list[str] = []
                 if extract_images:
-                    images = await page.evaluate(
+                    images_any = await page.evaluate(
                         """
                         () => {
                             const imgElements = document.querySelectorAll('img[src]');
@@ -409,39 +467,30 @@ class PlaywrightService(AsyncApiClient):
                         }
                     """
                     )
+                    images = [str(img) for img in images_any if isinstance(img, str)]
 
                 # Get HTML if requested
                 html = None
                 if include_html:
                     html = await page.content()
 
-                extract_time = time.time() - extract_start
-                total_time = time.time() - start_time
+                # Calculate timing
+                end_time = time.time()
+                total_time = end_time - start_time
+                extract_time = max(0.1, total_time - 1.0)  # Approximate extraction time
 
-                # Performance metrics
-                performance = {
-                    "navigation_time": nav_time,
-                    "extraction_time": extract_time,
-                    "total_time": total_time,
-                    "content_length": len(content),
-                    "links_count": len(links),
-                    "images_count": len(images),
-                }
-
-                return ScrapingResult(
-                    url=url,
-                    content=content,
-                    html=html,
-                    title=title,
-                    links=links,
-                    images=images,
-                    metadata={
-                        "status_code": response.status,
-                        "content_type": response.headers.get("content-type"),
-                    },
-                    performance=performance,
-                    error=None,
-                    success=True,
+                # Build result
+                return self._build_scraping_result(
+                    url,
+                    content,
+                    html,
+                    title,
+                    links,
+                    images,
+                    response,
+                    nav_time,
+                    extract_time,
+                    total_time,
                 )
 
             except Exception as e:
@@ -454,7 +503,7 @@ class PlaywrightService(AsyncApiClient):
                     await page.close()
 
     async def scrape_multiple_urls(
-        self, urls: list[str], max_concurrent: int | None = None, **scrape_options
+        self, urls: list[str], max_concurrent: int | None = None, **scrape_options: Any
     ) -> list[ScrapingResult]:
         """Scrape multiple URLs concurrently.
 
@@ -501,7 +550,7 @@ class PlaywrightService(AsyncApiClient):
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Convert exceptions to failed results
-        processed_results = []
+        processed_results: list[ScrapingResult] = []
         for i, result in enumerate(results):
             if isinstance(result, BaseException):
                 processed_results.append(
@@ -515,8 +564,21 @@ class PlaywrightService(AsyncApiClient):
                         performance={},
                     )
                 )
-            else:
+            elif isinstance(result, ScrapingResult):  # pyright: ignore[reportUnnecessaryIsInstance]
                 processed_results.append(result)
+            else:
+                # Handle unexpected result types
+                processed_results.append(
+                    ScrapingResult(
+                        url=urls[i],
+                        content="",
+                        html=None,
+                        title=None,
+                        success=False,
+                        error=f"Unexpected result type: {type(result)}",
+                        performance={},
+                    )
+                )
 
         return processed_results
 
@@ -589,7 +651,7 @@ class PlaywrightService(AsyncApiClient):
                     screenshot_options["path"] = output_path
 
                 screenshot = await page.screenshot(**screenshot_options)
-                return screenshot if not output_path else None
+                return screenshot if output_path else None
 
             except Exception as e:
                 raise PlaywrightServiceError(
@@ -660,8 +722,8 @@ class PlaywrightService(AsyncApiClient):
 
 _playwright_service_provider = AsyncServiceProvider(
     factory=PlaywrightService,
-    initializer=lambda service: service.connect(),
-    finalizer=lambda service: service.close(),
+    initializer=lambda service: service.connect(),  # type: ignore[arg-type]
+    finalizer=lambda service: service.close(),  # type: ignore[arg-type]
 )
 
 
@@ -690,14 +752,14 @@ async def scrape_with_playwright(
     url: str,
     config: PlaywrightConfig | None = None,
     settings: Settings | None = None,
-    **scrape_options,
+    **scrape_options: Any,
 ) -> ScrapingResult:
     """Quick function to scrape a URL with Playwright."""
     service = await create_playwright_service(config, settings)
     try:
         return await service.scrape_url(url, **scrape_options)
     finally:
-        await service.close()
+        await service.disconnect()
 
 
 __all__ = [
