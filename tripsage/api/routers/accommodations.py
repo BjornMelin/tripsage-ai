@@ -262,7 +262,7 @@ async def list_saved_accommodations(
             listing = await get_details2(getattr(booking, "listing_id", ""), user_id)
             if listing:
                 bid_trip = getattr(booking, "trip_id", None)
-                trip_uuid: UUID | None = (UUID(bid_trip) if bid_trip else trip_id)
+                trip_uuid: UUID | None = UUID(bid_trip) if bid_trip else trip_id
                 if trip_uuid is None:
                     logger.warning(
                         "Skipping saved accommodation without a trip identifier",

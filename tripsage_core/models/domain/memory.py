@@ -5,7 +5,7 @@ and session management entities. These models represent the essential memory
 data structures independent of storage implementation or API specifics.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import Field
@@ -98,7 +98,7 @@ class TravelMemory(TripSageDomainModel):
     )
     tags: list[str] | None = Field([], description="Memory tags")
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Creation timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Creation timestamp"
     )
     updated_at: datetime | None = Field(None, description="Last update timestamp")
     expires_at: datetime | None = Field(None, description="Expiration timestamp")
@@ -116,7 +116,7 @@ class SessionMemory(TripSageDomainModel):
     memory_type: str = Field(..., description="Memory type")
     content: dict[str, Any] = Field(..., description="Memory content")
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Creation timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Creation timestamp"
     )
     expires_at: datetime | None = Field(None, description="Expiration timestamp")
 

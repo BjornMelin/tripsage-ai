@@ -4,7 +4,7 @@ This module contains common base models, response patterns, and shared
 schemas used across API endpoints and services.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, TypeVar
 
 from pydantic import Field
@@ -22,7 +22,7 @@ class BaseResponse(TripSageModel):
     success: bool = Field(description="Whether the request was successful")
     message: str | None = Field(None, description="Human-readable message")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="Response timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Response timestamp"
     )
 
 
@@ -79,7 +79,9 @@ class ValidationErrorDetail(TripSageModel):
 class ValidationErrorResponse(ErrorResponse):
     """Validation error response with field details."""
 
-    error_code: str = Field("VALIDATION_ERROR", description="Always VALIDATION_ERROR")
+    error_code: str | None = Field(
+        default="VALIDATION_ERROR", description="Always VALIDATION_ERROR"
+    )
     validation_errors: list[ValidationErrorDetail] = Field(
         description="Field validation errors"
     )
