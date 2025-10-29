@@ -14,13 +14,15 @@ from __future__ import annotations
 import asyncio
 import logging
 import statistics
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
 
 from tripsage_core.services.business.api_key_service import (
+    ApiKeyDatabaseProtocol,
     ApiKeyService,
+    ApiValidationResult,
     ServiceHealthStatus,
     ServiceType,
 )
@@ -148,8 +150,11 @@ class DashboardService:  # pylint: disable=too-many-instance-attributes
         # Initialize API key service for health checks and validation when possible
         self.api_key_service: ApiKeyService | None = None
         if database_service is not None:
+            # DatabaseService conforms structurally to ApiKeyDatabaseProtocol
             self.api_key_service = ApiKeyService(
-                db=database_service, cache=cache_service, settings=settings
+                db=cast(ApiKeyDatabaseProtocol, database_service),
+                cache=cache_service,
+                settings=settings,
             )
 
         # Active alerts storage (in production, this would be in database/cache)
@@ -347,7 +352,13 @@ class DashboardService:  # pylint: disable=too-many-instance-attributes
                 return self._get_default_service_analytics()
 
             # Get health checks for all services
-            health_checks = await self.api_key_service.check_all_services_health()
+            checks_awaitable = cast(
+                Awaitable[dict[ServiceType, ApiValidationResult]],
+                self.api_key_service.check_all_services_health(),
+            )
+            health_checks: dict[
+                ServiceType, ApiValidationResult
+            ] = await checks_awaitable
 
             # Single query for all usage logs in time range
             end_time = datetime.now(UTC)

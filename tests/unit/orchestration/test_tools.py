@@ -84,17 +84,16 @@ class TestTools:
         assert parsed_result["flights"][0]["airline"] == "Delta"
 
     @pytest.mark.asyncio
-    @patch("tripsage.orchestration.tools.tools._get_mcp_service")
-    async def test_search_accommodations_tool(self, mock_get_mcp_service: Any):
+    @patch("tripsage.orchestration.tools.tools._default_mcp_service")
+    async def test_search_accommodations_tool(self, mock_mcp_service: Any):
         """Test the search_accommodations tool function."""
-        mock_mcp_service = MagicMock()
-        mock_get_mcp_service.return_value = mock_mcp_service
+        mock_mcp_service.invoke = AsyncMock()
         mock_result = {
             "accommodations": [
                 {"name": "Hotel California", "price": 150, "rating": 4.5}
             ]
         }
-        mock_mcp_service.invoke = AsyncMock(return_value=mock_result)
+        mock_mcp_service.invoke.return_value = mock_result
 
         result = await cast(Any, search_accommodations).ainvoke(
             {
@@ -167,16 +166,14 @@ class TestTools:
     @pytest.mark.asyncio
     @patch("tripsage.orchestration.tools.tools._search_user_memories")
     @patch("tripsage.orchestration.tools.tools._add_conversation_memory")
-    @patch("tripsage.orchestration.tools.tools._get_mcp_service")
+    @patch("tripsage.orchestration.tools.tools._default_mcp_service")
     async def test_memory_tools(
         self,
-        mock_get_mcp_service: Any,
+        mock_mcp_service: Any,
         mock_add_conversation_memory: Any,
         mock_search_user_memories: Any,
     ) -> None:
         """Test the memory add and search tools."""
-        mock_mcp_service = MagicMock()
-        mock_get_mcp_service.return_value = mock_mcp_service
         # Test add_memory
         mock_mcp_service.health_check = AsyncMock(return_value={"status": "healthy"})
         mock_add_conversation_memory.return_value = {

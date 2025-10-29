@@ -21,7 +21,6 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.services.external_apis.base_service import (
     sanitize_response,
 )
-from tripsage_core.utils.outbound import AsyncApiClient
 
 
 class WebCrawlServiceError(CoreAPIError):
@@ -94,7 +93,7 @@ class WebCrawlServiceConfig:
     max_concurrent_crawls: int
 
 
-class WebCrawlService(AsyncApiClient):
+class WebCrawlService:
     """Direct Crawl4AI SDK service for web crawling operations with Core integration.
 
     This service provides high-performance web crawling capabilities using
@@ -107,7 +106,6 @@ class WebCrawlService(AsyncApiClient):
         Args:
             settings: Core application settings
         """
-        super().__init__()
         self.settings = settings or get_settings()
         self._connected = False
 

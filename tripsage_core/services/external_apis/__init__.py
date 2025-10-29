@@ -1,13 +1,14 @@
 """External API client services with TripSage Core integration.
 
-This module provides direct SDK/API integrations for external services,
-replacing MCP wrappers with high-performance native implementations.
+This module provides direct SDK/API integrations for external services.
+Each service manages its own specific client requirements while providing
+consistent async lifecycle, error handling, and type safety.
 """
 
 from .calendar_service import (
     GoogleCalendarService,
-    close_calendar_service,
-    get_calendar_service,
+    create_calendar_service,
+    create_calendar_service_with_token,
 )
 from .document_analyzer import (
     DocumentAnalyzer,
@@ -18,6 +19,7 @@ from .google_maps_service import GoogleMapsService
 from .playwright_service import (
     PlaywrightService,
     close_playwright_service,
+    create_playwright_service,
     get_playwright_service,
 )
 from .time_service import TimeService, close_time_service, get_time_service
@@ -29,21 +31,19 @@ from .webcrawl_service import (
 
 __all__ = [
     "DocumentAnalyzer",
-    # Service classes
     "GoogleCalendarService",
     "GoogleMapsService",
     "PlaywrightService",
     "TimeService",
     "WeatherService",
     "WebCrawlService",
-    "close_calendar_service",
     "close_document_analyzer",
-    # Service closers
     "close_playwright_service",
     "close_time_service",
-    "get_calendar_service",
+    "create_calendar_service",
+    "create_calendar_service_with_token",
+    "create_playwright_service",
     "get_document_analyzer",
-    # Global service getters
     "get_playwright_service",
     "get_time_service",
 ]

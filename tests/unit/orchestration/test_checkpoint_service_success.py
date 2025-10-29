@@ -25,7 +25,7 @@ def _patch_settings(url: str = "postgresql://user:pass@host:5432/db"):
 
 @pytest.mark.asyncio
 async def test_async_checkpointer_success_path() -> None:
-    """Async saver should be constructed and setup() called."""
+    """Async saver stub is built via importlib; setup() awaited."""
     svc = SupabaseCheckpointService()
 
     class _AsyncSaver:
@@ -56,7 +56,7 @@ async def test_async_checkpointer_success_path() -> None:
 
 
 def test_sync_checkpointer_success_path() -> None:
-    """Sync saver should be constructed and setup() called."""
+    """Sync saver stub is built via importlib; setup() called once."""
     svc = SupabaseCheckpointService()
 
     class _SyncSaver:
