@@ -17,6 +17,24 @@ logger = logging.getLogger(__name__)
 SUPPORTED_METHODS: Final[tuple[str, ...]] = ("search_listings", "get_listing_details")
 
 
+def _coerce_int_param(value: Any, default: int) -> int:
+    """Convert incoming parameter to integer with a safe default."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return default
+    return default
+
+
 class AirbnbMCP:
     """Concrete MCP facade that currently proxies Airbnb operations."""
 
@@ -60,24 +78,29 @@ class AirbnbMCP:
                 return await client.search_accommodations(**search_payload)
 
             if method_name == "get_listing_details":
-                listing_id = params.get("listing_id") or params.get("id")
-                if not listing_id:
+                raw_listing_id = params.get("listing_id") or params.get("id")
+                if raw_listing_id is None:
                     raise CoreServiceError(
                         message="listing_id is required for get_listing_details",
                         service="mcp",
                         details={"params": params},
                     )
 
-                lookup_kwargs = {
-                    "listing_id": listing_id,
-                    "checkin": params.get("checkin") or params.get("check_in"),
-                    "checkout": params.get("checkout") or params.get("check_out"),
-                    "adults": params.get("adults", 1),
-                    "children": params.get("children", 0),
-                    "infants": params.get("infants", 0),
-                    "pets": params.get("pets", 0),
-                }
-                return await client.get_listing_details(**lookup_kwargs)
+                listing_id = str(raw_listing_id)
+                checkin_raw = params.get("checkin") or params.get("check_in")
+                checkout_raw = params.get("checkout") or params.get("check_out")
+                checkin = str(checkin_raw) if checkin_raw is not None else None
+                checkout = str(checkout_raw) if checkout_raw is not None else None
+
+                return await client.get_listing_details(
+                    listing_id=listing_id,
+                    checkin=checkin,
+                    checkout=checkout,
+                    adults=_coerce_int_param(params.get("adults"), 1),
+                    children=_coerce_int_param(params.get("children"), 0),
+                    infants=_coerce_int_param(params.get("infants"), 0),
+                    pets=_coerce_int_param(params.get("pets"), 0),
+                )
 
         except CoreServiceError:
             raise

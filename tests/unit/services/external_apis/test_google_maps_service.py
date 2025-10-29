@@ -61,7 +61,7 @@ class TestGoogleMapsService:
         """Test client is configured with API key."""
         call_args = mock_googlemaps.Client.call_args  # type: ignore[assignment]
         assert call_args is not None
-        assert "api_key" in call_args.kwargs  # type: ignore[index]
+        assert "key" in call_args.kwargs  # type: ignore[index]
 
     @pytest.mark.asyncio
     async def test_geocode_success(self, mock_googlemaps: Any, service: Any):

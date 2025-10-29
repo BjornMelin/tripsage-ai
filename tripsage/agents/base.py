@@ -9,6 +9,7 @@ unavailable.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import uuid4
@@ -266,7 +267,7 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
     async def _summarize_conversation(self) -> str:
         """Generate a concise summary of the latest conversation window."""
         recent_turns = "\n".join(
-            f"{msg['role']}: {msg['content']}"
+            f"{msg.get('role')}: {self._stringify_content(msg.get('content'))}"
             for msg in self.messages_history[-self._summary_interval :]
             if "content" in msg
         )
@@ -290,7 +291,7 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
         prompt_messages.append(HumanMessage(content=user_input))
 
         response = await self.llm.ainvoke(prompt_messages)
-        return cast(str, response.content)
+        return self._stringify_content(getattr(response, "content", response))
 
     def _build_conversation_prompt(
         self,
@@ -301,12 +302,32 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
         ]
         for message in self.messages_history:
             role = message.get("role")
-            content = cast(str, message.get("content", ""))
+            content = self._stringify_content(message.get("content"))
+            if not content:
+                continue
             if role == "user":
                 messages.append(HumanMessage(content=content))
             elif role == "assistant":
                 messages.append(AIMessage(content=content))
         return messages
+
+    def _stringify_content(self, value: Any) -> str:
+        """Convert structured content payloads into plain text."""
+        if isinstance(value, str):
+            return value
+        if value is None:
+            return ""
+        if isinstance(value, (list, tuple)):
+            sequence_value = cast(Sequence[Any], value)
+            parts = [self._stringify_content(item) for item in sequence_value]
+            return "\n".join(parts)
+        if isinstance(value, dict):
+            dict_value = cast(dict[Any, Any], value)
+            parts: list[str] = []
+            for key, item in dict_value.items():
+                parts.append(f"{key!s}: {self._stringify_content(item)}")
+            return "\n".join(parts)
+        return str(value)
 
     def _create_llm(self) -> BaseChatModel:
         """Instantiate the default chat model."""

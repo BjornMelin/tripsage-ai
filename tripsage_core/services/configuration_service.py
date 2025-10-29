@@ -1,10 +1,12 @@
 """Configuration Service for dynamic agent configuration management (Supabase-only)."""
 
+from collections.abc import Callable
 from functools import lru_cache
-from typing import Any
+from typing import Any, cast
 
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
+from tripsage_core.types import JSONObject
 from tripsage_core.utils.cache_utils import (
     delete_cache,
     generate_cache_key,
@@ -15,6 +17,41 @@ from tripsage_core.utils.logging_utils import get_logger
 
 
 logger = get_logger(__name__)
+
+AgentConfig = dict[str, Any]
+
+
+def _coerce_optional_float(value: Any, *, default: float | None = None) -> float | None:
+    """Convert arbitrary value to float when possible."""
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return default
+    return default
+
+
+def _coerce_optional_int(value: Any) -> int | None:
+    """Convert arbitrary value to int when possible."""
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _coerce_optional_str(value: Any) -> str | None:
+    """Convert arbitrary value to string when possible."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return str(value)
 
 
 class ConfigurationService:
@@ -27,8 +64,11 @@ class ConfigurationService:
         self._db = DatabaseService()
 
     async def get_agent_config(
-        self, agent_type: str, environment: str | None = None, **overrides
-    ) -> dict[str, Any]:
+        self,
+        agent_type: str,
+        environment: str | None = None,
+        **overrides: Any,
+    ) -> AgentConfig:
         """Get configuration for an agent with caching and fallback logic.
 
         Priority order:
@@ -44,32 +84,26 @@ class ConfigurationService:
         cache_key_str = generate_cache_key(
             "agent_config", f"{agent_type}:{environment}"
         )
-        cached_config = await get_cache(cache_key_str)
+        cached_config = cast(AgentConfig | None, await get_cache(cache_key_str))
         if cached_config and not overrides:
             logger.debug("Using cached config for %s in %s", agent_type, environment)
             return cached_config
+        runtime_overrides: AgentConfig = dict(overrides)
 
         try:
-            # Get from database
             db_config = await self._get_agent_config_from_db(agent_type, environment)
 
             if db_config:
-                # Merge with runtime overrides
-                final_config = {**db_config, **overrides}
-
-                # Cache the database result (without overrides)
+                final_config: AgentConfig = {**db_config, **runtime_overrides}
                 await set_cache(cache_key_str, db_config, ttl=self._cache_ttl)
 
                 logger.debug(
                     "Using database config for %s in %s", agent_type, environment
                 )
                 return final_config
-            # Fallback to settings-based config
-            # Fallback to static settings, if available
-            default_fn = getattr(
-                self.settings, "default_agent_config", lambda *_a, **_k: {}
-            )  # type: ignore[attr-defined]
-            fallback_config = default_fn(agent_type, **overrides)
+
+            default_fn = self._resolve_default_config_fn()
+            fallback_config = default_fn(agent_type, **runtime_overrides)
             logger.warning(
                 "No database config found for %s, using fallback", agent_type
             )
@@ -77,10 +111,15 @@ class ConfigurationService:
 
         except Exception:
             logger.exception("Error getting agent config from database")
-            # Fallback to settings-based config
-            return getattr(self.settings, "default_agent_config", lambda *_a, **_k: {})(  # type: ignore[attr-defined]
-                agent_type, **overrides
-            )
+            default_fn = self._resolve_default_config_fn()
+            return default_fn(agent_type, **runtime_overrides)
+
+    def _resolve_default_config_fn(self) -> Callable[..., AgentConfig]:
+        """Resolve the default configuration factory from settings."""
+        default_fn = getattr(self.settings, "default_agent_config", None)
+        if callable(default_fn):
+            return cast(Callable[..., AgentConfig], default_fn)
+        return lambda *_args, **_kwargs: {}
 
     async def _get_agent_config_from_db(
         self, agent_type: str, environment: str
@@ -100,18 +139,24 @@ class ConfigurationService:
         if not rows:
             return None
         row = rows[0]
-        return {
-            "model": row.get("model"),
-            "temperature": float(row.get("temperature", 0.0)),
-            "max_tokens": row.get("max_tokens"),
-            "top_p": float(row.get("top_p", 1.0)),
-            "timeout_seconds": row.get("timeout_seconds"),
-            # type: ignore # pylint: disable=no-member
+        temperature = _coerce_optional_float(row.get("temperature"), default=0.0)
+        top_p = _coerce_optional_float(row.get("top_p"), default=1.0)
+        max_tokens = _coerce_optional_int(row.get("max_tokens"))
+        timeout_seconds = _coerce_optional_int(row.get("timeout_seconds"))
+
+        config: AgentConfig = {
+            "model": _coerce_optional_str(row.get("model")),
+            "temperature": temperature if temperature is not None else 0.0,
+            "max_tokens": max_tokens,
+            "top_p": top_p if top_p is not None else 1.0,
+            "timeout_seconds": timeout_seconds,
+            # pylint: disable=no-member
             "api_key": self.settings.openai_api_key.get_secret_value(),
-            "description": row.get("description"),
+            "description": _coerce_optional_str(row.get("description")),
             "updated_at": row.get("updated_at"),
-            "updated_by": row.get("updated_by"),
+            "updated_by": _coerce_optional_str(row.get("updated_by")),
         }
+        return config
 
     async def update_agent_config(
         self,
@@ -141,38 +186,47 @@ class ConfigurationService:
         await self._db.ensure_connected()
 
         current = await self._get_agent_config_from_db(agent_type, environment)
+        default_fn = self._resolve_default_config_fn()
+        defaults = default_fn(agent_type)
+
         if not current:
-            defaults = getattr(
-                self.settings, "default_agent_config", lambda *_a, **_k: {}
-            )(agent_type)
-            final_config = {**defaults, **config_updates}
-            payload = {
+            final_config: AgentConfig = {**defaults, **config_updates}
+            payload: JSONObject = {
                 "agent_type": agent_type,
-                "temperature": final_config.get("temperature"),
-                "max_tokens": final_config.get("max_tokens"),
-                "top_p": final_config.get("top_p"),
-                "timeout_seconds": final_config.get("timeout_seconds"),
-                "model": final_config.get("model"),
+                "temperature": _coerce_optional_float(final_config.get("temperature")),
+                "max_tokens": _coerce_optional_int(final_config.get("max_tokens")),
+                "top_p": _coerce_optional_float(final_config.get("top_p")),
+                "timeout_seconds": _coerce_optional_int(
+                    final_config.get("timeout_seconds")
+                ),
+                "model": _coerce_optional_str(final_config.get("model")),
                 "environment": environment,
-                "description": description,
+                "description": _coerce_optional_str(description),
                 "created_by": updated_by,
                 "updated_by": updated_by,
                 "is_active": True,
             }
             await self._db.insert("configuration_profiles", payload)
         else:
-            update_fields: dict[str, Any] = {}
-            for field in (
-                "temperature",
-                "max_tokens",
-                "top_p",
-                "timeout_seconds",
-                "model",
-            ):
-                if field in config_updates:
-                    update_fields[field] = config_updates[field]
+            update_fields: JSONObject = {}
+            if "temperature" in config_updates:
+                update_fields["temperature"] = _coerce_optional_float(
+                    config_updates["temperature"]
+                )
+            if "max_tokens" in config_updates:
+                update_fields["max_tokens"] = _coerce_optional_int(
+                    config_updates["max_tokens"]
+                )
+            if "top_p" in config_updates:
+                update_fields["top_p"] = _coerce_optional_float(config_updates["top_p"])
+            if "timeout_seconds" in config_updates:
+                update_fields["timeout_seconds"] = _coerce_optional_int(
+                    config_updates["timeout_seconds"]
+                )
+            if "model" in config_updates:
+                update_fields["model"] = _coerce_optional_str(config_updates["model"])
             if description is not None:
-                update_fields["description"] = description
+                update_fields["description"] = _coerce_optional_str(description)
             update_fields["updated_by"] = updated_by
             if not update_fields:
                 raise ValueError("No valid configuration fields to update")
@@ -232,8 +286,12 @@ class ConfigurationService:
         if environment is None:
             environment = self.settings.environment
 
-        agent_types = ["budget_agent", "destination_research_agent", "itinerary_agent"]
-        configs = {}
+        agent_types = [
+            "budget_agent",
+            "destination_research_agent",
+            "itinerary_agent",
+        ]
+        configs: dict[str, AgentConfig] = {}
 
         for agent_type in agent_types:
             try:
@@ -243,9 +301,7 @@ class ConfigurationService:
             except Exception:
                 logger.exception("Error getting config for %s", agent_type)
                 # Use fallback
-                default_fn = getattr(
-                    self.settings, "default_agent_config", lambda *_a, **_k: {}
-                )  # type: ignore[attr-defined]
+                default_fn = self._resolve_default_config_fn()
                 configs[agent_type] = default_fn(agent_type)
 
         return configs
