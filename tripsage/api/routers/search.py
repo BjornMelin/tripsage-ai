@@ -11,7 +11,7 @@ from tripsage.api.core.dependencies import (
     CurrentPrincipalDep,
     DatabaseDep,
     RequiredPrincipalDep,
-    UnifiedSearchServiceDep,
+    SearchFacadeDep,
     get_principal_id,
 )
 from tripsage.api.schemas.search import (
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 async def unified_search(
     _: Request,
     request: UnifiedSearchRequest,
-    search_service: UnifiedSearchServiceDep,
+    search_service: SearchFacadeDep,
     cache_service: CacheDep,
     principal: CurrentPrincipalDep,
     use_cache: bool = Query(True, description="Whether to use cached results"),
@@ -151,7 +151,7 @@ async def _track_search_analytics(
 @router.get("/suggest", response_model=list[str])
 async def search_suggestions(
     _: Request,
-    search_service: UnifiedSearchServiceDep,
+    search_service: SearchFacadeDep,
     query: str = Query(
         ..., min_length=1, max_length=100, description="Partial search query"
     ),
@@ -292,7 +292,7 @@ async def delete_saved_search(
 async def bulk_search(
     _: Request,
     requests: list[UnifiedSearchRequest],
-    search_service: UnifiedSearchServiceDep,
+    search_service: SearchFacadeDep,
     cache_service: CacheDep,
     principal: CurrentPrincipalDep,
     use_cache: bool = Query(True, description="Whether to use cached results"),

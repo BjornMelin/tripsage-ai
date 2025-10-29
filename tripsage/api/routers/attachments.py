@@ -5,6 +5,8 @@ of travel documents, following KISS principles and security best practices.
 """
 
 import logging
+from collections.abc import Awaitable, Callable
+from typing import cast
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
@@ -30,6 +32,10 @@ from tripsage_core.services.business.audit_logging_service import (
 from tripsage_core.services.business.file_processing_service import (
     FileSearchRequest,
     FileUploadRequest,
+    ProcessedFile,
+)
+from tripsage_core.services.business.trip_service import (
+    TripResponse as CoreTripResponse,
 )
 
 # Trip service is injected via dependencies module
@@ -92,7 +98,11 @@ async def upload_file(
         )
 
         # Process file
-        result = await service.upload_file(user_id, upload_request)
+        do_upload = cast(
+            Callable[[str, FileUploadRequest], Awaitable[ProcessedFile]],
+            service.upload_file,
+        )
+        result = await do_upload(user_id, upload_request)
 
         logger.info(
             "File uploaded successfully: %s (%s bytes) for user %s",
@@ -152,8 +162,8 @@ async def upload_files_batch(
             ),
         )
 
-    processed_files = []
-    errors = []
+    processed_files: list[FileUploadResponse] = []
+    errors: list[str] = []
     user_id = get_principal_id(principal)
 
     # Process each file individually for better error isolation
@@ -176,8 +186,12 @@ async def upload_files_batch(
             )
 
             # Process file
-            result = await service.upload_file(user_id, upload_request)
-            processed_files.append(  # type: ignore[unknown-member-type]
+            do_upload = cast(
+                Callable[[str, FileUploadRequest], Awaitable[ProcessedFile]],
+                service.upload_file,
+            )
+            result: ProcessedFile = await do_upload(user_id, upload_request)
+            processed_files.append(
                 FileUploadResponse(
                     file_id=result.id,
                     filename=result.original_filename,
@@ -191,30 +205,30 @@ async def upload_files_batch(
 
         except Exception:
             logger.exception("Failed to process file %s", file.filename)
-            errors.append(f"{file.filename}: Processing failed")  # type: ignore[unknown-member-type]
+            errors.append(f"{file.filename}: Processing failed")
 
     if errors and not processed_files:
         # All files failed
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"All files failed validation/processing: {'; '.join(errors)}",  # type: ignore[unknown-argument-type]
+            detail=f"All files failed validation/processing: {'; '.join(errors)}",
         )
 
     if errors:
         # Some files failed - log warnings but return successful ones
-        logger.warning("Some files failed processing: %s", "; ".join(errors))  # type: ignore[unknown-argument-type]
+        logger.warning("Some files failed processing: %s", "; ".join(errors))
 
     logger.info(
         "Batch upload completed: %s/%s files processed for user %s",
-        len(processed_files),  # type: ignore[unknown-argument-type]
+        len(processed_files),
         len(files),
         user_id,
     )
 
     return BatchUploadResponse(
-        files=processed_files,  # type: ignore[unknown-argument-type]
-        total_files=len(processed_files),  # type: ignore[unknown-argument-type]
-        total_size=sum(f.file_size for f in processed_files),  # type: ignore[unknown-argument-type,unknown-variable-type]
+        files=processed_files,
+        total_files=len(processed_files),
+        total_size=sum(f.file_size for f in processed_files),
     )
 
 
@@ -230,7 +244,11 @@ async def get_file_metadata(
     """
     try:
         user_id = get_principal_id(principal)
-        file_info = await service.get_file(file_id, user_id)
+        get_file_call = cast(
+            Callable[[str, str], Awaitable[ProcessedFile | None]],
+            service.get_file,
+        )
+        file_info = await get_file_call(file_id, user_id)
         if not file_info:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -261,7 +279,11 @@ async def delete_file(
     """
     try:
         user_id = get_principal_id(principal)
-        success = await service.delete_file(file_id, user_id)
+        do_delete = cast(
+            Callable[[str, str], Awaitable[bool]],
+            service.delete_file,
+        )
+        success = await do_delete(file_id, user_id)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -296,7 +318,11 @@ async def list_files(
         # Create search request with basic pagination
         search_request = FileSearchRequest(limit=limit, offset=offset)
 
-        raw_files = await service.search_files(user_id, search_request)
+        search_files = cast(
+            Callable[[str, FileSearchRequest], Awaitable[list[ProcessedFile]]],
+            service.search_files,
+        )
+        raw_files: list[ProcessedFile] = await search_files(user_id, search_request)
 
         # Adapt service results to API schema
         adapted: list[FileMetadataResponse] = []
@@ -368,7 +394,11 @@ async def download_file(
         user_id = get_principal_id(principal)
 
         # Get file metadata and verify ownership
-        file_info = await service.get_file(file_id, user_id)
+        get_file_call = cast(
+            Callable[[str, str], Awaitable[ProcessedFile | None]],
+            service.get_file,
+        )
+        file_info = await get_file_call(file_id, user_id)
         if not file_info:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -376,7 +406,11 @@ async def download_file(
             )
 
         # Get file content
-        file_content = await service.get_file_content(file_id, user_id)
+        get_content_call = cast(
+            Callable[[str, str], Awaitable[bytes | None]],
+            service.get_file_content,
+        )
+        file_content = await get_content_call(file_id, user_id)
         if not file_content:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -386,18 +420,18 @@ async def download_file(
         # Create streaming response
         _file_stream = io.BytesIO(file_content)
 
-        headers = {
+        headers: dict[str, str] = {
             "Content-Disposition": (
-                f'attachment; filename="{file_info.original_filename}"'
+                f'attachment; filename="{file_info.original_filename!s}"'
             ),
-            "Content-Type": file_info.mime_type,
+            "Content-Type": str(file_info.mime_type),
         }
 
         logger.info("File %s downloaded by user %s", file_id, user_id)
 
         return StreamingResponse(
             io.BytesIO(file_content),
-            media_type=file_info.mime_type,
+            media_type=str(file_info.mime_type),
             headers=headers,
         )
 
@@ -435,7 +469,11 @@ async def list_trip_attachments(
         user_id = get_principal_id(principal)
 
         # Verify user has access to the trip
-        trip = await trip_service.get_trip(trip_id=trip_id, user_id=user_id)
+        get_core_trip = cast(
+            Callable[[str, str], Awaitable[CoreTripResponse | None]],
+            trip_service.get_trip,
+        )
+        trip = await get_core_trip(trip_id, user_id)
         if not trip:
             # Log unauthorized access attempt
             await audit_security_event(
@@ -477,7 +515,11 @@ async def list_trip_attachments(
             trip_id=trip_id,
         )
 
-        files = await service.search_files(user_id, search_request)
+        search_files = cast(
+            Callable[[str, FileSearchRequest], Awaitable[list[ProcessedFile]]],
+            service.search_files,
+        )
+        files: list[ProcessedFile] = await search_files(user_id, search_request)
 
         logger.info(
             "Listed %s attachments for trip %s by user %s", len(files), trip_id, user_id

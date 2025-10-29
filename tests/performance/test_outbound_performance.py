@@ -1,7 +1,7 @@
-"""Performance testing for outbound HTTP utilities.
+"""Performance testing for outbound HTTP utilities (deterministic).
 
-This module provides benchmarks for outbound request handling,
-ensuring async patterns don't block the event loop.
+Small, strictly-typed micro-tests that avoid benchmarking async coroutines
+directly and complete quickly under pytest-asyncio strict mode.
 """
 
 import asyncio
@@ -11,7 +11,6 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
-from tests.performance.test_api_key_performance import BenchmarkFixture
 from tripsage_core.utils.outbound import request_with_backoff
 
 
@@ -30,34 +29,29 @@ class TestOutboundPerformance:
 
     @pytest.mark.asyncio
     async def test_request_with_backoff_no_blocking(
-        self, mock_client: AsyncMock, benchmark: BenchmarkFixture
-    ):
-        """Benchmark request_with_backoff to ensure no event loop blocking."""
-
-        async def run_request():
-            return await request_with_backoff(
-                mock_client,
-                "GET",
-                "https://api.example.com/test",
-                max_retries=0,
-            )
-
-        # Benchmark the async call
-        result = await benchmark(run_request)
+        self, mock_client: AsyncMock
+    ) -> None:
+        """Ensure request_with_backoff completes quickly and returns 200."""
+        start = time.time()
+        result = await request_with_backoff(
+            mock_client, "GET", "https://api.example.com/test", max_retries=0
+        )
+        duration = time.time() - start
         assert result.status_code == 200
+        assert duration < 0.05
 
     @pytest.mark.asyncio
-    async def test_concurrent_requests_no_blocking(self):
+    async def test_concurrent_requests_no_blocking(self) -> None:
         """Test concurrent requests don't block each other."""
         with patch("httpx.AsyncClient") as mock_client_class:
-            mock_client = AsyncMock()
-            response = AsyncMock()
+            mock_client: AsyncMock = AsyncMock()
+            response: AsyncMock = AsyncMock()
             response.status_code = 200
             response.headers = {}
             mock_client.request.return_value = response
             mock_client_class.return_value = mock_client
 
-            async def make_request(i: int):
+            async def make_request(i: int) -> httpx.Response:
                 client = httpx.AsyncClient()
                 return await request_with_backoff(
                     client,
@@ -69,7 +63,7 @@ class TestOutboundPerformance:
             # Run 10 concurrent requests
             start_time = time.time()
             tasks = [make_request(i) for i in range(10)]
-            results = await asyncio.gather(*tasks)
+            results: list[httpx.Response] = await asyncio.gather(*tasks)
             end_time = time.time()
 
             # Should complete quickly (under 0.1s since mocked)

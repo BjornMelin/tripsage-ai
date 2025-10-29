@@ -3,8 +3,8 @@
 from fastapi import APIRouter, HTTPException, status
 
 from tripsage.api.core.dependencies import (
-    DestinationServiceDep,
     RequiredPrincipalDep,
+    SearchFacadeDep,
     get_principal_id,
 )
 from tripsage.api.schemas.destinations import (
@@ -25,7 +25,7 @@ router = APIRouter()
 @router.post("/search", response_model=DestinationSearchResponse)
 async def search_destinations(
     request: DestinationSearchRequest,
-    destination_service: DestinationServiceDep,
+    destination_service: SearchFacadeDep,
     principal: RequiredPrincipalDep,
 ) -> DestinationSearchResponse:
     """Search destinations using the consolidated destination service."""
@@ -39,7 +39,7 @@ async def search_destinations(
 )
 async def save_destination(
     request: SavedDestinationRequest,
-    destination_service: DestinationServiceDep,
+    destination_service: SearchFacadeDep,
     principal: RequiredPrincipalDep,
 ) -> SavedDestination:
     """Save a destination for the authenticated user."""
@@ -56,7 +56,7 @@ async def save_destination(
 
 @router.get("/saved", response_model=list[SavedDestination])
 async def list_saved_destinations(
-    destination_service: DestinationServiceDep,
+    destination_service: SearchFacadeDep,
     principal: RequiredPrincipalDep,
 ) -> list[SavedDestination]:
     """Return destinations saved by the authenticated user."""
@@ -70,7 +70,7 @@ async def list_saved_destinations(
 )
 async def get_destination_recommendations(
     request: DestinationRecommendationRequest,
-    destination_service: DestinationServiceDep,
+    destination_service: SearchFacadeDep,
     principal: RequiredPrincipalDep,
 ) -> list[DestinationRecommendation]:
     """Get personalized destination recommendations."""
@@ -84,7 +84,7 @@ async def get_destination_recommendations(
 @router.get("/{destination_id}", response_model=Destination)
 async def get_destination_details(
     destination_id: str,
-    destination_service: DestinationServiceDep,
+    destination_service: SearchFacadeDep,
     principal: RequiredPrincipalDep,
 ) -> Destination:
     """Retrieve detailed information about a destination."""
