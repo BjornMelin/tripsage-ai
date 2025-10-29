@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Memory service for AI conversation memory and user context management.
 
 This service consolidates memory-related operations using Mem0 with pgvector backend,
@@ -5,40 +6,53 @@ providing efficient storage and retrieval of conversation context, user preferen
 and travel-specific insights.
 """
 
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import json
 import logging
 import time
+from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
-# Pylint may resolve type-checking before uv virtual env loads optional deps.
-# pydantic is a runtime dependency and present in application runs.
-from pydantic import Field, field_validator  # pylint: disable=import-error
+from pydantic import Field, field_validator
 
-from tripsage_core.exceptions import CoreServiceError as ServiceError
+from tripsage_core.exceptions import (
+    RECOVERABLE_ERRORS,
+    CoreServiceError as ServiceError,
+)
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.observability.otel import record_histogram, trace_span
+from tripsage_core.services.business.memory_insights import (
+    JSONDict,
+    MemoryContext,
+    MemoryEntry,
+    derive_travel_insights,
+    generate_context_summary,
+    sanitize_memory_entry,
+)
+from tripsage_core.services.infrastructure.database_operations_mixin import (
+    DatabaseOperationsMixin,
+    DatabaseServiceProtocol,
+)
+from tripsage_core.services.infrastructure.validation_mixin import ValidationMixin
 from tripsage_core.utils.connection_utils import (
+    ConnectionCredentials,
     DatabaseURLParser,
     DatabaseURLParsingError,
     DatabaseValidationError,
 )
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
 
-RECOVERABLE_ERRORS = (
-    ServiceError,
-    ConnectionError,
-    RuntimeError,
-    ValueError,
-    asyncio.TimeoutError,
-    OSError,
-    KeyError,
-    TypeError,
-)
+
+def _empty_json_list() -> list[JSONDict]:
+    """Return a new empty list for JSON dictionaries."""
+    return []
 
 
 class MemorySearchResult(TripSageModel):
@@ -78,29 +92,30 @@ class MemorySearchRequest(TripSageModel):
 class UserContextResponse(TripSageModel):
     """Response model for user context."""
 
-    preferences: list[dict[str, Any]] = Field(
-        default_factory=list, description="User preferences"
+    preferences: list[JSONDict] = Field(
+        default_factory=_empty_json_list, description="User preferences"
     )
-    past_trips: list[dict[str, Any]] = Field(
-        default_factory=list, description="Past trip memories"
+    past_trips: list[JSONDict] = Field(
+        default_factory=_empty_json_list, description="Past trip memories"
     )
-    saved_destinations: list[dict[str, Any]] = Field(
-        default_factory=list, description="Saved destinations"
+    saved_destinations: list[JSONDict] = Field(
+        default_factory=_empty_json_list, description="Saved destinations"
     )
-    budget_patterns: list[dict[str, Any]] = Field(
-        default_factory=list, description="Budget patterns"
+    budget_patterns: list[JSONDict] = Field(
+        default_factory=_empty_json_list, description="Budget patterns"
     )
-    travel_style: list[dict[str, Any]] = Field(
-        default_factory=list, description="Travel style memories"
+    travel_style: list[JSONDict] = Field(
+        default_factory=_empty_json_list, description="Travel style memories"
     )
-    dietary_restrictions: list[dict[str, Any]] = Field(
-        default_factory=list, description="Dietary restrictions"
+    dietary_restrictions: list[JSONDict] = Field(
+        default_factory=_empty_json_list, description="Dietary restrictions"
     )
-    accommodation_preferences: list[dict[str, Any]] = Field(
-        default_factory=list, description="Accommodation preferences"
+    accommodation_preferences: list[JSONDict] = Field(
+        default_factory=_empty_json_list,
+        description="Accommodation preferences",
     )
-    activity_preferences: list[dict[str, Any]] = Field(
-        default_factory=list, description="Activity preferences"
+    activity_preferences: list[JSONDict] = Field(
+        default_factory=_empty_json_list, description="Activity preferences"
     )
     insights: dict[str, Any] = Field(
         default_factory=dict, description="Derived insights"
@@ -123,7 +138,7 @@ class PreferencesUpdateRequest(TripSageModel):
         return v
 
 
-class MemoryService:
+class MemoryService(DatabaseOperationsMixin, ValidationMixin):
     """Memory service using Mem0 with travel-specific optimizations.
 
     This service handles:
@@ -142,7 +157,7 @@ class MemoryService:
 
     def __init__(
         self,
-        database_service=None,
+        database_service: DatabaseServiceProtocol | None = None,
         *,
         memory_backend_config: dict[str, Any] | None = None,
         cache_ttl: int = 300,
@@ -159,7 +174,8 @@ class MemoryService:
             connection_validation_timeout: Connection validation timeout in seconds
         """
         # Import here to avoid circular imports
-        if database_service is None:
+        resolved_service = database_service
+        if resolved_service is None:
             from tripsage_core.services.infrastructure import get_database_service
 
             try:
@@ -167,9 +183,11 @@ class MemoryService:
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-            database_service = loop.run_until_complete(get_database_service())
+            resolved_service = loop.run_until_complete(get_database_service())
 
-        self.db = database_service
+        self._db: DatabaseServiceProtocol = cast(
+            DatabaseServiceProtocol, resolved_service
+        )
         self.cache_ttl = cache_ttl
 
         # Connection manager removed; rely on SQLAlchemy ping in engine init
@@ -181,6 +199,11 @@ class MemoryService:
         # In-memory cache for search results
         self._cache: dict[str, tuple[list[MemorySearchResult], float]] = {}
         self._connected = False
+
+    @property
+    def db(self) -> DatabaseServiceProtocol:
+        """Database dependency exposed for mixin consumers."""
+        return self._db
 
     def _initialize_memory_backend(self, config: dict[str, Any] | None) -> None:
         """Initialize Mem0 memory backend.
@@ -218,7 +241,9 @@ class MemoryService:
         try:
             # Parse database URL securely
             url_parser = DatabaseURLParser()
-            credentials = url_parser.parse_url(settings.effective_postgres_url)
+            credentials: ConnectionCredentials = url_parser.parse_url(
+                settings.effective_postgres_url
+            )
 
             logger.info(
                 "Database configuration parsed successfully",
@@ -228,6 +253,14 @@ class MemoryService:
                     "port": credentials.port,
                 },
             )
+
+            # Extract query params safely
+            query_params = dict(getattr(credentials, "query_params", {}))
+            ssl_config = {
+                k: v
+                for k, v in query_params.items()
+                if k in ["sslmode", "connect_timeout", "application_name"]
+            }
 
             return {
                 "vector_store": {
@@ -240,11 +273,7 @@ class MemoryService:
                         "password": credentials.password,
                         "collection_name": "memories",
                         # Add SSL configuration from parsed query params
-                        **{
-                            k: v
-                            for k, v in credentials.query_params.items()
-                            if k in ["sslmode", "connect_timeout", "application_name"]
-                        },
+                        **ssl_config,
                     },
                 },
                 "llm": {
@@ -275,6 +304,7 @@ class MemoryService:
             logger.exception(error_msg)
             raise ServiceError(error_msg) from error
 
+    @tripsage_safe_execute()
     @trace_span("service.memory.connect")
     @record_histogram("tripsage.service.memory.connect.seconds")
     async def connect(self) -> None:
@@ -319,6 +349,7 @@ class MemoryService:
             logger.exception(error_msg)
             raise ServiceError(error_msg) from error
 
+    @tripsage_safe_execute()
     @trace_span("service.memory.close")
     @record_histogram("tripsage.service.memory.close.seconds")
     async def close(self) -> None:
@@ -334,6 +365,7 @@ class MemoryService:
         except RECOVERABLE_ERRORS:
             logger.exception("Error closing memory service")
 
+    @tripsage_safe_execute()
     @trace_span("service.memory.add_conversation")
     @record_histogram("tripsage.service.memory.add_conversation.seconds")
     async def add_conversation_memory(
@@ -403,6 +435,7 @@ class MemoryService:
             )
             return {"results": [], "error": str(error)}
 
+    @tripsage_safe_execute()
     @trace_span("service.memory.search")
     @record_histogram("tripsage.service.memory.search.seconds")
     async def search_memories(
@@ -487,6 +520,7 @@ class MemoryService:
             )
             return []
 
+    @tripsage_safe_execute()
     @trace_span("service.memory.user_context")
     @record_histogram("tripsage.service.memory.user_context.seconds")
     async def get_user_context(
@@ -513,6 +547,13 @@ class MemoryService:
                 memory.get_all, user_id=user_id, limit=100
             )
 
+            raw_results = all_memories.get("results", [])
+            memory_entries: list[MemoryEntry] = [
+                sanitize_memory_entry(cast(Mapping[str, Any], entry))
+                for entry in raw_results
+                if isinstance(entry, Mapping)
+            ]
+
             context_keys = [
                 "preferences",
                 "past_trips",
@@ -524,49 +565,47 @@ class MemoryService:
                 "activity_preferences",
             ]
 
-            processed_memories = [
-                (
-                    memory,
-                    set(memory.get("categories", [])),
-                    memory.get("memory", "").lower(),
-                )
-                for memory in all_memories.get("results", [])
-            ]
+            processed_memories: list[tuple[MemoryEntry, set[str], str]] = []
+            for entry in memory_entries:
+                categories_value = entry.get("categories", [])
+                if isinstance(categories_value, list):
+                    category_set: set[str] = {str(cat) for cat in categories_value}
+                else:
+                    category_set = set[str]()
+                content_text = str(entry.get("memory", "")).lower()
+                processed_memories.append((entry, category_set, content_text))
 
-            context = {
-                key: [
-                    memory
-                    for memory, categories, _content in processed_memories
-                    if key in categories
-                ]
-                for key in context_keys
-            }
+            context: MemoryContext = {key: [] for key in context_keys}
+            for entry, categories, _ in processed_memories:
+                for key in context_keys:
+                    if key in categories:
+                        context[key].append(entry)
 
-            preference_candidates = [
-                memory
-                for memory, categories, content in processed_memories
+            preference_candidates: list[MemoryEntry] = [
+                entry
+                for entry, categories, content in processed_memories
                 if "preferences" not in categories
                 and any(
                     word in content
-                    for word in ["prefer", "like", "dislike", "favorite"]
+                    for word in ("prefer", "like", "dislike", "favorite")
                 )
             ]
-            budget_candidates = [
-                memory
-                for memory, categories, content in processed_memories
+            budget_candidates: list[MemoryEntry] = [
+                entry
+                for entry, categories, content in processed_memories
                 if "budget_patterns" not in categories
                 and any(
                     word in content
-                    for word in ["budget", "cost", "price", "expensive", "cheap"]
+                    for word in ("budget", "cost", "price", "expensive", "cheap")
                 )
             ]
 
-            context["preferences"] += preference_candidates
-            context["budget_patterns"] += budget_candidates
+            context["preferences"].extend(preference_candidates)
+            context["budget_patterns"].extend(budget_candidates)
 
             # Add derived insights
-            insights = await self._derive_travel_insights(context)
-            summary = self._generate_context_summary(context, insights)
+            insights = derive_travel_insights(context)
+            summary = generate_context_summary(insights)
 
             return UserContextResponse(
                 preferences=context["preferences"],
@@ -588,6 +627,7 @@ class MemoryService:
             )
             return UserContextResponse(summary="Error retrieving user context")
 
+    @tripsage_safe_execute()
     @trace_span("service.memory.update_preferences")
     @record_histogram("tripsage.service.memory.update_preferences.seconds")
     async def update_user_preferences(
@@ -654,6 +694,7 @@ class MemoryService:
             )
             return {"error": str(e)}
 
+    @tripsage_safe_execute()
     @trace_span("service.memory.delete_user_memories")
     @record_histogram("tripsage.service.memory.delete_user_memories.seconds")
     async def delete_user_memories(
@@ -735,6 +776,7 @@ class MemoryService:
 
         return self._connected
 
+    @tripsage_safe_execute()
     @trace_span("service.memory.health_check")
     @record_histogram("tripsage.service.memory.health_check.seconds")
     async def health_check(self) -> bool:
@@ -832,161 +874,7 @@ class MemoryService:
 
         return memories
 
-    async def _derive_travel_insights(self, context: dict[str, list]) -> dict[str, Any]:
-        """Derive insights from user's travel history and preferences."""
-        return {
-            "preferred_destinations": self._analyze_destinations(context),
-            "budget_range": self._analyze_budgets(context),
-            "travel_frequency": self._analyze_frequency(context),
-            "preferred_activities": self._analyze_activities(context),
-            "travel_style": self._analyze_travel_style(context),
-        }
-
-    def _analyze_destinations(self, context: dict[str, list]) -> dict[str, Any]:
-        """Analyze destination preferences from context."""
-        tracked_destinations = {
-            "Japan",
-            "France",
-            "Italy",
-            "Spain",
-            "Thailand",
-            "USA",
-            "UK",
-        }
-        destinations = [
-            word.capitalize()
-            for memory in (
-                context.get("past_trips", []) + context.get("saved_destinations", [])
-            )
-            for word in memory.get("memory", "").lower().split()
-            if word.capitalize() in tracked_destinations
-        ]
-
-        return {
-            "most_visited": list(set(destinations)),
-            "destination_count": len(set(destinations)),
-        }
-
-    def _analyze_budgets(self, context: dict[str, list]) -> dict[str, Any]:
-        """Analyze budget patterns from context."""
-        import re
-
-        budgets = [
-            int(amount)
-            for memory in context.get("budget_patterns", [])
-            for amount in re.findall(r"\$(\d+)", memory.get("memory", ""))
-        ]
-
-        if budgets:
-            return {
-                "average_budget": sum(budgets) / len(budgets),
-                "max_budget": max(budgets),
-                "min_budget": min(budgets),
-            }
-        return {"budget_info": "No budget data available"}
-
-    def _analyze_frequency(self, context: dict[str, list]) -> dict[str, Any]:
-        """Analyze travel frequency from context."""
-        trips = context.get("past_trips", [])
-        return {
-            "total_trips": len(trips),
-            "estimated_frequency": "Regular" if len(trips) > 5 else "Occasional",
-        }
-
-    def _analyze_activities(self, context: dict[str, list]) -> dict[str, Any]:
-        """Analyze activity preferences from context."""
-        activity_keywords = [
-            "museum",
-            "beach",
-            "hiking",
-            "shopping",
-            "dining",
-            "nightlife",
-            "culture",
-        ]
-        activities = [
-            keyword
-            for memory in (
-                context.get("activity_preferences", []) + context.get("preferences", [])
-            )
-            for keyword in activity_keywords
-            if keyword in memory.get("memory", "").lower()
-        ]
-
-        return {
-            "preferred_activities": list(set(activities)),
-            "activity_style": "Cultural"
-            if "museum" in activities or "culture" in activities
-            else "Adventure",
-        }
-
-    def _analyze_travel_style(self, context: dict[str, list]) -> dict[str, Any]:
-        """Analyze overall travel style from context."""
-        style_indicators = {
-            "luxury": ["luxury", "expensive", "high-end", "premium"],
-            "budget": ["budget", "cheap", "affordable", "backpack"],
-            "family": ["family", "kids", "children"],
-            "solo": ["solo", "alone", "independent"],
-            "group": ["group", "friends", "together"],
-        }
-
-        all_content = " ".join(
-            [
-                memory.get("memory", "").lower()
-                for memory_list in context.values()
-                if isinstance(memory_list, list)
-                for memory in memory_list
-            ]
-        )
-
-        detected_styles = []
-        for style, keywords in style_indicators.items():
-            if any(keyword in all_content for keyword in keywords):
-                detected_styles.append(style)
-
-        return {
-            "travel_styles": detected_styles,
-            "primary_style": detected_styles[0] if detected_styles else "general",
-        }
-
-    def _generate_context_summary(
-        self, context: dict[str, Any], insights: dict[str, Any]
-    ) -> str:
-        """Generate a human-readable summary of user context."""
-        summary_parts = []
-
-        # Destination preferences
-        destinations = insights.get("preferred_destinations", {}).get(
-            "most_visited", []
-        )
-        if destinations:
-            summary_parts.append(
-                f"Frequently travels to: {', '.join(destinations[:3])}"
-            )
-
-        # Travel style
-        travel_style = insights.get("travel_style", {}).get("primary_style")
-        if travel_style and travel_style != "general":
-            summary_parts.append(f"Travel style: {travel_style}")
-
-        # Budget range
-        budget_info = insights.get("budget_range", {})
-        if "average_budget" in budget_info:
-            avg_budget = budget_info["average_budget"]
-            summary_parts.append(f"Average budget: ${avg_budget:.0f}")
-
-        # Activity preferences
-        activities = insights.get("preferred_activities", {}).get(
-            "preferred_activities", []
-        )
-        if activities:
-            summary_parts.append(f"Enjoys: {', '.join(activities[:3])}")
-
-        return (
-            ". ".join(summary_parts)
-            if summary_parts
-            else "New user with limited travel history"
-        )
+    # Analytics helpers moved to ``memory_insights``.
 
 
 # Dependency function for FastAPI

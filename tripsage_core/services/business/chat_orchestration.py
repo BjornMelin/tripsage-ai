@@ -283,6 +283,7 @@ class ChatOrchestrationService:
             )
 
             await self._ensure_database()
+            assert self.database is not None  # Ensure database is initialized
             flight_service = FlightService(
                 database_service=self.database, external_flight_service=external
             )

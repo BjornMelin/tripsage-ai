@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import statistics
-from collections.abc import Awaitable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
@@ -352,10 +352,7 @@ class DashboardService:  # pylint: disable=too-many-instance-attributes
                 return self._get_default_service_analytics()
 
             # Get health checks for all services
-            checks_awaitable = cast(
-                Awaitable[dict[ServiceType, ApiValidationResult]],
-                self.api_key_service.check_all_services_health(),
-            )
+            checks_awaitable = self.api_key_service.check_all_services_health()
             health_checks: dict[
                 ServiceType, ApiValidationResult
             ] = await checks_awaitable

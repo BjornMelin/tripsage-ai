@@ -34,6 +34,7 @@ from tripsage_core.models.api.itinerary_models import (
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.models.schemas_common.base_models import PaginationMeta
 from tripsage_core.services.infrastructure.database_service import DatabaseService
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 LOGGER = logging.getLogger(__name__)
@@ -133,6 +134,7 @@ class ItineraryService:
         """Initialise the service with its required infrastructure dependency."""
         self._db = database_service
 
+    @tripsage_safe_execute()
     async def create_itinerary(
         self,
         user_id: str,
@@ -157,18 +159,20 @@ class ItineraryService:
         await self._insert_itinerary(itinerary)
         return await self.get_itinerary(user_id, itinerary.id)
 
+    @tripsage_safe_execute()
     async def list_itineraries(self, user_id: str) -> list[dict[str, Any]]:
         """Return all itineraries owned by ``user_id``."""
         rows = await self._safe_select(
             ITINERARIES_TABLE, filters={"user_id": user_id}, order_by="-start_date"
         )
-        itineraries = []
+        itineraries: list[dict[str, Any]] = []
         for raw in rows:
             itinerary = self._build_itinerary_from_row(raw)
             items = await self._load_items_for_itinerary(itinerary.id)
             itineraries.append(self._serialize_itinerary(itinerary, items))
         return itineraries
 
+    @tripsage_safe_execute()
     async def search_itineraries(
         self,
         user_id: str,
@@ -183,8 +187,13 @@ class ItineraryService:
         filters: dict[str, Any] = {"user_id": user_id}
         if status := payload.get("status"):
             filters["status"] = str(status)
-        if destinations := payload.get("destinations"):
-            filters["destinations"] = destinations
+        destinations_value = payload.get("destinations")
+        if isinstance(destinations_value, list):
+            filters["destinations"] = [
+                str(dest) for dest in cast(list[Any], destinations_value)
+            ]
+        elif isinstance(destinations_value, str):
+            filters["destinations"] = [destinations_value]
 
         rows = await self._safe_select(
             ITINERARIES_TABLE,
@@ -226,6 +235,7 @@ class ItineraryService:
             pagination=pagination,
         )
 
+    @tripsage_safe_execute()
     async def get_itinerary(self, user_id: str, itinerary_id: str) -> dict[str, Any]:
         """Fetch a single itinerary ensuring the caller owns it."""
         raw = await self._get_owned_itinerary_row(user_id, itinerary_id)
@@ -233,6 +243,7 @@ class ItineraryService:
         items = await self._load_items_for_itinerary(itinerary.id)
         return self._serialize_itinerary(itinerary, items)
 
+    @tripsage_safe_execute()
     async def update_itinerary(
         self,
         user_id: str,
@@ -258,12 +269,14 @@ class ItineraryService:
         )
         return await self.get_itinerary(user_id, itinerary_id)
 
+    @tripsage_safe_execute()
     async def delete_itinerary(self, user_id: str, itinerary_id: str) -> None:
         """Delete an itinerary and its items."""
         await self._get_owned_itinerary_row(user_id, itinerary_id)
         await self._safe_delete(ITINERARY_ITEMS_TABLE, {"itinerary_id": itinerary_id})
         await self._safe_delete(ITINERARIES_TABLE, {"id": itinerary_id})
 
+    @tripsage_safe_execute()
     async def add_item_to_itinerary(
         self,
         user_id: str,
@@ -295,6 +308,7 @@ class ItineraryService:
         await self._insert_item(item, user_id)
         return self._serialize_item(item)
 
+    @tripsage_safe_execute()
     async def get_item(
         self, user_id: str, itinerary_id: str, item_id: str
     ) -> dict[str, Any]:
@@ -311,6 +325,7 @@ class ItineraryService:
             )
         return self._serialize_item(self._build_item_from_row(row[0]))
 
+    @tripsage_safe_execute()
     async def update_item(
         self,
         user_id: str,
@@ -337,6 +352,7 @@ class ItineraryService:
         )
         return await self.get_item(user_id, itinerary_id, item_id)
 
+    @tripsage_safe_execute()
     async def delete_item(self, user_id: str, itinerary_id: str, item_id: str) -> None:
         """Delete an itinerary item when the user owns the itinerary."""
         await self._get_owned_itinerary_row(user_id, itinerary_id)
@@ -344,6 +360,7 @@ class ItineraryService:
             ITINERARY_ITEMS_TABLE, {"id": item_id, "itinerary_id": itinerary_id}
         )
 
+    @tripsage_safe_execute()
     async def check_conflicts(self, user_id: str, itinerary_id: str) -> dict[str, Any]:
         """Detect simple overlapping time conflicts for an itinerary."""
         itinerary = await self.get_itinerary(user_id, itinerary_id)
@@ -369,6 +386,7 @@ class ItineraryService:
 
         return {"has_conflicts": bool(conflicts), "conflicts": conflicts}
 
+    @tripsage_safe_execute()
     async def optimize_itinerary(
         self,
         user_id: str,

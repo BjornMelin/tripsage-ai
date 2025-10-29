@@ -6,13 +6,12 @@ message persistence, tool call tracking, and rate limiting. It provides clean
 integration with the AI agents and maintains conversation context.
 """
 
-import asyncio
 import html
 import logging
 import re
 import time
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Protocol, cast
 from uuid import uuid4
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -21,26 +20,34 @@ from pydantic import Field, field_validator
 
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions import (
-    CoreAuthorizationError as AuthPermissionError,
+    RECOVERABLE_ERRORS,
     CoreResourceNotFoundError as NotFoundError,
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.observability.otel import record_histogram, trace_span
+from tripsage_core.services.infrastructure.database_operations_mixin import (
+    DatabaseOperationsMixin,
+)
+from tripsage_core.services.infrastructure.error_handling_mixin import (
+    ErrorHandlingMixin,
+)
+from tripsage_core.services.infrastructure.logging_mixin import LoggingMixin
+from tripsage_core.services.infrastructure.validation_mixin import ValidationMixin
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
 
-RECOVERABLE_ERRORS = (
-    AuthPermissionError,
-    ValidationError,
-    NotFoundError,
-    ConnectionError,
-    RuntimeError,
-    ValueError,
-    asyncio.TimeoutError,
-    TypeError,
-)
+
+def _empty_metadata() -> dict[str, Any]:
+    """Typed empty metadata factory for pydantic defaults."""
+    return {}
+
+
+def _empty_tool_calls() -> list[dict[str, Any]]:
+    """Typed empty tool-calls factory for pydantic defaults."""
+    return []
 
 
 class MessageRole(str):
@@ -118,10 +125,10 @@ class MessageResponse(TripSageModel):
     content: str = Field(..., description="Message content")
     created_at: datetime = Field(..., description="Creation timestamp")
     metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Message metadata"
+        default_factory=_empty_metadata, description="Message metadata"
     )
     tool_calls: list[dict[str, Any]] = Field(
-        default_factory=list, description="Tool calls"
+        default_factory=_empty_tool_calls, description="Tool calls"
     )
     estimated_tokens: int | None = Field(None, description="Estimated token count")
 
@@ -213,7 +220,59 @@ class RateLimiter:
             del self.user_windows[user_id]
 
 
-class ChatService:
+class _ChatDbProtocol(Protocol):
+    """Minimal database surface used by ChatService."""
+
+    async def insert(
+        self, table: str, data: dict[str, Any], user_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Insert data into a table."""
+        ...
+
+    async def get_user_chat_sessions(
+        self, user_id: str, limit: int = 10, include_ended: bool = False
+    ) -> list[dict[str, Any]]:
+        """Get chat sessions for a user."""
+        ...
+
+    async def get_chat_session(
+        self, session_id: str, user_id: str
+    ) -> dict[str, Any] | None:
+        """Get a chat session by ID."""
+        ...
+
+    async def update_session_timestamp(self, session_id: str) -> bool:
+        """Update the timestamp of a chat session."""
+        ...
+
+    async def get_session_messages(
+        self, session_id: str, limit: int | None = None, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        """Get messages for a chat session."""
+        ...
+
+    async def get_message_tool_calls(self, message_id: str) -> list[dict[str, Any]]:
+        """Get tool calls for a message."""
+        ...
+
+    async def create_tool_call(self, tool_call_data: dict[str, Any]) -> dict[str, Any]:
+        """Create a tool call by data."""
+        ...
+
+    async def update_tool_call(
+        self, tool_call_id: str, update_data: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Update a tool call by ID."""
+        ...
+
+    async def end_chat_session(self, session_id: str) -> bool:
+        """End a chat session."""
+        ...
+
+
+class ChatService(
+    DatabaseOperationsMixin, ValidationMixin, LoggingMixin, ErrorHandlingMixin
+):
     """Comprehensive chat service for session and message management.
 
     This service handles:
@@ -227,7 +286,7 @@ class ChatService:
 
     def __init__(
         self,
-        database_service,
+        database_service: _ChatDbProtocol,
         rate_limiter: RateLimiter | None = None,
         chars_per_token: int = 4,
     ):
@@ -239,12 +298,18 @@ class ChatService:
             chars_per_token: Characters per token for estimation
         """
         # DatabaseService is injected by the FastAPI dependency factory.
-        self.db = database_service
+        self._db: _ChatDbProtocol = database_service
         self.rate_limiter = rate_limiter or RateLimiter()
         self.chars_per_token = chars_per_token
         self._retry_count = 3
         self._retry_delay = 0.1
 
+    @property
+    def db(self) -> _ChatDbProtocol:  # type: ignore[override]
+        """Database accessor used by service and mixins."""
+        return self._db
+
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.sessions.create")
     @record_histogram("svc.op.duration", unit="s")
     async def create_session(
@@ -260,6 +325,9 @@ class ChatService:
             Created chat session
         """
         try:
+            # Validate user ID
+            self._validate_user_id(user_id)
+
             session_id = str(uuid4())
 
             # Prepare session data for database
@@ -274,8 +342,9 @@ class ChatService:
                 "metadata": self._validate_metadata(session_data.metadata),
             }
 
-            # Store in database
-            result = await self.db.create_chat_session(db_session_data)
+            # Store in database (final-only, no legacy helpers)
+            rows = await self.db.insert("chat_sessions", db_session_data, user_id)
+            result: dict[str, Any] = rows[0] if rows else db_session_data
 
             logger.info(
                 "Chat session created",
@@ -308,6 +377,7 @@ class ChatService:
 
     # This method is replaced by _get_session_internal to avoid router conflicts
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.sessions.list")
     @record_histogram("svc.op.duration", unit="s")
     async def get_user_sessions(
@@ -325,7 +395,7 @@ class ChatService:
         """
         try:
             results = await self.db.get_user_chat_sessions(
-                user_id, limit, include_ended
+                user_id, limit=limit, include_ended=include_ended
             )
 
             return [
@@ -355,6 +425,7 @@ class ChatService:
             )
             return []
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.messages.create")
     @record_histogram("svc.op.duration", unit="s")
     async def add_message(
@@ -408,8 +479,9 @@ class ChatService:
                 "metadata": self._validate_metadata(message_data.metadata),
             }
 
-            # Store message in database
-            result = await self.db.create_chat_message(db_message_data)
+            # Store message in database (final API)
+            rows = await self.db.insert("chat_messages", db_message_data, user_id)
+            result: dict[str, Any] = rows[0] if rows else db_message_data
 
             # Handle tool calls if present
             tool_calls: list[dict[str, Any]] = []
@@ -456,6 +528,7 @@ class ChatService:
 
     # This method is replaced by _get_messages_internal to avoid router conflicts
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.messages.recent")
     @record_histogram("svc.op.duration", unit="s")
     async def get_recent_messages(
@@ -479,7 +552,7 @@ class ChatService:
                     messages=[], total_tokens=0, truncated=False
                 )
 
-            # Fetch messages using standard helper and enforce token window locally
+            # Fetch messages directly from database
             raw = await self.db.get_session_messages(
                 session_id, limit=(request.limit + request.offset), offset=0
             )
@@ -504,8 +577,8 @@ class ChatService:
 
             messages: list[MessageResponse] = []
             for result in selected:
-                tool_calls = list(
-                    await self.db.get_message_tool_calls(result["id"])  # type: ignore[index]
+                tool_calls: list[dict[str, Any]] = await self.db.get_message_tool_calls(
+                    result["id"]
                 )
                 messages.append(
                     MessageResponse(
@@ -539,6 +612,7 @@ class ChatService:
             )
             return RecentMessagesResponse(messages=[], total_tokens=0, truncated=False)
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.sessions.end")
     @record_histogram("svc.op.duration", unit="s")
     async def end_session(self, session_id: str, user_id: str) -> bool:
@@ -587,6 +661,7 @@ class ChatService:
             )
             return False
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.tool_calls.update")
     @record_histogram("svc.op.duration", unit="s")
     async def update_tool_call_status(
@@ -675,18 +750,17 @@ class ChatService:
             raise ValidationError("Metadata must be a dictionary")
 
         # Remove None values and ensure all keys are strings
-        cleaned = {}
-        for key, value in metadata.items():
-            if not isinstance(key, str):
-                raise ValidationError("Metadata keys must be strings")
-            if value is not None:
-                cleaned[key] = value
-
-        return cleaned
+        typed_metadata = cast(dict[str, Any], metadata)
+        sanitized: dict[str, Any] = {}
+        for key, value in typed_metadata.items():
+            if value is None:
+                continue
+            sanitized[str(key)] = value
+        return sanitized
 
     def _estimate_tokens(self, content: str) -> int:
         """Estimate token count for content."""
-        if not content:
+        if content == "":
             return 0
         return max(1, len(content) // self.chars_per_token)
 
@@ -750,9 +824,10 @@ class ChatService:
         )
 
     # ===== Public Chat Methods =====
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.completion")
     @record_histogram("svc.op.duration", unit="s")
-    async def chat_completion(self, user_id: str, request) -> dict[str, Any]:
+    async def chat_completion(self, user_id: str, request: Any) -> dict[str, Any]:
         """Handle chat completion requests (main chat endpoint).
 
         This method provides AI chat functionality by processing messages,
@@ -815,7 +890,7 @@ class ChatService:
             ]
 
             # Get AI response
-            response = await llm.ainvoke(langchain_messages)
+            response: Any = await llm.ainvoke(langchain_messages)
 
             # Extract token usage information
             usage_metadata = getattr(response, "response_metadata", {})
@@ -849,9 +924,10 @@ class ChatService:
                             await self.add_message(session_id, user_id, user_msg_data)
 
                     # Add AI response to session
+                    ai_content: str = str(getattr(response, "content", ""))
                     ai_msg_data = MessageCreateRequest(
                         role="assistant",
-                        content=str(response.content),
+                        content=ai_content,
                         metadata={"model": model_name, "usage": token_usage},
                         tool_calls=None,
                     )
@@ -864,8 +940,9 @@ class ChatService:
                     )
 
             # Return formatted response
+            resp_content: str = str(getattr(response, "content", ""))
             return {
-                "content": response.content,
+                "content": resp_content,
                 "session_id": session_id,
                 "model": model_name,
                 "usage": {
@@ -885,6 +962,7 @@ class ChatService:
 
     # Router compatibility wrappers removed in final-only alignment.
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.sessions.get")
     @record_histogram("svc.op.duration", unit="s")
     async def get_session(
@@ -930,6 +1008,7 @@ class ChatService:
             )
             return None
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.messages.list")
     @record_histogram("svc.op.duration", unit="s")
     async def get_messages(
