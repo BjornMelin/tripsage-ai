@@ -472,7 +472,13 @@ class GoogleMapsService(AsyncApiClient):
 
         try:
             gm: Any = self.client
-            result = await asyncio.to_thread(gm.elevation, locations, **kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_raw = await asyncio.to_thread(gm.elevation, locations, **kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_any = sanitize_response(result_raw)
+            result = (
+                cast(list[dict[str, Any]], result_any)
+                if isinstance(result_any, list)
+                else []
+            )
             logger.debug("Retrieved elevation data for %s locations", len(locations))
             points: list[ElevationPoint] = []
             for item in result:
@@ -523,7 +529,11 @@ class GoogleMapsService(AsyncApiClient):
             timezone_kwargs.update(kwargs)
 
             gm: Any = self.client
-            result = await asyncio.to_thread(gm.timezone, **timezone_kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_raw = await asyncio.to_thread(gm.timezone, **timezone_kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_any = sanitize_response(result_raw)
+            result = (
+                cast(dict[str, Any], result_any) if isinstance(result_any, dict) else {}
+            )
             logger.debug("Retrieved timezone data for location %s", location)
             return TimezoneInfo(
                 time_zone_id=result.get("timeZoneId", "UTC"),

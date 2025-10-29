@@ -1,12 +1,15 @@
-"""Common validators for TripSage AI using Pydantic V2 best practices.
+"""Common validators for TripSage AI using Pydantic v2.
 
-This module provides reusable validators using the latest Pydantic V2 patterns including
-Annotated types, BeforeValidator, AfterValidator, and WrapValidator for maximum
-code reuse and consistency across the application.
+This module exposes small, typed validator functions and reusable Annotated
+aliases. Signatures accept ``object`` where runtime ``isinstance`` checks are
+performed to avoid Pyright "unnecessary isinstance" diagnostics while keeping
+robust runtime validation.
 """
 
 import re
-from typing import Annotated, Any
+from collections.abc import Callable
+from enum import Enum
+from typing import Annotated, TypeVar
 
 from pydantic import (
     AfterValidator,
@@ -14,7 +17,10 @@ from pydantic import (
 )
 
 
-def validate_airport_code(value: str) -> str:
+E = TypeVar("E", bound=Enum)
+
+
+def validate_airport_code(value: object) -> str:
     """Validate and standardize IATA airport codes.
 
     Args:
@@ -40,7 +46,7 @@ def validate_airport_code(value: str) -> str:
     return value
 
 
-def validate_rating_range(value: float | None) -> float | None:
+def validate_rating_range(value: object | None) -> float | None:
     """Validate that rating is between 0.0 and 5.0.
 
     Args:
@@ -64,7 +70,7 @@ def validate_rating_range(value: float | None) -> float | None:
     return float(value)
 
 
-def validate_email_lowercase(value: str | None) -> str | None:
+def validate_email_lowercase(value: object | None) -> str | None:
     """Validate and normalize email addresses to lowercase.
 
     Args:
@@ -82,7 +88,7 @@ def validate_email_lowercase(value: str | None) -> str | None:
     return value.strip().lower()
 
 
-def validate_positive_integer(value: int | None) -> int | None:
+def validate_positive_integer(value: object | None) -> int | None:
     """Validate that value is a positive integer.
 
     Args:
@@ -106,7 +112,7 @@ def validate_positive_integer(value: int | None) -> int | None:
     return value
 
 
-def validate_non_negative_number(value: float | None) -> float | None:
+def validate_non_negative_number(value: object | None) -> float | None:
     """Validate that value is a non-negative number.
 
     Args:
@@ -130,7 +136,7 @@ def validate_non_negative_number(value: float | None) -> float | None:
     return float(value)
 
 
-def validate_currency_code(value: str) -> str:
+def validate_currency_code(value: object) -> str:
     """Validate and standardize currency codes (ISO 4217).
 
     Args:
@@ -167,10 +173,9 @@ def validate_string_length_range(min_len: int, max_len: int):
         A validator function for string length
     """
 
-    def validator(value: str | None) -> str | None:
+    def validator(value: object | None) -> str | None:
         if value is None:
             return None
-
         if not isinstance(value, str):
             raise TypeError("Value must be a string")
 
@@ -187,7 +192,7 @@ def validate_string_length_range(min_len: int, max_len: int):
     return validator
 
 
-def validate_password_strength(value: str) -> str:
+def validate_password_strength(value: object) -> str:
     """Validate password strength according to TripSage security requirements.
 
     Requirements:
@@ -228,7 +233,7 @@ def validate_password_strength(value: str) -> str:
     return value
 
 
-def validate_latitude(value: float | None) -> float | None:
+def validate_latitude(value: object | None) -> float | None:
     """Validate geographic latitude.
 
     Args:
@@ -252,7 +257,7 @@ def validate_latitude(value: float | None) -> float | None:
     return float(value)
 
 
-def validate_longitude(value: float | None) -> float | None:
+def validate_longitude(value: object | None) -> float | None:
     """Validate geographic longitude.
 
     Args:
@@ -276,7 +281,9 @@ def validate_longitude(value: float | None) -> float | None:
     return float(value)
 
 
-def create_enum_validator(enum_class):
+def create_enum_validator[E: Enum](
+    enum_class: type[E],
+) -> Callable[[object | None], E | None]:
     """Create a validator for enum values with better error messages.
 
     Args:
@@ -286,22 +293,24 @@ def create_enum_validator(enum_class):
         A validator function for the enum
     """
 
-    def validator(value: Any) -> Any:
+    def validator(value: object | None) -> E | None:
         if value is None:
             return None
 
         if isinstance(value, enum_class):
             return value
 
-        # Try to convert string to enum
+        # Try multiple case strategies for string values
         if isinstance(value, str):
-            try:
-                return enum_class(value.lower())
-            except ValueError:
-                pass
+            for candidate in (value, value.lower(), value.upper()):
+                try:
+                    return enum_class(candidate)
+                except ValueError:
+                    continue
 
-        valid_values = [member.value for member in enum_class]
-        raise ValueError(f"Value must be one of: {', '.join(valid_values)}")
+        valid_values: list[str] = [str(member.value) for member in enum_class]
+        joined = ", ".join(valid_values)
+        raise ValueError(f"Value must be one of: {joined}")
 
     return validator
 
@@ -316,7 +325,7 @@ def truncate_string(max_length: int):
         A before validator function
     """
 
-    def validator(value: Any) -> str:
+    def validator(value: object) -> object:
         if value is None:
             return value
         if isinstance(value, str):

@@ -255,7 +255,13 @@ class DatabaseURLDetector:
 
     def detect_url_type(self, url: str) -> dict[str, Any]:
         """Detect URL type and provide metadata."""
-        result = {"url": url, "type": "unknown", "valid": False, "metadata": {}}
+        metadata: dict[str, Any] = {}
+        result: dict[str, Any] = {
+            "url": url,
+            "type": "unknown",
+            "valid": False,
+            "metadata": metadata,
+        }
 
         try:
             if self.converter.is_supabase_url(url):
@@ -316,19 +322,37 @@ class DatabaseURLDetector:
 
 
 # Convenience functions
-def convert_supabase_to_postgres(supabase_url: str, password: str, **kwargs) -> str:
+def convert_supabase_to_postgres(
+    supabase_url: str,
+    password: str,
+    *,
+    use_pooler: bool = False,
+    username: str = "postgres",
+    database: str = "postgres",
+    sslmode: str = "require",
+) -> str:
     """Convert Supabase URL to PostgreSQL connection string.
 
     Args:
         supabase_url: Supabase project URL
         password: Database password
-        **kwargs: Additional options for conversion
+        use_pooler: Use connection pooler (port 6543) instead of direct (5432)
+        username: Database username
+        database: Database name
+        sslmode: SSL mode
 
     Returns:
         PostgreSQL connection string
     """
     converter = DatabaseURLConverter()
-    return converter.supabase_to_postgres(supabase_url, password, **kwargs)
+    return converter.supabase_to_postgres(
+        supabase_url,
+        password,
+        use_pooler=use_pooler,
+        username=username,
+        database=database,
+        sslmode=sslmode,
+    )
 
 
 def detect_database_url_type(url: str) -> dict[str, Any]:

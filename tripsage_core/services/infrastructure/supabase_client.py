@@ -10,17 +10,15 @@ server-side operations.
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from postgrest import AsyncPostgrestClient
-from supabase.lib.client_options import (
-    AsyncClientOptions,  # pylint: disable=no-name-in-module
-)
 
-from supabase import (  # pylint: disable=no-name-in-module
-    AsyncClient as SupabaseAsyncClient,
-    acreate_client,
-)
+
+if TYPE_CHECKING:
+    from supabase import AsyncClient as SupabaseAsyncClient
+else:
+    SupabaseAsyncClient = Any
 from tripsage_core.config import get_settings
 
 
@@ -42,13 +40,20 @@ async def get_admin_client() -> SupabaseAsyncClient:
         return _admin_client
 
     settings = get_settings()
-    _admin_client = await acreate_client(
+    from importlib import import_module
+
+    supabase = import_module("supabase")
+    client_options_mod = import_module("supabase.lib.client_options")
+    AsyncClientOptions = client_options_mod.AsyncClientOptions
+    acreate_client = supabase.acreate_client
+    client = await acreate_client(
         str(settings.database_url),
         # pylint: disable=no-member
         settings.database_service_key.get_secret_value(),
         options=AsyncClientOptions(auto_refresh_token=False, persist_session=False),
     )
-    return _admin_client
+    _admin_client = client
+    return client
 
 
 async def get_public_client() -> SupabaseAsyncClient:
@@ -65,13 +70,20 @@ async def get_public_client() -> SupabaseAsyncClient:
         return _public_client
 
     settings = get_settings()
-    _public_client = await acreate_client(
+    from importlib import import_module
+
+    supabase = import_module("supabase")
+    client_options_mod = import_module("supabase.lib.client_options")
+    AsyncClientOptions = client_options_mod.AsyncClientOptions
+    acreate_client = supabase.acreate_client
+    client = await acreate_client(
         str(settings.database_url),
         # pylint: disable=no-member
         settings.database_public_key.get_secret_value(),
         options=AsyncClientOptions(auto_refresh_token=False, persist_session=False),
     )
-    return _public_client
+    _public_client = client
+    return client
 
 
 async def verify_and_get_claims(jwt: str) -> dict[str, Any]:
