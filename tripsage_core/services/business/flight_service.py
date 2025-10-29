@@ -41,6 +41,7 @@ from tripsage_core.services.infrastructure.database_operations_mixin import (
     DatabaseOperationsMixin,
     DatabaseServiceProtocol,
 )
+from tripsage_core.services.infrastructure.database_service import DatabaseService
 from tripsage_core.services.infrastructure.in_memory_search_cache_mixin import (
     InMemorySearchCacheMixin,
 )
@@ -130,7 +131,7 @@ __all__ = [
 
 
 class FlightService(DatabaseOperationsMixin, ValidationMixin, InMemorySearchCacheMixin):
-    """Comprehensive flight service for search, booking, and management.
+    """Flight service for search, booking, and management.
 
     This service handles:
     - Flight search with multiple providers
@@ -144,8 +145,8 @@ class FlightService(DatabaseOperationsMixin, ValidationMixin, InMemorySearchCach
     def __init__(
         self,
         *,
-        database_service: DatabaseServiceProtocol,
-        external_flight_service: ExternalFlightServiceProtocol | None = None,
+        database_service: DatabaseService,
+        external_flight_service: Any = None,
         cache_ttl: int = 300,
     ) -> None:
         """Initialize the flight service.
@@ -160,19 +161,22 @@ class FlightService(DatabaseOperationsMixin, ValidationMixin, InMemorySearchCach
 
         # Dependencies must be provided explicitly via DI
 
-        self._db: DatabaseServiceProtocol = database_service
-        self._external_service: ExternalFlightServiceProtocol | None = (
-            external_flight_service
-        )
+        self._db: DatabaseService = database_service
+        self._external_service: Any = external_flight_service
         self.cache_ttl = cache_ttl
 
     @property
-    def db(self) -> DatabaseServiceProtocol:
+    def database_service(self) -> DatabaseService:
         """Database service dependency."""
         return self._db
 
     @property
-    def external_service(self) -> ExternalFlightServiceProtocol | None:
+    def db(self) -> DatabaseServiceProtocol:
+        """Database service required by database mixins."""
+        return cast(DatabaseServiceProtocol, self._db)
+
+    @property
+    def external_service(self) -> Any:
         """External flight provider dependency (optional)."""
         return self._external_service
 

@@ -359,12 +359,14 @@ async def get_search_facade() -> SearchFacade:
     )
 
     # Initialize services (this would typically be done in a DI container)
-    destination_service = DestinationService()
+    destination_service = DestinationService(database_service=None)
     activity_service = None  # Would need proper initialization with Google Maps service
     unified_search_service = UnifiedSearchService(
+        cache_service=None,  # Would need proper cache service initialization
         destination_service=destination_service,
         activity_service=activity_service,
-        cache_service=None,  # Would need proper cache service initialization
+        flight_service=None,
+        accommodation_service=None,
     )
 
     # Return the search facade instance

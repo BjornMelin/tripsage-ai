@@ -8,7 +8,7 @@ while maintaining proper data relationships.
 """
 
 import logging
-from collections.abc import Awaitable, Mapping
+from collections.abc import Mapping
 from datetime import UTC, date, datetime
 from enum import Enum
 from typing import Any, cast
@@ -583,10 +583,7 @@ class DestinationService(
         """
         try:
             # Get destination details
-            result_any = await cast(
-                Awaitable[Destination | None],
-                self.get_destination_details(save_request.destination_id),
-            )
+            result_any = await self.get_destination_details(save_request.destination_id)
             destination = result_any
             if not destination:
                 raise NotFoundError("Destination not found")
@@ -684,11 +681,7 @@ class DestinationService(
         try:
             # Get user's travel history and preferences
             user_preferences = await self._get_user_travel_preferences(user_id)
-            saved_list_any = await cast(
-                Awaitable[list[SavedDestination]],
-                self.get_saved_destinations(user_id),
-            )
-            saved_destinations = saved_list_any
+            saved_destinations = await self.get_saved_destinations(user_id)
 
             # Generate recommendations based on interests and history
             recommendations = await self._generate_recommendations(

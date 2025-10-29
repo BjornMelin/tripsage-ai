@@ -73,6 +73,9 @@ class DirectionsLeg(TripSageModel):
     duration_seconds: int | None = Field(default=None, ge=0)
     start: Place | None = None
     end: Place | None = None
+    # Optional display-friendly values
+    distance: DisplayValue | None = None
+    duration: DisplayValue | None = None
 
 
 class DirectionsResult(TripSageModel):
@@ -97,12 +100,22 @@ class DirectionsResult(TripSageModel):
     raw: dict[str, Any] | None = None
 
 
+class DisplayValue(TripSageModel):
+    """Human-readable value with raw numeric representation."""
+
+    text: str | None = None
+    value: int | None = None
+
+
 class DistanceMatrixElement(TripSageModel):
     """Single origin→destination matrix element."""
 
     status: str
     distance_meters: int | None = Field(default=None, ge=0)
     duration_seconds: int | None = Field(default=None, ge=0)
+    # Optional display-friendly values used by some tests/callers
+    distance: DisplayValue | None = None
+    duration: DisplayValue | None = None
 
 
 class DistanceMatrixRow(TripSageModel):

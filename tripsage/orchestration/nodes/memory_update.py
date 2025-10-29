@@ -5,6 +5,9 @@ insights learned during conversation.
 """
 
 from collections import Counter
+from collections.abc import Sequence
+
+from langchain_core.tools import BaseTool
 
 from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
@@ -25,17 +28,21 @@ class MemoryUpdateNode(BaseAgentNode):
     def __init__(self, services: AppServiceContainer):
         """Initialize the memory update node."""
         super().__init__("memory_update", services)
+        # Predefine tool attributes to satisfy static analysis and pylint
+        self.available_tools: list[BaseTool] = []
+        self.memory_tool: BaseTool | None = None
 
     def _initialize_tools(self) -> None:
         """Initialize memory management tools using simple tool catalog."""
         from tripsage.orchestration.tools.tools import get_tools_for_agent
 
         # Get tools for memory update agent using simple catalog
-        self.available_tools = get_tools_for_agent("memory_update")
+        tools: Sequence[BaseTool] = list(get_tools_for_agent("memory_update"))
+        self.available_tools = list(tools)
 
-        # Extract memory tool for convenience
+        # Extract memory tool for convenience (typed defensively for stubs)
         self.memory_tool = next(
-            (tool for tool in self.available_tools if "memory" in tool.name.lower()),
+            (tool for tool in tools if "memory" in tool.name.lower()),
             None,
         )
 

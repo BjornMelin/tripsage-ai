@@ -7,31 +7,32 @@ provides clean abstractions over external services with proper data relationship
 """
 
 import logging
+from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
-from pydantic import Field, field_validator
+from pydantic import Field, ValidationInfo, field_validator
 
 from tripsage_core.exceptions import (
+    RECOVERABLE_ERRORS,
     CoreResourceNotFoundError as NotFoundError,
     CoreServiceError as ServiceError,
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.services.infrastructure.database_operations_mixin import (
+    DatabaseOperationsMixin,
+)
+from tripsage_core.services.infrastructure.in_memory_search_cache_mixin import (
+    InMemorySearchCacheMixin,
+)
+from tripsage_core.services.infrastructure.validation_mixin import ValidationMixin
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
-
-
-RECOVERABLE_ERRORS = (
-    ServiceError,
-    ConnectionError,
-    TimeoutError,
-    RuntimeError,
-    ValueError,
-)
 
 
 class PropertyType(str, Enum):
@@ -180,10 +181,13 @@ class AccommodationSearchRequest(TripSageModel):
 
     @field_validator("check_out")
     @classmethod
-    def validate_check_out(cls, v: date, info) -> date:
+    def validate_check_out(cls, v: date, info: ValidationInfo) -> date:
         """Validate check-out date is after check-in date."""
-        if info.data.get("check_in") and v <= info.data["check_in"]:
-            raise ValueError("Check-out date must be after check-in date")
+        data = info.data
+        if data and "check_in" in data:
+            check_in = data["check_in"]
+            if isinstance(check_in, date) and v <= check_in:
+                raise ValueError("Check-out date must be after check-in date")
         return v
 
 
@@ -210,11 +214,21 @@ class AccommodationListing(TripSageModel):
     beds: int | None = Field(None, description="Number of beds")
     bathrooms: float | None = Field(None, description="Number of bathrooms")
 
+    @staticmethod
+    def _empty_amenities() -> list["AccommodationAmenity"]:
+        """Typed empty list factory for amenities."""
+        return []
+
+    @staticmethod
+    def _empty_images() -> list["AccommodationImage"]:
+        """Typed empty list factory for images."""
+        return []
+
     amenities: list[AccommodationAmenity] = Field(
-        default_factory=list, description="Property amenities"
+        default_factory=_empty_amenities, description="Property amenities"
     )
     images: list[AccommodationImage] = Field(
-        default_factory=list, description="Property images"
+        default_factory=_empty_images, description="Property images"
     )
 
     host: AccommodationHost | None = Field(None, description="Host information")
@@ -363,7 +377,9 @@ class AccommodationBookingRequest(TripSageModel):
     )
 
 
-class AccommodationService:
+class AccommodationService(
+    DatabaseOperationsMixin, ValidationMixin, InMemorySearchCacheMixin
+):
     """Accommodation service for search, booking, and management.
 
     This service handles:
@@ -377,8 +393,8 @@ class AccommodationService:
 
     def __init__(
         self,
-        database_service=None,
-        external_accommodation_service=None,
+        database_service: Any | None = None,
+        external_accommodation_service: Any | None = None,
         cache_ttl: int = 300,
     ):
         """Initialize the accommodation service.
@@ -388,6 +404,9 @@ class AccommodationService:
             external_accommodation_service: External accommodation API service
             cache_ttl: Cache TTL in seconds
         """
+        # Initialize mixin with cache TTL
+        super().__init__(cache_ttl=cache_ttl)
+
         # Import here to avoid circular imports
         if database_service is None:
             import asyncio
@@ -402,25 +421,27 @@ class AccommodationService:
             database_service = loop.run_until_complete(get_database_service())
 
         if external_accommodation_service is None:
-            # Try to import MCP accommodation client
+            # Prefer sanitized Airbnb MCP client if available
             try:
-                from tripsage_core.clients.accommodations import AccommodationMCPClient
+                from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
 
-                # Default local MCP base URL; can be made configurable via Settings.
-                external_accommodation_service = AccommodationMCPClient(
-                    base_url="http://localhost:3000"
+                external_accommodation_service = AirbnbMCPClient(
+                    endpoint="http://localhost:3000"
                 )
-            except ImportError:
+            except Exception:  # noqa: BLE001 - optional dependency
                 logger.warning("External accommodation service not available")
                 external_accommodation_service = None
 
-        self.db: Any = database_service  # dynamic backend, attribute surface varies
+        self._db: Any = database_service  # dynamic backend, attribute surface varies
         self.external_service: Any = external_accommodation_service
         self.cache_ttl = cache_ttl
 
-        # In-memory cache for search results
-        self._search_cache: dict[str, tuple] = {}
+    @property
+    def db(self) -> Any:
+        """Database service instance."""
+        return self._db
 
+    @tripsage_safe_execute()
     async def search_accommodations(
         self, search_request: AccommodationSearchRequest
     ) -> AccommodationSearchResponse:
@@ -437,7 +458,7 @@ class AccommodationService:
             ServiceError: If search fails
         """
         try:
-            if not search_request.user_id:
+            if not self._validate_user_id(search_request.user_id):
                 raise ValidationError("User ID is required for accommodation search")
 
             search_id = str(uuid4())
@@ -469,7 +490,7 @@ class AccommodationService:
                 )
 
             # Perform external search
-            listings = []
+            listings: list[AccommodationListing] = []
             if self.external_service:
                 try:
                     external_listings = await self._search_external_api(search_request)
@@ -559,6 +580,7 @@ class AccommodationService:
             )
             raise ServiceError(f"Accommodation search failed: {error!s}") from error
 
+    @tripsage_safe_execute()
     async def get_listing_details(
         self, listing_id: str, user_id: str
     ) -> AccommodationListing | None:
@@ -573,7 +595,9 @@ class AccommodationService:
         """
         try:
             # Try to get from database first
-            listing_data = await self.db.get_accommodation_listing(listing_id, user_id)
+            listing_data = await self._get_entity_by_id(
+                "accommodation_listing", listing_id, user_id
+            )
             if listing_data:
                 return AccommodationListing(**listing_data)
 
@@ -581,7 +605,7 @@ class AccommodationService:
             if self.external_service:
                 try:
                     external_listing = await self.external_service.get_listing_details(
-                        listing_id
+                        listing_id=listing_id
                     )
                     if external_listing:
                         # Convert to our model
@@ -612,6 +636,7 @@ class AccommodationService:
             )
             return None
 
+    @tripsage_safe_execute()
     async def book_accommodation(
         self, user_id: str, booking_request: AccommodationBookingRequest
     ) -> AccommodationBooking:
@@ -630,11 +655,13 @@ class AccommodationService:
             ServiceError: If booking fails
         """
         try:
-            # Get listing details
-            listing = await self.get_listing_details(
-                booking_request.listing_id, user_id
+            # Get listing details (decorated coroutine; cast for static typing)
+            get_details = cast(
+                Callable[[str, str], Awaitable[AccommodationListing | None]],
+                self.get_listing_details,
             )
-            if not listing:
+            listing = await get_details(booking_request.listing_id, user_id)
+            if listing is None:
                 raise NotFoundError("Accommodation listing not found")
 
             # Check availability
@@ -738,6 +765,7 @@ class AccommodationService:
             )
             raise ServiceError(f"Accommodation booking failed: {error!s}") from error
 
+    @tripsage_safe_execute()
     async def get_user_bookings(
         self,
         user_id: str,
@@ -763,7 +791,9 @@ class AccommodationService:
             if status:
                 filters["status"] = status.value
 
-            results = await self.db.get_accommodation_bookings(filters, limit)
+            results = await self._get_entities_with_filters(
+                "accommodation_booking", filters, limit
+            )
 
             return [AccommodationBooking(**result) for result in results]
 
@@ -774,6 +804,7 @@ class AccommodationService:
             )
             return []
 
+    @tripsage_safe_execute()
     async def cancel_booking(self, booking_id: str, user_id: str) -> bool:
         """Cancel an accommodation booking.
 
@@ -791,7 +822,9 @@ class AccommodationService:
         """
         try:
             # Get booking
-            booking_data = await self.db.get_accommodation_booking(booking_id, user_id)
+            booking_data = await self._get_entity_by_id(
+                "accommodation_booking", booking_id, user_id
+            )
             if not booking_data:
                 raise NotFoundError("Accommodation booking not found")
 
@@ -818,8 +851,11 @@ class AccommodationService:
                     )
 
             # Update booking status
-            success = await self.db.update_accommodation_booking(
-                booking_id, {"status": BookingStatus.CANCELLED.value}
+            success = await self._update_entity(
+                "accommodation_booking",
+                booking_id,
+                {"status": BookingStatus.CANCELLED.value},
+                user_id,
             )
 
             if success:
@@ -849,22 +885,30 @@ class AccommodationService:
             return []
 
         try:
-            # Convert to external API format
-            external_request = {
-                "location": search_request.location,
-                "check_in": search_request.check_in,
-                "check_out": search_request.check_out,
-                "guests": (search_request.adults or 0) + (search_request.children or 0),
-                "property_types": search_request.property_types,
-                "min_price": search_request.min_price,
-                "max_price": search_request.max_price,
-                "amenities": search_request.amenities,
-                "instant_book": getattr(search_request, "instant_book", None),
-            }
+            # Map to Airbnb MCP client parameters
+            adults = (
+                search_request.adults
+                if search_request.adults is not None
+                else search_request.guests
+            ) or 1
+            children = search_request.children or 0
+            infants = search_request.infants or 0
 
-            # Call external API
             external_listings = await self.external_service.search_accommodations(
-                **external_request
+                location=search_request.location,
+                checkin=search_request.check_in.isoformat(),
+                checkout=search_request.check_out.isoformat(),
+                adults=adults,
+                children=children,
+                infants=infants,
+                pets=0,
+                min_price=int(search_request.min_price)
+                if search_request.min_price
+                else None,
+                max_price=int(search_request.max_price)
+                if search_request.max_price
+                else None,
+                cursor=None,
             )
 
             # Convert to our model
@@ -877,7 +921,9 @@ class AccommodationService:
             logger.exception("External API search failed", extra={"error": str(error)})
             return []
 
-    async def _convert_external_listing(self, external_listing) -> AccommodationListing:
+    async def _convert_external_listing(
+        self, external_listing: dict[str, Any]
+    ) -> AccommodationListing:
         """Convert external API listing to our model."""
         # This is a simplified conversion - in practice you'd map all fields
         return AccommodationListing.model_validate(
@@ -1018,48 +1064,6 @@ class AccommodationService:
         # Sort by score (highest first)
         return sorted(listings, key=lambda x: x.score or 0, reverse=True)
 
-    def _generate_search_cache_key(
-        self, search_request: AccommodationSearchRequest
-    ) -> str:
-        """Generate cache key for search request."""
-        import hashlib
-
-        key_data = (
-            f"{search_request.user_id}:{search_request.trip_id or 'none'}:"
-            f"{search_request.location}:{search_request.check_in}:"
-            f"{search_request.check_out}:"
-            f"{search_request.guests}:"
-            f"{(search_request.adults or 0)}:{(search_request.children or 0)}:"
-            f"{search_request.min_price}:{search_request.max_price}"
-        )
-
-        return hashlib.sha256(key_data.encode()).hexdigest()[:16]
-
-    def _get_cached_search(self, cache_key: str) -> dict[str, Any] | None:
-        """Get cached search results if still valid."""
-        if cache_key in self._search_cache:
-            result, timestamp = self._search_cache[cache_key]
-            import time
-
-            if time.time() - timestamp < self.cache_ttl:
-                return result
-            del self._search_cache[cache_key]
-        return None
-
-    def _cache_search_results(self, cache_key: str, result: dict[str, Any]) -> None:
-        """Cache search results."""
-        import time
-
-        self._search_cache[cache_key] = (result, time.time())
-
-        # Simple cache cleanup
-        if len(self._search_cache) > 1000:
-            oldest_keys = sorted(
-                self._search_cache.keys(), key=lambda k: self._search_cache[k][1]
-            )[:200]
-            for key in oldest_keys:
-                del self._search_cache[key]
-
     async def _store_search_history(
         self,
         search_id: str,
@@ -1084,7 +1088,7 @@ class AccommodationService:
                 "metadata": search_request.metadata or {},
             }
 
-            await self.db.store_accommodation_search(search_data)
+            await self._store_entity("accommodation_search", search_data)
 
         except RECOVERABLE_ERRORS as error:
             logger.warning(
@@ -1103,7 +1107,7 @@ class AccommodationService:
                 else datetime.now(UTC).isoformat()
             )
 
-            await self.db.store_accommodation_listing(listing_data)
+            await self._store_entity("accommodation_listing", listing_data)
 
         except RECOVERABLE_ERRORS as error:
             logger.warning(
@@ -1121,7 +1125,7 @@ class AccommodationService:
                 else datetime.now(UTC).isoformat()
             )
 
-            await self.db.store_accommodation_booking(booking_data)
+            await self._store_entity("accommodation_booking", booking_data)
 
         except RECOVERABLE_ERRORS as error:
             logger.exception(

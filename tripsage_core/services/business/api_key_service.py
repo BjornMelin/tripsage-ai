@@ -22,7 +22,7 @@ import uuid
 from collections.abc import Awaitable
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Annotated, Any, Optional, Protocol, cast
+from typing import TYPE_CHECKING, Annotated, Any, Optional, Protocol
 
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
@@ -421,10 +421,9 @@ class ApiKeyService(
             ServiceError: If creation fails
         """
         try:
-            # Validate the API key first (decorator obscures Awaitable type)
-            validation_result: ApiValidationResult = await cast(
-                Awaitable[ApiValidationResult],
-                self.validate_api_key(key_data.service, key_data.key_value),
+            # Validate the API key first
+            validation_result: ApiValidationResult = await self.validate_api_key(
+                key_data.service, key_data.key_value
             )
 
             # Generate secure key ID and encrypt key
@@ -796,10 +795,9 @@ class ApiKeyService(
         """
         services = [ServiceType.OPENAI, ServiceType.WEATHER, ServiceType.GOOGLEMAPS]
 
-        # Run health checks concurrently with explicit coroutine typing
+        # Run health checks concurrently
         tasks: list[Awaitable[ApiValidationResult]] = [
-            cast(Awaitable[ApiValidationResult], self.check_service_health(service))
-            for service in services
+            self.check_service_health(service) for service in services
         ]
         results: list[ApiValidationResult | BaseException] = await asyncio.gather(
             *tasks, return_exceptions=True
@@ -998,6 +996,18 @@ class ApiKeyService(
             raise ServiceError(
                 "Decryption failed - unable to recover API key"
             ) from error
+
+    # ------------------------------------------------------------------
+    # Benchmark/test helpers
+    # ------------------------------------------------------------------
+
+    def encrypt_for_benchmark(self, key_value: str) -> str:
+        """Expose encryption for performance benchmarks and diagnostics."""
+        return self._encrypt_api_key(key_value)
+
+    def decrypt_for_benchmark(self, encrypted_key: str) -> str:
+        """Expose decryption for performance benchmarks and diagnostics."""
+        return self._decrypt_api_key(encrypted_key)
 
     async def _validate_api_key(  # pylint: disable=too-many-return-statements
         self, service: ServiceType, key_value: str
