@@ -1,9 +1,10 @@
 """Canonical accommodation request and response models for the API layer."""
 
 from datetime import date
+from typing import cast
 from uuid import UUID
 
-from pydantic import ConfigDict, Field, field_validator
+from pydantic import ConfigDict, Field, ValidationInfo, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.services.business.accommodation_service import (
@@ -43,9 +44,16 @@ class AccommodationDetailsRequest(TripSageModel):
 
     @field_validator("check_out")
     @classmethod
-    def validate_dates(cls, value: date | None, info) -> date | None:
+    def validate_dates(cls, value: date | None, info: ValidationInfo) -> date | None:
         """Ensure check-out is after check-in when both provided."""
-        check_in = info.data.get("check_in")
+        from typing import Any
+
+        data_any: Any = info.data
+        if isinstance(data_any, dict):
+            d = cast(dict[str, Any], data_any)
+            check_in = cast(date | None, d.get("check_in"))
+        else:
+            check_in = None
         if value is not None and check_in and value <= check_in:
             raise ValueError("Check-out date must be after check-in date")
         return value
@@ -74,9 +82,16 @@ class SavedAccommodationRequest(TripSageModel):
 
     @field_validator("check_out")
     @classmethod
-    def validate_dates(cls, value: date, info) -> date:
+    def validate_dates(cls, value: date, info: ValidationInfo) -> date:
         """Validate that check-out date is after check-in date."""
-        check_in = info.data.get("check_in")
+        from typing import Any
+
+        data_any: Any = info.data
+        if isinstance(data_any, dict):
+            d = cast(dict[str, Any], data_any)
+            check_in = cast(date | None, d.get("check_in"))
+        else:
+            check_in = None
         if check_in and value <= check_in:
             raise ValueError("Check-out date must be after check-in date")
         return value

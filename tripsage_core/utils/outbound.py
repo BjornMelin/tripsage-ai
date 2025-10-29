@@ -25,7 +25,7 @@ _DEFAULT_QPM = get_settings().outbound_default_qpm
 _limiters_by_loop: MutableMapping[int, MutableMapping[str, AsyncLimiter]] = {}
 
 
-def _limiter_for_host(host: str) -> AsyncLimiter:
+async def _limiter_for_host(host: str) -> AsyncLimiter:
     """Get or create a limiter for a given hostname.
 
     Uses environment override ``OUTBOUND_QPM__<HOST>`` (uppercased, dots
@@ -48,7 +48,8 @@ def _limiter_for_host(host: str) -> AsyncLimiter:
         return per_loop[key]
 
     env_key = f"OUTBOUND_QPM__{host.upper().replace('.', '_')}"
-    qpm = float(os.getenv(env_key, str(_DEFAULT_QPM)))
+    env_value = await asyncio.to_thread(os.getenv, env_key, str(_DEFAULT_QPM))
+    qpm = float(env_value)
     # Window of 60 seconds for QPM semantics
     limiter = AsyncLimiter(max_rate=qpm, time_period=60)
     per_loop[key] = limiter
@@ -96,7 +97,7 @@ async def request_with_backoff(
     """
     parsed = urllib.parse.urlparse(url)
     host = parsed.netloc.split("@")[-1]  # strip userinfo if any
-    limiter = _limiter_for_host(host)
+    limiter = await _limiter_for_host(host)
 
     attempt = 0
     while True:

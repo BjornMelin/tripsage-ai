@@ -2,11 +2,27 @@
 
 from datetime import date, time
 from enum import Enum
+from typing import Any, cast
 
-from pydantic import ConfigDict, Field, field_validator
+from pydantic import ConfigDict, Field, ValidationInfo, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.models.schemas_common.base_models import PaginatedResponse
+
+
+def _empty_str_list() -> list[str]:
+    """Return an empty list of strings."""
+    return []
+
+
+def _empty_item_list() -> list["ItineraryItemResponse"]:  # forward ref
+    """Return an empty list of itinerary item responses."""
+    return []
+
+
+def _empty_dict_any_list() -> list[dict[str, Any]]:
+    """Return an empty list of dictionaries."""
+    return []
 
 
 class ItineraryItemType(str, Enum):
@@ -58,9 +74,14 @@ class TimeSlot(TripSageModel):
 
     @field_validator("end_time")
     @classmethod
-    def validate_end_time(cls, value: time, info) -> time:
+    def validate_end_time(cls, value: time, info: ValidationInfo) -> time:
         """Validate that end_time is after start_time."""
-        start = info.data.get("start_time")
+        data_any: Any = info.data
+        if isinstance(data_any, dict):
+            d = cast(dict[str, Any], data_any)
+            start = cast(time | None, d.get("start_time"))
+        else:
+            start = None
         if start and value <= start:
             raise ValueError("End time must be after start time")
         return value
@@ -115,9 +136,14 @@ class ItineraryCreateRequest(TripSageModel):
 
     @field_validator("end_date")
     @classmethod
-    def validate_dates(cls, value: date, info) -> date:
+    def validate_dates(cls, value: date, info: ValidationInfo) -> date:
         """Validate that end_date is after or equal to start_date."""
-        start = info.data.get("start_date")
+        data_any: Any = info.data
+        if isinstance(data_any, dict):
+            d = cast(dict[str, Any], data_any)
+            start = cast(date | None, d.get("start_date"))
+        else:
+            start = None
         if start and value < start:
             raise ValueError("End date must be after or equal to start date")
         return value
@@ -241,19 +267,19 @@ class ItineraryItemCreateRequest(TripSageModel):
         False,
         description="Whether this item's time is flexible",
     )
-    flight_details: dict | None = Field(
+    flight_details: dict[str, Any] | None = Field(
         None,
         description="Flight-specific details if type is TRANSPORT",
     )
-    accommodation_details: dict | None = Field(
+    accommodation_details: dict[str, Any] | None = Field(
         None,
         description="Accommodation-specific details if type is ACCOMMODATION",
     )
-    activity_details: dict | None = Field(
+    activity_details: dict[str, Any] | None = Field(
         None,
         description="Activity-specific details if type is ACTIVITY",
     )
-    transportation_details: dict | None = Field(
+    transportation_details: dict[str, Any] | None = Field(
         None,
         description="Transportation-specific details if type is TRANSPORT",
     )
@@ -305,19 +331,19 @@ class ItineraryItemUpdateRequest(TripSageModel):
         None,
         description="Whether this item's time is flexible",
     )
-    flight_details: dict | None = Field(
+    flight_details: dict[str, Any] | None = Field(
         None,
         description="Flight-specific details if type is TRANSPORT",
     )
-    accommodation_details: dict | None = Field(
+    accommodation_details: dict[str, Any] | None = Field(
         None,
         description="Accommodation-specific details if type is ACCOMMODATION",
     )
-    activity_details: dict | None = Field(
+    activity_details: dict[str, Any] | None = Field(
         None,
         description="Activity-specific details if type is ACTIVITY",
     )
-    transportation_details: dict | None = Field(
+    transportation_details: dict[str, Any] | None = Field(
         None,
         description="Transportation-specific details if type is TRANSPORT",
     )
@@ -465,9 +491,11 @@ class ItineraryResponse(TripSageModel):
     status: str = Field(description="Current status of the itinerary")
     total_budget: float | None = Field(None, description="Total budget for the trip")
     currency: str | None = Field(None, description="Currency code for budget")
-    tags: list[str] = Field(default_factory=list, description="Associated tags")
+    tags: list[str] = Field(
+        default_factory=_empty_str_list, description="Associated tags"
+    )
     items: list[ItineraryItemResponse] = Field(
-        default_factory=list, description="Itinerary items"
+        default_factory=_empty_item_list, description="Itinerary items"
     )
     created_at: str | None = Field(None, description="Creation timestamp")
     updated_at: str | None = Field(None, description="Last update timestamp")
@@ -517,8 +545,8 @@ class ItineraryConflictCheckResponse(TripSageModel):
     has_conflicts: bool = Field(
         description="Whether there are any conflicts",
     )
-    conflicts: list[dict] = Field(
-        default_factory=list,
+    conflicts: list[dict[str, Any]] = Field(
+        default_factory=_empty_dict_any_list,
         description="List of conflicts found",
     )
 
@@ -532,8 +560,8 @@ class ItineraryOptimizeResponse(TripSageModel):
     optimized_itinerary: ItineraryResponse = Field(
         description="Optimized itinerary",
     )
-    changes: list[dict] = Field(
-        default_factory=list,
+    changes: list[dict[str, Any]] = Field(
+        default_factory=_empty_dict_any_list,
         description="List of changes made during optimization",
     )
     optimization_score: float = Field(
