@@ -12,7 +12,7 @@ from typing import Any, cast
 from pydantic import BaseModel, Field, field_validator
 
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
-from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ class ToolCallService:
         self.execution_history: list[ToolCallResponse] = []
         self.rate_limits: dict[str, list[float]] = {}
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def execute_tool_call(self, request: ToolCallRequest) -> ToolCallResponse:
         """Execute a single tool call with error handling.
 
@@ -180,7 +180,7 @@ class ToolCallService:
                 method=request.method,
             )
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def execute_parallel_tool_calls(
         self, requests: list[ToolCallRequest]
     ) -> list[ToolCallResponse]:

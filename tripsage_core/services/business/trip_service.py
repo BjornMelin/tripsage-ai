@@ -7,6 +7,7 @@ retrieval, updates, sharing, and collaboration features.
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
@@ -25,6 +26,8 @@ from tripsage_core.models.schemas_common.enums import (
     TripVisibility,
 )
 from tripsage_core.models.trip import Budget, Trip, TripPreferences
+from tripsage_core.types import JSONObject, JSONValue
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
@@ -162,6 +165,7 @@ class TripService:
         self.db: DatabaseService = database_service
         self.user_service: UserService = user_service
 
+    @tripsage_safe_execute()
     async def create_trip(
         self, user_id: str, trip_data: TripCreateRequest
     ) -> TripResponse:
@@ -218,6 +222,7 @@ class TripService:
             )
             raise
 
+    @tripsage_safe_execute()
     async def get_trip(self, trip_id: str, user_id: str) -> TripResponse | None:
         """Get trip by ID.
 
@@ -246,6 +251,7 @@ class TripService:
             )
             return None
 
+    @tripsage_safe_execute()
     async def get_user_trips(
         self,
         user_id: str,
@@ -303,6 +309,7 @@ class TripService:
             )
             return []
 
+    @tripsage_safe_execute()
     async def count_user_trips(self, user_id: str) -> int:
         """Count total trips for a user.
 
@@ -323,6 +330,7 @@ class TripService:
             )
             return 0
 
+    @tripsage_safe_execute()
     async def update_trip(
         self, trip_id: str, user_id: str, update_data: TripUpdateRequest
     ) -> TripResponse | None:
@@ -394,6 +402,7 @@ class TripService:
             )
             raise
 
+    @tripsage_safe_execute()
     async def delete_trip(self, trip_id: str, user_id: str) -> bool:
         """Delete a trip.
 
@@ -433,6 +442,7 @@ class TripService:
             )
             return False
 
+    @tripsage_safe_execute()
     async def share_trip(
         self,
         trip_id: str,
@@ -466,12 +476,12 @@ class TripService:
                 raise CoreResourceNotFoundError("User not found")
 
             # Create collaborator record
-            collaborator_data = {
+            collaborator_data: JSONObject = {
                 "trip_id": trip_id,
                 "user_id": share_with_user_id,
                 "permission": permission,
                 "added_by": owner_id,
-                "added_at": datetime.now(UTC),
+                "added_at": datetime.now(UTC).isoformat(),
             }
 
             result = await self.db.add_trip_collaborator(collaborator_data)
@@ -503,6 +513,7 @@ class TripService:
             )
             return False
 
+    @tripsage_safe_execute()
     async def unshare_trip(
         self, trip_id: str, owner_id: str, unshare_user_id: str
     ) -> bool:
@@ -554,6 +565,7 @@ class TripService:
             )
             return False
 
+    @tripsage_safe_execute()
     async def get_shared_trips(
         self, user_id: str, limit: int = 50, offset: int = 0
     ) -> list[TripResponse]:
@@ -575,7 +587,17 @@ class TripService:
 
             trips: list[TripResponse] = []
             for collab in collaborations:
-                result = await self.db.get_trip_by_id(collab["trip_id"])
+                trip_id_value = collab.get("trip_id")
+                if isinstance(trip_id_value, (str, UUID)):
+                    trip_id_str = str(trip_id_value)
+                else:
+                    logger.warning(
+                        "Collaboration record missing trip_id",
+                        extra={"collaboration": collab},
+                    )
+                    continue
+
+                result = await self.db.get_trip_by_id(trip_id_str)
                 if result:
                     trip = await self._build_trip_response(result)
                     trips.append(trip)
@@ -590,6 +612,7 @@ class TripService:
             )
             return []
 
+    @tripsage_safe_execute()
     async def search_trips(
         self,
         user_id: str,
@@ -613,12 +636,15 @@ class TripService:
         """
         try:
             # Build search filters
-            search_filters = {"user_id": user_id}
+            search_filters: JSONObject = {
+                "user_id": user_id,
+                "query": query,
+            }
             if filters:
-                search_filters.update(filters)
+                for key, value in filters.items():
+                    search_filters[str(key)] = self._coerce_json_value(value)
 
             # Perform search
-            search_filters["query"] = query
             results = await self.db.search_trips(
                 search_filters, limit=limit, offset=offset
             )
@@ -626,7 +652,13 @@ class TripService:
             trips: list[TripResponse] = []
             for result in results:
                 # Check access
-                if await self._check_trip_access(result["id"], user_id):
+                trip_id_value = result.get("id")
+                if isinstance(trip_id_value, (str, UUID)):
+                    trip_id = str(trip_id_value)
+                else:
+                    continue
+
+                if await self._check_trip_access(trip_id, user_id):
                     trip = await self._build_trip_response(result)
                     trips.append(trip)
 
@@ -638,6 +670,28 @@ class TripService:
                 extra={"user_id": user_id, "query": query, "error": str(e)},
             )
             return []
+
+    @staticmethod
+    def _coerce_json_value(value: Any) -> JSONValue:
+        """Convert arbitrary values to JSONValue for database filtering."""
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            return value
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, UUID):
+            return str(value)
+        if isinstance(value, (list, tuple)):
+            return [
+                TripService._coerce_json_value(element)
+                for element in cast(Sequence[Any], value)
+            ]
+        if isinstance(value, dict):
+            generic_mapping = cast(dict[Any, Any], value)
+            coerced: dict[str, JSONValue] = {}
+            for key_obj, item_obj in generic_mapping.items():
+                coerced[str(key_obj)] = TripService._coerce_json_value(item_obj)
+            return coerced
+        return str(value)
 
     async def _check_trip_access(
         self, trip_id: str, user_id: str, require_owner: bool = False

@@ -4,15 +4,18 @@ This service consolidates flight-related business logic including flight search,
 booking, management, and integration with external flight APIs. It provides
 clean abstractions over external services while maintaining proper data relationships.
 """
-# pylint: disable=duplicate-code
+
+from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime, time, timedelta
+from collections.abc import Mapping, Sequence
+from datetime import UTC, date, datetime, time, timedelta
 from enum import Enum
-from typing import Any
+from typing import Any, Protocol, TypedDict, cast
 from uuid import uuid4
 
 from tripsage_core.exceptions import (
+    RECOVERABLE_ERRORS,
     CoreResourceNotFoundError as NotFoundError,
     CoreServiceError as ServiceError,
     CoreValidationError as ValidationError,
@@ -34,21 +37,67 @@ from tripsage_core.models.schemas_common.flight_schemas import (
     FlightSearchRequest,
 )
 from tripsage_core.observability.otel import record_histogram, trace_span
+from tripsage_core.services.infrastructure.database_operations_mixin import (
+    DatabaseOperationsMixin,
+    DatabaseServiceProtocol,
+)
+from tripsage_core.services.infrastructure.in_memory_search_cache_mixin import (
+    InMemorySearchCacheMixin,
+)
+from tripsage_core.services.infrastructure.validation_mixin import ValidationMixin
+from tripsage_core.types import JSONValue
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
 
-RECOVERABLE_ERRORS = (
-    ServiceError,
-    NotFoundError,
-    ValidationError,
-    ConnectionError,
-    TimeoutError,
-    RuntimeError,
-    ValueError,
-    KeyError,
-    TypeError,
-)
+
+class ExternalPassengerPayload(TypedDict, total=False):
+    """Passenger payload accepted by external flight providers."""
+
+    type: str
+    given_name: str
+    family_name: str
+    age: int
+    born_on: str
+    email: str
+    phone_number: str
+
+
+ExternalOfferPayload = Mapping[str, JSONValue]
+
+
+class ExternalFlightServiceProtocol(Protocol):
+    """Protocol describing the subset of external flight provider features used."""
+
+    async def search_flights(
+        self,
+        *,
+        origin: str,
+        destination: str,
+        departure_date: date | datetime,
+        return_date: date | datetime | None,
+        passengers: Sequence[ExternalPassengerPayload],
+        cabin_class: str | None,
+        max_connections: int | None,
+        currency: str,
+    ) -> Sequence[ExternalOfferPayload]:
+        """Search for flight offers using the external provider."""
+        ...
+
+    async def get_offer_details(self, offer_id: str) -> ExternalOfferPayload | None:
+        """Fetch a single offer from the external provider."""
+        ...
+
+    async def create_order(
+        self,
+        *,
+        offer_id: str,
+        passengers: Sequence[ExternalPassengerPayload],
+        payment: Mapping[str, JSONValue],
+    ) -> Mapping[str, JSONValue]:
+        """Create an external booking/order for a given offer."""
+        ...
 
 
 class FlightType(str, Enum):
@@ -80,7 +129,7 @@ __all__ = [
 # Models are imported from the canonical domain module above.
 
 
-class FlightService:
+class FlightService(DatabaseOperationsMixin, ValidationMixin, InMemorySearchCacheMixin):
     """Comprehensive flight service for search, booking, and management.
 
     This service handles:
@@ -93,8 +142,12 @@ class FlightService:
     """
 
     def __init__(
-        self, *, database_service, external_flight_service=None, cache_ttl: int = 300
-    ):
+        self,
+        *,
+        database_service: DatabaseServiceProtocol,
+        external_flight_service: ExternalFlightServiceProtocol | None = None,
+        cache_ttl: int = 300,
+    ) -> None:
         """Initialize the flight service.
 
         Args:
@@ -102,16 +155,28 @@ class FlightService:
             external_flight_service: External flight API service
             cache_ttl: Cache TTL in seconds
         """
+        # Initialize mixin with cache TTL
+        super().__init__(cache_ttl=cache_ttl)
+
         # Dependencies must be provided explicitly via DI
 
-        # Allow dynamic attributes on services for type checker flexibility
-        self.db: Any = database_service
-        self.external_service: Any = external_flight_service
+        self._db: DatabaseServiceProtocol = database_service
+        self._external_service: ExternalFlightServiceProtocol | None = (
+            external_flight_service
+        )
         self.cache_ttl = cache_ttl
 
-        # In-memory cache for search results
-        self._search_cache: dict[str, tuple] = {}
+    @property
+    def db(self) -> DatabaseServiceProtocol:
+        """Database service dependency."""
+        return self._db
 
+    @property
+    def external_service(self) -> ExternalFlightServiceProtocol | None:
+        """External flight provider dependency (optional)."""
+        return self._external_service
+
+    @tripsage_safe_execute()
     async def search_flights(
         self, search_request: FlightSearchRequest
     ) -> FlightSearchResponse:
@@ -133,9 +198,13 @@ class FlightService:
 
             # Check cache first
             cache_key = self._generate_search_cache_key(search_request)
-            cached_result = self._get_cached_search(cache_key)
+            cached_payload = self._get_cached_search(cache_key)
 
-            if cached_result:
+            if cached_payload:
+                cached_result: dict[str, Any] = cast(dict[str, Any], cached_payload)
+                cached_offers: list[FlightOffer] = cast(
+                    list[FlightOffer], cached_result.get("offers", [])
+                )
                 logger.info(
                     "Returning cached flight search results",
                     extra={"search_id": search_id, "cache_key": cache_key},
@@ -143,15 +212,15 @@ class FlightService:
 
                 return FlightSearchResponse(
                     search_id=search_id,
-                    offers=cached_result["offers"],
+                    offers=cached_offers,
                     search_parameters=search_request,
-                    total_results=len(cached_result["offers"]),
+                    total_results=len(cached_offers),
                     search_duration_ms=0,
                     cached=True,
                 )
 
             # Perform external search
-            offers = []
+            offers: list[FlightOffer] = []
             if self.external_service:
                 try:
                     external_offers = await self._search_external_api(search_request)
@@ -170,7 +239,7 @@ class FlightService:
             scored_offers = await self._score_offers(offers, search_request)
 
             # Cache results
-            self._cache_search_results(cache_key, scored_offers)
+            self._cache_search_results(cache_key, {"offers": scored_offers})
 
             # Store search in database
             await self._store_search_history(search_id, search_request, scored_offers)
@@ -208,6 +277,7 @@ class FlightService:
             )
             raise ServiceError(f"Flight search failed: {error!s}") from error
 
+    @tripsage_safe_execute()
     async def get_offer_details(
         self, offer_id: str, user_id: str
     ) -> FlightOffer | None:
@@ -221,8 +291,12 @@ class FlightService:
             Flight offer details or None if not found
         """
         try:
+            # Validate user ID
+            if not self._validate_user_id(user_id):
+                raise ValidationError("Invalid user ID")
+
             # Try to get from database first
-            offer_data = await self.db.get_flight_offer(offer_id, user_id)
+            offer_data = await self._get_entity_by_id("flight_offer", offer_id, user_id)
             if offer_data:
                 return FlightOffer(**offer_data)
 
@@ -257,6 +331,7 @@ class FlightService:
             )
             return None
 
+    @tripsage_safe_execute()
     async def book_flight(
         self, user_id: str, booking_request: FlightBookingRequest
     ) -> FlightBooking:
@@ -291,7 +366,7 @@ class FlightService:
             now = datetime.now(UTC)
 
             # Create booking record
-            booking = FlightBooking(  # type: ignore[reportCallIssue]
+            booking = FlightBooking(
                 id=booking_id,
                 trip_id=booking_request.trip_id,
                 user_id=user_id,
@@ -305,6 +380,10 @@ class FlightService:
                 if booking_request.hold_only
                 else BookingStatus.BOOKED,
                 booked_at=now,
+                confirmation_number=None,
+                expires_at=None,
+                cancellable=False,
+                refundable=False,
                 metadata=booking_request.metadata or {},
             )
 
@@ -315,12 +394,19 @@ class FlightService:
                         offer, booking_request
                     )
                     if external_booking:
-                        booking.confirmation_number = external_booking.get(
-                            "confirmation_number"
-                        )
+                        confirmation_value = external_booking.get("confirmation_number")
+                        if isinstance(confirmation_value, str):
+                            booking.confirmation_number = confirmation_value
+
+                        cancellable_value = external_booking.get("cancellable")
+                        if isinstance(cancellable_value, bool):
+                            booking.cancellable = cancellable_value
+
+                        refundable_value = external_booking.get("refundable")
+                        if isinstance(refundable_value, bool):
+                            booking.refundable = refundable_value
+
                         booking.status = BookingStatus.BOOKED
-                        booking.cancellable = external_booking.get("cancellable", False)
-                        booking.refundable = external_booking.get("refundable", False)
                 except RECOVERABLE_ERRORS as error:
                     logger.exception(
                         "External booking failed",
@@ -359,6 +445,7 @@ class FlightService:
             )
             raise ServiceError(f"Flight booking failed: {error!s}") from error
 
+    @tripsage_safe_execute()
     async def get_user_bookings(
         self,
         user_id: str,
@@ -378,13 +465,19 @@ class FlightService:
             List of flight bookings
         """
         try:
+            # Validate user ID
+            if not self._validate_user_id(user_id):
+                raise ValidationError("Invalid user ID")
+
             filters = {"user_id": user_id}
             if trip_id:
                 filters["trip_id"] = trip_id
             if status:
                 filters["status"] = status.value
 
-            results = await self.db.get_flight_bookings(filters, limit)
+            results = await self._get_entities_with_filters(
+                "flight_booking", filters, limit
+            )
 
             return [FlightBooking(**result) for result in results]
 
@@ -395,6 +488,7 @@ class FlightService:
             )
             return []
 
+    @tripsage_safe_execute()
     async def cancel_booking(self, booking_id: str, user_id: str) -> bool:
         """Cancel a flight booking.
 
@@ -411,8 +505,14 @@ class FlightService:
             ValidationError: If booking cannot be cancelled
         """
         try:
+            # Validate user ID
+            if not self._validate_user_id(user_id):
+                raise ValidationError("Invalid user ID")
+
             # Get booking
-            booking_data = await self.db.get_flight_booking(booking_id, user_id)
+            booking_data = await self._get_entity_by_id(
+                "flight_booking", booking_id, user_id
+            )
             if not booking_data:
                 raise NotFoundError("Flight booking not found")
 
@@ -433,8 +533,11 @@ class FlightService:
                     )
 
             # Update booking status
-            success = await self.db.update_flight_booking(
-                booking_id, {"status": BookingStatus.CANCELLED.value}
+            success = await self._update_entity(
+                "flight_booking",
+                booking_id,
+                {"status": BookingStatus.CANCELLED.value},
+                user_id,
             )
 
             if success:
@@ -512,11 +615,11 @@ class FlightService:
                 ]
             )
 
-            external_passengers = [
+            external_passengers: list[ExternalPassengerPayload] = [
                 {
                     "type": p.type.value,
-                    "given_name": (p.given_name or ""),
-                    "family_name": (p.family_name or ""),
+                    "given_name": p.given_name or "",
+                    "family_name": p.family_name or "",
                 }
                 for p in passengers_list
             ]
@@ -542,8 +645,28 @@ class FlightService:
             logger.exception("External API search failed", extra={"error": str(error)})
             return []
 
+    @staticmethod
+    def _extract_external_offer_id(external_offer: object) -> str:
+        """Best-effort extraction of an identifier from an external offer payload."""
+        if isinstance(external_offer, Mapping):
+            offer_mapping = cast(Mapping[str, JSONValue], external_offer)
+            candidate = offer_mapping.get("id")
+            if isinstance(candidate, str):
+                return candidate
+            if candidate is not None:
+                return str(candidate)
+            return str(uuid4())
+
+        identifier = getattr(external_offer, "id", None)
+        if isinstance(identifier, str):
+            return identifier
+        if identifier is not None:
+            return str(identifier)
+
+        return str(uuid4())
+
     @trace_span("flights.convert_offer")
-    async def _convert_external_offer(self, external_offer) -> FlightOffer:
+    async def _convert_external_offer(self, external_offer: object) -> FlightOffer:
         """Convert a Duffel offer (model or dict) into service FlightOffer."""
         from tripsage_core.models.mappers.flights_mapper import (
             duffel_offer_to_service_offer,
@@ -555,19 +678,29 @@ class FlightService:
             logger.exception(
                 "Failed to convert external offer; returning minimal fallback"
             )
-            # Minimal safe fallback to avoid breaking flow
-            try:
-                oid = getattr(external_offer, "id", None) or external_offer.get("id")  # type: ignore[attr-defined]
-            except (AttributeError, KeyError):
-                oid = str(uuid4())
-            return FlightOffer(  # type: ignore[reportCallIssue]
-                id=str(oid),
+            offer_id = self._extract_external_offer_id(external_offer)
+
+            return FlightOffer(
+                id=offer_id,
+                search_id=None,
                 outbound_segments=[],
+                return_segments=None,
                 total_price=0.0,
+                base_price=None,
+                taxes=None,
                 currency="USD",
                 cabin_class=CabinClass.ECONOMY,
+                booking_class=None,
+                total_duration=None,
+                stops_count=0,
+                airlines=[],
+                expires_at=None,
+                bookable=True,
                 source="duffel",
-                source_offer_id=str(oid),
+                source_offer_id=offer_id,
+                score=None,
+                price_score=None,
+                convenience_score=None,
             )
 
     async def _generate_mock_offers(
@@ -665,57 +798,6 @@ class FlightService:
         # Sort by score (highest first)
         return sorted(offers, key=lambda x: x.score or 0, reverse=True)
 
-    def _generate_search_cache_key(self, search_request: FlightSearchRequest) -> str:
-        """Generate cache key for search request."""
-        import hashlib
-        from datetime import date as _date
-
-        def _norm_date(val: datetime | _date | None):
-            if val is None:
-                return ""
-            if isinstance(val, datetime):
-                return val.date().isoformat()
-            # `val` may be a date object; it has isoformat
-            return val.isoformat()
-
-        passenger_count = (
-            len(search_request.passengers or []) or search_request.total_passengers
-        )
-
-        key_data = (
-            f"{search_request.origin}:{search_request.destination}:"
-            f"{_norm_date(search_request.departure_date)}:"
-            f"{_norm_date(search_request.return_date)}:"
-            f"{passenger_count}:{search_request.cabin_class.value}"
-        )
-
-        return hashlib.sha256(key_data.encode()).hexdigest()[:16]
-
-    def _get_cached_search(self, cache_key: str) -> dict[str, Any] | None:
-        """Get cached search results if still valid."""
-        if cache_key in self._search_cache:
-            result, timestamp = self._search_cache[cache_key]
-            import time as _time
-
-            if _time.time() - timestamp < self.cache_ttl:
-                return result
-            del self._search_cache[cache_key]
-        return None
-
-    def _cache_search_results(self, cache_key: str, offers: list[FlightOffer]) -> None:
-        """Cache search results."""
-        import time as _time
-
-        self._search_cache[cache_key] = ({"offers": offers}, _time.time())
-
-        # Simple cache cleanup
-        if len(self._search_cache) > 1000:
-            oldest_keys = sorted(
-                self._search_cache.keys(), key=lambda k: self._search_cache[k][1]
-            )[:200]
-            for key in oldest_keys:
-                del self._search_cache[key]
-
     async def _store_search_history(
         self,
         search_id: str,
@@ -738,7 +820,7 @@ class FlightService:
                 "search_timestamp": datetime.now(UTC).isoformat(),
             }
 
-            await self.db.store_flight_search(search_data)
+            await self._store_entity("flight_search", search_data)
 
         except RECOVERABLE_ERRORS as error:
             logger.warning(
@@ -753,7 +835,7 @@ class FlightService:
             offer_data["user_id"] = user_id
             offer_data["stored_at"] = datetime.now(UTC).isoformat()
 
-            await self.db.store_flight_offer(offer_data)
+            await self._store_entity("flight_offer", offer_data)
 
         except RECOVERABLE_ERRORS as error:
             logger.warning(
@@ -767,7 +849,7 @@ class FlightService:
             booking_data = booking.model_dump()
             booking_data["created_at"] = datetime.now(UTC).isoformat()
 
-            await self.db.store_flight_booking(booking_data)
+            await self._store_entity("flight_booking", booking_data)
 
         except RECOVERABLE_ERRORS as error:
             logger.exception(
@@ -778,35 +860,46 @@ class FlightService:
 
     async def _book_external_flight(
         self, offer: FlightOffer, booking_request: FlightBookingRequest
-    ) -> dict[str, Any] | None:
+    ) -> dict[str, JSONValue] | None:
         """Book flight using external API."""
         if not self.external_service:
             return None
 
         try:
-            external_passengers = [
-                {
+            external_passengers: list[ExternalPassengerPayload] = []
+            for passenger in booking_request.passengers:
+                passenger_payload: ExternalPassengerPayload = {
                     "type": passenger.type.value,
-                    "given_name": passenger.given_name,
-                    "family_name": passenger.family_name,
-                    "born_on": passenger.date_of_birth.date()
-                    if passenger.date_of_birth
-                    else None,
-                    "email": passenger.email,
-                    "phone_number": passenger.phone,
+                    "given_name": passenger.given_name or "",
+                    "family_name": passenger.family_name or "",
                 }
-                for passenger in booking_request.passengers
-            ]
+                if passenger.date_of_birth is not None:
+                    passenger_payload["born_on"] = (
+                        passenger.date_of_birth.date().isoformat()
+                    )
+                if passenger.email:
+                    passenger_payload["email"] = passenger.email
+                if passenger.phone:
+                    passenger_payload["phone_number"] = passenger.phone
+                external_passengers.append(passenger_payload)
 
             # Create external booking
             external_order = await self.external_service.create_order(
                 offer_id=offer.source_offer_id or offer.id,
                 passengers=external_passengers,
-                payment={"type": "balance", "amount": 0},  # Test payment
+                payment={"type": "balance", "amount": 0},
+            )
+
+            order_mapping: Mapping[str, JSONValue] = external_order
+            confirmation_raw = order_mapping.get("booking_reference")
+            confirmation_number = (
+                str(confirmation_raw)
+                if isinstance(confirmation_raw, (str, int))
+                else None
             )
 
             return {
-                "confirmation_number": external_order.get("booking_reference"),
+                "confirmation_number": confirmation_number,
                 "cancellable": True,
                 "refundable": False,
             }

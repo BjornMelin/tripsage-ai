@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from fastapi import FastAPI
 
+from tripsage_core.services.business.search_facade import SearchFacade
 from tripsage_core.services.infrastructure.database_service import (
     close_database_service,
 )
@@ -76,6 +77,7 @@ class AppServiceContainer:
     itinerary_service: ItineraryService | None = None
     api_key_service: ApiKeyService | None = None
     memory_service: MemoryService | None = None
+    search_facade: SearchFacade | None = None
     trip_service: TripService | None = None
     user_service: UserService | None = None
     unified_search_service: UnifiedSearchService | None = None
@@ -194,8 +196,10 @@ async def initialise_app_state(
 
     # Business services
     user_service = UserService(database_service)
+    from tripsage_core.services.business.api_key_service import ApiKeyDatabaseProtocol
+
     api_key_service = ApiKeyService(
-        db=database_service,
+        db=cast(ApiKeyDatabaseProtocol, database_service),
         cache=cache_service,
         settings=settings,
     )
@@ -215,7 +219,12 @@ async def initialise_app_state(
         database_service=database_service,
         weather_service=weather_service,
     )
-    flight_service = FlightService(database_service=database_service)
+    from tripsage_core.services.infrastructure.database_operations_mixin import (
+        DatabaseServiceProtocol,
+    )
+    flight_service = FlightService(
+        database_service=cast(DatabaseServiceProtocol, database_service)
+    )
     itinerary_service = ItineraryService(database_service=database_service)
     trip_service = TripService(
         database_service=database_service,
@@ -227,6 +236,12 @@ async def initialise_app_state(
         activity_service=activity_service,
         flight_service=flight_service,
         accommodation_service=accommodation_service,
+    )
+
+    search_facade = SearchFacade(
+        destination_service=destination_service,
+        activity_service=activity_service,
+        unified_search_service=unified_search_service,
     )
 
     # Orchestration helpers
@@ -246,6 +261,7 @@ async def initialise_app_state(
         flight_service=flight_service,
         itinerary_service=itinerary_service,
         memory_service=memory_service,
+        search_facade=search_facade,
         trip_service=trip_service,
         unified_search_service=unified_search_service,
         user_service=user_service,
