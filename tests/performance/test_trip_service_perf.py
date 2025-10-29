@@ -75,7 +75,7 @@ async def test_trip_creation_latency_with_stubbed_dependencies() -> None:
         "updated_at": now,
     }
     db_stub = _TripDbStub(trip_payload)
-    service = TripService(database_service=cast(Any, db_stub), user_service=object())
+    service = TripService(database_service=cast(Any, db_stub), user_service=None)
 
     request_data = {
         "title": "Perf Trip",

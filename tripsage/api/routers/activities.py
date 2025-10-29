@@ -1,16 +1,17 @@
 """Router for activity-related endpoints in the TripSage API."""
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime
+from typing import cast
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, status
 
 from tripsage.api.core.dependencies import (
-    ActivityServiceDep,
     DatabaseDep,
     RequiredPrincipalDep,
+    SearchFacadeDep,
     TripServiceDep,
     get_principal_id,
 )
@@ -39,7 +40,7 @@ logger = logging.getLogger(__name__)
 @router.post("/search", response_model=ActivitySearchResponse)
 async def search_activities(
     request: ActivitySearchRequest,
-    activity_service: ActivityServiceDep,
+    activity_service: SearchFacadeDep,
 ):
     """Search for activities based on provided criteria using Google Maps Places API.
 
@@ -49,7 +50,11 @@ async def search_activities(
     logger.info("Activity search request: %s", request.destination)
 
     try:
-        result = await activity_service.search_activities(request)
+        do_search = cast(
+            Callable[[ActivitySearchRequest], Awaitable[ActivitySearchResponse]],
+            activity_service.search_activities,
+        )
+        result = await do_search(request)
 
         logger.info(
             "Found %s activities for %s", len(result.activities), request.destination
@@ -91,7 +96,11 @@ async def save_activity(
     try:
         # Verify trip access if trip_id is provided
         if request.trip_id:
-            trip = await trip_service.get_trip(trip_id=request.trip_id, user_id=user_id)
+            get_core_trip = cast(
+                Callable[[str, str], Awaitable[object | None]],
+                trip_service.get_trip,
+            )
+            trip = await get_core_trip(request.trip_id, user_id)
             if not trip:
                 await audit_security_event(
                     event_type=AuditEventType.ACCESS_DENIED,
@@ -441,7 +450,7 @@ async def delete_saved_activity(
 
 
 @router.get("/{activity_id}", response_model=ActivityResponse)
-async def get_activity_details(activity_id: str, activity_service: ActivityServiceDep):
+async def get_activity_details(activity_id: str, activity_service: SearchFacadeDep):
     """Get detailed information about a specific activity.
 
     Retrieves details for an activity including enhanced
@@ -450,7 +459,11 @@ async def get_activity_details(activity_id: str, activity_service: ActivityServi
     logger.info("Get activity details request: %s", activity_id)
 
     try:
-        activity = await activity_service.get_activity_details(activity_id)
+        get_details = cast(
+            Callable[[str], Awaitable[ActivityResponse | None]],
+            activity_service.get_activity_details,
+        )
+        activity = await get_details(activity_id)
 
         if not activity:
             raise HTTPException(

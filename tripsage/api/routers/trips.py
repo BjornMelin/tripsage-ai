@@ -6,7 +6,7 @@ retrieving, updating, and deleting trips.
 """
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Awaitable, Callable, Iterable
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Protocol, TypedDict, cast
 from uuid import UUID
@@ -27,6 +27,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreSecurityError,
     CoreServiceError,
 )
+from tripsage_core.models.api.itinerary_models import ItinerarySearchResponse
 
 # Import schemas
 from tripsage_core.models.api.trip_models import (
@@ -63,7 +64,10 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditSeverity,
     audit_security_event,
 )
-from tripsage_core.services.business.memory_service import MemorySearchRequest
+from tripsage_core.services.business.memory_service import (
+    MemorySearchRequest,
+    MemorySearchResult,
+)
 
 # Import core service and models
 from tripsage_core.services.business.trip_service import (
@@ -72,7 +76,7 @@ from tripsage_core.services.business.trip_service import (
     TripResponse as CoreTripResponse,
     TripUpdateRequest as CoreTripUpdateRequest,
 )
-from tripsage_core.services.business.user_service import UserService
+from tripsage_core.services.business.user_service import UserResponse, UserService
 
 
 logger = logging.getLogger(__name__)
@@ -163,7 +167,11 @@ async def _get_user_details_by_id(
 ) -> tuple[str | None, str | None]:
     """Retrieve user email and name for a given identifier."""
     try:
-        user = await user_service.get_user_by_id(user_id)
+        get_by_id = cast(
+            Callable[[str], Awaitable[UserResponse | None]],
+            user_service.get_user_by_id,
+        )
+        user = await get_by_id(user_id)
         if user:
             return user.email, getattr(user, "full_name", None)
     except (AttributeError, ValueError, CoreServiceError):
@@ -177,7 +185,11 @@ async def _resolve_user_by_email(
 ) -> tuple[str | None, str | None]:
     """Resolve a user ID and name from an email address."""
     try:
-        user = await user_service.get_user_by_email(email)
+        get_by_email = cast(
+            Callable[[str], Awaitable[UserResponse | None]],
+            user_service.get_user_by_email,
+        )
+        user = await get_by_email(email)
         if user:
             return str(user.id), getattr(user, "full_name", None)
     except (AttributeError, ValueError, CoreServiceError):
@@ -378,9 +390,11 @@ async def create_trip(
             core_request.preferences = core_preferences
 
         # Create trip via core service
-        core_response = await trip_service.create_trip(
-            user_id=principal.user_id, trip_data=core_request
+        create_core_trip = cast(
+            Callable[[str, TripCreateRequest], Awaitable[CoreTripResponse]],
+            trip_service.create_trip,
         )
+        core_response = await create_core_trip(principal.user_id, core_request)
 
         # Convert core response to API response
         trip_response = _adapt_trip_response(core_response)
@@ -417,9 +431,11 @@ async def get_trip(
     logger.info("Getting trip %s for user: %s", trip_id, principal.user_id)
 
     try:
-        trip_response = await trip_service.get_trip(
-            trip_id=str(trip_id), user_id=principal.user_id
+        get_core_trip = cast(
+            Callable[[str, str], Awaitable[CoreTripResponse | None]],
+            trip_service.get_trip,
         )
+        trip_response = await get_core_trip(str(trip_id), principal.user_id)
 
         if not trip_response:
             raise HTTPException(
@@ -465,7 +481,11 @@ async def list_trips(
     logger.info("Listing trips for user: %s", principal.user_id)
 
     try:
-        trips = await trip_service.get_user_trips(
+        list_user_trips = cast(
+            Callable[..., Awaitable[list[CoreTripResponse]]],
+            trip_service.get_user_trips,
+        )
+        trips = await list_user_trips(
             user_id=principal.user_id, limit=limit, offset=skip
         )
 
@@ -486,7 +506,11 @@ async def list_trips(
                 )
             )
 
-        total_count = await trip_service.count_user_trips(user_id=principal.user_id)
+        count_user_trips = cast(
+            Callable[[str], Awaitable[int]],
+            trip_service.count_user_trips,
+        )
+        total_count = await count_user_trips(principal.user_id)
         return TripListResponse(
             items=trip_items,
             total=total_count,
@@ -566,10 +590,15 @@ async def update_trip(
         # Build core update request model
         core_update = CoreTripUpdateRequest(**updates)
 
-        trip_response = await trip_service.update_trip(
-            trip_id=str(trip_id),
-            user_id=principal.user_id,
-            update_data=core_update,
+        do_update_trip = cast(
+            Callable[
+                [str, str, CoreTripUpdateRequest],
+                Awaitable[CoreTripResponse | None],
+            ],
+            trip_service.update_trip,
+        )
+        trip_response = await do_update_trip(
+            str(trip_id), principal.user_id, core_update
         )
 
         if not trip_response:
@@ -618,9 +647,11 @@ async def delete_trip(
     logger.info("Deleting trip %s for user: %s", trip_id, principal.user_id)
 
     try:
-        success = await trip_service.delete_trip(
-            user_id=principal.user_id, trip_id=str(trip_id)
+        do_delete_trip = cast(
+            Callable[[str, str], Awaitable[bool]],
+            trip_service.delete_trip,
         )
+        success = await do_delete_trip(principal.user_id, str(trip_id))
 
         if not success:
             raise HTTPException(
@@ -677,9 +708,11 @@ async def get_trip_summary(
 
     try:
         # Get trip first to ensure access
-        trip_response = await trip_service.get_trip(
-            trip_id=str(trip_id), user_id=principal.user_id
+        get_core_trip = cast(
+            Callable[[str, str], Awaitable[CoreTripResponse | None]],
+            trip_service.get_trip,
         )
+        trip_response = await get_core_trip(str(trip_id), principal.user_id)
 
         if not trip_response:
             raise HTTPException(
@@ -791,10 +824,15 @@ async def update_trip_preferences(
             {"preferences": core_preferences}
         )
 
-        trip_response = await trip_service.update_trip(
-            trip_id=str(trip_id),
-            user_id=principal.user_id,
-            update_data=core_update_request,
+        do_update_trip = cast(
+            Callable[
+                [str, str, CoreTripUpdateRequest],
+                Awaitable[CoreTripResponse | None],
+            ],
+            trip_service.update_trip,
+        )
+        trip_response = await do_update_trip(
+            str(trip_id), principal.user_id, core_update_request
         )
 
         if not trip_response:
@@ -839,9 +877,11 @@ async def duplicate_trip(
 
     try:
         # Get original trip
-        original_trip = await trip_service.get_trip(
-            trip_id=str(trip_id), user_id=principal.user_id
+        get_core_trip = cast(
+            Callable[[str, str], Awaitable[CoreTripResponse | None]],
+            trip_service.get_trip,
         )
+        original_trip = await get_core_trip(str(trip_id), principal.user_id)
 
         if not original_trip:
             raise HTTPException(
@@ -865,9 +905,11 @@ async def duplicate_trip(
             preferences=original_trip.preferences,
         )
 
-        duplicated_trip = await trip_service.create_trip(
-            user_id=principal.user_id, trip_data=duplicate_request
+        create_core_trip = cast(
+            Callable[[str, TripCreateRequest], Awaitable[CoreTripResponse]],
+            trip_service.create_trip,
         )
+        duplicated_trip = await create_core_trip(principal.user_id, duplicate_request)
 
         # Convert core response to API response
         return _adapt_trip_response(duplicated_trip)
@@ -919,7 +961,11 @@ async def search_trips(
         if params.status:
             search_filters["status"] = params.status
 
-        trips = await trip_service.search_trips(
+        search_trips_core = cast(
+            Callable[..., Awaitable[list[CoreTripResponse]]],
+            trip_service.search_trips,
+        )
+        trips = await search_trips_core(
             user_id=principal.user_id,
             query=params.q or "",
             filters=search_filters or None,
@@ -979,9 +1025,11 @@ async def get_trip_itinerary(
 
     try:
         # Get trip first to ensure access
-        trip_response = await trip_service.get_trip(
-            trip_id=str(trip_id), user_id=principal.user_id
+        get_core_trip = cast(
+            Callable[[str, str], Awaitable[CoreTripResponse | None]],
+            trip_service.get_trip,
         )
+        trip_response = await get_core_trip(str(trip_id), principal.user_id)
 
         if not trip_response:
             raise HTTPException(
@@ -1007,9 +1055,11 @@ async def get_trip_itinerary(
                 {"query": str(trip_id), "limit": 1}
             )
 
-            itinerary_search = await itinerary_service.search_itineraries(
-                user_id=principal.user_id, search_request=search_request
+            search_itins = cast(
+                Callable[[str, object], Awaitable[ItinerarySearchResponse]],
+                itinerary_service.search_itineraries,
             )
+            itinerary_search = await search_itins(principal.user_id, search_request)
 
             itinerary_items = itinerary_search.data
 
@@ -1103,9 +1153,11 @@ async def export_trip(
 
     try:
         # Get trip first to ensure access
-        trip_response = await trip_service.get_trip(
-            trip_id=str(trip_id), user_id=principal.user_id
+        get_core_trip = cast(
+            Callable[[str, str], Awaitable[CoreTripResponse | None]],
+            trip_service.get_trip,
         )
+        trip_response = await get_core_trip(str(trip_id), principal.user_id)
 
         if not trip_response:
             raise HTTPException(
@@ -1299,10 +1351,11 @@ async def get_trip_suggestions(
             limit=10,
             filters=None,
         )
-        user_memories = await memory_service.search_memories(
-            user_id=principal.user_id,
-            search_request=memory_search,
+        search_memories = cast(
+            Callable[[str, MemorySearchRequest], Awaitable[list[MemorySearchResult]]],
+            memory_service.search_memories,
         )
+        user_memories = await search_memories(principal.user_id, memory_search)
 
         if user_memories:
             logger.info(
@@ -1460,11 +1513,15 @@ async def share_trip(
                 continue
 
             try:
-                await trip_service.share_trip(
-                    trip_id=str(trip_id),
-                    owner_id=principal.user_id,
-                    share_with_user_id=user_id_val,
-                    permission=share_request.permission_level,
+                do_share = cast(
+                    Callable[[str, str, str, str], Awaitable[bool]],
+                    trip_service.share_trip,
+                )
+                await do_share(
+                    str(trip_id),
+                    principal.user_id,
+                    user_id_val,
+                    share_request.permission_level,
                 )
             except CoreAuthorizationError as _auth_err:
                 permission_error = _auth_err
@@ -1546,10 +1603,11 @@ async def list_trip_collaborators(
 
     try:
         # Get trip to verify access and get owner ID
-        trip = await trip_service.get_trip(
-            trip_id=str(trip_id),
-            user_id=principal.user_id,
+        get_core_trip = cast(
+            Callable[[str, str], Awaitable[CoreTripResponse | None]],
+            trip_service.get_trip,
         )
+        trip = await get_core_trip(str(trip_id), principal.user_id)
 
         if not trip:
             raise HTTPException(
@@ -1653,10 +1711,11 @@ async def update_collaborator_permissions(
 
     try:
         # Verify ownership
-        trip = await trip_service.get_trip(
-            trip_id=str(trip_id),
-            user_id=principal.user_id,
+        get_core_trip = cast(
+            Callable[[str, str], Awaitable[CoreTripResponse | None]],
+            trip_service.get_trip,
         )
+        trip = await get_core_trip(str(trip_id), principal.user_id)
 
         if not trip:
             raise HTTPException(
@@ -1755,10 +1814,11 @@ async def remove_collaborator(
 
     try:
         # Verify ownership
-        trip = await trip_service.get_trip(
-            trip_id=str(trip_id),
-            user_id=principal.user_id,
+        get_core_trip = cast(
+            Callable[[str, str], Awaitable[CoreTripResponse | None]],
+            trip_service.get_trip,
         )
+        trip = await get_core_trip(str(trip_id), principal.user_id)
 
         if not trip:
             raise HTTPException(
@@ -1773,11 +1833,11 @@ async def remove_collaborator(
             )
 
         # Remove collaborator
-        success = await trip_service.unshare_trip(
-            trip_id=str(trip_id),
-            owner_id=principal.user_id,
-            unshare_user_id=str(user_id),
+        do_unshare = cast(
+            Callable[[str, str, str], Awaitable[bool]],
+            trip_service.unshare_trip,
         )
+        success = await do_unshare(str(trip_id), principal.user_id, str(user_id))
 
         if not success:
             raise HTTPException(

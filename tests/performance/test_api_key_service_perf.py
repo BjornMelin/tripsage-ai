@@ -11,12 +11,12 @@ import pytest
 from tripsage_core.config import Settings
 from tripsage_core.services.business.api_key_service import (
     ApiKeyCreateRequest,
+    ApiKeyDatabaseProtocol,
     ApiKeyService,
     ApiValidationResult,
     ServiceType,
     ValidationStatus,
 )
-from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
 class _TransactionContext:
@@ -26,21 +26,25 @@ class _TransactionContext:
         """Initialize the transaction context."""
         self.row = row
 
-    async def __aenter__(self) -> _TransactionContext:
+    async def __aenter__(self) -> object:
         """Enter the transaction context."""
         return self
 
     async def __aexit__(
         self,
         exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        tb: TracebackType | None,
-    ) -> bool:
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Exit the transaction context."""
-        return False
+        return
 
     def insert(self, *_args: Any, **_kwargs: Any) -> None:
         """Record an insert operation."""
+        return
+
+    def delete(self, *_args: Any, **_kwargs: Any) -> None:
+        """Record a delete operation."""
         return
 
     async def execute(self) -> list[list[dict[str, Any]]]:
@@ -55,19 +59,27 @@ class _PerfDb:
         """Initialize the performance database."""
         self._result = result
 
-    def transaction(self) -> _TransactionContext:
+    def transaction(self, user_id: str | None = None) -> object:
         """Create a new transaction context."""
         return _TransactionContext(self._result)
 
-    async def get_user_api_keys(self, *_args: Any, **_kwargs: Any) -> list[Any]:
+    async def get_user_api_keys(
+        self, *_args: Any, **_kwargs: Any
+    ) -> list[dict[str, Any]]:
         """Get user keys."""
         return []
+
+    async def get_api_key_by_id(
+        self, *_args: Any, **_kwargs: Any
+    ) -> dict[str, Any] | None:
+        """Get API key by id for a user."""
+        return self._result
 
     async def get_api_key_for_service(
         self, *_args: Any, **_kwargs: Any
     ) -> dict[str, Any] | None:
         """Get API key for service."""
-        return
+        return None
 
     async def update_api_key_last_used(self, *_args: Any, **_kwargs: Any) -> None:
         """Update API key last used."""
@@ -105,7 +117,7 @@ async def test_create_api_key_completes_within_latency_budget(
     )
 
     async with ApiKeyService(
-        db=cast(DatabaseService, db), cache=None, settings=test_settings
+        db=cast(ApiKeyDatabaseProtocol, db), cache=None, settings=test_settings
     ) as service:
         validation = ApiValidationResult(
             is_valid=True,
