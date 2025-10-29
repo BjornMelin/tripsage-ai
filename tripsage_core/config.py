@@ -306,3 +306,19 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Get cached settings instance."""
     return Settings()
+
+
+async def get_env_var(key: str, default: str | None = None) -> str | None:
+    """Asynchronously get environment variable.
+
+    Args:
+        key: Environment variable name
+        default: Default value if not set
+
+    Returns:
+        Environment variable value or default
+    """
+    import asyncio
+    import os
+
+    return await asyncio.to_thread(os.getenv, key, default)

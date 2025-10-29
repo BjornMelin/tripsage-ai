@@ -32,7 +32,24 @@ from tripsage_core.exceptions.exceptions import (
 )
 
 
+# Common recoverable errors for service operations
+# Services can extend this tuple with service-specific errors if needed
+RECOVERABLE_ERRORS = (
+    CoreServiceError,
+    CoreResourceNotFoundError,
+    CoreValidationError,
+    ConnectionError,
+    TimeoutError,
+    RuntimeError,
+    ValueError,
+    KeyError,
+    TypeError,
+)
+
+
 __all__ = [
+    # Common constants
+    "RECOVERABLE_ERRORS",
     "CoreAgentError",
     # Authentication and authorization
     "CoreAuthenticationError",

@@ -326,6 +326,12 @@ class OneCallWeather(BaseModel):
     minutely: list[dict[str, Any]] | None = None
     hourly: list[HourlyForecast] | None = None
     daily: list[DailyForecast] | None = None
+
+    @staticmethod
+    def _empty_alerts() -> list["WeatherAlert"]:
+        """Return an empty list of weather alerts."""
+        return []
+
     alerts: list[WeatherAlert] | None = None
 
 
@@ -436,12 +442,23 @@ class TravelWeatherSummary(BaseModel):
     dominant_condition: str
     travel_rating: float = Field(..., ge=0, le=10)
 
-    recommendations: list[str]
-    packing_suggestions: list[str]
+    @staticmethod
+    def _empty_str_list() -> list[str]:
+        """Return an empty list of strings."""
+        return []
+
+    recommendations: list[str] = Field(default_factory=_empty_str_list)
+    packing_suggestions: list[str] = Field(default_factory=_empty_str_list)
     activity_suitability: dict[str, str]
 
     daily_summaries: list[dict[str, Any]]
-    alerts: list[WeatherAlert] = Field(default_factory=list)
+
+    @staticmethod
+    def _empty_alerts_list() -> list["WeatherAlert"]:
+        """Return an empty list of weather alerts."""
+        return []
+
+    alerts: list[WeatherAlert] = Field(default_factory=_empty_alerts_list)
 
 
 class SeasonalWeather(BaseModel):

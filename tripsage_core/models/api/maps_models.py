@@ -86,7 +86,13 @@ class DirectionsResult(TripSageModel):
     """
 
     route: Route
-    legs: list[DirectionsLeg] = Field(default_factory=list)
+
+    @staticmethod
+    def _empty_legs() -> list[DirectionsLeg]:
+        """Return an empty list of directions legs."""
+        return []
+
+    legs: list[DirectionsLeg] = Field(default_factory=_empty_legs)
     polyline: str | None = None
     raw: dict[str, Any] | None = None
 
