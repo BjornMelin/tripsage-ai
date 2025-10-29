@@ -55,7 +55,7 @@ class AirbnbMCPClient:
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
-        exc_tb: "TracebackType | None",
+        exc_tb: TracebackType | None,
     ) -> None:
         """Async context manager exit."""
         await self.disconnect()

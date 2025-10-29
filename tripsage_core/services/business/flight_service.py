@@ -541,7 +541,7 @@ class FlightService(DatabaseOperationsMixin, ValidationMixin, InMemorySearchCach
                 "flight_booking",
                 booking_id,
                 {"status": BookingStatus.CANCELLED.value},
-                user_id,
+                user_id=user_id,
             )
 
             if success:

@@ -7,7 +7,8 @@ JavaScript execution, complex interactions, or sophisticated browser automation.
 import asyncio
 import logging
 import time
-from typing import Any
+from collections.abc import Mapping
+from typing import Any, cast
 
 from playwright.async_api import (
     Browser,
@@ -274,45 +275,6 @@ class PlaywrightService:
         if not self._connected:
             await self.connect()
 
-    def _build_scraping_result(
-        self,
-        url: str,
-        content: str,
-        html: str | None,
-        title: str | None,
-        links: list[str],
-        images: list[str],
-        response: Any,
-        nav_time: float,
-        extract_time: float,
-        total_time: float,
-    ) -> ScrapingResult:
-        """Build a ScrapingResult from extracted data with performance metrics."""
-        performance = {
-            "navigation_time": nav_time,
-            "extraction_time": extract_time,
-            "total_time": total_time,
-            "content_length": len(content),
-            "links_count": len(links),
-            "images_count": len(images),
-        }
-
-        return ScrapingResult(
-            url=url,
-            content=content,
-            html=html,
-            title=title,
-            links=links,
-            images=images,
-            metadata={
-                "status_code": response.status,
-                "content_type": response.headers.get("content-type"),
-            },
-            performance=performance,
-            error=None,
-            success=True,
-        )
-
     async def scrape_url(
         self,
         url: str,
@@ -439,58 +401,39 @@ class PlaywrightService:
                 # Get title
                 title = await page.title()
 
-                # Extract links if requested
-                links: list[str] = []
-                if extract_links:
-                    links_any = await page.evaluate(
-                        """
-                        () => {
-                            const linkElements = document.querySelectorAll('a[href]');
-                            return Array.from(linkElements)
-                                .map(a => a.href)
-                                .filter(href => href.startsWith('http'));
-                        }
-                    """
-                    )
-                    links = [str(link) for link in links_any if isinstance(link, str)]
+                links = await self._extract_links(page) if extract_links else []
 
-                # Extract images if requested
-                images: list[str] = []
-                if extract_images:
-                    images_any = await page.evaluate(
-                        """
-                        () => {
-                            const imgElements = document.querySelectorAll('img[src]');
-                            return Array.from(imgElements)
-                                .map(img => img.src)
-                                .filter(src => src.startsWith('http'));
-                        }
-                    """
-                    )
-                    images = [str(img) for img in images_any if isinstance(img, str)]
+                images = await self._extract_images(page) if extract_images else []
 
-                # Get HTML if requested
-                html = None
-                if include_html:
-                    html = await page.content()
+                html = await self._get_page_content(page) if include_html else None
 
                 # Calculate timing
                 end_time = time.time()
                 total_time = end_time - start_time
                 extract_time = max(0.1, total_time - 1.0)  # Approximate extraction time
 
-                # Build result
-                return self._build_scraping_result(
-                    url,
-                    content,
-                    html,
-                    title,
-                    links,
-                    images,
-                    response,
-                    nav_time,
-                    extract_time,
-                    total_time,
+                performance = self._build_performance_metrics(
+                    content=content,
+                    links=links,
+                    images=images,
+                    navigation_time=nav_time,
+                    extraction_time=extract_time,
+                    total_time=total_time,
+                )
+
+                metadata = self._build_response_metadata(response)
+
+                return ScrapingResult(
+                    url=url,
+                    content=content,
+                    html=html,
+                    title=title,
+                    links=links,
+                    images=images,
+                    metadata=metadata,
+                    performance=performance,
+                    error=None,
+                    success=True,
                 )
 
             except Exception as e:
@@ -501,6 +444,71 @@ class PlaywrightService:
             finally:
                 if page:
                     await page.close()
+
+    async def _extract_links(self, page: Any) -> list[str]:
+        """Extract HTTP links from the current page."""
+        links_any = await page.evaluate(
+            """
+            () => {
+                const linkElements = document.querySelectorAll('a[href]');
+                return Array.from(linkElements)
+                    .map(a => a.href)
+                    .filter(href => href.startsWith('http'));
+            }
+        """
+        )
+        return [str(link) for link in links_any if isinstance(link, str)]
+
+    async def _extract_images(self, page: Any) -> list[str]:
+        """Extract HTTP image sources from the current page."""
+        images_any = await page.evaluate(
+            """
+            () => {
+                const imgElements = document.querySelectorAll('img[src]');
+                return Array.from(imgElements)
+                    .map(img => img.src)
+                    .filter(src => src.startsWith('http'));
+            }
+        """
+        )
+        return [str(img) for img in images_any if isinstance(img, str)]
+
+    async def _get_page_content(self, page: Any) -> str:
+        """Retrieve the full HTML content for the current page."""
+        return await page.content()
+
+    def _build_performance_metrics(
+        self,
+        *,
+        content: str,
+        links: list[str],
+        images: list[str],
+        navigation_time: float,
+        extraction_time: float,
+        total_time: float,
+    ) -> dict[str, Any]:
+        """Construct the performance metrics payload."""
+        return {
+            "navigation_time": navigation_time,
+            "extraction_time": extraction_time,
+            "total_time": total_time,
+            "content_length": len(content),
+            "links_count": len(links),
+            "images_count": len(images),
+        }
+
+    @staticmethod
+    def _build_response_metadata(response: Any) -> dict[str, Any]:
+        """Extract response metadata for the scraping result."""
+        headers_any = getattr(response, "headers", None)
+        content_type: str | None = None
+        if isinstance(headers_any, Mapping) or hasattr(headers_any, "get"):
+            headers_mapping = cast(Mapping[str, Any], headers_any)
+            content_type = cast(str | None, headers_mapping.get("content-type"))
+        return {
+            "status_code": getattr(response, "status", None),
+            "content_type": content_type,
+        }
 
     async def scrape_multiple_urls(
         self, urls: list[str], max_concurrent: int | None = None, **scrape_options: Any
