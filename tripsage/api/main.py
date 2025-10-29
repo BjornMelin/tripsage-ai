@@ -336,6 +336,13 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
     # dashboard_realtime router is temporarily excluded pending module finalization
     app.include_router(keys.router, prefix="/api/user/keys", tags=["api_keys"])
+    # Legacy alias for compatibility with earlier clients
+    app.include_router(
+        keys.router,
+        prefix="/api/keys",
+        tags=["api_keys"],
+        include_in_schema=False,
+    )
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
     app.include_router(

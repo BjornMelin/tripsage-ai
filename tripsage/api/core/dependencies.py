@@ -4,6 +4,7 @@ This module provides clean, modern dependency injection using Annotated types
 for unified authentication across JWT (frontend) and API keys (agents).
 """
 
+import inspect
 from collections.abc import Awaitable, Callable, Iterable as TypingIterable
 from typing import Annotated, cast
 
@@ -164,6 +165,14 @@ async def require_admin_principal(request: Request) -> Principal:
         code="ADMIN_AUTH_REQUIRED",
         details={"additional_context": {"roles": sorted(roles)}},
     )
+
+
+async def _require_principal_dependency(request: Request) -> Principal:
+    """Wrapper that allows tests to patch require_principal dynamically."""
+    result = require_principal(request)
+    if inspect.isawaitable(result):
+        return await cast(Awaitable[Principal], result)
+    return cast(Principal, result)
 
 
 # Principal utilities
@@ -344,7 +353,7 @@ SearchFacadeDep = Annotated[SearchFacade, Depends(get_search_facade)]
 
 # Principal-based authentication dependencies
 CurrentPrincipalDep = Annotated[Principal | None, Depends(get_current_principal)]
-RequiredPrincipalDep = Annotated[Principal, Depends(require_principal)]
+RequiredPrincipalDep = Annotated[Principal, Depends(_require_principal_dependency)]
 UserPrincipalDep = Annotated[Principal, Depends(require_user_principal)]
 AgentPrincipalDep = Annotated[Principal, Depends(require_agent_principal)]
 AdminPrincipalDep = Annotated[Principal, Depends(require_admin_principal)]

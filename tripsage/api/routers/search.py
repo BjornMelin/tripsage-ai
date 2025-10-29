@@ -1,6 +1,7 @@
 """Router for unified search endpoints in the TripSage API."""
 
 import logging
+from collections.abc import Awaitable, Callable
 from datetime import UTC
 from typing import Any, cast
 
@@ -69,8 +70,12 @@ async def unified_search(
             except (OSError, RuntimeError, ValueError, TypeError) as e:
                 logger.warning("Cache retrieval failed: %s", e)
 
-        # Perform actual search
-        result = await search_service.unified_search(request)
+        # Perform actual search (cast decorated method for strict typing)
+        do_unified = cast(
+            Callable[[UnifiedSearchRequest], Awaitable[UnifiedSearchResponse]],
+            search_service.unified_search,
+        )
+        result: UnifiedSearchResponse = await do_unified(request)
 
         # Cache the result for 5 minutes
         if use_cache:
@@ -166,7 +171,11 @@ async def search_suggestions(
     logger.info("Search suggestions request: '%s' (limit: %s)", query, limit)
 
     try:
-        suggestions = await search_service.get_search_suggestions(query, limit)
+        get_suggestions = cast(
+            Callable[[str, int], Awaitable[list[str]]],
+            search_service.get_search_suggestions,
+        )
+        suggestions: list[str] = await get_suggestions(query, limit)
 
         logger.info("Generated %s suggestions for query: '%s'", len(suggestions), query)
         return suggestions
@@ -315,7 +324,9 @@ async def bulk_search(
         import asyncio
         # cache_service not required explicitly here; UnifiedSearchService is DI
 
-        async def process_single_search(request: UnifiedSearchRequest):
+        async def process_single_search(
+            request: UnifiedSearchRequest,
+        ) -> UnifiedSearchResponse:
             """Process a single search with caching."""
             cache_key = f"search:unified:{hash(str(request.model_dump()))}"
 
@@ -336,7 +347,11 @@ async def bulk_search(
                     )
 
             # Perform search
-            result = await search_service.unified_search(request)
+            do_unified = cast(
+                Callable[[UnifiedSearchRequest], Awaitable[UnifiedSearchResponse]],
+                search_service.unified_search,
+            )
+            result: UnifiedSearchResponse = await do_unified(request)
 
             # Cache result
             if use_cache:

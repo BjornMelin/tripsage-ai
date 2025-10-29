@@ -12,8 +12,9 @@ This module provides dashboard API endpoints for monitoring and insights:
 """
 
 import logging
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException, Query, status
 
@@ -35,6 +36,14 @@ from tripsage.api.schemas.dashboard import (
     TrendDataPoint,
     UsageMetricsResponse,
     UserActivityResponse,
+)
+from tripsage_core.services.business.api_key_service import (
+    ApiValidationResult,
+    ServiceType,
+)
+from tripsage_core.services.business.dashboard_models import (
+    DashboardData,
+    RealTimeMetrics,
 )
 from tripsage_core.services.business.dashboard_service import DashboardService
 
@@ -66,16 +75,17 @@ async def get_system_overview(
             database_service=db_service,
         )
 
-        # Get dashboard data for 24 hours
-        dashboard_data = await dashboard_service.get_dashboard_data(
-            time_range_hours=24,
-            top_users_limit=10,
+        # Get dashboard data for 24 hours (typed cast for strict checking)
+        get_data = cast(
+            Callable[[int, int], Awaitable[DashboardData]],
+            dashboard_service.get_dashboard_data,
         )
+        dashboard_data: DashboardData = await get_data(24, 10)
 
         # Calculate uptime (simplified - would use actual startup time in production)
         uptime_seconds = 86400  # 24 hours as default
 
-        metrics = dashboard_data.metrics
+        metrics: RealTimeMetrics = dashboard_data.metrics
 
         # Determine overall status
         overall_status = SystemStatus.HEALTHY
@@ -123,9 +133,11 @@ async def get_services_status(
         if dashboard_service.api_key_service is None:
             return []
 
-        health_checks = (
-            await dashboard_service.api_key_service.check_all_services_health()
+        check_all = cast(
+            Callable[[], Awaitable[dict[ServiceType, ApiValidationResult]]],
+            dashboard_service.api_key_service.check_all_services_health,
         )
+        health_checks: dict[ServiceType, ApiValidationResult] = await check_all()
 
         services_status: list[ServiceStatusResponse] = []
         for service_type, health_check in health_checks.items():
@@ -192,13 +204,14 @@ async def get_usage_metrics(
         start_time = end_time - timedelta(hours=time_range_hours)
 
         # Get dashboard data
-        dashboard_data = await dashboard_service.get_dashboard_data(
-            time_range_hours=time_range_hours,
-            top_users_limit=50,
+        get_data = cast(
+            Callable[[int, int], Awaitable[DashboardData]],
+            dashboard_service.get_dashboard_data,
         )
+        dashboard_data: DashboardData = await get_data(time_range_hours, 50)
 
         # Extract metrics from dashboard data
-        metrics = dashboard_data.metrics
+        metrics: RealTimeMetrics = dashboard_data.metrics
         total_requests = metrics.total_requests
         total_errors = metrics.total_errors
 
@@ -267,7 +280,11 @@ async def get_rate_limits_status(
         rate_limits: list[RateLimitInfoResponse] = []
 
         # Get active keys from dashboard data
-        dashboard_data = await dashboard_service.get_dashboard_data(time_range_hours=1)
+        get_data = cast(
+            Callable[[int, int], Awaitable[DashboardData]],
+            dashboard_service.get_dashboard_data,
+        )
+        dashboard_data: DashboardData = await get_data(1, 10)
 
         # Extract key IDs from user activity or create sample keys for demonstration
         active_keys: list[str] = []
@@ -349,9 +366,11 @@ async def get_alerts(
         )
 
         # Get recent alerts via public dashboard data API (avoid private method)
-        dashboard_data_alerts = await dashboard_service.get_dashboard_data(
-            time_range_hours=24, top_users_limit=10
+        get_data = cast(
+            Callable[[int, int], Awaitable[DashboardData]],
+            dashboard_service.get_dashboard_data,
         )
+        dashboard_data_alerts: DashboardData = await get_data(24, 10)
         recent_alerts = dashboard_data_alerts.recent_alerts
 
         alerts: list[AlertInfoResponse] = []
@@ -367,12 +386,12 @@ async def get_alerts(
             raw_type = getattr(alert.alert_type, "value", alert.alert_type)
             sev = (
                 AlertSeverity(raw_sev)
-                if raw_sev in AlertSeverity.__members__.values()
+                if raw_sev in AlertSeverity._value2member_map_
                 else AlertSeverity.LOW
             )
             atype = (
                 AlertType(raw_type)
-                if raw_type in AlertType.__members__.values()
+                if raw_type in AlertType._value2member_map_
                 else AlertType.SECURITY
             )
 
@@ -522,10 +541,11 @@ async def get_user_activity(
         )
 
         # Get dashboard data
-        dashboard_data = await dashboard_service.get_dashboard_data(
-            time_range_hours=time_range_hours,
-            top_users_limit=limit,
+        get_data = cast(
+            Callable[[int, int], Awaitable[DashboardData]],
+            dashboard_service.get_dashboard_data,
         )
+        dashboard_data: DashboardData = await get_data(time_range_hours, limit)
 
         # Convert top users to UserActivity objects
         return [

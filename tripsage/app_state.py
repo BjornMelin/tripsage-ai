@@ -181,6 +181,7 @@ async def initialise_app_state(
 
     # Infrastructure
     database_service = await get_database_service()
+    db_concrete: DatabaseService = database_service
     cache_service = CacheService()
     await cache_service.connect()
 
@@ -203,7 +204,13 @@ async def initialise_app_state(
         cache=cache_service,
         settings=settings,
     )
-    memory_service = MemoryService(database_service=database_service)
+    from tripsage_core.services.infrastructure.database_operations_mixin import (
+        DatabaseServiceProtocol,
+    )
+
+    memory_service = MemoryService(
+        database_service=cast(DatabaseServiceProtocol, db_concrete)
+    )
     await memory_service.connect()
     chat_service = ChatService(database_service=database_service)
     file_processing_service = FileProcessingService(
@@ -219,15 +226,10 @@ async def initialise_app_state(
         database_service=database_service,
         weather_service=weather_service,
     )
-    from tripsage_core.services.infrastructure.database_operations_mixin import (
-        DatabaseServiceProtocol,
-    )
-    flight_service = FlightService(
-        database_service=cast(DatabaseServiceProtocol, database_service)
-    )
-    itinerary_service = ItineraryService(database_service=database_service)
+    flight_service = FlightService(database_service=db_concrete)
+    itinerary_service = ItineraryService(database_service=db_concrete)
     trip_service = TripService(
-        database_service=database_service,
+        database_service=db_concrete,
         user_service=user_service,
     )
     unified_search_service = UnifiedSearchService(

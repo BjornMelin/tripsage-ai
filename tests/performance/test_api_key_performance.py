@@ -46,176 +46,376 @@ from tripsage_core.services.business.api_key_service import (
 )
 
 
-class TestApiKeyPerformance:
-    """Performance tests for API key service operations."""
+@pytest.fixture
+def mock_db_service() -> AsyncMock:
+    """Mock database service optimized for performance testing."""
+    db = AsyncMock()
 
-    @pytest.fixture
-    def mock_db_service(self):
-        """Mock database service optimized for performance testing."""
-        db = AsyncMock()
+    # Simulate realistic database latencies
+    async def mock_create_with_latency(
+        *args: object, **kwargs: object
+    ) -> dict[str, object]:
+        """Mock create with latency."""
+        await asyncio.sleep(0.002)
+        return {
+            "id": str(uuid.uuid4()),
+            "name": "Test Key",
+            "service": "openai",
+            "is_valid": True,
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
+            "usage_count": 0,
+        }
 
-        # Simulate realistic database latencies
-        async def mock_create_with_latency(
-            *args: object, **kwargs: object
-        ) -> dict[str, object]:
-            """Mock create with latency."""
-            await asyncio.sleep(0.002)  # 2ms DB latency
-            return {
-                "id": str(uuid.uuid4()),
-                "name": "Test Key",
-                "service": "openai",
-                "is_valid": True,
-                "created_at": datetime.now(UTC).isoformat(),
-                "updated_at": datetime.now(UTC).isoformat(),
-                "usage_count": 0,
-            }
+    async def mock_get_with_latency(
+        *args: object, **kwargs: object
+    ) -> dict[str, object]:
+        """Mock get with latency."""
+        await asyncio.sleep(0.001)
+        return {
+            "id": str(uuid.uuid4()),
+            "encrypted_key": "encrypted_value",
+            "service": "openai",
+            "expires_at": None,
+        }
 
-        async def mock_get_with_latency(
-            *args: object, **kwargs: object
-        ) -> dict[str, object]:
-            """Mock get with latency."""
-            await asyncio.sleep(0.001)  # 1ms DB read latency
-            return {
+    async def mock_list_with_latency(
+        *args: object, **kwargs: object
+    ) -> list[dict[str, object]]:
+        """Mock list with latency."""
+        await asyncio.sleep(0.003)
+        return [
+            {
                 "id": str(uuid.uuid4()),
                 "encrypted_key": "encrypted_value",
                 "service": "openai",
                 "expires_at": None,
             }
-
-        async def mock_list_with_latency(
-            *args: object, **kwargs: object
-        ) -> list[dict[str, object]]:
-            """Mock list with latency."""
-            await asyncio.sleep(0.003)  # 3ms for list operation
-            return [
-                {
-                    "id": str(uuid.uuid4()),
-                    "encrypted_key": "encrypted_value",
-                    "service": "openai",
-                    "expires_at": None,
-                }
-                for _ in range(5)
-            ]
-
-        db.create_api_key = mock_create_with_latency
-        db.get_api_key_by_id = mock_get_with_latency
-        db.get_api_key_for_service = mock_get_with_latency
-        db.get_user_api_keys = mock_list_with_latency
-        db.update_api_key_last_used = AsyncMock()
-        db.delete = AsyncMock()
-        db.insert = AsyncMock()
-
-        # Mock transaction context
-        transaction_mock = AsyncMock()
-        transaction_mock.__aenter__ = AsyncMock(return_value=transaction_mock)
-        transaction_mock.__aexit__ = AsyncMock()
-        transaction_mock.insert = AsyncMock()
-        transaction_mock.delete = AsyncMock()
-        transaction_mock.execute = AsyncMock(
-            return_value=[
-                [
-                    {
-                        "id": str(uuid.uuid4()),
-                        "name": "Test API Key",
-                        "service": "openai",
-                        "created_at": datetime.now(UTC).isoformat(),
-                        "updated_at": datetime.now(UTC).isoformat(),
-                        "is_active": True,
-                        "is_valid": True,
-                        "usage_count": 0,
-                        "description": "Test key description",
-                        "expires_at": None,
-                        "last_used": None,
-                        "last_validated": datetime.now(UTC).isoformat(),
-                    }
-                ],
-                [],
-            ]
-        )
-        db.transaction = Mock(return_value=transaction_mock)
-
-        return db
-
-    @pytest.fixture
-    def mock_cache_service(self):
-        """Mock cache service with realistic performance characteristics."""
-        cache: AsyncMock = AsyncMock()
-        cache_storage: dict[str, object] = {}
-
-        async def mock_get_with_latency(key: str) -> object | None:
-            """Get a value from the cache."""
-            await asyncio.sleep(0.0001)
-            return cache_storage.get(key)
-
-        async def mock_set_with_latency(
-            key: str, value: object, ex: object | None = None
-        ) -> bool:
-            """Set a value in the cache."""
-            await asyncio.sleep(0.0001)
-            cache_storage[key] = value
-            return True
-
-        async def mock_delete_with_latency(key: str) -> int:
-            """Delete a value from the cache."""
-            await asyncio.sleep(0.0001)
-            return 1 if cache_storage.pop(key, None) is not None else 0
-
-        async def mock_get_json(key: str) -> object | None:
-            """Get a JSON value from the cache."""
-            value = cache_storage.get(key)
-            return json.loads(value) if isinstance(value, str) else value
-
-        async def mock_set_json(
-            key: str, value: object, ttl: int | None = None
-        ) -> bool:
-            """Set a JSON value in the cache."""
-            cache_storage[key] = json.dumps(value)
-            return True
-
-        cache.get = mock_get_with_latency
-        cache.set = mock_set_with_latency
-        cache.delete = mock_delete_with_latency
-        cache.get_json = mock_get_json
-        cache.set_json = mock_set_json
-        return cache
-
-    @pytest.fixture
-    def api_key_service(
-        self, mock_db_service: AsyncMock, mock_cache_service: AsyncMock
-    ) -> ApiKeyService:
-        """Create ApiKeyService instance for performance testing."""
-        service = ApiKeyService(
-            db=mock_db_service,  # type: ignore[reportUnknownArgumentType]
-            cache=mock_cache_service,  # type: ignore[reportUnknownArgumentType]
-            validation_timeout=5,
-        )
-        service._audit_key_creation = AsyncMock()  # type: ignore[attr-defined]
-        service._audit_key_deletion = AsyncMock()  # type: ignore[attr-defined]
-        return service
-
-    @pytest.fixture
-    def mock_cache(self, mock_cache_service: AsyncMock) -> AsyncMock:
-        """Alias to reuse cache mock in tests expecting mock_cache."""
-        return mock_cache_service
-
-    @pytest.fixture
-    def mock_db(self, mock_db_service: AsyncMock) -> AsyncMock:
-        """Alias to reuse database mock in tests expecting mock_db."""
-        return mock_db_service
-
-    @pytest.fixture
-    def sample_api_keys(self) -> list[str]:
-        """Generate sample API keys for testing."""
-        return [
-            f"sk-test_key_{i:04d}_"
-            f"{''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=32))}"
-            for i in range(100)
+            for _ in range(5)
         ]
 
-    @pytest.fixture
-    def sample_users(self) -> list[str]:
-        """Generate sample user IDs for testing."""
-        return [str(uuid.uuid4()) for _ in range(50)]
+    db.create_api_key = mock_create_with_latency
+    db.get_api_key_by_id = mock_get_with_latency
+    db.get_api_key_for_service = mock_get_with_latency
+    db.get_user_api_keys = mock_list_with_latency
+    db.update_api_key_last_used = AsyncMock()
+    db.delete = AsyncMock()
+    db.insert = AsyncMock()
+
+    transaction_mock = AsyncMock()
+    transaction_mock.__aenter__ = AsyncMock(return_value=transaction_mock)
+    transaction_mock.__aexit__ = AsyncMock()
+    transaction_mock.insert = AsyncMock()
+    transaction_mock.delete = AsyncMock()
+    transaction_mock.execute = AsyncMock(
+        return_value=[
+            [
+                {
+                    "id": str(uuid.uuid4()),
+                    "name": "Test API Key",
+                    "service": "openai",
+                    "created_at": datetime.now(UTC).isoformat(),
+                    "updated_at": datetime.now(UTC).isoformat(),
+                    "is_active": True,
+                    "is_valid": True,
+                    "usage_count": 0,
+                    "description": "Test key description",
+                    "expires_at": None,
+                    "last_used": None,
+                    "last_validated": datetime.now(UTC).isoformat(),
+                }
+            ],
+            [],
+        ]
+    )
+    db.transaction = Mock(return_value=transaction_mock)
+
+    return db
+
+
+@pytest.fixture
+def mock_cache_service() -> AsyncMock:
+    """Mock cache service with realistic performance characteristics."""
+    cache: AsyncMock = AsyncMock()
+    cache_storage: dict[str, object] = {}
+
+    async def mock_get_with_latency(key: str) -> object | None:
+        await asyncio.sleep(0.0001)
+        return cache_storage.get(key)
+
+    async def mock_set_with_latency(
+        key: str, value: object, ex: object | None = None
+    ) -> bool:
+        await asyncio.sleep(0.0001)
+        cache_storage[key] = value
+        return True
+
+    async def mock_delete_with_latency(key: str) -> int:
+        await asyncio.sleep(0.0001)
+        return 1 if cache_storage.pop(key, None) is not None else 0
+
+    async def mock_get_json(key: str) -> object | None:
+        value = cache_storage.get(key)
+        return json.loads(value) if isinstance(value, str) else value
+
+    async def mock_set_json(key: str, value: object, ttl: int | None = None) -> bool:
+        cache_storage[key] = json.dumps(value)
+        return True
+
+    cache.get = mock_get_with_latency
+    cache.set = mock_set_with_latency
+    cache.delete = mock_delete_with_latency
+    cache.get_json = mock_get_json
+    cache.set_json = mock_set_json
+    return cache
+
+
+@pytest.fixture
+def api_key_service(
+    mock_db_service: AsyncMock, mock_cache_service: AsyncMock
+) -> ApiKeyService:
+    """Create ApiKeyService instance for performance testing."""
+    service = ApiKeyService(
+        db=mock_db_service,  # type: ignore[reportUnknownArgumentType]
+        cache=mock_cache_service,  # type: ignore[reportUnknownArgumentType]
+        validation_timeout=5,
+    )
+    service._audit_key_creation = AsyncMock()  # type: ignore[attr-defined]
+    service._audit_key_deletion = AsyncMock()  # type: ignore[attr-defined]
+    return service
+
+
+@pytest.fixture
+def mock_cache(mock_cache_service: AsyncMock) -> AsyncMock:
+    """Alias to reuse cache mock in tests expecting mock_cache."""
+    return mock_cache_service
+
+
+@pytest.fixture
+def mock_db(mock_db_service: AsyncMock) -> AsyncMock:
+    """Alias to reuse database mock in tests expecting mock_db."""
+    return mock_db_service
+
+
+@pytest.fixture
+def sample_api_keys() -> list[str]:
+    """Generate sample API keys for testing."""
+    return [
+        f"sk-test_key_{i:04d}_"
+        f"{''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=32))}"
+        for i in range(100)
+    ]
+
+
+@pytest.fixture
+def sample_users() -> list[str]:
+    """Generate sample user IDs for testing."""
+    return [str(uuid.uuid4()) for _ in range(50)]
+
+
+def _measure_encryption_metrics(
+    svc: ApiKeyService,
+) -> tuple[dict[str, float], dict[str, float]]:
+    """Measure encryption and decryption timings."""
+    test_key = "sk-regression_test_key_" + "x" * 50
+    encryption_times: list[float] = []
+    decryption_times: list[float] = []
+
+    for _ in range(20):
+        start = time.time()
+        encrypted = svc.encrypt_for_benchmark(test_key)
+        encryption_times.append((time.time() - start) * 1000)
+
+        start = time.time()
+        svc.decrypt_for_benchmark(encrypted)
+        decryption_times.append((time.time() - start) * 1000)
+
+    encryption_metrics = {
+        "avg_time_ms": statistics.mean(encryption_times),
+        "max_time_ms": max(encryption_times),
+        "std_dev_ms": statistics.stdev(encryption_times)
+        if len(encryption_times) > 1
+        else 0,
+    }
+
+    decryption_metrics = {
+        "avg_time_ms": statistics.mean(decryption_times),
+        "max_time_ms": max(decryption_times),
+        "std_dev_ms": statistics.stdev(decryption_times)
+        if len(decryption_times) > 1
+        else 0,
+    }
+
+    return encryption_metrics, decryption_metrics
+
+
+async def _measure_validation_metrics(svc: ApiKeyService) -> dict[str, float]:
+    """Measure validation latency and error rate."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"data": [{"id": "gpt-4"}]}
+
+    validation_times: list[float] = []
+    validation_errors = 0
+
+    with patch.object(
+        svc, "_request_with_backoff", AsyncMock(return_value=mock_response)
+    ):
+        for i in range(15):
+            start = time.time()
+            try:
+                await svc.validate_api_key(
+                    ServiceType.OPENAI,
+                    f"sk-validation_test_{i}",
+                    str(uuid.uuid4()),
+                )
+                validation_times.append((time.time() - start) * 1000)
+            except (HTTPException, TimeoutError, RuntimeError):
+                validation_errors += 1
+
+    return {
+        "avg_time_ms": statistics.mean(validation_times) if validation_times else 0,
+        "max_time_ms": max(validation_times) if validation_times else 0,
+        "error_rate": validation_errors / 15,
+    }
+
+
+async def _measure_throughput_metrics(svc: ApiKeyService) -> dict[str, float]:
+    """Measure validation and creation throughput under load."""
+    with patch.object(svc, "validate_api_key") as mock_validate:
+        mock_validate.return_value = ApiValidationResult(
+            is_valid=True,
+            status=ValidationStatus.VALID,
+            service=ServiceType.OPENAI,
+            message="Valid",
+        )
+
+        start = time.time()
+        validation_tasks: list[Awaitable[ApiValidationResult]] = [
+            svc.validate_api_key(
+                ServiceType.OPENAI,
+                f"sk-throughput_{i}",
+                str(uuid.uuid4()),
+            )
+            for i in range(50)
+        ]
+        await asyncio.gather(*validation_tasks)
+        validation_throughput_time = time.time() - start
+
+    start = time.time()
+    user_id = str(uuid.uuid4())
+    creation_tasks: list[Awaitable[Any]] = [
+        svc.create_api_key(
+            user_id,
+            ApiKeyCreateRequest(
+                name=f"Throughput Test {i}",
+                service=ServiceType.OPENAI,
+                key=f"sk-throughput_create_{i}",
+                description="Throughput test",
+            ),
+        )
+        for i in range(20)
+    ]
+    await asyncio.gather(*creation_tasks)
+    creation_throughput_time = time.time() - start
+
+    return {
+        "validation_ops_per_sec": 50 / validation_throughput_time,
+        "creation_ops_per_sec": 20 / creation_throughput_time,
+    }
+
+
+async def _measure_cache_metrics(mock_cache: Any) -> dict[str, float]:
+    """Measure cache hit ratio and throughput."""
+    cache_hits = 0
+    cache_misses = 0
+
+    for i in range(10):
+        key = f"cache_test_{i}"
+        await mock_cache.set(key, f"value_{i}", ex=300)
+
+    start = time.time()
+    for i in range(10):
+        key = f"cache_test_{i}"
+        result = await mock_cache.get(key)
+        if result:
+            cache_hits += 1
+        else:
+            cache_misses += 1
+    cache_hit_time = time.time() - start
+
+    hit_ratio = (
+        cache_hits / (cache_hits + cache_misses)
+        if (cache_hits + cache_misses) > 0
+        else 0
+    )
+    ops_per_sec = (
+        (cache_hits + cache_misses) / cache_hit_time if cache_hit_time > 0 else 0
+    )
+
+    return {"hit_ratio": hit_ratio, "ops_per_sec": ops_per_sec}
+
+
+def _evaluate_baselines(
+    baselines: dict[str, float], results: dict[str, Any]
+) -> list[dict[str, float]]:
+    """Compare metrics against established baselines."""
+    checks = [
+        (
+            "encryption_max_ms",
+            results["encryption_performance"]["max_time_ms"],
+            baselines["encryption_max_ms"],
+        ),
+        (
+            "decryption_max_ms",
+            results["decryption_performance"]["max_time_ms"],
+            baselines["decryption_max_ms"],
+        ),
+        (
+            "validation_max_ms",
+            results["validation_performance"]["max_time_ms"],
+            baselines["validation_max_ms"],
+        ),
+        (
+            "validation_min_ops_per_sec",
+            results["throughput_metrics"]["validation_ops_per_sec"],
+            baselines["validation_min_ops_per_sec"],
+        ),
+        (
+            "creation_min_ops_per_sec",
+            results["throughput_metrics"]["creation_ops_per_sec"],
+            baselines["creation_min_ops_per_sec"],
+        ),
+        (
+            "cache_hit_ratio_min",
+            results["cache_performance"]["hit_ratio"],
+            baselines["cache_hit_ratio_min"],
+        ),
+        (
+            "error_rate_max",
+            results["validation_performance"]["error_rate"],
+            baselines["error_rate_max"],
+        ),
+    ]
+
+    failed: list[dict[str, Any]] = []
+    for metric, actual, baseline in checks:
+        if ("max" in metric and actual > baseline) or (
+            "min" in metric and actual < baseline
+        ):
+            failed.append(
+                {
+                    "metric": metric,
+                    "actual": actual,
+                    "baseline": baseline,
+                    "regression_type": "performance_degradation",
+                }
+            )
+    return failed
+
+
+class TestApiKeyPerformance:
+    """Performance tests for API key service operations."""
 
     def test_encrypt_decrypt_performance(
         self, api_key_service: ApiKeyService, benchmark: BenchmarkFixture
@@ -1636,7 +1836,6 @@ class TestApiKeyPerformance:
 
         return results
 
-    # pylint: disable=too-many-statements
     def test_comprehensive_performance_regression_suite(
         self,
         api_key_service: ApiKeyService,
@@ -1694,222 +1893,27 @@ class TestApiKeyPerformance:
                 "failed_baselines": [],
             }
 
-            # Test 1: Core operation performance
             print("  Testing core operation performance...")
+            encryption_metrics, decryption_metrics = _measure_encryption_metrics(svc)
+            results["encryption_performance"] = encryption_metrics
+            results["decryption_performance"] = decryption_metrics
 
-            # Encryption/Decryption performance
-            test_key = "sk-regression_test_key_" + "x" * 50
-
-            encryption_times: list[float] = []
-            decryption_times: list[float] = []
-
-            for _ in range(20):
-                start = time.time()
-                encrypted = svc.encrypt_for_benchmark(test_key)
-                encryption_times.append((time.time() - start) * 1000)
-
-                start = time.time()
-                svc.decrypt_for_benchmark(encrypted)
-                decryption_times.append((time.time() - start) * 1000)
-
-            results["encryption_performance"] = {
-                "avg_time_ms": statistics.mean(encryption_times),
-                "max_time_ms": max(encryption_times),
-                "std_dev_ms": statistics.stdev(encryption_times)
-                if len(encryption_times) > 1
-                else 0,
-            }
-
-            results["decryption_performance"] = {
-                "avg_time_ms": statistics.mean(decryption_times),
-                "max_time_ms": max(decryption_times),
-                "std_dev_ms": statistics.stdev(decryption_times)
-                if len(decryption_times) > 1
-                else 0,
-            }
-
-            # Test 2: Validation performance with external API mocking
             print("  Testing validation performance...")
+            results["validation_performance"] = await _measure_validation_metrics(
+                api_key_service
+            )
 
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {"data": [{"id": "gpt-4"}]}
-
-            with patch.object(
-                api_key_service,
-                "_request_with_backoff",
-                AsyncMock(return_value=mock_response),
-            ):
-                validation_times: list[float] = []
-                validation_errors = 0
-
-                for i in range(15):
-                    start = time.time()
-                    try:
-                        await api_key_service.validate_api_key(
-                            ServiceType.OPENAI,
-                            f"sk-validation_test_{i}",
-                            str(uuid.uuid4()),
-                        )
-                        validation_times.append((time.time() - start) * 1000)
-                    except (HTTPException, TimeoutError, RuntimeError):
-                        validation_errors += 1
-
-                results["validation_performance"] = {
-                    "avg_time_ms": statistics.mean(validation_times)
-                    if validation_times
-                    else 0,
-                    "max_time_ms": max(validation_times) if validation_times else 0,
-                    "error_rate": validation_errors / 15,
-                }
-
-            # Test 3: Throughput measurements
             print("  Testing throughput metrics...")
+            results["throughput_metrics"] = await _measure_throughput_metrics(
+                api_key_service
+            )
 
-            # Mock validation for throughput testing
-            with patch.object(api_key_service, "validate_api_key") as mock_validate:
-                mock_validate.return_value = ApiValidationResult(
-                    is_valid=True,
-                    status=ValidationStatus.VALID,
-                    service=ServiceType.OPENAI,
-                    message="Valid",
-                )
-
-                # Validation throughput
-                start = time.time()
-                validation_tasks: list[Awaitable[ApiValidationResult]] = [
-                    api_key_service.validate_api_key(
-                        ServiceType.OPENAI,
-                        f"sk-throughput_{i}",
-                        str(uuid.uuid4()),
-                    )
-                    for i in range(50)
-                ]
-
-                await asyncio.gather(*validation_tasks)
-                validation_throughput_time = time.time() - start
-                validation_ops_per_sec = 50 / validation_throughput_time
-
-                # Creation throughput
-                start = time.time()
-                user_id = str(uuid.uuid4())
-                creation_tasks: list[Awaitable[Any]] = [
-                    api_key_service.create_api_key(
-                        user_id,
-                        ApiKeyCreateRequest(
-                            name=f"Throughput Test {i}",
-                            service=ServiceType.OPENAI,
-                            key=f"sk-throughput_create_{i}",
-                            description="Throughput test",
-                        ),
-                    )
-                    for i in range(20)
-                ]
-
-                await asyncio.gather(*creation_tasks)
-                creation_throughput_time = time.time() - start
-                creation_ops_per_sec = 20 / creation_throughput_time
-
-                results["throughput_metrics"] = {
-                    "validation_ops_per_sec": validation_ops_per_sec,
-                    "creation_ops_per_sec": creation_ops_per_sec,
-                }
-
-            # Test 4: Cache performance regression
             print("  Testing cache performance...")
+            results["cache_performance"] = await _measure_cache_metrics(mock_cache)
 
-            cache_hits = 0
-            cache_misses = 0
-            cache_any = mock_cache
-
-            # Warm up cache
-            for i in range(10):
-                key = f"cache_test_{i}"
-                await cache_any.set(key, f"value_{i}", ex=300)
-
-            # Test cache hits
-            start = time.time()
-            for i in range(10):
-                key = f"cache_test_{i}"
-                result = await cache_any.get(key)
-                if result:
-                    cache_hits += 1
-                else:
-                    cache_misses += 1
-            cache_hit_time = time.time() - start
-
-            cache_hit_ratio = (
-                cache_hits / (cache_hits + cache_misses)
-                if (cache_hits + cache_misses) > 0
-                else 0
-            )
-            cache_ops_per_sec = (
-                (cache_hits + cache_misses) / cache_hit_time
-                if cache_hit_time > 0
-                else 0
-            )
-
-            results["cache_performance"] = {
-                "hit_ratio": cache_hit_ratio,
-                "ops_per_sec": cache_ops_per_sec,
-            }
-
-            # Test 5: Regression detection
             print("  Checking for performance regressions...")
-
-            # Check each baseline
-            checks = [
-                (
-                    "encryption_max_ms",
-                    results["encryption_performance"]["max_time_ms"],
-                    baselines["encryption_max_ms"],
-                ),
-                (
-                    "decryption_max_ms",
-                    results["decryption_performance"]["max_time_ms"],
-                    baselines["decryption_max_ms"],
-                ),
-                (
-                    "validation_max_ms",
-                    results["validation_performance"]["max_time_ms"],
-                    baselines["validation_max_ms"],
-                ),
-                (
-                    "validation_min_ops_per_sec",
-                    results["throughput_metrics"]["validation_ops_per_sec"],
-                    baselines["validation_min_ops_per_sec"],
-                ),
-                (
-                    "creation_min_ops_per_sec",
-                    results["throughput_metrics"]["creation_ops_per_sec"],
-                    baselines["creation_min_ops_per_sec"],
-                ),
-                (
-                    "cache_hit_ratio_min",
-                    results["cache_performance"]["hit_ratio"],
-                    baselines["cache_hit_ratio_min"],
-                ),
-                (
-                    "error_rate_max",
-                    results["validation_performance"]["error_rate"],
-                    baselines["error_rate_max"],
-                ),
-            ]
-
-            for check_name, actual_value, baseline_value in checks:
-                if ("max" in check_name and actual_value > baseline_value) or (
-                    "min" in check_name and actual_value < baseline_value
-                ):
-                    results["failed_baselines"].append(
-                        {
-                            "metric": check_name,
-                            "actual": actual_value,
-                            "baseline": baseline_value,
-                            "regression_type": "performance_degradation",
-                        }
-                    )
-
-            results["regression_detected"] = len(results["failed_baselines"]) > 0
+            results["failed_baselines"] = _evaluate_baselines(baselines, results)
+            results["regression_detected"] = bool(results["failed_baselines"])
 
             return results
 
