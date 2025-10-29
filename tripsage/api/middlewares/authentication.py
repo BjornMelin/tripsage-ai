@@ -119,6 +119,11 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         Returns:
             The response from the next middleware or endpoint
         """
+        if request.method.upper() == "OPTIONS":
+            response = await call_next(request)
+            self._add_security_headers(response)
+            return response
+
         # Skip authentication for certain paths
         if self._should_skip_auth(request.url.path):
             return await call_next(request)

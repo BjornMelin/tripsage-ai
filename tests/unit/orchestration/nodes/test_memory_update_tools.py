@@ -11,4 +11,3 @@ def test_initialize_tools_selects_memory_tool() -> None:
     node = MemoryUpdateNode(AppServiceContainer())
     node._initialize_tools()  # type: ignore[reportPrivateUsage]
     assert node.memory_tool is not None
-

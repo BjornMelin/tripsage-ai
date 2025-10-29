@@ -514,10 +514,12 @@ class TestApiKeyPerformance:
         def validate_operation() -> ApiValidationResult:
             return asyncio.run(validate_operation_async())
 
-        result = benchmark.pedantic(
-            validate_operation,
-            rounds=15,
-            warmup_rounds=3,
+        result = await asyncio.to_thread(
+            lambda: benchmark.pedantic(
+                validate_operation,
+                rounds=15,
+                warmup_rounds=3,
+            )
         )
 
         # Verify validation was successful
@@ -1013,8 +1015,8 @@ class TestApiKeyPerformance:
                 "Creation performance regression"
             )
 
-    # pylint: disable=too-many-statements
-    def test_database_performance_under_concurrent_load(
+    @pytest.mark.asyncio
+    async def test_database_performance_under_concurrent_load(
         self,
         api_key_service: ApiKeyService,
         mock_cache: Any,
@@ -1285,7 +1287,9 @@ class TestApiKeyPerformance:
             }
 
         # Benchmark the concurrent database operations
-        results = benchmark(lambda: asyncio.run(run_concurrent_database_operations()))
+        results = await asyncio.to_thread(
+            lambda: benchmark(lambda: asyncio.run(run_concurrent_database_operations()))
+        )
 
         # Performance assertions
         assert results["successful_creations"] >= 20, (
@@ -1326,7 +1330,8 @@ class TestApiKeyPerformance:
         return results
 
     # pylint: disable=too-many-statements
-    def test_cache_hit_miss_ratio_under_load(
+    @pytest.mark.asyncio
+    async def test_cache_hit_miss_ratio_under_load(
         self,
         api_key_service: ApiKeyService,
         mock_cache: Any,
@@ -1525,7 +1530,9 @@ class TestApiKeyPerformance:
             }
 
         # Benchmark cache load scenarios
-        results = benchmark(lambda: asyncio.run(run_cache_load_scenarios()))
+        results = await asyncio.to_thread(
+            lambda: benchmark(lambda: asyncio.run(run_cache_load_scenarios()))
+        )
 
         # Performance assertions
         assert results["hit_ratio"] >= 0.3, (
@@ -1556,7 +1563,8 @@ class TestApiKeyPerformance:
         return results
 
     # pylint: disable=too-many-statements
-    def test_memory_usage_and_resource_monitoring(
+    @pytest.mark.asyncio
+    async def test_memory_usage_and_resource_monitoring(
         self,
         api_key_service: ApiKeyService,
         mock_cache: Any,
@@ -1799,7 +1807,9 @@ class TestApiKeyPerformance:
             }
 
         # Benchmark memory-intensive operations
-        results = benchmark(lambda: asyncio.run(run_memory_intensive_operations()))
+        results = await asyncio.to_thread(
+            lambda: benchmark(lambda: asyncio.run(run_memory_intensive_operations()))
+        )
 
         # Resource usage assertions
         assert results["memory_leaks_detected"] == 0, (
@@ -1836,7 +1846,8 @@ class TestApiKeyPerformance:
 
         return results
 
-    def test_comprehensive_performance_regression_suite(
+    @pytest.mark.asyncio
+    async def test_comprehensive_performance_regression_suite(
         self,
         api_key_service: ApiKeyService,
         mock_cache: Any,
@@ -1918,7 +1929,13 @@ class TestApiKeyPerformance:
             return results
 
         # Benchmark performance tests
-        results = benchmark(lambda: asyncio.run(run_comprehensive_performance_tests()))
+        results = await asyncio.to_thread(
+            lambda: benchmark(
+                lambda: asyncio.run(
+                    run_comprehensive_performance_tests()
+                )
+            )
+        )
 
         # Regression assertions
         assert not results["regression_detected"], (
