@@ -18,7 +18,7 @@ from tripsage_core.models.domain.flights_canonical import (
 from tripsage_core.models.schemas_common.enums import CabinClass
 
 
-def _as_dict(model_or_dict: Any) -> dict[str, Any]:
+def _as_dict(model_or_dict: Any) -> dict[str, Any]:  # type: ignore[return-value]
     """Return a dictionary view of a Pydantic model or a dict-like input.
 
     Args:
@@ -29,11 +29,11 @@ def _as_dict(model_or_dict: Any) -> dict[str, Any]:
         A dictionary representation of the input.
     """
     if isinstance(model_or_dict, BaseModel):
-        return model_or_dict.model_dump()
+        return model_or_dict.model_dump()  # type: ignore[return-value]
     if isinstance(model_or_dict, dict):
-        return model_or_dict
+        return model_or_dict  # type: ignore[return-value]
     # Fallback: shallow attribute introspection (best effort)
-    return {
+    return {  # type: ignore[return-value]
         k: getattr(model_or_dict, k)
         for k in dir(model_or_dict)
         if not k.startswith("_") and hasattr(model_or_dict, k)
@@ -49,7 +49,7 @@ def _segments_from_slice(slice_obj: Any) -> list[CanonFlightSegment]:
     """
     segs: list[CanonFlightSegment] = []
     raw_slice = _as_dict(slice_obj)
-    for seg_wrapper in raw_slice.get("segments", []) or []:
+    for seg_wrapper in raw_slice.get("segments", []) or []:  # type: ignore[assignment]
         seg_data = _as_dict(seg_wrapper).get("segment") or _as_dict(seg_wrapper)
 
         origin = None
@@ -113,12 +113,12 @@ def duffel_offer_to_service_offer(external_offer: Any) -> CanonFlightOffer:
         cabin = CabinClass.ECONOMY
 
     # Slices → segments
-    slices = data.get("slices") or []
+    slices = data.get("slices") or []  # type: ignore[assignment]
     outbound_segments: list[CanonFlightSegment] = []
     return_segments: list[CanonFlightSegment] | None = None
     if slices:
         outbound_segments = _segments_from_slice(slices[0])
-        if len(slices) > 1:
+        if len(slices) > 1:  # type: ignore[arg-type]
             segs = _segments_from_slice(slices[1])
             return_segments = segs or None
 

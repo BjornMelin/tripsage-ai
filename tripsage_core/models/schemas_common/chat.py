@@ -6,7 +6,7 @@ services, and core business logic.
 
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 from pydantic import BaseModel, BeforeValidator, Field
 
@@ -33,10 +33,10 @@ class MessageRole(str, Enum):
 def ensure_dict(v: Any) -> dict[str, Any]:
     """Ensure value is a dictionary."""
     if v is None:
-        return {}
+        return cast(dict[str, Any], {})
     if isinstance(v, dict):
-        return v
-    return {}
+        return cast(dict[str, Any], v)
+    return cast(dict[str, Any], {})
 
 
 DictOrEmpty = Annotated[dict[str, Any], BeforeValidator(ensure_dict)]
