@@ -15,6 +15,19 @@ from tripsage_core.models.schemas_common.enums import AccommodationType
 from tripsage_core.models.schemas_common.geographic import Coordinates
 
 
+def _normalize_date_input(value: str | date | None) -> str | None:
+    """Ensure date values are ISO-formatted strings or None."""
+    if value is None:
+        return None
+    candidate = value if isinstance(value, str) else value.isoformat()
+
+    try:
+        date.fromisoformat(candidate)
+    except ValueError as error:
+        raise ValueError("Date must be in YYYY-MM-DD format") from error
+    return candidate
+
+
 class AirbnbSearchParams(BaseModel):
     """Parameters for Airbnb accommodation search."""
 
@@ -56,17 +69,9 @@ class AirbnbSearchParams(BaseModel):
 
     @field_validator("checkin", "checkout")
     @classmethod
-    def validate_date_format(cls, v):
+    def validate_date_format(cls, value: str | date | None) -> str | None:
         """Validate that dates are in YYYY-MM-DD format."""
-        if isinstance(v, date):
-            return v.isoformat()
-        if not v:
-            return v
-        try:
-            date.fromisoformat(v)
-            return v
-        except ValueError as error:
-            raise ValueError("Date must be in YYYY-MM-DD format") from error
+        return _normalize_date_input(value)
 
     def to_airbnb_payload(self) -> dict[str, Any]:
         """Return parameters using Airbnb's expected field names."""
@@ -107,17 +112,9 @@ class AirbnbListingDetailsParams(BaseModel):
 
     @field_validator("checkin", "checkout")
     @classmethod
-    def validate_date_format(cls, v):
+    def validate_date_format(cls, value: str | date | None) -> str | None:
         """Validate that dates are in YYYY-MM-DD format."""
-        if isinstance(v, date):
-            return v.isoformat()
-        if not v:
-            return v
-        try:
-            date.fromisoformat(v)
-            return v
-        except ValueError as error:
-            raise ValueError("Date must be in YYYY-MM-DD format") from error
+        return _normalize_date_input(value)
 
     def to_airbnb_payload(self) -> dict[str, Any]:
         """Return parameters using Airbnb's expected field names."""
@@ -247,17 +244,9 @@ class AccommodationSearchParams(BaseModel):
 
     @field_validator("check_in", "check_out")
     @classmethod
-    def validate_date_format(cls, v):
+    def validate_date_format(cls, value: str | date | None) -> str | None:
         """Validate that dates are in YYYY-MM-DD format."""
-        if isinstance(v, date):
-            return v.isoformat()
-        if not v:
-            return v
-        try:
-            date.fromisoformat(v)
-            return v
-        except ValueError as error:
-            raise ValueError("Date must be in YYYY-MM-DD format") from error
+        return _normalize_date_input(value)
 
     def to_filters(self) -> dict[str, Any]:
         """Return normalized filters for downstream services."""
