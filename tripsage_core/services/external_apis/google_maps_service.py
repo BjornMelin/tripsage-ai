@@ -47,6 +47,7 @@ from tripsage_core.models.schemas_common.geographic import (
     Route,
 )
 from tripsage_core.services.external_apis.base_service import sanitize_response
+from tripsage_core.utils.outbound import AsyncApiClient
 
 
 logger = logging.getLogger(__name__)
@@ -66,7 +67,7 @@ class GoogleMapsServiceError(CoreAPIError):
         self.original_error = original_error
 
 
-class GoogleMapsService:
+class GoogleMapsService(AsyncApiClient):
     """Google Maps API service with typed results and async support."""
 
     def __init__(self, settings: Settings | None = None) -> None:
@@ -75,6 +76,7 @@ class GoogleMapsService:
         Args:
             settings: Core application settings.
         """
+        super().__init__()
         self.settings = settings or get_settings()
         self._client: googlemaps.Client | None = None
         self._connected = False

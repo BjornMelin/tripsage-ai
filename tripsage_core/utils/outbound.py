@@ -113,3 +113,66 @@ async def request_with_backoff(
             delay = await _retry_delay(attempt, max_delay=retry_cap_seconds)
         attempt += 1
         await asyncio.sleep(delay)
+
+
+class AsyncApiClient:
+    """Base class for async HTTP API clients with rate limiting and backoff.
+
+    This class provides a standardized way to make HTTP requests to external APIs
+    with built-in rate limiting per host and automatic retry with exponential backoff
+    on HTTP 429 responses.
+    """
+
+    def __init__(self, client: httpx.AsyncClient | None = None) -> None:
+        """Initialize the API client.
+
+        Args:
+            client: Optional httpx.AsyncClient instance.
+                    If None, a default client is created.
+        """
+        self.client = client or httpx.AsyncClient()
+
+    async def request_with_backoff(
+        self,
+        method: str,
+        url: str,
+        *,
+        max_retries: int = 6,
+        retry_cap_seconds: float = 30.0,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        """Perform an HTTP request with rate limiting and backoff.
+
+        This is a convenience method that calls the module-level request_with_backoff
+        function with this client's httpx.AsyncClient instance.
+
+        Args:
+            method: HTTP method name (e.g., "GET").
+            url: Target URL.
+            max_retries: Maximum retry attempts for HTTP 429.
+            retry_cap_seconds: Maximum delay for backoff.
+            **kwargs: Passed through to httpx request method.
+
+        Returns:
+            The final httpx.Response.
+        """
+        return await request_with_backoff(
+            self.client,
+            method,
+            url,
+            max_retries=max_retries,
+            retry_cap_seconds=retry_cap_seconds,
+            **kwargs,
+        )
+
+    async def close(self) -> None:
+        """Close the underlying HTTP client."""
+        await self.client.aclose()
+
+    async def __aenter__(self) -> AsyncApiClient:
+        """Enter async context manager."""
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exit async context manager and close client."""
+        await self.close()

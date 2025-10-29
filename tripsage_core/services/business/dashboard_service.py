@@ -33,6 +33,7 @@ from tripsage_core.services.business.dashboard_models import (
     ServiceAnalytics,
     UserActivityData,
 )
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 if TYPE_CHECKING:
@@ -160,6 +161,7 @@ class DashboardService:  # pylint: disable=too-many-instance-attributes
 
         logger.info("DashboardService initialized with real analytics capabilities")
 
+    @tripsage_safe_execute()
     async def get_dashboard_data(
         self, time_range_hours: int = 24, top_users_limit: int = 10
     ) -> DashboardData:
@@ -204,6 +206,7 @@ class DashboardService:  # pylint: disable=too-many-instance-attributes
             # Return minimal data on error
             return await self._get_fallback_dashboard_data(time_range_hours)
 
+    @tripsage_safe_execute()
     async def get_rate_limit_status(
         self, key_id: str, window_minutes: int = 60
     ) -> dict[str, Any]:

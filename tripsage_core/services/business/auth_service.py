@@ -17,6 +17,12 @@ from tripsage_core.services.infrastructure.supabase_client import (
     get_admin_client,
     verify_and_get_claims,
 )
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
+
+
+async def _admin() -> Any:
+    """Get admin Supabase client for dependency injection."""
+    return await get_admin_client()
 
 
 class TokenData(TripSageModel):
@@ -32,11 +38,7 @@ class TokenData(TripSageModel):
 security = HTTPBearer()
 
 
-async def _admin() -> Any:
-    """Dependency wrapper to provide an async admin client."""
-    return await get_admin_client()
-
-
+@tripsage_safe_execute()
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> TokenData:
@@ -71,6 +73,7 @@ async def get_current_user(
         ) from exc
 
 
+@tripsage_safe_execute()
 async def get_user_with_client(
     token_data: TokenData = Depends(get_current_user),
     supabase: Any = Depends(_admin),
