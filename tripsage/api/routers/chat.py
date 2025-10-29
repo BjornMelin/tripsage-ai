@@ -10,7 +10,7 @@ import json
 import logging
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar, cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import StreamingResponse
@@ -175,8 +175,10 @@ async def chat_stream(
             yield f"data: {json.dumps({'type': 'final', 'content': full})}\n\n"
             # Done marker
             yield "data: [DONE]\n\n"
-        except Exception as e:  # pragma: no cover  # noqa: BLE001
-            err = {"type": "error", "message": str(e)}
+        except Exception as _exc:  # pragma: no cover
+            error_id = uuid4().hex
+            logger.exception("Chat stream failed", extra={"error_id": error_id})
+            err = {"type": "error", "message": "stream_failed", "error_id": error_id}
             yield f"data: {json.dumps(err)}\n\n"
 
     headers = {

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
@@ -294,15 +293,6 @@ async def test_validate_api_key_returns_cached_result(test_settings: Settings) -
     """Cached validation results should short-circuit external validation."""
     cache = _StubCache()
     api_key = "sk-cached-xyz"
-    cache_hash = hashlib.sha256(f"openai:{api_key}".encode()).hexdigest()
-    cache_key = f"api_validation:v3:{cache_hash}"
-    cache.storage[cache_key] = ApiValidationResult(
-        is_valid=True,
-        status=ValidationStatus.VALID,
-        service=ServiceType.OPENAI,
-        message="cached",
-    ).model_dump_json()
-
     db = _StubDatabase(transaction_result=_db_row())
 
     # Enable caching for this test
@@ -313,6 +303,15 @@ async def test_validate_api_key_returns_cached_result(test_settings: Settings) -
         cache=cast(CacheService, cache),
         settings=test_settings,
     ) as service:
+        cache_key = cast(Any, service)._validation_cache_key(
+            ServiceType.OPENAI, api_key
+        )
+        cache.storage[cache_key] = ApiValidationResult(
+            is_valid=True,
+            status=ValidationStatus.VALID,
+            service=ServiceType.OPENAI,
+            message="cached",
+        ).model_dump_json()
 
         async def _fail(*_args: Any, **_kwargs: Any) -> ApiValidationResult:
             raise AssertionError("Validation should use cached data")
@@ -333,6 +332,7 @@ async def test_validate_api_key_caches_successful_result(
     cache = _StubCache()
     db = _StubDatabase(transaction_result=_db_row())
     api_key = "sk-cache-me"
+    expected_cache_key: str | None = None
 
     # Enable caching for this test
     test_settings.enable_api_key_caching = True
@@ -355,8 +355,10 @@ async def test_validate_api_key_caches_successful_result(
         cast(Any, service)._validate_api_key = _validate
 
         await service.validate_api_key(ServiceType.OPENAI, api_key)
+        expected_cache_key = cast(Any, service)._validation_cache_key(
+            ServiceType.OPENAI, api_key
+        )
 
-    expected_hash = hashlib.sha256(f"openai:{api_key}".encode()).hexdigest()
-    cache_key = f"api_validation:v3:{expected_hash}"
-    assert cache_key in cache.storage
-    assert "ok" in cache.storage[cache_key]
+    assert expected_cache_key is not None
+    assert expected_cache_key in cache.storage
+    assert "ok" in cache.storage[expected_cache_key]

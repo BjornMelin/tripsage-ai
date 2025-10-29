@@ -178,7 +178,6 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_origin_regex=".*",
         allow_credentials=settings.cors_credentials,
         allow_methods=["*"],
         allow_headers=["*"],

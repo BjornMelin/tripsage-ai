@@ -610,10 +610,7 @@ class ApiKeyService(
 
         # Check cache first if enabled
         if self.cache and self.settings.enable_api_key_caching:
-            cache_hash = hashlib.sha256(
-                f"{self._get_service_value(service)}:{key_value}".encode()
-            ).hexdigest()
-            cache_key = f"api_validation:v3:{cache_hash}"
+            cache_key = self._validation_cache_key(service, key_value)
             try:
                 cached_raw = await self.cache.get_json(cache_key)
                 if isinstance(cached_raw, dict) and cached_raw:
@@ -702,10 +699,7 @@ class ApiKeyService(
                 and self.settings.enable_api_key_caching
                 and final_result.is_valid
             ):
-                cache_hash = hashlib.sha256(
-                    f"{self._get_service_value(service)}:{key_value}".encode()
-                ).hexdigest()
-                cache_key = f"api_validation:v3:{cache_hash}"
+                cache_key = self._validation_cache_key(service, key_value)
                 try:
                     await self.cache.set_json(
                         cache_key, final_result.model_dump(mode="json"), ttl=300
@@ -1132,6 +1126,23 @@ class ApiKeyService(
                 service=service,
                 message=f"Validation error: {error!s}",
             )
+
+    def _validation_cache_key(self, service: ServiceType, key_value: str) -> str:
+        """Compute deterministic cache key without exposing raw secrets."""
+        material = f"{self._get_service_value(service)}:{key_value}".encode()
+        secret_bytes = self.settings.secret_key.get_secret_value().encode("utf-8")
+        pepper = hashlib.blake2b(
+            secret_bytes,
+            person=b"tripsage-cache",
+            digest_size=32,
+        ).digest()
+        digest = hashlib.blake2b(
+            material,
+            key=pepper,
+            digest_size=32,
+        ).digest()
+        encoded = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+        return f"api_validation:v3:{encoded}"
 
     async def _validate_googlemaps_key(self, key_value: str) -> ApiValidationResult:
         """Validate Google Maps API key with HTTP request."""

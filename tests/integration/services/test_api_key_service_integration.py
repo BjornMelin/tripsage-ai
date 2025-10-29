@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from types import TracebackType
 from typing import Any, cast
+from urllib.parse import urlparse
 
 import pytest
 
@@ -228,7 +229,8 @@ async def test_health_checks_aggregate_results_without_network(
     ) as svc:
 
         async def _fake_get(url: str, **_kwargs: Any) -> _Resp:  # type: ignore[override]
-            if "status.openai.com" in url:
+            host = urlparse(url).netloc
+            if host in {"status.openai.com", "api.openai.com"}:
                 return _Resp(
                     200,
                     {
@@ -239,9 +241,9 @@ async def test_health_checks_aggregate_results_without_network(
                         "page": {"updated_at": _now_iso()},
                     },
                 )
-            if "openweathermap.org" in url:
+            if host in {"openweathermap.org", "api.openweathermap.org"}:
                 return _Resp(401)  # Healthy path per implementation
-            if "maps.googleapis.com" in url:
+            if host == "maps.googleapis.com":
                 return _Resp(200, {"status": "REQUEST_DENIED"})
             return _Resp(500)
 
@@ -249,16 +251,15 @@ async def test_health_checks_aggregate_results_without_network(
 
         results = await svc.check_all_services_health()
 
-    # The model uses `use_enum_values=True`, so `status` may be a str value.
     assert (
-        ServiceHealthStatus(results[ServiceType.OPENAI].status)
+        ServiceHealthStatus(results[ServiceType.OPENAI].health_status)
         is ServiceHealthStatus.HEALTHY
     )
     assert (
-        ServiceHealthStatus(results[ServiceType.WEATHER].status)
+        ServiceHealthStatus(results[ServiceType.WEATHER].health_status)
         is ServiceHealthStatus.HEALTHY
     )
-    assert ServiceHealthStatus(results[ServiceType.GOOGLEMAPS].status) in {
+    assert ServiceHealthStatus(results[ServiceType.GOOGLEMAPS].health_status) in {
         ServiceHealthStatus.HEALTHY,
         ServiceHealthStatus.DEGRADED,
     }
