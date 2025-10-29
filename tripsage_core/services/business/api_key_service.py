@@ -19,9 +19,10 @@ import binascii
 import hashlib
 import logging
 import uuid
+from collections.abc import Awaitable
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Annotated, Any, Optional
+from typing import TYPE_CHECKING, Annotated, Any, Optional, Protocol, cast
 
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
@@ -34,14 +35,12 @@ from pydantic import (
     computed_field,
     field_validator,
 )
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
 
-from tripsage_core.exceptions import CoreServiceError as ServiceError
+from tripsage_core.exceptions import (
+    RECOVERABLE_ERRORS,
+    CoreServiceError as ServiceError,
+)
+from tripsage_core.infrastructure.retry_policies import tripsage_retry
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
@@ -51,27 +50,83 @@ from tripsage_core.services.business.audit_logging_service import (
 from tripsage_core.services.infrastructure.cache_service import (
     get_cache_service,
 )
+from tripsage_core.services.infrastructure.database_operations_mixin import (
+    DatabaseOperationsMixin,
+)
 from tripsage_core.services.infrastructure.database_service import (
     get_database_service,
 )
+from tripsage_core.services.infrastructure.error_handling_mixin import (
+    ErrorHandlingMixin,
+)
+from tripsage_core.services.infrastructure.logging_mixin import LoggingMixin
+from tripsage_core.services.infrastructure.validation_mixin import ValidationMixin
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
+
+
+class _TxProtocol(Protocol):
+    """Minimal DB transaction protocol used by this service."""
+
+    async def __aenter__(self) -> "_TxProtocol":
+        """Enter the transaction context manager."""
+        ...
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any | None,
+    ) -> None:
+        """Exit the transaction context manager."""
+        ...
+
+    def insert(self, table: str, payload: dict[str, Any]) -> None:
+        """Queue an insert operation for execution."""
+        ...
+
+    def delete(self, table: str, criteria: dict[str, Any]) -> None:
+        """Queue a delete operation for execution."""
+        ...
+
+    async def execute(self) -> list[list[dict[str, Any]]]:
+        """Execute queued operations and return batched results."""
+        ...
+
+
+class ApiKeyDatabaseProtocol(Protocol):
+    """DB surface area required by ApiKeyService."""
+
+    def transaction(self, user_id: str | None = None) -> _TxProtocol:
+        """Open a batched transaction context."""
+        ...
+
+    async def get_user_api_keys(self, user_id: str) -> list[dict[str, Any]]:
+        """Return API key rows for the given user."""
+        ...
+
+    async def get_api_key_by_id(
+        self, key_id: str, user_id: str
+    ) -> dict[str, Any] | None:
+        """Return an API key row by id or ``None``."""
+        ...
+
+    async def get_api_key_for_service(
+        self, user_id: str, service: str
+    ) -> dict[str, Any] | None:
+        """Return a user's API key row for a service or ``None``."""
+        ...
+
+    async def update_api_key_last_used(self, key_id: str) -> bool:
+        """Update last-used metadata, returning success state."""
+        ...
 
 
 if TYPE_CHECKING:
     from tripsage_core.config import Settings
     from tripsage_core.services.infrastructure.cache_service import CacheService
-    from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
 logger = logging.getLogger(__name__)
-
-RECOVERABLE_ERRORS = (
-    ServiceError,
-    httpx.HTTPError,
-    asyncio.TimeoutError,
-    ConnectionError,
-    ValueError,
-    RuntimeError,
-)
 
 ENCRYPTION_ERRORS = (InvalidToken, ValueError, TypeError, binascii.Error)
 
@@ -240,8 +295,10 @@ class ApiValidationResult(TripSageModel):
         return self.health_status == ServiceHealthStatus.HEALTHY
 
 
-class ApiKeyService:
-    """Simplified API key service for TripSage following KISS principles.
+class ApiKeyService(
+    DatabaseOperationsMixin, ValidationMixin, LoggingMixin, ErrorHandlingMixin
+):
+    """API key service for TripSage following KISS principles.
 
     Provides key management, validation, and security features with clean
     dependency injection and atomic operations.
@@ -249,7 +306,7 @@ class ApiKeyService:
 
     def __init__(
         self,
-        db: "DatabaseService",
+        db: ApiKeyDatabaseProtocol,
         cache: Optional["CacheService"] = None,
         settings: Optional["Settings"] = None,
         validation_timeout: int = 10,
@@ -262,7 +319,8 @@ class ApiKeyService:
             settings: Application settings (optional, will use defaults)
             validation_timeout: Request timeout for validation (default: 10s)
         """
-        self.db = db
+        # Store concrete dependency privately; expose via typed property
+        self._db: ApiKeyDatabaseProtocol = db
         self.cache = cache
         self.validation_timeout = validation_timeout
 
@@ -282,6 +340,12 @@ class ApiKeyService:
             timeout=httpx.Timeout(validation_timeout),
             limits=httpx.Limits(max_keepalive_connections=10, max_connections=50),
         )
+
+    # DatabaseOperationsMixin requires subclasses to provide a typed `db` property
+    @property
+    def db(self) -> ApiKeyDatabaseProtocol:  # pyright: ignore[reportIncompatibleMethodOverride]
+        """Database service accessor used by mixin operations."""
+        return self._db
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -340,6 +404,7 @@ class ApiKeyService:
         self.master_key = base64.urlsafe_b64encode(key_bytes)
         self.master_cipher = Fernet(self.master_key)
 
+    @tripsage_safe_execute(exception_class=ServiceError)
     async def create_api_key(
         self, user_id: str, key_data: ApiKeyCreateRequest
     ) -> ApiKeyResponse:
@@ -356,9 +421,10 @@ class ApiKeyService:
             ServiceError: If creation fails
         """
         try:
-            # Validate the API key first
-            validation_result = await self.validate_api_key(
-                key_data.service, key_data.key_value
+            # Validate the API key first (decorator obscures Awaitable type)
+            validation_result: ApiValidationResult = await cast(
+                Awaitable[ApiValidationResult],
+                self.validate_api_key(key_data.service, key_data.key_value),
             )
 
             # Generate secure key ID and encrypt key
@@ -367,14 +433,16 @@ class ApiKeyService:
 
             # Prepare database entry
             now = datetime.now(UTC)
-            db_key_data = {
+            db_key_data: dict[str, str | bool | int | None] = {
                 "id": key_id,
                 "user_id": user_id,
                 "name": key_data.name,
                 "service": self._get_service_value(key_data.service),
                 "encrypted_key": encrypted_key,
                 "description": key_data.description,
-                "is_valid": validation_result.is_valid,
+                "is_valid": bool(validation_result.is_valid)
+                if validation_result.is_valid is not None
+                else False,
                 "created_at": now.isoformat(),
                 "updated_at": now.isoformat(),
                 "expires_at": key_data.expires_at.isoformat()
@@ -388,8 +456,8 @@ class ApiKeyService:
                 "usage_count": 0,
             }
 
-            # Atomic transaction: create key + log operation
-            async with self.db.transaction() as tx:
+            # Persist using a single DB transaction to match service contract
+            async with self.db.transaction() as tx:  # type: ignore[attr-defined]
                 tx.insert("api_keys", db_key_data)
                 tx.insert(
                     "api_key_usage_logs",
@@ -402,9 +470,11 @@ class ApiKeyService:
                         "success": True,
                     },
                 )
-                results = await tx.execute()
-
-            result = results[0][0]  # First operation (create_api_key) result
+                tx_result = await tx.execute()
+            # Capture primary insert row if provided by the DB implementation
+            result = (
+                tx_result[0][0] if tx_result and tx_result[0] else None
+            ) or db_key_data
 
             # Audit log (fire-and-forget)
             asyncio.create_task(  # noqa: RUF006
@@ -457,15 +527,24 @@ class ApiKeyService:
             )
             raise ServiceError(f"Failed to create API key: {error!s}") from error
 
+    @tripsage_safe_execute()
     async def list_user_keys(self, user_id: str) -> list[ApiKeyResponse]:
         """Get all API keys for a user."""
+        # Validate user ID
+        self._validate_user_id(user_id)
+
         results = await self.db.get_user_api_keys(user_id)
         return [self._db_result_to_response(result) for result in results]
 
+    @tripsage_safe_execute()
     async def get_api_key(self, key_id: str, user_id: str) -> dict[str, Any] | None:
         """Get a specific API key by ID for a user."""
+        # Validate user ID
+        self._validate_user_id(user_id)
+
         return await self.db.get_api_key_by_id(key_id, user_id)
 
+    @tripsage_safe_execute()
     async def get_key_for_service(
         self, user_id: str, service: ServiceType
     ) -> str | None:
@@ -478,6 +557,9 @@ class ApiKeyService:
         Returns:
             Decrypted API key or None if not found/expired
         """
+        # Validate user ID
+        self._validate_user_id(user_id)
+
         result = await self.db.get_api_key_for_service(
             user_id, self._get_service_value(service)
         )
@@ -499,18 +581,12 @@ class ApiKeyService:
         decrypted_key = self._decrypt_api_key(result["encrypted_key"])
 
         # Update last used timestamp (fire-and-forget)
-        asyncio.create_task(  # noqa: RUF006
-            self.db.update_api_key_last_used(result["id"])
-        )
+        asyncio.create_task(self.db.update_api_key_last_used(result["id"]))  # noqa: RUF006
 
         return decrypted_key
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type((httpx.TimeoutException, httpx.ConnectError)),
-        reraise=True,
-    )
+    @tripsage_safe_execute()
+    @tripsage_retry(include_httpx_errors=True, attempts=3, max_delay=10.0)
     async def validate_api_key(
         self,
         service: ServiceType,
@@ -540,8 +616,8 @@ class ApiKeyService:
             ).hexdigest()
             cache_key = f"api_validation:v3:{cache_hash}"
             try:
-                cached_result = await self.cache.get_json(cache_key)
-                if cached_result:
+                cached_raw = await self.cache.get_json(cache_key)
+                if isinstance(cached_raw, dict) and cached_raw:
                     logger.debug(
                         "Cache hit for API key validation",
                         extra={
@@ -552,7 +628,7 @@ class ApiKeyService:
                     # Return cached result with updated latency
                     latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
                     # Handle enum conversion for cached results
-                    cached_copy = cached_result.copy()
+                    cached_copy: dict[str, Any] = dict(cached_raw)
                     # Remove computed fields that shouldn't be in constructor
                     cached_copy.pop("success_rate_category", None)
                     cached_copy.pop("is_healthy", None)
@@ -676,6 +752,7 @@ class ApiKeyService:
                 latency_ms=(datetime.now(UTC) - start_time).total_seconds() * 1000,
             )
 
+    @tripsage_safe_execute()
     async def check_service_health(self, service: ServiceType) -> ApiValidationResult:
         """Check the health of an external service.
 
@@ -707,17 +784,30 @@ class ApiKeyService:
                 checked_at=datetime.now(UTC),
             )
 
+    @tripsage_safe_execute()
     async def check_all_services_health(self) -> dict[ServiceType, ApiValidationResult]:
-        """Check health of all supported services concurrently."""
+        """Run concurrent health checks for core external services.
+
+        Notes:
+            The `tripsage_safe_execute` decorator used on `check_service_health`
+            obscures its return type from the type checker. To keep types
+            precise without altering the decorator, we cast each coroutine to
+            `Awaitable[ApiValidationResult]` before passing to `asyncio.gather`.
+        """
         services = [ServiceType.OPENAI, ServiceType.WEATHER, ServiceType.GOOGLEMAPS]
 
-        # Run health checks concurrently
-        tasks = [self.check_service_health(service) for service in services]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Run health checks concurrently with explicit coroutine typing
+        tasks: list[Awaitable[ApiValidationResult]] = [
+            cast(Awaitable[ApiValidationResult], self.check_service_health(service))
+            for service in services
+        ]
+        results: list[ApiValidationResult | BaseException] = await asyncio.gather(
+            *tasks, return_exceptions=True
+        )
 
         health_status: dict[ServiceType, ApiValidationResult] = {}
         for service, result in zip(services, results, strict=False):
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 health_status[service] = ApiValidationResult(
                     service=service,
                     is_valid=None,
@@ -729,12 +819,11 @@ class ApiKeyService:
                     checked_at=datetime.now(UTC),
                 )
             else:
-                if not isinstance(result, ApiValidationResult):
-                    raise TypeError("Unexpected health check result type") from None
                 health_status[service] = result
 
         return health_status
 
+    @tripsage_safe_execute()
     async def delete_api_key(self, key_id: str, user_id: str) -> bool:
         """Delete an API key atomically.
 
@@ -750,60 +839,62 @@ class ApiKeyService:
         if not key_data:
             return False
 
-        # Atomic transaction: delete key + log operation
-        now = datetime.now(UTC)
-        async with self.db.transaction() as tx:
+        # Perform atomic delete using DB transaction
+        success = True
+        async with self.db.transaction() as tx:  # type: ignore[attr-defined]
             tx.delete("api_keys", {"id": key_id, "user_id": user_id})
+            # Also record usage log in same transaction
+            now = datetime.now(UTC)
             tx.insert(
                 "api_key_usage_logs",
                 {
                     "key_id": key_id,
                     "user_id": user_id,
-                    "service": key_data["service"],
+                    "service": key_data.get("service"),
                     "operation": "delete",
                     "timestamp": now.isoformat(),
                     "success": True,
                 },
             )
-            results = await tx.execute()
+            await tx.execute()
 
-        success = len(results[0]) > 0  # Check if deletion was successful
+        # Log operation
+        now = datetime.now(UTC)
 
-        if success:
-            # Audit log (fire-and-forget)
-            asyncio.create_task(self._audit_key_deletion(key_id, user_id, key_data))  # noqa: RUF006
+        # Audit log (fire-and-forget)
+        asyncio.create_task(self._audit_key_deletion(key_id, user_id, key_data))  # noqa: RUF006
 
-            logger.info(
-                "API key deleted",
-                extra={
-                    "key_id": key_id,
-                    "user_id": user_id,
-                    "service": key_data["service"],
-                },
-            )
+        logger.info(
+            "API key deleted",
+            extra={
+                "key_id": key_id,
+                "user_id": user_id,
+                "service": key_data.get("service"),
+            },
+        )
 
-            # Invalidate cache for this service to ensure fresh validations
-            if self.cache and self.settings.enable_api_key_caching:
-                try:
-                    # Clear all validation cache entries (simplified approach)
-                    await self.cache.delete_pattern("api_validation:v3:*")
-                    logger.debug(
-                        "Invalidated validation cache after key deletion",
-                        extra={"service": key_data["service"]},
-                    )
-                except (
-                    httpx.RequestError,
-                    httpx.TimeoutException,
-                    ValueError,
-                    TypeError,
-                ) as cache_error:
-                    logger.warning(
-                        "Cache invalidation failed after key deletion",
-                        extra={
-                            "service": key_data["service"],
-                            "error": str(cache_error),
-                        },
-                    )
+        # Invalidate cache for this service to ensure fresh validations
+        if self.cache and self.settings.enable_api_key_caching:
+            try:
+                # Clear all validation cache entries (simplified approach)
+                await self.cache.delete_pattern("api_validation:v3:*")
+                logger.debug(
+                    "Invalidated validation cache after key deletion",
+                    extra={"service": key_data.get("service")},
+                )
+            except (
+                httpx.RequestError,
+                httpx.TimeoutException,
+                ValueError,
+                TypeError,
+            ) as cache_error:
+                logger.warning(
+                    "Cache invalidation failed after key deletion",
+                    extra={
+                        "service": key_data.get("service"),
+                        "error": str(cache_error),
+                    },
+                )
 
         return success
 
@@ -1288,7 +1379,7 @@ class ApiKeyService:
 
 
 async def get_api_key_service(
-    db: Annotated["DatabaseService", Depends(get_database_service)],
+    db: Annotated[ApiKeyDatabaseProtocol, Depends(get_database_service)],
     cache: Annotated[Optional["CacheService"], Depends(get_cache_service)] = None,
 ) -> ApiKeyService:
     """Dependency injection for ApiKeyService.
