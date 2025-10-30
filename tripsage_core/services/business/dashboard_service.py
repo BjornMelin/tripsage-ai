@@ -1,4 +1,4 @@
-"""Dashboard Service aggregates metrics from ApiKeyService and the database.
+"""Dashboard Service aggregates metrics from the database and cached telemetry.
 
 Provides:
 - Real-time API usage analytics and service health tracking
@@ -19,13 +19,6 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
 
-from tripsage_core.services.business.api_key_service import (
-    ApiKeyDatabaseProtocol,
-    ApiKeyService,
-    ApiValidationResult,
-    ServiceHealthStatus,
-    ServiceType,
-)
 from tripsage_core.services.business.dashboard_models import (
     AlertData,
     AlertSeverity,
@@ -33,6 +26,8 @@ from tripsage_core.services.business.dashboard_models import (
     DashboardData,
     RealTimeMetrics,
     ServiceAnalytics,
+    ServiceHealthStatus,
+    ServiceType,
     UserActivityData,
 )
 from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
@@ -129,6 +124,7 @@ class _ServiceUsageSnapshot:
     requests: int = 0
     errors: int = 0
     success_rate: float = 1.0
+    avg_latency_ms: float = 0.0
     active_keys: int = 0
     rate_limit_hits: int = 0
     quota_usage: float = 0.0
@@ -146,16 +142,6 @@ class DashboardService:  # pylint: disable=too-many-instance-attributes
         """Initialize dashboard service with dependencies."""
         self.cache = cache_service
         self.db = database_service
-
-        # Initialize API key service for health checks and validation when possible
-        self.api_key_service: ApiKeyService | None = None
-        if database_service is not None:
-            # DatabaseService conforms structurally to ApiKeyDatabaseProtocol
-            self.api_key_service = ApiKeyService(
-                db=cast(ApiKeyDatabaseProtocol, database_service),
-                cache=cache_service,
-                settings=settings,
-            )
 
         # Active alerts storage (in production, this would be in database/cache)
         self._active_alerts: dict[str, AlertData] = {}
@@ -348,15 +334,6 @@ class DashboardService:  # pylint: disable=too-many-instance-attributes
     ) -> list[ServiceAnalytics]:
         """Get per-service analytics from real data using single query."""
         try:
-            if self.api_key_service is None:
-                return self._get_default_service_analytics()
-
-            # Get health checks for all services
-            checks_awaitable = self.api_key_service.check_all_services_health()
-            health_checks: dict[
-                ServiceType, ApiValidationResult
-            ] = await checks_awaitable
-
             # Single query for all usage logs in time range
             end_time = datetime.now(UTC)
             start_time = end_time - timedelta(hours=time_range_hours)
@@ -366,36 +343,32 @@ class DashboardService:  # pylint: disable=too-many-instance-attributes
             grouped_logs = self._group_logs_by_service(usage_logs)
 
             analytics: list[ServiceAnalytics] = []
-            for service_type, health_check in health_checks.items():
-                # Use pre-grouped logs instead of individual queries
-                service_logs = grouped_logs.get(service_type.value, [])
+            for service_name, service_logs in grouped_logs.items():
                 usage_snapshot = self._build_service_snapshot(service_logs)
 
-                last_check = (
-                    health_check.checked_at
-                    if health_check.checked_at is not None
-                    else datetime.now(UTC)
-                )
-                health_status = (
-                    health_check.health_status
-                    if health_check.health_status is not None
-                    else ServiceHealthStatus.UNKNOWN
-                )
+                try:
+                    service_type = ServiceType(service_name.lower())
+                except ValueError:
+                    service_type = ServiceType.GENERIC
+
                 analytics.append(
                     ServiceAnalytics(
-                        service_name=service_type.value,
+                        service_name=service_name,
                         service_type=service_type,
                         total_requests=usage_snapshot.requests,
                         total_errors=usage_snapshot.errors,
                         success_rate=usage_snapshot.success_rate,
-                        avg_latency_ms=health_check.latency_ms,
-                        active_keys=usage_snapshot.active_keys,
-                        last_health_check=last_check,
-                        health_status=health_status,
+                        avg_latency_ms=usage_snapshot.avg_latency_ms,
+                        active_keys=0,
+                        last_health_check=datetime.now(UTC),
+                        health_status=ServiceHealthStatus.UNKNOWN,
                         rate_limit_hits=usage_snapshot.rate_limit_hits,
                         quota_usage_percent=usage_snapshot.quota_usage,
                     )
                 )
+
+            if not analytics:
+                return self._get_default_service_analytics()
 
             return analytics
 
@@ -663,6 +636,12 @@ class DashboardService:  # pylint: disable=too-many-instance-attributes
             1 for log in service_logs if not _coerce_bool(log.get("success"), True)
         )
         success_rate = (requests - errors) / requests if requests > 0 else 1.0
+        latencies = [
+            _coerce_float(log.get("latency_ms"), 0.0)
+            for log in service_logs
+            if log.get("latency_ms") is not None
+        ]
+        avg_latency_ms = statistics.mean(latencies) if latencies else 0.0
         active_keys = len(
             {
                 cast(str, log.get("key_id"))
@@ -675,6 +654,7 @@ class DashboardService:  # pylint: disable=too-many-instance-attributes
             requests=requests,
             errors=errors,
             success_rate=success_rate,
+            avg_latency_ms=avg_latency_ms,
             active_keys=active_keys,
             rate_limit_hits=0,
             quota_usage=0.0,
@@ -741,7 +721,7 @@ class DashboardService:  # pylint: disable=too-many-instance-attributes
             avg_latency_ms=150.0,
             p95_latency_ms=300.0,
             p99_latency_ms=500.0,
-            active_keys_count=5,
+            active_keys_count=0,
             unique_users_count=10,
             requests_per_minute=base_requests / (time_range_hours * 60),
             period_start=start_time,
@@ -750,23 +730,7 @@ class DashboardService:  # pylint: disable=too-many-instance-attributes
 
     def _get_default_service_analytics(self) -> list[ServiceAnalytics]:
         """Get default service analytics when data is unavailable."""
-        now = datetime.now(UTC)
-        return [
-            ServiceAnalytics(
-                service_name=service_type.value,
-                service_type=service_type,
-                total_requests=200,
-                total_errors=10,
-                success_rate=0.95,
-                avg_latency_ms=150.0,
-                active_keys=2,
-                last_health_check=now,
-                health_status=ServiceHealthStatus.HEALTHY,
-                rate_limit_hits=0,
-                quota_usage_percent=45.0,
-            )
-            for service_type in ServiceType
-        ]
+        return []
 
     async def _get_fallback_dashboard_data(
         self, time_range_hours: int

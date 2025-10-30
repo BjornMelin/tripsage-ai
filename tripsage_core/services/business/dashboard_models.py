@@ -8,11 +8,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field, computed_field
 
-from tripsage_core.services.business.api_key_service import (
-    ServiceHealthStatus,
-    ServiceType,
-)
-
 
 __all__ = [
     "AlertData",
@@ -282,3 +277,22 @@ class RateLimitStatus(BaseModel):
     last_request: datetime | None = Field(
         default=None, description="Last request timestamp"
     )
+
+
+class ServiceHealthStatus(str, enum.Enum):
+    """Service health status indicator."""
+
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    UNHEALTHY = "unhealthy"
+    UNKNOWN = "unknown"
+
+
+class ServiceType(str, enum.Enum):
+    """Known third-party service identifiers."""
+
+    GENERIC = "generic"
+    OPENAI = "openai"
+    WEATHER = "weather"
+    GOOGLEMAPS = "googlemaps"
+    EMAIL = "email"

@@ -103,7 +103,6 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   const [toolResults, setToolResults] = useState<Map<string, ToolResult>>(new Map());
 
   const isAuthenticated = true;
-  const isApiKeyValid = true;
   // Access chat store functions
   const {
     sessions,
@@ -294,12 +293,6 @@ export function useChatAi(options: UseChatAiOptions = {}) {
           return;
         }
 
-        // Check for valid API key
-        if (!isApiKeyValid) {
-          setAuthError("Valid API key required before sending messages");
-          return;
-        }
-
         // Set agent status to thinking
         updateAgentStatus(sessionIdRef.current, {
           isActive: true,
@@ -447,7 +440,6 @@ export function useChatAi(options: UseChatAiOptions = {}) {
       updateAgentStatus,
       isInitialized,
       isAuthenticated,
-      isApiKeyValid,
     ]
   );
 
@@ -481,7 +473,6 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     // Auth state
     isAuthenticated,
     isInitialized,
-    isApiKeyValid,
     authError,
 
     // Tool call state
