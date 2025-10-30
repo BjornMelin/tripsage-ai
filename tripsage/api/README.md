@@ -13,8 +13,6 @@ The TripSage API provides endpoints for:
 
 ### Core Capabilities
 
-- **User Authentication & Management** - JWT and API key authentication
-- **BYOK (Bring Your Own Key)** - Secure user-provided API key management
 - **Trip Planning & Management** - Travel planning workflow
 - **Flight Search & Booking** - Multi-provider flight search and comparison
 - **Accommodation Search** - Hotel and alternative lodging search
@@ -85,12 +83,10 @@ tripsage/api/
 │   ├── dependencies.py     # Dependency injection and service factories
 │   └── openapi.py         # OpenAPI documentation and consumer tagging
 ├── middlewares/            # Cross-cutting concerns
-│   ├── authentication.py  # JWT and API key authentication
 │   ├── logging.py         # Structured logging and observability
 │   └── rate_limiting.py   # Rate limiting by consumer type
 ├── routers/               # API endpoints organized by domain
 │   ├── auth.py           # Authentication and authorization
-│   ├── keys.py           # BYOK API key management
 │   ├── chat.py           # Chat and conversation endpoints
 │   ├── trips.py          # Trip planning and management
 │   ├── flights.py        # Flight search and booking
@@ -149,7 +145,6 @@ Authorization: Bearer <jwt_token>
 #### API Key Authentication (Primary for Agents)
 
 ```bash
-# Create API key
 POST /api/v1/keys
 Authorization: Bearer <jwt_token>
 
@@ -159,15 +154,11 @@ X-API-Key: <api_key>
 
 ### BYOK (Bring Your Own Key) System
 
-Secure user-provided API key management:
-
 ```bash
-# Store encrypted user API key
 POST /api/v1/keys
 {
   "service": "duffel",
   "api_key": "user_provided_key",
-  "description": "My Duffel API key"
 }
 
 # API automatically uses user's key when available
@@ -177,7 +168,6 @@ GET /api/v1/flights/search
 
 **Security Features:**
 
-- **AES-256 encryption** for stored API keys
 - **User-specific salt** for additional security
 - **Key validation** before storage
 - **Usage monitoring** and rotation support
@@ -207,11 +197,6 @@ GET /api/v1/flights/search
 - `DELETE /api/v1/auth/logout` - Logout and token invalidation
 
 #### API Key Management
-
-- `GET /api/v1/keys` - List user's API keys
-- `POST /api/v1/keys` - Create/store new API key
-- `PUT /api/v1/keys/{key_id}` - Update API key
-- `DELETE /api/v1/keys/{key_id}` - Delete API key
 
 ### Travel Planning Endpoints
 
@@ -354,7 +339,6 @@ TripSage uses Supabase Realtime with private channels and RLS authorization. The
 ### Rate Limiting
 
 - **Limits by consumer type** - Higher limits for agents
-- **Principal-based tracking** - Per-user and per-API key limits
 - **Graceful degradation** - Progressive limiting with warnings
 
 ### Database Optimization

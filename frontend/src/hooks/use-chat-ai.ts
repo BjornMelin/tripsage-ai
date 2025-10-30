@@ -10,7 +10,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
-import { useApiKeyStore } from "@/stores/api-key-store";
 import { useChatStore } from "@/stores/chat-store";
 import type {
   Attachment,
@@ -78,8 +77,7 @@ interface UseChatAiOptions {
  * @returns .error - Current error message if any.
  * @returns .isAuthenticated - Whether the user is authenticated.
  * @returns .isInitialized - Whether the hook has completed initialization.
- * @returns .isApiKeyValid - Whether a valid API key is configured.
- * @returns .authError - Authentication-related error message.
+  * @returns .authError - Authentication-related error message.
  * @returns .activeToolCalls - Currently executing tool calls.
  * @returns .toolResults - Results from completed tool calls.
  * @returns .sendMessage - Function to send a new message.
@@ -94,7 +92,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   // Generate a session ID if not provided
   const sessionIdRef = useRef<string>(providedSessionId || uuidv4());
 
-  // Auth and API key state
+  // Authentication state
   const [authError, setAuthError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -104,15 +102,8 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   );
   const [toolResults, setToolResults] = useState<Map<string, ToolResult>>(new Map());
 
-  const {
-    isAuthenticated,
-    isApiKeyValid,
-    authError: storeAuthError,
-    loadKeys,
-    validateKey,
-    setAuthError: setStoreAuthError,
-  } = useApiKeyStore();
-
+  const isAuthenticated = true;
+  const isApiKeyValid = true;
   // Access chat store functions
   const {
     sessions,
@@ -125,42 +116,17 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     stopStreaming,
   } = useChatStore();
 
-  // Initialize authentication and validate API keys
+  // Initialize authentication state (Supabase session is managed upstream)
   useEffect(() => {
-    const initializeAuth = async () => {
-      if (!isAuthenticated) {
-        setAuthError("Authentication required. Please log in to use the chat.");
-        setIsInitialized(false);
-        return;
-      }
+    if (!isAuthenticated) {
+      setAuthError("Authentication required. Please log in to use the chat.");
+      setIsInitialized(false);
+      return;
+    }
 
-      // Load keys if authenticated
-      try {
-        await loadKeys();
-
-        // Validate the OpenAI key (required for chat)
-        const hasValidKey = await validateKey("openai");
-        if (!hasValidKey) {
-          setAuthError(
-            "Valid OpenAI API key required. Please add one in your API settings."
-          );
-          setIsInitialized(false);
-          return;
-        }
-
-        setAuthError(null);
-        setStoreAuthError(null);
-        setIsInitialized(true);
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Authentication failed";
-        setAuthError(message);
-        setIsInitialized(false);
-      }
-    };
-
-    initializeAuth();
-  }, [isAuthenticated, loadKeys, validateKey, setStoreAuthError]);
+    setAuthError(null);
+    setIsInitialized(true);
+  }, [isAuthenticated]);
 
   // Ensure the session exists (only after auth is initialized)
   useEffect(() => {
@@ -510,13 +476,13 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     sessionId: sessionIdRef.current,
     messages: sessions.find((s) => s.id === sessionIdRef.current)?.messages || [],
     isLoading: sendingStatus !== "idle",
-    error: localError || authError || storeAuthError,
+    error: localError || authError,
 
     // Auth state
     isAuthenticated,
     isInitialized,
     isApiKeyValid,
-    authError: authError || storeAuthError,
+    authError,
 
     // Tool call state
     activeToolCalls: Array.from(activeToolCalls.values()),

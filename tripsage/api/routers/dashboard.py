@@ -2,7 +2,6 @@
 
 This module provides dashboard API endpoints for monitoring and insights:
 - System health and status
-- API key usage statistics and analytics
 - Real-time metrics and monitoring data
 - Usage trends and historical data
 - Alert management
@@ -37,10 +36,6 @@ from tripsage.api.schemas.dashboard import (
     UsageMetricsResponse,
     UserActivityResponse,
 )
-from tripsage_core.services.business.api_key_service import (
-    ApiValidationResult,
-    ServiceType,
-)
 from tripsage_core.services.business.dashboard_models import (
     DashboardData,
     RealTimeMetrics,
@@ -65,7 +60,7 @@ async def get_system_overview(
     Returns high-level system metrics and status including:
     - Overall system health
     - Request and error counts
-    - Active users and API keys
+    - Active users in monitored period
     - Success rates
     """
     try:
@@ -130,38 +125,24 @@ async def get_services_status(
             database_service=db_service,
         )
 
-        if dashboard_service.api_key_service is None:
-            return []
-
-        check_all = cast(
-            Callable[[], Awaitable[dict[ServiceType, ApiValidationResult]]],
-            dashboard_service.api_key_service.check_all_services_health,
-        )
-        health_checks: dict[ServiceType, ApiValidationResult] = await check_all()
+        dashboard_data = await dashboard_service.get_dashboard_data(time_range_hours=24)
 
         services_status: list[ServiceStatusResponse] = []
-        for service_type, health_check in health_checks.items():
-            status_enum = ServiceHealthStatus.HEALTHY
-            if health_check.health_status == ServiceHealthStatus.DEGRADED:
-                status_enum = ServiceHealthStatus.DEGRADED
-            elif health_check.health_status == ServiceHealthStatus.UNHEALTHY:
-                status_enum = ServiceHealthStatus.UNHEALTHY
-            elif health_check.health_status == ServiceHealthStatus.UNKNOWN:
-                status_enum = ServiceHealthStatus.UNKNOWN
-
-            details = health_check.details or {}
-            error_rate = float(details.get("error_rate", 0.0))
-            uptime_percentage = float(details.get("uptime_percentage", 100.0))
-
+        for service in dashboard_data.services:
+            error_rate = max(0.0, min(1.0, 1.0 - float(service.success_rate)))
+            uptime_percentage = max(
+                0.0, min(100.0, float(service.success_rate) * 100.0)
+            )
+            status_enum = ServiceHealthStatus(service.health_status.value)
             services_status.append(
                 ServiceStatusResponse(
-                    service=service_type.value,
+                    service=service.service_name,
                     status=status_enum,
-                    latency_ms=health_check.latency_ms,
-                    last_check=health_check.checked_at or datetime.now(UTC),
+                    latency_ms=service.avg_latency_ms,
+                    last_check=service.last_health_check,
                     error_rate=error_rate,
                     uptime_percentage=uptime_percentage,
-                    message=health_check.message,
+                    message=None,
                 )
             )
 
@@ -265,9 +246,9 @@ async def get_rate_limits_status(
     limit: int = Query(default=20, ge=1, le=100),
     principal: RequiredPrincipalDep,
 ) -> list[RateLimitInfoResponse]:
-    """Get rate limit status for API keys.
+    """Get rate limit status for service usage tokens.
 
-    Returns current rate limit status for active API keys including:
+    Returns current rate limit status for service integrations including:
     - Current usage vs limits, remaining quota, and reset times
     """
     try:
