@@ -17,6 +17,12 @@ from tripsage_core.services.business.trip_service import (
     TripType,
     TripVisibility,
 )
+from tripsage_core.services.business.user_service import UserService
+from tripsage_core.services.infrastructure.database_service import DatabaseService
+
+
+class _UserServiceStub(UserService):
+    """Minimal user service stub for :class:`TripService` tests."""
 
 
 class _TripDatabaseStub:
@@ -118,7 +124,10 @@ async def test_create_trip_persists_dates_and_counts() -> None:
         collaborators=[{"user_id": collaborator_id, "permission": "edit"}],
     )
 
-    service = TripService(database_service=db, user_service=object())
+    service = TripService(
+        database_service=cast(DatabaseService, db),
+        user_service=cast(UserService, _UserServiceStub(cast(DatabaseService, db))),
+    )
     result = await service.create_trip(owner_id, request)
 
     assert db.created_payload is not None
@@ -164,7 +173,10 @@ async def test_check_trip_access_allows_collaborator() -> None:
         {"user_id": collaborator_id, "permission": "view"},
     ]
     db = _TripDatabaseStub(record=record, collaborators=collaborators)
-    service = TripService(database_service=db, user_service=object())
+    service = TripService(
+        database_service=cast(DatabaseService, db),
+        user_service=cast(UserService, _UserServiceStub(cast(DatabaseService, db))),
+    )
 
     has_access = await cast(Any, service)._check_trip_access(
         record["id"], collaborator_id, require_owner=False
