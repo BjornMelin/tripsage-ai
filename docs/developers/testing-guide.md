@@ -417,12 +417,10 @@ uv run pytest --cov=tripsage --cov-report=term-missing -x
 
 #### Services
 
-- `mock_api_key_service`: Mock ApiKeyService with async methods
 - `mock_key_monitoring_service`: Mock KeyMonitoringService
 - `mock_database_service`: Mock database operations
 - `mock_cache_service`: Mock cache operations
 - `mock_audit_service`: Mock audit logging
-- `api_key_service_with_mocks`: Service with all dependencies mocked
 
 #### Requests
 
@@ -442,7 +440,6 @@ uv run pytest --cov=tripsage --cov-report=term-missing -x
 
 #### Property-Based Testing
 
-- `api_key_strategies`: Hypothesis strategies for API keys
 - `service_type_strategy`: Strategy for ServiceType enum
 - `user_id_strategy`: Strategy for user IDs
 - `key_name_strategy`: Strategy for key names
@@ -495,8 +492,6 @@ uv run pytest --cov=tripsage --cov-report=term-missing -x
 #### Basic Unit Test
 
 ```python
-def test_api_key_creation(mock_api_key_service, sample_api_key_create_request):
-    result = await mock_api_key_service.create_key(sample_api_key_create_request)
     assert result.is_valid
 ```
 
