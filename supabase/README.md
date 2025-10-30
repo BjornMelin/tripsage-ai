@@ -172,7 +172,6 @@ erDiagram
     auth_users ||--o{ trip_collaborators : collaborates
     auth_users ||--o{ chat_sessions : creates
     auth_users ||--o{ memories : has
-    auth_users ||--o{ api_keys : manages
     
     trips ||--o{ trip_collaborators : "shared with"
     trips ||--o{ flights : contains
@@ -345,7 +344,6 @@ erDiagram
         timestamp created_at
     }
     
-    api_keys {
         bigint id PK
         uuid user_id FK
         string service_name
@@ -391,7 +389,6 @@ erDiagram
 
 | Table | Description | Key Features |
 |-------|-------------|--------------|
-| `api_keys` | BYOK (Bring Your Own Keys) | Encrypted storage, usage tracking, service-specific key management |
 
 ### Trip Collaboration System
 

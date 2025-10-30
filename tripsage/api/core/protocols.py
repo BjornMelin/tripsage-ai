@@ -10,38 +10,6 @@ from __future__ import annotations
 from typing import Any, Protocol
 
 
-class ApiKeyServiceProto(Protocol):
-    """Protocol for API key service methods used by routers."""
-
-    async def list_user_keys(self, user_id: str) -> list[dict[str, Any]]:
-        """Return API keys for a user."""
-        ...
-
-    async def validate_key(
-        self, key: str, service: str, user_id: str | None = None
-    ) -> Any:
-        """Validate an API key for a service."""
-        ...
-
-    async def create_key(self, user_id: str, data: Any) -> dict[str, Any]:
-        """Create an API key for a user."""
-        ...
-
-    async def get_key(self, key_id: str) -> dict[str, Any] | None:
-        """Get an API key by identifier."""
-        ...
-
-    async def delete_key(self, key_id: str) -> None:
-        """Delete an API key by identifier."""
-        ...
-
-    async def rotate_key(
-        self, key_id: str, new_key: str, user_id: str
-    ) -> dict[str, Any]:
-        """Rotate an API key with a new secret."""
-        ...
-
-
 class ChatServiceProto(Protocol):
     """Protocol for chat service methods used by routers."""
 

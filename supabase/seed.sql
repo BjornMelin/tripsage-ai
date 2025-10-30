@@ -220,7 +220,6 @@ INSERT INTO chat_messages (
 -- ===========================
 
 -- Insert sample API keys (encrypted dummy data for development)
-INSERT INTO api_keys (
     user_id,
     service_name,
     key_name,
@@ -242,7 +241,6 @@ INSERT INTO api_keys (
     '00000000-0000-0000-0000-000000000001'::UUID,
     'google_maps',
     'places_api',
-    'encrypted_dummy_places_api_key',
     'hash_of_places_key',
     true,
     '{"environment": "production", "capabilities": ["places", "geocoding", "directions"]}'

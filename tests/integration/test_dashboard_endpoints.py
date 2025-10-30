@@ -33,21 +33,18 @@ _global_limiter.limit = _no_limit  # type: ignore[attr-defined]
 from tripsage.api.core import dependencies as core_dependencies
 from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.services.business.api_key_service import (
-    ApiValidationResult,
-    ServiceHealthStatus,
-    ServiceType,
-)
-from tripsage_core.services.business.dashboard_service import (
+from tripsage_core.services.business.dashboard_models import (
     AlertData,
     AlertSeverity,
     AlertType,
     DashboardData,
-    DashboardService,
     RealTimeMetrics,
     ServiceAnalytics,
+    ServiceHealthStatus,
+    ServiceType,
     UserActivityData,
 )
+from tripsage_core.services.business.dashboard_service import DashboardService
 
 
 @pytest.fixture(name="client")
@@ -227,51 +224,6 @@ def _patch_dependencies(
         "percentage_used": 60.0,
         "is_throttled": False,
     }
-
-    api_key_service = AsyncMock()
-    api_key_service.check_all_services_health.return_value = {
-        ServiceType.OPENAI: ApiValidationResult(
-            service=ServiceType.OPENAI,
-            is_valid=None,
-            status=None,
-            health_status=ServiceHealthStatus.HEALTHY,
-            latency_ms=110.0,
-            message="Operating normally",
-            checked_at=datetime.now(UTC),
-            validated_at=None,
-        ),
-        ServiceType.WEATHER: ApiValidationResult(
-            service=ServiceType.WEATHER,
-            is_valid=None,
-            status=None,
-            health_status=ServiceHealthStatus.DEGRADED,
-            latency_ms=210.0,
-            message="Latency elevated",
-            checked_at=datetime.now(UTC),
-            validated_at=None,
-        ),
-        ServiceType.GOOGLEMAPS: ApiValidationResult(
-            service=ServiceType.GOOGLEMAPS,
-            is_valid=None,
-            status=None,
-            health_status=ServiceHealthStatus.UNHEALTHY,
-            latency_ms=510.0,
-            message="Service unavailable",
-            checked_at=datetime.now(UTC),
-            validated_at=None,
-        ),
-        ServiceType.EMAIL: ApiValidationResult(
-            service=ServiceType.EMAIL,
-            is_valid=None,
-            status=None,
-            health_status=ServiceHealthStatus.UNKNOWN,
-            latency_ms=0.0,
-            message="Health status unknown",
-            checked_at=None,
-            validated_at=None,
-        ),
-    }
-    dashboard_service.api_key_service = api_key_service
 
     stack.enter_context(
         patch(

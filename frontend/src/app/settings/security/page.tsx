@@ -1,7 +1,7 @@
 /**
  * @fileoverview Security settings page.
  *
- * Manages account security preferences including 2FA, passwords, API keys,
+ * Manages account security preferences including 2FA, passwords,
  * notifications, privacy settings, and account deletion.
  */
 
@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   Download,
   Eye,
-  Key,
   Lock,
   Shield,
   Smartphone,
@@ -199,20 +198,18 @@ export default function SecuritySettingsPage() {
 
             <Separator />
 
-            {/* API Keys */}
+            {/* Multi-factor Authentication */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-base font-medium">API Keys</Label>
+                  <Label className="text-base font-medium">Multi-factor Authentication</Label>
                   <p className="text-sm text-muted-foreground">
-                    Manage your service API keys
+                    Add a second factor to strengthen account security
                   </p>
                 </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/settings/api-keys">
-                    <Key className="mr-2 h-4 w-4" />
-                    Manage Keys
-                  </Link>
+                <Button variant="outline" size="sm">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Configure MFA
                 </Button>
               </div>
             </div>

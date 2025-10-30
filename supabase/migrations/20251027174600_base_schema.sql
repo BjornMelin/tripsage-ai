@@ -3,7 +3,6 @@
 -- This migration consolidates the canonical database schema from supabase/schemas.
 -- FINAL-ONLY: the supabase/schemas and supabase/storage folders are legacy and will be removed.
 
-
 -- ===========================
 -- 00_extensions.sql
 -- ===========================
@@ -153,7 +152,6 @@ $$;
 -- - pg_amqp: Message queue integration for advanced event processing
 -- - pgtap: Testing framework for database functions and procedures
 -- - plv8: JavaScript language for stored procedures (if needed)
-
 
 -- ===========================
 -- 01_tables.sql
@@ -338,8 +336,6 @@ CREATE TABLE IF NOT EXISTS chat_tool_calls (
 -- API KEYS TABLE (BYOK)
 -- ===========================
 
--- Create api_keys table (BYOK - Bring Your Own Keys)
-CREATE TABLE IF NOT EXISTS api_keys (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     service_name TEXT NOT NULL,
@@ -353,7 +349,6 @@ CREATE TABLE IF NOT EXISTS api_keys (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
-    CONSTRAINT api_keys_user_service_key_unique UNIQUE (user_id, service_name, key_name)
 );
 
 -- ===========================
@@ -515,7 +510,6 @@ CREATE TABLE IF NOT EXISTS search_hotels (
     CONSTRAINT search_hotels_source_check CHECK (source IN ('booking', 'expedia', 'airbnb_mcp', 'external_api', 'cached'))
 );
 
-
 -- ===========================
 -- 02_indexes.sql
 -- ===========================
@@ -612,13 +606,8 @@ CREATE INDEX IF NOT EXISTS idx_chat_tool_calls_created_at ON chat_tool_calls(cre
 -- ===========================
 
 -- API key indexes for BYOK performance
-CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
-CREATE INDEX IF NOT EXISTS idx_api_keys_service_name ON api_keys(service_name);
-CREATE INDEX IF NOT EXISTS idx_api_keys_is_active ON api_keys(is_active);
-CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash);
 
 -- Composite index for key lookup (most common pattern)
-CREATE INDEX IF NOT EXISTS idx_api_keys_user_service ON api_keys(user_id, service_name, is_active);
 
 -- ===========================
 -- MEMORY SYSTEM INDEXES (pgvector optimized)
@@ -714,7 +703,6 @@ CREATE INDEX IF NOT EXISTS idx_chat_sessions_expired ON chat_sessions(ended_at)
 WHERE ended_at IS NULL;
 
 -- API key expiration monitoring
-CREATE INDEX IF NOT EXISTS idx_api_keys_expiration ON api_keys(expires_at, is_active)
 WHERE expires_at IS NOT NULL;
 
 -- ===========================
@@ -828,8 +816,6 @@ COMMENT ON INDEX idx_search_destinations_user_query IS 'Optimized for cache hit 
 COMMENT ON INDEX idx_search_flights_user_route_class IS 'Optimized for flight search cache lookups. Includes all common filter parameters.';
 
 COMMENT ON INDEX idx_search_hotels_user_dest_guests IS 'Optimized for hotel search cache lookups. Accounts for guest and room requirements.';
-
-
 
 -- ===========================
 -- 03_functions.sql
@@ -1056,7 +1042,6 @@ BEGIN
     ANALYZE chat_sessions;
     ANALYZE chat_messages;
     ANALYZE chat_tool_calls;
-    ANALYZE api_keys;
     ANALYZE memories;
     ANALYZE session_memories;
     
@@ -1949,8 +1934,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
-
 -- ===========================
 -- 04_triggers.sql
 -- ===========================
@@ -1984,8 +1967,6 @@ CREATE TRIGGER update_chat_sessions_updated_at
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_api_keys_updated_at 
-    BEFORE UPDATE ON api_keys 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -2188,7 +2169,6 @@ CREATE TRIGGER update_trip_status_from_accommodation_bookings_upd
 -- Schedule session expiration check (runs every hour)
 -- SELECT cron.schedule('expire-sessions', '0 * * * *', 'SELECT expire_inactive_sessions(24);');
 
-
 -- ===========================
 -- 05_policies.sql
 -- ===========================
@@ -2218,7 +2198,6 @@ ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_tool_calls ENABLE ROW LEVEL SECURITY;
 
 -- User management tables
-ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 
 -- Memory tables (now using UUID user_id with proper foreign key constraints)
 ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
@@ -2229,7 +2208,6 @@ ALTER TABLE session_memories ENABLE ROW LEVEL SECURITY;
 -- ===========================
 
 -- API Keys: Users can only manage their own API keys
-CREATE POLICY "Users can only access their own API keys" ON api_keys
     FOR ALL USING (auth.uid() = user_id);
 
 -- Memory System: Users can only access their own memories
@@ -2662,7 +2640,6 @@ CREATE POLICY "Users can only access their own hotel searches" ON search_hotels
 -- POLICY DOCUMENTATION
 -- ===========================
 
-COMMENT ON POLICY "Users can only access their own API keys" ON api_keys 
     IS 'RLS policy ensuring users can only manage their own API keys (BYOK - Bring Your Own Keys)';
 
 COMMENT ON POLICY "Users can view trip collaborations they are part of" ON trip_collaborators 
@@ -2701,8 +2678,6 @@ COMMENT ON POLICY "Users can modify flights with edit permissions" ON flights
 -- All policies include created_at/updated_at tracking for audit purposes
 -- Permission changes are logged through the updated_at trigger
 -- Collaboration events can be tracked via trip_collaborators table timestamps
-
-
 
 -- ===========================
 -- 06_views.sql
@@ -2821,7 +2796,6 @@ ORDER BY booking_date ASC;
 -- ===========================
 
 -- Create view for active API keys by service
-CREATE OR REPLACE VIEW active_api_keys_by_service AS
 SELECT 
     service_name,
     COUNT(*) as total_keys,
@@ -2829,12 +2803,10 @@ SELECT
     COUNT(CASE WHEN last_used_at IS NOT NULL THEN 1 END) as used_keys,
     MAX(last_used_at) as last_usage,
     COUNT(CASE WHEN expires_at IS NOT NULL AND expires_at < NOW() THEN 1 END) as expired_keys
-FROM api_keys
 GROUP BY service_name
 ORDER BY total_keys DESC;
 
 -- Create view for user API key status
-CREATE OR REPLACE VIEW user_api_key_status AS
 SELECT 
     user_id,
     COUNT(*) as total_keys,
@@ -2842,7 +2814,6 @@ SELECT
     array_agg(DISTINCT service_name) as services,
     MIN(created_at) as first_key_added,
     MAX(last_used_at) as last_api_usage
-FROM api_keys
 GROUP BY user_id;
 
 -- ===========================
@@ -2871,10 +2842,7 @@ COMMENT ON VIEW active_chat_sessions IS 'Active chat sessions with message count
 COMMENT ON VIEW trip_summaries IS 'Trip overview with associated bookings count and total costs';
 COMMENT ON VIEW user_trip_stats IS 'User-level trip statistics and spending patterns';
 COMMENT ON VIEW upcoming_bookings IS 'All upcoming confirmed bookings (flights and accommodations)';
-COMMENT ON VIEW active_api_keys_by_service IS 'API key usage statistics by service type';
-COMMENT ON VIEW user_api_key_status IS 'User-level API key management overview';
 COMMENT ON VIEW user_memory_stats IS 'User memory system usage and categorization statistics';
-
 
 -- ===========================
 -- 07_automation.sql
@@ -2968,7 +2936,6 @@ SELECT cron.schedule(
     INSERT INTO notifications (user_id, type, title, message, metadata)
     SELECT 
         user_id,
-        'api_key_expiring',
         'API Key Expiring Soon',
         format('Your %s API key "%s" will expire in %s days', 
                service_name, key_name, 
@@ -2978,16 +2945,11 @@ SELECT cron.schedule(
             'key_name', key_name,
             'expires_at', expires_at
         )
-    FROM api_keys
     WHERE is_active = true
     AND expires_at IS NOT NULL
     AND expires_at BETWEEN NOW() AND NOW() + INTERVAL '7 days'
     AND NOT EXISTS (
         SELECT 1 FROM notifications n
-        WHERE n.user_id = api_keys.user_id
-        AND n.type = 'api_key_expiring'
-        AND n.metadata->>'service_name' = api_keys.service_name
-        AND n.metadata->>'key_name' = api_keys.key_name
         AND n.created_at > NOW() - INTERVAL '7 days'
     );
     $$
@@ -3218,7 +3180,6 @@ WHERE read = false;
 
 CREATE INDEX IF NOT EXISTS idx_system_metrics_type_time 
 ON system_metrics(metric_type, created_at DESC);
-
 
 -- ===========================
 -- 08_webhooks.sql

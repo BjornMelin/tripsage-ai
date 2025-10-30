@@ -210,8 +210,8 @@ export function ChatContainer({
             A valid OpenAI API key is required to use the chat feature. Please add one
             to get started.
           </p>
-          <Link href="/settings/api-keys">
-            <Button className="w-full">Manage API Keys</Button>
+          <Link href="/settings/security">
+            <Button className="w-full">Open Security Settings</Button>
           </Link>
         </div>
       </div>
@@ -334,9 +334,9 @@ export function ChatContainer({
               {authError || (typeof error === "string" ? error : String(error || ""))}
               {authError?.includes("API key") && (
                 <div className="mt-2">
-                  <Link href="/settings/api-keys">
+                  <Link href="/settings/security">
                     <Button variant="outline" size="sm">
-                      Manage API Keys
+                      Open Security Settings
                     </Button>
                   </Link>
                 </div>

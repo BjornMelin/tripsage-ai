@@ -2,7 +2,6 @@
 
 This package contains consolidated Pydantic V2 schemas organized by domain:
 
-- api_keys.py      : API key management schemas
 - auth.py          : Authentication schemas
 - chat.py          : Chat interaction schemas
 - config.py        : Configuration management schemas

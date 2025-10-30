@@ -7,7 +7,6 @@ export * from "./use-accommodation-search";
 export * from "./use-activity-search";
 export * from "./use-agent-status";
 export * from "./use-agent-status-websocket";
-export * from "./use-api-keys";
 // Legacy hooks (to be migrated)
 export * from "./use-api-query";
 // Modern API hooks

@@ -9,17 +9,6 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useChatAi } from "@/hooks/use-chat-ai";
 
-vi.mock("@/stores/api-key-store", () => ({
-  useApiKeyStore: () => ({
-    isAuthenticated: true,
-    isApiKeyValid: true,
-    authError: null,
-    loadKeys: vi.fn().mockResolvedValue(undefined),
-    validateKey: vi.fn().mockResolvedValue(true),
-    setAuthError: vi.fn(),
-  }),
-}));
-
 const addMessage = vi.fn().mockReturnValue("assistant-1");
 const updateAgentStatus = vi.fn();
 const createSession = vi.fn().mockReturnValue("test-session");

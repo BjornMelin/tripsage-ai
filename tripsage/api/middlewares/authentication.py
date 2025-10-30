@@ -1,9 +1,8 @@
 """Authentication middleware for FastAPI.
 
-This module provides robust authentication middleware supporting both JWT tokens
-(for frontend) and API keys (for agents), populating request.state.principal
-with authenticated entity information. Includes audit logging
-for all authentication events.
+This module provides authentication middleware that validates Supabase-issued
+JWT access tokens and populates request.state.principal with authenticated
+entity information while emitting audit events.
 """
 
 import logging
@@ -41,8 +40,8 @@ class Principal(BaseModel):
     id: str
     type: str  # "user" or "agent"
     email: str | None = None
-    service: str | None = None  # For API keys
-    auth_method: str  # "jwt" or "api_key"
+    service: str | None = None
+    auth_method: str  # "jwt"
     scopes: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -59,11 +58,10 @@ class Principal(BaseModel):
 
 
 class AuthenticationMiddleware(BaseHTTPMiddleware):
-    """Authentication middleware for JWT and API key flows.
+    """Authentication middleware for Supabase JWT flows.
 
     This middleware handles:
     - JWT token authentication for frontend users
-    - API key authentication for agents and services
     - Populating request.state.principal with authenticated entity info
     - Proper error responses tailored to each authentication failure
     """

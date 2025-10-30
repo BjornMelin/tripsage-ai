@@ -167,13 +167,6 @@ def test_settings() -> Settings:
     )
 
 
-@pytest.fixture()
-def dummy_api_key_service() -> object:
-    """Provide a dummy API key service for middleware tests."""
-    # Simple mock object - middleware tests don't seem to call methods on it
-    return object()
-
-
 @pytest.fixture(scope="session", autouse=True)
 def set_testing_env() -> None:
     """Force testing settings for the duration of the pytest session.
@@ -339,7 +332,6 @@ def app() -> FastAPI:
         destinations,
         health,
         itineraries,
-        keys,
         memory,
         search,
         trips,
@@ -347,7 +339,6 @@ def app() -> FastAPI:
 
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(config.router, prefix="/api", tags=["configuration"])
-    app.include_router(keys.router, prefix="/api/keys", tags=["api_keys"])
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
     app.include_router(memory.router, prefix="/api", tags=["memory"])

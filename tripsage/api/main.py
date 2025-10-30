@@ -34,7 +34,6 @@ from tripsage.api.routers import (
     flights,
     health,
     itineraries,
-    keys,
     memory,
     search,
     trips,
@@ -191,7 +190,7 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     # Install SlowAPI-based inbound rate limiting
     install_rate_limiting(app, settings)
 
-    # Authentication middleware supporting JWT and API keys
+    # Authentication middleware enforcing Supabase JWT access tokens
     app.add_middleware(AuthenticationMiddleware, settings=settings)
 
     # Inbound rate limiting handled via SlowAPI installed above
@@ -335,7 +334,6 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
     # dashboard_realtime router is temporarily excluded pending module finalization
-    app.include_router(keys.router, prefix="/api/user/keys", tags=["api_keys"])
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
     app.include_router(
