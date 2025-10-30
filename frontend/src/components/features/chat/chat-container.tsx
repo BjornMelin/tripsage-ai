@@ -9,7 +9,7 @@
 
 "use client";
 
-import { AlertCircle, Key, PanelRightOpen, Wifi } from "lucide-react";
+import { AlertCircle, PanelRightOpen, Wifi } from "lucide-react";
 import Link from "next/link";
 import React, { startTransition, useCallback, useEffect, useOptimistic } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -70,7 +70,6 @@ export function ChatContainer({
     stopGeneration,
     isAuthenticated,
     isInitialized,
-    isApiKeyValid,
     authError,
     // Tool call functionality
     activeToolCalls,
@@ -200,24 +199,6 @@ export function ChatContainer({
   }
 
   // Show API key required UI
-  if (isAuthenticated && !isApiKeyValid) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="p-8 text-center max-w-md">
-          <Key className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">API Key Required</h3>
-          <p className="text-muted-foreground mb-6">
-            A valid OpenAI API key is required to use the chat feature. Please add one
-            to get started.
-          </p>
-          <Link href="/settings/security">
-            <Button className="w-full">Open Security Settings</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   // Show loading UI while initializing
   if (!isInitialized || !chatSessionId) {
     return (

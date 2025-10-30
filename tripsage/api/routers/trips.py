@@ -6,7 +6,7 @@ retrieving, updating, and deleting trips.
 """
 
 import logging
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Protocol, TypedDict, cast
 from uuid import UUID
@@ -18,7 +18,6 @@ from tripsage.api.core.dependencies import (
     MemoryServiceDep,
     RequiredPrincipalDep,
     TripServiceDep,
-    UserServiceDep,
 )
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.trips import TripSearchParams
@@ -76,7 +75,10 @@ from tripsage_core.services.business.trip_service import (
     TripResponse as CoreTripResponse,
     TripUpdateRequest as CoreTripUpdateRequest,
 )
-from tripsage_core.services.business.user_service import UserResponse, UserService
+from tripsage_core.services.infrastructure.supabase_user_ops import (
+    fetch_user_by_email,
+    fetch_user_by_id,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -161,37 +163,41 @@ def _ensure_date(value: datetime | date | str) -> date:
     return _ensure_datetime(value).date()
 
 
-async def _get_user_details_by_id(
-    user_id: str,
-    user_service: "UserService",
-) -> tuple[str | None, str | None]:
+async def _get_user_details_by_id(user_id: str) -> tuple[str | None, str | None]:
     """Retrieve user email and name for a given identifier."""
     try:
-        get_by_id = cast(
-            Callable[[str], Awaitable[UserResponse | None]],
-            user_service.get_user_by_id,
-        )
-        user = await get_by_id(user_id)
+        user = await fetch_user_by_id(user_id)
         if user:
-            return user.email, getattr(user, "full_name", None)
+            metadata_raw = user.get("user_metadata")
+            if isinstance(metadata_raw, Mapping):
+                metadata = dict(cast(Mapping[str, Any], metadata_raw))
+            else:
+                metadata = {}
+            full_name = cast(str | None, metadata.get("full_name"))
+            email_value = user.get("email")
+            email = email_value if isinstance(email_value, str) else None
+            return email, full_name
     except (AttributeError, ValueError, CoreServiceError):
         logger.exception("Failed to get user details")
     return None, None
 
 
-async def _resolve_user_by_email(
-    email: str,
-    user_service: "UserService",
-) -> tuple[str | None, str | None]:
+async def _resolve_user_by_email(email: str) -> tuple[str | None, str | None]:
     """Resolve a user ID and name from an email address."""
     try:
-        get_by_email = cast(
-            Callable[[str], Awaitable[UserResponse | None]],
-            user_service.get_user_by_email,
-        )
-        user = await get_by_email(email)
+        user = await fetch_user_by_email(email)
         if user:
-            return str(user.id), getattr(user, "full_name", None)
+            metadata_raw = user.get("user_metadata")
+            if isinstance(metadata_raw, Mapping):
+                metadata = dict(cast(Mapping[str, Any], metadata_raw))
+            else:
+                metadata = {}
+            full_name = cast(str | None, metadata.get("full_name"))
+            user_id_value = user.get("id")
+            resolved_id = (
+                str(user_id_value) if isinstance(user_id_value, (str, UUID)) else None
+            )
+            return resolved_id, full_name
     except (AttributeError, ValueError, CoreServiceError):
         logger.exception("Failed to resolve user by email")
     return None, None
@@ -1465,7 +1471,6 @@ async def share_trip(
     trip_id: UUID,
     share_request: TripShareRequest,
     trip_service: TripServiceDep,
-    user_service: UserServiceDep,
     principal: RequiredPrincipalDep,
 ):
     """Share a trip with other users.
@@ -1477,7 +1482,6 @@ async def share_trip(
         share_request: Share request with user emails and permissions
         principal: Current authenticated principal
         trip_service: Trip service instance
-        user_service: User service used to resolve collaborator identities
 
     Returns:
         List of successfully added collaborators
@@ -1499,13 +1503,11 @@ async def share_trip(
                 email_val = identifier
                 user_id_val, full_name = await _resolve_user_by_email(
                     email_val,
-                    user_service,
                 )
             else:
                 user_id_val = identifier
                 email_val, full_name = await _get_user_details_by_id(
                     user_id_val,
-                    user_service,
                 )
 
             if not user_id_val:
@@ -1576,7 +1578,6 @@ async def share_trip(
 async def list_trip_collaborators(
     trip_id: UUID,
     trip_service: TripServiceDep,
-    user_service: UserServiceDep,
     principal: RequiredPrincipalDep,
 ):
     """List all collaborators for a trip.
@@ -1587,7 +1588,6 @@ async def list_trip_collaborators(
         trip_id: Trip ID
         principal: Current authenticated principal
         trip_service: Trip service instance
-        user_service: User service used to hydrate collaborator metadata
 
     Returns:
         List of trip collaborators with their permissions
@@ -1623,10 +1623,7 @@ async def list_trip_collaborators(
 
         response_collaborators: list[TripCollaboratorResponse] = []
         for collab in collaborator_records:
-            email, full_name = await _get_user_details_by_id(
-                str(collab.get("user_id")),
-                user_service,
-            )
+            email, full_name = await _get_user_details_by_id(str(collab.get("user_id")))
             added_at_value = collab.get("added_at")
             added_at = (
                 _ensure_datetime(added_at_value)
@@ -1678,10 +1675,8 @@ async def list_trip_collaborators(
 async def update_collaborator_permissions(
     trip_id: UUID,
     user_id: UUID,
-    trip_service: TripServiceDep,
-    user_service: UserServiceDep,
-    *,
     update_request: TripCollaboratorUpdateRequest,
+    trip_service: TripServiceDep,
     principal: RequiredPrincipalDep,
 ):
     """Update collaborator permissions for a trip.
@@ -1694,7 +1689,6 @@ async def update_collaborator_permissions(
         update_request: New permission level
         principal: Current authenticated principal
         trip_service: Trip service instance
-        user_service: User service used to fetch collaborator details
 
     Returns:
         Updated collaborator information
@@ -1753,7 +1747,7 @@ async def update_collaborator_permissions(
             await database_service.get_trip_collaborator(str(trip_id), str(user_id))
             or existing_collaborator
         )
-        email, full_name = await _get_user_details_by_id(str(user_id), user_service)
+        email, full_name = await _get_user_details_by_id(str(user_id))
         added_at_value = (
             updated_collaborator.get("added_at") if updated_collaborator else None
         )
