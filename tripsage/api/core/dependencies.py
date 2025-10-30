@@ -1,7 +1,7 @@
 """Modern dependency injection for TripSage API.
 
 This module provides clean, modern dependency injection using Annotated types
-for unified authentication across JWT (frontend) and API keys (agents).
+for unified authentication against Supabase-issued JWTs.
 """
 
 import inspect
@@ -33,7 +33,7 @@ from tripsage_core.services.business.search_facade import SearchFacade
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.business.unified_search_service import UnifiedSearchService
 from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
-from tripsage_core.services.infrastructure import CacheService, KeyMonitoringService
+from tripsage_core.services.infrastructure import CacheService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
@@ -206,15 +206,6 @@ def get_file_processing_service(request: Request) -> FileProcessingService:
     )
 
 
-def get_key_monitoring_service(request: Request) -> KeyMonitoringService:
-    """Return the KeyMonitoringService singleton."""
-    return _get_required_service(
-        request,
-        "key_monitoring_service",
-        KeyMonitoringService,
-    )
-
-
 # Unified search service dependency
 def get_unified_search_service_dep(request: Request) -> UnifiedSearchService:
     """Return the UnifiedSearchService singleton."""
@@ -321,7 +312,4 @@ MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
 TripServiceDep = Annotated[TripService, Depends(get_trip_service)]
 FileProcessingServiceDep = Annotated[
     FileProcessingService, Depends(get_file_processing_service)
-]
-KeyMonitoringServiceDep = Annotated[
-    KeyMonitoringService, Depends(get_key_monitoring_service)
 ]

@@ -11,13 +11,15 @@ import contextlib
 import logging
 import time
 from collections.abc import Awaitable, Callable
-from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, Field, field_validator
 
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
 from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
+
+
+RETRYABLE_EXCEPTIONS: tuple[type[Exception], ...] = (ConnectionError, OSError)
 
 
 if TYPE_CHECKING:
@@ -128,6 +130,7 @@ class ToolCallService:
         self.rate_limits: dict[str, list[float]] = {}
         self.db = db
         self._memory_service: Any = None  # Lazy initialization
+        self._service_cache: dict[str, Any] = {}  # Cache for external service instances
 
         # Minimal whitelist of safe tables for generic DB ops
         # Extend centrally as schema evolves; keep restrictive by default.
@@ -140,12 +143,13 @@ class ToolCallService:
             "accommodation_searches",
             "flight_options",
             "accommodation_options",
-            "api_keys",
             "trip_collaborators",
             "flights",
             "accommodations",
         }
 
+        # Service handlers dispatch: Maps service names to handler methods.
+        # Signature: async def handler(method: str, params: dict) -> dict
         self._service_handlers: dict[
             str, Callable[[str, dict[str, Any]], Awaitable[dict[str, Any]]]
         ] = {
@@ -155,6 +159,28 @@ class ToolCallService:
             "duffel_flights": self._handle_duffel_flights,
             "supabase": self._handle_supabase,
             "memory": self._handle_memory,
+        }
+
+        # Validation handlers dispatch: Maps service names to validation methods.
+        # Signature: async def validator(params: dict, method: str) -> list[str]
+        self._validation_handlers: dict[
+            str, Callable[[dict[str, Any], str], Awaitable[list[str]]]
+        ] = {
+            "duffel_flights": self._validate_flight_params,
+            "airbnb": self._validate_accommodation_params,
+            "google_maps": self._validate_maps_params,
+            "weather": self._validate_weather_params,
+        }
+
+        # Formatter handlers dispatch: Maps service names to formatter methods
+        # Formatters follow signature: async def formatter(result: dict | None) -> dict
+        self._formatter_handlers: dict[
+            str, Callable[[dict[str, Any] | None], Awaitable[dict[str, Any]]]
+        ] = {
+            "duffel_flights": self._format_flight_results,
+            "airbnb": self._format_accommodation_results,
+            "google_maps": self._format_maps_results,
+            "weather": self._format_weather_results,
         }
 
     @tripsage_safe_execute()
@@ -298,15 +324,10 @@ class ToolCallService:
         errors: list[str] = []
         sanitized_params = request.params.copy()
 
-        # Service-specific validation
-        if request.service == "duffel_flights":
-            errors.extend(await self._validate_flight_params(sanitized_params))
-        elif request.service == "airbnb":
-            errors.extend(await self._validate_accommodation_params(sanitized_params))
-        elif request.service == "google_maps":
-            errors.extend(await self._validate_maps_params(sanitized_params))
-        elif request.service == "weather":
-            errors.extend(await self._validate_weather_params(sanitized_params))
+        # Service-specific validation using dispatcher
+        validator = self._validation_handlers.get(request.service)
+        if validator:
+            errors.extend(await validator(sanitized_params, request.method))
 
         # General parameter sanitization
         sanitized_params = await self._sanitize_params(sanitized_params)
@@ -344,14 +365,8 @@ class ToolCallService:
                 "retry_available": True,
             }
 
-        # Format successful results by service type
-        formatters = {
-            "duffel_flights": self._format_flight_results,
-            "airbnb": self._format_accommodation_results,
-            "google_maps": self._format_maps_results,
-            "weather": self._format_weather_results,
-        }
-        formatter = formatters.get(response.service)
+        # Format successful results by service type using dispatcher
+        formatter = self._formatter_handlers.get(response.service)
         if formatter:
             return await formatter(response.result)
         return {
@@ -439,17 +454,29 @@ class ToolCallService:
                         else f"{request.service}/{request.method} timed out"
                     )
                     raise TimeoutError(timeout_msg) from exc
-                await self._apply_retry_backoff(attempt)
-            except self._retryable_exception_types() as exc:
+                await asyncio.sleep(min(0.5 * attempt, 2.0))
+            except RETRYABLE_EXCEPTIONS as exc:
                 if attempt == attempts:
                     raise ToolCallError(f"Tool call failed: {exc!s}") from exc
-                await self._apply_retry_backoff(attempt)
+                await asyncio.sleep(min(0.5 * attempt, 2.0))
         raise ToolCallError("Tool call failed after retries")
 
     async def _dispatch_service_call(
         self, service: str, method: str, params: dict[str, Any]
     ) -> dict[str, Any]:
-        """Dispatch to the appropriate service handler."""
+        """Dispatch service call to appropriate handler.
+
+        Args:
+            service: Service name to dispatch to
+            method: Method name within the service
+            params: Method parameters
+
+        Returns:
+            Service handler result
+
+        Raises:
+            ToolCallError: If service is not supported
+        """
         handler = self._service_handlers.get(service)
         if handler is None:
             raise ToolCallError(f"Unsupported service: {service}")
@@ -459,15 +486,11 @@ class ToolCallService:
         self, method: str, params: dict[str, Any]
     ) -> dict[str, Any]:
         """Handle Google Maps service calls."""
-        from tripsage_core.services.external_apis.google_maps_service import (
-            GoogleMapsService,
-        )
-
-        maps_service = GoogleMapsService()
+        maps_service = await self._get_service_instance("google_maps")
         normalized = method.lower()
 
         if normalized == "geocode":
-            address = params.get("address") or params.get("location")
+            address = self._first_param(params, "address", "location")
             if not address:
                 raise ToolCallError("Missing address/location for geocode")
             places = await maps_service.geocode(address)
@@ -475,17 +498,17 @@ class ToolCallService:
 
         if normalized == "search_places":
             places = await maps_service.search_places(
-                query=params.get("query", ""),
-                location=params.get("location"),
-                radius=params.get("radius"),
+                query=self._first_param(params, "query", default="") or "",
+                location=self._first_param(params, "location"),
+                radius=self._first_param(params, "radius"),
             )
             return {"places": [place.model_dump() for place in places]}
 
         if normalized == "get_directions":
             directions = await maps_service.get_directions(
-                origin=params.get("origin", ""),
-                destination=params.get("destination", ""),
-                mode=params.get("mode", "driving"),
+                origin=self._first_param(params, "origin", default="") or "",
+                destination=self._first_param(params, "destination", default="") or "",
+                mode=self._first_param(params, "mode", default="driving") or "driving",
             )
             return {"directions": [direction.model_dump() for direction in directions]}
 
@@ -495,9 +518,7 @@ class ToolCallService:
         self, method: str, params: dict[str, Any]
     ) -> dict[str, Any]:
         """Handle weather service calls."""
-        from tripsage_core.services.external_apis.weather_service import WeatherService
-
-        weather_service = WeatherService()
+        weather_service = await self._get_service_instance("weather")
         normalized = self._normalize_method(
             method,
             {
@@ -531,9 +552,7 @@ class ToolCallService:
         self, method: str, params: dict[str, Any]
     ) -> dict[str, Any]:
         """Handle Airbnb service calls."""
-        from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
-
-        airbnb_client = AirbnbMCPClient()
+        airbnb_client = await self._get_service_instance("airbnb")
         normalized = self._normalize_method(
             method,
             {
@@ -546,35 +565,46 @@ class ToolCallService:
         )
 
         if normalized == "search":
-            location_param = params.get("location") or params.get("place")
+            location_param = self._first_param(params, "location", "place")
             if not location_param:
                 raise ToolCallError("location or place is required")
             listings = await airbnb_client.search_accommodations(
                 location=location_param,
-                checkin=params.get("checkin") or params.get("check_in"),
-                checkout=params.get("checkout") or params.get("check_out"),
-                adults=int(params.get("adults", params.get("guests", 1))),
-                children=int(params.get("children", 0)),
-                infants=int(params.get("infants", 0)),
-                pets=int(params.get("pets", 0)),
-                min_price=params.get("price_min") or params.get("min_price"),
-                max_price=params.get("price_max") or params.get("max_price"),
-                cursor=params.get("cursor"),
+                checkin=self._first_param(params, "checkin", "check_in"),
+                checkout=self._first_param(params, "checkout", "check_out"),
+                adults=self._to_int(
+                    self._first_param(params, "adults", "guests", default=1),
+                    1,
+                ),
+                children=self._to_int(
+                    self._first_param(params, "children", default=0), 0
+                ),
+                infants=self._to_int(
+                    self._first_param(params, "infants", default=0), 0
+                ),
+                pets=self._to_int(self._first_param(params, "pets", default=0), 0),
+                min_price=self._first_param(params, "price_min", "min_price"),
+                max_price=self._first_param(params, "price_max", "max_price"),
+                cursor=self._first_param(params, "cursor"),
             )
             return {"listings": listings}
 
         if normalized == "details":
-            listing_id_param = params.get("listing_id") or params.get("id")
+            listing_id_param = self._first_param(params, "listing_id", "id")
             if not listing_id_param:
                 raise ToolCallError("listing_id is required for listing details")
             details = await airbnb_client.get_listing_details(
                 listing_id=listing_id_param,
-                checkin=params.get("checkin") or params.get("check_in"),
-                checkout=params.get("checkout") or params.get("check_out"),
-                adults=int(params.get("adults", 1)),
-                children=int(params.get("children", 0)),
-                infants=int(params.get("infants", 0)),
-                pets=int(params.get("pets", 0)),
+                checkin=self._first_param(params, "checkin", "check_in"),
+                checkout=self._first_param(params, "checkout", "check_out"),
+                adults=self._to_int(self._first_param(params, "adults", default=1), 1),
+                children=self._to_int(
+                    self._first_param(params, "children", default=0), 0
+                ),
+                infants=self._to_int(
+                    self._first_param(params, "infants", default=0), 0
+                ),
+                pets=self._to_int(self._first_param(params, "pets", default=0), 0),
             )
             return {"details": details}
 
@@ -704,48 +734,26 @@ class ToolCallService:
             },
         )
 
-        handlers: dict[str, Callable[[], Awaitable[dict[str, Any]]]] = {
-            "store": partial(
-                self._memory_store,
-                memory_service,
-                user_id,
-                params,
-                ConversationMemoryRequest,
-            ),
-            "search": partial(
-                self._memory_search,
-                memory_service,
-                user_id,
-                params,
-                MemorySearchRequest,
-            ),
-            "retrieve": partial(
-                self._memory_retrieve,
-                memory_service,
-                user_id,
-                params,
-                MemorySearchRequest,
-            ),
-            "delete": partial(
-                self._memory_delete,
-                memory_service,
-                user_id,
-                params,
-            ),
-            "update": partial(
-                self._memory_update,
-                memory_service,
-                user_id,
-                params,
-                ConversationMemoryRequest,
-            ),
-        }
+        if normalized == "store":
+            return await self._memory_store(
+                memory_service, user_id, params, ConversationMemoryRequest
+            )
+        if normalized == "search":
+            return await self._memory_search(
+                memory_service, user_id, params, MemorySearchRequest
+            )
+        if normalized == "retrieve":
+            return await self._memory_retrieve(
+                memory_service, user_id, params, MemorySearchRequest
+            )
+        if normalized == "delete":
+            return await self._memory_delete(memory_service, user_id, params)
+        if normalized == "update":
+            return await self._memory_update(
+                memory_service, user_id, params, ConversationMemoryRequest
+            )
 
-        handler = handlers.get(normalized)
-        if handler is None:
-            raise ToolCallError(f"Unsupported memory method: {method}")
-
-        return await handler()
+        raise ToolCallError(f"Unsupported memory method: {method}")
 
     async def _memory_store(
         self,
@@ -756,9 +764,7 @@ class ToolCallService:
     ) -> dict[str, Any]:
         """Handle memory store operations."""
         messages_param = params.get("messages")
-        fact_text = (
-            params.get("fact_text") or params.get("memory") or params.get("text")
-        )
+        fact_text = self._first_param(params, "fact_text", "memory", "text")
         if not messages_param and not fact_text:
             raise ToolCallError("Either 'messages' or 'fact_text' must be provided")
 
@@ -793,7 +799,7 @@ class ToolCallService:
         search_cls: type[MemorySearchRequest],
     ) -> dict[str, Any]:
         """Handle memory search operations."""
-        query = params.get("query") or params.get("q")
+        query = self._first_param(params, "query", "q")
         if not query or not str(query).strip():
             raise ToolCallError("'query' is required for search_memories")
 
@@ -817,7 +823,7 @@ class ToolCallService:
         search_cls: type[MemorySearchRequest],
     ) -> dict[str, Any]:
         """Handle memory retrieve operations."""
-        query = params.get("query") or params.get("q") or "*"
+        query = self._first_param(params, "query", "q", default="*") or "*"
         limit = int(params.get("limit", 10))
         filters = self._memory_filters_with_category(params)
         threshold = float(params.get("similarity_threshold", 0.0))
@@ -840,8 +846,8 @@ class ToolCallService:
         params: dict[str, Any],
     ) -> dict[str, Any]:
         """Handle memory delete operations."""
-        memory_ids = params.get("memory_ids") or params.get("ids")
-        memory_id = params.get("memory_id") or params.get("id")
+        memory_ids = self._first_param(params, "memory_ids", "ids")
+        memory_id = self._first_param(params, "memory_id", "id")
         ids: list[str] | None
         if isinstance(memory_ids, list):
             typed_ids = cast(list[Any], memory_ids)
@@ -861,15 +867,13 @@ class ToolCallService:
         conversation_cls: type[ConversationMemoryRequest],
     ) -> dict[str, Any]:
         """Handle memory update operations."""
-        memory_id = params.get("memory_id") or params.get("id")
+        memory_id = self._first_param(params, "memory_id", "id")
         if not memory_id:
             raise ToolCallError("'memory_id' is required for update_fact")
 
         await memory_service.delete_user_memories(user_id, [str(memory_id)])
 
-        fact_text = (
-            params.get("fact_text") or params.get("memory") or params.get("text")
-        )
+        fact_text = self._first_param(params, "fact_text", "memory", "text")
         if not fact_text:
             raise ToolCallError("Updated 'fact_text' (or 'memory'/'text') is required")
         metadata = {
@@ -903,6 +907,46 @@ class ToolCallService:
         if category:
             filters = {**filters, "categories": [category]}
         return filters
+
+    @staticmethod
+    def _first_param(
+        params: dict[str, Any], *keys: str, default: Any | None = None
+    ) -> Any | None:
+        """Get first available parameter value from multiple possible keys.
+
+        Args:
+            params: Parameter dictionary to search
+            *keys: One or more key names to try in order
+            default: Default value if no key is found
+
+        Returns:
+            First non-empty value found, or default
+        """
+        for key in keys:
+            value = params.get(key)
+            if value is None:
+                continue
+            if isinstance(value, str):
+                if value.strip():
+                    return value
+                continue
+            return value
+        return default
+
+    @staticmethod
+    def _pack_rows(rows: list[Any], include_count: bool = False) -> dict[str, Any]:
+        """Pack database rows into a standardized response format.
+
+        Args:
+            rows: List of row data
+            include_count: Whether to include row count in response
+
+        Returns:
+            Dictionary with rows and optionally row_count
+        """
+        if include_count:
+            return {"rows": rows, "row_count": len(rows)}
+        return {"rows": rows}
 
     async def _create_duffel_provider(self, params: dict[str, Any]) -> DuffelProvider:
         """Create a Duffel provider instance."""
@@ -953,9 +997,12 @@ class ToolCallService:
         cabin_class = cast(str | None, params.get("cabin_class"))
         max_connections = cast(
             int | None,
-            params.get("max_connections") or params.get("max_stops"),
+            self._first_param(params, "max_connections", "max_stops"),
         )
-        currency = cast(str, params.get("currency", "USD"))
+        currency = cast(
+            str,
+            self._first_param(params, "currency", default="USD") or "USD",
+        )
 
         offers = await provider.search_flights(
             origin=origin,
@@ -980,7 +1027,7 @@ class ToolCallService:
             duffel_offer_to_service_offer,
         )
 
-        offer_id = cast(str | None, params.get("offer_id") or params.get("id"))
+        offer_id = cast(str | None, self._first_param(params, "offer_id", "id"))
         if not offer_id:
             raise ToolCallError("offer_id is required for offer details")
         offer = await provider.get_offer_details(offer_id)
@@ -992,7 +1039,7 @@ class ToolCallService:
         self, provider: DuffelProvider, params: dict[str, Any]
     ) -> dict[str, Any]:
         """Handle Duffel create order operations."""
-        offer_id = cast(str | None, params.get("offer_id") or params.get("id"))
+        offer_id = cast(str | None, self._first_param(params, "offer_id", "id"))
         if not offer_id:
             raise ToolCallError("offer_id is required to create an order")
         passengers = cast(list[dict[str, Any]] | None, params.get("passengers"))
@@ -1030,7 +1077,7 @@ class ToolCallService:
             limit=limit,
             offset=offset,
         )
-        return {"rows": rows}
+        return self._pack_rows(rows)
 
     async def _supabase_insert(
         self,
@@ -1043,7 +1090,7 @@ class ToolCallService:
         data = cast(dict[str, Any], params.get("data") or {})
         user_id = params.get("user_id")
         rows = await dbi.insert(table, data, user_id)
-        return {"rows": rows, "row_count": len(rows)}
+        return self._pack_rows(rows, include_count=True)
 
     async def _supabase_update(
         self,
@@ -1059,7 +1106,7 @@ class ToolCallService:
         filters = cast(dict[str, Any], params.get("filters") or {})
         user_id = params.get("user_id")
         rows = await dbi.update(table, update_data, filters, user_id)
-        return {"rows": rows, "row_count": len(rows)}
+        return self._pack_rows(rows, include_count=True)
 
     async def _supabase_delete(
         self,
@@ -1072,7 +1119,7 @@ class ToolCallService:
         filters = cast(dict[str, Any], params.get("filters") or {})
         user_id = params.get("user_id")
         rows = await dbi.delete(table, filters, user_id)
-        return {"rows": rows, "row_count": len(rows)}
+        return self._pack_rows(rows, include_count=True)
 
     async def _supabase_upsert(
         self,
@@ -1086,7 +1133,7 @@ class ToolCallService:
         on_conflict = params.get("on_conflict")
         user_id = params.get("user_id")
         rows = await dbi.upsert(table, data, on_conflict, user_id)
-        return {"rows": rows, "row_count": len(rows)}
+        return self._pack_rows(rows, include_count=True)
 
     async def _supabase_vector_search(
         self,
@@ -1118,16 +1165,7 @@ class ToolCallService:
             filters=filters,
             user_id=user_id,
         )
-        return {"rows": rows, "row_count": len(rows)}
-
-    def _retryable_exception_types(self) -> tuple[type[Exception], ...]:
-        """Return exception types considered retryable."""
-        return (ConnectionError, OSError)
-
-    async def _apply_retry_backoff(self, attempt: int) -> None:
-        """Sleep using a simple linear backoff between retries."""
-        delay = min(0.5 * attempt, 2.0)
-        await asyncio.sleep(delay)
+        return self._pack_rows(rows, include_count=True)
 
     @staticmethod
     def _normalize_method(method: str, aliases: dict[str, str]) -> str:
@@ -1149,9 +1187,12 @@ class ToolCallService:
         if passengers_param is not None:
             return passengers_param
 
-        adults = self._to_int(params.get("adults", params.get("guests", 1)), 1)
-        children = self._to_int(params.get("children", 0), 0)
-        infants = self._to_int(params.get("infants", 0), 0)
+        adults = self._to_int(
+            self._first_param(params, "adults", "guests", default=1),
+            1,
+        )
+        children = self._to_int(self._first_param(params, "children", default=0), 0)
+        infants = self._to_int(self._first_param(params, "infants", default=0), 0)
         return (
             [{"type": "adult"} for _ in range(max(0, adults))]
             + [{"type": "child"} for _ in range(max(0, children))]
@@ -1212,6 +1253,48 @@ class ToolCallService:
             self._memory_service = MemoryService()
         return cast("MemoryService", self._memory_service)
 
+    async def _get_service_instance(self, service_name: str) -> Any:
+        """Lazily initialize and cache external service instances.
+
+        This method provides a centralized way to create and cache external service
+        instances (GoogleMapsService, WeatherService, AirbnbMCPClient) to avoid
+        redundant instantiation across handler methods.
+
+        Args:
+            service_name: Name of the service to get/create
+                ("google_maps", "weather", "airbnb")
+
+        Returns:
+            Cached instance of the requested service
+
+        Raises:
+            ToolCallError: If service_name is not recognized
+        """
+        if service_name in self._service_cache:
+            return self._service_cache[service_name]
+
+        if service_name == "google_maps":
+            from tripsage_core.services.external_apis.google_maps_service import (
+                GoogleMapsService,
+            )
+
+            instance = GoogleMapsService()
+        elif service_name == "weather":
+            from tripsage_core.services.external_apis.weather_service import (
+                WeatherService,
+            )
+
+            instance = WeatherService()
+        elif service_name == "airbnb":
+            from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
+
+            instance = AirbnbMCPClient()
+        else:
+            raise ToolCallError(f"Unknown service name for factory: {service_name}")
+
+        self._service_cache[service_name] = instance
+        return instance
+
     async def _sanitize_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """Sanitize parameters to remove potentially harmful content."""
         sanitized: dict[str, Any] = {}
@@ -1223,35 +1306,143 @@ class ToolCallService:
                 sanitized[key] = value
         return sanitized
 
-    async def _validate_flight_params(self, params: dict[str, Any]) -> list[str]:
-        """Validate flight search parameters."""
-        required_fields = ["origin", "destination", "departure_date"]
-        return [
-            f"Missing required field: {field}"
-            for field in required_fields
-            if field not in params
-        ]
+    async def _validate_flight_params(
+        self, params: dict[str, Any], method: str
+    ) -> list[str]:
+        """Validate flight search parameters based on method.
 
-    async def _validate_accommodation_params(self, params: dict[str, Any]) -> list[str]:
-        """Validate accommodation search parameters."""
-        required_fields = ["location", "check_in", "check_out"]
-        return [
-            f"Missing required field: {field}"
-            for field in required_fields
-            if field not in params
-        ]
+        Args:
+            params: Parameters to validate
+            method: Method name (search_flights, offer_details, create_order)
 
-    async def _validate_maps_params(self, params: dict[str, Any]) -> list[str]:
-        """Validate maps API parameters."""
-        if "address" not in params and "location" not in params:
-            return ["Either 'address' or 'location' is required"]
-        return []
+        Returns:
+            List of validation error messages
+        """
+        normalized = self._normalize_method(
+            method,
+            {
+                "get_flight_details": "offer_details",
+                "get_offer_details": "offer_details",
+                "offer_details": "offer_details",
+                "create_order": "create_order",
+                "book_flight": "create_order",
+                "create_booking": "create_order",
+                "search_flights": "search_flights",
+            },
+        )
 
-    async def _validate_weather_params(self, params: dict[str, Any]) -> list[str]:
-        """Validate weather API parameters."""
-        if "location" not in params:
-            return ["'location' parameter is required"]
-        return []
+        errors: list[str] = []
+
+        if normalized == "search_flights":
+            required_fields = ["origin", "destination", "departure_date"]
+            errors.extend(
+                f"Missing required field: {field}"
+                for field in required_fields
+                if field not in params
+            )
+        elif normalized == "offer_details":
+            offer_id = self._first_param(params, "offer_id", "id")
+            if not offer_id:
+                errors.append("offer_id (or id) is required for offer details")
+        elif normalized == "create_order":
+            offer_id = self._first_param(params, "offer_id", "id")
+            if not offer_id:
+                errors.append("offer_id (or id) is required to create an order")
+            if not params.get("passengers"):
+                errors.append(
+                    "passengers list with identity/contact is required "
+                    "to create an order"
+                )
+
+        return errors
+
+    async def _validate_accommodation_params(
+        self, params: dict[str, Any], method: str
+    ) -> list[str]:
+        """Validate accommodation search parameters.
+
+        Args:
+            params: Parameters to validate
+            method: Method name (unused but required for dispatcher consistency)
+
+        Returns:
+            List of validation error messages
+        """
+        errors: list[str] = []
+
+        # Check location (required)
+        location = self._first_param(params, "location", "place")
+        if not location:
+            errors.append("location or place is required")
+
+        # Check checkin/check_in (accept either alias)
+        checkin = self._first_param(params, "checkin", "check_in")
+        if not checkin:
+            errors.append("checkin or check_in is required")
+
+        # Check checkout/check_out (accept either alias)
+        checkout = self._first_param(params, "checkout", "check_out")
+        if not checkout:
+            errors.append("checkout or check_out is required")
+
+        return errors
+
+    async def _validate_maps_params(
+        self, params: dict[str, Any], method: str
+    ) -> list[str]:
+        """Validate maps API parameters based on method.
+
+        Args:
+            params: Parameters to validate
+            method: Method name (geocode, search_places, get_directions)
+
+        Returns:
+            List of validation error messages
+        """
+        normalized = method.lower()
+        errors: list[str] = []
+
+        if normalized == "geocode":
+            address = self._first_param(params, "address", "location")
+            if not address:
+                errors.append("address or location is required for geocode")
+        elif normalized == "search_places":
+            query = self._first_param(params, "query", default="")
+            if not query or not str(query).strip():
+                errors.append("query is required for search_places")
+        elif normalized == "get_directions":
+            origin = self._first_param(params, "origin", default="")
+            destination = self._first_param(params, "destination", default="")
+            if not origin or not str(origin).strip():
+                errors.append("origin is required for get_directions")
+            if not destination or not str(destination).strip():
+                errors.append("destination is required for get_directions")
+
+        return errors
+
+    async def _validate_weather_params(
+        self, params: dict[str, Any], method: str
+    ) -> list[str]:
+        """Validate weather API parameters based on method.
+
+        Args:
+            params: Parameters to validate
+            method: Method name (unused but required for dispatcher consistency)
+
+        Returns:
+            List of validation error messages
+        """
+        errors: list[str] = []
+
+        # Accept lat/lon pair OR location string (matching handler logic)
+        has_lat_lon = params.get("lat") is not None and params.get("lon") is not None
+        location = self._first_param(params, "location")
+        if not has_lat_lon and not location:
+            errors.append(
+                "Either lat/lon pair or location parameter is required for weather"
+            )
+
+        return errors
 
     async def _format_flight_results(
         self, result: dict[str, Any] | None
