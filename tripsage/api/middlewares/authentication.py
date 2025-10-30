@@ -8,8 +8,7 @@ for all authentication events.
 
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any
 
 from fastapi import Request, Response
 from pydantic import BaseModel, ConfigDict, Field
@@ -18,19 +17,18 @@ from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette.types import ASGIApp
 
 from tripsage.api.core.config import Settings, get_settings
-from tripsage.app_state import AppServiceContainer
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
-    CoreKeyValidationError as KeyValidationError,
 )
-from tripsage_core.services.business.api_key_service import ApiKeyService
 from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
     AuditOutcome,
     AuditSeverity,
-    audit_api_key,
     audit_authentication,
     audit_security_event,
+)
+from tripsage_core.services.infrastructure.supabase_client import (
+    verify_and_get_claims,
 )
 
 
@@ -74,38 +72,15 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         self,
         app: ASGIApp,
         settings: Settings | None = None,
-        key_service: ApiKeyService | None = None,
     ):
         """Initialize AuthenticationMiddleware.
 
         Args:
             app: The ASGI application
             settings: API settings or None to use the default
-            key_service: Key management service for API key handling
         """
         super().__init__(app)
         self.settings = settings or get_settings()
-        self.key_service = key_service
-
-        # Lazy initialization of services
-        self._services_initialized = False
-
-    async def _ensure_services(self, request: Request) -> None:
-        """Ensure services are initialised from the lifespan container."""
-        if self._services_initialized:
-            return
-        if self.key_service is None:
-            services = getattr(request.app.state, "services", None)
-            if not isinstance(services, AppServiceContainer):
-                raise RuntimeError(
-                    "AppServiceContainer is not initialised; authentication requires "
-                    "app.state.services to be available.",
-                )
-            self.key_service = services.get_required_service(
-                "api_key_service",
-                expected_type=ApiKeyService,
-            )
-        self._services_initialized = True
 
     async def dispatch(  # pylint: disable=too-many-statements
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
@@ -127,9 +102,6 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # Skip authentication for certain paths
         if self._should_skip_auth(request.url.path):
             return await call_next(request)
-
-        # Ensure services are initialized
-        await self._ensure_services(request)
 
         # Perform header validation for security
         if not self._validate_request_headers(request):
@@ -162,8 +134,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         if authorization_header and authorization_header.startswith("Bearer "):
             try:
                 token = authorization_header.replace("Bearer ", "")
-                # Validate token format to enforce security
-                if not self._validate_token_format(token):
+                if not token:
                     raise AuthenticationError("Invalid token format")
                 principal = await self._authenticate_jwt(token)
 
@@ -207,72 +178,6 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                         "path": request.url.path,
                     },
                 )
-
-        # Try API key authentication if JWT failed
-        if not principal:
-            api_key_header = request.headers.get("X-API-Key")
-            if api_key_header:
-                try:
-                    # Validate API key format before use
-                    if not self._validate_api_key_format(api_key_header):
-                        raise KeyValidationError("Invalid API key format")
-                    principal = await self._authenticate_api_key(api_key_header)
-
-                    # Log successful API key authentication
-                    if principal:
-                        # Extract service from principal metadata
-                        service = principal.service or "unknown"
-                        key_id = principal.metadata.get("key_id", "unknown")
-
-                        await audit_api_key(
-                            event_type=AuditEventType.API_KEY_VALIDATION_SUCCESS,
-                            outcome=AuditOutcome.SUCCESS,
-                            key_id=key_id,
-                            service=service,
-                            ip_address=self._get_client_ip(request),
-                            message="API key authentication successful",
-                            endpoint=request.url.path,
-                            method=request.method,
-                        )
-
-                except (AuthenticationError, KeyValidationError) as e:
-                    auth_error = e
-                    user_agent = request.headers.get("User-Agent", "Unknown")[:200]
-
-                    # Extract service and key_id for failed authentication audit
-                    service = "unknown"
-                    key_id = "unknown"
-                    try:
-                        if api_key_header and api_key_header.startswith("sk_"):
-                            parts = api_key_header.split("_")
-                            if len(parts) >= 3:
-                                service = parts[1]
-                                key_id = parts[2]
-                    except (ValueError, IndexError):
-                        pass
-
-                    # Log failed API key authentication
-                    await audit_api_key(
-                        event_type=AuditEventType.API_KEY_VALIDATION_FAILED,
-                        outcome=AuditOutcome.FAILURE,
-                        key_id=key_id,
-                        service=service,
-                        ip_address=self._get_client_ip(request),
-                        message=f"API key authentication failed: {e!s}",
-                        endpoint=request.url.path,
-                        method=request.method,
-                        error_type=type(e).__name__,
-                    )
-
-                    logger.warning(
-                        "API key authentication failed: %s",
-                        e,
-                        extra={
-                            "ip_address": self._get_client_ip(request),
-                            "user_agent": user_agent,
-                            "path": request.url.path,
-                        },
-                    )
 
         # If no authentication succeeded
         if not principal:
@@ -375,145 +280,36 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             AuthenticationError: If authentication fails
         """
         try:
-            # Use the new Supabase auth validation
-            import jwt
+            claims = await verify_and_get_claims(token)
+            user_id = str(claims.get("sub"))
+            if not user_id:
+                raise AuthenticationError("Invalid authentication token")
 
-            settings = get_settings()
+            email = claims.get("email")
+            role = claims.get("role", "authenticated")
 
-            # Local JWT validation for performance
-            payload = jwt.decode(
-                token,
-                # pylint: disable=no-member
-                settings.database_jwt_secret.get_secret_value(),
-                algorithms=["HS256"],
-                audience="authenticated",
-                leeway=30,  # Allow 30 seconds clock skew
-            )
+            metadata: dict[str, Any] = {
+                "role": role,
+                "aud": claims.get("aud", "authenticated"),
+                "supabase_claims": claims,
+            }
 
-            # Extract user data from token
-            user_id = payload["sub"]
-            email = payload.get("email")
-            role = payload.get("role", "authenticated")
-
-            # Create principal from token data
             return Principal(
                 id=user_id,
                 type="user",
                 email=email,
                 auth_method="jwt",
                 scopes=[],
-                metadata={
-                    "role": role,
-                    "aud": payload.get("aud", "authenticated"),
-                },
+                metadata=metadata,
             )
 
-        except jwt.ExpiredSignatureError:  # type: ignore[possibly-unbound]
-            raise AuthenticationError("Token has expired") from None
-        except jwt.InvalidTokenError:  # type: ignore[reportPossiblyUnboundVariable]
-            logger.exception("JWT InvalidTokenError")
-            raise AuthenticationError("Invalid token") from None
-        except Exception as e:
-            logger.exception("JWT authentication error")
-            raise AuthenticationError("Invalid authentication token") from e
-
-    async def _authenticate_api_key(self, api_key: str) -> Principal:
-        """Authenticate using API key.
-
-        Args:
-            api_key: API key value
-
-        Returns:
-            Authenticated principal
-
-        Raises:
-            AuthenticationError: If authentication fails
-            KeyValidationError: If key validation fails
-        """
-        try:
-            # Extract key ID and service from the API key format
-            # Format: "sk_<service>_<key_id>_<secret>"
-            parts = api_key.split("_")
-            if len(parts) < 4 or parts[0] != "sk":
-                raise KeyValidationError("Invalid API key format")
-
-            service = parts[1]
-            key_id = parts[2]
-            # The rest is the secret
-            secret = "_".join(parts[3:])
-
-            # Validate the API key using the key management service
-            if self.key_service:
-                # Reconstruct the full API key for validation
-                full_key = f"sk_{service}_{key_id}_{secret}"
-
-                # Validate the key with the appropriate service
-                from tripsage_core.services.business.api_key_service import ServiceType
-
-                service_type = (
-                    ServiceType(service)
-                    if service in [e.value for e in ServiceType]
-                    else ServiceType.OPENAI
-                )
-                validate = cast(
-                    Callable[..., Awaitable[Any]], self.key_service.validate_api_key
-                )
-                validation_result = await validate(
-                    service=service_type, key_value=full_key
-                )
-
-                if not cast(bool | None, getattr(validation_result, "is_valid", None)):
-                    raise KeyValidationError(
-                        cast(str | None, getattr(validation_result, "message", None))
-                        or "Invalid API key"
-                    )
-
-                # Retrieve key metadata if available
-                key_metadata = cast(
-                    dict[str, Any], getattr(validation_result, "details", {}) or {}
-                )
-
-                # Create principal for validated API key
-                return Principal(
-                    id=f"agent_{service}_{key_id}",
-                    type="agent",
-                    service=service,
-                    auth_method="api_key",
-                    scopes=[f"{service}:*"],  # Grant all scopes for the service
-                    metadata={
-                        "key_id": key_id,
-                        "service": service,
-                        "validated_at": datetime.now(UTC).isoformat(),
-                        **key_metadata,  # Additional metadata
-                    },
-                )
-            # Fallback validation if key service is not available
-            if len(secret) < 20:
-                raise KeyValidationError("Invalid API key")
-
-            # Create principal with limited validation
-            return Principal(
-                id=f"agent_{service}_{key_id}",
-                type="agent",
-                service=service,
-                auth_method="api_key",
-                scopes=[f"{service}:*"],
-                metadata={
-                    "key_id": key_id,
-                    "service": service,
-                    "validation_mode": "fallback",
-                },
-            )
-
-        except (AuthenticationError, KeyValidationError):
+        except AuthenticationError:
             raise
-        except Exception as e:
-            logger.exception("API key authentication error")
-            raise AuthenticationError("Invalid API key") from e
+        except Exception as exc:  # pragma: no cover - logged for observability
+            logger.exception("Supabase JWT authentication error")
+            raise AuthenticationError("Invalid authentication token") from exc
 
-    def _create_auth_error_response(
-        self, error: AuthenticationError | KeyValidationError
-    ) -> Response:
+    def _create_auth_error_response(self, error: AuthenticationError) -> Response:
         """Create an authentication error response.
 
         Args:
@@ -522,12 +318,6 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         Returns:
             HTTP response with error details
         """
-        if isinstance(error, KeyValidationError):
-            return Response(
-                content=f"API key validation failed: {error.message}",
-                status_code=HTTP_401_UNAUTHORIZED,
-                headers={"WWW-Authenticate": "Bearer"},
-            )
         return Response(
             content=f"Authentication failed: {error.message}",
             status_code=HTTP_401_UNAUTHORIZED,
@@ -582,70 +372,6 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     return False
 
         return True
-
-    def _validate_token_format(self, token: str) -> bool:
-        """Validate JWT token format.
-
-        Args:
-            token: JWT token string
-
-        Returns:
-            True if format is valid, False otherwise
-        """
-        if not token:
-            return False
-
-        # Check length bounds
-        if len(token) < 20 or len(token) > 4096:
-            return False
-
-        # Check for null bytes and control characters
-        if "\x00" in token or any(ord(c) < 32 for c in token if c not in "\t\n\r"):
-            return False
-
-        # Basic JWT format check (three parts separated by dots)
-        parts = token.split(".")
-        if len(parts) != 3:
-            return False
-
-        # Each part should be base64url encoded (basic check)
-        base64url_chars = (
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
-        )
-        for part in parts:
-            if not part or not all(c in base64url_chars for c in part):
-                return False
-
-        return True
-
-    def _validate_api_key_format(self, api_key: str) -> bool:
-        """Validate API key format.
-
-        Args:
-            api_key: API key string
-
-        Returns:
-            True if format is valid, False otherwise
-        """
-        if not api_key:
-            return False
-
-        # Check length bounds
-        if len(api_key) < 10 or len(api_key) > 512:
-            return False
-
-        # Check for null bytes and control characters
-        if "\x00" in api_key or any(ord(c) < 32 for c in api_key):
-            return False
-
-        # Basic format check for our API key format: sk_service_keyid_secret
-        if api_key.startswith("sk_"):
-            parts = api_key.split("_")
-            if len(parts) >= 4:
-                return True
-
-        # Allow other formats but they must be printable ASCII
-        return all(32 <= ord(c) <= 126 for c in api_key)
 
     def _get_client_ip(self, request: Request) -> str:
         """Get client IP address with proper header precedence."""
