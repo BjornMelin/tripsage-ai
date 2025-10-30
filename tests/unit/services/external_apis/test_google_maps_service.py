@@ -120,13 +120,13 @@ class TestGoogleMapsService:
 
         service._client = mock_client
 
-        result = await service.places_search(
+        result = await service.search_places(
             query="test place", location=(40.7128, -74.0060), radius=1000
         )
 
         assert len(result) == 1
-        assert result[0].place_id == "test_place_id"
-        assert result[0].name == "Test Place"
+        assert result[0].place.place_id == "test_place_id"
+        assert result[0].place.name == "Test Place"
         mock_client.places.assert_called_once()
 
     @pytest.mark.asyncio
@@ -153,7 +153,7 @@ class TestGoogleMapsService:
 
         service._client = mock_client
 
-        result = await service.directions(
+        result = await service.get_directions(
             origin="Start", destination="End", mode="driving"
         )
 

@@ -9,10 +9,7 @@ from datetime import datetime
 from pydantic import Field, field_validator, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
-from tripsage_core.models.schemas_common.enums import (
-    BookingStatus,
-    TransportationType,
-)
+from tripsage_core.models.schemas_common.enums import BookingStatus, TransportationType
 
 
 class Transportation(TripSageModel):
@@ -103,23 +100,15 @@ class Transportation(TripSageModel):
         Returns:
             True if the status was updated, False if invalid transition
         """
-        # Define valid status transitions
-        valid_transitions = {
-            BookingStatus.VIEWED: [
-                BookingStatus.SAVED,
-                BookingStatus.BOOKED,
-                BookingStatus.CANCELLED,
-            ],
-            BookingStatus.SAVED: [
-                BookingStatus.BOOKED,
-                BookingStatus.CANCELLED,
-                BookingStatus.VIEWED,
-            ],
-            BookingStatus.BOOKED: [BookingStatus.CANCELLED],
-            BookingStatus.CANCELLED: [],  # Cannot change from cancelled
-        }
+        from tripsage_core.utils.booking_utils import (
+            get_standard_booking_transitions,
+            validate_booking_status_transition,
+        )
 
-        if new_status in valid_transitions.get(self.booking_status, []):
+        valid_transitions = get_standard_booking_transitions()
+        if validate_booking_status_transition(
+            self.booking_status, new_status, valid_transitions
+        ):
             self.booking_status = new_status
             return True
         return False
