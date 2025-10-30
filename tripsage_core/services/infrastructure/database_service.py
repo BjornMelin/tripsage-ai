@@ -1688,20 +1688,6 @@ class DatabaseService:
         result = await self.insert("api_keys", key_data, user_id)
         return result[0] if result else {}
 
-    async def get_api_key_for_service(
-        self, user_id: str, service: str
-    ) -> JSONObject | None:
-        """Alias for :meth:`get_api_key` for backward compatibility.
-
-        Args:
-            user_id: User identifier.
-            service: Service name.
-
-        Returns:
-            API key row or None.
-        """
-        return await self.get_api_key(user_id, service)
-
     async def get_api_key_by_id(self, key_id: str, user_id: str) -> JSONObject | None:
         """Fetch an API key by ID for a user.
 
@@ -1713,7 +1699,10 @@ class DatabaseService:
             API key row or None.
         """
         result = await self.select(
-            "api_keys", "*", filters={"id": key_id, "user_id": user_id}, user_id=user_id
+            "api_keys",
+            "*",
+            filters={"id": key_id, "user_id": user_id},
+            user_id=user_id,
         )
         return result[0] if result else None
 

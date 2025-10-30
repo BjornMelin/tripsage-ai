@@ -111,9 +111,7 @@ class ApiKeyDatabaseProtocol(Protocol):
         """Return an API key row by id or ``None``."""
         ...
 
-    async def get_api_key_for_service(
-        self, user_id: str, service: str
-    ) -> dict[str, Any] | None:
+    async def get_api_key(self, user_id: str, service: str) -> dict[str, Any] | None:
         """Return a user's API key row for a service or ``None``."""
         ...
 
@@ -560,9 +558,7 @@ class ApiKeyService(
         # Validate user ID
         self._validate_user_id(user_id)
 
-        result = await self.db.get_api_key_for_service(
-            user_id, self._get_service_value(service)
-        )
+        result = await self.db.get_api_key(user_id, self._get_service_value(service))
         if not result:
             return None
 

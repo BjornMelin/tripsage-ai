@@ -191,28 +191,6 @@ class GoogleMapsService:
             logger.exception("Geocoding failed for address '%s'", address)
             raise GoogleMapsServiceError("Geocoding failed", e) from e
 
-    # Back-compat aliases used by tests
-    async def places_search(
-        self,
-        query: str,
-        location: tuple[float, float] | None = None,
-        radius: int | None = None,
-        **kwargs: Any,
-    ) -> list[Place]:
-        """Search for places.
-
-        Args:
-            query: Search query string.
-            location: Optional center point for the search.
-            radius: Optional search radius in meters.
-            **kwargs: Additional parameters forwarded to the SDK.
-
-        Returns:
-            A list of summarized places.
-        """
-        summaries = await self.search_places(query, location, radius, **kwargs)
-        return [s.place for s in summaries]
-
     async def reverse_geocode(
         self, lat: float, lng: float, **kwargs: Any
     ) -> list[Place]:
@@ -392,23 +370,6 @@ class GoogleMapsService:
             )
             raise GoogleMapsServiceError(f"Directions request failed: {e}", e) from e
 
-    # Back-compat alias used by tests
-    async def directions(
-        self, origin: str, destination: str, mode: str = "driving", **kwargs: Any
-    ) -> list[DirectionsResult]:
-        """Get directions between two locations.
-
-        Args:
-            origin: Origin address or coordinates.
-            destination: Destination address or coordinates.
-            mode: Travel mode (driving, walking, bicycling, transit).
-            **kwargs: Additional parameters forwarded to the SDK.
-
-        Returns:
-            A list of normalized routes (usually 1-3).
-        """
-        return await self.get_directions(origin, destination, mode, **kwargs)
-
     def _parse_distance_matrix_rows(
         self, result: dict[str, Any]
     ) -> list[DistanceMatrixRow]:
@@ -510,7 +471,8 @@ class GoogleMapsService:
             addr_list: list[Any] = cast(list[Any], addr_any)
             for s_any in addr_list:
                 if isinstance(s_any, str):
-                    addresses.extend(s_any)
+                    # Append full string, not extend (which splits chars)
+                    addresses.append(s_any)  # noqa: PERF401
         return addresses
 
     async def distance_matrix(

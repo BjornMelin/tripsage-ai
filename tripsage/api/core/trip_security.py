@@ -85,16 +85,13 @@ class TripAccessContext(TripSageModel):
     @field_validator("trip_id")
     @classmethod
     def validate_trip_id(cls, v: str) -> str:
-        """Validate trip ID format."""
+        """Validate trip ID format - requires UUID format."""
         if not v:
             raise ValueError("Trip ID must be a non-empty string")
-        # Support both UUID and string formats
         try:
             UUID(v)
         except ValueError as e:
-            # Allow non-UUID string IDs for backward compatibility
-            if len(v.strip()) == 0:
-                raise ValueError("Trip ID cannot be empty") from e
+            raise ValueError(f"Trip ID must be a valid UUID format, got: {v}") from e
         return v.strip()
 
     @field_validator("principal_id")
@@ -300,6 +297,23 @@ async def verify_trip_access(
                         f"permission"
                     ),
                 )
+
+        # Check required access level after computing granted_level
+        from tripsage.api.core.trip_security_helpers import (
+            check_access_level_requirement,
+        )
+
+        is_level_authorized, denial_result = await check_access_level_requirement(
+            context,
+            granted_level,
+            granted_permission,
+            is_owner,
+            is_collaborator,
+            audit_security_event=audit_security_event,
+        )
+
+        if not is_level_authorized:
+            return TripAccessResult(**denial_result)  # type: ignore[arg-type]
 
         # Log successful access for audit trail
         await audit_security_event(

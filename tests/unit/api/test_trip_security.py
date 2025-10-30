@@ -251,6 +251,49 @@ async def test_verify_denied_on_insufficient_collab_permission(
 
 
 @pytest.mark.asyncio
+async def test_verify_access_level_enforcement(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that access level requirements are enforced correctly."""
+    calls: list[dict[str, Any]] = []
+
+    async def fake_audit(**kwargs: Any) -> None:
+        """Fake audit."""
+        calls.append(kwargs)
+
+    monkeypatch.setattr(
+        "tripsage.api.core.trip_security.audit_security_event",
+        fake_audit,
+        raising=False,
+    )
+
+    # Test: READ user cannot access COLLABORATOR-required operation
+    trip = {
+        "id": "abc",
+        "user_id": "owner-1",
+        "visibility": TripVisibility.PUBLIC.value,
+    }
+    # Public trip allows READ access, but operation requires COLLABORATOR
+    service = _FakeTripService(db=_FakeDB(trip=trip))
+    ctx = _Ctx(
+        trip_id="abc",
+        principal_id="user-2",  # Not owner or collaborator
+        required_level=TripAccessLevel.COLLABORATOR,
+        required_permission=None,
+        operation="POST /api/trips/abc/collaborators",
+    )
+    result = await verify_trip_access(ctx, service)  # type: ignore[arg-type]
+    assert result.is_authorized is False
+    assert (
+        result.denial_reason
+        and "requires collaborator access level" in result.denial_reason.lower()
+    )
+    assert calls and calls[-1]["event_type"] == AuditEventType.ACCESS_DENIED
+    assert calls[-1].get("required_level") == "collaborator"
+    assert calls[-1].get("granted_level") == "read"
+
+
+@pytest.mark.asyncio
 async def test_verify_unexpected_error_logs_and_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -258,6 +301,7 @@ async def test_verify_unexpected_error_logs_and_raises(
     calls: list[dict[str, Any]] = []
 
     async def fake_audit(**kwargs: Any) -> None:
+        """Fake audit."""
         calls.append(kwargs)
 
     monkeypatch.setattr(
