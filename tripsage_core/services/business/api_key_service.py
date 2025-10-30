@@ -17,6 +17,7 @@ import asyncio
 import base64
 import binascii
 import hashlib
+import hmac
 import logging
 import uuid
 from collections.abc import Awaitable
@@ -1131,16 +1132,7 @@ class ApiKeyService(
         """Compute deterministic cache key without exposing raw secrets."""
         material = f"{self._get_service_value(service)}:{key_value}".encode()
         secret_bytes = self.settings.secret_key.get_secret_value().encode("utf-8")
-        pepper = hashlib.blake2b(
-            secret_bytes,
-            person=b"tripsage-cache",
-            digest_size=32,
-        ).digest()
-        digest = hashlib.blake2b(
-            material,
-            key=pepper,
-            digest_size=32,
-        ).digest()
+        digest = hmac.new(secret_bytes, material, hashlib.sha256).digest()
         encoded = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
         return f"api_validation:v3:{encoded}"
 
