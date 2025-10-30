@@ -180,7 +180,6 @@ ALTER TABLE trips ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trip_collaborators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE itinerary_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trip_notes ENABLE ROW LEVEL SECURITY;
@@ -231,7 +230,6 @@ WITH CHECK (auth.uid() = user_id);
 
 -- API key access policies
 CREATE POLICY "Users can manage their own API keys"
-ON api_keys FOR ALL
 USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
 ```
@@ -287,7 +285,6 @@ BEGIN
     new_key := encode(gen_random_bytes(32), 'base64');
     
     -- Update existing key
-    UPDATE api_keys 
     SET 
         encrypted_key = crypt(new_key, gen_salt('bf')),
         updated_at = NOW()

@@ -105,7 +105,6 @@ The BYOK system allows users to provide their own API keys for external services
 ### User-Provided API Keys (Stored in Database)
 
 ```bash
-# These are NOT environment variables - they're user-provided keys stored in api_keys table
 # Listed here for reference only:
 
 # Flight APIs
@@ -403,7 +402,6 @@ UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
 
 ```bash
 # User API keys are stored in database, not environment
-# Check api_keys table for user-specific keys
 # Verify key encryption/decryption is working
 ```
 

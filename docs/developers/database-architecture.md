@@ -58,7 +58,6 @@ TripSage uses a unified database architecture built on Supabase PostgreSQL with 
 erDiagram
     users ||--o{ trips : owns
     users ||--o{ conversations : has
-    users ||--o{ user_api_keys : manages
 
     trips ||--o{ flights : contains
     trips ||--o{ accommodations : contains
@@ -72,7 +71,6 @@ erDiagram
         timestamp created_at
     }
 
-    user_api_keys {
         uuid id PK
         uuid user_id FK
         varchar service
