@@ -1634,6 +1634,43 @@ class DatabaseService:
             code="API_KEY_UNSUPPORTED",
         )
 
+    # ---- BYOK helpers (Vault-backed) ----
+    async def fetch_user_service_api_key(
+        self, user_id: str, service: str
+    ) -> str | None:
+        """Fetch the plaintext API key for a user/service via Vault RPC.
+
+        Args:
+            user_id: Supabase auth user id (UUID string).
+            service: Provider name (e.g., "openai", "openrouter", "anthropic", "xai").
+
+        Returns:
+            The plaintext API key if present, else None.
+        """
+        # Import lazily to avoid import cycles and only create admin client on demand
+        from tripsage_core.services.infrastructure.supabase_client import (
+            get_admin_client as _get_admin_client,
+        )
+
+        admin = await _get_admin_client()
+        res = await admin.rpc(
+            "get_user_api_key",
+            {"p_user_id": user_id, "p_service": service.lower().strip()},
+        ).execute()
+        # RPC returns .data; None or '' if not found/empty
+        key_value = getattr(res, "data", None)
+        if isinstance(key_value, str) and key_value:
+            # best-effort touch (ignore errors)
+            from contextlib import suppress
+
+            with suppress(Exception):
+                await admin.rpc(
+                    "touch_user_api_key",
+                    {"p_user_id": user_id, "p_service": service.lower().strip()},
+                ).execute()
+            return key_value
+        return None
+
     async def vector_search_destinations(
         self,
         query_vector: list[float],
