@@ -26,6 +26,7 @@ from tripsage_core.models.schemas_common.enums import (
     TripVisibility,
 )
 from tripsage_core.models.trip import Budget, Trip, TripPreferences
+from tripsage_core.services.infrastructure.supabase_user_ops import fetch_user_by_id
 from tripsage_core.types import JSONObject, JSONValue
 from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
@@ -133,7 +134,6 @@ class TripService:
 
     if TYPE_CHECKING:
         # Imported for typing only to avoid import cycles at runtime
-        from tripsage_core.services.business.user_service import UserService
         from tripsage_core.services.infrastructure.database_service import (
             DatabaseService,
         )
@@ -141,13 +141,11 @@ class TripService:
     def __init__(
         self,
         database_service: DatabaseService | None = None,
-        user_service: UserService | None = None,
     ) -> None:
         """Initialize trip service with dependencies.
 
         Args:
             database_service: Database service instance
-            user_service: User service instance
         """
         if database_service is None:
             from tripsage_core.services.infrastructure.database_service import (
@@ -156,14 +154,8 @@ class TripService:
 
             database_service = DatabaseService()
 
-        if user_service is None:
-            from tripsage_core.services.business.user_service import UserService
-
-            user_service = UserService()
-
         # Explicit typing helps pyright infer method return types
         self.db: DatabaseService = database_service
-        self.user_service: UserService = user_service
 
     @tripsage_safe_execute()
     async def create_trip(
@@ -471,7 +463,7 @@ class TripService:
                 raise CoreAuthorizationError("Only the trip owner can share the trip")
 
             # Verify target user exists
-            target_user = await self.user_service.get_user_by_id(share_with_user_id)
+            target_user = await fetch_user_by_id(share_with_user_id)
             if not target_user:
                 raise CoreResourceNotFoundError("User not found")
 

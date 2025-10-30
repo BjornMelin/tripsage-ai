@@ -5,13 +5,13 @@ for unified authentication across JWT (frontend) and API keys (agents).
 """
 
 import inspect
-from collections.abc import Awaitable, Callable, Iterable as TypingIterable
+from collections.abc import Awaitable, Iterable as TypingIterable
 from typing import Annotated, cast
 
 from fastapi import Depends, Request
 
 from tripsage.api.core.config import Settings, get_settings
-from tripsage.api.core.protocols import ApiKeyServiceProto, ChatServiceProto
+from tripsage.api.core.protocols import ChatServiceProto
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.app_state import AppServiceContainer
 from tripsage_core.exceptions.exceptions import (
@@ -21,7 +21,6 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.services.airbnb_mcp import AirbnbMCP
 from tripsage_core.services.business.accommodation_service import AccommodationService
 from tripsage_core.services.business.activity_service import ActivityService
-from tripsage_core.services.business.api_key_service import ApiKeyService
 from tripsage_core.services.business.chat_service import ChatService
 from tripsage_core.services.business.destination_service import DestinationService
 from tripsage_core.services.business.file_processing_service import (
@@ -33,7 +32,6 @@ from tripsage_core.services.business.memory_service import MemoryService
 from tripsage_core.services.business.search_facade import SearchFacade
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.business.unified_search_service import UnifiedSearchService
-from tripsage_core.services.business.user_service import UserService
 from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
 from tripsage_core.services.infrastructure import CacheService, KeyMonitoringService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
@@ -181,39 +179,6 @@ def get_principal_id(principal: Principal) -> str:
     return principal.id
 
 
-async def verify_service_access(
-    principal: Principal,
-    service: str = "openai",
-    key_service: ApiKeyService | None = None,
-) -> bool:
-    """Verify that the principal has access to a specific service."""
-    # Agents with API keys already have service access
-    if principal.auth_method == "api_key":
-        return True
-
-    # For users, check they have the required service key
-    if principal.type == "user":
-        if key_service is None:
-            # Without a DI-provided ApiKeyService, we cannot verify access.
-            return False
-        try:
-            list_keys = cast(
-                Callable[[str], Awaitable[list[object]]],
-                key_service.list_user_keys,
-            )
-            keys_any = await list_keys(principal.id)
-            for k in keys_any:
-                svc = getattr(k, "service", None)
-                svc_value = getattr(svc, "value", None) if svc is not None else None
-                if svc_value == service:
-                    return True
-            return False
-        except (OSError, ValueError, TypeError):
-            return False
-
-    return False
-
-
 # Cache service dependency
 def get_cache_service_dep(request: Request) -> CacheService:
     """Get cache service (lifespan-managed singleton)."""
@@ -276,15 +241,6 @@ def get_mcp_service(request: Request) -> AirbnbMCP:
     return _get_required_service(request, "mcp_service", AirbnbMCP)
 
 
-# API Key service dependency
-def get_api_key_service(request: Request) -> ApiKeyServiceProto:
-    """Get the API key service singleton."""
-    service: ApiKeyService = _get_required_service(
-        request, "api_key_service", ApiKeyService
-    )
-    return cast(ApiKeyServiceProto, service)
-
-
 # Business service dependencies (container-backed)
 def get_accommodation_service(request: Request) -> AccommodationService:
     """Return AccommodationService from app.state container."""
@@ -334,11 +290,6 @@ def get_trip_service(request: Request) -> TripService:
     return _get_required_service(request, "trip_service", TripService)
 
 
-def get_user_service(request: Request) -> UserService:
-    """Return UserService from the container."""
-    return _get_required_service(request, "user_service", UserService)
-
-
 # Modern Annotated dependency types for 2025 best practices
 SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]
 DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
@@ -366,10 +317,8 @@ ChatServiceDep = Annotated[ChatServiceProto, Depends(get_chat_service)]
 DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
 FlightServiceDep = Annotated[FlightService, Depends(get_flight_service_dep)]
 ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)]
-ApiKeyServiceDep = Annotated[ApiKeyServiceProto, Depends(get_api_key_service)]
 MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
 TripServiceDep = Annotated[TripService, Depends(get_trip_service)]
-UserServiceDep = Annotated[UserService, Depends(get_user_service)]
 FileProcessingServiceDep = Annotated[
     FileProcessingService, Depends(get_file_processing_service)
 ]
