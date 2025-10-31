@@ -859,10 +859,19 @@ class ChatService(
             temperature = getattr(request, "temperature", 0.7)
             max_tokens = getattr(request, "max_tokens", 4096)
 
+            # Prefer user's BYOK for OpenAI when available
+            user_key: str | None = None
+            if hasattr(self.db, "fetch_user_service_api_key"):
+                try:
+                    fetch_key = self.db.fetch_user_service_api_key  # type: ignore[misc]
+                    user_key = await fetch_key(user_id, "openai")  # type: ignore[misc]
+                except Exception:  # noqa: BLE001 - non-critical
+                    user_key = None
+
             llm = ChatOpenAI(
                 model=model_name,
                 temperature=temperature,
-                api_key=settings.openai_api_key,
+                api_key=(user_key or settings.openai_api_key),  # type: ignore[arg-type]
                 model_kwargs={"max_tokens": max_tokens},
             )
 

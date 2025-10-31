@@ -4,24 +4,21 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
-from tripsage_core.services.business.api_key_service import (
-    ApiValidationResult,
-    ServiceHealthStatus,
-    ServiceType,
-)
-from tripsage_core.services.business.dashboard_service import (
+from tripsage_core.services.business.dashboard_models import (
     AlertData,
     AlertSeverity,
     AlertType,
     DashboardData,
-    DashboardService,
     RealTimeMetrics,
     ServiceAnalytics,
+    ServiceHealthStatus,
+    ServiceType,
 )
+from tripsage_core.services.business.dashboard_service import DashboardService
 
 
 pytestmark = pytest.mark.anyio
@@ -42,51 +39,16 @@ def mock_database_service() -> AsyncMock:
 
 
 @pytest.fixture
-def mock_api_key_service() -> AsyncMock:
-    """Create a mock ApiKeyService."""
-    service = AsyncMock()
-    now = datetime.now(UTC)
-    service.check_all_services_health.return_value = {
-        ServiceType.OPENAI: ApiValidationResult(
-            service=ServiceType.OPENAI,
-            is_valid=None,
-            status=None,
-            health_status=ServiceHealthStatus.HEALTHY,
-            latency_ms=150.0,
-            message="Operational",
-            checked_at=now,
-            validated_at=None,
-        ),
-        ServiceType.WEATHER: ApiValidationResult(
-            service=ServiceType.WEATHER,
-            is_valid=None,
-            status=None,
-            health_status=ServiceHealthStatus.DEGRADED,
-            latency_ms=450.0,
-            message="Elevated latency",
-            checked_at=now,
-            validated_at=None,
-        ),
-    }
-    return service
-
-
-@pytest.fixture
 def dashboard_service(
     mock_cache_service: AsyncMock,
     mock_database_service: AsyncMock,
-    mock_api_key_service: AsyncMock,
 ) -> DashboardService:
     """Create DashboardService with mocked dependencies."""
-    with patch(
-        "tripsage_core.services.business.dashboard_service.ApiKeyService",
-        return_value=mock_api_key_service,
-    ):
-        return DashboardService(
-            cache_service=mock_cache_service,
-            database_service=mock_database_service,
-            settings=None,
-        )
+    return DashboardService(
+        cache_service=mock_cache_service,
+        database_service=mock_database_service,
+        settings=None,
+    )
 
 
 @pytest.fixture
@@ -157,7 +119,7 @@ class TestDashboardService:
 
         assert result.metrics.total_requests == len(sample_usage_logs)
         assert result.metrics.total_errors == 1
-        assert result.services  # Service analytics from mocked ApiKeyService
+        assert result.services  # Service analytics derived from usage logs
         assert result.top_users
         assert result.usage_trend
 
@@ -187,24 +149,11 @@ class TestDashboardService:
     async def test_service_analytics(
         self,
         dashboard_service: DashboardService,
-        mock_api_key_service: AsyncMock,
         mock_database_service: AsyncMock,
         sample_usage_logs: list[dict[str, object]],
     ) -> None:
         """Return per-service analytics using health checks."""
         mock_database_service.select.return_value = sample_usage_logs
-        mock_api_key_service.check_all_services_health.return_value = {
-            ServiceType.OPENAI: ApiValidationResult(
-                service=ServiceType.OPENAI,
-                is_valid=None,
-                status=None,
-                health_status=ServiceHealthStatus.HEALTHY,
-                latency_ms=120.0,
-                message="All good",
-                checked_at=datetime.now(UTC),
-                validated_at=None,
-            )
-        }
 
         data: DashboardData = await dashboard_service.get_dashboard_data(
             time_range_hours=1
@@ -218,38 +167,7 @@ class TestDashboardService:
         expected_sr = 0.5
         diff = abs(float(service.success_rate) - expected_sr)
         assert diff <= expected_sr * 1e-6 + 1e-12
-
-    @pytest.mark.asyncio
-    async def test_service_analytics_handles_missing_health_data(
-        self,
-        dashboard_service: DashboardService,
-        mock_api_key_service: AsyncMock,
-        mock_database_service: AsyncMock,
-        sample_usage_logs: list[dict[str, object]],
-    ) -> None:
-        """Gracefully handle missing checked_at and health_status fields."""
-        mock_database_service.select.return_value = sample_usage_logs
-        mock_api_key_service.check_all_services_health.return_value = {
-            ServiceType.OPENAI: ApiValidationResult(
-                service=ServiceType.OPENAI,
-                is_valid=None,
-                status=None,
-                health_status=None,
-                latency_ms=95.0,
-                message="No recent checks",
-                checked_at=None,
-                validated_at=None,
-            )
-        }
-
-        data: DashboardData = await dashboard_service.get_dashboard_data(
-            time_range_hours=1
-        )
-
-        assert len(data.services) >= 1
-        service = next(s for s in data.services if s.service_name == "openai")
-        assert service.health_status == ServiceHealthStatus.UNKNOWN
-        assert service.last_health_check.tzinfo is UTC
+        assert service.health_status is ServiceHealthStatus.UNKNOWN
 
     async def test_user_activity_data(
         self,

@@ -11,7 +11,6 @@ from typing import Any, cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from pydantic import SecretStr
 
 from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
@@ -42,23 +41,8 @@ class RouterNode(BaseAgentNode):
         """Initialize the router node with enhanced classification capabilities."""
         super().__init__("router", services)
 
-        # Initialize classifier model with improved configuration
-        settings = get_settings()
-        api_key_value: str | None = (
-            settings.openai_api_key.get_secret_value()
-            if settings.openai_api_key
-            else None
-        )
-
-        secret_api_key: SecretStr | None = (
-            SecretStr(api_key_value) if api_key_value else None
-        )
-
-        self.classifier = ChatOpenAI(
-            model="gpt-5-mini",  # Use smaller, faster model for classification
-            temperature=0.1,  # Low temperature for consistent routing decisions
-            api_key=secret_api_key,
-        )
+        # Classifier instantiated per-call to support BYOK; keep constructor lean.
+        self.classifier = None  # legacy field no longer used
 
         # Available agent types and their capabilities
         self.agent_capabilities = {
@@ -186,7 +170,7 @@ class RouterNode(BaseAgentNode):
 
         # Perform enhanced semantic classification with fallback strategies
         classification = await self._classify_with_fallback(
-            last_message, conversation_context
+            last_message, conversation_context, state.get("user_id")
         )
 
         # Update state with routing decision
@@ -210,13 +194,14 @@ class RouterNode(BaseAgentNode):
         return state
 
     async def _classify_intent(
-        self, message: str, context: dict[str, Any]
+        self, message: str, context: dict[str, Any], user_id: str | None
     ) -> dict[str, Any]:
         """Classify user intent using semantic analysis.
 
         Args:
             message: User message to classify
             context: Conversation context for better classification
+            user_id: Optional user id to resolve BYOK for OpenAI
 
         Returns:
             Classification result with agent, confidence, and reasoning
@@ -233,7 +218,33 @@ class RouterNode(BaseAgentNode):
                 HumanMessage(content=classification_prompt),
             ]
 
-            response = await self.classifier.ainvoke(messages)
+            # Build BYOK-aware classifier (OpenAI small model)
+            settings = get_settings()
+            from pydantic import SecretStr
+
+            api_key_value: str | None = None
+            if user_id:
+                try:
+                    db = self.get_optional_service("database_service")
+                    if db is not None and hasattr(db, "fetch_user_service_api_key"):
+                        fetch_key = db.fetch_user_service_api_key  # type: ignore[misc]
+                        api_key_value = await fetch_key(user_id, "openai")  # type: ignore[misc]
+                except Exception:  # noqa: BLE001 - fallback to server key
+                    api_key_value = None
+            if not api_key_value and settings.openai_api_key:
+                # pylint: disable=no-member
+                api_key_value = settings.openai_api_key.get_secret_value()
+
+            secret_api_key: SecretStr | None = (
+                SecretStr(api_key_value) if api_key_value else None
+            )
+            llm = ChatOpenAI(
+                model="gpt-5-mini",
+                temperature=0.1,
+                api_key=secret_api_key,
+            )
+
+            response = await llm.ainvoke(messages)
             # Handle different response formats
             raw_resp: Any = cast(Any, response)
             if hasattr(raw_resp, "content"):
@@ -389,20 +400,21 @@ class RouterNode(BaseAgentNode):
         return True
 
     async def _classify_with_fallback(
-        self, message: str, context: dict[str, Any]
+        self, message: str, context: dict[str, Any], user_id: str | None
     ) -> dict[str, Any]:
         """Classification with multiple fallback strategies.
 
         Args:
             message: User message to classify
             context: Conversation context
+            user_id: Optional user id to resolve BYOK for OpenAI
 
         Returns:
             Classification result with enhanced confidence scoring
         """
         try:
             # Primary classification
-            classification = await self._classify_intent(message, context)
+            classification = await self._classify_intent(message, context, user_id)
 
             # If confidence is too low, try keyword-based fallback
             if classification["confidence"] < 0.7:

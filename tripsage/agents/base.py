@@ -92,6 +92,21 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
 
         await self._hydrate_session(resolved_user_id)
 
+        # Recreate LLM with user's BYOK if available
+        try:
+            db = self.services.get_optional_service("database_service")
+            if db is not None and hasattr(db, "fetch_user_service_api_key"):
+                key = await db.fetch_user_service_api_key(resolved_user_id, "openai")  # type: ignore[misc]
+                if key:
+                    settings = get_settings()
+                    self.llm = ChatOpenAI(
+                        model=settings.openai_model,
+                        temperature=settings.model_temperature,
+                        api_key=key,  # type: ignore[arg-type]
+                    )
+        except Exception:  # noqa: BLE001 - keep existing LLM on failure
+            pass
+
         user_message = {
             "role": "user",
             "content": user_input,
