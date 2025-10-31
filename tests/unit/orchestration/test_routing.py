@@ -27,6 +27,7 @@ async def test_classify_intent_json_and_fallback(
 ) -> None:
     """Router should parse JSON or fall back with safe default when parse fails."""
     router = _make_router()
+    classify_intent = cast(Any, router)._classify_intent
     # Mock returns agent=flight_agent JSON
     cast(Any, router.classifier).set_default_response(  # type: ignore[attr-defined] # pylint: disable=no-member
         '{"agent": "flight_agent", "confidence": 0.9, "reasoning": "flight"}'
@@ -34,9 +35,11 @@ async def test_classify_intent_json_and_fallback(
     state = state_factory(
         extra={"messages": [{"role": "user", "content": "find flights"}]}
     )
-    classification = await router._classify_intent(  # type: ignore[reportPrivateUsage]  # pylint: disable=protected-access
+    user_id = str(state["user_id"])
+    classification = await classify_intent(
         "find flights",
         router._build_conversation_context(state),  # type: ignore[reportPrivateUsage]  # pylint: disable=protected-access
+        user_id,
     )
     assert classification["agent"] == "flight_agent"
 
@@ -49,7 +52,7 @@ async def test_classify_intent_json_and_fallback(
             return "not-json"
 
     router.classifier = _BadLLM()  # type: ignore[assignment]
-    fallback = await router._classify_intent("what is travel?", {})  # type: ignore[reportPrivateUsage]  # pylint: disable=protected-access
+    fallback = await classify_intent("what is travel?", {}, user_id)
     assert fallback["agent"] in {"general_agent", "error_recovery"}
 
 
@@ -79,6 +82,9 @@ async def test_invalid_agent_and_confidence_bounds(
 ) -> None:
     """Router should fallback on invalid agent or bad confidence values."""
     router = _make_router()
+    classify_intent = cast(Any, router)._classify_intent
+    state = state_factory()
+    user_id = str(state["user_id"])
 
     class _BadAgentLLM:
         """Bad agent LLM stub."""
@@ -88,7 +94,7 @@ async def test_invalid_agent_and_confidence_bounds(
             return '{"agent": "invalid_agent", "confidence": 0.9, "reasoning": "-"}'
 
     router.classifier = _BadAgentLLM()  # type: ignore[assignment]
-    fb1 = await router._classify_intent("x", {})  # type: ignore[reportPrivateUsage]  # pylint: disable=protected-access
+    fb1 = await classify_intent("x", {}, user_id)
     assert fb1["agent"] == "general_agent"
 
     class _BadConfLLM:
@@ -99,5 +105,5 @@ async def test_invalid_agent_and_confidence_bounds(
             return '{"agent": "flight_agent", "confidence": 1.5, "reasoning": "-"}'
 
     router.classifier = _BadConfLLM()  # type: ignore[assignment]
-    fb2 = await router._classify_intent("x", {})  # type: ignore[reportPrivateUsage]  # pylint: disable=protected-access
+    fb2 = await classify_intent("x", {}, user_id)
     assert fb2["agent"] == "general_agent"

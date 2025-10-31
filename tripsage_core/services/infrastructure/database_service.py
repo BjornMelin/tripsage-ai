@@ -1671,6 +1671,27 @@ class DatabaseService:
             return key_value
         return None
 
+    async def fetch_user_api_key_preferred(
+        self, user_id: str, services: Sequence[str]
+    ) -> tuple[str | None, str | None]:
+        """Return the first available API key among preferred services.
+
+        The lookup order follows the sequence provided; the first non-empty
+        key found is returned along with the service name.
+
+        Args:
+            user_id: Supabase auth user id (UUID string).
+            services: Preferred services to probe (e.g., ["openai", "openrouter"]).
+
+        Returns:
+            (api_key, service) if found, else (None, None).
+        """
+        for svc in services:
+            key = await self.fetch_user_service_api_key(user_id, svc)
+            if key:
+                return key, svc
+        return None, None
+
     async def vector_search_destinations(
         self,
         query_vector: list[float],

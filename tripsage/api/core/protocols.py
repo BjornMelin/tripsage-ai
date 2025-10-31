@@ -7,6 +7,7 @@ runtime. This improves Pyright type checking without changing runtime wiring.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Any, Protocol
 
 
@@ -15,6 +16,12 @@ class ChatServiceProto(Protocol):
 
     async def chat_completion(self, user_id: str, request: Any) -> dict[str, Any]:
         """Generate a chat completion for the user and request."""
+        ...
+
+    async def stream_chat_completion(
+        self, user_id: str, request: Any
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Stream chat completion events for the user/request."""
         ...
 
     async def create_session(self, user_id: str, session_data: Any) -> Any:
