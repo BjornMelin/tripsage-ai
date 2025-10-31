@@ -848,13 +848,13 @@ export type Database = {
 
 // Helper types for better developer experience
 export type Tables<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Row"];
+  Database["public"]["Tables"][T] extends { Row: infer R } ? R : never;
 
 export type InsertTables<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Insert"];
+  Database["public"]["Tables"][T] extends { Insert: infer I } ? I : never;
 
 export type UpdateTables<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Update"];
+  Database["public"]["Tables"][T] extends { Update: infer U } ? U : never;
 
 export type Enums<T extends keyof Database["public"]["Enums"]> =
   Database["public"]["Enums"][T];

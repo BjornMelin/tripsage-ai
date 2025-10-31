@@ -1,11 +1,8 @@
-"""Mock configuration objects for isolated testing.
-
-This module provides mocking of configuration objects
-to enable isolated testing without external dependencies.
-"""
+"""Mock configuration helpers for isolated testing."""
 
 import os
-from typing import Any
+from collections.abc import Callable
+from typing import Any, cast
 from unittest.mock import AsyncMock
 
 import pytest
@@ -15,40 +12,57 @@ from pydantic import SecretStr
 class MockSettings:
     """Mock version of flat Settings for testing."""
 
-    def __init__(self):
-        """Initialize mock settings with testing defaults."""
-        # Environment & Core (flat structure)
-        self.environment = "testing"
-        self.debug = True
-        self.log_level = "INFO"
+    def __init__(self) -> None:
+        """Initialize mock settings with testing defaults stored in a mapping."""
+        super().__setattr__(
+            "_values",
+            {
+                # Environment & Core (flat structure)
+                "environment": "testing",
+                "debug": True,
+                "log_level": "INFO",
+                # API Configuration (flat structure)
+                "api_title": "TripSage API",
+                "api_version": "1.0.0",
+                "cors_origins": [
+                    "http://localhost:3000",
+                    "http://localhost:3001",
+                ],
+                "cors_credentials": True,
+                # Database (flat structure)
+                "database_url": "https://test-project.supabase.co",
+                "database_public_key": SecretStr("test-anon-key"),
+                "database_service_key": SecretStr("test-service-key"),
+                "database_jwt_secret": SecretStr("test-jwt-secret"),
+                # Application Security (flat structure)
+                "secret_key": SecretStr("test-secret-key"),
+                # Redis/Cache (flat structure)
+                "redis_url": None,
+                "redis_password": None,
+                "redis_max_connections": 50,
+                # AI Services (flat structure)
+                "openai_api_key": SecretStr("sk-test-openai-key-1234567890abcdef"),
+                "openai_model": "gpt-5",
+                # Rate Limiting (flat structure)
+                "rate_limit_requests": 100,
+                "rate_limit_window": 60,
+            },
+        )
 
-        # API Configuration (flat structure)
-        self.api_title = "TripSage API"
-        self.api_version = "1.0.0"
-        self.cors_origins = ["http://localhost:3000", "http://localhost:3001"]
-        self.cors_credentials = True
+    def __getattr__(self, name: str) -> Any:
+        """Support attribute-style access backed by the internal mapping."""
+        try:
+            return self._values[name]
+        except KeyError as exc:  # pragma: no cover - mirrors real settings behaviour
+            raise AttributeError(name) from exc
 
-        # Database (flat structure)
-        self.database_url = "https://test-project.supabase.co"
-        self.database_public_key = SecretStr("test-anon-key")
-        self.database_service_key = SecretStr("test-service-key")
-        self.database_jwt_secret = SecretStr("test-jwt-secret")
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Update stored values via normal attribute assignment."""
+        self._values[name] = value
 
-        # Application Security (flat structure)
-        self.secret_key = SecretStr("test-secret-key")
-
-        # Redis/Cache (flat structure)
-        self.redis_url = None  # Optional in test
-        self.redis_password = None
-        self.redis_max_connections = 50
-
-        # AI Services (flat structure)
-        self.openai_api_key = SecretStr("sk-test-openai-key-1234567890abcdef")
-        self.openai_model = "gpt-5"
-
-        # Rate Limiting (flat structure)
-        self.rate_limit_requests = 100
-        self.rate_limit_window = 60
+    def as_dict(self) -> dict[str, Any]:
+        """Return a shallow copy of the internal mapping for external use."""
+        return dict(self._values)
 
     @property
     def is_production(self) -> bool:
@@ -122,15 +136,16 @@ def setup_test_env():
 class MockMCPBridge:
     """Mock MCP Manager for testing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize a mock MCP manager with async fakes."""
-        self.invoke = AsyncMock()
+        self._invoke_mock = AsyncMock()
         self.is_connected = AsyncMock(return_value=True)
         self.connect = AsyncMock()
         self.disconnect = AsyncMock()
 
     async def invoke(self, method_name: str, params: dict[str, Any]) -> dict[str, Any]:
         """Mock MCP invoke method."""
+        await self._invoke_mock(method_name, params)
         # Return different mock responses based on method name
         if "search_flights" in method_name:
             return {
@@ -138,16 +153,15 @@ class MockMCPBridge:
                     {"id": "flight_123", "price": 299.99, "airline": "Test Airways"}
                 ]
             }
-        elif "search_accommodations" in method_name:
+        if "search_accommodations" in method_name:
             return {
                 "accommodations": [
                     {"id": "hotel_123", "price_per_night": 150.0, "name": "Test Hotel"}
                 ]
             }
-        elif "weather" in method_name:
+        if "weather" in method_name:
             return {"temperature": 75, "condition": "sunny"}
-        else:
-            return {"status": "success", "result": "mock_result"}
+        return {"status": "success", "result": "mock_result"}
 
 
 @pytest.fixture
@@ -159,13 +173,13 @@ def mock_mcp_manager():
 def mock_pydantic_settings():
     """Mock Pydantic settings to avoid validation errors."""
 
-    def mock_init(self, **kwargs):
-        # Set all attributes from mock configurations
+    def mock_init(self: Any, **kwargs: Any) -> None:
+        del kwargs
         mock_settings = MockSettings()
-        for key, value in mock_settings.__dict__.items():
+        for key, value in mock_settings.as_dict().items():
             setattr(self, key, value)
 
-    return mock_init
+    return cast(Callable[..., None], mock_init)
 
 
 # Test configuration validation

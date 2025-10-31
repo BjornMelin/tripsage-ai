@@ -256,6 +256,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             "/api/docs",
             "/api/redoc",
             "/api/openapi.json",
+            "/openapi.json",
             "/api/health",
             "/api/auth/login",
             "/api/auth/register",

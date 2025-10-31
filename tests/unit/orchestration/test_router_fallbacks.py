@@ -24,11 +24,13 @@ async def test_classify_with_exception_fallback() -> None:
     """When classification raises, router returns safe fallback dict."""
     router = _make_router()
 
-    async def _raise(*_a: Any, **_k: Any) -> dict[str, Any]:
+    async def _raise(
+        _message: str, _context: dict[str, Any], _user_id: str | None
+    ) -> dict[str, Any]:
         raise RuntimeError("classifier down")
 
     # Patch private classify to raise so fallback path is reached
     router._classify_intent = _raise  # type: ignore[assignment, reportPrivateUsage]
-    out = await router._classify_with_fallback("hi", {})  # type: ignore[reportPrivateUsage]
+    out = await router._classify_with_fallback("hi", {}, "test-user")  # type: ignore[reportPrivateUsage]
     assert out["agent"] in {"general_agent", "error_recovery"}
     assert 0.0 <= out.get("confidence", 0.0) <= 1.0
