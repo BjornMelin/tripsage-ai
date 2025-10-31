@@ -6,7 +6,7 @@ Validates SSE contract: started → delta* → final → [DONE] without network 
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
 import pytest
@@ -90,6 +90,37 @@ class _FakeOpenAI:
         self.chat = _FakeChat(["Hello, ", "world!"])
 
 
+class _StubChatService:
+    """Minimal chat service stub that mimics streaming completions."""
+
+    def __init__(self, db: Any, responses: Sequence[str]) -> None:
+        self._db = db
+        self._responses = list(responses)
+
+    async def stream_chat_completion(self, user_id: str, request: Any):
+        # Resolve API keys to determine provider selection similar to real service.
+        import openai as _openai  # type: ignore[import-not-found]
+
+        base_url: str | None = None
+        openai_key: str | None = None
+        if hasattr(self._db, "fetch_user_service_api_key"):
+            openai_key = await self._db.fetch_user_service_api_key(  # type: ignore[misc]
+                user_id, "openai"
+            )
+        if not openai_key and hasattr(self._db, "fetch_user_service_api_key"):
+            openrouter_key = await self._db.fetch_user_service_api_key(  # type: ignore[misc]
+                user_id, "openrouter"
+            )
+            if openrouter_key:
+                base_url = "https://openrouter.ai/api/v1"
+
+        _openai.OpenAI(base_url=base_url)
+
+        for part in self._responses:
+            yield {"type": "delta", "content": part}
+        yield {"type": "final", "content": "".join(self._responses)}
+
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_chat_streaming_sse_contract(
@@ -120,24 +151,21 @@ async def test_chat_streaming_sse_contract(
         _provide_principal_dep
     )  # type: ignore[assignment]
 
-    # Provide a minimal chat service that streams two deltas then final
-    class _FakeSvc:
-        """Fake chat service that streams chat completion."""
+    class _DB:
+        """Mock database service that returns test API keys."""
 
-        async def stream_chat_completion(self, user_id: str, request: Any):
-            """Stream chat completion as a generator of event dicts."""
-            from openai import OpenAI  # patched below
+        async def fetch_user_service_api_key(
+            self, user_id: str, service: str
+        ) -> str | None:
+            assert service in {"openai", "openrouter"}
+            return "sk-test" if service == "openai" else None
 
-            _ = OpenAI(api_key="sk-test")  # smoke constructor call
-            for part in ["Hello, ", "world!"]:
-                yield {"type": "delta", "content": part}
-            yield {"type": "final", "content": "Hello, world!"}
-
-    async def _provide_svc() -> Any:
-        """Return the fake chat service."""
-        return _FakeSvc()
-
-    app.dependency_overrides[dep.get_chat_service] = _provide_svc  # type: ignore[assignment]
+    db_service = _DB()
+    app.dependency_overrides[dep.get_db] = lambda: db_service  # type: ignore[assignment]
+    app.dependency_overrides[dep.get_chat_service] = lambda: _StubChatService(  # type: ignore[assignment]
+        db_service,
+        ["Hello, ", "world!"],
+    )
 
     # Patch OpenAI client used in the router (imported dynamically)
     import openai as _openai  # type: ignore[import-not-found]
@@ -202,24 +230,24 @@ async def test_chat_streaming_openrouter_branch(
         _provide_principal_dep
     )  # type: ignore[assignment]
 
-    # Provide a fake chat service that selects OpenRouter path
-    class _FakeSvc:
-        """Fake chat service that selects OpenRouter path."""
+    class _DB:
+        """Mock database service that returns only OpenRouter API key."""
 
-        async def stream_chat_completion(self, user_id: str, request: Any):
-            """Stream chat completion as a generator of event dicts."""
-            from openai import OpenAI  # patched below
+        async def fetch_user_service_api_key(
+            self, user_id: str, service: str
+        ) -> str | None:
+            if service == "openai":
+                return None
+            if service == "openrouter":
+                return "or-test"
+            return None
 
-            _ = OpenAI(api_key="or-test", base_url="https://openrouter.ai/api/v1")
-            for part in ["Hello, ", "world!"]:
-                yield {"type": "delta", "content": part}
-            yield {"type": "final", "content": "Hello, world!"}
-
-    async def _provide_svc() -> Any:
-        """Return the fake chat service."""
-        return _FakeSvc()
-
-    app.dependency_overrides[dep.get_chat_service] = _provide_svc  # type: ignore[assignment]
+    db_service = _DB()
+    app.dependency_overrides[dep.get_db] = lambda: db_service  # type: ignore[assignment]
+    app.dependency_overrides[dep.get_chat_service] = lambda: _StubChatService(  # type: ignore[assignment]
+        db_service,
+        ["Hello, ", "world!"],
+    )
 
     # Capture constructed OpenAI client to assert base_url
     constructed: dict[str, Any] = {}
