@@ -12,14 +12,15 @@ from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar, cast
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import StreamingResponse
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from tripsage.api.core.dependencies import (
     ChatServiceDep,
     RequiredPrincipalDep,
+    get_db,
     get_principal_id,
 )
 from tripsage.api.limiting import limiter
@@ -103,6 +104,7 @@ async def chat_stream(
     http_request: Request,
     http_response: Response,
     principal: RequiredPrincipalDep,
+    db: Any = Depends(get_db),
 ):
     r"""Stream chat responses as Server-Sent Events (SSE).
 
@@ -114,6 +116,7 @@ async def chat_stream(
         http_request: Raw HTTP request (required by SlowAPI for headers).
         http_response: Raw HTTP response (required by SlowAPI for headers).
         principal: Current authenticated principal.
+        db: Database service to fetch user's BYOK if present.
 
     Yields:
         str: Server-Sent Events formatted strings with chat response data.
@@ -134,12 +137,14 @@ async def chat_stream(
             )
 
             # Build message list
-            mapped = [
-                HumanMessage(content=m.content)
-                for m in request.messages
-                if str(m.role) == "user"
-            ]
-            # We currently ignore assistant/tool messages for simplicity
+            mapped: list[SystemMessage | HumanMessage | AIMessage] = []
+            for m in request.messages:
+                role = str(m.role)
+                if role == "user":
+                    mapped.append(HumanMessage(content=m.content))
+                elif role == "assistant":
+                    mapped.append(AIMessage(content=m.content))
+                # tool/system roles can be added here if needed
 
             # Initialize model
             from tripsage_core.config import get_settings
@@ -149,10 +154,17 @@ async def chat_stream(
             temperature = getattr(request, "temperature", 0.7)
             max_tokens = getattr(request, "max_tokens", 4096)
 
+            # Prefer user's OpenAI BYOK if present; fallback to server default
+            user_key = await db.fetch_user_service_api_key(user_id, "openai")
+            default_openai_key = (
+                settings.openai_api_key.get_secret_value()
+                if getattr(settings, "openai_api_key", None)
+                else None
+            )
             llm = ChatOpenAI(
                 model=model_name,
                 temperature=temperature,
-                api_key=settings.openai_api_key,
+                api_key=(user_key or default_openai_key),  # type: ignore[arg-type]
                 model_kwargs={"max_tokens": max_tokens},
                 streaming=True,
             )
@@ -161,9 +173,12 @@ async def chat_stream(
             yield f"data: {json.dumps({'type': 'started', 'user': user_id})}\n\n"
 
             full = ""
-            async for chunk in llm.astream(
-                [SystemMessage(content=system_prompt), *mapped]
-            ):
+            payload: list[SystemMessage | HumanMessage | AIMessage] = [
+                SystemMessage(content=system_prompt),
+                *mapped,
+            ]
+
+            async for chunk in llm.astream(payload):
                 part = getattr(chunk, "content", None)
                 if part:
                     full += part

@@ -168,7 +168,15 @@ class MockChatOpenAI:
         """Mock sync invoke."""
         import asyncio
 
-        return asyncio.run(self.ainvoke(messages, **kwargs))
+        coro = self.ainvoke(messages, **kwargs)
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(coro)
+        raise RuntimeError(
+            "MockChatOpenAI.invoke cannot run while an event loop is active; "
+            "await ainvoke(...) instead."
+        )
 
     def with_structured_output(self, schema: Any) -> MockChatOpenAI:
         """Return self to emulate LangChain structured output wrapper."""
@@ -226,10 +234,8 @@ def create_mock_services(
         flight_service=flight_service,
         activity_service=activity_service,
         itinerary_service=cast(Any, Mock()),
-        api_key_service=cast(Any, Mock()),
         memory_service=cast(Any, Mock()),
         trip_service=cast(Any, Mock()),
-        user_service=cast(Any, Mock()),
         unified_search_service=unified_search_service,
         configuration_service=cast(Any, Mock()),
         calendar_service=cast(Any, Mock()),
@@ -241,7 +247,6 @@ def create_mock_services(
         webcrawl_service=webcrawl_service,
         cache_service=cast(Any, Mock()),
         database_service=cast(Any, Mock()),
-        key_monitoring_service=cast(Any, Mock()),
         checkpoint_service=cast(Any, Mock()),
         memory_bridge=cast(Any, Mock()),
         mcp_service=mcp_service,
