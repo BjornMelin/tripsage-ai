@@ -10,6 +10,7 @@ import pytest
 from tripsage_core.models.schemas_common.enums import CabinClass
 from tripsage_core.models.schemas_common.flight_schemas import FlightSearchRequest
 from tripsage_core.services.business.flight_service import FlightService
+from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
 def _flight_request() -> FlightSearchRequest:
@@ -37,7 +38,8 @@ def _flight_request() -> FlightSearchRequest:
 @pytest.mark.asyncio
 async def test_generate_mock_offers_creates_incremental_options() -> None:
     """Mock offer generation should create incremental price and stop variants."""
-    service = FlightService(database_service=object())
+    db_stub = cast(DatabaseService, object())
+    service = FlightService(database_service=db_stub)
     request = _flight_request()
 
     offers = await cast(Any, service)._generate_mock_offers(request)
@@ -56,7 +58,8 @@ async def test_generate_mock_offers_creates_incremental_options() -> None:
 @pytest.mark.asyncio
 async def test_score_offers_orders_by_value() -> None:
     """Offer scoring should annotate price metrics and sort by overall score."""
-    service = FlightService(database_service=object())
+    db_stub = cast(DatabaseService, object())
+    service = FlightService(database_service=db_stub)
     request = _flight_request()
     offers = await cast(Any, service)._generate_mock_offers(request)
 
