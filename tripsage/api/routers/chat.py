@@ -14,8 +14,6 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import StreamingResponse
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 
 from tripsage.api.core.dependencies import (
     ChatServiceDep,
@@ -100,94 +98,58 @@ async def chat(
 @trace_span(name="api.chat.stream")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def chat_stream(
-    request: ChatRequest,
-    http_request: Request,
-    http_response: Response,
+    body: ChatRequest,
+    request: Request,
+    response: Response,
     principal: RequiredPrincipalDep,
+    chat_service: ChatServiceDep,
     db: Any = Depends(get_db),
 ):
-    r"""Stream chat responses as Server-Sent Events (SSE).
+    r"""Stream chat completions as Server-Sent Events (SSE).
 
-    Yields JSON lines formatted as SSE: "data: {json}\n\n" where json contains
-    token deltas and a final message.
+    Emits lines in the form: "data: {json}\n\n", where json contains
+    delta chunks and a final message object.
 
     Args:
-        request: Chat request with messages and options.
-        http_request: Raw HTTP request (required by SlowAPI for headers).
-        http_response: Raw HTTP response (required by SlowAPI for headers).
-        principal: Current authenticated principal.
-        db: Database service to fetch user's BYOK if present.
+        body: Chat request payload.
+        request: Raw HTTP request (SlowAPI context).
+        response: Raw HTTP response (SlowAPI context).
+        principal: Authenticated principal.
+        chat_service: Chat service dependency.
+        db: Database service (unused; reserved for overrides).
 
     Yields:
-        str: Server-Sent Events formatted strings with chat response data.
-
-    Raises:
-        HTTPException: If streaming setup or processing fails.
+        SSE-formatted string events.
     """
 
     async def event_gen():  # type: ignore[no-redef]
         try:
             user_id = get_principal_id(principal)
-            # System prompt aligned with non-streaming endpoint
-            system_prompt = (
-                "You are TripSage AI, an expert travel planning assistant. "
-                "You help users plan trips, find flights and accommodations, "
-                "create itineraries, and provide destination recommendations. "
-                "Be helpful, informative, and personalized in your responses."
-            )
-
-            # Build message list
-            mapped: list[SystemMessage | HumanMessage | AIMessage] = []
-            for m in request.messages:
-                role = str(m.role)
-                if role == "user":
-                    mapped.append(HumanMessage(content=m.content))
-                elif role == "assistant":
-                    mapped.append(AIMessage(content=m.content))
-                # tool/system roles can be added here if needed
-
-            # Initialize model
-            from tripsage_core.config import get_settings
-
-            settings = get_settings()
-            model_name = getattr(request, "model", "gpt-5-mini")
-            temperature = getattr(request, "temperature", 0.7)
-            max_tokens = getattr(request, "max_tokens", 4096)
-
-            # Prefer user's OpenAI BYOK if present; fallback to server default
-            user_key = await db.fetch_user_service_api_key(user_id, "openai")
-            default_openai_key = (
-                settings.openai_api_key.get_secret_value()
-                if getattr(settings, "openai_api_key", None)
-                else None
-            )
-            llm = ChatOpenAI(
-                model=model_name,
-                temperature=temperature,
-                api_key=(user_key or default_openai_key),  # type: ignore[arg-type]
-                model_kwargs={"max_tokens": max_tokens},
-                streaming=True,
-            )
-
             # Send started event
             yield f"data: {json.dumps({'type': 'started', 'user': user_id})}\n\n"
+            # Delegate to ChatService streaming generator for parity
+            from collections.abc import AsyncIterator
 
-            full = ""
-            payload: list[SystemMessage | HumanMessage | AIMessage] = [
-                SystemMessage(content=system_prompt),
-                *mapped,
-            ]
-
-            async for chunk in llm.astream(payload):
-                part = getattr(chunk, "content", None)
-                if part:
-                    full += part
-                    yield f"data: {json.dumps({'type': 'delta', 'content': part})}\n\n"
-                # Keep the event loop responsive
+            gen = cast(
+                AsyncIterator[dict[str, Any]],
+                chat_service.stream_chat_completion(user_id, body),
+            )
+            async for evt in gen:
+                if evt.get("type") == "delta":
+                    payload: dict[str, str] = {
+                        "type": "delta",
+                        "content": str(evt.get("content", "")),
+                    }
+                    yield f"data: {json.dumps(payload)}\n\n"
+                elif evt.get("type") == "final":
+                    payload = {
+                        "type": "final",
+                        "content": str(evt.get("content", "")),
+                    }
+                    yield f"data: {json.dumps(payload)}\n\n"
+                else:
+                    yield f"data: {json.dumps(evt)}\n\n"
                 await asyncio.sleep(0)
-
-            # Final event
-            yield f"data: {json.dumps({'type': 'final', 'content': full})}\n\n"
             # Done marker
             yield "data: [DONE]\n\n"
         except Exception as _exc:  # pragma: no cover
