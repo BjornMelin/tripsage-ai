@@ -11,6 +11,26 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 
+def _memory_sample_list() -> list[MemorySample]:
+    """Return empty memory sample list."""
+    return []
+
+
+def _cpu_sample_list() -> list[CpuSample]:
+    """Return empty CPU sample list."""
+    return []
+
+
+def _gc_sample_list() -> list[GcSample]:
+    """Return empty GC sample list."""
+    return []
+
+
+def _float_list() -> list[float]:
+    """Return empty float list for timing metrics."""
+    return []
+
+
 @dataclass
 class MemorySample:
     """Memory sample data."""
@@ -37,12 +57,18 @@ class GcSample:
 
 
 @dataclass
-class ResourceMetrics:
-    """Resource metrics data."""
+class ResourceTimeline:
+    """Resource samples captured during a benchmark run."""
 
-    memory_samples: list[MemorySample] = field(default_factory=list)
-    cpu_samples: list[CpuSample] = field(default_factory=list)
-    gc_collections: list[GcSample] = field(default_factory=list)
+    memory_samples: list[MemorySample] = field(default_factory=_memory_sample_list)
+    cpu_samples: list[CpuSample] = field(default_factory=_cpu_sample_list)
+    gc_collections: list[GcSample] = field(default_factory=_gc_sample_list)
+
+
+@dataclass
+class ResourceSummary:
+    """Aggregated view of resource behaviour."""
+
     peak_memory_mb: float = 0.0
     memory_leaks_detected: int = 0
     avg_memory_per_operation: float = 0.0
@@ -50,8 +76,16 @@ class ResourceMetrics:
 
 
 @dataclass
-class CacheMetrics:
-    """Cache metrics data."""
+class ResourceMetrics:
+    """Resource metrics data combining samples and summary."""
+
+    timeline: ResourceTimeline = field(default_factory=ResourceTimeline)
+    summary: ResourceSummary = field(default_factory=ResourceSummary)
+
+
+@dataclass
+class CacheCounters:
+    """Cache hit/miss counters."""
 
     hits: int = 0
     misses: int = 0
@@ -59,15 +93,29 @@ class CacheMetrics:
     sets: int = 0
     deletes: int = 0
     memory_pressure_events: int = 0
-    avg_hit_time: list[float] = field(default_factory=list)
-    avg_miss_time: list[float] = field(default_factory=list)
+
+
+@dataclass
+class CacheTimings:
+    """Timing information for cache operations."""
+
+    hit_latency: list[float] = field(default_factory=_float_list)
+    miss_latency: list[float] = field(default_factory=_float_list)
+
+
+@dataclass
+class CacheMetrics:
+    """Cache metrics data."""
+
+    counters: CacheCounters = field(default_factory=CacheCounters)
+    timings: CacheTimings = field(default_factory=CacheTimings)
 
 
 @dataclass
 class QueryMetrics:
     """Query metrics data."""
 
-    response_times: list[float] = field(default_factory=list)
+    response_times: list[float] = field(default_factory=_float_list)
 
 
 class BenchmarkFixture(Protocol):

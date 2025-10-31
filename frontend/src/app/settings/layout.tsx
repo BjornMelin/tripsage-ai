@@ -5,9 +5,15 @@ import { usePathname } from "next/navigation";
 // caching handled at app level via cacheComponents; no per-file directive
 import { cn } from "@/lib/utils";
 
-const navItems = [
+interface NavItem {
+  name: string;
+  href: string;
+}
+
+const navItems: NavItem[] = [
+  { name: "General", href: "/settings" },
   { name: "API Keys", href: "/settings/api-keys" },
-  // Add more settings sections as needed
+  { name: "Security", href: "/settings/security" },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

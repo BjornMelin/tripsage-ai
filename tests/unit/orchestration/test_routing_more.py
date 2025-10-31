@@ -25,6 +25,7 @@ def _make_router() -> RouterNode:
 async def test_classification_missing_fields_fallback() -> None:
     """Fallback classification when LLM omits required routing fields."""
     router = _make_router()
+    classify_intent = cast(Any, router)._classify_intent
 
     class _LLM:
         """LLM stub."""
@@ -35,7 +36,7 @@ async def test_classification_missing_fields_fallback() -> None:
 
     router.classifier = cast(Any, _LLM())
     _unused_state = create_initial_state("u", "help")
-    out = await router._classify_intent("x", {})  # type: ignore[reportPrivateUsage]
+    out = await classify_intent("x", {}, "user-1")
     assert out["agent"] in {"general_agent", "error_recovery"}
 
 

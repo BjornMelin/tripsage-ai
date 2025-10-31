@@ -155,6 +155,18 @@ class ItineraryAgentNode(BaseAgentNode):
         if not self.agent_config:
             await self._load_configuration()
 
+        # Prefer user BYOK if available at runtime (no-op if already applied)
+        try:
+            db = self.get_optional_service("database_service")
+            user_id = str(state.get("user_id"))
+            if db and user_id:
+                key = await db.fetch_user_service_api_key(user_id, "openai")  # type: ignore[attr-defined]
+                if key and self.agent_config.get("api_key") != key:
+                    self.agent_config["api_key"] = key
+                    self.llm = self._create_llm_from_config()
+        except Exception:  # noqa: BLE001 - best-effort; preserve existing llm
+            pass
+
         user_message = state["messages"][-1]["content"] if state["messages"] else ""
 
         # Extract itinerary parameters from user message and context

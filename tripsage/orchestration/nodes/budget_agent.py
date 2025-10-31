@@ -125,11 +125,9 @@ class BudgetAgentNode(BaseAgentNode):
             from tripsage.orchestration.config import get_default_config
 
             fallback = get_default_config()
-            secret_candidate: Any = settings.openai_api_key
-            if isinstance(secret_candidate, SecretStr):
-                api_key = secret_candidate.get_secret_value()  # type: ignore[attr-defined]  # pylint: disable=no-member
-            else:
-                api_key = ""
+            api_key = ""
+            if isinstance(getattr(settings, "openai_api_key", None), SecretStr):  # type: ignore[truthy-bool]
+                api_key = settings.openai_api_key.get_secret_value()  # type: ignore[attr-defined]  # pylint: disable=no-member
             self.agent_config = {
                 "model": fallback.default_model,
                 "temperature": fallback.temperature,

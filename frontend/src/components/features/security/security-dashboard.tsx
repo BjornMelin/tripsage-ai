@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   Clock,
   Info,
-  Key,
   Lock,
   Monitor,
   RefreshCw,
@@ -27,8 +26,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useApiKeys } from "@/hooks/use-api-keys";
-
 /**
  * Represents a security-related event in the user's account.
  */
@@ -41,7 +38,7 @@ interface SecurityEvent {
     | "login_failure"
     | "logout"
     | "password_change"
-    | "api_key_created"
+    | "mfa_enabled"
     | "suspicious_activity";
   /** Human-readable description of the event. */
   description: string;
@@ -87,8 +84,8 @@ interface SecurityMetrics {
   failed_login_attempts: number;
   /** Number of currently active sessions. */
   active_sessions: number;
-  /** Total number of API keys associated with the account. */
-  api_keys_count: number;
+  /** Number of trusted devices registered. */
+  trusted_devices: number;
   /** List of connected OAuth providers. */
   oauth_connections: string[];
   /** Overall security score out of 100. */
@@ -99,12 +96,11 @@ interface SecurityMetrics {
  * Security dashboard component.
  *
  * Displays security metrics, active sessions, security events, and recommendations.
- * Integrates with API keys hook for data.
+ * Aggregates Supabase-authenticated activity metadata.
  *
  * @returns The security dashboard JSX element
  */
 export function SecurityDashboard() {
-  const apiKeysQuery = useApiKeys();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [metrics, setMetrics] = useState<SecurityMetrics | null>(null);
@@ -134,8 +130,8 @@ export function SecurityDashboard() {
           },
           {
             id: "2",
-            type: "api_key_created",
-            description: "New OpenAI API key added",
+            type: "mfa_enabled",
+            description: "Multi-factor authentication enabled",
             timestamp: "2025-06-10T14:15:00Z",
             ip_address: "192.168.1.100",
             location: "San Francisco, CA",
@@ -181,9 +177,7 @@ export function SecurityDashboard() {
           last_login: "2025-06-11T10:30:00Z",
           failed_login_attempts: 1,
           active_sessions: 2,
-          api_keys_count: Array.isArray(apiKeysQuery.data?.keys)
-            ? apiKeysQuery.data.keys.length
-            : 0,
+          trusted_devices: 2,
           oauth_connections: ["google", "github"],
           security_score: 85,
         });
@@ -196,7 +190,7 @@ export function SecurityDashboard() {
     };
 
     loadSecurityData();
-  }, [apiKeysQuery.data]);
+  }, []);
 
   /**
    * Returns CSS classes for risk level styling.
@@ -233,8 +227,8 @@ export function SecurityDashboard() {
         return <Shield className="h-4 w-4 text-blue-600" />;
       case "password_change":
         return <Lock className="h-4 w-4 text-blue-600" />;
-      case "api_key_created":
-        return <Key className="h-4 w-4 text-purple-600" />;
+      case "mfa_enabled":
+        return <Shield className="h-4 w-4 text-purple-600" />;
       case "suspicious_activity":
         return <AlertTriangle className="h-4 w-4 text-red-600" />;
       default:
@@ -358,10 +352,10 @@ export function SecurityDashboard() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <Key className="h-4 w-4 text-muted-foreground" />
+                <Smartphone className="h-4 w-4 text-muted-foreground" />
                 <div className="ml-2">
-                  <p className="text-sm font-medium">API Keys</p>
-                  <p className="text-2xl font-bold">{metrics.api_keys_count}</p>
+                  <p className="text-sm font-medium">Trusted Devices</p>
+                  <p className="text-2xl font-bold">{metrics.trusted_devices}</p>
                 </div>
               </div>
             </CardContent>
@@ -533,9 +527,9 @@ export function SecurityDashboard() {
               </div>
 
               <div className="p-3 border rounded-lg">
-                <h4 className="font-medium">Review API Keys</h4>
+                <h4 className="font-medium">Enable MFA</h4>
                 <p className="text-sm text-muted-foreground">
-                  Regularly audit and rotate your API keys.
+                  Add multi-factor authentication to protect your account.
                 </p>
               </div>
 

@@ -144,12 +144,10 @@ class AccommodationAgentNode(BaseAgentNode):
 
             # Fallback to settings-based configuration
             settings = get_settings()
-            api_key = (
+            api_key = ""
+            if getattr(settings, "openai_api_key", None):  # type: ignore[truthy-bool]
                 # pylint: disable=no-member
-                settings.openai_api_key.get_secret_value()
-                if settings.openai_api_key
-                else ""
-            )
+                api_key = settings.openai_api_key.get_secret_value()
             self.agent_config = {
                 "model": settings.openai_model,
                 "temperature": settings.model_temperature,

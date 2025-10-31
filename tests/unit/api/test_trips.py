@@ -273,14 +273,6 @@ def _override_dependencies(
         trips_router_module, "_get_user_details_by_id", _user_details, raising=False
     )
 
-    # Avoid requiring app.state.services for UserService in DI
-    def _provide_user_service() -> object:
-        """Provide a minimal placeholder user service."""
-        return object()
-
-    app.dependency_overrides[deps.get_user_service] = _provide_user_service
-
-
 # -----------------
 # Test entry points
 # -----------------
