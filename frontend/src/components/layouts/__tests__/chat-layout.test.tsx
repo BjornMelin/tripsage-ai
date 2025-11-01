@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Unit tests for ChatLayout components including ChatLayout,
+ * ChatSidebar, and AgentStatusPanel, covering layout rendering, sidebar
+ * collapse/expand functionality, agent status display, and chat navigation.
+ */
+
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
@@ -16,7 +22,7 @@ vi.mock("@/stores/agent-status-store", () => ({
 
 // Mock Next.js router
 vi.mock("next/navigation", () => ({
-  usePathname: vi.fn(() => "/dashboard/chat"),
+  usePathname: vi.fn(() => "/chat"),
 }));
 
 describe("ChatLayout", () => {
@@ -29,8 +35,8 @@ describe("ChatLayout", () => {
     });
 
     (useAgentStatusStore as any).mockReturnValue({
-      agents: [],
-      isLoading: false,
+      activeAgents: [],
+      isMonitoring: false,
     });
   });
 
@@ -143,8 +149,8 @@ describe("AgentStatusPanel", () => {
 
   it("shows no active agents message when no agents are active", () => {
     (useAgentStatusStore as any).mockReturnValue({
-      agents: [],
-      isLoading: false,
+      activeAgents: [],
+      isMonitoring: false,
     });
 
     render(<AgentStatusPanel />);
@@ -154,16 +160,17 @@ describe("AgentStatusPanel", () => {
 
   it("shows active agents when available", () => {
     (useAgentStatusStore as any).mockReturnValue({
-      agents: [
+      activeAgents: [
         {
           id: "1",
           name: "Flight Agent",
           status: "active",
-          currentTask: "Searching for flights",
+          currentTaskId: "t1",
+          tasks: [{ id: "t1", description: "Searching for flights" }],
           progress: 75,
         },
       ],
-      isLoading: false,
+      isMonitoring: false,
     });
 
     render(<AgentStatusPanel />);
@@ -181,8 +188,8 @@ describe("AgentStatusPanel", () => {
 
   it("displays loading state indicator", () => {
     (useAgentStatusStore as any).mockReturnValue({
-      agents: [],
-      isLoading: true,
+      activeAgents: [],
+      isMonitoring: true,
     });
 
     render(<AgentStatusPanel />);

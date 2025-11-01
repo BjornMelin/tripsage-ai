@@ -32,6 +32,11 @@ export default function AIDemoPage() {
   const [_isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Handle prompt submission by streaming response from AI API.
+   *
+   * @param prompt - The user input text to send to the AI service.
+   */
   const onSubmit = useCallback(async (prompt: string) => {
     setIsLoading(true);
     setOutput("");
@@ -53,12 +58,28 @@ export default function AIDemoPage() {
       }
 
       const decoder = new TextDecoder();
-      // Naive SSE reader for demo purposes
-      // Accumulates streamed chunks into `output`
+      let buffer = "";
+      // Parse UI Message Stream events and append text parts
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        setOutput((prev) => prev + decoder.decode(value));
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split("\n\n");
+        // Keep the last partial chunk in buffer
+        buffer = events.pop() ?? "";
+        for (const evt of events) {
+          const line = evt.trim();
+          if (!line.startsWith("data: ")) continue;
+          const json = line.slice(6);
+          try {
+            const payload = JSON.parse(json) as { type?: string; text?: string };
+            if (payload.type === "text" && typeof payload.text === "string") {
+              setOutput((prev) => prev + payload.text);
+            }
+          } catch {
+            // Ignore malformed chunks
+          }
+        }
       }
     } catch (err) {
       const errorMessage =

@@ -12,7 +12,6 @@ export * from "./use-api-query";
 // Modern API hooks
 export * from "./use-authenticated-api";
 export * from "./use-budget";
-export * from "./use-chat-ai";
 export * from "./use-currency";
 export * from "./use-deals";
 export * from "./use-destination-search";

@@ -26,6 +26,6 @@ export async function POST(req: Request): Promise<Response> {
     system: "You are a helpful travel planning assistant.",
   });
 
-  // Stream raw text for simple client consumption
-  return result.toTextStreamResponse();
+  // Return a UI Message Stream response suitable for AI Elements consumers
+  return result.toUIMessageStreamResponse();
 }
