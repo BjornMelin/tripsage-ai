@@ -3,12 +3,12 @@
  */
 
 import { waitFor } from "@testing-library/react";
-import type { Database } from "@/lib/supabase/database.types";
-import { useSupabaseQuery } from "@/hooks/use-supabase-query";
-import { createMockSupabaseClient } from "@/test/mock-helpers";
-import { render } from "@/test/test-utils";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useSupabaseQuery } from "@/hooks/use-supabase-query";
+import type { Database } from "@/lib/supabase/database.types";
+import { createMockSupabaseClient } from "@/test/mock-helpers";
+import { render } from "@/test/test-utils";
 
 type TripsTable = Database["public"]["Tables"]["trips"]["Row"];
 
@@ -58,7 +58,7 @@ function UsersList() {
     table: "trips",
     columns: "id",
   });
-  return <div data-testid="count">{isSuccess ? data?.length ?? 0 : "-"}</div>;
+  return <div data-testid="count">{isSuccess ? (data?.length ?? 0) : "-"}</div>;
 }
 
 describe("useSupabaseQuery", () => {

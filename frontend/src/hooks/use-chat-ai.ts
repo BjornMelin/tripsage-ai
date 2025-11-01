@@ -77,7 +77,7 @@ interface UseChatAiOptions {
  * @returns .error - Current error message if any.
  * @returns .isAuthenticated - Whether the user is authenticated.
  * @returns .isInitialized - Whether the hook has completed initialization.
-  * @returns .authError - Authentication-related error message.
+ * @returns .authError - Authentication-related error message.
  * @returns .activeToolCalls - Currently executing tool calls.
  * @returns .toolResults - Results from completed tool calls.
  * @returns .sendMessage - Function to send a new message.
@@ -434,13 +434,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
         return;
       }
     },
-    [
-      sessions,
-      addMessage,
-      updateAgentStatus,
-      isInitialized,
-      isAuthenticated,
-    ]
+    [sessions, addMessage, updateAgentStatus, isInitialized, isAuthenticated]
   );
 
   // Handle stopping the generation

@@ -11,7 +11,7 @@ Modern Next.js 16 application with React 19, TypeScript, and AI-powered travel p
 - **State Management**: Zustand 5.0.8
 - **Data Fetching**: TanStack Query 5.90.5
 - **UI Components**: Radix UI primitives with Tailwind
-- **AI Integration**: AI SDK v5.0.76 (@ai-sdk/react)
+- **AI Integration**: AI SDK v6.0.0-beta (@ai-sdk/react)
 - **Backend**: Supabase with SSR auth
 - **Testing**: Vitest 4.0.1 with Playwright E2E
 - **Linting**: Biome 2.2.7
