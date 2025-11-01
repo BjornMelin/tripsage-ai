@@ -41,6 +41,7 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 | [ADR-0020](adr-0020-rate-limiting-strategy.md) | Rate limiting strategy (Next @upstash/ratelimit + FastAPI SlowAPI) | Accepted | 2025-10-24 |
 | [ADR-0021](adr-0021-slowapi-aiolimiter-migration-historic.md) | SlowAPI + Aiolimiter Migration (Historic) | Deprecated | 2025-10-24 |
 | [ADR-0022](adr-0022-python-pytest-foundation.md) | Standardize Python Test Suite Foundations | Accepted | 2025-10-24 |
+| [ADR-0024](adr-0024-byok-routes-and-security.md) | BYOK Routes and Security (Next.js + Supabase Vault) | Accepted | 2025-11-01 |
 
 ## By Category
 
@@ -70,6 +71,7 @@ Platform
 Security
 
 - ADR-0020: Rate limiting strategy (Next @upstash/ratelimit + FastAPI SlowAPI)
+- ADR-0024: BYOK Routes and Security (Next.js + Supabase Vault)
 
 Data
 

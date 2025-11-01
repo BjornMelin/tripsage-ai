@@ -9,6 +9,7 @@
 - [Security Best Practices](#security-best-practices)
 - [Row Level Security (RLS)](#row-level-security-rls)
 - [Security Testing](#security-testing)
+- [BYOK Routes & Vault](#byok-routes--vault)
 
 ---
 
@@ -160,6 +161,20 @@ USING (
 | JWT Token | 100 | 200 |
 | API Key (Basic) | 200 | 400 |
 | API Key (Premium) | 1000 | 2000 |
+
+## BYOK Routes & Vault
+
+TripSage manages BYOK (Bring Your Own Key) via Next.js server routes backed by Supabase Vault. Secrets never traverse the client and are stored using SECURITY DEFINER RPCs with PostgREST JWT claim guards.
+
+- Design ADR: docs/adrs/adr-0024-byok-routes-and-security.md
+- Spec: docs/specs/0011-spec-byok-routes-and-security.md
+- Migrations: supabase/migrations/20251030000000_vault_api_keys.sql, supabase/migrations/20251030002000_vault_role_hardening.sql
+
+### Operational notes
+
+- Endpoints moved from FastAPI to Next.js: POST /api/keys, DELETE /api/keys/[service], POST /api/keys/validate
+- Rate limits with Upstash: CRUD 10/min, validate 20/min per user (env gated)
+- Server-only Supabase admin client uses SUPABASE_SERVICE_ROLE_KEY (never exposed to client)
 
 ## Data Protection
 
