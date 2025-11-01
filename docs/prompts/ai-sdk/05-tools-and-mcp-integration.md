@@ -31,12 +31,29 @@
   - Notes:
 - [ ] Configure MCP tools alongside local tools with unified interface
   - Notes:
-- [ ] Wire tools usage into chat stream calls
+- [ ] Wire tools usage into chat stream calls (server-side `streamText({ tools })`)
   - Notes:
 - [ ] Vitest tests: unit for tools; integration to verify interleaving
   - Notes:
 - [ ] Write ADR(s) and Spec(s) for tools/MCP registry
   - Notes:
+
+### Augmented checklist (tooling scope & UX)
+
+- [ ] Define initial domain tools:
+  - [ ] `searchUnified` (query → unified search facade; safe subset via Next.js route)
+  - [ ] `summarizeTrip` (session-id → brief outline from persisted messages)
+  - [ ] `getWeather` (location → weather service; cache results)
+- [ ] Zod parameters and explicit error mapping (do not leak stack traces)
+- [ ] Timeouts and idempotency guards; tool-level rate limiting where applicable
+- [ ] UI rendering of `tool`, `tool-call`, `tool-call-result` parts (already supported)
+- [ ] Integration test: prompt triggers tool-call; assert tool-call-result appears in UI stream
+
+### MCP integration (optional)
+
+- [ ] Configure MCP endpoints and credentials (server-only)
+- [ ] Bridge MCP tools into the same registry with compatible signatures
+- [ ] Tests: mock MCP responses; ensure failures produce structured `tool-error` parts
 
 ## Working instructions (mandatory)
 

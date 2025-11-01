@@ -33,6 +33,13 @@
 - [ ] Write ADR(s) and Spec(s) for attribution header policy
   - Notes:
 
+### Augmented checklist (provider registry + BYOK)
+
+- [ ] Provider registry resolves provider+model per-user (Supabase SSR)
+- [ ] Apply OpenRouter base URL and attribution headers only in server routes
+- [ ] Fallback to default provider when user’s BYOK missing; record provider id in `messageMetadata`
+- [ ] Tests: mock SSR and verify header injection and fallback behavior
+
 ## Working instructions (mandatory)
 
 - Check off tasks only after Vitest/biome/tsc are clean.

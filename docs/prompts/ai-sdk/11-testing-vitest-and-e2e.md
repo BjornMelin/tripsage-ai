@@ -36,6 +36,7 @@
   - Notes:
 - [ ] Integration: chat SSE ordering + usage
   - Notes:
+  - Include auth (401), rate-limit (429), and tool-call interleave
 - [ ] Integration: /api/keys validate (provider mocked)
   - Notes:
 - [ ] Integration: memory read/write via chat
@@ -44,6 +45,12 @@
   - Notes:
 - [ ] Write ADR(s) and Spec(s) for testing strategy and coverage
   - Notes:
+
+### Augmented checklist (attachments, resume, persistence)
+
+- [ ] Route tests for attachments mapping (image parts) and validation errors
+- [ ] Resume behavior (id reuse) happy path test
+- [ ] Sessions/messages CRUD tests (create/list/get/delete; message insert)
 
 ## Working instructions (mandatory)
 
