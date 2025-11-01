@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Unit tests for ErrorBoundary components, covering error catching,
+ * fallback rendering, recovery mechanisms, and different error UI variants
+ * including minimal, page-level, and standard error boundaries.
+ */
+
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -66,12 +72,7 @@ describe("ErrorBoundary", () => {
   });
 
   it("shows error details in development mode", () => {
-    const originalEnv = process.env.NODE_ENV;
-    Object.defineProperty(process.env, "NODE_ENV", {
-      value: "development",
-      writable: true,
-      configurable: true,
-    });
+    vi.stubEnv("NODE_ENV", "development");
 
     render(
       <ErrorBoundary>
@@ -81,11 +82,7 @@ describe("ErrorBoundary", () => {
 
     expect(screen.getByText("Test error message")).toBeInTheDocument();
 
-    Object.defineProperty(process.env, "NODE_ENV", {
-      value: originalEnv,
-      writable: true,
-      configurable: true,
-    });
+    vi.unstubAllEnvs();
   });
 
   it("resets error state when try again is clicked", () => {
@@ -126,31 +123,40 @@ describe("ErrorBoundary", () => {
     expect(screen.getByText("Custom error UI")).toBeInTheDocument();
   });
 
-  it("displays error ID for tracking", () => {
+  it("displays error ID for tracking when digest present", () => {
+    const DigestErrorThrower = () => {
+      const e = new Error("Digest error") as Error & { digest?: string };
+      e.digest = "error_12345_abcdef";
+      throw e;
+    };
+
     render(
       <ErrorBoundary>
-        <ErrorThrowingComponent />
+        <DigestErrorThrower />
       </ErrorBoundary>
     );
 
     expect(screen.getByText(/error id:/i)).toBeInTheDocument();
-    expect(screen.getByText(/error_\d+_\w+/)).toBeInTheDocument();
+    expect(screen.getByText(/error_12345_abcdef/)).toBeInTheDocument();
   });
 });
 
 describe("MinimalErrorFallback", () => {
-  it("renders minimal error message", () => {
+  it("renders application error header", () => {
     const error = new Error("Test error");
     render(<MinimalErrorFallback error={error} />);
 
-    expect(screen.getByText("Error")).toBeInTheDocument();
+    expect(screen.getByText("Application Error")).toBeInTheDocument();
   });
 
-  it("renders with custom error", () => {
+  it("renders restart button when reset provided", () => {
+    const reset = vi.fn();
     const error = new Error("Custom error");
-    render(<MinimalErrorFallback error={error} />);
+    render(<MinimalErrorFallback error={error} reset={reset} />);
 
-    expect(screen.getByText("Error")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /restart application/i })
+    ).toBeInTheDocument();
   });
 });
 
@@ -169,12 +175,21 @@ describe("ErrorFallback", () => {
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
   });
 
-  it("calls reset when try again is clicked", () => {
+  it("calls retry when Try Again is clicked", () => {
+    const retry = vi.fn();
+    const error = new Error("Test error");
+    render(<ErrorFallback error={error} retry={retry} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(retry).toHaveBeenCalled();
+  });
+
+  it("calls reset when Reset is clicked", () => {
     const reset = vi.fn();
     const error = new Error("Test error");
     render(<ErrorFallback error={error} reset={reset} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    fireEvent.click(screen.getByRole("button", { name: /reset/i }));
     expect(reset).toHaveBeenCalled();
   });
 
@@ -187,29 +202,22 @@ describe("ErrorFallback", () => {
 });
 
 describe("PageErrorFallback", () => {
-  it("renders with default message", () => {
+  it("renders page error UI", () => {
     const error = new Error("Test error");
     render(<PageErrorFallback error={error} />);
 
-    expect(screen.getByText("Test error")).toBeInTheDocument();
+    expect(screen.getByText("Page Error")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /go to dashboard/i })
+    ).toBeInTheDocument();
   });
 
-  it("renders with custom error", () => {
-    const error = new Error("Custom error message");
-    render(<PageErrorFallback error={error} />);
-
-    expect(screen.getByText("Custom error message")).toBeInTheDocument();
-  });
-
-  it("calls reset when reset button is clicked", () => {
+  it("calls reset when Try Again is clicked", () => {
     const reset = vi.fn();
     const error = new Error("Test error");
     render(<PageErrorFallback error={error} reset={reset} />);
 
-    const button = screen.queryByRole("button", { name: /try again/i });
-    if (button) {
-      fireEvent.click(button);
-      expect(reset).toHaveBeenCalled();
-    }
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(reset).toHaveBeenCalled();
   });
 });
