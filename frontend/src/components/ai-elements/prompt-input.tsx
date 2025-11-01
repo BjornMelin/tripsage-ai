@@ -97,11 +97,11 @@ export type TextInputContext = {
 export type PromptInputControllerProps = {
   textInput: TextInputContext;
   attachments: AttachmentsContext;
-  /** INTERNAL: Allows PromptInput to register its file textInput + "open" callback */
+  /** INTERNAL: Allows PromptInput to register its file input + "open" callback */
   __registerFileInput: (
     ref: RefObject<HTMLInputElement | null>,
     open: () => void
-  ) => void;
+  ) => () => void; // Returns cleanup function to unregister
 };
 
 const PromptInputController = createContext<PromptInputControllerProps | null>(null);
@@ -151,6 +151,10 @@ export type PromptInputProviderProps = PropsWithChildren<{
 /**
  * Optional global provider that lifts PromptInput state outside of PromptInput.
  * If you don't use it, PromptInput stays fully self-managed.
+ *
+ * Supports multiple PromptInput components within the same provider. When
+ * openFileDialog() is called externally (e.g., via PromptInputActionAddAttachments),
+ * it opens the most recently registered input.
  */
 export function PromptInputProvider({
   initialInput: initialTextInput = "",
@@ -163,7 +167,10 @@ export function PromptInputProvider({
   // ----- attachments state (global when wrapped)
   const [attachements, setAttachements] = useState<(FileUIPart & { id: string })[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const openRef = useRef<() => void>(() => {});
+  // Store multiple registered inputs: Map<id, { ref, open }>
+  const registeredInputsRef = useRef<
+    Map<symbol, { ref: RefObject<HTMLInputElement | null>; open: () => void }>
+  >(new Map());
 
   const add = useCallback((files: File[] | FileList) => {
     const incoming = Array.from(files);
@@ -198,7 +205,23 @@ export function PromptInputProvider({
   }, []);
 
   const openFileDialog = useCallback(() => {
-    openRef.current?.();
+    // Open the most recently registered input (last in Map iteration order)
+    const entries = Array.from(registeredInputsRef.current.entries());
+    if (entries.length > 0) {
+      const [, { open }] = entries[entries.length - 1];
+      open();
+    }
+  }, []);
+
+  // Helper to update fileInputRef to point to the most recently registered input
+  const updateFileInputRef = useCallback(() => {
+    const entries = Array.from(registeredInputsRef.current.entries());
+    if (entries.length > 0) {
+      const [, { ref }] = entries[entries.length - 1];
+      fileInputRef.current = ref.current;
+    } else {
+      fileInputRef.current = null;
+    }
   }, []);
 
   const attachments = useMemo<AttachmentsContext>(
@@ -215,10 +238,17 @@ export function PromptInputProvider({
 
   const __registerFileInput = useCallback(
     (ref: RefObject<HTMLInputElement | null>, open: () => void) => {
-      fileInputRef.current = ref.current;
-      openRef.current = open;
+      const id = Symbol("PromptInput");
+      registeredInputsRef.current.set(id, { ref, open });
+      // Update fileInputRef immediately for backwards compatibility
+      updateFileInputRef();
+      // Return cleanup function to unregister
+      return () => {
+        registeredInputsRef.current.delete(id);
+        updateFileInputRef();
+      };
     },
-    []
+    [updateFileInputRef]
   );
 
   const controller = useMemo<PromptInputControllerProps>(
@@ -583,7 +613,11 @@ export const PromptInput = ({
   // Let provider know about our hidden file input so external menus can call openFileDialog()
   useEffect(() => {
     if (!usingProvider) return;
-    controller.__registerFileInput(inputRef, () => inputRef.current?.click());
+    const unregister = controller.__registerFileInput(
+      inputRef,
+      () => inputRef.current?.click()
+    );
+    return unregister;
   }, [usingProvider, controller]);
 
   // Note: File input cannot be programmatically set for security reasons
