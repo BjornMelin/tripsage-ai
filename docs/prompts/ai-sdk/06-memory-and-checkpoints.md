@@ -1,14 +1,14 @@
 # Prompt: Memory & Checkpoints (Supabase-first; optional LangGraph JS)
 
-Executive summary
+## Executive summary
 
 - Goal: Port session/message persistence and context assembly to Supabase JS in Next.js. If advanced multi-step orchestration is required, adopt LangGraph JS with Supabase-backed persistence; otherwise rely on AI SDK agents.
 
-Custom persona
+## Custom persona
 
 - You are “AI SDK Migrator (Memory)”. You keep persistence simple, secure, and cost-aware.
 
-Docs & references
+## Docs & references
 
 - LangGraph JS overview/persistence (optional): <https://docs.langchain.com/oss/javascript/langgraph/overview> and /persistence
 - AI SDK agents (workflows/loop control): <https://v6.ai-sdk.dev/docs/agents>
@@ -17,7 +17,7 @@ Docs & references
 - zen.planner; zen.thinkdeep + zen.analyze; zen.consensus for whether to adopt LangGraph JS (≥ 9.0/10)
 - zen.secaudit for data handling; zen.challenge assumptions; zen.codereview before completion
 
-Plan (overview)
+## Plan (overview)
 
 1) `frontend/lib/memory/index.ts`:
    - addMessage, getMessages(sessionId, limit), getUserContext, sanitize content, select by token budget
@@ -25,7 +25,7 @@ Plan (overview)
 3) Optional: integrate LangGraph JS for checkpoints if workflows require it
 4) Vitest tests: memory read/write; token-window selection
 
-Checklist (mark off; add notes under each)
+## Checklist (mark off; add notes under each)
 
 - [ ] Implement `frontend/lib/memory/index.ts` (addMessage/getMessages/getUserContext)
   - Notes:
@@ -40,13 +40,13 @@ Checklist (mark off; add notes under each)
 - [ ] Write ADR(s) and Spec(s) for memory/checkpointing strategy
   - Notes:
 
-Working instructions (mandatory)
+## Working instructions (mandatory)
 
 - Check off tasks only after Vitest/biome/tsc are clean.
 - Add “Notes” for impl details, issues, and debt; address or log.
 - Write ADR(s) in `docs/adrs/` for persistence/design choices (Supabase vs LangGraph JS); Spec(s) in `docs/specs/` for data schemas, APIs, and migration.
 
-Process flow (required)
+## Process flow (required)
 
 1) Research: exa.web_search_exa → exa.crawling_exa → firecrawl_scrape → exa.get_code_context_exa for AI SDK agents and LangGraph JS persistence.
 2) Plan: zen.planner; define atomic tasks.
@@ -59,22 +59,22 @@ Process flow (required)
 9) Review: zen.codereview; fix; rerun checks.
 10) Finalize docs: update ADR/Spec with deltas.
 
-Legacy mapping (delete later)
+## Legacy mapping (delete later)
 
 - `tripsage_core/services/business/chat_service.py` memory methods
 - Orchestrator checkpoint service in Python if replaced by LangGraph JS
 
-Testing requirements
+## Testing requirements (Vitest)
 
 - Unit tests for memory CRUD; integration to confirm chat routes store/load as expected
 
-Final Notes & Next Steps (compile from task notes)
+## Final Notes & Next Steps (compile from task notes)
 
 - Summary of changes and decisions:
 - Outstanding items / tracked tech debt:
 - Follow-up prompts or tasks:
 
-Additional context & assumptions
+## Additional context & assumptions
 
 - Suggested tables/columns (adjust to existing schema):
   - `chat_sessions(id, user_id, title, trip_id, created_at, updated_at, metadata jsonb)`
@@ -82,11 +82,11 @@ Additional context & assumptions
 - RLS: ensure `auth.uid() = user_id` policies remain enforced.
 - Selection by token window: compute from newest to oldest until budget is met; always include current user message.
 
-File & module targets
+## File & module targets
 
 - `frontend/lib/memory/index.ts` (CRUD + selectors)
 - Optionally `frontend/lib/orchestration/langgraph.ts` if LangGraph JS is adopted
 
-Testing & mocking guidelines
+## Testing & mocking guidelines
 
 - Seed data in test DB or mock Supabase client; assert that message windows respect token budgets and role ordering.

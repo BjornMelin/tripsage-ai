@@ -1,0 +1,195 @@
+/**
+ * @fileoverview BYOK validate route. Checks if a provided API key is valid for a given service.
+ * Route: POST /api/keys/validate
+ * Never persists the key.
+ */
+"use cache";
+export const dynamic = "force-dynamic";
+
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { buildRateLimitKey } from "@/lib/next/route-helpers";
+import { createServerSupabase } from "@/lib/supabase/server";
+
+// Environment variables
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const RATELIMIT_PREFIX = "ratelimit:keys-validate";
+
+// Create rate limit instance lazily to make testing easier
+const getRatelimitInstance = () => {
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) {
+    return undefined;
+  }
+
+  return new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.slidingWindow(20, "1 m"),
+    analytics: true,
+    prefix: RATELIMIT_PREFIX,
+  });
+};
+
+type ProviderConfig = {
+  url: string;
+  buildHeaders: (apiKey: string) => Record<string, string>;
+};
+
+const PROVIDERS: Record<string, ProviderConfig> = {
+  openai: {
+    url: "https://api.openai.com/v1/models",
+    buildHeaders: (key) => ({ Authorization: `Bearer ${key}` }),
+  },
+  openrouter: {
+    url: "https://openrouter.ai/api/v1/models",
+    buildHeaders: (key) => ({ Authorization: `Bearer ${key}` }),
+  },
+  anthropic: {
+    url: "https://api.anthropic.com/v1/models",
+    buildHeaders: (key) => ({
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+    }),
+  },
+  xai: {
+    url: "https://api.x.ai/v1/models",
+    buildHeaders: (key) => ({ Authorization: `Bearer ${key}` }),
+  },
+};
+
+type ValidateResult = { is_valid: boolean; reason?: string };
+
+/**
+ * Generic validator using provider configuration map.
+ *
+ * @param service Provider identifier (openai|openrouter|anthropic|xai).
+ * @param apiKey The plaintext API key to check.
+ * @returns Validation result with is_valid and optional reason.
+ */
+async function validateProviderKey(
+  service: string,
+  apiKey: string
+): Promise<ValidateResult> {
+  const cfg = PROVIDERS[service.trim().toLowerCase()];
+  if (!cfg) return { is_valid: false, reason: `Invalid service: ${service}` };
+
+  try {
+    const res = await fetch(cfg.url, {
+      method: "GET",
+      headers: cfg.buildHeaders(apiKey),
+    });
+    if (res.status === 200) return { is_valid: true };
+    if ([401, 403].includes(res.status))
+      return { is_valid: false, reason: "Unauthorized" };
+    return { is_valid: false, reason: `HTTP_${res.status}` };
+  } catch {
+    return { is_valid: false, reason: "NETWORK_ERROR" };
+  }
+}
+
+/**
+ * Require rate limiting for the request.
+ *
+ * @param req Next.js request object.
+ * @returns NextResponse with 429 status if rate limit exceeded, otherwise null.
+ */
+async function requireRateLimit(req: NextRequest): Promise<NextResponse | null> {
+  const ratelimitInstance = getRatelimitInstance();
+  if (!ratelimitInstance) return null;
+  const { success, limit, remaining, reset } = await ratelimitInstance.limit(
+    buildRateLimitKey(req)
+  );
+  if (!success) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded", code: "RATE_LIMIT" },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": String(limit),
+          "X-RateLimit-Remaining": String(remaining),
+          "X-RateLimit-Reset": String(reset),
+        },
+      }
+    );
+  }
+  return null;
+}
+
+/**
+ * Require authenticated user.
+ *
+ * @returns NextResponse with 401 status if user not authenticated, otherwise user ID.
+ */
+async function requireUser(): Promise<NextResponse | string> {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return user.id;
+}
+
+/**
+ * Handle POST /api/keys/validate to verify a user-supplied API key.
+ *
+ * Orchestrates rate limiting, authentication, and provider validation.
+ *
+ * @param req Next.js request containing JSON body with { service, api_key }.
+ * @returns 200 with validation result; 400/401/429/500 on error.
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const rateLimitResponse = await requireRateLimit(req);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    let service: string | undefined;
+    let api_key: string | undefined;
+    try {
+      const body = await req.json();
+      service = body.service;
+      api_key = body.api_key;
+    } catch (parseError) {
+      const message =
+        parseError instanceof Error ? parseError.message : "Unknown JSON parse error";
+      console.error("/api/keys/validate POST JSON parse error:", { message });
+      return NextResponse.json(
+        { error: "Malformed JSON in request body", code: "BAD_REQUEST" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !service ||
+      !api_key ||
+      typeof service !== "string" ||
+      typeof api_key !== "string"
+    ) {
+      return NextResponse.json(
+        { error: "Invalid request body", code: "BAD_REQUEST" },
+        { status: 400 }
+      );
+    }
+
+    const userResponse = await requireUser();
+    if (userResponse instanceof NextResponse) {
+      return userResponse;
+    }
+
+    const result = await validateProviderKey(service, api_key);
+    return NextResponse.json(result, { status: 200 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("/api/keys/validate POST error:", { message });
+    return NextResponse.json(
+      { error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
+  }
+}

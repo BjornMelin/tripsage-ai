@@ -1,14 +1,14 @@
 # Prompt: OpenRouter Attribution Headers & Model Routing
 
-Executive summary
+## Executive summary
 
 - Goal: Ensure requests routed to OpenRouter include `http-referer` and `x-title` headers (or via Gateway); verify model mapping; test presence of headers.
 
-Custom persona
+## Custom persona
 
 - You are “AI SDK Migrator (OpenRouter)”. You ensure leaderboard attribution and proper base URL usage.
 
-Docs & references
+## Docs & references
 
 - OpenRouter provider (community): <https://v6.ai-sdk.dev/providers/community-providers/openrouter>
 - OpenRouter attribution: <https://openrouter.ai/docs/app-attribution>
@@ -16,13 +16,13 @@ Docs & references
 - zen.planner; zen.analyze; zen.consensus for attribution policy enforcement (≥ 9.0/10)
 - zen.codereview
 
-Plan (overview)
+## Plan (overview)
 
 1) Update `provider registry` to attach attribution headers when provider is OpenRouter
 2) Add config fields in settings for `referer` and `title`
 3) Vitest tests: assert headers present when OpenRouter selected
 
-Checklist (mark off; add notes under each)
+## Checklist (mark off; add notes under each)
 
 - [ ] Attach `http-referer` and `x-title` in provider registry for OpenRouter
   - Notes:
@@ -33,7 +33,7 @@ Checklist (mark off; add notes under each)
 - [ ] Write ADR(s) and Spec(s) for attribution header policy
   - Notes:
 
-Working instructions (mandatory)
+## Working instructions (mandatory)
 
 - Check off tasks only after Vitest/biome/tsc are clean.
 - Add “Notes” per task; address or log follow-ups.
@@ -56,4 +56,5 @@ Process flow (required)
 8) Challenge: zen.challenge assumptions.
 9) Review: zen.codereview; fix; rerun checks.
 10) Finalize docs: update ADR/Spec with deltas.
+
 - Write ADR(s) under `docs/adrs/` for final attribution policy and rationale; author Spec(s) under `docs/specs/` detailing exact header behavior and configuration.

@@ -1,14 +1,14 @@
 # Prompt: Observability (Telemetry, Spans, Counters) + Redaction + Rate Limits
 
-Executive summary
+## Executive summary
 
 - Goal: Add structured telemetry across BYOK RPCs, provider calls, and tools; ensure redaction of `api_key`; enforce rate limits on key endpoints.
 
-Custom persona
+## Custom persona
 
 - You are “AI SDK Migrator (Observability)”. You make debugging seamless and secure.
 
-Docs & references
+## Docs & references
 
 - AI SDK telemetry docs (Core) and Next.js instrumentation
 - Vercel AI Gateway app attribution (optional): <https://vercel.com/docs/ai-gateway/app-attribution>
@@ -18,7 +18,7 @@ Docs & references
 - zen.consensus for rate-limit and telemetry schema decisions (≥ 9.0/10)
 - zen.challenge; zen.codereview
 
-Plan (overview)
+## Plan (overview)
 
 1) Telemetry module `frontend/lib/observability/index.ts` exporting span helpers
 2) Wrap BYOK RPCs and chat provider calls with spans; counters for errors/usage
@@ -26,7 +26,7 @@ Plan (overview)
 4) Add rate limits: strict for `/api/keys*` routes; moderate for `/api/chat*`
 5) Vitest tests: unit for redaction utils; integration smoke for rate limit headers
 
-Checklist (mark off; add notes under each)
+## Checklist (mark off; add notes under each)
 
 - [ ] Implement `frontend/lib/observability/index.ts` with span/counter helpers
   - Notes:
@@ -41,13 +41,13 @@ Checklist (mark off; add notes under each)
 - [ ] Write ADR(s) and Spec(s) for telemetry schema and policies
   - Notes:
 
-Working instructions (mandatory)
+## Working instructions (mandatory)
 
 - Check off tasks only after Vitest/biome/tsc are clean.
 - Add “Notes” per task; address or log follow-ups.
 - Write ADR(s) in `docs/adrs/` for observability/telemetry decisions (span names, counters, PII policy), and Spec(s) in `docs/specs/` describing schema and implementation details.
 
-Process flow (required)
+## Process flow (required)
 
 1) Research: exa.web_search_exa → exa.crawling_exa → firecrawl_scrape → exa.get_code_context_exa for telemetry patterns and redaction best practices.
 2) Plan: zen.planner; define atomic tasks.
@@ -60,21 +60,21 @@ Process flow (required)
 9) Review: zen.codereview; fix; rerun checks.
 10) Finalize docs: update ADR/Spec with deltas.
 
-Legacy mapping (delete later)
+## Legacy mapping (delete later)
 
 - Python logging/observability for these features (triplicate code)
 
-Testing requirements
+## Testing requirements (Vitest)
 
 - Ensure no sensitive fields appear in logs
 
-Final Notes & Next Steps (compile from task notes)
+## Final Notes & Next Steps (compile from task notes)
 
 - Summary of changes and decisions:
 - Outstanding items / tracked tech debt:
 - Follow-up prompts or tasks:
 
-Additional context & assumptions
+## Additional context & assumptions
 
 - Span naming conventions:
   - `svc.db.vault.rpc` for Vault RPC calls
@@ -85,12 +85,12 @@ Additional context & assumptions
   - `svc.op.usage_tokens_total` (prompt/completion)
 - Rate-limit libraries: e.g., `@upstash/ratelimit` or similar; attach headers for RL status.
 
-File & module targets
+## File & module targets
 
 - `frontend/lib/observability/index.ts` (spans/counters)
 - `frontend/lib/logging/redact.ts` (scrub api_key and similar)
 - Rate-limit middleware under `frontend/middleware.ts` or per-route wrappers
 
-Security checks
+## Security checks
 
 - Verify redaction is applied in error paths and logs; run zen.secaudit to confirm no leakage.

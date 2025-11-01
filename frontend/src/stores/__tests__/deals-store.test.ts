@@ -1,13 +1,19 @@
+/**
+ * @fileoverview Unit tests for the deals store functionality.
+ * Tests deal and alert management, statistics calculation, and store state operations.
+ */
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DealType } from "@/types/deals";
 import { useDealsStore } from "../deals-store";
 
 // Mock current timestamp for consistent testing
+/** Mock timestamp for consistent date-based testing */
 const mockTimestamp = "2025-05-20T12:00:00.000Z";
 vi.spyOn(Date.prototype, "toISOString").mockReturnValue(mockTimestamp);
 
 // Sample deal data
+/** Sample flight deal for testing purposes */
 const sampleDeal = {
   id: "deal1",
   type: "flight" as DealType,
@@ -31,6 +37,7 @@ const sampleDeal = {
 };
 
 // Sample alert data
+/** Sample deal alert for testing purposes */
 const sampleAlert = {
   id: "alert1",
   userId: "user1",
@@ -463,8 +470,13 @@ describe("Deals Store", () => {
       expect(stats.totalCount).toBe(3);
       expect(stats.byType).toEqual({
         flight: 1,
+        activity: 0,
         accommodation: 1,
+        transportation: 0,
         package: 1,
+        error_fare: 0,
+        flash_sale: 0,
+        promotion: 0,
       });
       expect(stats.byDestination).toEqual({
         Paris: 2,
