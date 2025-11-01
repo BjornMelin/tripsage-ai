@@ -1,64 +1,69 @@
-# TripSage Unified API
+# TripSage API
 
 A FastAPI implementation that serves both frontend applications and AI agents for the TripSage travel planning platform.
 
 ## Overview
 
-The TripSage API provides a unified interface that supports:
+The TripSage API provides endpoints for:
 
 - **Frontend Applications** - Next.js 15 web application with real-time features
-- **AI Agents** - LangGraph-based travel planning agents with rich context
+- **AI Agents** - LangGraph-based travel planning agents with context
 - **External Integrations** - Third-party services and travel platforms
-- **WebSocket Communication** - Real-time updates and collaboration
+**Real-time Communication** - Supabase Realtime private channels with RLS authorization (no custom WebSocket endpoints).
 
 ### Core Capabilities
 
-- **User Authentication & Management** - JWT and API key authentication
-- **BYOK (Bring Your Own Key)** - Secure user-provided API key management
 - **Trip Planning & Management** - Travel planning workflow
 - **Flight Search & Booking** - Multi-provider flight search and comparison
 - **Accommodation Search** - Hotel and alternative lodging search
 - **Destination Research** - AI-powered destination insights and recommendations
-- **Itinerary Building** - Intelligent trip optimization and scheduling
+- **Itinerary Building** - Trip optimization and scheduling
 - **Memory & Context** - Conversation memory and user preference learning
-- **Real-time Communication** - WebSocket support for live updates
+**Real-time Communication** - Supabase Realtime (no custom WebSocket endpoints)
 
-## Unified Architecture
+## Architecture
 
 The API implements a dual-consumer architecture serving both frontend and agent clients:
 
-```text
-┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   AI Agents     │
-│   (Next.js)     │    │   (LangGraph)   │
-└─────────┬───────┘    └─────────┬───────┘
-          │                      │
-          └──────────┬───────────┘
-                     │
-           ┌─────────▼─────────┐
-           │   Unified API     │
-           │   (FastAPI)       │
-           └─────────┬─────────┘
-                     │
-           ┌─────────▼─────────┐
-           │   TripSage Core   │
-           │  (Shared Layer)   │
-           └─────────┬─────────┘
-                     │
-           ┌─────────▼─────────┐
-           │ External Services │
-           │ & Infrastructure  │
-           └───────────────────┘
+```mermaid
+graph TD
+    A[Frontend<br/>Next.js] --> C[API<br/>FastAPI]
+    B[AI Agents<br/>LangGraph] --> C
+    C --> D[TripSage Core<br/>Shared Layer]
+    D --> E[External Services<br/>& Infrastructure]
+
+    subgraph "Consumers"
+        A
+        B
+    end
+
+    subgraph "API Layer"
+        C
+    end
+
+    subgraph "Core Layer"
+        D
+    end
+
+    subgraph "Infrastructure"
+        E
+    end
+
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#fff3e0
+    style D fill:#e8f5e8
+    style E fill:#fafafa
 ```
 
-### Consumer-Aware Design
+### Consumer-Specific Design
 
 The API automatically adapts responses based on the consumer type:
 
 #### Frontend Consumers
 
 - **User-friendly error messages** - Simplified, actionable error descriptions
-- **Rich response metadata** - UI state information and display hints
+- **Response metadata** - UI state information and display hints
 - **Rate limiting** - Standard user-based limits
 - **Sanitized data** - Secure, filtered data appropriate for frontend display
 
@@ -67,7 +72,7 @@ The API automatically adapts responses based on the consumer type:
 - **Detailed error context** - Technical error information for agent decision-making
 - **Raw data access** - Unfiltered data for AI processing
 - **Higher rate limits** - Increased limits for agent operations
-- **Tool integration data** - Rich context for agent tool calling
+- **Tool integration data** - Context for agent tool calling
 
 ## Directory Structure
 
@@ -78,12 +83,10 @@ tripsage/api/
 │   ├── dependencies.py     # Dependency injection and service factories
 │   └── openapi.py         # OpenAPI documentation and consumer tagging
 ├── middlewares/            # Cross-cutting concerns
-│   ├── authentication.py  # JWT and API key authentication
 │   ├── logging.py         # Structured logging and observability
-│   └── rate_limiting.py   # Consumer-aware rate limiting
+│   └── rate_limiting.py   # Rate limiting by consumer type
 ├── routers/               # API endpoints organized by domain
 │   ├── auth.py           # Authentication and authorization
-│   ├── keys.py           # BYOK API key management
 │   ├── chat.py           # Chat and conversation endpoints
 │   ├── trips.py          # Trip planning and management
 │   ├── flights.py        # Flight search and booking
@@ -92,7 +95,7 @@ tripsage/api/
 │   ├── itineraries.py    # Itinerary building and optimization
 │   ├── memory.py         # Memory and context management
 │   ├── attachments.py    # File upload and processing
-│   ├── websocket.py      # Real-time communication
+│   ├── realtime.md       # Realtime (Supabase) concepts and usage
 │   └── health.py         # Health checks and monitoring
 ├── schemas/              # API-specific compositions and re-exports
 │   ├── requests/         # Input validation schemas (API-only)
@@ -116,7 +119,7 @@ tripsage/api/
 
 ### Multi-Modal Authentication
 
-The API supports multiple authentication methods optimized for different consumers:
+The API supports multiple authentication methods for different consumer types:
 
 #### JWT Authentication (Primary for Frontend)
 
@@ -142,7 +145,6 @@ Authorization: Bearer <jwt_token>
 #### API Key Authentication (Primary for Agents)
 
 ```bash
-# Create API key
 POST /api/v1/keys
 Authorization: Bearer <jwt_token>
 
@@ -152,15 +154,11 @@ X-API-Key: <api_key>
 
 ### BYOK (Bring Your Own Key) System
 
-Secure user-provided API key management:
-
 ```bash
-# Store encrypted user API key
 POST /api/v1/keys
 {
   "service": "duffel",
   "api_key": "user_provided_key",
-  "description": "My Duffel API key"
 }
 
 # API automatically uses user's key when available
@@ -170,7 +168,6 @@ GET /api/v1/flights/search
 
 **Security Features:**
 
-- **AES-256 encryption** for stored API keys
 - **User-specific salt** for additional security
 - **Key validation** before storage
 - **Usage monitoring** and rotation support
@@ -200,11 +197,6 @@ GET /api/v1/flights/search
 - `DELETE /api/v1/auth/logout` - Logout and token invalidation
 
 #### API Key Management
-
-- `GET /api/v1/keys` - List user's API keys
-- `POST /api/v1/keys` - Create/store new API key
-- `PUT /api/v1/keys/{key_id}` - Update API key
-- `DELETE /api/v1/keys/{key_id}` - Delete API key
 
 ### Travel Planning Endpoints
 
@@ -266,13 +258,9 @@ GET /api/v1/flights/search
 
 ### Real-time Communication
 
-#### WebSocket Endpoints
+TripSage uses Supabase Realtime with private channels and RLS authorization. There are no custom WebSocket endpoints exposed by the FastAPI app; clients authenticate with Supabase and join authorized channels directly.
 
-- `WS /api/v1/ws/chat/{session_id}` - Real-time chat communication
-- `WS /api/v1/ws/trip/{trip_id}` - Trip planning collaboration
-- `WS /api/v1/ws/status` - Agent status and progress updates
-
-## Consumer-Specific Features
+## Consumer-Specific Behavior
 
 ### Frontend Optimization
 
@@ -311,7 +299,7 @@ GET /api/v1/flights/search
 
 ### Agent Optimization
 
-**Rich Context Responses:**
+**Context Responses:**
 
 ```json
 {
@@ -344,14 +332,13 @@ GET /api/v1/flights/search
 
 ### Caching Strategy
 
-- **Multi-tier caching** with DragonflyDB (25x performance improvement)
-- **Intelligent TTL** based on data volatility
-- **Consumer-specific cache keys** for optimized retrieval
+- **Multi-tier caching** with Upstash Redis
+- **TTL-based expiration** based on data volatility
+- **Cache keys by consumer type** for retrieval
 
 ### Rate Limiting
 
-- **Consumer-aware limits** - Higher limits for agents
-- **Principal-based tracking** - Per-user and per-API key limits
+- **Limits by consumer type** - Higher limits for agents
 - **Graceful degradation** - Progressive limiting with warnings
 
 ### Database Optimization
@@ -414,7 +401,8 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-supabase-key
 
 # Caching
-DRAGONFLY_URL=redis://localhost:6379
+UPSTASH_REDIS_REST_URL=your-upstash-url
+UPSTASH_REDIS_REST_TOKEN=your-upstash-token
 
 # Authentication
 JWT_SECRET_KEY=your-secret-key
@@ -422,7 +410,7 @@ JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # External APIs (Optional - use BYOK instead)
-DUFFEL_API_TOKEN=your-duffel-token
+DUFFEL_ACCESS_TOKEN=your-duffel-access-token
 GOOGLE_MAPS_API_KEY=your-google-maps-key
 OPENWEATHERMAP_API_KEY=your-weather-key
 ```
@@ -475,4 +463,4 @@ async def search_flights(criteria: FlightSearchRequest):
 - **External API availability**
 - **Memory usage and performance**
 
-The TripSage Unified API provides a robust, scalable foundation for both human users through the frontend and AI agents through direct integration, enabling sophisticated travel planning workflows with real-time collaboration and intelligent automation.
+The TripSage API serves both frontend applications and AI agents, providing endpoints for travel planning, authentication, and real-time communication.

@@ -1,4 +1,10 @@
-import { type VariantProps, cva } from "class-variance-authority";
+/**
+ * @fileoverview Button component with variant styling. When `asChild` is true,
+ * styles are merged into the single child element (e.g., Next.js `Link`) to
+ * avoid additional wrappers and invalid nested anchors.
+ */
+
+import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -34,12 +40,27 @@ const buttonVariants = cva(
   }
 );
 
+/**
+ * Variant class generator for Button.
+ * @returns A class name string for the given `variant` and `size`.
+ */
+
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
+  /**
+   * When true, renders the child element directly with button styles
+   * merged into it. Intended for components like `Link` that should be
+   * styled like a button without additional wrappers.
+   */
   asChild?: boolean;
 }
 
+/**
+ * Button component.
+ * @param props Component props including `variant`, `size`, and `asChild`.
+ * @returns A styled `<button>` or the child element when `asChild` is true.
+ */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     if (asChild) {
@@ -47,12 +68,18 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         <React.Fragment>
           {React.Children.map(props.children, (child) => {
             if (React.isValidElement(child)) {
+              // Avoid forwarding `children` from Button props into the cloned
+              // child. Passing `children` would re-nest the child element and
+              // can create invalid nested anchors when used with `Link`.
+              // Only forward non-children props we want to apply to the child.
+              const { children: _ignored, ...restProps } = props;
               return React.cloneElement(
                 child as React.ReactElement<{ className?: string }>,
                 {
-                  ...props,
+                  ...restProps,
                   className: cn(
                     buttonVariants({ variant, size }),
+                    className,
                     (child.props as { className?: string }).className
                   ),
                 }

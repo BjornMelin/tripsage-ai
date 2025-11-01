@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from tripsage.tools.models import (
     ConversationMessage,
@@ -23,23 +23,22 @@ from tripsage.tools.models import (
     UserPreferences,
 )
 from tripsage_core.observability.otel import record_histogram, trace_span
-from tripsage_core.services.business.memory_service import (
-    ConversationMemoryRequest,
-    MemorySearchRequest,
-    MemoryService,
-    PreferencesUpdateRequest,
-    UserContextResponse,
-)
 from tripsage_core.utils.logging_utils import get_logger
+
+
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+    from tripsage_core.services.business.memory_service import (
+        MemoryService as _MemoryService,
+    )
 
 
 logger = get_logger(__name__)
 
 
-_memory_service_singleton: MemoryService | None = None
+_memory_service_singleton: _MemoryService | None = None
 
 
-async def get_memory_service() -> MemoryService:
+async def get_memory_service() -> _MemoryService:
     """Return a connected MemoryService instance (singleton).
 
     Returns:
@@ -50,6 +49,9 @@ async def get_memory_service() -> MemoryService:
     """
     global _memory_service_singleton  # pylint: disable=global-statement
     if _memory_service_singleton is None:
+        # Deferred import to avoid triggering heavy model imports during module load
+        from tripsage_core.services.business.memory_service import MemoryService
+
         svc = MemoryService()
         await svc.connect()
         _memory_service_singleton = svc
@@ -97,6 +99,10 @@ async def add_conversation_memory(
     if metadata:
         meta.update(metadata)
 
+    from tripsage_core.services.business.memory_service import (
+        ConversationMemoryRequest,
+    )
+
     req = ConversationMemoryRequest(
         messages=message_dicts, session_id=session_id, trip_id=None, metadata=meta
     )
@@ -124,6 +130,8 @@ async def search_user_memories(search_query: MemorySearchQuery) -> list[dict[str
         List of memory records as dictionaries (JSON-safe).
     """
     svc = await get_memory_service()
+    from tripsage_core.services.business.memory_service import MemorySearchRequest
+
     req = MemorySearchRequest(
         query=search_query.query,
         limit=search_query.limit,
@@ -152,6 +160,8 @@ async def get_user_context(user_id: str) -> dict[str, Any]:
         raise ValueError("user_id cannot be empty")
 
     svc = await get_memory_service()
+    from tripsage_core.services.business.memory_service import UserContextResponse
+
     ctx: UserContextResponse = await svc.get_user_context(user_id)
     return {"status": "success", "context": ctx.model_dump(exclude_none=True)}
 
@@ -171,6 +181,10 @@ async def update_user_preferences(preferences: UserPreferences) -> dict[str, Any
     pref_dict = preferences.model_dump(
         exclude_none=True, exclude={"user_id"}, by_alias=True
     )
+    from tripsage_core.services.business.memory_service import (
+        PreferencesUpdateRequest,
+    )
+
     req = PreferencesUpdateRequest(preferences=pref_dict, category=None)
     await svc.update_user_preferences(preferences.user_id, req)
     return {"status": "success", "preferences_updated": len(pref_dict)}
@@ -207,6 +221,10 @@ async def save_session_summary(session_summary: SessionSummary) -> dict[str, Any
         msgs.append({"role": "user", "content": f"Decisions Made: {joined}"})
 
     svc = await get_memory_service()
+    from tripsage_core.services.business.memory_service import (
+        ConversationMemoryRequest,
+    )
+
     req = ConversationMemoryRequest(
         messages=msgs,
         session_id=session_summary.session_id,

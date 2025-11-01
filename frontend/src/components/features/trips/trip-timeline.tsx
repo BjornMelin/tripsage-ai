@@ -1,5 +1,8 @@
 "use client";
 
+import { differenceInDays, format, parseISO } from "date-fns";
+import { Calendar, Car, Clock, Edit2, MapPin, Plane, Plus, Train } from "lucide-react";
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,9 +14,6 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { Destination, Trip } from "@/stores/trip-store";
-import { differenceInDays, format, parseISO } from "date-fns";
-import { Calendar, Car, Clock, Edit2, MapPin, Plane, Plus, Train } from "lucide-react";
-import { useMemo } from "react";
 
 interface TripTimelineProps {
   trip: Trip;
@@ -31,7 +31,7 @@ interface TimelineEvent {
   description?: string;
   location: string;
   destination: Destination;
-  icon: React.ReactNode;
+  iconType: "flight" | "car" | "train" | "calendar" | "location";
 }
 
 export function TripTimeline({
@@ -50,16 +50,14 @@ export function TripTimeline({
 
       // Arrival event
       if (startDate) {
-        const transportIcon =
-          destination.transportation?.type === "flight" ? (
-            <Plane className="h-4 w-4" />
-          ) : destination.transportation?.type === "car" ? (
-            <Car className="h-4 w-4" />
-          ) : destination.transportation?.type === "train" ? (
-            <Train className="h-4 w-4" />
-          ) : (
-            <MapPin className="h-4 w-4" />
-          );
+        const transportType =
+          destination.transportation?.type === "flight"
+            ? "flight"
+            : destination.transportation?.type === "car"
+              ? "car"
+              : destination.transportation?.type === "train"
+                ? "train"
+                : "location";
 
         events.push({
           id: `arrival-${destination.id}`,
@@ -69,7 +67,7 @@ export function TripTimeline({
           description: destination.transportation?.details,
           location: `${destination.name}, ${destination.country}`,
           destination,
-          icon: transportIcon,
+          iconType: transportType,
         });
       }
 
@@ -93,7 +91,7 @@ export function TripTimeline({
             title: activity,
             location: `${destination.name}, ${destination.country}`,
             destination,
-            icon: <Calendar className="h-4 w-4" />,
+            iconType: "calendar",
           });
         });
       }
@@ -111,7 +109,7 @@ export function TripTimeline({
             : undefined,
           location: `${destination.name}, ${destination.country}`,
           destination,
-          icon: <Plane className="h-4 w-4" />,
+          iconType: "flight",
         });
       }
     });
@@ -139,6 +137,23 @@ export function TripTimeline({
         return "border-purple-200 bg-purple-50";
       default:
         return "border-gray-200 bg-gray-50";
+    }
+  };
+
+  const getEventIcon = (iconType: TimelineEvent["iconType"]) => {
+    switch (iconType) {
+      case "flight":
+        return <Plane className="h-4 w-4" />;
+      case "car":
+        return <Car className="h-4 w-4" />;
+      case "train":
+        return <Train className="h-4 w-4" />;
+      case "calendar":
+        return <Calendar className="h-4 w-4" />;
+      case "location":
+        return <MapPin className="h-4 w-4" />;
+      default:
+        return <MapPin className="h-4 w-4" />;
     }
   };
 
@@ -202,7 +217,7 @@ export function TripTimeline({
                   ${getEventColor(event.type)}
                 `}
                 >
-                  {event.icon}
+                  {getEventIcon(event.iconType)}
                 </div>
 
                 {/* Event content */}

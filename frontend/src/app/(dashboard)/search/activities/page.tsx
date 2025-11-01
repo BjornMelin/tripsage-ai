@@ -1,5 +1,7 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { ActivityCard } from "@/components/features/search/activity-card";
 import { ActivitySearchForm } from "@/components/features/search/activity-search-form";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -9,8 +11,6 @@ import {
 } from "@/hooks/use-activity-search";
 import { useSearchStore } from "@/stores/search-store";
 import type { Activity } from "@/types/search";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
 
 // URL search parameters are handled inline
 

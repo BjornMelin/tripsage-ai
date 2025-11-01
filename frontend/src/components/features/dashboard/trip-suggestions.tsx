@@ -1,5 +1,7 @@
 "use client";
 
+import { Brain, Clock, MapPin, Sparkles, Star, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,8 +17,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useMemoryContext, useMemoryInsights } from "@/hooks/use-memory";
 import { type TripSuggestion, useTripSuggestions } from "@/hooks/use-trips";
 import { useBudgetStore } from "@/stores/budget-store";
-import { Brain, Clock, MapPin, Sparkles, Star, TrendingUp } from "lucide-react";
-import Link from "next/link";
 
 interface TripSuggestionsProps {
   limit?: number;

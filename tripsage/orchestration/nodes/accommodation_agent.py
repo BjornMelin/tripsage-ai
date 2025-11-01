@@ -4,13 +4,16 @@ This module implements the accommodation search and booking agent as a LangGraph
 using modern LangGraph @tool patterns for simplicity and maintainability.
 """
 
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools.tools import get_tools_for_agent
@@ -47,6 +50,23 @@ class AccommodationSearchParameters(BaseModel):
     rating_min: float | None = Field(default=None, ge=0, le=5)
 
 
+def _empty_tool_list() -> list[BaseTool]:
+    """Return a typed empty tool list."""
+    return []
+
+
+@dataclass(slots=True)
+class _AgentRuntimeState:
+    """Runtime state for accommodation agent."""
+
+    llm: ChatOpenAI | None = None
+    llm_with_tools: ChatOpenAI | None = None
+    parameter_extractor: StructuredExtractor[AccommodationSearchParameters] | None = (
+        None
+    )
+    tools: list[BaseTool] = field(default_factory=_empty_tool_list)
+
+
 class AccommodationAgentNode(BaseAgentNode):
     """Accommodation search and booking agent node.
 
@@ -54,20 +74,22 @@ class AccommodationAgentNode(BaseAgentNode):
     and accommodation information using service-based integration.
     """
 
-    def __init__(self, service_registry):
-        """Initialize the accommodation agent node."""
-        settings = get_settings()
-        # type: ignore # pylint: disable=no-member
-        api_key_str = settings.openai_api_key.get_secret_value()
-        self.llm = ChatOpenAI(
-            model=settings.openai_model,
-            temperature=settings.model_temperature,
-            api_key=api_key_str,  # type: ignore
-        )
-        self._parameter_extractor = StructuredExtractor(
-            self.llm, AccommodationSearchParameters, logger=logger
-        )
-        super().__init__("accommodation_agent", service_registry)
+    def __init__(self, services: AppServiceContainer, **config_overrides: Any):
+        """Initialize the accommodation agent node with dynamic configuration.
+
+        Args:
+            services: Application service container for dependency injection
+            **config_overrides: Runtime configuration overrides (e.g., temperature=0.7)
+        """
+        # Store overrides for async config loading
+        self.config_overrides: dict[str, Any] = dict(config_overrides)
+        self.agent_config: dict[str, Any] = {}
+        self._runtime = _AgentRuntimeState()
+
+        super().__init__("accommodation_agent", services)
+
+        # Get configuration service for database-backed config
+        self.config_service: Any = self.get_service("configuration_service")
         self.accommodation_service: AccommodationService = self.get_service(
             "accommodation_service"
         )
@@ -76,16 +98,72 @@ class AccommodationAgentNode(BaseAgentNode):
     def _initialize_tools(self) -> None:
         """Initialize accommodation-specific tools using simple tool catalog."""
         # Get tools for accommodation agent using simple catalog
-        self.available_tools = get_tools_for_agent("accommodation_agent")
+        self._runtime.tools = list(get_tools_for_agent("accommodation_agent"))
 
-        # Bind tools to LLM for direct use
-        self.llm_with_tools = self.llm.bind_tools(self.available_tools)
+        # Bind tools to LLM for direct use (if LLM is available)
+        if self._runtime.llm:
+            runtime_llm = cast(Any, self._runtime.llm)
+            self._runtime.llm_with_tools = cast(
+                ChatOpenAI, runtime_llm.bind_tools(self._runtime.tools)
+            )
 
         logger.info(
-            "Initialized accommodation agent with %s tools", len(self.available_tools)
+            "Initialized accommodation agent with %s tools",
+            len(self._runtime.tools),
         )
 
-        logger.info("Initialized accommodation agent with service-based architecture")
+    async def _load_configuration(self) -> None:
+        """Load agent configuration from database with fallback to settings."""
+        try:
+            # Get configuration from database with runtime overrides
+            cfg = await self.config_service.get_agent_config(
+                "accommodation_agent", **self.config_overrides
+            )
+            if not cfg:
+                raise RuntimeError("Accommodation agent configuration is missing")
+            self.agent_config = cfg
+
+            # Initialize LLM with loaded configuration
+            self._runtime.llm = self._create_llm_from_config()
+            self._runtime.parameter_extractor = StructuredExtractor(
+                self._runtime.llm, AccommodationSearchParameters, logger=logger
+            )
+            if self._runtime.tools:
+                runtime_llm = cast(Any, self._runtime.llm)
+                self._runtime.llm_with_tools = cast(
+                    ChatOpenAI, runtime_llm.bind_tools(self._runtime.tools)
+                )
+
+            logger.info(
+                "Loaded accommodation agent configuration from database: temp=%s",
+                self.agent_config["temperature"],
+            )
+
+        except Exception:
+            logger.exception("Failed to load database configuration, using fallback")
+
+            # Fallback to settings-based configuration
+            settings = get_settings()
+            api_key = ""
+            if getattr(settings, "openai_api_key", None):  # type: ignore[truthy-bool]
+                # pylint: disable=no-member
+                api_key = settings.openai_api_key.get_secret_value()
+            self.agent_config = {
+                "model": settings.openai_model,
+                "temperature": settings.model_temperature,
+                "api_key": api_key,
+                "top_p": 1.0,
+            }
+
+            self._runtime.llm = self._create_llm_from_config()
+            self._runtime.parameter_extractor = StructuredExtractor(
+                self._runtime.llm, AccommodationSearchParameters, logger=logger
+            )
+            if self._runtime.tools:
+                runtime_llm = cast(Any, self._runtime.llm)
+                self._runtime.llm_with_tools = cast(
+                    ChatOpenAI, runtime_llm.bind_tools(self._runtime.tools)
+                )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
         """Process accommodation-related requests.
@@ -96,6 +174,10 @@ class AccommodationAgentNode(BaseAgentNode):
         Returns:
             Updated state with accommodation search results and response
         """
+        # Ensure configuration is loaded before processing
+        if not self.agent_config:
+            await self._load_configuration()
+
         user_message = state["messages"][-1]["content"] if state["messages"] else ""
 
         # Extract accommodation search parameters from user message and context
@@ -180,7 +262,13 @@ class AccommodationAgentNode(BaseAgentNode):
         """
 
         try:
-            result = await self._parameter_extractor.extract_from_prompts(
+            extractor = self._runtime.parameter_extractor
+            if extractor is None:
+                raise RuntimeError(
+                    "Accommodation parameter extractor is not initialised"
+                )
+
+            result = await extractor.extract_from_prompts(
                 system_prompt=(
                     "You are an accommodation parameter extraction assistant."
                 ),
@@ -196,7 +284,11 @@ class AccommodationAgentNode(BaseAgentNode):
 
         amenities = params.get("amenities")
         if isinstance(amenities, list):
-            params["amenities"] = [str(item) for item in amenities if item]
+            vals: list[object] = cast(list[object], amenities)
+            amenities_list: list[str] = [
+                str(item) for item in vals if isinstance(item, (str, int, float))
+            ]
+            params["amenities"] = amenities_list
 
         return params
 
@@ -364,7 +456,8 @@ class AccommodationAgentNode(BaseAgentNode):
         """
 
         try:
-            if self.llm is None:
+            llm = self._runtime.llm
+            if llm is None:
                 raise RuntimeError("Accommodation LLM is not initialized")
 
             messages = [
@@ -374,9 +467,16 @@ class AccommodationAgentNode(BaseAgentNode):
                 HumanMessage(content=response_prompt),
             ]
 
-            response = await self.llm.ainvoke(messages)
-            raw_content = response.content
-            content = raw_content if isinstance(raw_content, str) else str(raw_content)
+            response = await llm.ainvoke(messages)
+            raw_resp: Any = cast(Any, response)
+            if hasattr(raw_resp, "content"):
+                raw_content: Any = raw_resp.content
+            else:
+                raw_content = raw_resp
+            if isinstance(raw_content, str):
+                content: str = raw_content
+            else:
+                content = str(raw_content)
 
         except Exception:
             logger.exception("Error generating accommodation response")

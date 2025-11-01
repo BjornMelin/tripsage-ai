@@ -1,17 +1,5 @@
 "use client";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import {
-  useMemoryInsights,
-  useMemoryStats,
-  // useUpdatePreferences, // Future implementation
-} from "@/hooks/use-memory";
-import { cn } from "@/lib/utils";
-import type { PersonalizationInsightsProps } from "@/types/memory";
 // import type { UserPreferences } from "@/types/memory"; // Future implementation
 import {
   BarChart3,
@@ -29,6 +17,18 @@ import {
   User,
 } from "lucide-react";
 import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import {
+  useMemoryInsights,
+  useMemoryStats,
+  // useUpdatePreferences, // Future implementation
+} from "@/hooks/use-memory";
+import { cn } from "@/lib/utils";
+import type { PersonalizationInsightsProps } from "@/types/memory";
 
 export function PersonalizationInsights({
   userId,

@@ -195,7 +195,7 @@ export const useUIStore = create<UIState>()(
           const { theme } = get();
           if (theme === "system") {
             if (typeof window === "undefined") return false;
-            
+
             try {
               const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
               return mediaQuery?.matches ?? false;

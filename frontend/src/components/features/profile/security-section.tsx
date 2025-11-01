@@ -1,5 +1,14 @@
+/**
+ * @fileoverview Security section: password change, 2FA toggle, active sessions
+ * management, and basic recommendations. UI only; actions are stubbed.
+ */
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Clock, Eye, EyeOff, Key, Shield, Smartphone } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,11 +42,6 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Clock, Eye, EyeOff, Key, Shield, Smartphone } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 const passwordChangeSchema = z
   .object({
@@ -67,6 +71,10 @@ interface SecurityDevice {
   current: boolean;
 }
 
+/**
+ * Security settings panel component.
+ * @returns A section for authentication and session management.
+ */
 export function SecuritySection() {
   const { profile: _profile } = useUserProfileStore();
   const { toast } = useToast();
@@ -131,6 +139,7 @@ export function SecuritySection() {
     }
   };
 
+  // TODO: Integrate real 2FA API and persist state.
   const toggle2FA = async (enabled: boolean) => {
     try {
       // Simulate API call
@@ -152,6 +161,7 @@ export function SecuritySection() {
     }
   };
 
+  // TODO: Revoke device via API and invalidate session list.
   const revokeDevice = async (_deviceId: string) => {
     try {
       // Simulate API call

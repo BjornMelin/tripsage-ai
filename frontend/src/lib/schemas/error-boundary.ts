@@ -40,7 +40,7 @@ export const routeErrorPropsSchema = z.object({
   error: z.instanceof(Error),
   reset: z.function(),
   pathname: z.string().optional(),
-  searchParams: z.record(z.string()).optional(),
+  searchParams: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**

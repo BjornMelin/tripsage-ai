@@ -1,51 +1,54 @@
-"""Shared fixtures for orchestration unit tests."""
+"""Shared orchestration test fixtures.
+
+Provides a lightweight state factory and LLM mock aliases for unit tests.
+"""
 
 from __future__ import annotations
 
-from types import SimpleNamespace
+from collections.abc import Callable, Generator
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
-from pydantic import SecretStr
+
+from tripsage.orchestration.state import TravelPlanningState, create_initial_state
 
 
-@pytest.fixture(autouse=True)
-def mock_orchestration_settings(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
-    """Provide deterministic settings for orchestration nodes."""
+@pytest.fixture
+def state_factory() -> Callable[..., TravelPlanningState]:
+    """Factory to create TravelPlanningState variants easily.
 
-    def agent_config_factory(agent: str, **overrides: Any) -> dict[str, Any]:
-        base_config: dict[str, Any] = {
-            "model": "gpt-4o-mini",
-            "temperature": 0.1,
-            "top_p": 0.9,
-            "api_key": SecretStr("test-key"),
-            "max_tokens": 512,
-        }
-        if agent == "itinerary_agent":
-            base_config["max_tokens"] = 768
-        base_config.update(overrides)
-        return base_config
+    Usage:
+        state = state_factory(
+            user_id="u1",
+            message="hi",
+            current_agent="router",
+            error_count=2,
+        )
+    """
 
-    settings = MagicMock()
-    settings.get_agent_config.side_effect = agent_config_factory
-    settings.openai_api_key = SecretStr("test-key")
-    settings.openai_model = "gpt-4o-mini"
-    settings.model_temperature = 0.1
-    settings.airbnb = SimpleNamespace(enabled=True)
+    def _make(
+        user_id: str = "user-1",
+        message: str = "hello",
+        current_agent: str | None = None,
+        error_count: int | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> TravelPlanningState:
+        """Make state."""
+        st = create_initial_state(user_id=user_id, message=message)
+        if current_agent is not None:
+            st["current_agent"] = current_agent
+        if error_count is not None:
+            st["error_info"]["error_count"] = int(error_count)
+            st["error_info"]["error_history"] = [{}] * int(error_count)
+        if extra:
+            for k, v in extra.items():
+                st[k] = v  # type: ignore[reportGeneralTypeIssues]
+        return st
 
-    def _get_settings() -> MagicMock:
-        return settings
+    return _make
 
-    targets = [
-        "tripsage_core.config.get_settings",
-        "tripsage.orchestration.nodes.flight_agent.get_settings",
-        "tripsage.orchestration.nodes.accommodation_agent.get_settings",
-        "tripsage.orchestration.nodes.budget_agent.get_settings",
-        "tripsage.orchestration.nodes.destination_research_agent.get_settings",
-        "tripsage.orchestration.nodes.itinerary_agent.get_settings",
-    ]
-    for target in targets:
-        monkeypatch.setattr(target, _get_settings)
 
-    return settings
+@pytest.fixture
+def cleanup_env() -> Generator[None]:
+    """No-op fixture placeholder for future environment cleanup if needed."""
+    yield

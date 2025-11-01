@@ -1,6 +1,5 @@
 /**
- * React Hook Form integration with Zod validation
- * Provides type-safe form handling with error management
+ * @fileoverview Form helpers that integrate Zod validation with React Hook Form.
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -98,13 +97,13 @@ export function useZodForm<T extends FieldValues>(
     onValidationError,
     onSubmitSuccess,
     onSubmitError,
-    enableAsyncValidation = false,
+    enableAsyncValidation: _enableAsyncValidation = false,
     ...formOptions
   } = options;
 
   // Initialize React Hook Form with Zod resolver
   const form = useForm<T>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema as any),
     mode: options.validateMode || "onChange",
     reValidateMode: options.reValidateMode || "onChange",
     ...formOptions,

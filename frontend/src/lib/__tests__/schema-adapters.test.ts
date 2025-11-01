@@ -1,10 +1,10 @@
-import type { Destination, Trip } from "@/stores/trip-store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Destination, Trip } from "@/stores/trip-store";
 import {
   type ApiDestination,
   type ApiTrip,
-  FrontendSchemaAdapter,
   calculateTripDuration,
+  FrontendSchemaAdapter,
   formatTripDate,
 } from "../schema-adapters";
 

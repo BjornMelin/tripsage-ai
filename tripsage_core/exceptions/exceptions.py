@@ -7,6 +7,7 @@ from across the application into a single, consistent system.
 
 import functools
 import inspect
+import logging
 import traceback
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar, cast
@@ -214,6 +215,7 @@ class CoreValidationError(CoreTripSageError):
         self,
         message: str = "Validation error",
         code: str = "VALIDATION_ERROR",
+        *,
         details: dict[str, Any] | ErrorDetails | None = None,
         field: str | None = None,
         value: Any | None = None,
@@ -381,6 +383,7 @@ class CoreDatabaseError(CoreTripSageError):
         self,
         message: str = "Database operation failed",
         code: str = "DATABASE_ERROR",
+        *,
         details: dict[str, Any] | ErrorDetails | None = None,
         operation: str | None = None,
         table: str | None = None,
@@ -417,6 +420,7 @@ class CoreExternalAPIError(CoreTripSageError):
         self,
         message: str = "External API call failed",
         code: str = "EXTERNAL_API_ERROR",
+        *,
         details: dict[str, Any] | ErrorDetails | None = None,
         api_service: str | None = None,
         api_status_code: int | None = None,
@@ -459,6 +463,7 @@ class CoreAgentError(CoreServiceError):
         self,
         message: str = "Agent operation failed",
         code: str = "AGENT_ERROR",
+        *,
         details: dict[str, Any] | ErrorDetails | None = None,
         agent_type: str | None = None,
         operation: str | None = None,
@@ -499,16 +504,15 @@ def format_exception(exc: Exception) -> dict[str, Any]:
     """
     if isinstance(exc, CoreTripSageError):
         return exc.to_dict()
-    else:
-        return {
-            "error": exc.__class__.__name__,
-            "message": str(exc),
-            "code": "SYSTEM_ERROR",
-            "status_code": 500,
-            "details": {
-                "traceback": traceback.format_exc(),
-            },
-        }
+    return {
+        "error": exc.__class__.__name__,
+        "message": str(exc),
+        "code": "SYSTEM_ERROR",
+        "status_code": 500,
+        "details": {
+            "traceback": traceback.format_exc(),
+        },
+    }
 
 
 def create_error_response(
@@ -532,7 +536,11 @@ def create_error_response(
 
 
 def safe_execute[T, R](
-    func: Callable[..., T], *args: Any, fallback: R = None, logger=None, **kwargs: Any
+    func: Callable[..., T],
+    *args: Any,
+    fallback: R = None,
+    logger: logging.Logger | None = None,
+    **kwargs: Any,
 ) -> T | R:
     """Execute a function with error handling and optional fallback.
 
@@ -556,7 +564,7 @@ def safe_execute[T, R](
 
 def with_error_handling(
     fallback: Any = None,
-    logger=None,
+    logger: logging.Logger | None = None,
     re_raise: bool = False,
 ):
     """Decorator to add error handling to functions.

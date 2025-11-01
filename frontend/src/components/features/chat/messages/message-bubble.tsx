@@ -1,14 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import type { Message } from "@/types/chat";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -25,6 +16,27 @@ import { useCallback, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import type { Message } from "@/types/chat";
+
+function partsToText(parts?: { type: string; text?: string }[]): string | undefined {
+  if (!parts) return undefined;
+  try {
+    return parts
+      .filter((p) => p && p.type === "text" && typeof p.text === "string")
+      .map((p) => p.text as string)
+      .join("");
+  } catch {
+    return undefined;
+  }
+}
 
 interface MessageBubbleProps {
   message: Message;
@@ -51,7 +63,7 @@ export function MessageBubble({
     if (isUser) {
       return {
         className: cn(
-          "bg-gradient-to-br from-primary to-primary/90",
+          "bg-linear-to-br from-primary to-primary/90",
           "text-primary-foreground shadow-lg",
           "border border-primary/20"
         ),
@@ -64,7 +76,7 @@ export function MessageBubble({
     if (isAssistant) {
       return {
         className: cn(
-          "bg-gradient-to-br from-card to-card/95",
+          "bg-linear-to-br from-card to-card/95",
           "border border-muted shadow-sm",
           "hover:shadow-md transition-shadow duration-300"
         ),
@@ -77,7 +89,7 @@ export function MessageBubble({
     if (isSystem) {
       return {
         className: cn(
-          "bg-gradient-to-br from-yellow-500/10 to-orange-500/5",
+          "bg-linear-to-br from-yellow-500/10 to-orange-500/5",
           "border border-yellow-500/30 shadow-sm"
         ),
         icon: Shield,
@@ -89,7 +101,7 @@ export function MessageBubble({
     if (isTool) {
       return {
         className: cn(
-          "bg-gradient-to-br from-purple-500/10 to-pink-500/5",
+          "bg-linear-to-br from-purple-500/10 to-pink-500/5",
           "border border-purple-500/30 shadow-sm"
         ),
         icon: Activity,
@@ -108,10 +120,9 @@ export function MessageBubble({
 
   // Handle copy content
   const handleCopyContent = useCallback(() => {
-    if (message.content) {
-      navigator.clipboard.writeText(message.content);
-    }
-  }, [message.content]);
+    const text = partsToText((message as any).parts) ?? message.content;
+    if (text) navigator.clipboard.writeText(text);
+  }, [message.content, message]);
 
   // markdown components with syntax highlighting
   const markdownComponents = useMemo(
@@ -156,7 +167,7 @@ export function MessageBubble({
                 style={theme === "dark" ? oneDark : oneLight}
                 language={language}
                 PreTag="div"
-                className="rounded-t-none !mt-0 !bg-background"
+                className="rounded-t-none mt-0! !bg-background"
                 showLineNumbers
                 wrapLines
                 {...props}
@@ -410,7 +421,7 @@ export function MessageBubble({
       <motion.div
         ref={contentRef}
         className={cn(
-          "prose prose-sm max-w-none break-words",
+          "prose prose-sm max-w-none wrap-break-word",
           isUser ? "prose-invert" : "dark:prose-invert",
           // Customize prose colors based on role
           !isUser && "prose-headings:text-foreground prose-p:text-foreground",

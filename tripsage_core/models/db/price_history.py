@@ -4,8 +4,9 @@ This module provides the PriceHistory model for tracking
 price changes over time for various entities.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
+from typing import Any
 
 from pydantic import Field, field_validator
 
@@ -51,21 +52,25 @@ class PriceHistory(TripSageModel):
     @classmethod
     def validate_currency(cls, v: str) -> str:
         """Validate currency code format."""
-        if not isinstance(v, str) or len(v) != 3 or not v.isupper():
+        if len(v) != 3 or not v.isupper():
             raise ValueError("Currency code must be a 3-letter code")
         return v
 
     @property
     def is_recent(self) -> bool:
         """Check if the price was recorded recently (within 24 hours)."""
-        from datetime import datetime as datetime_type, timedelta
-
-        return datetime_type.now() - self.timestamp < timedelta(hours=24)
+        price_timestamp = self._timestamp_as_datetime()
+        current_timestamp = (
+            datetime.now(tz=price_timestamp.tzinfo)
+            if price_timestamp.tzinfo is not None
+            else datetime.now()
+        )
+        return current_timestamp - price_timestamp < timedelta(hours=24)
 
     @property
     def formatted_timestamp(self) -> str:
         """Get the formatted timestamp for display."""
-        return self.timestamp.strftime("%Y-%m-%d %H:%M")
+        return self._timestamp_as_datetime().strftime("%Y-%m-%d %H:%M")
 
     @property
     def formatted_price(self) -> str:
@@ -110,3 +115,10 @@ class PriceHistory(TripSageModel):
     def is_activity_price(self) -> bool:
         """Check if this is an activity price."""
         return self.entity_type == EntityType.ACTIVITY
+
+    def _timestamp_as_datetime(self) -> datetime:
+        """Return the timestamp as a datetime instance, validating the payload."""
+        timestamp_any: Any | None = self.__dict__.get("timestamp")
+        if not isinstance(timestamp_any, datetime):
+            raise TypeError("PriceHistory.timestamp must be a datetime instance")
+        return timestamp_any

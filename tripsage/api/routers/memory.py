@@ -7,7 +7,6 @@ conversation history, and travel preferences using the unified memory service.
 import logging
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
-from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import (
     MemoryServiceDep,
@@ -15,56 +14,51 @@ from tripsage.api.core.dependencies import (
     get_principal_id,
 )
 from tripsage.api.limiting import limiter
+from tripsage.api.schemas.memory import (
+    ConversationMemoryRequest,
+    MemorySearchResponse,
+    SearchMemoryRequest,
+    UpdatePreferencesRequest,
+)
+from tripsage_core.services.business.memory_service import (
+    UserContextResponse,
+)
 
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["memory"])
 
 
-class ConversationMemoryRequest(BaseModel):
-    """Request model for adding conversation memory."""
-
-    messages: list[dict[str, str]] = Field(..., description="Conversation messages")
-    session_id: str | None = Field(None, description="Session ID")
-    context_type: str = Field("travel_planning", description="Context type")
-
-
-class SearchMemoryRequest(BaseModel):
-    """Request model for searching user memories."""
-
-    query: str = Field(..., description="Search query")
-    limit: int = Field(10, description="Maximum results to return")
-
-
-class UpdatePreferencesRequest(BaseModel):
-    """Request model for updating user preferences."""
-
-    preferences: dict = Field(..., description="User preferences to update")
-
-
-@router.post("/conversation")
+@router.post("/conversation", response_model=dict[str, object])
 @limiter.limit("30/minute")
 async def add_conversation_memory(
-    request: ConversationMemoryRequest,
-    http_request: Request,
-    http_response: Response,
+    payload: ConversationMemoryRequest,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
-):
+    response: Response,
+    *,
+    request: Request,
+) -> dict[str, object]:
     """Add conversation messages to user memory.
 
     Args:
-        request: Conversation memory request
-        http_request: Raw HTTP request (required by SlowAPI for headers)
-        http_response: Raw HTTP response (required by SlowAPI for headers)
+        payload: Conversation memory request
         principal: Current authenticated principal
         memory_service: Unified memory service
+        response: Response object for SlowAPI header injection
+        request: Raw HTTP request (required by SlowAPI limiter)
 
     Returns:
         Operation result
     """
     try:
         user_id = get_principal_id(principal)
+        _ = response  # SlowAPI mutates response headers post-call.
+        logger.debug(
+            "Adding conversation memory for user %s via %s",
+            user_id,
+            request.url.path,
+        )
 
         # Import the core ConversationMemoryRequest model
         from tripsage_core.services.business.memory_service import (
@@ -73,11 +67,11 @@ async def add_conversation_memory(
 
         # Convert API request to core request
         core_request = CoreMemoryRequest(
-            messages=request.messages,
-            session_id=request.session_id,
+            messages=payload.messages,
+            session_id=payload.session_id,
             # context_type is not in the core model, add to metadata if needed
             metadata=(
-                {"context_type": request.context_type} if request.context_type else None
+                {"context_type": payload.context_type} if payload.context_type else None
             ),
             trip_id=None,
         )
@@ -95,23 +89,19 @@ async def add_conversation_memory(
         ) from e
 
 
-@router.get("/context")
+@router.get("/context", response_model=UserContextResponse)
 async def get_user_context(
-    http_request: Request,
-    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
-):
+) -> UserContextResponse:
     """Get user context and preferences.
 
     Args:
-        http_request: Raw HTTP request (required by SlowAPI for headers)
-        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
 
     Returns:
-        User context and preferences
+        UserContextResponse model with preferences and context
     """
     try:
         user_id = get_principal_id(principal)
@@ -125,41 +115,46 @@ async def get_user_context(
         ) from e
 
 
-@router.post("/search")
+@router.post("/search", response_model=MemorySearchResponse)
 @limiter.limit("30/minute")
 async def search_memories(
-    request: SearchMemoryRequest,
-    http_request: Request,
-    http_response: Response,
+    payload: SearchMemoryRequest,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
-):
+    response: Response,
+    *,
+    request: Request,
+) -> MemorySearchResponse:
     """Search user memories.
 
     Args:
-        request: Search request
-        http_request: Raw HTTP request (required by SlowAPI for headers)
-        http_response: Raw HTTP response (required by SlowAPI for headers)
+        payload: Search request
         principal: Current authenticated principal
         memory_service: Unified memory service
+        response: Response object for SlowAPI header injection
+        request: Raw HTTP request (required by SlowAPI limiter)
 
     Returns:
         List of matching memories
     """
     try:
         user_id = get_principal_id(principal)
+        _ = response  # SlowAPI mutates response headers post-call.
+        logger.debug("Searching memories for user %s via %s", user_id, request.url.path)
         # Convert router request to service request
         from tripsage_core.services.business.memory_service import MemorySearchRequest
 
         search_request = MemorySearchRequest(
-            query=request.query, limit=request.limit, filters=None
+            query=payload.query, limit=payload.limit, filters=None
         )
         from typing import Any, cast
 
         memories = await cast(Any, memory_service).search_memories(
             user_id, search_request
         )
-        return {"results": memories, "query": request.query, "total": len(memories)}
+        return MemorySearchResponse(
+            results=memories, query=payload.query, total=len(memories)
+        )
 
     except Exception as e:
         logger.exception("Search memories failed")
@@ -169,20 +164,16 @@ async def search_memories(
         ) from e
 
 
-@router.put("/preferences")
+@router.put("/preferences", response_model=dict[str, object])
 async def update_preferences(
-    request: UpdatePreferencesRequest,
-    http_request: Request,
-    http_response: Response,
+    payload: UpdatePreferencesRequest,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
-):
+) -> dict[str, object]:
     """Update user preferences.
 
     Args:
-        request: Preferences update request
-        http_request: Raw HTTP request (required by SlowAPI for headers)
-        http_response: Raw HTTP response (required by SlowAPI for headers)
+        payload: Preferences update request
         principal: Current authenticated principal
         memory_service: Unified memory service
 
@@ -194,7 +185,7 @@ async def update_preferences(
         from typing import Any, cast
 
         return await cast(Any, memory_service).update_user_preferences(
-            user_id, request.preferences
+            user_id, payload.preferences
         )
 
     except Exception as e:
@@ -205,34 +196,38 @@ async def update_preferences(
         ) from e
 
 
-@router.post("/preference")
+@router.post("/preference", response_model=dict[str, object])
 @limiter.limit("30/minute")
 async def add_preference(  # pylint: disable=too-many-positional-arguments
     key: str,
     value: str,
-    http_request: Request,
-    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
+    response: Response,
     category: str = "general",
-):
+    *,
+    request: Request,
+) -> dict[str, object]:
     """Add or update a single user preference.
 
     Args:
         key: Preference key
         value: Preference value
-        category: Preference category
-        http_request: Raw HTTP request (required by SlowAPI for headers)
-        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
+        response: Response object for SlowAPI header injection
+        category: Preference category
+        request: Raw HTTP request (required by SlowAPI limiter)
 
     Returns:
         Updated preference
     """
     try:
         user_id = get_principal_id(principal)
+        _ = response  # SlowAPI mutates response headers post-call.
         from typing import Any, cast
+
+        logger.debug("Adding preference for user %s via %s", user_id, request.url.path)
 
         return await cast(Any, memory_service).add_user_preference(
             user_id, key, value, category
@@ -246,20 +241,16 @@ async def add_preference(  # pylint: disable=too-many-positional-arguments
         ) from e
 
 
-@router.delete("/memory/{memory_id}")
+@router.delete("/memory/{memory_id}", response_model=dict[str, object])
 async def delete_memory(
     memory_id: str,
-    http_request: Request,
-    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
-):
+) -> dict[str, object]:
     """Delete a specific memory.
 
     Args:
         memory_id: Memory ID to delete
-        http_request: Raw HTTP request (required by SlowAPI for headers)
-        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
 
@@ -289,18 +280,14 @@ async def delete_memory(
         ) from e
 
 
-@router.get("/stats")
+@router.get("/stats", response_model=dict[str, object])
 async def get_memory_stats(
-    http_request: Request,
-    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
-):
+) -> dict[str, object]:
     """Get memory statistics for the user.
 
     Args:
-        http_request: Raw HTTP request (required by SlowAPI for headers)
-        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
 
@@ -321,20 +308,16 @@ async def get_memory_stats(
         ) from e
 
 
-@router.delete("/clear")
+@router.delete("/clear", response_model=dict[str, object])
 async def clear_user_memory(
-    http_request: Request,
-    http_response: Response,
     principal: RequiredPrincipalDep,
     memory_service: MemoryServiceDep,
     confirm: bool = False,
-):
+) -> dict[str, object]:
     """Clear all memories for the user.
 
     Args:
         confirm: Confirmation flag
-        http_request: Raw HTTP request (required by SlowAPI for headers)
-        http_response: Raw HTTP response (required by SlowAPI for headers)
         principal: Current authenticated principal
         memory_service: Unified memory service
 

@@ -1,6 +1,14 @@
+/**
+ * @fileoverview React hooks for Supabase Storage file management.
+ *
+ * Provides hooks for file uploads, downloads, storage stats,
+ * and file attachment management with progress tracking.
+ */
+
 "use client";
 
-import { useAuth } from "@/contexts/auth-context";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSupabase } from "@/lib/supabase/client";
 import type {
   FileAttachment,
@@ -8,9 +16,8 @@ import type {
   FileAttachmentUpdate,
   UploadStatus,
   VirusScanStatus,
-} from "@/lib/supabase/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+} from "@/lib/supabase/database.types";
+import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 
 interface UploadProgress {
   fileId: string;
@@ -29,14 +36,29 @@ interface UploadOptions {
   allowedTypes?: string[];
 }
 
+function useUserId(): string | null {
+  const supabase = useSupabase();
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    const isMounted = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (isMounted) setUserId(data.user?.id ?? null);
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (isMounted) setUserId(session?.user?.id ?? null);
+    });
+    return () => data.subscription.unsubscribe();
+  }, [supabase]);
+  return userId;
+}
+
 /**
- * Hook for managing file uploads and attachments with Supabase Storage
- * Provides upload progress tracking, virus scanning, and file management
+ * Hook for managing file uploads and attachments with Supabase Storage.
  */
 export function useSupabaseStorage() {
   const supabase = useSupabase();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const userId = useUserId();
   const [uploadProgress, setUploadProgress] = useState<Record<string, UploadProgress>>(
     {}
   );
@@ -49,14 +71,14 @@ export function useSupabaseStorage() {
     virusScanStatus?: VirusScanStatus;
   }) => {
     return useQuery({
-      queryKey: ["file-attachments", user?.id, filters],
+      queryKey: ["file-attachments", userId, filters],
       queryFn: async () => {
-        if (!user?.id) throw new Error("User not authenticated");
+        if (!userId) throw new Error("User not authenticated");
 
         let query = supabase
           .from("file_attachments")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .order("created_at", { ascending: false });
 
         if (filters?.tripId) {
@@ -76,7 +98,7 @@ export function useSupabaseStorage() {
         if (error) throw error;
         return data as FileAttachment[];
       },
-      enabled: !!user?.id,
+      enabled: !!userId,
       staleTime: 1000 * 60 * 5, // 5 minutes
     });
   };
@@ -105,19 +127,24 @@ export function useSupabaseStorage() {
   // Get storage usage statistics
   const useStorageStats = () => {
     return useQuery({
-      queryKey: ["storage-stats", user?.id],
+      queryKey: ["storage-stats", userId],
       queryFn: async () => {
-        if (!user?.id) throw new Error("User not authenticated");
+        if (!userId) throw new Error("User not authenticated");
 
+        type FileStatRow = Pick<
+          FileAttachment,
+          "file_size" | "mime_type" | "upload_status"
+        >;
         const { data: files, error } = await supabase
           .from("file_attachments")
           .select("file_size, mime_type, upload_status")
-          .eq("user_id", user.id);
+          .eq("user_id", userId);
 
         if (error) throw error;
 
-        const totalSize = files.reduce((sum, file) => sum + file.file_size, 0);
-        const filesByType = files.reduce(
+        const typedFiles = (files ?? []) as FileStatRow[];
+        const totalSize = typedFiles.reduce((sum, file) => sum + file.file_size, 0);
+        const filesByType = typedFiles.reduce(
           (acc, file) => {
             const type = file.mime_type.split("/")[0] || "other";
             acc[type] = (acc[type] || 0) + 1;
@@ -126,7 +153,7 @@ export function useSupabaseStorage() {
           {} as Record<string, number>
         );
 
-        const filesByStatus = files.reduce(
+        const filesByStatus = typedFiles.reduce(
           (acc, file) => {
             acc[file.upload_status] = (acc[file.upload_status] || 0) + 1;
             return acc;
@@ -142,7 +169,7 @@ export function useSupabaseStorage() {
           filesByStatus,
         };
       },
-      enabled: !!user?.id,
+      enabled: !!userId,
       staleTime: 1000 * 60 * 15, // 15 minutes
     });
   };
@@ -156,7 +183,7 @@ export function useSupabaseStorage() {
       file: File;
       options?: UploadOptions;
     }) => {
-      if (!user?.id) throw new Error("User not authenticated");
+      if (!userId) throw new Error("User not authenticated");
 
       const {
         bucket = "attachments",
@@ -182,7 +209,7 @@ export function useSupabaseStorage() {
       const fileId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const fileExt = file.name.split(".").pop();
       const fileName = `${fileId}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
+      const filePath = `${userId}/${fileName}`;
 
       // Track upload progress
       setUploadProgress((prev) => ({
@@ -208,7 +235,7 @@ export function useSupabaseStorage() {
 
         // Create file attachment record
         const attachmentData: FileAttachmentInsert = {
-          user_id: user.id,
+          user_id: userId,
           trip_id: tripId || null,
           chat_message_id: chatMessageId || null,
           filename: fileName,
@@ -225,11 +252,11 @@ export function useSupabaseStorage() {
           },
         };
 
-        const { data: attachmentRecord, error: attachmentError } = await supabase
-          .from("file_attachments")
-          .insert(attachmentData)
-          .select()
-          .single();
+        const { data: attachmentRecord, error: attachmentError } = await insertSingle(
+          supabase,
+          "file_attachments",
+          attachmentData
+        );
 
         if (attachmentError) throw attachmentError;
 
@@ -319,9 +346,10 @@ export function useSupabaseStorage() {
       if (fetchError) throw fetchError;
 
       // Delete from storage
+      const attachmentTyped = attachment as FileAttachment;
       const { error: storageError } = await supabase.storage
-        .from(attachment.bucket_name)
-        .remove([attachment.file_path]);
+        .from(attachmentTyped.bucket_name)
+        .remove([attachmentTyped.file_path]);
 
       if (storageError) throw storageError;
 
@@ -350,12 +378,12 @@ export function useSupabaseStorage() {
       id: string;
       updates: FileAttachmentUpdate;
     }) => {
-      const { data, error } = await supabase
-        .from("file_attachments")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
+      const { data, error } = await updateSingle(
+        supabase,
+        "file_attachments",
+        updates,
+        (qb) => (qb as any).eq("id", id)
+      );
 
       if (error) throw error;
       return data as FileAttachment;
@@ -394,7 +422,7 @@ export function useSupabaseStorage() {
   // Clear upload progress for a specific file
   const clearUploadProgress = useCallback((fileId: string) => {
     setUploadProgress((prev) => {
-      const { [fileId]: removed, ...rest } = prev;
+      const { [fileId]: _removed, ...rest } = prev;
       return rest;
     });
   }, []);
@@ -444,7 +472,7 @@ export function useSupabaseStorage() {
 }
 
 /**
- * Hook for file type utilities and validation
+ * Hook for file type utilities and validation.
  */
 export function useFileTypeUtils() {
   const getFileIcon = useCallback((mimeType: string) => {

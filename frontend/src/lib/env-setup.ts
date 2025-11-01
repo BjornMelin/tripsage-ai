@@ -1,14 +1,14 @@
 /**
- * Environment setup and validation for TripSage frontend
- * Validates environment variables at startup and provides type-safe access
+ * @fileoverview Environment setup and validation for the frontend. Validates
+ * environment variables at startup and exposes type-safe accessors.
  */
 
+import type { ClientEnv, EnvironmentInfo, ServerEnv } from "./schemas/env";
 import {
   getEnvironmentInfo,
   validateClientEnv,
   validateServerEnv,
 } from "./schemas/env";
-import type { ClientEnv, EnvironmentInfo, ServerEnv } from "./schemas/env";
 
 // Global environment state
 let serverEnv: ServerEnv | null = null;
@@ -218,7 +218,6 @@ export function isServiceAvailable(service: string): boolean {
  */
 export function getConfig(): {
   apiBaseUrl: string;
-  wsUrl?: string;
   supabaseUrl: string;
   supabaseAnonKey: string;
   isDevelopment: boolean;
@@ -231,8 +230,9 @@ export function getConfig(): {
   const envInfo = getEnvInfo();
 
   return {
-    apiBaseUrl: clientEnv.NEXT_PUBLIC_API_BASE_URL || "/api",
-    wsUrl: clientEnv.NEXT_PUBLIC_WS_URL,
+    apiBaseUrl: clientEnv.NEXT_PUBLIC_API_URL
+      ? `${clientEnv.NEXT_PUBLIC_API_URL}/api`
+      : "/api",
     supabaseUrl: clientEnv.NEXT_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     isDevelopment: envInfo.environment === "development",
@@ -289,7 +289,6 @@ ${Object.entries(envInfo.services || {})
 
 ## Configuration
 - API Base URL: ${config.apiBaseUrl}
-- WebSocket URL: ${config.wsUrl || "Not configured"}
 - Supabase URL: ${config.supabaseUrl}
 - Timeout: ${getApiConfig().timeout}ms
 - Retries: ${getApiConfig().retries}

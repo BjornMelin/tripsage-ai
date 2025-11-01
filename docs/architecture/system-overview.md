@@ -9,20 +9,21 @@ This document provides an overview of TripSage's system architecture, focusing o
 ```mermaid
 graph TD
     subgraph "Presentation Layer"
-        F[Frontend<br/>Next.js 15<br/>• React Server<br/>Components<br/>• Real-time UI<br/>• WebSocket<br/>• State Mgmt]
+        F[Frontend<br/>Next.js 15<br/>• React Server<br/>Components<br/>• Real-time UI<br/>• Supabase Realtime<br/>• State Mgmt]
         A[AI Agents<br/>LangGraph<br/>• Planning<br/>• Flight Agent<br/>• Hotel Agent<br/>• Budget Agent<br/>• Memory Agent]
         E[External APIs<br/>Travel Partners<br/>• Flight APIs<br/>• Hotel APIs<br/>• Maps APIs<br/>• Weather APIs<br/>• Calendar APIs]
     end
 
     subgraph "Unified API Layer<br/>FastAPI with<br/>Consumer Support"
-        G[API Gateway<br/>• Frontend Adapter<br/>• Agent Adapter<br/>• Auth Middleware<br/>• WebSocket Manager]
+        G[API Gateway<br/>• Frontend Adapter<br/>• Agent Adapter<br/>• Auth Middleware]
         R["API Routers<br/>Auth | Chat | Trips | Flights |<br/>Hotels | Destinations |<br/>Memory | WS"]
     end
 
     subgraph "Business Logic Layer<br/>TripSage Core"
         BS[Business Services<br/>• Auth Service<br/>• Memory Svc<br/>• Chat Service<br/>• Flight Svc<br/>• Hotel Service]
         ES[External API Services<br/>• Google Maps<br/>• Weather API<br/>• Calendar API<br/>• Document AI<br/>• Crawl4AI]
-        IS[Infrastructure Services<br/>• Database Service<br/>• Cache Service<br/>Upstash Redis (HTTP)<br/>• WebSocket Manager<br/>• Key Monitoring<br/>Service<br/>• Security Service]
+        IS[Infrastructure Services<br/>• Database Service<br/>• Cache Service<br/>Upstash Redis (HTTP)<br/>• Key Monitoring
+Service<br/>• Security Service]
         LG["LangGraph Orchestration<br/>PostgreSQL Checkpointing |<br/>Memory Bridge |<br/>Handoff Coordination"]
     end
 
@@ -59,6 +60,33 @@ graph TD
     LG --> EX
 ```
 
+## Technology Stack
+
+### Technology Selection Principles
+
+1. **Production-Proven**: Technologies with demonstrated reliability at scale
+2. **Developer Experience**: Tools that enhance productivity and reduce complexity
+3. **Performance First**: Technologies delivering measurable performance benefits
+4. **Cost Efficient**: Solutions optimizing infrastructure and operational costs
+5. **Future-Proof**: Technologies with strong communities and long-term viability
+
+### Core Technologies
+
+- **Backend**: FastAPI (Python 3.11+) - Async performance, type safety, auto-documentation
+- **Database**: Supabase PostgreSQL - Unified platform with pgvector for AI workloads
+- **Cache**: Upstash Redis (HTTP) - Serverless, connectionless HTTP client
+- **AI Framework**: LangGraph - Production-ready agent orchestration with state persistence
+- **Memory System**: Mem0 + pgvector - Intelligent context management
+- **Frontend**: Next.js 15 - Server components, App Router, TypeScript
+- **Testing**: pytest, vitest, Playwright - Comprehensive test coverage (90%+)
+
+### External Integrations
+
+- **Flight API**: Duffel SDK - Direct integration, 70% latency reduction
+- **Maps**: Google Maps Platform SDK - Location services and geocoding
+- **Weather**: OpenWeatherMap API - Real-time weather data
+- **Browser Automation**: Playwright - Headless browser operations
+
 ## Architecture Components
 
 ### Presentation Layer
@@ -67,7 +95,7 @@ graph TD
 
 - App Router: Routing with server-side rendering
 - React Server Components: Server-side rendering
-- Real-time Features: WebSocket integration
+- Real-time Features: Supabase Realtime (private channels + RLS)
 - State Management: Zustand stores with persistence
 - Component Architecture: Modular components
 - Performance: Code splitting and lazy loading
@@ -108,7 +136,7 @@ The API adapts responses based on consumer type:
 - Authentication: JWT for users, API keys for agents, BYOK
   support
 - Rate Limiting: Limits with principal tracking
-- WebSocket Support: Real-time communication
+- Realtime (Supabase): Private channels with RLS for live updates
 - Error Handling: Error processing with context
 - Response Formatting: Response adaptation
 
@@ -137,16 +165,30 @@ Unified service design in TripSage Core:
 
 - DatabaseService with transaction management
 - CacheService with Upstash Redis (HTTP) integration
-- WebSocketManager for real-time communication
+- Realtime integration (Supabase) for client channels; backend publishes via DB functions/REST when needed
 - KeyMonitoringService for security
 
 #### LangGraph Orchestration
 
-- Graph-based Workflows: Multi-step planning
-- PostgreSQL Checkpointing: State management
-- Memory Bridge: Integration for relationship data
-- Handoff Coordination: Agent collaboration
-- Error Recovery: Retry and fallback mechanisms
+- **Graph-based Workflows**: Deterministic multi-step planning processes
+- **PostgreSQL Checkpointing**: Persistent state management across sessions
+- **Memory Bridge**: Mem0 integration for contextual relationship data
+- **Handoff Coordination**: Seamless agent collaboration and state transfer
+- **Error Recovery**: Built-in retry mechanisms and graceful degradation
+
+#### Specialized Agent Nodes
+
+**Router Node**: Intelligent request routing based on conversation analysis and intent classification.
+
+**Flight Agent**: Multi-airline search, price comparison, route optimization, and booking assistance with user preference learning.
+
+**Accommodation Agent**: Hotel/Airbnb search, property comparison, amenity filtering, and location-based recommendations.
+
+**Budget Agent**: Expense tracking, cost optimization, multi-currency support, and personalized spending recommendations.
+
+**Destination Research Agent**: Local insights, activity recommendations, weather integration, and personalized destination guidance.
+
+**Itinerary Agent**: Day-by-day planning, scheduling optimization, calendar integration, and logistics coordination.
 
 ### Infrastructure Layer
 
@@ -246,16 +288,16 @@ The memory system uses a context pipeline:
 
 ## Real-time Communication Architecture
 
-### WebSocket Management
+### Realtime Management (Supabase)
 
-The system uses WebSocket for real-time features:
+The system uses Supabase Realtime for real-time features:
 
 - Consumer-Aware Connections: Handling for frontend vs
   agent connections
-- Connection Pooling: Management of concurrent connections
+- Channel Management: Join/leave private topics; presence/broadcast APIs
 - Message Routing: Routing based on message type and consumer
 - Graceful Disconnection: Cleanup and state preservation
-- Error Recovery: Reconnection strategies with backoff
+- Error Recovery: supabase-js connection lifecycle handling and resubscribe
 
 ### Real-time Features
 

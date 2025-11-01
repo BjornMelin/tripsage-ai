@@ -14,13 +14,15 @@ Design goals:
 from __future__ import annotations
 
 import importlib
+import inspect
 import logging
 import os
 import time
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from functools import wraps
-from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
+from types import TracebackType
+from typing import TYPE_CHECKING, Any, ParamSpec, Self, TypeVar, cast
 
 
 # Import typing-only symbols to avoid runtime ImportError on environments
@@ -37,7 +39,7 @@ logger: logging.Logger = logging.getLogger(__name__)  # pylint: disable=no-membe
 # Instrumentors are imported lazily inside setup_otel().
 
 
-_SETUP_DONE = False
+_setup_done = False
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
 F = TypeVar("F", bound=Callable[..., Any])
@@ -70,8 +72,8 @@ def setup_otel(
         enable_redis: Enable Redis instrumentation when available.
     """
     # pylint: disable=too-many-statements
-    global _SETUP_DONE  # pylint: disable=global-statement
-    if _SETUP_DONE:  # pragma: no cover
+    global _setup_done  # pylint: disable=global-statement
+    if _setup_done:  # pragma: no cover
         return
 
     # Lazy imports via importlib to avoid static import errors under pylint
@@ -234,7 +236,7 @@ def setup_otel(
             redis_inst = importlib.import_module("opentelemetry.instrumentation.redis")
             redis_inst.RedisInstrumentor().instrument()
 
-    _SETUP_DONE = True
+    _setup_done = True
 
 
 def before_sleep_otel(retry_state: Any) -> None:
@@ -274,11 +276,16 @@ def get_tracer(name: str):
         class _NoopSpan:
             """No-op span with attribute/exception stubs."""
 
-            def __enter__(self):
+            def __enter__(self) -> Self:
                 """Enter no-op span."""
                 return self
 
-            def __exit__(self, *_exc):
+            def __exit__(
+                self,
+                exc_type: type[BaseException] | None,
+                exc: BaseException | None,
+                traceback: TracebackType | None,
+            ) -> bool:
                 """Exit no-op span."""
                 return False
 
@@ -291,7 +298,7 @@ def get_tracer(name: str):
         class _NoopTracer:
             """Factory for no-op span context manager."""
 
-            def start_as_current_span(self, *_a: Any, **_k: Any):
+            def start_as_current_span(self, *_a: Any, **_k: Any) -> _NoopSpan:
                 """Return a no-op span context manager."""
                 return _NoopSpan()
 
@@ -383,6 +390,14 @@ def trace_span(
                     span.record_exception(e)
                     raise
 
+        # Preserve original callable signature for FastAPI dependency analysis
+        try:  # pragma: no cover - defensive guard
+            sig = inspect.signature(func)
+            _sync.__signature__ = sig  # type: ignore[attr-defined]
+            _async.__signature__ = sig  # type: ignore[attr-defined]
+        except (TypeError, ValueError):
+            pass
+
         wrapped: F = cast(F, _async) if _is_coroutine(func) else cast(F, _sync)
         return wrapped
 
@@ -443,6 +458,14 @@ def record_histogram(
                 )
                 hist.record(dur, attributes)
 
+        # Preserve original callable signature for FastAPI dependency analysis
+        try:  # pragma: no cover - defensive guard
+            sig = inspect.signature(func)
+            _sync.__signature__ = sig  # type: ignore[attr-defined]
+            _async.__signature__ = sig  # type: ignore[attr-defined]
+        except (TypeError, ValueError):
+            pass
+
         wrapped: F = cast(F, _async) if _is_coroutine(func) else cast(F, _sync)
         return wrapped
 
@@ -500,7 +523,7 @@ def _merge_default_metric_attrs(
     base.setdefault("module", module)
 
     # Attempt to discover an incoming request to enrich route attributes.
-    req = None
+    req: Any | None = None
     for v in (*args, *kwargs.values()):
         if hasattr(v, "method") and hasattr(v, "url") and hasattr(v, "scope"):
             # Likely a Starlette/FastAPI Request
@@ -509,9 +532,14 @@ def _merge_default_metric_attrs(
     if req is not None:
         try:
             # Prefer templated route path if available
-            route = None
-            scope = getattr(req, "scope", {})
-            route_obj = scope.get("route") if isinstance(scope, dict) else None
+            route: str | None = None
+            scope_obj = getattr(req, "scope", None)
+            scope_dict: dict[str, Any] | None
+            if isinstance(scope_obj, dict):
+                scope_dict = cast(dict[str, Any], scope_obj)
+            else:
+                scope_dict = None
+            route_obj: Any = scope_dict.get("route") if scope_dict else None
             if route_obj is not None:
                 route = getattr(route_obj, "path", None)
             if not route:
@@ -541,16 +569,21 @@ def http_route_attr_fn(args: tuple[Any, ...], kwargs: dict[str, Any]) -> dict[st
     """
     # Module is added by the decorator; only compute HTTP attributes here.
     http_attrs: dict[str, Any] = {}
-    req = None
+    req: Any | None = None
     for v in (*args, *kwargs.values()):
         if hasattr(v, "method") and hasattr(v, "url") and hasattr(v, "scope"):
             req = v
             break
     if req is not None:
         try:
-            route = None
-            scope = getattr(req, "scope", {})
-            route_obj = scope.get("route") if isinstance(scope, dict) else None
+            route: str | None = None
+            scope_obj = getattr(req, "scope", None)
+            scope_dict: dict[str, Any] | None
+            if isinstance(scope_obj, dict):
+                scope_dict = cast(dict[str, Any], scope_obj)
+            else:
+                scope_dict = None
+            route_obj: Any = scope_dict.get("route") if scope_dict else None
             if route_obj is not None:
                 route = getattr(route_obj, "path", None)
             if not route:

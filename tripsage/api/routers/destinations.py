@@ -1,9 +1,12 @@
 """Destination router exposing the finalized destination management API."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
-from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.core.dependencies import (
+    RequiredPrincipalDep,
+    SearchFacadeDep,
+    get_principal_id,
+)
 from tripsage.api.schemas.destinations import (
     Destination,
     DestinationRecommendation,
@@ -14,10 +17,6 @@ from tripsage.api.schemas.destinations import (
     SavedDestinationRequest,
 )
 from tripsage_core.exceptions.exceptions import CoreResourceNotFoundError
-from tripsage_core.services.business.destination_service import (
-    DestinationService,
-    get_destination_service,
-)
 
 
 router = APIRouter()
@@ -26,34 +25,11 @@ router = APIRouter()
 @router.post("/search", response_model=DestinationSearchResponse)
 async def search_destinations(
     request: DestinationSearchRequest,
-    principal: Principal = Depends(require_principal),
-    destination_service: DestinationService = Depends(get_destination_service),
+    destination_service: SearchFacadeDep,
+    principal: RequiredPrincipalDep,
 ) -> DestinationSearchResponse:
     """Search destinations using the consolidated destination service."""
     return await destination_service.search_destinations(request)
-
-
-@router.get("/{destination_id}", response_model=Destination)
-async def get_destination_details(
-    destination_id: str,
-    principal: Principal = Depends(require_principal),
-    destination_service: DestinationService = Depends(get_destination_service),
-) -> Destination:
-    """Retrieve detailed information about a destination."""
-    destination = await destination_service.get_destination_details(
-        destination_id,
-        include_weather=True,
-        include_pois=True,
-        include_advisory=True,
-    )
-
-    if destination is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Destination '{destination_id}' not found",
-        )
-
-    return destination
 
 
 @router.post(
@@ -63,8 +39,8 @@ async def get_destination_details(
 )
 async def save_destination(
     request: SavedDestinationRequest,
-    principal: Principal = Depends(require_principal),
-    destination_service: DestinationService = Depends(get_destination_service),
+    destination_service: SearchFacadeDep,
+    principal: RequiredPrincipalDep,
 ) -> SavedDestination:
     """Save a destination for the authenticated user."""
     user_id = get_principal_id(principal)
@@ -80,8 +56,8 @@ async def save_destination(
 
 @router.get("/saved", response_model=list[SavedDestination])
 async def list_saved_destinations(
-    principal: Principal = Depends(require_principal),
-    destination_service: DestinationService = Depends(get_destination_service),
+    destination_service: SearchFacadeDep,
+    principal: RequiredPrincipalDep,
 ) -> list[SavedDestination]:
     """Return destinations saved by the authenticated user."""
     user_id = get_principal_id(principal)
@@ -94,8 +70,8 @@ async def list_saved_destinations(
 )
 async def get_destination_recommendations(
     request: DestinationRecommendationRequest,
-    principal: Principal = Depends(require_principal),
-    destination_service: DestinationService = Depends(get_destination_service),
+    destination_service: SearchFacadeDep,
+    principal: RequiredPrincipalDep,
 ) -> list[DestinationRecommendation]:
     """Get personalized destination recommendations."""
     user_id = get_principal_id(principal)
@@ -103,3 +79,27 @@ async def get_destination_recommendations(
         user_id=user_id,
         recommendation_request=request,
     )
+
+
+@router.get("/{destination_id}", response_model=Destination)
+async def get_destination_details(
+    destination_id: str,
+    destination_service: SearchFacadeDep,
+    principal: RequiredPrincipalDep,
+) -> Destination:
+    """Retrieve detailed information about a destination."""
+    _ = principal
+    destination = await destination_service.get_destination_details(
+        destination_id,
+        include_weather=True,
+        include_pois=True,
+        include_advisory=True,
+    )
+
+    if destination is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Destination '{destination_id}' not found",
+        )
+
+    return destination

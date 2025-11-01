@@ -139,6 +139,8 @@ rate_limits:
 - Monitor usage
 - Revoke compromised keys
 - Audit access logs
+- All API key CRUD operations now live under `/api/keys`. Update CLI scripts, monitoring probes, and third-party integrations that previously used `/api/user/keys`.
+- Admin-only routes rely on JWT user principals with either `metadata.is_admin = true` or an `admin` role flag. Ensure operator accounts are provisioned accordingly before rotating credentials.
 
 ### Integration Settings
 
@@ -150,7 +152,7 @@ rate_limits:
 | **Duffel** | API credentials, test mode | ✅ Active |
 | **Google Maps** | API key, quotas | ✅ Active |
 | **Supabase** | Project URL, service key | ✅ Active |
-| **DragonflyDB** | Connection string | ✅ Active |
+| **Redis** | Connection string | ✅ Active |
 
 **Webhook Configuration:**
 
@@ -354,7 +356,7 @@ alerts:
 
 ### Cache Operations
 
-**DragonflyDB Management:**
+**Redis Management:**
 
 - Memory usage monitoring
 - Key analysis

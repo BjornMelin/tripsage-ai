@@ -1,18 +1,18 @@
+/**
+ * @fileoverview Security dashboard component.
+ *
+ * Displays security metrics, active sessions, security events, OAuth accounts,
+ * and security recommendations.
+ */
+
 "use client";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/contexts/auth-context";
-import { useApiKeys } from "@/hooks/use-api-keys";
 import {
   Activity,
   AlertTriangle,
   CheckCircle2,
   Clock,
   Info,
-  Key,
   Lock,
   Monitor,
   RefreshCw,
@@ -22,46 +22,85 @@ import {
   UserCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+/**
+ * Represents a security-related event in the user's account.
+ */
 interface SecurityEvent {
+  /** Unique identifier for the security event. */
   id: string;
+  /** Type of security event that occurred. */
   type:
     | "login_success"
     | "login_failure"
     | "logout"
     | "password_change"
-    | "api_key_created"
+    | "mfa_enabled"
     | "suspicious_activity";
+  /** Human-readable description of the event. */
   description: string;
+  /** ISO timestamp when the event occurred. */
   timestamp: string;
+  /** IP address associated with the event. */
   ip_address: string;
+  /** Optional location information derived from IP. */
   location?: string;
+  /** Optional device/browser information. */
   device?: string;
+  /** Risk level assessment of the event. */
   risk_level: "low" | "medium" | "high";
 }
 
+/**
+ * Represents an active user session.
+ */
 interface ActiveSession {
+  /** Unique identifier for the session. */
   id: string;
+  /** Device name or type. */
   device: string;
+  /** Browser and version information. */
   browser: string;
+  /** Location derived from IP address. */
   location: string;
+  /** IP address of the session. */
   ip_address: string;
+  /** ISO timestamp of last activity. */
   last_activity: string;
+  /** Whether this is the current user's session. */
   is_current: boolean;
 }
 
+/**
+ * Security metrics and statistics for the user account.
+ */
 interface SecurityMetrics {
+  /** ISO timestamp of the last successful login. */
   last_login: string;
+  /** Number of failed login attempts in the last 24 hours. */
   failed_login_attempts: number;
+  /** Number of currently active sessions. */
   active_sessions: number;
-  api_keys_count: number;
+  /** Number of trusted devices registered. */
+  trusted_devices: number;
+  /** List of connected OAuth providers. */
   oauth_connections: string[];
+  /** Overall security score out of 100. */
   security_score: number;
 }
 
+/**
+ * Security dashboard component.
+ *
+ * Displays security metrics, active sessions, security events, and recommendations.
+ * Aggregates Supabase-authenticated activity metadata.
+ *
+ * @returns The security dashboard JSX element
+ */
 export function SecurityDashboard() {
-  const { user: _user } = useAuth();
-  const apiKeysQuery = useApiKeys();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [metrics, setMetrics] = useState<SecurityMetrics | null>(null);
@@ -69,6 +108,9 @@ export function SecurityDashboard() {
 
   // Mock data for demonstration - replace with real API calls
   useEffect(() => {
+    /**
+     * Loads security data from mock API endpoints.
+     */
     const loadSecurityData = async () => {
       try {
         // Simulate API calls
@@ -88,8 +130,8 @@ export function SecurityDashboard() {
           },
           {
             id: "2",
-            type: "api_key_created",
-            description: "New OpenAI API key added",
+            type: "mfa_enabled",
+            description: "Multi-factor authentication enabled",
             timestamp: "2025-06-10T14:15:00Z",
             ip_address: "192.168.1.100",
             location: "San Francisco, CA",
@@ -135,9 +177,7 @@ export function SecurityDashboard() {
           last_login: "2025-06-11T10:30:00Z",
           failed_login_attempts: 1,
           active_sessions: 2,
-          api_keys_count: Array.isArray(apiKeysQuery.data?.keys)
-            ? apiKeysQuery.data.keys.length
-            : 0,
+          trusted_devices: 2,
           oauth_connections: ["google", "github"],
           security_score: 85,
         });
@@ -150,8 +190,14 @@ export function SecurityDashboard() {
     };
 
     loadSecurityData();
-  }, [apiKeysQuery.data]);
+  }, []);
 
+  /**
+   * Returns CSS classes for risk level styling.
+   *
+   * @param level - Risk level (low, medium, high)
+   * @returns CSS classes for the risk level
+   */
   const getRiskColor = (level: string) => {
     switch (level) {
       case "high":
@@ -165,6 +211,12 @@ export function SecurityDashboard() {
     }
   };
 
+  /**
+   * Returns the appropriate icon component for security event types.
+   *
+   * @param type - Security event type
+   * @returns Icon component for the event type
+   */
   const getEventIcon = (type: string) => {
     switch (type) {
       case "login_success":
@@ -175,8 +227,8 @@ export function SecurityDashboard() {
         return <Shield className="h-4 w-4 text-blue-600" />;
       case "password_change":
         return <Lock className="h-4 w-4 text-blue-600" />;
-      case "api_key_created":
-        return <Key className="h-4 w-4 text-purple-600" />;
+      case "mfa_enabled":
+        return <Shield className="h-4 w-4 text-purple-600" />;
       case "suspicious_activity":
         return <AlertTriangle className="h-4 w-4 text-red-600" />;
       default:
@@ -184,10 +236,21 @@ export function SecurityDashboard() {
     }
   };
 
+  /**
+   * Formats ISO timestamp for display.
+   *
+   * @param timestamp - ISO timestamp string
+   * @returns Formatted timestamp string
+   */
   const formatTimestamp = (timestamp: string) => {
     return new Date(timestamp).toLocaleString();
   };
 
+  /**
+   * Terminates an active user session.
+   *
+   * @param sessionId - ID of the session to terminate
+   */
   const handleTerminateSession = async (sessionId: string) => {
     try {
       // TODO: Implement session termination
@@ -289,10 +352,10 @@ export function SecurityDashboard() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <Key className="h-4 w-4 text-muted-foreground" />
+                <Smartphone className="h-4 w-4 text-muted-foreground" />
                 <div className="ml-2">
-                  <p className="text-sm font-medium">API Keys</p>
-                  <p className="text-2xl font-bold">{metrics.api_keys_count}</p>
+                  <p className="text-sm font-medium">Trusted Devices</p>
+                  <p className="text-2xl font-bold">{metrics.trusted_devices}</p>
                 </div>
               </div>
             </CardContent>
@@ -464,9 +527,9 @@ export function SecurityDashboard() {
               </div>
 
               <div className="p-3 border rounded-lg">
-                <h4 className="font-medium">Review API Keys</h4>
+                <h4 className="font-medium">Enable MFA</h4>
                 <p className="text-sm text-muted-foreground">
-                  Regularly audit and rotate your API keys.
+                  Add multi-factor authentication to protect your account.
                 </p>
               </div>
 

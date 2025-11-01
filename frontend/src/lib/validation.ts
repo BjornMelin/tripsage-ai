@@ -1,6 +1,6 @@
 /**
- * Validation utilities and error handling system
- * Central validation logic with proper error handling and user feedback
+ * @fileoverview Validation utilities and error handling system. Central
+ * validation logic with error formatting and helpers built on Zod.
  */
 
 import { z } from "zod";

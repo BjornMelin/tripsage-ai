@@ -10,14 +10,13 @@ import json
 import logging
 from collections.abc import Awaitable
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage_core.services.business.memory_service import (
-    ConversationMemoryRequest,
-    MemoryService,
-    UserContextResponse,
-)
+
+
+if TYPE_CHECKING:  # pragma: no cover - import only for typing
+    from tripsage_core.services.business.memory_service import MemoryService
 
 
 logger = logging.getLogger(__name__)
@@ -39,6 +38,9 @@ class SessionMemoryBridge:
     async def _get_service(self) -> MemoryService:
         """Get or create a MemoryService instance (lazy)."""
         if self._memory_service is None:
+            # Deferred import to avoid heavy pydantic model import during module load
+            from tripsage_core.services.business.memory_service import MemoryService
+
             self._memory_service = MemoryService()
         await cast(Awaitable[None], self._memory_service.connect())
         return self._memory_service
@@ -52,7 +54,7 @@ class SessionMemoryBridge:
         Returns:
             State enriched with session memory data
         """
-        user_id = state.get("user_id")
+        user_id = state.get("user_id", None)
         if not user_id:
             logger.warning("No user_id in state, skipping memory hydration")
             return state
@@ -60,11 +62,14 @@ class SessionMemoryBridge:
         try:
             logger.debug("Hydrating state for user: %s", user_id)
             svc = await self._get_service()
-            context = await cast(
-                Awaitable[UserContextResponse], svc.get_user_context(user_id)
-            )
+            context_any = await cast(Awaitable[Any], svc.get_user_context(user_id))
 
-            state = self._map_user_context_to_state(state, context.model_dump())
+            context_dict = (
+                context_any.model_dump()
+                if hasattr(context_any, "model_dump")
+                else cast(dict[str, Any], context_any)
+            )
+            state = self._map_user_context_to_state(state, context_dict)
             logger.info("Successfully hydrated state for user %s", user_id)
 
         except Exception:
@@ -83,16 +88,19 @@ class SessionMemoryBridge:
             state["user_preferences"] = {"items": prefs}
 
         # Past trips and destinations
-        past_trips = context.get("past_trips", [])
-        if past_trips:
+        past_trips_raw = context.get("past_trips", [])
+        if past_trips_raw:
+            past_trips: list[dict[str, Any]] = [
+                t for t in past_trips_raw if isinstance(t, dict)
+            ]
             state["destination_info"] = {
-                "recent_destinations": [
-                    t.get("destination") for t in past_trips if isinstance(t, dict)
-                ][:5],
+                "recent_destinations": [str(t.get("destination")) for t in past_trips][
+                    :5
+                ],
             }
 
         # Derived insights/summary
-        insights = context.get("insights", {})
+        insights: dict[str, Any] = context.get("insights", {})
         summary = context.get("summary")
         if insights:
             state["extracted_entities"] = {
@@ -129,6 +137,10 @@ class SessionMemoryBridge:
             if insights:
                 # Persist insights via MemoryService as a structured note
                 svc = await self._get_service()
+                from tripsage_core.services.business.memory_service import (
+                    ConversationMemoryRequest,
+                )
+
                 payload = ConversationMemoryRequest(
                     messages=[
                         {
@@ -168,7 +180,7 @@ class SessionMemoryBridge:
         Returns:
             Extracted insights
         """
-        insights = {}
+        insights: dict[str, Any] = {}
 
         # Extract updated preferences
         user_preferences = state.get("user_preferences", {})
@@ -176,16 +188,22 @@ class SessionMemoryBridge:
             insights["preferences"] = user_preferences
 
         # Extract learned facts from interactions
-        messages = state.get("messages", [])
-        if messages:
-            insights["learned_facts"] = self._extract_facts_from_messages(messages)
+        messages_list = state.get("messages", [])
+        if messages_list:
+            facts = self._extract_facts_from_messages(messages_list)
+            if facts:
+                insights["learned_facts"] = facts
 
         # Extract search patterns
-        search_history = []
-        if state.get("flight_searches"):
-            search_history.extend(state["flight_searches"])
-        if state.get("accommodation_searches"):
-            search_history.extend(state["accommodation_searches"])
+        search_history: list[dict[str, Any]] = []
+        flight_searches: list[dict[str, Any]] = state.get("flight_searches", [])
+        accommodation_searches: list[dict[str, Any]] = state.get(
+            "accommodation_searches", []
+        )
+        if flight_searches:
+            search_history.extend(flight_searches)
+        if accommodation_searches:
+            search_history.extend(accommodation_searches)
         # Destination searches are folded into activity or other agent results.
 
         if search_history:
@@ -201,19 +219,23 @@ class SessionMemoryBridge:
         if destination_info:
             insights["destination_preferences"] = destination_info
 
-        # Add session context
+        # If nothing meaningful was extracted, return an empty dict to avoid
+        # persisting no-op insights. Otherwise, append lightweight context.
+        if not insights:
+            return {}
+
         insights["session_context"] = {
             "timestamp": datetime.now(UTC).isoformat(),
             "session_id": state.get("session_id"),
             "agent_interactions": state.get("agent_history", []),
-            "total_messages": len(messages),
+            "total_messages": len(messages_list),
         }
 
         return insights
 
     def _extract_facts_from_messages(self, messages: list[dict[str, Any]]) -> list[str]:
         """Extract facts and insights from conversation messages."""
-        facts = []
+        facts: list[str] = []
 
         for message in messages:
             content = message.get("content", "")
@@ -343,6 +365,10 @@ class SessionMemoryBridge:
 
             # Store in session memory as checkpoint reference
             svc = await self._get_service()
+            from tripsage_core.services.business.memory_service import (
+                ConversationMemoryRequest,
+            )
+
             payload = ConversationMemoryRequest(
                 messages=[
                     {

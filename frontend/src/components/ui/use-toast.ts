@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Toast state manager inspired by react-hot-toast. Provides a
+ * small reducer, timeouts, and helpers for showing/dismissing toasts.
+ */
 // Inspired by react-hot-toast library
 import * as React from "react";
 

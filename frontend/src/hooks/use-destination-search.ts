@@ -1,9 +1,11 @@
 /**
- * Mock implementation of use-destination-search
- * This file exists to satisfy test imports that expect this module
+ * @fileoverview Mock implementation of destination search hook.
+ *
+ * Placeholder implementation for destination search functionality.
+ * Provides interface for search methods and state management.
  */
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 export interface DestinationSearchParams {
   query: string;
@@ -19,13 +21,15 @@ export interface UseDestinationSearchResult {
 }
 
 /**
- * Mock hook for destination search functionality
+ * Hook for destination search functionality.
+ *
+ * @returns Object with search methods and state
  */
 export function useDestinationSearch(): UseDestinationSearchResult {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<Error | null>(null);
 
-  const searchDestinations = async (_params: DestinationSearchParams) => {
+  const searchDestinations = useCallback(async (_params: DestinationSearchParams) => {
     setIsSearching(true);
     setSearchError(null);
     try {
@@ -36,12 +40,12 @@ export function useDestinationSearch(): UseDestinationSearchResult {
     } finally {
       setIsSearching(false);
     }
-  };
+  }, []);
 
-  const resetSearch = () => {
+  const resetSearch = useCallback(() => {
     setIsSearching(false);
     setSearchError(null);
-  };
+  }, []);
 
   return {
     searchDestinations,

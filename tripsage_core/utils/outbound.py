@@ -17,19 +17,15 @@ from typing import Any
 import httpx
 from aiolimiter import AsyncLimiter
 
+from tripsage_core.config import get_settings
 
-_DEFAULT_QPM = float(  # default queries per minute if no override
-    asyncio.get_event_loop().run_until_complete(
-        asyncio.to_thread(
-            lambda: float(__import__("os").getenv("OUTBOUND_QPM_DEFAULT", "60"))
-        )
-    )
-)
+
+_DEFAULT_QPM = get_settings().outbound_default_qpm
 
 _limiters_by_loop: MutableMapping[int, MutableMapping[str, AsyncLimiter]] = {}
 
 
-def _limiter_for_host(host: str) -> AsyncLimiter:
+async def _limiter_for_host(host: str) -> AsyncLimiter:
     """Get or create a limiter for a given hostname.
 
     Uses environment override ``OUTBOUND_QPM__<HOST>`` (uppercased, dots
@@ -52,7 +48,8 @@ def _limiter_for_host(host: str) -> AsyncLimiter:
         return per_loop[key]
 
     env_key = f"OUTBOUND_QPM__{host.upper().replace('.', '_')}"
-    qpm = float(os.getenv(env_key, str(_DEFAULT_QPM)))
+    env_value = await asyncio.to_thread(os.getenv, env_key, str(_DEFAULT_QPM))
+    qpm = float(env_value)
     # Window of 60 seconds for QPM semantics
     limiter = AsyncLimiter(max_rate=qpm, time_period=60)
     per_loop[key] = limiter
@@ -100,7 +97,7 @@ async def request_with_backoff(
     """
     parsed = urllib.parse.urlparse(url)
     host = parsed.netloc.split("@")[-1]  # strip userinfo if any
-    limiter = _limiter_for_host(host)
+    limiter = await _limiter_for_host(host)
 
     attempt = 0
     while True:
@@ -117,3 +114,66 @@ async def request_with_backoff(
             delay = await _retry_delay(attempt, max_delay=retry_cap_seconds)
         attempt += 1
         await asyncio.sleep(delay)
+
+
+class AsyncApiClient:
+    """Base class for async HTTP API clients with rate limiting and backoff.
+
+    This class provides a standardized way to make HTTP requests to external APIs
+    with built-in rate limiting per host and automatic retry with exponential backoff
+    on HTTP 429 responses.
+    """
+
+    def __init__(self, client: httpx.AsyncClient | None = None) -> None:
+        """Initialize the API client.
+
+        Args:
+            client: Optional httpx.AsyncClient instance.
+                    If None, a default client is created.
+        """
+        self.client = client or httpx.AsyncClient()
+
+    async def request_with_backoff(
+        self,
+        method: str,
+        url: str,
+        *,
+        max_retries: int = 6,
+        retry_cap_seconds: float = 30.0,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        """Perform an HTTP request with rate limiting and backoff.
+
+        This is a convenience method that calls the module-level request_with_backoff
+        function with this client's httpx.AsyncClient instance.
+
+        Args:
+            method: HTTP method name (e.g., "GET").
+            url: Target URL.
+            max_retries: Maximum retry attempts for HTTP 429.
+            retry_cap_seconds: Maximum delay for backoff.
+            **kwargs: Passed through to httpx request method.
+
+        Returns:
+            The final httpx.Response.
+        """
+        return await request_with_backoff(
+            self.client,
+            method,
+            url,
+            max_retries=max_retries,
+            retry_cap_seconds=retry_cap_seconds,
+            **kwargs,
+        )
+
+    async def close(self) -> None:
+        """Close the underlying HTTP client."""
+        await self.client.aclose()
+
+    async def __aenter__(self) -> AsyncApiClient:
+        """Enter async context manager."""
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exit async context manager and close client."""
+        await self.close()

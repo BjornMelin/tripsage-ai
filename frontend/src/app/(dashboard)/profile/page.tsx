@@ -1,5 +1,6 @@
 "use client";
 
+import { Settings, Shield, Sliders, User } from "lucide-react";
 import { AccountSettingsSection } from "@/components/features/profile/account-settings-section";
 import { PersonalInfoSection } from "@/components/features/profile/personal-info-section";
 import { PreferencesSection } from "@/components/features/profile/preferences-section";
@@ -15,7 +16,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/stores/auth-store";
 import { useUserProfileStore } from "@/stores/user-store";
-import { Settings, Shield, Sliders, User } from "lucide-react";
 
 export default function ProfilePage() {
   const { user, isLoading } = useAuthStore();

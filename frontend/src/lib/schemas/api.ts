@@ -1,6 +1,5 @@
 /**
- * Zod schemas for API interfaces
- * Runtime validation for all API requests and responses
+ * @fileoverview Zod schemas for API request/response validation.
  */
 
 import { z } from "zod";

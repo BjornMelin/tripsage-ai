@@ -7,16 +7,16 @@
 - Memory via ``MemoryService``
 """
 
-import asyncio
 import json
-import os
 import time
+from collections.abc import Awaitable, Callable
 from datetime import date, datetime
 from typing import Any, cast
 
 import httpx
 
 from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
+from tripsage_core.config import get_env_var
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
 from tripsage_core.services.business.flight_service import (
     CabinClass,
@@ -37,7 +37,7 @@ from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsService,
 )
 from tripsage_core.services.infrastructure import get_database_service
-from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -107,7 +107,7 @@ class ChatOrchestrationService:
         escaped = str_value.replace("'", "''")
         return f"'{escaped}'"
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def create_chat_session(
         self, user_id: int, metadata: dict[str, Any] | None = None
     ) -> dict[str, Any]:
@@ -159,7 +159,7 @@ class ChatOrchestrationService:
             self.logger.exception("Failed to create chat session")
             raise ChatOrchestrationError(f"Failed to create chat session: {e!s}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def save_message(
         self,
         session_id: str,
@@ -225,7 +225,7 @@ class ChatOrchestrationService:
             self.logger.exception("Failed to save message")
             raise ChatOrchestrationError(f"Failed to save message: {e!s}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def search_flights(self, params: dict[str, Any]) -> dict[str, Any]:
         """Search flights using direct provider/FlightService (no MCP).
 
@@ -242,7 +242,7 @@ class ChatOrchestrationService:
             self.logger.info("Searching flights via direct provider")
 
             # Build FlightSearchRequest from untyped params
-            def _get(key: str, default=None):
+            def _get(key: str, default: Any | None = None) -> Any | None:
                 return params.get(key, default)
 
             # Required fields validation for static typing and runtime safety
@@ -277,22 +277,31 @@ class ChatOrchestrationService:
             )
 
             # Optionally wire Duffel provider if access token present
-            duffel_token = os.getenv("DUFFEL_ACCESS_TOKEN")
+            duffel_token = await get_env_var("DUFFEL_ACCESS_TOKEN")
             external = (
                 DuffelProvider(access_token=duffel_token) if duffel_token else None
             )
 
             await self._ensure_database()
+            assert self.database is not None  # Ensure database is initialized
             flight_service = FlightService(
                 database_service=self.database, external_flight_service=external
             )
 
-            search_response = await flight_service.search_flights(fs_request)
+            search_flights = cast(
+                Callable[[FlightSearchRequest], Awaitable[Any]],
+                flight_service.search_flights,
+            )
+            search_response = await search_flights(fs_request)
             # Convert to plain dict for chat payloads
             result = search_response.model_dump()
 
             # Store search results in memory graph for future reference
-            await self._store_search_result("flight", params, result)
+            store_search = cast(
+                Callable[[str, dict[str, Any], Any], Awaitable[None]],
+                self._store_search_result,
+            )
+            await store_search("flight", params, result)
 
             return {
                 "search_type": "flights",
@@ -305,7 +314,7 @@ class ChatOrchestrationService:
             self.logger.exception("Flight search failed")
             raise ChatOrchestrationError(f"Flight search failed: {e!s}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def search_accommodations(self, params: dict[str, Any]) -> dict[str, Any]:
         """Search accommodations using Airbnb MCP client directly.
 
@@ -346,7 +355,11 @@ class ChatOrchestrationService:
             result = {"listings": listings}
 
             # Store search results in memory graph
-            await self._store_search_result("accommodation", params, result)
+            store_search = cast(
+                Callable[[str, dict[str, Any], Any], Awaitable[None]],
+                self._store_search_result,
+            )
+            await store_search("accommodation", params, result)
 
             return {
                 "search_type": "accommodations",
@@ -359,7 +372,7 @@ class ChatOrchestrationService:
             self.logger.exception("Accommodation search failed")
             raise ChatOrchestrationError(f"Accommodation search failed: {e!s}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def get_location_info(self, location: str) -> dict[str, Any]:
         """Get location information using Google Maps service.
 
@@ -384,7 +397,11 @@ class ChatOrchestrationService:
 
             # Store location data in memory
             if data:
-                await self._store_location_data(location, data[0])
+                store_loc = cast(
+                    Callable[[str, dict[str, Any]], Awaitable[None]],
+                    self._store_location_data,
+                )
+                await store_loc(location, data[0])
 
             return {"location": location, "data": data, "timestamp": time.time()}
 
@@ -392,8 +409,10 @@ class ChatOrchestrationService:
             self.logger.exception("Location lookup failed")
             raise ChatOrchestrationError(f"Location lookup failed: {e!s}") from e
 
-    @with_error_handling()
-    async def execute_parallel_tools(self, tool_calls: list[dict]) -> dict[str, Any]:
+    @tripsage_safe_execute()
+    async def execute_parallel_tools(
+        self, tool_calls: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """Execute multiple tool calls in parallel using structured tool call service.
 
         Args:
@@ -409,7 +428,7 @@ class ChatOrchestrationService:
             self.logger.info("Executing %s tool calls in parallel", len(tool_calls))
 
             # Convert to structured tool call requests
-            requests = []
+            requests: list[ToolCallRequest] = []
             for i, tool_call in enumerate(tool_calls):
                 request = ToolCallRequest(
                     id=tool_call.get("id", f"tool_call_{i}"),
@@ -422,12 +441,14 @@ class ChatOrchestrationService:
                 requests.append(request)
 
             # Execute using structured tool calling service
-            responses = await self.tool_call_service.execute_parallel_tool_calls(
-                requests
+            exec_parallel = cast(
+                Callable[[list[ToolCallRequest]], Awaitable[list[ToolCallResponse]]],
+                self.tool_call_service.execute_parallel_tool_calls,
             )
+            responses: list[ToolCallResponse] = await exec_parallel(requests)
 
             # Convert responses to a simple mapping for callers
-            results = {}
+            results: dict[str, Any] = {}
             for response in responses:
                 if response.status == "success":
                     results[response.id] = response.result
@@ -462,7 +483,7 @@ class ChatOrchestrationService:
                 f"Parallel tool execution failed: {e!s}"
             ) from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def execute_structured_tool_call(
         self,
         service: str,
@@ -492,13 +513,17 @@ class ChatOrchestrationService:
                 params=params,
             )
 
-            return await self.tool_call_service.execute_tool_call(request)
+            exec_one = cast(
+                Callable[[ToolCallRequest], Awaitable[ToolCallResponse]],
+                self.tool_call_service.execute_tool_call,
+            )
+            return await exec_one(request)
 
         except Exception as e:
             self.logger.exception("Structured tool call failed")
             raise ChatOrchestrationError(f"Structured tool call failed: {e!s}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def format_tool_response_for_chat(
         self, response: ToolCallResponse
     ) -> dict[str, Any]:
@@ -535,7 +560,7 @@ class ChatOrchestrationService:
                 f"Tool response formatting failed: {e!s}"
             ) from e
 
-    async def _execute_single_tool_call(self, tool_call: dict) -> Any:
+    async def _execute_single_tool_call(self, tool_call: dict[str, Any]) -> Any:
         """Execute a single tool call.
 
         Args:
@@ -601,7 +626,11 @@ class ChatOrchestrationService:
             return await self.database.execute_sql(sql=sql)
 
         if service == "duffel_flights":
-            return await self.search_flights(params)
+            search_flights2 = cast(
+                Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
+                self.search_flights,
+            )
+            return await search_flights2(params)
 
         if service == "memory":
             # Map to memory service conversation entry
@@ -617,15 +646,17 @@ class ChatOrchestrationService:
                 trip_id=None,
                 metadata=None,
             )
-            return await mem.add_conversation_memory(
-                user_id="system", memory_request=req
+            add_conv = cast(
+                Callable[[str, ConversationMemoryRequest], Awaitable[dict[str, Any]]],
+                mem.add_conversation_memory,
             )
+            return await add_conv("system", req)
 
         raise ChatOrchestrationError(
             f"Unsupported tool call service/method: {service}.{method}"
         )
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def _store_search_result(
         self, search_type: str, params: dict[str, Any], results: Any
     ) -> None:
@@ -638,7 +669,7 @@ class ChatOrchestrationService:
         """
         try:
             mem = await get_memory_service()
-            count = len(results) if isinstance(results, list) else 1
+            count = len(cast(list[Any], results)) if isinstance(results, list) else 1
             summary = (
                 f"{search_type} search stored (count={count}): {str(params)[:180]}"
             )
@@ -648,7 +679,11 @@ class ChatOrchestrationService:
                 trip_id=None,
                 metadata={"search_type": search_type},
             )
-            await mem.add_conversation_memory(user_id="system", memory_request=req)
+            add_conv2 = cast(
+                Callable[[str, ConversationMemoryRequest], Awaitable[dict[str, Any]]],
+                mem.add_conversation_memory,
+            )
+            await add_conv2("system", req)
 
         except (
             httpx.HTTPError,
@@ -661,7 +696,7 @@ class ChatOrchestrationService:
         except Exception as e:  # noqa: BLE001
             self.logger.warning("Unexpected error storing search result: %s", e)
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def _store_location_data(self, location: str, data: dict[str, Any]) -> None:
         """Store location data using MemoryService.
 
@@ -682,7 +717,11 @@ class ChatOrchestrationService:
                 trip_id=None,
                 metadata={"source": "google_maps", "location": location},
             )
-            await mem.add_conversation_memory(user_id="system", memory_request=req)
+            add_conv3 = cast(
+                Callable[[str, ConversationMemoryRequest], Awaitable[dict[str, Any]]],
+                mem.add_conversation_memory,
+            )
+            await add_conv3("system", req)
 
         except (
             httpx.HTTPError,
@@ -695,7 +734,7 @@ class ChatOrchestrationService:
         except Exception as e:  # noqa: BLE001
             self.logger.warning("Unexpected error storing location data: %s", e)
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def get_chat_history(
         self, session_id: str, limit: int = 10, offset: int = 0
     ) -> list[dict[str, Any]]:
@@ -737,7 +776,7 @@ class ChatOrchestrationService:
             await self._ensure_database()
             assert self.database is not None
             rows = await self.database.execute_sql(sql=query)
-            messages = rows if isinstance(rows, list) else []
+            messages: list[dict[str, Any]] = cast(list[dict[str, Any]], rows)
 
             self.logger.info("Retrieved %s messages from history", len(messages))
             return messages
@@ -746,7 +785,7 @@ class ChatOrchestrationService:
             self.logger.exception("Failed to get chat history")
             raise ChatOrchestrationError(f"Failed to get chat history: {e!s}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def end_chat_session(self, session_id: str) -> bool:
         """End a chat session using DatabaseService.
 
@@ -784,35 +823,5 @@ class ChatOrchestrationService:
             raise ChatOrchestrationError(f"Failed to end chat session: {e!s}") from e
 
 
-async def main():
-    """Main function for testing chat orchestration service."""
-    # Initialize the service
-    service = ChatOrchestrationService()
-
-    try:
-        # Example: Create a chat session
-        session = await service.create_chat_session(user_id=1)
-        print(f"Created session: {session}")
-
-        # Example: Search flights
-        flight_params = {
-            "origin": "NYC",
-            "destination": "LAX",
-            "departure_date": "2025-06-01",
-            "return_date": "2025-06-08",
-        }
-        flights = await service.search_flights(flight_params)
-        print(f"Flight search completed: {len(flights.get('results', []))} results")
-
-        # Example: Get location info
-        location_info = await service.get_location_info("Paris, France")
-        print(f"Location info: {location_info}")
-
-    except ChatOrchestrationError as e:
-        print(f"Chat orchestration error: {e}")
-    except Exception as e:  # noqa: BLE001
-        print(f"Unexpected error: {e}")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+# Note: Standalone demo runner removed to keep library import-only and
+# avoid static-analysis confusion around decorated async methods.

@@ -1,4 +1,4 @@
-"""Consolidated database models for TripSage.
+"""Database models for TripSage.
 
 This module provides essential business models that represent
 core domain entities with validation logic, used across
@@ -43,7 +43,6 @@ from .flight import (
 from .memory import (
     Memory,
     MemoryCreate,
-    MemorySearchResult,
     MemoryUpdate,
     SessionMemory,
 )
@@ -98,7 +97,6 @@ __all__ = [
     # Memory models
     "Memory",
     "MemoryCreate",
-    "MemorySearchResult",
     "MemoryUpdate",
     "MessageWithTokenEstimate",
     "OptionType",

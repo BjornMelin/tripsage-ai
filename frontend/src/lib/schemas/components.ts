@@ -155,7 +155,7 @@ export const searchResultsPropsSchema = z.object({
 
 export const searchFiltersPropsSchema = z.object({
   searchType: z.enum(["flight", "accommodation", "activity", "destination"]),
-  filters: z.record(z.unknown()),
+  filters: z.record(z.string(), z.unknown()),
   onFiltersChange: z.function(),
   onReset: z.function().optional(),
   disabled: z.boolean().optional(),
@@ -192,7 +192,7 @@ export const budgetTrackerPropsSchema = z.object({
     total: z.number().positive(),
     spent: z.number().nonnegative(),
     currency: z.string().length(3),
-    breakdown: z.record(z.number()).optional(),
+    breakdown: z.record(z.string(), z.number()).optional(),
   }),
   showBreakdown: z.boolean().optional(),
   editable: z.boolean().optional(),

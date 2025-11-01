@@ -1,7 +1,10 @@
 # ADR-0003: Use Upstash Redis (HTTP) for Caching
 
-**Status:** Accepted
-**Date:** 2025-10-22
+**Version**: 1.0.0
+**Status**: Accepted
+**Date**: 2025-10-22
+**Category**: platform
+**Domain**: Upstash Redis
 
 ## Context
 
@@ -31,3 +34,7 @@
 - [Upstash Redis Documentation](https://upstash.com/docs/redis)
 - [Upstash Redis Python SDK](https://github.com/upstash/upstash-redis)
 - [Upstash Redis Vercel Integration](https://vercel.com/integrations/upstash-redis)
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

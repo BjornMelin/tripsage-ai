@@ -28,8 +28,8 @@ ModelName = Annotated[
     str,
     StringConstraints(
         pattern=(
-            r"^(gpt-4|gpt-4-turbo|gpt-4o|gpt-4o-mini|gpt-3.5-turbo|"
-            r"claude-3-sonnet|claude-3-haiku)$"
+            r"^(gpt-4|gpt-4-turbo|gpt-4o|gpt-4o-mini|gpt-5|gpt-5-mini|gpt-5-nano|"
+            r"claude-4.5-sonnet|claude-4.5-haiku)$"
         )
     ),
 ]
@@ -177,7 +177,7 @@ class AgentConfigRequest(BaseConfigModel):
                 "gpt-3.5-turbo": 4096,
                 "gpt-4": 8192,
                 "gpt-4-turbo": 8192,
-                "gpt-4o": 8192,
+                "gpt-5": 8192,
                 "claude-3-haiku": 4096,
                 "claude-3-sonnet": 8192,
             }
@@ -206,7 +206,7 @@ class AgentConfigRequest(BaseConfigModel):
         """Get list of fields that changed compared to another configuration."""
         return [
             field_name
-            for field_name in self.model_fields
+            for field_name in list(self.__class__.model_fields)
             if getattr(self, field_name) != getattr(other, field_name)
         ]
 
@@ -237,9 +237,11 @@ class AgentConfigResponse(BaseConfigModel):
             "gpt-4-turbo": Decimal("0.010"),
             "gpt-4o": Decimal("0.005"),
             "gpt-4o-mini": Decimal("0.002"),
-            "gpt-3.5-turbo": Decimal("0.0015"),
-            "claude-3-sonnet": Decimal("0.015"),
-            "claude-3-haiku": Decimal("0.0025"),
+            "gpt-5": Decimal("0.005"),
+            "gpt-5-mini": Decimal("0.002"),
+            "gpt-5-nano": Decimal("0.001"),
+            "claude-4.5-sonnet": Decimal("0.015"),
+            "claude-4.5-haiku": Decimal("0.0025"),
         }
         return model_costs.get(self.model, Decimal("0.010"))
 
@@ -249,12 +251,11 @@ class AgentConfigResponse(BaseConfigModel):
         """Categorize the creativity level based on temperature."""
         if self.temperature <= 0.3:
             return "Conservative (Focused, Deterministic)"
-        elif self.temperature <= 0.7:
+        if self.temperature <= 0.7:
             return "Balanced (Moderate Creativity)"
-        elif self.temperature <= 1.2:
+        if self.temperature <= 1.2:
             return "Creative (High Variation)"
-        else:
-            return "Very Creative (Maximum Randomness)"
+        return "Very Creative (Maximum Randomness)"
 
     @computed_field
     @property
@@ -262,25 +263,27 @@ class AgentConfigResponse(BaseConfigModel):
         """Categorize response size based on max_tokens."""
         if self.max_tokens <= 500:
             return "Short (Concise responses)"
-        elif self.max_tokens <= 1500:
+        if self.max_tokens <= 1500:
             return "Medium (Detailed responses)"
-        elif self.max_tokens <= 4000:
+        if self.max_tokens <= 4000:
             return "Long (Comprehensive responses)"
-        else:
-            return "Very Long (Extensive responses)"
+        return "Very Long (Extensive responses)"
 
     @computed_field
     @property
     def performance_tier(self) -> str:
         """Determine performance tier based on model and settings."""
-        if self.model in ["gpt-4o", "gpt-4-turbo"]:
+        if self.model in ["gpt-5-mini", "gpt-4o", "claude-4.5-haiku"]:
             return "High Performance"
-        elif self.model in ["gpt-4", "claude-3-sonnet"]:
+        if self.model in ["gpt-5", "claude-4.5-sonnet"]:
             return "Premium"
-        elif self.model in ["gpt-4o-mini", "gpt-3.5-turbo", "claude-3-haiku"]:
+        if self.model in [
+            "gpt-5-nano",
+            "gpt-4o-mini",
+            "claude-4.5-sonnet",
+        ]:
             return "Efficient"
-        else:
-            return "Standard"
+        return "Standard"
 
     @field_serializer("created_at", "updated_at")
     def serialize_datetime(self, value: datetime) -> str:
@@ -368,10 +371,9 @@ class ConfigurationDiff(BaseConfigModel):
         critical_fields = ["model", "temperature"]
         if self.field in critical_fields:
             return "High"
-        elif self.field in ["max_tokens", "timeout_seconds"]:
+        if self.field in ["max_tokens", "timeout_seconds"]:
             return "Medium"
-        else:
-            return "Low"
+        return "Low"
 
 
 class PerformanceMetrics(BaseConfigModel):
@@ -398,14 +400,13 @@ class PerformanceMetrics(BaseConfigModel):
         """Calculate overall performance grade."""
         if self.success_rate >= 0.95 and self.average_response_time <= 2.0:
             return "A+ (Excellent)"
-        elif self.success_rate >= 0.90 and self.average_response_time <= 5.0:
+        if self.success_rate >= 0.90 and self.average_response_time <= 5.0:
             return "A (Very Good)"
-        elif self.success_rate >= 0.85 and self.average_response_time <= 10.0:
+        if self.success_rate >= 0.85 and self.average_response_time <= 10.0:
             return "B (Good)"
-        elif self.success_rate >= 0.75:
+        if self.success_rate >= 0.75:
             return "C (Fair)"
-        else:
-            return "D (Needs Improvement)"
+        return "D (Needs Improvement)"
 
     @computed_field
     @property
@@ -435,10 +436,9 @@ class ConfigurationRecommendation(BaseConfigModel):
         """Determine priority level of this recommendation."""
         if self.confidence_score >= 0.8:
             return "High Priority"
-        elif self.confidence_score >= 0.6:
+        if self.confidence_score >= 0.6:
             return "Medium Priority"
-        else:
-            return "Low Priority"
+        return "Low Priority"
 
     @model_validator(mode="after")
     def validate_recommendation_logic(self) -> Self:
@@ -452,29 +452,6 @@ class ConfigurationRecommendation(BaseConfigModel):
                 "High confidence recommendations should not suggest "
                 "dramatic temperature changes"
             )
-
-        return self
-
-
-class WebSocketConfigMessage(BaseConfigModel):
-    """Schema for real-time WebSocket configuration messages."""
-
-    type: str = Field(description="Message type (update, rollback, validation, etc.)")
-    agent_type: AgentType | None = None
-    configuration: dict[str, Any] | None = None
-    version_id: VersionId | None = None
-    updated_by: str | None = None
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    message: str | None = None
-
-    @model_validator(mode="after")
-    def validate_message_consistency(self) -> Self:
-        """Validate that message fields are consistent with message type."""
-        if self.type == "update" and not self.configuration:
-            raise ValueError("Update messages must include configuration data")
-
-        if self.type == "rollback" and not self.version_id:
-            raise ValueError("Rollback messages must include version_id")
 
         return self
 
@@ -562,11 +539,10 @@ class ConfigurationValidationResponse(BaseConfigModel):
         """Generate human-readable validation summary."""
         if self.is_valid:
             return f"✅ Valid configuration ({len(self.warnings)} warnings)"
-        else:
-            return (
-                f"❌ Invalid configuration ({len(self.errors)} errors, "
-                f"{len(self.warnings)} warnings)"
-            )
+        return (
+            f"❌ Invalid configuration ({len(self.errors)} errors, "
+            f"{len(self.warnings)} warnings)"
+        )
 
 
 class ConfigurationImportResult(BaseConfigModel):

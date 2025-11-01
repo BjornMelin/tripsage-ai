@@ -1,9 +1,9 @@
 "use client";
 
-import { useApiMutation, useApiQuery } from "@/hooks/use-api-query";
-import { useAgentStatusStore } from "@/stores/agent-status-store";
-import type { Agent, AgentTask } from "@/types/agent-status";
 import { useCallback, useEffect } from "react";
+import { useApiMutation, useApiQuery } from "@/hooks/use-api-query";
+import type { Agent, AgentTask } from "@/lib/schemas/agent-status";
+import { useAgentStatusStore } from "@/stores/agent-status-store";
 
 /**
  * Hook for fetching and managing agent status

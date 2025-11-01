@@ -10,26 +10,23 @@ from __future__ import annotations
 import json
 from collections.abc import Awaitable, Callable
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, cast as _cast
 
-from langchain_core.tools import BaseTool, tool
+import langchain_core.tools as _lc_tools  # type: ignore[reportMissingTypeStubs]
+from langchain_core.tools import BaseTool
+
+
+# Narrow 'tool' to Any for strict type checking; runtime behavior unchanged
+tool: Any = _cast(Any, _lc_tools.tool)  # pyright: ignore[reportUnknownMemberType]
 from pydantic import BaseModel, Field
 
+from tripsage.app_state import AppServiceContainer
 from tripsage.tools.memory_tools import (
     add_conversation_memory as _add_conversation_memory_raw,
     search_user_memories as _search_user_memories_raw,
 )
 from tripsage.tools.models import ConversationMessage
-from tripsage_core.services.airbnb_mcp import default_airbnb_mcp
-from tripsage_core.services.business.flight_service import FlightService
-from tripsage_core.services.external_apis.google_maps_service import (
-    GoogleMapsService,
-)
-from tripsage_core.services.external_apis.weather_service import WeatherService
-from tripsage_core.services.external_apis.webcrawl_service import (
-    WebCrawlParams,
-    WebCrawlService,
-)
+from tripsage_core.services.airbnb_mcp import AirbnbMCP, default_airbnb_mcp
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -39,7 +36,45 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-mcp_service: Final = default_airbnb_mcp
+_services_container: AppServiceContainer | None = None
+_default_mcp_service: Final = default_airbnb_mcp
+_mcp_service: AirbnbMCP | None = None
+
+
+def set_tool_services(services: AppServiceContainer) -> None:
+    """Provide the lifespan-managed services to the tools module."""
+    global _services_container  # pylint: disable=global-statement
+    global _mcp_service  # pylint: disable=global-statement
+
+    _services_container = services
+    try:
+        _mcp_service = services.get_optional_service(
+            "mcp_service",
+            expected_type=AirbnbMCP,
+        )
+    except TypeError:
+        _mcp_service = None
+
+
+def _require_services() -> AppServiceContainer:
+    """Return the active service container or raise if missing."""
+    if _services_container is None:
+        raise RuntimeError(
+            "AppServiceContainer not initialised for orchestration tools; "
+            "set_tool_services must be called during application startup.",
+        )
+    return _services_container
+
+
+def _get_service_from_container(service_name: str) -> Any:
+    """Fetch a required service from the container.
+
+    Type validation is intentionally avoided to prevent importing heavy
+    submodules during test collection and lightweight environments.
+    """
+    services = _require_services()
+    return _cast(Any, services.get_required_service(service_name))
+
 
 AddMemoryFn = Callable[..., Awaitable[dict[str, Any]]]
 SearchMemoryFn = Callable[["MemorySearchQuery"], Awaitable[list[dict[str, Any]]]]
@@ -98,8 +133,7 @@ class WebSearchParams(BaseModel):
 
 
 # Core Travel Tools
-@tool("search_flights", args_schema=FlightSearchParams)
-async def search_flights(
+async def _search_flights_impl(
     origin: str,
     destination: str,
     departure_date: str,
@@ -114,8 +148,7 @@ async def search_flights(
             FlightSearchRequest,
         )
 
-        db = await _ensure_database_service()
-        service = FlightService(database_service=db)
+        service = _get_service_from_container("flight_service")
         pax = [FlightPassenger(type="adult") for _ in range(max(1, passengers))]  # type: ignore[call-arg]
         req = FlightSearchRequest(  # type: ignore[call-arg]
             origin=origin,
@@ -126,14 +159,13 @@ async def search_flights(
             cabin_class=class_preference or "economy",
         )
         resp = await service.search_flights(req)
-        return resp.model_dump_json()
+        return str(resp.model_dump_json())
     except Exception as e:  # pragma: no cover - defensive
         logger.exception("Flight search failed")
         return json.dumps({"error": f"Flight search failed: {e!s}"})
 
 
-@tool("search_accommodations", args_schema=AccommodationSearchParams)
-async def search_accommodations(
+async def _search_accommodations_impl(
     location: str,
     check_in: str,
     check_out: str,
@@ -143,7 +175,7 @@ async def search_accommodations(
 ) -> str:
     """Search accommodations by location and dates."""
     try:
-        params = {
+        params: dict[str, Any] = {
             "location": location,
             "check_in": check_in,
             "check_out": check_out,
@@ -154,7 +186,10 @@ async def search_accommodations(
         if price_max is not None:
             params["price_max"] = price_max
 
-        result = await mcp_service.invoke(method_name="search_listings", params=params)
+        result = await _default_mcp_service.invoke(
+            method_name="search_listings",
+            params=params,
+        )
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
@@ -162,11 +197,10 @@ async def search_accommodations(
         return json.dumps({"error": f"Accommodation search failed: {e!s}"})
 
 
-@tool("geocode_location", args_schema=LocationParams)
-async def geocode_location(location: str) -> str:
+async def _geocode_location_impl(location: str) -> str:
     """Get geographic coordinates and details for a location via GoogleMapsService."""
     try:
-        svc = GoogleMapsService()
+        svc = _get_service_from_container("google_maps_service")
         await svc.connect()
         places = await svc.geocode(location)
         return json.dumps([p.model_dump() for p in places], ensure_ascii=False)
@@ -175,11 +209,10 @@ async def geocode_location(location: str) -> str:
         return json.dumps({"error": f"Geocoding failed: {e!s}"})
 
 
-@tool("get_weather", args_schema=LocationParams)
-async def get_weather(location: str) -> str:
+async def _get_weather_impl(location: str) -> str:
     """Get current weather information for a location using WeatherService."""
     try:
-        svc = WeatherService()
+        svc = _get_service_from_container("weather_service")
         await svc.connect()
         # WeatherService signature may vary; pass location as a plain string
         # pylint: disable=no-value-for-parameter
@@ -190,15 +223,16 @@ async def get_weather(location: str) -> str:
         return json.dumps({"error": f"Weather lookup failed: {e!s}"})
 
 
-@tool("web_search", args_schema=WebSearchParams)
-async def web_search(query: str, location: str | None = None) -> str:
+async def _web_search_impl(query: str, location: str | None = None) -> str:
     """Search the web for travel-related information using WebCrawlService."""
     try:
-        svc = WebCrawlService()
+        svc = _get_service_from_container("webcrawl_service")
         await svc.connect()
-        params: WebCrawlParams = WebCrawlParams(
-            javascript_enabled=False, extract_markdown=True, extract_html=False
-        )
+        params = {
+            "javascript_enabled": False,
+            "extract_markdown": True,
+            "extract_html": False,
+        }
         # Use a generic search engine wrapper if available; else crawl query URL
         # For now, just return an empty result to satisfy interface if not implemented.
         # Some builds may not expose `search_web`; tolerate via pylint hint
@@ -211,8 +245,7 @@ async def web_search(query: str, location: str | None = None) -> str:
         return json.dumps({"error": f"Web search failed: {e!s}"})
 
 
-@tool("add_memory", args_schema=MemoryParams)
-async def add_memory(content: str, category: str | None = None) -> str:
+async def _add_memory_impl(content: str, category: str | None = None) -> str:
     """Save important information to user memory for future reference."""
     try:
         # Persist a simple note as a conversation memory for the current thread.
@@ -237,8 +270,7 @@ async def add_memory(content: str, category: str | None = None) -> str:
         return json.dumps({"error": f"Memory addition failed: {e!s}"})
 
 
-@tool("search_memories", args_schema=MemoryParams)
-async def search_memories(content: str, category: str | None = None) -> str:
+async def _search_memories_impl(content: str, category: str | None = None) -> str:
     """Search user memories for relevant information."""
     try:
         from tripsage.tools.models import (
@@ -259,7 +291,25 @@ async def search_memories(content: str, category: str | None = None) -> str:
 
 
 # Tool catalog for agent-specific tool access
-AGENT_TOOLS: dict[str, list[BaseTool]] = {
+search_flights: BaseTool = tool("search_flights", args_schema=FlightSearchParams)(
+    _search_flights_impl
+)
+search_accommodations: BaseTool = tool(
+    "search_accommodations", args_schema=AccommodationSearchParams
+)(_search_accommodations_impl)
+geocode_location: BaseTool = tool("geocode_location", args_schema=LocationParams)(
+    _geocode_location_impl
+)
+get_weather: BaseTool = tool("get_weather", args_schema=LocationParams)(
+    _get_weather_impl
+)
+web_search: BaseTool = tool("web_search", args_schema=WebSearchParams)(_web_search_impl)
+add_memory: BaseTool = tool("add_memory", args_schema=MemoryParams)(_add_memory_impl)
+search_memories: BaseTool = tool("search_memories", args_schema=MemoryParams)(
+    _search_memories_impl
+)
+
+AGENT_TOOLS: dict[str, list[Any]] = {
     "flight_agent": [
         search_flights,
         geocode_location,
@@ -303,7 +353,7 @@ AGENT_TOOLS: dict[str, list[BaseTool]] = {
 }
 
 # All available tools list
-ALL_TOOLS: list[BaseTool] = [
+ALL_TOOLS: list[Any] = [
     search_flights,
     search_accommodations,
     geocode_location,
@@ -314,23 +364,23 @@ ALL_TOOLS: list[BaseTool] = [
 ]
 
 
-def get_tools_for_agent(agent_type: str) -> list[BaseTool]:
+def get_tools_for_agent(agent_type: str) -> list[Any]:
     """Get tools for a specific agent type."""
     return AGENT_TOOLS.get(agent_type, [])
 
 
-def get_all_tools() -> list[BaseTool]:
+def get_all_tools() -> list[Any]:
     """Get all available tools."""
     return ALL_TOOLS
 
 
 async def health_check() -> dict[str, Any]:
     """Perform basic health check on core tools."""
-    healthy = []
-    unhealthy = []
+    healthy: list[str] = []
+    unhealthy: list[dict[str, Any]] = []
 
     try:
-        status = await mcp_service.health_check()
+        status = await _default_mcp_service.health_check()
         if status.get("status") == "healthy":
             healthy.append("airbnb_mcp")
         else:
@@ -363,14 +413,6 @@ __all__ = [
     "search_accommodations",
     "search_flights",
     "search_memories",
+    "set_tool_services",
     "web_search",
 ]
-
-
-async def _ensure_database_service():
-    """Get a database service instance for tools that require persistence."""
-    from tripsage_core.services.infrastructure.database_service import (
-        get_database_service,
-    )
-
-    return await get_database_service()

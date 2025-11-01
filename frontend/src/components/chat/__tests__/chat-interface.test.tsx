@@ -1,6 +1,6 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useChatStore } from "@/stores/chat-store";
 import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatInterface } from "../chat-interface";
 
 // Mock the chat store

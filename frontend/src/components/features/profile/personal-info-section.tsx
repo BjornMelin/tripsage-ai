@@ -1,5 +1,10 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Camera, Upload } from "lucide-react";
+import { useId, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,11 +27,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Camera, Upload } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 const personalInfoSchema = z.object({
   firstName: z
@@ -49,6 +49,7 @@ const personalInfoSchema = z.object({
 type PersonalInfoFormData = z.infer<typeof personalInfoSchema>;
 
 export function PersonalInfoSection() {
+  const avatarInputId = useId();
   const { profile, updatePersonalInfo, uploadAvatar } = useUserProfileStore();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
@@ -171,7 +172,7 @@ export function PersonalInfoSection() {
                 size="sm"
                 variant="outline"
                 className="h-8 w-8 rounded-full p-0"
-                onClick={() => document.getElementById("avatar-upload")?.click()}
+                onClick={() => document.getElementById(avatarInputId)?.click()}
                 disabled={isUploading}
               >
                 {isUploading ? (
@@ -182,7 +183,7 @@ export function PersonalInfoSection() {
               </Button>
             </div>
             <input
-              id="avatar-upload"
+              id={avatarInputId}
               type="file"
               accept="image/*"
               className="hidden"

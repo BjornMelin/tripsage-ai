@@ -15,7 +15,7 @@ const UserResponseSchema = z.object({
   name: z.string().min(1),
   age: z.number().int().min(0).max(150),
   isActive: z.boolean(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -87,10 +87,12 @@ describe("API client with Zod Validation", () => {
       });
 
       // Test with validated request data
-      const result = await apiClient.postValidated<
-        UserCreateRequest,
-        UserResponse
-      >("/api/users", validUserData, UserCreateRequestSchema, UserResponseSchema);
+      const result = await apiClient.postValidated<UserCreateRequest, UserResponse>(
+        "/api/users",
+        validUserData,
+        UserCreateRequestSchema,
+        UserResponseSchema
+      );
 
       expect(result).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
@@ -168,10 +170,7 @@ describe("API client with Zod Validation", () => {
         json: () => Promise.resolve(validResponse),
       });
 
-      const result = await apiClient.getValidated(
-        "/api/users/123",
-        UserResponseSchema
-      );
+      const result = await apiClient.getValidated("/api/users/123", UserResponseSchema);
 
       expect(result).toEqual(validResponse);
       expect(() => UserResponseSchema.parse(result)).not.toThrow();
@@ -323,10 +322,7 @@ describe("API client with Zod Validation", () => {
         json: () => Promise.resolve(mockUser),
       });
 
-      const result = await apiClient.getValidated(
-        "/api/users/123",
-        UserResponseSchema
-      );
+      const result = await apiClient.getValidated("/api/users/123", UserResponseSchema);
 
       expect(result).toEqual(mockUser);
       expect(mockFetch).toHaveBeenCalledWith(
@@ -427,10 +423,7 @@ describe("API client with Zod Validation", () => {
         json: () => Promise.resolve(userWithOptionalFields),
       });
 
-      const result = await apiClient.getValidated(
-        "/api/users/123",
-        UserResponseSchema
-      );
+      const result = await apiClient.getValidated("/api/users/123", UserResponseSchema);
 
       expect(result.metadata).toEqual({
         department: "Engineering",

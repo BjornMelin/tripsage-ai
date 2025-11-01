@@ -5,17 +5,22 @@ Simplified authentication using direct JWT verification.
 """
 
 import logging
+from collections.abc import Mapping
+from typing import Any, cast
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
+from tripsage.api.core.dependencies import RequiredPrincipalDep, get_principal_id
 from tripsage.api.schemas.users import UserPreferencesRequest, UserPreferencesResponse
 from tripsage_core.observability.otel import (
     http_route_attr_fn,
     record_histogram,
     trace_span,
 )
-from tripsage_core.services.business.user_service import UserService, get_user_service
+from tripsage_core.services.infrastructure.supabase_user_ops import (
+    get_user_preferences as supabase_get_user_preferences,
+    update_user_preferences as supabase_update_user_preferences,
+)
 
 
 router = APIRouter()
@@ -26,8 +31,7 @@ logger = logging.getLogger(__name__)
 @trace_span(name="api.users.preferences.get")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def get_user_preferences(
-    principal=Depends(require_principal),
-    user_service: UserService = Depends(get_user_service),
+    principal: RequiredPrincipalDep,
 ) -> UserPreferencesResponse:
     """Get the authenticated user's preferences.
 
@@ -45,19 +49,8 @@ async def get_user_preferences(
     logger.info("Getting preferences for user: %s", user_id)
 
     try:
-        user = await user_service.get_user_by_id(user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
-
-        # Return preferences or empty dict if none set
-        preferences = user.preferences or {}
+        preferences = await supabase_get_user_preferences(user_id)
         return UserPreferencesResponse(preferences=preferences)
-
-    except HTTPException:
-        raise
     except Exception as e:
         logger.exception("Error getting user preferences")
         raise HTTPException(
@@ -71,8 +64,7 @@ async def get_user_preferences(
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def update_user_preferences(
     preferences_request: UserPreferencesRequest,
-    principal=Depends(require_principal),
-    user_service: UserService = Depends(get_user_service),
+    principal: RequiredPrincipalDep,
 ) -> UserPreferencesResponse:
     """Update the authenticated user's preferences.
 
@@ -94,12 +86,11 @@ async def update_user_preferences(
     logger.info("Updating preferences for user: %s", user_id)
 
     try:
-        # Update preferences (service handles merging)
-        updated_user = await user_service.update_user_preferences(
-            user_id, preferences_request.preferences
+        preferences = await supabase_update_user_preferences(
+            user_id,
+            new_preferences=cast(Mapping[str, Any], preferences_request.preferences),
         )
-
-        return UserPreferencesResponse(preferences=updated_user.preferences or {})
+        return UserPreferencesResponse(preferences=preferences)
 
     except Exception as e:
         logger.exception("Error updating user preferences")

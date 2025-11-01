@@ -1,19 +1,18 @@
 "use client";
 
+import { MessageCircle, Settings, Users } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useOptimisticChat } from "@/hooks/use-optimistic-chat";
 import { useWebSocketChat } from "@/hooks/use-websocket-chat";
 import { cn } from "@/lib/utils";
-import { MessageCircle, Settings, Users } from "lucide-react";
-import { useState } from "react";
 import { CompactConnectionStatus } from "../features/shared/connection-status";
 import { MessageInput } from "./message-input";
 import { MessageList } from "./message-list";
 
 export interface ChatContainerProps {
-  websocketUrl?: string;
   currentUser: {
     id: string;
     name: string;
@@ -25,7 +24,6 @@ export interface ChatContainerProps {
 }
 
 export function ChatContainer({
-  websocketUrl = "wss://localhost:8080/ws",
   currentUser,
   className,
   title = "AI Travel Assistant",
@@ -43,13 +41,7 @@ export function ChatContainer({
     typingUsers,
     startTyping,
     stopTyping,
-  } = useWebSocketChat({
-    url: websocketUrl,
-    autoConnect: true,
-    retryOnError: true,
-    maxRetries: 5,
-    pingInterval: 30000,
-  });
+  } = useWebSocketChat({ autoConnect: true });
 
   // Optimistic updates for better UX
   const { optimisticMessages, sendOptimisticMessage, isPending, error } =

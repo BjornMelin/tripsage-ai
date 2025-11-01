@@ -1,11 +1,18 @@
+/**
+ * @fileoverview React hooks for deals management and filtering.
+ *
+ * Provides hooks for accessing deals, managing filters, saving deals,
+ * and handling deal alerts with local state management.
+ */
+
 "use client";
 
+import { useCallback, useEffect, useMemo } from "react";
 import { useDealsStore } from "@/stores/deals-store";
 import type { Deal, DealAlert, DealState, DealType } from "@/types/deals";
-import { useCallback, useEffect, useMemo } from "react";
 
 /**
- * Custom hook for accessing and managing deals
+ * Hook for accessing and managing deals.
  */
 export function useDeals() {
   const dealsStore = useDealsStore();

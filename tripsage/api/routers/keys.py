@@ -1,33 +1,28 @@
-"""API key management endpoints for the TripSage API.
+"""Vault-backed BYOK endpoints.
 
-This module provides endpoints for API key management, including BYOK (Bring Your
-Own Key) functionality for user-provided API keys.
+This router exposes minimal CRUD endpoints to manage user-provided API keys
+for providers: openai, openrouter, anthropic, xai. Secrets are stored in
+Supabase Vault; only metadata is stored in ``public.api_keys``.
 """
 
-import logging
-from typing import Any
+from __future__ import annotations
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    Path,
-    Query,
-    Request,
-    Response,
-    status,
-)
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar, cast
+
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.core.dependencies import (
-    ApiKeyServiceDep,
+    get_db,
     get_principal_id,
-    require_principal,
+    require_user_principal,
 )
+from tripsage.api.limiting import limiter
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.api_keys import (
-    ApiKeyCreate,
+    AllowedService,
+    ApiKeyCreateRequest,
     ApiKeyResponse,
-    ApiKeyRotateRequest,
     ApiKeyValidateRequest,
     ApiKeyValidateResponse,
 )
@@ -36,288 +31,179 @@ from tripsage_core.observability.otel import (
     record_histogram,
     trace_span,
 )
-from tripsage_core.services.infrastructure.key_monitoring_service import (
-    KeyMonitoringService,
-    get_key_health_metrics,
-)
+from tripsage_core.services.infrastructure.database_service import DatabaseService
+from tripsage_core.services.infrastructure.supabase_client import get_admin_client
+
+
+ALLOWED_SERVICES: set[str] = {"openai", "openrouter", "anthropic", "xai"}
 
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
+
+EndpointCallable = TypeVar("EndpointCallable", bound=Callable[..., Awaitable[Any]])
 
 
-def get_monitoring_service() -> KeyMonitoringService:
-    """Dependency provider for the KeyMonitoringService."""
-    return KeyMonitoringService()
+def rate_limit(
+    limit_value: str, **kwargs: Any
+) -> Callable[[EndpointCallable], EndpointCallable]:
+    """Typed wrapper around SlowAPI's limit decorator for this router."""
+    typed_limit = cast(
+        Callable[..., Callable[[EndpointCallable], EndpointCallable]],
+        cast(Any, limiter).limit,
+    )
+    return typed_limit(limit_value, **kwargs)
 
 
-@router.get(
-    "",
-    response_model=list[ApiKeyResponse],
-    summary="List API keys",
-)
-@trace_span(name="api.keys.list")
-@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def list_keys(
-    request: Request,
-    response: Response,
-    key_service: ApiKeyServiceDep,
-    principal: Principal = Depends(require_principal),
-):
-    """List all API keys for the current user.
+def _as_allowed(service: str) -> AllowedService:
+    svc = service.lower().strip()
+    if svc not in ALLOWED_SERVICES:  # pragma: no cover - defensive
+        raise ValueError("unsupported service")
+    # Narrow type for response model
+    return svc  # type: ignore[return-value]
 
-    Args:
-        request: Raw HTTP request (required by SlowAPI for headers)
-        response: Raw HTTP response (required by SlowAPI for headers)
-        principal: Current authenticated principal
-        key_service: Injected key service
+
+async def _validate_api_key(service: str, api_key: str) -> tuple[bool, str | None]:
+    """Perform a minimal metadata call to verify credentials.
 
     Returns:
-        List of API keys
+        Tuple of (is_valid, reason)
+    """
+    svc = service.lower().strip()
+    try:
+        if svc == "openai":
+            from openai import OpenAI  # type: ignore[reportMissingImports]
+
+            client = OpenAI(api_key=api_key)
+            _ = client.models.list()
+            return True, None
+        if svc == "openrouter":
+            from openai import OpenAI  # type: ignore[reportMissingImports]
+
+            client = OpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
+            _ = client.models.list()
+            return True, None
+        if svc == "anthropic":
+            from anthropic import Anthropic  # type: ignore[reportMissingImports]
+
+            client = Anthropic(api_key=api_key)
+            _ = client.models.list()
+            return True, None
+        if svc == "xai":
+            from openai import OpenAI  # type: ignore[reportMissingImports]
+
+            client = OpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
+            _ = client.models.list()
+            return True, None
+        return False, "unsupported_service"
+    except Exception as exc:  # noqa: BLE001 - surface reason only
+        return False, str(exc)
+
+
+@router.get("/keys", response_model=list[ApiKeyResponse])
+async def list_api_keys(
+    principal: Principal = Depends(require_user_principal),
+    db: DatabaseService = Depends(get_db),
+) -> list[ApiKeyResponse]:
+    """Return summary of keys owned by the authenticated user.
+
+    This returns only metadata (no secret material).
     """
     user_id = get_principal_id(principal)
-    return await key_service.list_user_keys(user_id)
+    rows = await db.select(
+        "api_keys",
+        "service, created_at, last_used",
+        filters={"user_id": user_id},
+        order_by="service",
+        user_id=user_id,
+    )
+    from datetime import UTC, datetime
 
+    def _as_dt(v: object) -> datetime | None:
+        """Convert various datetime representations into a timezone-aware datetime."""
+        if v is None:
+            return None
+        if isinstance(v, datetime):
+            return v
+        if isinstance(v, str):
+            try:
+                return datetime.fromisoformat(v)
+            except ValueError:  # pragma: no cover - defensive
+                return None
+        return None
 
-@router.post(
-    "",
-    response_model=ApiKeyResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create a new API key",
-)
-@trace_span(name="api.keys.create")
-@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def create_key(
-    request: Request,
-    response: Response,
-    key_data: ApiKeyCreate,
-    key_service: ApiKeyServiceDep,
-    principal: Principal = Depends(require_principal),
-):
-    """Create a new API key.
-
-    Args:
-        request: Raw HTTP request (required by SlowAPI for headers)
-        response: Raw HTTP response (required by SlowAPI for headers)
-        key_data: API key data
-        principal: Current authenticated principal
-        key_service: Injected key service
-
-    Returns:
-        The created API key
-
-    Raises:
-        HTTPException: If the key is invalid
-    """
-    try:
-        # Validate the API key with the service
-        validation = await key_service.validate_key(key_data.key, key_data.service)
-
-        if not validation.is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid API key for {key_data.service}: {validation.message}",
+    resp: list[ApiKeyResponse] = []
+    for r in rows:
+        service = str(r["service"]).lower().strip()
+        # Skip unknown services if any legacy rows exist
+        if service not in ALLOWED_SERVICES:
+            continue
+        resp.append(
+            ApiKeyResponse(
+                service=_as_allowed(service),
+                created_at=_as_dt(r.get("created_at")) or datetime.now(UTC),
+                last_used=_as_dt(r.get("last_used")),
             )
-
-        # Create the API key
-        user_id = get_principal_id(principal)
-        return await key_service.create_key(user_id, key_data)
-    except Exception as e:
-        logger.exception("Error creating API key")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create API key: {e!s}",
-        ) from e
+        )
+    return resp
 
 
-@router.delete(
-    "/{key_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete an API key",
-)
+@router.post("/keys", status_code=status.HTTP_204_NO_CONTENT)
+@rate_limit("10/minute")
+@trace_span(name="api.keys.upsert")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
+async def upsert_api_key(
+    payload: ApiKeyCreateRequest,
+    principal: Principal = Depends(require_user_principal),
+) -> None:
+    """Insert or replace the user's API key for a service.
+
+    Stores the secret in Vault via ``public.insert_user_api_key`` and upserts
+    metadata in ``public.api_keys``. Returns 204 on success.
+    """
+    service = payload.service.lower().strip()
+    if service not in ALLOWED_SERVICES:
+        raise HTTPException(status_code=400, detail="Unsupported service")
+
+    user_id = get_principal_id(principal)
+    admin = await get_admin_client()
+    try:
+        await admin.rpc(
+            "insert_user_api_key",
+            {"p_user_id": user_id, "p_service": service, "p_api_key": payload.api_key},
+        ).execute()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to store API key") from exc
+
+
+@router.delete("/keys/{service}", status_code=status.HTTP_204_NO_CONTENT)
+@rate_limit("10/minute")
 @trace_span(name="api.keys.delete")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def delete_key(
-    request: Request,
-    response: Response,
-    key_service: ApiKeyServiceDep,
-    principal: Principal = Depends(require_principal),
-    key_id: str = Path(..., description="The API key ID"),
-):
-    """Delete an API key.
-
-    Args:
-        request: Raw HTTP request (required by SlowAPI for headers)
-        response: Raw HTTP response (required by SlowAPI for headers)
-        key_service: Injected key service
-        principal: Current authenticated principal
-        key_id: The API key ID
-
-    Raises:
-        HTTPException: If the key is not found or does not belong to the user
-    """
-    # Check if the key exists and belongs to the user
-    key = await key_service.get_key(key_id)
-
-    if not key:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="API key not found",
-        )
-
+async def delete_api_key(
+    service: str,
+    principal: Principal = Depends(require_user_principal),
+) -> None:
+    """Delete a user's API key and its Vault secret."""
+    svc = service.lower().strip()
+    if svc not in ALLOWED_SERVICES:
+        raise HTTPException(status_code=400, detail="Unsupported service")
     user_id = get_principal_id(principal)
-    if key["user_id"] != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to delete this API key",
-        )
+    admin = await get_admin_client()
+    try:
+        await admin.rpc(
+            "delete_user_api_key", {"p_user_id": user_id, "p_service": svc}
+        ).execute()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to delete API key") from exc
 
-    # Delete the key
-    await key_service.delete_key(key_id)
 
-
-@router.post(
-    "/validate",
-    response_model=ApiKeyValidateResponse,
-    summary="Validate an API key",
-)
+@router.post("/keys/validate", response_model=ApiKeyValidateResponse)
+@rate_limit("20/minute")
 @trace_span(name="api.keys.validate")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def validate_key(
-    request: Request,
-    response: Response,
-    key_data: ApiKeyValidateRequest,
-    key_service: ApiKeyServiceDep,
-    principal: Principal = Depends(require_principal),
-):
-    """Validate an API key with the service.
-
-    Args:
-        request: Raw HTTP request (required by SlowAPI for headers)
-        response: Raw HTTP response (required by SlowAPI for headers)
-        key_data: API key data
-        principal: Current authenticated principal
-        key_service: Injected key service
-
-    Returns:
-        Validation result
-    """
-    user_id = get_principal_id(principal)
-    return await key_service.validate_key(key_data.key, key_data.service, user_id)
-
-
-@router.post(
-    "/{key_id}/rotate",
-    response_model=ApiKeyResponse,
-    summary="Rotate an API key",
-)
-@trace_span(name="api.keys.rotate")
-@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def rotate_key(  # pylint: disable=too-many-positional-arguments
-    request: Request,
-    response: Response,
-    key_data: ApiKeyRotateRequest,
-    key_service: ApiKeyServiceDep,
-    principal: Principal = Depends(require_principal),
-    key_id: str = Path(..., description="The API key ID"),
-):
-    """Rotate an API key.
-
-    Args:
-        request: Raw HTTP request (required by SlowAPI for headers)
-        response: Raw HTTP response (required by SlowAPI for headers)
-        key_data: New API key data
-        key_id: The API key ID
-        principal: Current authenticated principal
-        key_service: Injected key service
-
-    Returns:
-        The updated API key
-
-    Raises:
-        HTTPException: If the key is not found or does not belong to the user
-    """
-    # Check if the key exists and belongs to the user
-    key = await key_service.get_key(key_id)
-
-    if not key:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="API key not found",
-        )
-
-    user_id = get_principal_id(principal)
-    if key["user_id"] != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to rotate this API key",
-        )
-
-    # Validate the new key
-    validation = await key_service.validate_key(
-        key_data.new_key, key["service"], user_id
-    )
-
-    if not validation.is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid API key for {key['service']}: {validation.message}",
-        )
-
-    # Rotate the key
-    return await key_service.rotate_key(key_id, key_data.new_key, user_id)
-
-
-@router.get(
-    "/metrics",
-    response_model=dict[str, Any],
-    summary="Get API key metrics",
-)
-@trace_span(name="api.keys.metrics")
-@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def get_metrics(
-    request: Request,
-    response: Response,
-    principal: Principal = Depends(require_principal),
-):
-    """Get API key health metrics.
-
-    Args:
-        request: Raw HTTP request (required by SlowAPI for headers)
-        response: Raw HTTP response (required by SlowAPI for headers)
-        principal: Current authenticated principal
-
-    Returns:
-        Key health metrics
-    """
-    # Only allow admin users to access metrics
-    # This would normally check user roles, but for now we'll use a simple approach
-    return await get_key_health_metrics()
-
-
-@router.get(
-    "/audit",
-    response_model=list[dict[str, Any]],
-    summary="Get API key audit log",
-)
-@trace_span(name="api.keys.audit")
-@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def get_audit_log(
-    request: Request,
-    response: Response,
-    principal: Principal = Depends(require_principal),
-    limit: int = Query(100, ge=1, le=1000),
-    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
-):
-    """Get API key audit log for a user.
-
-    Args:
-        request: Raw HTTP request (required by SlowAPI for headers)
-        response: Raw HTTP response (required by SlowAPI for headers)
-        principal: Current authenticated principal
-        limit: Maximum number of entries to return
-        monitoring_service: Key monitoring service
-
-    Returns:
-        List of audit log entries
-    """
+async def validate_api_key_endpoint(
+    payload: ApiKeyValidateRequest,
+) -> ApiKeyValidateResponse:
+    """Validate a provider API key by calling provider metadata."""
+    ok, reason = await _validate_api_key(payload.service, payload.api_key)
+    return ApiKeyValidateResponse(is_valid=ok, reason=reason)

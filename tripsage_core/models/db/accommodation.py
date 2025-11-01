@@ -182,13 +182,13 @@ class Accommodation(TripSageModel):
 
         # Depending on how amenities are stored, extract the list
         # Assuming amenities is a dict with a key 'list' containing the amenities
-        if isinstance(self.amenities, dict) and "list" in self.amenities:
+        if "list" in self.amenities:
             return self.amenities["list"]
         # Or if it's directly a list stored as a dict key 'amenities'
-        if isinstance(self.amenities, dict) and "amenities" in self.amenities:
+        if "amenities" in self.amenities:
             return self.amenities["amenities"]
         # If it's another format, return a simple string representation
-        return [str(k) for k, v in self.amenities.items() if v]
+        return [str(k) for k, v in self.amenities.items() if v]  # pylint: disable=no-member
 
     def book(self) -> None:
         """Book this accommodation."""
@@ -205,9 +205,8 @@ class Accommodation(TripSageModel):
         # Can only cancel if booked and check-in date hasn't passed
         if self.booking_status != BookingStatus.BOOKED:
             return False
-        from datetime import date as date_type
 
-        return date_type.today() < self.check_in
+        return date.today() < self.check_in
 
     def update_status(self, new_status: BookingStatus) -> bool:
         """Update the accommodation status with validation.
@@ -218,23 +217,15 @@ class Accommodation(TripSageModel):
         Returns:
             True if the status was updated, False if invalid transition
         """
-        # Define valid status transitions
-        valid_transitions = {
-            BookingStatus.VIEWED: [
-                BookingStatus.SAVED,
-                BookingStatus.BOOKED,
-                BookingStatus.CANCELLED,
-            ],
-            BookingStatus.SAVED: [
-                BookingStatus.BOOKED,
-                BookingStatus.CANCELLED,
-                BookingStatus.VIEWED,
-            ],
-            BookingStatus.BOOKED: [BookingStatus.CANCELLED],
-            BookingStatus.CANCELLED: [],  # Cannot change from cancelled
-        }
+        from tripsage_core.utils.booking_utils import (
+            get_standard_booking_transitions,
+            validate_booking_status_transition,
+        )
 
-        if new_status in valid_transitions.get(self.booking_status, []):
+        valid_transitions = get_standard_booking_transitions()
+        if validate_booking_status_transition(
+            self.booking_status, new_status, valid_transitions
+        ):
             self.booking_status = new_status
             return True
         return False

@@ -5,23 +5,40 @@ of travel documents, following KISS principles and security best practices.
 """
 
 import logging
+from collections.abc import Awaitable, Callable
+from typing import cast
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
+from tripsage.api.core.dependencies import (
+    FileProcessingServiceDep,
+    RequiredPrincipalDep,
+    TripServiceDep,
+    get_principal_id,
+)
 from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.schemas.attachments import (
+    BatchUploadResponse,
+    DeleteFileResponse,
+    FileListResponse,
+    FileMetadataResponse,
+    FileUploadResponse,
+)
 from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
     AuditSeverity,
     audit_security_event,
 )
 from tripsage_core.services.business.file_processing_service import (
-    FileProcessingService,
     FileSearchRequest,
     FileUploadRequest,
+    ProcessedFile,
 )
-from tripsage_core.services.business.trip_service import TripService, get_trip_service
+from tripsage_core.services.business.trip_service import (
+    TripResponse as CoreTripResponse,
+)
+
+# Trip service is injected via dependencies module
 from tripsage_core.utils.file_utils import MAX_SESSION_SIZE, validate_file
 
 
@@ -32,49 +49,18 @@ router = APIRouter()
 # File configuration now imported from centralized config
 
 # Module-level dependencies to avoid B008 warnings
-require_principal_module_dep = Depends(require_principal)
+require_principal_module_dep = RequiredPrincipalDep
 
 # Module-level dependency for file uploads
 file_upload_dep = File(...)
 files_upload_dep = File(...)
 
 
-def get_file_processing_service() -> FileProcessingService:
-    """Get file processing service singleton."""
-    # Choice: Using simple import pattern instead of complex DI
-    # Reason: KISS principle - FileProcessingService is lightweight and stateless
-    return FileProcessingService()
-
-
-get_file_processing_service_dep = Depends(get_file_processing_service)
-get_trip_service_dep = Depends(get_trip_service)
-
-
-class FileUploadResponse(BaseModel):
-    """Response model for file upload."""
-
-    file_id: str = Field(..., description="Unique file identifier")
-    filename: str = Field(..., description="Original filename")
-    file_size: int = Field(..., description="File size in bytes")
-    mime_type: str = Field(..., description="MIME type")
-    processing_status: str = Field(..., description="Processing status")
-    upload_status: str = Field(..., description="Upload status")
-    message: str = Field(default="Upload successful", description="Status message")
-
-
-class BatchUploadResponse(BaseModel):
-    """Response model for batch file upload."""
-
-    files: list[FileUploadResponse] = Field(..., description="Processed files")
-    total_files: int = Field(..., description="Total files processed")
-    total_size: int = Field(..., description="Total size in bytes")
-
-
 @router.post("/upload", response_model=FileUploadResponse)
 async def upload_file(
+    service: FileProcessingServiceDep,
     file: UploadFile = file_upload_dep,
-    principal: Principal = require_principal_module_dep,
-    service: FileProcessingService = get_file_processing_service_dep,
+    principal: Principal = require_principal_module_dep,  # type: ignore  # type: ignore[assignment]
 ):
     """Upload and process a single file attachment.
 
@@ -112,7 +98,11 @@ async def upload_file(
         )
 
         # Process file
-        result = await service.upload_file(user_id, upload_request)
+        do_upload = cast(
+            Callable[[str, FileUploadRequest], Awaitable[ProcessedFile]],
+            service.upload_file,
+        )
+        result = await do_upload(user_id, upload_request)
 
         logger.info(
             "File uploaded successfully: %s (%s bytes) for user %s",
@@ -141,9 +131,9 @@ async def upload_file(
 
 @router.post("/upload/batch", response_model=BatchUploadResponse)
 async def upload_files_batch(
+    service: FileProcessingServiceDep,
     files: list[UploadFile] = files_upload_dep,
-    principal: Principal = require_principal_module_dep,
-    service: FileProcessingService = get_file_processing_service_dep,
+    principal: Principal = require_principal_module_dep,  # type: ignore
 ):
     """Upload and process multiple files in a batch.
 
@@ -172,8 +162,8 @@ async def upload_files_batch(
             ),
         )
 
-    processed_files = []
-    errors = []
+    processed_files: list[FileUploadResponse] = []
+    errors: list[str] = []
     user_id = get_principal_id(principal)
 
     # Process each file individually for better error isolation
@@ -182,7 +172,7 @@ async def upload_files_batch(
             # Validate file
             validation_result = await validate_file(file)
             if not validation_result.is_valid:
-                errors.append(f"{file.filename}: {validation_result.error_message}")
+                errors.append(f"{file.filename}: {validation_result.error_message}")  # type: ignore[unknown-member-type]
                 continue
 
             # Read file content
@@ -196,7 +186,11 @@ async def upload_files_batch(
             )
 
             # Process file
-            result = await service.upload_file(user_id, upload_request)
+            do_upload = cast(
+                Callable[[str, FileUploadRequest], Awaitable[ProcessedFile]],
+                service.upload_file,
+            )
+            result: ProcessedFile = await do_upload(user_id, upload_request)
             processed_files.append(
                 FileUploadResponse(
                     file_id=result.id,
@@ -238,11 +232,11 @@ async def upload_files_batch(
     )
 
 
-@router.get("/files/{file_id}")
+@router.get("/files/{file_id}", response_model=FileMetadataResponse)
 async def get_file_metadata(
     file_id: str,
-    principal: Principal = require_principal_module_dep,
-    service: FileProcessingService = get_file_processing_service_dep,
+    service: FileProcessingServiceDep,
+    principal: Principal = require_principal_module_dep,  # type: ignore
 ):
     """Get metadata and analysis results for an uploaded file.
 
@@ -250,7 +244,11 @@ async def get_file_metadata(
     """
     try:
         user_id = get_principal_id(principal)
-        file_info = await service.get_file(file_id, user_id)
+        get_file_call = cast(
+            Callable[[str, str], Awaitable[ProcessedFile | None]],
+            service.get_file,
+        )
+        file_info = await get_file_call(file_id, user_id)
         if not file_info:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -259,6 +257,8 @@ async def get_file_metadata(
 
         return file_info
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to get file info for %s", file_id)
         raise HTTPException(
@@ -267,11 +267,11 @@ async def get_file_metadata(
         ) from e
 
 
-@router.delete("/files/{file_id}")
+@router.delete("/files/{file_id}", response_model=DeleteFileResponse)
 async def delete_file(
     file_id: str,
-    principal: Principal = require_principal_module_dep,
-    service: FileProcessingService = get_file_processing_service_dep,
+    service: FileProcessingServiceDep,
+    principal: Principal = require_principal_module_dep,  # type: ignore
 ):
     """Delete an uploaded file and its associated data.
 
@@ -279,7 +279,11 @@ async def delete_file(
     """
     try:
         user_id = get_principal_id(principal)
-        success = await service.delete_file(file_id, user_id)
+        do_delete = cast(
+            Callable[[str, str], Awaitable[bool]],
+            service.delete_file,
+        )
+        success = await do_delete(file_id, user_id)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -287,8 +291,10 @@ async def delete_file(
             )
 
         logger.info("File %s deleted by user %s", file_id, user_id)
-        return {"message": "File deleted successfully", "file_id": file_id}
+        return DeleteFileResponse(message="File deleted successfully", file_id=file_id)
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to delete file %s", file_id)
         raise HTTPException(
@@ -297,31 +303,72 @@ async def delete_file(
         ) from e
 
 
-@router.get("/files")
-async def list_user_files(
-    principal: Principal = require_principal_module_dep,
-    service: FileProcessingService = get_file_processing_service_dep,
+@router.get("/files", response_model=FileListResponse)
+async def list_files(
+    service: FileProcessingServiceDep,
+    principal: Principal = require_principal_module_dep,  # type: ignore
     limit: int = 50,
     offset: int = 0,
 ):
     """List files uploaded by the current user with pagination."""
+    user_id = "unknown"
     try:
         user_id = get_principal_id(principal)
 
         # Create search request with basic pagination
         search_request = FileSearchRequest(limit=limit, offset=offset)
 
-        files = await service.search_files(user_id, search_request)
+        search_files = cast(
+            Callable[[str, FileSearchRequest], Awaitable[list[ProcessedFile]]],
+            service.search_files,
+        )
+        raw_files: list[ProcessedFile] = await search_files(user_id, search_request)
 
-        return {
-            "files": files,
-            "limit": limit,
-            "offset": offset,
-            "total": len(files),  # Simple implementation - could be optimized
-        }
+        # Adapt service results to API schema
+        adapted: list[FileMetadataResponse] = []
+        for f in raw_files:
+            try:
+                file_id = getattr(f, "id", getattr(f, "file_id", ""))
+                filename = getattr(f, "original_filename", getattr(f, "filename", ""))
+                file_size = int(getattr(f, "file_size", 0) or 0)
+                mime_type = getattr(f, "mime_type", "")
+                status_val = getattr(
+                    getattr(f, "processing_status", None), "value", None
+                )
+                processing_status = status_val or str(
+                    getattr(f, "processing_status", "unknown")
+                )
+                created_at = getattr(f, "created_at", None)
+                analysis_summary = getattr(f, "analysis_summary", None)
+
+                adapted.append(  # type: ignore[unknown-member-type]
+                    FileMetadataResponse(
+                        file_id=file_id,
+                        filename=filename,
+                        file_size=file_size,
+                        mime_type=mime_type,
+                        processing_status=processing_status,
+                        created_at=(
+                            created_at.isoformat()
+                            if (
+                                created_at is not None
+                                and hasattr(created_at, "isoformat")
+                            )
+                            else None
+                        ),
+                        analysis_summary=analysis_summary,
+                    )
+                )
+            except Exception:
+                logger.exception("Failed to adapt file metadata for response")
+                continue
+
+        return FileListResponse(
+            files=adapted, limit=limit, offset=offset, total=len(adapted)
+        )
 
     except Exception as e:
-        logger.exception("Failed to list files for user %s", user_id)
+        logger.exception("Failed to list files for user %s", user_id)  # type: ignore[possibly-unbound-variable]
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve file list",
@@ -331,8 +378,8 @@ async def list_user_files(
 @router.get("/files/{file_id}/download")
 async def download_file(
     file_id: str,
-    principal: Principal = require_principal_module_dep,
-    service: FileProcessingService = get_file_processing_service_dep,
+    service: FileProcessingServiceDep,
+    principal: Principal = require_principal_module_dep,  # type: ignore
 ):
     """Download a file securely.
 
@@ -347,7 +394,11 @@ async def download_file(
         user_id = get_principal_id(principal)
 
         # Get file metadata and verify ownership
-        file_info = await service.get_file(file_id, user_id)
+        get_file_call = cast(
+            Callable[[str, str], Awaitable[ProcessedFile | None]],
+            service.get_file,
+        )
+        file_info = await get_file_call(file_id, user_id)
         if not file_info:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -355,7 +406,11 @@ async def download_file(
             )
 
         # Get file content
-        file_content = await service.get_file_content(file_id, user_id)
+        get_content_call = cast(
+            Callable[[str, str], Awaitable[bytes | None]],
+            service.get_file_content,
+        )
+        file_content = await get_content_call(file_id, user_id)
         if not file_content:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -365,18 +420,18 @@ async def download_file(
         # Create streaming response
         _file_stream = io.BytesIO(file_content)
 
-        headers = {
+        headers: dict[str, str] = {
             "Content-Disposition": (
-                f'attachment; filename="{file_info.original_filename}"'
+                f'attachment; filename="{file_info.original_filename!s}"'
             ),
-            "Content-Type": file_info.mime_type,
+            "Content-Type": str(file_info.mime_type),
         }
 
         logger.info("File %s downloaded by user %s", file_id, user_id)
 
         return StreamingResponse(
             io.BytesIO(file_content),
-            media_type=file_info.mime_type,
+            media_type=str(file_info.mime_type),
             headers=headers,
         )
 
@@ -393,9 +448,10 @@ async def download_file(
 @router.get("/trips/{trip_id}/attachments")
 async def list_trip_attachments(
     trip_id: str,
-    principal: Principal = require_principal_module_dep,
-    service: FileProcessingService = get_file_processing_service_dep,
-    trip_service: TripService = get_trip_service_dep,
+    service: FileProcessingServiceDep,
+    trip_service: TripServiceDep,
+    *,
+    principal: Principal = require_principal_module_dep,  # type: ignore
     limit: int = 50,
     offset: int = 0,
 ):
@@ -408,11 +464,16 @@ async def list_trip_attachments(
     - Audit logging for access attempts
     - Authorization error handling
     """
+    user_id = "unknown"
     try:
         user_id = get_principal_id(principal)
 
         # Verify user has access to the trip
-        trip = await trip_service.get_trip(trip_id=trip_id, user_id=user_id)
+        get_core_trip = cast(
+            Callable[[str, str], Awaitable[CoreTripResponse | None]],
+            trip_service.get_trip,
+        )
+        trip = await get_core_trip(trip_id, user_id)
         if not trip:
             # Log unauthorized access attempt
             await audit_security_event(
@@ -454,7 +515,11 @@ async def list_trip_attachments(
             trip_id=trip_id,
         )
 
-        files = await service.search_files(user_id, search_request)
+        search_files = cast(
+            Callable[[str, FileSearchRequest], Awaitable[list[ProcessedFile]]],
+            service.search_files,
+        )
+        files: list[ProcessedFile] = await search_files(user_id, search_request)
 
         logger.info(
             "Listed %s attachments for trip %s by user %s", len(files), trip_id, user_id
@@ -478,7 +543,7 @@ async def list_trip_attachments(
             event_type=AuditEventType.SYSTEM_ERROR,
             severity=AuditSeverity.HIGH,
             message=f"System error accessing trip attachments for trip {trip_id}",
-            actor_id=user_id,
+            actor_id=user_id,  # type: ignore[possibly-unbound-variable]
             ip_address="unknown",
             target_resource=f"trip_attachments:{trip_id}",
             resource_type="trip_attachments",

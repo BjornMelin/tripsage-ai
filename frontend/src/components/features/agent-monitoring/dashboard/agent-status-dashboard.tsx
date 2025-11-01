@@ -1,12 +1,5 @@
 "use client";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { useAgentStatus } from "@/hooks/use-agent-status";
-import { useAgentStatusWebSocket } from "@/hooks/use-agent-status-websocket";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -23,7 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import type React from "react";
-import { startTransition, useEffect, useOptimistic, useState } from "react";
+import { startTransition, useEffect, useId, useOptimistic, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -35,6 +28,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { useAgentStatus } from "@/hooks/use-agent-status";
+import { useAgentStatusWebSocket } from "@/hooks/use-agent-status-websocket";
 import { ConnectionStatus } from "../../shared/connection-status";
 
 interface AgentMetrics {
@@ -148,7 +148,7 @@ const AgentHealthIndicator: React.FC<{ agent: AgentMetrics }> = ({ agent }) => {
   return (
     <div className="relative">
       <div
-        className={`w-16 h-16 rounded-full bg-gradient-to-br ${healthColorClass} flex items-center justify-center shadow-lg`}
+        className={`w-16 h-16 rounded-full bg-linear-to-br ${healthColorClass} flex items-center justify-center shadow-lg`}
         style={{
           animation:
             agent.status === "active"
@@ -158,7 +158,7 @@ const AgentHealthIndicator: React.FC<{ agent: AgentMetrics }> = ({ agent }) => {
       >
         <Heart className="h-6 w-6 text-white" />
       </div>
-      <div className="absolute -bottom-1 -right-1 text-xs font-bold text-white bg-black bg-opacity-75 rounded-full px-1.5 py-0.5">
+      <div className="absolute -bottom-1 -right-1 text-xs font-bold text-white bg-black/75 rounded-full px-1.5 py-0.5">
         {agent.healthScore}%
       </div>
     </div>
@@ -224,6 +224,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
   onAgentSelect,
   refreshInterval: _refreshInterval = 5000,
 }) => {
+  const responseTimeGradientId = useId();
   const [timeSeriesData] = useState(generateMockTimeSeriesData);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<string>("");
@@ -516,7 +517,13 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={timeSeriesData}>
                 <defs>
-                  <linearGradient id="responseTimeGradient" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id={responseTimeGradientId}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
                   </linearGradient>
@@ -530,7 +537,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
                   dataKey="responseTime"
                   stroke="#3b82f6"
                   fillOpacity={1}
-                  fill="url(#responseTimeGradient)"
+                  fill={`url(#${responseTimeGradientId})`}
                 />
               </AreaChart>
             </ResponsiveContainer>

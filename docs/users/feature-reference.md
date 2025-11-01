@@ -298,6 +298,14 @@ Steps:
 
 ## 🛠️ Developer Tools
 
+### SSE Client Expectations
+
+- Chat streaming uses Server-Sent Events (SSE) from `POST /api/chat/stream`.
+- Clients must parse `text/event-stream` lines framed as `data: <json>\n\n`.
+- Expected event types: `started` (once), `delta` (0..N), `final` (once), and `[DONE]` sentinel.
+- Implement cancellation with `AbortController` and set a sensible timeout (for example, 60s).
+- Ignore malformed lines; only process `data:` records.
+
 ### API Testing Sandbox
 
 **Test Environment:**

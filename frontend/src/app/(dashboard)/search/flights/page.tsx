@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
+import React from "react";
 import { FlightSearchForm } from "@/components/features/search/flight-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import {
@@ -12,8 +14,6 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { useSearchStore } from "@/stores/search-store";
 import type { FlightSearchParams } from "@/types/search";
-import { useRouter, useSearchParams } from "next/navigation";
-import React from "react";
 
 // URL search parameters are handled inline
 
@@ -187,13 +187,7 @@ function PopularRouteCard({
   );
 }
 
-function TravelTip({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+function TravelTip({ title, description }: { title: string; description: string }) {
   return (
     <div className="p-4 border rounded-lg">
       <h3 className="font-medium mb-1">{title}</h3>

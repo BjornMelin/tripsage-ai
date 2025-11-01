@@ -1,6 +1,6 @@
-import type { Budget } from "@/types/budget";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Budget } from "@/lib/schemas/budget";
 import { BudgetTracker } from "../budget-tracker";
 
 // Mock the stores

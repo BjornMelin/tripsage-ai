@@ -1,6 +1,7 @@
 /**
- * API client with Zod validation.
- * Provides runtime type safety for all API interactions.
+ * @fileoverview API client with Zod validation. Provides runtime type safety
+ * for requests and responses, request/response interceptors, and retry/timeout
+ * behavior suitable for browser runtimes.
  */
 
 import type { z } from "zod";
@@ -72,8 +73,8 @@ interface RequestConfig<TRequest = unknown, TResponse = unknown> {
   headers?: Record<string, string>;
   timeout?: number;
   retries?: number;
-  requestSchema?: z.ZodSchema<TRequest>;
-  responseSchema?: z.ZodSchema<TResponse>;
+  requestSchema?: z.ZodType<TRequest>;
+  responseSchema?: z.ZodType<TResponse>;
   validateResponse?: boolean;
   validateRequest?: boolean;
   abortSignal?: AbortSignal;
@@ -109,7 +110,9 @@ export class ApiClient {
 
   constructor(config: Partial<ApiClientConfig> = {}) {
     this.config = {
-      baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "/api",
+      baseUrl: process.env.NEXT_PUBLIC_API_URL
+        ? `${process.env.NEXT_PUBLIC_API_URL}/api`
+        : "/api",
       timeout: 10000,
       retries: 3,
       validateResponses: process.env.NODE_ENV !== "production",
@@ -419,7 +422,7 @@ export class ApiClient {
   // Type-safe API methods with schemas
   public async getValidated<TResponse>(
     endpoint: string,
-    responseSchema: z.ZodSchema<TResponse>,
+    responseSchema: z.ZodType<TResponse>,
     options: Omit<
       RequestConfig<never, TResponse>,
       "endpoint" | "method" | "responseSchema"
@@ -431,8 +434,8 @@ export class ApiClient {
   public async postValidated<TRequest, TResponse>(
     endpoint: string,
     data: TRequest,
-    requestSchema: z.ZodSchema<TRequest>,
-    responseSchema: z.ZodSchema<TResponse>,
+    requestSchema: z.ZodType<TRequest>,
+    responseSchema: z.ZodType<TResponse>,
     options: Omit<
       RequestConfig<TRequest, TResponse>,
       "endpoint" | "method" | "data" | "requestSchema" | "responseSchema"
@@ -444,8 +447,8 @@ export class ApiClient {
   public async putValidated<TRequest, TResponse>(
     endpoint: string,
     data: TRequest,
-    requestSchema: z.ZodSchema<TRequest>,
-    responseSchema: z.ZodSchema<TResponse>,
+    requestSchema: z.ZodType<TRequest>,
+    responseSchema: z.ZodType<TResponse>,
     options: Omit<
       RequestConfig<TRequest, TResponse>,
       "endpoint" | "method" | "data" | "requestSchema" | "responseSchema"
@@ -457,8 +460,8 @@ export class ApiClient {
   public async patchValidated<TRequest, TResponse>(
     endpoint: string,
     data: TRequest,
-    requestSchema: z.ZodSchema<TRequest>,
-    responseSchema: z.ZodSchema<TResponse>,
+    requestSchema: z.ZodType<TRequest>,
+    responseSchema: z.ZodType<TResponse>,
     options: Omit<
       RequestConfig<TRequest, TResponse>,
       "endpoint" | "method" | "data" | "requestSchema" | "responseSchema"
@@ -469,7 +472,7 @@ export class ApiClient {
 
   public async deleteValidated<TResponse>(
     endpoint: string,
-    responseSchema: z.ZodSchema<TResponse>,
+    responseSchema: z.ZodType<TResponse>,
     options: Omit<
       RequestConfig<never, TResponse>,
       "endpoint" | "method" | "responseSchema"
@@ -543,62 +546,10 @@ defaultClient.addResponseInterceptor(async (response, config) => {
 export { defaultClient as apiClient };
 
 // Export utility functions
-export const createTypedApiClient = <TApiSchema extends Record<string, z.ZodSchema>>(
-  schemas: TApiSchema
-) => {
-  const client = new ApiClient();
-
-  // Create typed methods for each schema
-  const typedMethods = {} as {
-    [K in keyof TApiSchema]: {
-      get: (endpoint: string) => Promise<z.infer<TApiSchema[K]>>;
-      post: <TRequest>(
-        endpoint: string,
-        data: TRequest,
-        requestSchema: z.ZodSchema<TRequest>
-      ) => Promise<z.infer<TApiSchema[K]>>;
-      put: <TRequest>(
-        endpoint: string,
-        data: TRequest,
-        requestSchema: z.ZodSchema<TRequest>
-      ) => Promise<z.infer<TApiSchema[K]>>;
-      patch: <TRequest>(
-        endpoint: string,
-        data: TRequest,
-        requestSchema: z.ZodSchema<TRequest>
-      ) => Promise<z.infer<TApiSchema[K]>>;
-      delete: (endpoint: string) => Promise<z.infer<TApiSchema[K]>>;
-    };
-  };
-
-  Object.keys(schemas).forEach((key) => {
-    const schema = schemas[key];
-    typedMethods[key as keyof TApiSchema] = {
-      get: (endpoint: string) => client.getValidated(endpoint, schema),
-      post: <TRequest>(
-        endpoint: string,
-        data: TRequest,
-        requestSchema: z.ZodSchema<TRequest>
-      ) => client.postValidated(endpoint, data, requestSchema, schema),
-      put: <TRequest>(
-        endpoint: string,
-        data: TRequest,
-        requestSchema: z.ZodSchema<TRequest>
-      ) => client.putValidated(endpoint, data, requestSchema, schema),
-      patch: <TRequest>(
-        endpoint: string,
-        data: TRequest,
-        requestSchema: z.ZodSchema<TRequest>
-      ) => client.patchValidated(endpoint, data, requestSchema, schema),
-      delete: (endpoint: string) => client.deleteValidated(endpoint, schema),
-    };
-  });
-
-  return {
-    client,
-    ...typedMethods,
-  };
-};
+// NOTE: A previously exported `createTypedApiClient` factory was removed in the
+// Zod v4 migration because it was unused and introduced brittle generic
+// constraints. Reintroduce a typed factory when concrete endpoint schemas and
+// tests require it.
 
 // Export types
 export type { RequestConfig, ResponseInterceptor, RequestInterceptor };

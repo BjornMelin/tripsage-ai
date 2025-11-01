@@ -1,33 +1,33 @@
-# 🔌 API Usage Examples
+# API Usage Examples
 
 > **Quick Reference for TripSage API Integration**  
-> Practical code snippets for REST API, WebSocket, and authentication
-> **💡 Looking for complete tutorials?** Check out our [**Complete Integration Guide**](examples.md) for full workflows, SDKs, and advanced patterns.
+> Practical code snippets for REST API, Realtime, and authentication
+> **Looking for complete tutorials?** Check out our [**Complete Integration Guide**](examples.md) for full workflows, SDKs, and advanced patterns.
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [🚀 Quick Start](#-quick-start)
-- [🔑 Authentication](#-authentication)
-- [✈️ Flight Search](#️-flight-search)
-- [🏨 Accommodation Search](#-accommodation-search)
-- [💬 WebSocket Chat](#-websocket-chat)
-- [🗺️ Trip Management](#️-trip-management)
+- [Quick Start](#quick-start)
+- [Authentication](#authentication)
+- [Flight Search](#flight-search)
+- [Accommodation Search](#accommodation-search)
+- [Realtime Chat](#realtime-chat-supabase)
+- [Trip Management](#trip-management)
 - [🧠 AI Memory System](#-ai-memory-system)
-- [📊 Rate Limiting](#-rate-limiting)
-- [🐛 Error Handling](#-error-handling)
-- [🔧 SDKs & Libraries](#-sdks--libraries)
+- [Rate Limiting](#rate-limiting)
+- [Error Handling](#error-handling)
+- [SDKs & Libraries](#sdks--libraries)
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### **Interactive Documentation**
 
 TripSage provides automatic interactive API documentation:
 
-- **📚 Swagger UI**: `http://localhost:8001/api/docs`
-- **📖 ReDoc**: `http://localhost:8001/api/redoc`
-- **🔧 OpenAPI Schema**: `http://localhost:8001/api/openapi.json`
+- **Swagger UI**: `http://localhost:8001/api/docs`
+- **ReDoc**: `http://localhost:8001/api/redoc`
+- **OpenAPI Schema**: `http://localhost:8001/api/openapi.json`
 
 ### **Health Check**
 
@@ -55,7 +55,7 @@ curl http://localhost:8001/api/health
 
 ---
 
-## 🔑 Authentication
+## Authentication
 
 ### **JWT Authentication**
 
@@ -98,7 +98,7 @@ curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
 #### **Generate API Key**
 
 ```bash
-curl -X POST http://localhost:8001/api/user/keys \
+curl -X POST http://localhost:8001/api/keys \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -125,20 +125,20 @@ curl -X POST http://localhost:8001/api/user/keys \
 #### **List API Keys**
 
 ```bash
-curl http://localhost:8001/api/user/keys \
+curl http://localhost:8001/api/keys \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 #### **Revoke API Key**
 
 ```bash
-curl -X DELETE http://localhost:8001/api/user/keys/key-456 \
+curl -X DELETE http://localhost:8001/api/keys/key-456 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 ---
 
-## ✈️ Flight Search
+## Flight Search
 
 ### **Basic Flight Search**
 
@@ -234,7 +234,7 @@ curl -X POST http://localhost:8001/api/flights/alerts \
 
 ---
 
-## 🏨 Accommodation Search
+## Accommodation Search
 
 ### **Hotel Search**
 
@@ -310,140 +310,18 @@ curl -X POST http://localhost:8001/api/accommodations/search \
 
 ---
 
-## 💬 WebSocket Chat
+## Realtime Chat (Supabase)
 
-### **JavaScript WebSocket Connection**
-
-```javascript
-// Connect to WebSocket
-const ws = new WebSocket('ws://localhost:8001/api/chat/ws?token=YOUR_TOKEN');
-
-ws.onopen = function(event) {
-    console.log('Connected to TripSage Chat');
-    
-    // Send initial message
-    ws.send(JSON.stringify({
-        type: 'user_message',
-        content: 'I want to plan a trip to Japan for 2 weeks',
-        session_id: 'session-123',
-        metadata: {
-            user_id: 'user-456',
-            preferences: {
-                budget: 5000,
-                interests: ['culture', 'food', 'technology']
-            }
-        }
-    }));
-};
-
-ws.onmessage = function(event) {
-    const message = JSON.parse(event.data);
-    console.log('Received:', message);
-    
-    switch(message.type) {
-        case 'ai_response':
-            displayAIMessage(message.content);
-            break;
-        case 'system_notification':
-            showNotification(message.content);
-            break;
-        case 'typing_indicator':
-            showTypingIndicator(message.agent);
-            break;
-    }
-};
-
-ws.onerror = function(error) {
-    console.error('WebSocket error:', error);
-};
-
-ws.onclose = function(event) {
-    console.log('WebSocket connection closed:', event.code, event.reason);
-};
+```ts
+const channel = supabase
+  .channel(`session:${sessionId}`, { config: { private: true } })
+  .on('broadcast', { event: 'chat:message' }, ({ payload }) => {
+    console.log('message', payload);
+  })
+  .subscribe();
 ```
 
-### **Message Types**
-
-#### **User Message**
-
-```json
-{
-  "type": "user_message",
-  "content": "Plan a 7-day trip to Paris with a budget of $3000",
-  "session_id": "session-123",
-  "timestamp": "2025-06-16T10:30:00Z",
-  "metadata": {
-    "user_id": "user-456",
-    "message_id": "msg-789"
-  }
-}
-```
-
-#### **AI Response**
-
-```json
-{
-  "type": "ai_response",
-  "content": "I'd be happy to help plan your Paris trip! Based on your $3000 budget for 7 days, here's what I recommend...",
-  "session_id": "session-123",
-  "timestamp": "2025-06-16T10:30:15Z",
-  "metadata": {
-    "agent": "destination_research_agent",
-    "confidence": 0.95,
-    "sources": ["duffel", "booking.com", "google_maps"]
-  }
-}
-```
-
-#### **System Notification**
-
-```json
-{
-  "type": "system_notification",
-  "content": "Flight prices updated for your Paris trip - found 3 cheaper options!",
-  "session_id": "session-123",
-  "timestamp": "2025-06-16T10:31:00Z",
-  "metadata": {
-    "notification_type": "price_alert",
-    "action_url": "/trips/trip-123/flights"
-  }
-}
-```
-
-### **Python WebSocket Client**
-
-```python
-import asyncio
-import websockets
-import json
-
-async def chat_client():
-    uri = "ws://localhost:8001/api/chat/ws?token=YOUR_TOKEN"
-    
-    async with websockets.connect(uri) as websocket:
-        # Send message
-        message = {
-            "type": "user_message",
-            "content": "Find me flights from NYC to Tokyo",
-            "session_id": "session-456"
-        }
-        await websocket.send(json.dumps(message))
-        
-        # Listen for responses
-        async for message in websocket:
-            data = json.loads(message)
-            print(f"Received: {data}")
-            
-            if data['type'] == 'ai_response':
-                print(f"AI: {data['content']}")
-
-# Run the client
-asyncio.run(chat_client())
-```
-
----
-
-## 🗺️ Trip Management
+## Trip Management
 
 ### **Create Trip**
 
@@ -578,7 +456,7 @@ curl http://localhost:8001/api/memory/summary \
 
 ---
 
-## 📊 Rate Limiting
+## Rate Limiting
 
 ### **Check Rate Limit Status**
 
@@ -602,28 +480,28 @@ X-RateLimit-Window: 3600
 
 ```javascript
 async function makeAPICall(url, options) {
-    const response = await fetch(url, options);
-    
-    // Check rate limit headers
-    const remaining = response.headers.get('X-RateLimit-Remaining');
-    const reset = response.headers.get('X-RateLimit-Reset');
-    
-    if (response.status === 429) {
-        const retryAfter = response.headers.get('Retry-After');
-        console.log(`Rate limited. Retry after ${retryAfter} seconds`);
-        
-        // Wait and retry
-        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-        return makeAPICall(url, options);
-    }
-    
-    return response.json();
+  const response = await fetch(url, options);
+
+  // Check rate limit headers
+  const remaining = response.headers.get("X-RateLimit-Remaining");
+  const reset = response.headers.get("X-RateLimit-Reset");
+
+  if (response.status === 429) {
+    const retryAfter = response.headers.get("Retry-After");
+    console.log(`Rate limited. Retry after ${retryAfter} seconds`);
+
+    // Wait and retry
+    await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+    return makeAPICall(url, options);
+  }
+
+  return response.json();
 }
 ```
 
 ---
 
-## 🐛 Error Handling
+## Error Handling
 
 ### **Standard Error Response**
 
@@ -644,56 +522,56 @@ async function makeAPICall(url, options) {
 
 ### **Common Error Codes**
 
-| Code | Status | Description |
-|------|--------|-------------|
-| `AUTHENTICATION_ERROR` | 401 | Invalid or expired token |
-| `AUTHORIZATION_ERROR` | 403 | Insufficient permissions |
-| `VALIDATION_ERROR` | 400 | Invalid request data |
-| `NOT_FOUND` | 404 | Resource not found |
-| `RATE_LIMITED` | 429 | Too many requests |
-| `EXTERNAL_API_ERROR` | 502 | External service unavailable |
-| `INTERNAL_ERROR` | 500 | Server error |
+| Code                   | Status | Description                  |
+| ---------------------- | ------ | ---------------------------- |
+| `AUTHENTICATION_ERROR` | 401    | Invalid or expired token     |
+| `AUTHORIZATION_ERROR`  | 403    | Insufficient permissions     |
+| `VALIDATION_ERROR`     | 400    | Invalid request data         |
+| `NOT_FOUND`            | 404    | Resource not found           |
+| `RATE_LIMITED`         | 429    | Too many requests            |
+| `EXTERNAL_API_ERROR`   | 502    | External service unavailable |
+| `INTERNAL_ERROR`       | 500    | Server error                 |
 
 ### **Error Handling Best Practices**
 
 ```javascript
 async function handleAPIResponse(response) {
-    if (!response.ok) {
-        const error = await response.json();
-        
-        switch (error.code) {
-            case 'AUTHENTICATION_ERROR':
-                // Refresh token or redirect to login
-                await refreshToken();
-                break;
-                
-            case 'RATE_LIMITED':
-                // Implement exponential backoff
-                const retryAfter = response.headers.get('Retry-After');
-                await delay(retryAfter * 1000);
-                break;
-                
-            case 'VALIDATION_ERROR':
-                // Show user-friendly validation errors
-                showValidationErrors(error.details);
-                break;
-                
-            default:
-                // Log error and show generic message
-                console.error('API Error:', error);
-                showErrorMessage('Something went wrong. Please try again.');
-        }
-        
-        throw new Error(error.message);
+  if (!response.ok) {
+    const error = await response.json();
+
+    switch (error.code) {
+      case "AUTHENTICATION_ERROR":
+        // Refresh token or redirect to login
+        await refreshToken();
+        break;
+
+      case "RATE_LIMITED":
+        // Implement exponential backoff
+        const retryAfter = response.headers.get("Retry-After");
+        await delay(retryAfter * 1000);
+        break;
+
+      case "VALIDATION_ERROR":
+        // Show user-friendly validation errors
+        showValidationErrors(error.details);
+        break;
+
+      default:
+        // Log error and show generic message
+        console.error("API Error:", error);
+        showErrorMessage("Something went wrong. Please try again.");
     }
-    
-    return response.json();
+
+    throw new Error(error.message);
+  }
+
+  return response.json();
 }
 ```
 
 ---
 
-## 🔧 SDKs & Libraries
+## SDKs & Libraries
 
 ### **Python SDK (Coming Soon)**
 
@@ -727,41 +605,45 @@ async with client.chat.session() as chat:
 ### **JavaScript/TypeScript SDK (Coming Soon)**
 
 ```typescript
-import { TripSage } from '@tripsage/sdk';
+import { TripSage } from "@tripsage/sdk";
 
 // Initialize client
 const client = new TripSage({
-  apiKey: 'your_api_key',
-  baseURL: 'https://api.tripsage.ai'
+  apiKey: "your_api_key",
+  baseURL: "https://api.tripsage.ai",
 });
 
 // Search accommodations
 const hotels = await client.accommodations.search({
-  location: 'Paris, France',
-  checkIn: '2025-07-15',
-  checkOut: '2025-07-22',
-  guests: 2
+  location: "Paris, France",
+  checkIn: "2025-07-15",
+  checkOut: "2025-07-22",
+  guests: 2,
 });
 
-// WebSocket chat
+// Realtime chat (Supabase)
 const chat = client.chat.connect();
-chat.on('message', (message) => {
-  console.log('AI:', message.content);
+chat.on("message", (message) => {
+  console.log("AI:", message.content);
 });
 
-await chat.send('Find me flights to Tokyo');
+await chat.send("Find me flights to Tokyo");
 ```
 
 ### **React Hooks (Coming Soon)**
 
 ```jsx
-import { useTripSage, useFlightSearch, useChat } from '@tripsage/react';
+import { useTripSage, useFlightSearch, useChat } from "@tripsage/react";
 
 function FlightSearchComponent() {
-  const { data: flights, loading, error } = useFlightSearch({
-    origin: 'NYC',
-    destination: 'LAX',
-    departureDate: '2025-07-15'
+  const {
+    data: flights,
+    loading,
+    error,
+  } = useFlightSearch({
+    origin: "NYC",
+    destination: "LAX",
+    departureDate: "2025-07-15",
   });
 
   const { messages, sendMessage, isConnected } = useChat();
@@ -772,7 +654,7 @@ function FlightSearchComponent() {
   return (
     <div>
       <h2>Available Flights</h2>
-      {flights.map(flight => (
+      {flights.map((flight) => (
         <FlightCard key={flight.id} flight={flight} />
       ))}
     </div>
@@ -782,28 +664,466 @@ function FlightSearchComponent() {
 
 ---
 
-## 🔗 Additional Resources
+## � Trip Security
 
-### **API Documentation**
+This section demonstrates how to use the trip access verification system in TripSage API endpoints.
 
-- **[📚 Complete API Reference](rest-endpoints.md)** - Full endpoint documentation
-- **[🔧 Interactive Docs](http://localhost:8001/api/docs)** - Test endpoints in browser
-- **[📖 OpenAPI Schema](http://localhost:8001/api/openapi.json)** - Machine-readable API spec
+### **Overview**
 
-### **Development Resources**
+The trip security system provides access control for trip-related operations through:
 
-- **[👨‍💻 Developer Guide](../04_DEVELOPMENT_GUIDE/README.md)** - Setup and development
-- **[🔧 Configuration](../07_CONFIGURATION/README.md)** - Environment setup
-- **[🚀 Getting Started](../01_GETTING_STARTED/README.md)** - Quick start guide
+- **Access Levels**: `READ`, `WRITE`, `OWNER`, `COLLABORATOR`
+- **Permissions**: `VIEW`, `EDIT`, `MANAGE`
+- **FastAPI Dependencies**: Pre-configured and custom dependency injection
+- **Decorators**: Clean, declarative endpoint protection
+- **Audit Logging**: Security event tracking
 
-### **Support**
+### **Using Pre-configured Dependencies**
 
-- **[❓ FAQ](FAQ.md)** - Common questions and answers
-- **[💬 Discord](https://discord.gg/tripsage)** - Developer community
-- **[📧 Email](mailto:developers@tripsage.ai)** - Direct developer support
+```python
+from fastapi import APIRouter, status
+from tripsage.api.core.trip_security import (
+    TripReadAccessDep,
+    TripOwnerAccessDep,
+    TripEditPermissionDep,
+)
+from tripsage.api.core.dependencies import RequiredPrincipalDep
+
+router = APIRouter(tags=["trips"])
+
+@router.get("/trips/{trip_id}")
+async def get_trip(
+    trip_id: str,
+    access_result: TripReadAccessDep,  # Verifies read access
+    principal: RequiredPrincipalDep,
+):
+    """Get trip details - requires read access."""
+    # Access already verified, proceed with operation
+    return {"trip_id": trip_id, "access_level": access_result.access_level}
+
+@router.delete("/trips/{trip_id}")
+async def delete_trip(
+    trip_id: str,
+    access_result: TripOwnerAccessDep,  # Verifies owner access
+    principal: RequiredPrincipalDep,
+):
+    """Delete trip - requires owner access."""
+    # Only trip owner can delete
+    return {"message": "Trip deleted successfully"}
+
+@router.put("/trips/{trip_id}")
+async def update_trip(
+    trip_id: str,
+    access_result: TripEditPermissionDep,  # Verifies edit permission
+    principal: RequiredPrincipalDep,
+):
+    """Update trip - requires edit permission."""
+    # Owner or collaborators with edit permission can update
+    return {"message": "Trip updated successfully"}
+```
+
+### **Using Decorators**
+
+```python
+from tripsage.api.core.trip_security import (
+    require_trip_access,
+    TripAccessLevel,
+    TripAccessPermission,
+)
+
+@router.get("/trips/{trip_id}/details")
+@require_trip_access(TripAccessLevel.READ)
+async def get_trip_details(
+    trip_id: str,
+    principal: RequiredPrincipalDep,
+):
+    """Get detailed trip information."""
+    # Access verification handled by decorator
+    return {"trip_id": trip_id, "details": "..."}
+
+@router.post("/trips/{trip_id}/collaborators")
+@require_trip_access(
+    TripAccessLevel.COLLABORATOR,
+    TripAccessPermission.MANAGE
+)
+async def add_collaborator(
+    trip_id: str,
+    principal: RequiredPrincipalDep,
+):
+    """Add collaborator - requires manage permission."""
+    # Only users with manage permission can add collaborators
+    return {"message": "Collaborator added"}
+```
+
+### **Custom Dependencies**
+
+```python
+from tripsage.api.core.trip_security import (
+    create_trip_access_dependency,
+    TripAccessLevel,
+    TripAccessPermission,
+)
+from typing import Annotated
+from fastapi import Depends
+
+# Create custom dependency for specific use case
+ViewOnlyAccessDep = Annotated[
+    TripAccessResult,
+    Depends(create_trip_access_dependency(
+        TripAccessLevel.COLLABORATOR,
+        TripAccessPermission.VIEW
+    ))
+]
+
+@router.get("/trips/{trip_id}/readonly-summary")
+async def get_readonly_summary(
+    trip_id: str,
+    access_result: ViewOnlyAccessDep,
+    principal: RequiredPrincipalDep,
+):
+    """Get read-only trip summary."""
+    return {
+        "trip_id": trip_id,
+        "can_edit": access_result.permission_granted in [
+            TripAccessPermission.EDIT,
+            TripAccessPermission.MANAGE
+        ]
+    }
+```
+
+### **Multiple Access Checks**
+
+```python
+from tripsage.api.core.trip_security import (
+    check_trip_ownership,
+    check_trip_collaboration,
+    get_user_trip_permissions,
+)
+
+@router.get("/trips/{trip_id}/permissions")
+async def get_trip_permissions(
+    trip_id: str,
+    principal: RequiredPrincipalDep,
+    trip_service: TripServiceDep,
+):
+    """Get detailed permission information for current user."""
+    permissions = await get_user_trip_permissions(
+        trip_id, principal, trip_service
+    )
+    return permissions
+
+@router.post("/trips/{trip_id}/conditional-action")
+async def conditional_action(
+    trip_id: str,
+    principal: RequiredPrincipalDep,
+    trip_service: TripServiceDep,
+):
+    """Perform different actions based on access level."""
+    is_owner = await check_trip_ownership(trip_id, principal, trip_service)
+
+    if is_owner:
+        # Owner-specific logic
+        return {"action": "owner_action_performed"}
+
+    has_collab = await check_trip_collaboration(
+        trip_id, principal, trip_service, TripAccessPermission.EDIT
+    )
+
+    if has_collab:
+        # Collaborator logic
+        return {"action": "collaborator_action_performed"}
+
+    # Read-only logic
+    return {"action": "readonly_action_performed"}
+```
+
+### **Error Handling**
+
+```python
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthorizationError,
+    CoreResourceNotFoundError,
+)
+
+@router.put("/trips/{trip_id}/sensitive-data")
+async def update_sensitive_data(
+    trip_id: str,
+    access_result: TripOwnerAccessDep,
+    principal: RequiredPrincipalDep,
+):
+    """Update sensitive trip data - owner only."""
+    try:
+        # The dependency already verified owner access
+        # Proceed with sensitive operation
+        return {"message": "Sensitive data updated"}
+    except Exception as e:
+        # Handle any additional errors
+        logger.exception(f"Failed to update sensitive data: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update trip data"
+        )
+```
+
+### **Realtime Security (Supabase)**
+
+Supabase Realtime uses Postgres RLS policies on `realtime.messages` with private channels. Clients must:
+
+- Authenticate and call `supabase.realtime.setAuth(access_token)` when the session changes.
+- Join private topics (for example, `session:{uuid}` or `user:{sub}`) that your policies allow.
+
+```ts
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+// After sign-in (or token refresh)
+const { data: { session } } = await supabase.auth.getSession();
+const accessToken = session?.access_token;
+if (accessToken) supabase.realtime.setAuth(accessToken);
+
+// Join a private session channel
+const sessionId = "abc-123";
+const channel = supabase.channel(`session:${sessionId}`, { config: { private: true } });
+
+channel
+  .on("broadcast", { event: "chat:message" }, (payload) => {
+    console.log("message", payload);
+  })
+  .subscribe((status) => {
+    if (status === "SUBSCRIBED") {
+      // Optionally broadcast
+      channel.send({ type: "broadcast", event: "chat:message", payload: { text: "hello" } });
+    }
+  });
+```
+
+Policy examples live in the Realtime migration files and the [Realtime API guide](realtime-api.md).
+
+### **Updating Existing Trip Endpoints**
+
+```python
+# Before - Manual access checking
+@router.get("/trips/{trip_id}")
+async def get_trip_old(
+    trip_id: str,
+    principal: RequiredPrincipalDep,
+    trip_service: TripServiceDep,
+):
+    # Manual access check (old way)
+    has_access = await trip_service._check_trip_access(trip_id, principal.id)
+    if not has_access:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Rest of logic...
+
+# After - Using new security system
+@router.get("/trips/{trip_id}")
+async def get_trip_new(
+    trip_id: str,
+    access_result: TripReadAccessDep,  # Automatic verification
+    principal: RequiredPrincipalDep,
+    trip_service: TripServiceDep,
+):
+    # Access already verified, proceed directly
+    # Additional context available in access_result
+    logger.info(f"User {principal.id} accessing trip {trip_id} as {access_result.access_level}")
+    # Rest of logic...
+```
+
+### **Collaboration Endpoints**
+
+```python
+@router.get("/trips/{trip_id}/collaborators")
+@require_trip_access(TripAccessLevel.COLLABORATOR)
+async def list_collaborators(
+    trip_id: str,
+    principal: RequiredPrincipalDep,
+    trip_service: TripServiceDep,
+):
+    """List trip collaborators - any collaborator can view."""
+    # Implementation here
+    pass
+
+@router.post("/trips/{trip_id}/collaborators")
+async def add_collaborator(
+    trip_id: str,
+    access_result: TripManagePermissionDep,  # Requires manage permission
+    principal: RequiredPrincipalDep,
+    trip_service: TripServiceDep,
+):
+    """Add collaborator - requires manage permission."""
+    if not access_result.permission_granted == TripAccessPermission.MANAGE:
+        raise HTTPException(
+            status_code=403,
+            detail="Adding collaborators requires manage permission"
+        )
+    # Implementation here
+    pass
+
+@router.delete("/trips/{trip_id}/collaborators/{user_id}")
+async def remove_collaborator(
+    trip_id: str,
+    user_id: str,
+    access_result: TripOwnerAccessDep,  # Only owner can remove
+    principal: RequiredPrincipalDep,
+    trip_service: TripServiceDep,
+):
+    """Remove collaborator - owner only."""
+    # Implementation here
+    pass
+```
+
+### **Best Practices**
+
+#### **1. Choose Appropriate Access Levels**
+
+```python
+# For viewing operations
+access_result: TripReadAccessDep
+
+# For editing trip content
+access_result: TripEditPermissionDep
+
+# For managing collaborators, settings
+access_result: TripManagePermissionDep
+
+# For deleting trips, changing ownership
+access_result: TripOwnerAccessDep
+```
+
+#### **2. Use Meaningful Operation Names**
+
+```python
+context = TripAccessContext(
+    trip_id=trip_id,
+    principal_id=principal.id,
+    required_level=TripAccessLevel.WRITE,
+    operation="update_trip_itinerary",  # Descriptive operation name
+)
+```
+
+#### **3. Handle Access Results Appropriately**
+
+```python
+@router.post("/trips/{trip_id}/action")
+async def trip_action(
+    trip_id: str,
+    access_result: TripCollaboratorAccessDep,
+    principal: RequiredPrincipalDep,
+):
+    # Use access result information to customize response
+    response = {"trip_id": trip_id}
+
+    if access_result.is_owner:
+        response["owner_actions"] = ["delete", "transfer_ownership"]
+
+    if access_result.permission_granted == TripAccessPermission.MANAGE:
+        response["manage_actions"] = ["add_collaborator", "change_settings"]
+
+    if access_result.permission_granted in [TripAccessPermission.EDIT, TripAccessPermission.MANAGE]:
+        response["edit_actions"] = ["update_itinerary", "add_notes"]
+
+    return response
+```
+
+#### **4. Audit Important Operations**
+
+```python
+# The system automatically audits access events, but you can add
+# operation-specific auditing for important actions
+
+from tripsage_core.services.business.audit_logging_service import audit_security_event
+
+@router.delete("/trips/{trip_id}")
+async def delete_trip(
+    trip_id: str,
+    access_result: TripOwnerAccessDep,
+    principal: RequiredPrincipalDep,
+):
+    # Perform deletion
+    # ...
+
+    # Additional audit for trip deletion
+    await audit_security_event(
+        event_type=AuditEventType.DATA_DELETION,
+        severity=AuditSeverity.HIGH,
+        message=f"Trip {trip_id} deleted by owner",
+        actor_id=principal.id,
+        target_resource=trip_id,
+        risk_score=80,
+    )
+
+    return {"message": "Trip deleted successfully"}
+```
+
+### **Testing**
+
+#### **Unit Tests**
+
+```python
+import pytest
+from tripsage.api.core.trip_security import verify_trip_access, TripAccessContext
+
+@pytest.mark.asyncio
+async def test_trip_access_verification():
+    # Mock dependencies and test access verification
+    context = TripAccessContext(
+        trip_id="test-trip-id",
+        principal_id="test-user-id",
+        required_level=TripAccessLevel.READ,
+        operation="test_operation",
+    )
+
+    # Test with mocked trip service
+    result = await verify_trip_access(context, mock_trip_service)
+    assert result.is_authorized
+```
+
+#### **Integration Tests**
+
+```python
+from fastapi.testclient import TestClient
+
+def test_trip_endpoint_security(client: TestClient):
+    # Test that endpoint requires authentication
+    response = client.get("/api/trips/test-id")
+    assert response.status_code == 401
+
+    # Test with valid authentication
+    headers = {"Authorization": "Bearer valid-token"}
+    response = client.get("/api/trips/test-id", headers=headers)
+    # Should succeed or return 403 based on access rights
+    assert response.status_code in [200, 403]
+```
 
 ---
 
-**Ready to build amazing travel experiences?** Start with our [interactive API documentation](http://localhost:8001/api/docs) and join our [developer community](https://discord.gg/tripsage)! 🚀
+## Additional Resources
 
-> *Last updated: June 16, 2025*
+### **API Documentation**
+
+- **[Complete API Reference](rest-endpoints.md)** - Full endpoint documentation
+- **[Interactive Docs](http://localhost:8001/api/docs)** - Test endpoints in browser
+- **[OpenAPI Schema](http://localhost:8001/api/openapi.json)** - Machine-readable API spec
+
+### **Development Resources**
+
+- **[Developer Guide](../04_DEVELOPMENT_GUIDE/README.md)** - Setup and development
+- **[Configuration](../07_CONFIGURATION/README.md)** - Environment setup
+- **[Getting Started](../01_GETTING_STARTED/README.md)** - Quick start guide
+
+### **Support**
+
+- **[FAQ](FAQ.md)** - Common questions and answers
+- **[Discord](https://discord.gg/tripsage)** - Developer community
+- **[Email](mailto:developers@tripsage.ai)** - Direct developer support
+
+---
+
+**Ready to build amazing travel experiences?** Start with our [interactive API documentation](http://localhost:8001/api/docs) and join our [developer community](https://discord.gg/tripsage)!
+
+> _Last updated: June 16, 2025_

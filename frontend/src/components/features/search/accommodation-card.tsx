@@ -1,7 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import type { Accommodation } from "@/types/search";
 import {
   Car,
   Coffee,
@@ -12,6 +8,11 @@ import {
   Waves,
   Wifi,
 } from "lucide-react";
+import Image from "next/image";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import type { Accommodation } from "@/types/search";
 
 interface AccommodationCardProps {
   accommodation: Accommodation;
@@ -44,10 +45,11 @@ export function AccommodationCard({
       <div className="flex">
         <div className="w-1/3 h-48 bg-muted flex items-center justify-center">
           {accommodation.images?.[0] ? (
-            <img
+            <Image
               src={accommodation.images[0]}
               alt={accommodation.name}
-              className="h-full w-full object-cover"
+              fill
+              className="object-cover"
             />
           ) : (
             <span className="text-muted-foreground">No image</span>

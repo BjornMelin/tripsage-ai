@@ -113,12 +113,15 @@ error = create_validation_error(
 ```python
 from tripsage_core.utils.error_handling_utils import TripSageErrorContext
 
-with TripSageErrorContext(
+# Create configuration
+config = TripSageErrorContext.Config(
     operation="search_flights",
     service="flight_service",
     user_id="user123",
     request_id="req456"
-):
+)
+
+with TripSageErrorContext(config):
     raise CoreMCPError("Flight search failed")
 ```
 

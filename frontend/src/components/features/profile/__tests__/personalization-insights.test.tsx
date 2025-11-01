@@ -307,13 +307,13 @@ describe("PersonalizationInsights", () => {
     mockUseMemoryStats.mockReturnValue({ ...mockStatsData, isLoading: true });
     mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
 
-    render(<PersonalizationInsights userId="user-123" />, {
+    const { container } = render(<PersonalizationInsights userId="user-123" />, {
       wrapper: createWrapper(),
     });
 
-    // Should show loading skeleton
-    const loadingElements = screen.getAllByRole("status", { hidden: true });
-    expect(loadingElements.length).toBeGreaterThan(0);
+    // Should show loading skeleton (pulsing placeholders)
+    const pulses = container.querySelectorAll(".animate-pulse");
+    expect(pulses.length).toBeGreaterThan(0);
   });
 
   it("shows error state when insights fail to load", () => {

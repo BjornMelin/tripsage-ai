@@ -152,7 +152,6 @@ CREATE TABLE users (
     auth_provider VARCHAR(50) DEFAULT 'supabase',
     profile JSONB,
     preferences JSONB,
-    api_keys JSONB, -- Encrypted BYOK storage
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

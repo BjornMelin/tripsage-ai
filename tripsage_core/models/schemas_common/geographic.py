@@ -66,7 +66,7 @@ class Address(TripSageModel):
         if self.formatted:
             return self.formatted
 
-        parts = []
+        parts: list[str] = []
         if self.street:
             parts.append(self.street)
         if self.city:
@@ -94,6 +94,15 @@ class Place(TripSageModel):
         None, description="Type of place (e.g., city, airport, hotel)"
     )
     timezone: str | None = Field(None, description="IANA timezone identifier")
+
+    @property
+    def formatted_address(self) -> str | None:
+        """Convenience accessor used by some callers/tests.
+
+        Mirrors common provider semantics by returning the formatted address
+        string when available.
+        """
+        return self.address.formatted if self.address else None  # type: ignore[attr-defined] # pylint: disable=no-member
 
 
 class BoundingBox(TripSageModel):
@@ -169,15 +178,15 @@ class Route(TripSageModel):
 
     def total_distance(self) -> float | None:
         """Calculate total route distance if coordinates are available."""
-        if not self.origin.coordinates or not self.destination.coordinates:
+        if not self.origin.coordinates or not self.destination.coordinates:  # type: ignore[attr-defined] # pylint: disable=no-member
             return self.distance_km
 
         if not self.waypoints:
-            return self.origin.coordinates.distance_to(self.destination.coordinates)
+            return self.origin.coordinates.distance_to(self.destination.coordinates)  # type: ignore[attr-defined] # pylint: disable=no-member
 
         # Calculate distance through waypoints
         total = 0.0
-        current = self.origin.coordinates
+        current = self.origin.coordinates  # type: ignore[attr-defined] # pylint: disable=no-member
 
         for waypoint in self.waypoints:
             if waypoint.coordinates:
@@ -185,6 +194,6 @@ class Route(TripSageModel):
                 current = waypoint.coordinates
 
         # Add final segment to destination
-        total += current.distance_to(self.destination.coordinates)
+        total += current.distance_to(self.destination.coordinates)  # type: ignore[attr-defined] # pylint: disable=no-member
 
         return total

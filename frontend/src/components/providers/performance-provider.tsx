@@ -1,7 +1,7 @@
 "use client";
 
-import { useWebVitals } from "@/hooks/use-performance";
 import type { ReactNode } from "react";
+import { useWebVitals } from "@/hooks/use-performance";
 
 interface PerformanceMonitorProps {
   children: ReactNode;

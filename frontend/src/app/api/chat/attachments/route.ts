@@ -1,11 +1,68 @@
+/**
+ * @fileoverview API route for uploading chat attachments with rate limiting.
+ * Handles multipart form data uploads, validates file sizes and types,
+ * and provides rate limiting protection.
+ */
+
+"use cache: private";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { buildRateLimitKey, forwardAuthHeaders } from "@/lib/next/route-helpers";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
+/** Maximum file size allowed per file in bytes (10MB). */
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+/** Maximum number of files allowed per upload request. */
 const MAX_FILES_PER_REQUEST = 5;
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8000";
 
+/** Backend API URL for attachment operations. */
+const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8001";
+
+// Hoist optional Upstash limiter to module scope to avoid per-request instantiation
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const RATELIMIT_PREFIX = "ratelimit:attachments";
+const ratelimitInstance =
+  UPSTASH_URL && UPSTASH_TOKEN
+    ? new Ratelimit({
+        redis: Redis.fromEnv(),
+        limiter: Ratelimit.slidingWindow(20, "1 m"),
+        analytics: true,
+        prefix: RATELIMIT_PREFIX,
+      })
+    : undefined;
+
+/**
+ * Handles attachment uploads with validation and rate limiting.
+ *
+ * @param req - The Next.js request object containing multipart form data.
+ * @returns A JSON response with uploaded file information or an error response.
+ * @throws Will return error responses for validation failures or server errors.
+ */
 export async function POST(req: NextRequest) {
   try {
+    // Optional rate limit: enable only when Upstash env is configured
+    if (ratelimitInstance) {
+      const identifier = buildRateLimitKey(req);
+      const { success, limit, remaining, reset } =
+        await ratelimitInstance.limit(identifier);
+      if (!success) {
+        return NextResponse.json(
+          { error: "Rate limit exceeded", code: "RATE_LIMIT" },
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": String(limit),
+              "X-RateLimit-Remaining": String(remaining),
+              "X-RateLimit-Reset": String(reset),
+            },
+          }
+        );
+      }
+    }
     // Validate content type
     const contentType = req.headers.get("content-type");
     if (!contentType?.includes("multipart/form-data")) {
@@ -64,11 +121,7 @@ export async function POST(req: NextRequest) {
     // Call backend API
     const endpoint =
       files.length === 1 ? "/api/attachments/upload" : "/api/attachments/upload/batch";
-    const headers: HeadersInit = {};
-    const authHeader = req.headers.get("authorization");
-    if (authHeader) {
-      headers.Authorization = authHeader;
-    }
+    const headers: HeadersInit | undefined = forwardAuthHeaders(req);
 
     const response = await fetch(`${BACKEND_API_URL}${endpoint}`, {
       method: "POST",
@@ -87,7 +140,7 @@ export async function POST(req: NextRequest) {
 
     // Transform response
     if (files.length === 1) {
-      return Response.json({
+      const payload = {
         files: [
           {
             id: data.file_id,
@@ -99,7 +152,13 @@ export async function POST(req: NextRequest) {
           },
         ],
         urls: [`/api/attachments/${data.file_id}/download`],
-      });
+      };
+      try {
+        revalidateTag("attachments", "max");
+      } catch {
+        // Ignore cache revalidation errors in non-Next runtime test environments
+      }
+      return Response.json(payload);
     }
 
     // Batch response
@@ -119,10 +178,17 @@ export async function POST(req: NextRequest) {
       status: file.processing_status,
     }));
 
-    return Response.json({
+    const resultPayload = {
       files: transformedFiles,
       urls: transformedFiles.map((f: any) => f.url),
-    });
+    };
+    const result = Response.json(resultPayload);
+    try {
+      revalidateTag("attachments", "max");
+    } catch {
+      // Ignore cache revalidation errors in non-Next runtime test environments
+    }
+    return result;
   } catch (error) {
     console.error("File upload error:", error);
     return Response.json(

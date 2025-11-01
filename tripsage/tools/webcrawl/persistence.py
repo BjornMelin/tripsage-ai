@@ -87,7 +87,12 @@ class WebCrawlPersistence:
         success_memory = await self._store_in_memory(result_with_type)
 
         # Store price history specifically for each item
-        for item in result.get("items", []):
+        item_list = [
+            cast(dict[str, Any], item)
+            for item in result.get("items", [])
+            if isinstance(item, dict)
+        ]
+        for item in item_list:
             await self._store_price_history(item, product_type)
 
         return success_supabase and success_memory
@@ -199,8 +204,13 @@ class WebCrawlPersistence:
             # source = result.get("source", "webcrawl")
 
             # Collect all content from items
-            content_items = []
-            for item in result.get("items", []):
+            content_items: list[str] = []
+            items_list = [
+                cast(dict[str, Any], item)
+                for item in result.get("items", [])
+                if isinstance(item, dict)
+            ]
+            for item in items_list:
                 title = item.get("title", "")
                 content = item.get("content", "")
                 if title and content:
@@ -277,9 +287,14 @@ class WebCrawlPersistence:
                 return await self._store_in_memory(result)
 
             # Collect event information
-            event_descriptions = []
-            for item in result.get("items", []):
-                event_info = []
+            event_descriptions: list[str] = []
+            items_list = [
+                cast(dict[str, Any], item)
+                for item in result.get("items", [])
+                if isinstance(item, dict)
+            ]
+            for item in items_list:
+                event_info: list[str] = []
                 if item.get("title"):
                     event_info.append(f"Event: {item['title']}")
                 if item.get("description"):
@@ -365,8 +380,13 @@ class WebCrawlPersistence:
                 return await self._store_in_memory(result)
 
             # Collect blog content based on extract_type
-            blog_content = []
-            for item in result.get("items", []):
+            blog_content: list[str] = []
+            items_list = [
+                cast(dict[str, Any], item)
+                for item in result.get("items", [])
+                if isinstance(item, dict)
+            ]
+            for item in items_list:
                 title = item.get("title", "")
                 if title:
                     blog_content.append(f"Title: {title}")
@@ -375,19 +395,23 @@ class WebCrawlPersistence:
                 if extract_type == "insights":
                     insights = item.get("insights", [])
                     if insights:
-                        blog_content.append(f"Insights: {'; '.join(insights)}")
+                        insights_text = "; ".join(str(val) for val in insights)
+                        blog_content.append(f"Insights: {insights_text}")
                 elif extract_type == "itinerary":
                     itinerary = item.get("itinerary", [])
                     if itinerary:
-                        blog_content.append(f"Itinerary: {'; '.join(itinerary)}")
+                        itinerary_text = "; ".join(str(val) for val in itinerary)
+                        blog_content.append(f"Itinerary: {itinerary_text}")
                 elif extract_type == "tips":
                     tips = item.get("tips", [])
                     if tips:
-                        blog_content.append(f"Travel Tips: {'; '.join(tips)}")
+                        tips_text = "; ".join(str(val) for val in tips)
+                        blog_content.append(f"Travel Tips: {tips_text}")
                 elif extract_type == "places":
                     places = item.get("places", [])
                     if places:
-                        blog_content.append(f"Places Mentioned: {'; '.join(places)}")
+                        places_text = "; ".join(str(val) for val in places)
+                        blog_content.append(f"Places Mentioned: {places_text}")
                 else:
                     # Fallback to content if no specific extracted data
                     content = item.get("content", "")
@@ -472,7 +496,7 @@ class WebCrawlPersistence:
             # Insert into Supabase
             response: Any = self.supabase.table("price_history").insert(data).execute()
 
-            if not cast(dict, response).get("data"):
+            if not cast(dict[str, Any], response).get("data"):
                 logger.exception(
                     "Supabase price history storage error: No data returned"
                 )

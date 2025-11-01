@@ -17,8 +17,8 @@ from tripsage_core.exceptions.exceptions import (
 )
 from tripsage_core.models.attachments import DocumentAnalysisResult, FileType
 from tripsage_core.services.external_apis.base_service import (
-    AsyncServiceLifecycle,
     AsyncServiceProvider,
+    sanitize_response,
 )
 
 
@@ -49,24 +49,32 @@ class AnalysisContext(BaseModel):
 class TravelInformation(BaseModel):
     """Extracted travel-related information."""
 
+    @staticmethod
+    def _list_str() -> list[str]:
+        return []
+
+    @staticmethod
+    def _list_dict_str() -> list[dict[str, str]]:
+        return []
+
     destinations: list[str] = Field(
-        default_factory=list, description="Mentioned destinations"
+        default_factory=_list_str, description="Mentioned destinations"
     )
-    dates: list[str] = Field(default_factory=list, description="Travel dates")
+    dates: list[str] = Field(default_factory=_list_str, description="Travel dates")
     accommodations: list[dict[str, str]] = Field(
-        default_factory=list, description="Accommodation details"
+        default_factory=_list_dict_str, description="Accommodation details"
     )
     flights: list[dict[str, str]] = Field(
-        default_factory=list, description="Flight information"
+        default_factory=_list_dict_str, description="Flight information"
     )
     activities: list[str] = Field(
-        default_factory=list, description="Planned activities"
+        default_factory=_list_str, description="Planned activities"
     )
     budget_info: dict[str, Any] | None = Field(
         None, description="Budget-related information"
     )
     contact_info: list[dict[str, str]] = Field(
-        default_factory=list, description="Important contact information"
+        default_factory=_list_dict_str, description="Important contact information"
     )
 
 
@@ -81,7 +89,7 @@ class DocumentAnalyzerConfig:
     pdf_extraction_enabled: bool
 
 
-class DocumentAnalyzer(AsyncServiceLifecycle):
+class DocumentAnalyzer:
     """Service for AI-powered analysis of travel documents with Core integration.
 
     Processes various document types to extract travel-relevant information
@@ -173,6 +181,10 @@ class DocumentAnalyzer(AsyncServiceLifecycle):
         self.ai_client = None
         self._connected = False
 
+    async def close(self) -> None:
+        """Alias for disconnect for consistency."""
+        await self.disconnect()
+
     async def ensure_connected(self) -> None:
         """Ensure service is connected."""
         if not self._connected:
@@ -227,7 +239,7 @@ class DocumentAnalyzer(AsyncServiceLifecycle):
                     if extracted_text
                     else None,  # Limit text for storage
                     key_information=analysis_results,
-                    travel_relevance=travel_info.dict() if travel_info else None,
+                    travel_relevance=travel_info.model_dump() if travel_info else None,
                     confidence_score=self._calculate_confidence_score(analysis_results),
                     processing_time_ms=processing_time,
                 )
@@ -312,10 +324,19 @@ class DocumentAnalyzer(AsyncServiceLifecycle):
         return f"PDF text extraction not yet implemented for {file_path.name}"
 
     async def _extract_text_from_json(self, file_path: Path) -> str:
-        """Extract text from JSON file."""
-        with Path(file_path).open(encoding="utf-8") as f:
-            data = json.load(f)
-            content = json.dumps(data, indent=2)
+        """Extract text from JSON file safely with strict parsing and sanitization.
+
+        Args:
+            file_path: Path to a JSON file on disk
+
+        Returns:
+            Stringified, sanitized JSON content (bounded in length)
+        """
+        with Path(file_path).open("rb") as f:
+            raw = f.read()
+            data = sanitize_response(raw)
+            # Stringify the sanitized structure deterministically
+            content = json.dumps(data, indent=2, ensure_ascii=False)
             if len(content) > self.config.max_text_length:
                 content = content[: self.config.max_text_length]
             return content
@@ -390,7 +411,7 @@ class DocumentAnalyzer(AsyncServiceLifecycle):
         This is an enhanced implementation that can be further improved with
         proper NLP libraries when needed.
         """
-        entities = {
+        entities: dict[str, list[str]] = {
             "dates": [],
             "locations": [],
             "emails": [],
@@ -401,7 +422,7 @@ class DocumentAnalyzer(AsyncServiceLifecycle):
         }
 
         # Date pattern coverage
-        date_patterns = [
+        date_patterns: list[str] = [
             r"\d{1,2}/\d{1,2}/\d{4}",  # MM/DD/YYYY
             r"\d{4}-\d{2}-\d{2}",  # YYYY-MM-DD
             r"\b\w+ \d{1,2}, \d{4}\b",  # Month DD, YYYY
@@ -417,7 +438,7 @@ class DocumentAnalyzer(AsyncServiceLifecycle):
         entities["emails"] = re.findall(email_pattern, text)
 
         # Phone pattern coverage
-        phone_patterns = [
+        phone_patterns: list[str] = [
             r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b",  # US format
             r"\+\d{1,3}[-.\s]?\d{1,14}\b",  # International format
             r"\(\d{3}\)\s?\d{3}[-.]?\d{4}\b",  # (xxx) xxx-xxxx
@@ -427,7 +448,7 @@ class DocumentAnalyzer(AsyncServiceLifecycle):
             entities["phone_numbers"].extend(re.findall(pattern, text))
 
         # Currency pattern coverage
-        currency_patterns = [
+        currency_patterns: list[str] = [
             r"\$\d+(?:,\d{3})*(?:\.\d{2})?",  # USD
             r"€\d+(?:,\d{3})*(?:\.\d{2})?",  # EUR
             r"£\d+(?:,\d{3})*(?:\.\d{2})?",  # GBP
@@ -438,7 +459,7 @@ class DocumentAnalyzer(AsyncServiceLifecycle):
             entities["currency_amounts"].extend(re.findall(pattern, text))
 
         # Confirmation number patterns
-        confirmation_patterns = [
+        confirmation_patterns: list[str] = [
             r"\b[A-Z]{2}\d{4,6}\b",  # Airline style
             r"\b\d{6,10}\b",  # Numeric confirmations
             r"\b[A-Z0-9]{6,12}\b",  # Mixed alphanumeric
@@ -448,7 +469,7 @@ class DocumentAnalyzer(AsyncServiceLifecycle):
             entities["confirmation_numbers"].extend(re.findall(pattern, text))
 
         # Flight number patterns
-        flight_pattern = r"\b[A-Z]{2,3}\s?\d{1,4}\b"
+        flight_pattern: str = r"\b[A-Z]{2,3}\s?\d{1,4}\b"
         entities["flight_numbers"] = re.findall(flight_pattern, text)
 
         # Remove duplicates
@@ -748,7 +769,7 @@ class DocumentAnalyzer(AsyncServiceLifecycle):
 _document_analyzer_provider = AsyncServiceProvider(
     factory=DocumentAnalyzer,
     initializer=lambda service: service.connect(),
-    finalizer=lambda service: service.close(),
+    finalizer=lambda service: service.close(),  # type: ignore[arg-type]
 )
 
 

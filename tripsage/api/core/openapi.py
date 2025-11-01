@@ -4,6 +4,9 @@ This module provides configuration for OpenAPI documentation, including
 custom examples, tags, and extensions.
 """
 
+from typing import Any, TypedDict, cast
+
+from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
 from tripsage.api.core.config import get_settings
@@ -46,12 +49,11 @@ This API is designed to serve multiple consumer types with adapted responses:
 ### AI & Communication
 * **Chat System** - Conversation management with AI agents
 * **Memory & Context** - Persistent conversation memory and user learning
-* **Real-time Communication** - WebSocket support for live updates
+* **Real-time Communication** - Realtime (Supabase) support for live updates
 * **File Processing** - Document analysis and travel document extraction
 
 ### Authentication & Security
-* **Dual Authentication** - JWT tokens for users, API keys for agents
-* **BYOK (Bring Your Own Key)** - Secure user-provided API key management
+* **Supabase Authentication** - JWT access tokens issued via Supabase
 * **Rate Limiting** - Consumer-aware limits with enhanced principal tracking
 * **Data Protection** - AES-256 encryption for sensitive data
 
@@ -68,30 +70,6 @@ POST /api/v1/auth/token
 }
 
 Authorization: Bearer <jwt_token>
-```
-
-### API Key Authentication (Primary for Agents)
-Create an API key via `/api/v1/keys`, then use in the X-API-Key header:
-
-```
-POST /api/v1/keys (with JWT auth)
-{
-  "description": "Agent access key"
-}
-
-X-API-Key: <api_key>
-```
-
-### BYOK (Bring Your Own Key) System
-Store encrypted user API keys for external services:
-
-```
-POST /api/v1/keys
-{
-  "service": "duffel",
-  "api_key": "user_provided_key",
-  "description": "My Duffel API key"
-}
 ```
 
 ## Consumer-Specific Response Formats
@@ -128,7 +106,7 @@ POST /api/v1/keys
 
 ## Performance Features
 
-* **Multi-tier Caching** - DragonflyDB with intelligent TTL (25x improvement)
+* **Multi-tier Caching** - Upstash Redis with intelligent TTL
 * **Consumer-aware Rate Limiting** - Higher limits for agents vs. frontend
 * **Connection Pooling** - Optimized database and external API connections
 * **Query Optimization** - Indexed searches and prepared statements
@@ -140,7 +118,6 @@ Consumer-aware rate limiting with different limits:
 * **Frontend Users**: 100 requests/minute, 1000 requests/hour
 * **AI Agents**: 500 requests/minute, 5000 requests/hour
 * **Authenticated Users**: 5x multiplier on base limits
-* **BYOK Users**: Higher limits when using own API keys
 
 ## Error Handling
 
@@ -174,18 +151,15 @@ The API returns consumer-specific error formats:
 
 ## Real-time Features
 
-WebSocket endpoints for live communication:
-
-* `WS /api/v1/ws/chat/{session_id}` - Real-time chat with agents
-* `WS /api/v1/ws/trip/{trip_id}` - Trip planning collaboration
-* `WS /api/v1/ws/status` - Agent status and progress updates
+Real-time messaging is provided via Supabase Realtime private channels with RLS
+authorization (no custom Realtime (Supabase) endpoints).
 
 ## Integration with TripSage Core
 
 This API leverages the `tripsage_core` shared library for:
 
 * **Business Services** - Flight, accommodation, memory, and chat services
-* **Infrastructure Services** - Database, caching, and WebSocket management
+* **Infrastructure Services** - Database, caching, and Realtime (Supabase) management
 * **External API Integration** - Standardized patterns for third-party services
 * **Security & Configuration** - Centralized settings and encryption
 """
@@ -217,18 +191,10 @@ TAG_DESCRIPTIONS = [
         ),
     },
     {
-        "name": "api_keys",
-        "description": (
-            "API key management endpoints (BYOK - Bring Your Own Key). "
-            "Supports both system API keys for agents and user-provided "
-            "external service keys."
-        ),
-    },
-    {
         "name": "trips",
         "description": (
             "Trip planning and management endpoints. Supports travel "
-            "itinerary creation, optimization, and collaboration features."
+            "itinerary creation and optimization."
         ),
     },
     {
@@ -284,13 +250,6 @@ TAG_DESCRIPTIONS = [
         ),
     },
     {
-        "name": "websocket",
-        "description": (
-            "Real-time communication endpoints via WebSocket. Enables live updates "
-            "for chat, trip planning collaboration, and agent status monitoring."
-        ),
-    },
-    {
         "name": "frontend",
         "description": (
             "Endpoints optimized for frontend consumers with UI-friendly responses, "
@@ -308,7 +267,17 @@ TAG_DESCRIPTIONS = [
 
 
 # Example responses for different endpoints
-EXAMPLES = {
+
+
+class OpenAPIExample(TypedDict, total=False):
+    """Typed mapping for OpenAPI example entries."""
+
+    summary: str
+    description: str
+    value: dict[str, Any]
+
+
+EXAMPLES: dict[str, OpenAPIExample] = {
     "auth_token": {
         "summary": "User authentication response",
         "description": "Response when user authentication is successful",
@@ -328,30 +297,6 @@ EXAMPLES = {
             "full_name": "John Doe",
             "created_at": "2023-07-27T12:34:56.789Z",
             "updated_at": "2023-07-27T12:34:56.789Z",
-        },
-    },
-    "api_key_response": {
-        "summary": "API key information",
-        "description": "Response with API key information",
-        "value": {
-            "id": "123e4567-e89b-12d3-a456-426614174000",
-            "name": "OpenAI API Key",
-            "service": "openai",
-            "description": "OpenAI API key for GPT-4",
-            "created_at": "2023-07-27T12:34:56.789Z",
-            "updated_at": "2023-07-27T12:34:56.789Z",
-            "expires_at": "2024-07-27T12:34:56.789Z",
-            "is_valid": True,
-            "last_used": "2023-07-27T12:34:56.789Z",
-        },
-    },
-    "api_key_validate_response": {
-        "summary": "API key validation result",
-        "description": "Response with API key validation result",
-        "value": {
-            "is_valid": True,
-            "service": "openai",
-            "message": "API key is valid",
         },
     },
     "error_response": {
@@ -377,7 +322,7 @@ EXAMPLES = {
 }
 
 
-def custom_openapi(app):
+def custom_openapi(app: FastAPI) -> dict[str, Any]:
     """Create a custom OpenAPI schema for the FastAPI application.
 
     Args:
@@ -409,7 +354,9 @@ def custom_openapi(app):
     if "examples" not in openapi_schema["components"]:
         openapi_schema["components"]["examples"] = {}
 
-    openapi_schema["components"]["examples"].update(EXAMPLES)
+    components = cast(dict[str, Any], openapi_schema["components"])
+    examples = cast(dict[str, Any], components.setdefault("examples", {}))
+    examples.update(EXAMPLES)
 
     # Add security schemes
     if "securitySchemes" not in openapi_schema["components"]:
@@ -421,14 +368,6 @@ def custom_openapi(app):
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "description": "JWT authentication",
-    }
-
-    # Add API key security scheme
-    openapi_schema["components"]["securitySchemes"]["api_key"] = {
-        "type": "apiKey",
-        "in": "header",
-        "name": "X-API-Key",
-        "description": "API key authentication",
     }
 
     app.openapi_schema = openapi_schema

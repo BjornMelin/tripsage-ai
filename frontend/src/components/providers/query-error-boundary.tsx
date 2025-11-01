@@ -1,11 +1,11 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { getErrorMessage, isApiError, isNetworkError } from "@/lib/api/error-types";
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
 import type { ReactNode } from "react";
 import { ErrorBoundary } from "react-error-boundary";
+import { Button } from "@/components/ui/button";
+import { getErrorMessage, isApiError, isNetworkError } from "@/lib/api/error-types";
 
 interface QueryErrorFallbackProps {
   error: Error;
@@ -173,9 +173,9 @@ export function InlineQueryError({
       className={`flex items-center gap-2 p-3 text-sm rounded-md border border-red-200 bg-red-50 text-red-800 ${className}`}
     >
       {isNetwork ? (
-        <WifiOff className="h-4 w-4 flex-shrink-0" />
+        <WifiOff className="h-4 w-4 shrink-0" />
       ) : (
-        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+        <AlertTriangle className="h-4 w-4 shrink-0" />
       )}
 
       <span className="flex-1">{errorMessage}</span>

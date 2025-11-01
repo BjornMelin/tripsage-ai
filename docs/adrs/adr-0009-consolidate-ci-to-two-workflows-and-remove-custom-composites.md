@@ -1,10 +1,10 @@
 # ADR-0009: Consolidate CI to two workflows and remove custom composites
 
+**Version**: 1.0.0
+**Status**: Proposed
 **Date**: 2025-10-18
-
-## Status
-
-Proposed
+**Category**: ops
+**Domain**: CI (GitHub Actions)
 
 ## Context
 
@@ -16,9 +16,9 @@ This violates our KISS/DRY/YAGNI principles and increases maintenance cost. We n
 
 We will consolidate CI into exactly two workflows and remove bespoke composites:
 
-1) ci.yml (single PR/push workflow): two small jobs (backend, frontend) gated by path filters; use official actions (setup‑python, setup‑node) and minimal steps (lint, type, unit).
+1. ci.yml (single PR/push workflow): two small jobs (backend, frontend) gated by path filters; use official actions (setup‑python, setup‑node) and minimal steps (lint, type, unit).
 
-2) security.yml (weekly + manual): a focused secrets scan using GH Advanced Secret Scanning configuration or gitleaks. Example env files will be excluded via `.github/secret_scanning.yml` to prevent false positives.
+2. security.yml (weekly + manual): a focused secrets scan using GH Advanced Secret Scanning configuration or gitleaks. Example env files will be excluded via `.github/secret_scanning.yml` to prevent false positives.
 
 We will delete legacy workflows (backend-ci, frontend-ci, security-ci, utilities, example-composite-actions) and composite actions (setup-python, setup-node, security-scan). Type checks and unit tests will be soft-fail initially (continue-on-error) and flipped to blocking after sustained stability on `main`.
 
@@ -54,3 +54,7 @@ Partial simplification with some utility steps. Rejected: still adds maintenance
 
 - GitHub Docs: secret_scanning.yml paths-ignore (UNVERIFIED)
 - Internal CI analysis and security scanning review (this PR)
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

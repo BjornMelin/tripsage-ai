@@ -1,1 +1,4 @@
-"""Unit test package marker for ruff D104 compliance."""
+"""Unit test package for TripSage.
+
+Makes `tests.unit` importable for static analyzers and Pylint.
+"""

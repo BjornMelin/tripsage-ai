@@ -848,13 +848,13 @@ export type Database = {
 
 // Helper types for better developer experience
 export type Tables<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Row"];
+  Database["public"]["Tables"][T] extends { Row: infer R } ? R : never;
 
 export type InsertTables<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Insert"];
+  Database["public"]["Tables"][T] extends { Insert: infer I } ? I : never;
 
 export type UpdateTables<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Update"];
+  Database["public"]["Tables"][T] extends { Update: infer U } ? U : never;
 
 export type Enums<T extends keyof Database["public"]["Enums"]> =
   Database["public"]["Enums"][T];
@@ -866,14 +866,24 @@ export type Accommodation = Tables<"accommodations">;
 export type Transportation = Tables<"transportation">;
 export type ItineraryItem = Tables<"itinerary_items">;
 export type ChatSession = Tables<"chat_sessions">;
+export type ChatSessionInsert = InsertTables<"chat_sessions">;
 export type ChatMessage = Tables<"chat_messages">;
+export type ChatMessageInsert = InsertTables<"chat_messages">;
 export type ChatToolCall = Tables<"chat_tool_calls">;
+export type ChatToolCallInsert = InsertTables<"chat_tool_calls">;
 export type ApiKey = Tables<"api_keys">;
 export type Memory = Tables<"memories">;
 export type SessionMemory = Tables<"session_memories">;
 export type TripCollaborator = Tables<"trip_collaborators">;
 export type FileAttachment = Tables<"file_attachments">;
+export type FileAttachmentInsert = InsertTables<"file_attachments">;
+export type FileAttachmentUpdate = UpdateTables<"file_attachments">;
 export type SearchDestination = Tables<"search_destinations">;
 export type SearchActivity = Tables<"search_activities">;
 export type SearchFlight = Tables<"search_flights">;
 export type SearchHotel = Tables<"search_hotels">;
+
+// Enum shortcuts
+export type ChatRole = Enums<"chat_role">;
+export type UploadStatus = Enums<"upload_status">;
+export type VirusScanStatus = Enums<"virus_scan_status">;

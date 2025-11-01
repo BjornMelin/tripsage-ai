@@ -5,7 +5,11 @@ insights learned during conversation.
 """
 
 from collections import Counter
+from collections.abc import Sequence
 
+from langchain_core.tools import BaseTool
+
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.utils.logging_utils import get_logger
@@ -21,20 +25,24 @@ class MemoryUpdateNode(BaseAgentNode):
     both the knowledge graph and session data for future reference.
     """
 
-    def __init__(self, service_registry):
+    def __init__(self, services: AppServiceContainer):
         """Initialize the memory update node."""
-        super().__init__("memory_update", service_registry)
+        super().__init__("memory_update", services)
+        # Predefine tool attributes to satisfy static analysis and pylint
+        self.available_tools: list[BaseTool] = []
+        self.memory_tool: BaseTool | None = None
 
     def _initialize_tools(self) -> None:
         """Initialize memory management tools using simple tool catalog."""
         from tripsage.orchestration.tools.tools import get_tools_for_agent
 
         # Get tools for memory update agent using simple catalog
-        self.available_tools = get_tools_for_agent("memory_update")
+        tools: Sequence[BaseTool] = list(get_tools_for_agent("memory_update"))
+        self.available_tools = list(tools)
 
-        # Extract memory tool for convenience
+        # Extract memory tool for convenience (typed defensively for stubs)
         self.memory_tool = next(
-            (tool for tool in self.available_tools if "memory" in tool.name.lower()),
+            (tool for tool in tools if "memory" in tool.name.lower()),
             None,
         )
 
@@ -74,24 +82,28 @@ class MemoryUpdateNode(BaseAgentNode):
         Returns:
             List of insights to store in memory
         """
-        insights = []
+        insights: list[str] = []
 
-        # Extract budget preferences
-        if state.get("budget_constraints"):
-            budget_info = state["budget_constraints"]
-            if isinstance(budget_info, dict):
-                insights.extend(
-                    f"Budget preference - {key}: {value}"
-                    for key, value in budget_info.items()
-                )
-            else:
-                insights.append(f"Budget constraint: {budget_info}")
+        # Extract budget preferences from user_preferences or analyses
+        prefs = state.get("user_preferences")
+        if isinstance(prefs, dict):
+            if "budget_total" in prefs:
+                insights.append(f"Budget total: {prefs['budget_total']}")
+            if "budget_currency" in prefs:
+                insights.append(f"Budget currency: {prefs['budget_currency']}")
+        if state.get("budget_analyses"):
+            insights.append(
+                f"Performed {len(state['budget_analyses'])} budget analysis operations"
+            )
 
         # Extract user preferences
-        if state.get("user_preferences"):
+        if isinstance(prefs, dict):
             insights.extend(
-                f"Travel preference - {pref_type}: {value}"
-                for pref_type, value in state["user_preferences"].items()
+                [
+                    f"Travel preference - {pref_type!s}: {value!s}"
+                    for pref_type, value in prefs.items()
+                    if pref_type not in {"budget_total", "budget_currency"}
+                ]
             )
 
         # Extract destination interests
@@ -138,7 +150,7 @@ class MemoryUpdateNode(BaseAgentNode):
         Returns:
             List of search-related insights
         """
-        insights = []
+        insights: list[str] = []
 
         # Flight search patterns
         if state.get("flight_searches"):
@@ -151,7 +163,7 @@ class MemoryUpdateNode(BaseAgentNode):
                 if params.get("origin") and params.get("destination")
             }
 
-            insights.extend(f"Searched flight route: {route}" for route in routes)
+            insights.extend([f"Searched flight route: {route}" for route in routes])
 
             # Analyze search frequency
             if len(flight_searches) > 1:
@@ -169,7 +181,7 @@ class MemoryUpdateNode(BaseAgentNode):
             }
 
             insights.extend(
-                f"Searched accommodation in: {location}" for location in locations
+                [f"Searched accommodation in: {location}" for location in locations]
             )
 
         # Activity search patterns
@@ -184,8 +196,10 @@ class MemoryUpdateNode(BaseAgentNode):
             }
 
             insights.extend(
-                f"Interested in activity type: {activity_type}"
-                for activity_type in activity_types
+                [
+                    f"Interested in activity type: {activity_type}"
+                    for activity_type in activity_types
+                ]
             )
 
         return insights
@@ -199,16 +213,18 @@ class MemoryUpdateNode(BaseAgentNode):
         Returns:
             List of interaction-related insights
         """
-        insights = []
+        insights: list[str] = []
 
         # Analyze agent usage patterns
         agent_history = state.get("agent_history", [])
         if agent_history:
             agent_counts = Counter(agent_history)
             insights.extend(
-                f"Frequently used {agent} ({count} times)"
-                for agent, count in agent_counts.items()
-                if count > 1
+                [
+                    f"Frequently used {agent} ({count} times)"
+                    for agent, count in agent_counts.items()
+                    if count > 1
+                ]
             )
 
         # Analyze conversation length and complexity
@@ -245,8 +261,11 @@ class MemoryUpdateNode(BaseAgentNode):
             # Add observations to the user entity
             memory_data = {"entity_name": entity_name, "observations": insights}
 
-            # Execute memory update
-            await self.memory_tool._arun(**memory_data)
+            # Execute memory update using public async API if available
+            if hasattr(self.memory_tool, "ainvoke"):
+                await self.memory_tool.ainvoke(memory_data)  # type: ignore[call-arg]
+            else:
+                await self.memory_tool.arun(**memory_data)  # type: ignore[attr-defined]
             logger.info("Updated knowledge graph with %s insights", len(insights))
 
         except Exception:

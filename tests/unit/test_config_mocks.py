@@ -1,11 +1,8 @@
-"""Mock configuration objects for isolated testing.
-
-This module provides mocking of configuration objects
-to enable isolated testing without external dependencies.
-"""
+"""Mock configuration helpers for isolated testing."""
 
 import os
-from typing import Any
+from collections.abc import Callable
+from typing import Any, cast
 from unittest.mock import AsyncMock
 
 import pytest
@@ -15,40 +12,57 @@ from pydantic import SecretStr
 class MockSettings:
     """Mock version of flat Settings for testing."""
 
-    def __init__(self):
-        """Initialize mock settings with testing defaults."""
-        # Environment & Core (flat structure)
-        self.environment = "testing"
-        self.debug = True
-        self.log_level = "INFO"
+    def __init__(self) -> None:
+        """Initialize mock settings with testing defaults stored in a mapping."""
+        super().__setattr__(
+            "_values",
+            {
+                # Environment & Core (flat structure)
+                "environment": "testing",
+                "debug": True,
+                "log_level": "INFO",
+                # API Configuration (flat structure)
+                "api_title": "TripSage API",
+                "api_version": "1.0.0",
+                "cors_origins": [
+                    "http://localhost:3000",
+                    "http://localhost:3001",
+                ],
+                "cors_credentials": True,
+                # Database (flat structure)
+                "database_url": "https://test-project.supabase.co",
+                "database_public_key": SecretStr("test-anon-key"),
+                "database_service_key": SecretStr("test-service-key"),
+                "database_jwt_secret": SecretStr("test-jwt-secret"),
+                # Application Security (flat structure)
+                "secret_key": SecretStr("test-secret-key"),
+                # Redis/Cache (flat structure)
+                "redis_url": None,
+                "redis_password": None,
+                "redis_max_connections": 50,
+                # AI Services (flat structure)
+                "openai_api_key": SecretStr("sk-test-openai-key-1234567890abcdef"),
+                "openai_model": "gpt-5",
+                # Rate Limiting (flat structure)
+                "rate_limit_requests": 100,
+                "rate_limit_window": 60,
+            },
+        )
 
-        # API Configuration (flat structure)
-        self.api_title = "TripSage API"
-        self.api_version = "1.0.0"
-        self.cors_origins = ["http://localhost:3000", "http://localhost:3001"]
-        self.cors_credentials = True
+    def __getattr__(self, name: str) -> Any:
+        """Support attribute-style access backed by the internal mapping."""
+        try:
+            return self._values[name]
+        except KeyError as exc:  # pragma: no cover - mirrors real settings behaviour
+            raise AttributeError(name) from exc
 
-        # Database (flat structure)
-        self.database_url = "https://test-project.supabase.co"
-        self.database_public_key = SecretStr("test-anon-key")
-        self.database_service_key = SecretStr("test-service-key")
-        self.database_jwt_secret = SecretStr("test-jwt-secret")
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Update stored values via normal attribute assignment."""
+        self._values[name] = value
 
-        # Application Security (flat structure)
-        self.secret_key = SecretStr("test-secret-key")
-
-        # Redis/Cache (flat structure)
-        self.redis_url = None  # Optional in test
-        self.redis_password = None
-        self.redis_max_connections = 50
-
-        # AI Services (flat structure)
-        self.openai_api_key = SecretStr("sk-test-openai-key-1234567890abcdef")
-        self.openai_model = "gpt-4o"
-
-        # Rate Limiting (flat structure)
-        self.rate_limit_requests = 100
-        self.rate_limit_window = 60
+    def as_dict(self) -> dict[str, Any]:
+        """Return a shallow copy of the internal mapping for external use."""
+        return dict(self._values)
 
     @property
     def is_production(self) -> bool:
@@ -119,130 +133,19 @@ def setup_test_env():
     # Cleanup is handled by test isolation
 
 
-class MockServiceRegistry:
-    """Mock service registry for dependency injection testing."""
-
-    def __init__(self):
-        """Initialize an empty service registry mapping."""
-        self._services = {}
-
-    def register_service(self, name: str, service: Any):
-        """Register a mock service."""
-        self._services[name] = service
-
-    def get_service(self, name: str) -> Any:
-        """Get a mock service."""
-        if name in self._services:
-            return self._services[name]
-
-        # Return appropriate mock based on service name
-        if "accommodation" in name.lower():
-            return self._create_accommodation_service_mock()
-        elif "flight" in name.lower():
-            return self._create_flight_service_mock()
-        elif "memory" in name.lower():
-            return self._create_memory_service_mock()
-        elif "weather" in name.lower():
-            return self._create_weather_service_mock()
-        else:
-            return AsyncMock()
-
-    def get_optional_service(self, name: str) -> Any | None:
-        """Get an optional mock service."""
-        try:
-            return self.get_service(name)
-        except (KeyError, AttributeError, RuntimeError):
-            return None
-
-    def _create_accommodation_service_mock(self):
-        """Create mock accommodation service."""
-        service = AsyncMock()
-        service.search_accommodations = AsyncMock(
-            return_value={
-                "accommodations": [
-                    {
-                        "id": "hotel_123",
-                        "name": "Test Hotel",
-                        "price_per_night": 150.0,
-                        "rating": 4.5,
-                        "location": "Test City",
-                    }
-                ],
-                "total_count": 1,
-            }
-        )
-        service.book_accommodation = AsyncMock(
-            return_value={"booking_id": "booking_456", "status": "confirmed"}
-        )
-        return service
-
-    def _create_flight_service_mock(self):
-        """Create mock flight service."""
-        service = AsyncMock()
-        service.search_flights = AsyncMock(
-            return_value={
-                "flights": [
-                    {
-                        "id": "flight_123",
-                        "airline": "Test Airways",
-                        "origin": "NYC",
-                        "destination": "LAX",
-                        "price": 299.99,
-                        "duration": "5h 30m",
-                    }
-                ],
-                "total_count": 1,
-            }
-        )
-        return service
-
-    def _create_memory_service_mock(self):
-        """Create mock memory service."""
-        service = AsyncMock()
-        service.search_memories = AsyncMock(
-            return_value={
-                "memories": [
-                    {
-                        "id": "memory_123",
-                        "content": "User prefers boutique hotels",
-                        "relevance": 0.95,
-                    }
-                ]
-            }
-        )
-        service.add_conversation_memory = AsyncMock(
-            return_value={"memory_id": "memory_456", "status": "stored"}
-        )
-        service.connect = AsyncMock()
-        return service
-
-    def _create_weather_service_mock(self):
-        """Create mock weather service."""
-        service = AsyncMock()
-        service.get_current_weather = AsyncMock(
-            return_value={"temperature": 75, "condition": "sunny", "humidity": 60}
-        )
-        return service
-
-
-@pytest.fixture
-def mock_service_registry():
-    """Fixture providing mock service registry."""
-    return MockServiceRegistry()
-
-
 class MockMCPBridge:
     """Mock MCP Manager for testing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize a mock MCP manager with async fakes."""
-        self.invoke = AsyncMock()
+        self._invoke_mock = AsyncMock()
         self.is_connected = AsyncMock(return_value=True)
         self.connect = AsyncMock()
         self.disconnect = AsyncMock()
 
     async def invoke(self, method_name: str, params: dict[str, Any]) -> dict[str, Any]:
         """Mock MCP invoke method."""
+        await self._invoke_mock(method_name, params)
         # Return different mock responses based on method name
         if "search_flights" in method_name:
             return {
@@ -250,16 +153,15 @@ class MockMCPBridge:
                     {"id": "flight_123", "price": 299.99, "airline": "Test Airways"}
                 ]
             }
-        elif "search_accommodations" in method_name:
+        if "search_accommodations" in method_name:
             return {
                 "accommodations": [
                     {"id": "hotel_123", "price_per_night": 150.0, "name": "Test Hotel"}
                 ]
             }
-        elif "weather" in method_name:
+        if "weather" in method_name:
             return {"temperature": 75, "condition": "sunny"}
-        else:
-            return {"status": "success", "result": "mock_result"}
+        return {"status": "success", "result": "mock_result"}
 
 
 @pytest.fixture
@@ -271,13 +173,13 @@ def mock_mcp_manager():
 def mock_pydantic_settings():
     """Mock Pydantic settings to avoid validation errors."""
 
-    def mock_init(self, **kwargs):
-        # Set all attributes from mock configurations
+    def mock_init(self: Any, **kwargs: Any) -> None:
+        del kwargs
         mock_settings = MockSettings()
-        for key, value in mock_settings.__dict__.items():
+        for key, value in mock_settings.as_dict().items():
             setattr(self, key, value)
 
-    return mock_init
+    return cast(Callable[..., None], mock_init)
 
 
 # Test configuration validation
@@ -298,23 +200,3 @@ def test_mock_settings_validation():
     # Config validation (flat structure)
     assert settings.database_url is not None
     assert settings.redis_url is None  # Optional in test config
-
-
-def test_mock_service_registry():
-    """Test mock service registry functionality."""
-    registry = MockServiceRegistry()
-
-    # Test service registration
-    mock_service = AsyncMock()
-    registry.register_service("test_service", mock_service)
-    assert registry.get_service("test_service") == mock_service
-
-    # Test automatic mock creation
-    accommodation_service = registry.get_service("accommodation_service")
-    assert accommodation_service is not None
-
-    flight_service = registry.get_service("flight_service")
-    assert flight_service is not None
-
-    memory_service = registry.get_service("memory_service")
-    assert memory_service is not None

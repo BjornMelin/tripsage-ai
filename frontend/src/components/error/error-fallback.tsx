@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle, Bug, Home, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { ErrorFallbackProps } from "@/types/errors";
-import { AlertTriangle, Bug, Home, RefreshCw } from "lucide-react";
 
 /**
  * Default error fallback component for error boundaries

@@ -2,7 +2,6 @@
 
 This module provides dashboard API endpoints for monitoring and insights:
 - System health and status
-- API key usage statistics and analytics
 - Real-time metrics and monitoring data
 - Usage trends and historical data
 - Alert management
@@ -12,16 +11,35 @@ This module provides dashboard API endpoints for monitoring and insights:
 """
 
 import logging
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Query, status
 
-from tripsage.api.core.dependencies import CacheDep, DatabaseDep, SettingsDep
-from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.exceptions.exceptions import CoreAuthenticationError
-from tripsage_core.services.business.api_key_service import ServiceHealthStatus
+from tripsage.api.core.dependencies import (
+    CacheDep,
+    DatabaseDep,
+    RequiredPrincipalDep,
+    SettingsDep,
+)
+from tripsage.api.schemas.dashboard import (
+    AlertInfoResponse,
+    AlertSeverity,
+    AlertType,
+    RateLimitInfoResponse,
+    ServiceHealthStatus,
+    ServiceStatusResponse,
+    SystemOverviewResponse,
+    SystemStatus,
+    TrendDataPoint,
+    UsageMetricsResponse,
+    UserActivityResponse,
+)
+from tripsage_core.services.business.dashboard_models import (
+    DashboardData,
+    RealTimeMetrics,
+)
 from tripsage_core.services.business.dashboard_service import DashboardService
 
 
@@ -30,142 +48,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
-# Pydantic models for dashboard responses
-
-
-class SystemOverview(BaseModel):
-    """System overview data for dashboard."""
-
-    status: str  # healthy, degraded, unhealthy
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    uptime_seconds: int
-    version: str = "1.0.0"
-    environment: str
-    total_requests_24h: int
-    total_errors_24h: int
-    success_rate_24h: float
-    active_users_24h: int
-    active_api_keys: int
-
-
-class ServiceStatus(BaseModel):
-    """Service status information."""
-
-    service: str
-    status: str  # healthy, degraded, unhealthy
-    latency_ms: float | None = None
-    last_check: datetime | None = None
-    error_rate: float
-    uptime_percentage: float
-    message: str | None = None
-
-
-class UsageMetrics(BaseModel):
-    """Usage metrics for a specific time period."""
-
-    period_start: datetime
-    period_end: datetime
-    total_requests: int
-    total_errors: int
-    success_rate: float
-    avg_latency_ms: float
-    p95_latency_ms: float
-    p99_latency_ms: float
-    unique_users: int
-    unique_endpoints: int
-    top_endpoints: list[dict[str, Any]]
-    error_breakdown: dict[str, int]
-
-
-class RateLimitInfo(BaseModel):
-    """Rate limit information."""
-
-    key_id: str
-    current_usage: int
-    limit: int
-    remaining: int
-    window_minutes: int
-    reset_at: datetime
-    percentage_used: float
-
-
-class AlertInfo(BaseModel):
-    """Alert information for dashboard."""
-
-    alert_id: str
-    severity: str
-    type: str
-    message: str
-    created_at: datetime
-    key_id: str | None = None
-    service: str | None = None
-    acknowledged: bool = False
-    details: dict[str, Any] = Field(default_factory=dict)
-
-
-class UserActivity(BaseModel):
-    """User activity information."""
-
-    user_id: str
-    user_type: str  # user, agent
-    request_count: int
-    error_count: int
-    success_rate: float
-    last_activity: datetime
-    services_used: list[str]
-    avg_latency_ms: float
-
-
-class TrendData(BaseModel):
-    """Time series trend data."""
-
-    timestamp: datetime
-    value: float
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class DashboardFilters(BaseModel):
-    """Filters for dashboard queries."""
-
-    time_range_hours: int = Field(default=24, ge=1, le=168)  # 1 hour to 1 week
-    service: str | None = None
-    user_id: str | None = None
-    key_id: str | None = None
-    severity: str | None = None
-    status: str | None = None
-
-
-# Dependency for getting authenticated principal
-async def get_current_principal(request: Request) -> Principal:
-    """Get the current authenticated principal from request state."""
-    if not hasattr(request.state, "principal") or not request.state.principal:
-        raise CoreAuthenticationError("Authentication required for dashboard access")
-
-    principal = request.state.principal
-
-    # Only allow users and admins to access dashboard
-    if principal.type not in ["user", "admin"]:
-        raise CoreAuthenticationError("Dashboard access requires user authentication")
-
-    return principal
-
-
-# Dashboard endpoints
-
-
-@router.get("/overview", response_model=SystemOverview)
+@router.get("/overview", response_model=SystemOverviewResponse)
 async def get_system_overview(
     settings: SettingsDep,
     cache_service: CacheDep,
     db_service: DatabaseDep,
-    principal: Principal = Depends(get_current_principal),
-) -> SystemOverview:
+    principal: RequiredPrincipalDep,
+) -> SystemOverviewResponse:
     """Get system overview for dashboard.
 
     Returns high-level system metrics and status including:
     - Overall system health
     - Request and error counts
-    - Active users and API keys
+    - Active users in monitored period
     - Success rates
     """
     try:
@@ -175,25 +70,26 @@ async def get_system_overview(
             database_service=db_service,
         )
 
-        # Get dashboard data for 24 hours
-        dashboard_data = await dashboard_service.get_dashboard_data(
-            time_range_hours=24,
-            top_users_limit=10,
+        # Get dashboard data for 24 hours (typed cast for strict checking)
+        get_data = cast(
+            Callable[[int, int], Awaitable[DashboardData]],
+            dashboard_service.get_dashboard_data,
         )
+        dashboard_data: DashboardData = await get_data(24, 10)
 
         # Calculate uptime (simplified - would use actual startup time in production)
         uptime_seconds = 86400  # 24 hours as default
 
-        metrics = dashboard_data.metrics
+        metrics: RealTimeMetrics = dashboard_data.metrics
 
         # Determine overall status
-        overall_status = "healthy"
+        overall_status = SystemStatus.HEALTHY
         if metrics.success_rate < 0.9:  # <90% success rate
-            overall_status = "degraded"
+            overall_status = SystemStatus.DEGRADED
         if metrics.success_rate < 0.8:  # <80% success rate
-            overall_status = "unhealthy"
+            overall_status = SystemStatus.UNHEALTHY
 
-        return SystemOverview(
+        return SystemOverviewResponse(
             status=overall_status,
             uptime_seconds=uptime_seconds,
             environment=settings.environment,
@@ -212,19 +108,16 @@ async def get_system_overview(
         ) from e
 
 
-@router.get("/services", response_model=list[ServiceStatus])
+@router.get("/services", response_model=list[ServiceStatusResponse])
 async def get_services_status(
     cache_service: CacheDep,
     db_service: DatabaseDep,
-    principal: Principal = Depends(get_current_principal),
-) -> list[ServiceStatus]:
+    principal: RequiredPrincipalDep,
+) -> list[ServiceStatusResponse]:
     """Get status of all external services.
 
     Returns health status for all integrated external services:
-    - OpenAI
-    - Weather API
-    - Google Maps
-    - Other configured services
+    - OpenAI, Weather API, Google Maps, and other configured services
     """
     try:
         dashboard_service = DashboardService(
@@ -232,36 +125,24 @@ async def get_services_status(
             database_service=db_service,
         )
 
-        if dashboard_service.api_key_service is None:
-            return []
+        dashboard_data = await dashboard_service.get_dashboard_data(time_range_hours=24)
 
-        health_checks = (
-            await dashboard_service.api_key_service.check_all_services_health()
-        )
-
-        services_status: list[ServiceStatus] = []
-        for service_type, health_check in health_checks.items():
-            status_str = "healthy"
-            if health_check.health_status == ServiceHealthStatus.DEGRADED:
-                status_str = "degraded"
-            elif health_check.health_status == ServiceHealthStatus.UNHEALTHY:
-                status_str = "unhealthy"
-            elif health_check.health_status == ServiceHealthStatus.UNKNOWN:
-                status_str = "unknown"
-
-            details = health_check.details or {}
-            error_rate = float(details.get("error_rate", 0.0))
-            uptime_percentage = float(details.get("uptime_percentage", 100.0))
-
+        services_status: list[ServiceStatusResponse] = []
+        for service in dashboard_data.services:
+            error_rate = max(0.0, min(1.0, 1.0 - float(service.success_rate)))
+            uptime_percentage = max(
+                0.0, min(100.0, float(service.success_rate) * 100.0)
+            )
+            status_enum = ServiceHealthStatus(service.health_status.value)
             services_status.append(
-                ServiceStatus(
-                    service=service_type.value,
-                    status=status_str,
-                    latency_ms=health_check.latency_ms,
-                    last_check=health_check.checked_at,
+                ServiceStatusResponse(
+                    service=service.service_name,
+                    status=status_enum,
+                    latency_ms=service.avg_latency_ms,
+                    last_check=service.last_health_check,
                     error_rate=error_rate,
                     uptime_percentage=uptime_percentage,
-                    message=health_check.message,
+                    message=None,
                 )
             )
 
@@ -275,15 +156,15 @@ async def get_services_status(
         ) from e
 
 
-@router.get("/metrics", response_model=UsageMetrics)
+@router.get("/metrics", response_model=UsageMetricsResponse)
 async def get_usage_metrics(
     cache_service: CacheDep,
     db_service: DatabaseDep,
     *,
     time_range_hours: int = Query(default=24, ge=1, le=168),
     service: str | None = Query(default=None),
-    principal: Principal = Depends(get_current_principal),
-) -> UsageMetrics:
+    principal: RequiredPrincipalDep,
+) -> UsageMetricsResponse:
     """Get usage metrics for specified time range.
 
     Returns usage metrics including:
@@ -304,13 +185,14 @@ async def get_usage_metrics(
         start_time = end_time - timedelta(hours=time_range_hours)
 
         # Get dashboard data
-        dashboard_data = await dashboard_service.get_dashboard_data(
-            time_range_hours=time_range_hours,
-            top_users_limit=50,
+        get_data = cast(
+            Callable[[int, int], Awaitable[DashboardData]],
+            dashboard_service.get_dashboard_data,
         )
+        dashboard_data: DashboardData = await get_data(time_range_hours, 50)
 
         # Extract metrics from dashboard data
-        metrics = dashboard_data.metrics
+        metrics: RealTimeMetrics = dashboard_data.metrics
         total_requests = metrics.total_requests
         total_errors = metrics.total_errors
 
@@ -333,7 +215,7 @@ async def get_usage_metrics(
             "external_api_error": total_errors // 4,
         }
 
-        return UsageMetrics(
+        return UsageMetricsResponse(
             period_start=start_time,
             period_end=end_time,
             total_requests=total_requests,
@@ -356,20 +238,18 @@ async def get_usage_metrics(
         ) from e
 
 
-@router.get("/rate-limits", response_model=list[RateLimitInfo])
+@router.get("/rate-limits", response_model=list[RateLimitInfoResponse])
 async def get_rate_limits_status(
     cache_service: CacheDep,
     db_service: DatabaseDep,
     *,
     limit: int = Query(default=20, ge=1, le=100),
-    principal: Principal = Depends(get_current_principal),
-) -> list[RateLimitInfo]:
-    """Get rate limit status for API keys.
+    principal: RequiredPrincipalDep,
+) -> list[RateLimitInfoResponse]:
+    """Get rate limit status for service usage tokens.
 
-    Returns current rate limit status for active API keys including:
-    - Current usage vs limits
-    - Remaining quota
-    - Reset times
+    Returns current rate limit status for service integrations including:
+    - Current usage vs limits, remaining quota, and reset times
     """
     try:
         # Initialize dashboard service
@@ -378,13 +258,17 @@ async def get_rate_limits_status(
             database_service=db_service,
         )
 
-        rate_limits = []
+        rate_limits: list[RateLimitInfoResponse] = []
 
         # Get active keys from dashboard data
-        dashboard_data = await dashboard_service.get_dashboard_data(time_range_hours=1)
+        get_data = cast(
+            Callable[[int, int], Awaitable[DashboardData]],
+            dashboard_service.get_dashboard_data,
+        )
+        dashboard_data: DashboardData = await get_data(1, 10)
 
         # Extract key IDs from user activity or create sample keys for demonstration
-        active_keys = []
+        active_keys: list[str] = []
         if dashboard_data.top_users:
             # In a real implementation, we'd query the database for active keys
             for i, user in enumerate(dashboard_data.top_users[:limit]):
@@ -412,7 +296,7 @@ async def get_rate_limits_status(
                     )
 
                     rate_limits.append(
-                        RateLimitInfo(
+                        RateLimitInfoResponse(
                             key_id=key_id,
                             current_usage=current_usage,
                             limit=limit_value,
@@ -420,6 +304,7 @@ async def get_rate_limits_status(
                             window_minutes=60,
                             reset_at=reset_at,
                             percentage_used=percentage_used,
+                            is_approaching_limit=percentage_used >= 80.0,
                         )
                     )
 
@@ -438,7 +323,7 @@ async def get_rate_limits_status(
         ) from e
 
 
-@router.get("/alerts", response_model=list[AlertInfo])
+@router.get("/alerts", response_model=list[AlertInfoResponse])
 async def get_alerts(
     settings: SettingsDep,
     cache_service: CacheDep,
@@ -446,16 +331,13 @@ async def get_alerts(
     *,
     severity: str | None = Query(default=None),
     acknowledged: bool | None = Query(default=None),
-    limit: int = Query(default=50, ge=1, le=200),
-    principal: Principal = Depends(get_current_principal),
-) -> list[AlertInfo]:
+    limit: int = Query(default=20, ge=1, le=100),
+    principal: RequiredPrincipalDep,
+) -> list[AlertInfoResponse]:
     """Get system alerts and notifications.
 
     Returns alerts filtered by severity and acknowledgment status:
-    - Security alerts
-    - Performance alerts
-    - Error rate alerts
-    - Anomaly detection alerts
+    - Security, performance, error rate, and anomaly detection alerts
     """
     try:
         # Initialize dashboard service
@@ -464,10 +346,15 @@ async def get_alerts(
             database_service=db_service,
         )
 
-        # Get recent alerts from the dashboard service
-        recent_alerts = await dashboard_service._get_recent_alerts()
+        # Get recent alerts via public dashboard data API (avoid private method)
+        get_data = cast(
+            Callable[[int, int], Awaitable[DashboardData]],
+            dashboard_service.get_dashboard_data,
+        )
+        dashboard_data_alerts: DashboardData = await get_data(24, 10)
+        recent_alerts = dashboard_data_alerts.recent_alerts
 
-        alerts = []
+        alerts: list[AlertInfoResponse] = []
         for alert in recent_alerts:
             # Apply filters
             if severity and alert.severity.value != severity:
@@ -475,11 +362,25 @@ async def get_alerts(
             if acknowledged is not None and alert.acknowledged != acknowledged:
                 continue
 
+            # Map strings to enums with safe fallback
+            raw_sev = getattr(alert.severity, "value", alert.severity)
+            raw_type = getattr(alert.alert_type, "value", alert.alert_type)
+            sev = (
+                AlertSeverity(raw_sev)
+                if raw_sev in AlertSeverity._value2member_map_
+                else AlertSeverity.LOW
+            )
+            atype = (
+                AlertType(raw_type)
+                if raw_type in AlertType._value2member_map_
+                else AlertType.SECURITY
+            )
+
             alerts.append(
-                AlertInfo(
+                AlertInfoResponse(
                     alert_id=alert.alert_id,
-                    severity=alert.severity.value,
-                    type=alert.alert_type.value,
+                    severity=sev,
+                    alert_type=atype,
                     message=alert.message,
                     created_at=alert.created_at,
                     key_id=alert.api_key_id,
@@ -517,12 +418,9 @@ async def acknowledge_alert(
     settings: SettingsDep,
     cache_service: CacheDep,
     db_service: DatabaseDep,
-    principal: Principal = Depends(get_current_principal),
+    principal: RequiredPrincipalDep,
 ) -> dict[str, Any]:
-    """Acknowledge an alert.
-
-    Marks an alert as acknowledged by the current user.
-    """
+    """Acknowledge an alert."""
     try:
         # Initialize dashboard service
         dashboard_service = DashboardService(
@@ -563,12 +461,9 @@ async def dismiss_alert(
     settings: SettingsDep,
     cache_service: CacheDep,
     db_service: DatabaseDep,
-    principal: Principal = Depends(get_current_principal),
+    principal: RequiredPrincipalDep,
 ) -> dict[str, Any]:
-    """Dismiss an alert.
-
-    Removes an alert from the active alerts list.
-    """
+    """Dismiss an alert."""
     try:
         # Initialize dashboard service
         dashboard_service = DashboardService(
@@ -603,15 +498,15 @@ async def dismiss_alert(
         ) from e
 
 
-@router.get("/users/activity", response_model=list[UserActivity])
+@router.get("/users/activity", response_model=list[UserActivityResponse])
 async def get_user_activity(
     cache_service: CacheDep,
     db_service: DatabaseDep,
     *,
     time_range_hours: int = Query(default=24, ge=1, le=168),
     limit: int = Query(default=20, ge=1, le=100),
-    principal: Principal = Depends(get_current_principal),
-) -> list[UserActivity]:
+    principal: RequiredPrincipalDep,
+) -> list[UserActivityResponse]:
     """Get user activity data.
 
     Returns user activity metrics including:
@@ -627,14 +522,15 @@ async def get_user_activity(
         )
 
         # Get dashboard data
-        dashboard_data = await dashboard_service.get_dashboard_data(
-            time_range_hours=time_range_hours,
-            top_users_limit=limit,
+        get_data = cast(
+            Callable[[int, int], Awaitable[DashboardData]],
+            dashboard_service.get_dashboard_data,
         )
+        dashboard_data: DashboardData = await get_data(time_range_hours, limit)
 
         # Convert top users to UserActivity objects
         return [
-            UserActivity(
+            UserActivityResponse(
                 user_id=user_data.user_id,
                 user_type="agent" if user_data.user_id.startswith("agent_") else "user",
                 request_count=user_data.request_count,
@@ -655,7 +551,7 @@ async def get_user_activity(
         ) from e
 
 
-@router.get("/trends/{metric_type}", response_model=list[TrendData])
+@router.get("/trends/{metric_type}", response_model=list[TrendDataPoint])
 async def get_trend_data(
     metric_type: str,
     cache_service: CacheDep,
@@ -663,15 +559,12 @@ async def get_trend_data(
     *,
     time_range_hours: int = Query(default=24, ge=1, le=168),
     interval_minutes: int = Query(default=60, ge=5, le=1440),
-    principal: Principal = Depends(get_current_principal),
-) -> list[TrendData]:
+    principal: RequiredPrincipalDep,
+) -> list[TrendDataPoint]:
     """Get trend data for specified metric.
 
     Returns time series data for metrics like:
-    - request_count
-    - error_rate
-    - latency
-    - active_users
+    - request_count, error_rate, latency, and active_users
     """
     try:
         # Validate metric type
@@ -689,10 +582,14 @@ async def get_trend_data(
         )
 
         # Get usage trend data
-        trend_data_raw = await dashboard_service._get_usage_trends(time_range_hours)
+        # Use the public dashboard data accessor rather than a private method
+        dashboard_data_trend = await dashboard_service.get_dashboard_data(
+            time_range_hours=time_range_hours, top_users_limit=10
+        )
+        trend_data_raw = dashboard_data_trend.usage_trend
 
         # Convert to TrendData objects based on metric type
-        trend_data = []
+        trend_data: list[TrendDataPoint] = []
         for data_point in trend_data_raw:
             timestamp = datetime.fromisoformat(data_point["timestamp"])
 
@@ -708,7 +605,7 @@ async def get_trend_data(
                 value = 0.0
 
             trend_data.append(
-                TrendData(
+                TrendDataPoint(
                     timestamp=timestamp,
                     value=value,
                     metadata={
@@ -735,8 +632,8 @@ async def get_trend_data(
 async def get_analytics_summary(
     cache_service: CacheDep,
     db_service: DatabaseDep,
+    principal: RequiredPrincipalDep,
     time_range_hours: int = Query(default=24, ge=1, le=168),
-    principal: Principal = Depends(get_current_principal),
 ) -> dict[str, Any]:
     """Get analytics summary.
 

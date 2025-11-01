@@ -5,7 +5,8 @@ for Airbnb accommodation searches and listing details.
 """
 
 import asyncio
-from typing import Any
+from types import TracebackType
+from typing import Any, cast
 
 import httpx
 
@@ -13,6 +14,7 @@ from tripsage.tools.models.accommodations import (
     AirbnbListingDetailsParams,
     AirbnbSearchParams,
 )
+from tripsage_core.services.external_apis.base_service import sanitize_response
 from tripsage_core.utils.logging_utils import get_logger
 from tripsage_core.utils.outbound import request_with_backoff
 
@@ -49,7 +51,12 @@ class AirbnbMCPClient:
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Async context manager exit."""
         await self.disconnect()
 
@@ -101,8 +108,10 @@ class AirbnbMCPClient:
                 headers={"Content-Type": "application/json"},
             )
             response.raise_for_status()
-
-            result = response.json()
+            result_any = sanitize_response(response.content)
+            result = (
+                cast(dict[str, Any], result_any) if isinstance(result_any, dict) else {}
+            )
             if "error" in result:
                 raise ValueError(f"MCP server error: {result['error']}")
 

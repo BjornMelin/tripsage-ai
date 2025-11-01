@@ -19,12 +19,12 @@
 ---
 
 TripSage AI is an travel planning platform that combines the power of modern AI agents with rich
-all-in-one travel services. Built with FastAPI, Next.js, LangGraph, Supabase, and Redis, with multi-agent AI orchestration, it provides personalized travel recommendations,
+all-in-one travel services. Built with FastAPI, Next.js, LangGraph, Supabase, and Upstash Redis, with multi-agent AI orchestration, it provides personalized travel recommendations,
 real-time booking capabilities, and intelligent memory management.
 
 ## ✨ Key Features
 
-- **AI-Powered Planning**: LangGraph agents with GPT-4 for intelligent
+- **AI-Powered Planning**: LangGraph agents with GPT-5 for intelligent
   trip recommendations
 - **Flight Integration**: Direct Duffel API integration for real-time
   flight search and booking
@@ -33,7 +33,7 @@ real-time booking capabilities, and intelligent memory management.
 - **Ultra-Fast Caching**: Upstash Redis (HTTP) for low-latency serverless caching
 - **Enterprise Security**: RLS policies and JWT authentication
 - **Modern Frontend**: Next.js 15 with React 19 and TypeScript
-- **Real-time Collaboration**: WebSocket-powered trip sharing and updates
+- **Real-time Collaboration**: Supabase Realtime (private channels + RLS)
 
 ## Quick Start
 
@@ -97,7 +97,7 @@ and scalability:
 | **[Complete Documentation](docs/README.md)** | **Organized documentation hub** |
 | **[User Guide](docs/users/README.md)** | Complete user manual with API usage examples |
 | **[Developer Guide](docs/developers/README.md)** | Development setup, architecture, and best practices |
-| **[API Reference](docs/api/README.md)** | Complete REST API and WebSocket documentation |
+| **[API Reference](docs/api/README.md)** | Complete REST API and Supabase Realtime documentation |
 | **[Security Guide](docs/operators/security-guide.md)** | Security implementation and best practices |
 | **[Architecture Guide](docs/architecture/README.md)** | System design and technical architecture |
 
@@ -122,9 +122,7 @@ tripsage-ai/
 ├── scripts/                    # Database and deployment scripts
 ├── docker/                     # Runtime compose files and Dockerfiles
 ├── docs/                       # Documentation
-├── supabase/                   # Supabase configuration
-├── legacy_tripsage/            # Legacy orchestration and agent code
-└── legacy_tripsage_core/       # Legacy core business logic
+└── supabase/                   # Supabase configuration
 ```
 
 ---
@@ -154,6 +152,57 @@ uv run python scripts/verification/verify_setup.py  # Verify installation
 ## Development Standards
 
 See [Testing Guide](docs/developers/testing-guide.md) and [Code Standards](docs/developers/code-standards.md) for details on testing, linting, and quality gates.
+
+---
+
+## Dependency Injection
+
+TripSage standardises dependency injection on FastAPI `app.state` singletons managed by
+[`tripsage/app_state.py`](tripsage/app_state.py).
+
+- Lifespan-managed services: `initialise_app_state()` builds an `AppServiceContainer`
+  that wires the database, caches, external providers, and domain services. The
+  container is stored on `app.state.services` and cleaned up on shutdown.
+- Typed accessors: call `services.get_required_service("flight_service", expected_type=FlightService)`
+  for safe retrieval and better type-checking.
+- API dependencies: `tripsage/api/core/dependencies.py` exposes `Annotated` helpers
+  (e.g. `TripServiceDep`, `MemoryServiceDep`) that resolve services from the container.
+- Request handlers: use `request: Request` to access `request.app.state.services` when
+  needed. Prefer dependency helpers to keep handlers declarative.
+- Rate limiting (SlowAPI): any endpoint decorated with `@limiter.limit(...)` must accept
+  `request: Request` (and `response: Response` if headers are injected). For unit tests,
+  either invoke via HTTP client or unwrap decorators and pass a synthetic `Request`.
+  Example snippet used by tests:
+
+  ```py
+  from fastapi import Request
+
+  def build_request(method: str, path: str) -> Request:
+      scope = {
+          "type": "http", "method": method, "path": path, "scheme": "http",
+          "headers": [], "client": ("127.0.0.1", 12345), "server": ("test", 80),
+          "query_string": b"",
+      }
+      async def receive():
+          return {"type": "http.request", "body": b"", "more_body": False}
+      return Request(scope, receive)
+  ```
+
+- Orchestration tools: LangGraph tools call `set_tool_services(container)` during startup
+  so shared utilities reuse the same singletons (no ad-hoc instantiation inside tools).
+- Testing: pytest fixtures construct lightweight containers with typed mocks. See
+  `tests/unit/orchestration/test_utils.py::create_mock_services`.
+
+The legacy `ServiceRegistry` abstraction has been removed. All new modules and tests use
+the `AppServiceContainer` pattern to keep DI consistent and explicit.
+
+Schema policy (routers vs. schemas):
+
+- Routers must not declare Pydantic `BaseModel` classes. Place request/response
+  models under `tripsage/api/schemas/requests|responses` (or `schemas/*.py` when shared).
+- Every endpoint declares a `response_model` and returns instances/serializable
+  shapes matching the schema. Prefer enum types and validated fields.
+- Centralized schemas avoid drift and enable accurate OpenAPI for client codegen.
 
 ---
 
@@ -189,11 +238,17 @@ kubectl get pods -l app=tripsage-ai
 | `SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
 | `OPENAI_API_KEY` | OpenAI API key for AI features | ✅ |
 | `DUFFEL_ACCESS_TOKEN` | Duffel API token for flights | ⚠️ |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | ⚠️ |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | ⚠️ |
+| `REDIS_URL` | Upstash Redis (TLS) URL for backend (rate limiting/cache) | ⚠️ |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL (frontend/edge) | ⚠️ |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token (frontend/edge) | ⚠️ |
 | `MEM0_API_KEY` | Mem0 API key for memory features | ⚠️ |
 
 ✅ Required | ⚠️ Optional (fallback available)
+
+**Notes:**
+
+- Backend (FastAPI) uses a TCP Redis connection for distributed rate limiting and caching. Use your Upstash Redis (TLS) URL in `REDIS_URL`.
+- Frontend/Edge (Next.js) uses Upstash REST credentials (`UPSTASH_REDIS_REST_URL`/`TOKEN`) for route-level limits or caching.
 
 ---
 
@@ -225,22 +280,15 @@ POST /api/memory/conversation     # Store conversation
 GET  /api/memory/context          # Get user context
 ```
 
-### WebSocket Connection
+### Realtime Client (Supabase Realtime only - private channel)
 
-```javascript
-// Real-time trip collaboration
-const ws = new WebSocket('ws://localhost:8000/ws/trip/123e4567-e89b-12d3-a456-426614174000');
-
-ws.onmessage = (event) => {
-  const message = JSON.parse(event.data);
-  console.log('Trip update:', message);
-};
-
-// Send trip updates
-ws.send(JSON.stringify({
-  type: 'trip_update',
-  data: { title: 'Updated Trip Name' }
-}));
+```ts
+import { createClient } from '@supabase/supabase-js'
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+// authorize realtime with access token via RealtimeAuthProvider in app
+const channel = supabase.channel(`user:${userId}`, { config: { private: true } })
+channel.on('broadcast', { event: 'chat:message' }, ({ payload }) => console.log(payload))
+channel.subscribe()
 ```
 
 ---

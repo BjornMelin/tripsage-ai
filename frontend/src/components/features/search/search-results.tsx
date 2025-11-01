@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
@@ -10,7 +11,6 @@ import type {
   SearchResults as SearchResultsType,
   SearchType,
 } from "@/types/search";
-import { useState } from "react";
 import { AccommodationCard } from "./accommodation-card";
 
 interface SearchResultsProps {
@@ -209,7 +209,10 @@ export function SearchResults({
 function FlightResultCard({
   flight,
   view,
-}: { flight: Flight; view: "list" | "grid" | "map" }) {
+}: {
+  flight: Flight;
+  view: "list" | "grid" | "map";
+}) {
   return (
     <Card
       className={`hover:bg-accent/50 transition-colors cursor-pointer ${view === "list" ? "flex" : ""}`}
@@ -299,7 +302,10 @@ function FlightResultCard({
 function ActivityResultCard({
   activity,
   view,
-}: { activity: Activity; view: "list" | "grid" | "map" }) {
+}: {
+  activity: Activity;
+  view: "list" | "grid" | "map";
+}) {
   return (
     <Card
       className={`overflow-hidden hover:bg-accent/50 transition-colors cursor-pointer ${view === "list" ? "flex" : ""}`}

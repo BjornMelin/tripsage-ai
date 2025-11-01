@@ -1,9 +1,9 @@
-import { useTrips } from "@/hooks/use-trips";
-import type { Trip } from "@/stores/trip-store";
-import { renderWithProviders } from "@/test/test-utils";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useTrips } from "@/hooks/use-trips";
+import type { Trip } from "@/stores/trip-store";
+import { renderWithProviders } from "@/test/test-utils";
 import { RecentTrips } from "../recent-trips";
 
 // Mock the useTrips hook

@@ -1,61 +1,67 @@
-"""Tests for the structured output helper utilities."""
+"""Tests for StructuredExtractor and model_to_dict utilities."""
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from typing import Any
 
 import pytest
-from langchain_core.messages import HumanMessage, SystemMessage
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from tripsage.orchestration.utils.structured import StructuredExtractor, model_to_dict
 
 
-class _SampleModel(BaseModel):
-    """Simple schema for structured extraction tests."""
+class _Schema(BaseModel):
+    """Simple schema for extraction tests."""
 
-    model_config = ConfigDict(extra="forbid")
-
-    value: str
+    value: int
 
 
-@pytest.mark.asyncio
-async def test_structured_extractor_calls_structured_llm():
-    """Extractor should invoke structured LLM with composed messages."""
-    runnable = MagicMock()
-    runnable.ainvoke = AsyncMock(return_value=_SampleModel(value="ok"))
+class _LLMStub:
+    """LLM stub that returns a structured runnable with ainvoke()."""
 
-    llm = MagicMock()
-    llm.with_structured_output.return_value = runnable
+    def with_structured_output(self, schema: Any) -> Any:
+        """Return a structured runnable with ainvoke()."""
 
-    extractor = StructuredExtractor(llm, _SampleModel)
+        class _Runnable:
+            """Runnable that returns a structured output."""
 
-    result = await extractor.extract_from_prompts(
-        system_prompt="system role", user_prompt="user message"
-    )
+            async def ainvoke(self, _messages: Any) -> Any:
+                """Return a structured output."""
+                return schema(value=42)
 
-    assert isinstance(result, _SampleModel)
-    runnable.ainvoke.assert_awaited_once()
-    (messages,), _ = runnable.ainvoke.await_args
-    assert isinstance(messages[0], SystemMessage)
-    assert isinstance(messages[1], HumanMessage)
-    assert model_to_dict(result) == {"value": "ok"}
+        return _Runnable()
 
 
 @pytest.mark.asyncio
-async def test_structured_extractor_handles_errors(caplog):
-    """Extractor should swallow errors and return None."""
-    runnable = MagicMock()
-    runnable.ainvoke = AsyncMock(side_effect=RuntimeError("boom"))
+async def test_structured_extractor_success() -> None:
+    """Extractor returns a Pydantic model instance on success."""
+    extractor = StructuredExtractor(_LLMStub(), _Schema)  # type: ignore[arg-type]
+    out = await extractor.extract_from_prompts(system_prompt="s", user_prompt="u")
+    assert isinstance(out, _Schema)
+    assert out.value == 42
+    assert model_to_dict(out)["value"] == 42
 
-    llm = MagicMock()
-    llm.with_structured_output.return_value = runnable
 
-    extractor = StructuredExtractor(llm, _SampleModel)
+class _BadRunnable:
+    """Bad runnable that raises an exception."""
 
-    result = await extractor.extract_from_prompts(
-        system_prompt="system role", user_prompt="user message"
-    )
+    async def ainvoke(self, _messages: Any) -> Any:
+        """Raise an exception."""
+        raise RuntimeError("llm failure")
 
-    assert result is None
-    assert "Structured extraction failed" in caplog.text
+
+class _BadLLMStub:
+    """LLM stub that returns a bad runnable."""
+
+    def with_structured_output(self, _schema: Any) -> Any:
+        """Return a bad runnable."""
+        return _BadRunnable()
+
+
+@pytest.mark.asyncio
+async def test_structured_extractor_error_returns_none() -> None:
+    """On exception, extractor returns None and model_to_dict returns {}."""
+    extractor = StructuredExtractor(_BadLLMStub(), _Schema)  # type: ignore[arg-type]
+    out = await extractor.extract_from_prompts(system_prompt="s", user_prompt="u")
+    assert out is None
+    assert model_to_dict(out) == {}

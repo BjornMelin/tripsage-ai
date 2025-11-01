@@ -1,22 +1,36 @@
 /**
- * Zod validation schemas for configuration management.
+ * @fileoverview Zod validation schemas for configuration management.
  *
- * These schemas provide runtime type safety and validation for all configuration
- * data, ensuring consistency between frontend and backend APIs.
+ * Provides runtime type safety and validation for all configuration
+ * data in the TripSage platform. Includes schemas for agent configurations,
+ * performance metrics, version control, and API request/response validation
+ * ensuring consistency between frontend and backend APIs.
  */
 
 import { z } from "zod";
 
-// Agent type enum matching backend
+/**
+ * Zod schema for agent type enumeration.
+ *
+ * Defines the supported AI agent types in the TripSage platform, matching
+ * backend agent classifications for consistent configuration management.
+ */
 export const AgentTypeEnum = z.enum([
   "budget_agent",
   "destination_research_agent",
   "itinerary_agent",
 ] as const);
 
+/** TypeScript type for agent types inferred from AgentTypeEnum schema. */
 export type AgentType = z.infer<typeof AgentTypeEnum>;
 
-// Configuration scope enum
+/**
+ * Zod schema for configuration scope enumeration.
+ *
+ * Defines the hierarchical scopes for configuration settings, allowing
+ * global defaults, environment overrides, agent-specific settings, and
+ * user-level customizations.
+ */
 export const ConfigurationScopeEnum = z.enum([
   "global",
   "environment",
@@ -24,29 +38,51 @@ export const ConfigurationScopeEnum = z.enum([
   "user_override",
 ] as const);
 
+/** TypeScript type for configuration scopes inferred from ConfigurationScopeEnum schema. */
 export type ConfigurationScope = z.infer<typeof ConfigurationScopeEnum>;
 
-// Model name validation with supported models
+/**
+ * Zod schema for supported AI model names.
+ *
+ * Validates model names against the list of supported AI models including
+ * OpenAI GPT series and Anthropic Claude models for configuration validation.
+ */
 export const ModelNameSchema = z.enum([
   "gpt-4",
   "gpt-4-turbo",
   "gpt-4o",
   "gpt-4o-mini",
-  "gpt-3.5-turbo",
-  "claude-3-sonnet",
-  "claude-3-haiku",
+  "gpt-5",
+  "gpt-5-mini",
+  "gpt-5-nano",
+  "claude-4.5-sonnet",
+  "claude-4.5-haiku",
 ] as const);
 
+/** TypeScript type for model names inferred from ModelNameSchema. */
 export type ModelName = z.infer<typeof ModelNameSchema>;
 
-// Version ID format validation
+/**
+ * Zod schema for version ID validation.
+ *
+ * Validates version identifiers following the format v{timestamp}_{hash}
+ * for consistent versioning across configuration changes and rollbacks.
+ */
 export const VersionIdSchema = z
   .string()
   .regex(/^v\d+_[a-f0-9]{8}$/, "Version ID must match format: v{timestamp}_{hash}");
 
+/** TypeScript type for version IDs inferred from VersionIdSchema. */
 export type VersionId = z.infer<typeof VersionIdSchema>;
 
-// Base agent configuration request schema
+/**
+ * Zod schema for agent configuration request validation.
+ *
+ * Validates incoming configuration requests for AI agents with cross-field
+ * validation ensuring model compatibility and parameter constraints. Includes
+ * temperature, token limits, model selection, and timeout settings with
+ * intelligent validation based on selected AI models.
+ */
 export const AgentConfigRequestSchema = z
   .object({
     temperature: z
@@ -126,9 +162,16 @@ export const AgentConfigRequestSchema = z
     }
   );
 
+/** TypeScript type for agent configuration requests inferred from AgentConfigRequestSchema. */
 export type AgentConfigRequest = z.infer<typeof AgentConfigRequestSchema>;
 
-// Agent configuration response schema
+/**
+ * Zod schema for agent configuration response validation.
+ *
+ * Validates complete agent configuration responses from the backend including
+ * computed fields like cost estimates, performance metrics, and metadata.
+ * Ensures all required fields are present and properly typed.
+ */
 export const AgentConfigResponseSchema = z.object({
   agent_type: AgentTypeEnum,
   temperature: z.number().min(0.0).max(2.0),
@@ -150,13 +193,20 @@ export const AgentConfigResponseSchema = z.object({
   performance_tier: z.string().optional(),
 });
 
+/** TypeScript type for agent configuration responses inferred from AgentConfigResponseSchema. */
 export type AgentConfigResponse = z.infer<typeof AgentConfigResponseSchema>;
 
-// Configuration version schema
+/**
+ * Zod schema for configuration version validation.
+ *
+ * Validates configuration version objects for version control and rollback
+ * functionality. Tracks changes over time with metadata about who created
+ * versions and when they were created.
+ */
 export const ConfigurationVersionSchema = z.object({
   version_id: VersionIdSchema,
   agent_type: AgentTypeEnum,
-  configuration: z.record(z.any()),
+  configuration: z.record(z.string(), z.any()),
   scope: ConfigurationScopeEnum,
   created_at: z.string().datetime(),
   created_by: z.string(),
@@ -168,15 +218,22 @@ export const ConfigurationVersionSchema = z.object({
   is_recent: z.boolean().optional(),
 });
 
+/** TypeScript type for configuration versions inferred from ConfigurationVersionSchema. */
 export type ConfigurationVersion = z.infer<typeof ConfigurationVersionSchema>;
 
-// Performance metrics schema
+/**
+ * Zod schema for performance metrics validation.
+ *
+ * Validates performance tracking data for AI agents including response times,
+ * success rates, token usage, and cost estimates. Used for monitoring agent
+ * performance and optimizing configurations.
+ */
 export const PerformanceMetricsSchema = z.object({
   agent_type: AgentTypeEnum,
   average_response_time: z.number().min(0),
   success_rate: z.number().min(0).max(1),
   error_rate: z.number().min(0).max(1),
-  token_usage: z.record(z.number().int()),
+  token_usage: z.record(z.string(), z.number().int()),
   cost_estimate: z.string(), // Decimal as string
   measured_at: z.string().datetime(),
   sample_size: z.number().int().min(1),
@@ -186,9 +243,15 @@ export const PerformanceMetricsSchema = z.object({
   tokens_per_second: z.number().min(0).optional(),
 });
 
+/** TypeScript type for performance metrics inferred from PerformanceMetricsSchema. */
 export type PerformanceMetrics = z.infer<typeof PerformanceMetricsSchema>;
 
-// Configuration validation error schema
+/**
+ * Zod schema for configuration validation error details.
+ *
+ * Defines the structure for individual validation errors including field names,
+ * error messages, current and suggested values, and severity levels.
+ */
 export const ConfigurationValidationErrorSchema = z.object({
   field: z.string(),
   error: z.string(),
@@ -198,11 +261,17 @@ export const ConfigurationValidationErrorSchema = z.object({
   error_code: z.string().optional(),
 });
 
+/** TypeScript type for configuration validation errors. */
 export type ConfigurationValidationError = z.infer<
   typeof ConfigurationValidationErrorSchema
 >;
 
-// Configuration validation response schema
+/**
+ * Zod schema for configuration validation response.
+ *
+ * Validates complete validation responses including validity status, error lists,
+ * warnings, suggestions, and summary information for comprehensive validation feedback.
+ */
 export const ConfigurationValidationResponseSchema = z.object({
   is_valid: z.boolean(),
   errors: z.array(ConfigurationValidationErrorSchema).default([]),
@@ -211,24 +280,19 @@ export const ConfigurationValidationResponseSchema = z.object({
   validation_summary: z.string().optional(),
 });
 
+/** TypeScript type for configuration validation responses. */
 export type ConfigurationValidationResponse = z.infer<
   typeof ConfigurationValidationResponseSchema
 >;
 
-// WebSocket message schema
-export const WebSocketConfigMessageSchema = z.object({
-  type: z.string(),
-  agent_type: AgentTypeEnum.optional(),
-  configuration: z.record(z.any()).optional(),
-  version_id: VersionIdSchema.optional(),
-  updated_by: z.string().optional(),
-  timestamp: z.string().datetime(),
-  message: z.string().optional(),
-});
+// Deprecated: legacy WebSocket config messages removed with Realtime migration
 
-export type WebSocketConfigMessage = z.infer<typeof WebSocketConfigMessageSchema>;
-
-// Configuration form schema for UI
+/**
+ * Zod schema for configuration form validation in UI components.
+ *
+ * Validates form data from configuration management UI with agent-specific
+ * recommendations and warnings for optimal parameter settings.
+ */
 export const ConfigurationFormSchema = z
   .object({
     agent_type: AgentTypeEnum,
@@ -262,9 +326,19 @@ export const ConfigurationFormSchema = z
     return true;
   });
 
+/** TypeScript type for configuration forms inferred from ConfigurationFormSchema. */
 export type ConfigurationForm = z.infer<typeof ConfigurationFormSchema>;
 
-// API response wrapper schema
+/**
+ * Generic Zod schema factory for API response validation.
+ *
+ * Creates standardized API response schemas with consistent structure including
+ * success status, optional messages, and error arrays for all API endpoints.
+ *
+ * @template T - The Zod schema type for the response data
+ * @param dataSchema - The schema to validate the response data against
+ * @returns A Zod schema for validating API responses
+ */
 export const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
   z.object({
     data: dataSchema,
@@ -273,33 +347,51 @@ export const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
     errors: z.array(z.string()).optional(),
   });
 
-// Common API responses
+/** Zod schema for agent configuration API responses. */
 export const AgentConfigApiResponseSchema = ApiResponseSchema(
   AgentConfigResponseSchema
 );
+
+/** Zod schema for configuration list API responses. */
 export const ConfigurationListApiResponseSchema = ApiResponseSchema(
   z.record(AgentTypeEnum, AgentConfigResponseSchema)
 );
+
+/** Zod schema for version history API responses. */
 export const VersionHistoryApiResponseSchema = ApiResponseSchema(
   z.array(ConfigurationVersionSchema)
 );
 
-// Utility schemas for forms
+/**
+ * Zod schema for agent selection form validation.
+ *
+ * Simple schema for validating agent type selection in UI forms and dropdowns.
+ */
 export const AgentSelectSchema = z.object({
   agent_type: AgentTypeEnum,
 });
 
+/**
+ * Zod schema for environment selection validation.
+ *
+ * Validates environment selection for configuration scoping and deployment targeting.
+ */
 export const EnvironmentSelectSchema = z.object({
   environment: z.enum(["development", "production", "staging", "test"]),
 });
 
-// Export statement validation schema for import/export
+/**
+ * Zod schema for configuration export validation.
+ *
+ * Validates complete configuration exports including agent configurations,
+ * feature flags, global defaults, and export metadata for backup and migration purposes.
+ */
 export const ConfigurationExportSchema = z.object({
   export_id: z.string(),
   environment: z.string(),
   agent_configurations: z.record(AgentTypeEnum, AgentConfigResponseSchema),
-  feature_flags: z.record(z.boolean()),
-  global_defaults: z.record(z.any()),
+  feature_flags: z.record(z.string(), z.boolean()),
+  global_defaults: z.record(z.string(), z.any()),
   exported_at: z.string().datetime(),
   exported_by: z.string(),
   format: z.enum(["json", "yaml"]).default("json"),
@@ -309,34 +401,82 @@ export const ConfigurationExportSchema = z.object({
   export_size_estimate_kb: z.number().min(0).optional(),
 });
 
+/** TypeScript type for configuration exports inferred from ConfigurationExportSchema. */
 export type ConfigurationExport = z.infer<typeof ConfigurationExportSchema>;
 
-// Helper functions for validation
+/**
+ * Validates agent configuration request data.
+ *
+ * Parses and validates unknown data against the AgentConfigRequestSchema,
+ * throwing an error if validation fails.
+ *
+ * @param data - The data to validate
+ * @returns The validated agent configuration request
+ * @throws {z.ZodError} If validation fails
+ */
 export const validateAgentConfig = (data: unknown): AgentConfigRequest => {
   return AgentConfigRequestSchema.parse(data);
 };
 
+/**
+ * Validates agent configuration response data.
+ *
+ * Parses and validates unknown data against the AgentConfigResponseSchema,
+ * throwing an error if validation fails.
+ *
+ * @param data - The data to validate
+ * @returns The validated agent configuration response
+ * @throws {z.ZodError} If validation fails
+ */
 export const validateConfigurationResponse = (data: unknown): AgentConfigResponse => {
   return AgentConfigResponseSchema.parse(data);
 };
 
+/**
+ * Generic API response validator.
+ *
+ * Validates API response data against a provided Zod schema with proper typing.
+ *
+ * @template T - The expected return type
+ * @param schema - The Zod schema to validate against
+ * @param data - The data to validate
+ * @returns The validated data with proper typing
+ * @throws {z.ZodError} If validation fails
+ */
 export const validateApiResponse = <T>(schema: z.ZodType<T>, data: unknown): T => {
   return schema.parse(data);
 };
 
-// Form validation helpers
+/**
+ * Extracts field-specific error message from Zod validation error.
+ *
+ * Searches through Zod error issues to find the first error message for a specific field.
+ *
+ * @param error - The Zod validation error
+ * @param fieldName - The field name to find errors for
+ * @returns The error message for the field, or undefined if not found
+ */
 export const getFieldErrorMessage = (
   error: z.ZodError,
   fieldName: string
 ): string | undefined => {
-  const fieldError = error.errors.find((err) => err.path.includes(fieldName));
+  const fieldError = error.issues.find((err) => err.path.includes(fieldName));
   return fieldError?.message;
 };
 
+/**
+ * Converts Zod validation errors to a field-error mapping.
+ *
+ * Transforms Zod error issues into a record mapping field paths to error messages
+ * for easy form error handling.
+ *
+ * @param error - The Zod validation error
+ * @returns A record mapping field paths to error messages
+ */
 export const getFormErrors = (error: z.ZodError): Record<string, string> => {
   const errors: Record<string, string> = {};
 
-  error.errors.forEach((err) => {
+  error.issues.forEach((err) => {
     const field = err.path.join(".");
     errors[field] = err.message;
   });
@@ -344,7 +484,15 @@ export const getFormErrors = (error: z.ZodError): Record<string, string> => {
   return errors;
 };
 
-// Default values for forms
+/**
+ * Returns default configuration values for a specific agent type.
+ *
+ * Provides optimized default settings for each agent type based on their use case,
+ * ensuring good performance and appropriate behavior out of the box.
+ *
+ * @param agentType - The type of agent to get defaults for
+ * @returns The default configuration for the specified agent type
+ */
 export const getDefaultConfigForAgent = (agentType: AgentType): AgentConfigRequest => {
   const defaults: Record<AgentType, AgentConfigRequest> = {
     budget_agent: {
@@ -361,8 +509,7 @@ export const getDefaultConfigForAgent = (agentType: AgentType): AgentConfigReque
       top_p: 0.9,
       timeout_seconds: 30,
       model: "gpt-4",
-      description:
-        "Destination research agent - moderate creativity for research",
+      description: "Destination research agent - moderate creativity for research",
     },
     itinerary_agent: {
       temperature: 0.4,

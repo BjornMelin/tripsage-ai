@@ -69,7 +69,7 @@ class HealthSnapshot:
     details: Mapping[str, Any] | None = None
 
 
-class DatabaseConnectionMonitor:
+class DatabaseConnectionMonitor:  # pylint: disable=too-many-instance-attributes
     """Periodically execute health checks for the configured database service."""
 
     def __init__(

@@ -6,41 +6,44 @@ message persistence, tool call tracking, and rate limiting. It provides clean
 integration with the AI agents and maintains conversation context.
 """
 
-import asyncio
 import html
 import logging
 import re
 import time
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Protocol, cast
 from uuid import uuid4
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from pydantic import Field, field_validator
 
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions import (
-    CoreAuthorizationError as AuthPermissionError,
+    RECOVERABLE_ERRORS,
     CoreResourceNotFoundError as NotFoundError,
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.observability.otel import record_histogram, trace_span
+from tripsage_core.services.infrastructure.db_ops_mixin import DatabaseOpsMixin
+from tripsage_core.services.infrastructure.error_handling_mixin import (
+    ErrorHandlingMixin,
+)
+from tripsage_core.services.infrastructure.logging_mixin import LoggingMixin
+from tripsage_core.services.infrastructure.validation_mixin import ValidationMixin
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
 
-RECOVERABLE_ERRORS = (
-    AuthPermissionError,
-    ValidationError,
-    NotFoundError,
-    ConnectionError,
-    RuntimeError,
-    ValueError,
-    asyncio.TimeoutError,
-    TypeError,
-)
+
+def _empty_metadata() -> dict[str, Any]:
+    """Typed empty metadata factory for pydantic defaults."""
+    return {}
+
+
+def _empty_tool_calls() -> list[dict[str, Any]]:
+    """Typed empty tool-calls factory for pydantic defaults."""
+    return []
 
 
 class MessageRole(str):
@@ -118,10 +121,10 @@ class MessageResponse(TripSageModel):
     content: str = Field(..., description="Message content")
     created_at: datetime = Field(..., description="Creation timestamp")
     metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Message metadata"
+        default_factory=_empty_metadata, description="Message metadata"
     )
     tool_calls: list[dict[str, Any]] = Field(
-        default_factory=list, description="Tool calls"
+        default_factory=_empty_tool_calls, description="Tool calls"
     )
     estimated_tokens: int | None = Field(None, description="Estimated token count")
 
@@ -213,7 +216,57 @@ class RateLimiter:
             del self.user_windows[user_id]
 
 
-class ChatService:
+class _ChatDbProtocol(Protocol):
+    """Minimal database surface used by ChatService."""
+
+    async def insert(
+        self, table: str, data: dict[str, Any], user_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Insert data into a table."""
+        ...
+
+    async def get_user_chat_sessions(
+        self, user_id: str, limit: int = 10, include_ended: bool = False
+    ) -> list[dict[str, Any]]:
+        """Get chat sessions for a user."""
+        ...
+
+    async def get_chat_session(
+        self, session_id: str, user_id: str
+    ) -> dict[str, Any] | None:
+        """Get a chat session by ID."""
+        ...
+
+    async def update_session_timestamp(self, session_id: str) -> bool:
+        """Update the timestamp of a chat session."""
+        ...
+
+    async def get_session_messages(
+        self, session_id: str, limit: int | None = None, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        """Get messages for a chat session."""
+        ...
+
+    async def get_message_tool_calls(self, message_id: str) -> list[dict[str, Any]]:
+        """Get tool calls for a message."""
+        ...
+
+    async def create_tool_call(self, tool_call_data: dict[str, Any]) -> dict[str, Any]:
+        """Create a tool call by data."""
+        ...
+
+    async def update_tool_call(
+        self, tool_call_id: str, update_data: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Update a tool call by ID."""
+        ...
+
+    async def end_chat_session(self, session_id: str) -> bool:
+        """End a chat session."""
+        ...
+
+
+class ChatService(DatabaseOpsMixin, ValidationMixin, LoggingMixin, ErrorHandlingMixin):
     """Comprehensive chat service for session and message management.
 
     This service handles:
@@ -227,7 +280,7 @@ class ChatService:
 
     def __init__(
         self,
-        database_service,
+        database_service: _ChatDbProtocol,
         rate_limiter: RateLimiter | None = None,
         chars_per_token: int = 4,
     ):
@@ -239,12 +292,18 @@ class ChatService:
             chars_per_token: Characters per token for estimation
         """
         # DatabaseService is injected by the FastAPI dependency factory.
-        self.db = database_service
+        self._db: _ChatDbProtocol = database_service
         self.rate_limiter = rate_limiter or RateLimiter()
         self.chars_per_token = chars_per_token
         self._retry_count = 3
         self._retry_delay = 0.1
 
+    @property
+    def db(self) -> _ChatDbProtocol:  # type: ignore[override]
+        """Database accessor used by service and mixins."""
+        return self._db
+
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.sessions.create")
     @record_histogram("svc.op.duration", unit="s")
     async def create_session(
@@ -260,6 +319,9 @@ class ChatService:
             Created chat session
         """
         try:
+            # Validate user ID
+            self._validate_user_id(user_id)
+
             session_id = str(uuid4())
 
             # Prepare session data for database
@@ -274,8 +336,9 @@ class ChatService:
                 "metadata": self._validate_metadata(session_data.metadata),
             }
 
-            # Store in database
-            result = await self.db.create_chat_session(db_session_data)
+            # Store in database (final-only, no legacy helpers)
+            rows = await self.db.insert("chat_sessions", db_session_data, user_id)
+            result: dict[str, Any] = rows[0] if rows else db_session_data
 
             logger.info(
                 "Chat session created",
@@ -308,6 +371,7 @@ class ChatService:
 
     # This method is replaced by _get_session_internal to avoid router conflicts
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.sessions.list")
     @record_histogram("svc.op.duration", unit="s")
     async def get_user_sessions(
@@ -325,7 +389,7 @@ class ChatService:
         """
         try:
             results = await self.db.get_user_chat_sessions(
-                user_id, limit, include_ended
+                user_id, limit=limit, include_ended=include_ended
             )
 
             return [
@@ -355,6 +419,7 @@ class ChatService:
             )
             return []
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.messages.create")
     @record_histogram("svc.op.duration", unit="s")
     async def add_message(
@@ -408,8 +473,9 @@ class ChatService:
                 "metadata": self._validate_metadata(message_data.metadata),
             }
 
-            # Store message in database
-            result = await self.db.create_chat_message(db_message_data)
+            # Store message in database (final API)
+            rows = await self.db.insert("chat_messages", db_message_data, user_id)
+            result: dict[str, Any] = rows[0] if rows else db_message_data
 
             # Handle tool calls if present
             tool_calls: list[dict[str, Any]] = []
@@ -456,6 +522,7 @@ class ChatService:
 
     # This method is replaced by _get_messages_internal to avoid router conflicts
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.messages.recent")
     @record_histogram("svc.op.duration", unit="s")
     async def get_recent_messages(
@@ -479,7 +546,7 @@ class ChatService:
                     messages=[], total_tokens=0, truncated=False
                 )
 
-            # Fetch messages using standard helper and enforce token window locally
+            # Fetch messages directly from database
             raw = await self.db.get_session_messages(
                 session_id, limit=(request.limit + request.offset), offset=0
             )
@@ -504,8 +571,8 @@ class ChatService:
 
             messages: list[MessageResponse] = []
             for result in selected:
-                tool_calls = list(
-                    await self.db.get_message_tool_calls(result["id"])  # type: ignore[index]
+                tool_calls: list[dict[str, Any]] = await self.db.get_message_tool_calls(
+                    result["id"]
                 )
                 messages.append(
                     MessageResponse(
@@ -539,6 +606,7 @@ class ChatService:
             )
             return RecentMessagesResponse(messages=[], total_tokens=0, truncated=False)
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.sessions.end")
     @record_histogram("svc.op.duration", unit="s")
     async def end_session(self, session_id: str, user_id: str) -> bool:
@@ -587,6 +655,7 @@ class ChatService:
             )
             return False
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.tool_calls.update")
     @record_histogram("svc.op.duration", unit="s")
     async def update_tool_call_status(
@@ -675,35 +744,234 @@ class ChatService:
             raise ValidationError("Metadata must be a dictionary")
 
         # Remove None values and ensure all keys are strings
-        cleaned = {}
-        for key, value in metadata.items():
-            if not isinstance(key, str):
-                raise ValidationError("Metadata keys must be strings")
-            if value is not None:
-                cleaned[key] = value
-
-        return cleaned
+        typed_metadata = cast(dict[str, Any], metadata)
+        sanitized: dict[str, Any] = {}
+        for key, value in typed_metadata.items():
+            if value is None:
+                continue
+            sanitized[str(key)] = value
+        return sanitized
 
     def _estimate_tokens(self, content: str) -> int:
         """Estimate token count for content."""
-        if not content:
+        if content == "":
             return 0
         return max(1, len(content) // self.chars_per_token)
 
-    @staticmethod
-    def _convert_request_message(
-        message: dict[str, Any],
-    ) -> HumanMessage | AIMessage | SystemMessage | None:
-        """Convert stored request message into a LangChain-compatible message."""
-        role = message.get("role", "user")
-        content = message.get("content", "")
-        if role == "user":
-            return HumanMessage(content=content)
-        if role == "assistant":
-            return AIMessage(content=content)
-        if role == "system":
-            return SystemMessage(content=content)
-        return None
+    def _get_system_prompt(self) -> str:
+        """Get the system prompt for TripSage AI.
+
+        Returns:
+            System prompt string.
+        """
+        return (
+            "You are TripSage AI, an expert travel planning assistant. "
+            "You help users plan trips, find flights and accommodations, "
+            "create itineraries, and provide destination recommendations. "
+            "Be helpful, informative, and personalized in your responses."
+        )
+
+    def _build_openai_messages(self, request: Any) -> list[dict[str, str]]:
+        """Build OpenAI-compatible messages list from request.
+
+        Args:
+            request: Request object with messages attribute.
+
+        Returns:
+            List of message dictionaries.
+        """
+        messages_list = getattr(request, "messages", []) or []
+        return self._build_openai_messages_from_list(messages_list)
+
+    def _build_openai_messages_from_list(
+        self, messages_list: list[dict[str, Any]]
+    ) -> list[dict[str, str]]:
+        """Build OpenAI-compatible messages list from a messages list.
+
+        Args:
+            messages_list: List of message dictionaries.
+
+        Returns:
+            List of message dictionaries with system prompt prepended.
+        """
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": self._get_system_prompt()}
+        ]
+        for m in messages_list:
+            role = str(m.get("role", "user"))
+            content = str(m.get("content", ""))
+            if role not in {"system", "user", "assistant"}:
+                continue
+            messages.append({"role": role, "content": content})
+        return messages
+
+    async def _resolve_api_credentials(
+        self, user_id: str
+    ) -> tuple[str | None, str | None]:
+        """Resolve API key and service preference.
+
+        Tries user BYOK first (OpenAI/OpenRouter), then falls back to
+        server OpenAI key from settings.
+
+        Args:
+            user_id: User ID for credential lookup.
+
+        Returns:
+            Tuple of (api_key, service) or (None, None) if not found.
+        """
+        settings = get_settings()
+        try:
+            db_any: Any = self.db
+            api_key, service = await db_any.fetch_user_api_key_preferred(  # type: ignore[call-arg]
+                user_id, ["openai", "openrouter"]
+            )
+        except Exception:  # noqa: BLE001 - fallback to settings
+            api_key, service = None, None
+        if not api_key and getattr(settings, "openai_api_key", None):  # type: ignore[truthy-bool]
+            api_key_attr: Any = cast(Any, settings).openai_api_key
+            # pylint: disable=no-member
+            api_key = api_key_attr.get_secret_value()  # type: ignore[reportAttributeAccessIssue]
+            service = "openai"
+        return api_key, service
+
+    def _build_openrouter_headers(
+        self, settings: Any, include_referer: bool = False
+    ) -> dict[str, str] | None:
+        """Build extra headers for OpenRouter requests.
+
+        Args:
+            settings: Application settings.
+            include_referer: Whether to include HTTP-Referer header.
+
+        Returns:
+            Headers dict if OpenRouter, None otherwise.
+        """
+        title = getattr(settings, "openrouter_title", None) or str(
+            getattr(settings, "api_title", "TripSage")
+        )
+        if not title:
+            return None
+        headers: dict[str, str] = {"X-Title": title}
+        if include_referer:
+            referer = getattr(settings, "openrouter_referer", None)
+            if referer:
+                headers["HTTP-Referer"] = referer
+        return headers
+
+    def _create_openai_client(self, api_key: str, service: str | None) -> Any:
+        """Create OpenAI client with appropriate base URL.
+
+        Args:
+            api_key: API key for authentication.
+            service: Service identifier ("openrouter" or None for OpenAI).
+
+        Returns:
+            OpenAI client instance.
+        """
+        from openai import OpenAI  # type: ignore[reportMissingImports]
+
+        base_url = "https://openrouter.ai/api/v1" if service == "openrouter" else None
+        if base_url:
+            return OpenAI(api_key=api_key, base_url=base_url)
+        return OpenAI(api_key=api_key)
+
+    def _build_completion_kwargs(
+        self,
+        model_name: str,
+        messages: list[dict[str, str]],
+        max_tokens: int | None,
+        temperature: float | None,
+        extra_headers: dict[str, str] | None,
+        stream: bool = False,
+    ) -> dict[str, object]:
+        """Build kwargs for OpenAI completion request.
+
+        Args:
+            model_name: Model identifier.
+            messages: List of message dictionaries.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+            extra_headers: Additional headers for request.
+            stream: Whether to stream the response.
+
+        Returns:
+            Dictionary of kwargs for completion request.
+        """
+        kwargs: dict[str, object] = {
+            "model": model_name,
+            "messages": messages,
+        }
+        if stream:
+            kwargs["stream"] = True
+            kwargs["stream_options"] = {"include_usage": True}
+        if max_tokens is not None:
+            kwargs["max_tokens"] = int(max_tokens)
+        if temperature is not None:
+            kwargs["temperature"] = float(temperature)
+        if extra_headers:
+            kwargs["extra_headers"] = extra_headers
+        return kwargs
+
+    def _extract_usage_from_chunk(self, chunk: Any) -> dict[str, int] | None:
+        """Extract usage information from a stream chunk.
+
+        Args:
+            chunk: Stream chunk from OpenAI SDK.
+
+        Returns:
+            Usage dict with token counts or None if not available.
+        """
+        try:
+            if not getattr(chunk, "usage", None):
+                return None
+            usage_obj = chunk.usage
+            return {
+                "prompt_tokens": int(getattr(usage_obj, "prompt_tokens", 0) or 0),
+                "completion_tokens": int(
+                    getattr(usage_obj, "completion_tokens", 0) or 0
+                ),
+                "total_tokens": int(getattr(usage_obj, "total_tokens", 0) or 0),
+            }
+        except Exception:  # noqa: BLE001 - optional usage extraction
+            return None
+
+    def _process_stream_chunk(
+        self, chunk: Any
+    ) -> tuple[str | None, dict[str, int] | None]:
+        """Process a single chunk from the stream.
+
+        Args:
+            chunk: Stream chunk from OpenAI SDK.
+
+        Returns:
+            Tuple of (content_delta, usage_dict).
+        """
+        try:
+            delta: Any = chunk.choices[0].delta
+            part = getattr(delta, "content", None)
+            content = str(part) if part else None
+        except Exception:  # noqa: BLE001 - defensive on SDK shape
+            content = None
+        usage = self._extract_usage_from_chunk(chunk)
+        return content, usage
+
+    def _extract_usage_from_response(self, response: Any) -> dict[str, int]:
+        """Extract usage information from a completion response.
+
+        Args:
+            response: Completion response from OpenAI SDK.
+
+        Returns:
+            Usage dict with token counts (defaults to zeros if not available).
+        """
+        if not getattr(response, "usage", None):
+            return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        usage_obj = response.usage
+        return {
+            "prompt_tokens": int(getattr(usage_obj, "prompt_tokens", 0) or 0),
+            "completion_tokens": int(getattr(usage_obj, "completion_tokens", 0) or 0),
+            "total_tokens": int(getattr(usage_obj, "total_tokens", 0) or 0),
+        }
 
     async def add_tool_call(
         self, message_id: str, tool_call_data: dict[str, Any]
@@ -750,9 +1018,10 @@ class ChatService:
         )
 
     # ===== Public Chat Methods =====
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.completion")
     @record_histogram("svc.op.duration", unit="s")
-    async def chat_completion(self, user_id: str, request) -> dict[str, Any]:
+    async def chat_completion(self, user_id: str, request: Any) -> dict[str, Any]:
         """Handle chat completion requests (main chat endpoint).
 
         This method provides AI chat functionality by processing messages,
@@ -778,49 +1047,30 @@ class ChatService:
                 },
             )
 
-            # Initialize ChatOpenAI with settings
-            settings = get_settings()
-            model_name = getattr(request, "model", "gpt-4")
+            model_name = getattr(request, "model", "gpt-5-mini")
             temperature = getattr(request, "temperature", 0.7)
             max_tokens = getattr(request, "max_tokens", 4096)
 
-            llm = ChatOpenAI(
-                model=model_name,
-                temperature=temperature,
-                api_key=settings.openai_api_key,
-                model_kwargs={"max_tokens": max_tokens},
+            api_key, service = await self._resolve_api_credentials(user_id)
+            if not api_key:
+                raise ValidationError("No API key available")
+
+            settings = get_settings()
+            extra_headers = (
+                self._build_openrouter_headers(settings, include_referer=True)
+                if service == "openrouter"
+                else None
+            )
+            client = self._create_openai_client(api_key, service)
+            oai_messages = self._build_openai_messages_from_list(request.messages)
+            kwargs = self._build_completion_kwargs(
+                model_name, oai_messages, max_tokens, temperature, extra_headers
             )
 
-            # Convert request messages to LangChain format
-            langchain_messages = []
-
-            # Add system message for travel assistant context
-            system_prompt = (
-                "You are TripSage AI, an expert travel planning assistant. "
-                "You help users plan trips, find flights and accommodations, "
-                "create itineraries, and provide destination recommendations. "
-                "Be helpful, informative, and personalized in your responses."
-            )
-            mapped_messages = [
-                converted
-                for converted in (
-                    self._convert_request_message(message)
-                    for message in request.messages
-                )
-                if converted is not None
-            ]
-            langchain_messages = [
-                SystemMessage(content=system_prompt),
-                *mapped_messages,
-            ]
-
-            # Get AI response
-            response = await llm.ainvoke(langchain_messages)
-
-            # Extract token usage information
-            usage_metadata = getattr(response, "response_metadata", {})
-            token_usage = usage_metadata.get("token_usage", {})
-            finish_reason = usage_metadata.get("finish_reason", "stop")
+            completions_any: Any = client.chat.completions
+            response: Any = completions_any.create(**kwargs)
+            finish_reason = str(getattr(response.choices[0], "finish_reason", "stop"))
+            token_usage = self._extract_usage_from_response(response)
 
             # Store the conversation in the session if we have a session ID
             if session_id and hasattr(self, "db"):
@@ -849,9 +1099,12 @@ class ChatService:
                             await self.add_message(session_id, user_id, user_msg_data)
 
                     # Add AI response to session
+                    ai_content: str = str(
+                        getattr(response.choices[0].message, "content", "")
+                    )
                     ai_msg_data = MessageCreateRequest(
                         role="assistant",
-                        content=str(response.content),
+                        content=ai_content,
                         metadata={"model": model_name, "usage": token_usage},
                         tool_calls=None,
                     )
@@ -864,8 +1117,9 @@ class ChatService:
                     )
 
             # Return formatted response
+            resp_content: str = str(getattr(response.choices[0].message, "content", ""))
             return {
-                "content": response.content,
+                "content": resp_content,
                 "session_id": session_id,
                 "model": model_name,
                 "usage": {
@@ -883,8 +1137,67 @@ class ChatService:
             )
             raise
 
+    async def stream_chat_completion(self, user_id: str, request: Any):
+        """Stream chat completion as a generator of event dicts.
+
+        Yields dictionaries shaped like {"type": "delta"|"final"|"error", ...}
+        suitable for SSE formatting at the API layer.
+        """
+        oai_messages = self._build_openai_messages(request)
+        model_name = getattr(request, "model", "gpt-5-mini")
+        temperature = getattr(request, "temperature", 0.7)
+        max_tokens = getattr(request, "max_tokens", 4096)
+
+        api_key, service = await self._resolve_api_credentials(user_id)
+        if not api_key:
+            yield {"type": "error", "message": "no_api_key"}
+            return
+
+        settings = get_settings()
+        extra_headers = (
+            self._build_openrouter_headers(settings)
+            if service == "openrouter"
+            else None
+        )
+        client = self._create_openai_client(api_key, service)
+        kwargs = self._build_completion_kwargs(
+            model_name,
+            oai_messages,
+            max_tokens,
+            temperature,
+            extra_headers,
+            stream=True,
+        )
+
+        full = ""
+        usage: dict[str, int] | None = None
+        try:
+            from collections.abc import Iterable
+
+            stream = cast(
+                Iterable[Any],
+                client.chat.completions.create(**kwargs),  # type: ignore[no-any-return]
+            )
+            for chunk in stream:
+                content, chunk_usage = self._process_stream_chunk(chunk)
+                if content:
+                    full += content
+                    yield {"type": "delta", "content": content}
+                if chunk_usage:
+                    usage = chunk_usage
+            yield {
+                "type": "final",
+                "content": full,
+                "model": model_name,
+                "usage": usage,
+            }
+        except Exception as exc:  # pragma: no cover
+            logger.exception("Streaming failed", extra={"user_id": user_id})
+            yield {"type": "error", "message": "stream_failed", "detail": str(exc)}
+
     # Router compatibility wrappers removed in final-only alignment.
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.sessions.get")
     @record_histogram("svc.op.duration", unit="s")
     async def get_session(
@@ -930,6 +1243,7 @@ class ChatService:
             )
             return None
 
+    @tripsage_safe_execute()
     @trace_span(name="svc.chat.messages.list")
     @record_histogram("svc.op.duration", unit="s")
     async def get_messages(

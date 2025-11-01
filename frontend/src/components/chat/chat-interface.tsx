@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface Message {
   id: string;
@@ -46,7 +46,10 @@ const SAMPLE_MESSAGES: Message[] = [
 function MessageBubble({
   message,
   className,
-}: { message: Message; className?: string }) {
+}: {
+  message: Message;
+  className?: string;
+}) {
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
 
@@ -65,7 +68,7 @@ function MessageBubble({
           message.isStreaming && "animate-pulse"
         )}
       >
-        <div className="whitespace-pre-wrap break-words">{message.content}</div>
+        <div className="whitespace-pre-wrap wrap-break-word">{message.content}</div>
         <div
           className={cn(
             "text-xs mt-1 opacity-60",
@@ -144,7 +147,7 @@ function MessageInput({
         type="submit"
         disabled={!input.trim() || disabled}
         className={cn(
-          "flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+          "shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
           "bg-primary text-primary-foreground hover:bg-primary/90",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           "h-[44px] flex items-center justify-center"
@@ -220,7 +223,7 @@ export function ChatInterface({
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
       {/* Chat Header */}
-      <div className="flex-shrink-0 p-4 border-b">
+      <div className="shrink-0 p-4 border-b">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">AI Assistant</h2>

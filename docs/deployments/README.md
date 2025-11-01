@@ -87,7 +87,7 @@ vercel-build]
 
 ## FastAPI Service
 
-- Expose REST/websocket endpoints consumed by frontend.
+- Expose REST endpoints; realtime is handled via Supabase Realtime (no backend WS endpoints).
 - Use Supabase Python client for DB interactions.[^supabase-python]
 - Connect to Redis Cloud for caching, rate limiting, or session storage using provided credentials.
 - Add health check endpoint (`/healthz`) for platform health probes.

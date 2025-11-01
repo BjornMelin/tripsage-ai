@@ -1,3 +1,5 @@
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import {
   type Deal,
   type DealAlert,
@@ -7,8 +9,6 @@ import {
   type DealStats,
   type DealType,
 } from "@/types/deals";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 interface DealsStore extends DealState {
   // Deals management
@@ -83,7 +83,16 @@ const calculateDealsStats = (deals: Deal[]): DealStats => {
   if (deals.length === 0) {
     return {
       totalCount: 0,
-      byType: {},
+      byType: {
+        flight: 0,
+        activity: 0,
+        accommodation: 0,
+        transportation: 0,
+        package: 0,
+        error_fare: 0,
+        flash_sale: 0,
+        promotion: 0,
+      },
       byDestination: {},
       avgDiscount: 0,
       avgSavings: 0,
@@ -91,7 +100,16 @@ const calculateDealsStats = (deals: Deal[]): DealStats => {
   }
 
   // Count by type
-  const byType: Record<DealType, number> = {} as Record<DealType, number>;
+  const byType: Record<DealType, number> = {
+    flight: 0,
+    activity: 0,
+    accommodation: 0,
+    transportation: 0,
+    package: 0,
+    error_fare: 0,
+    flash_sale: 0,
+    promotion: 0,
+  };
 
   // Count by destination
   const byDestination: Record<string, number> = {};

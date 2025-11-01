@@ -8,11 +8,11 @@ import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  useAddConversationMemory,
   useMemoryContext,
   useMemoryInsights,
   useMemoryStats,
   useSearchMemories,
-  useStoreConversation,
   useUpdatePreferences,
 } from "../use-memory";
 
@@ -187,12 +187,12 @@ describe("Memory Hooks", () => {
     });
   });
 
-  describe("useStoreConversation", () => {
+  describe("useAddConversationMemory", () => {
     it("should store conversation memory", async () => {
       const mockResponse = { status: "success", memory_id: "mem-123" };
       mockMakeAuthenticatedRequest.mockResolvedValueOnce(mockResponse);
 
-      const { result } = renderHook(() => useStoreConversation(), {
+      const { result } = renderHook(() => useAddConversationMemory(), {
         wrapper: createWrapper(),
       });
 
@@ -233,7 +233,7 @@ describe("Memory Hooks", () => {
     it("should handle conversation storage errors", async () => {
       mockMakeAuthenticatedRequest.mockRejectedValueOnce(new Error("Storage failed"));
 
-      const { result } = renderHook(() => useStoreConversation(), {
+      const { result } = renderHook(() => useAddConversationMemory(), {
         wrapper: createWrapper(),
       });
 
@@ -380,7 +380,7 @@ describe("Memory Hooks", () => {
         .mockResolvedValueOnce(searchResponse); // for search
 
       // Store conversation
-      const { result: storeResult } = renderHook(() => useStoreConversation(), {
+      const { result: storeResult } = renderHook(() => useAddConversationMemory(), {
         wrapper: createWrapper(),
       });
 

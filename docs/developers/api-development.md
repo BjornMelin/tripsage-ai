@@ -772,25 +772,19 @@ async def process_trip_optimization(trip_id: str, user_id: str):
         # Update database
         await update_trip_optimization_results(trip_id, optimized_itinerary)
         
-        # Notify user via WebSocket
-        await websocket_manager.send_to_user(
-            user_id,
-            {
-                "type": "optimization_complete",
-                "trip_id": trip_id,
-                "data": optimized_itinerary
-            }
+        # Notify listeners via Supabase Realtime only (publisher helper handles details)
+        await publish_realtime_update(
+            channel=f"user:{user_id}",
+            event="optimization_complete",
+            payload={"trip_id": trip_id, "data": optimized_itinerary},
         )
-        
+
     except Exception as e:
-        logger.exception(f"Trip optimization failed: {e}")
-        await websocket_manager.send_to_user(
-            user_id,
-            {
-                "type": "optimization_error",
-                "trip_id": trip_id,
-                "error": str(e)
-            }
+        logger.exception("Trip optimization failed", exc_info=e)
+        await publish_realtime_update(
+            channel=f"user:{user_id}",
+            event="optimization_error",
+            payload={"trip_id": trip_id, "error": str(e)},
         )
 
 @router.post("/trips/{trip_id}/optimize")

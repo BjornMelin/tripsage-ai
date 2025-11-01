@@ -49,7 +49,6 @@ from .db import (
     FlightBookingStatus,
     Memory,
     MemoryCreate,
-    MemorySearchResult,
     MemoryUpdate,
     MessageWithTokenEstimate,
     OptionType,
@@ -121,7 +120,6 @@ __all__ = [
     # Database models - Memory
     "Memory",
     "MemoryCreate",
-    "MemorySearchResult",
     "MemoryUpdate",
     "MessageWithTokenEstimate",
     "OptionType",

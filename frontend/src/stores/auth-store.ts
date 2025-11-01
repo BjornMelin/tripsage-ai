@@ -182,7 +182,7 @@ const isTokenExpired = (tokenInfo: TokenInfo | null): boolean => {
 // Session time remaining helper
 const getSessionTimeRemaining = (session: Session | null): number => {
   if (!session) return 0;
-  const now = new Date().getTime();
+  const now = Date.now();
   const expiresAt = new Date(session.expiresAt).getTime();
   return Math.max(0, expiresAt - now);
 };

@@ -67,6 +67,14 @@ class SearchResult(BaseModel):
     error_message: str | None = None
 
 
+type JSONDict = dict[str, Any]
+
+
+def _empty_jsondict_list() -> list[JSONDict]:
+    """Return an empty list of JSON dictionaries."""
+    return []
+
+
 class BookingProgress(BaseModel):
     """Booking progress tracking."""
 
@@ -74,7 +82,7 @@ class BookingProgress(BaseModel):
 
     flight_booking: dict[str, Any] | None = None
     accommodation_booking: dict[str, Any] | None = None
-    activity_bookings: list[dict[str, Any]] = Field(default_factory=list)
+    activity_bookings: list[JSONDict] = Field(default_factory=_empty_jsondict_list)
     total_cost: float | None = None
     currency: str = "USD"
     status: Literal["planning", "comparing", "booking", "confirmed", "cancelled"] = (
@@ -104,7 +112,7 @@ class ErrorInfo(BaseModel):
     error_count: int = 0
     last_error: str | None = None
     retry_attempts: dict[str, int] = Field(default_factory=dict)
-    error_history: list[dict[str, Any]] = Field(default_factory=list)
+    error_history: list[JSONDict] = Field(default_factory=_empty_jsondict_list)
 
 
 class ToolCallInfo(BaseModel):
@@ -238,13 +246,6 @@ def create_initial_state(
 
 
 def update_state_timestamp(state: TravelPlanningState) -> TravelPlanningState:
-    """Update the state's timestamp to current time.
-
-    Args:
-        state: Current state to update
-
-    Returns:
-        State with updated timestamp
-    """
+    """Update the state's timestamp to current time."""
     state["updated_at"] = datetime.now(UTC).isoformat()
     return state

@@ -5,6 +5,17 @@
 
 "use client";
 
+import {
+  AlertCircle,
+  Calculator,
+  DollarSign,
+  Loader2,
+  Plus,
+  TrendingUp,
+  X,
+} from "lucide-react";
+import React, { useCallback, useState } from "react";
+import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,19 +40,8 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useZodForm } from "@/lib/hooks/use-zod-form";
-import { type ExpenseCategory, budgetFormSchema } from "@/lib/schemas/budget";
+import { budgetFormSchema, type ExpenseCategory } from "@/lib/schemas/budget";
 import { cn } from "@/lib/utils";
-import {
-  AlertCircle,
-  Calculator,
-  DollarSign,
-  Loader2,
-  Plus,
-  TrendingUp,
-  X,
-} from "lucide-react";
-import React, { useCallback, useState } from "react";
-import { z } from "zod";
 
 // Augmented form data with additional UI state
 const budgetFormUISchema = budgetFormSchema.and(
@@ -150,7 +150,13 @@ export function BudgetForm({
     reValidateMode: "onChange",
     transformSubmitData: (data) => {
       // Transform data before submission - remove UI-specific fields
-      const { autoAllocate, enableAlerts, alertThreshold, notes, ...budgetData } = data;
+      const {
+        autoAllocate: _autoAllocate,
+        enableAlerts: _enableAlerts,
+        alertThreshold: _alertThreshold,
+        notes: _notes,
+        ...budgetData
+      } = data;
       return budgetData;
     },
     onValidationError: (errors) => {
@@ -400,7 +406,7 @@ export function BudgetForm({
                       key={index}
                       className="flex items-center gap-4 p-4 border rounded-lg"
                     >
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <span className="text-2xl">{categoryInfo?.icon}</span>
                       </div>
 
@@ -584,7 +590,7 @@ export function BudgetForm({
                             step="5"
                             {...field}
                             onChange={(e) =>
-                              field.onChange(Number.parseInt(e.target.value) || 80)
+                              field.onChange(Number.parseInt(e.target.value, 10) || 80)
                             }
                             className="w-20"
                           />

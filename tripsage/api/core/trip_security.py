@@ -14,7 +14,7 @@ Features:
 """
 
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from enum import Enum
 from functools import wraps
 from typing import Annotated, Any, TypeVar
@@ -85,23 +85,20 @@ class TripAccessContext(TripSageModel):
     @field_validator("trip_id")
     @classmethod
     def validate_trip_id(cls, v: str) -> str:
-        """Validate trip ID format."""
-        if not v or not isinstance(v, str):
+        """Validate trip ID format - requires UUID format."""
+        if not v:
             raise ValueError("Trip ID must be a non-empty string")
-        # Support both UUID and string formats
         try:
             UUID(v)
         except ValueError as e:
-            # Allow non-UUID string IDs for backward compatibility
-            if len(v.strip()) == 0:
-                raise ValueError("Trip ID cannot be empty") from e
+            raise ValueError(f"Trip ID must be a valid UUID format, got: {v}") from e
         return v.strip()
 
     @field_validator("principal_id")
     @classmethod
     def validate_principal_id(cls, v: str) -> str:
         """Validate principal ID format."""
-        if not v or not isinstance(v, str):
+        if not v:
             raise ValueError("Principal ID must be a non-empty string")
         return v.strip()
 
@@ -168,7 +165,7 @@ async def verify_trip_access(
         require_owner = context.required_level == TripAccessLevel.OWNER
 
         # First, check basic access using existing service method
-        has_basic_access = await trip_service._check_trip_access(
+        has_basic_access = await trip_service._check_trip_access(  # type: ignore[reportPrivateUsage]
             trip_id=context.trip_id,
             user_id=context.principal_id,
             require_owner=require_owner,
@@ -191,9 +188,14 @@ async def verify_trip_access(
 
             return TripAccessResult(
                 is_authorized=False,
+                access_level=None,
+                permission_granted=None,
+                is_owner=False,
+                is_collaborator=False,
+                trip_visibility=None,
                 denial_reason=(
-                    f"Insufficient permissions for {context.required_level.value} "
-                    f"access"
+                    "Insufficient permissions for "
+                    f"{context.required_level.value} access"
                 ),
             )
 
@@ -204,9 +206,11 @@ async def verify_trip_access(
                 message="Trip not found",
                 code="TRIP_NOT_FOUND",
                 details=ErrorDetails(
+                    service=None,
                     operation=context.operation,
                     resource_id=context.trip_id,
                     user_id=context.principal_id,
+                    request_id=None,
                 ),
             )
 
@@ -247,14 +251,19 @@ async def verify_trip_access(
 
         # Check specific permission requirements
         if context.required_permission:
-            permission_hierarchy = {
+            permission_hierarchy: dict[TripAccessPermission, int] = {
                 TripAccessPermission.VIEW: 1,
                 TripAccessPermission.EDIT: 2,
                 TripAccessPermission.MANAGE: 3,
             }
 
-            required_level = permission_hierarchy.get(context.required_permission, 3)
-            granted_level_value = permission_hierarchy.get(granted_permission, 0)
+            required_level = int(
+                permission_hierarchy.get(context.required_permission, 3)
+            )
+            if granted_permission is None:
+                granted_level_value = 0
+            else:
+                granted_level_value = int(permission_hierarchy[granted_permission])
 
             if granted_level_value < required_level:
                 await audit_security_event(
@@ -282,11 +291,29 @@ async def verify_trip_access(
                     permission_granted=granted_permission,
                     is_owner=is_owner,
                     is_collaborator=is_collaborator,
+                    trip_visibility=None,
                     denial_reason=(
                         f"Operation requires {context.required_permission.value} "
                         f"permission"
                     ),
                 )
+
+        # Check required access level after computing granted_level
+        from tripsage.api.core.trip_security_helpers import (
+            check_access_level_requirement,
+        )
+
+        is_level_authorized, denial_result = await check_access_level_requirement(
+            context,
+            granted_level,
+            granted_permission,
+            is_owner,
+            is_collaborator,
+            audit_security_event=audit_security_event,
+        )
+
+        if not is_level_authorized:
+            return TripAccessResult(**denial_result)  # type: ignore[arg-type]
 
         # Log successful access for audit trail
         await audit_security_event(
@@ -312,6 +339,7 @@ async def verify_trip_access(
             is_owner=is_owner,
             is_collaborator=is_collaborator,
             trip_visibility=TripVisibility(trip.get("visibility", "private")),
+            denial_reason=None,
         )
 
     except (CoreResourceNotFoundError, CoreSecurityError):
@@ -346,9 +374,11 @@ async def verify_trip_access(
             message="Trip access verification failed due to internal error",
             code="ACCESS_VERIFICATION_ERROR",
             details=ErrorDetails(
+                service=None,
                 operation=context.operation,
                 resource_id=context.trip_id,
                 user_id=context.principal_id,
+                request_id=None,
                 additional_context={"original_error": str(e)},
             ),
         ) from e
@@ -358,7 +388,7 @@ def create_trip_access_dependency(
     access_level: TripAccessLevel,
     permission: TripAccessPermission | None = None,
     trip_id_param: str = "trip_id",
-) -> Callable:
+) -> Callable[..., Awaitable[TripAccessResult]]:
     """Create a FastAPI dependency for trip access verification.
 
     This factory function creates FastAPI dependencies that can be used to verify
@@ -485,7 +515,7 @@ def require_trip_access(
         )
 
         @wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any):
             """Wrapper function that performs access verification."""
             # The actual verification is handled by FastAPI dependency injection
             # This wrapper primarily serves as a marker and documentation
@@ -498,7 +528,9 @@ def require_trip_access(
             TripAccessResult, Depends(access_dependency)
         ]
 
-        return wrapper
+        from typing import cast
+
+        return cast(F, wrapper)
 
     return decorator
 
@@ -561,6 +593,9 @@ async def check_trip_ownership(
             principal_id=get_principal_id(principal),
             required_level=TripAccessLevel.OWNER,
             operation="ownership_check",
+            required_permission=None,
+            ip_address="unknown",
+            user_agent=None,
         )
 
         result = await verify_trip_access(context, trip_service)
@@ -602,6 +637,8 @@ async def check_trip_collaboration(
             required_level=TripAccessLevel.COLLABORATOR,
             required_permission=required_permission,
             operation="collaboration_check",
+            ip_address="unknown",
+            user_agent=None,
         )
 
         result = await verify_trip_access(context, trip_service)
@@ -643,6 +680,9 @@ async def get_user_trip_permissions(
             principal_id=get_principal_id(principal),
             required_level=TripAccessLevel.READ,  # Minimum level to get info
             operation="permission_inquiry",
+            required_permission=None,
+            ip_address="unknown",
+            user_agent=None,
         )
 
         result = await verify_trip_access(context, trip_service)

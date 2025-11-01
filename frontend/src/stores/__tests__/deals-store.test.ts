@@ -1,6 +1,6 @@
-import type { DealType } from "@/types/deals";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { DealType } from "@/types/deals";
 import { useDealsStore } from "../deals-store";
 
 // Mock current timestamp for consistent testing
@@ -451,7 +451,9 @@ describe("Deals Store", () => {
 
     beforeEach(() => {
       const store = useDealsStore.getState();
-      deals.forEach((deal) => store.addDeal(deal));
+      for (const deal of deals) {
+        store.addDeal(deal);
+      }
     });
 
     it("should calculate deal stats", () => {

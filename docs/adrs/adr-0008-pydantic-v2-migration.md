@@ -1,10 +1,10 @@
 # ADR-0008: Migrate to Pydantic v2
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-06-17
-
-## Status
-
-Accepted
+**Category**: backend
+**Domain**: Pydantic
 
 ## Context
 
@@ -61,6 +61,10 @@ Key changes:
 - **Third-party**: Some libraries may not support v2 yet
 
 ### Neutral
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.
 
 - Different import patterns and method names
 - New configuration syntax to learn

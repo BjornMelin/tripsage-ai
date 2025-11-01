@@ -13,6 +13,7 @@ export type REALTIME_CHANNEL_STATES =
   | "CHANNEL_ERROR"
   | "TIMED_OUT"
   | "CLOSED";
+
 import { vi } from "vitest";
 
 export type MockRealtimeChannel = {

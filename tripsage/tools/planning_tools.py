@@ -4,8 +4,9 @@ This module provides function tools for travel planning operations used by the
 TravelPlanningAgent, including plan creation, updates, and persistence.
 """
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TypedDict, cast
 
 from pydantic import BaseModel, Field
 
@@ -15,6 +16,41 @@ from tripsage_core.utils.cache_utils import redis_cache
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
+
+
+class TravelPlanComponents(TypedDict):
+    """Typed structure for travel plan components."""
+
+    flights: list[dict[str, Any]]
+    accommodations: list[dict[str, Any]]
+    activities: list[dict[str, Any]]
+    transportation: list[dict[str, Any]]
+    notes: list[dict[str, Any]]
+
+
+class CombinedRecommendations(TypedDict):
+    """Typed structure for combined recommendation buckets."""
+
+    flights: list[dict[str, Any]]
+    accommodations: list[dict[str, Any]]
+    activities: list[dict[str, Any]]
+
+
+class CombinedResultsPayload(TypedDict):
+    """Top-level combined search recommendation payload."""
+
+    recommendations: CombinedRecommendations
+    total_estimated_cost: float
+    destination_highlights: list[str]
+    travel_tips: list[str]
+
+
+def _coerce_float(value: Any) -> float:
+    """Safely convert arbitrary values to float for cost aggregation."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 logger = get_logger(__name__)
@@ -118,7 +154,15 @@ async def create_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
         plan_id = f"plan_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
 
         # Create travel plan object
-        travel_plan = {
+        components: TravelPlanComponents = {
+            "flights": [],
+            "accommodations": [],
+            "activities": [],
+            "transportation": [],
+            "notes": [],
+        }
+
+        travel_plan: dict[str, Any] = {
             "plan_id": plan_id,
             "user_id": plan_input.user_id,
             "title": plan_input.title,
@@ -130,13 +174,7 @@ async def create_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
             "preferences": plan_input.preferences or {},
             "created_at": datetime.now(UTC).isoformat(),
             "updated_at": datetime.now(UTC).isoformat(),
-            "components": {
-                "flights": [],
-                "accommodations": [],
-                "activities": [],
-                "transportation": [],
-                "notes": [],
-            },
+            "components": components,
         }
 
         # Cache the travel plan
@@ -204,13 +242,15 @@ async def update_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
 
         # Get the existing plan
         cache_key = f"travel_plan:{update_input.plan_id}"
-        travel_plan = await redis_cache.get(cache_key)
+        travel_plan_raw = await redis_cache.get(cache_key)
 
-        if not travel_plan:
+        if not isinstance(travel_plan_raw, dict):
             return {
                 "success": False,
                 "error": f"Travel plan {update_input.plan_id} not found",
             }
+
+        travel_plan = cast(dict[str, Any], travel_plan_raw)
 
         # Check user authorization
         if travel_plan.get("user_id") != update_input.user_id:
@@ -229,11 +269,16 @@ async def update_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
         await redis_cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
         update_memory = f"Travel plan '{travel_plan.get('title', 'Untitled')}' updated"
-        update_details = []
+        update_details: list[str] = []
 
         for key, value in updates.items():
             if key == "destinations":
-                update_details.append(f"destinations changed to {', '.join(value)}")
+                if isinstance(value, Sequence) and not isinstance(value, str):
+                    seq_value = cast(Sequence[Any], value)
+                    destinations = [str(dest) for dest in seq_value]
+                    update_details.append(
+                        f"destinations changed to {', '.join(destinations)}"
+                    )
             elif key in {"start_date", "end_date"}:
                 update_details.append(f"{key} changed to {value}")
             elif key == "budget":
@@ -291,12 +336,13 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
         search_input = SearchResultInput(**params)
 
         # Combine results
-        combined_results = {
-            "recommendations": {
-                "flights": [],
-                "accommodations": [],
-                "activities": [],
-            },
+        recommendations: CombinedRecommendations = {
+            "flights": [],
+            "accommodations": [],
+            "activities": [],
+        }
+        combined_results: CombinedResultsPayload = {
+            "recommendations": recommendations,
             "total_estimated_cost": 0.0,
             "destination_highlights": [],
             "travel_tips": [],
@@ -304,7 +350,12 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
 
         flight_results = dict(search_input.flight_results or {})
         if flight_results:
-            flight_offers = flight_results.get("offers", [])
+            flight_offers_raw = flight_results.get("offers", [])
+            flight_offers: list[dict[str, Any]] = [
+                cast(dict[str, Any], offer)
+                for offer in flight_offers_raw
+                if isinstance(offer, dict)
+            ]
             if flight_offers:
                 # Sort by price (assuming flight offers have total_amount field)
                 sorted_flights = sorted(
@@ -314,14 +365,19 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
                 combined_results["recommendations"]["flights"] = sorted_flights[:3]
                 # Add to total cost estimate (using lowest price)
                 if sorted_flights:
-                    combined_results["total_estimated_cost"] += sorted_flights[0].get(
-                        "total_amount", 0
+                    combined_results["total_estimated_cost"] += _coerce_float(
+                        sorted_flights[0].get("total_amount", 0)
                     )
 
         # Process accommodation results
         accommodation_results = dict(search_input.accommodation_results or {})
         if accommodation_results:
-            accommodations = accommodation_results.get("accommodations", [])
+            accommodations_raw = accommodation_results.get("accommodations", [])
+            accommodations: list[dict[str, Any]] = [
+                cast(dict[str, Any], accommodation)
+                for accommodation in accommodations_raw
+                if isinstance(accommodation, dict)
+            ]
             if accommodations:
                 # Sort by a combination of price and rating
                 for accommodation in accommodations:
@@ -345,13 +401,21 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
                 # nightly rate * 3 nights)
                 if sorted_accommodations:
                     combined_results["total_estimated_cost"] += (
-                        sorted_accommodations[0].get("price_per_night", 0) * 3
+                        _coerce_float(
+                            sorted_accommodations[0].get("price_per_night", 0)
+                        )
+                        * 3
                     )
 
         # Process activity results
         activity_results = dict(search_input.activity_results or {})
         if activity_results:
-            activities = activity_results.get("activities", [])
+            activities_raw = activity_results.get("activities", [])
+            activities: list[dict[str, Any]] = [
+                cast(dict[str, Any], activity)
+                for activity in activities_raw
+                if isinstance(activity, dict)
+            ]
             if activities:
                 # Sort by rating
                 sorted_activities = sorted(
@@ -365,22 +429,23 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
                 ]
                 # Add to total cost estimate (using top 3 activities)
                 for _, activity in enumerate(sorted_activities[:3]):
-                    combined_results["total_estimated_cost"] += activity.get(
-                        "price_per_person", 0
+                    combined_results["total_estimated_cost"] += _coerce_float(
+                        activity.get("price_per_person", 0)
                     )
 
         # Process destination information
         destination_info = dict(search_input.destination_info or {})
         if destination_info:
             # Extract highlights
-            highlights = destination_info.get("highlights", [])
-            if highlights:
-                combined_results["destination_highlights"] = highlights[:5]
+            highlights_raw = destination_info.get("highlights", [])
+            if highlights_raw:
+                highlights = [str(item) for item in highlights_raw[:5]]
+                combined_results["destination_highlights"] = highlights
 
             # Extract travel tips
-            tips = destination_info.get("tips", [])
-            if tips:
-                combined_results["travel_tips"] = tips[:3]
+            tips_raw = destination_info.get("tips", [])
+            if tips_raw:
+                combined_results["travel_tips"] = [str(item) for item in tips_raw[:3]]
 
         return {
             "success": True,

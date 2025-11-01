@@ -1,5 +1,7 @@
 "use client";
 
+import { Calendar, Clock, MapPin } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +15,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTrips } from "@/hooks/use-trips";
 import type { Trip } from "@/stores/trip-store";
-import { Calendar, Clock, MapPin } from "lucide-react";
-import Link from "next/link";
 
 interface RecentTripsProps {
   limit?: number;

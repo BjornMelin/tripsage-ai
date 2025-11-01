@@ -1,24 +1,25 @@
 """Router for activity-related endpoints in the TripSage API."""
 
 import logging
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime
+from typing import cast
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
 from tripsage.api.core.dependencies import (
-    ActivityServiceDep,
+    DatabaseDep,
+    RequiredPrincipalDep,
+    SearchFacadeDep,
+    TripServiceDep,
     get_principal_id,
-    require_principal,
 )
-from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.requests.activities import (
-    ActivitySearchRequest,
-    SaveActivityRequest,
-)
-from tripsage.api.schemas.responses.activities import (
+from tripsage.api.schemas.activities import (
     ActivityResponse,
+    ActivitySearchRequest,
     ActivitySearchResponse,
+    SaveActivityRequest,
     SavedActivityResponse,
 )
 from tripsage_core.services.business.activity_service import (
@@ -29,11 +30,7 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditSeverity,
     audit_security_event,
 )
-from tripsage_core.services.business.trip_service import TripService, get_trip_service
-from tripsage_core.services.infrastructure.database_service import (
-    DatabaseService,
-    get_database_service,
-)
+from tripsage_core.types import JSONObject
 
 
 router = APIRouter()
@@ -43,7 +40,7 @@ logger = logging.getLogger(__name__)
 @router.post("/search", response_model=ActivitySearchResponse)
 async def search_activities(
     request: ActivitySearchRequest,
-    activity_service: ActivityServiceDep,
+    activity_service: SearchFacadeDep,
 ):
     """Search for activities based on provided criteria using Google Maps Places API.
 
@@ -53,7 +50,11 @@ async def search_activities(
     logger.info("Activity search request: %s", request.destination)
 
     try:
-        result = await activity_service.search_activities(request)
+        do_search = cast(
+            Callable[[ActivitySearchRequest], Awaitable[ActivitySearchResponse]],
+            activity_service.search_activities,
+        )
+        result = await do_search(request)
 
         logger.info(
             "Found %s activities for %s", len(result.activities), request.destination
@@ -74,50 +75,12 @@ async def search_activities(
         ) from e
 
 
-@router.get("/{activity_id}", response_model=ActivityResponse)
-async def get_activity_details(activity_id: str, activity_service: ActivityServiceDep):
-    """Get detailed information about a specific activity.
-
-    Retrieves details for an activity including enhanced
-    information from Google Maps Places API.
-    """
-    logger.info("Get activity details request: %s", activity_id)
-
-    try:
-        activity = await activity_service.get_activity_details(activity_id)
-
-        if not activity:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Activity with ID {activity_id} not found",
-            )
-
-        logger.info("Retrieved details for activity: %s", activity_id)
-        return activity
-
-    except ActivityServiceError as e:
-        logger.exception("Activity service error")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get activity details: {e.message}",
-        ) from e
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
-    except Exception as e:
-        logger.exception("Unexpected error getting activity details")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while retrieving activity details",
-        ) from e
-
-
 @router.post("/save", response_model=SavedActivityResponse)
 async def save_activity(
     request: SaveActivityRequest,
-    principal: Principal = Depends(require_principal),
-    db_service: DatabaseService = Depends(get_database_service),
-    trip_service: TripService = Depends(get_trip_service),
+    db_service: DatabaseDep,
+    trip_service: TripServiceDep,
+    principal: RequiredPrincipalDep,
 ):
     """Save an activity for a user.
 
@@ -129,12 +92,15 @@ async def save_activity(
     """
     logger.info("Save activity request: %s", request.activity_id)
 
+    user_id = get_principal_id(principal)
     try:
-        user_id = get_principal_id(principal)
-
         # Verify trip access if trip_id is provided
         if request.trip_id:
-            trip = await trip_service.get_trip(trip_id=request.trip_id, user_id=user_id)
+            get_core_trip = cast(
+                Callable[[str, str], Awaitable[object | None]],
+                trip_service.get_trip,
+            )
+            trip = await get_core_trip(request.trip_id, user_id)
             if not trip:
                 await audit_security_event(
                     event_type=AuditEventType.ACCESS_DENIED,
@@ -159,7 +125,7 @@ async def save_activity(
 
         # Save activity to itinerary_items table
         saved_at = datetime.now(UTC)
-        itinerary_data = {
+        itinerary_data: JSONObject = {
             "id": str(uuid4()),
             "trip_id": request.trip_id,
             "user_id": user_id,
@@ -199,13 +165,15 @@ async def save_activity(
 
         logger.info("Activity %s saved for user %s", request.activity_id, user_id)
 
-        return SavedActivityResponse(
-            activity_id=request.activity_id,
-            trip_id=request.trip_id,
-            user_id=user_id,
-            saved_at=saved_at.isoformat(),
-            notes=request.notes,
-            activity=None,
+        return SavedActivityResponse.model_validate(
+            {
+                "activity_id": request.activity_id,
+                "trip_id": request.trip_id,
+                "user_id": user_id,
+                "saved_at": saved_at.isoformat(),
+                "notes": request.notes,
+                "activity": None,
+            }
         )
 
     except HTTPException:
@@ -235,8 +203,8 @@ async def save_activity(
 
 @router.get("/saved", response_model=list[SavedActivityResponse])
 async def get_saved_activities(
-    principal: Principal = Depends(require_principal),
-    db_service: DatabaseService = Depends(get_database_service),
+    db_service: DatabaseDep,
+    principal: RequiredPrincipalDep,
     limit: int = 50,
     offset: int = 0,
 ):
@@ -250,16 +218,15 @@ async def get_saved_activities(
     """
     logger.info("Get saved activities request")
 
+    user_id = get_principal_id(principal)
     try:
-        user_id = get_principal_id(principal)
-
         # Query saved activities from itinerary_items table
         filters = {
             "user_id": user_id,
             "item_type": "activity",
         }
 
-        saved_items = await db_service.select(
+        saved_items: list[JSONObject] = await db_service.select(
             table="itinerary_items",
             columns="*",
             filters=filters,
@@ -270,19 +237,26 @@ async def get_saved_activities(
         )
 
         # Convert to SavedActivityResponse format
-        saved_activities = []
+        saved_activities: list[SavedActivityResponse] = []
         for item in saved_items:
-            metadata = item.get("metadata", {})
+            md_value = item.get("metadata", {})
+            metadata: Mapping[str, object] = (
+                md_value if isinstance(md_value, Mapping) else {}
+            )
             saved_activities.append(
-                SavedActivityResponse(
-                    activity_id=metadata.get(
-                        "activity_id", item.get("external_id", "")
-                    ),
-                    trip_id=item.get("trip_id"),
-                    user_id=user_id,
-                    saved_at=item.get("created_at", datetime.now(UTC).isoformat()),
-                    notes=metadata.get("notes"),
-                    activity=None,
+                SavedActivityResponse.model_validate(
+                    {
+                        "activity_id": metadata.get(
+                            "activity_id", item.get("external_id", "")
+                        ),
+                        "trip_id": item.get("trip_id"),
+                        "user_id": user_id,
+                        "saved_at": item.get(
+                            "created_at", datetime.now(UTC).isoformat()
+                        ),
+                        "notes": metadata.get("notes"),
+                        "activity": None,
+                    }
                 )
             )
 
@@ -332,8 +306,8 @@ async def get_saved_activities(
 @router.delete("/saved/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_activity(
     activity_id: str,
-    principal: Principal = Depends(require_principal),
-    db_service: DatabaseService = Depends(get_database_service),
+    db_service: DatabaseDep,
+    principal: RequiredPrincipalDep,
 ):
     """Delete a saved activity for a user.
 
@@ -345,9 +319,8 @@ async def delete_saved_activity(
     """
     logger.info("Delete saved activity request: %s", activity_id)
 
+    user_id = get_principal_id(principal)
     try:
-        user_id = get_principal_id(principal)
-
         # First, check if the saved activity exists and belongs to the user
         filters = {
             "user_id": user_id,
@@ -369,19 +342,22 @@ async def delete_saved_activity(
                 "item_type": "activity",
             }
 
-            all_items = await db_service.select(
+            all_items: list[JSONObject] = await db_service.select(
                 table="itinerary_items",
                 columns="*",
                 filters=metadata_filter,
                 user_id=user_id,
             )
 
-            # Find item with matching activity_id in metadata
-            existing_items = [
-                item
-                for item in all_items
-                if item.get("metadata", {}).get("activity_id") == activity_id
-            ]
+            # Find item with matching activity_id in metadata (only when mapping)
+            filtered: list[JSONObject] = []
+            for item in all_items:
+                md_val = item.get("metadata", {})
+                if not isinstance(md_val, Mapping):
+                    continue
+                if md_val.get("activity_id") == activity_id:
+                    filtered.append(item)
+            existing_items = filtered
 
         if not existing_items:
             await audit_security_event(
@@ -470,4 +446,46 @@ async def delete_saved_activity(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete saved activity",
+        ) from e
+
+
+@router.get("/{activity_id}", response_model=ActivityResponse)
+async def get_activity_details(activity_id: str, activity_service: SearchFacadeDep):
+    """Get detailed information about a specific activity.
+
+    Retrieves details for an activity including enhanced
+    information from Google Maps Places API.
+    """
+    logger.info("Get activity details request: %s", activity_id)
+
+    try:
+        get_details = cast(
+            Callable[[str], Awaitable[ActivityResponse | None]],
+            activity_service.get_activity_details,
+        )
+        activity = await get_details(activity_id)
+
+        if not activity:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Activity with ID {activity_id} not found",
+            )
+
+        logger.info("Retrieved details for activity: %s", activity_id)
+        return activity
+
+    except ActivityServiceError as e:
+        logger.exception("Activity service error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get activity details: {e.message}",
+        ) from e
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error getting activity details")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while retrieving activity details",
         ) from e

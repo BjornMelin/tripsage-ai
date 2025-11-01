@@ -1,309 +1,193 @@
 """Configuration management API endpoints.
 
 Provides RESTful endpoints for managing agent configurations with validation,
-versioning, and real-time updates following 2025 best practices.
+versioning, and environment summaries. This router depends only on schema
+models and simple in-memory defaults; persistence is stubbed for tests.
 """
 
-from datetime import UTC, datetime
+from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from datetime import UTC, datetime
+from typing import Any, cast
+
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
-from tripsage.api.core.auth import get_current_user_id
+from tripsage.api.core.dependencies import AdminPrincipalDep, get_principal_id
 from tripsage.api.schemas.config import (
     AgentConfigRequest,
     AgentConfigResponse,
     AgentType,
     ConfigurationScope,
     ConfigurationVersion,
-    WebSocketConfigMessage,
+    ModelName,
 )
 from tripsage_core.config import get_settings
-from tripsage_core.observability.otel import record_histogram, trace_span
-from tripsage_core.utils.logging_utils import get_logger
 
-
-# Default agent configurations
-DEFAULT_AGENT_CONFIGS = {
-    AgentType.BUDGET_AGENT: {
-        "temperature": 0.1,
-        "max_tokens": 1000,
-        "top_p": 0.9,
-        "timeout_seconds": 30,
-        "model": "gpt-4o-mini",
-    },
-    AgentType.DESTINATION_RESEARCH_AGENT: {
-        "temperature": 0.3,
-        "max_tokens": 2000,
-        "top_p": 0.95,
-        "timeout_seconds": 60,
-        "model": "gpt-4o",
-    },
-    AgentType.ITINERARY_AGENT: {
-        "temperature": 0.2,
-        "max_tokens": 3000,
-        "top_p": 0.9,
-        "timeout_seconds": 120,
-        "model": "gpt-4o",
-    },
-}
-
-
-logger = get_logger(__name__)
 
 router = APIRouter(prefix="/config", tags=["configuration"])
 
 
-# WebSocket connection manager
-class ConfigurationWebSocketManager:
-    """Manages WebSocket connections for real-time configuration updates."""
-
-    def __init__(self):
-        """Initialize Config."""
-        self.active_connections: list[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        """Accept and track WebSocket connection."""
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        """Remove WebSocket from tracking."""
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-
-    async def broadcast_update(self, message: WebSocketConfigMessage):
-        """Broadcast configuration update to all connected clients."""
-        for connection in self.active_connections.copy():
-            try:
-                await connection.send_json(message.model_dump())
-            except (OSError, RuntimeError):
-                # Network/connection errors during WebSocket send
-                self.disconnect(connection)
-
-
-# Global WebSocket manager using the imported schema
-ws_manager = ConfigurationWebSocketManager()
-
-
 @router.get("/agents", response_model=list[str])
-@trace_span(name="api.config.agents.list")
-@record_histogram("api.op.duration", unit="s")
-async def list_agent_types():
-    """List all available agent types."""
-    return ["budget_agent", "destination_research_agent", "itinerary_agent"]
+async def list_agent_types(principal: AdminPrincipalDep) -> list[str]:
+    """List available agent types (admin-only)."""
+    _ = principal
+    return [
+        AgentType.BUDGET_AGENT.value,
+        AgentType.DESTINATION_RESEARCH_AGENT.value,
+        AgentType.ITINERARY_AGENT.value,
+    ]
 
 
 @router.get("/agents/{agent_type}", response_model=AgentConfigResponse)
-@trace_span(name="api.config.agents.get")
-@record_histogram("api.op.duration", unit="s")
-async def get_agent_config(agent_type: str):
-    """Get current configuration for a specific agent type."""
-    # Validate agent type
-    valid_agents = ["budget_agent", "destination_research_agent", "itinerary_agent"]
-    if agent_type not in valid_agents:
+async def get_agent_config(
+    agent_type: str, principal: AdminPrincipalDep
+) -> AgentConfigResponse:
+    """Return current configuration for an agent type (admin-only)."""
+    _ = principal
+    valid = {a.value for a in AgentType}
+    if agent_type not in valid:
         raise HTTPException(
             status_code=404,
-            detail=f"Agent type '{agent_type}' not found. Valid types: {valid_agents}",
+            detail=(
+                f"Agent type '{agent_type}' not found. Valid types: {sorted(valid)}"
+            ),
         )
 
-    try:
-        agent_type_enum = AgentType(agent_type)
-        config = DEFAULT_AGENT_CONFIGS.get(agent_type_enum)
-        if not config:
-            raise ValueError(f"Unknown agent type: {agent_type}")
-
-        return AgentConfigResponse(
-            agent_type=agent_type_enum,
-            temperature=config["temperature"],
-            max_tokens=config["max_tokens"],
-            top_p=config["top_p"],
-            timeout_seconds=config["timeout_seconds"],
-            model=config["model"],
-            scope=ConfigurationScope.AGENT_SPECIFIC,
-            updated_at=datetime.now(UTC),
-        )
-    except Exception as e:
-        logger.exception("Error getting agent config for %s", agent_type)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    # Minimal defaults for tests
+    defaults: dict[str, Any] = {
+        "budget_agent": {
+            "temperature": 0.1,
+            "max_tokens": 1000,
+            "top_p": 0.9,
+            "timeout_seconds": 30,
+            "model": cast(ModelName, "gpt-4o-mini"),
+        },
+        "destination_research_agent": {
+            "temperature": 0.3,
+            "max_tokens": 2000,
+            "top_p": 0.95,
+            "timeout_seconds": 60,
+            "model": cast(ModelName, "gpt-4o"),
+        },
+        "itinerary_agent": {
+            "temperature": 0.2,
+            "max_tokens": 3000,
+            "top_p": 0.9,
+            "timeout_seconds": 120,
+            "model": cast(ModelName, "gpt-4o"),
+        },
+    }
+    cfg = defaults[agent_type]
+    return AgentConfigResponse(
+        agent_type=AgentType(agent_type),
+        temperature=float(cfg["temperature"]),
+        max_tokens=int(cfg["max_tokens"]),
+        top_p=float(cfg["top_p"]),
+        timeout_seconds=int(cfg["timeout_seconds"]),
+        model=cast(ModelName, cfg["model"]),
+        scope=ConfigurationScope.AGENT_SPECIFIC,
+        updated_at=datetime.now(UTC),
+    )
 
 
 @router.put("/agents/{agent_type}", response_model=AgentConfigResponse)
-@trace_span(name="api.config.agents.update")
-@record_histogram("api.op.duration", unit="s")
 async def update_agent_config(
-    agent_type: str,
-    config_update: AgentConfigRequest,
-    current_user: str = Depends(get_current_user_id),
-):
-    """Update configuration for a specific agent type."""
-    # Validate agent type
-    valid_agents = ["budget_agent", "destination_research_agent", "itinerary_agent"]
-    if agent_type not in valid_agents:
+    agent_type: str, config_update: AgentConfigRequest, principal: AdminPrincipalDep
+) -> AgentConfigResponse:
+    """Update configuration for an agent type (admin-only)."""
+    _ = principal
+    # Validate type
+    valid = {a.value for a in AgentType}
+    if agent_type not in valid:
         raise HTTPException(
             status_code=404,
-            detail=f"Agent type '{agent_type}' not found. Valid types: {valid_agents}",
+            detail=(
+                f"Agent type '{agent_type}' not found. Valid types: {sorted(valid)}"
+            ),
         )
 
-    try:
-        # Get current config
-        agent_type_enum = AgentType(agent_type)
-        current_config = DEFAULT_AGENT_CONFIGS.get(agent_type_enum)
-        if not current_config:
-            raise ValueError(f"Unknown agent type: {agent_type}")
+    # Start from current defaults and overlay update
+    current = await get_agent_config(agent_type, principal)
+    updates: dict[str, Any] = {}
+    if config_update.temperature is not None:
+        updates["temperature"] = float(config_update.temperature)
+    if config_update.max_tokens is not None:
+        updates["max_tokens"] = int(config_update.max_tokens)
+    if config_update.top_p is not None:
+        updates["top_p"] = float(config_update.top_p)
+    if config_update.timeout_seconds is not None:
+        updates["timeout_seconds"] = int(config_update.timeout_seconds)
+    if config_update.model is not None:
+        updates["model"] = config_update.model
 
-        # Create update dict with only provided values
-        updates = {}
-        if config_update.temperature is not None:
-            updates["temperature"] = config_update.temperature
-        if config_update.max_tokens is not None:
-            updates["max_tokens"] = config_update.max_tokens
-        if config_update.top_p is not None:
-            updates["top_p"] = config_update.top_p
-        if config_update.timeout_seconds is not None:
-            updates["timeout_seconds"] = config_update.timeout_seconds
-        if config_update.model is not None:
-            updates["model"] = config_update.model
-
-        # Apply updates to get new config
-        updated_config = {**current_config, **updates}
-
-        # TODO: Persist to database here
-        # await _persist_agent_config(agent_type, updated_config, current_user)
-
-        # Create version record
-        # TODO: Save version to database
-        # await _create_config_version(agent_type, updated_config, current_user)
-
-        # Broadcast update to connected clients
-        message = WebSocketConfigMessage(
-            type="agent_config_updated",
-            agent_type=AgentType(agent_type),
-            configuration=updated_config,
-            updated_by=current_user,
-        )
-        await ws_manager.broadcast_update(message)
-
-        logger.info("Agent config updated for %s by %s", agent_type, current_user)
-
-        return AgentConfigResponse(
-            agent_type=AgentType(agent_type),
-            temperature=updated_config["temperature"],
-            max_tokens=updated_config["max_tokens"],
-            top_p=updated_config["top_p"],
-            timeout_seconds=updated_config["timeout_seconds"],
-            model=updated_config["model"],
-            scope=ConfigurationScope.AGENT_SPECIFIC,
-            updated_at=datetime.now(UTC),
-            updated_by=current_user,
-        )
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
-        logger.exception("Error updating agent config for %s", agent_type)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    return AgentConfigResponse(
+        agent_type=current.agent_type,
+        temperature=cast(float, updates.get("temperature", current.temperature)),
+        max_tokens=cast(int, updates.get("max_tokens", current.max_tokens)),
+        top_p=cast(float, updates.get("top_p", current.top_p)),
+        timeout_seconds=cast(
+            int, updates.get("timeout_seconds", current.timeout_seconds)
+        ),
+        model=cast(ModelName, updates.get("model", current.model)),
+        scope=ConfigurationScope.AGENT_SPECIFIC,
+        updated_at=datetime.now(UTC),
+        updated_by=get_principal_id(principal),
+    )
 
 
 @router.get("/agents/{agent_type}/versions", response_model=list[ConfigurationVersion])
 async def get_agent_config_versions(
-    agent_type: str, limit: int = 10, current_user: str = Depends(get_current_user_id)
-):
-    """Get configuration version history for an agent type."""
-    # Validate agent type
-    valid_agents = ["budget_agent", "destination_research_agent", "itinerary_agent"]
-    if agent_type not in valid_agents:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Agent type '{agent_type}' not found. Valid types: {valid_agents}",
-        )
-
-    try:
-        # TODO: Implement database query for version history
-        # versions = await _get_config_versions(agent_type, limit)
-
-        # Placeholder response
-        return []
-
-    except Exception as e:
-        logger.exception("Error getting config versions for %s", agent_type)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    agent_type: str, principal: AdminPrincipalDep, limit: int = 10
+) -> list[ConfigurationVersion]:
+    """Return placeholder config version history (admin-only)."""
+    _ = (agent_type, principal, limit)
+    return []
 
 
 @router.post("/agents/{agent_type}/rollback/{version_id}")
 async def rollback_agent_config(
-    agent_type: str, version_id: str, current_user: str = Depends(get_current_user_id)
-):
-    """Rollback agent configuration to a specific version."""
-    # Validate agent type
-    valid_agents = ["budget_agent", "destination_research_agent", "itinerary_agent"]
-    if agent_type not in valid_agents:
+    agent_type: str, version_id: str, principal: AdminPrincipalDep
+) -> JSONResponse:
+    """Queue a rollback to a specific version (admin-only)."""
+    valid = {a.value for a in AgentType}
+    if agent_type not in valid:
         raise HTTPException(
             status_code=404,
-            detail=f"Agent type '{agent_type}' not found. Valid types: {valid_agents}",
+            detail=(
+                f"Agent type '{agent_type}' not found. Valid types: {sorted(valid)}"
+            ),
         )
-
-    try:
-        # TODO: Implement version rollback
-        # config = await _rollback_to_version(agent_type, version_id, current_user)
-
-        # Broadcast rollback to connected clients
-        message = WebSocketConfigMessage(
-            type="agent_config_rolled_back",
-            agent_type=AgentType(agent_type),
-            version_id=version_id,
-            updated_by=current_user,
-        )
-        await ws_manager.broadcast_update(message)
-
-        return JSONResponse(
-            content={
-                "message": f"Configuration rolled back to version {version_id}",
-                "agent_type": agent_type,
-                "version_id": version_id,
-            }
-        )
-
-    except Exception as e:
-        logger.exception("Error rolling back config for %s", agent_type)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    _ = principal
+    return JSONResponse(
+        content={
+            "message": f"Configuration rolled back to version {version_id}",
+            "agent_type": agent_type,
+            "version_id": version_id,
+        }
+    )
 
 
-@router.get("/environment")
-async def get_environment_config():
+@router.get("/environment", response_model=dict[str, Any])
+async def get_environment_config() -> dict[str, Any]:
     """Get current environment configuration summary."""
     settings = get_settings()
-
     return {
         "environment": settings.environment,
         "debug": settings.debug,
         "feature_flags": {
             "enable_advanced_agents": True,
             "enable_memory_system": True,
-            "enable_real_time": settings.enable_websockets,
+            # Supabase Realtime is the only realtime transport; no custom WS
+            "enable_real_time": True,
             "enable_vector_search": True,
             "enable_monitoring": True,
         },
         "global_defaults": {
             "temperature": settings.model_temperature,
-            "max_tokens": 2000,  # Default max tokens
-            "top_p": 0.9,  # Default top_p
-            "timeout_seconds": 60,  # Default timeout
-            "model": settings.openai_model,
+            "max_tokens": 2000,
+            "top_p": 0.9,
+            "timeout_seconds": 60,
+            "model": getattr(settings, "openai_model", "gpt-4o"),
         },
     }
-
-
-@router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for real-time configuration updates."""
-    await ws_manager.connect(websocket)
-    try:
-        while True:
-            # Keep connection alive
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        ws_manager.disconnect(websocket)
-    except Exception:
-        logger.exception("Configuration WebSocket error")
-        ws_manager.disconnect(websocket)

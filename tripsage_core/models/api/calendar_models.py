@@ -153,7 +153,12 @@ class CalendarEvent(BaseModel):
     sequence: int = 0
 
     # Participants
-    attendees: list[EventAttendee] = Field(default_factory=list)
+    @staticmethod
+    def _empty_attendees() -> list["EventAttendee"]:
+        """Return an empty list of event attendees."""
+        return []
+
+    attendees: list[EventAttendee] = Field(default_factory=_empty_attendees)
     attendees_omitted: bool = Field(False, alias="attendeesOmitted")
     extended_properties: ExtendedProperties | None = Field(
         None, alias="extendedProperties"
@@ -187,7 +192,12 @@ class CreateEventRequest(BaseModel):
     end: EventDateTime
 
     time_zone: str | None = Field(None, alias="timeZone")
-    attendees: list[EventAttendee] = Field(default_factory=list)
+
+    @staticmethod
+    def _empty_attendees() -> list["EventAttendee"]:  # type: ignore[no-redef]
+        return []
+
+    attendees: list[EventAttendee] = Field(default_factory=_empty_attendees)
     reminders: dict[str, Any] | None = None
 
     visibility: EventVisibility = EventVisibility.DEFAULT
@@ -274,8 +284,14 @@ class CalendarListEntry(BaseModel):
     hidden: bool = False
     selected: bool = True
     access_role: str = Field("reader", alias="accessRole")
+
+    @staticmethod
+    def _empty_event_reminders() -> list["EventReminder"]:
+        """Return an empty list of event reminders."""
+        return []
+
     default_reminders: list[EventReminder] = Field(
-        default_factory=list, alias="defaultReminders"
+        default_factory=_empty_event_reminders, alias="defaultReminders"
     )
     notification_settings: dict[str, Any] | None = Field(
         None, alias="notificationSettings"
@@ -296,7 +312,13 @@ class CalendarList(BaseModel):
     etag: str | None = None
     next_page_token: str | None = Field(None, alias="nextPageToken")
     next_sync_token: str | None = Field(None, alias="nextSyncToken")
-    items: list[CalendarListEntry] = Field(default_factory=list)
+
+    @staticmethod
+    def _empty_calendar_list_entries() -> list["CalendarListEntry"]:
+        """Return an empty list of calendar list entries."""
+        return []
+
+    items: list[CalendarListEntry] = Field(default_factory=_empty_calendar_list_entries)
 
 
 class FreeBusyCalendarItem(BaseModel):
@@ -373,12 +395,24 @@ class EventsListResponse(BaseModel):
     updated: datetime | None = None
     time_zone: str | None = Field(None, alias="timeZone")
     access_role: str | None = Field(None, alias="accessRole")
+
+    @staticmethod
+    def _empty_event_reminders() -> list["EventReminder"]:  # type: ignore[no-redef]
+        """Return an empty list of event reminders."""
+        return []
+
     default_reminders: list[EventReminder] = Field(
-        default_factory=list, alias="defaultReminders"
+        default_factory=_empty_event_reminders, alias="defaultReminders"
     )
     next_page_token: str | None = Field(None, alias="nextPageToken")
     next_sync_token: str | None = Field(None, alias="nextSyncToken")
-    items: list[CalendarEvent] = Field(default_factory=list)
+
+    @staticmethod
+    def _empty_calendar_events() -> list["CalendarEvent"]:
+        """Return an empty list of calendar events."""
+        return []
+
+    items: list[CalendarEvent] = Field(default_factory=_empty_calendar_events)
 
 
 class TravelEventRequest(BaseModel):
@@ -425,11 +459,11 @@ class TravelEventRequest(BaseModel):
             "description": self.description or "",
             "location": self.location,
             "start": {
-                "dateTime": self.start.isoformat(),
+                "dateTime": self.start.isoformat(),  # pylint: disable=no-member
                 "timeZone": "UTC",
             },
             "end": {
-                "dateTime": self.end.isoformat(),
+                "dateTime": self.end.isoformat(),  # pylint: disable=no-member
                 "timeZone": "UTC",
             },
             "timeZone": "UTC",

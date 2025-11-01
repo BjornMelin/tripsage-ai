@@ -5,8 +5,9 @@ It uses UUID as the primary key and includes the full feature set including visi
 tags, preferences, and detailed budget breakdown.
 """
 
+# pylint: disable=no-member
 from datetime import UTC, date, datetime
-from typing import Any, cast
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import Field, field_validator, model_validator
@@ -113,7 +114,18 @@ class Trip(TripSageModel):
     )
 
     # Additional metadata
-    notes: list[dict[str, Any]] = Field(default_factory=list, description="Trip notes")
+    @staticmethod
+    def _empty_notes() -> list[dict[str, Any]]:
+        """Typed empty list factory for notes.
+
+        Returns:
+            Empty list for notes with precise element type.
+        """
+        return []
+
+    notes: list[dict[str, Any]] = Field(
+        default_factory=_empty_notes, description="Trip notes"
+    )
     search_metadata: dict[str, Any] = Field(
         default_factory=dict, description="Search and discovery metadata"
     )
@@ -149,19 +161,19 @@ class Trip(TripSageModel):
     @property
     def budget_per_day(self) -> float:
         """Get the budget per day for the trip."""
-        budget = cast(Budget, self.budget_breakdown)
+        budget: Budget = self.budget_breakdown
         return budget.total / self.duration_days if self.duration_days > 0 else 0
 
     @property
     def budget_per_person(self) -> float:
         """Get the budget per person for the trip."""
-        budget = cast(Budget, self.budget_breakdown)
+        budget: Budget = self.budget_breakdown
         return budget.total / self.travelers if self.travelers > 0 else 0
 
     @property
     def budget_utilization(self) -> float:
         """Get budget utilization percentage."""
-        budget = cast(Budget, self.budget_breakdown)
+        budget: Budget = self.budget_breakdown
         if budget.total <= 0:
             return 0.0
         return min((budget.spent / budget.total) * 100, 100.0)
@@ -169,7 +181,7 @@ class Trip(TripSageModel):
     @property
     def remaining_budget(self) -> float:
         """Get remaining budget amount."""
-        budget = cast(Budget, self.budget_breakdown)
+        budget: Budget = self.budget_breakdown
         return max(budget.total - budget.spent, 0.0)
 
     @property

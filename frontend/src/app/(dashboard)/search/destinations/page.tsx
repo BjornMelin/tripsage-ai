@@ -1,8 +1,9 @@
 "use client";
 
-// Force dynamic rendering to avoid SSG issues with authentication
-export const dynamic = "force-dynamic";
+// Client-side search screen; no cache directive
 
+import { AlertCircle, MapPin, Search, Star } from "lucide-react";
+import { useState } from "react";
 import { DestinationCard } from "@/components/features/search/destination-card";
 import { DestinationSearchForm } from "@/components/features/search/destination-search-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,8 +20,6 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useDestinationSearch } from "@/hooks/use-destination-search";
 import { useSearchStore } from "@/stores/search-store";
 import type { Destination, DestinationSearchParams } from "@/types/search";
-import { AlertCircle, MapPin, Search, Star } from "lucide-react";
-import { useState } from "react";
 
 export default function DestinationsSearchPage() {
   const { hasResults, isSearching: storeIsSearching } = useSearchStore();

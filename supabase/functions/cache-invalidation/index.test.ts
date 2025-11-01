@@ -5,7 +5,7 @@
  * - HTTP request/response handling
  * - CORS preflight requests
  * - Authentication and authorization
- * - Redis/DragonflyDB cache operations
+ * - Redis (Upstash) cache operations
  * - Search cache table operations
  * - Webhook event handling
  * - Manual cache invalidation

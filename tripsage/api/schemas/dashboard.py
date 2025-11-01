@@ -8,7 +8,27 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, model_validator
+
+
+def _empty_components() -> list["ComponentHealth"]:  # type: ignore[name-defined]
+    """Return an empty list of component health."""
+    return []
+
+
+def _empty_dict_list() -> list[dict[str, Any]]:
+    """Return an empty list of dictionaries."""
+    return []
+
+
+def _empty_str_list() -> list[str]:
+    """Return an empty list of strings."""
+    return []
+
+
+def _empty_strdict_list() -> list[dict[str, str]]:
+    """Return an empty list of dictionaries with strings as keys and values."""
+    return []
 
 
 class TimeRange(str, Enum):
@@ -82,13 +102,15 @@ class DashboardQueryParams(BaseModel):
     time_range_hours: int | None = Field(default=None, ge=1, le=168)
     service: str | None = Field(default=None, max_length=50)
 
-    @validator("time_range_hours")
-    def validate_time_range_hours(cls, v, values):
-        """Validate time_range_hours based on time_range."""
-        if v is not None:
-            return v
+    @model_validator(mode="after")
+    def _set_time_range_hours_default(self) -> "DashboardQueryParams":
+        """Populate ``time_range_hours`` when not provided using ``time_range``.
 
-        time_range = values.get("time_range", TimeRange.LAST_24_HOURS)
+        Pydantic v2 model-level validator used for cross-field defaulting.
+        """
+        if self.time_range_hours is not None:
+            return self
+
         time_range_mapping = {
             TimeRange.LAST_HOUR: 1,
             TimeRange.LAST_6_HOURS: 6,
@@ -96,7 +118,10 @@ class DashboardQueryParams(BaseModel):
             TimeRange.LAST_7_DAYS: 168,
             TimeRange.LAST_30_DAYS: 720,
         }
-        return time_range_mapping.get(time_range, 24)
+        self.time_range_hours = time_range_mapping.get(
+            self.time_range or TimeRange.LAST_24_HOURS, 24
+        )
+        return self
 
 
 class MetricsQueryParams(DashboardQueryParams):
@@ -104,7 +129,7 @@ class MetricsQueryParams(DashboardQueryParams):
 
     metric_type: MetricType | None = Field(default=None)
     interval_minutes: int | None = Field(default=60, ge=5, le=1440)
-    aggregation: str | None = Field(default="avg", regex="^(avg|sum|min|max|count)$")
+    aggregation: str | None = Field(default="avg", pattern="^(avg|sum|min|max|count)$")
 
 
 class AlertsQueryParams(BaseModel):
@@ -121,12 +146,12 @@ class AlertsQueryParams(BaseModel):
 class UserActivityQueryParams(DashboardQueryParams):
     """Query parameters for user activity endpoints."""
 
-    user_type: str | None = Field(default=None, regex="^(user|agent|admin)$")
+    user_type: str | None = Field(default=None, pattern="^(user|agent|admin)$")
     limit: int | None = Field(default=20, ge=1, le=100)
     sort_by: str | None = Field(
-        default="request_count", regex="^(request_count|error_count|last_activity)$"
+        default="request_count", pattern="^(request_count|error_count|last_activity)$"
     )
-    sort_order: str | None = Field(default="desc", regex="^(asc|desc)$")
+    sort_order: str | None = Field(default="desc", pattern="^(asc|desc)$")
 
 
 class RateLimitQueryParams(BaseModel):
@@ -179,7 +204,7 @@ class SystemOverviewResponse(BaseModel):
 
     # Component health
     components: list[ComponentHealth] = Field(
-        default_factory=list, description="Component health status"
+        default_factory=_empty_components, description="Component health status"
     )
 
 
@@ -223,7 +248,7 @@ class UsageMetricsResponse(BaseModel):
         ..., description="Number of unique endpoints accessed"
     )
     top_endpoints: list[dict[str, Any]] = Field(
-        default_factory=list, description="Top accessed endpoints"
+        default_factory=_empty_dict_list, description="Top accessed endpoints"
     )
     error_breakdown: dict[str, int] = Field(
         default_factory=dict, description="Error count by type"
@@ -248,13 +273,18 @@ class RateLimitInfoResponse(BaseModel):
     percentage_used: float = Field(
         ..., ge=0.0, le=100.0, description="Percentage of quota used"
     )
-    is_approaching_limit: bool = Field(..., description="Whether approaching the limit")
+    is_approaching_limit: bool = Field(
+        default=False, description="Whether approaching the limit"
+    )
 
-    @validator("is_approaching_limit", always=True)
-    def calculate_approaching_limit(cls, v, values):
-        """Calculate if approaching limit based on percentage used."""
-        percentage = values.get("percentage_used", 0.0)
-        return percentage >= 80.0
+    @model_validator(mode="after")
+    def _compute_is_approaching_limit(self) -> "RateLimitInfoResponse":
+        """Derive ``is_approaching_limit`` from ``percentage_used``.
+
+        Uses a fixed 80% threshold.
+        """
+        self.is_approaching_limit = self.percentage_used >= 80.0
+        return self
 
 
 class AlertInfoResponse(BaseModel):
@@ -309,10 +339,10 @@ class UserActivityResponse(BaseModel):
 
     # Usage patterns
     services_used: list[str] = Field(
-        default_factory=list, description="Services accessed"
+        default_factory=_empty_str_list, description="Services accessed"
     )
     top_endpoints: list[dict[str, Any]] = Field(
-        default_factory=list, description="Most used endpoints"
+        default_factory=_empty_dict_list, description="Most used endpoints"
     )
     avg_latency_ms: float = Field(default=0.0, description="Average response latency")
 
@@ -349,32 +379,35 @@ class TrendDataResponse(BaseModel):
     max_value: float = Field(..., description="Maximum value in period")
     avg_value: float = Field(..., description="Average value in period")
     trend_direction: str = Field(
-        ..., description="Overall trend direction (up, down, stable)"
+        default="stable", description="Overall trend direction (up, down, stable)"
     )
 
-    @validator("trend_direction", always=True)
-    def calculate_trend_direction(cls, v, values):
-        """Calculate trend direction from data points."""
-        data_points = values.get("data_points", [])
-        if len(data_points) < 2:
-            return "stable"
+    @model_validator(mode="after")
+    def _compute_trend_direction(self) -> "TrendDataResponse":
+        """Calculate trend direction from data points using a simple heuristic."""
+        if len(self.data_points) < 2:
+            self.trend_direction = "stable"
+            return self
 
-        first_half = data_points[: len(data_points) // 2]
-        second_half = data_points[len(data_points) // 2 :]
+        first_half = self.data_points[: len(self.data_points) // 2]
+        second_half = self.data_points[len(self.data_points) // 2 :]
 
         if not first_half or not second_half:
-            return "stable"
+            self.trend_direction = "stable"
+            return self
 
         first_avg = sum(p.value for p in first_half) / len(first_half)
         second_avg = sum(p.value for p in second_half) / len(second_half)
 
         difference_threshold = 0.05  # 5% change
         if second_avg > first_avg * (1 + difference_threshold):
-            return "up"
+            self.trend_direction = "up"
         elif second_avg < first_avg * (1 - difference_threshold):
-            return "down"
+            self.trend_direction = "down"
         else:
-            return "stable"
+            self.trend_direction = "stable"
+
+        return self
 
 
 class AnalyticsSummaryResponse(BaseModel):
@@ -398,9 +431,11 @@ class AnalyticsSummaryResponse(BaseModel):
     trends: dict[str, Any] = Field(..., description="Trend analysis summary")
 
     # Insights and recommendations
-    insights: list[str] = Field(default_factory=list, description="Key insights")
+    insights: list[str] = Field(
+        default_factory=_empty_str_list, description="Key insights"
+    )
     recommendations: list[str] = Field(
-        default_factory=list, description="Improvement recommendations"
+        default_factory=_empty_str_list, description="Improvement recommendations"
     )
 
 
@@ -431,7 +466,7 @@ class ConfigureAlertRequest(BaseModel):
     threshold: float = Field(..., description="Alert threshold value")
     enabled: bool = Field(default=True, description="Whether alert is enabled")
     notification_channels: list[str] = Field(
-        default_factory=list, description="Notification channels"
+        default_factory=_empty_str_list, description="Notification channels"
     )
 
 
@@ -442,10 +477,10 @@ class BulkAlertActionRequest(BaseModel):
     """Request for bulk alert actions."""
 
     alert_ids: list[str] = Field(
-        ..., min_items=1, max_items=100, description="Alert IDs to process"
+        ..., min_length=1, max_length=100, description="Alert IDs to process"
     )
     action: str = Field(
-        ..., regex="^(acknowledge|dismiss)$", description="Action to perform"
+        ..., pattern="^(acknowledge|dismiss)$", description="Action to perform"
     )
     note: str | None = Field(default=None, max_length=500, description="Action note")
 
@@ -457,7 +492,7 @@ class BulkAlertActionResponse(BaseModel):
     successful: int = Field(..., description="Number of successful operations")
     failed: int = Field(..., description="Number of failed operations")
     errors: list[dict[str, str]] = Field(
-        default_factory=list, description="Error details"
+        default_factory=_empty_strdict_list, description="Error details"
     )
 
 
@@ -469,11 +504,11 @@ class ExportRequest(BaseModel):
 
     data_type: str = Field(
         ...,
-        regex="^(metrics|alerts|usage|trends)$",
+        pattern="^(metrics|alerts|usage|trends)$",
         description="Type of data to export",
     )
     format: str = Field(
-        default="json", regex="^(json|csv|excel)$", description="Export format"
+        default="json", pattern="^(json|csv|excel)$", description="Export format"
     )
     time_range_hours: int = Field(
         default=24, ge=1, le=8760, description="Time range in hours"

@@ -4,15 +4,18 @@ This module provides standardized error handling functionality for the TripSage
 application, building on top of the core exception system.
 """
 
-from collections.abc import Callable
-from typing import Any, TypeVar
+import functools
+import inspect
+import logging
+import types
+from collections.abc import Awaitable as TypingAwaitable, Callable
+from typing import Any, ParamSpec, TypeVar, cast
 
 from tripsage_core.exceptions import (
     CoreDatabaseError,
     CoreExternalAPIError,
     CoreTripSageError,
     CoreValidationError,
-    ErrorDetails,
     safe_execute as core_safe_execute,
     with_error_handling as core_with_error_handling,
 )
@@ -22,6 +25,7 @@ from tripsage_core.utils.logging_utils import get_logger
 logger = get_logger(__name__)
 
 # Type variable for function return type
+P = ParamSpec("P")
 T = TypeVar("T")
 R = TypeVar("R")
 F = TypeVar("F", bound=Callable[..., Any])
@@ -77,7 +81,13 @@ def safe_execute_with_logging[T, R](
     Returns:
         The function result or fallback value
     """
-    return core_safe_execute(func, *args, fallback=fallback, logger=logger, **kwargs)
+    return core_safe_execute(
+        func,
+        *args,
+        fallback=fallback,
+        logger=None,
+        **kwargs,
+    )
 
 
 def with_error_handling_and_logging(
@@ -97,56 +107,12 @@ def with_error_handling_and_logging(
     """
     return core_with_error_handling(
         fallback=fallback,
-        logger=logger_instance or logger,
+        logger=cast(logging.Logger | None, None),
         re_raise=re_raise,
     )
 
 
 # Factory functions for creating specific TripSage exceptions
-def create_mcp_error(
-    message: str,
-    server: str,
-    tool: str | None = None,
-    params: dict[str, Any] | None = None,
-    category: str = "unknown",
-    status_code: int | None = None,
-) -> CoreExternalAPIError:
-    """Create an MCP error with TripSage-specific formatting.
-
-    Args:
-        message: Error message
-        server: Name of the MCP server that failed
-        tool: Name of the tool that failed, if applicable
-        params: Tool parameters, if applicable
-        category: Error category for better classification
-        status_code: HTTP status code, if applicable
-
-    Returns:
-        CoreMCPError instance
-    """
-    details = ErrorDetails(
-        service=server,
-        operation=None,
-        resource_id=None,
-        user_id=None,
-        request_id=None,
-        additional_context={
-            "tool": tool,
-            "params": params,
-            "category": category,
-            "status_code": status_code,
-        },
-    )
-
-    # Map legacy MCP error into external API error semantics
-    return CoreExternalAPIError(
-        message=message,
-        code=f"{server.upper()}_MCP_ERROR",
-        api_service=server,
-        api_status_code=status_code,
-        api_response={"tool": tool, "params": params},
-        details=details,
-    )
 
 
 def create_api_error(
@@ -230,28 +196,28 @@ def create_database_error(
 class TripSageErrorContext:
     """Context manager for enhanced error handling in TripSage operations."""
 
-    def __init__(
-        self,
-        operation: str,
-        service: str | None = None,
-        user_id: str | None = None,
-        request_id: str | None = None,
-        logger_instance: Any | None = None,
-    ):
+    class Config:
+        """Configuration for error context."""
+
+        def __init__(self, **kwargs: Any) -> None:
+            """Initialize configuration from keyword arguments."""
+            self.operation = kwargs.get("operation", "")
+            self.service = kwargs.get("service")
+            self.user_id = kwargs.get("user_id")
+            self.request_id = kwargs.get("request_id")
+            self.logger_instance = kwargs.get("logger_instance")
+
+    def __init__(self, config: Config):
         """Initialize the error context.
 
         Args:
-            operation: Name of the operation being performed
-            service: Name of the service performing the operation
-            user_id: User ID associated with the operation
-            request_id: Request ID for tracing
-            logger_instance: Optional logger instance
+            config: Configuration object containing all parameters
         """
-        self.operation = operation
-        self.service = service
-        self.user_id = user_id
-        self.request_id = request_id
-        self.logger = logger_instance or logger
+        self.operation = config.operation
+        self.service = config.service
+        self.user_id = config.user_id
+        self.request_id = config.request_id
+        self.logger = config.logger_instance or logger
 
     def __enter__(self):
         """Enter the error context."""
@@ -266,9 +232,14 @@ class TripSageErrorContext:
         )
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ) -> bool:
         """Exit the error context and handle any exceptions."""
-        if exc_type is not None:
+        if exc_type is not None and exc_val is not None:
             # Enhance the exception with context information
             if isinstance(exc_val, CoreTripSageError):
                 exc_val.details.operation = self.operation
@@ -281,7 +252,8 @@ class TripSageErrorContext:
 
             # Log the exception with context
             logger_name = getattr(self.logger, "name", None)
-            log_exception(exc_val, logger_name)
+            if isinstance(exc_val, Exception):
+                log_exception(cast(Exception, exc_val), logger_name)
 
         else:
             self.logger.debug(
@@ -298,13 +270,88 @@ class TripSageErrorContext:
         return False
 
 
+def tripsage_safe_execute(
+    exception_class: type[CoreTripSageError] = CoreTripSageError,
+    fallback: Any | None = None,
+    logger_instance: Any | None = None,
+    re_raise: bool = False,
+) -> Callable[[F], F]:
+    """Decorator to add TripSage error handling with CoreTripSageError raising.
+
+    This decorator consolidates the common pattern of try/except blocks with logging
+    and CoreTripSageError raising found throughout the codebase.
+
+    Args:
+        exception_class: The CoreTripSageError subclass to raise on failure
+        fallback: Value to return if execution fails (only if re_raise=False)
+        logger_instance: Optional logger for error reporting
+                         (defaults to TripSage logger)
+        re_raise: Whether to re-raise the original exception after logging
+
+    Returns:
+        Decorator function
+    """
+
+    def decorator(func: F) -> F:
+        log = logger_instance or logger
+
+        if inspect.iscoroutinefunction(func):
+            async_func = cast(Callable[..., TypingAwaitable[Any]], func)
+
+            @functools.wraps(async_func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                try:
+                    return await async_func(*args, **kwargs)
+                except Exception as e:
+                    log_exception(e, getattr(log, "name", None))
+                    if re_raise:
+                        raise
+                    if fallback is not None:
+                        return fallback
+                    # Raise CoreTripSageError with context
+                    raise exception_class(
+                        message=f"Error in {async_func.__name__}: {e!s}",
+                        details={
+                            "operation": async_func.__name__,
+                            "original_exception": e.__class__.__name__,
+                        },
+                    ) from e
+
+            return cast(F, async_wrapper)
+
+        sync_func = cast(Callable[..., Any], func)
+
+        @functools.wraps(sync_func)
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            try:
+                return sync_func(*args, **kwargs)
+            except Exception as e:
+                log_exception(e, getattr(log, "name", None))
+                if re_raise:
+                    raise
+                if fallback is not None:
+                    return fallback
+                # Raise CoreTripSageError with context
+                raise exception_class(
+                    message=f"Error in {sync_func.__name__}: {e!s}",
+                    details={
+                        "operation": sync_func.__name__,
+                        "original_exception": e.__class__.__name__,
+                    },
+                ) from e
+
+        return cast(F, sync_wrapper)
+
+    return decorator
+
+
 __all__ = [
     "TripSageErrorContext",
     "create_api_error",
     "create_database_error",
-    "create_mcp_error",
     "create_validation_error",
     "log_exception",
     "safe_execute_with_logging",
+    "tripsage_safe_execute",
     "with_error_handling_and_logging",
 ]

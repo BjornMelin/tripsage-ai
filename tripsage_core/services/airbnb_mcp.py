@@ -4,6 +4,7 @@ This module provides the Airbnb MCP facade for orchestration nodes and HTTP surf
 """
 
 import logging
+from collections.abc import Awaitable, Callable
 from typing import Any, Final
 
 from tripsage.tools.models.accommodations import AirbnbSearchParams
@@ -15,6 +16,23 @@ from tripsage_core.exceptions import CoreServiceError
 logger = logging.getLogger(__name__)
 
 SUPPORTED_METHODS: Final[tuple[str, ...]] = ("search_listings", "get_listing_details")
+
+
+def _coerce_int_param(value: Any, default: int) -> int:
+    """Convert incoming parameter to integer with a safe default."""
+    if value is None or isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            parsed = int(value)
+        except ValueError:
+            parsed = default
+        return parsed
+    return default
 
 
 class AirbnbMCP:
@@ -45,40 +63,11 @@ class AirbnbMCP:
     ) -> Any:
         """Invoke a supported MCP method."""
         params = params or {}
-        if method_name not in SUPPORTED_METHODS:
-            raise CoreServiceError(
-                message=f"Unsupported MCP method '{method_name}'",
-                service="mcp",
-                details={"supported_methods": list(SUPPORTED_METHODS)},
-            )
-
+        handler = self._get_method_handler(method_name)
         client = await self._ensure_airbnb_client()
 
         try:
-            if method_name == "search_listings":
-                search_payload = self._convert_to_airbnb_params(params)
-                return await client.search_accommodations(**search_payload)
-
-            if method_name == "get_listing_details":
-                listing_id = params.get("listing_id") or params.get("id")
-                if not listing_id:
-                    raise CoreServiceError(
-                        message="listing_id is required for get_listing_details",
-                        service="mcp",
-                        details={"params": params},
-                    )
-
-                lookup_kwargs = {
-                    "listing_id": listing_id,
-                    "checkin": params.get("checkin") or params.get("check_in"),
-                    "checkout": params.get("checkout") or params.get("check_out"),
-                    "adults": params.get("adults", 1),
-                    "children": params.get("children", 0),
-                    "infants": params.get("infants", 0),
-                    "pets": params.get("pets", 0),
-                }
-                return await client.get_listing_details(**lookup_kwargs)
-
+            return await handler(client, params)
         except CoreServiceError:
             raise
         except Exception as exc:  # pragma: no cover - defensive
@@ -88,11 +77,6 @@ class AirbnbMCP:
                 service="mcp",
                 details={"original_error": str(exc)},
             ) from exc
-
-        raise CoreServiceError(
-            message=f"Unhandled MCP method '{method_name}'",
-            service="mcp",
-        )
 
     async def health_check(self) -> dict[str, Any]:
         """Run a lightweight health check against enabled MCP integrations."""
@@ -193,6 +177,61 @@ class AirbnbMCP:
 
         search_params = AirbnbSearchParams(**candidate)
         return search_params.model_dump(exclude_none=True)
+
+    def _get_method_handler(
+        self, method_name: str
+    ) -> Callable[[AirbnbMCPClient, dict[str, Any]], Awaitable[Any]]:
+        """Resolve the async handler for a supported method or raise."""
+        handlers: dict[
+            str, Callable[[AirbnbMCPClient, dict[str, Any]], Awaitable[Any]]
+        ] = {
+            "search_listings": self._execute_search_listings,
+            "get_listing_details": self._execute_get_listing_details,
+        }
+
+        try:
+            return handlers[method_name]
+        except KeyError as exc:
+            raise CoreServiceError(
+                message=f"Unsupported MCP method '{method_name}'",
+                service="mcp",
+                details={"supported_methods": list(SUPPORTED_METHODS)},
+            ) from exc
+
+    async def _execute_search_listings(
+        self, client: AirbnbMCPClient, params: dict[str, Any]
+    ) -> Any:
+        """Execute the search listings handler."""
+        search_payload = self._convert_to_airbnb_params(params)
+        return await client.search_accommodations(**search_payload)
+
+    async def _execute_get_listing_details(
+        self, client: AirbnbMCPClient, params: dict[str, Any]
+    ) -> Any:
+        """Execute the get listing details handler with validation."""
+        raw_listing_id = params.get("listing_id") or params.get("id")
+        if raw_listing_id is None:
+            raise CoreServiceError(
+                message="listing_id is required for get_listing_details",
+                service="mcp",
+                details={"params": params},
+            )
+
+        listing_id = str(raw_listing_id)
+        checkin_raw = params.get("checkin") or params.get("check_in")
+        checkout_raw = params.get("checkout") or params.get("check_out")
+        checkin = str(checkin_raw) if checkin_raw is not None else None
+        checkout = str(checkout_raw) if checkout_raw is not None else None
+
+        return await client.get_listing_details(
+            listing_id=listing_id,
+            checkin=checkin,
+            checkout=checkout,
+            adults=_coerce_int_param(params.get("adults"), 1),
+            children=_coerce_int_param(params.get("children"), 0),
+            infants=_coerce_int_param(params.get("infants"), 0),
+            pets=_coerce_int_param(params.get("pets"), 0),
+        )
 
 
 # Default service instance for DI wiring.

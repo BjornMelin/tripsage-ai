@@ -1,8 +1,8 @@
 "use client";
 
+import { memo } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { memo } from "react";
 
 export interface TypingIndicatorProps {
   users: string[];

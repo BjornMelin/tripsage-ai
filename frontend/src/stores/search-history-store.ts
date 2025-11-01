@@ -1,7 +1,7 @@
-import type { SearchParams, SearchType } from "@/types/search";
 import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import type { SearchParams, SearchType } from "@/types/search";
 
 // Validation schemas for search history
 const SearchTypeSchema = z.enum(["flight", "accommodation", "activity", "destination"]);
@@ -9,7 +9,7 @@ const SearchTypeSchema = z.enum(["flight", "accommodation", "activity", "destina
 const SearchHistoryItemSchema = z.object({
   id: z.string(),
   searchType: SearchTypeSchema,
-  params: z.record(z.unknown()),
+  params: z.record(z.string(), z.unknown()),
   timestamp: z.string(),
   resultsCount: z.number().min(0).optional(),
   searchDuration: z.number().min(0).optional(),
@@ -33,7 +33,7 @@ const SavedSearchSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   searchType: SearchTypeSchema,
-  params: z.record(z.unknown()),
+  params: z.record(z.string(), z.unknown()),
   tags: z.array(z.string()).default([]),
   isPublic: z.boolean().default(false),
   isFavorite: z.boolean().default(false),
@@ -66,7 +66,7 @@ const QuickSearchSchema = z.object({
   id: z.string(),
   label: z.string().min(1).max(50),
   searchType: SearchTypeSchema,
-  params: z.record(z.unknown()),
+  params: z.record(z.string(), z.unknown()),
   icon: z.string().optional(),
   color: z.string().optional(),
   sortOrder: z.number().default(0),

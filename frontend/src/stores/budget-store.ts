@@ -1,15 +1,15 @@
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type {
   Budget,
   BudgetAlert,
   BudgetCategory,
   BudgetSummary,
-  CurrencyCode,
   CurrencyRate,
   Expense,
   ExpenseCategory,
-} from "@/types/budget";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+} from "@/lib/schemas/budget";
+import type { CurrencyCode } from "@/types/currency";
 
 // Helper functions
 const generateId = () =>
@@ -112,7 +112,7 @@ const calculateBudgetSummary = (budget: Budget, expenses: Expense[]): BudgetSumm
     );
     const elapsedDays = Math.max(
       1,
-      Math.ceil((new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+      Math.ceil((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24))
     );
 
     dailyAverage = elapsedDays > 0 ? totalSpent / elapsedDays : 0;

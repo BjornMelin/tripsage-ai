@@ -1,31 +1,80 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+/**
+ * @fileoverview Chat-centric Supabase Realtime hook with Google-style documentation.
+ */
 
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getBrowserClient } from "@/lib/supabase/client";
+import { useAuthStore } from "@/stores";
+
+type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
+
+type ChannelSendRequest = Parameters<RealtimeChannel["send"]>[0];
+
+type ChatMessageBroadcastPayload = {
+  id?: string;
+  content: string;
+  timestamp?: string;
+  sender?: { id: string; name: string; avatar?: string };
+};
+
+type ChatTypingBroadcastPayload = {
+  userId: string;
+  isTyping: boolean;
+};
+
+/**
+ * Represents a chat message exchanged through the realtime channel.
+ *
+ * @interface ChatMessage
+ * @property {string} id Stable message identifier.
+ * @property {string} content Message body (Markdown/plain text).
+ * @property {Date} timestamp Client-side timestamp when the message was processed.
+ * @property {{id: string, name: string, avatar?: string}} sender Basic sender information.
+ * @property {"sending" | "sent" | "failed"=} status Delivery state used for optimistic updates.
+ * @property {"text" | "system" | "typing"=} type Optional message category, defaults to `text`.
+ */
 export interface ChatMessage {
   id: string;
   content: string;
   timestamp: Date;
-  sender: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
+  sender: { id: string; name: string; avatar?: string };
   status?: "sending" | "sent" | "failed";
   type?: "text" | "system" | "typing";
 }
 
+/**
+ * Configuration flags for the websocket chat hook.
+ *
+ * @interface WebSocketChatOptions
+ * @property {boolean=} autoConnect Whether the hook should auto-connect on mount (default `true`).
+ * @property {"user" | "session"=} topicType Determines topic prefix: `user:{id}` or `session:{id}`.
+ * @property {string=} sessionId Session identifier when `topicType` equals `"session"`.
+ */
 export interface WebSocketChatOptions {
-  url: string;
   autoConnect?: boolean;
-  retryOnError?: boolean;
-  maxRetries?: number;
-  pingInterval?: number;
+  topicType?: "user" | "session";
+  sessionId?: string;
 }
 
+/**
+ * Shape of the realtime chat hook return value.
+ *
+ * @interface UseWebSocketChatReturn
+ * @property {ChatMessage[]} messages Ordered list of chat messages.
+ * @property {ConnectionStatus} connectionStatus Derived realtime connection state.
+ * @property {(content: string) => Promise<void>} sendMessage Broadcasts a chat message.
+ * @property {boolean} isConnected Convenience boolean for `connectionStatus === "connected"`.
+ * @property {() => void} reconnect Forces a disconnect/reconnect cycle.
+ * @property {string[]} typingUsers Identifiers for users currently typing.
+ * @property {() => void} startTyping Notifies the channel that the current user is typing.
+ * @property {() => void} stopTyping Signals that the current user stopped typing.
+ */
 export interface UseWebSocketChatReturn {
   messages: ChatMessage[];
-  connectionStatus: "connecting" | "connected" | "disconnected" | "error";
+  connectionStatus: ConnectionStatus;
   sendMessage: (content: string) => Promise<void>;
   isConnected: boolean;
   reconnect: () => void;
@@ -34,235 +83,174 @@ export interface UseWebSocketChatReturn {
   stopTyping: () => void;
 }
 
+/**
+ * Provides realtime chat capabilities backed by Supabase broadcast channels.
+ *
+ * @param {WebSocketChatOptions} options Hook configuration overrides.
+ * @returns {UseWebSocketChatReturn} Realtime connection state and chat helpers.
+ */
 export function useWebSocketChat({
-  url,
   autoConnect = true,
-  retryOnError = true,
-  maxRetries = 5,
-  pingInterval = 30000,
-}: WebSocketChatOptions): UseWebSocketChatReturn {
+  topicType = "user",
+  sessionId,
+}: WebSocketChatOptions = {}): UseWebSocketChatReturn {
+  const supabase = useMemo(() => getBrowserClient(), []);
+  const { user } = useAuthStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [connectionStatus, setConnectionStatus] = useState<
-    "connecting" | "connected" | "disconnected" | "error"
-  >("disconnected");
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [retryCount, setRetryCount] = useState(0);
+  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
+  const [reconnectVersion, setReconnectVersion] = useState(0);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+  useEffect(() => {
+    if (!autoConnect) {
+      return;
+    }
+    const userId = user?.id;
+    const topic =
+      topicType === "session"
+        ? sessionId
+          ? `session:${sessionId}`
+          : null
+        : userId
+          ? `user:${userId}`
+          : null;
+    if (!topic) {
       return;
     }
 
-    setConnectionStatus("connecting");
+    setStatus("connecting");
+    const channel = supabase.channel(topic, { config: { private: true } });
+    channelRef.current = channel;
 
-    try {
-      const ws = new WebSocket(url);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        console.log("WebSocket connected");
-        setConnectionStatus("connected");
-        setRetryCount(0);
-
-        // Start ping interval to keep connection alive
-        if (pingIntervalRef.current) {
-          clearInterval(pingIntervalRef.current);
+    channel
+      .on("broadcast", { event: "chat:message" }, (payload) => {
+        const data = payload.payload as ChatMessageBroadcastPayload | undefined;
+        if (!data?.content) {
+          return;
         }
-        pingIntervalRef.current = setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: "ping" }));
-          }
-        }, pingInterval);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          switch (data.type) {
-            case "message":
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: data.id || crypto.randomUUID(),
-                  content: data.content,
-                  timestamp: new Date(data.timestamp),
-                  sender: data.sender,
-                  status: "sent",
-                },
-              ]);
-              break;
-
-            case "typing":
-              setTypingUsers((prev) => {
-                const users = prev.filter((user) => user !== data.user);
-                if (data.isTyping) {
-                  return [...users, data.user];
-                }
-                return users;
-              });
-              break;
-
-            case "pong":
-              // Acknowledge ping response
-              break;
-
-            default:
-              console.warn("Unknown message type:", data.type);
-          }
-        } catch (error) {
-          console.error("Failed to parse WebSocket message:", error);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: data.id ?? crypto.randomUUID(),
+            content: data.content,
+            timestamp: new Date(data.timestamp ?? Date.now()),
+            sender: data.sender ?? { id: user?.id ?? "unknown", name: "You" },
+            status: "sent",
+          },
+        ]);
+      })
+      .on("broadcast", { event: "chat:typing" }, (payload) => {
+        const data = payload.payload as ChatTypingBroadcastPayload | undefined;
+        if (!data?.userId) {
+          return;
         }
-      };
+        setTypingUsers((prev) => {
+          const filtered = prev.filter((usr) => usr !== data.userId);
+          return data.isTyping ? [...filtered, data.userId] : filtered;
+        });
+      });
 
-      ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        setConnectionStatus("error");
-      };
-
-      ws.onclose = (event) => {
-        console.log("WebSocket closed:", event.code, event.reason);
-        setConnectionStatus("disconnected");
-
-        if (pingIntervalRef.current) {
-          clearInterval(pingIntervalRef.current);
-          pingIntervalRef.current = null;
+    channel.subscribe((state, err) => {
+      if (state === "SUBSCRIBED") {
+        setStatus("connected");
+        reconnectAttemptsRef.current = 0;
+      }
+      if (
+        state === "TIMED_OUT" ||
+        state === "CHANNEL_ERROR" ||
+        state === "CLOSED" ||
+        err
+      ) {
+        setStatus("error");
+        // clear current channel
+        if (channelRef.current === channel) {
+          channelRef.current = null;
         }
-
-        // Attempt to reconnect with exponential backoff
-        if (retryOnError && retryCount < maxRetries && !event.wasClean) {
-          const delay = Math.min(1000 * 2 ** retryCount, 30000);
-          console.log(`Reconnecting in ${delay}ms... (attempt ${retryCount + 1})`);
-
-          reconnectTimeoutRef.current = setTimeout(() => {
-            setRetryCount((prev) => prev + 1);
-            connect();
+        // schedule reconnect with simple exponential backoff
+        if (autoConnect) {
+          const attempt = ++reconnectAttemptsRef.current;
+          const delay = Math.min(30000, 1000 * 2 ** Math.min(5, attempt));
+          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = setTimeout(() => {
+            setReconnectVersion((v) => v + 1);
           }, delay);
         }
-      };
-    } catch (error) {
-      console.error("Failed to create WebSocket connection:", error);
-      setConnectionStatus("error");
-    }
-  }, [url, retryOnError, maxRetries, retryCount, pingInterval]);
+      }
+    });
 
-  const disconnect = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
-    if (pingIntervalRef.current) {
-      clearInterval(pingIntervalRef.current);
-      pingIntervalRef.current = null;
-    }
-
-    if (wsRef.current) {
-      wsRef.current.close(1000, "Client disconnecting");
-      wsRef.current = null;
-    }
-
-    setConnectionStatus("disconnected");
-    setRetryCount(0);
-  }, []);
-
-  const sendMessage = useCallback(async (content: string): Promise<void> => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      throw new Error("WebSocket is not connected");
-    }
-
-    const message = {
-      type: "message",
-      content,
-      timestamp: new Date().toISOString(),
+    return () => {
+      channel.unsubscribe();
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      if (channelRef.current === channel) {
+        channelRef.current = null;
+      }
+      setStatus("disconnected");
     };
+  }, [autoConnect, supabase, user?.id, topicType, sessionId, reconnectVersion]);
 
-    wsRef.current.send(JSON.stringify(message));
-  }, []);
+  const sendMessage = useCallback(
+    async (content: string) => {
+      const channel = channelRef.current;
+      if (!content || !user?.id || !channel) {
+        return;
+      }
+
+      const request: ChannelSendRequest = {
+        type: "broadcast",
+        event: "chat:message",
+        payload: {
+          content,
+          timestamp: new Date().toISOString(),
+          sender: { id: user.id, name: "You" },
+        },
+      };
+      await channel.send(request);
+    },
+    [user?.id]
+  );
 
   const startTyping = useCallback(() => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+    const channel = channelRef.current;
+    if (!user?.id || !channel) {
       return;
     }
-
-    wsRef.current.send(
-      JSON.stringify({
-        type: "typing",
-        isTyping: true,
-      })
-    );
-
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // Auto-stop typing after 3 seconds
-    typingTimeoutRef.current = setTimeout(() => {
-      stopTyping();
-    }, 3000);
-  }, []);
+    const request: ChannelSendRequest = {
+      type: "broadcast",
+      event: "chat:typing",
+      payload: { userId: user.id, isTyping: true },
+    };
+    void channel.send(request);
+  }, [user?.id]);
 
   const stopTyping = useCallback(() => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+    const channel = channelRef.current;
+    if (!user?.id || !channel) {
       return;
     }
-
-    wsRef.current.send(
-      JSON.stringify({
-        type: "typing",
-        isTyping: false,
-      })
-    );
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
-    }
-  }, []);
+    const request: ChannelSendRequest = {
+      type: "broadcast",
+      event: "chat:typing",
+      payload: { userId: user.id, isTyping: false },
+    };
+    void channel.send(request);
+  }, [user?.id]);
 
   const reconnect = useCallback(() => {
-    disconnect();
-    setRetryCount(0);
-    connect();
-  }, [disconnect, connect]);
-
-  // Auto-connect on mount
-  useEffect(() => {
-    if (autoConnect) {
-      connect();
-    }
-
-    return () => {
-      disconnect();
-    };
-  }, [autoConnect, connect, disconnect]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-      }
-    };
+    setStatus("connecting");
+    setReconnectVersion((version) => version + 1);
   }, []);
 
   return {
     messages,
-    connectionStatus,
+    connectionStatus: status,
     sendMessage,
-    isConnected: connectionStatus === "connected",
+    isConnected: status === "connected",
     reconnect,
     typingUsers,
     startTyping,

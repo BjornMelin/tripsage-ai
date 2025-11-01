@@ -13,7 +13,10 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useTripRealtime } from "@/hooks";
 // TODO: Implement useUpdateTrip hook or replace with proper mutation
-import type { Trip, TripUpdate } from "@/lib/supabase/types";
+import type { Trip, UpdateTables } from "@/lib/supabase/database.types";
+
+type TripUpdate = UpdateTables<"trips">;
+
 import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -25,7 +28,7 @@ import {
   MapPin,
   Users,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 interface OptimisticTripUpdatesProps {
   tripId: number;
@@ -55,6 +58,10 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       }
     >
   >({});
+  const tripNameInputId = useId();
+  const destinationInputId = useId();
+  const budgetInputId = useId();
+  const travelersInputId = useId();
 
   // Mock trip data - in real implementation, this would come from useTrip(tripId)
   const [trip, setTrip] = useState<Trip>({
@@ -124,7 +131,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       // Clear the optimistic update after a delay
       setTimeout(() => {
         setOptimisticUpdates((prev) => {
-          const { [field]: removed, ...rest } = prev;
+          const { [field]: _removed, ...rest } = prev;
           return rest;
         });
       }, 2000);
@@ -229,12 +236,12 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="trip-name" className="flex items-center space-x-2">
+              <Label htmlFor={tripNameInputId} className="flex items-center space-x-2">
                 <span>Trip Name</span>
                 {getFieldStatus("name")}
               </Label>
               <Input
-                id="trip-name"
+                id={tripNameInputId}
                 value={formData.name || ""}
                 onChange={(e) => handleInputChange("name", e.target.value)}
                 onBlur={() => handleInputBlur("name")}
@@ -243,12 +250,15 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="destination" className="flex items-center space-x-2">
+              <Label
+                htmlFor={destinationInputId}
+                className="flex items-center space-x-2"
+              >
                 <span>Destination</span>
                 {getFieldStatus("destination")}
               </Label>
               <Input
-                id="destination"
+                id={destinationInputId}
                 value={formData.destination || ""}
                 onChange={(e) => handleInputChange("destination", e.target.value)}
                 onBlur={() => handleInputBlur("destination")}
@@ -257,17 +267,17 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="budget" className="flex items-center space-x-2">
+              <Label htmlFor={budgetInputId} className="flex items-center space-x-2">
                 <DollarSign className="h-4 w-4" />
                 <span>Budget</span>
                 {getFieldStatus("budget")}
               </Label>
               <Input
-                id="budget"
+                id={budgetInputId}
                 type="number"
                 value={formData.budget || 0}
                 onChange={(e) =>
-                  handleInputChange("budget", Number.parseInt(e.target.value))
+                  handleInputChange("budget", Number.parseInt(e.target.value, 10))
                 }
                 onBlur={() => handleInputBlur("budget")}
                 placeholder="Enter budget..."
@@ -275,18 +285,18 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="travelers" className="flex items-center space-x-2">
+              <Label htmlFor={travelersInputId} className="flex items-center space-x-2">
                 <Users className="h-4 w-4" />
                 <span>Travelers</span>
                 {getFieldStatus("travelers")}
               </Label>
               <Input
-                id="travelers"
+                id={travelersInputId}
                 type="number"
                 min="1"
                 value={formData.travelers || 1}
                 onChange={(e) =>
-                  handleInputChange("travelers", Number.parseInt(e.target.value))
+                  handleInputChange("travelers", Number.parseInt(e.target.value, 10))
                 }
                 onBlur={() => handleInputBlur("travelers")}
                 placeholder="Number of travelers..."
