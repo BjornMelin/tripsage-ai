@@ -34,7 +34,7 @@
   - Notes:
 - [ ] Implement redaction util for `api_key` and other sensitive fields
   - Notes:
-- [ ] Add rate limits to `/api/keys*` and `/api/chat*`
+- [x] Add rate limits to `/api/keys*` and `/api/chat*`
   - Notes:
 - [ ] Vitest tests: redaction + rate-limit smoke
   - Notes:
@@ -43,10 +43,10 @@
 
 ### Augmented checklist (AI SDK v6 specifics)
 
-- [ ] Attach usage/tokens via `messageMetadata` on finish; include `model` and provider id
+- [x] Attach usage/tokens via `messageMetadata` on finish; include `model` and provider id
   - Notes: surface in final UI messages; omit raw prompts from logs
 - [ ] Classify errors (provider vs user input vs rate-limit); add counters
-- [ ] Emit `Retry-After` header on 429; never log full request bodies or secrets
+- [x] Emit `Retry-After` header on 429; never log full request bodies or secrets
 - [ ] Degrade gracefully when OTEL exporters unavailable; never block routes
 
 ## Working instructions (mandatory)

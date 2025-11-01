@@ -33,8 +33,8 @@
 - [ ] Implement `app/api/chat/route.ts` (non-stream)
   - Notes:
 - [x] Implement `app/api/chat/stream/route.ts` (SSE with `toUIMessageStreamResponse`)
-  - Notes:
-- [ ] Integrate provider registry + token clamping (BYOK, per-user model)
+  - Notes: SSR auth + RL + messageMetadata implemented; attachments validated
+- [x] Integrate provider registry + token clamping (BYOK, per-user model)
   - Notes:
 - [ ] Accept tools input for function-calling (wire to AI SDK tools registry)
   - Notes:
@@ -45,16 +45,16 @@
 
 ### Augmented checklist (auth, limits, sessions, attachments)
 
-- [ ] Require Supabase SSR auth on chat routes; return 401 when unauthenticated
-  - Notes: create server client via `@supabase/ssr` and gate access; mark dynamic to avoid public caching
-- [ ] Upstash rate limiting on `/api/chat/stream` (e.g., 40 req/min per user+IP)
-  - Notes: include Retry-After header and structured error when limited
-- [ ] Persist sessions/messages to Supabase tables with Next.js Route Handlers:
-  - [ ] `POST /api/chat/sessions`, `GET /api/chat/sessions`, `GET /api/chat/sessions/{id}`
-  - [ ] `GET /api/chat/sessions/{id}/messages`, `POST /api/chat/sessions/{id}/messages`, `DELETE /api/chat/sessions/{id}`
-  - Notes: save streamed assistant messages incrementally or on finish; SSR list with tags
-- [ ] Map attachments in UI parts to model inputs (images → `type: 'image'`)
-  - Notes: validate size/type; reject unsupported media with UI error part
+- [x] Require Supabase SSR auth on chat routes; return 401 when unauthenticated
+  - Notes: `createServerSupabase` + `dynamic = 'force-dynamic'`
+- [x] Upstash rate limiting on `/api/chat/stream` (40 req/min per user+IP)
+  - Notes: adds `Retry-After` header on 429
+- [x] Persist sessions/messages to Supabase tables with Next.js Route Handlers:
+  - [x] `POST /api/chat/sessions`, `GET /api/chat/sessions`, `GET /api/chat/sessions/{id}`
+  - [x] `GET /api/chat/sessions/{id}/messages`, `POST /api/chat/sessions/{id}/messages`, `DELETE /api/chat/sessions/{id}`
+  - Notes: assistant persistence on finish is best‑effort; summary updates after threshold via metadata
+- [x] Map attachments in UI parts to model inputs (images → validated)
+  - Notes: non‑image attachments rejected with `{ error: 'invalid_attachment' }`
 - [ ] Resume support: include resumable ids in UI stream; enable client retry to reattach
 
 ### Observability & diagnostics

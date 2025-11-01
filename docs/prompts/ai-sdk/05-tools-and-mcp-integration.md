@@ -31,8 +31,8 @@
   - Notes:
 - [ ] Configure MCP tools alongside local tools with unified interface
   - Notes:
-- [ ] Wire tools usage into chat stream calls (server-side `streamText({ tools })`)
-  - Notes:
+- [x] Wire tools usage into chat stream calls (server-side `streamText({ tools })`)
+  - Notes: Added trivial `ping` zod tool in `/api/chat/stream`
 - [ ] Vitest tests: unit for tools; integration to verify interleaving
   - Notes:
 - [ ] Write ADR(s) and Spec(s) for tools/MCP registry

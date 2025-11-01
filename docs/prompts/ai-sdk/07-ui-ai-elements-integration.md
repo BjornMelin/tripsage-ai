@@ -87,7 +87,7 @@
 
 ### Augmented UI checklist
 
-- [ ] Expose Stop/Retry controls during streaming
+- [x] Expose Stop/Retry controls during streaming (smoke-level buttons present)
 - [ ] Show token usage and model id on final assistant message (from `messageMetadata`)
-- [ ] Render tool and reasoning blocks with concise styles (already supported)
+- [x] Render tool and reasoning blocks with concise styles (already supported)
 - [ ] Validate attachments UX: add/remove/preview; error banners for oversized files

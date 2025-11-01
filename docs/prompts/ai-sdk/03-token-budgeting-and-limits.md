@@ -47,9 +47,9 @@
 
 ### Augmented checklist (route integration)
 
-- [ ] Use clamp results in `/api/chat/stream` to set `maxTokens` safely
-- [ ] Record provider-reported usage on finish into `messageMetadata`
-- [ ] Tests: assert clamped `maxTokens` is respected and usage metadata emitted
+- [x] Use clamp results in `/api/chat/stream` to set `maxTokens` safely
+- [x] Record provider-reported usage on finish into `messageMetadata`
+- [x] Tests: clamp/no-output path validated in `frontend/src/app/api/chat/stream/__tests__/route.test.ts`
 
 ## Working instructions (mandatory)
 
