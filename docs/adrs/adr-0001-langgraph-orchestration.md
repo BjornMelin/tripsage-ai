@@ -1,10 +1,10 @@
 # ADR-0001: Use LangGraph for Agent Orchestration
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-06-17
-
-## Status
-
-Accepted
+**Category**: backend
+**Domain**: LangGraph
 
 ## Context
 
@@ -38,6 +38,10 @@ LangGraph provides:
 - **Structured Workflows**: Graph-based approach makes complex flows easier to understand and maintain
 - **State Management**: Built-in checkpointing enables resumable workflows and error recovery
 - **Debugging**: Native visualization tools help with development and troubleshooting
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.
 - **Ecosystem**: Tight integration with LangChain provides access to numerous tools and integrations
 - **Flexibility**: Supports both simple linear flows and complex multi-agent orchestrations
 

@@ -54,7 +54,7 @@ class ResultNormalizer:
         html_content = raw_output.get("html")
 
         # Extract structured data
-        structured_data = {}
+        structured_data: dict[str, Any] = {}
         if "metadata" in raw_output:
             metadata = raw_output["metadata"]
             # Extract OpenGraph data
@@ -124,7 +124,7 @@ class ResultNormalizer:
         text_content = result_data.get("cleaned_text") or result_data.get("text")
 
         # Extract structured data
-        structured_data = {}
+        structured_data: dict[str, Any] = {}
         if "extracted_content" in result_data:
             structured_data["extracted_content"] = result_data["extracted_content"]
         if "metadata" in result_data:
@@ -169,7 +169,7 @@ class ResultNormalizer:
         Returns:
             List of UnifiedCrawlResult instances
         """
-        normalized_results = []
+        normalized_results: list[UnifiedCrawlResult] = []
 
         for idx, result in enumerate(raw_results):
             # Create a basic unified result for each search result

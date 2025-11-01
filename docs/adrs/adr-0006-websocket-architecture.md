@@ -1,12 +1,14 @@
-# ADR-0006: Real-time Communication via WebSockets
+# ADR-0006 (Superseded): Real-time Communication via WebSockets
 
+**Version**: 1.0.0
+**Status**: Superseded (2025-10-27)
 **Date**: 2025-06-17
+**Category**: backend
+**Domain**: WebSocket
 
-## Status
+> This ADR is superseded by our Supabase Realtime Authorization design (private channels + RLS on `realtime.messages`). All custom WebSocket infrastructure has been removed. Clients authenticate via `supabase.realtime.setAuth(access_token)` and join topics such as `user:{sub}` and `session:{uuid}` using `supabase.channel(topic, { config: { private: true } })`.
 
-Accepted
-
-## Context
+## Context (Historical)
 
 TripSage requires real-time bidirectional communication for:
 
@@ -18,14 +20,9 @@ TripSage requires real-time bidirectional communication for:
 
 HTTP request/response patterns are insufficient for these real-time, event-driven requirements.
 
-## Decision
+## Decision (Historical)
 
-We will implement WebSocket-based real-time communication with:
-
-1. **Backend**: FastAPI's native WebSocket support
-2. **Frontend**: Socket.io client for reliability and features
-3. **Protocol**: JSON-RPC 2.0 for structured messaging
-4. **Scaling**: Redis pub/sub for multi-instance coordination
+This section captured a now-deprecated decision to build a custom WebSocket stack. It has been replaced by Supabase Realtime and retained here only for traceability.
 
 The architecture supports:
 
@@ -34,7 +31,7 @@ The architecture supports:
 - Message queuing and delivery guarantees
 - Graceful degradation to polling if needed
 
-## Consequences
+## Consequences (Historical)
 
 ### Positive
 
@@ -52,6 +49,10 @@ The architecture supports:
 - **Infrastructure**: Requires sticky sessions or Redis for scaling
 
 ### Neutral
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.
 
 - Different deployment considerations for WebSocket endpoints
 - Requires WebSocket-compatible hosting infrastructure

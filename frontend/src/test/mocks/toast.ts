@@ -1,6 +1,8 @@
 import { vi } from "vitest";
 
-export const mockToast = vi.fn((_props: any) => ({
+type ToastProps = Record<string, unknown>;
+
+export const mockToast = vi.fn((_props: ToastProps = {}) => ({
   id: `toast-${Date.now()}`,
   dismiss: vi.fn(),
   update: vi.fn(),

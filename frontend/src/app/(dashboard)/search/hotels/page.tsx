@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAccommodationSearch } from "@/hooks/use-accommodation-search";
 import { useSearchStore } from "@/stores/search-store";
 import type { AccommodationSearchParams } from "@/types/search";
-import { useState } from "react";
 
 export default function HotelSearchPage() {
   const { search: _search, isSearching } = useAccommodationSearch();

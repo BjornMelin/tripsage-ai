@@ -7,6 +7,11 @@ const withBundleAnalyzer =
     : (config: NextConfig) => config;
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: __dirname,
+  },
+  // Enable Cache Components (replaces experimental PPR flags in v16)
+  cacheComponents: true,
   experimental: {
     // Enable React 19 Compiler when available
     // reactCompiler: true, // Uncomment when react-compiler is installed
@@ -21,8 +26,8 @@ const nextConfig: NextConfig = {
       "zod",
     ],
 
-    // Enable partial pre-rendering for faster page loads
-    ppr: false, // Enable when ready for production
+    // Dev-only: File system cache for Turbopack to speed restarts
+    turbopackFileSystemCacheForDev: true,
 
     // Enable Turbopack for faster development builds (moved to top level)
     // turbo config moved to the top level as turbopack property
@@ -31,20 +36,8 @@ const nextConfig: NextConfig = {
   // Bundle Pages Router dependencies for better performance
   bundlePagesRouterDependencies: true,
 
-  // Turbopack configuration (stable in Next.js 15)
-  turbopack: {
-    rules: {
-      // SVG imports as React components
-      "*.svg": {
-        loaders: ["@svgr/webpack"],
-        as: "*.js",
-      },
-    },
-    resolveAlias: {
-      // Add any module aliases if needed
-    },
-    resolveExtensions: [".tsx", ".ts", ".jsx", ".js", ".json"],
-  },
+  // Turbopack configuration for browser fallbacks and aliases
+  // Use top-level turbopack per Next.js 16 docs
 
   compiler: {
     // Remove console.log statements in production

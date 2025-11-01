@@ -10,9 +10,9 @@
  * @module cache-invalidation
  */
 
-import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.1";
-import { Redis } from "https://deno.land/x/upstash_redis@v1.22.0/mod.ts";
+import { serve } from "std/http/server.ts";
+import { createClient } from "@supabase/supabase-js";
+import { Redis } from "upstash_redis/mod.ts";
 
 // Type definitions
 interface WebhookPayload {

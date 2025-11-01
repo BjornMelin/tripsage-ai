@@ -21,7 +21,7 @@ from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsService,
     GoogleMapsServiceError,
 )
-from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ class LocationService:
         self.google_maps_service: GoogleMapsService = google_maps_service
         logger.info("LocationService initialized successfully")
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def geocode(self, address: str, **kwargs: Any) -> list[Place]:
         """Convert address to coordinates.
 
@@ -60,7 +60,7 @@ class LocationService:
             logger.exception("Geocoding failed for address '%s'", address)
             raise LocationServiceError(f"Geocoding failed: {e}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def reverse_geocode(
         self, lat: float, lng: float, **kwargs: Any
     ) -> list[Place]:
@@ -86,11 +86,11 @@ class LocationService:
             )
             raise LocationServiceError(f"Reverse geocoding failed: {e}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def search_places(
         self,
         query: str,
-        location: tuple | None = None,
+        location: tuple[float, float] | None = None,
         radius: int | None = None,
         **kwargs: Any,
     ) -> list[PlaceSummary]:
@@ -117,7 +117,7 @@ class LocationService:
             logger.exception("Place search failed for query '%s'", query)
             raise LocationServiceError(f"Place search failed: {e}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def get_place_details(
         self, place_id: str, fields: list[str] | None = None, **kwargs: Any
     ) -> PlaceDetails:
@@ -143,7 +143,7 @@ class LocationService:
             logger.exception("Place details request failed for place_id '%s'", place_id)
             raise LocationServiceError(f"Place details request failed: {e}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def get_directions(
         self, origin: str, destination: str, mode: str = "driving", **kwargs: Any
     ) -> list[DirectionsResult]:
@@ -172,7 +172,7 @@ class LocationService:
             )
             raise LocationServiceError(f"Directions request failed: {e}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def distance_matrix(
         self,
         origins: list[str],
@@ -203,7 +203,7 @@ class LocationService:
             logger.exception("Distance matrix request failed")
             raise LocationServiceError(f"Distance matrix request failed: {e}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def get_elevation(
         self, locations: list[tuple[float, float]], **kwargs: Any
     ) -> list[ElevationPoint]:
@@ -226,7 +226,7 @@ class LocationService:
             logger.exception("Elevation request failed")
             raise LocationServiceError(f"Elevation request failed: {e}") from e
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def get_timezone(
         self, location: tuple[float, float], timestamp: int | None = None, **kwargs: Any
     ) -> TimezoneInfo:
@@ -251,7 +251,3 @@ class LocationService:
         except GoogleMapsServiceError as e:
             logger.exception("Timezone request failed for location %s", location)
             raise LocationServiceError(f"Timezone request failed: {e}") from e
-
-
-# Note: Use dependency injection. Construct LocationService in composition
-# roots (e.g., ServiceRegistry or app lifespan) and pass to callers.

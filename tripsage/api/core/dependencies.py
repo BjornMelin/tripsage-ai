@@ -1,51 +1,64 @@
 """Modern dependency injection for TripSage API.
 
 This module provides clean, modern dependency injection using Annotated types
-for unified authentication across JWT (frontend) and API keys (agents).
+for unified authentication against Supabase-issued JWTs.
 """
 
-from typing import Annotated
+import inspect
+from collections.abc import Awaitable, Iterable as TypingIterable
+from typing import Annotated, cast
 
 from fastapi import Depends, Request
 
 from tripsage.api.core.config import Settings, get_settings
-from tripsage.api.core.protocols import ApiKeyServiceProto, ChatServiceProto
+from tripsage.api.core.protocols import ChatServiceProto
 from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+from tripsage.app_state import AppServiceContainer
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthenticationError,
+    CoreAuthorizationError,
+)
 from tripsage_core.services.airbnb_mcp import AirbnbMCP
-from tripsage_core.services.business.accommodation_service import (
-    AccommodationService,
-    get_accommodation_service,
-)
+from tripsage_core.services.business.accommodation_service import AccommodationService
 from tripsage_core.services.business.activity_service import ActivityService
-from tripsage_core.services.business.api_key_service import ApiKeyService
-from tripsage_core.services.business.chat_service import get_chat_service
-from tripsage_core.services.business.destination_service import (
-    DestinationService,
-    get_destination_service,
+from tripsage_core.services.business.chat_service import ChatService
+from tripsage_core.services.business.destination_service import DestinationService
+from tripsage_core.services.business.file_processing_service import (
+    FileProcessingService,
 )
-from tripsage_core.services.business.flight_service import (
-    FlightService,
-)
-from tripsage_core.services.business.itinerary_service import (
-    ItineraryService,
-    get_itinerary_service,
-)
-from tripsage_core.services.business.memory_service import (
-    MemoryService,
-    get_memory_service,
-)
-from tripsage_core.services.business.trip_service import TripService, get_trip_service
+from tripsage_core.services.business.flight_service import FlightService
+from tripsage_core.services.business.itinerary_service import ItineraryService
+from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.services.business.search_facade import SearchFacade
+from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.business.unified_search_service import UnifiedSearchService
-from tripsage_core.services.business.user_service import UserService, get_user_service
 from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
 from tripsage_core.services.infrastructure import CacheService
-from tripsage_core.services.infrastructure.cache_service import get_cache_service
-from tripsage_core.services.infrastructure.database_service import (
-    DatabaseService,
-    get_database_service,
-)
-from tripsage_core.utils.session_utils import SessionMemory
+from tripsage_core.services.infrastructure.database_service import DatabaseService
+
+
+def _get_services_container(request: Request) -> AppServiceContainer:
+    """Return the lifespan-managed service container from app.state."""
+    services = cast(
+        AppServiceContainer | None,
+        getattr(request.app.state, "services", None),
+    )
+    if services is None:
+        raise RuntimeError(
+            "Application services are not initialised; ensure initialise_app_state "
+            "completes during startup."
+        )
+    return services
+
+
+def _get_required_service[ServiceT](
+    request: Request,
+    attr: str,
+    expected_type: type[ServiceT],
+) -> ServiceT:
+    """Fetch a required service from the container with type validation."""
+    services = _get_services_container(request)
+    return services.get_required_service(attr, expected_type=expected_type)
 
 
 # Settings dependency
@@ -55,26 +68,13 @@ def get_settings_dependency() -> Settings:
 
 
 # Database dependency
-async def get_db():
-    """Get database service as a dependency.
-
-    Note: This returns DatabaseService, not AsyncSession.
-    The name is kept for compatibility but the return type has changed.
-    """
-    return await get_database_service()
-
-
-# Session memory dependency
-async def get_session_memory(request: Request) -> SessionMemory:
-    """Get session memory for the current request."""
-    if not hasattr(request.state, "session_memory"):
-        session_id = request.cookies.get("session_id", None)
-        if not session_id:
-            from uuid import uuid4
-
-            session_id = str(uuid4())
-        request.state.session_memory = SessionMemory(session_id=session_id)
-    return request.state.session_memory
+def get_db(request: Request) -> DatabaseService:
+    """Get the lifespan-managed database service as a dependency."""
+    return _get_required_service(
+        request,
+        "database_service",
+        DatabaseService,
+    )
 
 
 # Principal-based authentication
@@ -123,136 +123,193 @@ async def require_agent_principal(request: Request) -> Principal:
     return principal
 
 
+async def require_admin_principal(request: Request) -> Principal:
+    """Require a principal with admin privileges."""
+    principal = await require_principal(request)
+
+    if principal.type == "agent":
+        raise CoreAuthorizationError(
+            message="Admin privileges required",
+            code="ADMIN_AUTH_REQUIRED",
+            details={"additional_context": {"principal_type": principal.type}},
+        )
+
+    roles: set[str] = set()
+    primary_role = principal.metadata.get("role")
+    if isinstance(primary_role, str):
+        roles.add(primary_role.lower())
+
+    role_collection = principal.metadata.get("roles")
+    if isinstance(role_collection, TypingIterable) and not isinstance(
+        role_collection, (str, bytes)
+    ):
+        # Cast to an iterable of opaque objects to satisfy the type checker
+        for role_item in cast(TypingIterable[object], role_collection):
+            if isinstance(role_item, str):
+                roles.add(role_item.lower())
+            else:
+                roles.add(str(role_item).lower())
+
+    is_admin_flag = principal.metadata.get("is_admin")
+    if isinstance(is_admin_flag, bool) and is_admin_flag:
+        return principal
+
+    allowed_roles = {"admin", "superadmin", "site_admin"}
+    if roles.intersection(allowed_roles):
+        return principal
+
+    raise CoreAuthorizationError(
+        message="Admin privileges required",
+        code="ADMIN_AUTH_REQUIRED",
+        details={"additional_context": {"roles": sorted(roles)}},
+    )
+
+
+async def _require_principal_dependency(request: Request) -> Principal:
+    """Wrapper that allows tests to patch require_principal dynamically."""
+    result = require_principal(request)
+    if inspect.isawaitable(result):
+        return await cast(Awaitable[Principal], result)
+    return cast(Principal, result)
+
+
 # Principal utilities
 def get_principal_id(principal: Principal) -> str:
     """Get the principal's ID as a string."""
     return principal.id
 
 
-async def verify_service_access(
-    principal: Principal,
-    service: str = "openai",
-    key_service: ApiKeyService | None = None,
-) -> bool:
-    """Verify that the principal has access to a specific service."""
-    # Agents with API keys already have service access
-    if principal.auth_method == "api_key":
-        return True
-
-    # For users, check they have the required service key
-    if principal.type == "user":
-        if key_service is None:
-            # Initialize key service if not provided
-            db = await get_database_service()
-            # Use core cache getter here (principal check may run outside app.state)
-            cache = await get_cache_service()
-            settings = get_settings()
-            key_service = ApiKeyService(db=db, cache=cache, settings=settings)
-
-        try:
-            keys = await key_service.list_user_keys(principal.id)
-            service_key = next((k for k in keys if k.service.value == service), None)
-            return service_key is not None
-        except (OSError, ValueError, TypeError):
-            return False
-
-    return False
-
-
 # Cache service dependency
-async def get_cache_service_dep(request: Request) -> CacheService:
+def get_cache_service_dep(request: Request) -> CacheService:
     """Get cache service (lifespan-managed singleton)."""
-    return request.app.state.cache_service  # type: ignore[attr-defined]
-
-
-async def get_websocket_manager_dep(request: Request):
-    """Get DI-managed WebSocket manager instance."""
-    return request.app.state.websocket_manager  # type: ignore[attr-defined]
-
-
-async def get_websocket_broadcaster_dep(request: Request):
-    """Get DI-managed WebSocket broadcaster instance."""
-    return request.app.state.websocket_broadcaster  # type: ignore[attr-defined]
+    return _get_required_service(request, "cache_service", CacheService)
 
 
 # Google Maps service dependency (DI-managed in app lifespan)
-async def get_maps_service_dep(request: Request) -> GoogleMapsService:
+def get_maps_service_dep(request: Request) -> GoogleMapsService:
     """Get DI-managed Google Maps service instance."""
-    return request.app.state.google_maps_service  # type: ignore[attr-defined]
+    return _get_required_service(request, "google_maps_service", GoogleMapsService)
 
 
 # Activity service dependency constructed from DI-managed services
-async def get_activity_service_dep(request: Request) -> ActivityService:
-    """Construct ActivityService from lifespan-managed dependencies."""
-    maps = await get_maps_service_dep(request)
-    cache = await get_cache_service_dep(request)
-    return ActivityService(google_maps_service=maps, cache_service=cache)
+def get_activity_service_dep(request: Request) -> ActivityService:
+    """Return the ActivityService singleton."""
+    return _get_required_service(request, "activity_service", ActivityService)
+
+
+def get_file_processing_service(request: Request) -> FileProcessingService:
+    """Return the FileProcessingService singleton."""
+    return _get_required_service(
+        request,
+        "file_processing_service",
+        FileProcessingService,
+    )
 
 
 # Unified search service dependency
-async def get_unified_search_service_dep(request: Request) -> UnifiedSearchService:
-    """Build UnifiedSearchService from DI-managed collaborators."""
-    cache: CacheService = await get_cache_service_dep(request)
-    activity = await get_activity_service_dep(request)
-    return UnifiedSearchService(
-        cache_service=cache,
-        destination_service=None,
-        activity_service=activity,
-        flight_service=None,
-        accommodation_service=None,
+def get_unified_search_service_dep(request: Request) -> UnifiedSearchService:
+    """Return the UnifiedSearchService singleton."""
+    return _get_required_service(
+        request,
+        "unified_search_service",
+        UnifiedSearchService,
+    )
+
+
+# Search facade dependency
+def get_search_facade(request: Request) -> SearchFacade:
+    """Return the SearchFacade singleton."""
+    return _get_required_service(
+        request,
+        "search_facade",
+        SearchFacade,
     )
 
 
 # MCP service dependency
 def get_mcp_service(request: Request) -> AirbnbMCP:
     """Get DI-managed MCP service instance."""
-    return request.app.state.mcp_service  # type: ignore[attr-defined]
+    return _get_required_service(request, "mcp_service", AirbnbMCP)
 
 
-# API Key service dependency
-async def get_api_key_service(request: Request) -> ApiKeyService:
-    """Get the API key service instance as a dependency."""
-    db = await get_database_service()
-    cache = await get_cache_service_dep(request)
-    settings = get_settings()
-    return ApiKeyService(db=db, cache=cache, settings=settings)
+# Business service dependencies (container-backed)
+def get_accommodation_service(request: Request) -> AccommodationService:
+    """Return AccommodationService from app.state container."""
+    return _get_required_service(
+        request,
+        "accommodation_service",
+        AccommodationService,
+    )
+
+
+def get_chat_service(request: Request) -> ChatServiceProto:
+    """Return ChatService from the container."""
+    service = _get_required_service(request, "chat_service", ChatService)
+    return cast(ChatServiceProto, service)
+
+
+def get_destination_service(request: Request) -> DestinationService:
+    """Return DestinationService from the container."""
+    return _get_required_service(
+        request,
+        "destination_service",
+        DestinationService,
+    )
+
+
+def get_flight_service_dep(request: Request) -> FlightService:
+    """Return FlightService from the container."""
+    return _get_required_service(request, "flight_service", FlightService)
+
+
+def get_itinerary_service(request: Request) -> ItineraryService:
+    """Return ItineraryService from the container."""
+    return _get_required_service(
+        request,
+        "itinerary_service",
+        ItineraryService,
+    )
+
+
+def get_memory_service(request: Request) -> MemoryService:
+    """Return MemoryService from the container."""
+    return _get_required_service(request, "memory_service", MemoryService)
+
+
+def get_trip_service(request: Request) -> TripService:
+    """Return TripService from the container."""
+    return _get_required_service(request, "trip_service", TripService)
 
 
 # Modern Annotated dependency types for 2025 best practices
 SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]
 DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
 CacheDep = Annotated[CacheService, Depends(get_cache_service_dep)]
-SessionMemoryDep = Annotated[SessionMemory, Depends(get_session_memory)]
 MCPServiceDep = Annotated[AirbnbMCP, Depends(get_mcp_service)]
 MapsServiceDep = Annotated[GoogleMapsService, Depends(get_maps_service_dep)]
 ActivityServiceDep = Annotated[ActivityService, Depends(get_activity_service_dep)]
 UnifiedSearchServiceDep = Annotated[
     UnifiedSearchService, Depends(get_unified_search_service_dep)
 ]
+SearchFacadeDep = Annotated[SearchFacade, Depends(get_search_facade)]
 
 # Principal-based authentication dependencies
 CurrentPrincipalDep = Annotated[Principal | None, Depends(get_current_principal)]
-RequiredPrincipalDep = Annotated[Principal, Depends(require_principal)]
+RequiredPrincipalDep = Annotated[Principal, Depends(_require_principal_dependency)]
 UserPrincipalDep = Annotated[Principal, Depends(require_user_principal)]
 AgentPrincipalDep = Annotated[Principal, Depends(require_agent_principal)]
+AdminPrincipalDep = Annotated[Principal, Depends(require_admin_principal)]
 
-# Business service dependencies
+# Business service dependencies (type aliases)
 AccommodationServiceDep = Annotated[
     AccommodationService, Depends(get_accommodation_service)
 ]
 ChatServiceDep = Annotated[ChatServiceProto, Depends(get_chat_service)]
 DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
-
-
-async def get_flight_service_dep(request: Request) -> FlightService:
-    """Construct FlightService for endpoints that require it."""
-    db = await get_database_service()
-    return FlightService(database_service=db)
-
-
 FlightServiceDep = Annotated[FlightService, Depends(get_flight_service_dep)]
 ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)]
-ApiKeyServiceDep = Annotated[ApiKeyServiceProto, Depends(get_api_key_service)]
 MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
 TripServiceDep = Annotated[TripService, Depends(get_trip_service)]
-UserServiceDep = Annotated[UserService, Depends(get_user_service)]
+FileProcessingServiceDep = Annotated[
+    FileProcessingService, Depends(get_file_processing_service)
+]

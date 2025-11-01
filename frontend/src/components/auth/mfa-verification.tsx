@@ -1,5 +1,7 @@
 "use client";
 
+import { AlertCircle, ArrowLeft, Loader2, Shield, Smartphone } from "lucide-react";
+import { useEffect, useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,9 +13,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, ArrowLeft, Loader2, Shield, Smartphone } from "lucide-react";
-import type React from "react";
-import { useEffect, useState } from "react";
 
 interface MFAVerificationProps {
   userEmail: string;
@@ -32,6 +31,7 @@ export function MFAVerification({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(30);
+  const verificationInputId = useId();
 
   // Auto-submit when 6 digits are entered
   useEffect(() => {
@@ -117,11 +117,11 @@ export function MFAVerification({
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="mfa-code" className="sr-only">
+            <Label htmlFor={verificationInputId} className="sr-only">
               Verification Code
             </Label>
             <Input
-              id="mfa-code"
+              id={verificationInputId}
               type="text"
               placeholder="123456"
               value={verificationCode}

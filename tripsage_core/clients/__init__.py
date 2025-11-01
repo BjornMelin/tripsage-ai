@@ -4,7 +4,7 @@ After the MCP to SDK migration, this module only contains:
 - AirbnbMCPClient: For Airbnb accommodations (only service remaining on MCP)
 
 All other services have been migrated to direct SDK integration:
-- Redis → DragonflyDB direct SDK (tripsage.services.infrastructure.dragonfly_service)
+- Redis direct SDK only
 - Supabase → Direct supabase-py SDK (tripsage.services.supabase_service)
 - Weather → Weather API direct integration (Week 4)
 - Maps → Google Maps Python client (Week 4)

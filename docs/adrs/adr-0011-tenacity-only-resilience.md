@@ -1,10 +1,10 @@
 # ADR-0011: Adopt Tenacity-Only Resilience, Remove Circuit Breaker
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-10-21
-
-## Status
-
-Accepted
+**Category**: backend
+**Domain**: Tenacity / Resilience
 
 ## Context
 
@@ -45,3 +45,7 @@ factories to standardize retry behavior across services.
 - Removed `retry_on_failure` and `resilience/circuit_breaker`.
 - Migrated external API services to Tenacity policies.
 - Updated/removed tests tied to removed modules.
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

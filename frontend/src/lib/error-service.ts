@@ -132,7 +132,9 @@ class ErrorService {
 
       // Keep only the last 10 errors
       const keysToRemove = errorKeys.slice(10);
-      keysToRemove.forEach((key) => localStorage.removeItem(key));
+      for (const key of keysToRemove) {
+        localStorage.removeItem(key);
+      }
     } catch (error) {
       console.error("Failed to cleanup local errors:", error);
     }
@@ -169,8 +171,8 @@ class ErrorService {
 // Default error service instance
 export const errorService = new ErrorService({
   enabled: process.env.NODE_ENV === "production",
-  endpoint: process.env.NEXT_PUBLIC_ERROR_REPORTING_ENDPOINT,
-  apiKey: process.env.NEXT_PUBLIC_ERROR_REPORTING_API_KEY,
+  endpoint: undefined,
+  apiKey: undefined,
   maxRetries: 3,
   enableLocalStorage: true,
 });

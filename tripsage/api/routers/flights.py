@@ -14,14 +14,13 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from tripsage.api.core.dependencies import (
-    get_flight_service_dep as get_flight_service,
+    FlightServiceDep,
+    RequiredPrincipalDep,
     get_principal_id,
-    require_principal,
 )
-from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.flights import (
     BookingStatus,
     FlightBooking,
@@ -35,7 +34,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreServiceError,
     CoreValidationError,
 )
-from tripsage_core.services.business.flight_service import FlightService
 
 
 router = APIRouter()
@@ -44,8 +42,8 @@ router = APIRouter()
 @router.post("/search", response_model=FlightSearchResponse)
 async def search_flights(
     request: FlightSearchRequest,
-    principal: Principal = Depends(require_principal),
-    flight_service: FlightService = Depends(get_flight_service),
+    flight_service: FlightServiceDep,
+    principal: RequiredPrincipalDep,
 ) -> FlightSearchResponse:
     """Search for flight offers using the unified flight service.
 
@@ -77,8 +75,8 @@ async def search_flights(
 @router.get("/offers/{offer_id}", response_model=FlightOffer)
 async def get_flight_offer(
     offer_id: str,
-    principal: Principal = Depends(require_principal),
-    flight_service: FlightService = Depends(get_flight_service),
+    flight_service: FlightServiceDep,
+    principal: RequiredPrincipalDep,
 ) -> FlightOffer:
     """Retrieve detailed information about a specific flight offer.
 
@@ -119,8 +117,8 @@ async def get_flight_offer(
 )
 async def book_flight(
     request: FlightBookingRequest,
-    principal: Principal = Depends(require_principal),
-    flight_service: FlightService = Depends(get_flight_service),
+    flight_service: FlightServiceDep,
+    principal: RequiredPrincipalDep,
 ) -> FlightBooking:
     """Book a flight offer for the authenticated user.
 
@@ -159,11 +157,12 @@ async def book_flight(
 
 @router.get("/bookings", response_model=list[FlightBooking])
 async def list_bookings(
+    flight_service: FlightServiceDep,
+    principal: RequiredPrincipalDep,
+    *,
     trip_id: UUID | None = Query(default=None),
     status_filter: BookingStatus | None = Query(default=None, alias="status"),
-    limit: int = Query(default=50, ge=1, le=100),
-    principal: Principal = Depends(require_principal),
-    flight_service: FlightService = Depends(get_flight_service),
+    limit: int = Query(default=20, ge=1, le=100),
 ) -> list[FlightBooking]:
     """List bookings for the authenticated user with optional filters.
 
@@ -199,8 +198,8 @@ async def list_bookings(
 )
 async def cancel_booking(
     booking_id: str,
-    principal: Principal = Depends(require_principal),
-    flight_service: FlightService = Depends(get_flight_service),
+    flight_service: FlightServiceDep,
+    principal: RequiredPrincipalDep,
 ) -> None:
     """Cancel an existing booking for the authenticated user.
 

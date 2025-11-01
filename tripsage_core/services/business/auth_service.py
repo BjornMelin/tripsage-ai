@@ -1,28 +1,32 @@
-"""Optimized Supabase Authentication Service for FastAPI.
+"""Supabase Authentication Service for FastAPI.
 
-This implementation follows community best practices by:
-1. Using local JWT validation for performance (avoids 600ms+ network calls)
-2. Leveraging Supabase Python client for user management
-3. Keeping the service lean and focused on authentication
-4. Following the dependency injection pattern from the PRD
-
-Based on research from:
-- Supabase Python client documentation
-- FastAPI + Supabase community examples
-- Performance optimization recommendations
+Replaces local JWT decoding with Supabase's official Python SDK to validate
+access tokens and resolve users. Keeps the service focused, leveraging
+library-native behavior for correctness and maintainability.
 """
 
-import jwt
+from __future__ import annotations
+
+from typing import Any
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from supabase import Client, create_client
 
-from tripsage_core.config import get_settings
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.services.infrastructure.supabase_client import (
+    get_admin_client,
+    verify_and_get_claims,
+)
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
+
+
+async def _admin() -> Any:
+    """Get admin Supabase client for dependency injection."""
+    return await get_admin_client()
 
 
 class TokenData(TripSageModel):
-    """Token data extracted from Supabase JWT tokens."""
+    """Token data extracted from Supabase user session."""
 
     user_id: str
     email: str | None = None
@@ -34,95 +38,72 @@ class TokenData(TripSageModel):
 security = HTTPBearer()
 
 
-def get_supabase_client() -> Client:
-    """Get Supabase client instance for user management operations.
-
-    Returns:
-        Supabase client configured with service key for admin operations
-    """
-    settings = get_settings()
-    return create_client(
-        settings.database_url,
-        settings.database_service_key.get_secret_value(),
-    )
-
-
+@tripsage_safe_execute()
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> TokenData:
-    """Validate Supabase JWT token and return user data.
-
-    Uses local JWT validation for optimal performance (avoids 600ms+ network calls).
-    This is the community-recommended approach for FastAPI + Supabase integration.
+    """Validate token with Supabase and return token data.
 
     Args:
         credentials: Bearer token from Authorization header
 
     Returns:
-        TokenData with validated user information
+        TokenData with user information
 
     Raises:
         HTTPException: If token is invalid or expired
     """
-    settings = get_settings()
     token = credentials.credentials
 
     try:
-        # Local JWT validation - fast and efficient
-        payload = jwt.decode(
-            token,
-            settings.database_jwt_secret.get_secret_value(),
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
-
+        claims = await verify_and_get_claims(token)
+        user_id = str(claims.get("sub"))
+        email = claims.get("email")
         return TokenData(
-            user_id=payload["sub"],
-            email=payload.get("email"),
-            role=payload.get("role", "authenticated"),
-            aud=payload.get("aud", "authenticated"),
+            user_id=user_id,
+            email=email,
+            role=claims.get("role"),
+            aud=claims.get("aud", "authenticated"),
         )
-
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired"
-        ) from None
-    except jwt.InvalidTokenError:
+    except HTTPException:
+        raise
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        ) from None
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token validation failed: {e!s}",
-        ) from e
+        ) from exc
 
 
+@tripsage_safe_execute()
 async def get_user_with_client(
     token_data: TokenData = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
-) -> dict:
-    """Get full user details using Supabase client.
-
-    Use this dependency when you need full user profile data.
-    For most cases, get_current_user() is sufficient and faster.
+    supabase: Any = Depends(_admin),
+) -> dict[str, Any]:
+    """Get full user details using Supabase admin client.
 
     Args:
         token_data: Validated token data
         supabase: Supabase client for user operations
 
     Returns:
-        Full user object from Supabase
+        Full user object as a dict
     """
     try:
-        user_response = supabase.auth.admin.get_user_by_id(token_data.user_id)
-        if not user_response.user:
+        resp = await supabase.auth.admin.get_user_by_id(token_data.user_id)
+        if not getattr(resp, "user", None):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
-        return user_response.user
-    except Exception as e:
+        # Convert user object to plain dict for downstream compatibility
+        user_obj = resp.user
+        return {
+            "id": str(getattr(user_obj, "id", "")),
+            "email": getattr(user_obj, "email", None),
+            "user_metadata": getattr(user_obj, "user_metadata", {}) or {},
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch user details: {e!s}",
-        ) from e
+            detail=f"Failed to fetch user details: {exc!s}",
+        ) from exc

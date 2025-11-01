@@ -1,8 +1,11 @@
+// caching handled at app level via cacheComponents; no per-file directive
+import { Suspense } from "react";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
-// Force dynamic rendering to avoid SSG issues with authentication
-export const dynamic = "force-dynamic";
-
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <DashboardLayout>{children}</DashboardLayout>;
+  return (
+    <Suspense fallback={null}>
+      <DashboardLayout>{children}</DashboardLayout>
+    </Suspense>
+  );
 }

@@ -1,38 +1,37 @@
-# TripSage AI Modern Development Environment
+# TripSage AI Development Environment
 
-**Optimized Docker environment aligned with TripSage's current high-performance architecture.**
+Docker Compose configuration for local development and testing.
 
-## Current Architecture (2025)
+## Current Architectur
 
-TripSage has evolved to a streamlined, high-performance architecture with dramatic improvements:
+Current TripSage architecture:
 
 - **Database**: Supabase PostgreSQL with pgvector extension (unified storage)
 - **Caching**: Upstash Redis (HTTP, managed)
-- **Memory**: Mem0 with pgvector backend (91% faster than Neo4j)
+- **Memory**: Mem0 with pgvector backend
 - **Web Crawling**: Crawl4AI direct SDK
 - **Browser Automation**: Playwright direct SDK
 - **External APIs**: Direct SDK integrations (Duffel, Google Maps, Weather)
 - **MCP Services**: Only 1 remaining (Airbnb - no official SDK available)
 
-### Performance Achievements
+### Architecture Changes
 
-- **Serverless cache** via Upstash Redis (no local container)
-- **11x faster vector search** (pgvector + pgvectorscale)
-- **91% faster memory operations** (Mem0 vs Neo4j)
-- **80% infrastructure cost** reduction
-- **60-70% architecture complexity** reduction
+- **Caching**: Upstash Redis (serverless, no local container)
+- **Vector Search**: pgvector + pgvectorscale for embeddings
+- **Memory**: Mem0 with pgvector backend
+- **Infrastructure**: Managed services reduce local complexity
 
 ## Services Overview
 
-| Service | Type | Purpose | Performance |
-|---------|------|---------|-------------|
-| `supabase` | Database | PostgreSQL + pgvector for unified storage | 11x faster vector search |
-| `upstash` | Cache | Serverless Redis over HTTP | Managed |
-| `tripsage-api` | Backend | FastAPI with modern direct SDKs | 91% faster memory ops |
-| `tripsage-frontend` | Frontend | Next.js 15 with App Router | Modern React architecture |
-| `airbnb-mcp` | Integration | Only remaining MCP (no SDK available) | Minimal MCP usage |
-| `jaeger` | Monitoring | Distributed tracing | Production-ready observability |
-| `otel-collector` | Telemetry | Receives OTLP traces/metrics/logs | Local development export |
+| Service | Type | Purpose | Notes |
+|---------|------|---------|--------|
+| `supabase` | Database | PostgreSQL + pgvector for unified storage | Vector embeddings |
+| `upstash` | Cache | Serverless Redis over HTTP | Managed service |
+| `tripsage-api` | Backend | FastAPI with direct SDK integrations | API server |
+| `tripsage-frontend` | Frontend | Next.js 15 with App Router | React application |
+| `airbnb-mcp` | Integration | Airbnb integration (no official SDK) | MCP service |
+| `jaeger` | Monitoring | Distributed tracing | Observability |
+| `otel-collector` | Telemetry | Receives OTLP traces/metrics/logs | Local export |
 
 ## Quick Start
 
@@ -96,7 +95,7 @@ UPSTASH_REDIS_REST_URL=your-url
 UPSTASH_REDIS_REST_TOKEN=your-token
 
 # External APIs (Direct SDK integrations)
-DUFFEL_API_KEY=your_duffel_api_key
+DUFFEL_ACCESS_TOKEN=your_duffel_access_token
 GOOGLE_MAPS_API_KEY=your_google_maps_key
 OPENWEATHERMAP_API_KEY=your_weather_key
 
@@ -121,33 +120,15 @@ DATABASE_URL=postgresql://postgres:password@supabase:5432/tripsage_dev
 SUPABASE_URL=http://supabase:8000
 ```
 
-## Architecture Benefits
+## Development Setup
 
-### Eliminated Legacy Components
+### Service Configuration
 
-**Removed from Docker environment** (migrated to direct SDKs):
-
-- ❌ Neo4j MCP (replaced by Mem0)
-- ❌ Local Redis/Dragonfly containers (replaced by Upstash Redis)
-- ❌ Firecrawl MCP (replaced by Crawl4AI SDK)
-- ❌ Google Maps MCP (replaced by direct SDK)
-- ❌ Weather MCP (replaced by direct HTTP)
-- ❌ Duffel MCP (replaced by direct SDK)
-- ❌ 8+ other legacy MCP services
-
-**Retained Essential Services**:
-
-- ✅ Airbnb MCP (only remaining - no official SDK)
-- ✅ Modern monitoring with Jaeger (traces) and OTEL Collector (OTLP metrics/logs)
-- ✅ Managed infrastructure (Supabase, Upstash Redis)
-
-### Development Workflow
-
-1. **Database**: Supabase provides PostgreSQL + pgvector + Studio UI
-2. **Caching**: Upstash Redis provides managed HTTP-based cache
-3. **Memory**: Mem0 integrates directly with pgvector for 91% faster operations
-4. **External APIs**: Direct SDK calls eliminate MCP overhead
-5. **Monitoring**: Production-ready observability stack for performance insights
+1. **Database**: Supabase PostgreSQL with pgvector and Studio UI
+2. **Caching**: Upstash Redis (managed HTTP-based cache)
+3. **Memory**: Mem0 with pgvector backend
+4. **External APIs**: Direct SDK integrations
+5. **Monitoring**: Jaeger tracing and OTLP telemetry collection
 
 ## Troubleshooting
 
@@ -188,35 +169,14 @@ uv run python scripts/verification/verify_upstash.py
 3. **Memory**: Allocate at least 8GB RAM for the full development environment
 4. **Network**: Use Docker's default networking for optimal performance
 
-### Production Alignment
+### Environment Consistency
 
-This development environment mirrors the production architecture:
+The development environment uses the same services as production:
 
-- Same database technology (Supabase + pgvector)
-- Same caching solution (Upstash Redis)
-- Same memory system (Mem0)
-- Same direct SDK integrations
-- Same monitoring stack
+- Database: Supabase PostgreSQL with pgvector
+- Cache: Upstash Redis
+- Memory: Mem0 with pgvector
+- APIs: Direct SDK integrations
+- Monitoring: Jaeger and OTLP collector
 
-This ensures development-production parity and prevents environment-specific issues.
-
-## Migration Notes
-
-**From Legacy MCP Architecture**:
-
-- Docker environment has been streamlined to match the current high-performance architecture
-- Legacy MCP services have been removed in favor of direct SDK integrations
-- Only Airbnb MCP remains due to lack of official SDK
-- Performance improvements are immediately visible in the development environment
-
-**Database Migration**:
-
-- Neo4j → Mem0 with pgvector backend
-- Multiple databases → Single Supabase instance
-- Complex vector setup → Unified pgvector + pgvectorscale
-
-**Cache Migration**:
-
-- Redis/Dragonfly → Upstash Redis (serverless, no local ops)
-- No configuration changes needed (Redis-compatible)
-- Dramatic performance improvements in development environment
+This minimizes differences between development and production environments.

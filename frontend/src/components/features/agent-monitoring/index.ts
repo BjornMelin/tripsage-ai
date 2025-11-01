@@ -1,24 +1,16 @@
 // Agent Monitoring Dashboard Components
-export { AgentStatusDashboard } from "./dashboard/agent-status-dashboard";
 
-// Communication Components
-export {
-  ConnectionStatus,
-  CompactConnectionStatus,
-} from "../shared/connection-status";
-export { AgentCollaborationHub } from "./communication/agent-collaboration-hub";
-
-// Hook Exports
-export { useWebSocketAgent } from "../../../hooks/use-websocket-agent";
-export type {
-  ConnectionStatus as WebSocketConnectionStatus,
-  WebSocketMessage,
-  WebSocketAgentConfig,
-  UseWebSocketAgentReturn,
-} from "../../../hooks/use-websocket-agent";
-
+// Hook Exports (Realtime-only)
+export { useAgentStatusWebSocket as useWebSocketAgent } from "../../../hooks/use-agent-status-websocket";
 // Type Exports
 export type {
-  NetworkMetrics,
   ConnectionAnalytics,
+  NetworkMetrics,
 } from "../shared/connection-status";
+// Communication Components
+export {
+  CompactConnectionStatus,
+  ConnectionStatus,
+} from "../shared/connection-status";
+export { AgentCollaborationHub } from "./communication/agent-collaboration-hub";
+export { AgentStatusDashboard } from "./dashboard/agent-status-dashboard";

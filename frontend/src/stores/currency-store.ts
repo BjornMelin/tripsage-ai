@@ -1,3 +1,5 @@
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import {
   type ConversionResult,
   ConversionResultSchema,
@@ -11,8 +13,6 @@ import {
   type ExchangeRate,
   ExchangeRateSchema,
 } from "@/types/currency";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 // Common currencies with symbols and decimal places
 const COMMON_CURRENCIES: Record<CurrencyCode, Currency> = {

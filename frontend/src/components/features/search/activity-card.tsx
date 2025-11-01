@@ -1,10 +1,11 @@
 "use client";
 
+import { Clock, MapPin, Star } from "lucide-react";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import type { Activity } from "@/types/search";
-import { Clock, MapPin, Star } from "lucide-react";
 
 interface ActivityCardProps {
   activity: Activity;
@@ -59,9 +60,11 @@ export function ActivityCard({ activity, onSelect, onCompare }: ActivityCardProp
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative">
         {activity.images && activity.images.length > 0 ? (
-          <img
+          <Image
             src={activity.images[0]}
             alt={activity.name}
+            width={1200}
+            height={480}
             className="w-full h-48 object-cover"
           />
         ) : (

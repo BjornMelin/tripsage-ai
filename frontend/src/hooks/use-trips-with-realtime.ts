@@ -1,9 +1,7 @@
 /**
- * Hook for trips with real-time updates and connection monitoring
- * Combines trip data fetching with real-time subscription management
+ * @fileoverview Hooks for managing trips with real-time updates and connection monitoring.
  */
 
-import { useAuth } from "@/contexts/auth-context";
 import { useMemo } from "react";
 import { useTripRealtime } from "./use-supabase-realtime";
 import { useTrips } from "./use-trips";
@@ -15,11 +13,12 @@ import {
 } from "./use-trips-supabase";
 
 /**
- * Hook that combines trip data with real-time updates
- * Provides both data and connection status monitoring
+ * Hook that combines trip data with real-time updates.
+ * Provides both data and connection status monitoring.
+ * @return Object containing trips data, loading state, error, refetch function,
+ * connection status, and real-time status.
  */
 export function useTripsWithRealtime() {
-  const { user: _user } = useAuth();
   const { data: trips, isLoading, error, refetch } = useTrips();
 
   // Set up real-time subscription for all user trips
@@ -37,10 +36,12 @@ export function useTripsWithRealtime() {
 }
 
 /**
- * Hook for individual trip with real-time updates
+ * Hook for individual trip with real-time updates.
+ * @param tripId The ID of the trip to monitor, or null for no specific trip.
+ * @return Object containing trip data, loading state, error, refetch function,
+ * connection status, and real-time status.
  */
 export function useTripWithRealtime(tripId: number | null) {
-  const { user: _user } = useAuth();
   const { data: trip, isLoading, error, refetch } = useTripData(tripId);
   const realtimeStatus = useTripRealtime(tripId);
 
@@ -56,10 +57,10 @@ export function useTripWithRealtime(tripId: number | null) {
 }
 
 /**
- * Connection status summary for trips real-time functionality
+ * Connection status summary for trips real-time functionality.
+ * @return Object containing connection status, error flags, error count, and last error.
  */
 export function useTripsConnectionStatus() {
-  const { user: _user } = useAuth();
   const realtimeStatus = useTripRealtime(null);
 
   const connectionStatus = useMemo(() => {
@@ -75,10 +76,12 @@ export function useTripsConnectionStatus() {
 }
 
 /**
- * Hook for trip collaboration management with real-time updates
+ * Hook for trip collaboration management with real-time updates.
+ * @param tripId The ID of the trip for collaboration.
+ * @return Object containing collaborators data, loading state, error, refetch function,
+ * add/remove collaborator functions, and connection status.
  */
 export function useTripCollaboration(tripId: string | number) {
-  const { user: _user } = useAuth();
   const numericTripId =
     typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId;
 

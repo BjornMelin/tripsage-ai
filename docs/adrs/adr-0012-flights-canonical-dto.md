@@ -1,8 +1,10 @@
 # ADR-0012: Canonical Flights DTOs and Service Convergence
 
-## Status
-
-Accepted — 2025-10-21
+**Version**: 1.0.0
+**Status**: Accepted
+**Date**: 2025-10-21
+**Category**: data
+**Domain**: Flights DTO
 
 ## Context
 
@@ -42,3 +44,7 @@ Flight-related data models and flows had diverged across API, business service, 
 ## Rollout and Validation
 
 - Lint/type/test gates run over the changed modules with `ruff`, `pyright`, and `pylint` clean. New deterministic unit tests cover the mapper, service booking/cancel, agent integration, and the router contract.
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

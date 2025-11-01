@@ -1,5 +1,31 @@
+/**
+ * @fileoverview Trip collaboration page.
+ *
+ * Manages trip collaborators and real-time editing. Handles collaborator invitations,
+ * permissions, sharing, and activity monitoring.
+ */
+
 "use client";
 
+import {
+  Clock,
+  Copy,
+  Crown,
+  Edit,
+  Eye,
+  Mail,
+  Share2,
+  Trash2,
+  UserPlus,
+  Users,
+} from "lucide-react";
+import { useParams } from "next/navigation";
+import { useEffect, useId, useState } from "react";
+import { ConnectionStatusMonitor } from "@/components/features/realtime/connection-status-monitor";
+import {
+  CollaborationIndicator,
+  OptimisticTripUpdates,
+} from "@/components/features/realtime/optimistic-trip-updates";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,59 +40,69 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  Clock,
-  Copy,
-  Crown,
-  Edit,
-  Eye,
-  Mail,
-  Share2,
-  Trash2,
-  UserPlus,
-  Users,
-} from "lucide-react";
-import { useParams } from "next/navigation";
-import { useState } from "react";
-
-import { ConnectionStatusMonitor } from "@/components/features/realtime/connection-status-monitor";
-import {
-  CollaborationIndicator,
-  OptimisticTripUpdates,
-} from "@/components/features/realtime/optimistic-trip-updates";
-import { useAuth } from "@/contexts/auth-context";
-import {
   useTripCollaboration,
   useTripWithRealtime,
 } from "@/hooks/use-trips-with-realtime";
+import { createClient } from "@/lib/supabase/client";
 
+/**
+ * Represents a collaborator on a trip with their permissions and status.
+ */
 interface Collaborator {
+  /** Unique identifier for the collaborator record. */
   id: string;
+  /** User ID of the collaborator. */
   user_id: string;
+  /** ID of the trip being collaborated on. */
   trip_id: string;
+  /** Email address of the collaborator. */
   email: string;
+  /** Optional display name of the collaborator. */
   name?: string;
+  /** Role determining permissions level. */
   role: "owner" | "editor" | "viewer";
+  /** Current invitation/acceptance status. */
   status: "pending" | "accepted" | "declined";
+  /** Detailed permission flags. */
   permissions: {
+    /** Whether the collaborator can edit trip content. */
     can_edit: boolean;
+    /** Whether the collaborator can invite others. */
     can_invite: boolean;
+    /** Whether the collaborator can delete the trip. */
     can_delete: boolean;
   };
+  /** Timestamp when the invitation was sent. */
   invited_at: string;
+  /** Timestamp when the invitation was accepted. */
   accepted_at?: string;
 }
 
+/**
+ * Trip collaboration page component.
+ *
+ * Displays interface for managing collaborators, real-time editing, activity monitoring,
+ * and sharing settings.
+ *
+ * @returns The trip collaboration page JSX element
+ */
 export default function TripCollaborationPage() {
   const params = useParams();
   const tripId = params.id as string;
+  const inviteInputId = useId();
   const { toast } = useToast();
-  const { user } = useAuth();
 
   const {
     trip,
     isConnected,
     connectionErrors: _connectionErrors,
   } = useTripWithRealtime(Number.parseInt(tripId, 10));
+
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
 
   // Type assertion for trip data
   const typedTrip = trip as {
@@ -75,8 +111,6 @@ export default function TripCollaborationPage() {
     visibility?: string;
   } | null;
   useTripCollaboration(tripId); // Initialize collaboration state
-
-  const currentUserId = user?.id;
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
@@ -91,11 +125,7 @@ export default function TripCollaborationPage() {
       name: "Alice Johnson",
       role: "owner",
       status: "accepted",
-      permissions: {
-        can_edit: true,
-        can_invite: true,
-        can_delete: true,
-      },
+      permissions: { can_edit: true, can_invite: true, can_delete: true },
       invited_at: new Date().toISOString(),
       accepted_at: new Date().toISOString(),
     },
@@ -107,11 +137,7 @@ export default function TripCollaborationPage() {
       name: "Bob Smith",
       role: "editor",
       status: "accepted",
-      permissions: {
-        can_edit: true,
-        can_invite: false,
-        can_delete: false,
-      },
+      permissions: { can_edit: true, can_invite: false, can_delete: false },
       invited_at: new Date(Date.now() - 86400000).toISOString(),
       accepted_at: new Date(Date.now() - 86400000).toISOString(),
     },
@@ -122,15 +148,14 @@ export default function TripCollaborationPage() {
       email: "charlie@example.com",
       role: "viewer",
       status: "pending",
-      permissions: {
-        can_edit: false,
-        can_invite: false,
-        can_delete: false,
-      },
+      permissions: { can_edit: false, can_invite: false, can_delete: false },
       invited_at: new Date(Date.now() - 3600000).toISOString(),
     },
   ]);
 
+  /**
+   * Handles sending collaboration invitations to new users.
+   */
   const handleInviteCollaborator = async () => {
     if (!inviteEmail.trim()) {
       toast({
@@ -143,14 +168,11 @@ export default function TripCollaborationPage() {
 
     setIsInviting(true);
     try {
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
-
       toast({
         title: "Invitation Sent",
         description: `Invitation sent to ${inviteEmail}`,
       });
-
       setInviteEmail("");
     } catch (_error) {
       toast({
@@ -163,15 +185,21 @@ export default function TripCollaborationPage() {
     }
   };
 
+  /**
+   * Copies the trip share link to clipboard.
+   */
   const handleCopyShareLink = () => {
     const shareUrl = `${window.location.origin}/trips/${tripId}/share`;
     navigator.clipboard.writeText(shareUrl);
-    toast({
-      title: "Link Copied",
-      description: "Share link copied to clipboard",
-    });
+    toast({ title: "Link Copied", description: "Share link copied to clipboard" });
   };
 
+  /**
+   * Returns the appropriate icon component for a collaborator role.
+   *
+   * @param role - The collaborator role
+   * @returns Icon component for the role
+   */
   const getRoleIcon = (role: string) => {
     switch (role) {
       case "owner":
@@ -185,6 +213,12 @@ export default function TripCollaborationPage() {
     }
   };
 
+  /**
+   * Returns the appropriate status badge component for invitation status.
+   *
+   * @param status - The invitation status
+   * @returns Badge component for the status
+   */
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "accepted":
@@ -237,7 +271,6 @@ export default function TripCollaborationPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Real-time Trip Editing */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -249,11 +282,10 @@ export default function TripCollaborationPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <OptimisticTripUpdates tripId={Number.parseInt(tripId)} />
+              <OptimisticTripUpdates tripId={Number.parseInt(tripId, 10)} />
             </CardContent>
           </Card>
 
-          {/* Collaborators Management */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -267,20 +299,17 @@ export default function TripCollaborationPage() {
             </CardHeader>
 
             <CardContent className="space-y-6">
-              {/* Invite New Collaborator */}
               <div className="space-y-4">
-                <Label htmlFor="invite-email">Invite by Email</Label>
+                <Label htmlFor={inviteInputId}>Invite by Email</Label>
                 <div className="flex space-x-2">
                   <Input
-                    id="invite-email"
+                    id={inviteInputId}
                     type="email"
                     placeholder="Enter email address..."
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleInviteCollaborator();
-                      }
+                      if (e.key === "Enter") handleInviteCollaborator();
                     }}
                   />
                   <Button onClick={handleInviteCollaborator} disabled={isInviting}>
@@ -292,7 +321,6 @@ export default function TripCollaborationPage() {
 
               <Separator />
 
-              {/* Share Link */}
               <div className="space-y-4">
                 <Label>Share Link</Label>
                 <div className="flex space-x-2">
@@ -313,7 +341,6 @@ export default function TripCollaborationPage() {
 
               <Separator />
 
-              {/* Collaborator List */}
               <div className="space-y-4">
                 <Label>Current Collaborators</Label>
                 <div className="space-y-3">
@@ -350,7 +377,6 @@ export default function TripCollaborationPage() {
 
                       <div className="flex items-center space-x-2">
                         {getStatusBadge(collaborator.status)}
-
                         {collaborator.role !== "owner" && (
                           <Button variant="ghost" size="sm">
                             <Trash2 className="h-4 w-4" />
@@ -367,10 +393,8 @@ export default function TripCollaborationPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Active Collaborators */}
-          <CollaborationIndicator tripId={Number.parseInt(tripId)} />
+          <CollaborationIndicator tripId={Number.parseInt(tripId, 10)} />
 
-          {/* Recent Activity */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -401,7 +425,6 @@ export default function TripCollaborationPage() {
             </CardContent>
           </Card>
 
-          {/* Trip Settings */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">

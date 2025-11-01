@@ -170,6 +170,42 @@ WHERE table_name LIKE '%memor%' OR table_name LIKE '%vector%';
 
 ## Security Configuration
 
+### Vault (BYOK) Hardening Checklist
+
+Use this checklist in staging/production to verify BYOK/Vault is secured correctly.
+
+1) Apply migrations
+
+    ```bash
+    20251030000000_vault_api_keys.sql
+    20251030002000_vault_role_hardening.sql
+    ```
+
+2) Roles and ownership
+
+   - `api_vault_definer` role exists.
+   - BYOK RPCs owned by `api_vault_definer`:
+     - `public.insert_user_api_key`
+     - `public.get_user_api_key`
+     - `public.delete_user_api_key`
+
+3) Privileges
+
+    ```sql
+    REVOKE ALL ON SCHEMA vault FROM PUBLIC;
+    REVOKE ALL ON ALL TABLES IN SCHEMA vault FROM PUBLIC;
+    ```
+
+4) Access validation
+
+   - With service role: `select * from vault.decrypted_secrets limit 1;` succeeds.
+   - With anon/authenticated roles: same query is denied.
+
+5) Observability (optional)
+
+   - Enable audit logs for BYOK RPC execution.
+   - Periodically check last_used timestamps in `public.api_keys`.
+
 ### 1. Row Level Security Setup
 
 **Enable RLS on All Tables:**
@@ -180,7 +216,6 @@ ALTER TABLE trips ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trip_collaborators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE itinerary_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trip_notes ENABLE ROW LEVEL SECURITY;
@@ -231,7 +266,6 @@ WITH CHECK (auth.uid() = user_id);
 
 -- API key access policies
 CREATE POLICY "Users can manage their own API keys"
-ON api_keys FOR ALL
 USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
 ```
@@ -287,7 +321,6 @@ BEGIN
     new_key := encode(gen_random_bytes(32), 'base64');
     
     -- Update existing key
-    UPDATE api_keys 
     SET 
         encrypted_key = crypt(new_key, gen_salt('bf')),
         updated_at = NOW()
@@ -319,8 +352,13 @@ SUPABASE_TIMEOUT=30
 SUPABASE_POOL_SIZE=20
 SUPABASE_MAX_OVERFLOW=30
 
-# DragonflyDB Cache (Production)
-DRAGONFLY_URL=rediss://username:password@your-dragonfly-host:6380/0
+# Redis Cache (Production)
+# Use your Upstash Redis (TLS) endpoint for backend services and rate limiting
+REDIS_URL=rediss://default:password@your-upstash-host:6380/0
+
+# Frontend/Edge can use Upstash REST (set in frontend env)
+# UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
+# UPSTASH_REDIS_REST_TOKEN=<token>
 
 # Security
 SECRET_KEY=<strong-production-secret-key>
@@ -350,7 +388,7 @@ Create `frontend/.env.production`:
 ```bash
 # Frontend Configuration
 NEXT_PUBLIC_API_URL=https://api.your-domain.com
-NEXT_PUBLIC_WS_URL=wss://api.your-domain.com/ws
+# Supabase Realtime uses the project URL and anon key via supabase-js; no separate WS URL required
 NEXT_PUBLIC_ENVIRONMENT=production
 
 # Supabase Frontend
@@ -482,14 +520,14 @@ SUPABASE_POOL_RECYCLE=3600  # 1 hour
 
 ### 2. Cache Configuration
 
-**DragonflyDB Setup:**
+**Redis Setup:**
 
 ```bash
-# Production DragonflyDB configuration
-DRAGONFLY_URL=rediss://username:password@your-host:6380/0
-DRAGONFLY_POOL_SIZE=20
-DRAGONFLY_TIMEOUT=5
-DRAGONFLY_MAX_CONNECTIONS=100
+# Production Redis configuration
+REDIS_URL=rediss://default:password@your-host:6380/0
+REDIS_POOL_SIZE=20
+REDIS_TIMEOUT=5
+REDIS_MAX_CONNECTIONS=100
 
 # Multi-tier TTL strategy
 CACHE_HOT_TTL=300       # 5 minutes

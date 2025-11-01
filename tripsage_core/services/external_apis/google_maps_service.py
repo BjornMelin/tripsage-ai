@@ -13,8 +13,10 @@ Design goals:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
-from typing import Any
+from types import TracebackType
+from typing import Any, cast
 
 import googlemaps
 from googlemaps.exceptions import (
@@ -27,11 +29,11 @@ from googlemaps.exceptions import (
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError as CoreAPIError,
-    CoreServiceError,
 )
 from tripsage_core.models.api.maps_models import (
     DirectionsLeg,
     DirectionsResult,
+    DisplayValue,
     DistanceMatrix,
     DistanceMatrixElement,
     DistanceMatrixRow,
@@ -46,6 +48,7 @@ from tripsage_core.models.schemas_common.geographic import (
     Place,
     Route,
 )
+from tripsage_core.services.external_apis.base_service import sanitize_response
 
 
 logger = logging.getLogger(__name__)
@@ -60,7 +63,13 @@ class GoogleMapsServiceError(CoreAPIError):
             message=message,
             code="GOOGLE_MAPS_API_ERROR",
             api_service="GoogleMapsService",
-            details={"original_error": str(original_error) if original_error else None},
+            details={
+                "additional_context": {
+                    "original_error": (
+                        type(original_error).__name__ if original_error else None
+                    )
+                }
+            },
         )
         self.original_error = original_error
 
@@ -77,6 +86,37 @@ class GoogleMapsService:
         self.settings = settings or get_settings()
         self._client: googlemaps.Client | None = None
         self._connected = False
+        with contextlib.suppress(
+            Exception
+        ):  # pragma: no cover - safe to proceed without client
+            _ = self.client  # attempt to init when safe (mocked in tests)
+
+    async def connect(self) -> None:
+        """Connect the service (lazy initialization)."""
+        self._connected = True
+
+    async def disconnect(self) -> None:
+        """Disconnect the service."""
+        self._client = None
+        self._connected = False
+
+    async def close(self) -> None:
+        """Close the service."""
+        await self.disconnect()
+
+    async def __aenter__(self) -> GoogleMapsService:
+        """Enter async context manager."""
+        await self.connect()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        """Exit async context manager."""
+        await self.close()
 
     @property
     def client(self) -> googlemaps.Client:
@@ -92,11 +132,7 @@ class GoogleMapsService:
             # Get API key from core settings
             google_maps_key = getattr(self.settings, "google_maps_api_key", None)
             if not google_maps_key:
-                raise CoreServiceError(
-                    message="Google Maps API key not configured in settings",
-                    code="MISSING_API_KEY",
-                    service="GoogleMapsService",
-                )
+                raise GoogleMapsServiceError("Google Maps API key not configured")
 
             # Get timeout settings from core configuration
             timeout = getattr(self.settings, "google_maps_timeout", 10.0)
@@ -118,17 +154,6 @@ class GoogleMapsService:
             logger.info("Initialized Google Maps client")
 
         return self._client
-
-    async def connect(self) -> None:
-        """Initialize the Google Maps client."""
-        # The client property handles initialization
-        _ = self.client
-
-    async def disconnect(self) -> None:
-        """Clean up resources."""
-        self._client = None
-        self._connected = False
-        logger.info("Google Maps service disconnected")
 
     async def ensure_connected(self) -> None:
         """Ensure service is connected."""
@@ -152,13 +177,19 @@ class GoogleMapsService:
 
         try:
             gm: Any = self.client
-            result = await asyncio.to_thread(gm.geocode, address, **kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_raw = await asyncio.to_thread(gm.geocode, address, **kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_any = sanitize_response(result_raw)
+            result = (
+                cast(list[dict[str, Any]], result_any)
+                if isinstance(result_any, list)
+                else []
+            )
             logger.debug("Geocoded address '%s' with %s results", address, len(result))
             mapper = self._map_geocode_result
             return [mapper(item) for item in result]
         except (ApiError, HTTPError, Timeout, TransportError) as e:
             logger.exception("Geocoding failed for address '%s'", address)
-            raise GoogleMapsServiceError(f"Geocoding failed: {e}", e) from e
+            raise GoogleMapsServiceError("Geocoding failed", e) from e
 
     async def reverse_geocode(
         self, lat: float, lng: float, **kwargs: Any
@@ -181,7 +212,13 @@ class GoogleMapsService:
         try:
             latlng = (lat, lng)
             gm: Any = self.client
-            result = await asyncio.to_thread(gm.reverse_geocode, latlng, **kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_raw = await asyncio.to_thread(gm.reverse_geocode, latlng, **kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_any = sanitize_response(result_raw)
+            result = (
+                cast(list[dict[str, Any]], result_any)
+                if isinstance(result_any, list)
+                else []
+            )
             logger.debug(
                 "Reverse geocoded coordinates (%s, %s) with %s results",
                 lat,
@@ -229,7 +266,11 @@ class GoogleMapsService:
             search_kwargs.update(kwargs)
 
             gm: Any = self.client
-            result = await asyncio.to_thread(gm.places, **search_kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_raw = await asyncio.to_thread(gm.places, **search_kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_any = sanitize_response(result_raw)
+            result = (
+                cast(dict[str, Any], result_any) if isinstance(result_any, dict) else {}
+            )
             items = result.get("results", [])
             logger.debug("Place search for '%s' returned %s results", query, len(items))
             mapper = self._map_place_summary
@@ -263,7 +304,11 @@ class GoogleMapsService:
             details_kwargs.update(kwargs)
 
             gm: Any = self.client
-            result = await asyncio.to_thread(gm.place, **details_kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_raw = await asyncio.to_thread(gm.place, **details_kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_any = sanitize_response(result_raw)
+            result = (
+                cast(dict[str, Any], result_any) if isinstance(result_any, dict) else {}
+            )
             logger.debug("Retrieved place details for place_id '%s'", place_id)
             data = result.get("result", {})
             det_mapper = self._map_place_details
@@ -300,7 +345,20 @@ class GoogleMapsService:
             directions_kwargs.update(kwargs)
 
             gm: Any = self.client
-            result = await asyncio.to_thread(gm.directions, **directions_kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_raw = await asyncio.to_thread(gm.directions, **directions_kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_any = sanitize_response(result_raw)
+            # Support both list payloads and wrapper dicts used by some tests
+            if isinstance(result_any, list):
+                result = cast(list[dict[str, Any]], result_any)
+            elif isinstance(result_any, dict):
+                routes_any = cast(dict[str, Any], result_any).get("routes", [])
+                result = (
+                    cast(list[dict[str, Any]], routes_any)
+                    if isinstance(routes_any, list)
+                    else []
+                )
+            else:
+                result = []
             logger.debug(
                 "Retrieved directions from '%s' to '%s' (%s)", origin, destination, mode
             )
@@ -311,6 +369,111 @@ class GoogleMapsService:
                 "Directions request failed from '%s' to '%s'", origin, destination
             )
             raise GoogleMapsServiceError(f"Directions request failed: {e}", e) from e
+
+    def _parse_distance_matrix_rows(
+        self, result: dict[str, Any]
+    ) -> list[DistanceMatrixRow]:
+        """Parse rows from distance matrix API response.
+
+        Args:
+            result: The raw API response dictionary.
+
+        Returns:
+            List of parsed distance matrix rows.
+        """
+        rows: list[DistanceMatrixRow] = []
+        rows_raw_any = result.get("rows", [])
+        rows_raw: list[Any] = (
+            cast(list[Any], rows_raw_any) if isinstance(rows_raw_any, list) else []
+        )
+        for row_any in rows_raw:
+            row_dict = (
+                cast(dict[str, Any], row_any) if isinstance(row_any, dict) else {}
+            )
+            elements = self._parse_distance_matrix_elements(row_dict)
+            rows.append(DistanceMatrixRow(elements=elements))
+        return rows
+
+    def _parse_distance_matrix_elements(
+        self, row_dict: dict[str, Any]
+    ) -> list[DistanceMatrixElement]:
+        """Parse elements from a distance matrix row.
+
+        Args:
+            row_dict: A single row dictionary from the API response.
+
+        Returns:
+            List of parsed distance matrix elements.
+        """
+        elements_raw = row_dict.get("elements", [])
+        elements: list[DistanceMatrixElement] = []
+        elements_seq: list[Any] = (
+            cast(list[Any], elements_raw) if isinstance(elements_raw, list) else []
+        )
+        for el_any in elements_seq:
+            el = cast(dict[str, Any], el_any) if isinstance(el_any, dict) else {}
+            element = self._parse_distance_matrix_element(el)
+            elements.append(element)
+        return elements
+
+    def _parse_distance_matrix_element(
+        self, el: dict[str, Any]
+    ) -> DistanceMatrixElement:
+        """Parse a single distance matrix element.
+
+        Args:
+            el: Element dictionary from API response.
+
+        Returns:
+            Parsed distance matrix element.
+        """
+        status = str(el.get("status", "UNKNOWN"))
+
+        # Parse distance
+        dist_val = None
+        d_obj: dict[str, Any] = el.get("distance", {})
+        if "value" in d_obj:
+            dv_any = d_obj["value"]
+            if isinstance(dv_any, (int, float)):
+                dist_val = int(dv_any)
+        dist_text = cast(str, d_obj.get("text")) if d_obj.get("text") else None
+
+        # Parse duration
+        dur_val = None
+        dd_obj: dict[str, Any] = el.get("duration", {})
+        if "value" in dd_obj:
+            tv_any = dd_obj["value"]
+            if isinstance(tv_any, (int, float)):
+                dur_val = int(tv_any)
+        dur_text = cast(str, dd_obj.get("text")) if dd_obj.get("text") else None
+
+        return DistanceMatrixElement(
+            status=status,
+            distance_meters=dist_val,
+            duration_seconds=dur_val,
+            distance=DisplayValue(text=dist_text, value=dist_val),
+            duration=DisplayValue(text=dur_text, value=dur_val),
+        )
+
+    def _extract_address_list(self, result: dict[str, Any], key: str) -> list[str]:
+        """Extract address list from distance matrix response.
+
+        Args:
+            result: API response dictionary.
+            key: Key to extract ('origin_addresses' or 'destination_addresses').
+
+        Returns:
+            List of addresses.
+        """
+        addresses: list[str] = []
+        addr_any = result.get(key, [])
+        if isinstance(addr_any, list):
+            addr_list: list[Any] = cast(list[Any], addr_any)
+            for s_any in addr_list:
+                if isinstance(s_any, str):
+                    # Append full string, not extend (which splits chars)
+                    addresses.append(s_any)  # noqa: PERF401
+        return addresses
 
     async def distance_matrix(
         self,
@@ -344,32 +507,26 @@ class GoogleMapsService:
             matrix_kwargs.update(kwargs)
 
             gm: Any = self.client
-            result = await asyncio.to_thread(gm.distance_matrix, **matrix_kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_raw = await asyncio.to_thread(gm.distance_matrix, **matrix_kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_any = sanitize_response(result_raw)
+            result = (
+                cast(dict[str, Any], result_any) if isinstance(result_any, dict) else {}
+            )
             logger.debug(
                 "Calculated distance matrix for %s origins to %s destinations",
                 len(origins),
                 len(destinations),
             )
-            rows = [
-                DistanceMatrixRow(
-                    elements=[
-                        DistanceMatrixElement(
-                            status=el.get("status", "UNKNOWN"),
-                            distance_meters=(
-                                (el.get("distance", {}) or {}).get("value")
-                            ),
-                            duration_seconds=(
-                                (el.get("duration", {}) or {}).get("value")
-                            ),
-                        )
-                        for el in row.get("elements", [])
-                    ]
-                )
-                for row in result.get("rows", [])
-            ]
+
+            rows = self._parse_distance_matrix_rows(result)
+            origin_addresses = self._extract_address_list(result, "origin_addresses")
+            destination_addresses = self._extract_address_list(
+                result, "destination_addresses"
+            )
+
             return DistanceMatrix(
-                origin_addresses=result.get("origin_addresses", []),
-                destination_addresses=result.get("destination_addresses", []),
+                origin_addresses=origin_addresses,
+                destination_addresses=destination_addresses,
                 rows=rows,
             )
         except (ApiError, HTTPError, Timeout, TransportError) as e:
@@ -397,7 +554,13 @@ class GoogleMapsService:
 
         try:
             gm: Any = self.client
-            result = await asyncio.to_thread(gm.elevation, locations, **kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_raw = await asyncio.to_thread(gm.elevation, locations, **kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_any = sanitize_response(result_raw)
+            result = (
+                cast(list[dict[str, Any]], result_any)
+                if isinstance(result_any, list)
+                else []
+            )
             logger.debug("Retrieved elevation data for %s locations", len(locations))
             points: list[ElevationPoint] = []
             for item in result:
@@ -448,7 +611,11 @@ class GoogleMapsService:
             timezone_kwargs.update(kwargs)
 
             gm: Any = self.client
-            result = await asyncio.to_thread(gm.timezone, **timezone_kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_raw = await asyncio.to_thread(gm.timezone, **timezone_kwargs)  # type: ignore[reportAttributeAccessIssue]
+            result_any = sanitize_response(result_raw)
+            result = (
+                cast(dict[str, Any], result_any) if isinstance(result_any, dict) else {}
+            )
             logger.debug("Retrieved timezone data for location %s", location)
             return TimezoneInfo(
                 time_zone_id=result.get("timeZoneId", "UTC"),
@@ -474,18 +641,14 @@ class GoogleMapsService:
             logger.exception("Google Maps API health check failed")
             return False
 
-    async def close(self) -> None:
-        """Close the service and clean up resources."""
-        await self.disconnect()
-
     # DI: Construct GoogleMapsService in composition root; no module singletons.
 
     # --- Internal mappers -------------------------------------------------
 
     def _map_geocode_result(self, item: dict[str, Any]) -> Place:
         """Map a geocoding result item to a `Place` model."""
-        geometry = item.get("geometry", {})
-        loc = geometry.get("location") or {}
+        geometry = cast(dict[str, Any], item.get("geometry", {}))
+        loc = cast(dict[str, Any] | None, geometry.get("location")) or {}
         coords = None
         if "lat" in loc and "lng" in loc:
             coords = Coordinates.model_validate(
@@ -496,10 +659,19 @@ class GoogleMapsService:
                 }
             )
 
-        address_components = {
-            c.get("types", ["unknown"])[0]: c.get("long_name")
-            for c in item.get("address_components", [])
-        }
+        components_any = item.get("address_components", [])
+        address_components: dict[str, Any] = {}
+        if isinstance(components_any, list):
+            for c_any in cast(list[Any], components_any):
+                c = cast(dict[str, Any], c_any) if isinstance(c_any, dict) else {}
+                types = c.get("types", ["unknown"])
+                key_obj = (
+                    cast(Any, types[0])
+                    if isinstance(types, list) and types
+                    else "unknown"
+                )
+                key = key_obj if isinstance(key_obj, str) else "unknown"
+                address_components[key] = c.get("long_name")
         address = Address.model_validate(
             {
                 "street": None,
@@ -524,8 +696,8 @@ class GoogleMapsService:
 
     def _map_place_summary(self, item: dict[str, Any]) -> PlaceSummary:
         """Map a Places text search item to `PlaceSummary`."""
-        geometry = item.get("geometry", {})
-        loc = geometry.get("location") or {}
+        geometry = cast(dict[str, Any], item.get("geometry", {}))
+        loc = cast(dict[str, Any] | None, geometry.get("location")) or {}
         coords = None
         if "lat" in loc and "lng" in loc:
             coords = Coordinates.model_validate(
@@ -560,8 +732,8 @@ class GoogleMapsService:
 
     def _map_place_details(self, item: dict[str, Any]) -> PlaceDetails:
         """Map a Place Details response to `PlaceDetails`."""
-        geometry = item.get("geometry", {})
-        loc = geometry.get("location") or {}
+        geometry = cast(dict[str, Any], item.get("geometry", {}))
+        loc = cast(dict[str, Any] | None, geometry.get("location")) or {}
         coords = None
         if "lat" in loc and "lng" in loc:
             coords = Coordinates.model_validate(
@@ -600,7 +772,10 @@ class GoogleMapsService:
 
     def _map_directions_route(self, route: dict[str, Any]) -> DirectionsResult:
         """Map a directions route to `DirectionsResult`."""
-        legs_raw = route.get("legs", [])
+        legs_raw_any = route.get("legs", [])
+        legs_raw: list[Any] = (
+            cast(list[Any], legs_raw_any) if isinstance(legs_raw_any, list) else []
+        )
         legs: list[DirectionsLeg] = []
         total_distance_m = 0
         total_duration_s = 0
@@ -621,11 +796,24 @@ class GoogleMapsService:
                 )
             return None
 
-        for leg in legs_raw:
-            distance_val = (leg.get("distance", {}) or {}).get("value")
-            duration_val = (leg.get("duration", {}) or {}).get("value")
-            total_distance_m += int(distance_val or 0)
-            total_duration_s += int(duration_val or 0)
+        for leg_any in legs_raw:
+            leg = cast(dict[str, Any], leg_any) if isinstance(leg_any, dict) else {}
+            distance_val_num: int = 0
+            d_obj: dict[str, Any] = leg.get("distance", {})
+            if "value" in d_obj:
+                v_any = d_obj["value"]
+                if isinstance(v_any, (int, float)):
+                    distance_val_num = int(v_any)
+            dist_text = cast(str, d_obj.get("text")) if d_obj.get("text") else None
+            duration_val_num: int = 0
+            dd_obj: dict[str, Any] = leg.get("duration", {})
+            if "value" in dd_obj:
+                v2_any = dd_obj["value"]
+                if isinstance(v2_any, (int, float)):
+                    duration_val_num = int(v2_any)
+            dur_text = cast(str, dd_obj.get("text")) if dd_obj.get("text") else None
+            total_distance_m += distance_val_num
+            total_duration_s += duration_val_num
 
             start_place = Place.model_validate(
                 {
@@ -651,14 +839,20 @@ class GoogleMapsService:
             )
             legs.append(
                 DirectionsLeg(
-                    distance_meters=int(distance_val or 0),
-                    duration_seconds=int(duration_val or 0),
+                    distance_meters=distance_val_num,
+                    duration_seconds=duration_val_num,
+                    distance=DisplayValue(text=dist_text, value=distance_val_num),
+                    duration=DisplayValue(text=dur_text, value=duration_val_num),
                     start=start_place,
                     end=end_place,
                 )
             )
 
-        polyline = (route.get("overview_polyline", {}) or {}).get("points")
+        op_obj = route.get("overview_polyline", {})
+        polyline: str | None = None
+        if isinstance(op_obj, dict) and "points" in op_obj:
+            p_any = cast(Any, op_obj["points"])
+            polyline = p_any if isinstance(p_any, str) else None
 
         route_summary = Route(
             origin=start_place

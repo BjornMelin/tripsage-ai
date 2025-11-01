@@ -61,7 +61,7 @@ class Flight(TripSageModel):
     @classmethod
     def validate_airport_code(cls, v: str) -> str:
         """Validate airport code format (IATA 3-letter code)."""
-        if not isinstance(v, str) or len(v) != 3 or not v.isalpha():
+        if len(v) != 3 or not v.isalpha():
             raise ValueError("Airport code must be a 3-letter IATA code")
         return v.upper()
 
@@ -163,9 +163,8 @@ class Flight(TripSageModel):
         # Can only cancel if booked and the departure date hasn't passed
         if self.booking_status != BookingStatus.BOOKED:
             return False
-        from datetime import datetime as datetime_type
 
-        return datetime_type.now() < self.departure_time
+        return datetime.now() < self.departure_time
 
     def update_status(self, new_status: BookingStatus) -> bool:
         """Update the flight status with validation.
@@ -176,23 +175,15 @@ class Flight(TripSageModel):
         Returns:
             True if the status was updated, False if invalid transition
         """
-        # Define valid status transitions
-        valid_transitions = {
-            BookingStatus.VIEWED: [
-                BookingStatus.SAVED,
-                BookingStatus.BOOKED,
-                BookingStatus.CANCELLED,
-            ],
-            BookingStatus.SAVED: [
-                BookingStatus.BOOKED,
-                BookingStatus.CANCELLED,
-                BookingStatus.VIEWED,
-            ],
-            BookingStatus.BOOKED: [BookingStatus.CANCELLED],
-            BookingStatus.CANCELLED: [],  # Cannot change from cancelled
-        }
+        from tripsage_core.utils.booking_utils import (
+            get_standard_booking_transitions,
+            validate_booking_status_transition,
+        )
 
-        if new_status in valid_transitions.get(self.booking_status, []):
+        valid_transitions = get_standard_booking_transitions()
+        if validate_booking_status_transition(
+            self.booking_status, new_status, valid_transitions
+        ):
             self.booking_status = new_status
             return True
         return False

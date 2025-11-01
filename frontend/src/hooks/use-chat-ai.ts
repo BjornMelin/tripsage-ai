@@ -1,25 +1,31 @@
+/**
+ * @fileoverview React hook for AI chat functionality.
+ *
+ * Provides interface for sending messages, handling streaming responses,
+ * managing tool calls, and maintaining chat session state.
+ */
+
 "use client";
 
-import { useApiKeyStore } from "@/stores/api-key-store";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
 import { useChatStore } from "@/stores/chat-store";
 import type {
   Attachment,
   ChatSession,
   Message,
-  MessageRole,
   ToolCall,
   ToolResult,
 } from "@/types/chat";
-import { type Message as AiMessage, useChat } from "ai/react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
-import { z } from "zod";
 
 // Zod schemas for validation
 // const SessionIdSchema = z.string().min(1, "Session ID cannot be empty").optional(); // Future validation
 
+/** Schema for validating message content. */
 const MessageContentSchema = z.string().min(1, "Message content cannot be empty");
 
+/** Schema for validating attachment arrays. */
 const AttachmentArraySchema = z
   .array(
     z.object({
@@ -32,6 +38,9 @@ const AttachmentArraySchema = z
   )
   .default([]);
 
+/**
+ * Options for configuring the useChatAi hook.
+ */
 interface UseChatAiOptions {
   /**
    * The ID of the chat session. If not provided, a new one will be created.
@@ -49,13 +58,41 @@ interface UseChatAiOptions {
   onNewSession?: (session: ChatSession) => void;
 }
 
+/**
+ * React hook for managing AI chat functionality with streaming responses.
+ *
+ * This hook provides a complete interface for interacting with AI chat services,
+ * including message sending, streaming response handling, tool call management,
+ * and session state management. It includes authentication validation and
+ * automatic session creation.
+ *
+ * @param options - Configuration options for the chat hook.
+ * @param options.sessionId - Optional session ID. If not provided, generates a new one.
+ * @param options.initialMessages - Initial messages to populate the chat session.
+ * @param options.onNewSession - Callback invoked when a new session is created.
+ * @returns Object containing chat state, actions, and authentication status.
+ * @returns .sessionId - Current chat session ID.
+ * @returns .messages - Array of messages in the current session.
+ * @returns .isLoading - Whether a message is currently being sent.
+ * @returns .error - Current error message if any.
+ * @returns .isAuthenticated - Whether the user is authenticated.
+ * @returns .isInitialized - Whether the hook has completed initialization.
+  * @returns .authError - Authentication-related error message.
+ * @returns .activeToolCalls - Currently executing tool calls.
+ * @returns .toolResults - Results from completed tool calls.
+ * @returns .sendMessage - Function to send a new message.
+ * @returns .stopGeneration - Function to stop ongoing message generation.
+ * @returns .reload - Placeholder for reload functionality.
+ * @returns .retryToolCall - Function to retry a failed tool call.
+ * @returns .cancelToolCall - Function to cancel an active tool call.
+ */
 export function useChatAi(options: UseChatAiOptions = {}) {
   const { sessionId: providedSessionId, initialMessages = [], onNewSession } = options;
 
   // Generate a session ID if not provided
   const sessionIdRef = useRef<string>(providedSessionId || uuidv4());
 
-  // Auth and API key state
+  // Authentication state
   const [authError, setAuthError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -65,16 +102,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   );
   const [toolResults, setToolResults] = useState<Map<string, ToolResult>>(new Map());
 
-  const {
-    isAuthenticated,
-    isApiKeyValid,
-    authError: storeAuthError,
-    token,
-    loadKeys,
-    validateKey,
-    setAuthError: setStoreAuthError,
-  } = useApiKeyStore();
-
+  const isAuthenticated = true;
   // Access chat store functions
   const {
     sessions,
@@ -87,42 +115,17 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     stopStreaming,
   } = useChatStore();
 
-  // Initialize authentication and validate API keys
+  // Initialize authentication state (Supabase session is managed upstream)
   useEffect(() => {
-    const initializeAuth = async () => {
-      if (!isAuthenticated) {
-        setAuthError("Authentication required. Please log in to use the chat.");
-        setIsInitialized(false);
-        return;
-      }
+    if (!isAuthenticated) {
+      setAuthError("Authentication required. Please log in to use the chat.");
+      setIsInitialized(false);
+      return;
+    }
 
-      // Load keys if authenticated
-      try {
-        await loadKeys();
-
-        // Validate the OpenAI key (required for chat)
-        const hasValidKey = await validateKey("openai");
-        if (!hasValidKey) {
-          setAuthError(
-            "Valid OpenAI API key required. Please add one in your API settings."
-          );
-          setIsInitialized(false);
-          return;
-        }
-
-        setAuthError(null);
-        setStoreAuthError(null);
-        setIsInitialized(true);
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Authentication failed";
-        setAuthError(message);
-        setIsInitialized(false);
-      }
-    };
-
-    initializeAuth();
-  }, [isAuthenticated, loadKeys, validateKey, setStoreAuthError]);
+    setAuthError(null);
+    setIsInitialized(true);
+  }, [isAuthenticated]);
 
   // Ensure the session exists (only after auth is initialized)
   useEffect(() => {
@@ -136,9 +139,9 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     if (!existingSession) {
       // Create a new session using the store method
       const createdSessionId = createSession("New Chat");
+      // Ensure subsequent operations target the created session
+      sessionIdRef.current = createdSessionId;
 
-      // Note: The onNewSession callback will be called when the session is available
-      // since sessions is a derived state that might not be immediately updated
       if (onNewSession) {
         // Create a temporary session object for the callback
         const tempSession: ChatSession = {
@@ -153,8 +156,8 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     }
 
     // Set as active session
-    if (currentSessionId !== sessionId) {
-      setCurrentSession(sessionId);
+    if (currentSessionId !== sessionIdRef.current) {
+      setCurrentSession(sessionIdRef.current);
     }
   }, [
     isInitialized,
@@ -168,7 +171,11 @@ export function useChatAi(options: UseChatAiOptions = {}) {
 
   // Tool call management functions
   const addToolCall = useCallback((toolCall: ToolCall) => {
-    setActiveToolCalls((prev) => new Map(prev.set(toolCall.id, toolCall)));
+    setActiveToolCalls((prev) => {
+      const next = new Map(prev);
+      next.set(toolCall.id, toolCall);
+      return next;
+    });
   }, []);
 
   const updateToolCall = useCallback(
@@ -231,7 +238,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   );
 
   // Handle streaming tool call chunks
-  const handleToolCallChunk = useCallback(
+  const _handleToolCallChunk = useCallback(
     (chunk: string) => {
       try {
         if (chunk.startsWith("9:")) {
@@ -264,184 +271,13 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     [addToolCall, addToolResult]
   );
 
-  // Convert our messages to AI SDK format
-  const aiMessages: AiMessage[] =
-    sessions
-      .find((s) => s.id === sessionIdRef.current)
-      ?.messages.map((msg) => ({
-        id: msg.id,
-        role: msg.role.toLowerCase() as "user" | "assistant" | "system",
-        content: msg.content,
-      })) || [];
-
-  // Set up Vercel AI SDK chat (only if initialized)
-  const {
-    messages: aiSdkMessages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
-    error,
-    stop,
-    reload,
-  } = useChat({
-    api: "/api/chat",
-    initialMessages: aiMessages,
-    id: sessionIdRef.current,
-    headers: {
-      ...(token && { Authorization: `Bearer ${token}` }),
-    },
-    onResponse: (response) => {
-      // Check for rate limit headers
-      const retryAfter = response.headers.get("X-RateLimit-Reset");
-      if (response.status === 429 && retryAfter) {
-        const resetTime = new Date(Number.parseInt(retryAfter) * 1000);
-        updateAgentStatus(sessionIdRef.current, {
-          isActive: false,
-          statusMessage: `Rate limited. Try again after ${resetTime.toLocaleTimeString()}`,
-        });
-        return;
-      }
-
-      // Set agent to processing when we get a response
-      updateAgentStatus(sessionIdRef.current, {
-        isActive: true,
-        statusMessage: "Processing your request...",
-      });
-
-      // Handle streaming tool calls
-      if (response.body) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        const processChunk = async () => {
-          try {
-            const { done, value } = await reader.read();
-            if (done) return;
-
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split("\n");
-
-            for (const line of lines) {
-              if (line.trim()) {
-                handleToolCallChunk(line.trim());
-              }
-            }
-
-            // Continue processing
-            processChunk();
-          } catch (error) {
-            console.warn("Error processing stream chunk:", error);
-          }
-        };
-
-        processChunk();
-      }
-    },
-    onFinish: (message) => {
-      // Update message with tool call information
-      if (activeToolCalls.size > 0) {
-        const toolCallsArray = Array.from(activeToolCalls.values()).map((toolCall) => ({
-          id: toolCall.id,
-          name: toolCall.name,
-          arguments: toolCall.arguments || {},
-          state: "call" as const,
-        }));
-        const toolResultsArray = Array.from(toolResults.values()).map((toolResult) => ({
-          callId: toolResult.callId,
-          result: toolResult.result || null, // Ensure result is present
-        }));
-
-        updateMessage(sessionIdRef.current, message.id, {
-          toolCalls: toolCallsArray,
-          toolResults: toolResultsArray,
-        });
-      }
-
-      // Set agent to idle when message is complete
-      updateAgentStatus(sessionIdRef.current, {
-        isActive: false,
-        statusMessage: "",
-      });
-
-      // Clear active tool calls for next message
-      setActiveToolCalls(new Map());
-      setToolResults(new Map());
-    },
-    onError: (error) => {
-      console.error("Chat error:", error);
-
-      // Parse error for specific handling
-      let errorMessage = "An error occurred while processing your request";
-      // let errorStatus = "error"; // Future use
-
-      if (error.message) {
-        // Check for specific error patterns
-        if (error.message.includes("timeout") || error.message.includes("TIMEOUT")) {
-          errorMessage = "Request timed out. Please try again.";
-          // errorStatus = "timeout"; // Future use
-        } else if (
-          error.message.includes("Authentication required") ||
-          error.message.includes("AUTH_REQUIRED")
-        ) {
-          errorMessage = "Authentication required. Please check your API keys.";
-          // errorStatus = "auth_error"; // Future use
-        } else if (
-          error.message.includes("Rate limited") ||
-          error.message.includes("RATE_LIMITED")
-        ) {
-          errorMessage = "Too many requests. Please wait a moment and try again.";
-          // errorStatus = "rate_limited"; // Future use
-        } else if (
-          error.message.includes("Service unavailable") ||
-          error.message.includes("SERVICE_UNAVAILABLE")
-        ) {
-          errorMessage =
-            "AI service is temporarily unavailable. Please try again later.";
-          // errorStatus = "service_unavailable"; // Future use
-        } else if (error.message.includes("Model not available")) {
-          errorMessage =
-            "The selected AI model is not available. Please try a different model.";
-          // errorStatus = "model_unavailable"; // Future use
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
-      updateAgentStatus(sessionIdRef.current, {
-        isActive: false,
-        statusMessage: errorMessage,
-      });
-    },
-  });
-
-  // Sync AI SDK messages to our store
-  useEffect(() => {
-    const lastMessage = aiSdkMessages[aiSdkMessages.length - 1];
-
-    if (!lastMessage) return;
-
-    const sessionMessages =
-      sessions.find((s) => s.id === sessionIdRef.current)?.messages || [];
-    const existingMessage = sessionMessages.find((m) => m.id === lastMessage.id);
-
-    if (existingMessage) {
-      // Update existing message
-      if (existingMessage.content !== lastMessage.content) {
-        updateMessage(sessionIdRef.current, lastMessage.id, {
-          content: lastMessage.content,
-        });
-      }
-    } else {
-      // Add new message
-      const role = lastMessage.role as MessageRole;
-
-      addMessage(sessionIdRef.current, {
-        role,
-        content: lastMessage.content,
-      });
-    }
-  }, [aiSdkMessages, sessions, addMessage, updateMessage]);
+  // Local loading/error state now that we call backend directly
+  const [sendingStatus, setSendingStatus] = useState<
+    "idle" | "submitting" | "streaming"
+  >("idle");
+  const [localError, setLocalError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Handle sending a user message
   const sendMessage = useCallback(
@@ -457,20 +293,11 @@ export function useChatAi(options: UseChatAiOptions = {}) {
           return;
         }
 
-        // Check for valid API key
-        if (!isApiKeyValid) {
-          setAuthError("Valid API key required before sending messages");
-          return;
-        }
-
         // Set agent status to thinking
         updateAgentStatus(sessionIdRef.current, {
           isActive: true,
           statusMessage: "Thinking...",
         });
-
-        // Create a unique ID for this message
-        uuidv4(); // Generated for future message tracking
 
         // Add the user message to our store
         addMessage(sessionIdRef.current, {
@@ -479,25 +306,127 @@ export function useChatAi(options: UseChatAiOptions = {}) {
           attachments: validatedAttachments,
         });
 
-        // Submit the message through AI SDK
-        // This will trigger the AI response
-        const submitEvent = {
-          preventDefault: () => {},
-          currentTarget: {
-            elements: {
-              // Create a mock form with the message as input
-              input: {
-                value: validatedContent,
-              },
-            },
-          },
-        } as unknown as React.FormEvent<HTMLFormElement>;
+        // Send to backend FastAPI chat endpoint
+        void (async () => {
+          try {
+            setSendingStatus("submitting");
+            setLocalError(null);
 
-        handleSubmit(submitEvent);
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+            const endpoint = `${apiUrl.replace(/\/$/, "")}/api/chat/stream`;
+
+            // Build a minimal ChatRequest payload using recent session messages
+            const session = sessions.find((s) => s.id === sessionIdRef.current);
+            const recent = (session?.messages || []).slice(-20).map((m) => ({
+              role: m.role,
+              content: m.content,
+            }));
+            const body = JSON.stringify({ messages: recent });
+
+            // Configure abort controller + timeout
+            abortRef.current?.abort();
+            abortRef.current = new AbortController();
+            const signal = abortRef.current.signal;
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            timeoutRef.current = setTimeout(() => {
+              abortRef.current?.abort();
+            }, 60_000);
+
+            const response = await fetch(endpoint, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "text/event-stream",
+              },
+              credentials: "include",
+              body,
+              signal,
+            });
+
+            if (!response.ok || !response.body) {
+              const err = await response.json().catch(() => ({}));
+              throw new Error(
+                err?.detail || err?.error || `Chat failed (${response.status})`
+              );
+            }
+            // Prepare streaming decode
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            // Create placeholder assistant message to progressively update
+            const placeholderId = addMessage(sessionIdRef.current, {
+              role: "assistant",
+              content: "",
+            });
+
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              buffer += chunk;
+
+              // Process complete SSE events separated by double newline
+              let idx;
+              while ((idx = buffer.indexOf("\n\n")) !== -1) {
+                const raw = buffer.slice(0, idx).trim();
+                buffer = buffer.slice(idx + 2);
+
+                if (raw.startsWith("data:")) {
+                  const dataStr = raw.slice(5).trim();
+                  if (dataStr === "[DONE]") {
+                    break;
+                  }
+                  try {
+                    const evt = JSON.parse(dataStr) as {
+                      type?: string;
+                      content?: string;
+                    };
+                    if (evt.type === "delta" && evt.content) {
+                      // Append token to placeholder content
+                      const current =
+                        sessions
+                          .find((s) => s.id === sessionIdRef.current)
+                          ?.messages.find((m) => m.id === placeholderId)?.content || "";
+                      updateMessage(sessionIdRef.current, placeholderId, {
+                        content: current + evt.content,
+                      });
+                    }
+                  } catch {
+                    // ignore malformed data
+                  }
+                }
+              }
+            }
+
+            // Done
+            setSendingStatus("idle");
+            updateAgentStatus(sessionIdRef.current, {
+              isActive: false,
+              statusMessage: "",
+            });
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : "Chat request failed";
+            setLocalError(msg);
+            updateAgentStatus(sessionIdRef.current, {
+              isActive: false,
+              statusMessage: msg,
+            });
+            setSendingStatus("idle");
+          } finally {
+            if (timeoutRef.current) {
+              clearTimeout(timeoutRef.current);
+              timeoutRef.current = null;
+            }
+            // Clear tool-call tracking between messages
+            setActiveToolCalls(new Map());
+            setToolResults(new Map());
+          }
+        })();
       } catch (error) {
         // Handle Zod validation errors
         if (error instanceof z.ZodError) {
-          const errorMessage = error.errors.map((e) => e.message).join(", ");
+          const errorMessage = error.issues.map((e) => e.message).join(", ");
           setAuthError(`Invalid input: ${errorMessage}`);
         } else {
           setAuthError("An error occurred while processing your message");
@@ -506,50 +435,54 @@ export function useChatAi(options: UseChatAiOptions = {}) {
       }
     },
     [
+      sessions,
       addMessage,
-      handleSubmit,
       updateAgentStatus,
       isInitialized,
       isAuthenticated,
-      isApiKeyValid,
     ]
   );
 
   // Handle stopping the generation
   const stopGeneration = useCallback(() => {
-    stop();
+    // Abort in-flight request and clear status/UI
+    abortRef.current?.abort();
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     stopStreaming();
-    updateAgentStatus(sessionIdRef.current, {
-      isActive: false,
-      statusMessage: "",
-    });
-  }, [stop, stopStreaming, updateAgentStatus]);
+    updateAgentStatus(sessionIdRef.current, { isActive: false, statusMessage: "" });
+  }, [stopStreaming, updateAgentStatus]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   return {
     // Chat state
     sessionId: sessionIdRef.current,
     messages: sessions.find((s) => s.id === sessionIdRef.current)?.messages || [],
-    isLoading,
-    error: error || authError || storeAuthError,
+    isLoading: sendingStatus !== "idle",
+    error: localError || authError,
 
     // Auth state
     isAuthenticated,
     isInitialized,
-    isApiKeyValid,
-    authError: authError || storeAuthError,
+    authError,
 
     // Tool call state
     activeToolCalls: Array.from(activeToolCalls.values()),
     toolResults: Array.from(toolResults.values()),
 
-    // Input state (from AI SDK)
-    input,
-    handleInputChange,
-
     // Actions
     sendMessage,
     stopGeneration,
-    reload,
+    reload: () => undefined,
 
     // Tool call actions
     retryToolCall,

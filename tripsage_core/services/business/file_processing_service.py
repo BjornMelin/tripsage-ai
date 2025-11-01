@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from pydantic import Field  # pylint: disable=import-error
@@ -33,6 +33,7 @@ from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
 logger = logging.getLogger(__name__)
@@ -452,7 +453,7 @@ class FileRepository:
                 "file_usage_stats", {"user_id": user_id}
             )
             if isinstance(result, dict):
-                return result
+                return result  # type: ignore[return-value]
 
         if hasattr(self._backend, "select"):
             rows = await self._backend.select(self._table, filters={"user_id": user_id})
@@ -605,6 +606,7 @@ class FileProcessingService:
         """Maximum aggregate upload size per batch in bytes."""
         return self._limits.max_session_size
 
+    @tripsage_safe_execute()
     async def upload_file(
         self, user_id: str, upload_request: FileUploadRequest
     ) -> ProcessedFile:
@@ -624,7 +626,7 @@ class FileProcessingService:
 
         file_hash = validation.file_hash or ""
         duplicate = await self._repo.fetch_by_hash(user_id, file_hash)
-        if duplicate and isinstance(duplicate, Mapping):
+        if duplicate:  # type: ignore[comparison-overlap]
             logger.info(
                 "Duplicate file detected; returning existing reference",
                 extra={"user_id": user_id, "file_id": duplicate.get("id")},
@@ -695,6 +697,7 @@ class FileProcessingService:
         )
         return processed_file
 
+    @tripsage_safe_execute()
     async def upload_batch(
         self, user_id: str, uploads: Iterable[FileUploadRequest]
     ) -> list[ProcessedFile]:
@@ -709,6 +712,7 @@ class FileProcessingService:
 
         return [await self.upload_file(user_id, request) for request in uploads_list]
 
+    @tripsage_safe_execute()
     async def get_file(
         self, file_id: str, user_id: str, *, check_access: bool = True
     ) -> ProcessedFile | None:
@@ -717,7 +721,7 @@ class FileProcessingService:
         if not record:
             return None
 
-        if not isinstance(record, Mapping):
+        if not record:  # type: ignore[comparison-overlap]
             logger.warning(
                 "Unexpected file record payload",
                 extra={"file_id": file_id, "type": type(record)},
@@ -739,6 +743,7 @@ class FileProcessingService:
 
         return processed_file
 
+    @tripsage_safe_execute()
     async def get_file_content(self, file_id: str, user_id: str) -> bytes | None:
         """Return binary content for an accessible file."""
         processed_file = await self.get_file(file_id, user_id)
@@ -761,6 +766,7 @@ class FileProcessingService:
 
         return content
 
+    @tripsage_safe_execute()
     async def search_files(
         self, user_id: str, search_request: FileSearchRequest
     ) -> list[ProcessedFile]:
@@ -792,7 +798,7 @@ class FileProcessingService:
 
         processed_files: list[ProcessedFile] = []
         for record in records:
-            if not isinstance(record, Mapping):
+            if not record:  # type: ignore[comparison-overlap]
                 logger.warning(
                     "Skipping unexpected search payload",
                     extra={"type": type(record)},
@@ -802,6 +808,7 @@ class FileProcessingService:
 
         return processed_files
 
+    @tripsage_safe_execute()
     async def delete_file(self, file_id: str, user_id: str) -> bool:
         """Delete file metadata and storage."""
         processed_file = await self.get_file(file_id, user_id)
@@ -820,6 +827,7 @@ class FileProcessingService:
 
         return await self._repo.delete(file_id)
 
+    @tripsage_safe_execute()
     async def get_usage_stats(self, user_id: str) -> FileUsageStats:
         """Return aggregate file usage statistics for a user."""
         try:
@@ -983,11 +991,11 @@ class FileProcessingService:
             if isinstance(storage_result, Mapping):
                 return StorageResult(
                     provider=StorageProvider(
-                        storage_result.get("provider", StorageProvider.EXTERNAL)
+                        storage_result.get("provider", StorageProvider.EXTERNAL)  # type: ignore[arg-type]
                     ),
-                    path=storage_result["path"],
-                    stored_filename=storage_result.get("stored_filename", filename),
-                    url=storage_result.get("url"),
+                    path=storage_result["path"],  # type: ignore[index]
+                    stored_filename=storage_result.get("stored_filename", filename),  # type: ignore[arg-type]
+                    url=storage_result.get("url"),  # type: ignore[arg-type]
                 )
 
             return StorageResult(
@@ -1103,29 +1111,84 @@ class FileProcessingService:
 
     def _deserialize_processed_file(self, data: Mapping[str, Any]) -> ProcessedFile:
         """Deserialize a processed file from a mapping."""
-        payload = dict(data)
-        payload.setdefault("tags", ())
-        payload.setdefault("shared_with", ())
-        payload.setdefault("processing_status", ProcessingStatus.PROCESSING.value)
-        if isinstance(payload["processing_status"], str):
-            payload["processing_status"] = ProcessingStatus(
-                payload["processing_status"]
+        # Extract and validate required fields
+        required_fields = {
+            "id": data["id"],
+            "user_id": data["user_id"],
+            "original_filename": data["original_filename"],
+            "stored_filename": data["stored_filename"],
+            "file_size": int(data["file_size"]),
+            "file_hash": data["file_hash"],
+            "storage_path": data["storage_path"],
+        }
+
+        # Extract optional fields with proper typing
+        processed_fields: dict[str, Any] = {}
+
+        if "trip_id" in data and data["trip_id"] is not None:
+            processed_fields["trip_id"] = str(data["trip_id"])
+
+        if "mime_type" in data:
+            processed_fields["mime_type"] = str(data["mime_type"])
+
+        # Handle processing status
+        processing_status_raw = data.get(
+            "processing_status", ProcessingStatus.PROCESSING.value
+        )
+        if isinstance(processing_status_raw, str):
+            processed_fields["processing_status"] = ProcessingStatus(
+                processing_status_raw
             )
-        if isinstance(payload.get("file_type"), str):
-            payload["file_type"] = FileType(payload["file_type"])
-        if isinstance(payload.get("visibility"), str):
-            payload["visibility"] = FileVisibility(payload["visibility"])
-        if isinstance(payload.get("storage_provider"), str):
-            payload["storage_provider"] = StorageProvider(payload["storage_provider"])
-        if "metadata" in payload and isinstance(payload["metadata"], Mapping):
-            payload["metadata"] = FileMetadata(**payload["metadata"])
-        if "analysis_result" in payload and isinstance(
-            payload["analysis_result"], Mapping
-        ):
-            payload["analysis_result"] = FileAnalysisResult(
-                **payload["analysis_result"]
+        else:
+            processed_fields["processing_status"] = ProcessingStatus.PROCESSING
+
+        # Handle file type
+        file_type_raw = data.get("file_type")
+        if isinstance(file_type_raw, str):
+            processed_fields["file_type"] = FileType(file_type_raw)
+
+        # Handle storage provider
+        storage_provider_raw = data.get("storage_provider")
+        if isinstance(storage_provider_raw, str):
+            processed_fields["storage_provider"] = StorageProvider(storage_provider_raw)
+
+        # Handle visibility
+        visibility_raw = data.get("visibility", FileVisibility.PRIVATE.value)
+        if isinstance(visibility_raw, str):
+            processed_fields["visibility"] = FileVisibility(visibility_raw)
+
+        # Handle optional fields
+        optional_fields = [
+            "storage_url",
+            "upload_timestamp",
+            "processed_timestamp",
+            "parent_file_id",
+            "download_count",
+            "last_accessed",
+            "version",
+        ]
+        for field_name in optional_fields:
+            if field_name in data and data[field_name] is not None:
+                processed_fields[field_name] = data[field_name]
+
+        # Handle list/tuple fields
+        list_fields = ["tags", "shared_with"]
+        for field_name in list_fields:
+            if field_name in data:
+                processed_fields[field_name] = tuple(data.get(field_name, []))
+
+        # Handle complex objects with explicit type checking
+        if "metadata" in data and isinstance(data["metadata"], Mapping):
+            processed_fields["metadata"] = FileMetadata(
+                **cast(dict[str, Any], data["metadata"])
             )
-        return ProcessedFile(**payload)
+
+        if "analysis_result" in data and isinstance(data["analysis_result"], Mapping):
+            processed_fields["analysis_result"] = FileAnalysisResult(
+                **cast(dict[str, Any], data["analysis_result"])
+            )
+
+        return ProcessedFile(**required_fields, **processed_fields)
 
     def _ensure_background_task(self, task: asyncio.Task[Any]) -> None:
         """Ensure a background task is added to the set."""

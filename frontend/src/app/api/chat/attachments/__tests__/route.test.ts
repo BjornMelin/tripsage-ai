@@ -86,7 +86,7 @@ describe("/api/chat/attachments route", () => {
       status: "completed",
     });
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8000/api/attachments/upload",
+      "http://localhost:8001/api/attachments/upload",
       expect.objectContaining({
         method: "POST",
       })
@@ -140,7 +140,7 @@ describe("/api/chat/attachments route", () => {
     const body = await response.json();
     expect(body.files).toHaveLength(2);
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8000/api/attachments/upload/batch",
+      "http://localhost:8001/api/attachments/upload/batch",
       expect.objectContaining({
         method: "POST",
       })
@@ -268,7 +268,7 @@ describe("/api/chat/attachments route", () => {
     await POST(mockRequest);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8000/api/attachments/upload",
+      "http://localhost:8001/api/attachments/upload",
       expect.objectContaining({
         method: "POST",
         headers: { Authorization: "Bearer token123" },

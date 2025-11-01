@@ -21,6 +21,7 @@ from tripsage.api.limiting import install_rate_limiting
 from tripsage.api.middlewares import (
     LoggingMiddleware,
 )
+from tripsage.api.middlewares.authentication import AuthenticationMiddleware
 from tripsage.api.routers import (
     accommodations,
     activities,
@@ -38,10 +39,10 @@ from tripsage.api.routers import (
     search,
     trips,
     users,
-    websocket,
 )
 
 # Removed ServiceRegistry: use direct lifespan-managed instances
+from tripsage.app_state import initialise_app_state, shutdown_app_state
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreExternalAPIError,
@@ -51,11 +52,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreValidationError,
 )
 from tripsage_core.observability.otel import setup_otel
-from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
-from tripsage_core.services.infrastructure.websocket_broadcaster import (
-    WebSocketBroadcaster,
-)
-from tripsage_core.services.infrastructure.websocket_manager import WebSocketManager
 
 
 logger: "logging.Logger" = logging.getLogger(__name__)  # pylint: disable=no-member
@@ -78,70 +74,44 @@ async def lifespan(app: FastAPI):
     Args:
         app: The FastAPI application
     """
-    # Startup: Initialize MCP Manager and WebSocket Services
-    logger.info("Initializing MCP service on API startup")
-    from tripsage_core.services.airbnb_mcp import AirbnbMCP
+    services, orchestrator = await initialise_app_state(app)
 
-    app.state.mcp_service = AirbnbMCP()
-    await app.state.mcp_service.initialize()
+    # Instantiate shared agents after services are ready
+    from tripsage.agents.chat import ChatAgent
 
-    # Initialize services (Cache, WebSocket, MCP) in DI-managed app.state
-    logger.info("Initializing Cache service")
-    from tripsage_core.services.infrastructure.cache_service import CacheService
-
-    app.state.cache_service = CacheService()
-    await app.state.cache_service.connect()
-
-    # Initialize Google Maps service (DI-managed singleton for API lifespan)
-    logger.info("Initializing Google Maps service")
-    app.state.google_maps_service = GoogleMapsService()
-    await app.state.google_maps_service.connect()
-    # Services are reachable via request.app.state*
+    app.state.chat_agent = ChatAgent(
+        services=services,
+        orchestrator=orchestrator,
+    )
 
     # Start database connection monitor for unified health reporting
+    database_monitor = None
     try:
+        db_service = services.database_service
+        if db_service is None:
+            raise RuntimeError("Database service unavailable during startup")
         from tripsage_core.services.infrastructure.database_monitor import (
             DatabaseConnectionMonitor,
         )
-        from tripsage_core.services.infrastructure.database_service import (
-            get_database_service,
-        )
 
-        db_service = await get_database_service()
-        app.state.database_monitor = DatabaseConnectionMonitor(
-            database_service=db_service
+        database_monitor = DatabaseConnectionMonitor(
+            database_service=db_service,
         )
-        await app.state.database_monitor.start_monitoring()
-    except Exception:  # noqa: BLE001 - do not break startup if monitor fails
+        await database_monitor.start_monitoring()
+        app.state.database_monitor = database_monitor
+    except Exception:  # noqa: BLE001 - non-critical
         logger.warning("DatabaseConnectionMonitor initialization failed")
 
-    logger.info("Starting WebSocket Broadcaster")
-    app.state.websocket_broadcaster = WebSocketBroadcaster()
-    await app.state.websocket_broadcaster.start()
-
-    # Initialize WebSocket Manager with broadcaster integration
-    logger.info("Starting WebSocket Manager with broadcaster integration")
-    app.state.websocket_manager = WebSocketManager()
-    app.state.websocket_manager.broadcaster = app.state.websocket_broadcaster
-    await app.state.websocket_manager.start()
-
-    yield  # Application runs here
-
-    # Shutdown: Clean up resources (reverse order)
-    logger.info("Stopping WebSocket Manager")
-    await app.state.websocket_manager.stop()
-
-    logger.info("Stopping WebSocket Broadcaster")
-    await app.state.websocket_broadcaster.stop()
-
-    logger.info("Disconnecting Cache service")
-    await app.state.cache_service.disconnect()
-
-    logger.info("Closing Google Maps service")
-    await app.state.google_maps_service.close()
-
-    logger.info("Shutting down MCP Manager")
-    await app.state.mcp_service.shutdown()
+    try:
+        yield  # Application runs here
+    finally:
+        if database_monitor is not None:
+            await database_monitor.stop_monitoring()
+            if hasattr(app.state, "database_monitor"):
+                delattr(app.state, "database_monitor")
+        if hasattr(app.state, "chat_agent"):
+            delattr(app.state, "chat_agent")
+        await shutdown_app_state(app)
 
 
 def create_app() -> FastAPI:  # pylint: disable=too-many-statements
@@ -156,8 +126,8 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     # Prevent duplicate server spans by preferring FastAPI instrumentation when both
     # toggles are enabled: we instrument FastAPI after app creation below, so pass
     # enable_fastapi=False here and disable ASGI if FastAPI instr is enabled.
-    enable_asgi = settings.enable_asgi_instrumentation
-    if settings.enable_fastapi_instrumentation and enable_asgi:
+    enable_asgi = getattr(settings, "enable_asgi_instrumentation", False)
+    if getattr(settings, "enable_fastapi_instrumentation", False) and enable_asgi:
         enable_asgi = False
         logger.warning("FastAPI+ASGI instrumentation both enabled; disabling ASGI.")
 
@@ -168,8 +138,8 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
             environment=settings.environment,
             enable_fastapi=False,  # instrument FastAPI via instrument_app below
             enable_asgi=enable_asgi,
-            enable_httpx=settings.enable_httpx_instrumentation,
-            enable_redis=settings.enable_redis_instrumentation,
+            enable_httpx=getattr(settings, "enable_httpx_instrumentation", False),
+            enable_redis=getattr(settings, "enable_redis_instrumentation", False),
         )
 
     # Create FastAPI app with unified configuration
@@ -179,12 +149,12 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
         version=settings.api_version,
         docs_url="/api/docs" if not settings.is_production else None,
         redoc_url="/api/redoc" if not settings.is_production else None,
-        openapi_url="/api/openapi.json" if not settings.is_production else None,
+        openapi_url="/openapi.json" if not settings.is_production else None,
         lifespan=lifespan,
     )
 
     # Instrument FastAPI via instrument_app(app) after app creation
-    if settings.enable_fastapi_instrumentation:
+    if getattr(settings, "enable_fastapi_instrumentation", False):
         try:
             import importlib
 
@@ -221,15 +191,14 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     # Install SlowAPI-based inbound rate limiting
     install_rate_limiting(app, settings)
 
-    # Authentication middleware supporting JWT and API keys
-    # Temporarily disabled - awaiting Supabase Auth
-    # app.add_middleware(AuthenticationMiddleware, settings=settings)
+    # Authentication middleware enforcing Supabase JWT access tokens
+    app.add_middleware(AuthenticationMiddleware, settings=settings)
 
     # Inbound rate limiting handled via SlowAPI installed above
 
     # Simplified exception handlers
     @app.exception_handler(CoreAuthenticationError)
-    async def authentication_error_handler(
+    async def authentication_error_handler(  # type: ignore[reportUnusedFunction]
         request: Request, exc: CoreAuthenticationError
     ):
         """Handle authentication errors."""
@@ -240,7 +209,7 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
         )
 
     @app.exception_handler(CoreKeyValidationError)
-    async def key_validation_error_handler(
+    async def key_validation_error_handler(  # type: ignore[reportUnusedFunction]
         request: Request, exc: CoreKeyValidationError
     ):
         """Handle API key validation errors."""
@@ -251,7 +220,7 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
         )
 
     @app.exception_handler(CoreRateLimitError)
-    async def rate_limit_error_handler(request: Request, exc: CoreRateLimitError):
+    async def rate_limit_error_handler(request: Request, exc: CoreRateLimitError):  # type: ignore[reportUnusedFunction]
         """Handle rate limit errors."""
         logger.warning(
             "Rate limit exceeded: %s", exc.message, extra={"path": request.url.path}
@@ -265,7 +234,7 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     # CoreMCPError removed; MCP integrations map to CoreExternalAPIError now
 
     @app.exception_handler(CoreExternalAPIError)
-    async def external_api_error_handler(request: Request, exc: CoreExternalAPIError):
+    async def external_api_error_handler(request: Request, exc: CoreExternalAPIError):  # type: ignore[reportUnusedFunction]
         """Handle external API errors."""
         logger.exception("External API error", extra={"path": request.url.path})
         return JSONResponse(
@@ -274,7 +243,7 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
         )
 
     @app.exception_handler(CoreValidationError)
-    async def validation_error_handler(request: Request, exc: CoreValidationError):
+    async def validation_error_handler(request: Request, exc: CoreValidationError):  # type: ignore[reportUnusedFunction]
         """Handle validation errors."""
         logger.warning(
             "Validation error: %s", exc.message, extra={"path": request.url.path}
@@ -285,7 +254,7 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
         )
 
     @app.exception_handler(CoreTripSageError)
-    async def core_tripsage_error_handler(request: Request, exc: CoreTripSageError):
+    async def core_tripsage_error_handler(request: Request, exc: CoreTripSageError):  # type: ignore[reportUnusedFunction]
         """Handle all other core TripSage exceptions."""
         logger.exception("Core error", extra={"path": request.url.path})
         return JSONResponse(
@@ -294,7 +263,7 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
         )
 
     @app.exception_handler(RequestValidationError)
-    async def request_validation_error_handler(
+    async def request_validation_error_handler(  # type: ignore[reportUnusedFunction]
         request: Request, exc: RequestValidationError
     ):
         """Handle FastAPI request validation errors."""
@@ -323,7 +292,7 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
         )
 
     @app.exception_handler(StarletteHTTPException)
-    async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    async def http_exception_handler(request: Request, exc: StarletteHTTPException):  # type: ignore[reportUnusedFunction]
         """Handle HTTP exceptions."""
         logger.warning(
             "HTTP %s: %s", exc.status_code, exc.detail, extra={"path": request.url.path}
@@ -339,11 +308,11 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
         )
 
     @app.exception_handler(Exception)
-    async def general_exception_handler(request: Request, exc: Exception):
+    async def general_exception_handler(request: Request, exc: Exception):  # type: ignore[reportUnusedFunction]
         """Handle all other unhandled exceptions."""
         logger.exception("Unhandled exception", extra={"path": request.url.path})
 
-        content = {
+        content: dict[str, Any] = {
             "error": True,
             "message": "Internal server error",
             "code": "INTERNAL_ERROR",
@@ -366,7 +335,6 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
     # dashboard_realtime router is temporarily excluded pending module finalization
-    app.include_router(keys.router, prefix="/api/user/keys", tags=["api_keys"])
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
     app.include_router(
@@ -390,7 +358,9 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
     app.include_router(search.router, prefix="/api/search", tags=["search"])
     app.include_router(memory.router, prefix="/api", tags=["memory"])
-    app.include_router(websocket.router, prefix="/api", tags=["websocket"])
+
+    # BYOK API keys management (Vault-backed)
+    app.include_router(keys.router, prefix="/api", tags=["keys"])
 
     app.include_router(users.router, prefix="/api/users", tags=["users"])
     app.include_router(config.router, prefix="/api", tags=["configuration"])

@@ -6,13 +6,16 @@ using modern LangGraph @tool patterns for simplicity and maintainability.
 
 # pylint: disable=duplicate-code
 
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
+from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools.tools import get_tools_for_agent
@@ -41,6 +44,19 @@ class FlightSearchParameters(BaseModel):
     airline_preference: str | None = None
 
 
+def _empty_tool_list() -> list[BaseTool]:
+    """Return a typed empty tool list."""
+    return []
+
+
+@dataclass(slots=True)
+class _RuntimeState:
+    llm: ChatOpenAI | None = None
+    llm_with_tools: ChatOpenAI | None = None
+    parameter_extractor: StructuredExtractor[FlightSearchParameters] | None = None
+    tools: list[BaseTool] = field(default_factory=_empty_tool_list)
+
+
 class FlightAgentNode(BaseAgentNode):
     """Flight search and booking agent node.
 
@@ -55,36 +71,86 @@ class FlightAgentNode(BaseAgentNode):
     - Update conversation state with search results and booking progress
     """
 
-    def __init__(self, service_registry):
-        """Initialize the flight agent node with tools and language model."""
-        settings = get_settings()
-        api_key_config = settings.openai_api_key
-        # type: ignore # pylint: disable=no-member
-        secret_api_key = (
-            api_key_config
-            if isinstance(api_key_config, SecretStr) or api_key_config is None
-            else SecretStr(api_key_config.get_secret_value())
-        )
-        self.llm = ChatOpenAI(
-            model=settings.openai_model,
-            temperature=settings.model_temperature,
-            api_key=secret_api_key,
-        )
-        self._parameter_extractor = StructuredExtractor(
-            self.llm, FlightSearchParameters, logger=logger
-        )
+    def __init__(self, services: AppServiceContainer, **config_overrides: Any):
+        """Initialize the flight agent node with dynamic configuration.
 
-        super().__init__("flight_agent", service_registry)
+        Args:
+            services: Application service container for dependency injection
+            **config_overrides: Runtime configuration overrides (e.g., temperature=0.6)
+        """
+        # Store overrides for async config loading
+        self.config_overrides: dict[str, Any] = dict(config_overrides)
+        self.agent_config: dict[str, Any] = {}
+        self._runtime = _RuntimeState()
+
+        super().__init__("flight_agent", services)
+
+        # Get configuration service for database-backed config
+        self.config_service: Any = self.get_service("configuration_service")
 
     def _initialize_tools(self) -> None:
         """Initialize flight-specific tools using simple tool catalog."""
         # Get tools for flight agent using simple catalog
-        self.available_tools = get_tools_for_agent("flight_agent")
+        self._runtime.tools = list(get_tools_for_agent("flight_agent"))
 
-        # Bind tools to LLM for direct use
-        self.llm_with_tools = self.llm.bind_tools(self.available_tools)
+        # Bind tools to LLM for direct use (if LLM is available)
+        if self._runtime.llm:
+            runtime_llm = cast(Any, self._runtime.llm)
+            self._runtime.llm_with_tools = cast(
+                ChatOpenAI, runtime_llm.bind_tools(self._runtime.tools)
+            )
 
-        logger.info("Initialized flight agent with %s tools", len(self.available_tools))
+        logger.info("Initialized flight agent with %s tools", len(self._runtime.tools))
+
+    async def _load_configuration(self) -> None:
+        """Load agent configuration from database with fallback to settings."""
+        try:
+            # Get configuration from database with runtime overrides
+            self.agent_config = await self.config_service.get_agent_config(
+                "flight_agent", **self.config_overrides
+            )
+            if not self.agent_config:
+                raise RuntimeError("Flight agent configuration is missing")
+
+            # Initialize LLM with loaded configuration
+            self._runtime.llm = self._create_llm_from_config()
+            self._runtime.parameter_extractor = StructuredExtractor(
+                self._runtime.llm, FlightSearchParameters, logger=logger
+            )
+            if self._runtime.tools:
+                runtime_llm = cast(Any, self._runtime.llm)
+                self._runtime.llm_with_tools = cast(
+                    ChatOpenAI, runtime_llm.bind_tools(self._runtime.tools)
+                )
+
+            logger.info(
+                "Loaded flight agent configuration from database: temp=%s",
+                self.agent_config["temperature"],
+            )
+
+        except Exception:
+            logger.exception("Failed to load database configuration, using fallback")
+
+            # Fallback to settings-based configuration
+            settings = get_settings()
+            # Preserve SecretStr or None as provided by settings
+            secret_api_key: SecretStr | None = settings.openai_api_key
+            self.agent_config = {
+                "model": settings.openai_model,
+                "temperature": settings.model_temperature,
+                "api_key": secret_api_key,
+                "top_p": 1.0,
+            }
+
+            self._runtime.llm = self._create_llm_from_config()
+            self._runtime.parameter_extractor = StructuredExtractor(
+                self._runtime.llm, FlightSearchParameters, logger=logger
+            )
+            if self._runtime.tools:
+                runtime_llm = cast(Any, self._runtime.llm)
+                self._runtime.llm_with_tools = cast(
+                    ChatOpenAI, runtime_llm.bind_tools(self._runtime.tools)
+                )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
         """Process flight-related requests.
@@ -95,6 +161,10 @@ class FlightAgentNode(BaseAgentNode):
         Returns:
             Updated state with flight search results and response
         """
+        # Ensure configuration is loaded before processing
+        if not self.agent_config:
+            await self._load_configuration()
+
         user_message = state["messages"][-1]["content"] if state["messages"] else ""
 
         # Extract flight search parameters from user message and context
@@ -168,7 +238,11 @@ class FlightAgentNode(BaseAgentNode):
         """
 
         try:
-            result = await self._parameter_extractor.extract_from_prompts(
+            extractor = self._runtime.parameter_extractor
+            if extractor is None:
+                raise RuntimeError("Flight parameter extractor is not initialised")
+
+            result = await extractor.extract_from_prompts(
                 system_prompt="You are a flight search parameter extraction assistant.",
                 user_prompt=extraction_prompt,
             )
@@ -262,7 +336,7 @@ class FlightAgentNode(BaseAgentNode):
                 f"{search_results['error']}. Let me help you try a different approach."
             )
         else:
-            flights = search_results.get("flights", [])
+            flights: list[dict[str, Any]] = search_results.get("flights", [])  # type: ignore[assignment]
 
             if flights:
                 # Format canonical FlightOffer dicts
@@ -271,17 +345,20 @@ class FlightAgentNode(BaseAgentNode):
                     f"{search_params['origin']} to {search_params['destination']}:\n\n"
                 )
 
-                for i, offer in enumerate(flights[:3], 1):  # Show top 3 results
+                for i, offer_dict in enumerate(flights[:3], 1):  # Show top 3 results
                     # Derive primary airline and departure from canonical structure
-                    airlines = offer.get("airlines") or []
-                    airline = airlines[0] if airlines else "Unknown"
+                    offer: dict[str, Any] = offer_dict
+                    airlines: list[str] = offer.get("airlines") or []
+                    airline: str = airlines[0] if airlines else "Unknown"
 
-                    outbound = offer.get("outbound_segments") or []
-                    first_seg = outbound[0] if outbound else {}
-                    departure = first_seg.get("departure_date", "Unknown")
+                    outbound: list[dict[str, Any]] = (
+                        offer.get("outbound_segments") or []
+                    )
+                    first_seg: dict[str, Any] = outbound[0] if outbound else {}
+                    departure: str = str(first_seg.get("departure_date", "Unknown"))
 
-                    currency = offer.get("currency", "USD")
-                    total_price = offer.get("total_price")
+                    currency: str = str(offer.get("currency", "USD"))
+                    total_price: Any = offer.get("total_price")
                     price_str = (
                         f"{currency} {total_price:.2f}"
                         if isinstance(total_price, (int, float))
@@ -350,12 +427,20 @@ class FlightAgentNode(BaseAgentNode):
                 HumanMessage(content=response_prompt),
             ]
 
-            if self.llm is None:
+            llm = self._runtime.llm
+            if llm is None:
                 raise RuntimeError("Flight LLM is not initialized")
 
-            response = await self.llm.ainvoke(messages)
-            raw_content = response.content
-            content = raw_content if isinstance(raw_content, str) else str(raw_content)
+            response = await llm.ainvoke(messages)
+            raw_resp: Any = cast(Any, response)
+            if hasattr(raw_resp, "content"):
+                raw_content: Any = raw_resp.content
+            else:
+                raw_content = raw_resp
+            if isinstance(raw_content, str):
+                content: str = raw_content
+            else:
+                content = str(raw_content)
 
         except Exception:
             logger.exception("Error generating flight response")

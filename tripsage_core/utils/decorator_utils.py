@@ -185,7 +185,7 @@ def with_error_handling(
                             **extra_context,
                         },
                     )
-                    log_exception(cast(Exception, e), operation_name)
+                    log_exception(e, operation_name)
 
                     # Preserve original error context; avoid wrapping
 

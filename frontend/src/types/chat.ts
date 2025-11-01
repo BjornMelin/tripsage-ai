@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Chat types and enums used across messaging features.
+ * Includes Zod-backed role/schema helpers for validation.
+ */
 import { z } from "zod";
 
 // Message role schema
@@ -22,7 +26,7 @@ export type ToolCallStatus = z.infer<typeof ToolCallStatusSchema>;
 export const ToolCallSchema = z.object({
   id: z.string(),
   name: z.string(),
-  arguments: z.record(z.unknown()).optional(),
+  arguments: z.record(z.string(), z.unknown()).optional(),
   status: ToolCallStatusSchema.optional().default("pending"),
   result: z.unknown().optional(),
   error: z.string().optional(),
@@ -72,14 +76,14 @@ export const MessageSchema = z.object({
   createdAt: z.date().or(z.string().datetime()),
   updatedAt: z.date().or(z.string().datetime()).optional(),
   attachments: z.array(AttachmentSchema).optional(),
-  annotations: z.record(z.unknown()).optional(),
+  annotations: z.record(z.string(), z.unknown()).optional(),
   // tool calling support
   toolCalls: z.array(ToolCallSchema).optional(),
   toolResults: z.array(ToolResultSchema).optional(),
   // Agent routing information
   routedTo: z.string().optional(),
   routingConfidence: z.number().optional(),
-  intentDetected: z.record(z.unknown()).optional(),
+  intentDetected: z.record(z.string(), z.unknown()).optional(),
   handledBy: z.string().optional(),
 });
 export type Message = z.infer<typeof MessageSchema>;
@@ -91,7 +95,7 @@ export const ChatSessionSchema = z.object({
   createdAt: z.date().or(z.string().datetime()),
   updatedAt: z.date().or(z.string().datetime()),
   messages: z.array(MessageSchema).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 export type ChatSession = z.infer<typeof ChatSessionSchema>;
 

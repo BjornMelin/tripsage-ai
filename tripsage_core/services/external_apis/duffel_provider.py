@@ -22,10 +22,11 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
+from tripsage_core.services.external_apis.base_service import sanitize_response
 from tripsage_core.utils.outbound import request_with_backoff
 
 
@@ -231,9 +232,16 @@ class DuffelProvider:
             json=payload,
         )
         resp.raise_for_status()
-        body = resp.json()
-        offers = body.get("data", {}).get("offers", [])
-        return offers if isinstance(offers, list) else []
+        body_any = sanitize_response(resp.content)
+        body = body_any if isinstance(body_any, dict) else {}
+        offers_any = (body.get("data", {}) or {}).get("offers", [])  # type: ignore[reportUnknownMemberType]
+        offers_list: list[dict[str, Any]] = []
+        if isinstance(offers_any, list):
+            offers_seq: list[Any] = cast(list[Any], offers_any)
+            offers_list.extend(
+                [cast(dict[str, Any], o) for o in offers_seq if isinstance(o, dict)]
+            )
+        return offers_list
 
     async def get_offer_details(self, offer_id: str) -> dict[str, Any] | None:
         """Fetch a single offer by ID.
@@ -250,7 +258,10 @@ class DuffelProvider:
         if resp.status_code == 404:
             return None
         resp.raise_for_status()
-        return resp.json().get("data", {})
+        body_any = sanitize_response(resp.content)
+        body = body_any if isinstance(body_any, dict) else {}
+        data = body.get("data", {})
+        return data if isinstance(data, dict) else {}
 
     async def create_order(
         self,
@@ -284,4 +295,7 @@ class DuffelProvider:
             self._client, "POST", f"{self._client.base_url}/air/orders", json=payload
         )
         resp.raise_for_status()
-        return resp.json().get("data", {})
+        body_any = sanitize_response(resp.content)
+        body = body_any if isinstance(body_any, dict) else {}
+        data = body.get("data", {})
+        return data if isinstance(data, dict) else {}

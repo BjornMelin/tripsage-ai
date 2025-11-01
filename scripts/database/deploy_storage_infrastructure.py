@@ -7,13 +7,13 @@ Version: 1.0.
 """
 
 import asyncio
+import importlib
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-import asyncpg
-import supabase  # type: ignore[import-not-found]
+import supabase
 
 
 class StorageDeployment:
@@ -31,7 +31,7 @@ class StorageDeployment:
 
     async def deploy_all(self) -> dict[str, bool]:
         """Deploy complete storage infrastructure."""
-        results = {}
+        results: dict[str, bool] = {}
 
         print("Starting TripSage Storage Infrastructure Deployment...")
         print("=" * 60)
@@ -83,7 +83,9 @@ class StorageDeployment:
             if not migration_file.exists():
                 raise FileNotFoundError(f"Migration file not found: {migration_file}")
 
-            conn = await asyncpg.connect(self.db_url)
+            module: Any = importlib.import_module("asyncpg")
+            connect_func: Any = module.connect
+            conn: Any = await connect_func(self.db_url)
 
             try:
                 # Read migration file
@@ -132,19 +134,26 @@ class StorageDeployment:
     async def test_rls_policies(self) -> bool:
         """Test RLS policies are working correctly."""
         try:
-            conn = await asyncpg.connect(self.db_url)
+            module: Any = importlib.import_module("asyncpg")
+            connect_func: Any = module.connect
+            conn: Any = await connect_func(self.db_url)
 
             try:
                 # Test query to check if policies exist
-                policy_count = await conn.fetchval("""
+                policy_count: int | None = cast(
+                    int | None,
+                    await conn.fetchval(
+                        """
                     SELECT COUNT(*)
                     FROM pg_policies
                     WHERE schemaname = 'storage'
                     AND tablename = 'objects'
                     AND policyname LIKE '%attachments%'
-                """)
+                """
+                    ),
+                )
 
-                if policy_count == 0:
+                if (policy_count or 0) == 0:
                     print("No storage policies found")
                     return False
 
@@ -188,7 +197,9 @@ class StorageDeployment:
     async def configure_webhooks(self) -> bool:
         """Configure database webhooks for file processing."""
         try:
-            conn = await asyncpg.connect(self.db_url)
+            module: Any = importlib.import_module("asyncpg")
+            connect_func: Any = module.connect
+            conn: Any = await connect_func(self.db_url)
 
             try:
                 # Check if webhook function exists
@@ -230,7 +241,9 @@ class StorageDeployment:
     async def run_verification_tests(self) -> bool:
         """Run verification tests for storage infrastructure."""
         try:
-            conn = await asyncpg.connect(self.db_url)
+            module: Any = importlib.import_module("asyncpg")
+            connect_func: Any = module.connect
+            conn: Any = await connect_func(self.db_url)
 
             try:
                 # Test storage functions
@@ -242,16 +255,19 @@ class StorageDeployment:
                 ]
 
                 for func_name in functions_to_test:
-                    func_exists = await conn.fetchval(
-                        """
+                    func_exists: bool | None = cast(
+                        bool | None,
+                        await conn.fetchval(
+                            """
                         SELECT EXISTS (
                             SELECT 1 FROM pg_proc p
                             JOIN pg_namespace n ON p.pronamespace = n.oid
                             WHERE n.nspname = 'public'
                             AND p.proname = $1
                         )
-                    """,
-                        func_name,
+                        """,
+                            func_name,
+                        ),
                     )
 
                     if not func_exists:
@@ -266,15 +282,18 @@ class StorageDeployment:
                 ]
 
                 for table_name in tables_to_test:
-                    table_exists = await conn.fetchval(
-                        """
+                    table_exists: bool | None = cast(
+                        bool | None,
+                        await conn.fetchval(
+                            """
                         SELECT EXISTS (
                             SELECT 1 FROM pg_tables
                             WHERE schemaname = 'public'
                             AND tablename = $1
                         )
-                    """,
-                        table_name,
+                        """,
+                            table_name,
+                        ),
                     )
 
                     if not table_exists:

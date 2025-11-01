@@ -4,7 +4,7 @@ This module defines models for file uploads, metadata, and AI analysis results
 following the established patterns in the codebase.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 from uuid import UUID
@@ -50,7 +50,7 @@ class AttachmentCreate(AttachmentBase):
 
     @field_validator("mime_type")
     @classmethod
-    def validate_mime_type(cls, v):
+    def validate_mime_type(cls, v: str) -> str:
         """Validate MIME type format."""
         if not v or "/" not in v:
             raise ValueError("Invalid MIME type format")
@@ -85,10 +85,10 @@ class AttachmentDB(AttachmentBase):
     )
 
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Creation timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Creation timestamp"
     )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Last update timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Last update timestamp"
     )
 
     model_config = {
@@ -144,11 +144,19 @@ class FileUploadResponse(BaseModel):
 class BatchUploadResponse(BaseModel):
     """Response model for batch file upload."""
 
+    @staticmethod
+    def _empty_uploads() -> list["FileUploadResponse"]:
+        return []
+
+    @staticmethod
+    def _empty_failed() -> list[dict[str, str]]:
+        return []
+
     successful_uploads: list[FileUploadResponse] = Field(
-        default_factory=list, description="Successfully uploaded files"
+        default_factory=_empty_uploads, description="Successfully uploaded files"
     )
     failed_uploads: list[dict[str, str]] = Field(
-        default_factory=list, description="Failed uploads with error messages"
+        default_factory=_empty_failed, description="Failed uploads with error messages"
     )
     total_files: int = Field(..., description="Total number of files in batch")
     successful_count: int = Field(..., description="Number of successful uploads")
@@ -176,8 +184,12 @@ class FileMetadataResponse(BaseModel):
 class UserFileListResponse(BaseModel):
     """Response model for user file listing."""
 
+    @staticmethod
+    def _empty_file_meta_list() -> list["FileMetadataResponse"]:
+        return []
+
     files: list[FileMetadataResponse] = Field(
-        default_factory=list, description="List of user files"
+        default_factory=_empty_file_meta_list, description="List of user files"
     )
     total_count: int = Field(..., description="Total number of files")
     page: int = Field(..., description="Current page number")
@@ -228,7 +240,7 @@ class DocumentAnalysisResult(BaseModel):
     )
     processing_time_ms: int = Field(..., description="Processing time in milliseconds")
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Analysis timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Analysis timestamp"
     )
 
 
@@ -266,7 +278,7 @@ class FileProcessingError(BaseModel):
         default=False, description="Whether operation can be retried"
     )
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="Error timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Error timestamp"
     )
 
 
@@ -290,11 +302,16 @@ class MessageWithAttachments(BaseModel):
 
     message_id: str = Field(..., description="Message identifier")
     content: str = Field(..., description="Message text content")
+
+    @staticmethod
+    def _empty_attachments() -> list["ChatAttachment"]:
+        return []
+
     attachments: list[ChatAttachment] = Field(
-        default_factory=list, description="Message attachments"
+        default_factory=_empty_attachments, description="Message attachments"
     )
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="Message timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Message timestamp"
     )
 
     model_config = {"from_attributes": True}

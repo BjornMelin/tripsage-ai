@@ -1,10 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 import {
   ArrowUpDown,
   Building2,
@@ -29,7 +24,13 @@ import {
   Wifi,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
 import { useOptimistic, useState, useTransition } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 // Modern hotel result types with 2025 hospitality patterns
 export interface ModernHotelResult {
@@ -334,10 +335,11 @@ export function ModernHotelResults({
                 )}
               >
                 {hotel.images.main ? (
-                  <img
+                  <Image
                     src={hotel.images.main}
                     alt={hotel.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 ) : (
                   <div className="flex flex-col items-center text-muted-foreground">

@@ -68,9 +68,9 @@ node scripts/verification/verify_connection.js --test-auth --test-realtime
 NODE_ENV=staging node scripts/verification/verify_connection.js
 ```
 
-### verify_dragonfly.py
+### verify_upstash.py
 
-Test DragonflyDB cache connectivity and performance.
+Test Upstash Redis cache connectivity and performance.
 
 **Validates**:
 
@@ -85,16 +85,16 @@ Test DragonflyDB cache connectivity and performance.
 
 ```bash
 # Basic verification
-python scripts/verification/verify_dragonfly.py
+python scripts/verification/verify_upstash.py
 
 # Include performance tests
-python scripts/verification/verify_dragonfly.py --benchmark
+python scripts/verification/verify_upstash.py --benchmark
 
 # Test specific features
-python scripts/verification/verify_dragonfly.py --test-json --test-pubsub
+python scripts/verification/verify_upstash.py --test-json --test-pubsub
 
 # Custom Redis URL
-python scripts/verification/verify_dragonfly.py --redis-url "redis://localhost:6379"
+python scripts/verification/verify_upstash.py --redis-url "rediss://default:password@<host>:<port>/0"
 ```
 
 ### verify_extensions.py
@@ -198,7 +198,7 @@ jobs:
         env:
           REDIS_URL: ${{ secrets.REDIS_URL }}
         run: |
-          python scripts/verification/verify_dragonfly.py --benchmark
+          python scripts/verification/verify_upstash.py --benchmark
 ```
 
 ## Health Check Endpoints
@@ -292,7 +292,7 @@ def health_database():
 # Example metrics exposed by verification scripts
 database_connection_status{environment="production"} 1
 database_response_time_ms{operation="select"} 8.5
-cache_connection_status{service="dragonfly"} 1
+cache_connection_status{service="upstash_redis"} 1
 cache_operation_latency_ms{operation="get"} 0.8
 schema_validation_passed{table="users"} 1
 extensions_installed{name="uuid-ossp"} 1
@@ -327,7 +327,7 @@ All verification scripts use structured logging:
    1. verify_connection.py
    2. verify_extensions.py
    3. validate_schema_consistency.py
-   4. verify_dragonfly.py
+   4. verify_upstash.py
    ```
 
 2. **Use in Development**: Run before starting development
@@ -335,7 +335,7 @@ All verification scripts use structured logging:
    ```bash
    # Add to your dev setup script
    python scripts/verification/verify_connection.py || exit 1
-   python scripts/verification/verify_dragonfly.py || exit 1
+   python scripts/verification/verify_upstash.py || exit 1
    ```
 
 3. **Automate Checks**: Include in deployment pipelines

@@ -1,8 +1,5 @@
 "use client";
 
-import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
-import { useChatStore } from "@/stores/chat-store";
 import {
   Activity,
   AlertTriangle,
@@ -14,6 +11,9 @@ import {
   Map as MapIcon,
   Plane,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+import { useChatStore } from "@/stores/chat-store";
 
 interface AgentStatusPanelProps {
   sessionId?: string;

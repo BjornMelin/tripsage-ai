@@ -1,5 +1,8 @@
 "use client";
 
+import { differenceInDays, format } from "date-fns";
+import { Calendar, DollarSign, MapPin } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,9 +15,6 @@ import {
 } from "@/components/ui/card";
 import { useBudgetStore } from "@/stores/budget-store";
 import type { Trip } from "@/stores/trip-store";
-import { differenceInDays, format } from "date-fns";
-import { Calendar, DollarSign, MapPin } from "lucide-react";
-import Link from "next/link";
 
 interface TripCardProps {
   trip: Trip;

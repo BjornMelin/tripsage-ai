@@ -13,7 +13,7 @@ export const MemorySchema = z.object({
   type: z.string(),
   userId: z.string(),
   sessionId: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -64,7 +64,7 @@ export const ConversationMessageSchema = z.object({
   role: z.enum(["user", "assistant", "system"]),
   content: z.string(),
   timestamp: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -79,7 +79,7 @@ export const SearchMemoriesFiltersSchema = z
         end: z.string(),
       })
       .optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .optional();
 
@@ -127,7 +127,7 @@ export const MemoryContextResponseSchema = z.object({
       frequentDestinations: z.array(z.string()),
       averageBudget: z.number(),
       preferredTravelStyle: z.string(),
-      seasonalPatterns: z.record(z.array(z.string())),
+      seasonalPatterns: z.record(z.string(), z.array(z.string())),
     }),
   }),
   metadata: z.object({
@@ -165,7 +165,7 @@ export const AddConversationMemoryRequestSchema = z.object({
   userId: z.string(),
   sessionId: z.string().optional(),
   context_type: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -195,7 +195,7 @@ export const MemoryInsightsResponseSchema = z.object({
       keyTraits: z.array(z.string()),
     }),
     budgetPatterns: z.object({
-      averageSpending: z.record(z.number()),
+      averageSpending: z.record(z.string(), z.number()),
       spendingTrends: z.array(
         z.object({
           category: z.string(),

@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable
 
-# pylint: disable=import-error
 from tenacity import (
     AsyncRetrying,
     before_sleep_log,
@@ -18,6 +17,8 @@ from tenacity import (
     stop_after_attempt,
     stop_after_delay,
     stop_any,
+    wait_fixed,
+    wait_incrementing,
     wait_random_exponential,
 )
 
@@ -120,8 +121,79 @@ def generic_retry(
     )
 
 
+def tripsage_retry(
+    *,
+    attempts: int = 3,
+    max_delay: float = 10.0,
+    exceptions: Iterable[type[BaseException]] | None = None,
+    backoff_strategy: str = "exponential",
+    include_httpx_errors: bool = False,
+    include_status_errors: bool = False,
+    reraise: bool = True,
+    log_level: int = logging.WARNING,
+):
+    """Unified TripSage retry decorator with configurable strategies.
+
+    This decorator provides a centralized retry mechanism for all TripSage services,
+    supporting different backoff strategies and exception types.
+
+    Args:
+        attempts: Maximum attempts including the first call.
+        max_delay: Maximum backoff delay in seconds.
+        exceptions: Custom exception types to retry. If None, uses default set.
+        backoff_strategy: Backoff strategy - "exponential", "fixed", "linear".
+        include_httpx_errors: Include httpx network errors
+                              (TimeoutException, ConnectError).
+        include_status_errors: Include httpx HTTPStatusError.
+        reraise: Whether to re-raise the last exception after all retries.
+        log_level: Logging level for retry attempts.
+
+    Returns:
+        Configured @retry decorator.
+    """
+    import httpx  # local import to avoid hard dep
+
+    # Build exception list
+    ex_list: list[type[BaseException]] = []
+    if exceptions:
+        ex_list.extend(exceptions)
+    else:
+        # Default exceptions
+        ex_list.extend([ConnectionError, TimeoutError, RuntimeError])
+
+    if include_httpx_errors:
+        ex_list.extend([httpx.TimeoutException, httpx.ConnectError])
+
+    if include_status_errors:
+        ex_list.append(httpx.HTTPStatusError)
+
+    excs = tuple(ex_list)
+
+    # Choose wait strategy using tenacity primitives (no lambdas)
+    if backoff_strategy == "exponential":
+        wait_strategy = wait_random_exponential(min=1, max=max_delay)
+    elif backoff_strategy == "fixed":
+        wait_strategy = wait_fixed(max_delay)
+    elif backoff_strategy == "linear":
+        # Linear backoff capped at max_delay
+        wait_strategy = wait_incrementing(start=1, increment=2, max=max_delay)
+    else:
+        wait_strategy = wait_random_exponential(min=1, max=max_delay)
+
+    return retry(
+        stop=stop_any(
+            stop_after_attempt(attempts), stop_after_delay(60)
+        ),  # Max 60s total
+        wait=wait_strategy,
+        retry=retry_if_exception_type(excs),
+        reraise=reraise,
+        before_sleep=before_sleep_log(logger, log_level, exc_info=True),
+    )
+
+
 __all__ = [
     "generic_retry",
     "httpx_async_retry",
     "httpx_block_retry",
+    "tripsage_retry",
 ]

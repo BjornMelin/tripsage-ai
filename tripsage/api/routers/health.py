@@ -3,19 +3,24 @@
 This module provides health check endpoints including:
 - Basic application health
 - Database connectivity checks
-- Cache (DragonflyDB) health
+- Cache (Redis) health
 - Detailed readiness checks
 """
 
 import asyncio
 import logging
 from datetime import UTC, datetime
+from typing import Any, cast
 
 from fastapi import APIRouter, Request, Response
-from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import CacheDep, DatabaseDep, SettingsDep
 from tripsage.api.limiting import limiter
+from tripsage.api.schemas.health import (
+    ComponentHealth,
+    ReadinessCheck,
+    SystemHealth,
+)
 from tripsage_core.observability.otel import (
     http_route_attr_fn,
     record_histogram,
@@ -26,35 +31,6 @@ from tripsage_core.observability.otel import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["health"])
-
-
-class ComponentHealth(BaseModel):
-    """Health status of a system component."""
-
-    name: str
-    status: str  # healthy, degraded, unhealthy
-    latency_ms: float | None = None
-    message: str | None = None
-    details: dict = Field(default_factory=dict)
-
-
-class SystemHealth(BaseModel):
-    """Overall system health status."""
-
-    status: str  # healthy, degraded, unhealthy
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    version: str = "1.0.0"
-    environment: str
-    components: list[ComponentHealth]
-
-
-class ReadinessCheck(BaseModel):
-    """Readiness check result."""
-
-    ready: bool
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    checks: dict[str, bool]
-    details: dict[str, str] = Field(default_factory=dict)
 
 
 @router.get("/health", response_model=SystemHealth)
@@ -72,7 +48,7 @@ async def comprehensive_health_check(
 
     Returns detailed health status of the application and all its dependencies.
     """
-    components = []
+    components: list[ComponentHealth] = []
     overall_status = "healthy"
 
     # 1. Application health
@@ -143,11 +119,11 @@ async def comprehensive_health_check(
     )
 
 
-@router.get("/health/liveness")
+@router.get("/health/liveness", response_model=dict[str, object])
 @limiter.exempt
 @trace_span(name="api.health.liveness")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
-async def liveness_check(request: Request, response: Response):
+async def liveness_check(request: Request, response: Response) -> dict[str, object]:
     """Basic liveness check for container orchestration.
 
     Returns 200 if the application is alive and can respond to requests.
@@ -174,8 +150,8 @@ async def readiness_check(
     Returns whether the application is ready to serve traffic.
     Checks critical dependencies but with shorter timeouts.
     """
-    checks = {}
-    details = {}
+    checks: dict[str, bool] = {}
+    details: dict[str, str] = {}
 
     # Check database (with timeout) via monitor or direct probe
     try:
@@ -244,7 +220,7 @@ async def readiness_check(
     )
 
 
-@router.get("/health/database")
+@router.get("/health/database", response_model=ComponentHealth)
 @trace_span(name="api.health.database")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def database_health_check(request: Request, db_service: DatabaseDep):
@@ -272,18 +248,21 @@ async def database_health_check(request: Request, db_service: DatabaseDep):
             else:
                 pool_stats = _maybe
             if isinstance(pool_stats, dict):
-                health.details.update(pool_stats)
+                # Assign to avoid pylint misdetection of Pydantic FieldInfo
+                current = dict(health.details or {})
+                current.update(cast(dict[str, object], pool_stats))
+                health.details = current
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to get pool stats: %s", e)
 
     return health
 
 
-@router.get("/health/cache")
+@router.get("/health/cache", response_model=ComponentHealth)
 @trace_span(name="api.health.cache")
 @record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def cache_health_check(request: Request, cache_service: CacheDep):
-    """Detailed cache (DragonflyDB) health check.
+    """Detailed cache (Redis) health check.
 
     Returns cache health information including:
     - Connection status
@@ -300,16 +279,16 @@ async def cache_health_check(request: Request, cache_service: CacheDep):
     # Add more detailed cache metrics if available
     if hasattr(cache_service, "info"):
         try:
-            from typing import Any, cast
-
             info = await cast(Any, cache_service).info()
-            health.details.update(
+            current = dict(health.details or {})
+            current.update(
                 {
                     "used_memory": info.get("used_memory_human"),
                     "connected_clients": info.get("connected_clients"),
                     "total_commands_processed": info.get("total_commands_processed"),
                 }
             )
+            health.details = current
         except Exception as e:  # noqa: BLE001
             logger.warning("Failed to get cache info: %s", e)
 

@@ -1,6 +1,8 @@
 /**
- * Mock implementation of use-activity-search
- * This file exists to satisfy test imports that expect this module
+ * @fileoverview Mock implementation of activity search hook.
+ *
+ * Placeholder implementation for activity search functionality.
+ * Provides interface for search methods and state management.
  */
 
 import type { ActivitySearchParams } from "@/types/search";
@@ -20,7 +22,9 @@ export interface UseActivitySearchResult {
 }
 
 /**
- * Mock hook for activity search functionality
+ * Hook for activity search functionality.
+ *
+ * @returns Object with search methods and state
  */
 export function useActivitySearch(): UseActivitySearchResult {
   return {

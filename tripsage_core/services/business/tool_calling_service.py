@@ -1,119 +1,109 @@
-"""Tool Calling Service for Phase 5 MCP Integration.
+"""Tool Calling Service orchestrator for MCP tool calls."""
 
-This service implements structured tool calling patterns for MCP servers
-with validation, error handling, and result formatting.
-"""
+from __future__ import annotations
 
 import asyncio
+import logging
 import time
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Any, cast
 
-from pydantic import BaseModel, Field, field_validator
-
-from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
-
-# MCPBridge removed as part of BJO-161 MCP abstraction removal
-# from tripsage_core.mcp_abstraction.manager import MCPBridge
-from tripsage_core.utils.decorator_utils import with_error_handling
-from tripsage_core.utils.logging_utils import get_logger
-
-
-logger = get_logger(__name__)
-
-
-class ToolCallError(TripSageError):
-    """Error raised when tool calling fails."""
-
-
-class ToolCallRequest(BaseModel):
-    """Structured tool call request model."""
-
-    id: str = Field(..., description="Unique identifier for the tool call")
-    service: str = Field(..., description="MCP service name")
-    method: str = Field(..., description="Method to invoke")
-    params: dict[str, Any] = Field(
-        default_factory=dict, description="Method parameters"
-    )
-    timeout: float | None = Field(default=30.0, description="Timeout in seconds")
-    retry_count: int = Field(default=3, description="Number of retries on failure")
-
-    @field_validator("service")
-    @classmethod
-    def validate_service(cls, v: str) -> str:
-        """Validate service name."""
-        allowed_services = [
-            "duffel_flights",
-            "airbnb",
-            "google_maps",
-            "weather",
-            "supabase",
-            "memory",
-            "time",
-            "firecrawl",
-            "linkup",
-        ]
-        if v not in allowed_services:
-            raise ValueError(
-                f"Service '{v}' not in allowed services: {allowed_services}"
-            )
-        return v
-
-    @field_validator("timeout")
-    @classmethod
-    def validate_timeout(cls, v: float | None) -> float | None:
-        """Validate timeout value."""
-        if v is not None and (v <= 0 or v > 300):
-            raise ValueError("Timeout must be between 0 and 300 seconds")
-        return v
+from tripsage_core.infrastructure.retry_policies import tripsage_retry
+from tripsage_core.observability.otel import record_histogram, trace_span
+from tripsage_core.services.business.tool_calling.core import (
+    HandlerContext,
+    ServiceFactory,
+    format_accommodation_results,
+    format_flight_results,
+    format_maps_results,
+    format_weather_results,
+    sanitize_params,
+    validate_accommodation_params,
+    validate_flight_params,
+    validate_maps_params,
+    validate_weather_params,
+)
+from tripsage_core.services.business.tool_calling.models import (
+    ToolCallError,
+    ToolCallRequest,
+    ToolCallResponse,
+    ToolCallValidationResult,
+)
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 
 
-class ToolCallResponse(BaseModel):
-    """Structured tool call response model."""
-
-    id: str = Field(..., description="Tool call identifier")
-    status: str = Field(..., description="Response status (success/error/timeout)")
-    result: dict[str, Any] | None = Field(default=None, description="Tool result data")
-    error: str | None = Field(default=None, description="Error message if failed")
-    execution_time: float = Field(..., description="Execution time in seconds")
-    service: str = Field(..., description="MCP service used")
-    method: str = Field(..., description="Method invoked")
-    timestamp: float = Field(
-        default_factory=time.time, description="Response timestamp"
+if TYPE_CHECKING:
+    from tripsage_core.services.infrastructure.database_service import (
+        DatabaseService,
     )
 
 
-class ToolCallValidationResult(BaseModel):
-    """Tool call validation result."""
-
-    is_valid: bool = Field(..., description="Whether tool call is valid")
-    errors: list[str] = Field(default_factory=list, description="Validation errors")
-    sanitized_params: dict[str, Any] | None = Field(
-        default=None, description="Sanitized parameters"
-    )
+logger = logging.getLogger(__name__)
 
 
 class ToolCallService:
-    """Service for executing MCP tool calls with validation and error handling.
+    """Service for executing MCP tool calls with validation and error handling."""
 
-    This service implements Phase 5 patterns for structured tool calling
-    with proper validation, error handling, and result formatting.
-    """
-
-    def __init__(self, mcp_manager=None):
+    def __init__(self, db: DatabaseService | None = None):
         """Initialize tool calling service.
 
         Args:
-            mcp_manager: MCP manager instance (deprecated - removed in BJO-161)
+            db: Optional database service for Supabase-backed operations.
         """
-        # MCP manager removed as part of BJO-161 MCP abstraction removal
-        if mcp_manager is not None:
-            logger.warning("MCP manager parameter is deprecated and will be ignored")
-        self.mcp_manager = None
-        # Error recovery removed - over-engineered stub
         self.execution_history: list[ToolCallResponse] = []
         self.rate_limits: dict[str, list[float]] = {}
+        self.db = db
+        self._factory = ServiceFactory()
 
-    @with_error_handling()
+        safe_tables = {
+            "users",
+            "trips",
+            "chat_sessions",
+            "chat_messages",
+            "flight_searches",
+            "accommodation_searches",
+            "flight_options",
+            "accommodation_options",
+            "trip_collaborators",
+            "flights",
+            "accommodations",
+        }
+        self._handler_context = HandlerContext(
+            factory=self._factory, db=self.db, safe_tables=safe_tables
+        )
+
+        self._service_handlers: dict[
+            str, Callable[[str, dict[str, Any]], Awaitable[dict[str, Any]]]
+        ] = {
+            "google_maps": self._handler_context.handle_google_maps,
+            "weather": self._handler_context.handle_weather,
+            "airbnb": self._handler_context.handle_airbnb,
+            "duffel_flights": self._handler_context.handle_duffel_flights,
+            "supabase": self._handler_context.handle_supabase,
+            "memory": self._handler_context.handle_memory,
+        }
+
+        self._validation_handlers: dict[
+            str, Callable[[dict[str, Any], str], Awaitable[list[str]]]
+        ] = {
+            "duffel_flights": validate_flight_params,
+            "airbnb": validate_accommodation_params,
+            "google_maps": validate_maps_params,
+            "weather": validate_weather_params,
+        }
+
+        self._formatter_handlers: dict[
+            str, Callable[[dict[str, Any] | None], Awaitable[dict[str, Any]]]
+        ] = {
+            "duffel_flights": format_flight_results,
+            "airbnb": format_accommodation_results,
+            "google_maps": format_maps_results,
+            "weather": format_weather_results,
+        }
+
+    @trace_span(name="svc.tool_call.execute")
+    @record_histogram("svc.tool_call.duration", unit="s")
+    @tripsage_safe_execute()
     async def execute_tool_call(self, request: ToolCallRequest) -> ToolCallResponse:
         """Execute a single tool call with error handling.
 
@@ -129,7 +119,6 @@ class ToolCallService:
         start_time = time.time()
 
         try:
-            # Validate and sanitize request
             validation = await self.validate_tool_call(request)
             if not validation.is_valid:
                 return ToolCallResponse(
@@ -141,7 +130,6 @@ class ToolCallService:
                     method=request.method,
                 )
 
-            # Check rate limits
             if not await self._check_rate_limit(request.service):
                 return ToolCallResponse(
                     id=request.id,
@@ -152,10 +140,8 @@ class ToolCallService:
                     method=request.method,
                 )
 
-            # Execute tool call with retries
-            result = await self._execute_with_retries(
-                request, validation.sanitized_params
-            )
+            sanitized_params: dict[str, Any] = validation.sanitized_params or {}
+            result = await self._execute_with_retries(request, sanitized_params)
 
             response = ToolCallResponse(
                 id=request.id,
@@ -166,7 +152,6 @@ class ToolCallService:
                 method=request.method,
             )
 
-            # Log successful execution
             await self._log_tool_call(request.service)
             self.execution_history.append(response)
 
@@ -192,7 +177,8 @@ class ToolCallService:
                 method=request.method,
             )
 
-    @with_error_handling()
+    @trace_span(name="svc.tool_call.parallel")
+    @tripsage_safe_execute()
     async def execute_parallel_tool_calls(
         self, requests: list[ToolCallRequest]
     ) -> list[ToolCallResponse]:
@@ -213,15 +199,11 @@ class ToolCallService:
         try:
             logger.info("Executing %s tool calls in parallel", len(requests))
 
-            # Create tasks for all requests
             tasks = [self.execute_tool_call(request) for request in requests]
-
-            # Execute all tasks in parallel
             responses = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Convert exceptions to error responses
-            processed_responses = [
-                response
+            final_responses: list[ToolCallResponse] = [
+                cast(ToolCallResponse, response)
                 if not isinstance(response, Exception)
                 else ToolCallResponse(
                     id=requests[i].id,
@@ -234,8 +216,8 @@ class ToolCallService:
                 for i, response in enumerate(responses)
             ]
 
-            logger.info("Completed %s parallel tool calls", len(processed_responses))
-            return processed_responses
+            logger.info("Completed %s parallel tool calls", len(final_responses))
+            return final_responses
 
         except Exception as e:
             logger.exception("Parallel tool call execution failed")
@@ -252,21 +234,14 @@ class ToolCallService:
         Returns:
             Validation result with sanitized parameters
         """
-        errors = []
+        errors: list[str] = []
         sanitized_params = request.params.copy()
 
-        # Service-specific validation
-        if request.service == "duffel_flights":
-            errors.extend(await self._validate_flight_params(sanitized_params))
-        elif request.service == "airbnb":
-            errors.extend(await self._validate_accommodation_params(sanitized_params))
-        elif request.service == "google_maps":
-            errors.extend(await self._validate_maps_params(sanitized_params))
-        elif request.service == "weather":
-            errors.extend(await self._validate_weather_params(sanitized_params))
+        validator = self._validation_handlers.get(request.service)
+        if validator:
+            errors.extend(await validator(sanitized_params, request.method))
 
-        # General parameter sanitization
-        sanitized_params = await self._sanitize_params(sanitized_params)
+        sanitized_params = sanitize_params(sanitized_params)
 
         return ToolCallValidationResult(
             is_valid=len(errors) == 0,
@@ -301,22 +276,15 @@ class ToolCallService:
                 "retry_available": True,
             }
 
-        # Format successful results by service type
-        if response.service == "duffel_flights":
-            return await self._format_flight_results(response.result)
-        elif response.service == "airbnb":
-            return await self._format_accommodation_results(response.result)
-        elif response.service == "google_maps":
-            return await self._format_maps_results(response.result)
-        elif response.service == "weather":
-            return await self._format_weather_results(response.result)
-        else:
-            return {
-                "type": "data",
-                "service": response.service,
-                "data": response.result,
-                "execution_time": response.execution_time,
-            }
+        formatter = self._formatter_handlers.get(response.service)
+        if formatter:
+            return await formatter(response.result)
+        return {
+            "type": "data",
+            "service": response.service,
+            "data": response.result,
+            "execution_time": response.execution_time,
+        }
 
     async def get_execution_history(
         self, limit: int = 100, service: str | None = None
@@ -343,9 +311,6 @@ class ToolCallService:
         Returns:
             Dictionary with error statistics and system health metrics
         """
-        base_stats = self.error_recovery.get_error_statistics()
-
-        # Add tool calling specific metrics
         total_calls = len(self.execution_history)
         success_calls = sum(1 for r in self.execution_history if r.status == "success")
         error_calls = sum(1 for r in self.execution_history if r.status == "error")
@@ -358,7 +323,6 @@ class ToolCallService:
         )
 
         return {
-            **base_stats,
             "tool_calling_stats": {
                 "total_calls": total_calls,
                 "success_rate": success_calls / total_calls if total_calls > 0 else 0,
@@ -371,27 +335,61 @@ class ToolCallService:
             },
         }
 
-    # Private helper methods
-
     async def _execute_with_retries(
         self, request: ToolCallRequest, params: dict[str, Any]
     ) -> dict[str, Any]:
-        """Execute tool call with error recovery."""
-        # MCP abstraction removed - direct service calls should be used
-        raise NotImplementedError(
-            f"Direct service integration needed for {request.service}.{request.method} "
-            f"after MCP removal"
+        """Execute a tool call with retry and timeout handling."""
+        attempts = max(1, request.retry_count)
+
+        @tripsage_retry(
+            attempts=attempts,
+            max_delay=10.0,
+            exceptions=(ConnectionError, OSError, TimeoutError),
+            backoff_strategy="exponential",
         )
+        async def _attempt() -> dict[str, Any]:
+            coro = self._dispatch_service_call(request.service, request.method, params)
+            if request.timeout is not None:
+                timeout_msg = (
+                    f"{request.service}/{request.method} timed out after "
+                    f"{request.timeout}s"
+                )
+                try:
+                    return await asyncio.wait_for(coro, timeout=request.timeout)
+                except TimeoutError as exc:
+                    raise TimeoutError(timeout_msg) from exc
+            return await coro
+
+        return await _attempt()
+
+    async def _dispatch_service_call(
+        self, service: str, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Dispatch service call to appropriate handler.
+
+        Args:
+            service: Service name to dispatch to
+            method: Method name within the service
+            params: Method parameters
+
+        Returns:
+            Service handler result
+
+        Raises:
+            ToolCallError: If service is not supported
+        """
+        handler = self._service_handlers.get(service)
+        if handler is None:
+            raise ToolCallError(f"Unsupported service: {service}")
+        return await handler(method, params)
 
     async def _check_rate_limit(self, service: str) -> bool:
         """Check if service is within rate limits."""
         current_time = time.time()
         service_calls = self.rate_limits.get(service, [])
 
-        # Remove calls older than 1 minute
         service_calls = [t for t in service_calls if current_time - t < 60]
 
-        # Check if under limit (10 calls per minute per service)
         if len(service_calls) >= 10:
             return False
 
@@ -405,93 +403,16 @@ class ToolCallService:
             self.rate_limits[service] = []
         self.rate_limits[service].append(current_time)
 
-    async def _sanitize_params(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Sanitize parameters to remove potentially harmful content."""
-        sanitized = {}
-        for key, value in params.items():
-            if isinstance(value, str):
-                # Remove potentially harmful characters
-                sanitized[key] = value.replace("<", "").replace(">", "").strip()
-            else:
-                sanitized[key] = value
-        return sanitized
 
-    async def _validate_flight_params(self, params: dict[str, Any]) -> list[str]:
-        """Validate flight search parameters."""
-        required_fields = ["origin", "destination", "departure_date"]
-        return [
-            f"Missing required field: {field}"
-            for field in required_fields
-            if field not in params
-        ]
-
-    async def _validate_accommodation_params(self, params: dict[str, Any]) -> list[str]:
-        """Validate accommodation search parameters."""
-        required_fields = ["location", "check_in", "check_out"]
-        return [
-            f"Missing required field: {field}"
-            for field in required_fields
-            if field not in params
-        ]
-
-    async def _validate_maps_params(self, params: dict[str, Any]) -> list[str]:
-        """Validate maps API parameters."""
-        if "address" not in params and "location" not in params:
-            return ["Either 'address' or 'location' is required"]
-        return []
-
-    async def _validate_weather_params(self, params: dict[str, Any]) -> list[str]:
-        """Validate weather API parameters."""
-        if "location" not in params:
-            return ["'location' parameter is required"]
-        return []
-
-    async def _format_flight_results(self, result: dict[str, Any]) -> dict[str, Any]:
-        """Format flight search results for chat display."""
-        return {
-            "type": "flights",
-            "title": "Flight Search Results",
-            "data": result,
-            "actions": ["book", "compare", "save"],
-        }
-
-    async def _format_accommodation_results(
-        self, result: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Format accommodation search results for chat display."""
-        return {
-            "type": "accommodations",
-            "title": "Accommodation Options",
-            "data": result,
-            "actions": ["book", "favorite", "share"],
-        }
-
-    async def _format_maps_results(self, result: dict[str, Any]) -> dict[str, Any]:
-        """Format maps API results for chat display."""
-        return {
-            "type": "location",
-            "title": "Location Information",
-            "data": result,
-            "actions": ["navigate", "save", "share"],
-        }
-
-    async def _format_weather_results(self, result: dict[str, Any]) -> dict[str, Any]:
-        """Format weather API results for chat display."""
-        return {
-            "type": "weather",
-            "title": "Weather Information",
-            "data": result,
-            "actions": ["save", "alert"],
-        }
-
-
-# Dependency function for FastAPI
 async def get_tool_calling_service() -> ToolCallService:
     """Get tool calling service instance for dependency injection.
 
     Returns:
         ToolCallService instance
     """
-    # MCP abstraction removed as part of BJO-161
-    # Direct service integrations should be used instead
-    return ToolCallService()
+    from tripsage_core.services.infrastructure.database_service import (
+        get_database_service,
+    )
+
+    db = await get_database_service()
+    return ToolCallService(db=db)

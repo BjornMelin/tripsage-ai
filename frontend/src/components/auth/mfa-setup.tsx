@@ -1,5 +1,15 @@
 "use client";
 
+import {
+  AlertCircle,
+  CheckCircle2,
+  Copy,
+  Loader2,
+  Shield,
+  Smartphone,
+} from "lucide-react";
+import Image from "next/image";
+import { useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,15 +22,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Copy,
-  Loader2,
-  Shield,
-  Smartphone,
-} from "lucide-react";
-import { useState } from "react";
 
 interface MFASetupProps {
   onComplete: (backupCodes: string[]) => void;
@@ -41,6 +42,7 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedSecret, setCopiedSecret] = useState(false);
+  const verificationInputId = useId();
 
   const handleInitiateSetup = async () => {
     setIsLoading(true);
@@ -131,7 +133,7 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold">
+              <div className="shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold">
                 1
               </div>
               <div>
@@ -143,7 +145,7 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
             </div>
 
             <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold">
+              <div className="shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold">
                 2
               </div>
               <div>
@@ -155,7 +157,7 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
             </div>
 
             <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold">
+              <div className="shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold">
                 3
               </div>
               <div>
@@ -214,9 +216,11 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
           {/* QR Code */}
           <div className="flex justify-center">
             <div className="p-4 bg-white rounded-lg border">
-              <img
+              <Image
                 src={setupData.qrCodeUrl}
                 alt="QR Code for MFA setup"
+                width={192}
+                height={192}
                 className="w-48 h-48"
               />
             </div>
@@ -252,11 +256,11 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
           {/* Verification */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="verification-code">
+              <Label htmlFor={verificationInputId}>
                 Enter the 6-digit code from your authenticator app:
               </Label>
               <Input
-                id="verification-code"
+                id={verificationInputId}
                 type="text"
                 placeholder="123456"
                 value={verificationCode}

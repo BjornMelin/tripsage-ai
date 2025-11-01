@@ -1,16 +1,16 @@
 /**
- * Query factory functions for consistent query creation and management
- * Following React Query v5 best practices for query organization
+ * @fileoverview Query factory functions for consistent query creation and
+ * management. Encodes caching, staleness, and invalidation patterns.
  */
 
-import type { AppError } from "@/lib/api/error-types";
-import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
 import type {
   QueryClient,
   UseInfiniteQueryOptions,
   UseMutationOptions,
   UseQueryOptions,
 } from "@tanstack/react-query";
+import type { AppError } from "@/lib/api/error-types";
+import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
 
 /**
  * Base query factory interface

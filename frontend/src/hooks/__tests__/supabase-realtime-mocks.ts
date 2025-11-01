@@ -1,5 +1,6 @@
 /**
- * Shared mock utilities for Supabase real-time client testing.
+ * @fileoverview Mock utilities for Supabase real-time client testing.
+ *
  * Provides mocking infrastructure for WebSocket connections,
  * channel management, and real-time event simulation.
  */
@@ -54,7 +55,7 @@ export const POSTGRES_EVENTS = {
 } as const;
 
 /**
- * Creates a mock real-time channel with all necessary methods
+ * Creates a mock real-time channel with all necessary methods.
  */
 export function createMockRealtimeChannel(): MockRealtimeChannel {
   return {
@@ -69,7 +70,7 @@ export function createMockRealtimeChannel(): MockRealtimeChannel {
 }
 
 /**
- * Creates a mock Supabase client for real-time testing
+ * Creates a mock Supabase client for real-time testing.
  */
 export function createMockSupabaseClient(): MockSupabaseClient {
   const mockChannel = createMockRealtimeChannel();
@@ -102,7 +103,7 @@ export function createMockSupabaseClient(): MockSupabaseClient {
 }
 
 /**
- * Mock payload factory for postgres changes events
+ * Mock payload factory for postgres changes events.
  */
 export function createMockPostgresPayload(
   eventType: keyof typeof POSTGRES_EVENTS,
@@ -122,7 +123,7 @@ export function createMockPostgresPayload(
 }
 
 /**
- * Mock system event payload for connection status changes
+ * Mock system event payload for connection status changes.
  */
 export function createMockSystemPayload(
   status: keyof typeof CONNECTION_STATUS,
@@ -178,7 +179,9 @@ export class MockRealtimeConnection {
   ) {
     const key = `postgres_changes:${JSON.stringify(config)}`;
     const handlers = this.eventHandlers.get(key) || [];
-    handlers.forEach((handler) => handler(payload));
+    for (const handler of handlers) {
+      handler(payload);
+    }
   }
 
   /**
@@ -188,7 +191,9 @@ export class MockRealtimeConnection {
     const key = "system:{}";
     const handlers = this.eventHandlers.get(key) || [];
     const payload = createMockSystemPayload(status, extension);
-    handlers.forEach((handler) => handler(payload));
+    for (const handler of handlers) {
+      handler(payload);
+    }
   }
 
   /**
@@ -232,7 +237,7 @@ export class MockRealtimeConnection {
 }
 
 /**
- * Creates a realistic mock for testing real-time scenarios
+ * Creates a realistic mock for testing real-time scenarios.
  */
 export function createRealtimeTestEnvironment() {
   const supabaseClient = createMockSupabaseClient();
@@ -299,25 +304,6 @@ export function createRealtimeTestEnvironment() {
 }
 
 /**
- * Mock auth context factory
- */
-export function createMockAuthContext(user?: Record<string, unknown> | null) {
-  return {
-    user: user || { id: "test-user-123", email: "test@example.com" },
-    isAuthenticated: !!user,
-    isLoading: false,
-    error: null,
-    signIn: vi.fn(),
-    signUp: vi.fn(),
-    signOut: vi.fn(),
-    refreshUser: vi.fn(),
-    clearError: vi.fn(),
-    resetPassword: vi.fn(),
-    updatePassword: vi.fn(),
-  };
-}
-
-/**
  * Real-time hook testing utilities
  */
 export class RealtimeHookTester {
@@ -328,15 +314,11 @@ export class RealtimeHookTester {
   }
 
   /**
-   * Sets up mocks for testing hooks that use Supabase real-time
+   * Sets up mocks for testing hooks that use Supabase real-time.
    */
   setupMocks() {
     vi.mock("@/lib/supabase/client", () => ({
       useSupabase: vi.fn(() => this.testEnv.supabaseClient),
-    }));
-
-    vi.mock("@/contexts/auth-context", () => ({
-      useAuth: vi.fn(() => createMockAuthContext()),
     }));
 
     return this.testEnv;
@@ -382,7 +364,9 @@ export class RealtimeHookTester {
     ];
 
     // Fire all events simultaneously
-    events.forEach((event) => event());
+    for (const event of events) {
+      event();
+    }
   }
 
   /**
@@ -395,7 +379,7 @@ export class RealtimeHookTester {
 }
 
 /**
- * Performance testing utilities for real-time hooks
+ * Performance testing utilities for real-time hooks.
  */
 export class RealtimePerformanceTester {
   private eventCounts = new Map<string, number>();
@@ -438,7 +422,6 @@ export default {
   createMockSystemPayload,
   MockRealtimeConnection,
   createRealtimeTestEnvironment,
-  createMockAuthContext,
   RealtimeHookTester,
   RealtimePerformanceTester,
   CONNECTION_STATUS,

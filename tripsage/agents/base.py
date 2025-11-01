@@ -9,6 +9,7 @@ unavailable.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import uuid4
@@ -16,9 +17,9 @@ from uuid import uuid4
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from pydantic import SecretStr
 
-from tripsage.agents.service_registry import ServiceRegistry
+from tripsage.app_state import AppServiceContainer
+from tripsage.orchestration.graph import TripSageOrchestrator
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreTripSageError
 from tripsage_core.services.business.memory_service import (
@@ -45,7 +46,8 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         name: str,
-        service_registry: ServiceRegistry,
+        services: AppServiceContainer,
+        orchestrator: TripSageOrchestrator,
         *,
         instructions: str | None = None,
         llm: BaseChatModel | None = None,
@@ -55,18 +57,19 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
 
         Args:
             name: Logical agent name.
-            service_registry: Dependency injection container.
+            services: Application service container.
+            orchestrator: TripSage LangGraph orchestrator singleton.
             instructions: Optional system instructions overriding defaults.
             llm: Optional pre-configured chat model instance.
             summary_interval: Number of messages between memory summaries.
         """
         self.name = name
         self.instructions = instructions or _DEFAULT_INSTRUCTIONS
-        self.service_registry = service_registry
+        self.services = services
         self.llm: BaseChatModel = llm or self._create_llm()
         self._summary_interval = max(summary_interval, 0)
         self._last_summary_index = 0
-        self._orchestrator = None
+        self._orchestrator: TripSageOrchestrator | None = orchestrator
 
         self.messages_history: list[dict[str, Any]] = []
         self.session_id = str(uuid4())
@@ -88,6 +91,21 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
         )
 
         await self._hydrate_session(resolved_user_id)
+
+        # Recreate LLM with user's BYOK if available
+        try:
+            db = self.services.get_optional_service("database_service")
+            if db is not None and hasattr(db, "fetch_user_service_api_key"):
+                key = await db.fetch_user_service_api_key(resolved_user_id, "openai")  # type: ignore[misc]
+                if key:
+                    settings = get_settings()
+                    self.llm = ChatOpenAI(
+                        model=settings.openai_model,
+                        temperature=settings.model_temperature,
+                        api_key=key,  # type: ignore[arg-type]
+                    )
+        except Exception:  # noqa: BLE001 - keep existing LLM on failure
+            pass
 
         user_message = {
             "role": "user",
@@ -185,10 +203,8 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
     async def _ensure_orchestrator(self):
         """Lazy-load the LangGraph orchestrator."""
         if self._orchestrator is None:
-            from tripsage.orchestration.graph import get_orchestrator
-
-            self._orchestrator = get_orchestrator(self.service_registry)
-            await self._orchestrator.initialize()
+            raise RuntimeError("TripSageOrchestrator is not configured")
+        await self._orchestrator.initialize()
         return self._orchestrator
 
     async def _hydrate_session(self, user_id: str) -> None:
@@ -266,7 +282,7 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
     async def _summarize_conversation(self) -> str:
         """Generate a concise summary of the latest conversation window."""
         recent_turns = "\n".join(
-            f"{msg['role']}: {msg['content']}"
+            f"{msg.get('role')}: {self._stringify_content(msg.get('content'))}"
             for msg in self.messages_history[-self._summary_interval :]
             if "content" in msg
         )
@@ -290,9 +306,7 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
         prompt_messages.append(HumanMessage(content=user_input))
 
         response = await self.llm.ainvoke(prompt_messages)
-        if isinstance(response, AIMessage):
-            return cast(str, response.content)
-        return cast(str, getattr(response, "content", str(response)))
+        return self._stringify_content(getattr(response, "content", response))
 
     def _build_conversation_prompt(
         self,
@@ -303,22 +317,38 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
         ]
         for message in self.messages_history:
             role = message.get("role")
-            content = cast(str, message.get("content", ""))
+            content = self._stringify_content(message.get("content"))
+            if not content:
+                continue
             if role == "user":
                 messages.append(HumanMessage(content=content))
             elif role == "assistant":
                 messages.append(AIMessage(content=content))
         return messages
 
+    def _stringify_content(self, value: Any) -> str:
+        """Convert structured content payloads into plain text."""
+        if isinstance(value, str):
+            return value
+        if value is None:
+            return ""
+        if isinstance(value, (list, tuple)):
+            sequence_value = cast(Sequence[Any], value)
+            parts = [self._stringify_content(item) for item in sequence_value]
+            return "\n".join(parts)
+        if isinstance(value, dict):
+            dict_value = cast(dict[Any, Any], value)
+            parts: list[str] = []
+            for key, item in dict_value.items():
+                parts.append(f"{key!s}: {self._stringify_content(item)}")
+            return "\n".join(parts)
+        return str(value)
+
     def _create_llm(self) -> BaseChatModel:
         """Instantiate the default chat model."""
         settings = get_settings()
         api_key_raw = settings.openai_api_key
-        secret_key = (
-            api_key_raw
-            if isinstance(api_key_raw, SecretStr) or api_key_raw is None
-            else SecretStr(api_key_raw)
-        )
+        secret_key = api_key_raw if api_key_raw else None
         return ChatOpenAI(
             model=settings.openai_model,
             temperature=settings.model_temperature,
@@ -326,10 +356,11 @@ class BaseAgent:  # pylint: disable=too-many-instance-attributes
         )
 
     def _get_memory_service(self) -> MemoryService | None:
-        """Return the optional memory service from the registry."""
+        """Return the optional memory service from the DI container."""
         try:
-            return self.service_registry.get_optional_service(
-                "memory_service", expected_type=MemoryService
+            return self.services.get_optional_service(
+                "memory_service",
+                expected_type=MemoryService,
             )
         except TypeError:
             logger.warning("Memory service present but type mismatch; ignoring.")

@@ -61,9 +61,9 @@ UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
 # For SSL/TLS (recommended for production)
 UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
 
-# Connection Pool Settings
-DRAGONFLY_POOL_SIZE=20
-DRAGONFLY_TIMEOUT=5
+# Connection Pool Settings (TCP Redis)
+REDIS_POOL_SIZE=20
+REDIS_POOL_TIMEOUT=5
 ```
 
 ## Memory System (Mem0)
@@ -80,6 +80,24 @@ MEMORY_VECTOR_STORE=supabase  # Uses pgvector in Supabase
 MEMORY_GRAPH_STORE=supabase   # Unified storage approach
 ```
 
+## AI & Orchestration (LangGraph)
+
+```bash
+# OpenAI Configuration
+OPENAI_API_KEY=sk-your-openai-api-key
+OPENAI_MODEL=gpt-5
+
+# LangGraph Orchestration
+LANGGRAPH_FEATURES=conversation_memory,advanced_routing,memory_updates,error_recovery
+LANGGRAPH_DEFAULT_MODEL=gpt-5
+LANGGRAPH_TEMPERATURE=0.7
+LANGGRAPH_MAX_TOKENS=4096
+
+# LangSmith (optional monitoring)
+LANGSMITH_PROJECT=tripsage-langgraph
+LANGSMITH_API_KEY=your-langsmith-api-key
+```
+
 ## BYOK (Bring Your Own Key) System
 
 The BYOK system allows users to provide their own API keys for external services. These are stored securely in the database per user.
@@ -87,7 +105,6 @@ The BYOK system allows users to provide their own API keys for external services
 ### User-Provided API Keys (Stored in Database)
 
 ```bash
-# These are NOT environment variables - they're user-provided keys stored in api_keys table
 # Listed here for reference only:
 
 # Flight APIs
@@ -116,7 +133,7 @@ The BYOK system allows users to provide their own API keys for external services
 # Provider configuration (used by the built-in DuffelProvider)
 DUFFEL_ACCESS_TOKEN=your_duffel_access_token
 # Optional legacy alias also supported by the DI factory:
-# DUFFEL_API_TOKEN=your_duffel_access_token
+# DUFFEL_ACCESS_TOKEN=your_duffel_access_token
 # Base URL and timeouts are sensible defaults; override only if needed.
 # DUFFEL_BASE_URL=https://api.duffel.com
 # DUFFEL_TIMEOUT=30
@@ -168,7 +185,7 @@ AIRBNB_MCP_RETRY_ATTEMPTS=3
 ```bash
 # Next.js Environment Variables
 NEXT_PUBLIC_API_URL=http://localhost:8000  # Backend API URL
-NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws  # WebSocket URL
+# Realtime uses supabase-js with project URL/anon key; no separate Realtime URL required
 NEXT_PUBLIC_ENVIRONMENT=development
 
 # Authentication
@@ -223,6 +240,9 @@ PROMETHEUS_PORT=9090
 
 # Health Checks
 HEALTH_CHECK_TIMEOUT=5
+
+# OpenTelemetry Instrumentation (comma-separated)
+OTEL_INSTRUMENTATION=fastapi,asgi,httpx,redis
 ```
 
 ## Testing Environment
@@ -268,22 +288,28 @@ SUPABASE_POOL_SIZE=20
 SUPABASE_MAX_OVERFLOW=30
 SUPABASE_POOL_TIMEOUT=30
 
-# Cache Connection Pool
-DRAGONFLY_POOL_SIZE=20
-DRAGONFLY_POOL_TIMEOUT=5
+# Cache Connection Pool (Redis)
+REDIS_POOL_SIZE=20
+REDIS_POOL_TIMEOUT=5
 ```
 
 ### Rate Limiting
 
 ```bash
-# API Rate Limits
+# Rate Limiting Configuration
 RATE_LIMIT_ENABLED=true
-RATE_LIMIT_REQUESTS=100  # per minute per user
-RATE_LIMIT_BURST=20      # burst allowance
 
-# External API Rate Limits
-EXTERNAL_API_RATE_LIMIT=50  # requests per minute
-EXTERNAL_API_RETRY_DELAY=1  # seconds
+# Default Rate Limits (per API key/user)
+RATE_LIMIT_REQUESTS_PER_MINUTE=60
+RATE_LIMIT_REQUESTS_PER_HOUR=1000
+RATE_LIMIT_REQUESTS_PER_DAY=10000
+RATE_LIMIT_BURST_SIZE=10
+
+# Consolidated Rate Limiting Strategy (comma-separated)
+RATE_LIMIT_STRATEGY=sliding_window,token_bucket,burst_protection
+
+# Monitoring
+RATE_LIMIT_ENABLE_MONITORING=true
 ```
 
 ## Security Best Practices
@@ -376,7 +402,6 @@ UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
 
 ```bash
 # User API keys are stored in database, not environment
-# Check api_keys table for user-specific keys
 # Verify key encryption/decryption is working
 ```
 

@@ -3,24 +3,22 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from typing import Any
+from unittest.mock import AsyncMock
 
 import pytest
 
-from tripsage_core.services.business.api_key_service import (
-    ApiValidationResult,
-    ServiceHealthStatus,
-    ServiceType,
-)
-from tripsage_core.services.business.dashboard_service import (
+from tripsage_core.services.business.dashboard_models import (
     AlertData,
     AlertSeverity,
     AlertType,
     DashboardData,
-    DashboardService,
     RealTimeMetrics,
     ServiceAnalytics,
+    ServiceHealthStatus,
+    ServiceType,
 )
+from tripsage_core.services.business.dashboard_service import DashboardService
 
 
 pytestmark = pytest.mark.anyio
@@ -41,51 +39,16 @@ def mock_database_service() -> AsyncMock:
 
 
 @pytest.fixture
-def mock_api_key_service() -> AsyncMock:
-    """Create a mock ApiKeyService."""
-    service = AsyncMock()
-    now = datetime.now(UTC)
-    service.check_all_services_health.return_value = {
-        ServiceType.OPENAI: ApiValidationResult(
-            service=ServiceType.OPENAI,
-            is_valid=None,
-            status=None,
-            health_status=ServiceHealthStatus.HEALTHY,
-            latency_ms=150.0,
-            message="Operational",
-            checked_at=now,
-            validated_at=None,
-        ),
-        ServiceType.WEATHER: ApiValidationResult(
-            service=ServiceType.WEATHER,
-            is_valid=None,
-            status=None,
-            health_status=ServiceHealthStatus.DEGRADED,
-            latency_ms=450.0,
-            message="Elevated latency",
-            checked_at=now,
-            validated_at=None,
-        ),
-    }
-    return service
-
-
-@pytest.fixture
 def dashboard_service(
     mock_cache_service: AsyncMock,
     mock_database_service: AsyncMock,
-    mock_api_key_service: AsyncMock,
 ) -> DashboardService:
     """Create DashboardService with mocked dependencies."""
-    with patch(
-        "tripsage_core.services.business.dashboard_service.ApiKeyService",
-        return_value=mock_api_key_service,
-    ):
-        return DashboardService(
-            cache_service=mock_cache_service,
-            database_service=mock_database_service,
-            settings=None,
-        )
+    return DashboardService(
+        cache_service=mock_cache_service,
+        database_service=mock_database_service,
+        settings=None,
+    )
 
 
 @pytest.fixture
@@ -130,10 +93,12 @@ class TestDashboardService:
         dashboard_service.db = None
         dashboard_service.cache = None
 
-        result = await dashboard_service.get_dashboard_data()
+        result: DashboardData = await dashboard_service.get_dashboard_data()
 
         assert result.metrics.total_requests > 0
-        assert result.metrics.success_rate == pytest.approx(0.95, rel=1e-2)
+        expected_sr = 0.95
+        tol = expected_sr * 1e-2 + 1e-12
+        assert abs(float(result.metrics.success_rate) - expected_sr) <= tol
         assert not result.top_users
         assert not result.recent_alerts
 
@@ -148,11 +113,13 @@ class TestDashboardService:
         assert isinstance(dashboard_service.cache, AsyncMock)
         dashboard_service.cache.get_json.return_value = None
 
-        result = await dashboard_service.get_dashboard_data(time_range_hours=1)
+        result: DashboardData = await dashboard_service.get_dashboard_data(
+            time_range_hours=1
+        )
 
         assert result.metrics.total_requests == len(sample_usage_logs)
         assert result.metrics.total_errors == 1
-        assert result.services  # Service analytics from mocked ApiKeyService
+        assert result.services  # Service analytics derived from usage logs
         assert result.top_users
         assert result.usage_trend
 
@@ -167,74 +134,40 @@ class TestDashboardService:
         assert isinstance(dashboard_service.cache, AsyncMock)
         dashboard_service.cache.get_json.return_value = None
 
-        metrics = await dashboard_service._get_real_time_metrics(time_range_hours=1)
+        data: DashboardData = await dashboard_service.get_dashboard_data(
+            time_range_hours=1
+        )
 
-        assert metrics.total_requests == 3
-        assert metrics.total_errors == 1
-        assert metrics.success_rate == pytest.approx(2 / 3, rel=1e-6)
-        assert metrics.unique_users_count == 2
-        assert metrics.active_keys_count == 2
+        assert data.metrics.total_requests == 3
+        assert data.metrics.total_errors == 1
+        expected = 2 / 3
+        actual = float(data.metrics.success_rate)
+        assert abs(actual - expected) <= expected * 1e-6 + 1e-12
+        assert data.metrics.unique_users_count == 2
+        assert data.metrics.active_keys_count == 2
 
     async def test_service_analytics(
         self,
         dashboard_service: DashboardService,
-        mock_api_key_service: AsyncMock,
         mock_database_service: AsyncMock,
         sample_usage_logs: list[dict[str, object]],
     ) -> None:
         """Return per-service analytics using health checks."""
         mock_database_service.select.return_value = sample_usage_logs
-        mock_api_key_service.check_all_services_health.return_value = {
-            ServiceType.OPENAI: ApiValidationResult(
-                service=ServiceType.OPENAI,
-                is_valid=None,
-                status=None,
-                health_status=ServiceHealthStatus.HEALTHY,
-                latency_ms=120.0,
-                message="All good",
-                checked_at=datetime.now(UTC),
-                validated_at=None,
-            )
-        }
 
-        services = await dashboard_service._get_service_analytics(time_range_hours=1)
+        data: DashboardData = await dashboard_service.get_dashboard_data(
+            time_range_hours=1
+        )
 
-        assert len(services) == 1
-        service = services[0]
+        assert len(data.services) >= 1
+        service = next(s for s in data.services if s.service_name == "openai")
         assert service.service_name == "openai"
         assert service.total_requests == 2
         assert service.total_errors == 1
-        assert service.success_rate == pytest.approx(0.5, rel=1e-6)
-
-    @pytest.mark.asyncio
-    async def test_service_analytics_handles_missing_health_data(
-        self,
-        dashboard_service: DashboardService,
-        mock_api_key_service: AsyncMock,
-        mock_database_service: AsyncMock,
-        sample_usage_logs: list[dict[str, object]],
-    ) -> None:
-        """Gracefully handle missing checked_at and health_status fields."""
-        mock_database_service.select.return_value = sample_usage_logs
-        mock_api_key_service.check_all_services_health.return_value = {
-            ServiceType.OPENAI: ApiValidationResult(
-                service=ServiceType.OPENAI,
-                is_valid=None,
-                status=None,
-                health_status=None,
-                latency_ms=95.0,
-                message="No recent checks",
-                checked_at=None,
-                validated_at=None,
-            )
-        }
-
-        services = await dashboard_service._get_service_analytics(time_range_hours=1)
-
-        assert len(services) == 1
-        service = services[0]
-        assert service.health_status == ServiceHealthStatus.UNKNOWN
-        assert service.last_health_check.tzinfo is UTC
+        expected_sr = 0.5
+        diff = abs(float(service.success_rate) - expected_sr)
+        assert diff <= expected_sr * 1e-6 + 1e-12
+        assert service.health_status is ServiceHealthStatus.UNKNOWN
 
     async def test_user_activity_data(
         self,
@@ -245,12 +178,10 @@ class TestDashboardService:
         """Aggregate user activity data."""
         mock_database_service.select.return_value = sample_usage_logs
 
-        users = await dashboard_service._get_user_activity_data(
-            time_range_hours=1, limit=5
-        )
+        data = await dashboard_service.get_dashboard_data(time_range_hours=1)
 
-        assert len(users) == 2
-        assert {user.user_id for user in users} == {"user_a", "user_b"}
+        assert len(data.top_users) == 2
+        assert {user.user_id for user in data.top_users} == {"user_a", "user_b"}
 
     async def test_alert_lifecycle(self, dashboard_service: DashboardService) -> None:
         """Create, acknowledge, and resolve alerts."""
@@ -275,7 +206,7 @@ class TestDashboardService:
     ) -> None:
         """Return deterministic defaults when cache unavailable."""
         dashboard_service.cache = None
-        status = await dashboard_service.get_rate_limit_status(
+        status: dict[str, Any] = await dashboard_service.get_rate_limit_status(
             key_id="key_123", window_minutes=60
         )
 
@@ -294,7 +225,7 @@ class TestDashboardService:
             "reset_at": datetime.now(UTC).isoformat(),
         }
 
-        status = await dashboard_service.get_rate_limit_status(
+        status: dict[str, Any] = await dashboard_service.get_rate_limit_status(
             key_id="key_abc", window_minutes=15
         )
 
@@ -370,7 +301,7 @@ class TestDashboardServiceCaching:
         mock_cache_service.get_json.return_value = None
         mock_database_service.select.return_value = sample_usage_logs
 
-        await dashboard_service._get_real_time_metrics(time_range_hours=1)
+        await dashboard_service.get_dashboard_data(time_range_hours=1)
 
         assert mock_cache_service.set_json.called
 

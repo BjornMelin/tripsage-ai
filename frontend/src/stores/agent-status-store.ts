@@ -1,3 +1,6 @@
+// import { z } from "zod"; // Future validation
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type {
   Agent,
   AgentActivity,
@@ -5,10 +8,7 @@ import type {
   AgentStatusType,
   AgentTask,
   ResourceUsage,
-} from "@/types/agent-status";
-// import { z } from "zod"; // Future validation
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+} from "@/lib/schemas/agent-status";
 
 interface AgentStatusState {
   agents: Agent[];

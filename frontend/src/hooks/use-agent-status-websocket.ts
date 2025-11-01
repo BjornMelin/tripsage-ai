@@ -1,28 +1,91 @@
 "use client";
 
-import {
-  type WebSocketClient,
-  WebSocketClientFactory,
-  WebSocketEventType,
-} from "@/lib/websocket/websocket-client";
+/**
+ * @fileoverview React hook that connects to the agent status Supabase channel and
+ * synchronizes realtime events with the agent status store.
+ */
+
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  AgentStatusType,
+  AgentTask,
+  ResourceUsage,
+} from "@/lib/schemas/agent-status";
+import { getBrowserClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
-import { useCallback, useEffect, useRef, useState } from "react";
+
+type BroadcastEnvelope<T> = {
+  event: string;
+  payload?: T;
+};
+
+type AgentStatusUpdatePayload = {
+  agentId: string;
+  status?: AgentStatusType;
+  progress?: number;
+};
+
+type AgentTaskStartPayload = {
+  agentId: string;
+  task?: {
+    id?: string;
+    title?: string;
+    description?: string;
+  };
+};
+
+type AgentTaskProgressPayload = {
+  agentId: string;
+  taskId: string;
+  progress?: number;
+  status?: AgentTask["status"];
+};
+
+type AgentTaskCompletePayload = {
+  agentId: string;
+  taskId: string;
+  error?: string;
+};
+
+type AgentErrorPayload = {
+  agentId: string;
+  error?: unknown;
+};
+
+interface AgentStatusWebSocketControls {
+  isConnected: boolean;
+  connectionError: string | null;
+  reconnectAttempts: number;
+  connect: () => Promise<void>;
+  disconnect: () => void;
+  startAgentMonitoring: () => void;
+  stopAgentMonitoring: () => void;
+  reportResourceUsage: (
+    agentId: string,
+    cpu: number,
+    memory: number,
+    tokens: number
+  ) => Promise<void>;
+  wsClient: RealtimeChannel | null;
+}
 
 /**
- * Hook for managing agent status via WebSocket connection
+ * Connects to the authenticated user's private Supabase channel and exposes helpers
+ * for managing realtime agent status updates.
  *
- * This hook provides real-time agent status updates through WebSocket,
- * replacing the polling mechanism with push-based updates.
+ * @returns {AgentStatusWebSocketControls} Realtime connection state and control handlers.
  */
-export function useAgentStatusWebSocket() {
-  const { tokenInfo, user } = useAuthStore();
+export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
+  const supabase = useMemo(() => getBrowserClient(), []);
+  const { user } = useAuthStore();
   const {
+    currentSession,
     startSession,
-    endSession: _endSession,
+    endSession,
     updateAgentStatus,
     updateAgentProgress,
-    addAgent,
     addAgentTask,
     updateAgentTask,
     completeAgentTask,
@@ -30,227 +93,226 @@ export function useAgentStatusWebSocket() {
     updateResourceUsage,
   } = useAgentStatusStore();
 
+  const channelRef = useRef<RealtimeChannel | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const wsClientRef = useRef<WebSocketClient | null>(null);
-  const wsFactoryRef = useRef<WebSocketClientFactory | null>(null);
+  const handleStatusUpdate = useCallback(
+    (payload: BroadcastEnvelope<AgentStatusUpdatePayload>) => {
+      const { agentId, status, progress } = payload.payload ?? {};
+      if (!agentId) {
+        return;
+      }
+      if (status) {
+        updateAgentStatus(agentId, status);
+      }
+      if (typeof progress === "number") {
+        updateAgentProgress(agentId, progress);
+      }
+    },
+    [updateAgentProgress, updateAgentStatus]
+  );
 
-  // Initialize WebSocket factory
-  useEffect(() => {
-    if (!wsFactoryRef.current) {
-      const wsBaseUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/api";
-      wsFactoryRef.current = new WebSocketClientFactory(wsBaseUrl, {
-        debug: process.env.NODE_ENV === "development",
-        reconnectAttempts: 5,
-        reconnectDelay: 1000,
+  const handleTaskStart = useCallback(
+    (payload: BroadcastEnvelope<AgentTaskStartPayload>) => {
+      const { agentId, task } = payload.payload ?? {};
+      if (!agentId || !task) {
+        return;
+      }
+      addAgentTask(agentId, {
+        title: task.title ?? task.description ?? "Untitled Task",
+        description: task.description ?? "",
+        status: "in_progress",
       });
+    },
+    [addAgentTask]
+  );
+
+  const handleTaskProgress = useCallback(
+    (payload: BroadcastEnvelope<AgentTaskProgressPayload>) => {
+      const { agentId, taskId, progress, status } = payload.payload ?? {};
+      if (!agentId || !taskId) {
+        return;
+      }
+      const updates: Partial<AgentTask> = {};
+      if (status) {
+        updates.status = status;
+      }
+      if (Object.keys(updates).length > 0) {
+        updateAgentTask(agentId, taskId, updates);
+      }
+      if (typeof progress === "number") {
+        updateAgentProgress(agentId, progress);
+      }
+    },
+    [updateAgentProgress, updateAgentTask]
+  );
+
+  const handleTaskComplete = useCallback(
+    (payload: BroadcastEnvelope<AgentTaskCompletePayload>) => {
+      const { agentId, taskId, error } = payload.payload ?? {};
+      if (!agentId || !taskId) {
+        return;
+      }
+      completeAgentTask(agentId, taskId, error);
+    },
+    [completeAgentTask]
+  );
+
+  const handleAgentError = useCallback(
+    (payload: BroadcastEnvelope<AgentErrorPayload>) => {
+      const { agentId, error } = payload.payload ?? {};
+      if (!agentId) {
+        return;
+      }
+      updateAgentStatus(agentId, "error");
+      addAgentActivity({
+        agentId,
+        type: "error",
+        message: typeof error === "string" ? error : "Agent reported an error",
+        metadata: { error },
+      });
+    },
+    [addAgentActivity, updateAgentStatus]
+  );
+
+  const disconnect = useCallback(() => {
+    if (channelRef.current) {
+      channelRef.current.unsubscribe();
+      channelRef.current = null;
+    }
+    setIsConnected(false);
+    setReconnectAttempts(0);
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
     }
   }, []);
 
-  // Connect to agent status WebSocket
-  const connect = useCallback(() => {
-    if (!tokenInfo?.accessToken || !user?.id || !wsFactoryRef.current) {
-      setConnectionError("Missing authentication or user information");
+  const connect = useCallback(async () => {
+    if (!user?.id) {
+      setConnectionError("Cannot connect without an authenticated user.");
       return;
     }
 
-    // Disconnect existing connection
-    if (wsClientRef.current) {
-      wsClientRef.current.destroy();
-      wsClientRef.current = null;
-    }
+    disconnect();
+    setReconnectAttempts((attempts) => attempts + 1);
+    setConnectionError(null);
 
-    try {
-      // Create agent status WebSocket client
-      wsClientRef.current = wsFactoryRef.current.createAgentStatusClient(
-        user.id,
-        tokenInfo.accessToken,
-        {
-          enableCompression: true,
-          batchMessages: true,
-          batchTimeout: 50, // 50ms batch timeout for real-time updates
-        }
-      );
+    const topic = `user:${user.id}`;
+    const channel = supabase.channel(topic, { config: { private: true } });
 
-      // Handle connection events
-      wsClientRef.current.on("connect", () => {
-        console.log("Agent status WebSocket connected");
+    channel
+      .on("broadcast", { event: "agent_status_update" }, handleStatusUpdate)
+      .on("broadcast", { event: "agent_task_start" }, handleTaskStart)
+      .on("broadcast", { event: "agent_task_progress" }, handleTaskProgress)
+      .on("broadcast", { event: "agent_task_complete" }, handleTaskComplete)
+      .on("broadcast", { event: "agent_error" }, handleAgentError);
+
+    channel.subscribe((status, err) => {
+      if (err) {
+        setConnectionError(err.message ?? "Realtime subscription error");
+      }
+
+      if (status === "SUBSCRIBED") {
         setIsConnected(true);
-        setConnectionError(null);
         setReconnectAttempts(0);
-
-        // Start a new monitoring session
         startSession();
-      });
+      }
 
-      wsClientRef.current.on("disconnect", () => {
-        console.log("Agent status WebSocket disconnected");
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
         setIsConnected(false);
-      });
-
-      wsClientRef.current.on("error", (error: Error) => {
-        console.error("Agent status WebSocket error:", error);
-        setConnectionError(error.message);
-      });
-
-      wsClientRef.current.on("reconnect", (data: unknown) => {
-        const eventData = data as { attempt: number; maxAttempts: number };
-        setReconnectAttempts(eventData.attempt);
-        console.log(
-          `Reconnecting agent status WebSocket... (${eventData.attempt}/${eventData.maxAttempts})`
-        );
-      });
-
-      // Handle agent status events
-      wsClientRef.current.on(WebSocketEventType.AGENT_STATUS_UPDATE, (event: any) => {
-        const { agentId, status, progress } = event.payload;
-        updateAgentStatus(agentId, status);
-        if (progress !== undefined) {
-          updateAgentProgress(agentId, progress);
+        if (!err) {
+          setConnectionError(`Realtime channel status: ${status}`);
         }
-      });
-
-      wsClientRef.current.on(WebSocketEventType.AGENT_TASK_START, (event: any) => {
-        const { agentId, task } = event.payload;
-        addAgentTask(agentId, {
-          title: task.title || task.description || "Untitled Task",
-          description: task.description,
-          status: "in_progress",
-        });
-      });
-
-      wsClientRef.current.on(WebSocketEventType.AGENT_TASK_PROGRESS, (event: any) => {
-        const { agentId, taskId, progress, status } = event.payload;
-        // Update task status
-        updateAgentTask(agentId, taskId, { status });
-        // Update agent progress separately if needed
-        if (progress !== undefined) {
-          updateAgentProgress(agentId, progress);
+        // Explicitly unsubscribe and schedule reconnect with backoff
+        if (channelRef.current) {
+          channelRef.current.unsubscribe();
+          channelRef.current = null;
         }
-      });
+        const attempt = reconnectAttempts + 1;
+        setReconnectAttempts(attempt);
+        const delay = Math.min(30000, 1000 * 2 ** Math.min(5, attempt));
+        if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = setTimeout(() => {
+          void connect();
+        }, delay);
+      }
+    });
 
-      wsClientRef.current.on(WebSocketEventType.AGENT_TASK_COMPLETE, (event: any) => {
-        const { agentId, taskId, error } = event.payload;
-        completeAgentTask(agentId, taskId, error);
-      });
-
-      wsClientRef.current.on(WebSocketEventType.AGENT_ERROR, (event: any) => {
-        const { agentId, error } = event.payload;
-        updateAgentStatus(agentId, "error");
-        addAgentActivity({
-          agentId,
-          type: "error",
-          message: `Agent error: ${error}`,
-          metadata: { error },
-        });
-      });
-
-      // Connect to WebSocket
-      wsClientRef.current.connect();
-    } catch (error) {
-      console.error("Failed to create agent status WebSocket:", error);
-      setConnectionError(error instanceof Error ? error.message : "Connection failed");
-    }
+    channelRef.current = channel;
   }, [
-    tokenInfo,
-    user,
+    disconnect,
+    handleAgentError,
+    handleStatusUpdate,
+    handleTaskComplete,
+    handleTaskProgress,
+    handleTaskStart,
     startSession,
-    updateAgentStatus,
-    updateAgentProgress,
-    addAgent,
-    addAgentTask,
-    updateAgentTask,
-    completeAgentTask,
-    addAgentActivity,
+    supabase,
+    user?.id,
   ]);
 
-  // Disconnect from WebSocket
-  const disconnect = useCallback(() => {
-    if (wsClientRef.current) {
-      wsClientRef.current.disconnect();
-      wsClientRef.current = null;
+  const startAgentMonitoring = useCallback(() => {
+    void connect();
+  }, [connect]);
+
+  const stopAgentMonitoring = useCallback(() => {
+    disconnect();
+    if (currentSession) {
+      endSession(currentSession.id);
     }
-    setIsConnected(false);
-  }, []);
+  }, [currentSession, disconnect, endSession]);
 
-  // Start monitoring an agent
-  const startAgentMonitoring = useCallback(
-    async (agentType: string, agentName: string, config?: any) => {
-      if (!wsClientRef.current || !isConnected) {
-        throw new Error("WebSocket not connected");
-      }
-
-      // Add agent to local store
-      addAgent({
-        type: agentType,
-        name: agentName,
-        description: `Agent: ${agentName}`,
-        metadata: config,
-      });
-
-      // Send start agent message
-      await wsClientRef.current.send("start_agent", {
-        type: agentType,
-        name: agentName,
-        config,
-      });
-    },
-    [isConnected, addAgent]
-  );
-
-  // Stop monitoring an agent
-  const stopAgentMonitoring = useCallback(
-    async (agentId: string) => {
-      if (!wsClientRef.current || !isConnected) {
-        throw new Error("WebSocket not connected");
-      }
-
-      // Send stop agent message
-      await wsClientRef.current.send("stop_agent", {
-        agent_id: agentId,
-      });
-    },
-    [isConnected]
-  );
-
-  // Update resource usage for an agent
   const reportResourceUsage = useCallback(
     async (agentId: string, cpu: number, memory: number, tokens: number) => {
-      if (!wsClientRef.current || !isConnected) {
+      if (!channelRef.current || !isConnected) {
         return;
       }
 
-      // Update local store
-      updateResourceUsage({
+      const usageUpdate: Omit<ResourceUsage, "timestamp"> = {
         cpuUsage: cpu,
         memoryUsage: memory,
         networkRequests: tokens,
         activeAgents: 1,
-      });
+      };
+      updateResourceUsage(usageUpdate);
 
-      // Send resource usage update
-      await wsClientRef.current.send("resource_usage", {
-        agent_id: agentId,
-        cpu,
-        memory,
-        tokens,
+      await channelRef.current.send({
+        type: "broadcast",
+        event: "resource_usage",
+        payload: {
+          agent_id: agentId,
+          cpu,
+          memory,
+          tokens,
+        },
       });
     },
     [isConnected, updateResourceUsage]
   );
 
-  // Auto-connect when auth is available
   useEffect(() => {
-    if (tokenInfo?.accessToken && user?.id) {
-      connect();
+    if (!user?.id) {
+      if (currentSession) {
+        endSession(currentSession.id);
+      }
+      disconnect();
+      return;
     }
 
+    void connect();
+
     return () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       disconnect();
     };
-  }, [tokenInfo, user, connect, disconnect]);
+  }, [connect, currentSession, disconnect, endSession, user?.id]);
 
   return {
     isConnected,
@@ -261,6 +323,6 @@ export function useAgentStatusWebSocket() {
     startAgentMonitoring,
     stopAgentMonitoring,
     reportResourceUsage,
-    wsClient: wsClientRef.current,
+    wsClient: channelRef.current,
   };
 }

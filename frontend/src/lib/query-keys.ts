@@ -1,6 +1,6 @@
 /**
- * Query key factory for consistent caching patterns across the application
- * Following React Query v5 best practices for query key organization
+ * @fileoverview Query key factory for consistent caching patterns across the
+ * application. Follows React Query v5 key composition guidance.
  */
 
 export const queryKeys = {

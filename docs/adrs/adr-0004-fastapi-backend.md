@@ -1,10 +1,10 @@
 # ADR-0004: FastAPI as Backend Framework
 
+**Version**: 1.0.0
+**Status**: Accepted
 **Date**: 2025-06-17
-
-## Status
-
-Accepted
+**Category**: backend
+**Domain**: FastAPI
 
 ## Context
 
@@ -12,7 +12,7 @@ TripSage requires a modern, high-performance backend framework that can:
 
 - Handle concurrent AI agent operations efficiently
 - Provide automatic API documentation
-- Support WebSocket connections for real-time features
+- Support Realtime channels (Supabase Realtime) for real-time features
 - Integrate well with async Python libraries
 - Enable rapid API development with strong typing
 
@@ -27,7 +27,7 @@ FastAPI provides:
 - Native async/await support for high concurrency
 - Automatic OpenAPI/Swagger documentation generation
 - Pydantic integration for data validation
-- WebSocket support for real-time features
+- Realtime channel support for real-time features
 - Excellent performance (on par with Node.js/Go)
 - Strong typing with Python type hints
 
@@ -95,3 +95,7 @@ JavaScript/TypeScript backend frameworks.
 - [Coding Standards](../04_DEVELOPMENT_GUIDE/CODING_STANDARDS.md)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [System Architecture](../03_ARCHITECTURE/SYSTEM_OVERVIEW.md)
+
+## Changelog
+
+- 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

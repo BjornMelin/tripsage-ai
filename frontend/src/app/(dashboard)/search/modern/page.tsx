@@ -1,20 +1,5 @@
 "use client";
 
-import { FlightSearchForm } from "@/components/features/search/flight-search-form";
-import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
-import { ModernFlightResults } from "@/components/features/search/modern-flight-results";
-import { ModernHotelResults } from "@/components/features/search/modern-hotel-results";
-
-import type { ModernFlightSearchParams } from "@/components/features/search/flight-search-form";
-import type { ModernHotelSearchParams } from "@/components/features/search/hotel-search-form";
-// Import the types from their source files
-import type { ModernFlightResult } from "@/components/features/search/modern-flight-results";
-import type { ModernHotelResult } from "@/components/features/search/modern-hotel-results";
-import { SearchLayout } from "@/components/layouts/search-layout";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Building2,
   Calendar,
@@ -28,6 +13,20 @@ import {
   Zap,
 } from "lucide-react";
 import { useState, useTransition } from "react";
+import type { ModernFlightSearchParams } from "@/components/features/search/flight-search-form";
+import { FlightSearchForm } from "@/components/features/search/flight-search-form";
+import type { ModernHotelSearchParams } from "@/components/features/search/hotel-search-form";
+import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
+// Import the types from their source files
+import type { ModernFlightResult } from "@/components/features/search/modern-flight-results";
+import { ModernFlightResults } from "@/components/features/search/modern-flight-results";
+import type { ModernHotelResult } from "@/components/features/search/modern-hotel-results";
+import { ModernHotelResults } from "@/components/features/search/modern-hotel-results";
+import { SearchLayout } from "@/components/layouts/search-layout";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Mock data uses the Modern types directly
 
@@ -273,7 +272,7 @@ export default function ModernSearchPage() {
     <SearchLayout>
       <div className="space-y-6">
         {/* Hero Section */}
-        <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-none">
+        <Card className="bg-linear-to-r from-blue-50 to-green-50 border-none">
           <CardContent className="p-8">
             <div className="text-center space-y-4">
               <h1 className="text-3xl font-bold">Modern Search Experience</h1>

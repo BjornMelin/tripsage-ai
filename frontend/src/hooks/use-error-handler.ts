@@ -1,7 +1,14 @@
+/**
+ * @fileoverview React hook for error handling and reporting.
+ *
+ * Provides error handling utilities with automatic error reporting,
+ * user context, and session tracking.
+ */
+
 "use client";
 
-import { errorService } from "@/lib/error-service";
 import { useCallback } from "react";
+import { errorService } from "@/lib/error-service";
 
 // Extend Window interface for custom properties
 declare global {
@@ -15,7 +22,7 @@ declare global {
 }
 
 /**
- * Hook for handling errors in components
+ * Hook for handling errors in components.
  */
 export function useErrorHandler() {
   const handleError = useCallback(
@@ -59,6 +66,11 @@ export function useErrorHandler() {
   };
 }
 
+/**
+ * Gets the current user ID from the user store.
+ *
+ * @returns User ID or undefined if not available
+ */
 function getUserId(): string | undefined {
   try {
     const userStore = window.__USER_STORE__;
@@ -68,6 +80,11 @@ function getUserId(): string | undefined {
   }
 }
 
+/**
+ * Gets or creates a session ID for error tracking.
+ *
+ * @returns Session ID or undefined if sessionStorage is unavailable
+ */
 function getSessionId(): string | undefined {
   try {
     let sessionId = sessionStorage.getItem("session_id");

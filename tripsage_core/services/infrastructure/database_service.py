@@ -1,4 +1,4 @@
-# pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods,no-name-in-module
+# pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods,no-name-in-module,too-many-statements
 """Supabase-only Database Service (FINAL-ONLY).
 
 This module provides a single modern DatabaseService that uses the Supabase
@@ -21,15 +21,16 @@ import contextlib
 import logging
 import time
 from collections import deque
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Protocol
+from types import TracebackType
+from typing import Any, Protocol, TypeVar, cast
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
+
 from supabase import Client, create_client
-
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreDatabaseError,
@@ -37,9 +38,59 @@ from tripsage_core.exceptions.exceptions import (
     CoreServiceError,
 )
 from tripsage_core.observability.otel import get_meter, get_tracer
+from tripsage_core.types import (
+    FilterMapping,
+    JSONObject,
+    JSONObjectMapping,
+    JSONObjectSequence,
+    JSONValue,
+)
 
 
 logger = logging.getLogger(__name__)
+
+DataT = TypeVar("DataT")
+
+
+SupabasePayload = Mapping[str, object] | Sequence[Mapping[str, object]]
+
+
+def _to_supabase_payload(
+    data: JSONObject | JSONObjectSequence,
+) -> SupabasePayload:
+    """Convert internal JSON structures to supabase-compatible payloads."""
+
+    def _convert(value: JSONValue) -> object:
+        if isinstance(value, Mapping):
+            mapping = cast(JSONObjectMapping, value)
+            return {str(k): _convert(v) for k, v in mapping.items()}
+        if isinstance(value, Sequence) and not isinstance(
+            value, (str, bytes, bytearray)
+        ):
+            seq = cast(Sequence[JSONValue], value)
+            return [_convert(item) for item in seq]
+        return value
+
+    if isinstance(data, Sequence) and not isinstance(data, Mapping):
+        payload_list: list[Mapping[str, object]] = []
+        for item in data:
+            mapping = cast(JSONObjectMapping, item)
+            payload_list.append({str(k): _convert(v) for k, v in mapping.items()})
+        return payload_list
+    mapping = cast(JSONObjectMapping, data)
+    return {str(k): _convert(v) for k, v in mapping.items()}
+
+
+class SupabaseResponse(Protocol[DataT]):
+    """Protocol representing the subset of Supabase responses we use."""
+
+    data: DataT
+
+
+class SupabaseCountResponse(Protocol):
+    """Protocol for Supabase responses that expose a count attribute."""
+
+    count: int | None
 
 
 # -------------------
@@ -145,9 +196,9 @@ class DatabaseSecurityConfig(BaseModel):
 
     @field_validator("rate_limit_burst")
     @classmethod
-    def _v_burst(cls, v: int, info) -> int:  # type: ignore[no-any-unimported]
+    def _v_burst(cls, v: int, info: ValidationInfo) -> int:
         """Validate the rate limit burst."""
-        req = info.data.get("rate_limit_requests", 0)
+        req = int(info.data.get("rate_limit_requests", 0))
         if v < req:
             raise ValueError("rate_limit_burst must be >= rate_limit_requests")
         return v
@@ -323,7 +374,7 @@ class SecurityAlert(BaseModel):
     event_type: SecurityEvent
     severity: str
     message: str
-    details: dict[str, Any]
+    details: JSONObject
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     user_id: str | None = None
 
@@ -571,8 +622,10 @@ class DatabaseService:
                         "enduser.id": user_id or "anonymous",
                     },
                 )
+        _span: object | None = None
         try:
-            with span_ctx as _span:  # type: ignore[assignment]
+            with span_ctx as span:  # type: ignore[assignment]
+                _span = span
                 yield
             duration = time.time() - start_time
             if _span is not None:
@@ -612,7 +665,7 @@ class DatabaseService:
         except Exception:
             duration = time.time() - start_time
             with contextlib.suppress(Exception):  # pragma: no cover
-                if "_span" in locals() and _span is not None:
+                if _span is not None:
                     _span.set_attribute("db.duration_sec", duration)
                     _span.record_exception(Exception("query_failed"))
             if self.enable_query_tracking:
@@ -714,9 +767,9 @@ class DatabaseService:
     async def insert(
         self,
         table: str,
-        data: dict[str, Any] | list[dict[str, Any]],
+        data: JSONObject | JSONObjectSequence,
         user_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[JSONObject]:
         """Insert records into a table.
 
         Args:
@@ -733,8 +786,15 @@ class DatabaseService:
         await self.ensure_connected()
         async with self._monitor_query(QueryType.INSERT, table, user_id):
             try:
-                result: Any = await asyncio.to_thread(
-                    lambda: self.client.table(table).insert(data).execute()
+                payload = _to_supabase_payload(data)
+                # Cast payload to satisfy Supabase client's JSON type hints.
+                result = cast(
+                    SupabaseResponse[list[JSONObject]],
+                    await asyncio.to_thread(
+                        lambda: self.client.table(table)
+                        .insert(cast(Any, payload))
+                        .execute()
+                    ),
                 )
                 if self.enable_audit_logging:
                     self._log_audit_event(
@@ -756,12 +816,12 @@ class DatabaseService:
         table: str,
         columns: str = "*",
         *,
-        filters: dict[str, Any] | None = None,
+        filters: FilterMapping | None = None,
         order_by: str | None = None,
         limit: int | None = None,
         offset: int | None = None,
         user_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[JSONObject]:
         """Select rows from a table with optional filtering and pagination.
 
         Args:
@@ -783,10 +843,10 @@ class DatabaseService:
         await self.ensure_connected()
         async with self._monitor_query(QueryType.SELECT, table, user_id):
             try:
-                query = self.client.table(table).select(columns)
+                query: Any = self.client.table(table).select(columns)
                 if filters:
                     for key, value in filters.items():
-                        if isinstance(value, dict):
+                        if isinstance(value, Mapping):
                             for op, val in value.items():
                                 query = getattr(query, op)(key, val)
                         else:
@@ -800,7 +860,11 @@ class DatabaseService:
                     query = query.limit(limit)
                 if offset is not None:
                     query = query.offset(offset)
-                result: Any = await asyncio.to_thread(query.execute)
+                exec_callable = cast(Callable[[], object], query.execute)
+                result = cast(
+                    SupabaseResponse[list[JSONObject]],
+                    await asyncio.to_thread(exec_callable),
+                )
                 return result.data
             except Exception as e:
                 logger.exception("SELECT error for table '%s'", table)
@@ -815,10 +879,10 @@ class DatabaseService:
     async def update(
         self,
         table: str,
-        data: dict[str, Any],
-        filters: dict[str, Any],
+        data: JSONObject,
+        filters: JSONObjectMapping,
         user_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[JSONObject]:
         """Update rows in a table.
 
         Args:
@@ -836,10 +900,15 @@ class DatabaseService:
         await self.ensure_connected()
         async with self._monitor_query(QueryType.UPDATE, table, user_id):
             try:
-                query = self.client.table(table).update(data)
+                payload = _to_supabase_payload(data)
+                query: Any = self.client.table(table).update(cast(Any, payload))
                 for k, v in filters.items():
                     query = query.eq(k, v)
-                result: Any = await asyncio.to_thread(query.execute)
+                exec_callable = cast(Callable[[], object], query.execute)
+                result = cast(
+                    SupabaseResponse[list[JSONObject]],
+                    await asyncio.to_thread(exec_callable),
+                )
                 if self.enable_audit_logging:
                     self._log_audit_event(
                         user_id, "UPDATE", table, len(result.data) if result.data else 0
@@ -858,10 +927,10 @@ class DatabaseService:
     async def upsert(
         self,
         table: str,
-        data: dict[str, Any] | list[dict[str, Any]],
+        data: JSONObject | JSONObjectSequence,
         on_conflict: str | None = None,
         user_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[JSONObject]:
         """Insert-or-update rows in a table.
 
         Args:
@@ -879,10 +948,15 @@ class DatabaseService:
         await self.ensure_connected()
         async with self._monitor_query(QueryType.UPSERT, table, user_id):
             try:
-                query = self.client.table(table).upsert(data)
+                payload = _to_supabase_payload(data)
+                query: Any = self.client.table(table).upsert(cast(Any, payload))
                 if on_conflict and hasattr(query, "on_conflict"):
                     query = query.on_conflict(on_conflict)  # type: ignore[call-arg]  # pylint: disable=no-member
-                result: Any = await asyncio.to_thread(query.execute)
+                exec_callable = cast(Callable[[], object], query.execute)
+                result = cast(
+                    SupabaseResponse[list[JSONObject]],
+                    await asyncio.to_thread(exec_callable),
+                )
                 if self.enable_audit_logging:
                     self._log_audit_event(
                         user_id, "UPSERT", table, len(result.data) if result.data else 0
@@ -899,8 +973,8 @@ class DatabaseService:
                 ) from e
 
     async def delete(
-        self, table: str, filters: dict[str, Any], user_id: str | None = None
-    ) -> list[dict[str, Any]]:
+        self, table: str, filters: JSONObjectMapping, user_id: str | None = None
+    ) -> list[JSONObject]:
         """Delete rows from a table.
 
         Args:
@@ -917,10 +991,14 @@ class DatabaseService:
         await self.ensure_connected()
         async with self._monitor_query(QueryType.DELETE, table, user_id):
             try:
-                query = self.client.table(table).delete()
+                query: Any = self.client.table(table).delete()
                 for k, v in filters.items():
                     query = query.eq(k, v)
-                result: Any = await asyncio.to_thread(query.execute)
+                exec_callable = cast(Callable[[], object], query.execute)
+                result = cast(
+                    SupabaseResponse[list[JSONObject]],
+                    await asyncio.to_thread(exec_callable),
+                )
                 if self.enable_audit_logging:
                     self._log_audit_event(
                         user_id, "DELETE", table, len(result.data) if result.data else 0
@@ -939,7 +1017,7 @@ class DatabaseService:
     async def count(
         self,
         table: str,
-        filters: dict[str, Any] | None = None,
+        filters: FilterMapping | None = None,
         user_id: str | None = None,
     ) -> int:
         """Count rows matching optional filters.
@@ -958,12 +1036,20 @@ class DatabaseService:
         await self.ensure_connected()
         async with self._monitor_query(QueryType.COUNT, table, user_id):
             try:
-                query = self.client.table(table).select("*", count="exact")  # type: ignore[arg-type]
+                query: Any = self.client.table(table).select("*", count="exact")  # type: ignore[arg-type]
                 if filters:
-                    for k, v in filters.items():
-                        query = query.eq(k, v)
-                result: Any = await asyncio.to_thread(query.execute)
-                return int(getattr(result, "count", 0) or 0)
+                    for key, value in filters.items():
+                        if isinstance(value, Mapping):
+                            for op, operand in value.items():
+                                query = getattr(query, op)(key, operand)
+                        else:
+                            query = query.eq(key, value)
+                exec_callable = cast(Callable[[], object], query.execute)
+                result = cast(
+                    SupabaseCountResponse,
+                    await asyncio.to_thread(exec_callable),
+                )
+                return int(result.count or 0)
             except Exception as e:
                 logger.exception("COUNT error for table '%s'", table)
                 raise CoreDatabaseError(
@@ -984,9 +1070,9 @@ class DatabaseService:
         *,
         limit: int = 10,
         similarity_threshold: float | None = None,
-        filters: dict[str, Any] | None = None,
+        filters: JSONObject | None = None,
         user_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[JSONObject]:
         """Perform a vector similarity search using pgvector ordering.
 
         Args:
@@ -1008,7 +1094,7 @@ class DatabaseService:
         async with self._monitor_query(QueryType.VECTOR_SEARCH, table, user_id):
             try:
                 vec = f"[{','.join(map(str, query_vector))}]"
-                query = self.client.table(table).select(
+                query: Any = self.client.table(table).select(
                     f"*, {vector_column} <-> '{vec}' as distance"
                 )
                 if filters:
@@ -1018,7 +1104,11 @@ class DatabaseService:
                     dist_thr = 1 - similarity_threshold
                     query = query.lt(f"{vector_column} <-> '{vec}'", dist_thr)
                 query = query.order(f"{vector_column} <-> '{vec}'").limit(limit)
-                result: Any = await asyncio.to_thread(query.execute)
+                exec_callable = cast(Callable[[], object], query.execute)
+                result = cast(
+                    SupabaseResponse[list[JSONObject]],
+                    await asyncio.to_thread(exec_callable),
+                )
                 return result.data
             except Exception as e:
                 logger.exception("Vector search error for table '%s'", table)
@@ -1033,13 +1123,16 @@ class DatabaseService:
     # ---- RPC / SQL ----
 
     async def execute_sql(
-        self, sql: str, params: dict[str, Any] | None = None, user_id: str | None = None
-    ) -> list[dict[str, Any]]:
+        self,
+        sql: str,
+        *params: JSONValue | JSONObjectMapping,
+        user_id: str | None = None,
+    ) -> list[JSONObject]:
         """Execute raw SQL through a trusted RPC wrapper.
 
         Args:
             sql: SQL text to execute. Use parameter placeholders handled by the RPC.
-            params: Parameter mapping supplied to the RPC wrapper.
+            *params: Parameter values. Can be a single dict or positional args.
             user_id: Optional user attribution.
 
         Returns:
@@ -1048,15 +1141,28 @@ class DatabaseService:
         Raises:
             CoreDatabaseError: If the SQL execution fails.
         """
+        # Handle params
+        if len(params) == 1 and isinstance(params[0], Mapping):
+            params_dict: JSONObject = {
+                str(key): cast(JSONValue, value) for key, value in params[0].items()
+            }
+        else:
+            params_dict = {
+                str(i + 1): cast(JSONValue, param) for i, param in enumerate(params)
+            }
+
         await self.ensure_connected()
         if self.enable_security:
             self._check_sql_injection(sql)
         async with self._monitor_query(QueryType.RAW_SQL, None, user_id):
             try:
-                result: Any = await asyncio.to_thread(
-                    self.client.rpc(
-                        "execute_sql", {"sql": sql, "params": params or {}}
-                    ).execute
+                rpc_call = self.client.rpc(
+                    "execute_sql", {"sql": sql, "params": params_dict}
+                )
+                exec_callable = cast(Callable[[], object], rpc_call.execute)
+                result = cast(
+                    SupabaseResponse[list[JSONObject]],
+                    await asyncio.to_thread(exec_callable),
                 )
                 return result.data
             except Exception as e:
@@ -1071,9 +1177,9 @@ class DatabaseService:
     async def call_function(
         self,
         function_name: str,
-        params: dict[str, Any] | None = None,
+        params: JSONObject | None = None,
         user_id: str | None = None,
-    ) -> Any:
+    ) -> JSONValue:
         """Invoke a Postgres function via Supabase RPC.
 
         Args:
@@ -1090,8 +1196,11 @@ class DatabaseService:
         await self.ensure_connected()
         async with self._monitor_query(QueryType.FUNCTION, function_name, user_id):
             try:
-                result: Any = await asyncio.to_thread(
-                    self.client.rpc(function_name, params or {}).execute
+                rpc_call = self.client.rpc(function_name, params or {})
+                exec_callable = cast(Callable[[], object], rpc_call.execute)
+                result = cast(
+                    SupabaseResponse[JSONValue],
+                    await asyncio.to_thread(exec_callable),
                 )
                 return result.data
             except Exception as e:
@@ -1120,46 +1229,41 @@ class DatabaseService:
         def __init__(self, svc: DatabaseService, user_id: str | None):
             self.svc = svc
             self.user_id = user_id
-            self.ops: list[tuple[str, tuple]] = []
+            self.ops: list[Callable[[], Awaitable[list[JSONObject]]]] = []
 
         async def __aenter__(self) -> DatabaseService._Batch:
             """Enter the batch context and ensure connectivity."""
             await self.svc.ensure_connected()
             return self
 
-        async def __aexit__(self, exc_type, exc, tb):
+        async def __aexit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc: BaseException | None,
+            tb: TracebackType | None,
+        ) -> bool:
             """Exit the batch context without committing extra state."""
             return False
 
-        def insert(self, table: str, data: dict[str, Any] | list[dict[str, Any]]):
+        def insert(self, table: str, data: JSONObject | JSONObjectSequence):
             """Insert a record into a table."""
-            self.ops.append(("insert", (table, data)))
+            self.ops.append(lambda: self.svc.insert(table, data, self.user_id))
 
-        def update(self, table: str, data: dict[str, Any], filters: dict[str, Any]):
+        def update(self, table: str, data: JSONObject, filters: JSONObject):
             """Update a record in a table."""
-            self.ops.append(("update", (table, data, filters)))
+            self.ops.append(lambda: self.svc.update(table, data, filters, self.user_id))
 
-        def delete(self, table: str, filters: dict[str, Any]):
+        def delete(self, table: str, filters: JSONObject):
             """Delete a record from a table."""
-            self.ops.append(("delete", (table, filters)))
+            self.ops.append(lambda: self.svc.delete(table, filters, self.user_id))
 
-        async def execute(self) -> list[Any]:
+        async def execute(self) -> list[list[JSONObject]]:
             """Execute all recorded operations in order.
 
             Returns:
                 List with each operation's result payload.
             """
-            out: list[Any] = []
-            for op, args in self.ops:
-                if op == "insert":
-                    out.append(await self.svc.insert(args[0], args[1], self.user_id))
-                elif op == "update":
-                    out.append(
-                        await self.svc.update(args[0], args[1], args[2], self.user_id)
-                    )
-                elif op == "delete":
-                    out.append(await self.svc.delete(args[0], args[1], self.user_id))
-            return out
+            return [await operation() for operation in self.ops]
 
     def transaction(self, user_id: str | None = None) -> DatabaseService._Batch:
         """Create a new non-atomic batch context.
@@ -1174,22 +1278,22 @@ class DatabaseService:
         return DatabaseService._Batch(self, user_id)
 
     async def create_trip(
-        self, trip_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+        self, trip_data: JSONObject, user_id: str | None = None
+    ) -> JSONObject:
         """Create a new trip record."""
         result = await self.insert("trips", trip_data, user_id)
         return result[0] if result else {}
 
     async def get_trip_by_id(
         self, trip_id: str, user_id: str | None = None
-    ) -> dict[str, Any] | None:
+    ) -> JSONObject | None:
         """Get trip by ID."""
         result = await self.select(
             "trips", "*", filters={"id": trip_id}, user_id=user_id
         )
         return result[0] if result else None
 
-    async def get_user_trips(self, user_id: str) -> list[dict[str, Any]]:
+    async def get_user_trips(self, user_id: str) -> list[JSONObject]:
         """Get all trips for a user."""
         return await self.select(
             "trips",
@@ -1201,7 +1305,7 @@ class DatabaseService:
 
     async def get_trip(
         self, trip_id: str, user_id: str | None = None
-    ) -> dict[str, Any] | None:
+    ) -> JSONObject | None:
         """Get trip by ID."""
         result = await self.get_trip_by_id(trip_id, user_id)
         if not result:
@@ -1212,8 +1316,8 @@ class DatabaseService:
         return result
 
     async def update_trip(
-        self, trip_id: str, trip_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+        self, trip_id: str, trip_data: JSONObject, user_id: str | None = None
+    ) -> JSONObject:
         """Update trip record."""
         result = await self.update("trips", trip_data, {"id": trip_id}, user_id)
         if not result:
@@ -1228,24 +1332,22 @@ class DatabaseService:
         result = await self.delete("trips", {"id": trip_id}, user_id)
         return len(result) > 0
 
-    async def create_user(self, user_data: dict[str, Any]) -> dict[str, Any]:
+    async def create_user(self, user_data: JSONObject) -> JSONObject:
         """Create a new user record."""
         result = await self.insert("users", user_data)
         return result[0] if result else {}
 
-    async def get_user(self, user_id: str) -> dict[str, Any] | None:
+    async def get_user(self, user_id: str) -> JSONObject | None:
         """Get user by ID."""
         result = await self.select("users", "*", filters={"id": user_id})
         return result[0] if result else None
 
-    async def get_user_by_email(self, email: str) -> dict[str, Any] | None:
+    async def get_user_by_email(self, email: str) -> JSONObject | None:
         """Get user by email."""
         result = await self.select("users", "*", filters={"email": email})
         return result[0] if result else None
 
-    async def update_user(
-        self, user_id: str, user_data: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def update_user(self, user_id: str, user_data: JSONObject) -> JSONObject:
         """Update user record."""
         result = await self.update("users", user_data, {"id": user_id})
         if not result:
@@ -1256,8 +1358,8 @@ class DatabaseService:
         return result[0]
 
     async def save_flight_search(
-        self, search_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+        self, search_data: JSONObject, user_id: str | None = None
+    ) -> JSONObject:
         """Persist a flight search request.
 
         Args:
@@ -1271,8 +1373,8 @@ class DatabaseService:
         return result[0] if result else {}
 
     async def save_accommodation_search(
-        self, search_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+        self, search_data: JSONObject, user_id: str | None = None
+    ) -> JSONObject:
         """Persist an accommodation search request.
 
         Args:
@@ -1286,8 +1388,8 @@ class DatabaseService:
         return result[0] if result else {}
 
     async def save_flight_option(
-        self, option_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+        self, option_data: JSONObject, user_id: str | None = None
+    ) -> JSONObject:
         """Persist a flight option candidate.
 
         Args:
@@ -1300,7 +1402,7 @@ class DatabaseService:
         result = await self.insert("flight_options", option_data, user_id)
         return result[0] if result else {}
 
-    async def get_user_flight_searches(self, user_id: str) -> list[dict[str, Any]]:
+    async def get_user_flight_searches(self, user_id: str) -> list[JSONObject]:
         """List flight searches created by a user.
 
         Args:
@@ -1318,8 +1420,8 @@ class DatabaseService:
         )
 
     async def save_accommodation_option(
-        self, option_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+        self, option_data: JSONObject, user_id: str | None = None
+    ) -> JSONObject:
         """Persist an accommodation option candidate.
 
         Args:
@@ -1332,9 +1434,7 @@ class DatabaseService:
         result = await self.insert("accommodation_options", option_data, user_id)
         return result[0] if result else {}
 
-    async def get_user_accommodation_searches(
-        self, user_id: str
-    ) -> list[dict[str, Any]]:
+    async def get_user_accommodation_searches(self, user_id: str) -> list[JSONObject]:
         """List accommodation searches created by a user.
 
         Args:
@@ -1352,8 +1452,8 @@ class DatabaseService:
         )
 
     async def create_chat_session(
-        self, session_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+        self, session_data: JSONObject, user_id: str | None = None
+    ) -> JSONObject:
         """Create a chat session row.
 
         Args:
@@ -1367,8 +1467,8 @@ class DatabaseService:
         return result[0] if result else {}
 
     async def create_chat_message(
-        self, message_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+        self, message_data: JSONObject, user_id: str | None = None
+    ) -> JSONObject:
         """Create a chat message row.
 
         Args:
@@ -1397,8 +1497,8 @@ class DatabaseService:
         return len(result) > 0
 
     async def save_chat_message(
-        self, message_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+        self, message_data: JSONObject, user_id: str | None = None
+    ) -> JSONObject:
         """Store a chat message.
 
         Args:
@@ -1413,7 +1513,7 @@ class DatabaseService:
 
     async def get_chat_history(
         self, session_id: str, limit: int = 50, user_id: str | None = None
-    ) -> list[dict[str, Any]]:
+    ) -> list[JSONObject]:
         """Fetch chat messages for a session.
 
         Args:
@@ -1437,7 +1537,7 @@ class DatabaseService:
 
     async def get_user_chat_sessions(
         self, user_id: str, limit: int = 10, include_ended: bool = False
-    ) -> list[dict[str, Any]]:
+    ) -> list[JSONObject]:
         """List chat sessions for a user.
 
         Args:
@@ -1448,7 +1548,7 @@ class DatabaseService:
         Returns:
             List of session rows.
         """
-        filters: dict[str, Any] = {"user_id": user_id}
+        filters: JSONObject = {"user_id": user_id}
         if not include_ended:
             filters["ended_at"] = {"is_": "null"}
         return await self.select(
@@ -1462,7 +1562,7 @@ class DatabaseService:
 
     async def get_chat_session(
         self, session_id: str, user_id: str
-    ) -> dict[str, Any] | None:
+    ) -> JSONObject | None:
         """Fetch a chat session by id for a user."""
         rows = await self.select(
             "chat_sessions",
@@ -1473,7 +1573,7 @@ class DatabaseService:
         )
         return rows[0] if rows else None
 
-    async def get_session_stats(self, session_id: str) -> dict[str, Any]:
+    async def get_session_stats(self, session_id: str) -> JSONObject:
         """Return message count and last message timestamp for a session."""
         count = await self.count("chat_messages", {"session_id": session_id})
         last_rows = await self.select(
@@ -1488,7 +1588,7 @@ class DatabaseService:
 
     async def get_session_messages(
         self, session_id: str, limit: int | None = None, offset: int = 0
-    ) -> list[dict[str, Any]]:
+    ) -> list[JSONObject]:
         """List messages for a chat session ordered by creation time."""
         return await self.select(
             "chat_messages",
@@ -1499,20 +1599,20 @@ class DatabaseService:
             offset=offset,
         )
 
-    async def get_message_tool_calls(self, message_id: str) -> list[dict[str, Any]]:
+    async def get_message_tool_calls(self, message_id: str) -> list[JSONObject]:
         """List tool calls attached to a message."""
         return await self.select(
             "chat_tool_calls", "*", filters={"message_id": message_id}
         )
 
-    async def create_tool_call(self, tool_call_data: dict[str, Any]) -> dict[str, Any]:
+    async def create_tool_call(self, tool_call_data: JSONObject) -> JSONObject:
         """Create a tool call row."""
         result = await self.insert("chat_tool_calls", tool_call_data)
         return result[0] if result else {}
 
     async def update_tool_call(
-        self, tool_call_id: str, update_data: dict[str, Any]
-    ) -> dict[str, Any] | None:
+        self, tool_call_id: str, update_data: JSONObject
+    ) -> JSONObject | None:
         """Update a tool call by id and return the updated row if any."""
         rows = await self.update(
             "chat_tool_calls", update_data, filters={"id": tool_call_id}
@@ -1527,182 +1627,70 @@ class DatabaseService:
         )
         return len(rows) > 0
 
-    async def get_user_api_keys(self, user_id: str) -> list[dict[str, Any]]:
-        """List API keys for a user.
-
-        Args:
-            user_id: User identifier.
-
-        Returns:
-            List of API key rows.
-        """
-        return await self.select(
-            "api_keys", "*", filters={"user_id": user_id}, user_id=user_id
+    async def get_user_api_keys(self, user_id: str) -> list[JSONObject]:
+        """API key operations are no longer supported."""
+        raise CoreDatabaseError(
+            message="API key operations are no longer supported",
+            code="API_KEY_UNSUPPORTED",
         )
 
-    async def get_api_key(
-        self, user_id: str, service_name: str
-    ) -> dict[str, Any] | None:
-        """Fetch a user's API key for a service.
-
-        Args:
-            user_id: User identifier.
-            service_name: Logical service name.
-
-        Returns:
-            API key row or None.
-        """
-        result = await self.select(
-            "api_keys",
-            "*",
-            filters={"user_id": user_id, "service_name": service_name},
-            user_id=user_id,
-        )
-        return result[0] if result else None
-
-    async def save_api_key(
-        self, key_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
-        """Create or update an API key using upsert.
-
-        Args:
-            key_data: API key payload.
-            user_id: Optional user attribution.
-
-        Returns:
-            Saved API key row.
-        """
-        result = await self.upsert(
-            "api_keys", key_data, on_conflict="user_id,service_name", user_id=user_id
-        )
-        return result[0] if result else {}
-
-    async def create_api_key(self, key_data: dict[str, Any]) -> dict[str, Any]:
-        """Create a new API key row.
-
-        Args:
-            key_data: API key payload.
-
-        Returns:
-            Created API key row.
-        """
-        user_id = key_data.get("user_id")
-        result = await self.insert("api_keys", key_data, user_id)
-        return result[0] if result else {}
-
-    async def get_api_key_for_service(
+    # ---- BYOK helpers (Vault-backed) ----
+    async def fetch_user_service_api_key(
         self, user_id: str, service: str
-    ) -> dict[str, Any] | None:
-        """Alias for :meth:`get_api_key` for backward compatibility.
+    ) -> str | None:
+        """Fetch the plaintext API key for a user/service via Vault RPC.
 
         Args:
-            user_id: User identifier.
-            service: Service name.
+            user_id: Supabase auth user id (UUID string).
+            service: Provider name (e.g., "openai", "openrouter", "anthropic", "xai").
 
         Returns:
-            API key row or None.
+            The plaintext API key if present, else None.
         """
-        return await self.get_api_key(user_id, service)
-
-    async def get_api_key_by_id(
-        self, key_id: str, user_id: str
-    ) -> dict[str, Any] | None:
-        """Fetch an API key by ID for a user.
-
-        Args:
-            key_id: Key identifier.
-            user_id: User identifier.
-
-        Returns:
-            API key row or None.
-        """
-        result = await self.select(
-            "api_keys", "*", filters={"id": key_id, "user_id": user_id}, user_id=user_id
+        # Import lazily to avoid import cycles and only create admin client on demand
+        from tripsage_core.services.infrastructure.supabase_client import (
+            get_admin_client as _get_admin_client,
         )
-        return result[0] if result else None
 
-    async def update_api_key_last_used(self, key_id: str) -> bool:
-        """Update the ``last_used`` and ``updated_at`` timestamps for a key.
+        admin = await _get_admin_client()
+        res = await admin.rpc(
+            "get_user_api_key",
+            {"p_user_id": user_id, "p_service": service.lower().strip()},
+        ).execute()
+        # RPC returns .data; None or '' if not found/empty
+        key_value = getattr(res, "data", None)
+        if isinstance(key_value, str) and key_value:
+            # best-effort touch (ignore errors)
+            from contextlib import suppress
 
-        Args:
-            key_id: Key identifier.
+            with suppress(Exception):
+                await admin.rpc(
+                    "touch_user_api_key",
+                    {"p_user_id": user_id, "p_service": service.lower().strip()},
+                ).execute()
+            return key_value
+        return None
 
-        Returns:
-            True if any row was updated.
-        """
-        now = datetime.now(UTC).isoformat()
-        result = await self.update(
-            "api_keys", {"last_used": now, "updated_at": now}, {"id": key_id}
-        )
-        return len(result) > 0
+    async def fetch_user_api_key_preferred(
+        self, user_id: str, services: Sequence[str]
+    ) -> tuple[str | None, str | None]:
+        """Return the first available API key among preferred services.
 
-    async def update_api_key_validation(
-        self, key_id: str, is_valid: bool, validated_at: datetime
-    ) -> bool:
-        """Record a key validation result and timestamp.
-
-        Args:
-            key_id: Key identifier.
-            is_valid: Validation status.
-            validated_at: Validation timestamp in UTC.
-
-        Returns:
-            True if any row was updated.
-        """
-        now = datetime.now(UTC).isoformat()
-        result = await self.update(
-            "api_keys",
-            {
-                "is_valid": is_valid,
-                "last_validated": validated_at.isoformat(),
-                "updated_at": now,
-            },
-            {"id": key_id},
-        )
-        return len(result) > 0
-
-    async def update_api_key(
-        self, key_id: str, update_data: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Update arbitrary fields for a key.
+        The lookup order follows the sequence provided; the first non-empty
+        key found is returned along with the service name.
 
         Args:
-            key_id: Key identifier.
-            update_data: Fields to update.
+            user_id: Supabase auth user id (UUID string).
+            services: Preferred services to probe (e.g., ["openai", "openrouter"]).
 
         Returns:
-            Updated API key row or empty dict.
+            (api_key, service) if found, else (None, None).
         """
-        result = await self.update("api_keys", update_data, {"id": key_id})
-        return result[0] if result else {}
-
-    async def log_api_key_usage(self, usage_data: dict[str, Any]) -> dict[str, Any]:
-        """Append an API key usage event.
-
-        Args:
-            usage_data: Usage payload to persist.
-
-        Returns:
-            Created usage row.
-        """
-        user_id = usage_data.get("user_id")
-        result = await self.insert("api_key_usage_logs", usage_data, user_id)
-        return result[0] if result else {}
-
-    async def delete_api_key(self, key_id: str, user_id: str) -> bool:
-        """Delete a key by ID for the given user.
-
-        Args:
-            key_id: Key identifier.
-            user_id: User identifier.
-
-        Returns:
-            True if any row was deleted.
-        """
-        result = await self.delete(
-            "api_keys", {"id": key_id, "user_id": user_id}, user_id
-        )
-        return len(result) > 0
+        for svc in services:
+            key = await self.fetch_user_service_api_key(user_id, svc)
+            if key:
+                return key, svc
+        return None, None
 
     async def vector_search_destinations(
         self,
@@ -1710,7 +1698,7 @@ class DatabaseService:
         limit: int = 10,
         similarity_threshold: float = 0.7,
         user_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[JSONObject]:
         """Convenience wrapper for destination vector search.
 
         Args:
@@ -1733,10 +1721,10 @@ class DatabaseService:
 
     async def save_destination_embedding(
         self,
-        destination_data: dict[str, Any],
+        destination_data: JSONObject,
         embedding: list[float],
         user_id: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> JSONObject:
         """Upsert a destination row with an embedding.
 
         Args:
@@ -1753,7 +1741,7 @@ class DatabaseService:
         )
         return result[0] if result else {}
 
-    async def get_trip_collaborators(self, trip_id: str) -> list[dict[str, Any]]:
+    async def get_trip_collaborators(self, trip_id: str) -> list[JSONObject]:
         """List collaborators for a trip.
 
         Args:
@@ -1766,9 +1754,7 @@ class DatabaseService:
             "trip_collaborators", "*", filters={"trip_id": trip_id}
         )
 
-    async def add_trip_collaborator(
-        self, collaborator_data: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def add_trip_collaborator(self, collaborator_data: JSONObject) -> JSONObject:
         """Add or update a trip collaborator.
 
         Args:
@@ -1790,7 +1776,7 @@ class DatabaseService:
                     operation="ADD_TRIP_COLLABORATOR",
                     details={"missing_field": f},
                 )
-        user_id = collaborator_data.get("added_by")
+        user_id = cast(str | None, collaborator_data.get("added_by"))
         result = await self.upsert(
             "trip_collaborators",
             collaborator_data,
@@ -1801,7 +1787,7 @@ class DatabaseService:
 
     async def get_trip_collaborator(
         self, trip_id: str, user_id: str
-    ) -> dict[str, Any] | None:
+    ) -> JSONObject | None:
         """Fetch a specific collaborator for a trip and user.
 
         Args:
@@ -1839,11 +1825,11 @@ class DatabaseService:
 
     async def search_trips(
         self,
-        search_filters: dict[str, Any],
+        search_filters: JSONObject,
         limit: int = 50,
         offset: int = 0,
         user_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[JSONObject]:
         """Search trips using filters and simple text matching.
 
         Args:
@@ -1859,51 +1845,54 @@ class DatabaseService:
         await self.ensure_connected()
         async with self._monitor_query(QueryType.SELECT, "trips", user_id):
             q = self.client.table("trips").select("*")
-            if "user_id" in search_filters:
-                q = q.eq("user_id", search_filters["user_id"])
-            if "status" in search_filters:
-                q = q.eq("status", search_filters["status"])
-            if "visibility" in search_filters:
-                q = q.eq("visibility", search_filters["visibility"])
-            if search_filters.get("query"):
-                text = search_filters["query"]
-                q = q.or_(f"name.ilike.%{text}%,destination.ilike.%{text}%")
-            if search_filters.get("destinations"):
+            user_filter = search_filters.get("user_id")
+            if user_filter is not None:
+                q = q.eq("user_id", user_filter)
+            status_filter = search_filters.get("status")
+            if status_filter is not None:
+                q = q.eq("status", status_filter)
+            visibility_filter = search_filters.get("visibility")
+            if visibility_filter is not None:
+                q = q.eq("visibility", visibility_filter)
+            query_text = search_filters.get("query")
+            if isinstance(query_text, str) and query_text:
+                q = q.or_(f"name.ilike.%{query_text}%,destination.ilike.%{query_text}%")
+            destinations = search_filters.get("destinations")
+            if isinstance(destinations, Sequence) and not isinstance(
+                destinations, (str, bytes, bytearray)
+            ):
                 ors = ",".join(
-                    [f"destination.ilike.%{d}%" for d in search_filters["destinations"]]
+                    [f"destination.ilike.%{dest!s}%" for dest in destinations]
                 )
                 if ors:
                     q = q.or_(ors)
-            if search_filters.get("tags"):
-                q = q.overlaps("notes", search_filters["tags"])  # type: ignore[call-arg]
-            if "date_range" in search_filters:
-                dr = search_filters["date_range"]
-                if "start_date" in dr:
-                    q = q.gte("start_date", dr["start_date"].isoformat())
-                if "end_date" in dr:
-                    q = q.lte("end_date", dr["end_date"].isoformat())
+            tags = search_filters.get("tags")
+            if isinstance(tags, Sequence) and not isinstance(
+                tags, (str, bytes, bytearray)
+            ):
+                q = q.overlaps("notes", list(tags))  # type: ignore[call-arg]
+            date_range = search_filters.get("date_range")
+            if isinstance(date_range, Mapping):
+                start_value = date_range.get("start_date")
+                if isinstance(start_value, datetime):
+                    q = q.gte("start_date", start_value.isoformat())
+                elif isinstance(start_value, str):
+                    q = q.gte("start_date", start_value)
+                end_value = date_range.get("end_date")
+                if isinstance(end_value, datetime):
+                    q = q.lte("end_date", end_value.isoformat())
+                elif isinstance(end_value, str):
+                    q = q.lte("end_date", end_value)
             q = q.order("created_at").limit(limit).offset(offset)
-        result: Any = await asyncio.to_thread(q.execute)
-        return result.data
-
-    async def delete_api_key_by_service(self, user_id: str, service_name: str) -> bool:
-        """Delete an API key by service for a user.
-
-        Args:
-            user_id: User identifier.
-            service_name: Logical service name.
-
-        Returns:
-            True if a row was deleted.
-        """
-        result = await self.delete(
-            "api_keys", {"user_id": user_id, "service_name": service_name}, user_id
+        result = cast(
+            SupabaseResponse[list[JSONObject]],
+            await asyncio.to_thread(q.execute),
         )
-        return len(result) > 0
+        return result.data
 
     async def get_popular_destinations(
         self, limit: int = 10, user_id: str | None = None
-    ) -> list[dict[str, Any]]:
+    ) -> list[JSONObject]:
         """Return the most frequently used destinations from trips.
 
         Args:
@@ -1926,7 +1915,7 @@ class DatabaseService:
             user_id,
         )
 
-    async def get_user_stats(self, user_id: str) -> dict[str, Any]:
+    async def get_user_stats(self, user_id: str) -> JSONObject:
         """Collect high-level usage statistics for a user.
 
         Args:
@@ -1971,7 +1960,7 @@ class DatabaseService:
 
     async def get_table_info(
         self, table: str, user_id: str | None = None
-    ) -> dict[str, Any]:
+    ) -> JSONObject:
         """Fetch basic column metadata from information_schema.
 
         Args:
@@ -2002,13 +1991,13 @@ class DatabaseService:
                 details={"error": str(e)},
             ) from e
 
-    async def get_database_stats(self) -> dict[str, Any]:
+    async def get_database_stats(self) -> JSONObject:
         """Return service statistics and recent security/metrics summaries.
 
         Returns:
             Mapping of connection/query/security summaries.
         """
-        stats: dict[str, Any] = {
+        stats: JSONObject = {
             "connection_stats": self._connection_stats.model_dump(),
             "uptime_seconds": time.time() - self._start_time,
         }

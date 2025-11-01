@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any, TypeVar
 
@@ -107,7 +108,7 @@ class SearchCacheMixin[
             # Get from cache
             cached_data = await self._cache_service.get_json(cache_key)
 
-            if cached_data:
+            if isinstance(cached_data, Mapping):
                 logger.info(
                     "Cache hit for search request",
                     extra={
@@ -119,7 +120,16 @@ class SearchCacheMixin[
                 # Reconstruct response object
                 # The implementing class should store the response class
                 response_class = self._get_response_class()
-                return response_class(**cached_data)
+                return response_class(**dict(cached_data))
+            if cached_data:
+                logger.warning(
+                    "Cached search result has unexpected format",
+                    extra={
+                        "cache_key": cache_key,
+                        "service": self._cache_prefix,
+                        "type": type(cached_data).__name__,
+                    },
+                )
             logger.debug(
                 "Cache miss for search request",
                 extra={

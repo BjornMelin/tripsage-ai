@@ -5,8 +5,8 @@ This document describes the dashboard monitoring API endpoints that provide real
 > **Related Documentation:**
 >
 > - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation
-> - [Authentication](authentication.md) - API authentication guide
-> - [WebSocket API](websocket-api.md) - Real-time WebSocket connections
+> - [Authentication](README.md#authentication) - API authentication guide
+> - [Realtime (Supabase)](realtime-api.md) - Real-time private channels
 > - [Error Codes](error-codes.md) - API error reference
 > - [Performance Optimization](../developers/performance-optimization.md) - System performance tuning
 
@@ -31,13 +31,13 @@ All dashboard endpoints require authenticated access. Only users with appropriat
 - **Admin Access**: Required for full dashboard functionality
 - **Agent Access**: Not permitted for dashboard endpoints
 
-For detailed authentication information, see the [Authentication Guide](authentication.md).
+For detailed authentication information, see the [Authentication Guide](README.md#authentication).
 
 > **Related Documentation:**
 >
-> - [Authentication Guide](authentication.md) - Complete authentication setup and usage
+> - [Authentication Guide](README.md#authentication) - Complete authentication setup and usage
 > - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation details
-> - [WebSocket API](websocket-api.md) - Real-time features and WebSocket connections
+> - [Realtime API](realtime-api.md) - Real-time features and channel usage
 
 ## Base URL
 
@@ -389,12 +389,12 @@ Get an analytics summary.
 
 ## Real-time Features
 
-### WebSocket Connection
+### Realtime
 
 Connect to real-time dashboard updates:
 
 ```text
-/api/dashboard/realtime/ws/{user_id}
+Supabase Realtime private topic: `user:{sub}`
 ```
 
 **Message Types:**
@@ -403,7 +403,7 @@ Connect to real-time dashboard updates:
 - `alert`: New or updated alerts
 - `system_event`: System status changes
 
-**Example WebSocket Message:**
+**Example Realtime Broadcast:**
 
 ```json
 {
@@ -458,7 +458,7 @@ Dashboard endpoints are subject to rate limiting:
 
 - **Standard Users**: 100 requests per minute
 - **Admin Users**: 500 requests per minute
-- **WebSocket Connections**: Limited to 5 concurrent connections per user
+- **Realtime Connections**: Managed by Supabase Realtime; refer to your plan’s limits and best practices (use private channels, avoid global topics).
 
 For complete rate limiting configuration and implementation details, see the [Rate Limiting Guide](../developers/rate-limiting.md).
 
@@ -511,17 +511,22 @@ for rate_limit in response.json():
 ### Real-time Monitoring
 
 ```javascript
-// Connect to WebSocket for real-time updates
-const ws = new WebSocket('ws://api.tripsage.com/api/dashboard/realtime/ws/user_123');
+// Connect to Supabase Realtime (using supabase-js v2)
+const channel = supabase
+  .channel(`user:${user.id}`, { config: { private: true } })
+  .on('broadcast', { event: 'dashboard:update' }, (payload) => {
+    console.log('dashboard:update', payload);
+  })
+  .subscribe();
 
-ws.onmessage = function(event) {
-    const data = JSON.parse(event.data);
-    
-    if (data.type === 'alert') {
-        showAlert(data.data);
-    } else if (data.type === 'metrics') {
-        updateMetrics(data.data);
-    }
+ws.onmessage = function (event) {
+  const data = JSON.parse(event.data);
+
+  if (data.type === "alert") {
+    showAlert(data.data);
+  } else if (data.type === "metrics") {
+    updateMetrics(data.data);
+  }
 };
 ```
 
@@ -531,6 +536,6 @@ This dashboard API provides monitoring capabilities for maintaining system healt
 
 - [Error Codes](error-codes.md) - Complete API error reference
 - [REST Endpoints](rest-endpoints.md) - Core API endpoints
-- [WebSocket Guide](websocket-guide.md) - Real-time communication setup
+- [Realtime (Supabase)](realtime-api.md) - Real-time private channels
 - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation
 - [Performance Optimization](../developers/performance-optimization.md) - System performance guides

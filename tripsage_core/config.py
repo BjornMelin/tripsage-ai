@@ -4,25 +4,8 @@ from functools import lru_cache
 from typing import Literal
 from urllib.parse import urlparse
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-class Crawl4AIMCPSettings(BaseSettings):
-    """Crawl4AI MCP server configuration."""
-
-    api_key: SecretStr | None = Field(
-        default=None, description="Crawl4AI MCP API key (Bearer token authentication)"
-    )
-    endpoint: str = Field(
-        default="http://localhost:11235", description="Crawl4AI MCP server endpoint URL"
-    )
-    timeout: float = Field(
-        default=30.0,
-        ge=5.0,
-        le=120.0,
-        description="Request timeout in seconds for Crawl4AI operations",
-    )
 
 
 class Settings(BaseSettings):
@@ -74,7 +57,7 @@ class Settings(BaseSettings):
         description="Application secret key for encryption and signing",
     )
 
-    # Redis/Cache (DragonflyDB)
+    # Redis/Cache
     redis_url: str | None = None
     redis_password: str | None = None
     redis_max_connections: int = Field(
@@ -94,7 +77,7 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr = Field(
         default=SecretStr("sk-test-1234567890"), description="OpenAI API key"
     )
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-5"
     model_temperature: float = Field(
         default=0.7,
         ge=0.0,
@@ -102,19 +85,11 @@ class Settings(BaseSettings):
         description="Default temperature for orchestrator LLMs",
     )
 
-    # Crawl4AI MCP Configuration
-    crawl4ai_mcp: Crawl4AIMCPSettings = Field(
-        default_factory=Crawl4AIMCPSettings,
-        description="Crawl4AI MCP server configuration",
-    )
-
     # Rate limiting configuration
     rate_limit_enabled: bool = Field(
         default=True, description="Enable rate limiting middleware"
     )
-    rate_limit_use_dragonfly: bool = Field(
-        default=True, description="Use DragonflyDB for distributed rate limiting"
-    )
+    # Dragonfly toggle removed; Redis is the standard backend for limiting
 
     # Default rate limits (can be overridden per API key/user)
     rate_limit_requests_per_minute: int = Field(
@@ -130,20 +105,20 @@ class Settings(BaseSettings):
         default=10, description="Default burst size for token bucket"
     )
 
-    # Algorithm configuration
-    rate_limit_enable_sliding_window: bool = Field(
-        default=True, description="Enable sliding window rate limiting"
-    )
-    rate_limit_enable_token_bucket: bool = Field(
-        default=True, description="Enable token bucket rate limiting"
-    )
-    rate_limit_enable_burst_protection: bool = Field(
-        default=True, description="Enable burst protection"
+    # Rate limiting strategy (comma-separated values)
+    rate_limit_strategy: str = Field(
+        default="sliding_window,token_bucket,burst_protection",
+        description="Rate limiting strategy as comma-separated values",
     )
 
     # Integration with monitoring
     rate_limit_enable_monitoring: bool = Field(
         default=True, description="Enable rate limit monitoring and analytics"
+    )
+
+    # Outbound HTTP limits
+    outbound_default_qpm: float = Field(
+        default=60.0, description="Default queries per minute for outbound HTTP"
     )
 
     # Feature Flags for Database Hardening
@@ -157,16 +132,12 @@ class Settings(BaseSettings):
         default=True, description="Enable automatic database recovery"
     )
 
-    # WebSocket Configuration
-    enable_websockets: bool = Field(
-        default=True, description="Enable WebSocket functionality"
+    # API Key Service Feature Flags
+    enable_api_key_caching: bool = Field(
+        default=False, description="Enable caching for API key validations"
     )
-    websocket_timeout: int = Field(
-        default=300, description="WebSocket connection timeout in seconds"
-    )
-    max_websocket_connections: int = Field(
-        default=1000, description="Maximum concurrent WebSocket connections"
-    )
+
+    # WebSocket configuration removed (Supabase Realtime is used exclusively)
 
     # Monitoring Configuration
     db_health_check_interval: float = Field(
@@ -182,20 +153,24 @@ class Settings(BaseSettings):
         default=5.0, description="Delay between recovery attempts in seconds"
     )
 
-    # Metrics Configuration (OTEL-only)
+    # Instrumentation Configuration (OTEL)
+    otel_instrumentation: str = Field(
+        default="",
+        description="OTEL instrumentation as comma-separated values",
+    )
 
-    # OpenTelemetry Instrumentation Flags
-    enable_fastapi_instrumentation: bool = Field(
-        default=False, description="Enable FastAPI OTEL auto-instrumentation"
+    # OpenRouter attribution (optional)
+    openrouter_referer: str | None = Field(
+        default=None, description="OpenRouter HTTP-Referer attribution header"
     )
-    enable_asgi_instrumentation: bool = Field(
-        default=False, description="Enable ASGI OTEL auto-instrumentation"
+    openrouter_title: str | None = Field(
+        default=None, description="OpenRouter X-Title attribution header"
     )
-    enable_httpx_instrumentation: bool = Field(
-        default=False, description="Enable httpx OTEL auto-instrumentation"
-    )
-    enable_redis_instrumentation: bool = Field(
-        default=False, description="Enable Redis OTEL auto-instrumentation"
+
+    # LangGraph features configuration
+    langgraph_features: str = Field(
+        default="conversation_memory,advanced_routing,memory_updates,error_recovery",
+        description="LangGraph features as comma-separated values",
     )
 
     # Google Maps Platform configuration
@@ -246,35 +221,46 @@ class Settings(BaseSettings):
         return self.environment in ("test", "testing")
 
     @property
-    def ENABLE_WEBSOCKETS(self) -> bool:
-        """Uppercase alias for enable_websockets (for test compatibility)."""
-        return self.enable_websockets
-
-    @ENABLE_WEBSOCKETS.setter
-    def ENABLE_WEBSOCKETS(self, value: bool):
-        """Setter for uppercase alias."""
-        self.enable_websockets = value
-
-    @property
-    def WEBSOCKET_TIMEOUT(self) -> int:
-        """Uppercase alias for websocket_timeout (for test compatibility)."""
-        return self.websocket_timeout
-
-    @WEBSOCKET_TIMEOUT.setter
-    def WEBSOCKET_TIMEOUT(self, value: int):
-        """Setter for uppercase alias."""
-        self.websocket_timeout = value
+    def enable_fastapi_instrumentation(self) -> bool:
+        """Check if FastAPI instrumentation is enabled."""
+        instrumentation_str: str = str(self.otel_instrumentation)
+        return "fastapi" in [
+            item.strip().lower()
+            for item in instrumentation_str.split(",")
+            if item.strip()
+        ]
 
     @property
-    def MAX_WEBSOCKET_CONNECTIONS(self) -> int:
-        """Uppercase alias for max_websocket_connections (for test compatibility)."""
-        return self.max_websocket_connections
+    def enable_asgi_instrumentation(self) -> bool:
+        """Check if ASGI instrumentation is enabled."""
+        instrumentation_str: str = str(self.otel_instrumentation)
+        return "asgi" in [
+            item.strip().lower()
+            for item in instrumentation_str.split(",")
+            if item.strip()
+        ]
 
-    @MAX_WEBSOCKET_CONNECTIONS.setter
-    def MAX_WEBSOCKET_CONNECTIONS(self, value: int):
-        """Setter for uppercase alias."""
-        self.max_websocket_connections = value
+    @property
+    def enable_httpx_instrumentation(self) -> bool:
+        """Check if HTTPX instrumentation is enabled."""
+        instrumentation_str: str = str(self.otel_instrumentation)
+        return "httpx" in [
+            item.strip().lower()
+            for item in instrumentation_str.split(",")
+            if item.strip()
+        ]
 
+    @property
+    def enable_redis_instrumentation(self) -> bool:
+        """Check if Redis instrumentation is enabled."""
+        instrumentation_str: str = str(self.otel_instrumentation)
+        return "redis" in [
+            item.strip().lower()
+            for item in instrumentation_str.split(",")
+            if item.strip()
+        ]
+
+    @computed_field
     @property
     def effective_postgres_url(self) -> str:
         """Get the effective PostgreSQL URL, converting from Supabase URL if needed.
@@ -328,3 +314,19 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Get cached settings instance."""
     return Settings()
+
+
+async def get_env_var(key: str, default: str | None = None) -> str | None:
+    """Asynchronously get environment variable.
+
+    Args:
+        key: Environment variable name
+        default: Default value if not set
+
+    Returns:
+        Environment variable value or default
+    """
+    import asyncio
+    import os
+
+    return await asyncio.to_thread(os.getenv, key, default)

@@ -134,7 +134,7 @@ Handles file upload processing, virus scanning, and image optimization.
 
 ### 4. Cache Invalidation (`cache-invalidation`)
 
-Manages Redis/DragonflyDB cache invalidation and search cache cleanup.
+Manages Redis cache invalidation and search cache cleanup.
 
 **Features:**
 
@@ -442,7 +442,7 @@ CLOUDFLARE_AI_TOKEN=your_cloudflare_token
 #### Cache Invalidation
 
 ```bash
-# Redis/DragonflyDB Configuration
+# Redis Configuration
 REDIS_URL=redis://localhost:6379
 REDIS_PASSWORD=your_redis_password
 

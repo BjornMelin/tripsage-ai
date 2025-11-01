@@ -11,7 +11,7 @@ and monitoring. The application is designed for Python 3.13+ and follows cloud-n
 - Python 3.13+
 - Access to Supabase project
 - OpenAI API key
-- Redis/DragonflyDB instance (optional)
+- Managed Redis instance (e.g., Upstash) (recommended)
 
 ## Deployment Environments
 
@@ -62,13 +62,7 @@ services:
     depends_on:
       - redis
 
-  redis:
-    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
-    ports:
-      - "6379:6379"
-    command: --logtostderr --cache_mode
-    volumes:
-      - dragonfly_data:/data
+  # Cache service removed. Use a managed Redis provider (e.g., Upstash)
 
   frontend:
     build:
@@ -82,8 +76,7 @@ services:
       - /app/node_modules
     command: pnpm dev
 
-volumes:
-  dragonfly_data:
+volumes: {}
 ```
 
 ### Production Deployment
@@ -161,16 +154,14 @@ services:
       - "traefik.http.routers.tripsage.tls=true"
       - "traefik.http.routers.tripsage.tls.certresolver=letsencrypt"
 
-  redis:
-    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
-    restart: unless-stopped
-    command: --logtostderr --cache_mode --requirepass_file=/run/secrets/redis_password
-    secrets:
-      - redis_password
-    volumes:
-      - dragonfly_data:/data
-    ports:
-      - "127.0.0.1:6379:6379"
+  # Redis is provided via a managed Upstash instance in production.
+  # If you need a local container for debugging only, use:
+  # redis:
+  #   image: redis:7-alpine
+  #   restart: unless-stopped
+  #   command: ["redis-server", "--appendonly", "yes"]
+  #   ports:
+  #     - "127.0.0.1:6379:6379"
 
   traefik:
     image: traefik:v3.0
@@ -209,9 +200,7 @@ secrets:
   redis_password:
     file: ./secrets/redis_password.txt
 
-volumes:
-  dragonfly_data:
-    driver: local
+volumes: {}
 ```
 
 ## Cloud Deployment
@@ -371,6 +360,12 @@ spec:
           value: "production"
         - name: DEBUG
           value: "false"
+        - name: REDIS_URL
+          # Upstash Redis (TLS) endpoint for backend rate limiting and caching
+          valueFrom:
+            secretKeyRef:
+              name: tripsage-secrets
+              key: redis_url
         envFrom:
         - secretRef:
             name: tripsage-secrets
@@ -442,6 +437,14 @@ spec:
 ```
 
 ## Security Configuration
+
+### Optional: Upstash for Edge Rate Limits
+
+If you deploy the Next.js frontend on Vercel (or another edge-capable platform) and want request rate limiting on Route Handlers without managing a TCP Redis, you can enable Upstash REST Redis. This is optional and only read at runtime by the attachments upload route.
+
+- Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in the frontend environment.
+- When set, `@upstash/ratelimit@2.0.6` + `@upstash/redis` are used to protect `POST /api/chat/attachments` using a sliding window (20 req / minute) keyed by bearer token and client IP.
+- If unset, the route runs without Upstash limiting. Backend SlowAPI still protects FastAPI endpoints.
 
 ### Production Security Checklist
 

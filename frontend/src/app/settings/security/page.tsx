@@ -1,5 +1,25 @@
+/**
+ * @fileoverview Security settings page.
+ *
+ * Manages account security preferences including 2FA, passwords,
+ * notifications, privacy settings, and account deletion.
+ */
+
 "use client";
 
+import {
+  AlertTriangle,
+  Bell,
+  CheckCircle2,
+  Download,
+  Eye,
+  Lock,
+  Shield,
+  Smartphone,
+  Trash2,
+} from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
 import { SecurityDashboard } from "@/components/features/security/security-dashboard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -8,33 +28,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { useAuth } from "@/contexts/auth-context";
-import {
-  AlertTriangle,
-  Bell,
-  CheckCircle2,
-  Download,
-  Eye,
-  Key,
-  Lock,
-  Shield,
-  Smartphone,
-  Trash2,
-} from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
 
+/**
+ * Interface defining security settings configuration.
+ */
 interface SecuritySettings {
+  /** Whether two-factor authentication is enabled. */
   twoFactorEnabled: boolean;
+  /** Whether to send security-related email notifications. */
   emailNotifications: boolean;
+  /** Whether to send alerts for suspicious security activity. */
   securityAlerts: boolean;
+  /** Whether to notify on new login events. */
   loginNotifications: boolean;
+  /** Whether to track device information for security monitoring. */
   deviceTracking: boolean;
+  /** Whether sensitive data is encrypted at rest. */
   dataEncryption: boolean;
 }
 
+/**
+ * Security settings page component.
+ *
+ * Displays interface for managing authentication, notifications, privacy settings,
+ * and account management.
+ *
+ * @returns The security settings page JSX element
+ */
 export default function SecuritySettingsPage() {
-  const { user: _user } = useAuth();
   const [settings, setSettings] = useState<SecuritySettings>({
     twoFactorEnabled: false,
     emailNotifications: true,
@@ -45,6 +66,12 @@ export default function SecuritySettingsPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  /**
+   * Handles updating security settings.
+   *
+   * @param key - The setting key to update
+   * @param value - The new value for the setting
+   */
   const handleSettingChange = async (key: keyof SecuritySettings, value: boolean) => {
     setIsLoading(true);
     try {
@@ -60,6 +87,9 @@ export default function SecuritySettingsPage() {
     }
   };
 
+  /**
+   * Handles downloading user security data export.
+   */
   const handleDownloadSecurityData = async () => {
     try {
       // TODO: Implement security data export
@@ -69,6 +99,9 @@ export default function SecuritySettingsPage() {
     }
   };
 
+  /**
+   * Handles account deletion request.
+   */
   const handleDeleteAccount = async () => {
     try {
       // TODO: Implement account deletion
@@ -165,20 +198,18 @@ export default function SecuritySettingsPage() {
 
             <Separator />
 
-            {/* API Keys */}
+            {/* Multi-factor Authentication */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-base font-medium">API Keys</Label>
+                  <Label className="text-base font-medium">Multi-factor Authentication</Label>
                   <p className="text-sm text-muted-foreground">
-                    Manage your service API keys
+                    Add a second factor to strengthen account security
                   </p>
                 </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/settings/api-keys">
-                    <Key className="mr-2 h-4 w-4" />
-                    Manage Keys
-                  </Link>
+                <Button variant="outline" size="sm">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Configure MFA
                 </Button>
               </div>
             </div>
@@ -397,5 +428,4 @@ export default function SecuritySettingsPage() {
   );
 }
 
-// Force dynamic rendering for authenticated pages
-export const dynamic = 'force-dynamic';
+// caching handled at app level via cacheComponents; no per-file directive

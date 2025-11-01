@@ -1,6 +1,6 @@
-import type { SearchParams, SearchType } from "@/types/search";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { SearchParams, SearchType } from "@/types/search";
 import { useSearchFiltersStore } from "../search-filters-store";
 import { useSearchHistoryStore } from "../search-history-store";
 import { useSearchParamsStore } from "../search-params-store";

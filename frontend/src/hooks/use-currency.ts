@@ -1,5 +1,14 @@
+/**
+ * @fileoverview React hooks for currency management and conversion.
+ *
+ * Provides hooks for managing currencies, exchange rates, and currency conversion
+ * with local state management and API synchronization.
+ */
+
 "use client";
 
+import { useCallback, useEffect } from "react";
+import { z } from "zod";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useCurrencyStore } from "@/stores/currency-store";
 import type {
@@ -7,11 +16,9 @@ import type {
   CurrencyCode,
   UpdateExchangeRatesResponse,
 } from "@/types/currency";
-import { useCallback, useEffect } from "react";
-import { z } from "zod";
 
 /**
- * Hook for accessing currency state and basic operations
+ * Hook for accessing currency state.
  */
 export function useCurrency() {
   const { currencies, baseCurrency, exchangeRates, favoriteCurrencies, lastUpdated } =
@@ -27,7 +34,7 @@ export function useCurrency() {
 }
 
 /**
- * Hook for currency management operations
+ * Hook for currency management operations.
  */
 export function useCurrencyActions() {
   const {
@@ -48,7 +55,7 @@ export function useCurrencyActions() {
 }
 
 /**
- * Hook for exchange rate operations
+ * Hook for exchange rate operations.
  */
 export function useExchangeRates() {
   const {
@@ -69,7 +76,7 @@ export function useExchangeRates() {
 }
 
 /**
- * Hook for currency conversion operations
+ * Hook for currency conversion operations.
  */
 export function useCurrencyConverter() {
   const { convertAmount, formatAmountWithCurrency } = useCurrencyStore();
@@ -104,7 +111,7 @@ export function useCurrencyConverter() {
 }
 
 /**
- * Hook for getting currency data like recent pairs and popular currencies
+ * Hook for getting currency data like recent pairs and popular currencies.
  */
 export function useCurrencyData() {
   const { getRecentCurrencyPairs, getPopularCurrencies, getCurrencyByCode } =
@@ -121,7 +128,7 @@ export function useCurrencyData() {
 }
 
 /**
- * Hook for fetching exchange rates from API
+ * Hook for fetching exchange rates from API.
  */
 export function useFetchExchangeRates() {
   const { updateAllExchangeRates } = useCurrencyStore();
@@ -158,7 +165,9 @@ export function useFetchExchangeRates() {
 }
 
 /**
- * Hook for fetching a specific exchange rate
+ * Hook for fetching a specific exchange rate.
+ *
+ * @param targetCurrency - Currency code to fetch rate for
  */
 export function useFetchExchangeRate(targetCurrency: CurrencyCode) {
   const { baseCurrency, updateExchangeRate } = useCurrencyStore();

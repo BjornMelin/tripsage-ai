@@ -1,6 +1,8 @@
 /**
- * Mock implementation of use-search
- * This file exists to satisfy test imports that expect this module
+ * @fileoverview Mock implementation of search hook.
+ *
+ * Placeholder implementation for search functionality.
+ * Exists to satisfy test imports and will be replaced with actual implementation.
  */
 
 export interface UseSearchResult {
@@ -12,7 +14,9 @@ export interface UseSearchResult {
 }
 
 /**
- * Mock hook for general search functionality
+ * Mock hook for general search functionality.
+ *
+ * @returns Search result object with mock methods
  */
 export function useSearch(): UseSearchResult {
   return {

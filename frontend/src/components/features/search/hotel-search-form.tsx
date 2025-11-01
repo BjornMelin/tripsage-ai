@@ -1,20 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 import {
   Bed,
   Building2,
@@ -32,7 +17,22 @@ import {
   Utensils,
   Wifi,
 } from "lucide-react";
-import { useOptimistic, useState, useTransition } from "react";
+import { useId, useOptimistic, useState, useTransition } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 // React 19 optimistic update types for hotel search
 export interface ModernHotelSearchParams {
@@ -80,6 +80,12 @@ export function HotelSearchForm({
   showRecommendations = true,
 }: HotelSearchFormProps) {
   const [isPending, startTransition] = useTransition();
+  const locationId = useId();
+  const checkInId = useId();
+  const checkOutId = useId();
+  const roomsId = useId();
+  const adultsId = useId();
+  const childrenId = useId();
 
   // Form state with React 19 patterns
   const [searchParams, setSearchParams] = useState<ModernHotelSearchParams>({
@@ -185,13 +191,13 @@ export function HotelSearchForm({
       <CardContent className="space-y-6">
         {/* Location Search */}
         <div className="space-y-2">
-          <Label htmlFor="location" className="text-sm font-medium">
+          <Label htmlFor={locationId} className="text-sm font-medium">
             Destination
           </Label>
           <div className="relative">
             <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              id="location"
+              id={locationId}
               placeholder="City, hotel name, or landmark"
               value={searchParams.location}
               onChange={(e) => handleInputChange("location", e.target.value)}
@@ -203,13 +209,13 @@ export function HotelSearchForm({
         {/* Dates Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="checkIn" className="text-sm font-medium">
+            <Label htmlFor={checkInId} className="text-sm font-medium">
               Check-in
             </Label>
             <div className="relative">
               <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                id="checkIn"
+                id={checkInId}
                 type="date"
                 value={searchParams.checkIn}
                 onChange={(e) => handleInputChange("checkIn", e.target.value)}
@@ -219,13 +225,13 @@ export function HotelSearchForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="checkOut" className="text-sm font-medium">
+            <Label htmlFor={checkOutId} className="text-sm font-medium">
               Check-out
             </Label>
             <div className="relative">
               <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                id="checkOut"
+                id={checkOutId}
                 type="date"
                 value={searchParams.checkOut}
                 onChange={(e) => handleInputChange("checkOut", e.target.value)}
@@ -250,13 +256,13 @@ export function HotelSearchForm({
         {/* Guests and Rooms */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="rooms" className="text-sm font-medium">
+            <Label htmlFor={roomsId} className="text-sm font-medium">
               Rooms
             </Label>
             <Select
               value={searchParams.rooms.toString()}
               onValueChange={(value) =>
-                handleInputChange("rooms", Number.parseInt(value))
+                handleInputChange("rooms", Number.parseInt(value, 10))
               }
             >
               <SelectTrigger>
@@ -273,7 +279,7 @@ export function HotelSearchForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="adults" className="text-sm font-medium">
+            <Label htmlFor={adultsId} className="text-sm font-medium">
               Adults
             </Label>
             <div className="relative">
@@ -281,7 +287,7 @@ export function HotelSearchForm({
               <Select
                 value={searchParams.adults.toString()}
                 onValueChange={(value) =>
-                  handleInputChange("adults", Number.parseInt(value))
+                  handleInputChange("adults", Number.parseInt(value, 10))
                 }
               >
                 <SelectTrigger className="pl-10">
@@ -299,13 +305,13 @@ export function HotelSearchForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="children" className="text-sm font-medium">
+            <Label htmlFor={childrenId} className="text-sm font-medium">
               Children
             </Label>
             <Select
               value={searchParams.children.toString()}
               onValueChange={(value) =>
-                handleInputChange("children", Number.parseInt(value))
+                handleInputChange("children", Number.parseInt(value, 10))
               }
             >
               <SelectTrigger>
@@ -405,7 +411,7 @@ export function HotelSearchForm({
         {showRecommendations && (
           <>
             <Separator />
-            <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border">
+            <div className="bg-linear-to-r from-orange-50 to-red-50 p-4 rounded-lg border">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-orange-600" />

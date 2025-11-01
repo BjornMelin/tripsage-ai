@@ -1,5 +1,10 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Clock, MapPin, Star, TrendingUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,11 +27,6 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useMemoryContext } from "@/hooks/use-memory";
 import type { DestinationSearchParams } from "@/types/search";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Clock, MapPin, Star, TrendingUp } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 const destinationSearchFormSchema = z.object({
   query: z.string().min(1, { message: "Destination is required" }),
@@ -464,7 +464,7 @@ export function DestinationSearchForm({
                           max={20}
                           {...field}
                           onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value))
+                            field.onChange(Number.parseInt(e.target.value, 10))
                           }
                         />
                       </FormControl>

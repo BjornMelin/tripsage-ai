@@ -2,39 +2,49 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from contextlib import ExitStack
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from slowapi import extension as slowapi_extension
+
+# Neutralize SlowAPI limiter decorator at source to avoid import-time validation
+# across unrelated routers included by the app. This keeps tests hermetic.
+from tripsage.api.limiting import limiter as _global_limiter
 
 
-# SlowAPI's decorator validates function signatures at import-time, causing
-# unrelated routers to explode in tests. Neutralize the decorator so imports
-# succeed without pulling those routers into this suite.
-slowapi_extension.Limiter.limit = lambda *args, **kwargs: (lambda func: func)
+def _no_limit(
+    *_args: Any, **_kwargs: Any
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Typed no-op decorator to replace SlowAPI's limiter.limit."""
+
+    def _decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        return func
+
+    return _decorator
+
+
+# Apply no-op limit decorator
+_global_limiter.limit = _no_limit  # type: ignore[attr-defined]
 
 from tripsage.api.core import dependencies as core_dependencies
 from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.routers import dashboard as dashboard_router
-from tripsage_core.services.business.api_key_service import (
-    ApiValidationResult,
-    ServiceHealthStatus,
-    ServiceType,
-)
-from tripsage_core.services.business.dashboard_service import (
+from tripsage_core.services.business.dashboard_models import (
     AlertData,
     AlertSeverity,
     AlertType,
     DashboardData,
-    DashboardService,
     RealTimeMetrics,
     ServiceAnalytics,
+    ServiceHealthStatus,
+    ServiceType,
     UserActivityData,
 )
+from tripsage_core.services.business.dashboard_service import DashboardService
 
 
 @pytest.fixture(name="client")
@@ -198,13 +208,10 @@ def _patch_dependencies(
     app.dependency_overrides[core_dependencies.get_db] = db_override
     stack.callback(app.dependency_overrides.pop, core_dependencies.get_db, None)
 
-    app.dependency_overrides[dashboard_router.get_current_principal] = (
-        principal_override
-    )
+    # Routers use RequiredPrincipalDep; override the dependency provider
+    app.dependency_overrides[core_dependencies.require_principal] = principal_override
     stack.callback(
-        app.dependency_overrides.pop,
-        dashboard_router.get_current_principal,
-        None,
+        app.dependency_overrides.pop, core_dependencies.require_principal, None
     )
 
     dashboard_service = AsyncMock(spec=DashboardService)
@@ -217,51 +224,6 @@ def _patch_dependencies(
         "percentage_used": 60.0,
         "is_throttled": False,
     }
-
-    api_key_service = AsyncMock()
-    api_key_service.check_all_services_health.return_value = {
-        ServiceType.OPENAI: ApiValidationResult(
-            service=ServiceType.OPENAI,
-            is_valid=None,
-            status=None,
-            health_status=ServiceHealthStatus.HEALTHY,
-            latency_ms=110.0,
-            message="Operating normally",
-            checked_at=datetime.now(UTC),
-            validated_at=None,
-        ),
-        ServiceType.WEATHER: ApiValidationResult(
-            service=ServiceType.WEATHER,
-            is_valid=None,
-            status=None,
-            health_status=ServiceHealthStatus.DEGRADED,
-            latency_ms=210.0,
-            message="Latency elevated",
-            checked_at=datetime.now(UTC),
-            validated_at=None,
-        ),
-        ServiceType.GOOGLEMAPS: ApiValidationResult(
-            service=ServiceType.GOOGLEMAPS,
-            is_valid=None,
-            status=None,
-            health_status=ServiceHealthStatus.UNHEALTHY,
-            latency_ms=510.0,
-            message="Service unavailable",
-            checked_at=datetime.now(UTC),
-            validated_at=None,
-        ),
-        ServiceType.EMAIL: ApiValidationResult(
-            service=ServiceType.EMAIL,
-            is_valid=None,
-            status=None,
-            health_status=ServiceHealthStatus.UNKNOWN,
-            latency_ms=0.0,
-            message="Health status unknown",
-            checked_at=None,
-            validated_at=None,
-        ),
-    }
-    dashboard_service.api_key_service = api_key_service
 
     stack.enter_context(
         patch(
@@ -288,9 +250,10 @@ def test_overview_and_services_flow(client: TestClient, principal: Principal) ->
     assert services.status_code == 200
 
     overview_body = overview.json()
-    assert overview_body["success_rate_24h"] == pytest.approx(
-        payload.metrics.success_rate, rel=1e-6
-    )
+    expected = float(payload.metrics.success_rate)  # type: ignore[attr-defined] # pylint: disable=no-member
+    actual = float(overview_body["success_rate_24h"])  # ensure numeric
+    # Relative tolerance 1e-6
+    assert abs(actual - expected) <= expected * 1e-6 + 1e-12
 
     services_body = services.json()
     assert len(services_body) == 4
@@ -300,7 +263,8 @@ def test_overview_and_services_flow(client: TestClient, principal: Principal) ->
     assert services_index["weather"]["status"] == "degraded"
     assert services_index["googlemaps"]["status"] == "unhealthy"
     assert services_index["email"]["status"] == "unknown"
-    assert services_index["email"]["last_check"] is None
+    # In the centralized schema, last_check is a datetime; allow any ISO string
+    assert isinstance(services_index["email"]["last_check"], str)
 
 
 def test_metrics_and_rate_limits(client: TestClient, principal: Principal) -> None:
@@ -318,7 +282,7 @@ def test_metrics_and_rate_limits(client: TestClient, principal: Principal) -> No
     assert rate_limits.status_code == 200
 
     metrics_body = metrics.json()
-    assert metrics_body["total_requests"] == payload.metrics.total_requests
+    assert metrics_body["total_requests"] == payload.metrics.total_requests  # type: ignore[attr-defined] # pylint: disable=no-member
     assert metrics_body["unique_users"] == len(payload.top_users)
 
     rate_limits_body = rate_limits.json()

@@ -51,58 +51,63 @@ function AttachmentItem({ url }: AttachmentItemProps) {
 
   if (isImage) {
     return (
-      <div
+      <button
+        type="button"
         className="relative h-40 w-40 overflow-hidden rounded-md border bg-background cursor-pointer"
         onClick={handleClick}
       >
         <Image src={url} alt={fileName} fill className="object-cover" />
-      </div>
+      </button>
     );
   }
 
   if (isPDF) {
     return (
-      <div
+      <button
+        type="button"
         className="flex items-center gap-2 rounded-md border bg-background p-2 cursor-pointer hover:bg-secondary/50"
         onClick={handleClick}
       >
         <FileIcon className="h-5 w-5 text-red-500" />
         <span className="text-sm truncate max-w-[200px]">{fileName}</span>
-      </div>
+      </button>
     );
   }
 
   if (isText) {
     return (
-      <div
+      <button
+        type="button"
         className="flex items-center gap-2 rounded-md border bg-background p-2 cursor-pointer hover:bg-secondary/50"
         onClick={handleClick}
       >
         <FileTextIcon className="h-5 w-5 text-blue-500" />
         <span className="text-sm truncate max-w-[200px]">{fileName}</span>
-      </div>
+      </button>
     );
   }
 
   if (isArchive) {
     return (
-      <div
+      <button
+        type="button"
         className="flex items-center gap-2 rounded-md border bg-background p-2 cursor-pointer hover:bg-secondary/50"
         onClick={handleClick}
       >
         <FileArchiveIcon className="h-5 w-5 text-yellow-500" />
         <span className="text-sm truncate max-w-[200px]">{fileName}</span>
-      </div>
+      </button>
     );
   }
 
   return (
-    <div
+    <button
+      type="button"
       className="flex items-center gap-2 rounded-md border bg-background p-2 cursor-pointer hover:bg-secondary/50"
       onClick={handleClick}
     >
       <FileIcon className="h-5 w-5" />
       <span className="text-sm truncate max-w-[200px]">{fileName}</span>
-    </div>
+    </button>
   );
 }

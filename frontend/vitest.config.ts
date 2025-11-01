@@ -1,6 +1,14 @@
+/**
+ * @fileoverview Vitest configuration tuned for stability and CI performance.
+ * - Uses forks by default for process isolation; switches to threads in CI.
+ * - JSDOM environment for UI tests, type/lint gates run separately.
+ */
+
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+
+const isCI = process.env.CI === "true" || process.env.CI === "1";
 
 export default defineConfig({
   plugins: [react()],
@@ -9,13 +17,6 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test-setup.ts"],
     exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*", "**/*.spec.*"],
-    // Enable browser mode for advanced testing
-    browser: {
-      enabled: false, // Can be enabled for specific tests
-      name: "chromium",
-      provider: "playwright",
-      headless: true,
-    },
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
@@ -42,21 +43,21 @@ export default defineConfig({
           statements: 90,
         },
       },
-      all: true,
     },
-    // Performance optimizations
-    pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true, // Better for memory-constrained environments
-      },
-    },
-    isolate: true, // Ensure test isolation
-    clearMocks: true, // Clear all mocks between tests
-    restoreMocks: true, // Restore original implementations
-    // Better error handling
-    logHeapUsage: true,
+    // Runtime stability
+    isolate: true,
+    clearMocks: true,
+    restoreMocks: true,
+    // Timeouts
+    testTimeout: 7500,
+    hookTimeout: 12000,
+    teardownTimeout: 10000,
+    // Stop early on cascading failures in CI
+    bail: isCI ? 5 : 0,
     passWithNoTests: true,
+    // Pools/workers: default to forks; prefer threads in CI for big suites
+    pool: isCI ? "threads" : "forks",
+    maxWorkers: isCI ? 2 : 2,
   },
   resolve: {
     alias: {

@@ -237,15 +237,15 @@ export const metadataValueSchema = z.union([
   z.string(),
   z.number(),
   z.boolean(),
-  z.record(z.unknown()),
+  z.record(z.string(), z.unknown()),
 ]);
 
 // Search response from API schema
 export const searchResponseSchema = z.object({
   results: searchResultsSchema,
   totalResults: nonNegativeIntSchema,
-  filters: z.record(filterValueSchema).optional(),
-  metadata: z.record(metadataValueSchema).optional(),
+  filters: z.record(z.string(), filterValueSchema).optional(),
+  metadata: z.record(z.string(), metadataValueSchema).optional(),
 });
 
 // Filter option schema

@@ -1,1 +1,1 @@
-"""Performance benchmarks for TripSage MCP to SDK migration."""
+"""Performance tests for TripSage."""

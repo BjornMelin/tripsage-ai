@@ -5,9 +5,9 @@
  * patterns and behavioral validation. Following ULTRATHINK methodology.
  */
 
-import { render } from "@/test/test-utils";
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render } from "@/test/test-utils";
 import { TripSuggestions } from "../trip-suggestions";
 
 // Mock the stores with essential methods

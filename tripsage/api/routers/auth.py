@@ -6,10 +6,9 @@ login, token refresh, logout, and user information.
 
 import logging
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, HTTPException, status
 
 from tripsage.api.schemas.auth import RegisterRequest, UserResponse
-from tripsage_core.services.business.user_service import UserService, get_user_service
 
 
 router = APIRouter()
@@ -24,17 +23,22 @@ logger = logging.getLogger(__name__)
 )
 async def register(
     user_data: RegisterRequest,
-    user_service: UserService = Depends(get_user_service),
 ):
     """Register a new user.
 
     Args:
         user_data: User registration data
-        user_service: Injected user service
 
     Returns:
         The created user
 
     Raises:
-        HTTPException: If the email is already registered
+        HTTPException: Always raised because Supabase manages registration.
     """
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail=(
+            "User registration is handled by Supabase auth; use the Supabase "
+            "client SDK or hosted UI to sign up users."
+        ),
+    )

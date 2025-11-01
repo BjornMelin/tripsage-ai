@@ -8,18 +8,19 @@ to avoid code duplication while providing enhanced search capabilities.
 
 import asyncio
 import uuid
+from collections.abc import Awaitable
 from datetime import datetime
 from typing import Any
 
-from tripsage.api.schemas.requests.search import UnifiedSearchRequest
-from tripsage.api.schemas.responses.search import (
+from tripsage.api.schemas.search import (
     SearchFacet,
     SearchResultItem,
+    UnifiedSearchRequest,
     UnifiedSearchResponse,
 )
 from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.infrastructure.search_cache_mixin import SearchCacheMixin
-from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.utils.error_handling_utils import tripsage_safe_execute
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -64,11 +65,11 @@ class UnifiedSearchService(
     def __init__(
         self,
         *,
-        cache_service,
-        destination_service=None,
-        activity_service=None,
-        flight_service=None,
-        accommodation_service=None,
+        cache_service: Any,
+        destination_service: Any | None = None,
+        activity_service: Any | None = None,
+        flight_service: Any | None = None,
+        accommodation_service: Any | None = None,
     ):
         """Initialize unified search service.
 
@@ -91,7 +92,7 @@ class UnifiedSearchService(
 
     def get_cache_fields(self, request: UnifiedSearchRequest) -> dict[str, Any]:
         """Extract fields for cache key generation."""
-        cache_fields = {
+        cache_fields: dict[str, Any] = {
             "query": request.query,
             "types": sorted(request.types or DEFAULT_SEARCH_TYPES),
             "destination": request.destination,
@@ -109,16 +110,14 @@ class UnifiedSearchService(
 
         # Include filters if present
         if request.filters:
-            cache_fields.update(
-                {
-                    "price_min": request.filters.price_min,
-                    "price_max": request.filters.price_max,
-                    "rating_min": request.filters.rating_min,
-                    "latitude": request.filters.latitude,
-                    "longitude": request.filters.longitude,
-                    "radius_km": request.filters.radius_km,
-                }
-            )
+            cache_fields |= {
+                "price_min": request.filters.price_min,
+                "price_max": request.filters.price_max,
+                "rating_min": request.filters.rating_min,
+                "latitude": request.filters.latitude,
+                "longitude": request.filters.longitude,
+                "radius_km": request.filters.radius_km,
+            }
 
         return cache_fields
 
@@ -126,7 +125,7 @@ class UnifiedSearchService(
         """Get the response class for deserialization."""
         return UnifiedSearchResponse
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def unified_search(
         self, request: UnifiedSearchRequest
     ) -> UnifiedSearchResponse:
@@ -142,7 +141,6 @@ class UnifiedSearchService(
             UnifiedSearchServiceError: If search fails
         """
         # Dependencies are injected; no lazy ensures
-
         try:
             logger.info(
                 "Unified search request: '%s' across types: %s",
@@ -164,8 +162,8 @@ class UnifiedSearchService(
             search_types = request.types or DEFAULT_SEARCH_TYPES
 
             # Prepare search tasks for parallel execution
-            search_tasks = {}
-            provider_errors = {}
+            search_tasks: dict[str, Awaitable[list[SearchResultItem]]] = {}
+            provider_errors: dict[str, str] = {}
 
             # Destination search
             if "destination" in search_types:
@@ -185,13 +183,14 @@ class UnifiedSearchService(
 
             # Execute searches in parallel
             if search_tasks:
-                search_results = await asyncio.gather(
-                    *search_tasks.values(), return_exceptions=True
-                )
+                task_list = list(search_tasks.values())
+                search_results: list[
+                    list[SearchResultItem] | BaseException
+                ] = await asyncio.gather(*task_list, return_exceptions=True)
 
                 # Process results
-                all_results = []
-                results_by_type = {}
+                all_results: list[SearchResultItem] = []
+                results_by_type: dict[str, list[SearchResultItem]] = {}
 
                 for search_type, result in zip(
                     list(search_tasks.keys()), list(search_results), strict=False
@@ -201,7 +200,9 @@ class UnifiedSearchService(
                         provider_errors[search_type] = str(result)
                         results_by_type[search_type] = []
                     else:
-                        type_results = list(result) if isinstance(result, list) else []
+                        type_results: list[SearchResultItem] = (
+                            result if isinstance(result, list) else []
+                        )
                         all_results.extend(type_results)
                         results_by_type[search_type] = type_results
                         logger.debug(
@@ -265,7 +266,7 @@ class UnifiedSearchService(
         try:
             # Use the destination service to search
             # For now, we'll create basic destination results based on the query
-            results = []
+            results: list[SearchResultItem] = []
 
             if request.destination or "destination" in request.query.lower():
                 # Create a destination result based on the query
@@ -311,7 +312,7 @@ class UnifiedSearchService(
                 return []
 
             # Create activity search request
-            from tripsage.api.schemas.requests.activities import ActivitySearchRequest
+            from tripsage.api.schemas.activities import ActivitySearchRequest
 
             activity_request = ActivitySearchRequest.model_validate(
                 {
@@ -331,7 +332,7 @@ class UnifiedSearchService(
             )
 
             # Convert to unified results
-            results = []
+            results: list[SearchResultItem] = []
             for activity in activity_response.activities:
                 result = SearchResultItem.model_validate(
                     {
@@ -463,10 +464,10 @@ class UnifiedSearchService(
 
     def _generate_facets(self, results: list[SearchResultItem]) -> list[SearchFacet]:
         """Generate facets for filtering UI."""
-        facets = []
+        facets: list[SearchFacet] = []
 
         # Type facet
-        type_counts = {}
+        type_counts: dict[str, int] = {}
         for result in results:
             type_counts[result.type] = type_counts.get(result.type, 0) + 1
 
@@ -483,7 +484,7 @@ class UnifiedSearchService(
             facets.append(type_facet)
 
         # Price range facet
-        prices = [r.price for r in results if r.price is not None]
+        prices: list[float] = [r.price for r in results if r.price is not None]
         if prices:
             price_facet = SearchFacet(
                 field="price",
@@ -494,7 +495,7 @@ class UnifiedSearchService(
             facets.append(price_facet)
 
         # Rating facet
-        ratings = [r.rating for r in results if r.rating is not None]
+        ratings: list[float] = [r.rating for r in results if r.rating is not None]
         if ratings:
             rating_facet = SearchFacet(
                 field="rating",
@@ -508,7 +509,7 @@ class UnifiedSearchService(
 
         return facets
 
-    @with_error_handling()
+    @tripsage_safe_execute()
     async def get_search_suggestions(self, query: str, limit: int = 10) -> list[str]:
         """Get search suggestions based on partial query.
 
@@ -523,7 +524,7 @@ class UnifiedSearchService(
             UnifiedSearchServiceError: If suggestion generation fails
         """
         try:
-            suggestions = []
+            suggestions: list[str] = []
             query_lower = query.lower()
 
             # Basic destination suggestions
@@ -567,7 +568,3 @@ class UnifiedSearchService(
         except Exception as e:
             logger.exception("Failed to get search suggestions")
             raise UnifiedSearchServiceError(f"Failed to get suggestions: {e}", e) from e
-
-
-# FINAL-ONLY: Removed module-level singleton and factory. Inject this service
-# via application DI with required collaborators.

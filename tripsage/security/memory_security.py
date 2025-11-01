@@ -5,8 +5,9 @@ for the memory service to ensure data privacy and security.
 """
 
 import hashlib
+import logging
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from functools import wraps
 from typing import Any
 
@@ -15,17 +16,21 @@ from pydantic import BaseModel, Field
 
 from tripsage_core.config import get_settings
 from tripsage_core.observability.otel import get_meter, get_tracer
-from tripsage_core.utils.logging_utils import get_logger
+from tripsage_core.services.business.audit_logging_service import (
+    AuditEventType,
+    AuditSeverity,
+    audit_security_event,
+)
 
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 settings = get_settings()
-_tracer = get_tracer("tripsage.security.memory")
-_meter = get_meter("tripsage.security.memory")
-_op_counter = _meter.create_counter(
+_tracer: Any = get_tracer("tripsage.security.memory")
+_meter: Any = get_meter("tripsage.security.memory")
+_op_counter: Any = _meter.create_counter(
     "memory.operation.count", unit="1", description="Total memory operations"
 )
-_op_duration = _meter.create_histogram(
+_op_duration: Any = _meter.create_histogram(
     "memory.operation.duration", unit="ms", description="Memory operation duration"
 )
 
@@ -142,13 +147,6 @@ class MemoryEncryption:
         return result
 
 
-from tripsage_core.services.business.audit_logging_service import (
-    AuditEventType,
-    AuditSeverity,
-    audit_security_event,
-)
-
-
 class MemorySecurity:
     """Main security service for memory operations."""
 
@@ -225,11 +223,11 @@ class MemorySecurity:
         self,
         operation: str,
         user_id: str,
-        func: Callable,
-        *args,
+        func: Callable[..., Awaitable[Any]],
+        *args: Any,
         ip_address: str | None = None,
         session_id: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Any:
         """Execute operation with security checks.
 
@@ -324,9 +322,9 @@ def secure_memory_operation(operation: str):
             # Function implementation
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
         @wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Extract user_id from arguments
             user_id = kwargs.get("user_id")
             if not user_id and len(args) > 0:

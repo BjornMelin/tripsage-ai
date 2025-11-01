@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Browser Supabase client factory and React hook.
+ * Provides a singleton typed client for the Database schema.
+ */
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useMemo } from "react";
@@ -11,7 +15,12 @@ let client: TypedSupabaseClient | undefined;
  * Create a singleton Supabase client for browser use
  * This ensures we only have one client instance throughout the app
  */
-function getSupabaseBrowserClient(): TypedSupabaseClient {
+/**
+ * Return the browser singleton Supabase client.
+ * Exported so non-React modules (e.g., Zustand stores) can reuse the same
+ * instance that the RealtimeAuthProvider authenticates.
+ */
+export function getBrowserClient(): TypedSupabaseClient {
   if (client) {
     return client;
   }
@@ -20,6 +29,10 @@ function getSupabaseBrowserClient(): TypedSupabaseClient {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
+    // During SSR/prerender, avoid throwing to allow pages to build
+    if (typeof window === "undefined") {
+      return (client ?? ({} as unknown)) as TypedSupabaseClient;
+    }
     throw new Error(
       "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
     );
@@ -34,7 +47,7 @@ function getSupabaseBrowserClient(): TypedSupabaseClient {
  * Memoizes the client to prevent unnecessary re-renders
  */
 export function useSupabase(): TypedSupabaseClient {
-  return useMemo(getSupabaseBrowserClient, []);
+  return useMemo(getBrowserClient, []);
 }
 
 /**
@@ -42,5 +55,19 @@ export function useSupabase(): TypedSupabaseClient {
  * Use useSupabase() hook in components instead
  */
 export function createClient(): TypedSupabaseClient {
-  return getSupabaseBrowserClient();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // For SSR/prerender safety, mimic the singleton behavior when missing envs
+    if (typeof window === "undefined") {
+      return {} as unknown as TypedSupabaseClient;
+    }
+    throw new Error(
+      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    );
+  }
+
+  // Intentionally create a fresh client (used by utility code that expects non-singleton behavior)
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
 }

@@ -11,11 +11,11 @@ Usage:
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import click
-import supabase  # type: ignore[import-not-found]
 
+import supabase
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
@@ -107,8 +107,8 @@ class DatabaseInitializer:
                 WHERE installed_version IS NOT NULL
             """)
 
-            installed_extensions = [row["name"] for row in result]
-            missing = set(extensions) - set(installed_extensions)
+            installed_extensions: list[str] = [str(row["name"]) for row in result]
+            missing: set[str] = set(extensions) - set(installed_extensions)
 
             if missing:
                 logger.warning("Some extensions may not be available: %s", missing)
@@ -281,8 +281,8 @@ class DatabaseInitializer:
                 AND c.relrowsecurity = true
                 AND c.relname IN ('user_profiles', 'trips', 'trip_messages')
             """)
-
-            if rls_check[0]["rls_count"] < 3:
+            rls_count = cast(int, rls_check[0]["rls_count"]) if rls_check else 0
+            if rls_count < 3:
                 logger.warning("Some tables may not have RLS enabled")
 
             logger.info("Initialization validation passed")
@@ -348,6 +348,7 @@ def main(with_seed_data: bool, env: str, dry_run: bool) -> None:
             db_service = DatabaseService(settings)
             supabase_client = supabase.create_client(  # type: ignore[attr-defined]  # pylint: disable=no-member,c-extension-no-member
                 settings.database_url,
+                # pylint: disable=no-member
                 settings.database_service_key.get_secret_value(),
             )
 

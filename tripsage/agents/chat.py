@@ -1,10 +1,11 @@
 """Chat agent implementation for handling real-time chat interactions."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from tripsage.agents.base import BaseAgent
-from tripsage.agents.service_registry import ServiceRegistry
+from tripsage.app_state import AppServiceContainer
+from tripsage.orchestration.graph import TripSageOrchestrator
 from tripsage_core.services.business.chat_service import ChatService
 from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
@@ -22,11 +23,17 @@ _CHAT_INSTRUCTIONS = (
 class ChatAgent(BaseAgent):
     """Chat agent for handling real-time chat interactions."""
 
-    def __init__(self, service_registry: ServiceRegistry):
+    def __init__(
+        self,
+        *,
+        services: AppServiceContainer,
+        orchestrator: TripSageOrchestrator,
+    ):
         """Initialize the chat agent with orchestration-aware base behaviour."""
         super().__init__(
             "chat_agent",
-            service_registry,
+            services=services,
+            orchestrator=orchestrator,
             instructions=_CHAT_INSTRUCTIONS,
             summary_interval=8,
         )
@@ -53,7 +60,7 @@ class ChatAgent(BaseAgent):
         user_id: str | None = None,
         session_id: str | None = None,
         context: dict[str, Any] | None = None,
-    ) -> AsyncIterator[dict[str, Any]]:
+    ) -> AsyncGenerator[dict[str, Any]]:
         """Stream a message through the orchestrator with status updates."""
         async for event in super().stream_message(
             user_input,
@@ -78,7 +85,7 @@ class ChatAgent(BaseAgent):
         """
         try:
             # Use the chat service to get conversation history
-            chat_service = self.service_registry.get_optional_service(
+            chat_service = self.services.get_optional_service(
                 "chat_service", expected_type=ChatService
             )
             if chat_service:
@@ -109,7 +116,7 @@ class ChatAgent(BaseAgent):
         """
         try:
             # Use the chat service to clear conversation
-            chat_service = self.service_registry.get_optional_service(
+            chat_service = self.services.get_optional_service(
                 "chat_service", expected_type=ChatService
             )
             if chat_service:

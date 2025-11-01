@@ -1,5 +1,19 @@
 "use client";
 
+import { differenceInDays, format } from "date-fns";
+import {
+  ArrowLeft,
+  Calendar,
+  DollarSign,
+  Download,
+  Edit,
+  MapPin,
+  Settings,
+  Share2,
+  Users,
+} from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   BudgetTracker,
   ItineraryBuilder,
@@ -17,20 +31,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTripStore } from "@/stores/trip-store";
-import { differenceInDays, format } from "date-fns";
-import {
-  ArrowLeft,
-  Calendar,
-  DollarSign,
-  Download,
-  Edit,
-  MapPin,
-  Settings,
-  Share2,
-  Users,
-} from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
 export default function TripDetailsPage() {
   const params = useParams();

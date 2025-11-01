@@ -1,3 +1,5 @@
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import type {
   Accommodation,
   Activity,
@@ -7,8 +9,6 @@ import type {
   SearchResults,
   SearchType,
 } from "@/types/search";
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
 
 import { useSearchFiltersStore } from "./search-filters-store";
 import { useSearchHistoryStore } from "./search-history-store";
@@ -436,34 +436,31 @@ export {
   useSearchHistoryStore,
 };
 
-// Re-export utility selectors
-export {
-  useSearchType,
-  useCurrentSearchParams,
-  useSearchParamsValidation,
-} from "./search-params-store";
-
-export {
-  useSearchStatus,
-  useSearchResults,
-  useIsSearching,
-  useSearchProgress,
-  useSearchError,
-  useHasSearchResults,
-} from "./search-results-store";
-
 export {
   useActiveFilters,
   useActiveSortOption,
   useCurrentFilters,
-  useHasActiveFilters,
   useFilterPresets,
+  useHasActiveFilters,
 } from "./search-filters-store";
-
 export {
+  useFavoriteSearches,
   useRecentSearches,
   useSavedSearches,
-  useFavoriteSearches,
-  useSearchSuggestions,
   useSearchAnalytics,
+  useSearchSuggestions,
 } from "./search-history-store";
+// Re-export utility selectors
+export {
+  useCurrentSearchParams,
+  useSearchParamsValidation,
+  useSearchType,
+} from "./search-params-store";
+export {
+  useHasSearchResults,
+  useIsSearching,
+  useSearchError,
+  useSearchProgress,
+  useSearchResults,
+  useSearchStatus,
+} from "./search-results-store";
