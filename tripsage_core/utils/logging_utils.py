@@ -47,7 +47,7 @@ class ContextAdapter(logging.LoggerAdapter[logging.Logger]):
 
         # Update kwargs extra with context
         extra_dict = cast(dict[str, Any], kwargs["extra"])
-        extra_dict.update(context)
+        extra_dict.update(_redact_sensitive(context))
 
         return msg, kwargs
 
@@ -210,9 +210,38 @@ def log_exception(
     """
     extra = {"exception_type": type(exception).__name__}
     if context:
-        extra.update(context)
+        extra.update(_redact_sensitive(context))
 
-    logger.exception(
-        "Exception occurred",
-        extra=extra,
-    )
+    logger.exception("Exception occurred", extra=extra)
+
+
+def _redact_sensitive(data: dict[str, Any] | None) -> dict[str, Any]:
+    """Redact sensitive fields like 'api_key' in nested structures.
+
+    Args:
+        data: Arbitrary context dict.
+
+    Returns:
+        A shallow-copied dict with sensitive values redacted.
+    """
+
+    def _sanitize(value: Any) -> Any:
+        """Sanitize a value."""
+        if isinstance(value, dict):
+            d: dict[str, Any] = cast(dict[str, Any], value)
+            return {str(k): _sanitize(v) for k, v in d.items()}
+        if isinstance(value, list):
+            lst: list[Any] = cast(list[Any], value)
+            return [_sanitize(v) for v in lst]
+        return value
+
+    redacted_keys: set[str] = {"api_key", "apikey", "authorization"}
+    out: dict[str, Any] = {}
+    src: dict[str, Any] = data or {}
+    for k, v in src.items():
+        k_str: str = str(k)
+        if k_str.lower() in redacted_keys:
+            out[k_str] = "[REDACTED]"
+        else:
+            out[k_str] = _sanitize(v)
+    return out

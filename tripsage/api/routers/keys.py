@@ -7,6 +7,9 @@ Supabase Vault; only metadata is stored in ``public.api_keys``.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar, cast
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.core.dependencies import (
@@ -14,6 +17,7 @@ from tripsage.api.core.dependencies import (
     get_principal_id,
     require_user_principal,
 )
+from tripsage.api.limiting import limiter
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.api_keys import (
     AllowedService,
@@ -21,6 +25,11 @@ from tripsage.api.schemas.api_keys import (
     ApiKeyResponse,
     ApiKeyValidateRequest,
     ApiKeyValidateResponse,
+)
+from tripsage_core.observability.otel import (
+    http_route_attr_fn,
+    record_histogram,
+    trace_span,
 )
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 from tripsage_core.services.infrastructure.supabase_client import get_admin_client
@@ -30,6 +39,19 @@ ALLOWED_SERVICES: set[str] = {"openai", "openrouter", "anthropic", "xai"}
 
 
 router = APIRouter()
+
+EndpointCallable = TypeVar("EndpointCallable", bound=Callable[..., Awaitable[Any]])
+
+
+def rate_limit(
+    limit_value: str, **kwargs: Any
+) -> Callable[[EndpointCallable], EndpointCallable]:
+    """Typed wrapper around SlowAPI's limit decorator for this router."""
+    typed_limit = cast(
+        Callable[..., Callable[[EndpointCallable], EndpointCallable]],
+        cast(Any, limiter).limit,
+    )
+    return typed_limit(limit_value, **kwargs)
 
 
 def _as_allowed(service: str) -> AllowedService:
@@ -126,6 +148,9 @@ async def list_api_keys(
 
 
 @router.post("/keys", status_code=status.HTTP_204_NO_CONTENT)
+@rate_limit("10/minute")
+@trace_span(name="api.keys.upsert")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def upsert_api_key(
     payload: ApiKeyCreateRequest,
     principal: Principal = Depends(require_user_principal),
@@ -151,6 +176,9 @@ async def upsert_api_key(
 
 
 @router.delete("/keys/{service}", status_code=status.HTTP_204_NO_CONTENT)
+@rate_limit("10/minute")
+@trace_span(name="api.keys.delete")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def delete_api_key(
     service: str,
     principal: Principal = Depends(require_user_principal),
@@ -170,6 +198,9 @@ async def delete_api_key(
 
 
 @router.post("/keys/validate", response_model=ApiKeyValidateResponse)
+@rate_limit("20/minute")
+@trace_span(name="api.keys.validate")
+@record_histogram("api.op.duration", unit="s", attr_fn=http_route_attr_fn)
 async def validate_api_key_endpoint(
     payload: ApiKeyValidateRequest,
 ) -> ApiKeyValidateResponse:
