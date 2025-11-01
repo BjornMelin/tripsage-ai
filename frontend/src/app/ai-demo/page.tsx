@@ -30,19 +30,27 @@ export default function AIDemoPage() {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [_isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const onSubmit = useCallback(async () => {
+  const onSubmit = useCallback(async (prompt: string) => {
     setIsLoading(true);
     setOutput("");
+    setError(null);
     try {
-      const res = await fetch("/api/_health/stream", {
+      const res = await fetch("/api/ai/stream", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: input }),
+        body: JSON.stringify({ prompt }),
       });
 
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
       const reader = res.body?.getReader();
-      if (!reader) return;
+      if (!reader) {
+        throw new Error("Response body is not available");
+      }
 
       const decoder = new TextDecoder();
       // Naive SSE reader for demo purposes
@@ -52,16 +60,25 @@ export default function AIDemoPage() {
         if (done) break;
         setOutput((prev) => prev + decoder.decode(value));
       }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`Failed to stream response: ${errorMessage}`);
+      console.error("Demo page streaming error:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [input]);
+  }, []);
 
   return (
     <div className="flex h-full flex-col">
       <Conversation className="min-h-[60vh]">
         <ConversationContent>
-          {output ? (
+          {error ? (
+            <div className="text-destructive text-sm p-4 border border-destructive/20 rounded-md bg-destructive/5">
+              <strong>Error:</strong> {error}
+            </div>
+          ) : output ? (
             <pre className="whitespace-pre-wrap text-sm">{output}</pre>
           ) : (
             <ConversationEmptyState description="Type a message and submit to stream a demo response." />
@@ -73,7 +90,7 @@ export default function AIDemoPage() {
         <PromptInput
           onSubmit={(message) => {
             setInput(message.text ?? "");
-            void onSubmit();
+            void onSubmit(message.text ?? "");
           }}
         >
           <PromptInputBody>
