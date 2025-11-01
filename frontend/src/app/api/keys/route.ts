@@ -2,7 +2,7 @@
  * @fileoverview BYOK upsert route. Stores user-provided API keys in Supabase Vault via RPC.
  * Route: POST /api/keys
  */
-"use cache: private";
+"use cache";
 
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
@@ -12,11 +12,30 @@ import { buildRateLimitKey } from "@/lib/next/route-helpers";
 import { insertUserApiKey } from "@/lib/supabase/rpc";
 import { createServerSupabase } from "@/lib/supabase/server";
 
+/**
+ * Set of allowed API service providers for key storage.
+ */
 const ALLOWED_SERVICES = new Set(["openai", "openrouter", "anthropic", "xai"]);
 
+/**
+ * Upstash Redis REST URL for rate limiting.
+ */
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+
+/**
+ * Upstash Redis REST token for rate limiting.
+ */
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+/**
+ * Prefix for rate limit keys in Redis.
+ */
 const RATELIMIT_PREFIX = "ratelimit:keys";
+
+/**
+ * Rate limiter instance for API key endpoints. Configured with a sliding window
+ * of 10 requests per minute per client.
+ */
 const ratelimitInstance =
   UPSTASH_URL && UPSTASH_TOKEN
     ? new Ratelimit({
@@ -54,9 +73,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { service, api_key }: { service?: string; api_key?: string } = await req
-      .json()
-      .catch(() => ({}));
+    let service: string | undefined;
+    let api_key: string | undefined;
+    try {
+      const body = await req.json();
+      service = body.service;
+      api_key = body.api_key;
+    } catch (parseError) {
+      const message =
+        parseError instanceof Error ? parseError.message : "Unknown JSON parse error";
+      console.error("/api/keys POST JSON parse error:", { message });
+      return NextResponse.json(
+        { error: "Malformed JSON in request body", code: "BAD_REQUEST" },
+        { status: 400 }
+      );
+    }
 
     if (
       !service ||
@@ -119,24 +150,20 @@ export async function GET() {
     }
     const { data, error } = await supabase
       .from("api_keys")
-      .select("service, created_at, last_used")
-      .order("service", { ascending: true });
+      .select("service_name, created_at, last_used_at")
+      .eq("user_id", auth.user.id)
+      .order("service_name", { ascending: true });
     if (error) {
       return NextResponse.json(
         { error: "Failed to fetch keys", code: "DB_ERROR" },
         { status: 500 }
       );
     }
-    const rows =
-      (data as Array<{
-        service: unknown;
-        created_at: unknown;
-        last_used: unknown;
-      }> | null) ?? [];
-    const payload = rows.map((r) => ({
-      service: String((r as any).service),
-      created_at: String((r as any).created_at),
-      last_used: (r as any).last_used ?? null,
+    const rows = data ?? [];
+    const payload = rows.map((r: any) => ({
+      service: String(r.service_name),
+      created_at: String(r.created_at),
+      last_used: r.last_used_at ?? null,
       has_key: true,
       is_valid: true,
     }));
