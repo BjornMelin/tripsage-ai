@@ -32,16 +32,41 @@
   - Notes:
 - [ ] Implement `app/api/chat/route.ts` (non-stream)
   - Notes:
-- [ ] Implement `app/api/chat/stream/route.ts` (SSE with `StreamingTextResponse`)
+- [x] Implement `app/api/chat/stream/route.ts` (SSE with `toUIMessageStreamResponse`)
   - Notes:
-- [ ] Integrate provider registry + token clamping
+- [ ] Integrate provider registry + token clamping (BYOK, per-user model)
   - Notes:
-- [ ] (Optional) Accept tools input for function-calling (to be wired after tools prompt)
+- [ ] Accept tools input for function-calling (wire to AI SDK tools registry)
   - Notes:
 - [ ] Vitest tests: event ordering, final payload, error paths (provider mocked)
   - Notes:
 - [ ] Finalize ADR(s) and Spec(s) for chat API design
   - Notes:
+
+### Augmented checklist (auth, limits, sessions, attachments)
+
+- [ ] Require Supabase SSR auth on chat routes; return 401 when unauthenticated
+  - Notes: create server client via `@supabase/ssr` and gate access; mark dynamic to avoid public caching
+- [ ] Upstash rate limiting on `/api/chat/stream` (e.g., 40 req/min per user+IP)
+  - Notes: include Retry-After header and structured error when limited
+- [ ] Persist sessions/messages to Supabase tables with Next.js Route Handlers:
+  - [ ] `POST /api/chat/sessions`, `GET /api/chat/sessions`, `GET /api/chat/sessions/{id}`
+  - [ ] `GET /api/chat/sessions/{id}/messages`, `POST /api/chat/sessions/{id}/messages`, `DELETE /api/chat/sessions/{id}`
+  - Notes: save streamed assistant messages incrementally or on finish; SSR list with tags
+- [ ] Map attachments in UI parts to model inputs (images → `type: 'image'`)
+  - Notes: validate size/type; reject unsupported media with UI error part
+- [ ] Resume support: include resumable ids in UI stream; enable client retry to reattach
+
+### Observability & diagnostics
+
+- [ ] Basic request logging (user id, model, duration); redact prompt segments
+- [ ] OnFinish: surface usage (tokens) via `messageMetadata`; attach to final UI message
+- [ ] Telemetry hooks (optional): measure rate-limit, error classes, and latencies
+
+### Migration tasks
+
+- [ ] Remove any remaining Python chat references from docs and snapshots
+- [ ] Update OpenAPI snapshot to reflect removal of `/api/chat/*` Python routes
 
 ## Working instructions (mandatory)
 

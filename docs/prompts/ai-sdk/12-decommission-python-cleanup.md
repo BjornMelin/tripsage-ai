@@ -33,7 +33,7 @@
 
 - [ ] Verify parity and green tests (routes + Vitest)
   - Notes:
-- [ ] Delete Python/FastAPI codepaths and tests listed above
+- [x] Delete Python/FastAPI codepaths and tests listed above
   - Notes:
 - [ ] Update CI to remove obsolete jobs
   - Notes:
@@ -41,6 +41,11 @@
   - Notes:
 - [ ] Write ADR(s) and Spec(s) capturing decommission rationale and scope
   - Notes:
+
+### Augmented checklist (docs and snapshots)
+
+- [ ] Update documentation to remove references to `/api/chat/*` Python endpoints
+- [ ] Regenerate OpenAPI snapshot to reflect removed endpoints
 
 ## Working instructions (mandatory)
 

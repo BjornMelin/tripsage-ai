@@ -45,6 +45,12 @@
 - [x] Finalize ADR(s) and Spec(s) for token budgeting policy
   - Notes: ADR/Spec updated with decisions and follow-ups; security notes included (no PII, safe defaults).
 
+### Augmented checklist (route integration)
+
+- [ ] Use clamp results in `/api/chat/stream` to set `maxTokens` safely
+- [ ] Record provider-reported usage on finish into `messageMetadata`
+- [ ] Tests: assert clamped `maxTokens` is respected and usage metadata emitted
+
 ## Working instructions (mandatory)
 
 - Check off tasks only after Vitest, Biome/ESLint/Prettier, and `tsc --noEmit` are clean.

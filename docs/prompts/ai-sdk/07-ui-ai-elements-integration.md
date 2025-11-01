@@ -84,3 +84,10 @@
 ## Testing guidelines
 
 - Use RTL to simulate form submission; mock fetch to stream SSE response chunks; assert UI updates per delta.
+
+### Augmented UI checklist
+
+- [ ] Expose Stop/Retry controls during streaming
+- [ ] Show token usage and model id on final assistant message (from `messageMetadata`)
+- [ ] Render tool and reasoning blocks with concise styles (already supported)
+- [ ] Validate attachments UX: add/remove/preview; error banners for oversized files
