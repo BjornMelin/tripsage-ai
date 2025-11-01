@@ -67,4 +67,27 @@ describe("clampMaxTokens", () => {
     expect(result.maxTokens).toBeGreaterThan(0);
     expect(getModelContextLimit(model)).toBe(DEFAULT_CONTEXT_LIMIT);
   });
+
+  it("clamps down to 1 when prompt exhausts unknown model limit", () => {
+    const model = "some-new-model";
+    // Create a prompt larger than default context to force clamp
+    const huge = "x".repeat(DEFAULT_CONTEXT_LIMIT * CHARS_PER_TOKEN_HEURISTIC + 1000);
+    const messages = [{ role: "user" as const, content: huge }];
+    const result = clampMaxTokens(messages, 1000, model);
+    expect(result.maxTokens).toBe(1);
+    expect(result.reasons).toContain("maxTokens_clamped_model_limit");
+  });
+});
+
+describe("countPromptTokens invariants", () => {
+  it("is order-insensitive for total count", () => {
+    const model = "gpt-4o";
+    const a = { role: "system" as const, content: "alpha beta" };
+    const b = { role: "user" as const, content: "gamma delta" };
+    const c = { role: "assistant" as const, content: "epsilon zeta" };
+
+    const ordered = countPromptTokens([a, b, c], model);
+    const shuffled = countPromptTokens([c, a, b], model);
+    expect(ordered).toBe(shuffled);
+  });
 });

@@ -5,7 +5,12 @@
 
 import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
-import { type ChatMessage, clampMaxTokens } from "../../../../lib/tokens/budget";
+import {
+  type ChatMessage,
+  clampMaxTokens,
+  countPromptTokens,
+} from "../../../../lib/tokens/budget";
+import { getModelContextLimit } from "../../../../lib/tokens/limits";
 
 // Allow streaming responses up to 30 seconds
 /** Maximum duration (seconds) to allow for streaming responses. */
@@ -46,7 +51,23 @@ export async function POST(req: Request): Promise<Response> {
   // Build message list if not provided
   const finalMessages: ChatMessage[] = messages ?? [{ role: "user", content: prompt }];
 
-  const { maxTokens } = clampMaxTokens(finalMessages, desiredMaxTokens, model);
+  const { maxTokens, reasons } = clampMaxTokens(finalMessages, desiredMaxTokens, model);
+
+  // If prompt already exhausts the model context window, return a 400 with reasons
+  const modelLimit = getModelContextLimit(model);
+  const promptTokens = countPromptTokens(finalMessages, model);
+  if (modelLimit - promptTokens <= 0) {
+    return new Response(
+      JSON.stringify({
+        error: "No output tokens available for the given prompt and model.",
+        model,
+        prompt_tokens: promptTokens,
+        model_context_limit: modelLimit,
+        reasons,
+      }),
+      { status: 400, headers: { "content-type": "application/json" } }
+    );
+  }
 
   const result = await streamText({
     model: openai(model),
