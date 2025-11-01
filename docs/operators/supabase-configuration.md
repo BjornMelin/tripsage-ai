@@ -170,6 +170,42 @@ WHERE table_name LIKE '%memor%' OR table_name LIKE '%vector%';
 
 ## Security Configuration
 
+### Vault (BYOK) Hardening Checklist
+
+Use this checklist in staging/production to verify BYOK/Vault is secured correctly.
+
+1) Apply migrations
+
+    ```bash
+    20251030000000_vault_api_keys.sql
+    20251030002000_vault_role_hardening.sql
+    ```
+
+2) Roles and ownership
+
+   - `api_vault_definer` role exists.
+   - BYOK RPCs owned by `api_vault_definer`:
+     - `public.insert_user_api_key`
+     - `public.get_user_api_key`
+     - `public.delete_user_api_key`
+
+3) Privileges
+
+    ```sql
+    REVOKE ALL ON SCHEMA vault FROM PUBLIC;
+    REVOKE ALL ON ALL TABLES IN SCHEMA vault FROM PUBLIC;
+    ```
+
+4) Access validation
+
+   - With service role: `select * from vault.decrypted_secrets limit 1;` succeeds.
+   - With anon/authenticated roles: same query is denied.
+
+5) Observability (optional)
+
+   - Enable audit logs for BYOK RPC execution.
+   - Periodically check last_used timestamps in `public.api_keys`.
+
 ### 1. Row Level Security Setup
 
 **Enable RLS on All Tables:**
