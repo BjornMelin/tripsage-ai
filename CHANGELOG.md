@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Provider registry and resolution (server-only) returning AI SDK v6 `LanguageModel`:
+  - `frontend/src/lib/providers/registry.ts` (`resolveProvider(userId, modelHint?)`)
+  - `frontend/src/lib/providers/types.ts`, `frontend/src/lib/settings.ts`
+- OpenRouter attribution headers support (`HTTP-Referer`, `X-Title`) sourced from env
+- Vitest unit tests for registry precedence and attribution
+  - `frontend/src/lib/providers/__tests__/registry.test.ts`
+- Architecture docs: ADR and Spec for provider order, attribution, and SSR boundaries
+  - `docs/adrs/2025-11-01-provider-registry.md`, `docs/specs/provider-registry.md`
+- Dependency: `@ai-sdk/anthropic@3.0.0-beta.47`
+
+### Changed
+
+- Centralized BYOK provider selection; preference order: openai → openrouter → anthropic → xai
+- OpenRouter and xAI wired via OpenAI-compatible client with per-user BYOK and required base URLs
+- Registry is SSR-only (`server-only`), never returns or logs secret material
+
+### Removed
+
+- Python provider wrappers and tests removed (see Breaking Changes)
+
+### Security
+
+- Provider keys are fetched via server-side Supabase RPCs only; no client exposure
+- OpenRouter attribution headers are non-sensitive and attached only when set
+
+### Breaking Changes
+
+- Removed legacy Python LLM provider modules and corresponding tests:
+  - `tripsage_core/services/external_apis/llm_providers.py`
+  - `tripsage_core/services/external_apis/providers/{openai_adapter.py, openrouter_adapter.py, anthropic_adapter.py, xai_adapter.py, token_budget.py, interfaces.py}`
+  - `tests/unit/external/{test_llm_providers.py, test_providers.py, test_token_budget.py}`
+- No backwards compatibility shims retained; registry is the final implementation
+
+## [2.2.0] - 2025-11-01
+
+### Added
+
 - Next.js route `src/app/auth/callback/route.ts` exchanges OAuth `code` for session
 - Login/Register use `@supabase/auth-ui-react` blocks (email/password + OAuth)
 - FastAPI SSE chat endpoint `POST /api/chat/stream` (streams token deltas; `text/event-stream`)
@@ -249,7 +286,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
   - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
 
-
 - Removed dict-shaped responses in list/search paths; replaced with typed response models
 - Removed scattered UUID/datetime parsing; centralized to helpers
 
@@ -289,7 +325,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Legacy Supabase schema sources and scripts removed:
   - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
   - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
-
 
 - Removed complex tool registry and redundant orchestration/abstraction layers
 - Removed nested configuration classes and legacy database service implementations
