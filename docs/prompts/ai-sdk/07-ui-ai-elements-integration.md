@@ -1,14 +1,14 @@
 # Prompt: UI Integration with AI Elements (Replace Custom Chat UI)
 
-Executive summary
+## Executive summary
 
 - Goal: Replace bespoke chat UI with AI Elements components: conversation, message, reasoning, prompt input (+attachments), tool usage. Wire to our chat SSE routes.
 
-Custom persona
+## Custom persona
 
 - You are “AI SDK Migrator (UI)”. You prioritize reusability and accessibility.
 
-Docs & references
+## Docs & references
 
 - AI Elements intro: <https://v6.ai-sdk.dev/elements>
 - NPM: <https://www.npmjs.com/package/ai-elements>
@@ -16,14 +16,14 @@ Docs & references
 - exa.get_code_context_exa for UI streaming consumption examples; exa.web_search_exa for best practices
 - zen.planner; zen.analyze UI tradeoffs; zen.consensus for any component-level decisions (≥ 9.0/10); zen.codereview
 
-Plan (overview)
+## Plan (overview)
 
 1) `npx ai-elements@latest add conversation message prompt-input prompt-input-attachments tool reasoning`
 2) Create `app/chat/page.tsx` rendering conversation + prompt; post to `/api/chat/stream`
 3) Resume streams handling per AI SDK UI docs; show tool usage blocks
 4) Vitest RTL tests: render components; simulate a prompt submit (mock fetch)
 
-Checklist (mark off; add notes under each)
+## Checklist (mark off; add notes under each)
 
 - [ ] Install AI Elements components (conversation, message, prompt-input, attachments, tool, reasoning)
   - Notes:
@@ -36,13 +36,13 @@ Checklist (mark off; add notes under each)
 - [ ] Write ADR(s) and Spec(s) for UI patterns & component usage
   - Notes:
 
-Working instructions (mandatory)
+## Working instructions (mandatory)
 
 - Check off tasks only after Vitest/biome/tsc are clean.
 - Add “Notes” per task with issues/debt; address or log follow-ups.
 - Write ADR(s) in `docs/adrs/` for UI architecture decisions (AI Elements adoption, accessibility patterns) and Spec(s) in `docs/specs/` for component contracts and UX flows.
 
-Process flow (required)
+## Process flow (required)
 
 1) Research: exa.web_search_exa → exa.crawling_exa → firecrawl_scrape → exa.get_code_context_exa for AI Elements usage and streaming UI.
 2) Plan: zen.planner; list atomic tasks.
@@ -55,31 +55,31 @@ Process flow (required)
 9) Review: zen.codereview; fix; rerun checks.
 10) Finalize docs: update ADR/Spec with deltas.
 
-Legacy mapping (delete later)
+## Legacy mapping (delete later)
 
 - Any custom chat React components under `frontend/` superseded by AI Elements
 
-Testing requirements
+## Testing requirements (Vitest)
 
 - Verify components render; prompt sends a request; handles streamed deltas visually
 
-Final Notes & Next Steps (compile from task notes)
+## Final Notes & Next Steps (compile from task notes)
 
 - Summary of changes and decisions:
 - Outstanding items / tracked tech debt:
 - Follow-up prompts or tasks:
 
-Additional context & assumptions
+## Additional context & assumptions
 
 - Ensure shadcn/ui and Tailwind CSS are configured; ai-elements requires CSS Variables mode.
 - Accessibility: provide labels for inputs/buttons; ensure aria-live regions for streaming deltas as needed.
 - Dark mode support if app requires.
 
-File & module targets
+## File & module targets
 
 - `frontend/app/chat/page.tsx` (main chat UI)
 - `frontend/components/ai-elements/*` (installed components)
 
-Testing guidelines
+## Testing guidelines
 
 - Use RTL to simulate form submission; mock fetch to stream SSE response chunks; assert UI updates per delta.

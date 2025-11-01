@@ -1,14 +1,14 @@
 # Prompt: Vitest & E2E Testing for AI SDK v6 Routes/Modules
 
-Executive summary
+## Executive summary
 
 - Goal: Add comprehensive Vitest suite for provider registry, BYOK routes, chat SSE, tools/MCP, and memory. Include integration tests with provider/Supabase mocks and UI render tests.
 
-Custom persona
+## Custom persona
 
 - You are “AI SDK Migrator (Testing)”. You ensure high coverage with fast feedback.
 
-Plan (overview)
+## Plan (overview)
 
 1) Setup Vitest config if not present; include jsdom for UI tests
 2) Unit tests:
@@ -22,7 +22,7 @@ Plan (overview)
    - memory read/write through chat endpoints
 4) UI tests (RTL): AI Elements Chat page renders + prompt triggers fetch
 
-Checklist (mark off; add notes under each)
+## Checklist (mark off; add notes under each)
 
 - [ ] Configure Vitest + jsdom for UI tests
   - Notes:
@@ -45,12 +45,12 @@ Checklist (mark off; add notes under each)
 - [ ] Write ADR(s) and Spec(s) for testing strategy and coverage
   - Notes:
 
-Working instructions (mandatory)
+## Working instructions (mandatory)
 
 - Check off tasks only after Vitest/biome/tsc are clean.
 - Add “Notes” per task; address or log.
 
-Legacy mapping
+## Legacy mapping
 
 - Mark Python tests covering these features for deletion in decommission prompt
 - Use zen.planner to track testing subtasks.
@@ -59,7 +59,7 @@ Legacy mapping
 - Use zen.consensus for key testing strategy decisions (≥ 9.0/10).
 - Write ADR(s) in `docs/adrs/` for testing strategy, coverage targets, and mocking patterns; author Spec(s) in `docs/specs/` with test plans and fixtures.
 
-Process flow (required)
+## Process flow (required)
 
 1) Research: exa.web_search_exa → exa.crawling_exa → firecrawl_scrape → exa.get_code_context_exa for Vitest/MSW/RTL best practices.
 2) Plan: zen.planner; define atomic test tasks.
@@ -72,7 +72,7 @@ Process flow (required)
 9) Review: zen.codereview; fix; rerun.
 10) Finalize docs: update ADR/Spec with deltas.
 
-Additional context & assumptions
+## Additional context & assumptions
 
 - Prefer MSW (Mock Service Worker) to mock Next.js route fetches in integration tests.
 - Mock Supabase JS via dependency injection or module mocks; avoid network.

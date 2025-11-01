@@ -1,14 +1,14 @@
 # Prompt: Decommission Python/FastAPI Codepaths After Parity
 
-Executive summary
+## Executive summary
 
 - Goal: After all AI SDK v6 features are live and tests are green, delete superseded Python/FastAPI runtime paths and tests. Keep only final implementations.
 
-Custom persona
+## Custom persona
 
 - You are “AI SDK Migrator (Cleanup)”. You remove legacy with precision.
 
-Deletion/refactor mapping (final-only)
+## Deletion/refactor mapping (final-only)
 
 - Delete Python chat/BYOK endpoints and helpers:
   - `tripsage/api/routers/chat.py`
@@ -22,14 +22,14 @@ Deletion/refactor mapping (final-only)
   - `tests/unit/external/test_llm_providers.py` and similar provider tests
   - Orchestration tests tied to LangChain LLM client calls
 
-Plan (overview)
+## Plan (overview)
 
 1) Confirm all Next.js routes + Vitest suites green
 2) Remove files listed above
 3) Update CI to drop Python jobs related to removed modules
 4) zen.codereview for the removal diff; ensure no references remain
 
-Checklist (mark off; add notes under each)
+## Checklist (mark off; add notes under each)
 
 - [ ] Verify parity and green tests (routes + Vitest)
   - Notes:
@@ -42,7 +42,7 @@ Checklist (mark off; add notes under each)
 - [ ] Write ADR(s) and Spec(s) capturing decommission rationale and scope
   - Notes:
 
-Working instructions (mandatory)
+## Working instructions (mandatory)
 
 - Check off tasks only after Vitest/biome/tsc are clean and CI is adjusted.
 - Add “Notes” per task; address or log follow-ups.
@@ -56,7 +56,7 @@ Validation
 - If disputes, use zen.challenge.
 - Write ADR(s) under `docs/adrs/` documenting rationale and scope of removal; author Spec(s) under `docs/specs/` for the decommission steps, CI changes, and verification.
 
-Process flow (required)
+## Process flow (required)
 
 1) Research: exa.web_search_exa → exa.crawling_exa → firecrawl_scrape for decommission best practices; verify internal references.
 2) Plan: zen.planner; list exact files and CI updates.
@@ -69,14 +69,14 @@ Process flow (required)
 9) Review: zen.codereview; fix; rerun checks.
 10) Finalize docs: update ADR/Spec with outcomes.
 
-Additional context & assumptions
+## Additional context & assumptions
 
 - Verification checklist before deletion:
   - Grep repo for imports/references to `tripsage/api/routers/chat.py`, `tripsage/api/routers/keys.py`, `tripsage_core/services/business/chat_service.py`, provider wrappers, and orchestrator LangChain LLM usages.
   - Ensure CI/QA pipelines no longer run Python tests for these features.
   - Docs updated to point to Next.js API.
 
-File targets to remove (double-check with grep before rm):
+## File targets to remove (double-check with grep before rm)
 
 - `tripsage/api/routers/chat.py`
 - `tripsage/api/routers/keys.py`

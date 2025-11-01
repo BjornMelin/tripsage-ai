@@ -104,7 +104,7 @@ describe("AI Demo Page", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/failed to stream response/i)).toBeInTheDocument();
-      expect(screen.getByText(/http 500/i)).toBeInTheDocument();
+      expect(screen.getByText(/HTTP 500/i)).toBeInTheDocument();
     });
   });
 
@@ -133,11 +133,11 @@ describe("AI Demo Page", () => {
 
     render(<Page />);
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
-    const submitButton = screen.getByRole("button", { name: /submit/i });
+    const form = screen.getByRole("form");
 
     // Trigger first error
     fireEvent.change(textarea, { target: { value: "Test input" } });
-    fireEvent.click(submitButton);
+    fireEvent.submit(form);
 
     await waitFor(() => {
       expect(screen.getByText(/failed to stream response/i)).toBeInTheDocument();
@@ -162,7 +162,7 @@ describe("AI Demo Page", () => {
     });
 
     // Submit again
-    fireEvent.click(submitButton);
+    fireEvent.submit(form);
 
     await waitFor(() => {
       expect(screen.queryByText(/failed to stream response/i)).not.toBeInTheDocument();
@@ -191,11 +191,14 @@ describe("AI Demo Page", () => {
     });
 
     render(<Page />);
-    const submitButton = screen.getByRole("button", { name: /submit/i });
+    const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
+    const form = screen.getByRole("form");
 
-    // Submit with empty input
-    fireEvent.click(submitButton);
+    // Type empty string and submit
+    fireEvent.change(textarea, { target: { value: "" } });
+    fireEvent.submit(form);
 
+    // Should call fetch with empty string
     expect(mockFetch).toHaveBeenCalledWith("/api/ai/stream", {
       method: "POST",
       headers: { "content-type": "application/json" },

@@ -1,14 +1,14 @@
 # Prompt: Chat API (SSE + Non-Stream) with AI SDK v6
 
-Executive summary
+## Executive summary
 
 - Goal: Replace Python chat endpoints with Next.js App Router endpoints using AI SDK v6. Provide `POST /api/chat` (non-stream) and `POST /api/chat/stream` (SSE with `StreamingTextResponse`). Integrate provider registry, token clamping, and optional tools. Include tests.
 
-Custom persona
+## Custom persona
 
 - You are “AI SDK Migrator (Chat)”. You implement robust SSE with graceful error handling and usage metadata where supported.
 
-Docs & references
+## Docs & references
 
 - Generating Text: <https://v6.ai-sdk.dev/docs/ai-sdk-core/generating-text>
 - Streaming: <https://v6.ai-sdk.dev/docs/foundations/streaming>
@@ -18,7 +18,7 @@ Docs & references
 - Use zen.planner for tasks; zen.thinkdeep + zen.analyze for design; zen.consensus for critical decisions (≥ 9.0/10)
 - Use zen.secaudit for route exposure security check; zen.challenge for contentious assumptions; zen.codereview before completion
 
-Plan (overview)
+## Plan (overview)
 
 1) Create `app/api/chat/route.ts` using `generateText` or `streamText(...).toAIStream()` consumed fully; return JSON { content, model, usage }
 2) Create `app/api/chat/stream/route.ts` using `streamText` and return `new StreamingTextResponse(stream)`; emit started/delta/final/usage events
@@ -26,7 +26,7 @@ Plan (overview)
 4) Optionally accept tools input for function-calling (to be implemented in separate tools prompt)
 5) Vitest tests: Node tests for event ordering, final payload, error conditions (provider mocked)
 
-Checklist (mark off; add notes under each)
+## Checklist (mark off; add notes under each)
 
 - [ ] Draft ADR(s) and Spec(s) (pre-implementation; research + consensus)
   - Notes:
@@ -43,13 +43,13 @@ Checklist (mark off; add notes under each)
 - [ ] Finalize ADR(s) and Spec(s) for chat API design
   - Notes:
 
-Working instructions (mandatory)
+## Working instructions (mandatory)
 
 - Check off tasks only after Vitest/biome/tsc are clean.
 - Add “Notes” for implementation details, issues, and debt; address or log follow-ups.
 - Write ADR(s) under `docs/adrs/` (SSE event model, non-stream contract, error policy) and Spec(s) under `docs/specs/` (schemas, examples, telemetry).
 
-Process flow (required)
+## Process flow (required)
 
 1) Research: exa.web_search_exa → exa.crawling_exa → firecrawl_scrape → exa.get_code_context_exa for streaming patterns and SSE semantics in AI SDK v6.
 2) Plan: zen.planner; define atomic tasks.
@@ -62,22 +62,22 @@ Process flow (required)
 9) Review: zen.codereview; fix; re-run tests.
 10) Finalize docs: update ADR/Spec with deltas.
 
-Legacy mapping (delete later)
+## Legacy mapping (delete later)
 
 - `tripsage/api/routers/chat.py`
 - Python chat service logic
 
-Testing requirements
+## Testing requirements (Vitest)
 
 - Mock providers to assert SSE chunk sequence and final aggregation; ensure usage fields are present when reported by provider
 
-Final Notes & Next Steps (compile from task notes)
+## Final Notes & Next Steps (compile from task notes)
 
 - Summary of changes and decisions:
 - Outstanding items / tracked tech debt:
 - Follow-up prompts or tasks:
 
-Additional context & assumptions
+## Additional context & assumptions
 
 - Request schema (suggested):
   - Body: `{ messages: { role: 'system'|'user'|'assistant', content: string }[], model?: string, temperature?: number, maxTokens?: number, tools?: string[] }`
@@ -92,12 +92,12 @@ Additional context & assumptions
 - Sanitation: strip null bytes, limit line length if necessary, escape HTML for logs.
 - Timeouts and retries: add conservative server timeout; optionally retry transient provider errors with backoff.
 
-File & module targets
+## File & module targets
 
 - `frontend/app/api/chat/route.ts`
 - `frontend/app/api/chat/stream/route.ts`
 
-Testing & mocking guidelines
+## Testing & mocking guidelines
 
 - Mock providers to emit chunked deltas and optional usage; assert ordering and final aggregation.
 - Test error paths: provider throws mid-stream → emit `error` event and terminate gracefully.

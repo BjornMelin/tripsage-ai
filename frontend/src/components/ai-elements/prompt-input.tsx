@@ -261,7 +261,13 @@ export function PromptInputProvider({
       __registerFileInput,
       __unregisterFileInput,
     }),
-    [textInput, clearInput, attachmentsContext, __registerFileInput, __unregisterFileInput]
+    [
+      textInput,
+      clearInput,
+      attachmentsContext,
+      __registerFileInput,
+      __unregisterFileInput,
+    ]
   );
 
   // Cleanup object URLs on unmount to prevent memory leaks
@@ -539,7 +545,10 @@ export const PromptInput = ({
         return true;
       }
       // Split accept string by comma and trim each entry
-      const acceptList = accept.split(",").map((a) => a.trim()).filter(Boolean);
+      const acceptList = accept
+        .split(",")
+        .map((a) => a.trim())
+        .filter(Boolean);
 
       // Check each accept entry
       for (const entry of acceptList) {
@@ -549,7 +558,7 @@ export const PromptInput = ({
         if (entry.endsWith("/*")) {
           // MIME type group, e.g. "image/*"
           const group = entry.split("/")[0];
-          if (f.type.startsWith(group + "/")) {
+          if (f.type.startsWith(`${group}/`)) {
             return true;
           }
         } else if (entry.startsWith(".")) {
@@ -744,7 +753,9 @@ export const PromptInput = ({
     const blob = await response.blob();
 
     if (blob.size > MAX_BLOB_SIZE) {
-      throw new Error(`File is too large to convert. Please select a file smaller than ${MAX_BLOB_SIZE / (1024 * 1024)}MB.`);
+      throw new Error(
+        `File is too large to convert. Please select a file smaller than ${MAX_BLOB_SIZE / (1024 * 1024)}MB.`
+      );
     }
 
     return new Promise((resolve, reject) => {
@@ -789,7 +800,8 @@ export const PromptInput = ({
             };
           } catch (error) {
             // Handle individual file conversion errors
-            const errorMessage = error instanceof Error ? error.message : "Unknown conversion error";
+            const errorMessage =
+              error instanceof Error ? error.message : "Unknown conversion error";
             onError?.({
               code: "file_conversion_failed",
               message: `Failed to process file "${item.filename || "unknown"}": ${errorMessage}`,
@@ -907,7 +919,10 @@ export const PromptInputTextarea = ({
         return true;
       }
       // Split accept string by comma and trim each entry
-      const acceptList = accept.split(",").map((a) => a.trim()).filter(Boolean);
+      const acceptList = accept
+        .split(",")
+        .map((a) => a.trim())
+        .filter(Boolean);
 
       // Check each accept entry
       for (const entry of acceptList) {
@@ -917,7 +932,7 @@ export const PromptInputTextarea = ({
         if (entry.endsWith("/*")) {
           // MIME type group, e.g. "image/*"
           const group = entry.split("/")[0];
-          if (f.type.startsWith(group + "/")) {
+          if (f.type.startsWith(`${group}/`)) {
             return true;
           }
         } else if (entry.startsWith(".")) {
