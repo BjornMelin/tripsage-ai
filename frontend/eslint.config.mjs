@@ -19,6 +19,36 @@ const eslintConfig = [
       "react/no-unescaped-entities": "off",
       "react-hooks/exhaustive-deps": "warn",
       "@next/next/no-img-element": "warn",
+      // Disallow importing server-only Supabase admin/RPC modules in client code
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/lib/supabase/admin",
+              message:
+                "Server-only module. Use in Next.js route handlers or server code only.",
+            },
+            {
+              name: "@/lib/supabase/rpc",
+              message:
+                "Server-only RPC helpers. Do not import into client components.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Allow server-only imports in server contexts (routes, supabase lib, tests)
+  {
+    files: [
+      "src/app/api/**",
+      "src/lib/supabase/**",
+      "src/test/**",
+      "src/**/__tests__/**",
+    ],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
 ];

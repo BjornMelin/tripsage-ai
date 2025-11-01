@@ -15,8 +15,8 @@ vi.mock("@ai-sdk/openai", () => ({
 }));
 
 // Import after mocks are set up
-import { POST } from "@/app/api/ai/stream/route";
 import { streamText } from "ai";
+import { POST } from "@/app/api/ai/stream/route";
 
 const mockStreamText = vi.mocked(streamText);
 

@@ -71,6 +71,12 @@
 - [x] Vitest tests: RPC wrappers + route handlers with mocks
   - Notes:
     - Added targeted tests under `frontend/src/lib/supabase/__tests__/rpc.test.ts`, `frontend/src/app/api/keys/**/__tests__/*`.
+- [x] ESLint rule to restrict server-only imports
+  - Notes:
+    - Added `no-restricted-imports` to block `@/lib/supabase/admin` and `@/lib/supabase/rpc` in client code; allowed in `src/app/api/**`, `src/lib/supabase/**`, and tests via overrides.
+- [x] Additional unit tests
+  - Notes:
+    - Added GET /api/keys tests in `frontend/src/app/api/keys/__tests__/get-route.test.ts` covering authenticated success and 401.
 - [x] Codereview + finalize
   - Notes:
     - Addressed findings: added `server-only` guards, auth on validate, and service validation returning 400.
