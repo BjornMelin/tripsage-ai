@@ -327,7 +327,6 @@ def app() -> FastAPI:
         accommodations,
         activities,
         attachments,
-        chat,
         config,
         destinations,
         health,
@@ -340,7 +339,7 @@ def app() -> FastAPI:
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(config.router, prefix="/api", tags=["configuration"])
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
-    app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+    # chat router removed; chat is handled in Next.js
     app.include_router(memory.router, prefix="/api", tags=["memory"])
     app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
     app.include_router(
