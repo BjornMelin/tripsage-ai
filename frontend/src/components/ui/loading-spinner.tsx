@@ -1,9 +1,15 @@
+/**
+ * @fileoverview Loading spinner components with multiple visual variants including
+ * default spinning circle, animated dots, bars, and pulsing circle styles,
+ * supporting different sizes and colors with accessibility features.
+ */
+
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Loading spinner variants for different styles and sizes
+ * Loading spinner variants for different styles and sizes using class-variance-authority.
  */
 const spinnerVariants = cva("animate-spin", {
   variants: {
@@ -29,51 +35,75 @@ const spinnerVariants = cva("animate-spin", {
   },
 });
 
+/**
+ * Props interface for the LoadingSpinner component.
+ */
 export interface LoadingSpinnerProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, "color">,
     VariantProps<typeof spinnerVariants> {
-  variant?: "default" | "dots" | "bars" | "pulse";
-}
-
-export interface SVGSpinnerProps
-  extends Omit<React.SVGAttributes<SVGSVGElement>, "color">,
-    VariantProps<typeof spinnerVariants> {
+  /** Visual variant of the spinner. */
   variant?: "default" | "dots" | "bars" | "pulse";
 }
 
 /**
- * Default spinning circle loader
+ * Props interface for SVG-based spinner components.
  */
-const DefaultSpinner = ({ size, color, className }: LoadingSpinnerProps) => (
-  <div className={cn(spinnerVariants({ size, color }), className)}>
-    <svg
-      className="w-full h-full"
-      fill="none"
-      viewBox="0 0 24 24"
+export interface SVGSpinnerProps
+  extends Omit<React.SVGAttributes<SVGSVGElement>, "color">,
+    VariantProps<typeof spinnerVariants> {
+  /** Visual variant of the spinner. */
+  variant?: "default" | "dots" | "bars" | "pulse";
+}
+
+/**
+ * Default spinning circle loader component with animated SVG path.
+ *
+ * @param props - Component props including size, color, and HTML attributes.
+ * @param ref - Forwarded ref to the spinner container div.
+ * @returns The default spinner component.
+ */
+const DefaultSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
+  ({ size, color, className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(spinnerVariants({ size, color }), className)}
       role="status"
       aria-label="Loading"
+      {...props}
     >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      />
-    </svg>
-  </div>
+      <svg
+        className="w-full h-full"
+        fill="none"
+        viewBox="0 0 24 24"
+        role="status"
+        aria-label="Loading"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+        />
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        />
+      </svg>
+    </div>
+  )
 );
 
 DefaultSpinner.displayName = "DefaultSpinner";
 
 /**
- * Animated dots loader
+ * Animated dots loader component with staggered pulse animations.
+ *
+ * @param props - Component props including size, color, and HTML attributes.
+ * @param ref - Forwarded ref to the spinner container div.
+ * @returns The dots spinner component.
  */
 const DotsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => {
@@ -116,7 +146,11 @@ const DotsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
 DotsSpinner.displayName = "DotsSpinner";
 
 /**
- * Animated bars loader
+ * Animated bars loader component with sequential pulse animations.
+ *
+ * @param props - Component props including size, color, and HTML attributes.
+ * @param ref - Forwarded ref to the spinner container div.
+ * @returns The bars spinner component.
  */
 const BarsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => {
@@ -159,7 +193,11 @@ const BarsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
 BarsSpinner.displayName = "BarsSpinner";
 
 /**
- * Pulsing circle loader
+ * Pulsing circle loader component with continuous ping animation.
+ *
+ * @param props - Component props including size, color, and HTML attributes.
+ * @param ref - Forwarded ref to the spinner container div.
+ * @returns The pulse spinner component.
  */
 const PulseSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => {
@@ -192,7 +230,15 @@ const PulseSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
 PulseSpinner.displayName = "PulseSpinner";
 
 /**
- * Main Loading Spinner component
+ * Main Loading Spinner component that renders different spinner variants.
+ *
+ * Supports multiple visual styles: default (spinning circle), dots, bars, and pulse.
+ * All variants include accessibility features and support size/color customization.
+ *
+ * @param variant - The visual variant of the spinner to render.
+ * @param props - Additional props passed to the specific spinner variant.
+ * @param ref - Forwarded ref to the spinner component.
+ * @returns The appropriate spinner component based on variant.
  */
 const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ variant = "default", ...props }, ref) => {
@@ -204,7 +250,7 @@ const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
       case "pulse":
         return <PulseSpinner ref={ref} {...props} />;
       default:
-        return <DefaultSpinner {...props} />;
+        return <DefaultSpinner ref={ref} {...props} />;
     }
   }
 );

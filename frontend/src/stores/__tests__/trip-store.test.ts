@@ -1,9 +1,12 @@
+/**
+ * @fileoverview Comprehensive tests for the trip store, covering trip CRUD operations,
+ * destination management, store state management, error handling, and edge cases
+ * with mocked repositories for isolated testing.
+ */
+
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createTripStoreMockClient,
-  resetTripStoreMockData,
-} from "@/test/trip-store-test-helpers";
+import { resetTripStoreMockData } from "@/test/trip-store-test-helpers";
 import { type Destination, type Trip, useTripStore } from "../trip-store";
 
 // Mock setTimeout to make tests run faster
@@ -11,10 +14,41 @@ vi.mock("global", () => ({
   setTimeout: vi.fn((fn) => fn()),
 }));
 
-// Mock the Supabase client for trip store
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: vi.fn(() => createTripStoreMockClient()),
-}));
+// Mock the repositories used by the store to decouple from network/DB
+vi.mock("@/lib/repositories/trips-repo", () => {
+  const now = () => new Date().toISOString();
+  let seq = 0;
+  return {
+    createTrip: vi.fn(async (payload: any) => {
+      return {
+        id: String(Date.now() + seq++),
+        name: payload.name || payload.title || "Untitled Trip",
+        description: payload.description ?? "",
+        startDate: payload.start_date ?? null,
+        endDate: payload.end_date ?? null,
+        budget: payload.budget ?? 0,
+        currency: payload.currency ?? "USD",
+        destinations: [],
+        isPublic: payload.visibility
+          ? payload.visibility === "public"
+          : Boolean(payload.isPublic),
+        createdAt: now(),
+        updatedAt: now(),
+      };
+    }),
+    updateTrip: vi.fn(async (id: number, _userId: string, patch: any) => {
+      return {
+        id: String(id),
+        name: patch.name || "Untitled Trip",
+        description: patch.description ?? "",
+        budget: patch.budget ?? 0,
+        updatedAt: now(),
+      };
+    }),
+    deleteTrip: vi.fn(async () => {}),
+    listTrips: vi.fn(async () => []),
+  };
+});
 
 describe("Trip Store", () => {
   beforeEach(() => {
