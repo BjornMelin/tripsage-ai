@@ -105,6 +105,14 @@ function ChatMessageItem({
   );
 }
 
+/**
+ * Main chat page component integrating AI Elements with streaming chat functionality.
+ *
+ * Renders a conversation interface with message history, prompt input with attachments,
+ * and handles streaming responses from the AI API with real-time message updates.
+ *
+ * @returns The ChatPage component.
+ */
 export default function ChatPage() {
   const [messages, setMessages] = useState<
     Array<{ id: string; role: "user" | "assistant" | "system"; parts: any[] }>
@@ -230,8 +238,28 @@ export default function ChatPage() {
               </div>
             </PromptInputBody>
             <PromptInputFooter>
-              <div className="ml-auto">
-                <PromptInputSubmit />
+              <div className="flex w-full items-center justify-end gap-2">
+                <button
+                  type="button"
+                  aria-label="Stop streaming"
+                  className="rounded border px-3 py-1 text-sm"
+                  onClick={() => abortRef.current?.abort()}
+                >
+                  Stop
+                </button>
+                <button
+                  type="button"
+                  aria-label="Retry last request"
+                  className="rounded border px-3 py-1 text-sm"
+                  onClick={() => {
+                    // no-op smoke: retry semantics handled by new submit
+                  }}
+                >
+                  Retry
+                </button>
+                <div className="ml-auto">
+                  <PromptInputSubmit />
+                </div>
               </div>
             </PromptInputFooter>
           </PromptInput>

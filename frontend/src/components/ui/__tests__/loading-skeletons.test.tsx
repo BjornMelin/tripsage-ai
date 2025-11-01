@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Unit tests for loading skeleton components, verifying rendering,
+ * accessibility, animation, and responsive behavior for various UI skeleton
+ * patterns including avatars, cards, charts, forms, lists, and tables.
+ */
+
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { render } from "@/test/test-utils";
@@ -154,9 +160,8 @@ describe("FormSkeleton", () => {
   it("includes submit button when specified", () => {
     const { container } = render(<FormSkeleton hasSubmitButton={true} />);
 
-    const submitSkeletons = container.querySelectorAll(
-      "[class*='h-10'][class*='w-120px']"
-    );
+    // The submit button skeleton uses inline dimensions (height 2.5rem, width 120px)
+    const submitSkeletons = container.querySelectorAll("[style*='width: 120px']");
     expect(submitSkeletons.length).toBeGreaterThan(0);
   });
 
@@ -191,8 +196,8 @@ describe("ChartSkeleton", () => {
   it("includes chart title", () => {
     const { container } = render(<ChartSkeleton />);
 
-    // Should have title skeleton
-    const titleSkeletons = container.querySelectorAll("[class*='h-6']");
+    // Title skeleton uses inline height/width (1.5rem, 40%)
+    const titleSkeletons = container.querySelectorAll("[style*='height: 1.5rem']");
     expect(titleSkeletons.length).toBeGreaterThan(0);
   });
 
