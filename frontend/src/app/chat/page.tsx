@@ -117,8 +117,16 @@ export default function ChatPage() {
         ? // eslint-disable-next-line @typescript-eslint/no-unsafe-call
           (crypto as any).randomUUID()
         : Math.random().toString(36).slice(2);
-    const user = { id: `${id}-u`, role: "user" as const, parts: [{ type: "text", text }] };
-    const assistant = { id: `${id}-a`, role: "assistant" as const, parts: [{ type: "text", text: "" }] };
+    const user = {
+      id: `${id}-u`,
+      role: "user" as const,
+      parts: [{ type: "text", text }],
+    };
+    const assistant = {
+      id: `${id}-a`,
+      role: "assistant" as const,
+      parts: [{ type: "text", text: "" }],
+    };
     setMessages((prev) => prev.concat([user, assistant]));
 
     abortRef.current?.abort();
@@ -187,12 +195,14 @@ export default function ChatPage() {
       </Conversation>
 
       <div className="border-t p-2">
-          <PromptInputProvider>
-          <PromptInput onSubmit={(msg: PromptInputMessage) => {
-            const text = msg.text?.trim() ?? "";
-            if (!text) return;
-            void handleSend(text);
-          }}>
+        <PromptInputProvider>
+          <PromptInput
+            onSubmit={(msg: PromptInputMessage) => {
+              const text = msg.text?.trim() ?? "";
+              if (!text) return;
+              void handleSend(text);
+            }}
+          >
             <PromptInputHeader>
               <PromptInputTools>
                 <PromptInputActionMenu>
