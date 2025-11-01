@@ -3,12 +3,12 @@
  */
 
 import { waitFor } from "@testing-library/react";
-import type { FileAttachment } from "@/lib/supabase/database.types";
-import { useSupabaseStorage } from "@/hooks/use-supabase-storage";
-import { createMockSupabaseClient } from "@/test/mock-helpers";
-import { render } from "@/test/test-utils";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useSupabaseStorage } from "@/hooks/use-supabase-storage";
+import type { FileAttachment } from "@/lib/supabase/database.types";
+import { createMockSupabaseClient } from "@/test/mock-helpers";
+import { render } from "@/test/test-utils";
 
 const supabase = createMockSupabaseClient();
 const fromMock = supabase.from as unknown as Mock;
@@ -60,7 +60,7 @@ const createAttachment = (overrides: Partial<FileAttachment> = {}): FileAttachme
 function FileCount() {
   const { useFileAttachments } = useSupabaseStorage();
   const { data, isSuccess } = useFileAttachments();
-  return <div data-testid="files">{isSuccess ? data?.length ?? 0 : "-"}</div>;
+  return <div data-testid="files">{isSuccess ? (data?.length ?? 0) : "-"}</div>;
 }
 
 describe("useSupabaseStorage", () => {

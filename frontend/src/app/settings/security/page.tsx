@@ -202,7 +202,9 @@ export default function SecuritySettingsPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-base font-medium">Multi-factor Authentication</Label>
+                  <Label className="text-base font-medium">
+                    Multi-factor Authentication
+                  </Label>
                   <p className="text-sm text-muted-foreground">
                     Add a second factor to strengthen account security
                   </p>
