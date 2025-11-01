@@ -46,27 +46,37 @@
 
 ## Checklist (mark off; add notes under each)
 
-- [ ] Draft ADR(s) and Spec(s) (pre-implementation; research + consensus)
+- [x] Draft ADR(s) and Spec(s) (pre-implementation; research + consensus)
   - Notes:
-- [ ] Crawl Supabase/PostgREST claims docs; verify RPC guard style
+    - Added ADR `docs/adrs/adr-0024-byok-routes-and-security.md` and Spec `docs/specs/0011-spec-byok-routes-and-security.md` capturing design, contracts, rate limits, and testing.
+- [x] Crawl Supabase/PostgREST claims docs; verify RPC guard style
   - Notes:
-- [ ] Implement server routes:
-  - [ ] `POST /api/keys` (upsert via `insert_user_api_key`)
+    - Verified `current_setting('request.jwt.claims', true)::jsonb->>'role'='service_role'` checks in SQL migrations.
+- [x] Implement server routes:
+  - [x] `POST /api/keys` (upsert via `insert_user_api_key`)
     - Notes:
-  - [ ] `DELETE /api/keys/[service]` (delete via `delete_user_api_key`)
+      - Implemented at `frontend/src/app/api/keys/route.ts`; validates allowed services and requires auth; returns 204.
+  - [x] `DELETE /api/keys/[service]` (delete via `delete_user_api_key`)
     - Notes:
-  - [ ] `POST /api/keys/validate` (AI SDK metadata check; no persist)
+      - Implemented at `frontend/src/app/api/keys/[service]/route.ts`; validates service; requires auth; returns 204.
+  - [x] `POST /api/keys/validate` (AI SDK metadata check; no persist)
     - Notes:
-- [ ] Add strict rate limits for POST/DELETE
+      - Implemented at `frontend/src/app/api/keys/validate/route.ts`; performs minimal provider metadata check; requires auth; no persistence.
+- [x] Add strict rate limits for POST/DELETE
   - Notes:
-- [ ] Add telemetry spans; redact `api_key` in logs
+    - Upstash Ratelimit configured (env-gated). CRUD 10/min, validate 20/min per user. Reused `buildRateLimitKey`.
+- [x] Add telemetry spans; redact `api_key` in logs
   - Notes:
-- [ ] Vitest tests: RPC wrappers + route handlers with mocks
+    - Logging redacts secrets; only error messages are logged without key values.
+- [x] Vitest tests: RPC wrappers + route handlers with mocks
   - Notes:
-- [ ] Codereview + finalize
+    - Added targeted tests under `frontend/src/lib/supabase/__tests__/rpc.test.ts`, `frontend/src/app/api/keys/**/__tests__/*`.
+- [x] Codereview + finalize
   - Notes:
-- [ ] Finalize ADR(s) and Spec(s) for BYOK routes/security decisions
+    - Addressed findings: added `server-only` guards, auth on validate, and service validation returning 400.
+- [x] Finalize ADR(s) and Spec(s) for BYOK routes/security decisions
   - Notes:
+    - Linked ADR/Spec from `docs/operators/security-guide.md`; added to ADR index.
 
 ## Working instructions (mandatory)
 
@@ -108,8 +118,9 @@
 
 ## Legacy mapping (delete later after app cutover)
 
-- `tripsage/api/routers/keys.py` and its unit tests
-- Any Python BYOK validation helpers
+- [x] `tripsage/api/routers/keys.py` and its unit tests (removed)
+- [x] Python BYOK validation unit test `tests/unit/api/test_keys_validate_unit.py` (removed)
+- [x] OpenAPI snapshot test normalized to ignore legacy `/api/keys*` paths
 
 ## Step-by-step
 
