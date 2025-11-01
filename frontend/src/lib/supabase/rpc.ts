@@ -13,7 +13,7 @@ function normalizeService(service: string): SupportedService {
   if (s === "openai" || s === "openrouter" || s === "anthropic" || s === "xai") {
     return s;
   }
-  throw new Error("Invalid service");
+  throw new Error(`Invalid service: ${service}`);
 }
 
 /**
