@@ -1,7 +1,8 @@
 # Spec: Python Test Suite Modernization
 
-Status: Draft
-Last updated: 2025-10-24
+**Status**: Draft
+**Version**: 1.0.0
+**Date**: 2025-10-24
 
 ## Objective
 
