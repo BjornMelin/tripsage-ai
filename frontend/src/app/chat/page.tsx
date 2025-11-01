@@ -112,7 +112,11 @@ export default function ChatPage() {
   const abortRef = useRef<AbortController | null>(null);
 
   const handleSend = useCallback(async (text: string) => {
-    const id = crypto.randomUUID();
+    const id =
+      typeof crypto !== "undefined" && (crypto as any).randomUUID
+        ? // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+          (crypto as any).randomUUID()
+        : Math.random().toString(36).slice(2);
     const user = { id: `${id}-u`, role: "user" as const, parts: [{ type: "text", text }] };
     const assistant = { id: `${id}-a`, role: "assistant" as const, parts: [{ type: "text", text: "" }] };
     setMessages((prev) => prev.concat([user, assistant]));
