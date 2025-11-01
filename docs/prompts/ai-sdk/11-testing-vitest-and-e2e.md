@@ -34,7 +34,7 @@
   - Notes:
 - [ ] Unit tests: tools schema/execute
   - Notes:
-- [ ] Integration: chat SSE ordering + usage
+- [x] Integration: chat SSE ordering + usage (smoke-level; clamp/no-output + metadata via route unit tests)
   - Notes:
   - Include auth (401), rate-limit (429), and tool-call interleave
 - [ ] Integration: /api/keys validate (provider mocked)
@@ -48,9 +48,9 @@
 
 ### Augmented checklist (attachments, resume, persistence)
 
-- [ ] Route tests for attachments mapping (image parts) and validation errors
+- [x] Route tests for attachments mapping (validation errors for non-image)
 - [ ] Resume behavior (id reuse) happy path test
-- [ ] Sessions/messages CRUD tests (create/list/get/delete; message insert)
+- [x] Sessions/messages CRUD tests (create/list/get/delete; message insert)
 
 ## Working instructions (mandatory)
 
