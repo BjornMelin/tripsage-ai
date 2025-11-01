@@ -1,3 +1,8 @@
+/**
+ * @fileoverview RecentTrips dashboard widget.
+ * Renders recent trip cards using data from useTrips with resilient parsing
+ * for items/data.items shapes. Includes accessible links and stable date text.
+ */
 "use client";
 
 import { Calendar, Clock, MapPin } from "lucide-react";
@@ -44,22 +49,36 @@ function TripCardSkeleton() {
   );
 }
 
+/**
+ * Render a single trip card.
+ * @param trip Trip object to render.
+ */
 function TripCard({ trip }: { trip: Trip }) {
+  /**
+   * Format an ISO date string to e.g. "Jun 15, 2024" in UTC to avoid TZ drift.
+   */
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
+      timeZone: "UTC",
     });
   };
 
+  /**
+   * Build destination summary (e.g., "Paris (+1 more)").
+   */
   const getDestinationText = () => {
     if (!trip.destinations || trip.destinations.length === 0) return "No destinations";
     if (trip.destinations.length === 1) return trip.destinations[0].name;
     return `${trip.destinations[0].name} (+${trip.destinations.length - 1} more)`;
   };
 
+  /**
+   * Compute duration in days from start/end.
+   */
   const getTripDuration = () => {
     if (!trip.startDate || !trip.endDate) return null;
     const start = new Date(trip.startDate);
@@ -69,6 +88,9 @@ function TripCard({ trip }: { trip: Trip }) {
     return `${diffDays} day${diffDays !== 1 ? "s" : ""}`;
   };
 
+  /**
+   * Compute trip status relative to now.
+   */
   const getTripStatus = () => {
     if (!trip.startDate || !trip.endDate) return "draft";
     const now = new Date();
@@ -156,9 +178,18 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
   const { data: tripsResponse, isLoading } = useTrips();
 
   // Extract trips from the response and sort by updatedAt/createdAt, take the most recent ones
-  const tripsData = Array.isArray(tripsResponse)
-    ? tripsResponse
-    : (tripsResponse as any)?.data || [];
+  let tripsData: any[] = [];
+  if (Array.isArray(tripsResponse)) {
+    tripsData = tripsResponse;
+  } else if (tripsResponse && typeof tripsResponse === "object") {
+    const anyResp = tripsResponse as any;
+    if (Array.isArray(anyResp.items)) {
+      tripsData = anyResp.items;
+    } else if (anyResp.data) {
+      if (Array.isArray(anyResp.data)) tripsData = anyResp.data;
+      else if (Array.isArray(anyResp.data.items)) tripsData = anyResp.data.items;
+    }
+  }
   const recentTrips = tripsData
     .sort((a: any, b: any) => {
       const dateA = new Date(a.updated_at || a.created_at);

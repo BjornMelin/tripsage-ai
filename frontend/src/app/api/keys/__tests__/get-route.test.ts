@@ -15,18 +15,18 @@ describe("GET /api/keys route", () => {
   });
 
   it("returns key metadata for authenticated user", async () => {
-    const select = vi.fn().mockReturnValue({
-      order: vi.fn().mockResolvedValue({
-        data: [
-          {
-            service: "openai",
-            created_at: "2025-11-01T00:00:00Z",
-            last_used: null,
-          },
-        ],
-        error: null,
-      }),
+    const order = vi.fn().mockResolvedValue({
+      data: [
+        {
+          service_name: "openai",
+          created_at: "2025-11-01T00:00:00Z",
+          last_used_at: null,
+        },
+      ],
+      error: null,
     });
+    const eq = vi.fn().mockReturnValue({ order });
+    const select = vi.fn().mockReturnValue({ eq });
     const from = vi.fn().mockReturnValue({ select });
     mockCreateServerSupabase.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })) },
