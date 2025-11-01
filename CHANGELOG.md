@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Python provider wrappers and tests removed (see Breaking Changes)
+- FastAPI chat router and schemas removed; chat moved to Next.js AI SDK v6
+  - Deleted: `tripsage/api/routers/chat.py`, `tripsage/api/schemas/chat.py`
+  - Removed ChatAgent and chat service wiring: `tripsage/agents/chat.py`, ChatAgent initialization in `tripsage/api/main.py`, chat service from `tripsage/app_state.py`, ChatService from `tripsage_core/services/business/chat_service.py`
+  - Deleted tests and fixtures tied to Python chat: `tests/integration/api/test_chat_streaming.py`, `tests/e2e/test_agent_config_flow.py`, `tests/fixtures/http.py`, and `tests/unit/agents/test_create_agent.py`
 
 ### Security
 
@@ -41,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `tripsage_core/services/external_apis/providers/{openai_adapter.py, openrouter_adapter.py, anthropic_adapter.py, xai_adapter.py, token_budget.py, interfaces.py}`
   - `tests/unit/external/{test_llm_providers.py, test_providers.py, test_token_budget.py}`
 - No backwards compatibility shims retained; registry is the final implementation
+- Removed Python chat API entirely in favor of Next.js routes using AI SDK v6; any direct callers to `/api/chat/*` must use `/app/api/chat/stream` (Next.js) instead
 
 ## [2.2.0] - 2025-11-01
 
