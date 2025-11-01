@@ -37,11 +37,11 @@ from tripsage_core.models.schemas_common.flight_schemas import (
     FlightSearchRequest,
 )
 from tripsage_core.observability.otel import record_histogram, trace_span
-from tripsage_core.services.infrastructure.database_operations_mixin import (
-    DatabaseOperationsMixin,
+from tripsage_core.services.infrastructure.database_service import DatabaseService
+from tripsage_core.services.infrastructure.db_ops_mixin import (
+    DatabaseOpsMixin,
     DatabaseServiceProtocol,
 )
-from tripsage_core.services.infrastructure.database_service import DatabaseService
 from tripsage_core.services.infrastructure.in_memory_search_cache_mixin import (
     InMemorySearchCacheMixin,
 )
@@ -130,7 +130,7 @@ __all__ = [
 # Models are imported from the canonical domain module above.
 
 
-class FlightService(DatabaseOperationsMixin, ValidationMixin, InMemorySearchCacheMixin):
+class FlightService(DatabaseOpsMixin, ValidationMixin, InMemorySearchCacheMixin):
     """Flight service for search, booking, and management.
 
     This service handles:

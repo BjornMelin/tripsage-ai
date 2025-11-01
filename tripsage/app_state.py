@@ -197,7 +197,7 @@ async def _setup_business_services(
     from tripsage_core.services.business.unified_search_service import (
         UnifiedSearchService,
     )
-    from tripsage_core.services.infrastructure.database_operations_mixin import (
+    from tripsage_core.services.infrastructure.db_ops_mixin import (
         DatabaseServiceProtocol,
     )
 

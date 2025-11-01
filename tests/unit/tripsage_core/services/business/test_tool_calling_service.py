@@ -1,9 +1,19 @@
 """Tests for the tool calling service retry logic and handlers."""
 
+from collections.abc import Awaitable, Callable
+from types import MethodType
 from typing import Any
 
 import pytest
 
+from tripsage_core.services.business.tool_calling.core import (
+    HandlerContext,
+    ServiceFactory,
+    build_duffel_passengers,
+    parse_date_like,
+    validate_accommodation_params,
+    validate_flight_params,
+)
 from tripsage_core.services.business.tool_calling_service import (
     ToolCallError,
     ToolCallRequest,
@@ -19,6 +29,25 @@ class TestableToolCallService(ToolCallService):
         """Expose the internal service handler mapping."""
         return self._service_handlers
 
+    @property
+    def validation_handlers(self) -> dict[str, Any]:
+        """Expose the internal validation handler mapping."""
+        return self._validation_handlers
+
+    @property
+    def formatter_handlers(self) -> dict[str, Any]:
+        """Expose the internal formatter handler mapping."""
+        return self._formatter_handlers
+
+    @property
+    def service_cache(self) -> dict[str, Any]:
+        """Expose the service cache for testing."""
+        return self._factory._service_cache  # type: ignore[reportPrivateUsage]
+
+    async def get_service_instance_for_test(self, service_name: str) -> Any:
+        """Expose factory's get_service_instance for testing."""
+        return await self._factory.get_service_instance(service_name)  # pylint: disable=not-callable
+
     async def execute_with_retries_public(
         self, request: ToolCallRequest, params: dict[str, Any]
     ) -> dict[str, Any]:
@@ -31,22 +60,15 @@ class TestableToolCallService(ToolCallService):
         """Invoke `_dispatch_service_call` in a test-friendly way."""
         return await self._dispatch_service_call(service, method, params)
 
-    def build_duffel_passengers_public(
-        self, params: dict[str, Any]
-    ) -> list[dict[str, Any]]:
-        """Return passengers using the internal Duffel helper."""
-        return self._build_duffel_passengers(params)
+    async def validate_tool_call_public(self, request: ToolCallRequest) -> Any:
+        """Invoke `validate_tool_call` for testing."""
+        return await self.validate_tool_call(request)
 
-    async def handle_airbnb_public(
-        self, method: str, params: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Expose the Airbnb handler for unit testing."""
-        return await self._handle_airbnb(method, params)
-
-    @staticmethod
-    def parse_date_like_public(value: Any, field_name: str) -> Any:
-        """Proxy to the date parsing helper used internally."""
-        return ToolCallService._parse_date_like(value, field_name)
+    def override_factory_getter(
+        self, getter: Callable[[ServiceFactory, str], Awaitable[Any]]
+    ) -> None:
+        """Override the factory getter for testing."""
+        self._factory.get_service_instance = MethodType(getter, self._factory)
 
 
 @pytest.mark.asyncio
@@ -83,10 +105,10 @@ async def test_execute_with_retries_returns_handler_result(
 async def test_execute_with_retries_retries_on_timeout(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Retry once when the handler raises `asyncio.TimeoutError`."""
+    """Test that execute_with_retries retries on timeout."""
     service = TestableToolCallService()
     attempts = 0
-    backoff_calls: list[int] = []
+    backoff_calls: list[float] = []
 
     async def fake_handler(method: str, params: dict[str, Any]) -> dict[str, Any]:
         """Fake handler for testing."""
@@ -96,12 +118,15 @@ async def test_execute_with_retries_retries_on_timeout(
             raise TimeoutError
         return {"ok": True}
 
-    async def fake_backoff(attempt: int) -> None:
+    async def fake_backoff(delay: float) -> None:
         """Fake backoff for testing."""
-        backoff_calls.append(attempt)
+        backoff_calls.append(delay)
 
     service.handlers["google_maps"] = fake_handler
-    monkeypatch.setattr(service, "_apply_retry_backoff", fake_backoff)
+    monkeypatch.setattr(
+        "tripsage_core.services.business.tool_calling_service.asyncio.sleep",
+        fake_backoff,
+    )
 
     request = ToolCallRequest(
         id="req-2",
@@ -116,12 +141,12 @@ async def test_execute_with_retries_retries_on_timeout(
 
     assert result == {"ok": True}
     assert attempts == 2
-    assert backoff_calls == [1]
+    assert backoff_calls == [1.0]
 
 
 @pytest.mark.asyncio
 async def test_execute_with_retries_stops_on_tool_error() -> None:
-    """Stop retrying when the handler raises `ToolCallError`."""
+    """Stop retries on ToolCallError."""
     service = TestableToolCallService()
     attempts = 0
 
@@ -164,12 +189,15 @@ async def test_execute_with_retries_retries_on_connection_error(
             raise ConnectionError("transient")
         return {"ok": True}
 
-    async def fake_backoff(_: int) -> None:  # pragma: no cover - trivial awaitable
+    async def fake_backoff(_: float) -> None:  # pragma: no cover - trivial awaitable
         """Fake backoff for testing."""
         return
 
     service.handlers["google_maps"] = fake_handler
-    monkeypatch.setattr(service, "_apply_retry_backoff", fake_backoff)
+    monkeypatch.setattr(
+        "tripsage_core.services.business.tool_calling_service.asyncio.sleep",
+        fake_backoff,
+    )
 
     request = ToolCallRequest(
         id="req-4",
@@ -188,7 +216,7 @@ async def test_execute_with_retries_retries_on_connection_error(
 
 @pytest.mark.asyncio
 async def test_dispatch_unsupported_service() -> None:
-    """Raise an error for unsupported services."""
+    """Dispatch an unsupported service and expect a ToolCallError."""
     service = TestableToolCallService()
 
     with pytest.raises(ToolCallError):
@@ -196,9 +224,8 @@ async def test_dispatch_unsupported_service() -> None:
 
 
 @pytest.mark.asyncio
-async def test_handle_airbnb_search_alias(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Normalize Airbnb search aliases and return listings."""
-    service = TestableToolCallService()
+async def test_handle_airbnb_search_alias() -> None:
+    """Test handling Airbnb search with alias parameters."""
     captured: dict[str, Any] = {}
 
     class StubAirbnb:
@@ -209,14 +236,18 @@ async def test_handle_airbnb_search_alias(monkeypatch: pytest.MonkeyPatch) -> No
             captured.update(kwargs)
             return [{"id": "listing"}]
 
-    monkeypatch.setattr(
-        "tripsage_core.clients.airbnb_mcp_client.AirbnbMCPClient",
-        StubAirbnb,
-    )
+    class StubFactory(ServiceFactory):
+        """Provide stub service instances."""
 
-    result = await service.handle_airbnb_public(
-        "search_properties",
-        {"location": "Berlin", "adults": 2, "children": 1},
+        async def get_service_instance(self, service_name: str) -> Any:
+            """Return stub instances for known services."""
+            assert service_name == "airbnb"
+            return StubAirbnb()
+
+    context = HandlerContext(factory=StubFactory(), db=None, safe_tables=set())
+
+    result = await context.handle_airbnb(
+        "search_properties", {"location": "Berlin", "adults": 2, "children": 1}
     )
 
     assert result == {"listings": [{"id": "listing"}]}
@@ -226,12 +257,8 @@ async def test_handle_airbnb_search_alias(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_build_duffel_passengers_from_counts() -> None:
-    """Convert passenger counts into Duffel passenger dictionaries."""
-    service = TestableToolCallService()
-
-    passengers = service.build_duffel_passengers_public(
-        {"adults": "2", "children": 1, "infants": 0}
-    )
+    """Build Duffel passengers from counts."""
+    passengers = build_duffel_passengers({"adults": "2", "children": 1, "infants": 0})
 
     assert passengers == [
         {"type": "adult"},
@@ -241,6 +268,123 @@ def test_build_duffel_passengers_from_counts() -> None:
 
 
 def test_parse_date_like_invalid() -> None:
-    """Raise `ToolCallError` when dates cannot be parsed."""
+    """Test parsing invalid date-like values."""
     with pytest.raises(ToolCallError):
-        TestableToolCallService.parse_date_like_public("invalid-date", "departure_date")
+        parse_date_like("invalid-date", "departure_date")
+
+
+@pytest.mark.asyncio
+async def test_validation_dispatcher() -> None:
+    """Test that validation dispatcher routes to correct validators."""
+    service = TestableToolCallService()
+    assert "duffel_flights" in service.validation_handlers
+    assert "airbnb" in service.validation_handlers
+    assert "google_maps" in service.validation_handlers
+    assert "weather" in service.validation_handlers
+
+
+@pytest.mark.asyncio
+async def test_formatter_dispatcher() -> None:
+    """Test that formatter dispatcher routes to correct formatters."""
+    service = TestableToolCallService()
+    assert "duffel_flights" in service.formatter_handlers
+    assert "airbnb" in service.formatter_handlers
+    assert "google_maps" in service.formatter_handlers
+    assert "weather" in service.formatter_handlers
+
+
+@pytest.mark.asyncio
+async def test_validate_flight_params_search_flights() -> None:
+    """Test flight validation for search_flights method."""
+    errors = await validate_flight_params(
+        {"origin": "NYC", "destination": "LAX", "departure_date": "2024-01-01"},
+        "search_flights",
+    )
+    assert len(errors) == 0
+
+    errors = await validate_flight_params({"origin": "NYC"}, "search_flights")
+    assert len(errors) > 0
+    assert any("destination" in err for err in errors)
+
+
+@pytest.mark.asyncio
+async def test_validate_flight_params_offer_details() -> None:
+    """Test flight validation for offer_details method."""
+    errors = await validate_flight_params({"offer_id": "offer-123"}, "offer_details")
+    assert len(errors) == 0
+
+    errors = await validate_flight_params({}, "offer_details")
+    assert len(errors) > 0
+    assert any("offer_id" in err.lower() for err in errors)
+
+
+@pytest.mark.asyncio
+async def test_validate_flight_params_create_order() -> None:
+    """Test flight validation for create_order method."""
+    errors = await validate_flight_params(
+        {"offer_id": "offer-123", "passengers": [{"type": "adult"}]},
+        "create_order",
+    )
+    assert len(errors) == 0
+
+    errors = await validate_flight_params({"offer_id": "offer-123"}, "create_order")
+    assert len(errors) > 0
+    assert any("passengers" in err.lower() for err in errors)
+
+
+@pytest.mark.asyncio
+async def test_validate_accommodation_params_with_aliases() -> None:
+    """Test accommodation validation accepts parameter aliases."""
+    # Test with checkin/checkout (no underscore)
+    errors = await validate_accommodation_params(
+        {"location": "Berlin", "checkin": "2024-01-01", "checkout": "2024-01-05"},
+        "search",
+    )
+    assert len(errors) == 0
+
+    # Test with check_in/check_out (with underscore)
+    errors = await validate_accommodation_params(
+        {"location": "Berlin", "check_in": "2024-01-01", "check_out": "2024-01-05"},
+        "search",
+    )
+    assert len(errors) == 0
+
+    # Test missing required fields
+    errors = await validate_accommodation_params({"location": "Berlin"}, "search")
+    assert len(errors) > 0
+
+
+@pytest.mark.asyncio
+async def test_service_factory_caching() -> None:
+    """Test that service factory caches instances."""
+    service = TestableToolCallService()
+    assert len(service.service_cache) == 0
+
+    async def fake_get_service_instance(self: ServiceFactory, service_name: str) -> Any:
+        """Return cached sentinel per service."""
+        cache = service.service_cache
+        if service_name in cache:
+            return cache[service_name]
+        cache[service_name] = {"service": service_name}
+        return cache[service_name]
+
+    service.override_factory_getter(fake_get_service_instance)
+
+    instance1 = await service.get_service_instance_for_test("google_maps")
+    assert len(service.service_cache) == 1
+    assert "google_maps" in service.service_cache
+
+    instance2 = await service.get_service_instance_for_test("google_maps")
+    assert instance1 is instance2  # Same instance cached
+
+    instance3 = await service.get_service_instance_for_test("weather")
+    assert len(service.service_cache) == 2
+    assert instance3 is not instance1
+
+
+@pytest.mark.asyncio
+async def test_service_factory_unknown_service() -> None:
+    """Test service factory raises error for unknown service."""
+    service = TestableToolCallService()
+    with pytest.raises(ToolCallError):
+        await service.get_service_instance_for_test("unknown_service")

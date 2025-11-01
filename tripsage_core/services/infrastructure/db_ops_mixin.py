@@ -104,7 +104,7 @@ class DatabaseServiceProtocol(Protocol):
         ...
 
 
-class DatabaseOperationsMixin:
+class DatabaseOpsMixin:
     """Mixin providing common database operation patterns."""
 
     @property

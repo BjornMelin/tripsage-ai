@@ -159,6 +159,14 @@ class Settings(BaseSettings):
         description="OTEL instrumentation as comma-separated values",
     )
 
+    # OpenRouter attribution (optional)
+    openrouter_referer: str | None = Field(
+        default=None, description="OpenRouter HTTP-Referer attribution header"
+    )
+    openrouter_title: str | None = Field(
+        default=None, description="OpenRouter X-Title attribution header"
+    )
+
     # LangGraph features configuration
     langgraph_features: str = Field(
         default="conversation_memory,advanced_routing,memory_updates,error_recovery",

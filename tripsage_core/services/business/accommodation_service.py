@@ -22,8 +22,8 @@ from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
-from tripsage_core.services.infrastructure.database_operations_mixin import (
-    DatabaseOperationsMixin,
+from tripsage_core.services.infrastructure.db_ops_mixin import (
+    DatabaseOpsMixin,
 )
 from tripsage_core.services.infrastructure.in_memory_search_cache_mixin import (
     InMemorySearchCacheMixin,
@@ -377,9 +377,7 @@ class AccommodationBookingRequest(TripSageModel):
     )
 
 
-class AccommodationService(
-    DatabaseOperationsMixin, ValidationMixin, InMemorySearchCacheMixin
-):
+class AccommodationService(DatabaseOpsMixin, ValidationMixin, InMemorySearchCacheMixin):
     """Accommodation service for search, booking, and management.
 
     This service handles:
