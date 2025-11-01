@@ -27,7 +27,6 @@ from tripsage.api.routers import (
     activities,
     attachments,
     auth,
-    chat,
     config,
     dashboard,
     destinations,
@@ -73,15 +72,10 @@ async def lifespan(app: FastAPI):
     Args:
         app: The FastAPI application
     """
-    services, orchestrator = await initialise_app_state(app)
+    services, _orchestrator = await initialise_app_state(app)
 
     # Instantiate shared agents after services are ready
-    from tripsage.agents.chat import ChatAgent
-
-    app.state.chat_agent = ChatAgent(
-        services=services,
-        orchestrator=orchestrator,
-    )
+    # ChatAgent removed; chat features are implemented in Next.js via AI SDK.
 
     # Start database connection monitor for unified health reporting
     database_monitor = None
@@ -108,8 +102,7 @@ async def lifespan(app: FastAPI):
             await database_monitor.stop_monitoring()
             if hasattr(app.state, "database_monitor"):
                 delattr(app.state, "database_monitor")
-        if hasattr(app.state, "chat_agent"):
-            delattr(app.state, "chat_agent")
+        # no chat_agent stored on app.state
         await shutdown_app_state(app)
 
 
@@ -335,7 +328,7 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
     # dashboard_realtime router is temporarily excluded pending module finalization
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-    app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+    # Chat router removed; handled in Next.js routes
     app.include_router(
         attachments.router, prefix="/api/attachments", tags=["attachments"]
     )
