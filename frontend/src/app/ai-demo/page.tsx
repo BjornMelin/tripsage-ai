@@ -27,7 +27,7 @@ import {
  * @returns The demo page component.
  */
 export default function AIDemoPage() {
-  const [input, setInput] = useState("");
+  const [_input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [_isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

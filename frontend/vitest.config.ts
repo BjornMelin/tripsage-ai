@@ -62,6 +62,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Shim Next.js server-only import for tests
+      "server-only": path.resolve(__dirname, "./src/test/mocks/server-only.ts"),
     },
   },
 });
