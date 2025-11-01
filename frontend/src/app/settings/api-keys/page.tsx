@@ -1,13 +1,25 @@
+/**
+ * @fileoverview BYOK API keys management UI. Provides provider selection and secured
+ * key storage operations via authenticated API. IDs are generated with `useId` to
+ * avoid duplicate DOM identifiers when multiple instances are rendered.
+ */
+
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 
 type AllowedService = "openai" | "openrouter" | "anthropic" | "xai";
 
@@ -21,6 +33,11 @@ type ApiKeySummary = {
 
 const SUPPORTED: AllowedService[] = ["openai", "openrouter", "anthropic", "xai"];
 
+/**
+ * Render the API Keys management page.
+ *
+ * @returns The BYOK management UI component.
+ */
 export default function ApiKeysPage() {
   const { authenticatedApi } = useAuthenticatedApi();
   const [loading, setLoading] = useState(false);
@@ -67,6 +84,10 @@ export default function ApiKeysPage() {
     }
   };
 
+  // Generate unique ids for form controls to satisfy accessibility and lint rules
+  const serviceId = useId();
+  const apiKeyId = useId();
+
   return (
     <div className="container mx-auto max-w-3xl space-y-6 py-8">
       <Card>
@@ -76,9 +97,12 @@ export default function ApiKeysPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="service">Provider</Label>
-              <Select value={service} onValueChange={(v) => setService(v as AllowedService)}>
-                <SelectTrigger id="service">
+              <Label htmlFor={serviceId}>Provider</Label>
+              <Select
+                value={service}
+                onValueChange={(v) => setService(v as AllowedService)}
+              >
+                <SelectTrigger id={serviceId}>
                   <SelectValue placeholder="Select provider" />
                 </SelectTrigger>
                 <SelectContent>
@@ -91,9 +115,9 @@ export default function ApiKeysPage() {
               </Select>
             </div>
             <div className="sm:col-span-2 space-y-2">
-              <Label htmlFor="apiKey">API Key</Label>
+              <Label htmlFor={apiKeyId}>API Key</Label>
               <Input
-                id="apiKey"
+                id={apiKeyId}
                 type="password"
                 placeholder="Paste your API key"
                 value={apiKey}
@@ -122,12 +146,19 @@ export default function ApiKeysPage() {
                 <div className="space-y-1">
                   <div className="font-medium">{s.toUpperCase()}</div>
                   <div className="text-sm text-muted-foreground">
-                    {present ? `Added: ${new Date(row!.created_at).toLocaleString()}` : "Not set"}
+                    {present
+                      ? `Added: ${new Date(row!.created_at).toLocaleString()}`
+                      : "Not set"}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {present ? (
-                    <Button variant="destructive" size="sm" onClick={() => onDelete(s)} disabled={loading}>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => onDelete(s)}
+                      disabled={loading}
+                    >
                       Remove
                     </Button>
                   ) : (
@@ -146,4 +177,3 @@ export default function ApiKeysPage() {
     </div>
   );
 }
-

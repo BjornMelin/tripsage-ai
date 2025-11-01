@@ -6,7 +6,13 @@ import type { InsertTables, Tables, UpdateTables } from "@/lib/supabase/database
 import type { TypedClient } from "@/lib/supabase/typed-helpers";
 import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 
-function makeMockFrom<T extends keyof Tables<any>>(_table: T) {
+/**
+ * Create a chained mock object simulating a Supabase table query builder.
+ *
+ * @param _table Unused table name for parity with production signatures.
+ * @returns A fluent mock with insert/update/select/single/eq methods.
+ */
+function makeMockFrom(_table: string) {
   const chain: any = {
     insert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
@@ -17,6 +23,11 @@ function makeMockFrom<T extends keyof Tables<any>>(_table: T) {
   return chain;
 }
 
+/**
+ * Create a minimal `TypedClient` mock that returns the same chain for any table.
+ *
+ * @returns A `TypedClient` compatible mock.
+ */
 function makeClient(): TypedClient {
   const chain = makeMockFrom("trips");
   return {
