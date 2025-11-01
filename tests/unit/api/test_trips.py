@@ -273,6 +273,7 @@ def _override_dependencies(
         trips_router_module, "_get_user_details_by_id", _user_details, raising=False
     )
 
+
 # -----------------
 # Test entry points
 # -----------------

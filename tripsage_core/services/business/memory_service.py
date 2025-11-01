@@ -33,8 +33,8 @@ from tripsage_core.services.business.memory_insights import (
     generate_context_summary,
     sanitize_memory_entry,
 )
-from tripsage_core.services.infrastructure.database_operations_mixin import (
-    DatabaseOperationsMixin,
+from tripsage_core.services.infrastructure.db_ops_mixin import (
+    DatabaseOpsMixin,
     DatabaseServiceProtocol,
 )
 from tripsage_core.services.infrastructure.validation_mixin import ValidationMixin
@@ -138,7 +138,7 @@ class PreferencesUpdateRequest(TripSageModel):
         return v
 
 
-class MemoryService(DatabaseOperationsMixin, ValidationMixin):
+class MemoryService(DatabaseOpsMixin, ValidationMixin):
     """Memory service using Mem0 with travel-specific optimizations.
 
     This service handles:
