@@ -60,26 +60,44 @@ Plan (overview)
 
 Checklist (mark off; add notes under each)
 
-Checklist (mark off; add notes under each)
-
-- [ ] Draft ADR(s) and Spec(s) (pre-implementation; based on research + consensus)
+- [x] Draft ADR(s) and Spec(s) (pre-implementation; based on research + consensus)
   - Notes:
-- [ ] Crawl core AI SDK v6 docs (streaming/generating) [research]
-  - Notes: (implementation notes, issues found, technical debt addressed)
-- [ ] Scaffold AI SDK v6 into Next.js (`pnpm add ai`)
+    - Authored ADR-0023 (docs/adrs/adr-0023-adopt-ai-sdk-v6-foundations.md) and Spec-0008 (docs/specs/0008-spec-ai-sdk-v6-foundations.md).
+    - Decision Framework weighted total: 9.315/10 (≥9.0 threshold).
+    - Includes security notes (server-only secrets) and links to research/tool logs.
+    - Timing: drafted during implementation with pre-implementation rationale captured.
+- [x] Crawl core AI SDK v6 docs (streaming/generating) [research]
   - Notes:
-- [ ] Add demo streaming route: `app/api/_health/stream/route.ts` using `streamText` + `StreamingTextResponse`
+    - Used exa.crawling_exa for Generating Text, Streaming, Next.js App Router, and AI Elements; used exa.get_code_context_exa for examples.
+    - Adopted `streamText` + `toUIMessageStreamResponse()` for UI message streams consumed by AI Elements.
+- [x] Scaffold AI SDK v6 into Next.js (`pnpm add ai`)
   - Notes:
-- [ ] Install AI Elements (CLI) and render placeholder chat page
+    - Installed `ai` via `pnpm add ai` in `frontend/` (installed version compatible with `streamText` + UI message streams).
+    - No additional provider packages required for demo (used string model id `"openai/gpt-4o"`).
+- [x] Add demo streaming route: `app/api/_health/stream/route.ts` using `streamText` + `StreamingTextResponse`
   - Notes:
-- [ ] Configure Supabase JS admin+anon clients; env wiring (server-only)
+    - Implemented at `frontend/src/app/api/_health/stream/route.ts` using `streamText` → `toUIMessageStreamResponse()` (UI message stream). This aligns with AI Elements integration and v6 UI streaming docs.
+    - Verified with a Vitest unit test mocking `ai.streamText` and asserting SSE headers.
+- [x] Install AI Elements (CLI) and render placeholder chat page
   - Notes:
-- [ ] Add Vitest tests for route + rendering (RTL) and ensure pass
+    - Ran `pnpm dlx ai-elements@latest add conversation message prompt-input` (skipped file overwrites where existing).
+    - Added `frontend/src/app/ai-demo/page.tsx` composing Conversation + PromptInput and posting to the demo route.
+- [x] Configure Supabase JS admin+anon clients; env wiring (server-only)
   - Notes:
-- [ ] Codereview + finalize
+    - Clients already present in repo: `frontend/src/lib/supabase/server.ts` (server-only) and `frontend/src/lib/supabase/client.ts` (anon). No changes required.
+    - Build requires public env vars for unrelated pre-rendered pages; validated with temporary env during `pnpm build` (no secrets leaked to client bundles).
+- [x] Add Vitest tests for route + rendering (RTL) and ensure pass
   - Notes:
-- [ ] Finalize ADR(s) and Spec(s) (post-implementation; capture deltas)
+    - Added `frontend/tests/ai-foundations/stream-route.test.ts` and `frontend/tests/ai-foundations/demo-page.test.tsx`.
+    - Both pass; coverage and JUnit emitted (`frontend/junit-foundations.xml`, ignored by git).
+- [x] Codereview + finalize
   - Notes:
+    - Ran `zen.codereview`. Suggestions captured:
+      - Consider forwarding request `prompt` to the route and adding fetch error handling in the demo page.
+      - Keep model id configurable via env in future prompts.
+- [x] Finalize ADR(s) and Spec(s) (post-implementation; capture deltas)
+  - Notes:
+    - ADR-0023 and Spec-0008 finalized with final rationale, scope, and validation results.
 
 Working instructions (mandatory)
 
@@ -107,10 +125,10 @@ Process flow (required)
 Implementation requirements
 
 - Next.js App Router must expose a server route using `streamText` with a local provider (placeholder OpenAI id) and return `StreamingTextResponse`.
-- Add `frontend/components/ai-elements/*` via `npx ai-elements@latest add conversation message prompt-input`.
-- Add a demo page under `frontend/app/ai-demo/page.tsx` to mount conversation + prompt input; wire to demo route.
-- Configure Supabase JS clients in `frontend/lib/supabase/server.ts` (admin from env, used server-only) and `frontend/lib/supabase/client.ts` (anon).
-- Vitest: create tests under `frontend/tests/ai-foundations/*.test.ts` for the streaming route and render test for the AI Elements page (use React Testing Library).
+  - Add `frontend/components/ai-elements/*` via `npx ai-elements@latest add conversation message prompt-input`.
+  - Add a demo page under `frontend/app/ai-demo/page.tsx` to mount conversation + prompt input; wire to demo route.
+  - Configure Supabase JS clients in `frontend/lib/supabase/server.ts` (admin from env, used server-only) and `frontend/lib/supabase/client.ts` (anon).
+  - Vitest: create tests under `frontend/tests/ai-foundations/*.test.ts` for the streaming route and render test for the AI Elements page (use React Testing Library).
 
 Quality gates for this prompt (TS)
 
@@ -154,5 +172,16 @@ Deliverables
 Final Notes & Next Steps (compile from task notes)
 
 - Summary of changes and decisions:
+  - Installed AI SDK and integrated a demo streaming route using `streamText` with `toUIMessageStreamResponse()` for AI Elements compatibility.
+  - Scaffolded AI Elements components (conversation, message, prompt-input) and added a demo page.
+  - Confirmed Supabase clients exist and are server-only where required; no changes needed.
+  - Authored ADR-0023 and Spec-0008; consensus score 9.315/10.
 - Outstanding items / tracked tech debt:
+  - Demo route currently uses a static prompt; consider accepting `{ prompt }` from request body and making model id configurable via env.
+  - Demo page streams raw text; consider consuming UI message streams with official helpers for richer UX and metadata.
+  - Add rate limiting (e.g., `@upstash/ratelimit`) and error surfacing for production hardening in later prompts.
+  - Ensure image optimization strategy (we used `next/image` with `unoptimized` for blob URLs) is aligned with app perf goals.
 - Follow-up prompts or tasks:
+  - Proceed with 01-byok-routes-and-security.md to implement secure BYOK flows.
+  - Add provider registry/resolution and tool-calling in subsequent prompts.
+  - Decommission Python chat routes once parity is achieved (per later prompt).

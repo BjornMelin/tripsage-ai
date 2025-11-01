@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * @fileoverview Agent configuration management component.
  *
@@ -8,6 +6,8 @@
  * configuration validation, rollback capabilities, and performance metrics
  * tracking for multiple agent types in the TripSage platform.
  */
+
+"use client";
 
 import {
   Activity,
@@ -116,13 +116,7 @@ const AGENT_TYPES = [
   },
 ];
 
-const MODEL_OPTIONS = [
-  "gpt-4",
-  "gpt-4-turbo",
-  "gpt-5",
-  "gpt-5-mini",
-  "gpt-3.5-turbo",
-];
+const MODEL_OPTIONS = ["gpt-4", "gpt-4-turbo", "gpt-5", "gpt-5-mini", "gpt-3.5-turbo"];
 
 /**
  * Agent configuration management component.
