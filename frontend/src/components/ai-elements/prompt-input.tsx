@@ -99,9 +99,12 @@ export type PromptInputControllerProps = {
   attachments: AttachmentsContext;
   /** INTERNAL: Allows PromptInput to register its file input + "open" callback */
   __registerFileInput: (
+    id: string,
     ref: RefObject<HTMLInputElement | null>,
     open: () => void
-  ) => () => void; // Returns cleanup function to unregister
+  ) => void;
+  /** INTERNAL: Allows PromptInput to unregister its file input */
+  __unregisterFileInput: (id: string) => void;
 };
 
 const PromptInputController = createContext<PromptInputControllerProps | null>(null);
@@ -165,18 +168,18 @@ export function PromptInputProvider({
   const clearInput = useCallback(() => setTextInput(""), []);
 
   // ----- attachments state (global when wrapped)
-  const [attachements, setAttachements] = useState<(FileUIPart & { id: string })[]>([]);
+  const [attachments, setAttachments] = useState<(FileUIPart & { id: string })[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // Store multiple registered inputs: Map<id, { ref, open }>
-  const registeredInputsRef = useRef<
-    Map<symbol, { ref: RefObject<HTMLInputElement | null>; open: () => void }>
+  // Store multiple registered inputs: Map<string, { ref, open }>
+  const fileInputsRef = useRef<
+    Map<string, { ref: RefObject<HTMLInputElement | null>; open: () => void }>
   >(new Map());
 
   const add = useCallback((files: File[] | FileList) => {
     const incoming = Array.from(files);
     if (incoming.length === 0) return;
 
-    setAttachements((prev) =>
+    setAttachments((prev) =>
       prev.concat(
         incoming.map((file) => ({
           id: nanoid(),
@@ -190,7 +193,7 @@ export function PromptInputProvider({
   }, []);
 
   const remove = useCallback((id: string) => {
-    setAttachements((prev) => {
+    setAttachments((prev) => {
       const found = prev.find((f) => f.id === id);
       if (found?.url) URL.revokeObjectURL(found.url);
       return prev.filter((f) => f.id !== id);
@@ -198,7 +201,7 @@ export function PromptInputProvider({
   }, []);
 
   const clear = useCallback(() => {
-    setAttachements((prev) => {
+    setAttachments((prev) => {
       for (const f of prev) if (f.url) URL.revokeObjectURL(f.url);
       return [];
     });
@@ -206,7 +209,7 @@ export function PromptInputProvider({
 
   const openFileDialog = useCallback(() => {
     // Open the most recently registered input (last in Map iteration order)
-    const entries = Array.from(registeredInputsRef.current.entries());
+    const entries = Array.from(fileInputsRef.current.entries());
     if (entries.length > 0) {
       const [, { open }] = entries[entries.length - 1];
       open();
@@ -214,8 +217,8 @@ export function PromptInputProvider({
   }, []);
 
   // Helper to update fileInputRef to point to the most recently registered input
-  const updateFileInputRef = useCallback(() => {
-    const entries = Array.from(registeredInputsRef.current.entries());
+  const _updateFileInputRef = useCallback(() => {
+    const entries = Array.from(fileInputsRef.current.entries());
     if (entries.length > 0) {
       const [, { ref }] = entries[entries.length - 1];
       fileInputRef.current = ref.current;
@@ -224,32 +227,28 @@ export function PromptInputProvider({
     }
   }, []);
 
-  const attachments = useMemo<AttachmentsContext>(
+  const attachmentsContext = useMemo<AttachmentsContext>(
     () => ({
-      files: attachements,
+      files: attachments,
       add,
       remove,
       clear,
       openFileDialog,
       fileInputRef,
     }),
-    [attachements, add, remove, clear, openFileDialog]
+    [attachments, add, remove, clear, openFileDialog]
   );
 
   const __registerFileInput = useCallback(
-    (ref: RefObject<HTMLInputElement | null>, open: () => void) => {
-      const id = Symbol("PromptInput");
-      registeredInputsRef.current.set(id, { ref, open });
-      // Update fileInputRef immediately for backwards compatibility
-      updateFileInputRef();
-      // Return cleanup function to unregister
-      return () => {
-        registeredInputsRef.current.delete(id);
-        updateFileInputRef();
-      };
+    (id: string, ref: RefObject<HTMLInputElement | null>, open: () => void) => {
+      fileInputsRef.current.set(id, { ref, open });
     },
-    [updateFileInputRef]
+    []
   );
+
+  const __unregisterFileInput = useCallback((id: string) => {
+    fileInputsRef.current.delete(id);
+  }, []);
 
   const controller = useMemo<PromptInputControllerProps>(
     () => ({
@@ -258,15 +257,27 @@ export function PromptInputProvider({
         setInput: setTextInput,
         clear: clearInput,
       },
-      attachments,
+      attachments: attachmentsContext,
       __registerFileInput,
+      __unregisterFileInput,
     }),
-    [textInput, clearInput, attachments, __registerFileInput]
+    [textInput, clearInput, attachmentsContext, __registerFileInput, __unregisterFileInput]
   );
+
+  // Cleanup object URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      for (const attachment of attachments) {
+        if (attachment.url) {
+          URL.revokeObjectURL(attachment.url);
+        }
+      }
+    };
+  }, [attachments]);
 
   return (
     <PromptInputController.Provider value={controller}>
-      <ProviderAttachmentsContext.Provider value={attachments}>
+      <ProviderAttachmentsContext.Provider value={attachmentsContext}>
         {children}
       </ProviderAttachmentsContext.Provider>
     </PromptInputController.Provider>
@@ -463,7 +474,12 @@ export type PromptInputProps = Omit<
   maxFiles?: number;
   maxFileSize?: number; // bytes
   onError?: (err: {
-    code: "max_files" | "max_file_size" | "accept";
+    code:
+      | "max_files"
+      | "max_file_size"
+      | "accept"
+      | "submission_failed"
+      | "file_conversion_failed";
     message: string;
   }) => void;
   onSubmit: (
@@ -499,6 +515,7 @@ export const PromptInput = ({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const anchorRef = useRef<HTMLSpanElement>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const inputIdRef = useRef<string>(`prompt-input-${nanoid()}`);
 
   // Find nearest form to scope drag & drop
   useEffect(() => {
@@ -521,11 +538,34 @@ export const PromptInput = ({
       if (!accept || accept.trim() === "") {
         return true;
       }
-      if (accept.includes("image/*")) {
-        return f.type.startsWith("image/");
+      // Split accept string by comma and trim each entry
+      const acceptList = accept.split(",").map((a) => a.trim()).filter(Boolean);
+
+      // Check each accept entry
+      for (const entry of acceptList) {
+        if (entry === "*/*") {
+          return true;
+        }
+        if (entry.endsWith("/*")) {
+          // MIME type group, e.g. "image/*"
+          const group = entry.split("/")[0];
+          if (f.type.startsWith(group + "/")) {
+            return true;
+          }
+        } else if (entry.startsWith(".")) {
+          // File extension, e.g. ".pdf"
+          if (f.name.toLowerCase().endsWith(entry.toLowerCase())) {
+            return true;
+          }
+        } else {
+          // Specific MIME type, e.g. "application/pdf"
+          if (f.type === entry) {
+            return true;
+          }
+        }
       }
-      // NOTE: keep simple; expand as needed
-      return true;
+      // No match found
+      return false;
     },
     [accept]
   );
@@ -613,12 +653,14 @@ export const PromptInput = ({
   // Let provider know about our hidden file input so external menus can call openFileDialog()
   useEffect(() => {
     if (!usingProvider) return;
-    const unregister = controller.__registerFileInput(
-      inputRef,
-      () => inputRef.current?.click()
-    );
-    return unregister;
-  }, [usingProvider, controller]);
+
+    const inputId = inputIdRef.current;
+    controller.__registerFileInput(inputId, inputRef, () => inputRef.current?.click());
+
+    return () => {
+      controller.__unregisterFileInput(inputId);
+    };
+  }, [usingProvider, controller, inputRef]);
 
   // Note: File input cannot be programmatically set for security reasons
   // The syncHiddenInput prop is no longer functional
@@ -695,9 +737,16 @@ export const PromptInput = ({
     }
   };
 
+  const MAX_BLOB_SIZE = 5 * 1024 * 1024; // 5MB
+
   const convertBlobUrlToDataUrl = async (url: string): Promise<string> => {
     const response = await fetch(url);
     const blob = await response.blob();
+
+    if (blob.size > MAX_BLOB_SIZE) {
+      throw new Error(`File is too large to convert. Please select a file smaller than ${MAX_BLOB_SIZE / (1024 * 1024)}MB.`);
+    }
+
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
@@ -729,50 +778,75 @@ export const PromptInput = ({
           return (formData.get("message") as string) || "";
         })();
 
-    // Reset form immediately after capturing text to avoid race condition
-    // where user input during async blob conversion would be lost
-    if (!usingProvider) {
-      form.reset();
-    }
-
     // Convert blob URLs to data URLs asynchronously
     Promise.all(
       files.map(async ({ id, ...item }) => {
         if (item.url?.startsWith("blob:")) {
-          return {
-            ...item,
-            url: await convertBlobUrlToDataUrl(item.url),
-          };
+          try {
+            return {
+              ...item,
+              url: await convertBlobUrlToDataUrl(item.url),
+            };
+          } catch (error) {
+            // Handle individual file conversion errors
+            const errorMessage = error instanceof Error ? error.message : "Unknown conversion error";
+            onError?.({
+              code: "file_conversion_failed",
+              message: `Failed to process file "${item.filename || "unknown"}": ${errorMessage}`,
+            });
+            // Return the original item without conversion
+            return item;
+          }
         }
         return item;
       })
-    ).then((convertedFiles: FileUIPart[]) => {
-      try {
-        const result = onSubmit({ text, files: convertedFiles }, event);
+    )
+      .then((convertedFiles: FileUIPart[]) => {
+        try {
+          const result = onSubmit({ text, files: convertedFiles }, event);
 
-        // Handle both sync and async onSubmit
-        if (result instanceof Promise) {
-          result
-            .then(() => {
-              clear();
-              if (usingProvider) {
-                controller.textInput.clear();
-              }
-            })
-            .catch(() => {
-              // Don't clear on error - user may want to retry
-            });
-        } else {
-          // Sync function completed without throwing, clear attachments
-          clear();
-          if (usingProvider) {
-            controller.textInput.clear();
+          // Handle both sync and async onSubmit
+          if (result instanceof Promise) {
+            result
+              .then(() => {
+                clear();
+                if (usingProvider) {
+                  controller.textInput.clear();
+                } else {
+                  form.reset();
+                }
+              })
+              .catch((_error) => {
+                // Don't clear on error - user may want to retry
+                onError?.({
+                  code: "submission_failed",
+                  message: "Failed to submit prompt. Please try again.",
+                });
+              });
+          } else {
+            // Sync function completed without throwing, clear attachments
+            clear();
+            if (usingProvider) {
+              controller.textInput.clear();
+            } else {
+              form.reset();
+            }
           }
+        } catch (_error) {
+          // Don't clear on error - user may want to retry
+          onError?.({
+            code: "submission_failed",
+            message: "Failed to submit prompt. Please try again.",
+          });
         }
-      } catch (_error) {
-        // Don't clear on error - user may want to retry
-      }
-    });
+      })
+      .catch((_error) => {
+        // General error in Promise.all - this shouldn't happen with our individual error handling
+        onError?.({
+          code: "file_conversion_failed",
+          message: "Failed to process files. Please try again.",
+        });
+      });
   };
 
   // Render with or without local provider
@@ -811,18 +885,58 @@ export const PromptInputBody = ({ className, ...props }: PromptInputBodyProps) =
   <div className={cn("contents", className)} {...props} />
 );
 
-export type PromptInputTextareaProps = ComponentProps<typeof InputGroupTextarea>;
+export type PromptInputTextareaProps = ComponentProps<typeof InputGroupTextarea> & {
+  accept?: string;
+};
 
 /** Multiline text control for entering prompts. Handles Enter to submit. */
 export const PromptInputTextarea = ({
   onChange,
   className,
   placeholder = "What would you like to know?",
+  accept,
   ...props
 }: PromptInputTextareaProps) => {
   const controller = useOptionalPromptInputController();
   const attachments = usePromptInputAttachments();
   const [isComposing, setIsComposing] = useState(false);
+
+  const matchesAccept = useCallback(
+    (f: File) => {
+      if (!accept || accept.trim() === "") {
+        return true;
+      }
+      // Split accept string by comma and trim each entry
+      const acceptList = accept.split(",").map((a) => a.trim()).filter(Boolean);
+
+      // Check each accept entry
+      for (const entry of acceptList) {
+        if (entry === "*/*") {
+          return true;
+        }
+        if (entry.endsWith("/*")) {
+          // MIME type group, e.g. "image/*"
+          const group = entry.split("/")[0];
+          if (f.type.startsWith(group + "/")) {
+            return true;
+          }
+        } else if (entry.startsWith(".")) {
+          // File extension, e.g. ".pdf"
+          if (f.name.toLowerCase().endsWith(entry.toLowerCase())) {
+            return true;
+          }
+        } else {
+          // Specific MIME type, e.g. "application/pdf"
+          if (f.type === entry) {
+            return true;
+          }
+        }
+      }
+      // No match found
+      return false;
+    },
+    [accept]
+  );
 
   const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
     if (e.key === "Enter") {
@@ -850,30 +964,6 @@ export const PromptInputTextarea = ({
     }
   };
 
-  const handlePaste: ClipboardEventHandler<HTMLTextAreaElement> = (event) => {
-    const items = event.clipboardData?.items;
-
-    if (!items) {
-      return;
-    }
-
-    const files: File[] = [];
-
-    for (const item of items) {
-      if (item.kind === "file") {
-        const file = item.getAsFile();
-        if (file) {
-          files.push(file);
-        }
-      }
-    }
-
-    if (files.length > 0) {
-      event.preventDefault();
-      attachments.add(files);
-    }
-  };
-
   const controlledProps = controller
     ? {
         value: controller.textInput.value,
@@ -885,6 +975,43 @@ export const PromptInputTextarea = ({
     : {
         onChange,
       };
+
+  const handlePaste: ClipboardEventHandler<HTMLTextAreaElement> = (event) => {
+    const items = event.clipboardData?.items;
+
+    if (!items) {
+      return;
+    }
+
+    const acceptedFiles: File[] = [];
+    const rejectedFiles: File[] = [];
+
+    for (const item of items) {
+      if (item.kind === "file") {
+        const file = item.getAsFile();
+        if (file) {
+          if (matchesAccept(file)) {
+            acceptedFiles.push(file);
+          } else {
+            rejectedFiles.push(file);
+          }
+        }
+      }
+    }
+
+    if (acceptedFiles.length > 0) {
+      event.preventDefault();
+      attachments.add(acceptedFiles);
+    }
+
+    if (rejectedFiles.length > 0) {
+      // Log rejected files for debugging - in a real implementation,
+      // you might want to use a toast notification or other UI feedback
+      console.warn(
+        `Rejected pasted files: ${rejectedFiles.map((f) => f.name).join(", ")}`
+      );
+    }
+  };
 
   return (
     <InputGroupTextarea
@@ -1091,17 +1218,26 @@ declare global {
 export type PromptInputSpeechButtonProps = ComponentProps<typeof PromptInputButton> & {
   textareaRef?: RefObject<HTMLTextAreaElement | null>;
   onTranscriptionChange?: (text: string) => void;
+  speechRecognitionLang?: string; // Optional prop to set speech recognition language
 };
 
 export const PromptInputSpeechButton = ({
   className,
   textareaRef,
   onTranscriptionChange,
+  speechRecognitionLang,
   ...props
 }: PromptInputSpeechButtonProps) => {
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const lastProcessedFinalRef = useRef<string>("");
+
+  // Determine language: use prop if provided, otherwise use browser locale or fallback to 'en-US'
+  const lang =
+    speechRecognitionLang ||
+    (typeof navigator !== "undefined" && navigator.language) ||
+    "en-US";
 
   useEffect(() => {
     if (
@@ -1114,7 +1250,7 @@ export const PromptInputSpeechButton = ({
 
       speechRecognition.continuous = true;
       speechRecognition.interimResults = true;
-      speechRecognition.lang = "en-US";
+      speechRecognition.lang = lang;
 
       speechRecognition.onstart = () => {
         setIsListening(true);
@@ -1126,23 +1262,46 @@ export const PromptInputSpeechButton = ({
 
       speechRecognition.onresult = (event) => {
         let finalTranscript = "";
+        let interimTranscript = "";
 
         const results = Array.from(event.results);
 
         for (const result of results) {
           if (result.isFinal) {
             finalTranscript += result[0]?.transcript ?? "";
+          } else {
+            interimTranscript += result[0]?.transcript ?? "";
           }
         }
 
-        if (finalTranscript && textareaRef?.current) {
+        if (textareaRef?.current) {
           const textarea = textareaRef.current;
-          const currentValue = textarea.value;
-          const newValue = currentValue + (currentValue ? " " : "") + finalTranscript;
 
-          textarea.value = newValue;
-          textarea.dispatchEvent(new Event("input", { bubbles: true }));
-          onTranscriptionChange?.(newValue);
+          if (finalTranscript) {
+            // Add final transcript permanently
+            const currentValue = textarea.value;
+            const newValue = currentValue + (currentValue ? " " : "") + finalTranscript;
+
+            textarea.value = newValue;
+            lastProcessedFinalRef.current = newValue;
+            textarea.dispatchEvent(new Event("input", { bubbles: true }));
+            onTranscriptionChange?.(newValue);
+          } else if (interimTranscript) {
+            // Show interim transcript temporarily
+            const currentValue = textarea.value;
+            const baseValue = lastProcessedFinalRef.current;
+            const newValue =
+              baseValue +
+              (baseValue && currentValue !== baseValue ? " " : "") +
+              interimTranscript;
+
+            // Only update if different to avoid cursor jumps
+            if (textarea.value !== newValue) {
+              textarea.value = newValue;
+              textarea.dispatchEvent(new Event("input", { bubbles: true }));
+              onTranscriptionChange?.(newValue);
+            }
+          }
         }
       };
 
@@ -1160,7 +1319,7 @@ export const PromptInputSpeechButton = ({
         recognitionRef.current.stop();
       }
     };
-  }, [textareaRef, onTranscriptionChange]);
+  }, [textareaRef, onTranscriptionChange, lang]);
 
   const toggleListening = useCallback(() => {
     if (!recognition) {
