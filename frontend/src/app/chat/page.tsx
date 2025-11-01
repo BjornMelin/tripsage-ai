@@ -4,7 +4,7 @@
  */
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -111,69 +111,6 @@ export default function ChatPage() {
   >([]);
   const abortRef = useRef<AbortController | null>(null);
 
-  const handleSend = useCallback(async (text: string) => {
-    const id =
-      typeof crypto !== "undefined" && (crypto as any).randomUUID
-        ? // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-          (crypto as any).randomUUID()
-        : Math.random().toString(36).slice(2);
-    const user = {
-      id: `${id}-u`,
-      role: "user" as const,
-      parts: [{ type: "text", text }],
-    };
-    const assistant = {
-      id: `${id}-a`,
-      role: "assistant" as const,
-      parts: [{ type: "text", text: "" }],
-    };
-    setMessages((prev) => prev.concat([user, assistant]));
-
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-
-    const payload = {
-      messages: [
-        {
-          id: user.id,
-          role: "user",
-          content: [{ type: "text", text }],
-        },
-      ],
-    };
-
-    const res = await fetch("/api/chat/stream", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: ac.signal,
-    });
-
-    if (!res.ok || !res.body) return;
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const delta = decoder.decode(value);
-      setMessages((prev) => {
-        const next = [...prev];
-        const idx = next.findIndex((m) => m.id === assistant.id);
-        if (idx !== -1) {
-          const part = next[idx].parts[0];
-          next[idx] = {
-            ...next[idx],
-            parts: [{ ...part, text: (part.text || "") + delta }],
-          };
-        }
-        return next;
-      });
-    }
-  }, []);
-
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       <Conversation className="flex-1">
@@ -198,9 +135,74 @@ export default function ChatPage() {
         <PromptInputProvider>
           <PromptInput
             onSubmit={(msg: PromptInputMessage) => {
-              const text = msg.text?.trim() ?? "";
-              if (!text) return;
-              void handleSend(text);
+              const parts: any[] = [];
+              const text = (msg.text || "").trim();
+              if (text) parts.push({ type: "text", text });
+              if (Array.isArray(msg.files)) {
+                for (const f of msg.files) {
+                  parts.push({
+                    type: "file",
+                    url: f.url,
+                    media_type: f.mediaType,
+                    name: f.filename,
+                  });
+                }
+              }
+              if (parts.length === 0) return;
+
+              const userId = Math.random().toString(36).slice(2);
+              setMessages((prev: any[]) =>
+                prev.concat([{ id: userId, role: "user", parts }])
+              );
+
+              abortRef.current?.abort();
+              const ac = new AbortController();
+              abortRef.current = ac;
+
+              const payload = { messages: [{ id: userId, role: "user", parts }] };
+
+              void (async () => {
+                const res = await fetch("/api/chat/stream", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify(payload),
+                  signal: ac.signal,
+                });
+                if (!res.ok || !res.body) return;
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  buffer += decoder.decode(value, { stream: true });
+                  let idx;
+                  while ((idx = buffer.indexOf("\n\n")) !== -1) {
+                    const event = buffer.slice(0, idx).trim();
+                    buffer = buffer.slice(idx + 2);
+                    if (event.startsWith("data:")) {
+                      const dataStr = event.slice(5).trim();
+                      if (dataStr === "[DONE]") break;
+                      try {
+                        const msgObj = JSON.parse(dataStr) as any;
+                        if (msgObj?.role) {
+                          setMessages((prev: any[]) =>
+                            prev.concat([
+                              {
+                                id: msgObj.id || Math.random().toString(36).slice(2),
+                                role: msgObj.role,
+                                parts: msgObj.parts || [],
+                              },
+                            ])
+                          );
+                        }
+                      } catch {
+                        // ignore parse errors for non-JSON events
+                      }
+                    }
+                  }
+                }
+              })();
             }}
           >
             <PromptInputHeader>

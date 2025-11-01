@@ -344,7 +344,28 @@ export const useSearchStore = create<SearchOrchestratorState>()(
         const paramsStore = useSearchParamsStore.getState();
         const historyStore = useSearchHistoryStore.getState();
 
-        const { currentSearchType, currentParams } = paramsStore;
+        let { currentSearchType, currentParams } = paramsStore;
+
+        // If computed currentParams is not yet available, derive from slice state
+        if (currentSearchType && !currentParams) {
+          switch (currentSearchType) {
+            case "flight":
+              currentParams = paramsStore.flightParams as SearchParams;
+              break;
+            case "accommodation":
+              currentParams = paramsStore.accommodationParams as SearchParams;
+              break;
+            case "activity":
+              currentParams = paramsStore.activityParams as SearchParams;
+              break;
+            case "destination":
+              currentParams = paramsStore.destinationParams as SearchParams;
+              break;
+            default:
+              break;
+          }
+        }
+
         if (!currentSearchType || !currentParams) return null;
 
         return await historyStore.saveSearch(name, currentSearchType, currentParams);
