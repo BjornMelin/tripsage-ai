@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Chat page now consumes AI SDK v6 `useChat` + `DefaultChatTransport`, removing the bespoke SSE parser and wiring Supabase user IDs into the payload (`frontend/src/app/chat/page.tsx`).
 - Chat stream adapter now delegates to DI handler and builds the Upstash rate limiter lazily:
   - `frontend/src/app/api/chat/stream/route.ts`
 - Keys and sessions adapters delegate to their DI handlers:
@@ -47,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Token budget utilities release WASM tokenizer resources without `any` casts (`frontend/src/lib/tokens/budget.ts`).
 - Resolved hanging API tests by:
   - Injecting a finite AI stream stub in handler tests (no open handles)
   - Building Upstash rate limiters lazily (no module‑scope side effects)
@@ -56,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Centralized BYOK provider selection; preference order: openai → openrouter → anthropic → xai
 - OpenRouter and xAI wired via OpenAI-compatible client with per-user BYOK and required base URLs
 - Registry is SSR-only (`server-only`), never returns or logs secret material
+- Session message listing and creation stay scoped to the authenticated user (`frontend/src/app/api/chat/sessions/_handlers.ts`).
 
 ### Removed
 
