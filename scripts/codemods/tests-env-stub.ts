@@ -59,8 +59,45 @@ export default function transformer(file: FileInfo, api: API) {
 
   if (mutated) {
     ensureVitestImport(j, root);
+    // Ensure afterEach(() => vi.unstubAllEnvs()) exists
+    const hasAfterEachCall = root
+      .find(j.CallExpression, { callee: { type: 'Identifier', name: 'afterEach' } })
+      .some((p) => {
+        const cb = p.node.arguments[0];
+        if (!cb) return false;
+        // naive check for vi.unstubAllEnvs inside callback
+        const cbSrc = j(cb).toSource();
+        return cbSrc.includes('vi.unstubAllEnvs');
+      });
+    if (!hasAfterEachCall) {
+      // ensure afterEach is imported from vitest
+      const vitestImport = root.find(j.ImportDeclaration, { source: { value: 'vitest' } });
+      if (vitestImport.size() > 0) {
+        const decl = vitestImport.get();
+        const hasAfterEach = decl.node.specifiers?.some(
+          (s: any) => s.type === 'ImportSpecifier' && s.imported.name === 'afterEach'
+        );
+        if (!hasAfterEach) {
+          decl.node.specifiers = decl.node.specifiers || [];
+          decl.node.specifiers.push(j.importSpecifier(j.identifier('afterEach')));
+        }
+      } else {
+        root.get().node.program.body.unshift(
+          j.importDeclaration([j.importSpecifier(j.identifier('afterEach'))], j.literal('vitest'))
+        );
+      }
+      const afterEachStmt = j.expressionStatement(
+        j.callExpression(j.identifier('afterEach'), [
+          j.arrowFunctionExpression([], j.blockStatement([
+            j.expressionStatement(
+              j.callExpression(j.memberExpression(j.identifier('vi'), j.identifier('unstubAllEnvs')), [])
+            ),
+          ])),
+        ])
+      );
+      root.get().node.program.body.push(afterEachStmt);
+    }
   }
 
   return mutated ? root.toSource() : file.source;
 }
-

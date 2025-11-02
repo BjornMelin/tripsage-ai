@@ -39,7 +39,7 @@ vi.mock("@/lib/supabase/server", () => {
           _rows: rows,
           select: vi.fn(() => api),
           eq: vi.fn(() => api),
-          order: vi.fn(() => api),
+          order: vi.fn(async () => ({ data: api._rows, error: null })),
           limit: vi.fn(() => api),
           maybeSingle: vi.fn(async () => ({ data: api._rows[0] ?? null, error: null })),
           insert: vi.fn(async (payload: any) => {
@@ -50,10 +50,14 @@ vi.mock("@/lib/supabase/server", () => {
             }
             return { error: null };
           }),
-          delete: vi.fn(async () => {
-            store[table] = [];
-            return { error: null };
-          }),
+          delete: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(async () => {
+                store[table] = [];
+                return { error: null };
+              }),
+            })),
+          })),
         };
         return api;
       }),
