@@ -59,7 +59,7 @@ export default defineConfig({
     passWithNoTests: true,
     // Pools/workers: default to forks; prefer threads in CI for big suites
     pool: "threads",
-    maxWorkers: 1,
+    maxWorkers: isCI ? 2 : 1,
   },
   resolve: {
     alias: {

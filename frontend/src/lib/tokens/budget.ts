@@ -13,6 +13,13 @@ import o200kBase from "js-tiktoken/ranks/o200k_base";
 
 import { getModelContextLimit } from "./limits";
 
+/**
+ * Extended Tiktoken interface with optional free method for WASM cleanup.
+ */
+interface TiktokenWithFree extends Tiktoken {
+  free?: () => void;
+}
+
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
   content: string;
@@ -60,10 +67,10 @@ export function countTokens(texts: string[], modelHint?: string): number {
     try {
       for (const t of texts) total += enc.encode(t || "").length;
     } finally {
-      // Release underlying WASM resources to avoid leaks.
-      // `free` is available on js-tiktoken Tiktoken instances.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (enc as any).free?.();
+      // Release WASM resources if available.
+      if (typeof (enc as TiktokenWithFree).free === "function") {
+        (enc as TiktokenWithFree).free!();
+      }
     }
     return total;
   }
