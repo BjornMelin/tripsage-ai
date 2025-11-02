@@ -120,25 +120,26 @@ export type AgentStatus = z.infer<typeof AgentStatusSchema>;
 // Chat completion request schema
 export const ChatCompletionRequestSchema = z.object({
   messages: z.array(MessageSchema),
-  systemPrompt: z.string().optional(),
+  model: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().positive().optional(),
-  stream: z.boolean().optional(),
-  tools: z.array(z.unknown()).optional(),
+  tools: z.array(z.string()).optional(),
   attachments: z.array(AttachmentSchema).optional(),
 });
 export type ChatCompletionRequest = z.infer<typeof ChatCompletionRequestSchema>;
 
 // Chat completion response schema
 export const ChatCompletionResponseSchema = z.object({
-  id: z.string(),
-  message: MessageSchema,
+  content: z.string(),
+  model: z.string(),
+  reasons: z.array(z.string()).optional(),
   usage: z
     .object({
-      promptTokens: z.number(),
-      completionTokens: z.number(),
-      totalTokens: z.number(),
+      promptTokens: z.number().optional(),
+      completionTokens: z.number().optional(),
+      totalTokens: z.number().optional(),
     })
     .optional(),
+  durationMs: z.number().optional(),
 });
 export type ChatCompletionResponse = z.infer<typeof ChatCompletionResponseSchema>;

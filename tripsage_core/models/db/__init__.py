@@ -21,16 +21,7 @@ from .accommodation import (
 # API Key models
 from .api_key import ApiKeyCreate, ApiKeyDB, ApiKeyUpdate
 
-# Chat models
-from .chat import (
-    ChatMessageDB,
-    ChatSessionDB,
-    ChatSessionWithStats,
-    ChatToolCallDB,
-    MessageWithTokenEstimate,
-    RecentMessagesResponse,
-)
-
+# Chat DB models removed; chat endpoints are implemented in Next.js.
 # Flight models
 from .flight import (
     AirlineProvider,
@@ -84,11 +75,7 @@ __all__ = [
     "ApiKeyDB",
     "ApiKeyUpdate",
     "CancellationPolicy",
-    "ChatMessageDB",
-    # Chat models
-    "ChatSessionDB",
-    "ChatSessionWithStats",
-    "ChatToolCallDB",
+    # Chat DB models removed
     "DataSource",
     "EntityType",
     # Flight
@@ -98,12 +85,12 @@ __all__ = [
     "Memory",
     "MemoryCreate",
     "MemoryUpdate",
-    "MessageWithTokenEstimate",
+    # Removed: MessageWithTokenEstimate
     "OptionType",
     "PermissionLevel",
     # Price History
     "PriceHistory",
-    "RecentMessagesResponse",
+    # Removed: RecentMessagesResponse
     # Saved Option
     "SavedOption",
     # Itinerary Item - temporarily commented out

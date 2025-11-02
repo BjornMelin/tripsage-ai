@@ -14,12 +14,8 @@ from .base_models import (
     ValidationErrorDetail,
     ValidationErrorResponse,
 )
-from .chat import (
-    ChatContext,
-    ChatMessage,
-    ChatSession,
-    ToolCall,
-)
+
+# Chat schemas removed; frontend AI SDK provides chat message handling.
 from .enums import (
     AccommodationType,
     BookingStatus,
@@ -101,10 +97,7 @@ __all__ = [
     "BusinessHours",
     "CabinClass",
     "CancellationPolicy",
-    # Chat models
-    "ChatContext",
-    "ChatMessage",
-    "ChatSession",
+    # Chat models removed
     # Validators
     "Coordinates",
     "Currency",
@@ -132,7 +125,7 @@ __all__ = [
     "SavedFlightResponse",
     "SuccessResponse",
     "TimeRange",
-    "ToolCall",
+    # ToolCall removed with chat schemas
     "TransportationPreferences",
     "TransportationType",
     "TripDestination",

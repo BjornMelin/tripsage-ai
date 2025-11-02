@@ -11,17 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Dependency-injected handlers for App Router APIs:
   - Chat stream: `frontend/src/app/api/chat/stream/_handler.ts`
+  - Chat (non-stream): `frontend/src/app/api/chat/_handler.ts`
   - Keys (BYOK): `frontend/src/app/api/keys/_handlers.ts`
   - Sessions/messages: `frontend/src/app/api/chat/sessions/_handlers.ts`
 - Attachment utilities and validation:
   - `frontend/src/app/api/_helpers/attachments.ts`
 - Deterministic Vitest suites for handlers and adapter smokes:
   - Chat stream handler and route smokes under `frontend/src/app/api/chat/stream/__tests__/`
+  - Chat non-stream handler and route smokes under `frontend/src/app/api/chat/__tests__/`
   - Keys and sessions handler tests under `frontend/src/app/api/keys/__tests__/` and `frontend/src/app/api/chat/sessions/__tests__/`
 - Frontend agent guidelines for DI handlers, thin adapters, lazy RL, and testing:
   - `frontend/AGENTS.md`
 - ADR documenting DI handlers + thin adapters testing strategy:
   - `docs/adrs/adr-0029-di-route-handlers-and-testing.md`
+  - `docs/adrs/adr-0031-nextjs-chat-api-ai-sdk-v6.md` (Next.js chat API canonical)
+  - `docs/specs/spec-chat-api-sse-nonstream.md` (contracts and errors)
 - Provider registry and resolution (server-only) returning AI SDK v6 `LanguageModel`:
   - `frontend/src/lib/providers/registry.ts` (`resolveProvider(userId, modelHint?)`)
   - `frontend/src/lib/providers/types.ts`, `frontend/src/lib/settings.ts`
@@ -37,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Chat page now consumes AI SDK v6 `useChat` + `DefaultChatTransport`, removing the bespoke SSE parser and wiring Supabase user IDs into the payload (`frontend/src/app/chat/page.tsx`).
 - Chat stream adapter now delegates to DI handler and builds the Upstash rate limiter lazily:
   - `frontend/src/app/api/chat/stream/route.ts`
+- Chat non-stream route added with DI handler, usage mapping, image-only validation, and RL parity (40/min):
+  - `frontend/src/app/api/chat/route.ts`, `frontend/src/app/api/chat/_handler.ts`
+- Stream emits `resumableId` in start metadata; client `useChat` wired with `resume: true` and reconnect transport; a brief "Reconnected" toast is shown after resume.
+- OpenAPI snapshot updated to reflect removal of Python chat endpoints.
 - Keys and sessions adapters delegate to their DI handlers:
   - `frontend/src/app/api/keys/route.ts`
   - `frontend/src/app/api/chat/sessions/route.ts`
@@ -65,8 +73,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python provider wrappers and tests removed (see Breaking Changes)
 - FastAPI chat router and schemas removed; chat moved to Next.js AI SDK v6
   - Deleted: `tripsage/api/routers/chat.py`, `tripsage/api/schemas/chat.py`
-  - Removed ChatAgent and chat service wiring: `tripsage/agents/chat.py`, ChatAgent initialization in `tripsage/api/main.py`, chat service from `tripsage/app_state.py`, ChatService from `tripsage_core/services/business/chat_service.py`
-  - Deleted tests and fixtures tied to Python chat: `tests/integration/api/test_chat_streaming.py`, `tests/e2e/test_agent_config_flow.py`, `tests/fixtures/http.py`, and `tests/unit/agents/test_create_agent.py`
+  - Pruned router import list: `tripsage/api/routers/__init__.py`
+- Removed ChatAgent and chat service wiring: `tripsage/agents/chat.py`, ChatAgent initialization in `tripsage/api/main.py`, chat service from `tripsage/app_state.py`, ChatService from `tripsage_core/services/business/chat_service.py`
+- Deleted tests and fixtures tied to Python chat: `tests/integration/api/test_chat_streaming.py`, `tests/e2e/test_agent_config_flow.py`, `tests/fixtures/http.py`, and `tests/unit/agents/test_create_agent.py`
+- Core chat models and orchestration removed from Python:
+  - Deleted: `tripsage_core/models/db/chat.py`, `tripsage_core/models/schemas_common/chat.py`, `tripsage_core/services/business/chat_orchestration.py`, `tests/factories/chat.py`
+  - Updated exports to remove chat DB/schemas: `tripsage_core/models/db/__init__.py`, `tripsage_core/models/schemas_common/__init__.py`, `tripsage_core/models/__init__.py`
 
 ### Security
 

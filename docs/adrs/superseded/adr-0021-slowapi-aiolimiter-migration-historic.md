@@ -1,11 +1,10 @@
 # ADR-0021: SlowAPI + Aiolimiter Migration (Historic)
 
-Version: 1.0.0
-Status: Deprecated
-Date: 2025-10-24
+**Version**: 1.0.0
+**Status**: Superseded
+**Date**: 2025-10-24
 **Category**: backend
 **Domain**: SlowAPI / Aiolimiter
-Owner: Platform
 
 ## Context
 
