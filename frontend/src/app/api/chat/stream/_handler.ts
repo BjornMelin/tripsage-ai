@@ -170,12 +170,6 @@ export async function handleChatStream(
     { role: "user", content: textParts.join(" ") },
   ];
   const { maxTokens, reasons } = clampMaxTokens(clampInput, desired, provider.modelId);
-  if (maxTokens <= 0) {
-    return new Response(
-      JSON.stringify({ error: "No output tokens available", reasons }),
-      { status: 400, headers: { "content-type": "application/json" } }
-    );
-  }
 
   // Stream via AI SDK (DI allows tests to inject a finite stream stub)
   const stream = deps.stream ?? defaultStreamText;
@@ -186,7 +180,10 @@ export async function handleChatStream(
     messages: convertToModelMessages(messages),
   });
 
-  const reqId = Math.random().toString(36).slice(2);
+  const reqId =
+    typeof globalThis.crypto?.randomUUID === "function"
+      ? globalThis.crypto.randomUUID()
+      : Math.random().toString(36).slice(2);
   deps.logger?.info?.("chat_stream:start", {
     requestId: reqId,
     userId: user.id,

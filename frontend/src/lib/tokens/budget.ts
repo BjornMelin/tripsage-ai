@@ -68,8 +68,9 @@ export function countTokens(texts: string[], modelHint?: string): number {
       for (const t of texts) total += enc.encode(t || "").length;
     } finally {
       // Release WASM resources if available.
-      if (typeof (enc as TiktokenWithFree).free === "function") {
-        (enc as TiktokenWithFree).free!();
+      const tokenizer = enc as TiktokenWithFree;
+      if (typeof tokenizer.free === "function") {
+        tokenizer.free();
       }
     }
     return total;
