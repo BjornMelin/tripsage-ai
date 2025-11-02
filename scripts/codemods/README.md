@@ -21,13 +21,13 @@ npx jscodeshift -v
 Run (dry-run):
 
 ```bash
-npx jscodeshift -t scripts/codemods/ai-route-v6-upgrade.ts "frontend/src/app/**/route.ts" --parser=ts -d -p
+npx jscodeshift -t scripts/codemods/ai-route-v6-upgrade.js "frontend/src/app/**/route.ts" --parser=ts -d -p
 ```
 
 Apply:
 
 ```bash
-npx jscodeshift -t scripts/codemods/ai-route-v6-upgrade.ts "frontend/src/app/**/route.ts" --parser=ts
+npx jscodeshift -t scripts/codemods/ai-route-v6-upgrade.js "frontend/src/app/**/route.ts" --parser=ts
 ```
 
 ### ai-chat-messages-convert
@@ -35,7 +35,7 @@ npx jscodeshift -t scripts/codemods/ai-route-v6-upgrade.ts "frontend/src/app/**/
 - Wraps `streamText({ messages })` with `convertToModelMessages(messages)`.
 
 ```bash
-npx jscodeshift -t scripts/codemods/ai-chat-messages-convert.ts "frontend/src/**/*.{ts,tsx}" --parser=ts -d -p
+npx jscodeshift -t scripts/codemods/ai-chat-messages-convert.js "frontend/src/**/*.{ts,tsx}" --parser=ts -d -p
 ```
 
 ### tests-env-stub
@@ -43,7 +43,7 @@ npx jscodeshift -t scripts/codemods/ai-chat-messages-convert.ts "frontend/src/**
 - Replaces `process.env.FOO = 'bar'` in tests with `vi.stubEnv('FOO','bar')` and ensures `vi` import.
 
 ```bash
-npx jscodeshift -t scripts/codemods/tests-env-stub.ts "frontend/src/**/*.{test.ts,test.tsx}" --parser=ts -d -p
+npx jscodeshift -t scripts/codemods/tests-env-stub.js "frontend/src/**/*.{test.ts,test.tsx}" --parser=ts -d -p
 ```
 
 ### vitest-mock-unify
@@ -51,7 +51,7 @@ npx jscodeshift -t scripts/codemods/tests-env-stub.ts "frontend/src/**/*.{test.t
 - Converts `vi.mocked(require('module').Identifier)` → `vi.mocked(Identifier)` with named import.
 
 ```bash
-npx jscodeshift -t scripts/codemods/vitest-mock-unify.ts "frontend/src/**/*.{test.ts,test.tsx}" --parser=ts -d -p
+npx jscodeshift -t scripts/codemods/vitest-mock-unify.js "frontend/src/**/*.{test.ts,test.tsx}" --parser=ts -d -p
 ```
 
 ## Workflow
