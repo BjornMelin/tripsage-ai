@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Search store orchestrator using Zustand for managing search state,
+ * coordinating multiple slice stores, and providing high-level search operations
+ * with cross-store synchronization and workflow management.
+ */
+
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import type {
@@ -54,7 +60,14 @@ interface SearchOrchestratorState {
   };
 }
 
-// Main search store that orchestrates the slice stores
+/**
+ * Zustand store hook for orchestrating search operations across multiple slice stores.
+ *
+ * Provides high-level search workflow management, cross-store synchronization,
+ * and coordinated operations for search parameters, results, filters, and history.
+ *
+ * @returns The search store orchestrator hook with state and actions.
+ */
 export const useSearchStore = create<SearchOrchestratorState>()(
   devtools(
     (_set, get) => ({

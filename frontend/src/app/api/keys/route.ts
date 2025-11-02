@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { buildRateLimitKey } from "@/lib/next/route-helpers";
 import { insertUserApiKey } from "@/lib/supabase/rpc";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { getKeys, postKey } from "./_handlers";
 
 /**
  * Set of allowed API service providers for key storage.
@@ -18,33 +19,26 @@ import { createServerSupabase } from "@/lib/supabase/server";
 const ALLOWED_SERVICES = new Set(["openai", "openrouter", "anthropic", "xai"]);
 
 /**
- * Upstash Redis REST URL for rate limiting.
- */
-const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
-
-/**
- * Upstash Redis REST token for rate limiting.
- */
-const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-/**
  * Prefix for rate limit keys in Redis.
  */
 const RATELIMIT_PREFIX = "ratelimit:keys";
 
 /**
- * Rate limiter instance for API key endpoints. Configured with a sliding window
- * of 10 requests per minute per client.
+ * Builds a rate limiter instance if Redis environment variables are configured.
+ *
+ * @returns Ratelimit instance or undefined if Redis is not configured.
  */
-const ratelimitInstance =
-  UPSTASH_URL && UPSTASH_TOKEN
-    ? new Ratelimit({
-        redis: Redis.fromEnv(),
-        limiter: Ratelimit.slidingWindow(10, "1 m"),
-        analytics: true,
-        prefix: RATELIMIT_PREFIX,
-      })
-    : undefined;
+function buildRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return undefined;
+  return new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.slidingWindow(10, "1 m"),
+    analytics: true,
+    prefix: RATELIMIT_PREFIX,
+  });
+}
 
 /**
  * Handle POST /api/keys to insert or replace a user's provider API key.
@@ -54,6 +48,7 @@ const ratelimitInstance =
  */
 export async function POST(req: NextRequest) {
   try {
+    const ratelimitInstance = buildRateLimiter();
     if (ratelimitInstance) {
       const identifier = buildRateLimitKey(req);
       const { success, limit, remaining, reset } =
@@ -101,28 +96,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const normalizedService = service.trim().toLowerCase();
-    if (!ALLOWED_SERVICES.has(normalizedService)) {
-      return NextResponse.json(
-        { error: "Unsupported service", code: "BAD_REQUEST" },
-        { status: 400 }
-      );
-    }
-
-    // Validate authenticated user from SSR cookies
     const supabase = await createServerSupabase();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Store key via SECURITY DEFINER RPC (admin client inside helper)
-    await insertUserApiKey(user.id, normalizedService, api_key);
-
-    return new NextResponse(null, { status: 204 });
+    return postKey(
+      { supabase, insertUserApiKey: (u, s, k) => insertUserApiKey(u, s, k) },
+      { service, api_key }
+    );
   } catch (err) {
     // Redact potential secrets from logs
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -144,30 +122,7 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   try {
     const supabase = await createServerSupabase();
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const { data, error } = await supabase
-      .from("api_keys")
-      .select("service_name, created_at, last_used_at")
-      .eq("user_id", auth.user.id)
-      .order("service_name", { ascending: true });
-    if (error) {
-      return NextResponse.json(
-        { error: "Failed to fetch keys", code: "DB_ERROR" },
-        { status: 500 }
-      );
-    }
-    const rows = data ?? [];
-    const payload = rows.map((r: any) => ({
-      service: String(r.service_name),
-      created_at: String(r.created_at),
-      last_used: r.last_used_at ?? null,
-      has_key: true,
-      is_valid: true,
-    }));
-    return NextResponse.json(payload, { status: 200 });
+    return getKeys({ supabase });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("/api/keys GET error:", { message });
