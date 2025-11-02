@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from fastapi.testclient import TestClient
 
@@ -30,6 +31,17 @@ def test_openapi_snapshot_matches() -> None:
         "> tests/unit/api/policy/openapi_snapshot.json"
     )
     snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+
+    # Exclude legacy chat endpoints that are now implemented in Next.js AI SDK.
+    def _strip_chat_paths(spec: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        paths = dict(spec.get("paths", {}))
+        filtered = {k: v for k, v in paths.items() if not k.startswith("/api/chat")}
+        spec = dict(spec)
+        spec["paths"] = filtered
+        return spec
+
+    current = _strip_chat_paths(current)
+    snapshot = _strip_chat_paths(snapshot)
 
     assert current == snapshot, (
         "OpenAPI schema changed. If intentional (additive and approved), "
