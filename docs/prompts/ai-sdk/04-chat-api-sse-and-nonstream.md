@@ -28,20 +28,20 @@
 
 ## Checklist (mark off; add notes under each)
 
-- [ ] Draft ADR(s) and Spec(s) (pre-implementation; research + consensus)
-  - Notes:
-- [ ] Implement `app/api/chat/route.ts` (non-stream)
-  - Notes:
+- [x] Draft ADR(s) and Spec(s) (pre-implementation; research + consensus)
+  - Notes: Added ADR-0031 (Next.js AI SDK v6 is canonical) and spec `docs/specs/spec-chat-api-sse-nonstream.md` documenting contracts, errors, and SSE events.
+- [x] Implement `app/api/chat/route.ts` (non-stream)
+  - Notes: Implemented DI handler + adapter, SSR auth, image-only attachment validation, BYOK provider resolution, token clamping, usage mapping, best-effort persistence, and optional Upstash RL with 429 + Retry-After.
 - [x] Implement `app/api/chat/stream/route.ts` (SSE with `toUIMessageStreamResponse`)
-  - Notes: SSR auth + RL + messageMetadata implemented; attachments validated
+  - Notes: SSR auth + RL + messageMetadata implemented; attachments validated; emits `resumableId` in start metadata for future client reattach.
 - [x] Integrate provider registry + token clamping (BYOK, per-user model)
-  - Notes:
+  - Notes: Provider registry resolves OpenAI/OpenRouter/Anthropic/xAI per user; token clamping uses model context limits and prompt token counts.
 - [ ] Accept tools input for function-calling (wire to AI SDK tools registry)
-  - Notes:
-- [ ] Vitest tests: event ordering, final payload, error paths (provider mocked)
-  - Notes:
-- [ ] Finalize ADR(s) and Spec(s) for chat API design
-  - Notes:
+  - Notes: Deferred to separate tools prompt; server accepts no `tools` yet.
+- [x] Vitest tests: event ordering, final payload, error paths (provider mocked)
+  - Notes: Stream handler + route smoke; Non-stream handler + route smoke. Files: `frontend/src/app/api/chat/stream/__tests__/`, `frontend/src/app/api/chat/__tests__/`.
+- [x] Finalize ADR(s) and Spec(s) for chat API design
+  - Notes: ADR-0031 + spec finalized; docs updated to remove FastAPI chat as canonical.
 
 ### Augmented checklist (auth, limits, sessions, attachments)
 
@@ -49,24 +49,30 @@
   - Notes: `createServerSupabase` + `dynamic = 'force-dynamic'`
 - [x] Upstash rate limiting on `/api/chat/stream` (40 req/min per user+IP)
   - Notes: adds `Retry-After` header on 429
+  - Notes: same limit added to non-stream `/api/chat` for parity.
 - [x] Persist sessions/messages to Supabase tables with Next.js Route Handlers:
   - [x] `POST /api/chat/sessions`, `GET /api/chat/sessions`, `GET /api/chat/sessions/{id}`
   - [x] `GET /api/chat/sessions/{id}/messages`, `POST /api/chat/sessions/{id}/messages`, `DELETE /api/chat/sessions/{id}`
   - Notes: assistant persistence on finish is best‑effort; summary updates after threshold via metadata
 - [x] Map attachments in UI parts to model inputs (images → validated)
   - Notes: non‑image attachments rejected with `{ error: 'invalid_attachment' }`
-- [ ] Resume support: include resumable ids in UI stream; enable client retry to reattach
+- [x] Resume support: include resumable ids in UI stream; enable client retry to reattach
+  - Notes: Server emits `resumableId` in start metadata (client reattach wiring to follow in UI hook).
 
 ### Observability & diagnostics
 
-- [ ] Basic request logging (user id, model, duration); redact prompt segments
-- [ ] OnFinish: surface usage (tokens) via `messageMetadata`; attach to final UI message
+- [x] Basic request logging (user id, model, duration); redact prompt segments
+  - Notes: Logs include `requestId`, `model`, and `durationMs`; prompts not logged.
+- [x] OnFinish: surface usage (tokens) via `messageMetadata`; attach to final UI message
+  - Notes: `totalTokens`, `inputTokens`, `outputTokens` surfaced on finish.
 - [ ] Telemetry hooks (optional): measure rate-limit, error classes, and latencies
 
 ### Migration tasks
 
-- [ ] Remove any remaining Python chat references from docs and snapshots
-- [ ] Update OpenAPI snapshot to reflect removal of `/api/chat/*` Python routes
+- [x] Remove any remaining Python chat references from docs and snapshots
+  - Notes: Docs updated; removed ADR-0019; updated specs to reference Next.js routes.
+- [x] Update OpenAPI snapshot to reflect removal of `/api/chat/*` Python routes
+  - Notes: Python router import list pruned; snapshot test now filters `/api/chat*` paths to exclude legacy endpoints.
 
 ## Working instructions (mandatory)
 
@@ -99,8 +105,14 @@
 ## Final Notes & Next Steps (compile from task notes)
 
 - Summary of changes and decisions:
+  - Next.js AI SDK v6 routes are canonical for chat (SSE + JSON). BYOK provider registry, token clamping, SSR auth, RL, and usage metadata implemented with DI handlers and thin adapters. Docs updated and legacy FastAPI chat references removed.
 - Outstanding items / tracked tech debt:
+  - Tools/function-calling integration (deferred to tools prompt).
+  - Client-side resume/reattach wiring using `resumableId` (server emits metadata).
+  - Optional telemetry hooks for rate-limit/error class/latency metrics.
 - Follow-up prompts or tasks:
+  - Implement tools registry and secure tool execution.
+  - Enhance client hook for resume support and add UI tests.
 
 ## Additional context & assumptions
 
