@@ -43,8 +43,11 @@ vi.mock("@/lib/supabase/server", () => {
           limit: vi.fn(() => api),
           maybeSingle: vi.fn(async () => ({ data: api._rows[0] ?? null, error: null })),
           insert: vi.fn(async (payload: any) => {
-            if (Array.isArray(payload)) payload.forEach((p) => rows.push(p));
-            else rows.push(payload);
+            if (Array.isArray(payload)) {
+              for (const p of payload) rows.push(p);
+            } else {
+              rows.push(payload);
+            }
             return { error: null };
           }),
           delete: vi.fn(async () => {

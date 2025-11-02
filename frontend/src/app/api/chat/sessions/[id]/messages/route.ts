@@ -45,7 +45,11 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     const supabase = await createServerSupabase();
     const sessionId = ctx.params.id;
     let body: any;
-    try { body = await req.json(); } catch { return NextResponse.json({ error: "bad_request" }, { status: 400 }); }
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "bad_request" }, { status: 400 });
+    }
     return createMessage({ supabase }, sessionId, body);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

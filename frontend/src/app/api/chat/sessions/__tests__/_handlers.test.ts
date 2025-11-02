@@ -34,12 +34,10 @@ function supabase(userId: string | null, store: { sessions: any[]; messages: any
           }),
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
-          order: vi
-            .fn()
-            .mockResolvedValue({
-              data: store.sessions.filter((s) => s.user_id === userId),
-              error: null,
-            }),
+          order: vi.fn().mockResolvedValue({
+            data: store.sessions.filter((s) => s.user_id === userId),
+            error: null,
+          }),
           delete: vi.fn().mockReturnThis(),
           maybeSingle: vi.fn(async () => ({
             data: store.sessions.find((s) => s.id) ?? null,
@@ -55,12 +53,10 @@ function supabase(userId: string | null, store: { sessions: any[]; messages: any
           }),
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
-          order: vi
-            .fn()
-            .mockResolvedValue({
-              data: store.messages.filter((m) => m.session_id),
-              error: null,
-            }),
+          order: vi.fn().mockResolvedValue({
+            data: store.messages.filter((m) => m.session_id),
+            error: null,
+          }),
         } as any;
       }
       return {} as any;
