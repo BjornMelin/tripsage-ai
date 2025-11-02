@@ -1,12 +1,12 @@
 # Spec: AI SDK v5 Migration (Client + Route)
 
 **Version**: 1.1.0
-**Status**: Accepted
+**Status**: Superseded by ADR-0031 (2025-11-02)
 **Date**: 2025-10-24
 
 ## Objective
 
-Align the AI-related client code and documentation with ADR-0019. The frontend calls the FastAPI chat endpoint directly; no Next.js AI SDK Route Handler is maintained. We retain AI SDK references in docs for future consideration only.
+Superseded by ADR-0031. Frontend hosts Next.js AI SDK v6 routes for chat: `/api/chat` (non-stream) and `/api/chat/stream` (SSE). Remove references to FastAPI chat as canonical and route via Next.js handlers.
 
 ## Implementation Checklist
 
@@ -16,7 +16,7 @@ Client
 
 Server Route
 
-- [x] No Next.js chat Route Handler; canonical endpoint remains FastAPI `/api/v1/chat/` (see ADR-0019).
+- [x] Next.js chat Route Handlers are canonical: `/api/chat` (JSON) and `/api/chat/stream` (SSE).
 
 Transport
 
@@ -25,7 +25,7 @@ Transport
 Docs
 
 - [x] ADR-0015 documents the original v5 migration.
-- [x] ADR-0019 documents canonicalization to FastAPI.
+- [x] ADR-0031 documents adoption of Next.js AI SDK v6 as canonical chat API.
 
 Validation
 
@@ -33,5 +33,4 @@ Validation
 
 ## Changelog
 
-- 1.1.0 (2025-10-24) — Switch documentation from JSON response to SSE streaming via `/api/chat/stream`; add version metadata.
-- 1.0.0 (2025-10-23) — Initial alignment to ADR-0019 (FastAPI canonical backend).
+- 1.2.0 (2025-11-02) — Superseded: Next.js AI SDK v6 routes are canonical (ADR-0031). Remove FastAPI chat references.

@@ -1,14 +1,14 @@
 /**
- * @fileoverview Pure handler for chat streaming. SSR wiring lives in the route adapter.
- *
- * The handler composes validation, memory hydration, token clamping, and AI SDK
- * streaming. It is fully dependency-injected to ensure deterministic tests.
+ * @fileoverview Pure handler for non-streaming chat responses. SSR wiring lives
+ * in the route adapter. Mirrors streaming handler semantics: auth, attachments
+ * validation, provider resolution, token clamping, and usage metadata.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LanguageModel, UIMessage } from "ai";
-import { convertToModelMessages, streamText as defaultStreamText } from "ai";
+import { convertToModelMessages, generateText as defaultGenerateText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
+import type { ChatMessageInsert } from "@/lib/supabase/database.types";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import {
   type ChatMessage as ClampMsg,
   clampMaxTokens,
@@ -19,9 +19,9 @@ import { getModelContextLimit } from "@/lib/tokens/limits";
 /**
  * Type representing a resolved AI provider configuration.
  *
- * @property provider - The AI provider name (e.g., 'openai', 'anthropic').
- * @property modelId - The specific model identifier (e.g., 'gpt-4o-mini').
- * @property model - The AI SDK LanguageModel instance.
+ * @param provider - The provider.
+ * @param modelId - The model ID.
+ * @param model - The model.
  */
 export type ProviderResolution = {
   provider: string;
@@ -30,7 +30,7 @@ export type ProviderResolution = {
 };
 
 /**
- * Function type for resolving AI provider configurations.
+ * Type representing a function that resolves an AI provider configuration.
  *
  * @param userId - The user ID for the chat.
  * @param modelHint - An optional model hint to resolve.
@@ -42,44 +42,36 @@ export type ProviderResolver = (
 ) => Promise<ProviderResolution>;
 
 /**
- * Function type for rate limiting requests.
- *
- * @param identifier - The identifier for the chat.
- * @returns Promise resolving to a dict with success, limit, remaining, and reset.
- */
-export type RateLimiter = (identifier: string) => Promise<{
-  success: boolean;
-  limit?: number;
-  remaining?: number;
-  reset?: number;
-}>;
-
-/**
- * Interface defining dependencies required for chat stream handling.
+ * Type representing the dependencies for non-streaming chat handling.
  *
  * @param supabase - The Supabase client.
  * @param resolveProvider - The function to resolve an AI provider configuration.
- * @param limit - The function to limit the chat.
  * @param logger - The logger.
  * @param clock - The clock.
  * @param config - The configuration.
- * @param stream - The function to stream the chat.
+ * @param generate - The function to generate text.
+ * @param limit - The function to limit the chat.
  */
-export interface ChatDeps {
-  supabase: SupabaseClient<any>;
+export interface NonStreamDeps {
+  supabase: TypedServerSupabase;
   resolveProvider: ProviderResolver;
-  limit?: RateLimiter;
   logger?: {
     info: (msg: string, meta?: any) => void;
     error: (msg: string, meta?: any) => void;
   };
   clock?: { now: () => number };
   config?: { defaultMaxTokens?: number };
-  stream?: typeof defaultStreamText;
+  generate?: typeof defaultGenerateText;
+  limit?: (identifier: string) => Promise<{
+    success: boolean;
+    limit?: number;
+    remaining?: number;
+    reset?: number;
+  }>;
 }
 
 /**
- * Interface defining the payload structure for chat stream requests.
+ * Type representing the payload for non-streaming chat handling.
  *
  * @param messages - The messages.
  * @param session_id - The session ID.
@@ -87,7 +79,7 @@ export interface ChatDeps {
  * @param desiredMaxTokens - The desired maximum tokens.
  * @param ip - The IP address.
  */
-export interface ChatPayload {
+export interface NonStreamPayload {
   messages?: UIMessage[];
   session_id?: string;
   model?: string;
@@ -96,19 +88,20 @@ export interface ChatPayload {
 }
 
 /**
- * Handles chat streaming requests with authentication, rate limiting, and AI SDK integration.
+ * Handle non-streaming chat completion with dependency injection for tests.
+ * Returns JSON with content, model, and optional usage.
  *
- * @param deps - Dependencies required for chat stream handling.
+ * @param deps - Dependencies required for chat handling.
  * @param payload - Chat request payload containing messages and configuration.
- * @returns Promise resolving to a Response with streamed chat data.
+ * @returns Promise resolving to a Response with chat completion data.
  */
-export async function handleChatStream(
-  deps: ChatDeps,
-  payload: ChatPayload
+export async function handleChatNonStream(
+  deps: NonStreamDeps,
+  payload: NonStreamPayload
 ): Promise<Response> {
   const startedAt = deps.clock?.now?.() ?? Date.now();
 
-  // SSR auth via injected supabase
+  // SSR auth
   const { data: auth } = await deps.supabase.auth.getUser();
   const user = auth?.user ?? null;
   if (!user) {
@@ -120,7 +113,7 @@ export async function handleChatStream(
 
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
 
-  // Rate limit
+  // Optional rate limit
   if (deps.limit) {
     const identifier = `${user.id}:${payload.ip ?? "unknown"}`;
     const { success } = await deps.limit(identifier);
@@ -132,7 +125,7 @@ export async function handleChatStream(
     }
   }
 
-  // Validate attachments
+  // Validate attachments (image/* only)
   const att = validateImageAttachments(messages);
   if (!att.valid) {
     return new Response(
@@ -147,10 +140,10 @@ export async function handleChatStream(
     (payload.model || "").trim() || undefined
   );
 
-  // Memory hydration: prepend system prompt with a short memory summary if present
+  // Memory hydration (best-effort)
   let systemPrompt = "You are a helpful travel planning assistant.";
   try {
-    const { data: memRows } = await (deps.supabase as any)
+    const { data: memRows } = await deps.supabase
       .from("memories")
       .select("content")
       .eq("user_id", user.id)
@@ -164,7 +157,7 @@ export async function handleChatStream(
     // ignore
   }
 
-  // Tokens clamp
+  // Token clamp
   const desired = Number.isFinite(payload.desiredMaxTokens as number)
     ? Math.max(1, Math.floor(payload.desiredMaxTokens!))
     : (deps.config?.defaultMaxTokens ?? 1024);
@@ -188,73 +181,53 @@ export async function handleChatStream(
   ];
   const { maxTokens, reasons } = clampMaxTokens(clampInput, desired, provider.modelId);
 
-  // Stream via AI SDK (DI allows tests to inject a finite stream stub)
-  const stream = deps.stream ?? defaultStreamText;
-  const result = stream({
+  const generate = deps.generate ?? defaultGenerateText;
+  const result = await generate({
     model: provider.model,
     system: systemPrompt,
     maxOutputTokens: maxTokens,
     messages: convertToModelMessages(messages),
   });
 
-  const reqId =
-    typeof globalThis.crypto?.randomUUID === "function"
-      ? globalThis.crypto.randomUUID()
-      : Math.random().toString(36).slice(2);
-  deps.logger?.info?.("chat_stream:start", {
-    requestId: reqId,
+  const usage = result.usage
+    ? {
+        promptTokens: (result.usage as any).promptTokens,
+        completionTokens: (result.usage as any).completionTokens,
+        totalTokens: result.usage.totalTokens,
+      }
+    : undefined;
+
+  const body = {
+    content: result.text ?? "",
+    model: provider.modelId,
+    reasons,
+    usage,
+    durationMs: (deps.clock?.now?.() ?? Date.now()) - startedAt,
+  } as const;
+
+  // Best-effort persistence for assistant message metadata
+  const sessionId = payload.session_id;
+  if (sessionId) {
+    try {
+      await (deps.supabase as unknown as any).from("chat_messages").insert({
+        session_id: sessionId,
+        role: "assistant",
+        content: result.text ?? "",
+        metadata: body as any,
+      } as ChatMessageInsert);
+    } catch {
+      // ignore persistence errors
+    }
+  }
+
+  deps.logger?.info?.("chat_non_stream:finish", {
     userId: user.id,
     model: provider.modelId,
+    durationMs: body.durationMs,
   });
 
-  const sessionId = payload.session_id;
-
-  return result.toUIMessageStreamResponse({
-    originalMessages: messages,
-    messageMetadata: async ({ part }) => {
-      if (part.type === "start") {
-        // Provide a resumable id to help clients reattach to ongoing streams.
-        return {
-          requestId: reqId,
-          model: provider.modelId,
-          reasons,
-          // `resumableId` duplicates `requestId` but is specifically used by the AI SDK client
-          // for reconnection attempts, while `requestId` is for logging/tracing.
-          resumableId: reqId,
-        } as const;
-      }
-      if (part.type === "finish") {
-        const meta = {
-          totalTokens: part.totalUsage?.totalTokens ?? undefined,
-          inputTokens: part.totalUsage?.inputTokens ?? undefined,
-          outputTokens: part.totalUsage?.outputTokens ?? undefined,
-          model: provider.modelId,
-          requestId: reqId,
-          durationMs: (deps.clock?.now?.() ?? Date.now()) - startedAt,
-        } as const;
-        deps.logger?.info?.("chat_stream:finish", meta);
-        if (sessionId) {
-          try {
-            await (deps.supabase as any).from("chat_messages").insert({
-              session_id: sessionId,
-              role: "assistant",
-              content: "(streamed)",
-              metadata: meta as any,
-            });
-          } catch {
-            /* ignore */
-          }
-        }
-        return meta;
-      }
-      return undefined;
-    },
-    onError: (err) => {
-      deps.logger?.error?.("chat_stream:error", {
-        requestId: reqId,
-        message: String((err as any)?.message || err),
-      });
-      return "An error occurred while processing your request.";
-    },
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "content-type": "application/json" },
   });
 }
