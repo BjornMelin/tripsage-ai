@@ -218,6 +218,8 @@ export async function handleChatStream(
           requestId: reqId,
           model: provider.modelId,
           reasons,
+          // `resumableId` duplicates `requestId` but is specifically used by the AI SDK client
+          // for reconnection attempts, while `requestId` is for logging/tracing.
           resumableId: reqId,
         } as const;
       }

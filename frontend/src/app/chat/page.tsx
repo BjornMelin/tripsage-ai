@@ -190,14 +190,14 @@ export default function ChatPage(): ReactElement {
   const [showReconnected, setShowReconnected] = useState(false);
   useEffect(() => {
     let mounted = true;
+    let timeoutId: NodeJS.Timeout | undefined;
     const fn = experimental_resume as undefined | (() => Promise<unknown>);
     if (typeof fn === "function") {
       void fn()
         .then(() => {
           if (!mounted) return;
           setShowReconnected(true);
-          const t = setTimeout(() => setShowReconnected(false), 3000);
-          return () => clearTimeout(t);
+          timeoutId = setTimeout(() => setShowReconnected(false), 3000);
         })
         .catch((err) => {
           // Log for developer diagnostics; avoid user-facing noise
@@ -206,6 +206,7 @@ export default function ChatPage(): ReactElement {
     }
     return () => {
       mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [experimental_resume]);
 

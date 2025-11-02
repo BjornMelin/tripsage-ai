@@ -7,8 +7,8 @@
 import type { LanguageModel, UIMessage } from "ai";
 import { convertToModelMessages, generateText as defaultGenerateText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
 import type { ChatMessageInsert } from "@/lib/supabase/database.types";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import {
   type ChatMessage as ClampMsg,
   clampMaxTokens,
@@ -191,9 +191,11 @@ export async function handleChatNonStream(
 
   const usage = result.usage
     ? {
-        promptTokens: (result.usage as any).inputTokens ?? undefined,
-        completionTokens: (result.usage as any).outputTokens ?? undefined,
-        totalTokens: (result.usage as any).totalTokens ?? undefined,
+        // Support both naming conventions across SDK versions
+        promptTokens: (result.usage as any).promptTokens ?? (result.usage as any).inputTokens,
+        completionTokens:
+          (result.usage as any).completionTokens ?? (result.usage as any).outputTokens,
+        totalTokens: (result.usage as any).totalTokens,
       }
     : undefined;
 
@@ -209,14 +211,12 @@ export async function handleChatNonStream(
   const sessionId = payload.session_id;
   if (sessionId) {
     try {
-      await (deps.supabase as unknown as any)
-        .from("chat_messages")
-        .insert({
-          session_id: sessionId,
-          role: "assistant",
-          content: result.text ?? "",
-          metadata: body as any,
-        } as ChatMessageInsert);
+      await (deps.supabase as unknown as any).from("chat_messages").insert({
+        session_id: sessionId,
+        role: "assistant",
+        content: result.text ?? "",
+        metadata: body as any,
+      } as ChatMessageInsert);
     } catch {
       // ignore persistence errors
     }
