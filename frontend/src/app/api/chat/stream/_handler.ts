@@ -18,7 +18,7 @@ import { getModelContextLimit } from "@/lib/tokens/limits";
 
 /**
  * Type representing a resolved AI provider configuration.
- * 
+ *
  * @param provider - The provider.
  * @param modelId - The model ID.
  * @param model - The model.
@@ -31,7 +31,7 @@ export type ProviderResolution = {
 
 /**
  * Function type for resolving AI provider configurations.
- * 
+ *
  * @param userId - The user ID for the chat.
  * @param modelHint - An optional model hint to resolve.
  * @returns Promise resolving to a ProviderResolution.
@@ -43,7 +43,7 @@ export type ProviderResolver = (
 
 /**
  * Function type for rate limiting requests.
- * 
+ *
  * @param identifier - The identifier for the chat.
  * @returns Promise resolving to a dict with success, limit, remaining, and reset.
  */
@@ -56,7 +56,7 @@ export type RateLimiter = (identifier: string) => Promise<{
 
 /**
  * Interface defining dependencies required for chat stream handling.
- * 
+ *
  * @param supabase - The Supabase client.
  * @param resolveProvider - The function to resolve an AI provider configuration.
  * @param limit - The function to limit the chat.
@@ -80,7 +80,7 @@ export interface ChatDeps {
 
 /**
  * Interface defining the payload structure for chat stream requests.
- * 
+ *
  * @param messages - The messages.
  * @param session_id - The session ID.
  * @param model - The model.
@@ -213,7 +213,13 @@ export async function handleChatStream(
     originalMessages: messages,
     messageMetadata: async ({ part }) => {
       if (part.type === "start") {
-        return { requestId: reqId, model: provider.modelId, reasons };
+        // Provide a resumable id to help clients reattach to ongoing streams.
+        return {
+          requestId: reqId,
+          model: provider.modelId,
+          reasons,
+          resumableId: reqId,
+        } as const;
       }
       if (part.type === "finish") {
         const meta = {

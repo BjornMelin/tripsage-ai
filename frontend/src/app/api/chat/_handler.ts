@@ -17,7 +17,7 @@ import { getModelContextLimit } from "@/lib/tokens/limits";
 
 /**
  * Type representing a resolved AI provider configuration.
- * 
+ *
  * @param provider - The provider.
  * @param modelId - The model ID.
  * @param model - The model.
@@ -30,7 +30,7 @@ export type ProviderResolution = {
 
 /**
  * Type representing a function that resolves an AI provider configuration.
- * 
+ *
  * @param userId - The user ID for the chat.
  * @param modelHint - An optional model hint to resolve.
  * @returns Promise resolving to a ProviderResolution.
@@ -42,7 +42,7 @@ export type ProviderResolver = (
 
 /**
  * Type representing the dependencies for non-streaming chat handling.
- * 
+ *
  * @param supabase - The Supabase client.
  * @param resolveProvider - The function to resolve an AI provider configuration.
  * @param logger - The logger.
@@ -71,7 +71,7 @@ export interface NonStreamDeps {
 
 /**
  * Type representing the payload for non-streaming chat handling.
- * 
+ *
  * @param messages - The messages.
  * @param session_id - The session ID.
  * @param model - The model.

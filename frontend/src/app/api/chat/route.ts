@@ -24,7 +24,7 @@ export const maxDuration = 30;
 
 /**
  * Type representing the incoming body for the chat route.
- * 
+ *
  * @param messages - The messages.
  * @param session_id - The session ID.
  * @param model - The model.
