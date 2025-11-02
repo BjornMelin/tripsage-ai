@@ -1,7 +1,7 @@
 # ADR-0019: Canonicalize chat service via FastAPI backend
 
 **Version**: 1.1.0
-**Status**: Accepted
+**Status**: Superseded by ADR-0031 (2025-11-02)
 **Date**: 2025-10-24
 **Category**: backend
 **Domain**: Chat Service / Streaming
