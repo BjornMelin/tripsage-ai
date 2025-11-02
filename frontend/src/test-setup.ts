@@ -120,7 +120,13 @@ class MockIntersectionObserver implements IntersectionObserver {
   }
 }
 
-if (typeof window !== "undefined") {
+/**
+ * Helper constant to check if we're in a JSDOM environment.
+ * Used to conditionally apply window-specific mocks.
+ */
+const isJSDOMEnvironment = typeof window !== "undefined";
+
+if (isJSDOMEnvironment) {
   const windowRef = globalThis.window as Window & typeof globalThis;
 
   Object.defineProperty(windowRef, "location", {
@@ -166,7 +172,7 @@ if (typeof window !== "undefined") {
 };
 
 // Only provide a global fetch mock in JSDOM, where window is available.
-if (typeof window !== "undefined") {
+if (isJSDOMEnvironment) {
   globalThis.fetch = vi.fn() as unknown as typeof fetch;
 }
 
