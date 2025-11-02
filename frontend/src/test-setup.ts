@@ -120,36 +120,44 @@ class MockIntersectionObserver implements IntersectionObserver {
   }
 }
 
-const windowRef = globalThis.window as Window & typeof globalThis;
+/**
+ * Helper constant to check if we're in a JSDOM environment.
+ * Used to conditionally apply window-specific mocks.
+ */
+const isJSDOMEnvironment = typeof window !== "undefined";
 
-Object.defineProperty(windowRef, "location", {
-  value: {
-    href: "https://example.com",
-    reload: vi.fn(),
-  },
-  writable: true,
-});
+if (isJSDOMEnvironment) {
+  const windowRef = globalThis.window as Window & typeof globalThis;
 
-Object.defineProperty(windowRef, "navigator", {
-  value: {
-    userAgent: "Vitest",
-  },
-  writable: true,
-});
+  Object.defineProperty(windowRef, "location", {
+    value: {
+      href: "https://example.com",
+      reload: vi.fn(),
+    },
+    writable: true,
+  });
 
-Object.defineProperty(windowRef, "matchMedia", {
-  writable: true,
-  configurable: true,
-  value: createMatchMediaMock(false),
-});
+  Object.defineProperty(windowRef, "navigator", {
+    value: {
+      userAgent: "Vitest",
+    },
+    writable: true,
+  });
 
-Object.defineProperty(windowRef, "localStorage", {
-  value: createMockStorage(),
-});
+  Object.defineProperty(windowRef, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: createMatchMediaMock(false),
+  });
 
-Object.defineProperty(windowRef, "sessionStorage", {
-  value: createMockStorage(),
-});
+  Object.defineProperty(windowRef, "localStorage", {
+    value: createMockStorage(),
+  });
+
+  Object.defineProperty(windowRef, "sessionStorage", {
+    value: createMockStorage(),
+  });
+}
 
 (globalThis as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
   MockResizeObserver;
@@ -163,7 +171,10 @@ Object.defineProperty(windowRef, "sessionStorage", {
   supports: vi.fn().mockReturnValue(false),
 };
 
-globalThis.fetch = vi.fn() as unknown as typeof fetch;
+// Only provide a global fetch mock in JSDOM, where window is available.
+if (isJSDOMEnvironment) {
+  globalThis.fetch = vi.fn() as unknown as typeof fetch;
+}
 
 const consoleSpies: Console = {
   ...console,

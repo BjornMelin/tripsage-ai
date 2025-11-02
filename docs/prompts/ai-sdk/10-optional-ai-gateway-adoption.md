@@ -35,6 +35,12 @@
 - [ ] Write ADR(s) and Spec(s) for Gateway adoption plan
   - Notes:
 
+### Augmented checklist (compatibility & safety)
+
+- [ ] Keep BYOK/provider registry intact; route via Gateway post-resolution
+- [ ] Never expose keys client-side; Gateway config SSR-only
+- [ ] Map errors consistently between direct provider and Gateway paths
+
 ## Working instructions (mandatory)
 
 - Check off tasks only after Vitest/biome/tsc are clean.

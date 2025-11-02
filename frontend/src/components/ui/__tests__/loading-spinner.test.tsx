@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Unit tests for LoadingSpinner component, verifying rendering of
+ * different spinner variants, size and color customization, accessibility
+ * features, and animation behavior across all supported spinner styles.
+ */
+
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { render } from "@/test/test-utils";
@@ -79,9 +85,9 @@ describe("LoadingSpinner", () => {
   });
 
   it("forwards ref correctly", () => {
-    const ref = { current: null };
+    const ref = { current: null as HTMLDivElement | null };
     render(<LoadingSpinner ref={ref} data-testid="spinner" />);
 
-    expect(ref.current).toBeInstanceOf(SVGSVGElement);
+    expect(ref.current).toBeInstanceOf(HTMLElement);
   });
 });

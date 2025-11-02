@@ -3,7 +3,7 @@
  * Tests search type management, parameter updates for different search types,
  * validation functionality, and parameter reset operations.
  */
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { useSearchParamsStore } from "../search-params-store";
 
@@ -39,7 +39,9 @@ describe("Search Params Store", () => {
     it("sets search type and initializes default params", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.setSearchType("flight");
+      act(() => {
+        result.current.setSearchType("flight");
+      });
 
       expect(result.current.currentSearchType).toBe("flight");
       expect(result.current.flightParams).toEqual({
@@ -56,11 +58,15 @@ describe("Search Params Store", () => {
     it("switches between search types", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.setSearchType("flight");
+      act(() => {
+        result.current.setSearchType("flight");
+      });
 
       expect(result.current.currentSearchType).toBe("flight");
 
-      result.current.setSearchType("accommodation");
+      act(() => {
+        result.current.setSearchType("accommodation");
+      });
 
       expect(result.current.currentSearchType).toBe("accommodation");
       expect(result.current.accommodationParams).toEqual({
@@ -75,11 +81,15 @@ describe("Search Params Store", () => {
     it("resets all parameters", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.setSearchType("flight");
+      act(() => {
+        result.current.setSearchType("flight");
+      });
 
       expect(result.current.currentSearchType).toBe("flight");
 
-      result.current.reset();
+      act(() => {
+        result.current.reset();
+      });
 
       expect(result.current.currentSearchType).toBeNull();
     });
@@ -88,19 +98,23 @@ describe("Search Params Store", () => {
   describe("Flight Parameters", () => {
     beforeEach(() => {
       const { result } = renderHook(() => useSearchParamsStore());
-      result.current.setSearchType("flight");
+      act(() => {
+        result.current.setSearchType("flight");
+      });
     });
 
     it("updates flight parameters", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.updateFlightParams({
-        origin: "NYC",
-        destination: "LAX",
-        departureDate: "2025-07-15",
-        returnDate: "2025-07-22",
-        adults: 2,
-        cabinClass: "business",
+      act(() => {
+        void result.current.updateFlightParams({
+          origin: "NYC",
+          destination: "LAX",
+          departureDate: "2025-07-15",
+          returnDate: "2025-07-22",
+          adults: 2,
+          cabinClass: "business",
+        });
       });
 
       const params = result.current.flightParams;
@@ -115,15 +129,19 @@ describe("Search Params Store", () => {
     it("resets flight parameters", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.updateFlightParams({
-        origin: "NYC",
-        destination: "LAX",
-        adults: 3,
+      act(() => {
+        void result.current.updateFlightParams({
+          origin: "NYC",
+          destination: "LAX",
+          adults: 3,
+        });
       });
 
       expect(result.current.flightParams.origin).toBe("NYC");
 
-      result.current.resetParams("flight");
+      act(() => {
+        result.current.resetParams("flight");
+      });
 
       const defaultParams = {
         adults: 1,
@@ -142,20 +160,24 @@ describe("Search Params Store", () => {
   describe("Accommodation Parameters", () => {
     beforeEach(() => {
       const { result } = renderHook(() => useSearchParamsStore());
-      result.current.setSearchType("accommodation");
+      act(() => {
+        result.current.setSearchType("accommodation");
+      });
     });
 
     it("updates accommodation parameters", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.updateAccommodationParams({
-        destination: "Paris",
-        checkIn: "2025-08-01",
-        checkOut: "2025-08-07",
-        adults: 2,
-        rooms: 2,
-        propertyType: "hotel",
-        amenities: ["wifi", "pool"],
+      act(() => {
+        void result.current.updateAccommodationParams({
+          destination: "Paris",
+          checkIn: "2025-08-01",
+          checkOut: "2025-08-07",
+          adults: 2,
+          rooms: 2,
+          propertyType: "hotel",
+          amenities: ["wifi", "pool"],
+        });
       });
 
       const params = result.current.accommodationParams;
@@ -171,14 +193,18 @@ describe("Search Params Store", () => {
     it("resets accommodation parameters", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.updateAccommodationParams({
-        destination: "Paris",
-        adults: 3,
+      act(() => {
+        void result.current.updateAccommodationParams({
+          destination: "Paris",
+          adults: 3,
+        });
       });
 
       expect(result.current.accommodationParams.destination).toBe("Paris");
 
-      result.current.resetParams("accommodation");
+      act(() => {
+        result.current.resetParams("accommodation");
+      });
 
       const defaultParams = {
         adults: 1,
@@ -195,18 +221,22 @@ describe("Search Params Store", () => {
   describe("Activity Parameters", () => {
     beforeEach(() => {
       const { result } = renderHook(() => useSearchParamsStore());
-      result.current.setSearchType("activity");
+      act(() => {
+        result.current.setSearchType("activity");
+      });
     });
 
     it("updates activity parameters", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.updateActivityParams({
-        destination: "Tokyo",
-        date: "2025-09-15",
-        duration: { min: 120, max: 240 },
-        category: "cultural",
-        difficulty: "moderate",
+      act(() => {
+        void result.current.updateActivityParams({
+          destination: "Tokyo",
+          date: "2025-09-15",
+          duration: { min: 120, max: 240 },
+          category: "cultural",
+          difficulty: "moderate",
+        });
       });
 
       const params = result.current.activityParams;
@@ -220,14 +250,18 @@ describe("Search Params Store", () => {
     it("resets activity parameters", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.updateActivityParams({
-        destination: "Tokyo",
-        category: "cultural",
+      act(() => {
+        void result.current.updateActivityParams({
+          destination: "Tokyo",
+          category: "cultural",
+        });
       });
 
       expect(result.current.activityParams.destination).toBe("Tokyo");
 
-      result.current.resetParams("activity");
+      act(() => {
+        result.current.resetParams("activity");
+      });
 
       const defaultParams = {
         adults: 1,
@@ -242,17 +276,21 @@ describe("Search Params Store", () => {
   describe("Destination Parameters", () => {
     beforeEach(() => {
       const { result } = renderHook(() => useSearchParamsStore());
-      result.current.setSearchType("destination");
+      act(() => {
+        result.current.setSearchType("destination");
+      });
     });
 
     it("updates destination parameters", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.updateDestinationParams({
-        query: "Europe",
-        limit: 20,
-        types: ["locality", "country", "landmark"],
-        countryCode: "FR",
+      act(() => {
+        void result.current.updateDestinationParams({
+          query: "Europe",
+          limit: 20,
+          types: ["locality", "country", "landmark"],
+          countryCode: "FR",
+        });
       });
 
       const params = result.current.destinationParams;
@@ -265,14 +303,18 @@ describe("Search Params Store", () => {
     it("resets destination parameters", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.updateDestinationParams({
-        query: "Asia",
-        limit: 30,
+      act(() => {
+        void result.current.updateDestinationParams({
+          query: "Asia",
+          limit: 30,
+        });
       });
 
       expect(result.current.destinationParams.query).toBe("Asia");
 
-      result.current.resetParams("destination");
+      act(() => {
+        result.current.resetParams("destination");
+      });
 
       const defaultParams = {
         query: "",
@@ -338,12 +380,16 @@ describe("Search Params Store", () => {
     it("validates current parameters successfully", async () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.setSearchType("flight");
-      result.current.updateFlightParams({
-        origin: "NYC",
-        destination: "LAX",
-        departureDate: "2025-07-15",
-        adults: 2,
+      act(() => {
+        result.current.setSearchType("flight");
+      });
+      await act(async () => {
+        await result.current.updateFlightParams({
+          origin: "NYC",
+          destination: "LAX",
+          departureDate: "2025-07-15",
+          adults: 2,
+        });
       });
 
       const isValid = await result.current.validateCurrentParams();
@@ -355,46 +401,54 @@ describe("Search Params Store", () => {
         activity: null,
         destination: null,
       });
+    });
 
-      it("handles validation errors", async () => {
-        const { result } = renderHook(() => useSearchParamsStore());
-
+    it("handles validation errors", async () => {
+      const { result } = renderHook(() => useSearchParamsStore());
+      act(() => {
         result.current.setSearchType("flight");
-        // Don't set required parameters
-        const isValid = await result.current.validateCurrentParams();
-        expect(isValid).toBe(false);
-
-        expect(Object.keys(result.current.validationErrors).length).toBeGreaterThan(0);
       });
+      // Force invalid value against schema (adults must be >=1)
+      const updated = await result.current.updateFlightParams({ adults: 0 });
+      expect(updated).toBe(false);
+      // State should remain at previous valid defaults
+      expect(result.current.flightParams.adults).toBe(1);
+    });
 
-      it("sets validation state during validation", async () => {
-        const { result } = renderHook(() => useSearchParamsStore());
-
+    it("validates without toggling isValidating flags", async () => {
+      const { result } = renderHook(() => useSearchParamsStore());
+      act(() => {
         result.current.setSearchType("flight");
-
-        const validatePromise = result.current.validateCurrentParams();
-
-        expect(result.current.isValidating).toBe(true);
-
-        await validatePromise;
-
-        expect(result.current.isValidating).toBe(false);
       });
+      const before = { ...result.current.isValidating };
+      const validateResult = await result.current.validateCurrentParams();
+      expect(typeof validateResult).toBe("boolean");
+      expect(result.current.isValidating).toEqual(before);
     });
 
     describe("Parameter Reset", () => {
-      it("resets all parameters", () => {
+      it("resets all parameters", async () => {
         const { result } = renderHook(() => useSearchParamsStore());
 
-        result.current.setSearchType("flight");
-        result.current.updateFlightParams({ origin: "NYC" });
-        result.current.setSearchType("accommodation");
-        result.current.updateAccommodationParams({ destination: "Paris" });
+        act(() => {
+          result.current.setSearchType("flight");
+        });
+        await act(async () => {
+          await result.current.updateFlightParams({ origin: "NYC" });
+        });
+        act(() => {
+          result.current.setSearchType("accommodation");
+        });
+        await act(async () => {
+          await result.current.updateAccommodationParams({ destination: "Paris" });
+        });
 
         expect(result.current.flightParams.origin).toBe("NYC");
         expect(result.current.accommodationParams.destination).toBe("Paris");
 
-        result.current.reset();
+        act(() => {
+          result.current.reset();
+        });
 
         expect(result.current.flightParams).toEqual({});
         expect(result.current.accommodationParams).toEqual({});

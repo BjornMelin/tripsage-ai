@@ -1,3 +1,8 @@
+/**
+ * @fileoverview DestinationCard component for displaying travel destination information
+ * with ratings, climate data, attractions, and interactive selection actions.
+ */
+
 "use client";
 
 import { Calendar, CloudRain, Globe, MapPin, Star, Thermometer } from "lucide-react";
@@ -6,19 +11,44 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Destination } from "@/types/search";
 
+/**
+ * Props interface for the DestinationCard component.
+ */
 interface DestinationCardProps {
+  /** Destination data to display in the card. */
   destination: Destination;
+  /** Callback when destination is selected. */
   onSelect?: (destination: Destination) => void;
+  /** Callback when destination is added to comparison. */
   onCompare?: (destination: Destination) => void;
+  /** Callback when destination details are requested. */
   onViewDetails?: (destination: Destination) => void;
 }
 
+/**
+ * DestinationCard component displaying comprehensive destination information.
+ *
+ * Shows destination name, address, rating, climate data, attractions, popularity,
+ * and provides interactive buttons for selection, comparison, and details view.
+ *
+ * @param destination - The destination data to display.
+ * @param onSelect - Callback fired when destination is selected.
+ * @param onCompare - Callback fired when destination is added to comparison.
+ * @param onViewDetails - Callback fired when details are requested.
+ * @returns The DestinationCard component.
+ */
 export function DestinationCard({
   destination,
   onSelect,
   onCompare,
   onViewDetails,
 }: DestinationCardProps) {
+  /**
+   * Format destination types into human-readable labels.
+   *
+   * @param types - Array of destination type identifiers.
+   * @returns Formatted string of destination types.
+   */
   const formatDestinationType = (types: string[]) => {
     const typeMap: Record<string, string> = {
       locality: "City",
@@ -36,6 +66,12 @@ export function DestinationCard({
       .join(", ");
   };
 
+  /**
+   * Get appropriate icon component based on destination types.
+   *
+   * @param types - Array of destination type identifiers.
+   * @returns React icon component for the destination type.
+   */
   const getDestinationIcon = (types: string[]) => {
     if (types.includes("country")) {
       return <Globe className="h-4 w-4" />;
@@ -46,6 +82,12 @@ export function DestinationCard({
     return <MapPin className="h-4 w-4" />;
   };
 
+  /**
+   * Format best time to visit months into a readable string.
+   *
+   * @param months - Array of month identifiers.
+   * @returns Formatted string of best visit months.
+   */
   const formatBestTimeToVisit = (months: string[]) => {
     if (!months || months.length === 0) return "Year-round";
 
@@ -117,12 +159,10 @@ export function DestinationCard({
         )}
 
         {/* Best Time to Visit */}
-        {destination.bestTimeToVisit && (
-          <div className="flex items-center text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3 mr-1" />
-            <span>Best: {formatBestTimeToVisit(destination.bestTimeToVisit)}</span>
-          </div>
-        )}
+        <div className="flex items-center text-xs text-muted-foreground">
+          <Calendar className="h-3 w-3 mr-1" />
+          <span>Best: {formatBestTimeToVisit(destination.bestTimeToVisit ?? [])}</span>
+        </div>
 
         {/* Top Attractions */}
         {destination.attractions && destination.attractions.length > 0 && (

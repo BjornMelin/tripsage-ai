@@ -5,6 +5,12 @@
 
 import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
+import {
+  type ChatMessage,
+  clampMaxTokens,
+  countPromptTokens,
+} from "../../../../lib/tokens/budget";
+import { getModelContextLimit } from "../../../../lib/tokens/limits";
 
 // Allow streaming responses up to 30 seconds
 /** Maximum duration (seconds) to allow for streaming responses. */
@@ -18,18 +24,56 @@ export const maxDuration = 30;
  */
 export async function POST(req: Request): Promise<Response> {
   let prompt = "Hello from AI SDK v6";
+  let model = "gpt-4o";
+  let desiredMaxTokens = 512;
+  let messages: ChatMessage[] | undefined;
 
   try {
-    const body = (await req.json()) as { prompt?: string };
+    const body = (await req.json()) as {
+      prompt?: string;
+      model?: string;
+      desiredMaxTokens?: number;
+      messages?: ChatMessage[];
+    };
     prompt = body.prompt || prompt;
+    model = body.model || model;
+    if (typeof body.desiredMaxTokens === "number") {
+      desiredMaxTokens = body.desiredMaxTokens;
+    }
+    if (Array.isArray(body.messages)) {
+      messages = body.messages;
+    }
   } catch (error) {
     // If JSON parsing fails, use default prompt
     console.warn("Failed to parse request body, using default prompt:", error);
   }
 
+  // Build message list if not provided
+  const finalMessages: ChatMessage[] = messages ?? [{ role: "user", content: prompt }];
+
+  const { maxTokens, reasons } = clampMaxTokens(finalMessages, desiredMaxTokens, model);
+
+  // If prompt already exhausts the model context window, return a 400 with reasons
+  const modelLimit = getModelContextLimit(model);
+  const promptTokens = countPromptTokens(finalMessages, model);
+  if (modelLimit - promptTokens <= 0) {
+    return new Response(
+      JSON.stringify({
+        error: "No output tokens available for the given prompt and model.",
+        model,
+        prompt_tokens: promptTokens,
+        model_context_limit: modelLimit,
+        reasons,
+      }),
+      { status: 400, headers: { "content-type": "application/json" } }
+    );
+  }
+
   const result = await streamText({
-    model: openai("gpt-4o"),
-    prompt,
+    model: openai(model),
+    // Prefer messages when available; otherwise prompt.
+    ...(messages ? { messages: finalMessages } : { prompt }),
+    maxOutputTokens: maxTokens,
   });
 
   // Return a UI Message Stream response suitable for AI Elements consumers

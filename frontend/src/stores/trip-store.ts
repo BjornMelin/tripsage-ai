@@ -1,7 +1,15 @@
+/**
+ * @fileoverview Trip store using Zustand for managing trip state, including CRUD operations,
+ * destination management, budget tracking, and persistence with local storage.
+ */
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Trip as DatabaseTrip } from "@/lib/supabase/database.types";
 
+/**
+ * Interface representing a destination within a trip.
+ */
 export interface Destination {
   id: string;
   name: string;
@@ -27,7 +35,9 @@ export interface Destination {
   notes?: string;
 }
 
-// budget structure aligned with backend
+/**
+ * Interface representing a trip budget with spending breakdown.
+ */
 export interface Budget {
   total: number;
   currency: string;
@@ -35,7 +45,9 @@ export interface Budget {
   breakdown: Record<string, number>;
 }
 
-// preferences structure
+/**
+ * Interface representing trip preferences including budget, accommodation, transportation, etc.
+ */
 export interface TripPreferences {
   budget?: {
     total?: number;
@@ -66,6 +78,9 @@ export interface TripPreferences {
   [key: string]: any; // Allow additional preferences
 }
 
+/**
+ * Interface representing a complete trip with all associated data.
+ */
 export interface Trip {
   // ID fields - supporting both legacy and new systems
   id: string;
@@ -129,6 +144,14 @@ interface TripState {
   clearError: () => void;
 }
 
+/**
+ * Zustand store hook for managing trip state with persistence.
+ *
+ * Provides CRUD operations for trips, destination management, budget tracking,
+ * and state persistence. All operations are asynchronous and handle error states.
+ *
+ * @returns The trip store hook with state and actions.
+ */
 export const useTripStore = create<TripState>()(
   persist(
     (set, _get) => ({
@@ -201,10 +224,13 @@ export const useTripStore = create<TripState>()(
             end_date: tripData.end_date || new Date().toISOString(),
             destination: (data as { destination?: string })?.destination || "",
             budget: tripData.budget || 0,
+            currency: tripData.currency,
+            description: tripData.description,
+            visibility: tripData.visibility,
             travelers: 1,
             search_metadata: {},
             flexibility: {},
-          });
+          } as any);
 
           // Convert to frontend format
           const frontendTrip: Trip = created as any;
@@ -241,6 +267,8 @@ export const useTripStore = create<TripState>()(
           if (data.status) updateData.status = data.status as DatabaseTrip["status"];
           if (data.preferences) updateData.flexibility = data.preferences as any;
           if (data.tags) updateData.notes = data.tags as string[];
+          if (data.description !== undefined)
+            (updateData as any).description = data.description as string;
 
           const updated = await repoUpdateTrip(
             Number.parseInt(id, 10),

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview TripSuggestions component displaying AI-powered travel recommendations
+ * with personalized suggestions based on user memory and preferences, including
+ * budget-aware filtering and interactive trip planning features.
+ */
+
 "use client";
 
 import { Brain, Clock, MapPin, Sparkles, Star, TrendingUp } from "lucide-react";
@@ -18,13 +24,25 @@ import { useMemoryContext, useMemoryInsights } from "@/hooks/use-memory";
 import { type TripSuggestion, useTripSuggestions } from "@/hooks/use-trips";
 import { useBudgetStore } from "@/stores/budget-store";
 
+/**
+ * Props interface for the TripSuggestions component.
+ */
 interface TripSuggestionsProps {
+  /** Maximum number of suggestions to display. */
   limit?: number;
+  /** Whether to show empty state when no suggestions available. */
   showEmpty?: boolean;
+  /** User ID for personalized memory-based suggestions. */
   userId?: string;
+  /** Whether to show AI memory-based personalized suggestions. */
   showMemoryBased?: boolean;
 }
 
+/**
+ * Skeleton loading component for trip suggestion cards.
+ *
+ * @returns The skeleton loading component.
+ */
 function SuggestionCardSkeleton() {
   return (
     <div className="p-4 border border-border rounded-lg">
@@ -51,7 +69,19 @@ function SuggestionCardSkeleton() {
   );
 }
 
+/**
+ * Individual trip suggestion card component with detailed trip information.
+ *
+ * @param suggestion - The trip suggestion data to display.
+ * @returns The suggestion card component.
+ */
 function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
+  /**
+   * Get emoji icon for trip category.
+   *
+   * @param category - The trip category.
+   * @returns The emoji icon for the category.
+   */
   const getCategoryIcon = (category: TripSuggestion["category"]) => {
     switch (category) {
       case "adventure":
@@ -71,6 +101,12 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
     }
   };
 
+  /**
+   * Get CSS class for difficulty level text color.
+   *
+   * @param difficulty - The trip difficulty level.
+   * @returns CSS class for text color.
+   */
   const getDifficultyColor = (difficulty?: TripSuggestion["difficulty"]) => {
     switch (difficulty) {
       case "easy":
@@ -84,6 +120,13 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
     }
   };
 
+  /**
+   * Format price with proper currency formatting.
+   *
+   * @param price - The numeric price value.
+   * @param currency - The currency code (e.g., "USD").
+   * @returns Formatted price string.
+   */
   const formatPrice = (price: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -176,6 +219,11 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
   );
 }
 
+/**
+ * Empty state component shown when no trip suggestions are available.
+ *
+ * @returns The empty state component.
+ */
 function EmptyState() {
   return (
     <div className="text-center py-8">
@@ -186,12 +234,24 @@ function EmptyState() {
         Get personalized trip suggestions based on your preferences.
       </p>
       <Button asChild size="sm">
-        <Link href="/dashboard/chat">Chat with AI for Suggestions</Link>
+        <Link href="/chat">Chat with AI for Suggestions</Link>
       </Button>
     </div>
   );
 }
 
+/**
+ * Main TripSuggestions component displaying AI-powered travel recommendations.
+ *
+ * Combines API-based suggestions with personalized memory-based recommendations,
+ * supports budget filtering, loading states, and interactive trip planning.
+ *
+ * @param limit - Maximum number of suggestions to display.
+ * @param showEmpty - Whether to show empty state when no suggestions available.
+ * @param userId - User ID for personalized memory-based suggestions.
+ * @param showMemoryBased - Whether to show AI memory-based personalized suggestions.
+ * @returns The TripSuggestions component.
+ */
 export function TripSuggestions({
   limit = 4,
   showEmpty = true,
@@ -217,7 +277,11 @@ export function TripSuggestions({
     !!userId && showMemoryBased
   );
 
-  // Generate memory-based suggestions
+  /**
+   * Generate personalized trip suggestions based on user memory and preferences.
+   *
+   * @returns Array of memory-based trip suggestions.
+   */
   const generateMemoryBasedSuggestions = (): TripSuggestion[] => {
     if (!memoryContext?.context || !insights?.insights) return [];
 
@@ -367,7 +431,7 @@ export function TripSuggestions({
       {filteredSuggestions.length > 0 && (
         <CardFooter className="flex gap-2">
           <Button className="flex-1" variant="outline" asChild>
-            <Link href="/dashboard/chat">Get More Suggestions</Link>
+            <Link href="/chat">Get More Suggestions</Link>
           </Button>
           {showMemoryBased && (
             <Button className="flex-1" variant="outline" asChild>

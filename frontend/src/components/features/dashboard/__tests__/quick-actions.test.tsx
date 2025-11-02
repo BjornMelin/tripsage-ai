@@ -85,7 +85,7 @@ describe("QuickActions", () => {
     expect(planTripLink).toHaveAttribute("href", "/dashboard/trips/create");
 
     const chatLink = screen.getByRole("link", { name: /Ask AI Assistant/i });
-    expect(chatLink).toHaveAttribute("href", "/dashboard/chat");
+    expect(chatLink).toHaveAttribute("href", "/chat");
 
     const exploreLink = screen.getByRole("link", {
       name: /Explore Destinations/i,

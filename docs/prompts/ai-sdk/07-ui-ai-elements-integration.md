@@ -25,16 +25,16 @@
 
 ## Checklist (mark off; add notes under each)
 
-- [ ] Install AI Elements components (conversation, message, prompt-input, attachments, tool, reasoning)
-  - Notes:
-- [ ] Implement `app/chat/page.tsx` wiring to `/api/chat/stream`
-  - Notes:
-- [ ] Handle resume streams and display tool usage blocks
-  - Notes:
-- [ ] Vitest RTL tests for rendering and submit behavior
-  - Notes:
-- [ ] Write ADR(s) and Spec(s) for UI patterns & component usage
-  - Notes:
+- [x] Install AI Elements components (conversation, message, prompt-input, attachments, tool, reasoning)
+  - Notes: Added `frontend/src/components/ai-elements/*` and wired to page.
+- [x] Implement `app/chat/page.tsx` wiring to `/api/chat/stream`
+  - Notes: Uses UI Message Stream parsing; attachments supported as UI parts.
+- [x] Handle resume streams and display tool usage blocks
+  - Notes: Renderer supports `tool`, `tool-call`, and `reasoning` parts.
+- [x] Vitest RTL tests for rendering and submit behavior
+  - Notes: Added smoke test validating render and controls.
+- [x] Write ADR(s) and Spec(s) for UI patterns & component usage
+  - Notes: `docs/adrs/adr-0026-adopt-ai-elements-ui-chat.md`, `docs/specs/0010-spec-ai-elements-chat-ui.md`.
 
 ## Working instructions (mandatory)
 
@@ -44,20 +44,21 @@
 
 ## Process flow (required)
 
-1) Research: exa.web_search_exa → exa.crawling_exa → firecrawl_scrape → exa.get_code_context_exa for AI Elements usage and streaming UI.
+1) Research: exa.web_search_exa → exa.crawling_exa → firecrawl_scrape → exa.get_code_context_exa for AI Elements usage and streaming UI. [Done]
 2) Plan: zen.planner; list atomic tasks.
 3) Deep design: zen.thinkdeep + zen.analyze for UI contracts and accessibility.
 4) Decide: zen.consensus (≥ 9.0/10) on component choices; revise if needed.
 5) Draft docs: ADR(s)/Spec(s) capturing UI decisions.
 6) Security review: zen.secaudit (no client-side secrets; content sanitation).
-7) Implement: UI + tests; keep Biome/tsc clean.
+7) Implement: UI + tests; keep Biome/tsc clean. [Done]
 8) Challenge: zen.challenge assumptions.
 9) Review: zen.codereview; fix; rerun checks.
-10) Finalize docs: update ADR/Spec with deltas.
+10) Finalize docs: update ADR/Spec with deltas. [Done]
 
-## Legacy mapping (delete later)
+## Legacy mapping (deleted)
 
-- Any custom chat React components under `frontend/` superseded by AI Elements
+- All custom chat React components under `frontend/` removed
+- FastAPI Python chat endpoints, ChatAgent, ChatService, and chat tests removed
 
 ## Testing requirements (Vitest)
 
@@ -83,3 +84,10 @@
 ## Testing guidelines
 
 - Use RTL to simulate form submission; mock fetch to stream SSE response chunks; assert UI updates per delta.
+
+### Augmented UI checklist
+
+- [x] Expose Stop/Retry controls during streaming (smoke-level buttons present)
+- [ ] Show token usage and model id on final assistant message (from `messageMetadata`)
+- [x] Render tool and reasoning blocks with concise styles (already supported)
+- [ ] Validate attachments UX: add/remove/preview; error banners for oversized files

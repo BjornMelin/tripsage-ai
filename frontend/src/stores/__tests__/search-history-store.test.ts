@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Comprehensive unit tests for search history store, covering search
+ * history management, saved searches, search collections, synchronization, cleanup,
+ * and persistence with extensive state management and edge case testing.
+ */
+
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SearchHistoryItem, ValidatedSavedSearch } from "../search-history-store";
@@ -182,8 +188,8 @@ describe("Search History Store", () => {
 
       const firstTimestamp = result.current.recentSearches[0].timestamp;
 
-      // Wait a small amount to ensure different timestamp
-      await new Promise((resolve) => setTimeout(resolve, 1));
+      // Wait a small amount to ensure different timestamp (ms resolution safe)
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Add same search again
       act(() => {

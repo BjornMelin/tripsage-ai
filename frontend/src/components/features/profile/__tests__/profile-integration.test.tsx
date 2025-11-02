@@ -1,5 +1,10 @@
+/**
+ * @fileoverview Integration tests for profile components, verifying user profile
+ * sections render correctly with mocked stores and handle form interactions
+ * across account settings, personal info, preferences, and security sections.
+ */
+
 import { screen } from "@testing-library/react";
-import type React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils";
 import { AccountSettingsSection } from "../account-settings-section";
@@ -46,26 +51,7 @@ vi.mock("@/components/ui/use-toast", () => ({
   }),
 }));
 
-// Mock react-hook-form
-vi.mock("react-hook-form", async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
-  return {
-    ...actual,
-    useForm: () => ({
-      register: vi.fn(),
-      handleSubmit: vi.fn((fn) => fn),
-      formState: { errors: {}, isSubmitting: false },
-      control: {},
-      reset: vi.fn(),
-    }),
-    FormProvider: ({ children }: { children: React.ReactNode }) => children,
-  };
-});
-
-// Mock @hookform/resolvers
-vi.mock("@hookform/resolvers/zod", () => ({
-  zodResolver: vi.fn(),
-}));
+// Use real react-hook-form and zod resolver for integration-level rendering
 
 describe("Profile Components Integration", () => {
   it("renders PersonalInfoSection without crashing", () => {

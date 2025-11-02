@@ -7,6 +7,7 @@
 
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useTripSuggestions } from "@/hooks/use-trips";
 import { render } from "@/test/test-utils";
 import { TripSuggestions } from "../trip-suggestions";
 
@@ -28,6 +29,10 @@ vi.mock("@/stores/deals-store", () => ({
   useDealsStore: vi.fn(() => mockDealsStore),
 }));
 
+vi.mock("@/hooks/use-trips", () => ({
+  useTripSuggestions: vi.fn(),
+}));
+
 // Mock Next.js Link
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: any) => (
@@ -42,6 +47,38 @@ describe("TripSuggestions", () => {
     vi.clearAllMocks();
     mockBudgetStore.activeBudget = null;
     mockDealsStore.deals = [];
+    // Provide default API suggestions
+    vi.mocked(useTripSuggestions).mockReturnValue({
+      data: [
+        {
+          id: "sug-1",
+          title: "Paris Getaway",
+          destination: "Paris",
+          description: "Romantic escape in the city of lights",
+          estimated_price: 1500,
+          currency: "USD",
+          duration: 5,
+          rating: 4.5,
+          category: "culture",
+          best_time_to_visit: "Spring",
+          highlights: ["Louvre", "Eiffel Tower", "Seine Cruise"],
+        },
+        {
+          id: "sug-2",
+          title: "Tokyo Explorer",
+          destination: "Tokyo",
+          description: "Modern meets tradition",
+          estimated_price: 2000,
+          currency: "USD",
+          duration: 7,
+          rating: 4.7,
+          category: "city",
+          best_time_to_visit: "Fall",
+          highlights: ["Shibuya", "Asakusa", "Akihabara"],
+        },
+      ],
+      isLoading: false,
+    } as any);
   });
 
   describe("Basic Rendering", () => {
@@ -111,6 +148,11 @@ describe("TripSuggestions", () => {
         createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-01T00:00:00Z",
       };
+      // No API suggestions
+      vi.mocked(useTripSuggestions).mockReturnValue({
+        data: [],
+        isLoading: false,
+      } as any);
 
       render(<TripSuggestions />);
 

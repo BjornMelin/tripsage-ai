@@ -24,14 +24,21 @@
 
 ## Checklist (mark off; add notes under each)
 
-- [ ] Attach `http-referer` and `x-title` in provider registry for OpenRouter
-  - Notes:
-- [ ] Add configuration fields (settings) for referer/title and document defaults
-  - Notes:
+- [x] Attach `http-referer` and `x-title` in provider registry for OpenRouter
+  - Notes: Implemented in `frontend/src/lib/providers/registry.ts` using `getProviderSettings()`; server-only
+- [x] Add configuration fields (settings) for referer/title and document defaults
+  - Notes: Implemented in `frontend/src/lib/settings.ts` via env vars `OPENROUTER_REFERER`, `OPENROUTER_TITLE`
 - [ ] Vitest tests verifying header presence when OpenRouter resolves
-  - Notes:
+  - Notes: Can add targeted unit test for registry
 - [ ] Write ADR(s) and Spec(s) for attribution header policy
   - Notes:
+
+### Augmented checklist (provider registry + BYOK)
+
+- [x] Provider registry resolves provider+model per-user (Supabase SSR)
+- [x] Apply OpenRouter base URL and attribution headers only in server routes
+- [ ] Fallback to default provider when user’s BYOK missing; record provider id in `messageMetadata`
+- [ ] Tests: mock SSR and verify header injection and fallback behavior
 
 ## Working instructions (mandatory)
 
