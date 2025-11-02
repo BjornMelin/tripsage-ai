@@ -120,36 +120,38 @@ class MockIntersectionObserver implements IntersectionObserver {
   }
 }
 
-const windowRef = globalThis.window as Window & typeof globalThis;
+if (typeof window !== "undefined") {
+  const windowRef = globalThis.window as Window & typeof globalThis;
 
-Object.defineProperty(windowRef, "location", {
-  value: {
-    href: "https://example.com",
-    reload: vi.fn(),
-  },
-  writable: true,
-});
+  Object.defineProperty(windowRef, "location", {
+    value: {
+      href: "https://example.com",
+      reload: vi.fn(),
+    },
+    writable: true,
+  });
 
-Object.defineProperty(windowRef, "navigator", {
-  value: {
-    userAgent: "Vitest",
-  },
-  writable: true,
-});
+  Object.defineProperty(windowRef, "navigator", {
+    value: {
+      userAgent: "Vitest",
+    },
+    writable: true,
+  });
 
-Object.defineProperty(windowRef, "matchMedia", {
-  writable: true,
-  configurable: true,
-  value: createMatchMediaMock(false),
-});
+  Object.defineProperty(windowRef, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: createMatchMediaMock(false),
+  });
 
-Object.defineProperty(windowRef, "localStorage", {
-  value: createMockStorage(),
-});
+  Object.defineProperty(windowRef, "localStorage", {
+    value: createMockStorage(),
+  });
 
-Object.defineProperty(windowRef, "sessionStorage", {
-  value: createMockStorage(),
-});
+  Object.defineProperty(windowRef, "sessionStorage", {
+    value: createMockStorage(),
+  });
+}
 
 (globalThis as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
   MockResizeObserver;

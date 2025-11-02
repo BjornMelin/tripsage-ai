@@ -32,16 +32,20 @@ export function validateImageAttachments(messages: UIMessage[]): Validation {
 }
 
 /**
- * Converts UI file parts to model image format for AI SDK compatibility.
+ * Converts UI file parts to model file format for AI SDK compatibility.
  *
  * @param part - UI message part to convert.
- * @returns Image object for AI SDK or null if not convertible.
+ * @returns FilePart object for AI SDK or undefined if not convertible.
  */
 export function convertUiFilePartToImage(part: any) {
   if (part?.type === "file") {
     const mediaType: string | undefined = part.media_type || part.mediaType;
-    if (mediaType && mediaType.startsWith("image/")) {
-      return { type: "image", image: part.url, mimeType: mediaType };
+    if (mediaType?.startsWith("image/")) {
+      return {
+        type: "image" as const,
+        image: part.url,
+        mimeType: mediaType,
+      };
     }
   }
   return null;
