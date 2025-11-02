@@ -6,11 +6,11 @@
 
 ## Objective
 
-Deliver server-sent events (SSE) chat streaming through the canonical FastAPI backend and a streaming-capable frontend hook. Remove JSON-only chat flows from UI.
+Deliver server-sent events (SSE) chat streaming via Next.js AI SDK v6 Route Handler and a streaming-capable frontend hook. JSON non-stream is provided by `/api/chat`.
 
 ## Scope
 
-- Backend: `POST /api/chat/stream` responds with `text/event-stream` and emits token deltas.
+- Next.js Route: `POST /api/chat/stream` responds with `toUIMessageStreamResponse()` and emits token deltas.
 - Frontend: `use-chat-ai` posts to `/api/chat/stream`, updates a placeholder assistant message as deltas arrive, and supports cancellation.
 - No feature flags; streaming is the final implementation.
 
