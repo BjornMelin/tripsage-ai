@@ -12,7 +12,7 @@ This document records the active phases, remaining tasks, and validation command
 
 - Phase 4 — Supabase typing tests: DONE (typed helpers + trips repo smoke tests)
 - Phase 5 — Tailwind v4 finalize: DONE (verification + notes recorded)
-- Phase 6 — AI SDK spec realignment: DONE (ADR-0019, spec updates, smoke test)
+- Phase 6 — AI SDK spec realignment: DONE (ADR-0031, spec updates, smoke test)
 - Phase 7 — Zod v4 migration: DONE (deps upgraded; resolver smoke test)
 - Phase 8 — Final spec review + changelog: DONE (CHANGELOG updated; specs statuses set)
 
@@ -23,7 +23,7 @@ This document records the active phases, remaining tasks, and validation command
 
 ### Notes
 
-- Canonical chat is FastAPI (`/api/chat/stream` for streaming; `/api/v1/chat/` legacy JSON). The hook `use-chat-ai` posts to the streaming endpoint and updates a placeholder assistant message with deltas.
+- Canonical chat is Next.js: `/api/chat/stream` (SSE) and `/api/chat` (JSON). The hook posts to the streaming endpoint and updates a placeholder assistant message with deltas.
 - Tailwind v4: one v3 opacity utility replaced (bg-opacity-75 → bg-black/75). Outline utilities remain as-is; revisit if needed.
 
 ## Changelog

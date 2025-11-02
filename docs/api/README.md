@@ -237,10 +237,10 @@ async def get_current_user(credentials = Depends(security)):
 - `GET /api/v1/accommodations/{id}` - Get details
 - `POST /api/v1/accommodations/{id}/book` - Book accommodation
 
-### AI & Chat
+### AI & Chat (Next.js)
 
-- `POST /api/v1/chat/completions` - AI chat interface (non-streaming)
-- `POST /api/chat/stream` - Streaming chat via Server-Sent Events (`text/event-stream`)
+- `POST /api/chat` - AI chat interface (non-streaming, Next.js AI SDK v6)
+- `POST /api/chat/stream` - Streaming chat via `toUIMessageStreamResponse()`
 - `POST /api/v1/memory/conversation` - Store conversation
 - `GET /api/v1/memory/context` - Get user context
 
