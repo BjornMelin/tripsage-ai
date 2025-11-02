@@ -1,10 +1,13 @@
 /**
  * @fileoverview Chat page integrating AI Elements primitives with AI SDK v6.
- * Renders a conversation and a prompt input wired to `/api/chat/stream`.
+ * Uses the official `useChat` hook to manage UI message streams and state.
  */
 "use client";
 
-import { useRef, useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import type { FileUIPart, UIMessage } from "ai";
+import { DefaultChatTransport } from "ai";
+import { type ReactElement, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -34,41 +37,76 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
+import { useSupabase } from "@/lib/supabase/client";
 
 /**
- * Render a single message with support for text, tool usage, and simple metadata.
+ * Resolve the authenticated Supabase user id for the current browser session.
+ *
+ * @returns The authenticated user's id or null when unauthenticated.
  */
-function ChatMessageItem({
-  role,
-  id,
-  parts,
-}: {
-  role: "user" | "assistant" | "system";
-  id: string;
-  parts: Array<any> | undefined;
-}) {
+function useCurrentUserId(): string | null {
+  const supabase = useSupabase();
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (isMounted) {
+          setUserId(data.user?.id ?? null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setUserId(null);
+      });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!isMounted) return;
+        setUserId(session?.user?.id ?? null);
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      authListener?.subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  return userId;
+}
+
+/**
+ * Render a single chat message including text, tool usage, and metadata parts.
+ *
+ * @param message UI message streamed by the AI SDK transport.
+ * @returns Rendered message content.
+ */
+function ChatMessageItem({ message }: { message: UIMessage }) {
+  const parts = message.parts ?? [];
   return (
-    <Message from={role} data-testid={`msg-${id}`}>
+    <Message from={message.role} data-testid={`msg-${message.id}`}>
       <MessageAvatar
-        src={role === "user" ? "/avatar-user.png" : "/avatar-ai.png"}
-        name={role === "user" ? "You" : "AI"}
+        src={message.role === "user" ? "/avatar-user.png" : "/avatar-ai.png"}
+        name={message.role === "user" ? "You" : "AI"}
       />
       <MessageContent>
-        {Array.isArray(parts) && parts.length > 0 ? (
+        {parts.length > 0 ? (
           parts.map((part, idx) => {
             switch (part?.type) {
               case "text":
                 return (
-                  <p key={`${id}-t-${idx}`} className="whitespace-pre-wrap">
+                  <p key={`${message.id}-t-${idx}`} className="whitespace-pre-wrap">
                     {part.text}
                   </p>
                 );
               case "tool-call":
-              case "tool":
               case "tool-call-result":
                 return (
                   <div
-                    key={`${id}-tool-${idx}`}
+                    key={`${message.id}-tool-${idx}`}
                     className="my-2 rounded-md border bg-muted/30 p-3 text-xs"
                   >
                     <div className="mb-1 font-medium">Tool</div>
@@ -80,7 +118,7 @@ function ChatMessageItem({
               case "reasoning":
                 return (
                   <div
-                    key={`${id}-r-${idx}`}
+                    key={`${message.id}-r-${idx}`}
                     className="my-2 rounded-md border border-yellow-300/50 bg-yellow-50 p-3 text-xs text-yellow-900 dark:border-yellow-300/30 dark:bg-yellow-950 dark:text-yellow-200"
                   >
                     <div className="mb-1 font-medium">Reasoning</div>
@@ -91,7 +129,7 @@ function ChatMessageItem({
                 );
               default:
                 return (
-                  <pre key={`${id}-u-${idx}`} className="text-xs opacity-70">
+                  <pre key={`${message.id}-u-${idx}`} className="text-xs opacity-70">
                     {JSON.stringify(part)}
                   </pre>
                 );
@@ -106,113 +144,95 @@ function ChatMessageItem({
 }
 
 /**
- * Main chat page component integrating AI Elements with streaming chat functionality.
+ * Chat page component using AI SDK v6 and AI Elements.
  *
- * Renders a conversation interface with message history, prompt input with attachments,
- * and handles streaming responses from the AI API with real-time message updates.
+ * Manages chat state, user authentication, and message streaming.
+ * Filters system messages from display and handles input validation.
  *
- * @returns The ChatPage component.
+ * @returns Chat interface with message history and input controls.
  */
-export default function ChatPage() {
-  const [messages, setMessages] = useState<
-    Array<{ id: string; role: "user" | "assistant" | "system"; parts: any[] }>
-  >([]);
-  const abortRef = useRef<AbortController | null>(null);
+export default function ChatPage(): ReactElement {
+  // Get the current authenticated user ID for personalization
+  const userId = useCurrentUserId();
+
+  // Create chat transport with user-specific context for API requests
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat/stream",
+        body: () => (userId ? { user_id: userId } : {}),
+      }),
+    [userId]
+  );
+
+  // Initialize chat state management with AI SDK hooks
+  const { messages, sendMessage, status, stop, regenerate, clearError, error } =
+    useChat({
+      id: userId ?? undefined,
+      transport,
+    });
+
+  // Filter out system messages from display (e.g., tool instructions)
+  const visibleMessages = useMemo(
+    () => messages.filter((message) => message.role !== "system"),
+    [messages]
+  );
+
+  /**
+   * Handle chat message submission.
+   *
+   * Validates input, clears errors, and sends message with files to API.
+   *
+   * @param text - User message text.
+   * @param files - Attached files array.
+   */
+  const handleSubmit = useCallback(
+    async ({ text, files }: PromptInputMessage) => {
+      const normalizedText = (text ?? "").trim();
+      const preparedFiles: FileUIPart[] | undefined =
+        files && files.length > 0 ? files : undefined;
+
+      if (!normalizedText && !preparedFiles) {
+        return;
+      }
+
+      if (status === "error") {
+        clearError();
+      }
+
+      await sendMessage({
+        text: normalizedText,
+        files: preparedFiles,
+        metadata: userId ? { userId } : undefined,
+      });
+    },
+    [clearError, sendMessage, status, userId]
+  );
+
+  // Determine button states based on current chat status
+  const canStop = status === "streaming";
+  const canRetry = visibleMessages.some((message) => message.role === "assistant");
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
+      {/* Main conversation area with message history */}
       <Conversation className="flex-1">
         <ConversationContent>
-          {messages.length === 0 ? (
+          {visibleMessages.length === 0 ? (
             <ConversationEmptyState description="Start a conversation to see messages here." />
           ) : (
-            messages.map((m) => (
-              <ChatMessageItem
-                key={m.id}
-                id={m.id}
-                role={m.role as any}
-                parts={(m as any).parts}
-              />
+            visibleMessages.map((message) => (
+              <ChatMessageItem key={message.id} message={message} />
             ))
           )}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
 
+      {/* Input controls and action buttons */}
       <div className="border-t p-2">
         <PromptInputProvider>
-          <PromptInput
-            onSubmit={(msg: PromptInputMessage) => {
-              const parts: any[] = [];
-              const text = (msg.text || "").trim();
-              if (text) parts.push({ type: "text", text });
-              if (Array.isArray(msg.files)) {
-                for (const f of msg.files) {
-                  parts.push({
-                    type: "file",
-                    url: f.url,
-                    media_type: f.mediaType,
-                    name: f.filename,
-                  });
-                }
-              }
-              if (parts.length === 0) return;
-
-              const userId = Math.random().toString(36).slice(2);
-              setMessages((prev: any[]) =>
-                prev.concat([{ id: userId, role: "user", parts }])
-              );
-
-              abortRef.current?.abort();
-              const ac = new AbortController();
-              abortRef.current = ac;
-
-              const payload = { messages: [{ id: userId, role: "user", parts }] };
-
-              void (async () => {
-                const res = await fetch("/api/chat/stream", {
-                  method: "POST",
-                  headers: { "content-type": "application/json" },
-                  body: JSON.stringify(payload),
-                  signal: ac.signal,
-                });
-                if (!res.ok || !res.body) return;
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = "";
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-                  buffer += decoder.decode(value, { stream: true });
-                  let idx;
-                  while ((idx = buffer.indexOf("\n\n")) !== -1) {
-                    const event = buffer.slice(0, idx).trim();
-                    buffer = buffer.slice(idx + 2);
-                    if (event.startsWith("data:")) {
-                      const dataStr = event.slice(5).trim();
-                      if (dataStr === "[DONE]") break;
-                      try {
-                        const msgObj = JSON.parse(dataStr) as any;
-                        if (msgObj?.role) {
-                          setMessages((prev: any[]) =>
-                            prev.concat([
-                              {
-                                id: msgObj.id || Math.random().toString(36).slice(2),
-                                role: msgObj.role,
-                                parts: msgObj.parts || [],
-                              },
-                            ])
-                          );
-                        }
-                      } catch {
-                        // ignore parse errors for non-JSON events
-                      }
-                    }
-                  }
-                }
-              })();
-            }}
-          >
+          <PromptInput onSubmit={handleSubmit}>
             <PromptInputHeader>
               <PromptInputTools>
                 <PromptInputActionMenu>
@@ -242,25 +262,34 @@ export default function ChatPage() {
                 <button
                   type="button"
                   aria-label="Stop streaming"
-                  className="rounded border px-3 py-1 text-sm"
-                  onClick={() => abortRef.current?.abort()}
+                  className="rounded border px-3 py-1 text-sm disabled:opacity-50"
+                  onClick={() => {
+                    void stop();
+                  }}
+                  disabled={!canStop}
                 >
                   Stop
                 </button>
                 <button
                   type="button"
                   aria-label="Retry last request"
-                  className="rounded border px-3 py-1 text-sm"
+                  className="rounded border px-3 py-1 text-sm disabled:opacity-50"
                   onClick={() => {
-                    // no-op smoke: retry semantics handled by new submit
+                    void regenerate();
                   }}
+                  disabled={!canRetry || status === "streaming"}
                 >
                   Retry
                 </button>
                 <div className="ml-auto">
-                  <PromptInputSubmit />
+                  <PromptInputSubmit status={status} />
                 </div>
               </div>
+              {error ? (
+                <p className="mt-2 text-sm text-destructive">
+                  {error.message ?? "Something went wrong. Please try again."}
+                </p>
+              ) : null}
             </PromptInputFooter>
           </PromptInput>
         </PromptInputProvider>
