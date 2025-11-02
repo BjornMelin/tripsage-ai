@@ -160,17 +160,53 @@ export default function ChatPage(): ReactElement {
     () =>
       new DefaultChatTransport({
         api: "/api/chat/stream",
+        credentials: "include",
         body: () => (userId ? { user_id: userId } : {}),
+        // Enable resumable streams by preparing a reconnect request when needed.
+        prepareReconnectToStreamRequest: () => ({
+          api: "/api/chat/stream",
+          credentials: "include",
+          headers: undefined,
+        }),
       }),
     [userId]
   );
 
   // Initialize chat state management with AI SDK hooks
+  const chatHelpers = useChat({
+    id: userId ?? undefined,
+    resume: true,
+    transport,
+  });
+
   const { messages, sendMessage, status, stop, regenerate, clearError, error } =
-    useChat({
-      id: userId ?? undefined,
-      transport,
-    });
+    chatHelpers;
+  // Experimental resume helper; not part of stable types in all builds.
+  const experimental_resume = (
+    chatHelpers as unknown as { experimental_resume?: () => Promise<unknown> }
+  ).experimental_resume;
+
+  // Surface a brief toast when a resume attempt completes.
+  const [showReconnected, setShowReconnected] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    const fn = experimental_resume as undefined | (() => Promise<unknown>);
+    if (typeof fn === "function") {
+      void fn()
+        .then(() => {
+          if (!mounted) return;
+          setShowReconnected(true);
+          const t = setTimeout(() => setShowReconnected(false), 3000);
+          return () => clearTimeout(t);
+        })
+        .catch(() => {
+          /* ignore resume errors */
+        });
+    }
+    return () => {
+      mounted = false;
+    };
+  }, [experimental_resume]);
 
   // Filter out system messages from display (e.g., tool instructions)
   const visibleMessages = useMemo(
@@ -215,6 +251,15 @@ export default function ChatPage(): ReactElement {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
+      {showReconnected ? (
+        <div
+          role="status"
+          data-testid="reconnected-toast"
+          className="fixed right-4 top-4 z-50 rounded-md border bg-green-600/90 px-3 py-2 text-sm text-white shadow"
+        >
+          Reconnected
+        </div>
+      ) : null}
       {/* Main conversation area with message history */}
       <Conversation className="flex-1">
         <ConversationContent>
