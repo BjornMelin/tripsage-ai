@@ -23,7 +23,7 @@
 1) Telemetry module `frontend/lib/observability/index.ts` exporting span helpers
 2) Wrap BYOK RPCs and chat provider calls with spans; counters for errors/usage
 3) Implement log redaction middleware/util; scrub `api_key` fields
-4) Add rate limits: strict for `/api/keys*` routes; moderate for `/api/chat*`
+4) Add rate limits: strict for `/api/keys*` routes; moderate for `/api/chat*`; centralize with a shared Upstash client/module and reuse per-route
 5) Vitest tests: unit for redaction utils; integration smoke for rate limit headers
 
 ## Checklist (mark off; add notes under each)
@@ -82,6 +82,26 @@
 - Outstanding items / tracked tech debt:
 - Follow-up prompts or tasks:
 
+---
+
+## Final Alignment with TripSage Migration Plan (Next.js 16 + AI SDK v6)
+
+- Core decisions impacting Observability:
+  - Initialize OTel via `@vercel/otel` and export via Trace Drains; prefer spans over verbose logs; redact PII.
+  - Add spans to BYOK RPCs, provider calls, tools, and persistence with request ids.
+
+- Implementation checklist delta:
+  - Add `instrumentation.ts` at repo root (or `src/`); verify traces.
+  - Standardize structured logs with redaction; avoid logging prompts/bodies.
+
+- References:
+  - Vercel OTel: <https://vercel.com/docs/otel>
+  - Trace Drains: <https://vercel.com/docs/drains/reference/traces>
+
+Verification
+
+- Traces are visible and complete; logs are minimal; no secrets appear in any output.
+
 ## Additional context & assumptions
 
 - Span naming conventions:
@@ -97,7 +117,7 @@
 
 - `frontend/lib/observability/index.ts` (spans/counters)
 - `frontend/lib/logging/redact.ts` (scrub api_key and similar)
-- Rate-limit middleware under `frontend/middleware.ts` or per-route wrappers
+- Rate-limit per-route wrappers; Next 16 uses `proxy.ts` (root or `src/`) instead of `middleware.ts`
 
 ## Security checks
 
