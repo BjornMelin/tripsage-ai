@@ -6,9 +6,6 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-/*
- * Type representing the dependencies for non-streaming chat handling.
- */
 let handleChatNonStream: (deps: any, payload: any) => Promise<Response>;
 
 /**
