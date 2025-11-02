@@ -13,6 +13,16 @@ title: Frontend Agent Guidelines
 - Coverage and reporting: provider `v8` by default; configure `coverage.include` and thresholds; emit `text`, `html`, `json` coverage; write machine-readable test results via `--reporter=junit` and `--outputFile`.
 - Mocks and timers: use `vi.mock`, `vi.fn`, `vi.spyOn`; clear/restore in `afterEach`; control time with `vi.useFakeTimers()` and `vi.setSystemTime()`.
 
+### UI/Store Testing Conventions
+
+- Deterministic inputs: provide stable timestamps and seeded data in UI tests. Use `vi.useFakeTimers()` + `vi.setSystemTime()` for date-dependent logic.
+- Visible output assertions: prefer roles, text, and aria attributes. When components don’t expose roles for loaders, assert minimal stable selectors (e.g., `.animate-spin`) rather than brittle trees.
+- No network: stub all fetch/external hooks; UI/store suites must not perform real network I/O.
+- Store isolation: reset the Zustand store between tests using the store’s `reset()` action. Avoid asserting internal shapes; prefer public getters/actions. Where computed getters can be stale in hook snapshots, read via `useUIStore.getState()` or derive from the underlying state (e.g., `Object.values(loadingStates)` or `notifications.filter(n => !n.isRead)`).
+- JSDOM vs Node: UI component tests run in JSDOM (default). Store-only tests can stay in JSDOM but must not depend on DOM APIs. Add `@vitest-environment` overrides only when necessary.
+- Timers in stores: for auto-dismiss notifications, use fake timers and advance until removal to avoid real-time delays.
+- Short runs: keep per-test timeouts short and eager; no unconsumed streams or pending async work.
+
 ## Next.js 16, Supabase, shadcn/ui, Tailwind v4, and Upstash Redis
 
 - Next.js 16 rendering: Use App Router and Route Handlers. Enable `cacheComponents` in `next.config`. Use `"use cache"` to cache stable data and components. Use tags for invalidation; call `revalidateTag` after writes in Server Actions or Route Handlers.
@@ -30,58 +40,44 @@ title: Frontend Agent Guidelines
 
 ## Route Handlers, DI, and Testing
 
-This repository standardizes Next.js App Router API code around thin adapters and dependency-injected handlers with deterministic Vitest tests.
+Standardize API code around thin Next.js route adapters that delegate to pure, dependency-injected handlers. Keep effects in adapters; keep business logic in testable functions.
 
-### Guidelines (always apply)
+### Adapters
 
-- Thin Adapters: Keep files under `app/api/**/route.ts` minimal. They:
-  - Parse `NextRequest` (headers/body)
-  - Construct SSR-only clients (e.g., `createServerSupabase()`)
-  - Lazily build rate limiters inside the handler (never at module scope)
-  - Call a DI handler (`_handler.ts` or `_handlers.ts`) and return the result
+- Files: `app/api/**/route.ts`
+- Parse `NextRequest` (headers/body) and construct SSR-only clients (e.g., `createServerSupabase()`).
+- Build rate limiters lazily inside the request; never at module scope.
+- Delegate to a DI handler (`_handler.ts` or `_handlers.ts`) and return `NextResponse`.
 
-- DI Handlers: Put business logic in `app/api/**/_handler.ts` or `_handlers.ts`:
-  - Accept collaborators: `supabase`, `resolveProvider`, optional `limit` function, `logger`, `clock`, `config`
-  - For AI streaming, accept `stream?: typeof streamText` so tests can inject a finite stub
-  - Do not read `process.env` in handlers
+### DI Handlers
 
-- Rate Limiting:
-  - Build Upstash `Ratelimit` inside the route, after env stubs/mocks are applied
-  - Optionally cache lazily to avoid per-request construction
+- Files: `app/api/**/_handler.ts` or `_handlers.ts`
+- Pure functions that accept collaborators: `supabase`, `resolveProvider`, optional `limit`, `logger`, `clock`, `config`.
+- No `process.env` reads, no module-scope state. For streaming, accept `stream?: typeof streamText` and return the injected result.
 
-- AI SDK v6 Streaming:
-  - Use `toUIMessageStreamResponse` in adapters/handlers
-  - In tests, inject a stream stub or use `simulateReadableStream`; ensure streams close during tests
+### Rate Limiting
 
-- Attachments:
-  - Map UI file parts → model image parts with `convertToModelMessages` + `convertDataPart`
-  - Validate media types (allow `image/*` only) in server routes
+- Construct Upstash `Ratelimit` inside the adapter using `Redis.fromEnv()`; optionally memoize per-request.
+- Keep env/credential handling at the adapter boundary; pass `limit()` into the handler.
 
-### Testing Rules
+### Attachments and Model Messages
 
-- Prefer handler unit tests with injected fakes:
-  - `@vitest-environment node` for API tests
-  - Inject stream stub for AI SDK tests to avoid open handles
-  - Use shared fakes for Supabase/ratelimit/provider resolvers
+- Convert UI file parts to model parts (`convertToModelMessages` + `convertDataPart`).
+- Validate media types (allow `image/*` only).
 
-- Adapter smoke tests:
-  - Always `vi.resetModules()` and `vi.stubEnv()` BEFORE importing the route module
-  - Mock `@upstash/ratelimit`, `@upstash/redis`, and SSR clients as needed
-  - Keep to a minimum (401, 429 checks). Avoid hitting real streaming path
+### Testing
 
-- Env Hygiene:
-  - Use `vi.stubEnv` and `unstubAllEnvs()` helpers to avoid env leaks
-  - Do not create Upstash clients at module scope
+- Handlers (unit): `@vitest-environment node`; inject fakes for Supabase/ratelimit/provider; ensure streams close; no network.
+- Adapters (smoke): `vi.stubEnv` + `vi.resetModules` before import; mock `@upstash/ratelimit`, `@upstash/redis`, and SSR clients; validate 401/429 and happy-path wiring.
+- Env hygiene: use helpers like `unstubAllEnvs()`; avoid module-scope clients.
 
-### File Structure Patterns
+### Structure
 
 - `app/api/feature/route.ts` — thin adapter
-- `app/api/feature/_handler.ts` or `_handlers.ts` — pure DI logic
-- `app/api/_helpers/*.ts` — shared mapping/validation helpers
-- Tests live under `__tests__` mirroring handler/adapter structure
+- `app/api/feature/_handler.ts` or `_handlers.ts` — DI logic
+- `app/api/_helpers/*.ts` — shared mappers/validators
+- `__tests__/` — mirrors handlers/adapters
 
 ### Rationale
 
-- Aligns with Clean Architecture: “thin adapters, fat services”
-- Stabilizes tests by eliminating module-scope side effects and open streams
-- Keeps SSR-only concerns in adapters; handlers remain pure and portable
+- Clean boundaries (“thin adapters, fat services”), deterministic tests (no module-scope effects), and portable handler logic.
