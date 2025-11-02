@@ -108,7 +108,7 @@ describe("handleChatNonStream", () => {
     const supabase = fakeSupabase("u4");
     const generateText = vi.fn(async () => ({
       text: "Hello world",
-      usage: { totalTokens: 42, inputTokens: 10, outputTokens: 32 },
+      usage: { totalTokens: 42, promptTokens: 10, completionTokens: 32 },
     }));
     const res = await handleChatNonStream(
       {
