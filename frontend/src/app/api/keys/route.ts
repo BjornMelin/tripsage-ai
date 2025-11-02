@@ -16,7 +16,7 @@ import { getKeys, postKey } from "./_handlers";
 /**
  * Set of allowed API service providers for key storage.
  */
-const ALLOWED_SERVICES = new Set(["openai", "openrouter", "anthropic", "xai"]);
+const _ALLOWED_SERVICES = new Set(["openai", "openrouter", "anthropic", "xai"]);
 
 /**
  * Prefix for rate limit keys in Redis.

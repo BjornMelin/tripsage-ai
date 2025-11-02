@@ -1,20 +1,20 @@
 /**
  * @fileoverview Pure handler for chat streaming. SSR wiring lives in the route adapter.
+ *
+ * The handler composes validation, memory hydration, token clamping, and AI SDK
+ * streaming. It is fully dependency-injected to ensure deterministic tests.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LanguageModel, UIMessage } from "ai";
 import { convertToModelMessages, streamText as defaultStreamText } from "ai";
-import {
-  convertUiFilePartToImage,
-  extractTexts,
-  validateImageAttachments,
-} from "@/app/api/_helpers/attachments";
+import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
 import {
   type ChatMessage as ClampMsg,
   clampMaxTokens,
   countTokens,
 } from "@/lib/tokens/budget";
+import { getModelContextLimit } from "@/lib/tokens/limits";
 
 /**
  * Type representing a resolved AI provider configuration.
@@ -76,6 +76,14 @@ export interface ChatPayload {
  * @param deps - Dependencies required for chat stream handling.
  * @param payload - Chat request payload containing messages and configuration.
  * @returns Promise resolving to a Response with streamed chat data.
+ */
+/**
+ * Handle chat streaming with injected dependencies.
+ *
+ * @param deps Collaborators: `supabase`, `resolveProvider`, optional `limit`,
+ *   `logger`, `clock`, `config`, and optional `stream` factory used by AI SDK.
+ * @param payload Request payload from the client (messages, model, desired tokens).
+ * @returns A Response suitable for `@ai-sdk/ui` consumption (UIMessageStream).
  */
 export async function handleChatStream(
   deps: ChatDeps,
@@ -146,9 +154,20 @@ export async function handleChatStream(
 
   const textParts = extractTexts(messages);
   const promptCount = countTokens([systemPrompt, ...textParts], provider.modelId);
+  const modelLimit = getModelContextLimit(provider.modelId);
+  const available = Math.max(0, modelLimit - promptCount);
+  if (available <= 0) {
+    return new Response(
+      JSON.stringify({
+        error: "No output tokens available",
+        reasons: ["maxTokens_clamped_model_limit"],
+      }),
+      { status: 400, headers: { "content-type": "application/json" } }
+    );
+  }
   const clampInput: ClampMsg[] = [
     { role: "system", content: systemPrompt },
-    { role: "user", content: `${promptCount} tokens estimated` },
+    { role: "user", content: textParts.join(" ") },
   ];
   const { maxTokens, reasons } = clampMaxTokens(clampInput, desired, provider.modelId);
   if (maxTokens <= 0) {
@@ -164,9 +183,7 @@ export async function handleChatStream(
     model: provider.model,
     system: systemPrompt,
     maxOutputTokens: maxTokens,
-    messages: convertToModelMessages(messages, {
-      convertDataPart: convertUiFilePartToImage,
-    }),
+    messages: convertToModelMessages(messages),
   });
 
   const reqId = Math.random().toString(36).slice(2);

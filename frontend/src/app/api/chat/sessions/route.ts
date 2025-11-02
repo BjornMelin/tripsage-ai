@@ -24,7 +24,9 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = await createServerSupabase();
     let title: string | undefined;
-    try { title = ((await req.json()) as any)?.title; } catch {}
+    try {
+      title = ((await req.json()) as any)?.title;
+    } catch {}
     return createSession({ supabase }, title);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
