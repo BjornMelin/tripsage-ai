@@ -165,7 +165,10 @@ if (typeof window !== "undefined") {
   supports: vi.fn().mockReturnValue(false),
 };
 
-globalThis.fetch = vi.fn() as unknown as typeof fetch;
+// Only provide a global fetch mock in JSDOM, where window is available.
+if (typeof window !== "undefined") {
+  globalThis.fetch = vi.fn() as unknown as typeof fetch;
+}
 
 const consoleSpies: Console = {
   ...console,

@@ -1,3 +1,4 @@
+/* @vitest-environment node */
 /**
  * @fileoverview Unit tests for handleChatStream function, testing authentication,
  * rate limiting, attachment validation, memory integration, and AI SDK streaming
@@ -196,4 +197,3 @@ describe("handleChatStream", () => {
     expect(String(body.error)).toMatch(/No output tokens/);
   });
 });
-/* @vitest-environment node */
