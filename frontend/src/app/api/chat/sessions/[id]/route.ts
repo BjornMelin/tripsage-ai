@@ -10,6 +10,7 @@ import "server-only";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { deleteSession, getSession } from "../_handlers";
 
 export const dynamic = "force-dynamic";
 
@@ -23,20 +24,8 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
   try {
     const supabase = await createServerSupabase();
-    const { data: auth } = await supabase.auth.getUser();
-    const user = auth.user;
-    if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-
     const { id } = ctx.params;
-    const { data, error } = await supabase
-      .from("chat_sessions")
-      .select("id, created_at, updated_at, metadata")
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (error) return NextResponse.json({ error: "db_error" }, { status: 500 });
-    if (!data) return NextResponse.json({ error: "not_found" }, { status: 404 });
-    return NextResponse.json(data, { status: 200 });
+    return getSession({ supabase }, id);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("/api/chat/sessions/[id] GET error", { message });
@@ -54,18 +43,8 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
 export async function DELETE(_req: NextRequest, ctx: { params: { id: string } }) {
   try {
     const supabase = await createServerSupabase();
-    const { data: auth } = await supabase.auth.getUser();
-    const user = auth.user;
-    if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-
     const { id } = ctx.params;
-    const { error } = await supabase
-      .from("chat_sessions")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", user.id);
-    if (error) return NextResponse.json({ error: "db_error" }, { status: 500 });
-    return new NextResponse(null, { status: 204 });
+    return deleteSession({ supabase }, id);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("/api/chat/sessions/[id] DELETE error", { message });
