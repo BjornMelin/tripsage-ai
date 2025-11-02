@@ -16,14 +16,6 @@ from tripsage_core.models.api._export_helpers import auto_all
 _HTTP_URL_ADAPTER: TypeAdapter[HttpUrl] = TypeAdapter(HttpUrl)
 
 
-class TemperatureUnit(str, Enum):
-    """Temperature units."""
-
-    CELSIUS = "celsius"
-    FAHRENHEIT = "fahrenheit"
-    KELVIN = "kelvin"
-
-
 class WindSpeedUnit(str, Enum):
     """Wind speed units."""
 
