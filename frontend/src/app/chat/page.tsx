@@ -199,8 +199,9 @@ export default function ChatPage(): ReactElement {
           const t = setTimeout(() => setShowReconnected(false), 3000);
           return () => clearTimeout(t);
         })
-        .catch(() => {
-          /* ignore resume errors */
+        .catch((err) => {
+          // Log for developer diagnostics; avoid user-facing noise
+          console.error("Chat stream resume failed:", err);
         });
     }
     return () => {

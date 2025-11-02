@@ -4,10 +4,11 @@
  * validation, provider resolution, token clamping, and usage metadata.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LanguageModel, UIMessage } from "ai";
 import { convertToModelMessages, generateText as defaultGenerateText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
+import type { ChatMessageInsert } from "@/lib/supabase/database.types";
 import {
   type ChatMessage as ClampMsg,
   clampMaxTokens,
@@ -52,7 +53,7 @@ export type ProviderResolver = (
  * @param limit - The function to limit the chat.
  */
 export interface NonStreamDeps {
-  supabase: SupabaseClient<any>;
+  supabase: TypedServerSupabase;
   resolveProvider: ProviderResolver;
   logger?: {
     info: (msg: string, meta?: any) => void;
@@ -142,7 +143,7 @@ export async function handleChatNonStream(
   // Memory hydration (best-effort)
   let systemPrompt = "You are a helpful travel planning assistant.";
   try {
-    const { data: memRows } = await (deps.supabase as any)
+    const { data: memRows } = await deps.supabase
       .from("memories")
       .select("content")
       .eq("user_id", user.id)
@@ -208,12 +209,14 @@ export async function handleChatNonStream(
   const sessionId = payload.session_id;
   if (sessionId) {
     try {
-      await (deps.supabase as any).from("chat_messages").insert({
-        session_id: sessionId,
-        role: "assistant",
-        content: result.text ?? "",
-        metadata: body as any,
-      });
+      await (deps.supabase as unknown as any)
+        .from("chat_messages")
+        .insert({
+          session_id: sessionId,
+          role: "assistant",
+          content: result.text ?? "",
+          metadata: body as any,
+        } as ChatMessageInsert);
     } catch {
       // ignore persistence errors
     }
