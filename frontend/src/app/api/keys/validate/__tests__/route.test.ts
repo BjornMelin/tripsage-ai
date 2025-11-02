@@ -1,8 +1,10 @@
+/* @vitest-environment node */
 /**
  * @fileoverview Unit tests for BYOK key validation route handler.
  */
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { stubRateLimitEnabled, unstubAllEnvs } from "@/test/env-helpers";
 
 // Mock external dependencies at the top level
 vi.mock("@/lib/next/route-helpers", () => ({
@@ -35,11 +37,8 @@ describe("/api/keys/validate route", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    vi.unstubAllGlobals();
-
-    // Set environment variables for testing
-    process.env.UPSTASH_REDIS_REST_URL = "mock-url";
-    process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
+    unstubAllEnvs();
+    stubRateLimitEnabled();
   });
 
   describe("successful validation", () => {
@@ -60,6 +59,7 @@ describe("/api/keys/validate route", () => {
         }),
       }));
 
+      vi.resetModules();
       const { POST } = await import("../route");
       const req = {
         json: async () => ({ service: "openai", api_key: "sk-test" }),

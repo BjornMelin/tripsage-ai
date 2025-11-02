@@ -174,6 +174,16 @@ function EmptyState() {
   );
 }
 
+/**
+ * RecentTrips dashboard widget component.
+ *
+ * Displays recent trip cards with resilient parsing for different data shapes,
+ * includes accessible links, and stable date formatting with loading states.
+ *
+ * @param limit - Maximum number of trips to display.
+ * @param showEmpty - Whether to show empty state when no trips available.
+ * @returns The RecentTrips component.
+ */
 export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
   const { data: tripsResponse, isLoading } = useTrips();
 
