@@ -20,7 +20,8 @@
    - chat SSE event ordering + final usage
    - /api/keys validate route (provider mocked)
    - memory read/write through chat endpoints
-4) UI tests (RTL): AI Elements Chat page renders + prompt triggers fetch
+4) UI tests (RTL): AI Elements Chat page renders + prompt triggers fetch; approvals flow; resume streams
+5) E2E (Playwright): Chat/RAG flows, Tool approvals, message parts validations; collect coverage >= 90%
 
 ## Checklist (mark off; add notes under each)
 
@@ -51,6 +52,7 @@
 - [x] Route tests for attachments mapping (validation errors for non-image)
 - [ ] Resume behavior (id reuse) happy path test
 - [x] Sessions/messages CRUD tests (create/list/get/delete; message insert)
+- [ ] E2E: Chat + RAG with rerank; approvals UI flow; coverage >= 90%
 
 ## Working instructions (mandatory)
 
@@ -78,6 +80,27 @@
 8) Challenge: zen.challenge for flaky tests.
 9) Review: zen.codereview; fix; rerun.
 10) Finalize docs: update ADR/Spec with deltas.
+
+---
+
+## Final Alignment with TripSage Migration Plan (Next.js 16 + AI SDK v6)
+
+- Core decisions impacting Testing:
+  - Unit: provider registry (Gateway default vs BYOK), tools, token clamping, BYOK RPCs.
+  - Integration: chat SSE with tools and approvals, rate limits, session persistence, and proxy.ts session refresh.
+  - UI: AI SDK UI Chatbot flows including resume and approvals.
+
+- Implementation checklist delta:
+  - Assert OTel spans exist (best-effort) and logs contain no PII.
+  - Mock Gateway and providers; ensure BYOK path uses direct provider clients.
+
+- References:
+  - AI SDK UI Streaming Data: <https://ai-sdk.dev/docs/ai-sdk-ui/streaming-data>
+  - Chatbot Tool Usage: <https://ai-sdk.dev/docs/ai-sdk-ui/chatbot-tool-usage>
+
+Verification
+
+- Suites cover registry, routes, tools, memory, and proxies; rate-limit behavior correct; no PII leaks.
 
 ## Additional context & assumptions
 

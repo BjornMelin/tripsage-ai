@@ -22,7 +22,7 @@
 1) `frontend/lib/tools/index.ts` exports:
    - Local tools: Zod schema + execute
    - MCP tools: configured endpoints; same interface
-2) Update chat routes to accept a set of tools and pass to `streamText`
+2) Update chat routes to accept a set of tools and pass to `streamText` (include `toolChoice: 'auto'` where appropriate)
 3) Vitest tests: unit for each tool; integration to ensure tool calls interleave correctly in stream
 
 ## Checklist (mark off; add notes under each)
@@ -48,6 +48,8 @@
 - [ ] Timeouts and idempotency guards; tool-level rate limiting where applicable
 - [ ] UI rendering of `tool`, `tool-call`, `tool-call-result` parts (already supported)
 - [ ] Integration test: prompt triggers tool-call; assert tool-call-result appears in UI stream
+- [ ] Sensitive tools: require approval; implement pause/resume and UI approval response
+- [ ] Structured outputs for deterministic responses (e.g., itinerary): `Output.object(z.object(...))` in server and validated in client
 
 ### MCP integration (optional)
 
@@ -60,6 +62,11 @@
 - Check off tasks only after Vitest/biome/tsc are clean.
 - Add “Notes” for implementation details, issues, and debt; address or log.
 - Author ADR(s) in `docs/adrs/` describing tool registry design, MCP boundaries, and security; create Spec(s) in `docs/specs/` defining tool schemas and execution contracts.
+
+## Roles & success criteria
+
+- Roles: Tool engineer (server), UI engineer (approvals), security reviewer (secaudit), reviewer (codereview).
+- Success: Tool registry in place; sensitive tool approval works end-to-end; structured outputs validated; tests green.
 
 ## Process flow (required)
 
@@ -87,6 +94,29 @@
 - Summary of changes and decisions:
 - Outstanding items / tracked tech debt:
 - Follow-up prompts or tasks:
+
+---
+
+## Final Alignment with TripSage Migration Plan (Next.js 16 + AI SDK v6)
+
+- Core decisions impacting Tools/MCP:
+  - Implement tools with AI SDK `tool()` and Zod; orchestrate in `streamText` with `tools` and optional `toolChoice: 'auto'`.
+  - For sensitive actions, follow AI SDK UI Chatbot tool usage approval flow (approval property names UNVERIFIED—follow docs pattern).
+  - Ensure tools are server‑side, with strict input validation and concise, safe outputs.
+
+- Implementation checklist delta:
+  - Provide a unified `tools` registry for chat route usage; include timeouts and error mapping.
+  - Integrate MCP tools via adapters conforming to AI SDK tool interface.
+  - Add Upstash rate limits to heavy tools where appropriate.
+
+- References:
+  - Tool Calling: <https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling>
+  - MCP Tools: <https://ai-sdk.dev/docs/ai-sdk-core/mcp-tools>
+  - Chatbot Tool Usage: <https://ai-sdk.dev/docs/ai-sdk-ui/chatbot-tool-usage>
+
+Verification
+
+- Tool calls interleave correctly in streams; approvals pause/resume behavior works; errors are structured and non‑leaky.
 
 ## Additional context & assumptions
 
