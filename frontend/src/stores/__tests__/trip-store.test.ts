@@ -199,6 +199,9 @@ describe("Trip Store", () => {
       const tripId = result.current.trips[0].id;
       const originalUpdatedAt = result.current.trips[0].updatedAt;
 
+      // Ensure timestamp granularity difference for updatedAt
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
       // Update the trip
       await act(async () => {
         await result.current.updateTrip(tripId, {

@@ -401,7 +401,6 @@ describe("Search Params Store", () => {
         activity: null,
         destination: null,
       });
-
     });
 
     it("handles validation errors", async () => {
@@ -426,7 +425,7 @@ describe("Search Params Store", () => {
       expect(typeof validateResult).toBe("boolean");
       expect(result.current.isValidating).toEqual(before);
     });
-  
+
     describe("Parameter Reset", () => {
       it("resets all parameters", async () => {
         const { result } = renderHook(() => useSearchParamsStore());
