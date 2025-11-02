@@ -9,6 +9,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Dependency-injected handlers for App Router APIs:
+  - Chat stream: `frontend/src/app/api/chat/stream/_handler.ts`
+  - Keys (BYOK): `frontend/src/app/api/keys/_handlers.ts`
+  - Sessions/messages: `frontend/src/app/api/chat/sessions/_handlers.ts`
+- Attachment utilities and validation:
+  - `frontend/src/app/api/_helpers/attachments.ts`
+- Deterministic Vitest suites for handlers and adapter smokes:
+  - Chat stream handler and route smokes under `frontend/src/app/api/chat/stream/__tests__/`
+  - Keys and sessions handler tests under `frontend/src/app/api/keys/__tests__/` and `frontend/src/app/api/chat/sessions/__tests__/`
+- Frontend agent guidelines for DI handlers, thin adapters, lazy RL, and testing:
+  - `frontend/AGENTS.md`
+- ADR documenting DI handlers + thin adapters testing strategy:
+  - `docs/adrs/adr-0029-di-route-handlers-and-testing.md`
+- Provider registry and resolution (server-only) returning AI SDK v6 `LanguageModel`:
+  - `frontend/src/lib/providers/registry.ts` (`resolveProvider(userId, modelHint?)`)
+  - `frontend/src/lib/providers/types.ts`, `frontend/src/lib/settings.ts`
+- OpenRouter attribution headers support (`HTTP-Referer`, `X-Title`) sourced from env
+- Vitest unit tests for registry precedence and attribution
+  - `frontend/src/lib/providers/__tests__/registry.test.ts`
+- Architecture docs: ADR and Spec for provider order, attribution, and SSR boundaries
+  - `docs/adrs/2025-11-01-provider-registry.md`, `docs/specs/provider-registry.md`
+- Dependency: `@ai-sdk/anthropic@3.0.0-beta.47`
+
+### Changed
+
+- Chat page now consumes AI SDK v6 `useChat` + `DefaultChatTransport`, removing the bespoke SSE parser and wiring Supabase user IDs into the payload (`frontend/src/app/chat/page.tsx`).
+- Chat stream adapter now delegates to DI handler and builds the Upstash rate limiter lazily:
+  - `frontend/src/app/api/chat/stream/route.ts`
+- Keys and sessions adapters delegate to their DI handlers:
+  - `frontend/src/app/api/keys/route.ts`
+  - `frontend/src/app/api/chat/sessions/route.ts`
+  - `frontend/src/app/api/chat/sessions/[id]/route.ts`
+  - `frontend/src/app/api/chat/sessions/[id]/messages/route.ts`
+- Vitest defaults tuned for stability and timeouts:
+  - `frontend/vitest.config.ts` (unstubEnvs, threads, single worker)
+  - `frontend/package.json` test scripts include short timeouts
+
+### Fixed
+
+- Token budget utilities release WASM tokenizer resources without `any` casts (`frontend/src/lib/tokens/budget.ts`).
+- Resolved hanging API tests by:
+  - Injecting a finite AI stream stub in handler tests (no open handles)
+  - Building Upstash rate limiters lazily (no module‑scope side effects)
+  - Guarding JSDOM‑specific globals in `frontend/src/test-setup.ts`
+  - Using `vi.resetModules()` and env stubs before importing route modules
+
+- Centralized BYOK provider selection; preference order: openai → openrouter → anthropic → xai
+- OpenRouter and xAI wired via OpenAI-compatible client with per-user BYOK and required base URLs
+- Registry is SSR-only (`server-only`), never returns or logs secret material
+- Session message listing and creation stay scoped to the authenticated user (`frontend/src/app/api/chat/sessions/_handlers.ts`).
+
+### Removed
+
+- Python provider wrappers and tests removed (see Breaking Changes)
+- FastAPI chat router and schemas removed; chat moved to Next.js AI SDK v6
+  - Deleted: `tripsage/api/routers/chat.py`, `tripsage/api/schemas/chat.py`
+  - Removed ChatAgent and chat service wiring: `tripsage/agents/chat.py`, ChatAgent initialization in `tripsage/api/main.py`, chat service from `tripsage/app_state.py`, ChatService from `tripsage_core/services/business/chat_service.py`
+  - Deleted tests and fixtures tied to Python chat: `tests/integration/api/test_chat_streaming.py`, `tests/e2e/test_agent_config_flow.py`, `tests/fixtures/http.py`, and `tests/unit/agents/test_create_agent.py`
+
+### Security
+
+- Provider keys are fetched via server-side Supabase RPCs only; no client exposure
+- OpenRouter attribution headers are non-sensitive and attached only when set
+
+### Breaking Changes
+
+- Removed legacy Python LLM provider modules and corresponding tests:
+  - `tripsage_core/services/external_apis/llm_providers.py`
+  - `tripsage_core/services/external_apis/providers/{openai_adapter.py, openrouter_adapter.py, anthropic_adapter.py, xai_adapter.py, token_budget.py, interfaces.py}`
+  - `tests/unit/external/{test_llm_providers.py, test_providers.py, test_token_budget.py}`
+- No backwards compatibility shims retained; registry is the final implementation
+- Removed Python chat API entirely in favor of Next.js routes using AI SDK v6; any direct callers to `/api/chat/*` must use `/app/api/chat/stream` (Next.js) instead
+
+## [2.2.0] - 2025-11-01
+
+### Added
+
 - Next.js route `src/app/auth/callback/route.ts` exchanges OAuth `code` for session
 - Login/Register use `@supabase/auth-ui-react` blocks (email/password + OAuth)
 - FastAPI SSE chat endpoint `POST /api/chat/stream` (streams token deltas; `text/event-stream`)
@@ -249,7 +326,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
   - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
 
-
 - Removed dict-shaped responses in list/search paths; replaced with typed response models
 - Removed scattered UUID/datetime parsing; centralized to helpers
 
@@ -289,7 +365,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Legacy Supabase schema sources and scripts removed:
   - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
   - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
-
 
 - Removed complex tool registry and redundant orchestration/abstraction layers
 - Removed nested configuration classes and legacy database service implementations

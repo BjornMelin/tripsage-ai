@@ -1,14 +1,15 @@
 /**
- * Test suite for the API client with Zod validation
+ * @fileoverview Comprehensive test suite for API client with Zod validation,
+ * covering request/response validation, error handling, authentication, retries,
+ * rate limiting, and various HTTP scenarios with mocked fetch implementation.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { apiClient } from "../api-client";
-import { ApiError } from "../error-types";
+import { ApiClient, ApiClientError } from "../api-client";
 
-// Test schemas for validation
+/** Zod schema for validating user response data. */
 const UserResponseSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),
@@ -20,6 +21,7 @@ const UserResponseSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
+/** Zod schema for validating user creation request data. */
 const UserCreateRequestSchema = z.object({
   email: z.string().email("Invalid email format"),
   name: z.string().min(1, "Name is required"),
@@ -32,6 +34,7 @@ const UserCreateRequestSchema = z.object({
     .optional(),
 });
 
+/** Zod schema for validating paginated API responses. */
 const PaginatedResponseSchema = z.object({
   data: z.array(UserResponseSchema),
   pagination: z.object({
@@ -47,14 +50,21 @@ type UserResponse = z.infer<typeof UserResponseSchema>;
 type UserCreateRequest = z.infer<typeof UserCreateRequestSchema>;
 type PaginatedResponse = z.infer<typeof PaginatedResponseSchema>;
 
-// Mock global fetch
+/** Mock implementation for global fetch function. */
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
+
+/** Dedicated API client instance for testing with absolute base URL. */
+const client = new ApiClient({ baseUrl: "http://localhost" });
 
 describe("API client with Zod Validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFetch.mockClear();
+    // Re-bind fetch in case other suites overwrote the global
+    // Ensures deterministic behavior within this file regardless of run order
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (global as any).fetch = mockFetch;
   });
 
   describe("Request Validation", () => {
@@ -87,7 +97,7 @@ describe("API client with Zod Validation", () => {
       });
 
       // Test with validated request data
-      const result = await apiClient.postValidated<UserCreateRequest, UserResponse>(
+      const result = await client.postValidated<UserCreateRequest, UserResponse>(
         "/api/users",
         validUserData,
         UserCreateRequestSchema,
@@ -96,7 +106,7 @@ describe("API client with Zod Validation", () => {
 
       expect(result).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        "/api/users",
+        expect.stringContaining("/api/users"),
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify(validUserData),
@@ -115,7 +125,7 @@ describe("API client with Zod Validation", () => {
       };
 
       await expect(
-        apiClient.postValidated<UserCreateRequest, UserResponse>(
+        client.postValidated<UserCreateRequest, UserResponse>(
           "/api/users",
           invalidUserData,
           UserCreateRequestSchema,
@@ -139,7 +149,7 @@ describe("API client with Zod Validation", () => {
       } as UserCreateRequest;
 
       await expect(
-        apiClient.postValidated<UserCreateRequest, UserResponse>(
+        client.postValidated<UserCreateRequest, UserResponse>(
           "/api/users",
           invalidUserData,
           UserCreateRequestSchema,
@@ -170,7 +180,7 @@ describe("API client with Zod Validation", () => {
         json: () => Promise.resolve(validResponse),
       });
 
-      const result = await apiClient.getValidated("/api/users/123", UserResponseSchema);
+      const result = await client.getValidated("/api/users/123", UserResponseSchema);
 
       expect(result).toEqual(validResponse);
       expect(() => UserResponseSchema.parse(result)).not.toThrow();
@@ -195,7 +205,7 @@ describe("API client with Zod Validation", () => {
       });
 
       await expect(
-        apiClient.getValidated("/api/users/123", UserResponseSchema)
+        client.getValidated("/api/users/123", UserResponseSchema)
       ).rejects.toThrow();
     });
 
@@ -238,10 +248,7 @@ describe("API client with Zod Validation", () => {
         json: () => Promise.resolve(validPaginatedResponse),
       });
 
-      const result = await apiClient.getValidated(
-        "/api/users",
-        PaginatedResponseSchema
-      );
+      const result = await client.getValidated("/api/users", PaginatedResponseSchema);
 
       expect(result).toEqual(validPaginatedResponse);
       expect(result.data).toHaveLength(2);
@@ -263,7 +270,7 @@ describe("API client with Zod Validation", () => {
       } as UserCreateRequest;
 
       try {
-        await apiClient.postValidated<UserCreateRequest, UserResponse>(
+        await client.postValidated<UserCreateRequest, UserResponse>(
           "/api/users",
           invalidData,
           UserCreateRequestSchema,
@@ -290,15 +297,22 @@ describe("API client with Zod Validation", () => {
       });
 
       await expect(
-        apiClient.getValidated("/api/users/invalid", UserResponseSchema)
-      ).rejects.toThrow(ApiError);
+        client.getValidated("/api/users/invalid", UserResponseSchema)
+      ).rejects.toThrow(ApiClientError);
     });
 
     it("handles network errors gracefully", async () => {
       mockFetch.mockRejectedValue(new Error("Network error"));
 
+      // Use a fast client to avoid exceeding the per-test timeout (6s)
+      const fastClient = new ApiClient({
+        baseUrl: "http://localhost",
+        retries: 1,
+        timeout: 100,
+      });
+
       await expect(
-        apiClient.getValidated("/api/users", UserResponseSchema)
+        fastClient.getValidated("/api/users", UserResponseSchema)
       ).rejects.toThrow("Network error");
     });
   });
@@ -322,11 +336,11 @@ describe("API client with Zod Validation", () => {
         json: () => Promise.resolve(mockUser),
       });
 
-      const result = await apiClient.getValidated("/api/users/123", UserResponseSchema);
+      const result = await client.getValidated("/api/users/123", UserResponseSchema);
 
       expect(result).toEqual(mockUser);
       expect(mockFetch).toHaveBeenCalledWith(
-        "/api/users/123",
+        expect.stringContaining("/api/users/123"),
         expect.objectContaining({ method: "GET" })
       );
     });
@@ -356,7 +370,7 @@ describe("API client with Zod Validation", () => {
 
       const partialSchema = UserCreateRequestSchema.partial();
 
-      const result = await apiClient.putValidated(
+      const result = await client.putValidated(
         "/api/users/123",
         updateData,
         partialSchema,
@@ -365,7 +379,7 @@ describe("API client with Zod Validation", () => {
 
       expect(result).toEqual(updatedUser);
       expect(mockFetch).toHaveBeenCalledWith(
-        "/api/users/123",
+        expect.stringContaining("/api/users/123"),
         expect.objectContaining({
           method: "PUT",
           body: JSON.stringify(updateData),
@@ -387,14 +401,14 @@ describe("API client with Zod Validation", () => {
         json: () => Promise.resolve(deleteResponse),
       });
 
-      const result = await apiClient.deleteValidated(
+      const result = await client.deleteValidated(
         "/api/users/123",
         DeleteResponseSchema
       );
 
       expect(result).toEqual(deleteResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        "/api/users/123",
+        expect.stringContaining("/api/users/123"),
         expect.objectContaining({ method: "DELETE" })
       );
     });
@@ -423,7 +437,7 @@ describe("API client with Zod Validation", () => {
         json: () => Promise.resolve(userWithOptionalFields),
       });
 
-      const result = await apiClient.getValidated("/api/users/123", UserResponseSchema);
+      const result = await client.getValidated("/api/users/123", UserResponseSchema);
 
       expect(result.metadata).toEqual({
         department: "Engineering",
@@ -450,14 +464,11 @@ describe("API client with Zod Validation", () => {
         json: () => Promise.resolve(apiResponse),
       });
 
-      const result = (await apiClient.get("/api/dates")) as {
-        date: Date;
-        timestamp: Date;
-      };
+      const result = await client.getValidated("/api/dates", _DateTransformSchema);
 
       expect(result.date).toBeInstanceOf(Date);
       expect(result.timestamp).toBeInstanceOf(Date);
-      expect(result.date.getFullYear()).toBe(2025);
+      expect(result.date.getUTCFullYear()).toBe(2025);
     });
 
     it("validates with strict mode for exact object matching", async () => {
@@ -482,7 +493,7 @@ describe("API client with Zod Validation", () => {
       });
 
       await expect(
-        apiClient.getValidated("/api/users/123", StrictUserSchema)
+        client.getValidated("/api/users/123", StrictUserSchema)
       ).rejects.toThrow();
     });
   });
@@ -508,7 +519,7 @@ describe("API client with Zod Validation", () => {
       });
 
       const start = performance.now();
-      const result = await apiClient.getValidated(
+      const result = await client.getValidated(
         "/api/users/bulk",
         z.array(UserResponseSchema)
       );

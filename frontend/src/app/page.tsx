@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Landing page component for TripSage AI, showcasing the main marketing
+ * content, feature highlights, and call-to-action buttons for user registration
+ * and demo access.
+ */
+
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -6,6 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrentYear } from "@/components/ui/current-year";
 
+/**
+ * Main landing page component for TripSage AI.
+ *
+ * Renders the homepage with hero section, feature cards, and footer navigation.
+ * Includes call-to-action buttons for user registration and demo access.
+ *
+ * @returns The home page component.
+ */
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
@@ -40,7 +54,7 @@ export default function Home() {
                     Get Started
                   </Button>
                 </Link>
-                <Link href="/dashboard/chat">
+                <Link href="/chat">
                   <Button
                     size="lg"
                     variant="outline"

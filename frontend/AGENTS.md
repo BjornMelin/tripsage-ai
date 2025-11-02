@@ -13,6 +13,16 @@ title: Frontend Agent Guidelines
 - Coverage and reporting: provider `v8` by default; configure `coverage.include` and thresholds; emit `text`, `html`, `json` coverage; write machine-readable test results via `--reporter=junit` and `--outputFile`.
 - Mocks and timers: use `vi.mock`, `vi.fn`, `vi.spyOn`; clear/restore in `afterEach`; control time with `vi.useFakeTimers()` and `vi.setSystemTime()`.
 
+### UI/Store Testing Conventions
+
+- Deterministic inputs: provide stable timestamps and seeded data in UI tests. Use `vi.useFakeTimers()` + `vi.setSystemTime()` for date-dependent logic.
+- Visible output assertions: prefer roles, text, and aria attributes. When components don’t expose roles for loaders, assert minimal stable selectors (e.g., `.animate-spin`) rather than brittle trees.
+- No network: stub all fetch/external hooks; UI/store suites must not perform real network I/O.
+- Store isolation: reset the Zustand store between tests using the store’s `reset()` action. Avoid asserting internal shapes; prefer public getters/actions. Where computed getters can be stale in hook snapshots, read via `useUIStore.getState()` or derive from the underlying state (e.g., `Object.values(loadingStates)` or `notifications.filter(n => !n.isRead)`).
+- JSDOM vs Node: UI component tests run in JSDOM (default). Store-only tests can stay in JSDOM but must not depend on DOM APIs. Add `@vitest-environment` overrides only when necessary.
+- Timers in stores: for auto-dismiss notifications, use fake timers and advance until removal to avoid real-time delays.
+- Short runs: keep per-test timeouts short and eager; no unconsumed streams or pending async work.
+
 ## Next.js 16, Supabase, shadcn/ui, Tailwind v4, and Upstash Redis
 
 - Next.js 16 rendering: Use App Router and Route Handlers. Enable `cacheComponents` in `next.config`. Use `"use cache"` to cache stable data and components. Use tags for invalidation; call `revalidateTag` after writes in Server Actions or Route Handlers.
@@ -27,3 +37,47 @@ title: Frontend Agent Guidelines
 - Upstash usage: Use Redis for rate limits, counters, transient state, and small personalized caches. Do not use it as the Next.js server cache handler. After writes, tag domain data and trigger `revalidateTag` to refresh views.
 - Caching rules with auth: Never wrap Supabase calls that read/set cookies in public caches. For user-specific prefetch, use `"use cache: private"` with required stale times; otherwise mark sections dynamic. Revalidate on mutation.
 - CI defaults: Fail builds if any route uses private data without correct cache directives or if Supabase pages lack middleware/token refresh. Enforce coverage on auth flows, confirm routes, and cache-tagged mutations.
+
+## Route Handlers, DI, and Testing
+
+Standardize API code around thin Next.js route adapters that delegate to pure, dependency-injected handlers. Keep effects in adapters; keep business logic in testable functions.
+
+### Adapters
+
+- Files: `app/api/**/route.ts`
+- Parse `NextRequest` (headers/body) and construct SSR-only clients (e.g., `createServerSupabase()`).
+- Build rate limiters lazily inside the request; never at module scope.
+- Delegate to a DI handler (`_handler.ts` or `_handlers.ts`) and return `NextResponse`.
+
+### DI Handlers
+
+- Files: `app/api/**/_handler.ts` or `_handlers.ts`
+- Pure functions that accept collaborators: `supabase`, `resolveProvider`, optional `limit`, `logger`, `clock`, `config`.
+- No `process.env` reads, no module-scope state. For streaming, accept `stream?: typeof streamText` and return the injected result.
+
+### Rate Limiting
+
+- Construct Upstash `Ratelimit` inside the adapter using `Redis.fromEnv()`; optionally memoize per-request.
+- Keep env/credential handling at the adapter boundary; pass `limit()` into the handler.
+
+### Attachments and Model Messages
+
+- Convert UI file parts to model parts (`convertToModelMessages` + `convertDataPart`).
+- Validate media types (allow `image/*` only).
+
+### Testing
+
+- Handlers (unit): `@vitest-environment node`; inject fakes for Supabase/ratelimit/provider; ensure streams close; no network.
+- Adapters (smoke): `vi.stubEnv` + `vi.resetModules` before import; mock `@upstash/ratelimit`, `@upstash/redis`, and SSR clients; validate 401/429 and happy-path wiring.
+- Env hygiene: use helpers like `unstubAllEnvs()`; avoid module-scope clients.
+
+### Structure
+
+- `app/api/feature/route.ts` — thin adapter
+- `app/api/feature/_handler.ts` or `_handlers.ts` — DI logic
+- `app/api/_helpers/*.ts` — shared mappers/validators
+- `__tests__/` — mirrors handlers/adapters
+
+### Rationale
+
+- Clean boundaries (“thin adapters, fat services”), deterministic tests (no module-scope effects), and portable handler logic.

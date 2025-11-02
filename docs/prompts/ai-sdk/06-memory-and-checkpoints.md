@@ -40,6 +40,14 @@
 - [ ] Write ADR(s) and Spec(s) for memory/checkpointing strategy
   - Notes:
 
+### Augmented checklist (chat stream integration)
+
+- [x] Hydrate memory on first exchange in `/api/chat/stream` (server-only Supabase SSR)
+  - Notes: prepend as system message; missing memory tolerated
+- [x] Persist assistant messages on finish to `chat_messages`; update `chat_sessions.summary` periodically (every N replies)
+- [x] Implement sessions/messages Next.js routes and RLS
+- [x] Tests: CRUD and smoke-level assertions added; summary update placeholder present
+
 ## Working instructions (mandatory)
 
 - Check off tasks only after Vitest/biome/tsc are clean.

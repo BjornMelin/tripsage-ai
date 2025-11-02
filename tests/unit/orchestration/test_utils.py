@@ -228,7 +228,7 @@ def create_mock_services(
 
     container = AppServiceContainer(
         accommodation_service=cast(Any, Mock()),
-        chat_service=cast(Any, Mock()),
+        # chat_service removed
         destination_service=cast(Any, Mock()),
         file_processing_service=cast(Any, Mock()),
         flight_service=flight_service,

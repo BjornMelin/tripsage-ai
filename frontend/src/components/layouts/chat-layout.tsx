@@ -1,3 +1,9 @@
+/**
+ * @fileoverview ChatLayout components providing the main chat interface structure
+ * including collapsible sidebar, agent status panel, and responsive layout
+ * management for the chat experience.
+ */
+
 "use client";
 
 import Link from "next/link";
@@ -5,7 +11,11 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 
+/**
+ * Props interface for the ChatSidebar component.
+ */
 interface ChatSidebarProps extends React.HTMLAttributes<HTMLElement> {
+  /** Callback function called when new chat button is clicked. */
   onNewChat?: () => void;
 }
 
@@ -31,6 +41,14 @@ const SAMPLE_SESSIONS = [
   },
 ];
 
+/**
+ * Sidebar component for chat navigation with recent conversations and new chat button.
+ *
+ * @param className - Additional CSS classes to apply.
+ * @param onNewChat - Callback for new chat creation.
+ * @param props - Additional HTML attributes.
+ * @returns The ChatSidebar component.
+ */
 function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
   const pathname = usePathname();
   const currentChatId = pathname.split("/").pop();
@@ -76,7 +94,7 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
             {SAMPLE_SESSIONS.map((session) => (
               <Link
                 key={session.id}
-                href={`/dashboard/chat/${session.id}`}
+                href={`/chat`}
                 className={cn(
                   "flex flex-col p-3 rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
                   currentChatId === session.id
@@ -126,8 +144,18 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
   );
 }
 
+/**
+ * Props interface for the AgentStatusPanel component.
+ */
 interface AgentStatusPanelProps extends React.HTMLAttributes<HTMLElement> {}
 
+/**
+ * Panel displaying active agent status, progress, and recent activity.
+ *
+ * @param className - Additional CSS classes to apply.
+ * @param props - Additional HTML attributes.
+ * @returns The AgentStatusPanel component.
+ */
 function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
   const { activeAgents, isMonitoring } = useAgentStatusStore();
 
@@ -237,13 +265,32 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
   );
 }
 
+/**
+ * Props interface for the ChatLayout component.
+ */
 interface ChatLayoutProps {
+  /** Child components to render in the main chat area. */
   children: React.ReactNode;
+  /** Whether to show the agent status panel. */
   showAgentPanel?: boolean;
+  /** Callback for new chat creation. */
   onNewChat?: () => void;
+  /** Whether the sidebar is collapsed. */
   sidebarCollapsed?: boolean;
 }
 
+/**
+ * Main chat layout component providing sidebar, content area, and agent panel.
+ *
+ * Arranges the chat interface with collapsible sidebar navigation, main content
+ * area, and optional agent status monitoring panel.
+ *
+ * @param children - Content to render in the main chat area.
+ * @param showAgentPanel - Whether to display the agent status panel.
+ * @param onNewChat - Callback for new chat creation.
+ * @param sidebarCollapsed - Whether the sidebar is collapsed.
+ * @returns The ChatLayout component.
+ */
 export function ChatLayout({
   children,
   showAgentPanel = true,

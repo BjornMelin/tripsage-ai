@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Unit tests for loading state components, covering overlay rendering,
+ * button loading states, container loading modes, page-level loading indicators,
+ * and accessibility features for various loading UI patterns.
+ */
+
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -69,8 +75,8 @@ describe("LoadingState", () => {
     );
 
     expect(screen.queryByText("Content")).not.toBeInTheDocument();
-    // Check for spinner presence
-    expect(screen.getByRole("status")).toBeInTheDocument();
+    // Check for at least one spinner role present
+    expect(screen.getAllByRole("status").length).toBeGreaterThan(0);
   });
 
   it("shows skeleton when provided", () => {
@@ -165,7 +171,7 @@ describe("LoadingContainer", () => {
     );
 
     expect(screen.queryByText("Content")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getAllByRole("status").length).toBeGreaterThan(0);
   });
 
   it("displays loading message", () => {
@@ -224,9 +230,13 @@ describe("PageLoading", () => {
   it("has correct accessibility attributes", () => {
     render(<PageLoading message="Loading app..." />);
 
-    const loading = screen.getByRole("status");
-    expect(loading).toHaveAttribute("aria-live", "polite");
-    expect(loading).toHaveAttribute("aria-label", "Loading app...");
+    const all = screen.getAllByRole("status");
+    const wrapper = all.find(
+      (el) => el.getAttribute("aria-label") === "Loading app..."
+    );
+    expect(wrapper).toBeTruthy();
+    expect(wrapper).toHaveAttribute("aria-live", "polite");
+    expect(wrapper).toHaveAttribute("aria-label", "Loading app...");
   });
 
   it("applies custom className", () => {

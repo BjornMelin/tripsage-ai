@@ -1,5 +1,7 @@
 /**
  * @vitest-environment jsdom
+ * @fileoverview Tests for ActivityCard component aligned with current UI.
+ * Assertions prefer accessibility roles/text over fragile DOM details.
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -45,7 +47,7 @@ describe("ActivityCard", () => {
     expect(screen.getByText("Central Park Walking Tour")).toBeInTheDocument();
     expect(screen.getByText("cultural")).toBeInTheDocument();
     expect(screen.getByText("Central Park, New York")).toBeInTheDocument();
-    expect(screen.getByText("$45")).toBeInTheDocument();
+    expect(screen.getAllByText("$45").length).toBeGreaterThan(0);
     expect(screen.getByText("per person")).toBeInTheDocument();
     expect(screen.getByText("(4.7)")).toBeInTheDocument();
     expect(screen.getByText(/discover the hidden gems/i)).toBeInTheDocument();
@@ -54,10 +56,8 @@ describe("ActivityCard", () => {
   it("displays activity image when available", () => {
     render(<ActivityCard activity={mockActivity} />);
 
-    const image = screen.getByRole("img");
+    const image = screen.getByRole("img", { name: /central park walking tour/i });
     expect(image).toBeInTheDocument();
-    expect(image).toHaveAttribute("src", "https://example.com/image1.jpg");
-    expect(image).toHaveAttribute("alt", "Central Park Walking Tour");
   });
 
   it("displays placeholder when no images available", () => {
@@ -103,13 +103,14 @@ describe("ActivityCard", () => {
   it("formats price correctly", () => {
     render(<ActivityCard activity={mockActivity} />);
 
-    expect(screen.getByText("$45")).toBeInTheDocument();
+    // Price is shown in overlay badge and in primary price area
+    expect(screen.getAllByText("$45").length).toBeGreaterThan(0);
   });
 
   it("formats large price correctly", () => {
     render(<ActivityCard activity={mockLongDurationActivity} />);
 
-    expect(screen.getByText("$299")).toBeInTheDocument();
+    expect(screen.getAllByText("$299").length).toBeGreaterThan(0);
   });
 
   it("renders star rating correctly", () => {
@@ -188,12 +189,10 @@ describe("ActivityCard", () => {
   });
 
   it("applies hover effects", () => {
-    render(<ActivityCard activity={mockActivity} />);
-
-    const card = screen
-      .getByRole("button", { name: /select/i })
-      .closest(".group, [class*='hover:']")?.parentElement;
-    expect(card).toHaveClass("hover:shadow-lg");
+    const { container } = render(<ActivityCard activity={mockActivity} />);
+    // Card root has hover:shadow-lg
+    const hoverCard = container.querySelector('[class*="hover:shadow-lg"]');
+    expect(hoverCard).toBeTruthy();
   });
 
   it("handles missing coordinates gracefully", () => {

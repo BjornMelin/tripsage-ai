@@ -15,7 +15,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
+    unstubEnvs: true,
     setupFiles: ["./src/test-setup.ts"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
     exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*", "**/*.spec.*"],
     coverage: {
       provider: "v8",
@@ -56,8 +58,8 @@ export default defineConfig({
     bail: isCI ? 5 : 0,
     passWithNoTests: true,
     // Pools/workers: default to forks; prefer threads in CI for big suites
-    pool: isCI ? "threads" : "forks",
-    maxWorkers: isCI ? 2 : 2,
+    pool: "threads",
+    maxWorkers: isCI ? 2 : 1,
   },
   resolve: {
     alias: {

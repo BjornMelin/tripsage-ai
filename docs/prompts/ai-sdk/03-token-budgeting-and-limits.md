@@ -28,22 +28,28 @@
 
 ## Checklist (mark off; add notes under each)
 
-- [ ] Draft ADR(s) and Spec(s) (pre-implementation; research + consensus)
-  - Notes:
-- [ ] Create `frontend/lib/tokens/budget.ts`
-  - Notes:
-- [ ] Implement `countTokens(texts, modelHint?)`
-  - Notes:
-- [ ] Implement `clampMaxTokens(messages, desiredMax, modelLimits)`
-  - Notes:
-- [ ] Prefer provider usage metadata when available; fallback only if missing
-  - Notes:
-- [ ] Maintain per-model limits table in TS
-  - Notes:
-- [ ] Vitest tests for counting/clamping edge cases
-  - Notes:
-- [ ] Finalize ADR(s) and Spec(s) for token budgeting policy
-  - Notes:
+- [x] Draft ADR(s) and Spec(s) (pre-implementation; research + consensus)
+  - Notes: Added ADR at `docs/adrs/2025-11-01-token-budgeting-and-limits.md` and Spec at `docs/specs/token-budgeting-and-limits.md` covering interfaces, limits, heuristics, and failure modes.
+- [x] Create `frontend/lib/tokens/budget.ts`
+  - Notes: Implemented at `frontend/src/lib/tokens/budget.ts` with JSDoc and strict typing.
+- [x] Implement `countTokens(texts, modelHint?)`
+  - Notes: Uses `js-tiktoken/lite` for OpenAI models with `o200k_base`/`cl100k_base`; falls back to ~4 chars/token heuristic for others.
+- [x] Implement `clampMaxTokens(messages, desiredMax, modelLimits)`
+  - Notes: Counts content-only tokens; clamps to `max(1, min(desired, limit - promptTokens))` and returns reasons on clamp.
+- [x] Prefer provider usage metadata when available; fallback only if missing
+  - Notes: Route clamps via utilities; usage passthrough remains provider-led in AI SDK v6 streaming. Future enhancement: surface provider usage at stream end when SDK exposes it uniformly.
+- [x] Maintain per-model limits table in TS
+  - Notes: Implemented at `frontend/src/lib/tokens/limits.ts` with defaults (128k) and helper `getModelContextLimit`.
+- [x] Vitest tests for counting/clamping edge cases
+  - Notes: Added `frontend/src/lib/tokens/__tests__/budget.test.ts` covering tokenizer-backed counts, heuristic fallback, and clamp edge cases.
+- [x] Finalize ADR(s) and Spec(s) for token budgeting policy
+  - Notes: ADR/Spec updated with decisions and follow-ups; security notes included (no PII, safe defaults).
+
+### Augmented checklist (route integration)
+
+- [x] Use clamp results in `/api/chat/stream` to set `maxTokens` safely
+- [x] Record provider-reported usage on finish into `messageMetadata`
+- [x] Tests: clamp/no-output path validated in `frontend/src/app/api/chat/stream/__tests__/route.test.ts`
 
 ## Working instructions (mandatory)
 

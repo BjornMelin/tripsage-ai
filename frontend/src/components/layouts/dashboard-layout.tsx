@@ -1,3 +1,9 @@
+/**
+ * @fileoverview DashboardLayout components providing the main application layout
+ * with sidebar navigation, header, and user account management for the dashboard
+ * experience.
+ */
+
 "use client";
 
 import { ChevronDown, LogOut, Settings, User as UserIcon } from "lucide-react";
@@ -11,7 +17,11 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 // import { logoutAction } from "@/lib/auth/server-actions"; // TODO: Replace with Supabase Auth
 import { cn } from "@/lib/utils";
 
+/**
+ * Props interface for the SidebarNav component.
+ */
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
+  /** Array of navigation items with href, title, and optional icon. */
   items: {
     href: string;
     title: string;
@@ -19,6 +29,14 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   }[];
 }
 
+/**
+ * Navigation component for sidebar with active route highlighting.
+ *
+ * @param className - Additional CSS classes to apply.
+ * @param items - Array of navigation items to display.
+ * @param props - Additional HTML attributes.
+ * @returns The SidebarNav component.
+ */
 export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
   const pathname = usePathname();
 
@@ -44,12 +62,21 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
   );
 }
 
+/**
+ * Main dashboard layout component with sidebar navigation and header.
+ *
+ * Provides the overall structure for dashboard pages with navigation sidebar,
+ * header with user controls, and main content area.
+ *
+ * @param children - Content to render in the main area.
+ * @returns The DashboardLayout component.
+ */
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: "/dashboard", title: "Overview" },
     { href: "/dashboard/trips", title: "My Trips" },
     { href: "/dashboard/search", title: "Search" },
-    { href: "/dashboard/chat", title: "AI Assistant" },
+    { href: "/chat", title: "AI Assistant" },
     { href: "/dashboard/agent-status", title: "Agent Status" },
     { href: "/dashboard/settings", title: "Settings" },
     { href: "/dashboard/profile", title: "Profile" },
@@ -78,6 +105,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * User navigation component with profile dropdown and logout functionality.
+ *
+ * Displays user avatar and provides access to profile, settings, and logout
+ * options via a popover menu.
+ *
+ * @returns The UserNav component.
+ */
 function UserNav() {
   const [isPending, startTransition] = useTransition();
   const [isOpen, setIsOpen] = useState(false);

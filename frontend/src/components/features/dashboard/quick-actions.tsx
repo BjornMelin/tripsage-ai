@@ -1,3 +1,8 @@
+/**
+ * @fileoverview QuickActions component providing grid/list/compact layouts for
+ * common travel planning tasks with icons, descriptions, and navigation links.
+ */
+
 "use client";
 
 import {
@@ -21,20 +26,37 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+/**
+ * Interface defining a quick action item with metadata for display and navigation.
+ */
 interface QuickAction {
+  /** Unique identifier for the action. */
   id: string;
+  /** Display title of the action. */
   title: string;
+  /** Descriptive text explaining the action. */
   description: string;
+  /** React icon component to display. */
   icon: React.ReactNode;
+  /** Navigation URL for the action. */
   href: string;
+  /** Button variant styling. */
   variant?: "default" | "secondary" | "outline";
+  /** Additional CSS classes for styling. */
   className?: string;
+  /** Optional badge text (e.g., "AI"). */
   badge?: string;
 }
 
+/**
+ * Props interface for the QuickActions component.
+ */
 interface QuickActionsProps {
+  /** Layout style: "grid" or "list". */
   layout?: "grid" | "list";
+  /** Whether to show action descriptions. */
   showDescription?: boolean;
+  /** Whether to use compact mode with fewer actions. */
   compact?: boolean;
 }
 
@@ -71,7 +93,7 @@ const quickActions: QuickAction[] = [
     title: "Ask AI Assistant",
     description: "Get personalized travel recommendations",
     icon: <MessageCircle className="h-4 w-4" />,
-    href: "/dashboard/chat",
+    href: "/chat",
     variant: "outline",
     className: "bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700",
     badge: "AI",
@@ -111,6 +133,14 @@ const quickActions: QuickAction[] = [
   },
 ];
 
+/**
+ * Renders a single action button with icon, title, description, and navigation.
+ *
+ * @param action - The quick action data to render.
+ * @param showDescription - Whether to display the action description.
+ * @param compact - Whether to use compact styling.
+ * @returns The action button component.
+ */
 function ActionButton({
   action,
   showDescription = true,
@@ -152,6 +182,14 @@ function ActionButton({
   );
 }
 
+/**
+ * Renders actions in a responsive grid layout.
+ *
+ * @param actions - Array of quick actions to display.
+ * @param showDescription - Whether to show action descriptions.
+ * @param compact - Whether to use compact grid sizing.
+ * @returns The grid layout component.
+ */
 function GridLayout({
   actions,
   showDescription,
@@ -182,6 +220,14 @@ function GridLayout({
   );
 }
 
+/**
+ * Renders actions in a vertical list layout.
+ *
+ * @param actions - Array of quick actions to display.
+ * @param showDescription - Whether to show action descriptions.
+ * @param compact - Whether to use compact list sizing.
+ * @returns The list layout component.
+ */
 function ListLayout({
   actions,
   showDescription,
@@ -228,6 +274,17 @@ function ListLayout({
   );
 }
 
+/**
+ * Main QuickActions component providing common travel planning shortcuts.
+ *
+ * Supports grid/list layouts and compact mode for different screen sizes.
+ * Renders action buttons with icons, titles, descriptions, and navigation links.
+ *
+ * @param layout - Layout style ("grid" or "list").
+ * @param showDescription - Whether to display action descriptions.
+ * @param compact - Whether to use compact mode with fewer actions.
+ * @returns The QuickActions component.
+ */
 export function QuickActions({
   layout = "grid",
   showDescription = true,
@@ -265,12 +322,24 @@ export function QuickActions({
   );
 }
 
-// Compact version for smaller spaces
+/**
+ * Compact version of QuickActions for smaller spaces.
+ *
+ * Shows fewer actions in grid layout without descriptions.
+ *
+ * @returns The compact QuickActions component.
+ */
 export function QuickActionsCompact() {
   return <QuickActions layout="grid" showDescription={false} compact={true} />;
 }
 
-// List version for sidebar or narrow spaces
+/**
+ * List version of QuickActions for sidebar or narrow spaces.
+ *
+ * Shows all actions in vertical list layout with descriptions.
+ *
+ * @returns The list QuickActions component.
+ */
 export function QuickActionsList() {
   return <QuickActions layout="list" showDescription={true} compact={false} />;
 }

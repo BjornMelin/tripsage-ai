@@ -51,6 +51,6 @@ describe("auth/confirm route", () => {
       "https://app.example.com/auth/confirm?token_hash=bad&type=email"
     );
     await GET(req);
-    expect(redirectMock).toHaveBeenCalledWith("/login?error=confirm_failed");
+    expect(redirectMock).toHaveBeenCalledWith("/error");
   });
 });

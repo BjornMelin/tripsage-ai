@@ -203,9 +203,9 @@ async def get_usage_metrics(
 
         # Get top endpoints (simplified)
         top_endpoints = [
-            {"endpoint": "/api/chat", "count": total_requests // 3},
-            {"endpoint": "/api/flights", "count": total_requests // 4},
-            {"endpoint": "/api/accommodations", "count": total_requests // 5},
+            {"endpoint": "/api/flights", "count": total_requests // 3},
+            {"endpoint": "/api/accommodations", "count": total_requests // 4},
+            {"endpoint": "/api/itineraries", "count": total_requests // 5},
         ]
 
         # Error breakdown (simplified)

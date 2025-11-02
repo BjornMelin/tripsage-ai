@@ -11,7 +11,6 @@ from typing import Annotated, cast
 from fastapi import Depends, Request
 
 from tripsage.api.core.config import Settings, get_settings
-from tripsage.api.core.protocols import ChatServiceProto
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.app_state import AppServiceContainer
 from tripsage_core.exceptions.exceptions import (
@@ -21,7 +20,6 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.services.airbnb_mcp import AirbnbMCP
 from tripsage_core.services.business.accommodation_service import AccommodationService
 from tripsage_core.services.business.activity_service import ActivityService
-from tripsage_core.services.business.chat_service import ChatService
 from tripsage_core.services.business.destination_service import DestinationService
 from tripsage_core.services.business.file_processing_service import (
     FileProcessingService,
@@ -242,10 +240,7 @@ def get_accommodation_service(request: Request) -> AccommodationService:
     )
 
 
-def get_chat_service(request: Request) -> ChatServiceProto:
-    """Return ChatService from the container."""
-    service = _get_required_service(request, "chat_service", ChatService)
-    return cast(ChatServiceProto, service)
+# Chat service no longer provided; chat moved to Next.js routes using AI SDK.
 
 
 def get_destination_service(request: Request) -> DestinationService:
@@ -304,7 +299,7 @@ AdminPrincipalDep = Annotated[Principal, Depends(require_admin_principal)]
 AccommodationServiceDep = Annotated[
     AccommodationService, Depends(get_accommodation_service)
 ]
-ChatServiceDep = Annotated[ChatServiceProto, Depends(get_chat_service)]
+# ChatServiceDep removed
 DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
 FlightServiceDep = Annotated[FlightService, Depends(get_flight_service_dep)]
 ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)]

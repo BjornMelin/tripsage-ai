@@ -1,10 +1,12 @@
 # ADR-XXXX: [short title of solved problem and solution]
 
+**Version**: 1.0.0
+**Status**: [Proposed | Accepted | Deprecated | Superseded by ADR-XXXX]
 **Date**: YYYY-MM-DD
-
-## Status
-
-[Proposed | Accepted | Deprecated | Superseded by ADR-XXXX]
+**Category**: [category]
+**Domain**: [domain]
+**Related ADRs**: [ADR-XXXX, ADR-XXXX]
+**Related Specs**: [SPEC-XXXX, SPEC-XXXX]
 
 ## Context
 

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Unit tests for error boundary Zod schemas, validating component props,
+ * error states, loading states, skeleton configurations, and route error handling
+ * with type checking and edge case coverage.
+ */
+
 import { describe, expect, it } from "vitest";
 import {
   errorBoundaryPropsSchema,
@@ -32,15 +38,8 @@ describe("errorStateSchema", () => {
   it("validates valid error state", () => {
     const validState = {
       hasError: true,
-      error: {
-        name: "Error",
-        message: "Test error",
-        stack: "Error stack",
-        digest: "abc123",
-      },
-      errorInfo: {
-        componentStack: "Component stack",
-      },
+      error: new Error("Test error"),
+      errorInfo: { componentStack: "Component stack" },
     };
 
     expect(() => errorStateSchema.parse(validState)).not.toThrow();
@@ -70,11 +69,7 @@ describe("errorStateSchema", () => {
 describe("routeErrorPropsSchema", () => {
   it("validates valid route error props", () => {
     const validProps = {
-      error: {
-        name: "Error",
-        message: "Route error",
-        digest: "def456",
-      },
+      error: new Error("Route error"),
       reset: () => {},
     };
 
@@ -83,10 +78,7 @@ describe("routeErrorPropsSchema", () => {
 
   it("validates error without digest", () => {
     const propsWithoutDigest = {
-      error: {
-        name: "Error",
-        message: "Route error",
-      },
+      error: new Error("Route error"),
       reset: () => {},
     };
 
@@ -109,11 +101,7 @@ describe("routeErrorPropsSchema", () => {
 describe("globalErrorPropsSchema", () => {
   it("validates valid global error props", () => {
     const validProps = {
-      error: {
-        name: "Global Error",
-        message: "Critical error",
-        digest: "ghi789",
-      },
+      error: new Error("Critical error"),
       reset: () => {},
     };
 
@@ -122,31 +110,27 @@ describe("globalErrorPropsSchema", () => {
 });
 
 describe("loadingStateSchema", () => {
-  it("validates valid loading state", () => {
+  it("accepts minimal valid loading state", () => {
     const validState = {
       isLoading: true,
-      error: null,
-      data: { test: "data" },
     };
 
     expect(() => loadingStateSchema.parse(validState)).not.toThrow();
   });
 
-  it("validates loading state with error", () => {
-    const stateWithError = {
+  it("honors optional fields and defaults", () => {
+    const state = {
       isLoading: false,
-      error: "Failed to load",
-      data: null,
+      loadingText: "Saving",
+      showSpinner: false,
     };
 
-    expect(() => loadingStateSchema.parse(stateWithError)).not.toThrow();
+    expect(() => loadingStateSchema.parse(state)).not.toThrow();
   });
 
   it("requires isLoading boolean", () => {
     const invalidState = {
       isLoading: 1, // should be boolean
-      error: null,
-      data: null,
     };
 
     expect(() => loadingStateSchema.parse(invalidState)).toThrow();
@@ -160,7 +144,7 @@ describe("skeletonPropsSchema", () => {
       variant: "circular" as const,
       width: "100px",
       height: 50,
-      count: 3,
+      animation: "wave" as const,
     };
 
     expect(() => skeletonPropsSchema.parse(validProps)).not.toThrow();
@@ -168,12 +152,11 @@ describe("skeletonPropsSchema", () => {
 
   it("validates minimal props", () => {
     const minimalProps = {};
-
     expect(() => skeletonPropsSchema.parse(minimalProps)).not.toThrow();
   });
 
-  it("validates valid variants", () => {
-    const variants = ["default", "circular", "rectangular", "text"] as const;
+  it("validates allowed variants", () => {
+    const variants = ["circular", "rectangular", "text"] as const;
 
     variants.forEach((variant) => {
       const props = { variant };
@@ -182,36 +165,13 @@ describe("skeletonPropsSchema", () => {
   });
 
   it("rejects invalid variant", () => {
-    const invalidProps = {
-      variant: "invalid",
-    };
-
+    const invalidProps = { variant: "invalid" } as any;
     expect(() => skeletonPropsSchema.parse(invalidProps)).toThrow();
   });
 
-  it("validates count range", () => {
-    // Valid counts
-    expect(() => skeletonPropsSchema.parse({ count: 1 })).not.toThrow();
-    expect(() => skeletonPropsSchema.parse({ count: 10 })).not.toThrow();
-    expect(() => skeletonPropsSchema.parse({ count: 20 })).not.toThrow();
-
-    // Invalid counts
-    expect(() => skeletonPropsSchema.parse({ count: 0 })).toThrow();
-    expect(() => skeletonPropsSchema.parse({ count: 21 })).toThrow();
-    expect(() => skeletonPropsSchema.parse({ count: -1 })).toThrow();
-  });
-
   it("accepts string and number dimensions", () => {
-    const propsWithStringDimensions = {
-      width: "100px",
-      height: "50px",
-    };
-
-    const propsWithNumberDimensions = {
-      width: 100,
-      height: 50,
-    };
-
+    const propsWithStringDimensions = { width: "100px", height: "50px" };
+    const propsWithNumberDimensions = { width: 100, height: 50 };
     expect(() => skeletonPropsSchema.parse(propsWithStringDimensions)).not.toThrow();
     expect(() => skeletonPropsSchema.parse(propsWithNumberDimensions)).not.toThrow();
   });

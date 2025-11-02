@@ -1,8 +1,10 @@
+/* @vitest-environment node */
 /**
  * @fileoverview Unit tests for BYOK CRUD route handlers (POST/DELETE).
  */
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { stubRateLimitDisabled } from "@/test/env-helpers";
 
 const mockInsert = vi.hoisted(() => vi.fn());
 const mockDelete = vi.hoisted(() => vi.fn());
@@ -18,6 +20,8 @@ describe("/api/keys routes", () => {
   });
 
   it("POST /api/keys returns 400 on invalid body", async () => {
+    stubRateLimitDisabled();
+    vi.resetModules();
     const { POST } = await import("../route");
     const req = {
       json: async () => ({}),
@@ -28,6 +32,7 @@ describe("/api/keys routes", () => {
   });
 
   it("DELETE /api/keys/[service] deletes key via RPC and returns 204", async () => {
+    stubRateLimitDisabled();
     vi.mock("@/lib/supabase/server", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })) },
@@ -35,6 +40,7 @@ describe("/api/keys routes", () => {
     }));
     mockDelete.mockResolvedValue(undefined);
     vi.mock("@/lib/supabase/rpc", () => ({ deleteUserApiKey: mockDelete }));
+    vi.resetModules();
     const route = await import("../[service]/route");
     const req = { headers: new Headers() } as unknown as NextRequest;
     const res = await route.DELETE(req, { params: { service: "openai" } });

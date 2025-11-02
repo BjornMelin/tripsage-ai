@@ -31,7 +31,6 @@ if TYPE_CHECKING:  # pragma: no cover - import only for type checking
         AccommodationService,
     )
     from tripsage_core.services.business.activity_service import ActivityService
-    from tripsage_core.services.business.chat_service import ChatService
     from tripsage_core.services.business.destination_service import DestinationService
     from tripsage_core.services.business.file_processing_service import (
         FileProcessingService,
@@ -67,7 +66,7 @@ class AppServiceContainer:
 
     # Business services
     accommodation_service: AccommodationService | None = None
-    chat_service: ChatService | None = None
+    # chat_service removed
     activity_service: ActivityService | None = None
     destination_service: DestinationService | None = None
     file_processing_service: FileProcessingService | None = None
@@ -185,7 +184,6 @@ async def _setup_business_services(
         AccommodationService,
     )
     from tripsage_core.services.business.activity_service import ActivityService
-    from tripsage_core.services.business.chat_service import ChatService
     from tripsage_core.services.business.destination_service import DestinationService
     from tripsage_core.services.business.file_processing_service import (
         FileProcessingService,
@@ -206,7 +204,6 @@ async def _setup_business_services(
     )
     await memory_service.connect()
 
-    chat_service = ChatService(database_service=database_service)
     file_processing_service = FileProcessingService(
         database_service=database_service,
         ai_analysis_service=document_analyzer,
@@ -245,7 +242,6 @@ async def _setup_business_services(
         "file_processing_service": file_processing_service,
         "flight_service": flight_service,
         "itinerary_service": itinerary_service,
-        "chat_service": chat_service,
         "memory_service": memory_service,
         "search_facade": search_facade,
         "trip_service": trip_service,
@@ -292,7 +288,6 @@ def _build_service_container(
 
     return AppServiceContainer(
         accommodation_service=business["accommodation_service"],
-        chat_service=business["chat_service"],
         activity_service=business["activity_service"],
         destination_service=business["destination_service"],
         file_processing_service=business["file_processing_service"],

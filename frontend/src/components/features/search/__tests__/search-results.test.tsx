@@ -1,13 +1,20 @@
+/**
+ * @fileoverview Unit tests for SearchResults component, verifying flight display,
+ * sorting functionality, filtering capabilities, loading states, and user
+ * interactions with flight cards, price display, and booking actions.
+ */
+
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Flight } from "@/types/search";
 import { SearchResults } from "../search-results";
 
-// Mock the onSort and onFilter functions
+/** Mock function for testing sort functionality. */
 const mockOnSort = vi.fn();
+/** Mock function for testing filter functionality. */
 const mockOnFilter = vi.fn();
 
-// Create mock flight data
+/** Mock flight data for testing search results display. */
 const mockFlights: Flight[] = [
   {
     id: "1",
@@ -148,11 +155,11 @@ describe("SearchResults", () => {
       />
     );
 
-    // Check if loading text is displayed
+    // Assert loading text is rendered
     expect(screen.getByText("Searching...")).toBeInTheDocument();
 
-    // Check if loading spinner is displayed
-    expect(screen.getByTestId("loading-spinner")).toBeInTheDocument();
+    // Assert spinner by class since component doesn't expose a test id
+    expect(document.querySelectorAll(".animate-spin").length).toBeGreaterThan(0);
 
     // Results should not be displayed
     expect(screen.queryByText("Test Airline TA123")).not.toBeInTheDocument();

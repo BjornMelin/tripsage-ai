@@ -11,7 +11,6 @@ from typing import Any, cast
 from fastapi import Request
 
 from tripsage.agents.base import BaseAgent
-from tripsage.agents.chat import ChatAgent
 from tripsage.app_state import AppServiceContainer
 from tripsage.orchestration.graph import TripSageOrchestrator
 from tripsage_core.config import get_settings
@@ -62,17 +61,12 @@ def create_agent(
             orchestrator=orchestrator,
             **kwargs,
         )
-    if agent_type == "chat":
-        return ChatAgent(
-            services=services,
-            orchestrator=orchestrator,
-        )
+    # 'chat' agent type removed; chat features use AI SDK in Next.js.
 
     raise ValueError(f"Unknown agent type: {agent_type}")
 
 
 __all__ = [
     "BaseAgent",
-    "ChatAgent",
     "create_agent",
 ]
