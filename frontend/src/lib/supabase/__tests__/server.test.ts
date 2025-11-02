@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Import after mocking dependencies
 let createServerSupabase: () => Promise<any>;
@@ -23,8 +23,8 @@ describe("Supabase Server Client", () => {
     vi.resetModules();
 
     // Set environment variables
-    process.env.NEXT_PUBLIC_SUPABASE_URL = mockSupabaseUrl;
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = mockSupabaseAnonKey;
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
 
     // Dynamically import after setting env vars
     const serverModule = await import("../server");
@@ -101,8 +101,8 @@ describe("Supabase Server Client", () => {
 
   it("should throw an error when environment variables are missing", async () => {
     // Clear environment variables
-    process.env.NEXT_PUBLIC_SUPABASE_URL = undefined;
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = undefined;
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", undefined);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", undefined);
 
     // Re-import module with missing env vars
     vi.resetModules();
@@ -136,4 +136,8 @@ describe("Supabase Server Client", () => {
     expect(client).toBe(mockClient);
     expect(mockCookieStore.getAll).toHaveBeenCalled();
   });
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
