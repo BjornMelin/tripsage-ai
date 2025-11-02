@@ -96,10 +96,19 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
   const { data: auth } = await deps.supabase.auth.getUser();
   const user = auth?.user ?? null;
   if (!user) return json({ error: "unauthorized" }, 401);
+  const { data: session, error: sessionError } = await deps.supabase
+    .from("chat_sessions")
+    .select("id")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (sessionError) return json({ error: "db_error" }, 500);
+  if (!session) return json({ error: "not_found" }, 404);
   const { data, error } = await deps.supabase
     .from("chat_messages")
     .select("id, role, content, created_at, metadata")
     .eq("session_id", id)
+    .eq("user_id", user.id)
     .order("id", { ascending: true });
   if (error) return json({ error: "db_error" }, 500);
   return json(data ?? [], 200);
