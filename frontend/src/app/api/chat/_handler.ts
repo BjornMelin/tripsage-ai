@@ -191,11 +191,9 @@ export async function handleChatNonStream(
 
   const usage = result.usage
     ? {
-        // Support both naming conventions across SDK versions
-        promptTokens: (result.usage as any).promptTokens ?? (result.usage as any).inputTokens,
-        completionTokens:
-          (result.usage as any).completionTokens ?? (result.usage as any).outputTokens,
-        totalTokens: (result.usage as any).totalTokens,
+        promptTokens: (result.usage as any).promptTokens,
+        completionTokens: (result.usage as any).completionTokens,
+        totalTokens: result.usage.totalTokens,
       }
     : undefined;
 

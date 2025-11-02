@@ -51,7 +51,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     try {
       body = (await req.json()) as IncomingBody;
     } catch {
-      body = { messages: [] };
+      return new Response(
+        JSON.stringify({ error: "Malformed JSON in request body." }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     // Optional rate limiter (reuse stream config if available)
@@ -69,7 +72,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const ip = getClientIpFromHeaders(req.headers);
 
-    const response = await handleChatNonStream(
+    return await handleChatNonStream(
       {
         supabase,
         resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
@@ -80,7 +83,6 @@ export async function POST(req: NextRequest): Promise<Response> {
       },
       { ...body!, ip }
     );
-    return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("/api/chat:fatal", { message });
