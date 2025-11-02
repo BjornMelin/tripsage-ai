@@ -19,9 +19,9 @@ import { getModelContextLimit } from "@/lib/tokens/limits";
 /**
  * Type representing a resolved AI provider configuration.
  *
- * @param provider - The provider.
- * @param modelId - The model ID.
- * @param model - The model.
+ * @property provider - The AI provider name (e.g., 'openai', 'anthropic').
+ * @property modelId - The specific model identifier (e.g., 'gpt-4o-mini').
+ * @property model - The AI SDK LanguageModel instance.
  */
 export type ProviderResolution = {
   provider: string;
