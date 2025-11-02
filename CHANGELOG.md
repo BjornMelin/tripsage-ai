@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Dependency-injected handlers for App Router APIs:
+  - Chat stream: `frontend/src/app/api/chat/stream/_handler.ts`
+  - Keys (BYOK): `frontend/src/app/api/keys/_handlers.ts`
+  - Sessions/messages: `frontend/src/app/api/chat/sessions/_handlers.ts`
+- Attachment utilities and validation:
+  - `frontend/src/app/api/_helpers/attachments.ts`
+- Deterministic Vitest suites for handlers and adapter smokes:
+  - Chat stream handler and route smokes under `frontend/src/app/api/chat/stream/__tests__/`
+  - Keys and sessions handler tests under `frontend/src/app/api/keys/__tests__/` and `frontend/src/app/api/chat/sessions/__tests__/`
+- Frontend agent guidelines for DI handlers, thin adapters, lazy RL, and testing:
+  - `frontend/AGENTS.md`
+- ADR documenting DI handlers + thin adapters testing strategy:
+  - `docs/adrs/adr-0029-di-route-handlers-and-testing.md`
 - Provider registry and resolution (server-only) returning AI SDK v6 `LanguageModel`:
   - `frontend/src/lib/providers/registry.ts` (`resolveProvider(userId, modelHint?)`)
   - `frontend/src/lib/providers/types.ts`, `frontend/src/lib/settings.ts`
@@ -20,6 +33,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dependency: `@ai-sdk/anthropic@3.0.0-beta.47`
 
 ### Changed
+
+- Chat stream adapter now delegates to DI handler and builds the Upstash rate limiter lazily:
+  - `frontend/src/app/api/chat/stream/route.ts`
+- Keys and sessions adapters delegate to their DI handlers:
+  - `frontend/src/app/api/keys/route.ts`
+  - `frontend/src/app/api/chat/sessions/route.ts`
+  - `frontend/src/app/api/chat/sessions/[id]/route.ts`
+  - `frontend/src/app/api/chat/sessions/[id]/messages/route.ts`
+- Vitest defaults tuned for stability and timeouts:
+  - `frontend/vitest.config.ts` (unstubEnvs, threads, single worker)
+  - `frontend/package.json` test scripts include short timeouts
+
+### Fixed
+
+- Resolved hanging API tests by:
+  - Injecting a finite AI stream stub in handler tests (no open handles)
+  - Building Upstash rate limiters lazily (no module‑scope side effects)
+  - Guarding JSDOM‑specific globals in `frontend/src/test-setup.ts`
+  - Using `vi.resetModules()` and env stubs before importing route modules
 
 - Centralized BYOK provider selection; preference order: openai → openrouter → anthropic → xai
 - OpenRouter and xAI wired via OpenAI-compatible client with per-user BYOK and required base URLs
