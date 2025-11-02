@@ -92,7 +92,6 @@ from tripsage_core.models.api.weather_models import (
     SeasonalWeather,
     Snow,
     Temperature,
-    TemperatureUnit,
     TravelWeatherSummary,
     WeatherAlert,
     WeatherCondition,
@@ -102,6 +101,7 @@ from tripsage_core.models.api.weather_models import (
     Wind,
     WindSpeedUnit,
 )
+from tripsage_core.models.schemas_common.enums import TemperatureUnit
 
 
 __all__ = [

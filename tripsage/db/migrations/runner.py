@@ -1,6 +1,6 @@
 """Database migration runner using Supabase context.
 
-Final implementation (no legacy aliases/paths):
+Final implementation (no aliases/paths):
 - Discovers SQL files under `supabase/migrations`.
 - Logs statements that would be executed (offline/SDK-limited mode).
 - Records applied migrations in a `migrations` table if available.

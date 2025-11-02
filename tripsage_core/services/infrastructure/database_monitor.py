@@ -3,7 +3,7 @@
 This module provides a minimal, final-only monitor that periodically probes the
 configured database service and records lightweight health telemetry. The
 implementation focuses exclusively on health checks and metrics reporting; it
-deliberately omits the legacy security heuristics, recovery orchestration, and
+deliberately omits the security heuristics, recovery orchestration, and
 callback shims that previously bloated the monitor surface.
 """
 

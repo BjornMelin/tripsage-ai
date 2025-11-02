@@ -49,7 +49,7 @@ async def search_flights(
 
     Args:
         request: Typed flight search parameters validated by Pydantic.
-        principal: Authenticated user context (unused directly but enforces auth).
+        principal: Authenticated user context (enforces authentication).
         flight_service: Injected flight service instance.
 
     Returns:

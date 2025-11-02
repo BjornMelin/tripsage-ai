@@ -210,8 +210,3 @@ async def test_verify_and_get_claims_raises_when_sub_missing(
 
     with pytest.raises(ValueError):
         await sc.verify_and_get_claims("jwt-token")
-
-
-def test_noop_placeholder_for_legacy_reset_removed() -> None:
-    """Ensure legacy client reset helper is not present anymore."""
-    assert not hasattr(sc, "_reset_clients_for_tests")

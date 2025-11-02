@@ -1,6 +1,6 @@
 """Application service container and FastAPI state helpers.
 
-This module replaces the legacy ServiceRegistry pattern with a lifespan-managed
+This module replaces the ServiceRegistry pattern with a lifespan-managed
 set of singletons stored on ``FastAPI.app.state``. It centralises service
 construction, provides typed accessors, and exposes startup/shutdown helpers.
 """

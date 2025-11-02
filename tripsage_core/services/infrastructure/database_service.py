@@ -2,7 +2,7 @@
 """Supabase-only Database Service (FINAL-ONLY).
 
 This module provides a single modern DatabaseService that uses the Supabase
-Python client exclusively. All legacy SQLAlchemy engine and raw engine paths
+Python client exclusively. SQLAlchemy engine and raw engine paths
 have been removed to keep the implementation simple, maintainable, and safe.
 
 Key features:
@@ -379,7 +379,7 @@ class SecurityAlert(BaseModel):
     user_id: str | None = None
 
 
-# FINAL-ONLY: no legacy metric handle containers remain.
+# FINAL-ONLY: no metric handle containers remain.
 
 
 # ----------------
@@ -403,7 +403,7 @@ class DatabaseService:
         _query_metrics: In-memory rolling query metrics.
         _security_alerts: Captured security alerts.
         _connection_stats: Lightweight connection statistics.
-        # OTEL meters are set up in _initialize_metrics(); no legacy handles remain.
+        # OTEL meters are set up in _initialize_metrics(); no handles remain.
     """
 
     def __init__(

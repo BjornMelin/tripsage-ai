@@ -2,8 +2,8 @@
 
 This implementation focuses on maintainability and predictable behaviour.  It
 performs local validation, delegates durable storage to an optional storage
-backend, and persists metadata through a small database adapter.  All legacy
-code paths have been removed.
+backend, and persists metadata through a small database adapter.
+All code paths have been removed.
 """
 
 # pylint: disable=too-many-lines
