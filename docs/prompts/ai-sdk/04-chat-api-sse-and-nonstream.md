@@ -57,7 +57,7 @@
 - [x] Map attachments in UI parts to model inputs (images → validated)
   - Notes: non‑image attachments rejected with `{ error: 'invalid_attachment' }`
 - [x] Resume support: include resumable ids in UI stream; enable client retry to reattach
-  - Notes: Server emits `resumableId` in start metadata (client reattach wiring to follow in UI hook).
+  - Notes: Server emits `resumableId`; client `useChat` wired with `resume: true` and reconnect transport. A brief "Reconnected" toast is surfaced on resume, and tests verify mid‑stream continuity.
 
 ### Observability & diagnostics
 
