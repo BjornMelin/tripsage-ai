@@ -28,17 +28,24 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const RATELIMIT_PREFIX = "ratelimit:chat";
+let cachedLimiter: InstanceType<typeof Ratelimit> | undefined;
 
-function buildRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
+/**
+ * Lazily construct (and cache) the Upstash rate limiter. Avoid module-scope
+ * construction to keep tests deterministic and allow env stubbing.
+ */
+function getRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
+  if (cachedLimiter) return cachedLimiter;
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return undefined;
-  return new Ratelimit({
+  cachedLimiter = new Ratelimit({
     redis: Redis.fromEnv(),
     limiter: Ratelimit.slidingWindow(40, "1 m"),
     analytics: true,
     prefix: RATELIMIT_PREFIX,
   });
+  return cachedLimiter;
 }
 
 /**
@@ -73,7 +80,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       body = { messages: [] };
     }
     const ip = getClientIpFromHeaders(req.headers);
-    const limiter = buildRateLimiter();
+    const limiter = getRateLimiter();
     return handleChatStream(
       {
         supabase,
