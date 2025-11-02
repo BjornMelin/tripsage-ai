@@ -107,7 +107,9 @@ export async function resolveProvider(
     }
   }
 
-  throw new Error("No provider key found for user; please add a provider API key.");
+  throw new Error(
+    "No provider key found for user; please add a provider API key for one of the supported providers: openai, openrouter, anthropic, xai."
+  );
 }
 
 export type { ProviderResolution };
