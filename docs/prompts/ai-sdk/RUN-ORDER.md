@@ -45,9 +45,22 @@ Order & dependencies
 13) 12-decommission-python-cleanup.md (final)
     - Only after all above pass and parity confirmed
 
+14) 13-proxy-and-edge-runtime-validation.md (after 00, 04)
+    - Verifies proxy.ts boundary and Edge runtime for streaming
+
+15) 14-tool-approval-e2e-and-ui-bridge.md (after 04, 05)
+    - End-to-end tool approval flow across server and UI
+
+16) 15-gateway-vs-byok-routing-validation.md (after 02, 04)
+    - Validates Gateway default vs BYOK routing and tests
+
+17) 16-otel-and-drains-validation.md (after 08)
+    - Confirms OTel init and Trace Drains export
+
 Parallelization notes
 
 - Safe in parallel: 01, 02, 03, 07 (they modify distinct areas)
+- Validation prompts (13–17) can run after their prerequisites without blocking others; 14 depends on 05; 16 depends on 08
 - Avoid running 04 and 05 concurrently until 04 scaffolds chat routes; then 05 can plug tools
 - 08 depends on 01 + 04 to instrument meaningful spans
 
