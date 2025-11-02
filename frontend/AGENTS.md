@@ -27,3 +27,61 @@ title: Frontend Agent Guidelines
 - Upstash usage: Use Redis for rate limits, counters, transient state, and small personalized caches. Do not use it as the Next.js server cache handler. After writes, tag domain data and trigger `revalidateTag` to refresh views.
 - Caching rules with auth: Never wrap Supabase calls that read/set cookies in public caches. For user-specific prefetch, use `"use cache: private"` with required stale times; otherwise mark sections dynamic. Revalidate on mutation.
 - CI defaults: Fail builds if any route uses private data without correct cache directives or if Supabase pages lack middleware/token refresh. Enforce coverage on auth flows, confirm routes, and cache-tagged mutations.
+
+## Route Handlers, DI, and Testing
+
+This repository standardizes Next.js App Router API code around thin adapters and dependency-injected handlers with deterministic Vitest tests.
+
+### Guidelines (always apply)
+
+- Thin Adapters: Keep files under `app/api/**/route.ts` minimal. They:
+  - Parse `NextRequest` (headers/body)
+  - Construct SSR-only clients (e.g., `createServerSupabase()`)
+  - Lazily build rate limiters inside the handler (never at module scope)
+  - Call a DI handler (`_handler.ts` or `_handlers.ts`) and return the result
+
+- DI Handlers: Put business logic in `app/api/**/_handler.ts` or `_handlers.ts`:
+  - Accept collaborators: `supabase`, `resolveProvider`, optional `limit` function, `logger`, `clock`, `config`
+  - For AI streaming, accept `stream?: typeof streamText` so tests can inject a finite stub
+  - Do not read `process.env` in handlers
+
+- Rate Limiting:
+  - Build Upstash `Ratelimit` inside the route, after env stubs/mocks are applied
+  - Optionally cache lazily to avoid per-request construction
+
+- AI SDK v6 Streaming:
+  - Use `toUIMessageStreamResponse` in adapters/handlers
+  - In tests, inject a stream stub or use `simulateReadableStream`; ensure streams close during tests
+
+- Attachments:
+  - Map UI file parts → model image parts with `convertToModelMessages` + `convertDataPart`
+  - Validate media types (allow `image/*` only) in server routes
+
+### Testing Rules
+
+- Prefer handler unit tests with injected fakes:
+  - `@vitest-environment node` for API tests
+  - Inject stream stub for AI SDK tests to avoid open handles
+  - Use shared fakes for Supabase/ratelimit/provider resolvers
+
+- Adapter smoke tests:
+  - Always `vi.resetModules()` and `vi.stubEnv()` BEFORE importing the route module
+  - Mock `@upstash/ratelimit`, `@upstash/redis`, and SSR clients as needed
+  - Keep to a minimum (401, 429 checks). Avoid hitting real streaming path
+
+- Env Hygiene:
+  - Use `vi.stubEnv` and `unstubAllEnvs()` helpers to avoid env leaks
+  - Do not create Upstash clients at module scope
+
+### File Structure Patterns
+
+- `app/api/feature/route.ts` — thin adapter
+- `app/api/feature/_handler.ts` or `_handlers.ts` — pure DI logic
+- `app/api/_helpers/*.ts` — shared mapping/validation helpers
+- Tests live under `__tests__` mirroring handler/adapter structure
+
+### Rationale
+
+- Aligns with Clean Architecture: “thin adapters, fat services”
+- Stabilizes tests by eliminating module-scope side effects and open streams
+- Keeps SSR-only concerns in adapters; handlers remain pure and portable
