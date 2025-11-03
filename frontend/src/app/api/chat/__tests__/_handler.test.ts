@@ -1,12 +1,29 @@
 /* @vitest-environment node */
 /**
- * @fileoverview Unit tests for handleChatNonStream: auth, attachments, clamping
- * and usage mapping, with injected dependencies and mocked AI SDK.
+ * @fileoverview Unit tests for handleChatNonStream covering auth, attachments, clamping,
+ * and usage mapping using injected dependencies and mocked AI SDK interactions.
  */
 
+import type { LanguageModel } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-let handleChatNonStream: (deps: any, payload: any) => Promise<Response>;
+import type {
+  NonStreamDeps,
+  NonStreamPayload,
+  ProviderResolver,
+} from "@/app/api/chat/_handler";
+
+let handleChatNonStream: (
+  deps: NonStreamDeps,
+  payload: NonStreamPayload
+) => Promise<Response>;
+
+const createResolver = (modelId: string): ProviderResolver =>
+  async () => ({
+    model: {} as LanguageModel,
+    modelId,
+    provider: "openai",
+  });
 
 /**
  * Creates a mock Supabase client for testing handleChatNonStream functionality.
@@ -15,7 +32,10 @@ let handleChatNonStream: (deps: any, payload: any) => Promise<Response>;
  * @param memories - Array of memory content strings for memory hydration testing.
  * @returns Mock Supabase client with basic database operations.
  */
-function fakeSupabase(userId: string | null, memories: string[] = []) {
+function fakeSupabase(
+  userId: string | null,
+  memories: string[] = []
+): NonStreamDeps["supabase"] {
   return {
     auth: {
       getUser: vi.fn(async () => ({ data: { user: userId ? { id: userId } : null } })),
@@ -29,16 +49,16 @@ function fakeSupabase(userId: string | null, memories: string[] = []) {
             .mockResolvedValue({ data: memories.map((m) => ({ content: m })) }),
           order: vi.fn().mockReturnThis(),
           select: vi.fn().mockReturnThis(),
-        } as any;
+        };
       }
       if (table === "chat_messages") {
         return {
           insert: vi.fn(async () => ({ error: null })),
-        } as any;
+        };
       }
-      return {} as any;
+      return {};
     }),
-  } as any;
+  } as unknown as NonStreamDeps["supabase"];
 }
 
 describe("handleChatNonStream", () => {
@@ -53,7 +73,7 @@ describe("handleChatNonStream", () => {
 
   it("401 when unauthenticated", async () => {
     const res = await handleChatNonStream(
-      { resolveProvider: vi.fn(), supabase: fakeSupabase(null) },
+      { resolveProvider: createResolver("gpt-4o-mini"), supabase: fakeSupabase(null) },
       { messages: [] }
     );
     expect(res.status).toBe(401);
@@ -63,17 +83,20 @@ describe("handleChatNonStream", () => {
 
   it("400 on invalid attachment type", async () => {
     const res = await handleChatNonStream(
-      { resolveProvider: vi.fn(), supabase: fakeSupabase("u2") },
+      {
+        resolveProvider: createResolver("gpt-4o-mini"),
+        supabase: fakeSupabase("u2"),
+      },
       {
         messages: [
           {
             id: "m1",
             parts: [
               { text: "hi", type: "text" },
-              { media_type: "application/pdf", type: "file", url: "https://x/y.pdf" },
+              { mediaType: "application/pdf", type: "file", url: "https://x/y.pdf" },
             ],
             role: "user",
-          } as any,
+          },
         ],
       }
     );
@@ -87,17 +110,11 @@ describe("handleChatNonStream", () => {
     const res = await handleChatNonStream(
       {
         config: { defaultMaxTokens: 1024 },
-        resolveProvider: vi.fn(async () => ({
-          model: {} as any,
-          modelId: "some-unknown-model",
-          provider: "openai",
-        })),
+        resolveProvider: createResolver("some-unknown-model"),
         supabase: fakeSupabase("u3"),
       },
       {
-        messages: [
-          { id: "u", parts: [{ text: huge, type: "text" }], role: "user" } as any,
-        ],
+        messages: [{ id: "u", parts: [{ text: huge, type: "text" }], role: "user" }],
       }
     );
     expect(res.status).toBe(400);
@@ -106,27 +123,30 @@ describe("handleChatNonStream", () => {
 
   it("200 with content and usage mapping", async () => {
     const supabase = fakeSupabase("u4");
-    const generateText = vi.fn(async () => ({
+    const generateText = (vi.fn(async () => ({
+      content: [],
+      experimental_providerMetadata: undefined,
+      experimental_stream: undefined,
+      finishReason: "stop",
+      messages: [],
+      reasoning: [],
+      reasoningText: "",
       text: "Hello world",
-      usage: { completionTokens: 32, promptTokens: 10, totalTokens: 42 },
-    }));
+      toolCalls: [],
+      usage: { inputTokens: 10, outputTokens: 32, totalTokens: 42 },
+      warnings: [],
+    })) as unknown) as NonStreamDeps["generate"];
     const res = await handleChatNonStream(
       {
         clock: { now: () => 1000 },
         config: { defaultMaxTokens: 256 },
-        generate: generateText as any,
+        generate: generateText,
         logger: { error: vi.fn(), info: vi.fn() },
-        resolveProvider: vi.fn(async () => ({
-          model: {} as any,
-          modelId: "gpt-4o-mini",
-          provider: "openai",
-        })),
+        resolveProvider: createResolver("gpt-4o-mini"),
         supabase,
       },
       {
-        messages: [
-          { id: "u1", parts: [{ text: "hi", type: "text" }], role: "user" } as any,
-        ],
+        messages: [{ id: "u1", parts: [{ text: "hi", type: "text" }], role: "user" }],
       }
     );
     expect(res.status).toBe(200);

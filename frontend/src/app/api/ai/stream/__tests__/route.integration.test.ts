@@ -1,11 +1,11 @@
 /**
- * @fileoverview Comprehensive test for the demo streaming route. Mocks AI SDK to avoid
- * network calls and asserts SSE-compatible response shape, error handling, and edge cases.
+ * @fileoverview Integration tests for the AI stream route ensuring SSE flow and error handling.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the `ai` package to avoid network/model dependencies
 vi.mock("ai", () => ({
+  simulateReadableStream: vi.fn(),
   streamText: vi.fn(),
 }));
 
@@ -15,10 +15,57 @@ vi.mock("@ai-sdk/openai", () => ({
 }));
 
 // Import after mocks are set up
-import { streamText } from "ai";
+import { simulateReadableStream, streamText } from "ai";
 import { POST } from "@/app/api/ai/stream/route";
 
 const MOCK_STREAM_TEXT = vi.mocked(streamText);
+const _MOCK_SIMULATE_READABLE_STREAM = vi.mocked(simulateReadableStream);
+
+/** Mock stream result that satisfies StreamTextResult interface */
+const createMockStreamResult = (responseFn: () => Response) => {
+  // AI SDK StreamTextResult interface is extremely complex with many properties.
+  // We use type assertion here to focus on testing the core functionality
+  // rather than mocking every single interface property.
+  return {
+    consumeStream: async () => {
+      // Intentionally empty - testing focuses on response conversion
+    },
+    content: Promise.resolve([]),
+    dynamicToolCalls: Promise.resolve([]),
+    dynamicToolResults: Promise.resolve([]),
+    experimentalContinueSteps: Promise.resolve([]),
+    experimentalProviderMetadata: Promise.resolve({}),
+    files: Promise.resolve([]),
+    finish: Promise.resolve(undefined),
+    finishReason: Promise.resolve("stop"),
+    getFinishReason: async () => "stop",
+    getFullText: async () => "",
+    getReasoning: async () => "",
+    getSteps: async () => [],
+    getText: async () => "",
+    getToolCalls: async () => [],
+    getToolInvocations: async () => [],
+    getUsage: async () => undefined,
+    getWarnings: async () => [],
+    isStreaming: false,
+    metadata: Promise.resolve({}),
+    reasoning: Promise.resolve(""),
+    reasoningText: Promise.resolve(""),
+    sources: Promise.resolve([]),
+    staticToolCalls: Promise.resolve([]),
+    staticToolResults: Promise.resolve([]),
+    steps: Promise.resolve([]),
+    text: Promise.resolve(""),
+    timestamp: Date.now(),
+    toDataStreamResponse: () => new Response(),
+    toolCalls: Promise.resolve([]),
+    toolInvocations: Promise.resolve([]),
+    toString: () => "",
+    toUIMessageStreamResponse: responseFn,
+    usage: Promise.resolve(undefined),
+    warnings: Promise.resolve([]),
+  } as unknown; // Type assertion necessary due to complex AI SDK interface
+};
 
 describe("ai stream route", () => {
   beforeEach(() => {
@@ -32,9 +79,9 @@ describe("ai stream route", () => {
     });
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    MOCK_STREAM_TEXT.mockReturnValue({
-      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
-    } as any);
+    MOCK_STREAM_TEXT.mockReturnValue(
+      createMockStreamResult(mockToUiMessageStreamResponse) as any
+    );
 
     const request = new Request("http://localhost", {
       body: JSON.stringify({ prompt: "Hello world" }),
@@ -62,9 +109,9 @@ describe("ai stream route", () => {
     });
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    MOCK_STREAM_TEXT.mockReturnValue({
-      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
-    } as any);
+    MOCK_STREAM_TEXT.mockReturnValue(
+      createMockStreamResult(mockToUiMessageStreamResponse) as any
+    );
 
     const request = new Request("http://localhost", {
       body: JSON.stringify({ prompt: "" }),
@@ -89,9 +136,9 @@ describe("ai stream route", () => {
     });
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    MOCK_STREAM_TEXT.mockReturnValue({
-      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
-    } as any);
+    MOCK_STREAM_TEXT.mockReturnValue(
+      createMockStreamResult(mockToUiMessageStreamResponse) as any
+    );
 
     const request = new Request("http://localhost", {
       body: JSON.stringify({}),
@@ -116,9 +163,9 @@ describe("ai stream route", () => {
     });
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    MOCK_STREAM_TEXT.mockReturnValue({
-      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
-    } as any);
+    MOCK_STREAM_TEXT.mockReturnValue(
+      createMockStreamResult(mockToUiMessageStreamResponse) as any
+    );
 
     const request = new Request("http://localhost", {
       body: "invalid json{",
@@ -153,9 +200,9 @@ describe("ai stream route", () => {
     });
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    MOCK_STREAM_TEXT.mockReturnValue({
-      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
-    } as any);
+    MOCK_STREAM_TEXT.mockReturnValue(
+      createMockStreamResult(mockToUiMessageStreamResponse) as any
+    );
 
     const request = new Request("http://localhost", {
       body: JSON.stringify({ prompt: "test" }),
@@ -173,9 +220,9 @@ describe("ai stream route", () => {
     });
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    MOCK_STREAM_TEXT.mockReturnValue({
-      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
-    } as any);
+    MOCK_STREAM_TEXT.mockReturnValue(
+      createMockStreamResult(mockToUiMessageStreamResponse) as any
+    );
 
     const request = new Request("http://localhost", {
       body: JSON.stringify({ prompt: "test" }),
@@ -216,9 +263,9 @@ describe("ai stream route", () => {
       throw new Error("Response conversion error");
     });
 
-    MOCK_STREAM_TEXT.mockReturnValue({
-      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
-    } as any);
+    MOCK_STREAM_TEXT.mockReturnValue(
+      createMockStreamResult(mockToUiMessageStreamResponse) as any
+    );
 
     const request = new Request("http://localhost", {
       body: JSON.stringify({ prompt: "test" }),
@@ -236,9 +283,9 @@ describe("ai stream route", () => {
     });
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    MOCK_STREAM_TEXT.mockReturnValue({
-      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
-    } as any);
+    MOCK_STREAM_TEXT.mockReturnValue(
+      createMockStreamResult(mockToUiMessageStreamResponse) as any
+    );
 
     const request = new Request("http://localhost", {
       body: JSON.stringify({ prompt: longPrompt }),

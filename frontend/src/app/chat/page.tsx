@@ -84,7 +84,7 @@ function useCurrentUserId(): string | null {
  * @param message UI message streamed by the AI SDK transport.
  * @returns Rendered message content.
  */
-function _chatMessageItem({ message }: { message: UIMessage }) {
+function ChatMessageItem({ message }: { message: UIMessage }) {
   const parts = message.parts ?? [];
   return (
     <Message from={message.role} data-testid={`msg-${message.id}`}>
@@ -268,7 +268,7 @@ export default function chatPage(): ReactElement {
             <ConversationEmptyState description="Start a conversation to see messages here." />
           ) : (
             visibleMessages.map((message) => (
-              <_chatMessageItem key={message.id} message={message} />
+              <ChatMessageItem key={message.id} message={message} />
             ))
           )}
         </ConversationContent>
