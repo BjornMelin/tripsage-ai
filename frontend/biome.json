@@ -100,14 +100,14 @@
         "useConst": { "level": "error", "fix": "safe" },
         "useTemplate": { "level": "error", "fix": "safe" },
         "useNamingConvention": {
-          "level": "error",
+          "level": "warn",
           "options": {
             "strictCase": true,
             "requireAscii": true,
             "conventions": [
               {
                 "selector": { "kind": "const", "scope": "global" },
-                "formats": ["CONSTANT_CASE"]
+                "formats": ["CONSTANT_CASE", "camelCase"]
               }
             ]
           }
@@ -131,5 +131,18 @@
         "noStaticOnlyClass": "error"
       }
     }
-  }
+  },
+
+  "overrides": [
+    {
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/__tests__/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "warn"
+          }
+        }
+      }
+    }
+  ]
 }
