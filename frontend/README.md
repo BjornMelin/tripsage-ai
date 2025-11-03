@@ -14,7 +14,7 @@ Modern Next.js 16 application with React 19, TypeScript, and AI-powered travel p
 - **AI Integration**: AI SDK v6.0.0-beta (@ai-sdk/react)
 - **Backend**: Supabase with SSR auth
 - **Testing**: Vitest 4.0.1 with Playwright E2E
-- **Linting**: Biome 2.2.7
+- **Code Quality**: Biome 2.3.2 (single gate for linting/formatting)
 - **Package Manager**: pnpm ≥9.0.0
 - **Runtime**: Node.js ≥24
 
@@ -52,9 +52,9 @@ pnpm start        # Start production server
 
 ```bash
 pnpm type-check   # TypeScript type checking
-pnpm biome:check  # Lint and format check
-pnpm biome:fix    # Auto-fix linting issues
-pnpm format:check # Check formatting
+pnpm biome:check  # Lint and format check (single gate)
+pnpm biome:fix    # Auto-fix linting and formatting issues
+pnpm format:biome # Format code with Biome
 ```
 
 ### Testing
@@ -69,8 +69,7 @@ pnpm test:e2e     # Run E2E tests with Playwright
 ### Maintenance
 
 ```bash
-pnpm lint         # ESLint check
-pnpm prepare      # Set up Husky git hooks
+pnpm prepare      # Set up Husky git hooks (runs biome:check pre-commit)
 ```
 
 ## Project Structure
