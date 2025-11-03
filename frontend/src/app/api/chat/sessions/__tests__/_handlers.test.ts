@@ -21,7 +21,7 @@ import {
  * @returns Mock Supabase client with basic CRUD operations.
  */
 type SessionRow = { id: string; [key: string]: unknown };
-type MessageRow = { session_id: string; [key: string]: unknown };
+type MessageRow = { sessionId: string; [key: string]: unknown };
 
 type MockSupabaseClient = {
   auth: {
@@ -59,7 +59,7 @@ function supabase(
             error: null,
           })),
           order: vi.fn().mockResolvedValue({
-            data: store.sessions.filter((s) => s.user_id === userId),
+            data: store.sessions.filter((s) => s.userId === userId),
             error: null,
           }),
           select: vi.fn().mockReturnThis(),
@@ -105,7 +105,7 @@ describe("sessions _handlers", () => {
     const store = {
       messages: [],
       sessions: [
-        { created_at: "", id: "s1", metadata: {}, updated_at: "", user_id: "u2" },
+        { createdAt: "", id: "s1", metadata: {}, updatedAt: "", userId: "u2" },
       ],
     };
     const s = supabase("u2", store) as any;
@@ -118,7 +118,7 @@ describe("sessions _handlers", () => {
   it("list/create messages happy path", async () => {
     const store = {
       messages: [] as MessageRow[],
-      sessions: [{ id: "s1", user_id: "u3" }],
+      sessions: [{ id: "s1", userId: "u3" }],
     };
     const s = supabase("u3", store) as any;
     const r1 = await createMessage({ supabase: s }, "s1", {

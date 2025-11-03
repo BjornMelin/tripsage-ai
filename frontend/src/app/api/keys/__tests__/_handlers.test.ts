@@ -54,7 +54,9 @@ describe("keys _handlers", () => {
 
   it("postKey returns 204 when valid and authenticated", async () => {
     const supabase = makeSupabase("u2");
-    const insert = vi.fn(async () => {});
+    const insert = vi.fn(async () => {
+      // Intentional no-op for successful insert mock
+    });
     const res = await postKey(
       { insertUserApiKey: insert, supabase },
       { apiKey: "sk", service: "openai" }

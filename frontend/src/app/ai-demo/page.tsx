@@ -109,9 +109,9 @@ export default function AiDemoPage() {
 
       <div className="border-t p-2">
         <PromptInput
-          onSubmit={(message) => {
+          onSubmit={async (message) => {
             setInput(message.text ?? "");
-            void onSubmit(message.text ?? "");
+            await onSubmit(message.text ?? "");
           }}
         >
           <PromptInputBody>

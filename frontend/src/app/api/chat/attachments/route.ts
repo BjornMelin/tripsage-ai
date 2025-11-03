@@ -70,7 +70,6 @@ interface BatchUploadResponse {
  * @returns A JSON response with uploaded file information or an error response.
  * @throws Will return error responses for validation failures or server errors.
  */
-// biome-ignore lint/style/useNamingConvention: Next.js API route handlers must use uppercase HTTP method names
 export async function POST(req: NextRequest) {
   try {
     // Optional rate limit: enable only when Upstash env is configured

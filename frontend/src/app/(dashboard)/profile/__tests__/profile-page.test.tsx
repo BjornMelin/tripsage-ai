@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Tests for the Profile Page component and its integration with user stores.
+ */
+
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,49 +11,84 @@ import type { UserProfile } from "@/stores/user-store";
 import { useUserProfileStore } from "@/stores/user-store";
 import ProfilePage from "../page";
 
-// Type for auth store return
+/**
+ * Type definition for auth store return values.
+ */
 interface AuthStoreReturn {
+  /** Whether the user is authenticated */
   isAuthenticated: boolean;
+  /** Whether authentication is loading */
   isLoading: boolean;
+  /** Current user data */
   user: User | null;
 }
 
-// Type for user profile store return
+/**
+ * Type definition for user profile store return values.
+ */
 interface UserProfileStoreReturn {
+  /** Whether profile data is loading */
   isLoading: boolean;
+  /** Current user profile data */
   profile: UserProfile | null;
 }
+
+/**
+ * Mock data for testing user authentication scenarios.
+ */
+const MOCK_USER: Partial<User> = {
+  /** User's display name */
+  displayName: "John Doe",
+  /** User's email address */
+  email: "test@example.com",
+  /** User's first name */
+  firstName: "John",
+  /** Unique user identifier */
+  id: "1",
+  /** Whether email has been verified */
+  isEmailVerified: true,
+  lastName: "Doe",
+};
 
 // Mock the stores and profile components
 vi.mock("@/stores/user-store");
 vi.mock("@/stores/auth-store");
+
+/** Mock component for PersonalInfoSection */
+const PERSONAL_INFO_SECTION = () => (
+  <div data-testid="personal-info-section">Personal Info Section</div>
+);
+
+/** Mock component for AccountSettingsSection */
+const ACCOUNT_SETTINGS_SECTION = () => (
+  <div data-testid="account-settings-section">Account Settings Section</div>
+);
+
+/** Mock component for PreferencesSection */
+const PREFERENCES_SECTION = () => (
+  <div data-testid="preferences-section">Preferences Section</div>
+);
+
+/** Mock component for SecuritySection */
+const SECURITY_SECTION = () => (
+  <div data-testid="security-section">Security Section</div>
+);
+
 vi.mock("@/components/features/profile/personal-info-section", () => ({
-  PersonalInfoSection: () => (
-    <div data-testid="personal-info-section">Personal Info Section</div>
-  ),
-}));
-vi.mock("@/components/features/profile/account-settings-section", () => ({
-  AccountSettingsSection: () => (
-    <div data-testid="account-settings-section">Account Settings Section</div>
-  ),
-}));
-vi.mock("@/components/features/profile/preferences-section", () => ({
-  PreferencesSection: () => (
-    <div data-testid="preferences-section">Preferences Section</div>
-  ),
-}));
-vi.mock("@/components/features/profile/security-section", () => ({
-  SecuritySection: () => <div data-testid="security-section">Security Section</div>,
+  PersonalInfoSection: PERSONAL_INFO_SECTION,
 }));
 
-const MOCK_USER: Partial<User> = {
-  displayName: "John Doe",
-  email: "test@example.com",
-  firstName: "John",
-  id: "1",
-  isEmailVerified: true,
-  lastName: "Doe",
-};
+vi.mock("@/components/features/profile/account-settings-section", () => ({
+  AccountSettingsSection: ACCOUNT_SETTINGS_SECTION,
+}));
+
+vi.mock("@/components/features/profile/preferences-section", () => ({
+  PreferencesSection: PREFERENCES_SECTION,
+}));
+
+vi.mock("@/components/features/profile/security-section", () => ({
+  SecuritySection: SECURITY_SECTION,
+}));
 
 describe("ProfilePage", () => {
   beforeEach(() => {

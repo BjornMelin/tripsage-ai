@@ -47,21 +47,18 @@ const PROVIDERS: Record<string, ProviderConfig> = {
   },
   openai: {
     buildHeaders: (key) => ({
-      // biome-ignore lint/style/useNamingConvention: HTTP header name
       Authorization: `Bearer ${key}`,
     }),
     url: "https://api.openai.com/v1/models",
   },
   openrouter: {
     buildHeaders: (key) => ({
-      // biome-ignore lint/style/useNamingConvention: HTTP header name
       Authorization: `Bearer ${key}`,
     }),
     url: "https://openrouter.ai/api/v1/models",
   },
   xai: {
     buildHeaders: (key) => ({
-      // biome-ignore lint/style/useNamingConvention: HTTP header name
       Authorization: `Bearer ${key}`,
     }),
     url: "https://api.x.ai/v1/models",

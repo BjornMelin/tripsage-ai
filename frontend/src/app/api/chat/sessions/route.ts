@@ -27,7 +27,9 @@ export async function POST(req: NextRequest) {
     try {
       const body = (await req.json()) as { title?: string };
       title = body?.title;
-    } catch {}
+    } catch {
+      // Intentionally ignore JSON parsing errors - title is optional
+    }
     return createSession({ supabase }, title);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

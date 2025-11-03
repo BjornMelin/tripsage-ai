@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
   if (tokenHash && type) {
     const supabase = await createServerSupabase();
     const { error } = await supabase.auth.verifyOtp({
-      // biome-ignore lint/style/useNamingConvention: Supabase API parameter
       token_hash: tokenHash,
       type,
     });
