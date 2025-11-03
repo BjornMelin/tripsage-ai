@@ -2,41 +2,30 @@
 
 ## Documentation Index
 
-### Getting Started
+### Essential Operations
 
-- [Installation Guide](./installation-guide.md) - Complete setup and dependencies
-- [Environment Configuration](./environment-configuration.md) - All environment variables and configuration
+- **[Operators Reference](./operators-reference.md)** - Complete setup, deployment, and operational procedures
+- **[Security Guide](./security-guide.md)** - Security implementation and best practices
+- **[Deployment Guide](./deployment-guide.md)** - Production deployment procedures
 
-### Deployment & Operations
+### Specialized Guides
 
-- [Deployment Guide](./deployment-guide.md) - Complete deployment guide with Supabase, Docker, and cloud platforms
-- [Configuration Management](./configuration-management.md) - Environment variables and configuration validation
-- [Supabase Configuration](./supabase-configuration.md) - Database concepts, security, and troubleshooting
-- [Manual Supabase Operations](./supabase-manual-operations.md) - Manual setup and operations when Vercel integration isn't available
-- [Admin Guide](./admin-guide.md) - Agent configuration management, system monitoring, and administrative operations
-
-### Security & Authentication
-
-- [Security Guide](./security-guide.md) - Security implementation
-- [OAuth Provider Setup Guide](./oauth-provider-setup.md) - OAuth setup with Supabase, Google, and GitHub
+- **[Admin Guide](./admin-guide.md)** - Agent configuration and system monitoring
+- **[OAuth Provider Setup](./oauth-provider-setup-guide.md)** - OAuth configuration with Supabase
 
 ### Operations Bulletins
 
-- [API key route migration notice](./api-keys-route-migration.md) - Required updates for the `/api/keys` rollout (October 28, 2025)
+- **[API Keys Route Migration](./api-keys-route-migration.md)** - Migration notice for `/api/keys` rollout
 
-### Configuration Details
-
-- [Settings Reference](./settings-reference.md) - Pydantic settings and technical configuration
-
-## Quick Links
+## Quick Start Tasks
 
 | **Task** | **Documentation** | **Time Estimate** |
 |----------|-------------------|-------------------|
-| New deployment | [Installation](./installation-guide.md) → [Deployment](./deployment-guide.md) | 1-2 hours |
-| Environment setup | [Environment Configuration](./environment-configuration.md) | 30-60 min |
+| New deployment | [Operators Reference](./operators-reference.md) | 1-2 hours |
+| Environment setup | [Operators Reference](./operators-reference.md) | 30-60 min |
 | Security review | [Security Guide](./security-guide.md) | 1-2 hours |
-| OAuth integration | [Authentication Guide](./authentication-guide.md) | 1-3 hours |
+| Production deployment | [Deployment Guide](./deployment-guide.md) | 1 hour |
 
 ## Notes
 
-This section is scoped to deployment and operations. See `../developers/` for development topics and `../architecture/` for system design.
+This section focuses on deployment and operations. See `../developers/` for development topics and `../api/` for API documentation.

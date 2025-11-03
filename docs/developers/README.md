@@ -14,7 +14,7 @@ Resources and guidelines for TripSage development.
 
 | Guide | Purpose |
 |-------|---------|
-| [Development Guide](development-guide.md) | Backend, frontend, database, and API patterns |
+| [Development Guide](development-guide.md) | Backend, frontend, database, API patterns, and observability |
 | [Troubleshooting](troubleshooting.md) | Debugging, CI/CD, and workflow guidance |
 
 ## Development Workflow
