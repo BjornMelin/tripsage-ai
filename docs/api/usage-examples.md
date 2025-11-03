@@ -1,8 +1,6 @@
 # API Usage Examples
 
-> **Quick Reference for TripSage API Integration**  
-> Practical code snippets for REST API, Realtime, and authentication
-> **Looking for complete tutorials?** Check out our [**Complete Integration Guide**](examples.md) for full workflows, SDKs, and advanced patterns.
+This document provides practical examples for integrating with the TripSage API.
 
 ## Table of Contents
 
@@ -10,141 +8,87 @@
 - [Authentication](#authentication)
 - [Flight Search](#flight-search)
 - [Accommodation Search](#accommodation-search)
-- [Realtime Chat](#realtime-chat-supabase)
 - [Trip Management](#trip-management)
-- [🧠 AI Memory System](#-ai-memory-system)
+- [Memory System](#memory-system)
 - [Rate Limiting](#rate-limiting)
 - [Error Handling](#error-handling)
-- [SDKs & Libraries](#sdks--libraries)
-
----
 
 ## Quick Start
 
-### **Interactive Documentation**
-
-TripSage provides automatic interactive API documentation:
+### Interactive Documentation
 
 - **Swagger UI**: `http://localhost:8001/api/docs`
 - **ReDoc**: `http://localhost:8001/api/redoc`
 - **OpenAPI Schema**: `http://localhost:8001/api/openapi.json`
 
-### **Health Check**
-
-Test your API connection:
+### Health Check
 
 ```bash
 curl http://localhost:8001/api/health
 ```
 
-**Response:**
+Response:
 
 ```json
 {
   "status": "healthy",
-  "timestamp": "2025-06-16T10:30:00Z",
-  "version": "1.0.0",
   "environment": "development",
-  "services": {
-    "database": "healthy",
-    "cache": "healthy",
-    "external_apis": "healthy"
-  }
+  "components": [
+    {
+      "name": "application",
+      "status": "healthy",
+      "message": "TripSage API is running"
+    },
+    {
+      "name": "database",
+      "status": "healthy",
+      "latency_ms": 45.2,
+      "message": "Database is responsive"
+    },
+    {
+      "name": "cache",
+      "status": "healthy",
+      "message": "Cache is responsive"
+    }
+  ]
 }
 ```
-
----
 
 ## Authentication
 
-### **JWT Authentication**
+TripSage uses Supabase JWT authentication. Users authenticate with Supabase and receive JWT tokens for API access.
 
-#### **Login to Get JWT Token**
-
-```bash
-curl -X POST http://localhost:8001/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password"
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer",
-  "expires_in": 3600,
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": "user-123",
-    "email": "user@example.com",
-    "name": "John Doe"
-  }
-}
-```
-
-#### **Using JWT Token**
+### Using JWT Tokens
 
 ```bash
+# All API requests require Authorization header
 curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  http://localhost:8001/api/profile
+  http://localhost:8001/api/trips
 ```
 
-### **API Key Management**
+### JavaScript Example
 
-#### **Generate API Key**
+```javascript
+// Get token from Supabase auth
+const { data: { session } } = await supabase.auth.getSession();
+const token = session?.access_token;
 
-```bash
-curl -X POST http://localhost:8001/api/keys \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "My Travel App",
-    "permissions": ["flights:read", "accommodations:read", "trips:write"],
-    "expires_at": "2025-12-31T23:59:59Z"
-  }'
+// Use token in API requests
+const response = await fetch('/api/trips', {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }
+});
 ```
-
-**Response:**
-
-```json
-{
-  "id": "key-456",
-  "name": "My Travel App",
-  "key": "ts_live_1234567890abcdef...",
-  "permissions": ["flights:read", "accommodations:read", "trips:write"],
-  "created_at": "2025-06-16T10:30:00Z",
-  "expires_at": "2025-12-31T23:59:59Z",
-  "last_used": null
-}
-```
-
-#### **List API Keys**
-
-```bash
-curl http://localhost:8001/api/keys \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-#### **Revoke API Key**
-
-```bash
-curl -X DELETE http://localhost:8001/api/keys/key-456 \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
----
 
 ## Flight Search
 
-### **Basic Flight Search**
+### Basic Flight Search
 
 ```bash
 curl -X POST http://localhost:8001/api/flights/search \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "origin": "NYC",
@@ -156,225 +100,166 @@ curl -X POST http://localhost:8001/api/flights/search \
   }'
 ```
 
-**Response:**
+Response:
 
 ```json
 {
-  "search_id": "search-789",
-  "flights": [
+  "offers": [
     {
-      "id": "flight-123",
-      "airline": "American Airlines",
-      "flight_number": "AA 123",
-      "departure": {
-        "airport": "JFK",
-        "time": "2025-07-15T08:00:00Z",
-        "terminal": "8"
-      },
-      "arrival": {
-        "airport": "LAX",
-        "time": "2025-07-15T11:30:00Z",
-        "terminal": "4"
-      },
-      "duration": "5h 30m",
-      "stops": 0,
+      "id": "offer-123",
       "price": {
         "amount": 299.99,
         "currency": "USD"
       },
-      "booking_url": "https://api.tripsage.ai/flights/book/flight-123"
+      "itineraries": [
+        {
+          "segments": [
+            {
+              "departure": {
+                "iata_code": "JFK",
+                "terminal": "8",
+                "at": "2025-07-15T08:00:00Z"
+              },
+              "arrival": {
+                "iata_code": "LAX",
+                "terminal": "4",
+                "at": "2025-07-15T11:30:00Z"
+              },
+              "carrier_code": "AA",
+              "number": "123",
+              "duration": "PT5H30M"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "total_results": 45,
-  "search_time": "1.2s"
+  "search_id": "search-789",
+  "total_results": 45
 }
 ```
 
-### **Flight Search with Filters with Filters**
+### Get Flight Offer Details
 
 ```bash
-curl -X POST http://localhost:8001/api/flights/search \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "origin": "NYC",
-    "destination": "LAX",
-    "departure_date": "2025-07-15",
-    "return_date": "2025-07-22",
-    "passengers": 2,
-    "cabin_class": "business",
-    "filters": {
-      "max_price": 1500,
-      "max_stops": 1,
-      "preferred_airlines": ["AA", "DL", "UA"],
-      "departure_time_range": {
-        "earliest": "06:00",
-        "latest": "10:00"
-      }
-    },
-    "sort_by": "price",
-    "limit": 20
-  }'
+curl http://localhost:8001/api/flights/offers/offer-123 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
-
-### **Flight Price Alerts**
-
-```bash
-curl -X POST http://localhost:8001/api/flights/alerts \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "origin": "NYC",
-    "destination": "LAX",
-    "departure_date": "2025-07-15",
-    "target_price": 250,
-    "notification_method": "email"
-  }'
-```
-
----
 
 ## Accommodation Search
 
-### **Hotel Search**
+### Basic Accommodation Search
 
 ```bash
 curl -X POST http://localhost:8001/api/accommodations/search \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "location": "Los Angeles, CA",
     "check_in": "2025-07-15",
     "check_out": "2025-07-22",
     "guests": 2,
-    "rooms": 1,
-    "budget_max": 200,
-    "accommodation_type": "hotel"
+    "rooms": 1
   }'
 ```
 
-**Response:**
+Response:
 
 ```json
 {
-  "search_id": "search-456",
-  "accommodations": [
+  "listings": [
     {
-      "id": "hotel-789",
+      "id": "listing-789",
       "name": "The Beverly Hills Hotel",
       "type": "hotel",
-      "rating": 4.8,
       "location": {
-        "address": "9641 Sunset Blvd, Beverly Hills, CA",
+        "address": "9641 Sunset Blvd, Beverly Hills, CA 90210",
         "coordinates": {
-          "lat": 34.0901,
-          "lng": -118.4065
+          "latitude": 34.0901,
+          "longitude": -118.4065
         }
       },
-      "amenities": ["wifi", "pool", "spa", "restaurant", "parking"],
-      "price": {
-        "per_night": 189.99,
-        "total": 1329.93,
-        "currency": "USD",
-        "includes_taxes": true
+      "rating": 4.8,
+      "price_per_night": {
+        "amount": 189.99,
+        "currency": "USD"
       },
-      "availability": "available",
-      "booking_url": "https://api.tripsage.ai/accommodations/book/hotel-789"
+      "total_price": {
+        "amount": 1329.93,
+        "currency": "USD"
+      },
+      "amenities": ["wifi", "pool", "spa", "restaurant", "parking"]
     }
   ],
-  "total_results": 127,
-  "search_time": "0.8s"
+  "search_id": "search-456",
+  "total_results": 127
 }
 ```
 
-### **Vacation Rental Search**
+### Get Accommodation Details
 
 ```bash
-curl -X POST http://localhost:8001/api/accommodations/search \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+curl -X POST http://localhost:8001/api/accommodations/details \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "location": "Malibu, CA",
-    "check_in": "2025-07-15",
-    "check_out": "2025-07-22",
-    "guests": 6,
-    "accommodation_type": "vacation_rental",
-    "filters": {
-      "min_bedrooms": 3,
-      "pet_friendly": true,
-      "has_kitchen": true,
-      "ocean_view": true
-    }
+    "listing_id": "listing-789"
   }'
-```
-
----
-
-## Realtime Chat (Supabase)
-
-```ts
-const channel = supabase
-  .channel(`session:${sessionId}`, { config: { private: true } })
-  .on('broadcast', { event: 'chat:message' }, ({ payload }) => {
-    console.log('message', payload);
-  })
-  .subscribe();
 ```
 
 ## Trip Management
 
-### **Create Trip**
+### Create Trip
 
 ```bash
 curl -X POST http://localhost:8001/api/trips \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "European Adventure",
+    "title": "European Adventure",
     "description": "Two-week tour of Europe",
     "start_date": "2025-08-01",
     "end_date": "2025-08-14",
     "budget": 5000,
-    "destinations": ["Paris", "Rome", "Barcelona"],
-    "travelers": 2,
-    "preferences": {
-      "accommodation_type": "hotel",
-      "budget_tier": "mid-range",
-      "interests": ["culture", "food", "history"],
-      "pace": "moderate"
-    }
+    "destinations": [
+      {
+        "name": "Paris",
+        "country": "France",
+        "city": "Paris"
+      }
+    ],
+    "travelers": 2
   }'
 ```
 
-**Response:**
+Response:
 
 ```json
 {
   "id": "trip-123",
-  "name": "European Adventure",
+  "title": "European Adventure",
   "status": "planning",
   "created_at": "2025-06-16T10:30:00Z",
   "itinerary": {
     "days": 14,
-    "destinations": 3,
+    "destinations": 1,
     "estimated_cost": 4750
-  },
-  "share_url": "https://tripsage.ai/trips/trip-123/share"
+  }
 }
 ```
 
-### **Get Trip Details**
+### Get Trip Details
 
 ```bash
 curl http://localhost:8001/api/trips/trip-123 \
-  -H "Authorization: Bearer YOUR_API_KEY"
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-### **Update Trip**
+### Update Trip
 
 ```bash
-curl -X PATCH http://localhost:8001/api/trips/trip-123 \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+curl -X PUT http://localhost:8001/api/trips/trip-123 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "budget": 6000,
@@ -384,114 +269,109 @@ curl -X PATCH http://localhost:8001/api/trips/trip-123 \
   }'
 ```
 
-### **Add Collaborators**
+### Trip Security
+
+Trip endpoints use automatic access control. The API verifies permissions before processing requests.
+
+```python
+# Access levels are automatically enforced
+@router.get("/trips/{trip_id}")
+async def get_trip(
+    trip_id: str,
+    access_result: TripReadAccessDep,  # Verifies read access
+    principal: RequiredPrincipalDep,
+):
+    # Access already verified - proceed with operation
+    return {"trip_id": trip_id, "access_level": access_result.access_level}
+```
+
+## Memory System
+
+### Add Conversation Memory
 
 ```bash
-curl -X POST http://localhost:8001/api/trips/trip-123/collaborators \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+curl -X POST http://localhost:8001/api/memory/conversation \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "friend@example.com",
-    "role": "editor",
-    "message": "Join me in planning our European adventure!"
+    "messages": [
+      {
+        "role": "user",
+        "content": "I prefer window seats on flights"
+      }
+    ],
+    "session_id": "session-123"
   }'
 ```
 
----
-
-## 🧠 AI Memory System
-
-### **Add Memory**
-
-```bash
-curl -X POST http://localhost:8001/api/memory \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "User prefers window seats on flights and hotels with ocean views",
-    "category": "preferences",
-    "metadata": {
-      "confidence": 0.9,
-      "source": "user_conversation"
-    }
-  }'
-```
-
-### **Search Memory**
+### Search Memories
 
 ```bash
 curl -X POST http://localhost:8001/api/memory/search \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "flight preferences",
-    "limit": 10,
-    "threshold": 0.7
+    "limit": 10
   }'
 ```
 
-**Response:**
+Response:
 
 ```json
 {
-  "memories": [
+  "results": [
     {
       "id": "memory-123",
-      "content": "User prefers window seats on flights and hotels with ocean views",
+      "content": "User prefers window seats on flights",
       "category": "preferences",
       "relevance_score": 0.95,
       "created_at": "2025-06-16T10:30:00Z"
     }
   ],
-  "total_results": 1
+  "query": "flight preferences",
+  "total": 1
 }
 ```
 
-### **Get User Memory Summary**
+### Get User Context
 
 ```bash
-curl http://localhost:8001/api/memory/summary \
-  -H "Authorization: Bearer YOUR_API_KEY"
+curl http://localhost:8001/api/memory/context \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
-
----
 
 ## Rate Limiting
 
-### **Check Rate Limit Status**
-
-Rate limit information is included in response headers:
+Rate limiting is enforced automatically. Check headers for limit status:
 
 ```bash
 curl -I http://localhost:8001/api/health \
-  -H "Authorization: Bearer YOUR_API_KEY"
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-**Headers:**
+Response headers:
 
-```http
+```bash
 X-RateLimit-Limit: 1000
 X-RateLimit-Remaining: 999
 X-RateLimit-Reset: 1642284000
 X-RateLimit-Window: 3600
 ```
 
-### **Handle Rate Limiting**
+### Handle Rate Limits
 
 ```javascript
 async function makeAPICall(url, options) {
   const response = await fetch(url, options);
 
-  // Check rate limit headers
-  const remaining = response.headers.get("X-RateLimit-Remaining");
-  const reset = response.headers.get("X-RateLimit-Reset");
-
   if (response.status === 429) {
-    const retryAfter = response.headers.get("Retry-After");
+    const retryAfter = response.headers.get('Retry-After');
     console.log(`Rate limited. Retry after ${retryAfter} seconds`);
 
-    // Wait and retry
-    await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+    await new Promise(resolve =>
+      setTimeout(resolve, parseInt(retryAfter) * 1000)
+    );
     return makeAPICall(url, options);
   }
 
@@ -499,40 +379,39 @@ async function makeAPICall(url, options) {
 }
 ```
 
----
-
 ## Error Handling
 
-### **Standard Error Response**
+### Standard Error Response
 
 ```json
 {
   "error": true,
   "message": "Invalid destination code",
-  "code": "INVALID_DESTINATION",
-  "details": {
-    "field": "destination",
-    "value": "INVALID",
-    "allowed_values": ["NYC", "LAX", "LHR", "..."]
-  },
-  "request_id": "req-123456",
-  "timestamp": "2025-06-16T10:30:00Z"
+  "code": "VALIDATION_ERROR",
+  "type": "validation",
+  "errors": [
+    {
+      "field": "destination",
+      "message": "Invalid destination code",
+      "type": "value_error"
+    }
+  ]
 }
 ```
 
-### **Common Error Codes**
+### Common Error Codes
 
-| Code                   | Status | Description                  |
-| ---------------------- | ------ | ---------------------------- |
-| `AUTHENTICATION_ERROR` | 401    | Invalid or expired token     |
-| `AUTHORIZATION_ERROR`  | 403    | Insufficient permissions     |
-| `VALIDATION_ERROR`     | 400    | Invalid request data         |
-| `NOT_FOUND`            | 404    | Resource not found           |
-| `RATE_LIMITED`         | 429    | Too many requests            |
-| `EXTERNAL_API_ERROR`   | 502    | External service unavailable |
-| `INTERNAL_ERROR`       | 500    | Server error                 |
+| Code | Status | Description |
+|------|--------|-------------|
+| `AUTHENTICATION_ERROR` | 401 | Invalid or expired token |
+| `AUTHORIZATION_ERROR` | 403 | Insufficient permissions |
+| `VALIDATION_ERROR` | 400 | Invalid request data |
+| `NOT_FOUND` | 404 | Resource not found |
+| `RATE_LIMITED` | 429 | Too many requests |
+| `EXTERNAL_API_ERROR` | 502 | External service unavailable |
+| `INTERNAL_ERROR` | 500 | Server error |
 
-### **Error Handling Best Practices**
+### Error Handling Example
 
 ```javascript
 async function handleAPIResponse(response) {
@@ -540,26 +419,23 @@ async function handleAPIResponse(response) {
     const error = await response.json();
 
     switch (error.code) {
-      case "AUTHENTICATION_ERROR":
+      case 'AUTHENTICATION_ERROR':
         // Refresh token or redirect to login
         await refreshToken();
         break;
 
-      case "RATE_LIMITED":
-        // Implement exponential backoff
-        const retryAfter = response.headers.get("Retry-After");
-        await delay(retryAfter * 1000);
+      case 'RATE_LIMITED':
+        const retryAfter = response.headers.get('Retry-After');
+        await delay(parseInt(retryAfter) * 1000);
         break;
 
-      case "VALIDATION_ERROR":
-        // Show user-friendly validation errors
-        showValidationErrors(error.details);
+      case 'VALIDATION_ERROR':
+        showValidationErrors(error.errors);
         break;
 
       default:
-        // Log error and show generic message
-        console.error("API Error:", error);
-        showErrorMessage("Something went wrong. Please try again.");
+        console.error('API Error:', error);
+        showErrorMessage('Something went wrong. Please try again.');
     }
 
     throw new Error(error.message);
@@ -569,561 +445,36 @@ async function handleAPIResponse(response) {
 }
 ```
 
----
+## Realtime Features
 
-## SDKs & Libraries
-
-### **Python SDK (Coming Soon)**
-
-```python
-from tripsage import TripSage
-
-# Initialize client
-client = TripSage(api_key="your_api_key")
-
-# Search flights
-flights = await client.flights.search(
-    origin="NYC",
-    destination="LAX",
-    departure_date="2025-07-15",
-    passengers=1
-)
-
-# Create trip
-trip = await client.trips.create(
-    name="California Adventure",
-    destinations=["Los Angeles", "San Francisco"],
-    budget=3000
-)
-
-# Start chat session
-async with client.chat.session() as chat:
-    response = await chat.send("Plan a trip to Japan")
-    print(response.content)
-```
-
-### **JavaScript/TypeScript SDK (Coming Soon)**
+TripSage uses Supabase Realtime for live features. See the [Realtime API guide](realtime-api.md) for details.
 
 ```typescript
-import { TripSage } from "@tripsage/sdk";
+import { createClient } from '@supabase/supabase-js';
 
-// Initialize client
-const client = new TripSage({
-  apiKey: "your_api_key",
-  baseURL: "https://api.tripsage.ai",
-});
+const supabase = createClient(url, key);
 
-// Search accommodations
-const hotels = await client.accommodations.search({
-  location: "Paris, France",
-  checkIn: "2025-07-15",
-  checkOut: "2025-07-22",
-  guests: 2,
-});
-
-// Realtime chat (Supabase)
-const chat = client.chat.connect();
-chat.on("message", (message) => {
-  console.log("AI:", message.content);
-});
-
-await chat.send("Find me flights to Tokyo");
-```
-
-### **React Hooks (Coming Soon)**
-
-```jsx
-import { useTripSage, useFlightSearch, useChat } from "@tripsage/react";
-
-function FlightSearchComponent() {
-  const {
-    data: flights,
-    loading,
-    error,
-  } = useFlightSearch({
-    origin: "NYC",
-    destination: "LAX",
-    departureDate: "2025-07-15",
-  });
-
-  const { messages, sendMessage, isConnected } = useChat();
-
-  if (loading) return <div>Searching flights...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-
-  return (
-    <div>
-      <h2>Available Flights</h2>
-      {flights.map((flight) => (
-        <FlightCard key={flight.id} flight={flight} />
-      ))}
-    </div>
-  );
-}
-```
-
----
-
-## � Trip Security
-
-This section demonstrates how to use the trip access verification system in TripSage API endpoints.
-
-### **Overview**
-
-The trip security system provides access control for trip-related operations through:
-
-- **Access Levels**: `READ`, `WRITE`, `OWNER`, `COLLABORATOR`
-- **Permissions**: `VIEW`, `EDIT`, `MANAGE`
-- **FastAPI Dependencies**: Pre-configured and custom dependency injection
-- **Decorators**: Clean, declarative endpoint protection
-- **Audit Logging**: Security event tracking
-
-### **Using Pre-configured Dependencies**
-
-```python
-from fastapi import APIRouter, status
-from tripsage.api.core.trip_security import (
-    TripReadAccessDep,
-    TripOwnerAccessDep,
-    TripEditPermissionDep,
-)
-from tripsage.api.core.dependencies import RequiredPrincipalDep
-
-router = APIRouter(tags=["trips"])
-
-@router.get("/trips/{trip_id}")
-async def get_trip(
-    trip_id: str,
-    access_result: TripReadAccessDep,  # Verifies read access
-    principal: RequiredPrincipalDep,
-):
-    """Get trip details - requires read access."""
-    # Access already verified, proceed with operation
-    return {"trip_id": trip_id, "access_level": access_result.access_level}
-
-@router.delete("/trips/{trip_id}")
-async def delete_trip(
-    trip_id: str,
-    access_result: TripOwnerAccessDep,  # Verifies owner access
-    principal: RequiredPrincipalDep,
-):
-    """Delete trip - requires owner access."""
-    # Only trip owner can delete
-    return {"message": "Trip deleted successfully"}
-
-@router.put("/trips/{trip_id}")
-async def update_trip(
-    trip_id: str,
-    access_result: TripEditPermissionDep,  # Verifies edit permission
-    principal: RequiredPrincipalDep,
-):
-    """Update trip - requires edit permission."""
-    # Owner or collaborators with edit permission can update
-    return {"message": "Trip updated successfully"}
-```
-
-### **Using Decorators**
-
-```python
-from tripsage.api.core.trip_security import (
-    require_trip_access,
-    TripAccessLevel,
-    TripAccessPermission,
-)
-
-@router.get("/trips/{trip_id}/details")
-@require_trip_access(TripAccessLevel.READ)
-async def get_trip_details(
-    trip_id: str,
-    principal: RequiredPrincipalDep,
-):
-    """Get detailed trip information."""
-    # Access verification handled by decorator
-    return {"trip_id": trip_id, "details": "..."}
-
-@router.post("/trips/{trip_id}/collaborators")
-@require_trip_access(
-    TripAccessLevel.COLLABORATOR,
-    TripAccessPermission.MANAGE
-)
-async def add_collaborator(
-    trip_id: str,
-    principal: RequiredPrincipalDep,
-):
-    """Add collaborator - requires manage permission."""
-    # Only users with manage permission can add collaborators
-    return {"message": "Collaborator added"}
-```
-
-### **Custom Dependencies**
-
-```python
-from tripsage.api.core.trip_security import (
-    create_trip_access_dependency,
-    TripAccessLevel,
-    TripAccessPermission,
-)
-from typing import Annotated
-from fastapi import Depends
-
-# Create custom dependency for specific use case
-ViewOnlyAccessDep = Annotated[
-    TripAccessResult,
-    Depends(create_trip_access_dependency(
-        TripAccessLevel.COLLABORATOR,
-        TripAccessPermission.VIEW
-    ))
-]
-
-@router.get("/trips/{trip_id}/readonly-summary")
-async def get_readonly_summary(
-    trip_id: str,
-    access_result: ViewOnlyAccessDep,
-    principal: RequiredPrincipalDep,
-):
-    """Get read-only trip summary."""
-    return {
-        "trip_id": trip_id,
-        "can_edit": access_result.permission_granted in [
-            TripAccessPermission.EDIT,
-            TripAccessPermission.MANAGE
-        ]
-    }
-```
-
-### **Multiple Access Checks**
-
-```python
-from tripsage.api.core.trip_security import (
-    check_trip_ownership,
-    check_trip_collaboration,
-    get_user_trip_permissions,
-)
-
-@router.get("/trips/{trip_id}/permissions")
-async def get_trip_permissions(
-    trip_id: str,
-    principal: RequiredPrincipalDep,
-    trip_service: TripServiceDep,
-):
-    """Get detailed permission information for current user."""
-    permissions = await get_user_trip_permissions(
-        trip_id, principal, trip_service
-    )
-    return permissions
-
-@router.post("/trips/{trip_id}/conditional-action")
-async def conditional_action(
-    trip_id: str,
-    principal: RequiredPrincipalDep,
-    trip_service: TripServiceDep,
-):
-    """Perform different actions based on access level."""
-    is_owner = await check_trip_ownership(trip_id, principal, trip_service)
-
-    if is_owner:
-        # Owner-specific logic
-        return {"action": "owner_action_performed"}
-
-    has_collab = await check_trip_collaboration(
-        trip_id, principal, trip_service, TripAccessPermission.EDIT
-    )
-
-    if has_collab:
-        # Collaborator logic
-        return {"action": "collaborator_action_performed"}
-
-    # Read-only logic
-    return {"action": "readonly_action_performed"}
-```
-
-### **Error Handling**
-
-```python
-from tripsage_core.exceptions.exceptions import (
-    CoreAuthorizationError,
-    CoreResourceNotFoundError,
-)
-
-@router.put("/trips/{trip_id}/sensitive-data")
-async def update_sensitive_data(
-    trip_id: str,
-    access_result: TripOwnerAccessDep,
-    principal: RequiredPrincipalDep,
-):
-    """Update sensitive trip data - owner only."""
-    try:
-        # The dependency already verified owner access
-        # Proceed with sensitive operation
-        return {"message": "Sensitive data updated"}
-    except Exception as e:
-        # Handle any additional errors
-        logger.exception(f"Failed to update sensitive data: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update trip data"
-        )
-```
-
-### **Realtime Security (Supabase)**
-
-Supabase Realtime uses Postgres RLS policies on `realtime.messages` with private channels. Clients must:
-
-- Authenticate and call `supabase.realtime.setAuth(access_token)` when the session changes.
-- Join private topics (for example, `session:{uuid}` or `user:{sub}`) that your policies allow.
-
-```ts
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-// After sign-in (or token refresh)
+// Set auth token for private channels
 const { data: { session } } = await supabase.auth.getSession();
-const accessToken = session?.access_token;
-if (accessToken) supabase.realtime.setAuth(accessToken);
+if (session?.access_token) {
+  supabase.realtime.setAuth(session.access_token);
+}
 
-// Join a private session channel
-const sessionId = "abc-123";
-const channel = supabase.channel(`session:${sessionId}`, { config: { private: true } });
+// Join private session channel
+const channel = supabase.channel(`session:${sessionId}`, {
+  config: { private: true }
+});
 
 channel
-  .on("broadcast", { event: "chat:message" }, (payload) => {
-    console.log("message", payload);
+  .on('broadcast', { event: 'chat:message' }, ({ payload }) => {
+    console.log('message', payload);
   })
-  .subscribe((status) => {
-    if (status === "SUBSCRIBED") {
-      // Optionally broadcast
-      channel.send({ type: "broadcast", event: "chat:message", payload: { text: "hello" } });
-    }
-  });
+  .subscribe();
 ```
-
-Policy examples live in the Realtime migration files and the [Realtime API guide](realtime-api.md).
-
-### **Updating Existing Trip Endpoints**
-
-```python
-# Before - Manual access checking
-@router.get("/trips/{trip_id}")
-async def get_trip_old(
-    trip_id: str,
-    principal: RequiredPrincipalDep,
-    trip_service: TripServiceDep,
-):
-    # Manual access check (old way)
-    has_access = await trip_service._check_trip_access(trip_id, principal.id)
-    if not has_access:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    # Rest of logic...
-
-# After - Using new security system
-@router.get("/trips/{trip_id}")
-async def get_trip_new(
-    trip_id: str,
-    access_result: TripReadAccessDep,  # Automatic verification
-    principal: RequiredPrincipalDep,
-    trip_service: TripServiceDep,
-):
-    # Access already verified, proceed directly
-    # Additional context available in access_result
-    logger.info(f"User {principal.id} accessing trip {trip_id} as {access_result.access_level}")
-    # Rest of logic...
-```
-
-### **Collaboration Endpoints**
-
-```python
-@router.get("/trips/{trip_id}/collaborators")
-@require_trip_access(TripAccessLevel.COLLABORATOR)
-async def list_collaborators(
-    trip_id: str,
-    principal: RequiredPrincipalDep,
-    trip_service: TripServiceDep,
-):
-    """List trip collaborators - any collaborator can view."""
-    # Implementation here
-    pass
-
-@router.post("/trips/{trip_id}/collaborators")
-async def add_collaborator(
-    trip_id: str,
-    access_result: TripManagePermissionDep,  # Requires manage permission
-    principal: RequiredPrincipalDep,
-    trip_service: TripServiceDep,
-):
-    """Add collaborator - requires manage permission."""
-    if not access_result.permission_granted == TripAccessPermission.MANAGE:
-        raise HTTPException(
-            status_code=403,
-            detail="Adding collaborators requires manage permission"
-        )
-    # Implementation here
-    pass
-
-@router.delete("/trips/{trip_id}/collaborators/{user_id}")
-async def remove_collaborator(
-    trip_id: str,
-    user_id: str,
-    access_result: TripOwnerAccessDep,  # Only owner can remove
-    principal: RequiredPrincipalDep,
-    trip_service: TripServiceDep,
-):
-    """Remove collaborator - owner only."""
-    # Implementation here
-    pass
-```
-
-### **Best Practices**
-
-#### **1. Choose Appropriate Access Levels**
-
-```python
-# For viewing operations
-access_result: TripReadAccessDep
-
-# For editing trip content
-access_result: TripEditPermissionDep
-
-# For managing collaborators, settings
-access_result: TripManagePermissionDep
-
-# For deleting trips, changing ownership
-access_result: TripOwnerAccessDep
-```
-
-#### **2. Use Meaningful Operation Names**
-
-```python
-context = TripAccessContext(
-    trip_id=trip_id,
-    principal_id=principal.id,
-    required_level=TripAccessLevel.WRITE,
-    operation="update_trip_itinerary",  # Descriptive operation name
-)
-```
-
-#### **3. Handle Access Results Appropriately**
-
-```python
-@router.post("/trips/{trip_id}/action")
-async def trip_action(
-    trip_id: str,
-    access_result: TripCollaboratorAccessDep,
-    principal: RequiredPrincipalDep,
-):
-    # Use access result information to customize response
-    response = {"trip_id": trip_id}
-
-    if access_result.is_owner:
-        response["owner_actions"] = ["delete", "transfer_ownership"]
-
-    if access_result.permission_granted == TripAccessPermission.MANAGE:
-        response["manage_actions"] = ["add_collaborator", "change_settings"]
-
-    if access_result.permission_granted in [TripAccessPermission.EDIT, TripAccessPermission.MANAGE]:
-        response["edit_actions"] = ["update_itinerary", "add_notes"]
-
-    return response
-```
-
-#### **4. Audit Important Operations**
-
-```python
-# The system automatically audits access events, but you can add
-# operation-specific auditing for important actions
-
-from tripsage_core.services.business.audit_logging_service import audit_security_event
-
-@router.delete("/trips/{trip_id}")
-async def delete_trip(
-    trip_id: str,
-    access_result: TripOwnerAccessDep,
-    principal: RequiredPrincipalDep,
-):
-    # Perform deletion
-    # ...
-
-    # Additional audit for trip deletion
-    await audit_security_event(
-        event_type=AuditEventType.DATA_DELETION,
-        severity=AuditSeverity.HIGH,
-        message=f"Trip {trip_id} deleted by owner",
-        actor_id=principal.id,
-        target_resource=trip_id,
-        risk_score=80,
-    )
-
-    return {"message": "Trip deleted successfully"}
-```
-
-### **Testing**
-
-#### **Unit Tests**
-
-```python
-import pytest
-from tripsage.api.core.trip_security import verify_trip_access, TripAccessContext
-
-@pytest.mark.asyncio
-async def test_trip_access_verification():
-    # Mock dependencies and test access verification
-    context = TripAccessContext(
-        trip_id="test-trip-id",
-        principal_id="test-user-id",
-        required_level=TripAccessLevel.READ,
-        operation="test_operation",
-    )
-
-    # Test with mocked trip service
-    result = await verify_trip_access(context, mock_trip_service)
-    assert result.is_authorized
-```
-
-#### **Integration Tests**
-
-```python
-from fastapi.testclient import TestClient
-
-def test_trip_endpoint_security(client: TestClient):
-    # Test that endpoint requires authentication
-    response = client.get("/api/trips/test-id")
-    assert response.status_code == 401
-
-    # Test with valid authentication
-    headers = {"Authorization": "Bearer valid-token"}
-    response = client.get("/api/trips/test-id", headers=headers)
-    # Should succeed or return 403 based on access rights
-    assert response.status_code in [200, 403]
-```
-
----
 
 ## Additional Resources
 
-### **API Documentation**
-
-- **[Complete API Reference](rest-endpoints.md)** - Full endpoint documentation
-- **[Interactive Docs](http://localhost:8001/api/docs)** - Test endpoints in browser
-- **[OpenAPI Schema](http://localhost:8001/api/openapi.json)** - Machine-readable API spec
-
-### **Development Resources**
-
-- **[Developer Guide](../04_DEVELOPMENT_GUIDE/README.md)** - Setup and development
-- **[Configuration](../07_CONFIGURATION/README.md)** - Environment setup
-- **[Getting Started](../01_GETTING_STARTED/README.md)** - Quick start guide
-
-### **Support**
-
-- **[FAQ](FAQ.md)** - Common questions and answers
-- **[Discord](https://discord.gg/tripsage)** - Developer community
-- **[Email](mailto:developers@tripsage.ai)** - Direct developer support
-
----
-
-**Ready to build amazing travel experiences?** Start with our [interactive API documentation](http://localhost:8001/api/docs) and join our [developer community](https://discord.gg/tripsage)!
-
-> _Last updated: June 16, 2025_
+- [Complete API Reference](rest-endpoints.md)
+- [Authentication Guide](auth.md)
+- [Realtime API Guide](realtime-api.md)
+- [Interactive API Docs](http://localhost:8001/api/docs)
