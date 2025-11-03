@@ -66,6 +66,8 @@ pnpm test:coverage # Run tests with coverage
 pnpm test:e2e     # Run E2E tests with Playwright
 ```
 
+- Testing: Unified test root at `src/**/__tests__`; Vitest include/exclude fixed to default patterns.
+
 ### Maintenance
 
 ```bash
