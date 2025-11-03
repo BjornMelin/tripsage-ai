@@ -30,8 +30,8 @@ test.describe("Error Boundaries and Loading States", () => {
       await page.route("**/api/dashboard/**", async (route) => {
         await page.waitForTimeout(1000);
         await route.fulfill({
+          body: JSON.stringify({ stats: {}, trips: [] }),
           status: 200,
-          body: JSON.stringify({ trips: [], stats: {} }),
         });
       });
 
@@ -51,8 +51,8 @@ test.describe("Error Boundaries and Loading States", () => {
       await page.route("**/api/chat/history", async (route) => {
         await page.waitForTimeout(1000);
         await route.fulfill({
-          status: 200,
           body: JSON.stringify({ messages: [] }),
+          status: 200,
         });
       });
 
@@ -74,8 +74,8 @@ test.describe("Error Boundaries and Loading States", () => {
       await page.route("**/api/search/flights", async (route) => {
         await page.waitForTimeout(2000);
         await route.fulfill({
-          status: 200,
           body: JSON.stringify({ results: [] }),
+          status: 200,
         });
       });
 
@@ -91,8 +91,8 @@ test.describe("Error Boundaries and Loading States", () => {
       // Simulate a route error by returning 500
       await page.route("**/api/dashboard", async (route) => {
         await route.fulfill({
-          status: 500,
           body: JSON.stringify({ error: "Internal server error" }),
+          status: 500,
         });
       });
 
@@ -112,14 +112,14 @@ test.describe("Error Boundaries and Loading States", () => {
         if (requestCount === 1) {
           // First request fails
           await route.fulfill({
-            status: 500,
             body: JSON.stringify({ error: "Server error" }),
+            status: 500,
           });
         } else {
           // Second request succeeds
           await route.fulfill({
-            status: 200,
             body: JSON.stringify({ data: "success" }),
+            status: 200,
           });
         }
       });
@@ -139,8 +139,8 @@ test.describe("Error Boundaries and Loading States", () => {
     test("should navigate home from error boundary", async ({ page }) => {
       await page.route("**/api/trips", async (route) => {
         await route.fulfill({
-          status: 500,
           body: JSON.stringify({ error: "Server error" }),
+          status: 500,
         });
       });
 
@@ -162,8 +162,8 @@ test.describe("Error Boundaries and Loading States", () => {
       // Simulate partial component failure
       await page.route("**/api/dashboard/recent-trips", async (route) => {
         await route.fulfill({
-          status: 500,
           body: JSON.stringify({ error: "Failed to load recent trips" }),
+          status: 500,
         });
       });
 
@@ -179,8 +179,8 @@ test.describe("Error Boundaries and Loading States", () => {
       if (isDev) {
         await page.route("**/api/test-error", async (route) => {
           await route.fulfill({
-            status: 500,
             body: JSON.stringify({ error: "Test error for development" }),
+            status: 500,
           });
         });
 
@@ -258,7 +258,7 @@ test.describe("Error Boundaries and Loading States", () => {
         await page.route(`**/api/test-${i}`, async (route) => {
           await page.waitForTimeout(100);
           if (i % 2 === 0) {
-            await route.fulfill({ status: 200, body: "{}" });
+            await route.fulfill({ body: "{}", status: 200 });
           } else {
             await route.fulfill({ status: 500 });
           }

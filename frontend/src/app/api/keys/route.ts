@@ -43,7 +43,7 @@ function buildRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
 /**
  * Handle POST /api/keys to insert or replace a user's provider API key.
  *
- * @param req Next.js request containing JSON body with { service, api_key }.
+ * @param req Next.js request containing JSON body with { service, apiKey }.
  * @returns 204 No Content on success; 400/401/429/500 on error.
  */
 export async function POST(req: NextRequest) {
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     try {
       const body = await req.json();
       service = body.service;
-      apiKey = body.api_key;
+      apiKey = body.apiKey;
     } catch (parseError) {
       const message =
         parseError instanceof Error ? parseError.message : "Unknown JSON parse error";
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     const supabase = await createServerSupabase();
     return postKey(
       { insertUserApiKey: (u, s, k) => insertUserApiKey(u, s, k), supabase },
-      { api_key: apiKey, service }
+      { apiKey, service }
     );
   } catch (err) {
     // Redact potential secrets from logs

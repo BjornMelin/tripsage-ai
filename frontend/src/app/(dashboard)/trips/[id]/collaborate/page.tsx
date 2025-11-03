@@ -52,9 +52,9 @@ interface Collaborator {
   /** Unique identifier for the collaborator record. */
   id: string;
   /** User ID of the collaborator. */
-  user_id: string;
+  userId: string;
   /** ID of the trip being collaborated on. */
-  trip_id: string;
+  tripId: string;
   /** Email address of the collaborator. */
   email: string;
   /** Optional display name of the collaborator. */
@@ -66,16 +66,16 @@ interface Collaborator {
   /** Detailed permission flags. */
   permissions: {
     /** Whether the collaborator can edit trip content. */
-    can_edit: boolean;
+    canEdit: boolean;
     /** Whether the collaborator can invite others. */
-    can_invite: boolean;
+    canInvite: boolean;
     /** Whether the collaborator can delete the trip. */
-    can_delete: boolean;
+    canDelete: boolean;
   };
   /** Timestamp when the invitation was sent. */
-  invited_at: string;
+  invitedAt: string;
   /** Timestamp when the invitation was accepted. */
-  accepted_at?: string;
+  acceptedAt?: string;
 }
 
 /**
@@ -118,38 +118,38 @@ export default function TripCollaborationPage() {
   // Mock collaborators data - in real implementation, this would come from a hook
   const [collaborators] = useState<Collaborator[]>([
     {
-      accepted_at: new Date().toISOString(),
+      acceptedAt: new Date().toISOString(),
       email: "alice@example.com",
       id: "1",
-      invited_at: new Date().toISOString(),
+      invitedAt: new Date().toISOString(),
       name: "Alice Johnson",
-      permissions: { can_delete: true, can_edit: true, can_invite: true },
+      permissions: { canDelete: true, canEdit: true, canInvite: true },
       role: "owner",
       status: "accepted",
-      trip_id: tripId,
-      user_id: "user-123",
+      tripId: tripId,
+      userId: "user-123",
     },
     {
-      accepted_at: new Date(Date.now() - 86400000).toISOString(),
+      acceptedAt: new Date(Date.now() - 86400000).toISOString(),
       email: "bob@example.com",
       id: "2",
-      invited_at: new Date(Date.now() - 86400000).toISOString(),
+      invitedAt: new Date(Date.now() - 86400000).toISOString(),
       name: "Bob Smith",
-      permissions: { can_delete: false, can_edit: true, can_invite: false },
+      permissions: { canDelete: false, canEdit: true, canInvite: false },
       role: "editor",
       status: "accepted",
-      trip_id: tripId,
-      user_id: "user-456",
+      tripId: tripId,
+      userId: "user-456",
     },
     {
       email: "charlie@example.com",
       id: "3",
-      invited_at: new Date(Date.now() - 3600000).toISOString(),
-      permissions: { can_delete: false, can_edit: false, can_invite: false },
+      invitedAt: new Date(Date.now() - 3600000).toISOString(),
+      permissions: { canDelete: false, canEdit: false, canInvite: false },
       role: "viewer",
       status: "pending",
-      trip_id: tripId,
-      user_id: "user-789",
+      tripId: tripId,
+      userId: "user-789",
     },
   ]);
 
@@ -358,7 +358,7 @@ export default function TripCollaborationPage() {
                             <span className="font-medium">
                               {collaborator.name || collaborator.email}
                             </span>
-                            {collaborator.user_id === currentUserId && (
+                            {collaborator.userId === currentUserId && (
                               <Badge variant="outline" className="text-xs">
                                 You
                               </Badge>

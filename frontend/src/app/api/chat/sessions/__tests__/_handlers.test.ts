@@ -20,7 +20,13 @@ import {
  * @param store - In-memory data store for sessions and messages.
  * @returns Mock Supabase client with basic CRUD operations.
  */
-function supabase(userId: string | null, store: { sessions: any[]; messages: any[] }) {
+type SessionRow = { id: string; [key: string]: unknown };
+type MessageRow = { session_id: string; [key: string]: unknown };
+
+function supabase(
+  userId: string | null,
+  store: { sessions: SessionRow[]; messages: MessageRow[] }
+) {
   return {
     auth: {
       getUser: vi.fn(async () => ({ data: { user: userId ? { id: userId } : null } })),
@@ -30,7 +36,7 @@ function supabase(userId: string | null, store: { sessions: any[]; messages: any
         return {
           delete: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
-          insert: vi.fn(async (row: any) => {
+          insert: vi.fn((row: SessionRow) => {
             store.sessions.push(row);
             return { error: null };
           }),
@@ -43,12 +49,12 @@ function supabase(userId: string | null, store: { sessions: any[]; messages: any
             error: null,
           }),
           select: vi.fn().mockReturnThis(),
-        } as any;
+        };
       }
       if (table === "chat_messages") {
         return {
           eq: vi.fn().mockReturnThis(),
-          insert: vi.fn(async (row: any) => {
+          insert: vi.fn((row: MessageRow) => {
             store.messages.push(row);
             return { error: null };
           }),
@@ -57,16 +63,16 @@ function supabase(userId: string | null, store: { sessions: any[]; messages: any
             error: null,
           }),
           select: vi.fn().mockReturnThis(),
-        } as any;
+        };
       }
-      return {} as any;
+      return {};
     }),
   } as any;
 }
 
 describe("sessions _handlers", () => {
   it("create/list session happy path", async () => {
-    const store = { messages: [] as any[], sessions: [] as any[] };
+    const store = { messages: [] as MessageRow[], sessions: [] as SessionRow[] };
     const s = supabase("u1", store);
     const res1 = await createSession({ supabase: s }, "Trip");
     expect(res1.status).toBe(201);
@@ -89,7 +95,10 @@ describe("sessions _handlers", () => {
   });
 
   it("list/create messages happy path", async () => {
-    const store = { messages: [] as any[], sessions: [{ id: "s1", user_id: "u3" }] };
+    const store = {
+      messages: [] as MessageRow[],
+      sessions: [{ id: "s1", user_id: "u3" }],
+    };
     const s = supabase("u3", store);
     const r1 = await createMessage({ supabase: s }, "s1", {
       parts: [{ text: "hi", type: "text" }],

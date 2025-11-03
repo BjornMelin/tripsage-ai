@@ -47,7 +47,7 @@ describe("useWebSocketChat", () => {
     );
   });
 
-  it("emits typing events", async () => {
+  it("emits typing events", () => {
     const { result } = renderHook(() => useWebSocketChat({ autoConnect: true }));
     act(() => result.current.startTyping());
     expect(MOCK_CHANNEL.send).toHaveBeenCalledWith(

@@ -189,11 +189,11 @@ export function PersonalizationInsights({
                     <div className="text-sm text-muted-foreground">
                       Last visit: {new Date(dest.lastVisit).toLocaleDateString()}
                     </div>
-                    {dest.satisfaction_score && (
+                    {dest.satisfactionScore && (
                       <div className="flex items-center gap-2 mt-2">
                         <Star className="h-4 w-4 text-yellow-500" />
                         <span className="text-sm">
-                          {dest.satisfaction_score.toFixed(1)}/5
+                          {dest.satisfactionScore.toFixed(1)}/5
                         </span>
                       </div>
                     )}
@@ -278,8 +278,8 @@ export function PersonalizationInsights({
                               : "text-gray-500"
                         )}
                       >
-                        {trend.percentage_change > 0 ? "+" : ""}
-                        {trend.percentage_change}%
+                        {trend.percentageChange > 0 ? "+" : ""}
+                        {trend.percentageChange}%
                       </div>
                     </div>
                   </div>
@@ -444,15 +444,13 @@ export function PersonalizationInsights({
           <CardContent className="pt-6">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>
-                Analysis based on {insights.metadata.data_coverage_months} months of
-                data
+                Analysis based on {insights.metadata.dataCoverageMonths} months of data
               </span>
               <span>
-                Confidence: {Math.round(insights.metadata.confidence_level * 100)}%
+                Confidence: {Math.round(insights.metadata.confidenceLevel * 100)}%
               </span>
               <span>
-                Updated:{" "}
-                {new Date(insights.metadata.analysis_date).toLocaleDateString()}
+                Updated: {new Date(insights.metadata.analysisDate).toLocaleDateString()}
               </span>
             </div>
           </CardContent>

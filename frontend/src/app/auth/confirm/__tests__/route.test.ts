@@ -2,20 +2,27 @@
  * @fileoverview Tests for the auth confirm route handler.
  */
 
+import type { MockInstance } from "vitest";
+import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const VERIFY_MOCK: any = vi.fn(async (_args: any) => ({ error: null }));
+const VERIFY_MOCK: MockInstance<
+  (_args: { token_hash: string; type: string }) => Promise<{ error: Error | null }>
+> = vi.fn(async (_args: { token_hash: string; type: string }) => ({ error: null }));
+
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({ auth: { verifyOtp: VERIFY_MOCK } })),
 }));
 
 // Mock next/navigation redirect helper
-const REDIRECT_MOCK = vi.fn();
+const REDIRECT_MOCK = vi.hoisted(
+  () => vi.fn() as MockInstance<(...args: string[]) => never>
+);
 vi.mock("next/navigation", async (importOriginal) => {
-  const actual = await importOriginal<any>();
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
-    redirect: (...args: any[]) => REDIRECT_MOCK(...args),
+    redirect: REDIRECT_MOCK,
   };
 });
 
@@ -26,8 +33,8 @@ import { GET } from "../route";
  * @param url The request URL.
  * @return A mock request object.
  */
-function makeReq(url: string): any {
-  return { headers: new Headers(), url };
+function makeReq(url: string): NextRequest {
+  return { headers: new Headers(), url } as NextRequest;
 }
 
 describe("auth/confirm route", () => {

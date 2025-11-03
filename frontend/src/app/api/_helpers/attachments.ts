@@ -4,9 +4,6 @@
 
 import type { UIMessage, FileUIPart } from "ai";
 
-// Type alias for UIMessage (preserves original parts type with both file and text)
-type UiMessageWithParts = UIMessage;
-
 /**
  * Type representing the result of attachment validation.
  */
@@ -18,7 +15,7 @@ export type Validation = { valid: true } | { valid: false; reason: string };
  * @param messages - Array of UI messages to validate for attachments.
  * @returns Validation result indicating success or failure with reason.
  */
-export function validateImageAttachments(messages: UiMessageWithParts[]): Validation {
+export function validateImageAttachments(messages: UIMessage[]): Validation {
   for (const m of messages) {
     const parts = m.parts;
     if (!Array.isArray(parts)) continue;
@@ -60,7 +57,7 @@ export function convertUiFilePartToImage(part: FileUIPart) {
  * @param messages - Array of UI messages to extract text from.
  * @returns Array of text strings found in the messages.
  */
-export function extractTexts(messages: UiMessageWithParts[]): string[] {
+export function extractTexts(messages: UIMessage[]): string[] {
   const texts: string[] = [];
   for (const m of messages) {
     const parts = m.parts;

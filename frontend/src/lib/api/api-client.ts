@@ -243,7 +243,7 @@ export class ApiClient {
 
         // Handle HTTP errors
         if (!response.ok) {
-          const errorData = (await this.parseResponseBody(response)) as any;
+          const errorData = (await this.parseResponseBody(response)) as unknown;
           const errorObject =
             typeof errorData === "object" && errorData !== null ? errorData : {};
           throw new ApiClientError(
@@ -278,7 +278,7 @@ export class ApiClient {
               );
             }
 
-            responseData = validationResult.data!;
+            responseData = validationResult.data;
           }
         }
 
@@ -322,7 +322,7 @@ export class ApiClient {
     }
 
     // If we get here, all retries failed
-    throw lastError!;
+    throw lastError || new Error("Request failed after all retries");
   }
 
   // Parse response body based on content type

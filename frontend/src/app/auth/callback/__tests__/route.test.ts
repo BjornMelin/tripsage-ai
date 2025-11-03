@@ -2,10 +2,13 @@
  * @fileoverview Tests for the auth callback route handler.
  */
 
+import type { MockInstance } from "vitest";
+import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the server client used by the route handler
-const EXCHANGE_MOCK: any = vi.fn(async (_code: string) => ({ error: null }));
+const EXCHANGE_MOCK: MockInstance<(_code: string) => Promise<{ error: Error | null }>> =
+  vi.fn(async (_code: string) => ({ error: null }));
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({
     auth: { exchangeCodeForSession: EXCHANGE_MOCK },
@@ -21,8 +24,8 @@ import { GET } from "../route";
  * @param headers Optional headers for the request.
  * @return A mock request object.
  */
-function makeReq(url: string, headers: Record<string, string> = {}): any {
-  return { headers: new Headers(headers), url };
+function makeReq(url: string, headers: Record<string, string> = {}): NextRequest {
+  return { headers: new Headers(headers), url } as NextRequest;
 }
 
 describe("auth/callback route", () => {

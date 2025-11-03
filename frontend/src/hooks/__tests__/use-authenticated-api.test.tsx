@@ -65,7 +65,11 @@ function TestCaller({ endpoint = "/api/ping" }: { endpoint?: string }) {
     }
   };
 
-  return <button onClick={call}>{result}</button>;
+  return (
+    <button type="button" onClick={call}>
+      {result}
+    </button>
+  );
 }
 
 describe("useAuthenticatedApi", () => {

@@ -63,7 +63,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
  * @returns Parsed response of type `T`.
  * @throws {ApiError} If the HTTP status indicates an error.
  */
-export async function fetchApi<T = any>(
+export async function fetchApi<T = unknown>(
   endpoint: string,
   options: FetchOptions = {}
 ): Promise<T> {
@@ -117,14 +117,14 @@ export async function fetchApi<T = any>(
  */
 export const api = {
   /** Issue a DELETE request. */
-  delete: <T = any>(endpoint: string, options?: FetchOptions) =>
+  delete: <T = unknown>(endpoint: string, options?: FetchOptions) =>
     fetchApi<T>(endpoint, { ...options, method: "DELETE" }),
   /** Issue a GET request. */
-  get: <T = any>(endpoint: string, options?: FetchOptions) =>
+  get: <T = unknown>(endpoint: string, options?: FetchOptions) =>
     fetchApi<T>(endpoint, { ...options, method: "GET" }),
 
   /** Issue a PATCH request with an optional JSON body. */
-  patch: <T = any>(endpoint: string, data?: any, options?: FetchOptions) =>
+  patch: <T = unknown>(endpoint: string, data?: unknown, options?: FetchOptions) =>
     fetchApi<T>(endpoint, {
       ...options,
       body: data ? JSON.stringify(data) : undefined,
@@ -132,7 +132,7 @@ export const api = {
     }),
 
   /** Issue a POST request with an optional JSON body. */
-  post: <T = any>(endpoint: string, data?: any, options?: FetchOptions) =>
+  post: <T = unknown>(endpoint: string, data?: unknown, options?: FetchOptions) =>
     fetchApi<T>(endpoint, {
       ...options,
       body: data ? JSON.stringify(data) : undefined,
@@ -140,7 +140,7 @@ export const api = {
     }),
 
   /** Issue a PUT request with an optional JSON body. */
-  put: <T = any>(endpoint: string, data?: any, options?: FetchOptions) =>
+  put: <T = unknown>(endpoint: string, data?: unknown, options?: FetchOptions) =>
     fetchApi<T>(endpoint, {
       ...options,
       body: data ? JSON.stringify(data) : undefined,
@@ -148,7 +148,7 @@ export const api = {
     }),
 
   /** Upload files using `FormData` without overriding content-type. */
-  upload: <T = any>(endpoint: string, formData: FormData, options?: FetchOptions) =>
+  upload: <T = unknown>(endpoint: string, formData: FormData, options?: FetchOptions) =>
     fetchApi<T>(endpoint, {
       ...options,
       body: formData,

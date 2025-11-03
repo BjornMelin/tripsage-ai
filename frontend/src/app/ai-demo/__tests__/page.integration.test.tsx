@@ -23,7 +23,7 @@ describe("AI Demo Page", () => {
     expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
   });
 
-  it("handles user input correctly", async () => {
+  it("handles user input correctly", () => {
     render(<Page />);
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
 

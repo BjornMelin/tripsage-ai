@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   type ErrorDetails,
-  ErrorDetailsSchema,
+  ERROR_DETAILS_SCHEMA,
   type ErrorInfo,
-  ErrorInfoSchema,
+  ERROR_INFO_SCHEMA,
   type ErrorReport,
-  ErrorReportSchema,
+  ERROR_REPORT_SCHEMA,
 } from "../errors";
 
 describe("Error Type Schemas", () => {
-  describe("ErrorInfoSchema", () => {
+  describe("ERROR_INFO_SCHEMA", () => {
     it("should validate valid error info", () => {
       const validErrorInfo = {
         componentStack: "at Component (src/Component.tsx:10:5)",
@@ -17,7 +17,7 @@ describe("Error Type Schemas", () => {
         errorBoundaryStack: "at ErrorBoundary (src/ErrorBoundary.tsx:25:10)",
       };
 
-      const result = ErrorInfoSchema.parse(validErrorInfo);
+      const result = ERROR_INFO_SCHEMA.parse(validErrorInfo);
       expect(result).toEqual(validErrorInfo);
     });
 
@@ -26,7 +26,7 @@ describe("Error Type Schemas", () => {
         componentStack: "at Component (src/Component.tsx:10:5)",
       };
 
-      const result = ErrorInfoSchema.parse(minimalErrorInfo);
+      const result = ERROR_INFO_SCHEMA.parse(minimalErrorInfo);
       expect(result).toEqual(minimalErrorInfo);
     });
 
@@ -35,11 +35,11 @@ describe("Error Type Schemas", () => {
         componentStack: 123, // Should be string
       };
 
-      expect(() => ErrorInfoSchema.parse(invalidErrorInfo)).toThrow();
+      expect(() => ERROR_INFO_SCHEMA.parse(invalidErrorInfo)).toThrow();
     });
   });
 
-  describe("ErrorDetailsSchema", () => {
+  describe("ERROR_DETAILS_SCHEMA", () => {
     it("should validate valid error details", () => {
       const validErrorDetails = {
         digest: "abc123",
@@ -48,7 +48,7 @@ describe("Error Type Schemas", () => {
         stack: "TypeError: Cannot read property 'foo' of undefined\n    at Component",
       };
 
-      const result = ErrorDetailsSchema.parse(validErrorDetails);
+      const result = ERROR_DETAILS_SCHEMA.parse(validErrorDetails);
       expect(result).toEqual(validErrorDetails);
     });
 
@@ -58,7 +58,7 @@ describe("Error Type Schemas", () => {
         name: "Error",
       };
 
-      const result = ErrorDetailsSchema.parse(minimalErrorDetails);
+      const result = ERROR_DETAILS_SCHEMA.parse(minimalErrorDetails);
       expect(result).toEqual(minimalErrorDetails);
     });
 
@@ -68,11 +68,11 @@ describe("Error Type Schemas", () => {
         // Missing required message field
       };
 
-      expect(() => ErrorDetailsSchema.parse(invalidErrorDetails)).toThrow();
+      expect(() => ERROR_DETAILS_SCHEMA.parse(invalidErrorDetails)).toThrow();
     });
   });
 
-  describe("ErrorReportSchema", () => {
+  describe("ERROR_REPORT_SCHEMA", () => {
     it("should validate complete error report", () => {
       const validErrorReport = {
         error: {
@@ -92,7 +92,7 @@ describe("Error Type Schemas", () => {
         userId: "user123",
       };
 
-      const result = ErrorReportSchema.parse(validErrorReport);
+      const result = ERROR_REPORT_SCHEMA.parse(validErrorReport);
       expect(result).toEqual(validErrorReport);
     });
 
@@ -107,7 +107,7 @@ describe("Error Type Schemas", () => {
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       };
 
-      const result = ErrorReportSchema.parse(minimalErrorReport);
+      const result = ERROR_REPORT_SCHEMA.parse(minimalErrorReport);
       expect(result).toEqual(minimalErrorReport);
     });
 
@@ -122,7 +122,7 @@ describe("Error Type Schemas", () => {
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       };
 
-      expect(() => ErrorReportSchema.parse(invalidErrorReport)).toThrow();
+      expect(() => ERROR_REPORT_SCHEMA.parse(invalidErrorReport)).toThrow();
     });
   });
 

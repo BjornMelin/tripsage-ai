@@ -23,17 +23,17 @@ Object.defineProperty(window, "matchMedia", {
   writable: true,
 });
 
-import { type Theme, useUIStore } from "../ui-store";
+import { type Theme, useUiStore } from "../ui-store";
 
 describe("UI Store", () => {
   beforeEach(() => {
     // Clear all state before each test
     act(() => {
-      useUIStore.getState().reset();
+      useUiStore.getState().reset();
       // Ensure non-reset parts of the store are restored as well
       // Theme and feature flags are persisted and not included in reset()
       // Reset them explicitly to avoid cross-test leakage.
-      useUIStore.setState({
+      useUiStore.setState({
         features: {
           enableAnalytics: true,
           enableAnimations: true,
@@ -48,7 +48,7 @@ describe("UI Store", () => {
 
   describe("Initial State", () => {
     it("initializes with correct default values", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       expect(result.current.theme).toBe("system");
       expect(result.current.sidebar.isOpen).toBe(true);
@@ -64,7 +64,7 @@ describe("UI Store", () => {
     });
 
     it("computed properties work correctly with initial state", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       expect(result.current.unreadNotificationCount).toBe(0);
       expect(result.current.isLoading).toBe(false);
@@ -73,7 +73,7 @@ describe("UI Store", () => {
 
   describe("Theme Management", () => {
     it("sets theme correctly", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.setTheme("dark");
@@ -89,7 +89,7 @@ describe("UI Store", () => {
     });
 
     it("toggles theme between light and dark", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.setTheme("light");
@@ -109,7 +109,7 @@ describe("UI Store", () => {
     });
 
     it("handles invalid theme values gracefully", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const previousTheme = result.current.theme;
 
@@ -126,7 +126,7 @@ describe("UI Store", () => {
     });
 
     it("computes isDarkMode correctly for system theme", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       // Mock dark mode preference - update the existing mock
       const matchMediaMock = vi.fn().mockImplementation((query: string) => ({
@@ -157,7 +157,7 @@ describe("UI Store", () => {
 
   describe("Sidebar Management", () => {
     it("toggles sidebar open/closed", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       expect(result.current.sidebar.isOpen).toBe(true);
 
@@ -175,7 +175,7 @@ describe("UI Store", () => {
     });
 
     it("sets sidebar open state directly", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.setSidebarOpen(false);
@@ -191,7 +191,7 @@ describe("UI Store", () => {
     });
 
     it("sets sidebar collapsed state", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.setSidebarCollapsed(true);
@@ -207,7 +207,7 @@ describe("UI Store", () => {
     });
 
     it("sets sidebar pinned state", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.setSidebarPinned(false);
@@ -225,7 +225,7 @@ describe("UI Store", () => {
 
   describe("Navigation Management", () => {
     it("sets active route", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.setActiveRoute("/dashboard");
@@ -241,7 +241,7 @@ describe("UI Store", () => {
     });
 
     it("sets breadcrumbs", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       const breadcrumbs = [
         { href: "/", label: "Home" },
@@ -257,7 +257,7 @@ describe("UI Store", () => {
     });
 
     it("adds breadcrumb to existing list", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       const initialBreadcrumbs = [
         { href: "/", label: "Home" },
@@ -279,29 +279,29 @@ describe("UI Store", () => {
 
   describe("Loading State Management", () => {
     it("sets loading state for a key", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.setLoadingState("user-profile", "loading");
       });
 
-      expect(useUIStore.getState().loadingStates["user-profile"]).toBe("loading");
+      expect(useUiStore.getState().loadingStates["user-profile"]).toBe("loading");
       expect(
-        Object.values(useUIStore.getState().loadingStates).some((s) => s === "loading")
+        Object.values(useUiStore.getState().loadingStates).some((s) => s === "loading")
       ).toBe(true);
 
       act(() => {
         result.current.setLoadingState("user-profile", "success");
       });
 
-      expect(useUIStore.getState().loadingStates["user-profile"]).toBe("success");
+      expect(useUiStore.getState().loadingStates["user-profile"]).toBe("success");
       expect(
-        Object.values(useUIStore.getState().loadingStates).some((s) => s === "loading")
+        Object.values(useUiStore.getState().loadingStates).some((s) => s === "loading")
       ).toBe(false);
     });
 
     it("handles multiple loading states", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.setLoadingState("profile", "loading");
@@ -310,9 +310,9 @@ describe("UI Store", () => {
       });
 
       expect(
-        Object.values(useUIStore.getState().loadingStates).some((s) => s === "loading")
+        Object.values(useUiStore.getState().loadingStates).some((s) => s === "loading")
       ).toBe(true);
-      expect(Object.keys(useUIStore.getState().loadingStates)).toHaveLength(3);
+      expect(Object.keys(useUiStore.getState().loadingStates)).toHaveLength(3);
 
       act(() => {
         result.current.setLoadingState("profile", "success");
@@ -320,12 +320,12 @@ describe("UI Store", () => {
       });
 
       expect(
-        Object.values(useUIStore.getState().loadingStates).some((s) => s === "loading")
+        Object.values(useUiStore.getState().loadingStates).some((s) => s === "loading")
       ).toBe(false);
     });
 
     it("clears loading state for a key", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.setLoadingState("test", "loading");
@@ -341,7 +341,7 @@ describe("UI Store", () => {
     });
 
     it("clears all loading states", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.setLoadingState("state1", "loading");
@@ -359,7 +359,7 @@ describe("UI Store", () => {
     });
 
     it("handles invalid loading state values gracefully", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       act(() => {
@@ -376,7 +376,7 @@ describe("UI Store", () => {
 
   describe("Notification Management", () => {
     it("adds notification successfully", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       const notification = {
         isRead: false,
@@ -385,23 +385,23 @@ describe("UI Store", () => {
         type: "success" as const,
       };
 
-      let notificationId: string;
+      let notificationId: string | undefined;
       act(() => {
         notificationId = result.current.addNotification(notification);
       });
 
-      expect(notificationId!).toBeDefined();
+      expect(notificationId).toBeDefined();
       expect(result.current.notifications).toHaveLength(1);
       expect(result.current.notifications[0].title).toBe("Success");
       expect(result.current.notifications[0].type).toBe("success");
-      expect(useUIStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
+      expect(useUiStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
         1
       );
     });
 
     it("adds notification with duration and auto-removes", async () => {
       vi.useFakeTimers();
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       const notification = {
         duration: 100,
@@ -422,7 +422,7 @@ describe("UI Store", () => {
     });
 
     it("removes notification by ID", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       let notificationId: string;
       act(() => {
@@ -436,14 +436,16 @@ describe("UI Store", () => {
       expect(result.current.notifications).toHaveLength(1);
 
       act(() => {
-        result.current.removeNotification(notificationId!);
+        if (notificationId) {
+          result.current.removeNotification(notificationId);
+        }
       });
 
       expect(result.current.notifications).toHaveLength(0);
     });
 
     it("marks notification as read", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       let notificationId: string;
       act(() => {
@@ -454,22 +456,24 @@ describe("UI Store", () => {
         });
       });
 
-      expect(useUIStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
+      expect(useUiStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
         1
       );
 
       act(() => {
-        result.current.markNotificationAsRead(notificationId!);
+        if (notificationId) {
+          result.current.markNotificationAsRead(notificationId);
+        }
       });
 
-      expect(useUIStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
+      expect(useUiStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
         0
       );
       expect(result.current.notifications[0].isRead).toBe(true);
     });
 
     it("clears all notifications", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.addNotification({
@@ -499,7 +503,7 @@ describe("UI Store", () => {
     });
 
     it("limits notifications to maximum of 50", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       // Add 55 notifications
       act(() => {
@@ -518,7 +522,7 @@ describe("UI Store", () => {
     });
 
     it("computes unread notification count correctly", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       let id1: string;
       let id2: string;
@@ -542,30 +546,30 @@ describe("UI Store", () => {
         });
       });
 
-      expect(useUIStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
+      expect(useUiStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
         3
       );
 
       act(() => {
-        result.current.markNotificationAsRead(id1!);
-        result.current.markNotificationAsRead(id2!);
+        if (id1) result.current.markNotificationAsRead(id1);
+        if (id2) result.current.markNotificationAsRead(id2);
       });
 
-      expect(useUIStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
+      expect(useUiStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
         1
       );
 
       act(() => {
-        result.current.markNotificationAsRead(id3!);
+        if (id3) result.current.markNotificationAsRead(id3);
       });
 
-      expect(useUIStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
+      expect(useUiStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
         0
       );
     });
 
     it("handles invalid notification gracefully", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       act(() => {
@@ -586,7 +590,7 @@ describe("UI Store", () => {
 
   describe("Modal Management", () => {
     it("opens modal with component and props", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       const modalProps = { mode: "edit", userId: "123" };
 
@@ -605,7 +609,7 @@ describe("UI Store", () => {
     });
 
     it("opens modal with default options", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.openModal("BasicModal");
@@ -619,7 +623,7 @@ describe("UI Store", () => {
     });
 
     it("closes modal and resets state", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.openModal("TestModal", { test: true });
@@ -637,7 +641,7 @@ describe("UI Store", () => {
     });
 
     it("updates modal props without closing", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.openModal("TestModal", { initial: true });
@@ -658,7 +662,7 @@ describe("UI Store", () => {
 
   describe("Command Palette Management", () => {
     it("opens command palette", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.openCommandPalette();
@@ -668,7 +672,7 @@ describe("UI Store", () => {
     });
 
     it("closes command palette and resets state", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.openCommandPalette();
@@ -696,7 +700,7 @@ describe("UI Store", () => {
     });
 
     it("sets command palette query", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.setCommandPaletteQuery("search term");
@@ -706,7 +710,7 @@ describe("UI Store", () => {
     });
 
     it("sets command palette results", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       const results = [
         {
@@ -733,7 +737,7 @@ describe("UI Store", () => {
 
   describe("Feature Flag Management", () => {
     it("toggles feature flags", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       expect(result.current.features.enableAnimations).toBe(true);
 
@@ -751,7 +755,7 @@ describe("UI Store", () => {
     });
 
     it("sets feature flag directly", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.setFeature("enableBetaFeatures", true);
@@ -773,7 +777,7 @@ describe("UI Store", () => {
     });
 
     it("toggles multiple feature flags independently", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       act(() => {
         result.current.toggleFeature("enableAnimations");
@@ -788,7 +792,7 @@ describe("UI Store", () => {
 
   describe("Utility Actions", () => {
     it("resets UI state to defaults", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       // Modify state
       act(() => {
@@ -825,7 +829,7 @@ describe("UI Store", () => {
 
   describe("Complex Scenarios", () => {
     it("handles complete UI workflow", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       // Set up navigation
       act(() => {
@@ -878,16 +882,16 @@ describe("UI Store", () => {
       ).toBe(true);
       expect(result.current.notifications).toHaveLength(2);
       expect(result.current.modal.isOpen).toBe(true);
-      expect(useUIStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
+      expect(useUiStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
         2
       );
 
       // Mark notification as read
       act(() => {
-        result.current.markNotificationAsRead(infoId!);
+        if (infoId) result.current.markNotificationAsRead(infoId);
       });
 
-      expect(useUIStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
+      expect(useUiStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
         1
       );
 
@@ -896,7 +900,7 @@ describe("UI Store", () => {
         result.current.setLoadingState("data", "success");
       });
 
-      expect(useUIStore.getState().isLoading).toBe(false);
+      expect(useUiStore.getState().isLoading).toBe(false);
 
       // Close modal
       act(() => {
@@ -907,7 +911,7 @@ describe("UI Store", () => {
     });
 
     it("handles command palette workflow", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       // Open command palette
       act(() => {
@@ -959,7 +963,7 @@ describe("UI Store", () => {
     });
 
     it("handles notification lifecycle with persistence", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       // Add different types of notifications
       let successId: string;
@@ -994,27 +998,27 @@ describe("UI Store", () => {
       });
 
       expect(result.current.notifications).toHaveLength(3);
-      expect(useUIStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
+      expect(useUiStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
         3
       );
 
       // Mark some as read
       act(() => {
-        result.current.markNotificationAsRead(successId!);
-        result.current.markNotificationAsRead(errorId!);
+        if (successId) result.current.markNotificationAsRead(successId);
+        if (errorId) result.current.markNotificationAsRead(errorId);
       });
 
-      expect(useUIStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
+      expect(useUiStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
         1
       );
 
       // Remove one notification
       act(() => {
-        result.current.removeNotification(errorId!);
+        if (errorId) result.current.removeNotification(errorId);
       });
 
       expect(result.current.notifications).toHaveLength(2);
-      expect(useUIStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
+      expect(useUiStore.getState().notifications.filter((n) => !n.isRead).length).toBe(
         1
       );
 
@@ -1026,7 +1030,7 @@ describe("UI Store", () => {
     });
 
     it("handles theme switching with persistence", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       // Test theme switching sequence
       const themes: Theme[] = ["light", "dark", "system"];
@@ -1056,17 +1060,17 @@ describe("UI Store", () => {
 
   describe("Utility Selectors", () => {
     it("utility selectors return correct values", () => {
-      const { result } = renderHook(() => useUIStore());
+      const { result } = renderHook(() => useUiStore());
 
       // Test individual selectors
       const { result: themeResult } = renderHook(() =>
-        useUIStore((state) => state.theme)
+        useUiStore((state) => state.theme)
       );
       const { result: sidebarResult } = renderHook(() =>
-        useUIStore((state) => state.sidebar)
+        useUiStore((state) => state.sidebar)
       );
       const { result: notificationsResult } = renderHook(() =>
-        useUIStore((state) => state.notifications)
+        useUiStore((state) => state.notifications)
       );
 
       expect(themeResult.current).toBe("system");

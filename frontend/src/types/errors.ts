@@ -7,7 +7,7 @@ import { z } from "zod";
 /**
  * Zod schema for error information
  */
-export const ErrorInfoSchema = z.object({
+export const ERROR_INFO_SCHEMA = z.object({
   componentStack: z.string(),
   errorBoundary: z.string().optional(),
   errorBoundaryStack: z.string().optional(),
@@ -16,7 +16,7 @@ export const ErrorInfoSchema = z.object({
 /**
  * Zod schema for error details
  */
-export const ErrorDetailsSchema = z.object({
+export const ERROR_DETAILS_SCHEMA = z.object({
   digest: z.string().optional(),
   message: z.string(),
   name: z.string(),
@@ -26,9 +26,9 @@ export const ErrorDetailsSchema = z.object({
 /**
  * Zod schema for error report
  */
-export const ErrorReportSchema = z.object({
-  error: ErrorDetailsSchema,
-  errorInfo: ErrorInfoSchema.optional(),
+export const ERROR_REPORT_SCHEMA = z.object({
+  error: ERROR_DETAILS_SCHEMA,
+  errorInfo: ERROR_INFO_SCHEMA.optional(),
   sessionId: z.string().optional(),
   timestamp: z.string(),
   url: z.string(),
@@ -39,9 +39,9 @@ export const ErrorReportSchema = z.object({
 /**
  * Type definitions derived from Zod schemas
  */
-export type ErrorInfo = z.infer<typeof ErrorInfoSchema>;
-export type ErrorDetails = z.infer<typeof ErrorDetailsSchema>;
-export type ErrorReport = z.infer<typeof ErrorReportSchema>;
+export type ErrorInfo = z.infer<typeof ERROR_INFO_SCHEMA>;
+export type ErrorDetails = z.infer<typeof ERROR_DETAILS_SCHEMA>;
+export type ErrorReport = z.infer<typeof ERROR_REPORT_SCHEMA>;
 
 /**
  * Error boundary fallback component props
