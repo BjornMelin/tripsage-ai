@@ -242,6 +242,81 @@
       }
     },
     {
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "conventions": [
+                  {
+                    "formats": ["CONSTANT_CASE", "camelCase"],
+                    "selector": { "kind": "const", "scope": "global" }
+                  },
+                  {
+                    "formats": ["PascalCase"],
+                    "selector": { "kind": "class", "scope": "global" }
+                  },
+                  {
+                    "formats": ["PascalCase"],
+                    "selector": { "kind": "interface", "scope": "global" }
+                  },
+                  {
+                    "formats": ["PascalCase"],
+                    "selector": { "kind": "typeAlias", "scope": "global" }
+                  },
+                  {
+                    "formats": ["camelCase", "PascalCase"],
+                    "selector": { "kind": "function", "scope": "global" }
+                  },
+                  {
+                    "formats": ["camelCase", "snake_case"],
+                    "selector": { "kind": "variable", "scope": "global" }
+                  }
+                ],
+                "requireAscii": true,
+                "strictCase": false
+              }
+            }
+          },
+          "suspicious": {
+            "noExplicitAny": "warn"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/components/**/*.tsx", "**/components/**/*.jsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "conventions": [
+                  {
+                    "formats": ["CONSTANT_CASE", "camelCase"],
+                    "selector": { "kind": "const", "scope": "global" }
+                  },
+                  {
+                    "formats": ["PascalCase"],
+                    "selector": { "kind": "function", "scope": "global" }
+                  },
+                  {
+                    "formats": ["PascalCase"],
+                    "selector": { "kind": "variable", "scope": "global" }
+                  }
+                ],
+                "requireAscii": true,
+                "strictCase": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/route.ts"],
       "linter": {
         "rules": {
