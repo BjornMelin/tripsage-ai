@@ -751,6 +751,122 @@ channel.on('broadcast', { event: 'chat:message' }, (payload) => {
 channel.subscribe()
 ```
 
+## Client Integration Examples
+
+### JavaScript/TypeScript
+
+```javascript
+// Initialize client
+const TRIPSAGE_API_URL = 'https://api.tripsage.ai';
+const API_KEY = 'your-api-key';
+
+// Create trip
+async function createTrip(tripData) {
+  const response = await fetch(`${TRIPSAGE_API_URL}/api/trips/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': API_KEY
+    },
+    body: JSON.stringify(tripData)
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// Search flights
+async function searchFlights(searchParams) {
+  const response = await fetch(`${TRIPSAGE_API_URL}/api/flights/search`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': API_KEY
+    },
+    body: JSON.stringify(searchParams)
+  });
+
+  return response.json();
+}
+```
+
+### Python
+
+```python
+import requests
+import json
+
+class TripSageClient:
+    def __init__(self, api_key, base_url='https://api.tripsage.ai'):
+        self.api_key = api_key
+        self.base_url = base_url
+        self.session = requests.Session()
+        self.session.headers.update({
+            'X-API-Key': api_key,
+            'Content-Type': 'application/json'
+        })
+
+    def create_trip(self, trip_data):
+        """Create a new trip"""
+        response = self.session.post(f'{self.base_url}/api/trips/', json=trip_data)
+        response.raise_for_status()
+        return response.json()
+
+    def search_flights(self, search_params):
+        """Search for flights"""
+        response = self.session.post(f'{self.base_url}/api/flights/search', json=search_params)
+        response.raise_for_status()
+        return response.json()
+
+    def get_trip(self, trip_id):
+        """Get trip details"""
+        response = self.session.get(f'{self.base_url}/api/trips/{trip_id}')
+        response.raise_for_status()
+        return response.json()
+
+# Usage
+client = TripSageClient('your-api-key')
+trip = client.create_trip({
+    'name': 'Summer Vacation',
+    'start_date': '2025-07-01',
+    'end_date': '2025-07-15',
+    'budget': {'currency': 'USD', 'total_amount': 3000}
+})
+```
+
+### cURL Examples
+
+```bash
+# Create trip
+curl -X POST "https://api.tripsage.ai/api/trips/" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "name": "Summer Vacation",
+    "start_date": "2025-07-01",
+    "end_date": "2025-07-15",
+    "budget": {"currency": "USD", "total_amount": 3000}
+  }'
+
+# Search flights
+curl -X POST "https://api.tripsage.ai/api/flights/search" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "origin": "JFK",
+    "destination": "CDG",
+    "departure_date": "2025-07-01",
+    "passengers": 2
+  }'
+
+# Get trip details
+curl -X GET "https://api.tripsage.ai/api/trips/123" \
+  -H "X-API-Key: your-api-key"
+```
+
 ## Interactive Documentation
 
 - **Swagger UI**: `http://localhost:8000/docs`
