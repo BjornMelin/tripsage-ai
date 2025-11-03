@@ -94,7 +94,7 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
             {SAMPLE_SESSIONS.map((session) => (
               <Link
                 key={session.id}
-                href={`/chat`}
+                href={"/chat"}
                 className={cn(
                   "flex flex-col p-3 rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
                   currentChatId === session.id

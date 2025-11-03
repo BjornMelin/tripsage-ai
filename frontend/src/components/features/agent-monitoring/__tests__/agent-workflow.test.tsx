@@ -59,11 +59,15 @@ interface NetworkMetrics {
 // Mock Recharts components to avoid canvas rendering issues in tests
 vi.mock("recharts", () => ({
   Area: () => <div data-testid="area" />,
-  AreaChart: ({ children }: any) => <div data-testid="area-chart">{children}</div>,
+  AreaChart: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="area-chart">{children}</div>
+  ),
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
   Line: () => <div data-testid="line" />,
-  LineChart: ({ children }: any) => <div data-testid="line-chart">{children}</div>,
-  ResponsiveContainer: ({ children }: any) => (
+  LineChart: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="line-chart">{children}</div>
+  ),
+  ResponsiveContainer: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="responsive-container">{children}</div>
   ),
   Tooltip: () => <div data-testid="tooltip" />,
@@ -73,10 +77,22 @@ vi.mock("recharts", () => ({
 
 // Mock framer-motion to avoid animation issues in tests
 vi.mock("framer-motion", () => ({
-  AnimatePresence: ({ children }: any) => <>{children}</>,
+  AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+    div: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      [key: string]: unknown;
+    }) => <div {...props}>{children}</div>,
+    span: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      [key: string]: unknown;
+    }) => <span {...props}>{children}</span>,
   },
 }));
 

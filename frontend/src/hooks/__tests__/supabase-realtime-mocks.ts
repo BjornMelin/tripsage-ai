@@ -140,7 +140,7 @@ export function createMockSystemPayload(
  */
 export class MockRealtimeConnection {
   private channel: MockRealtimeChannel;
-  private eventHandlers = new Map<string, Function[]>();
+  private eventHandlers = new Map<string, ((...args: unknown[]) => void)[]>();
 
   constructor(channel: MockRealtimeChannel) {
     this.channel = channel;
@@ -150,7 +150,7 @@ export class MockRealtimeConnection {
   private setupChannelBehavior() {
     // Mock the 'on' method to store event handlers
     this.channel.on.mockImplementation(
-      (event: string, config: any, handler: Function) => {
+      (event: string, config: unknown, handler: (...args: unknown[]) => void) => {
         const key = `${event}:${JSON.stringify(config)}`;
         const handlers = this.eventHandlers.get(key) || [];
         handlers.push(handler);
@@ -160,14 +160,16 @@ export class MockRealtimeConnection {
     );
 
     // Mock the 'subscribe' method to trigger connection events
-    this.channel.subscribe.mockImplementation((callback?: Function) => {
-      // Simulate connection success
-      setTimeout(() => {
-        callback?.(CONNECTION_STATUS.SUBSCRIBED);
-        this.triggerSystemEvent(CONNECTION_STATUS.SUBSCRIBED);
-      }, 0);
-      return this.channel;
-    });
+    this.channel.subscribe.mockImplementation(
+      (callback?: (...args: unknown[]) => void) => {
+        // Simulate connection success
+        setTimeout(() => {
+          callback?.(CONNECTION_STATUS.SUBSCRIBED);
+          this.triggerSystemEvent(CONNECTION_STATUS.SUBSCRIBED);
+        }, 0);
+        return this.channel;
+      }
+    );
   }
 
   /**
@@ -351,7 +353,7 @@ export class RealtimeHookTester {
   /**
    * Creates a test scenario with multiple concurrent real-time events
    */
-  async simulateConcurrentEvents() {
+  simulateConcurrentEvents() {
     const events = [
       () => this.testEnv.simulateUserTripsUpdate(1, { name: "Trip 1 Updated" }),
       () => this.testEnv.simulateUserTripsUpdate(2, { name: "Trip 2 Updated" }),

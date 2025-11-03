@@ -186,8 +186,8 @@ export function UpcomingFlights({ limit = 3, showEmpty = true }: UpcomingFlights
           <CardDescription>Your next departures</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <FlightCardSkeleton key={`flight-skeleton-${i}`} />
+          {Array.from({ length: 2 }, (_, i) => (
+            <FlightCardSkeleton key={`flight-skeleton-${i}-loading`} />
           ))}
         </CardContent>
         <CardFooter>

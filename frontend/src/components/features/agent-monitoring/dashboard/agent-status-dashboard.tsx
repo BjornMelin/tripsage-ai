@@ -324,16 +324,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-4">
-          {!isMonitoring ? (
-            <Button
-              onClick={startMonitoring}
-              disabled={!isConnected}
-              className="flex items-center gap-2"
-            >
-              <Wifi className="h-4 w-4" />
-              Start Monitoring
-            </Button>
-          ) : (
+          {isMonitoring ? (
             <Button
               onClick={stopMonitoring}
               variant="outline"
@@ -341,6 +332,15 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
             >
               <WifiOff className="h-4 w-4" />
               Stop Monitoring
+            </Button>
+          ) : (
+            <Button
+              onClick={startMonitoring}
+              disabled={!isConnected}
+              className="flex items-center gap-2"
+            >
+              <Wifi className="h-4 w-4" />
+              Start Monitoring
             </Button>
           )}
           <Badge

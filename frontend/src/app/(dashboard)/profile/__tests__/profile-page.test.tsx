@@ -2,8 +2,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "@/stores/auth-store";
-import type { UserProfile } from "@/stores/user-store";
 import { useAuthStore } from "@/stores/auth-store";
+import type { UserProfile } from "@/stores/user-store";
 import { useUserProfileStore } from "@/stores/user-store";
 import ProfilePage from "../page";
 

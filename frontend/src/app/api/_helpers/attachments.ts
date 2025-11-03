@@ -2,7 +2,7 @@
  * @fileoverview Helpers for UI attachments mapping and validation.
  */
 
-import type { UIMessage, FileUIPart } from "ai";
+import type { FileUIPart, UIMessage } from "ai";
 
 /**
  * Type representing the result of attachment validation.

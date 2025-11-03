@@ -4,8 +4,8 @@
  */
 
 import { render, screen } from "@testing-library/react";
+import type { ChatStatus, FileUIPart, UIMessage } from "ai";
 import { describe, expect, it, vi } from "vitest";
-import type { UIMessage, ChatStatus, FileUIPart } from "ai";
 
 type UseChatOptions = {
   id?: string;

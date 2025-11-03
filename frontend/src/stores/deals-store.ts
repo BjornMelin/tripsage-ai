@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
-  type Deal,
-  type DealAlert,
   DEAL_ALERT_SCHEMA,
   DEAL_SCHEMA,
+  type Deal,
+  type DealAlert,
   type DealState,
   type DealStats,
   type DealType,
@@ -62,14 +62,14 @@ const GENERATE_ID = () =>
 const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
 
 // Utility for validating deal objects
-const validateDeal = (deal: unknown): deal is Deal => {
+const _validateDeal = (deal: unknown): deal is Deal => {
   return DEAL_SCHEMA.safeParse(deal).success;
-}; 
+};
 
 // Utility for validating alert objects
-const validateAlert = (alert: unknown): alert is DealAlert => {
+const _validateAlert = (alert: unknown): alert is DealAlert => {
   return DEAL_ALERT_SCHEMA.safeParse(alert).success;
-}; 
+};
 
 // Calculate percentage discount
 const CALCULATE_DISCOUNT_PERCENTAGE = (

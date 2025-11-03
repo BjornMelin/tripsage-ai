@@ -1,14 +1,32 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.3.2/schema.json",
-  "root": true,
 
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on",
+        "useSortedKeys": "on"
+      }
+    },
+    "enabled": true
+  },
+
+  "css": {
+    "parser": {
+      "allowWrongLineComments": false,
+      "cssModules": false,
+      "tailwindDirectives": true
+    },
+    "linter": {
+      "enabled": true
+    }
+  },
 
   "files": {
+    "ignoreUnknown": false,
     "includes": [
-      "**",
       "**/*.ts",
-      "**/*.tsx",
+      "**/*.tsx", 
       "**/*.js",
       "**/*.jsx",
       "**/*.mjs",
@@ -16,17 +34,18 @@
       "**/*.mts",
       "**/*.cts",
       "**/*.json",
-      "!**/node_modules/**",
-      "!**/.next/**",
-      "!**/dist/**",
-      "!**/build/**",
-      "!**/coverage/**",
-      "!**/.turbo/**",
-      "!**/.vercel/**",
-      "!**/storybook-static/**",
-      "!**/out/**"
+      "**/*.css",
+      "!**/node_modules",
+      "!**/.next",
+      "!**/dist",
+      "!**/build",
+      "!**/coverage",
+      "!**/.turbo",
+      "!**/.vercel",
+      "!**/storybook-static",
+      "!**/out"
     ],
-    "ignoreUnknown": false
+    "maxSize": 1048576
   },
 
   "formatter": {
@@ -34,37 +53,32 @@
     "formatWithErrors": false,
     "indentStyle": "space",
     "indentWidth": 2,
+    "lineEnding": "lf",
     "lineWidth": 88,
-    "lineEnding": "lf"
+    "attributePosition": "auto",
+    "bracketSpacing": true,
+    "expand": "auto"
   },
 
   "javascript": {
-    "jsxRuntime": "transparent",
     "formatter": {
-      "quoteStyle": "double",
+      "arrowParentheses": "always",
       "jsxQuoteStyle": "double",
-      "trailingCommas": "es5",
+      "quoteStyle": "double",
       "semicolons": "always",
-      "arrowParentheses": "always"
-    }
+      "trailingCommas": "es5",
+      "quoteProperties": "asNeeded",
+      "bracketSameLine": false
+    },
+    "jsxRuntime": "transparent"
   },
 
-  "css": {
-    "parser": { "tailwindDirectives": true }
-  },
-
-  "assist": {
-    "enabled": true,
-    "actions": {
-      "source": {
-        "organizeImports": {
-          "options": {
-            "identifierOrder": "lexicographic",
-            "groups": [{ "type": true }]
-          }
-        },
-        "useSortedKeys": "on"
-      }
+  "json": {
+    "formatter": {
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "lineWidth": 88,
+      "trailingCommas": "none"
     }
   },
 
@@ -73,76 +87,177 @@
     "rules": {
       "recommended": true,
 
-      "correctness": {
-        "noUnusedImports": { "level": "error", "fix": "safe" },
-        "noUnusedVariables": { "level": "error", "fix": "safe" },
-        "noUnusedFunctionParameters": {
-          "level": "error",
-          "options": { "ignoreRestSiblings": false }
-        },
-        "useExhaustiveDependencies": "error",
-        "useHookAtTopLevel": "error"
-      },
-
-      "suspicious": {
-        "noExplicitAny": "error",
-        "noImplicitAnyLet": "error",
-        "useAwait": "error",
-        "noAssignInExpressions": "error",
-        "noShadowRestrictedNames": "error",
-        "noArrayIndexKey": "warn",
-        "noConstEnum": { "level": "error", "fix": "safe" }
-      },
-
-      "style": {
-        "useImportType": { "level": "error", "fix": "safe" },
-        "useExportType": { "level": "error", "fix": "safe" },
-        "useConst": { "level": "error", "fix": "safe" },
-        "useTemplate": { "level": "error", "fix": "safe" },
-        "useNamingConvention": {
-          "level": "warn",
-          "options": {
-            "strictCase": true,
-            "requireAscii": true,
-            "conventions": [
-              {
-                "selector": { "kind": "const", "scope": "global" },
-                "formats": ["CONSTANT_CASE", "camelCase"]
-              }
-            ]
-          }
-        },
-        "noParameterAssign": "error"
-      },
-
-      "performance": {
-        "noAccumulatingSpread": "warn"
-      },
-
       "a11y": {
         "noAccessKey": "error",
         "useAltText": "error",
-        "useValidAnchor": "error"
+        "useValidAnchor": "error",
+        "useKeyWithClickEvents": "error",
+        "useKeyWithMouseEvents": "error"
       },
 
       "complexity": {
         "noBannedTypes": "error",
+        "noStaticOnlyClass": "error",
         "noUselessConstructor": "error",
-        "noStaticOnlyClass": "error"
+        "noForEach": "off",
+        "noVoid": "error"
+      },
+
+      "correctness": {
+        "noUnusedFunctionParameters": {
+          "level": "error",
+          "options": { "ignoreRestSiblings": false }
+        },
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error",
+        "useExhaustiveDependencies": "error",
+        "useHookAtTopLevel": "error",
+        "noConstAssign": "error",
+        "noConstantCondition": "error",
+        "noEmptyPattern": "error",
+        "noGlobalObjectCalls": "error",
+        "noInvalidConstructorSuper": "error",
+        "noInvalidUseBeforeDeclaration": "error",
+        "noSelfAssign": "error",
+        "noSetterReturn": "error",
+        "noUndeclaredVariables": "error",
+        "noUnreachable": "error",
+        "noUnreachableSuper": "error"
+      },
+
+      "performance": {
+        "noAccumulatingSpread": "warn",
+        "noDelete": "error"
+      },
+
+      "security": {
+        "noDangerouslySetInnerHtml": "error",
+        "noGlobalEval": "error"
+      },
+
+      "style": {
+        "noParameterAssign": "error",
+        "useConst": "error",
+        "useExportType": "error",
+        "useImportType": "error",
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "conventions": [
+              {
+                "formats": ["CONSTANT_CASE", "camelCase"],
+                "selector": { "kind": "const", "scope": "global" }
+              },
+              {
+                "formats": ["PascalCase"],
+                "selector": { "kind": "class", "scope": "global" }
+              },
+              {
+                "formats": ["PascalCase"],
+                "selector": { "kind": "interface", "scope": "global" }
+              },
+              {
+                "formats": ["PascalCase"],
+                "selector": { "kind": "typeAlias", "scope": "global" }
+              },
+              {
+                "formats": ["camelCase"],
+                "selector": { "kind": "function", "scope": "global" }
+              },
+              {
+                "formats": ["camelCase"],
+                "selector": { "kind": "variable", "scope": "global" }
+              }
+            ],
+            "requireAscii": true,
+            "strictCase": true
+          }
+        },
+        "useTemplate": "error",
+        "noNegationElse": "error",
+        "useSingleVarDeclarator": "error",
+        "noUnusedTemplateLiteral": "error"
+      },
+
+      "suspicious": {
+        "noArrayIndexKey": "error",
+        "noAssignInExpressions": "error",
+        "noConstEnum": "error",
+        "noExplicitAny": "error",
+        "noImplicitAnyLet": "error",
+        "noShadowRestrictedNames": "error",
+        "useAwait": "error",
+        "noCatchAssign": "error",
+        "noConfusingVoidType": "error",
+        "noConsole": "warn",
+        "noDebugger": "error",
+        "noDuplicateCase": "error",
+        "noDuplicateClassMembers": "error",
+        "noDuplicateObjectKeys": "error",
+        "noEmptyBlockStatements": "error",
+        "noExtraNonNullAssertion": "error",
+        "noFallthroughSwitchClause": "error",
+        "noFunctionAssign": "error",
+        "noGlobalIsFinite": "error",
+        "noGlobalIsNan": "error",
+        "noImportAssign": "error",
+        "noMisleadingCharacterClass": "error",
+        "noMisleadingInstantiator": "error",
+        "noPrototypeBuiltins": "error",
+        "noRedeclare": "error",
+        "noUnsafeNegation": "error"
       }
     }
   },
 
   "overrides": [
     {
-      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/__tests__/**"],
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts", 
+        "**/*.spec.tsx",
+        "**/__tests__/**"
+      ],
       "linter": {
         "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          },
           "suspicious": {
-            "noExplicitAny": "warn"
+            "noExplicitAny": "warn",
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/database.types.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/schemas/env.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
           }
         }
       }
     }
-  ]
+  ],
+
+  "root": true,
+
+  "vcs": {
+    "clientKind": "git",
+    "enabled": true,
+    "useIgnoreFile": true
+  }
 }

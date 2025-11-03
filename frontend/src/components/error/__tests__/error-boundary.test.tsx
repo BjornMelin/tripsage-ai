@@ -52,7 +52,7 @@ describe("ErrorBoundary", () => {
     CONSOLE_SPY.groupEnd.mockClear();
 
     // Mock createErrorReport to return a valid report
-    (errorService.createErrorReport as any).mockReturnValue({
+    vi.mocked(errorService.createErrorReport).mockReturnValue({
       error: {
         message: "Test error",
         name: "Error",
@@ -63,7 +63,7 @@ describe("ErrorBoundary", () => {
     });
 
     // Mock reportError to return a resolved promise
-    (errorService.reportError as any).mockResolvedValue(undefined);
+    vi.mocked(errorService.reportError).mockResolvedValue(undefined);
   });
 
   describe("normal rendering", () => {
@@ -153,16 +153,24 @@ describe("ErrorBoundary", () => {
   });
 
   describe("error recovery", () => {
-    const CaptureFallback = ({ error, reset, retry }: any) => (
+    const CaptureFallback = ({
+      error,
+      reset,
+      retry,
+    }: {
+      error?: Error;
+      reset?: () => void;
+      retry?: () => void;
+    }) => (
       <div>
         <div data-testid="err">{error?.message}</div>
         {retry && (
-          <button onClick={retry} aria-label="try-again">
+          <button type="button" onClick={retry} aria-label="try-again">
             Try Again
           </button>
         )}
         {reset && (
-          <button onClick={reset} aria-label="reset">
+          <button type="button" onClick={reset} aria-label="reset">
             Reset
           </button>
         )}
@@ -238,11 +246,13 @@ describe("ErrorBoundary", () => {
      * @param reset - Function to reset the error boundary state.
      * @returns Custom error UI component.
      */
-    const CustomFallback = ({ error, reset }: any) => (
+    const CustomFallback = ({ error, reset }: { error: Error; reset?: () => void }) => (
       <div>
         <h1>Custom Error UI</h1>
         <p>{error.message}</p>
-        <button onClick={reset}>Custom Reset</button>
+        <button type="button" onClick={reset || (() => {})}>
+          Custom Reset
+        </button>
       </div>
     );
 
@@ -326,7 +336,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should generate session ID", () => {
-      (window.sessionStorage.getItem as any).mockReturnValue(null);
+      vi.mocked(window.sessionStorage.getItem).mockReturnValue(null);
 
       renderWithProviders(
         <ErrorBoundary>
@@ -341,7 +351,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should use existing session ID", () => {
-      (window.sessionStorage.getItem as any).mockReturnValue("existing_session_id");
+      vi.mocked(window.sessionStorage.getItem).mockReturnValue("existing_session_id");
 
       renderWithProviders(
         <ErrorBoundary>
@@ -359,7 +369,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should handle user store when available", () => {
-      (window as any).userStore = {
+      (window as Window & { userStore?: { user: { id: string } } }).userStore = {
         user: { id: "test_user_123" },
       };
 
@@ -378,7 +388,8 @@ describe("ErrorBoundary", () => {
       );
 
       // Cleanup
-      (window as any).userStore = undefined;
+      (window as Window & { userStore?: { user: { id: string } } }).userStore =
+        undefined;
     });
   });
 });

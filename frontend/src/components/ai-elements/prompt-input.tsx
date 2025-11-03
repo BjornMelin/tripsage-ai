@@ -1222,6 +1222,7 @@ interface SpeechRecognitionErrorEvent extends Event {
 
 declare global {
   interface Window {
+    // biome-ignore lint/style/useNamingConvention: Web Speech API uses PascalCase
     SpeechRecognition: {
       new (): SpeechRecognition;
     };

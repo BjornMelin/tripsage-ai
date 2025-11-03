@@ -8,6 +8,7 @@ import {
 
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
+  // biome-ignore lint/style/useNamingConvention: React component names from lucide-react library
   AlertTriangle: () => <div data-testid="alert-triangle-icon" />,
   Bug: () => <div data-testid="bug-icon" />,
   Home: () => <div data-testid="home-icon" />,

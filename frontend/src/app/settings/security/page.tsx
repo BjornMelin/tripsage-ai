@@ -90,7 +90,7 @@ export default function SecuritySettingsPage() {
   /**
    * Handles downloading user security data export.
    */
-  const handleDownloadSecurityData = async () => {
+  const handleDownloadSecurityData = () => {
     try {
       // TODO: Implement security data export
       console.log("Downloading security data...");
@@ -102,7 +102,7 @@ export default function SecuritySettingsPage() {
   /**
    * Handles account deletion request.
    */
-  const handleDeleteAccount = async () => {
+  const handleDeleteAccount = () => {
     try {
       // TODO: Implement account deletion
       console.log("Account deletion requested...");

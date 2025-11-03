@@ -74,7 +74,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     // Try to get user ID from various sources
     try {
       // Check if user store is available
-      const userStore = (window as any).userStore;
+      const userStore = (window as Window & { userStore?: { user: { id: string } } })
+        .userStore;
       return userStore?.user?.id;
     } catch {
       return undefined;

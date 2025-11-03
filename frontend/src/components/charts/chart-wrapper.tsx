@@ -19,7 +19,7 @@ const CREATE_DYNAMIC_COMPONENT = <P extends object>(
 };
 
 // Dynamically import chart components to reduce initial bundle size
-export const ResponsiveContainer = dynamic(
+export const responsiveContainer = dynamic(
   () => import("recharts").then((mod) => mod.ResponsiveContainer),
   {
     loading: () => (
@@ -31,49 +31,59 @@ export const ResponsiveContainer = dynamic(
   }
 );
 
-export const AreaChart = dynamic(
+export const areaChart = dynamic(
   () => import("recharts").then((mod) => mod.AreaChart),
   { ssr: false }
 );
 
-export const LineChart = dynamic(
+export const lineChart = dynamic(
   () => import("recharts").then((mod) => mod.LineChart),
   { ssr: false }
 );
 
 // Use the safe dynamic wrapper for problematic components
-export const Area = CREATE_DYNAMIC_COMPONENT(() =>
-  import("recharts").then((mod) => mod.Area as any)
+export const area = CREATE_DYNAMIC_COMPONENT(() =>
+  import("recharts").then(
+    (mod) => mod.Area as unknown as React.ComponentType<Record<string, unknown>>
+  )
 );
 
-export const Line = CREATE_DYNAMIC_COMPONENT(() =>
-  import("recharts").then((mod) => mod.Line as any)
+export const line = CREATE_DYNAMIC_COMPONENT(() =>
+  import("recharts").then(
+    (mod) => mod.Line as unknown as React.ComponentType<Record<string, unknown>>
+  )
 );
 
-export const CartesianGrid = dynamic(
+export const cartesianGrid = dynamic(
   () => import("recharts").then((mod) => mod.CartesianGrid),
   { ssr: false }
 );
 
-export const XAxis = CREATE_DYNAMIC_COMPONENT(() =>
-  import("recharts").then((mod) => mod.XAxis as any)
+export const xAxis = CREATE_DYNAMIC_COMPONENT(() =>
+  import("recharts").then(
+    (mod) => mod.XAxis as unknown as React.ComponentType<Record<string, unknown>>
+  )
 );
 
-export const YAxis = CREATE_DYNAMIC_COMPONENT(() =>
-  import("recharts").then((mod) => mod.YAxis as any)
+export const yAxis = CREATE_DYNAMIC_COMPONENT(() =>
+  import("recharts").then(
+    (mod) => mod.YAxis as unknown as React.ComponentType<Record<string, unknown>>
+  )
 );
 
-export const Tooltip = CREATE_DYNAMIC_COMPONENT(() =>
-  import("recharts").then((mod) => mod.Tooltip as any)
+export const tooltip = CREATE_DYNAMIC_COMPONENT(() =>
+  import("recharts").then(
+    (mod) => mod.Tooltip as unknown as React.ComponentType<Record<string, unknown>>
+  )
 );
 
 // Export types for better TypeScript support
-export type ResponsiveContainerProps = ComponentProps<typeof ResponsiveContainer>;
-export type AreaChartProps = ComponentProps<typeof AreaChart>;
-export type LineChartProps = ComponentProps<typeof LineChart>;
-export type AreaProps = ComponentProps<typeof Area>;
-export type LineProps = ComponentProps<typeof Line>;
-export type CartesianGridProps = ComponentProps<typeof CartesianGrid>;
-export type XAxisProps = ComponentProps<typeof XAxis>;
-export type YAxisProps = ComponentProps<typeof YAxis>;
-export type TooltipProps = ComponentProps<typeof Tooltip>;
+export type ResponsiveContainerProps = ComponentProps<typeof responsiveContainer>;
+export type AreaChartProps = ComponentProps<typeof areaChart>;
+export type LineChartProps = ComponentProps<typeof lineChart>;
+export type AreaProps = ComponentProps<typeof area>;
+export type LineProps = ComponentProps<typeof line>;
+export type CartesianGridProps = ComponentProps<typeof cartesianGrid>;
+export type XaxisProps = ComponentProps<typeof xAxis>;
+export type YaxisProps = ComponentProps<typeof yAxis>;
+export type TooltipProps = ComponentProps<typeof tooltip>;

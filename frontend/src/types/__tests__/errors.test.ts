@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  type ErrorDetails,
   ERROR_DETAILS_SCHEMA,
-  type ErrorInfo,
   ERROR_INFO_SCHEMA,
-  type ErrorReport,
   ERROR_REPORT_SCHEMA,
+  type ErrorDetails,
+  type ErrorInfo,
+  type ErrorReport,
 } from "../errors";
 
 describe("Error Type Schemas", () => {

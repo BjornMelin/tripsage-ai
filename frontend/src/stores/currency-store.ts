@@ -1,17 +1,17 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
-  type ConversionResult,
   CONVERSION_RESULT_SCHEMA,
-  type Currency,
-  type CurrencyCode,
+  type ConversionResult,
   CURRENCY_CODE_SCHEMA,
-  type CurrencyPair,
   CURRENCY_PAIR_SCHEMA,
   CURRENCY_SCHEMA,
+  type Currency,
+  type CurrencyCode,
+  type CurrencyPair,
   type CurrencyState,
-  type ExchangeRate,
   EXCHANGE_RATE_SCHEMA,
+  type ExchangeRate,
 } from "@/types/currency";
 
 // Common currencies with symbols and decimal places
