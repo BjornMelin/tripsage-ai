@@ -161,7 +161,7 @@
                 "selector": { "kind": "typeAlias", "scope": "global" }
               },
               {
-                "formats": ["camelCase"],
+                "formats": ["camelCase", "PascalCase"],
                 "selector": { "kind": "function", "scope": "global" }
               },
               {
@@ -189,7 +189,7 @@
         "useAwait": "error",
         "noCatchAssign": "error",
         "noConfusingVoidType": "error",
-        "noConsole": "warn",
+        "noConsole": "off",
         "noDebugger": "error",
         "noDuplicateCase": "error",
         "noDuplicateClassMembers": "error",

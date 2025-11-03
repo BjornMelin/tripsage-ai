@@ -7,8 +7,8 @@
 import type { LanguageModel, UIMessage } from "ai";
 import { convertToModelMessages, generateText as defaultGenerateText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
-import type { ChatMessageInsert } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { insertSingle } from "@/lib/supabase/typed-helpers";
 import {
   type ChatMessage as ClampMsg,
   clampMaxTokens,
@@ -56,8 +56,8 @@ export interface NonStreamDeps {
   supabase: TypedServerSupabase;
   resolveProvider: ProviderResolver;
   logger?: {
-    info: (msg: string, meta?: any) => void;
-    error: (msg: string, meta?: any) => void;
+    info: (msg: string, meta?: Record<string, unknown>) => void;
+    error: (msg: string, meta?: Record<string, unknown>) => void;
   };
   clock?: { now: () => number };
   config?: { defaultMaxTokens?: number };
@@ -74,14 +74,14 @@ export interface NonStreamDeps {
  * Type representing the payload for non-streaming chat handling.
  *
  * @param messages - The messages.
- * @param session_id - The session ID.
+ * @param sessionId - The session ID.
  * @param model - The model.
  * @param desiredMaxTokens - The desired maximum tokens.
  * @param ip - The IP address.
  */
 export interface NonStreamPayload {
   messages?: UIMessage[];
-  session_id?: string;
+  sessionId?: string;
   model?: string;
   desiredMaxTokens?: number;
   ip?: string;
@@ -126,7 +126,7 @@ export async function handleChatNonStream(
   }
 
   // Validate attachments (image/* only)
-  const att = validateImageAttachments(messages as any);
+  const att = validateImageAttachments(messages);
   if (!att.valid) {
     return new Response(
       JSON.stringify({ error: "invalid_attachment", reason: att.reason }),
@@ -150,7 +150,9 @@ export async function handleChatNonStream(
       .order("created_at", { ascending: false })
       .limit(3);
     if (Array.isArray(memRows) && memRows.length > 0) {
-      const summary = memRows.map((r: any) => String(r.content)).join("\n");
+      const summary = memRows
+        .map((r: { content: unknown }) => String(r.content))
+        .join("\n");
       systemPrompt += `\n\nUser memory (summary):\n${summary}`;
     }
   } catch {
@@ -159,7 +161,7 @@ export async function handleChatNonStream(
 
   // Token clamp
   const desired = Number.isFinite(payload.desiredMaxTokens as number)
-    ? Math.max(1, Math.floor(payload.desiredMaxTokens!))
+    ? Math.max(1, Math.floor(payload.desiredMaxTokens as number))
     : (deps.config?.defaultMaxTokens ?? 1024);
 
   const textParts = extractTexts(messages);
@@ -184,16 +186,16 @@ export async function handleChatNonStream(
   const generate = deps.generate ?? defaultGenerateText;
   const result = await generate({
     maxOutputTokens: maxTokens,
-    messages: convertToModelMessages(messages as any),
+    messages: convertToModelMessages(messages),
     model: provider.model,
     system: systemPrompt,
   });
 
   const usage = result.usage
     ? {
-        completionTokens: (result.usage as any).completionTokens,
-        promptTokens: (result.usage as any).promptTokens,
-        totalTokens: result.usage.totalTokens,
+        completionTokens: result.usage.outputTokens || 0,
+        promptTokens: result.usage.inputTokens || 0,
+        totalTokens: result.usage.totalTokens || 0,
       }
     : undefined;
 
@@ -206,15 +208,16 @@ export async function handleChatNonStream(
   } as const;
 
   // Best-effort persistence for assistant message metadata
-  const sessionId = payload.session_id;
+  const sessionId = payload.sessionId;
   if (sessionId) {
     try {
-      await (deps.supabase as unknown as any).from("chat_messages").insert({
+      await insertSingle(deps.supabase, "chat_messages", {
         content: result.text ?? "",
-        metadata: body as any,
+        metadata: body,
         role: "assistant",
+        // biome-ignore lint/style/useNamingConvention: Database field name
         session_id: sessionId,
-      } as ChatMessageInsert);
+      });
     } catch {
       // ignore persistence errors
     }

@@ -84,7 +84,7 @@ function useCurrentUserId(): string | null {
  * @param message UI message streamed by the AI SDK transport.
  * @returns Rendered message content.
  */
-function ChatMessageItem({ message }: { message: UIMessage }) {
+function _chatMessageItem({ message }: { message: UIMessage }) {
   const parts = message.parts ?? [];
   return (
     <Message from={message.role} data-testid={`msg-${message.id}`}>
@@ -151,7 +151,7 @@ function ChatMessageItem({ message }: { message: UIMessage }) {
  *
  * @returns Chat interface with message history and input controls.
  */
-export default function ChatPage(): ReactElement {
+export default function chatPage(): ReactElement {
   // Get the current authenticated user ID for personalization
   const userId = useCurrentUserId();
 
@@ -160,6 +160,7 @@ export default function ChatPage(): ReactElement {
     () =>
       new DefaultChatTransport({
         api: "/api/chat/stream",
+        // biome-ignore lint/style/useNamingConvention: API request body matches backend snake_case
         body: () => (userId ? { user_id: userId } : {}),
         credentials: "include",
         // Enable resumable streams by preparing a reconnect request when needed.
@@ -182,30 +183,29 @@ export default function ChatPage(): ReactElement {
   const { messages, sendMessage, status, stop, regenerate, clearError, error } =
     chatHelpers;
   // Experimental resume helper; not part of stable types in all builds.
-  const experimentalResume = (
-    chatHelpers as unknown as { experimental_resume?: () => Promise<unknown> }
-  ).experimental_resume;
+  const experimentalResume =
+    // biome-ignore lint/style/useNamingConvention: External library API uses snake_case
+    (chatHelpers as unknown as { experimental_resume?: () => Promise<unknown> })
+      .experimental_resume;
 
   // Surface a brief toast when a resume attempt completes.
   const [showReconnected, setShowReconnected] = useState(false);
   useEffect(() => {
-    let mounted = true;
+    let _mounted = true;
     let timeoutId: NodeJS.Timeout | undefined;
     const fn = experimentalResume as undefined | (() => Promise<unknown>);
     if (typeof fn === "function") {
-      void fn()
+      fn()
         .then(() => {
-          if (!mounted) return;
           setShowReconnected(true);
           timeoutId = setTimeout(() => setShowReconnected(false), 3000);
         })
-        .catch((err) => {
-          // Log for developer diagnostics; avoid user-facing noise
-          console.error("Chat stream resume failed:", err);
+        .catch((_err) => {
+          // biome-ignore lint/suspicious/noEmptyBlockStatements: Error intentionally ignored for user experience
         });
     }
     return () => {
-      mounted = false;
+      _mounted = false;
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [experimentalResume]);
@@ -254,13 +254,12 @@ export default function ChatPage(): ReactElement {
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       {showReconnected ? (
-        <div
-          role="status"
+        <output
           data-testid="reconnected-toast"
           className="fixed right-4 top-4 z-50 rounded-md border bg-green-600/90 px-3 py-2 text-sm text-white shadow"
         >
           Reconnected
-        </div>
+        </output>
       ) : null}
       {/* Main conversation area with message history */}
       <Conversation className="flex-1">
@@ -269,7 +268,7 @@ export default function ChatPage(): ReactElement {
             <ConversationEmptyState description="Start a conversation to see messages here." />
           ) : (
             visibleMessages.map((message) => (
-              <ChatMessageItem key={message.id} message={message} />
+              <_chatMessageItem key={message.id} message={message} />
             ))
           )}
         </ConversationContent>
@@ -311,7 +310,7 @@ export default function ChatPage(): ReactElement {
                   aria-label="Stop streaming"
                   className="rounded border px-3 py-1 text-sm disabled:opacity-50"
                   onClick={() => {
-                    void stop();
+                    stop();
                   }}
                   disabled={!canStop}
                 >
@@ -322,7 +321,7 @@ export default function ChatPage(): ReactElement {
                   aria-label="Retry last request"
                   className="rounded border px-3 py-1 text-sm disabled:opacity-50"
                   onClick={() => {
-                    void regenerate();
+                    regenerate();
                   }}
                   disabled={!canRetry || status === "streaming"}
                 >

@@ -5,11 +5,18 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Trip } from "@/stores/trip-store";
 import { renderWithProviders } from "@/test/test-utils";
 
 vi.mock("next/link", () => ({
-  default: ({ children, href, ...props }: any) => (
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) => (
     // eslint-disable-next-line jsx-a11y/anchor-is-valid
     <a href={href} {...props}>
       {children}
@@ -17,7 +24,7 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const MOCK_TRIPS: any[] = [
+const MOCK_TRIPS: Array<Record<string, unknown>> = [
   {
     budget: 3000,
     created_at: "2024-01-15T00:00:00Z",
@@ -45,19 +52,19 @@ const MOCK_TRIPS: any[] = [
     isPublic: true,
     name: "European Tour",
     startDate: "2024-08-01T00:00:00Z",
-    updated_at: "2024-01-20T00:00:00Z",
+    updatedAt: "2024-01-20T00:00:00Z",
   },
   {
-    created_at: "2024-01-05T00:00:00Z",
+    createdAt: "2024-01-05T00:00:00Z",
     destinations: [],
     id: "trip-3",
     isPublic: false,
     name: "Beach Getaway",
-    updated_at: "2024-01-05T00:00:00Z",
+    updatedAt: "2024-01-05T00:00:00Z",
   },
 ];
 
-async function doMockTrips(items: any[] | null, isLoading = false) {
+function doMockTrips(items: Array<Record<string, unknown>> | null, isLoading = false) {
   vi.resetModules();
   vi.doMock("@/hooks/use-trips", () => ({
     useTrips: () => ({
@@ -169,12 +176,12 @@ describe.sequential("RecentTrips", () => {
 
   it("calculates trip status correctly", async () => {
     const now = new Date();
-    const pastTrip: Trip = {
+    const pastTrip: Record<string, unknown> = {
       ...MOCK_TRIPS[0],
       endDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
       startDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     };
-    const ongoingTrip: Trip = {
+    const ongoingTrip: Record<string, unknown> = {
       ...MOCK_TRIPS[0],
       endDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
       id: "ongoing-trip",
@@ -197,7 +204,10 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("handles missing trip description gracefully", async () => {
-    const tripWithoutDescription: Trip = { ...MOCK_TRIPS[0], description: undefined };
+    const tripWithoutDescription: Record<string, unknown> = {
+      ...MOCK_TRIPS[0],
+      description: undefined,
+    };
     await doMockTrips([tripWithoutDescription]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips limit={1} />);
