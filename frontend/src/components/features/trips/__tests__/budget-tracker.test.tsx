@@ -11,9 +11,9 @@ import { useBudgetStore } from "@/stores/budget-store";
 import { BudgetTracker } from "../budget-tracker";
 
 // Mock the stores
-const MOCK_SET_ACTIVE_BUDGET = vi.fn();
+const MockSetActiveBudget = vi.fn();
 
-function defaultStore() {
+function DefaultStore() {
   return {
     activeBudget: {
       categories: [],
@@ -75,12 +75,12 @@ function defaultStore() {
       "trip-1": ["budget-1"],
       "trip-2": ["budget-2"],
     },
-    setActiveBudget: MOCK_SET_ACTIVE_BUDGET,
+    setActiveBudget: MockSetActiveBudget,
   };
 }
 
 vi.mock("@/stores/budget-store", () => ({
-  useBudgetStore: vi.fn(defaultStore),
+  useBudgetStore: vi.fn(DefaultStore),
 }));
 
 vi.mock("@/stores/currency-store", () => ({
@@ -93,7 +93,7 @@ describe("BudgetTracker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset mock implementation to default for each test
-    vi.mocked(useBudgetStore).mockImplementation(defaultStore as any);
+    vi.mocked(useBudgetStore).mockImplementation(DefaultStore as any);
   });
 
   describe("Budget Display", () => {
@@ -186,7 +186,7 @@ describe("BudgetTracker", () => {
           },
         },
         budgetsByTrip: { "trip-1": ["budget-1"] },
-        setActiveBudget: MOCK_SET_ACTIVE_BUDGET,
+        setActiveBudget: MockSetActiveBudget,
       });
 
       render(<BudgetTracker />);
@@ -236,7 +236,7 @@ describe("BudgetTracker", () => {
           },
         },
         budgetsByTrip: { "trip-1": ["budget-1"] },
-        setActiveBudget: MOCK_SET_ACTIVE_BUDGET,
+        setActiveBudget: MockSetActiveBudget,
       });
 
       render(<BudgetTracker />);
@@ -297,7 +297,7 @@ describe("BudgetTracker", () => {
           },
         },
         budgetsByTrip: { "trip-1": ["budget-1"] },
-        setActiveBudget: MOCK_SET_ACTIVE_BUDGET,
+        setActiveBudget: MockSetActiveBudget,
       });
 
       render(<BudgetTracker />);
@@ -356,7 +356,7 @@ describe("BudgetTracker", () => {
           },
         },
         budgetsByTrip: { "trip-1": ["budget-1"] },
-        setActiveBudget: MOCK_SET_ACTIVE_BUDGET,
+        setActiveBudget: MockSetActiveBudget,
       });
 
       render(<BudgetTracker />);
@@ -406,7 +406,7 @@ describe("BudgetTracker", () => {
           },
         },
         budgetsByTrip: { "trip-1": ["budget-1"] },
-        setActiveBudget: MOCK_SET_ACTIVE_BUDGET,
+        setActiveBudget: MockSetActiveBudget,
       });
 
       render(<BudgetTracker />);
@@ -467,7 +467,7 @@ describe("BudgetTracker", () => {
           },
         },
         budgetsByTrip: { "trip-1": ["budget-1"] },
-        setActiveBudget: MOCK_SET_ACTIVE_BUDGET,
+        setActiveBudget: MockSetActiveBudget,
       });
 
       render(<BudgetTracker />);
@@ -499,7 +499,7 @@ describe("BudgetTracker", () => {
       const viewDetailsButton = screen.getByText("View Details");
       fireEvent.click(viewDetailsButton);
 
-      expect(MOCK_SET_ACTIVE_BUDGET).toHaveBeenCalledWith("budget-1");
+      expect(MockSetActiveBudget).toHaveBeenCalledWith("budget-1");
     });
 
     it("should hide action buttons when showActions is false", () => {
@@ -517,7 +517,7 @@ describe("BudgetTracker", () => {
         budgetSummary: null as any,
         budgets: {},
         budgetsByTrip: {},
-        setActiveBudget: MOCK_SET_ACTIVE_BUDGET,
+        setActiveBudget: MockSetActiveBudget,
       });
       render(
         <BudgetTracker tripId="nonexistent-trip" onCreateBudget={mockOnCreateBudget} />
@@ -587,7 +587,7 @@ describe("BudgetTracker", () => {
           },
         },
         budgetsByTrip: { "trip-1": ["budget-1"] },
-        setActiveBudget: MOCK_SET_ACTIVE_BUDGET,
+        setActiveBudget: MockSetActiveBudget,
       });
 
       render(<BudgetTracker />);
@@ -636,7 +636,7 @@ describe("BudgetTracker", () => {
           },
         },
         budgetsByTrip: { "trip-1": ["budget-1"] },
-        setActiveBudget: MOCK_SET_ACTIVE_BUDGET,
+        setActiveBudget: MockSetActiveBudget,
       });
 
       render(<BudgetTracker />);

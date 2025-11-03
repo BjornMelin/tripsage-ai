@@ -73,7 +73,7 @@ interface ConnectionStatusProps {
   showOptimizations?: boolean;
 }
 
-const DEFAULT_METRICS: NetworkMetrics = {
+const DefaultMetrics: NetworkMetrics = {
   bandwidth: 0,
   jitter: 0,
   latency: 0,
@@ -82,7 +82,7 @@ const DEFAULT_METRICS: NetworkMetrics = {
   signalStrength: 0,
 };
 
-const DEFAULT_ANALYTICS: ConnectionAnalytics = {
+const DefaultAnalytics: ConnectionAnalytics = {
   avgResponseTime: 0,
   connectionTime: 0,
   failedMessages: 0,
@@ -91,7 +91,7 @@ const DEFAULT_ANALYTICS: ConnectionAnalytics = {
   uptime: 0,
 };
 
-const GET_QUALITY_COLOR = (quality: NetworkMetrics["quality"]) => {
+const GetQualityColor = (quality: NetworkMetrics["quality"]) => {
   switch (quality) {
     case "excellent":
       return "text-green-500";
@@ -106,25 +106,25 @@ const GET_QUALITY_COLOR = (quality: NetworkMetrics["quality"]) => {
   }
 };
 
-const GET_SIGNAL_ICON = (strength: number) => {
+const GetSignalIcon = (strength: number) => {
   if (strength >= 80) return <SignalHigh className="h-4 w-4" />;
   if (strength >= 60) return <SignalMedium className="h-4 w-4" />;
   if (strength >= 40) return <SignalLow className="h-4 w-4" />;
   return <Signal className="h-4 w-4" />;
 };
 
-const FORMAT_LATENCY = (ms: number) => {
+const FormatLatency = (ms: number) => {
   if (ms < 1000) return `${ms.toFixed(0)}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
 };
 
-const FORMAT_BANDWIDTH = (bps: number) => {
+const FormatBandwidth = (bps: number) => {
   if (bps < 1024) return `${bps.toFixed(0)} B/s`;
   if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} KB/s`;
   return `${(bps / (1024 * 1024)).toFixed(1)} MB/s`;
 };
 
-const FORMAT_UPTIME = (seconds: number) => {
+const FormatUptime = (seconds: number) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
@@ -134,7 +134,7 @@ const FORMAT_UPTIME = (seconds: number) => {
   return `${secs}s`;
 };
 
-const CONNECTION_QUALITY_INDICATOR: React.FC<{ metrics: NetworkMetrics }> = ({
+const ConnectionQualityIndicator: React.FC<{ metrics: NetworkMetrics }> = ({
   metrics,
 }) => {
   const qualityScore = useMemo(() => {
@@ -164,14 +164,14 @@ const CONNECTION_QUALITY_INDICATOR: React.FC<{ metrics: NetworkMetrics }> = ({
           />
         ))}
       </div>
-      <span className={cn("text-sm font-medium", GET_QUALITY_COLOR(metrics.quality))}>
+      <span className={cn("text-sm font-medium", GetQualityColor(metrics.quality))}>
         {metrics.quality}
       </span>
     </div>
   );
 };
 
-const NETWORK_OPTIMIZATION_SUGGESTIONS: React.FC<{
+const NetworkOptimizationSuggestions: React.FC<{
   metrics: NetworkMetrics;
   onOptimize?: () => void;
 }> = ({ metrics, onOptimize }) => {
@@ -241,8 +241,8 @@ const NETWORK_OPTIMIZATION_SUGGESTIONS: React.FC<{
 
 export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   status,
-  metrics = DEFAULT_METRICS,
-  analytics = DEFAULT_ANALYTICS,
+  metrics = DefaultMetrics,
+  analytics = DefaultAnalytics,
   onReconnect,
   onOptimize,
   className,
@@ -377,7 +377,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
               {config.label}
               {status === "connected" && (
                 <div className="flex items-center gap-1">
-                  {GET_SIGNAL_ICON(metrics.signalStrength)}
+                  {GetSignalIcon(metrics.signalStrength)}
                   <span className="text-xs">{metrics.signalStrength}%</span>
                 </div>
               )}
@@ -388,9 +388,9 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
               <div>{config.description}</div>
               {status === "connected" && showMetrics && (
                 <div className="text-xs space-y-1">
-                  <div>Latency: {FORMAT_LATENCY(metrics.latency)}</div>
+                  <div>Latency: {FormatLatency(metrics.latency)}</div>
                   <div>Quality: {metrics.quality}</div>
-                  <div>Uptime: {FORMAT_UPTIME(analytics.uptime)}</div>
+                  <div>Uptime: {FormatUptime(analytics.uptime)}</div>
                 </div>
               )}
             </div>
@@ -456,9 +456,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {status === "connected" && (
-              <CONNECTION_QUALITY_INDICATOR metrics={metrics} />
-            )}
+            {status === "connected" && <ConnectionQualityIndicator metrics={metrics} />}
             {(status === "error" || status === "disconnected") && onReconnect && (
               <Button variant="outline" size="sm" onClick={onReconnect}>
                 <RefreshCw className="h-4 w-4 mr-1" />
@@ -485,7 +483,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                       <div className="text-center p-2 rounded-lg bg-gray-50">
                         <Activity className="h-4 w-4 mx-auto mb-1 text-blue-500" />
                         <div className="text-sm font-medium">
-                          {FORMAT_LATENCY(metrics.latency)}
+                          {FormatLatency(metrics.latency)}
                         </div>
                         <div className="text-xs text-muted-foreground">Latency</div>
                       </div>
@@ -500,7 +498,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                       <div className="text-center p-2 rounded-lg bg-gray-50">
                         <Zap className="h-4 w-4 mx-auto mb-1 text-green-500" />
                         <div className="text-sm font-medium">
-                          {FORMAT_BANDWIDTH(metrics.bandwidth)}
+                          {FormatBandwidth(metrics.bandwidth)}
                         </div>
                         <div className="text-xs text-muted-foreground">Bandwidth</div>
                       </div>
@@ -530,7 +528,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                       <div className="text-center p-2 rounded-lg bg-gray-50">
                         <Monitor className="h-4 w-4 mx-auto mb-1 text-purple-500" />
                         <div className="text-sm font-medium">
-                          {FORMAT_UPTIME(analytics.uptime)}
+                          {FormatUptime(analytics.uptime)}
                         </div>
                         <div className="text-xs text-muted-foreground">Uptime</div>
                       </div>
@@ -566,14 +564,14 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 <div>
                   <span className="text-muted-foreground">Avg Response:</span>
                   <span className="ml-2 font-medium">
-                    {FORMAT_LATENCY(analytics.avgResponseTime)}
+                    {FormatLatency(analytics.avgResponseTime)}
                   </span>
                 </div>
               </div>
 
               {/* Network Optimization Suggestions */}
               {showOptimizations && (
-                <NETWORK_OPTIMIZATION_SUGGESTIONS
+                <NetworkOptimizationSuggestions
                   metrics={metrics}
                   onOptimize={onOptimize}
                 />

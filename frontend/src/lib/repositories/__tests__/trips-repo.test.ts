@@ -2,7 +2,7 @@
  * @fileoverview Smoke tests for trips repository using typed helpers.
  */
 import { describe, expect, it, vi } from "vitest";
-import { createTrip, mapTripRowToUI, updateTrip } from "@/lib/repositories/trips-repo";
+import { createTrip, mapTripRowToUi, updateTrip } from "@/lib/repositories/trips-repo";
 import type { Tables } from "@/lib/supabase/database.types";
 import * as helpers from "@/lib/supabase/typed-helpers";
 
@@ -29,7 +29,7 @@ describe("trips-repo", () => {
       updated_at: "2025-03-01T00:00:00Z",
       user_id: "u42",
     };
-    const ui = mapTripRowToUI(row);
+    const ui = mapTripRowToUi(row);
     expect(ui.id).toBe("42");
     expect(ui.name).toBe("Trip");
     expect(ui.startDate).toBe("2025-03-01");

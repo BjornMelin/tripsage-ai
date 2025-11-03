@@ -9,16 +9,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FlightSearchForm } from "../flight-search-form";
 
 // Mock the onSearch function
-const MOCK_ON_SEARCH = vi.fn();
+const MockOnSearch = vi.fn();
 
 describe("FlightSearchForm", () => {
   beforeEach(() => {
     // Clear mock calls between tests
-    MOCK_ON_SEARCH.mockClear();
+    MockOnSearch.mockClear();
   });
 
   it("renders the form correctly (aligned with current UI)", () => {
-    render(<FlightSearchForm onSearch={MOCK_ON_SEARCH} />);
+    render(<FlightSearchForm onSearch={MockOnSearch} />);
 
     // Title and trip type buttons
     expect(screen.getByText("Find Flights")).toBeInTheDocument();
@@ -44,7 +44,7 @@ describe("FlightSearchForm", () => {
   });
 
   it("handles form submission with valid data", async () => {
-    render(<FlightSearchForm onSearch={MOCK_ON_SEARCH} />);
+    render(<FlightSearchForm onSearch={MockOnSearch} />);
 
     // Fill in required fields matching current placeholders/labels
     fireEvent.change(screen.getByPlaceholderText("Departure city or airport"), {
@@ -72,8 +72,8 @@ describe("FlightSearchForm", () => {
     fireEvent.submit(formEl!);
 
     // onSearch receives schema-validated FlightSearchFormData shape (async)
-    await vi.waitFor(() => expect(MOCK_ON_SEARCH).toHaveBeenCalledTimes(1));
-    expect(MOCK_ON_SEARCH).toHaveBeenCalledWith({
+    await vi.waitFor(() => expect(MockOnSearch).toHaveBeenCalledTimes(1));
+    expect(MockOnSearch).toHaveBeenCalledWith({
       cabinClass: "economy",
       departureDate: "2099-08-15",
       destination: "London",
