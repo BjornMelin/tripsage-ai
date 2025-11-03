@@ -32,12 +32,6 @@ describe("getProviderSettings", () => {
   it("exposes default provider preference order", async () => {
     const { getProviderSettings } = await import("../settings");
     const settings = getProviderSettings();
-    expect(settings.preference).toEqual([
-      "openai",
-      "openrouter",
-      "anthropic",
-      "xai",
-    ]);
+    expect(settings.preference).toEqual(["openai", "openrouter", "anthropic", "xai"]);
   });
 });
-

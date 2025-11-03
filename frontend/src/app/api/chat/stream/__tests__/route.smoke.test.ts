@@ -99,9 +99,7 @@ describe("/api/chat/stream route smoke", () => {
     const mod = await import("../route");
     const res = await mod.POST(
       buildReq({
-        messages: [
-          { id: "1", role: "user", parts: [{ type: "text", text: "hi" }] },
-        ],
+        messages: [{ id: "1", role: "user", parts: [{ type: "text", text: "hi" }] }],
       })
     );
     expect(res.status).toBe(200);
