@@ -7,13 +7,14 @@
 
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useTripSuggestions } from "@/hooks/use-trips";
+import { type TripSuggestion, useTripSuggestions } from "@/hooks/use-trips";
 import { render } from "@/test/test-utils";
 import { TripSuggestions } from "../trip-suggestions";
 
 // Mock the stores with essential methods
 const MOCK_BUDGET_STORE = {
-  activeBudget: null as any,
+  activeBudget: null as any, // Allow both null and budget object
+  activeBudgetId: null,
 };
 
 const MOCK_DEALS_STORE = {
@@ -35,7 +36,15 @@ vi.mock("@/hooks/use-trips", () => ({
 
 // Mock Next.js Link
 vi.mock("next/link", () => ({
-  default: ({ children, href, ...props }: any) => (
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) => (
     <a href={href} {...props}>
       {children}
     </a>
@@ -77,8 +86,32 @@ describe("TripSuggestions", () => {
           title: "Tokyo Explorer",
         },
       ],
+      dataUpdatedAt: Date.now(),
+      error: null,
+      errorUpdateCount: 0,
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: "idle",
+      isEnabled: true,
+      isError: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+      isFetching: false,
+      isInitialLoading: false,
       isLoading: false,
-    } as any);
+      isLoadingError: false,
+      isPaused: false,
+      isPending: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isSuccess: true,
+      promise: Promise.resolve([] as TripSuggestion[]),
+      refetch: vi.fn(),
+      status: "success",
+    });
   });
 
   describe("Basic Rendering", () => {
@@ -151,8 +184,32 @@ describe("TripSuggestions", () => {
       // No API suggestions
       vi.mocked(useTripSuggestions).mockReturnValue({
         data: [],
+        dataUpdatedAt: Date.now(),
+        error: null,
+        errorUpdateCount: 0,
+        errorUpdatedAt: 0,
+        failureCount: 0,
+        failureReason: null,
+        fetchStatus: "idle",
+        isEnabled: true,
+        isError: false,
+        isFetched: true,
+        isFetchedAfterMount: true,
+        isFetching: false,
+        isInitialLoading: false,
         isLoading: false,
-      } as any);
+        isLoadingError: false,
+        isPaused: false,
+        isPending: false,
+        isPlaceholderData: false,
+        isRefetchError: false,
+        isRefetching: false,
+        isStale: false,
+        isSuccess: true,
+        promise: Promise.resolve([] as TripSuggestion[]),
+        refetch: vi.fn(),
+        status: "success",
+      });
 
       render(<TripSuggestions />);
 
@@ -262,7 +319,9 @@ describe("TripSuggestions", () => {
 
     it("should handle store errors gracefully", () => {
       // Mock store to throw error
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // Intentionally empty - suppress console errors during test
+      });
 
       try {
         render(<TripSuggestions />);

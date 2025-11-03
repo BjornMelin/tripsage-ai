@@ -21,19 +21,47 @@ const MAX_FILES_PER_REQUEST = 5;
 /** Backend API URL for attachment operations. */
 const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8001";
 
-// Hoist optional Upstash limiter to module scope to avoid per-request instantiation
-const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
-const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const RATELIMIT_PREFIX = "ratelimit:attachments";
-const RATELIMIT_INSTANCE =
-  UPSTASH_URL && UPSTASH_TOKEN
-    ? new Ratelimit({
-        analytics: true,
-        limiter: Ratelimit.slidingWindow(20, "1 m"),
-        prefix: RATELIMIT_PREFIX,
-        redis: Redis.fromEnv(),
-      })
-    : undefined;
+
+/**
+ * Lazily construct a rate limiter when Upstash credentials are configured.
+ *
+ * @returns Configured Ratelimit instance or undefined when env vars are absent.
+ */
+function createRateLimiter(): Ratelimit | undefined {
+  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!upstashUrl || !upstashToken) {
+    return undefined;
+  }
+
+  return new Ratelimit({
+    analytics: true,
+    limiter: Ratelimit.slidingWindow(20, "1 m"),
+    prefix: RATELIMIT_PREFIX,
+    redis: Redis.fromEnv(),
+  });
+}
+
+interface SingleUploadResponse {
+  file_id: string;
+  filename: string;
+  file_size: number;
+  mime_type: string;
+  processing_status: string;
+}
+
+interface BatchUploadFileResponse {
+  fileId: string;
+  filename: string;
+  fileSize: number;
+  mimeType: string;
+  processingStatus: string;
+}
+
+interface BatchUploadResponse {
+  successful_uploads: BatchUploadFileResponse[];
+}
 
 /**
  * Handles attachment uploads with validation and rate limiting.
@@ -42,13 +70,14 @@ const RATELIMIT_INSTANCE =
  * @returns A JSON response with uploaded file information or an error response.
  * @throws Will return error responses for validation failures or server errors.
  */
+// biome-ignore lint/style/useNamingConvention: Next.js API route handlers must use uppercase HTTP method names
 export async function POST(req: NextRequest) {
   try {
     // Optional rate limit: enable only when Upstash env is configured
-    if (RATELIMIT_INSTANCE) {
+    const limiter = createRateLimiter();
+    if (limiter) {
       const identifier = buildRateLimitKey(req);
-      const { success, limit, remaining, reset } =
-        await RATELIMIT_INSTANCE.limit(identifier);
+      const { success, limit, remaining, reset } = await limiter.limit(identifier);
       if (!success) {
         return NextResponse.json(
           { code: "RATE_LIMIT", error: "Rate limit exceeded" },
@@ -66,7 +95,7 @@ export async function POST(req: NextRequest) {
     // Validate content type
     const contentType = req.headers.get("content-type");
     if (!contentType?.includes("multipart/form-data")) {
-      return Response.json(
+      return NextResponse.json(
         { code: "INVALID_CONTENT_TYPE", error: "Invalid content type" },
         { status: 400 }
       );
@@ -80,14 +109,14 @@ export async function POST(req: NextRequest) {
 
     // Validate files
     if (files.length === 0) {
-      return Response.json(
+      return NextResponse.json(
         { code: "NO_FILES", error: "No files uploaded" },
         { status: 400 }
       );
     }
 
     if (files.length > MAX_FILES_PER_REQUEST) {
-      return Response.json(
+      return NextResponse.json(
         {
           code: "TOO_MANY_FILES",
           error: `Maximum ${MAX_FILES_PER_REQUEST} files allowed per request`,
@@ -99,7 +128,7 @@ export async function POST(req: NextRequest) {
     // Check file sizes
     const oversizedFile = files.find((file) => file.size > MAX_FILE_SIZE);
     if (oversizedFile) {
-      return Response.json(
+      return NextResponse.json(
         {
           code: "FILE_TOO_LARGE",
           error: `File "${oversizedFile.name}" exceeds maximum size of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
@@ -129,60 +158,65 @@ export async function POST(req: NextRequest) {
       method: "POST",
     });
 
-    const data = await response.json();
+    const data: unknown = await response.json();
 
     if (!response.ok) {
-      return Response.json(
-        { code: "UPLOAD_ERROR", error: data.detail || "Upload failed" },
+      const detail = (data as { detail?: string } | undefined)?.detail ?? "Upload failed";
+      return NextResponse.json(
+        { code: "UPLOAD_ERROR", error: detail },
         { status: response.status }
       );
     }
 
     // Transform response
     if (files.length === 1) {
+      const singleUpload = data as SingleUploadResponse;
       const payload = {
         files: [
           {
-            id: data.file_id,
-            name: data.filename,
-            size: data.file_size,
-            status: data.processing_status,
-            type: data.mime_type,
-            url: `/api/attachments/${data.file_id}/download`,
+            id: singleUpload.file_id,
+            name: singleUpload.filename,
+            size: singleUpload.file_size,
+            status: singleUpload.processing_status,
+            type: singleUpload.mime_type,
+            url: `/api/attachments/${singleUpload.file_id}/download`,
           },
         ],
-        urls: [`/api/attachments/${data.file_id}/download`],
+        urls: [`/api/attachments/${singleUpload.file_id}/download`],
       };
       try {
         revalidateTag("attachments", "max");
       } catch {
         // Ignore cache revalidation errors in non-Next runtime test environments
       }
-      return Response.json(payload);
+      return NextResponse.json(payload);
     }
 
     // Batch response
-    interface UploadedFile {
-      file_id: string;
-      filename: string;
-      file_size: number;
-      mime_type: string;
-      processing_status: string;
-    }
-    const transformedFiles = data.successful_uploads.map((file: UploadedFile) => ({
-      id: file.file_id,
-      name: file.filename,
-      size: file.file_size,
-      status: file.processing_status,
-      type: file.mime_type,
-      url: `/api/attachments/${file.file_id}/download`,
-    }));
+    const batchResponse = data as BatchUploadResponse;
+    const transformedFiles = batchResponse.successful_uploads.map(
+      (file): {
+        id: string;
+        name: string;
+        size: number;
+        status: string;
+        type: string;
+        url: string;
+      } => ({
+        id: file.fileId,
+        name: file.filename,
+        size: file.fileSize,
+        status: file.processingStatus,
+        type: file.mimeType,
+        url: `/api/attachments/${file.fileId}/download`,
+      })
+    );
 
     const resultPayload = {
       files: transformedFiles,
-      urls: transformedFiles.map((f: any) => f.url),
+      urls: transformedFiles.map((f) => f.url),
     };
-    const result = Response.json(resultPayload);
+    const result = NextResponse.json(resultPayload);
     try {
       revalidateTag("attachments", "max");
     } catch {
@@ -190,8 +224,9 @@ export async function POST(req: NextRequest) {
     }
     return result;
   } catch (error) {
+    // DecisionFramework§2.1(L1): Log for debugging while returning sanitized response.
     console.error("File upload error:", error);
-    return Response.json(
+    return NextResponse.json(
       { code: "INTERNAL_ERROR", error: "Internal server error" },
       { status: 500 }
     );

@@ -7,9 +7,16 @@
 
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ChatDeps, ChatPayload } from "../_handler";
+import type { ChatDeps, ChatPayload, ProviderResolver } from "../_handler";
 
 let handleChatStream: (deps: ChatDeps, payload: ChatPayload) => Promise<Response>;
+
+const createResolver = (modelId: string): ProviderResolver =>
+  async () => ({
+    model: {} as LanguageModel,
+    modelId,
+    provider: "openai",
+  });
 
 /**
  * Type for the mock query builder methods used in tests.
@@ -85,7 +92,7 @@ describe("handleChatStream", () => {
   it("401 when unauthenticated", async () => {
     const res = await handleChatStream(
       {
-        resolveProvider: vi.fn(),
+        resolveProvider: createResolver("gpt-4o-mini"),
         supabase: fakeSupabase(null),
       },
       { messages: [] }
@@ -97,7 +104,6 @@ describe("handleChatStream", () => {
 
   it("emits usage metadata on finish and persists assistant message (stream stub)", async () => {
     type MessageRow = {
-      // biome-ignore lint/style/useNamingConvention: API field uses snake_case
       session_id: string;
       role: string;
       [key: string]: unknown;
@@ -146,7 +152,6 @@ describe("handleChatStream", () => {
     let startMeta: MetadataResult | undefined;
     let finishMeta: MetadataResult | undefined;
     const fauxStream = vi.fn(() => ({
-      // biome-ignore lint/style/useNamingConvention: AI SDK method name
       toUIMessageStreamResponse: ({
         messageMetadata,
       }: {
@@ -168,11 +173,7 @@ describe("handleChatStream", () => {
         clock: { now: () => 1000 },
         config: { defaultMaxTokens: 256 },
         logger: { error: vi.fn(), info: vi.fn() },
-        resolveProvider: vi.fn(async () => ({
-          model: {} as LanguageModel,
-          modelId: "gpt-4o-mini",
-          provider: "openai",
-        })),
+        resolveProvider: createResolver("gpt-4o-mini"),
         stream: fauxStream as unknown as ChatDeps["stream"],
         supabase,
       },
@@ -184,8 +185,7 @@ describe("handleChatStream", () => {
             role: "user",
           } satisfies UIMessage,
         ],
-        // biome-ignore lint/style/useNamingConvention: API field uses snake_case
-        session_id: "s1",
+        sessionId: "s1",
       }
     );
     expect(res.status).toBe(200);
@@ -201,8 +201,8 @@ describe("handleChatStream", () => {
   it("429 when rate limited", async () => {
     const res = await handleChatStream(
       {
-        limit: vi.fn(async () => ({ success: false })),
-        resolveProvider: vi.fn(),
+        limit: vi.fn(async () => ({ success: false })) as ChatDeps["limit"],
+        resolveProvider: createResolver("gpt-4o-mini"),
         supabase: fakeSupabase("u1"),
       },
       { ip: "1.2.3.4", messages: [] }
@@ -214,7 +214,7 @@ describe("handleChatStream", () => {
   it("400 on invalid attachment type", async () => {
     const res = await handleChatStream(
       {
-        resolveProvider: vi.fn(),
+        resolveProvider: createResolver("gpt-4o-mini"),
         supabase: fakeSupabase("u2"),
       },
       {
@@ -242,11 +242,7 @@ describe("handleChatStream", () => {
       {
         config: { defaultMaxTokens: 1024 },
         // Use unknown model to trigger heuristic token counting (fast)
-        resolveProvider: vi.fn(async () => ({
-          model: {} as LanguageModel,
-          modelId: "some-unknown-model",
-          provider: "openai",
-        })),
+        resolveProvider: createResolver("some-unknown-model"),
         supabase: fakeSupabase("u3"),
       },
       {
