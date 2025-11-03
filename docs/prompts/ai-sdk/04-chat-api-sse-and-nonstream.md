@@ -111,8 +111,9 @@
   - Client-side resume/reattach wiring using `resumableId` (server emits metadata).
   - Optional telemetry hooks for rate-limit/error class/latency metrics.
 - Follow-up prompts or tasks:
-  - Implement tools registry and secure tool execution.
-  - Enhance client hook for resume support and add UI tests.
+  - Structured outputs for server responses: see 17-structured-outputs-and-object-generation.md
+  - Advanced RAG integration with reranking and caching: see 18-embeddings-and-rag-advanced.md
+  - End-to-end tool approval flow (UI bridge): see 14-tool-approval-e2e-and-ui-bridge.md
 
 ## Additional context & assumptions
 

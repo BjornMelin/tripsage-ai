@@ -10,11 +10,12 @@
 
 ## Deletion/refactor mapping (final-only)
 
-- Delete Python chat/BYOK endpoints and helpers:
+- Delete Python chat/BYOK/attachments endpoints and helpers:
   - `tripsage/api/routers/chat.py`
   - `tripsage/api/routers/keys.py`
   - `tripsage_core/services/business/chat_service.py`
   - `tripsage_core/services/external_apis/llm_providers.py`
+  - `tripsage/api/routers/attachments.py` (if attachment proxy still present)
   - Any Python adapters/wrappers introduced for LLM runtime
   - Orchestrator modules that bind LangChain clients at runtime (conditional if LangGraph JS replaces them): `tripsage/orchestration/*`
 - Remove tests that validated Python chat/BYOK/tool paths:
@@ -24,9 +25,9 @@
 
 ## Plan (overview)
 
-1) Confirm all Next.js routes + Vitest suites green
+1) Confirm all Next.js routes + Vitest/Playwright suites green; v6 message parts validated
 2) Remove files listed above
-3) Update CI to drop Python jobs related to removed modules
+3) Update CI to drop Python jobs related to removed modules; bump coverage thresholds
 4) zen.codereview for the removal diff; ensure no references remain
 
 ## Checklist (mark off; add notes under each)
@@ -73,6 +74,25 @@ Validation
 8) Challenge: zen.challenge if concerns remain.
 9) Review: zen.codereview; fix; rerun checks.
 10) Finalize docs: update ADR/Spec with outcomes.
+
+---
+
+## Final Alignment with TripSage Migration Plan (Next.js 16 + AI SDK v6)
+
+- Core decisions impacting Decommissioning:
+  - Next.js 16 + AI SDK v6 implementations are canonical; remove Python/FastAPI paths once parity verified.
+  - Final-only policy: delete legacy/flags/shims; keep only final implementations.
+
+- Implementation checklist delta:
+  - Validate parity across chat, BYOK, tools, memory, and observability; then remove Python modules and tests.
+  - Update READMEs/specs; ensure CI no longer runs removed tests/jobs.
+
+- References:
+  - Migration plan: docs/prompts/ai-sdk/trip_sage_migration_to_next.md
+
+Verification
+
+- Repo free of legacy Python for migrated features; docs updated; CI green.
 
 ## Additional context & assumptions
 

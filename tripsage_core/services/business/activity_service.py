@@ -118,7 +118,7 @@ class ActivityService:
                     provider_responses=None,
                 )
 
-            # Get the primary location (typed Place only - no legacy support)
+            # Get the primary location (typed Place only)
             first_place = geocode_results[0]
             coords = first_place.coordinates
             if coords is None:

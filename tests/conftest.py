@@ -373,11 +373,11 @@ def app() -> FastAPI:
             """Cache is healthy."""
             return True
 
-    def _provide_db(request: Any | None = None) -> _DB:  # type: ignore[unused-argument]
+    def _provide_db() -> _DB:
         """Provide a minimal healthy DB stub for integration tests."""
         return _DB()
 
-    def _provide_cache(request: Any | None = None) -> _Cache:  # type: ignore[unused-argument]
+    def _provide_cache() -> _Cache:
         """Provide a minimal healthy cache stub for integration tests."""
         return _Cache()
 

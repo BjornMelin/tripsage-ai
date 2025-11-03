@@ -1,31 +1,21 @@
-# TripSage Developer Documentation
+# Developer Documentation
 
-Developer resources and guidelines for the TripSage platform.
+Resources and guidelines for TripSage development.
 
 ## Getting Started
 
-| Guide | Purpose | When to Use |
-|-------|---------|-------------|
-| [Quick Start Guide](quick-start-guide.md) | Project setup and development environment | First time contributors |
-| [Code Standards](code-standards.md) | Coding guidelines and conventions | All development work |
-| [Testing Guide](testing-guide.md) | Testing strategies and patterns | Writing and running tests |
+| Guide | Purpose |
+|-------|---------|
+| [Quick Start](quick-start.md) | Project setup and development environment |
+| [Code Standards](code-standards.md) | Coding guidelines and conventions |
+| [Testing Guide](testing-guide.md) | Testing strategies and patterns |
 
-## Core Development
+## Development
 
-| Guide | Purpose | Primary Audience |
-|-------|---------|------------------|
-| [Backend Development](backend-development.md) | API development, integrations, architecture | Backend developers |
-| [Database Architecture](database-architecture.md) | Database design, schema, data modeling | Backend developers |
-| [Frontend Development](frontend-development.md) | Next.js development and patterns | Frontend developers |
-| [Data Models](data-models.md) | Data structures and validation | All developers |
-| [Branch Conventions](branch-conventions.md) | Git workflow and naming standards | All developers |
-
-## Quality & Operations
-
-| Guide | Purpose | Use Case |
-|-------|---------|----------|
-| [Debugging & Performance](debugging-performance.md) | Debugging techniques and optimization | Troubleshooting issues |
-| [CI Overview](ci-overview.md) | Continuous integration and deployment | Understanding CI/CD |
+| Guide | Purpose |
+|-------|---------|
+| [Development Guide](development-guide.md) | Backend, frontend, database, API patterns, and observability |
+| [Troubleshooting](troubleshooting.md) | Debugging, CI/CD, and workflow guidance |
 
 ## Development Workflow
 
@@ -53,26 +43,25 @@ cd frontend && pnpm lint && pnpm format   # Lint and format
 cd frontend && pnpm test                  # Run tests
 ```
 
-## Architecture Overview
+## Architecture
 
 - **Backend**: Python 3.13, FastAPI, Pydantic
 - **Frontend**: Next.js 15, TypeScript, Tailwind CSS
 - **Database**: PostgreSQL (Supabase) with pgvector
-- **Caching**: Upstash Redis (HTTP-based)
-- **AI**: LangGraph orchestration, Mem0 memory system
+- **Cache**: Upstash Redis (HTTP REST API)
+- **AI**: OpenAI integration with LangGraph
 
 ## Key Principles
 
 - **Type Safety**: Full type hints in Python, strict TypeScript
-- **Testing**: 90%+ coverage required, comprehensive test suite
-- **Security**: Environment variables only, no hardcoded secrets
-- **Performance**: Async operations, efficient database queries
-- **Documentation**: Code and API documentation auto-generated
+- **Async First**: All I/O operations use async/await
+- **Security**: Environment variables only, JWT authentication
+- **Testing**: Comprehensive test coverage required
+- **Performance**: Efficient database queries and caching
 
 ## Finding Information
 
-- **New to the project?** → [Quick Start Guide](quick-start-guide.md)
+- **New to the project?** → [Quick Start](quick-start.md)
 - **Writing code?** → [Code Standards](code-standards.md)
-- **Building APIs?** → [Backend Development](backend-development.md)
-- **Database work?** → [Database Architecture](database-architecture.md)
-- **Having issues?** → [Debugging & Performance](debugging-performance.md)
+- **Building features?** → [Development Guide](development-guide.md)
+- **Having issues?** → [Troubleshooting](troubleshooting.md)

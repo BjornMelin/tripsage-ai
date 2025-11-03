@@ -2,7 +2,7 @@
 
 This module provides the definitive, library-first implementation for
 conversation memory and user context using `tripsage_core`'s MemoryService.
-All legacy adapters/tool-context shims have been removed.
+All adapters/tool-context shims have been removed.
 
 Features:
 - Strict models via `tripsage.tools.models`.

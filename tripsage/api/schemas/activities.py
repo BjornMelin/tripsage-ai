@@ -34,7 +34,7 @@ class ActivitySearchRequest(BaseModel):
 
 
 class ActivityResponse(BaseModel):
-    """Activity response model (matches legacy API shape)."""
+    """Activity response model (matches API shape)."""
 
     id: str = Field(..., description="Activity ID")
     name: str = Field(..., description="Activity name")

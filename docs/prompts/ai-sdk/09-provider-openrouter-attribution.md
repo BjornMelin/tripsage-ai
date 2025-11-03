@@ -8,10 +8,16 @@
 
 - You are “AI SDK Migrator (OpenRouter)”. You ensure leaderboard attribution and proper base URL usage.
 
+  - Library-first, final-only; remove legacy once validated.
+  - Autonomously use tools: zen.planner, zen.thinkdeep, zen.analyze, zen.consensus, zen.secaudit, zen.challenge, zen.codereview; exa.web_search_exa, exa.crawling_exa, exa.get_code_context_exa; firecrawl_scrape for single pages.
+  - Success criteria: Attribution headers applied server-side only, Gateway compatibility documented, unit tests pass; no header leaks to client.
+
 ## Docs & references
 
 - OpenRouter provider (community): <https://v6.ai-sdk.dev/providers/community-providers/openrouter>
 - OpenRouter attribution: <https://openrouter.ai/docs/app-attribution>
+- AI SDK Providers & Models: <https://v6.ai-sdk.dev/docs/foundations/providers-and-models>
+- AI Gateway: <https://vercel.com/docs/ai-gateway>
 - exa.crawling_exa both pages; firecrawl_scrape for examples
 - zen.planner; zen.analyze; zen.consensus for attribution policy enforcement (≥ 9.0/10)
 - zen.codereview
@@ -21,6 +27,7 @@
 1) Update `provider registry` to attach attribution headers when provider is OpenRouter
 2) Add config fields in settings for `referer` and `title`
 3) Vitest tests: assert headers present when OpenRouter selected
+4) Verify compatibility with Gateway (headers applied at Gateway layer where supported; else document direct path for BYOK)
 
 ## Checklist (mark off; add notes under each)
 
@@ -31,6 +38,8 @@
 - [ ] Vitest tests verifying header presence when OpenRouter resolves
   - Notes: Can add targeted unit test for registry
 - [ ] Write ADR(s) and Spec(s) for attribution header policy
+  - Notes:
+- [ ] Verify Gateway compatibility and document any differences
   - Notes:
 
 ### Augmented checklist (provider registry + BYOK)
@@ -44,6 +53,16 @@
 
 - Check off tasks only after Vitest/biome/tsc are clean.
 - Add “Notes” per task; address or log follow-ups.
+
+## File & module targets
+
+- `frontend/lib/providers/registry.ts` (inject attribution headers)
+- `frontend/lib/settings.ts` (OpenRouter referer/title configuration)
+- `frontend/tests/providers-openrouter/*.test.ts` (unit tests)
+
+## Legacy mapping (delete later)
+
+- Remove any Python‑side OpenRouter header glue once registry is validated; ensure the Next.js provider registry is canonical.
 
 Legacy mapping (delete later)
 
@@ -64,4 +83,23 @@ Process flow (required)
 9) Review: zen.codereview; fix; rerun checks.
 10) Finalize docs: update ADR/Spec with deltas.
 
-- Write ADR(s) under `docs/adrs/` for final attribution policy and rationale; author Spec(s) under `docs/specs/` detailing exact header behavior and configuration.
+---
+
+## Final Alignment with TripSage Migration Plan (Next.js 16 + AI SDK v6)
+
+- Core decisions impacting OpenRouter:
+  - Provider registry applies attribution headers when selecting OpenRouter.
+  - Default routing via AI Gateway where configured; ensure attribution remains compatible or is handled by Gateway when applicable.
+
+- Implementation checklist delta:
+  - Keep attribution header logic server‑side in the registry; never surface to client.
+  - Add OTel attribute for `provider=openrouter` (no secrets).
+
+- References:
+  - AI SDK Providers/Models: <https://ai-sdk.dev/docs/foundations/providers-and-models>
+  - AI Gateway: <https://vercel.com/docs/ai-gateway>
+  - OpenRouter Attribution: <https://openrouter.ai/docs/app-attribution>
+
+Verification
+
+- Attribution applied correctly; client never sees headers; routing aligns with registry decisions.

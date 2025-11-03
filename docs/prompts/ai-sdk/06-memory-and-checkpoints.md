@@ -21,7 +21,7 @@
 
 1) `frontend/lib/memory/index.ts`:
    - addMessage, getMessages(sessionId, limit), getUserContext, sanitize content, select by token budget
-2) Update chat routes to read/write memory as needed
+2) Update chat routes to read/write memory as needed; ensure UIMessage.parts alignment (v6 message format)
 3) Optional: integrate LangGraph JS for checkpoints if workflows require it
 4) Vitest tests: memory read/write; token-window selection
 
@@ -52,7 +52,7 @@
 
 - Check off tasks only after Vitest/biome/tsc are clean.
 - Add “Notes” for impl details, issues, and debt; address or log.
-- Write ADR(s) in `docs/adrs/` for persistence/design choices (Supabase vs LangGraph JS); Spec(s) in `docs/specs/` for data schemas, APIs, and migration.
+- Write ADR(s) in `docs/adrs/` for persistence/design choices (Supabase vs LangGraph JS); Spec(s) in `docs/specs/` for data schemas, APIs, and migration. Document UIMessage.parts usage explicitly for v6.
 
 ## Process flow (required)
 
@@ -81,6 +81,27 @@
 - Summary of changes and decisions:
 - Outstanding items / tracked tech debt:
 - Follow-up prompts or tasks:
+  - Integrate hybrid retrieval and reranking for context assembly: see 18-embeddings-and-rag-advanced.md
+
+---
+
+## Final Alignment with TripSage Migration Plan (Next.js 16 + AI SDK v6)
+
+- Core decisions impacting Memory:
+  - Supabase-first persistence for sessions/messages with RLS; avoid PII in logs and traces.
+  - Prefer AI SDK agent loop + simple selectors; adopt LangGraph JS only if workflows require advanced checkpointing.
+
+- Implementation checklist delta:
+  - SSR-only access to Supabase; add `proxy.ts` at repo root (or `src/`) for session refresh.
+  - Add minimal OTel spans with session/message ids (no content).
+
+- References:
+  - Chatbot Message Persistence: <https://ai-sdk.dev/docs/ai-sdk-ui/chatbot-message-persistence>
+  - Supabase SSR: <https://supabase.com/docs/guides/auth/server-side/nextjs>
+
+Verification
+
+- Memory CRUD and window selection work; RLS prevents cross-user access; traces/logs remain content-free.
 
 ## Additional context & assumptions
 
