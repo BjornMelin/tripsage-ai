@@ -161,7 +161,8 @@ export async function POST(req: NextRequest) {
     const data: unknown = await response.json();
 
     if (!response.ok) {
-      const detail = (data as { detail?: string } | undefined)?.detail ?? "Upload failed";
+      const detail =
+        (data as { detail?: string } | undefined)?.detail ?? "Upload failed";
       return NextResponse.json(
         { code: "UPLOAD_ERROR", error: detail },
         { status: response.status }
@@ -195,7 +196,9 @@ export async function POST(req: NextRequest) {
     // Batch response
     const batchResponse = data as BatchUploadResponse;
     const transformedFiles = batchResponse.successful_uploads.map(
-      (file): {
+      (
+        file
+      ): {
         id: string;
         name: string;
         size: number;

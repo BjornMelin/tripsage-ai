@@ -18,7 +18,8 @@ let handleChatNonStream: (
   payload: NonStreamPayload
 ) => Promise<Response>;
 
-const createResolver = (modelId: string): ProviderResolver =>
+const createResolver =
+  (modelId: string): ProviderResolver =>
   async () => ({
     model: {} as LanguageModel,
     modelId,
@@ -123,7 +124,7 @@ describe("handleChatNonStream", () => {
 
   it("200 with content and usage mapping", async () => {
     const supabase = fakeSupabase("u4");
-    const generateText = (vi.fn(async () => ({
+    const generateText = vi.fn(async () => ({
       content: [],
       experimental_providerMetadata: undefined,
       experimental_stream: undefined,
@@ -135,7 +136,7 @@ describe("handleChatNonStream", () => {
       toolCalls: [],
       usage: { inputTokens: 10, outputTokens: 32, totalTokens: 42 },
       warnings: [],
-    })) as unknown) as NonStreamDeps["generate"];
+    })) as unknown as NonStreamDeps["generate"];
     const res = await handleChatNonStream(
       {
         clock: { now: () => 1000 },
