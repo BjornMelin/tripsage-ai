@@ -6,18 +6,18 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const LABEL_VARIANTS = cva(
+const LabelVariants = cva(
   "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 );
 
 const Label = React.forwardRef<
-  React.ElementRef<typeof LabelPrimitive.Root>,
+  React.ComponentRef<typeof LabelPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> &
-    VariantProps<typeof LABEL_VARIANTS>
+    VariantProps<typeof LabelVariants>
 >(({ className, ...props }, ref) => (
   <LabelPrimitive.Root
     ref={ref}
-    className={cn(LABEL_VARIANTS(), className)}
+    className={cn(LabelVariants(), className)}
     {...props}
   />
 ));

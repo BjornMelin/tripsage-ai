@@ -3,7 +3,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const ALERT_VARIANTS = cva(
+const AlertVariants = cva(
   "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
   {
     defaultVariants: {
@@ -21,12 +21,12 @@ const ALERT_VARIANTS = cva(
 
 const Alert = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof ALERT_VARIANTS>
+  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof AlertVariants>
 >(({ className, variant, ...props }, ref) => (
   <div
     ref={ref}
     role="alert"
-    className={cn(ALERT_VARIANTS({ variant }), className)}
+    className={cn(AlertVariants({ variant }), className)}
     {...props}
   />
 ));
