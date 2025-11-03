@@ -8,12 +8,14 @@ import Page from "@/app/ai-demo/page";
 
 // Mock fetch to control API responses
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(global as any).fetch = mockFetch;
 
 describe("AI Demo Page", () => {
   beforeEach(() => {
     mockFetch.mockClear();
     // Ensure both global and window fetch are mocked in JSDOM
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).fetch = mockFetch;
   });
 
@@ -52,7 +54,7 @@ describe("AI Demo Page", () => {
       body: {
         getReader: () => mockReader,
       },
-    });
+    } as unknown as Response);
 
     render(<Page />);
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
@@ -60,8 +62,6 @@ describe("AI Demo Page", () => {
 
     fireEvent.change(textarea, { target: { value: "Test input" } });
     fireEvent.click(submit);
-
-    // Submission triggers streaming; implementation details of fetch are not asserted here.
 
     // Wait for streaming response to appear
     await waitFor(() => {
@@ -90,7 +90,7 @@ describe("AI Demo Page", () => {
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
-    });
+    } as unknown as Response);
 
     render(<Page />);
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
@@ -109,7 +109,7 @@ describe("AI Demo Page", () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       body: null,
-    });
+    } as unknown as Response);
 
     render(<Page />);
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
@@ -156,7 +156,7 @@ describe("AI Demo Page", () => {
       body: {
         getReader: () => mockReader,
       },
-    });
+    } as unknown as Response);
 
     // Submit again
     fireEvent.click(submit);
@@ -185,7 +185,7 @@ describe("AI Demo Page", () => {
       body: {
         getReader: () => mockReader,
       },
-    });
+    } as unknown as Response);
 
     render(<Page />);
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
@@ -194,8 +194,6 @@ describe("AI Demo Page", () => {
     // Type empty string and submit
     fireEvent.change(textarea, { target: { value: "" } });
     fireEvent.click(submit);
-
-    // Submits with empty string; assert response content instead of network details.
 
     await waitFor(() => {
       expect(screen.getByText(/Response/)).toBeInTheDocument();

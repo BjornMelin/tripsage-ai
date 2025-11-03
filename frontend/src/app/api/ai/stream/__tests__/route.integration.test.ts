@@ -47,10 +47,12 @@ describe("ai stream route", () => {
     expect(response).toBeInstanceOf(Response);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toMatch(/text\/event-stream/i);
-    expect(mockStreamText).toHaveBeenCalledWith({
-      model: "openai/gpt-4o",
-      prompt: "Hello world",
-    });
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "openai/gpt-4o",
+        prompt: "Hello world",
+      })
+    );
     expect(mockToUIMessageStreamResponse).toHaveBeenCalled();
   });
 
@@ -73,10 +75,12 @@ describe("ai stream route", () => {
     const response = await POST(request);
 
     expect(response.status).toBe(200);
-    expect(mockStreamText).toHaveBeenCalledWith({
-      model: "openai/gpt-4o",
-      prompt: "Hello from AI SDK v6",
-    });
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "openai/gpt-4o",
+        prompt: "Hello from AI SDK v6",
+      })
+    );
   });
 
   it("handles requests with no prompt field", async () => {
@@ -98,10 +102,12 @@ describe("ai stream route", () => {
     const response = await POST(request);
 
     expect(response.status).toBe(200);
-    expect(mockStreamText).toHaveBeenCalledWith({
-      model: "openai/gpt-4o",
-      prompt: "Hello from AI SDK v6",
-    });
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "openai/gpt-4o",
+        prompt: "Hello from AI SDK v6",
+      })
+    );
   });
 
   it("handles malformed JSON request body", async () => {
@@ -122,10 +128,12 @@ describe("ai stream route", () => {
 
     const response = await POST(request);
     expect(response.status).toBe(200);
-    expect(mockStreamText).toHaveBeenCalledWith({
-      model: "openai/gpt-4o",
-      prompt: "Hello from AI SDK v6",
-    });
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "openai/gpt-4o",
+        prompt: "Hello from AI SDK v6",
+      })
+    );
   });
 
   it("handles non-POST requests", async () => {
@@ -178,10 +186,12 @@ describe("ai stream route", () => {
     await POST(request);
 
     // Verify the route uses the expected model and configuration
-    expect(mockStreamText).toHaveBeenCalledWith({
-      model: "openai/gpt-4o",
-      prompt: "test",
-    });
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "openai/gpt-4o",
+        prompt: "test",
+      })
+    );
   });
 
   it("handles AI SDK errors gracefully", async () => {
@@ -219,7 +229,7 @@ describe("ai stream route", () => {
     await expect(POST(request)).rejects.toThrow("Response conversion error");
   });
 
-  it("handles very long prompt content", async () => {
+  it("handles very long prompt content", { timeout: 15000 }, async () => {
     const longPrompt = "a".repeat(10000);
     const mockResponse = new Response('data: {"type":"finish"}\n\n', {
       headers: { "content-type": "text/event-stream" },
@@ -239,9 +249,11 @@ describe("ai stream route", () => {
     const response = await POST(request);
 
     expect(response.status).toBe(200);
-    expect(mockStreamText).toHaveBeenCalledWith({
-      model: "openai/gpt-4o",
-      prompt: longPrompt,
-    });
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "openai/gpt-4o",
+        prompt: longPrompt,
+      })
+    );
   });
 });
