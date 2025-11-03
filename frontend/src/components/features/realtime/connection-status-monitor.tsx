@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Connection status monitor component for real-time connections.
+ */
 "use client";
 
 import {
@@ -279,7 +282,7 @@ export function ConnectionStatusIndicator() {
 
   return (
     <div className="flex items-center space-x-2">
-      {getStatusIcon(isConnected, hasError)}
+      {GetStatusIcon(isConnected, hasError)}
       <span className="text-xs text-muted-foreground">
         {isConnected ? "Live" : "Offline"}
       </span>
@@ -287,7 +290,7 @@ export function ConnectionStatusIndicator() {
   );
 }
 
-function getStatusIcon(isConnected: boolean, hasError: boolean) {
+function GetStatusIcon(isConnected: boolean, hasError: boolean) {
   if (hasError) return <AlertTriangle className="h-3 w-3 text-yellow-500" />;
   if (isConnected) return <Activity className="h-3 w-3 text-green-500 animate-pulse" />;
   return <WifiOff className="h-3 w-3 text-red-500" />;

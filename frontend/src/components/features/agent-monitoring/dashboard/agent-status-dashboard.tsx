@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Agent status dashboard component for monitoring agent performance and status.
+ */
+
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -37,6 +41,7 @@ import { useAgentStatus } from "@/hooks/use-agent-status";
 import { useAgentStatusWebSocket } from "@/hooks/use-agent-status-websocket";
 import { ConnectionStatus } from "../../shared/connection-status";
 
+/** Interface for agent metrics */
 interface AgentMetrics {
   id: string;
   name: string;
@@ -52,6 +57,7 @@ interface AgentMetrics {
   lastUpdate: Date;
 }
 
+/** Interface for a predictive indicator */
 interface PredictiveIndicator {
   metric: string;
   current: number;
@@ -61,13 +67,15 @@ interface PredictiveIndicator {
   timeHorizon: string;
 }
 
+/** Interface for the AgentStatusDashboard component props */
 interface AgentStatusDashboardProps {
   agents: AgentMetrics[];
   onAgentSelect?: (agentId: string) => void;
   refreshInterval?: number;
 }
 
-const GENERATE_MOCK_TIME_SERIES_DATA = () => {
+/** Function to generate mock time series data */
+const GenerateMockTimeSeriesData = () => {
   return Array.from({ length: 30 }, (_, i) => ({
     errorRate: Math.random() * 5,
     responseTime: Math.random() * 100 + 50,
@@ -80,7 +88,8 @@ const GENERATE_MOCK_TIME_SERIES_DATA = () => {
   }));
 };
 
-const PREDICTIVE_INDICATORS: PredictiveIndicator[] = [
+/** Mock predictive indicators for testing */
+const PredictiveIndicators: PredictiveIndicator[] = [
   {
     confidence: 0.89,
     current: 125,
@@ -107,6 +116,7 @@ const PREDICTIVE_INDICATORS: PredictiveIndicator[] = [
   },
 ];
 
+/** Function to get the status color for an agent */
 // const getStatusColor = (status: AgentMetrics["status"]) => { // Future implementation
 //   switch (status) {
 //     case "active":
@@ -122,7 +132,8 @@ const PREDICTIVE_INDICATORS: PredictiveIndicator[] = [
 //   }
 // };
 
-const GET_STATUS_ICON = (status: AgentMetrics["status"]) => {
+/** Function to get the status icon for an agent */
+const GetStatusIcon = (status: AgentMetrics["status"]) => {
   switch (status) {
     case "active":
       return <CheckCircle className="h-4 w-4" />;
@@ -137,7 +148,8 @@ const GET_STATUS_ICON = (status: AgentMetrics["status"]) => {
   }
 };
 
-const AGENT_HEALTH_INDICATOR: React.FC<{ agent: AgentMetrics }> = ({ agent }) => {
+/** Component for an agent health indicator */
+const AgentHealthIndicator: React.FC<{ agent: AgentMetrics }> = ({ agent }) => {
   const healthColorClass =
     agent.healthScore >= 90
       ? "from-green-400 to-green-600"
@@ -165,7 +177,8 @@ const AGENT_HEALTH_INDICATOR: React.FC<{ agent: AgentMetrics }> = ({ agent }) =>
   );
 };
 
-const PREDICTIVE_CARD: React.FC<{ indicator: PredictiveIndicator }> = ({
+/** Component for a predictive card */
+const PredictiveCard: React.FC<{ indicator: PredictiveIndicator }> = ({
   indicator,
 }) => {
   const getTrendIcon = () => {
@@ -219,15 +232,21 @@ const PREDICTIVE_CARD: React.FC<{ indicator: PredictiveIndicator }> = ({
   );
 };
 
+/** Component for the AgentStatusDashboard */
 export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
   agents: externalAgents,
   onAgentSelect,
   refreshInterval: _refreshInterval = 5000,
 }) => {
+  /** Response time gradient ID */
   const responseTimeGradientId = useId();
-  const [timeSeriesData] = useState(GENERATE_MOCK_TIME_SERIES_DATA);
+  /** Time series data */
+  const [timeSeriesData] = useState(GenerateMockTimeSeriesData);
+  /** Selected agent */
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  /** Last update time */
   const [lastUpdateTime, setLastUpdateTime] = useState<string>("");
+  /** Is client */
   const [isClient, setIsClient] = useState(false);
 
   // Use WebSocket for real-time agent status updates
@@ -437,14 +456,14 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <AGENT_HEALTH_INDICATOR agent={agent} />
+                      <AgentHealthIndicator agent={agent} />
                       <div>
                         <h3 className="font-semibold">{agent.name}</h3>
                         <Badge
                           variant={agent.status === "active" ? "default" : "secondary"}
                           className="flex items-center gap-1"
                         >
-                          {GET_STATUS_ICON(agent.status)}
+                          {GetStatusIcon(agent.status)}
                           {agent.status}
                         </Badge>
                       </div>
@@ -497,8 +516,8 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {PREDICTIVE_INDICATORS.map((indicator, index) => (
-              <PREDICTIVE_CARD
+            {PredictiveIndicators.map((indicator, index) => (
+              <PredictiveCard
                 key={`predictive-${indicator.metric}-${index}`}
                 indicator={indicator}
               />

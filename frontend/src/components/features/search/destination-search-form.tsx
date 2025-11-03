@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Destination search form component for searching destinations.
+ */
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,7 +31,7 @@ import { Separator } from "@/components/ui/separator";
 import { useMemoryContext } from "@/hooks/use-memory";
 import type { DestinationSearchParams } from "@/types/search";
 
-const DESTINATION_SEARCH_FORM_SCHEMA = z.object({
+const DestinationSearchFormSchema = z.object({
   language: z.string().optional(),
   limit: z.number().min(1).max(20),
   query: z.string().min(1, { message: "Destination is required" }),
@@ -38,7 +41,7 @@ const DESTINATION_SEARCH_FORM_SCHEMA = z.object({
   ),
 });
 
-type DestinationSearchFormValues = z.infer<typeof DESTINATION_SEARCH_FORM_SCHEMA>;
+type DestinationSearchFormValues = z.infer<typeof DestinationSearchFormSchema>;
 
 interface DestinationSuggestion {
   placeId: string;
@@ -55,7 +58,7 @@ interface DestinationSearchFormProps {
   showMemoryRecommendations?: boolean;
 }
 
-const DESTINATION_TYPES = [
+const DestinationTypes = [
   {
     description: "Local municipalities and urban areas",
     id: "locality",
@@ -78,7 +81,7 @@ const DESTINATION_TYPES = [
   },
 ];
 
-const POPULAR_DESTINATIONS = [
+const PopularDestinations = [
   "Paris, France",
   "Tokyo, Japan",
   "New York, USA",
@@ -118,7 +121,7 @@ export function DestinationSearchForm({
       ...initialValues,
     },
     mode: "onChange",
-    resolver: zodResolver(DESTINATION_SEARCH_FORM_SCHEMA),
+    resolver: zodResolver(DestinationSearchFormSchema),
   });
 
   const query = form.watch("query");
@@ -372,7 +375,7 @@ export function DestinationSearchForm({
                   Popular Destinations
                 </FormLabel>
                 <div className="flex flex-wrap gap-2">
-                  {POPULAR_DESTINATIONS.map((destination) => (
+                  {PopularDestinations.map((destination) => (
                     <Badge
                       key={destination}
                       variant="secondary"
@@ -396,7 +399,7 @@ export function DestinationSearchForm({
                       Select the types of destinations you're interested in
                     </FormDescription>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {DESTINATION_TYPES.map((type) => (
+                      {DestinationTypes.map((type) => (
                         <label
                           key={type.id}
                           className="flex items-start space-x-3 border rounded-md p-3 cursor-pointer hover:bg-accent transition-colors"

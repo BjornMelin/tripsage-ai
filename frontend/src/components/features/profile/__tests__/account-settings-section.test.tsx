@@ -13,7 +13,7 @@ import { AccountSettingsSection } from "../account-settings-section";
 vi.mock("@/stores/user-store");
 // use-toast is fully mocked in test-setup.ts; avoid overriding here.
 
-const MOCK_PROFILE = {
+const MockProfile = {
   createdAt: "",
   email: "test@example.com",
   firstName: "John",
@@ -22,15 +22,15 @@ const MOCK_PROFILE = {
   updatedAt: "",
 };
 
-const MOCK_UPDATE_PERSONAL_INFO = vi.fn();
-const MOCK_TOAST = toast as unknown as ReturnType<typeof vi.fn>;
+const MockUpdatePersonalInfo = vi.fn();
+const MockToast = toast as unknown as ReturnType<typeof vi.fn>;
 
 describe("AccountSettingsSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: MOCK_PROFILE,
-      updatePersonalInfo: MOCK_UPDATE_PERSONAL_INFO,
+      profile: MockProfile,
+      updatePersonalInfo: MockUpdatePersonalInfo,
     });
     // toast is mocked in global test setup; nothing to rewire here.
   });
@@ -71,7 +71,7 @@ describe("AccountSettingsSection", () => {
     await userEvent.click(screen.getByRole("button", { name: /update email/i }));
 
     await waitFor(() => {
-      expect(MOCK_TOAST).toHaveBeenCalledWith({
+      expect(MockToast).toHaveBeenCalledWith({
         description: "Please check your inbox to verify your new email address.",
         title: "Email updated",
       });
@@ -94,7 +94,7 @@ describe("AccountSettingsSection", () => {
     const switches = screen.getAllByRole("switch");
     await userEvent.click(switches[0]);
     await waitFor(() => {
-      expect(MOCK_TOAST).toHaveBeenCalled();
+      expect(MockToast).toHaveBeenCalled();
     });
   });
 
@@ -151,7 +151,7 @@ describe("AccountSettingsSection", () => {
 
     // Dialog should close without deletion toast
     expect(
-      MOCK_TOAST.mock.calls.find(([arg]: { title?: string }[]) =>
+      MockToast.mock.calls.find(([arg]: { title?: string }[]) =>
         arg?.title?.includes("Account deletion")
       )
     ).toBeUndefined();

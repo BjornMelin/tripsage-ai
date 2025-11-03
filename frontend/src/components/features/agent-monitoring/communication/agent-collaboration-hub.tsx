@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Agent collaboration hub component for monitoring multi-agent coordination and handoffs.
+ */
+
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -30,6 +34,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+/** Interface for an agent */
 interface Agent {
   id: string;
   name: string;
@@ -46,6 +51,7 @@ interface Agent {
   lastActive: Date;
 }
 
+/** Interface for an agent handoff */
 interface AgentHandoff {
   id: string;
   fromAgent: string;
@@ -57,6 +63,7 @@ interface AgentHandoff {
   confidence: number;
 }
 
+/** Interface for a collaboration metric */
 interface CollaborationMetric {
   metric: string;
   value: number;
@@ -64,6 +71,7 @@ interface CollaborationMetric {
   description: string;
 }
 
+/** Interface for the AgentCollaborationHub component props */
 interface AgentCollaborationHubProps {
   agents: Agent[];
   handoffs: AgentHandoff[];
@@ -73,7 +81,8 @@ interface AgentCollaborationHubProps {
   className?: string;
 }
 
-const MOCK_AGENTS: Agent[] = [
+/** Mock agents for testing */
+const MockAgents: Agent[] = [
   {
     avatar: "/agents/research.jpg",
     currentTask: "Market trend analysis",
@@ -119,7 +128,8 @@ const MOCK_AGENTS: Agent[] = [
   },
 ];
 
-const MOCK_HANDOFFS: AgentHandoff[] = [
+/** Mock handoffs for testing */
+const MockHandoffs: AgentHandoff[] = [
   {
     confidence: 0.89,
     fromAgent: "agent-1",
@@ -142,7 +152,8 @@ const MOCK_HANDOFFS: AgentHandoff[] = [
   },
 ];
 
-const COLLABORATION_METRICS: CollaborationMetric[] = [
+/** Mock collaboration metrics for testing */
+const CollaborationMetrics: CollaborationMetric[] = [
   {
     description: "Percentage of successful agent handoffs",
     metric: "Handoff Success Rate",
@@ -169,7 +180,8 @@ const COLLABORATION_METRICS: CollaborationMetric[] = [
   },
 ];
 
-const GET_STATUS_COLOR = (status: Agent["status"]) => {
+/** Function to get the status color for an agent */
+const GetStatusColor = (status: Agent["status"]) => {
   switch (status) {
     case "active":
       return "bg-green-500";
@@ -184,7 +196,8 @@ const GET_STATUS_COLOR = (status: Agent["status"]) => {
   }
 };
 
-const GET_STATUS_ICON = (status: Agent["status"]) => {
+/** Function to get the status icon for an agent */
+const GetStatusIcon = (status: Agent["status"]) => {
   switch (status) {
     case "active":
       return <CheckCircle2 className="h-3 w-3" />;
@@ -199,7 +212,8 @@ const GET_STATUS_ICON = (status: Agent["status"]) => {
   }
 };
 
-const AGENT_CARD: React.FC<{
+/** Component for an agent card */
+const AgentCard: React.FC<{
   agent: Agent;
   onSelect?: (agentId: string) => void;
   isSelected?: boolean;
@@ -235,10 +249,10 @@ const AGENT_CARD: React.FC<{
           <div
             className={cn(
               "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center",
-              GET_STATUS_COLOR(agent.status)
+              GetStatusColor(agent.status)
             )}
           >
-            <div className="text-white">{GET_STATUS_ICON(agent.status)}</div>
+            <div className="text-white">{GetStatusIcon(agent.status)}</div>
           </div>
         </div>
 
@@ -308,7 +322,8 @@ const AGENT_CARD: React.FC<{
   );
 };
 
-const HANDOFF_CARD: React.FC<{
+/** Component for a handoff card */
+const HandoffCard: React.FC<{
   handoff: AgentHandoff;
   agents: Agent[];
   onApprove?: (handoffId: string) => void;
@@ -338,6 +353,7 @@ const HANDOFF_CARD: React.FC<{
     }
   };
 
+  /** Get the status configuration for a handoff */
   const statusConfig = getStatusConfig();
 
   return (
@@ -418,9 +434,10 @@ const HANDOFF_CARD: React.FC<{
   );
 };
 
+/** Component for the AgentCollaborationHub */
 export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
-  agents: initialAgents = MOCK_AGENTS,
-  handoffs: initialHandoffs = MOCK_HANDOFFS,
+  agents: initialAgents = MockAgents,
+  handoffs: initialHandoffs = MockHandoffs,
   onAgentSelect,
   onHandoffApprove,
   onHandoffReject,
@@ -535,7 +552,7 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
 
       {/* Metrics Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {COLLABORATION_METRICS.map((metric, index) => (
+        {CollaborationMetrics.map((metric, index) => (
           <Card key={index}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
@@ -572,7 +589,7 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <AnimatePresence>
                 {optimisticAgents.map((agent) => (
-                  <AGENT_CARD
+                  <AgentCard
                     key={agent.id}
                     agent={agent}
                     onSelect={handleAgentSelect}
@@ -596,7 +613,7 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
             <div className="space-y-4">
               <AnimatePresence>
                 {optimisticHandoffs.map((handoff) => (
-                  <HANDOFF_CARD
+                  <HandoffCard
                     key={handoff.id}
                     handoff={handoff}
                     agents={optimisticAgents}

@@ -9,9 +9,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SecuritySection } from "../security-section";
 
 // Mock the stores and hooks
-const MOCK_UPDATE_USER = vi.fn();
+const MockUpdateUser = vi.fn();
 
-const DEFAULT_USER = {
+const DefaultUser = {
   email: "test@example.com",
   id: "1",
   security: {
@@ -19,13 +19,13 @@ const DEFAULT_USER = {
   },
 };
 
-const MOCK_USER_STORE = {
-  updateUser: MOCK_UPDATE_USER,
-  user: { ...DEFAULT_USER },
+const MockUserStore = {
+  updateUser: MockUpdateUser,
+  user: { ...DefaultUser },
 };
 
 vi.mock("@/stores/user-store", () => ({
-  useUserProfileStore: vi.fn(() => MOCK_USER_STORE),
+  useUserProfileStore: vi.fn(() => MockUserStore),
 }));
 
 // use-toast is globally mocked in test-setup.ts; avoid overriding here.
@@ -33,8 +33,8 @@ vi.mock("@/stores/user-store", () => ({
 describe("SecuritySection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    MOCK_USER_STORE.user = { ...DEFAULT_USER } as any;
-    MOCK_UPDATE_USER.mockResolvedValue({});
+    MockUserStore.user = { ...DefaultUser } as any;
+    MockUpdateUser.mockResolvedValue({});
   });
 
   describe("Password Management", () => {
@@ -190,8 +190,8 @@ describe("SecuritySection", () => {
 
   describe("Error Handling", () => {
     it("should handle missing security settings gracefully", () => {
-      MOCK_USER_STORE.user = {
-        ...MOCK_USER_STORE.user!,
+      MockUserStore.user = {
+        ...MockUserStore.user!,
         security: undefined as any,
       };
 
@@ -202,7 +202,7 @@ describe("SecuritySection", () => {
     });
 
     it("should render with missing user data", () => {
-      MOCK_USER_STORE.user = null as any;
+      MockUserStore.user = null as any;
 
       render(<SecuritySection />);
 

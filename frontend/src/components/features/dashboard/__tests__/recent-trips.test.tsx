@@ -24,7 +24,7 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const MOCK_TRIPS: Array<Record<string, unknown>> = [
+const MockTrips: Array<Record<string, unknown>> = [
   {
     budget: 3000,
     created_at: "2024-01-15T00:00:00Z",
@@ -64,7 +64,7 @@ const MOCK_TRIPS: Array<Record<string, unknown>> = [
   },
 ];
 
-function doMockTrips(items: Array<Record<string, unknown>> | null, isLoading = false) {
+function DoMockTrips(items: Array<Record<string, unknown>> | null, isLoading = false) {
   vi.resetModules();
   vi.doMock("@/hooks/use-trips", () => ({
     useTrips: () => ({
@@ -83,7 +83,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("renders loading state correctly", async () => {
-    await doMockTrips(null, true);
+    await DoMockTrips(null, true);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips />);
     expect(screen.getByText("Recent Trips")).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("renders empty state when no trips exist", async () => {
-    await doMockTrips([]);
+    await DoMockTrips([]);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips />);
     expect(screen.getByText("No recent trips yet.")).toBeInTheDocument();
@@ -100,7 +100,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("renders trip cards for existing trips", async () => {
-    await doMockTrips(MOCK_TRIPS);
+    await DoMockTrips(MockTrips);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips />);
     expect(screen.getByText("Tokyo Adventure")).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe.sequential("RecentTrips", () => {
   it("displays trip details correctly", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2024-01-10T00:00:00Z"));
-    await doMockTrips([MOCK_TRIPS[0], MOCK_TRIPS[1]]);
+    await DoMockTrips([MockTrips[0], MockTrips[1]]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips />);
     const tokyoLink = within(container).getByRole("link", { name: /Tokyo Adventure/i });
@@ -125,7 +125,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("handles trips with multiple destinations", async () => {
-    await doMockTrips([MOCK_TRIPS[0], MOCK_TRIPS[1]]);
+    await DoMockTrips([MockTrips[0], MockTrips[1]]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips />);
     const europeanLink = within(container).getByRole("link", {
@@ -137,7 +137,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("limits the number of trips displayed", async () => {
-    await doMockTrips(MOCK_TRIPS);
+    await DoMockTrips(MockTrips);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips limit={2} />);
     expect(screen.getByText("European Tour")).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("sorts trips by updated date in descending order", async () => {
-    await doMockTrips(MOCK_TRIPS);
+    await DoMockTrips(MockTrips);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips />);
     const tripCards = screen.getAllByRole("link");
@@ -155,7 +155,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("navigates to trip details when card is clicked", async () => {
-    await doMockTrips([MOCK_TRIPS[0], MOCK_TRIPS[1]]);
+    await DoMockTrips([MockTrips[0], MockTrips[1]]);
     userEvent.setup();
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips />);
@@ -165,7 +165,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("handles showEmpty prop correctly", async () => {
-    await doMockTrips([]);
+    await DoMockTrips([]);
     const { RecentTrips } = await import("../recent-trips");
     const { rerender } = renderWithProviders(<RecentTrips showEmpty={false} />);
     expect(screen.queryByText("Create your first trip")).not.toBeInTheDocument();
@@ -177,17 +177,17 @@ describe.sequential("RecentTrips", () => {
   it("calculates trip status correctly", async () => {
     const now = new Date();
     const pastTrip: Record<string, unknown> = {
-      ...MOCK_TRIPS[0],
+      ...MockTrips[0],
       endDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
       startDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     };
     const ongoingTrip: Record<string, unknown> = {
-      ...MOCK_TRIPS[0],
+      ...MockTrips[0],
       endDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
       id: "ongoing-trip",
       startDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     };
-    await doMockTrips([pastTrip, ongoingTrip]);
+    await DoMockTrips([pastTrip, ongoingTrip]);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips />);
     expect(screen.getByText("completed")).toBeInTheDocument();
@@ -195,7 +195,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("formats dates correctly", async () => {
-    await doMockTrips([MOCK_TRIPS[0]]);
+    await DoMockTrips([MockTrips[0]]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips limit={1} />);
     // Assert US short month format regardless of specific dates present
@@ -205,10 +205,10 @@ describe.sequential("RecentTrips", () => {
 
   it("handles missing trip description gracefully", async () => {
     const tripWithoutDescription: Record<string, unknown> = {
-      ...MOCK_TRIPS[0],
+      ...MockTrips[0],
       description: undefined,
     };
-    await doMockTrips([tripWithoutDescription]);
+    await DoMockTrips([tripWithoutDescription]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips limit={1} />);
     // Assert that the known description text does not render when missing
