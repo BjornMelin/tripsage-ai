@@ -80,8 +80,8 @@ describe("TripCard", () => {
       const duration = screen.getByText("(11 days)");
       const row = duration.closest("div");
       expect(row).toBeTruthy();
-      expect(row!.textContent).toContain("Jun 15, 2024");
-      expect(row!.textContent).toContain("Jun 25, 2024");
+      expect(row?.textContent).toContain("Jun 15, 2024");
+      expect(row?.textContent).toContain("Jun 25, 2024");
     });
 
     it("should display destinations correctly", () => {

@@ -76,7 +76,7 @@ describe("typed-helpers", () => {
     const { data, error } = await insertSingle(client, "trips", payload);
     expect(error).toBeNull();
     expect(data).toBeTruthy();
-    expect(data!.name).toBe("Test Trip");
+    expect(data?.name).toBe("Test Trip");
   });
 
   it("updateSingle applies filters and returns the updated row", async () => {

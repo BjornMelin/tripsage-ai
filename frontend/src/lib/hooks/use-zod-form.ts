@@ -439,7 +439,7 @@ export function useAsyncZodValidation<T extends FieldValues>(
         });
       }
     }, debounceMs),
-    [schema, debounceMs]
+    []
   );
 
   return {

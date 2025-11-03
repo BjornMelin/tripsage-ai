@@ -99,7 +99,7 @@ export function useWebSocketChat({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
-  const [reconnectVersion, setReconnectVersion] = useState(0);
+  const [_reconnectVersion, setReconnectVersion] = useState(0);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -192,7 +192,7 @@ export function useWebSocketChat({
       }
       setStatus("disconnected");
     };
-  }, [autoConnect, supabase, user?.id, topicType, sessionId, reconnectVersion]);
+  }, [autoConnect, supabase, user?.id, topicType, sessionId]);
 
   const sendMessage = useCallback(
     async (content: string) => {
