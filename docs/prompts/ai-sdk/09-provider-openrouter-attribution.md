@@ -35,19 +35,20 @@
   - Notes: Implemented in `frontend/src/lib/providers/registry.ts` using `getProviderSettings()`; server-only
 - [x] Add configuration fields (settings) for referer/title and document defaults
   - Notes: Implemented in `frontend/src/lib/settings.ts` via env vars `OPENROUTER_REFERER`, `OPENROUTER_TITLE`
-- [ ] Vitest tests verifying header presence when OpenRouter resolves
-  - Notes: Can add targeted unit test for registry
-- [ ] Write ADR(s) and Spec(s) for attribution header policy
-  - Notes:
-- [ ] Verify Gateway compatibility and document any differences
-  - Notes:
+- [x] Vitest tests verifying header presence when OpenRouter resolves
+  - Notes: Added `frontend/src/lib/providers/__tests__/registry.test.ts` covering precedence and OpenRouter attribution headers; added case verifying no headers when env unset. Stream handler test asserts `provider` metadata.
+- [x] Write ADR(s) and Spec(s) for attribution header policy
+  - Notes: See ADR-0028 (`docs/adrs/adr-0028-provider-registry.md`) and Spec (`docs/specs/0012-provider-registry.md`) documenting attribution logic, server-only headers, and integration mapping.
+- [x] Verify Gateway compatibility and document any differences
+  - Notes: ADR updated (`docs/adrs/adr-0028-provider-registry.md`) with Gateway compatibility guidance: configure attribution in Gateway or continue direct OpenRouter with headers; headers remain server-only.
 
 ### Augmented checklist (provider registry + BYOK)
 
 - [x] Provider registry resolves provider+model per-user (Supabase SSR)
 - [x] Apply OpenRouter base URL and attribution headers only in server routes
 - [ ] Fallback to default provider when user’s BYOK missing; record provider id in `messageMetadata`
-- [ ] Tests: mock SSR and verify header injection and fallback behavior
+- [x] Tests: mock SSR and verify header injection and fallback behavior
+  - Notes: We do not fallback to a server-held key for end-user chat; registry throws when no BYOK is present (see SPEC/ADR). `provider` recorded in `messageMetadata`.
 
 ## Working instructions (mandatory)
 

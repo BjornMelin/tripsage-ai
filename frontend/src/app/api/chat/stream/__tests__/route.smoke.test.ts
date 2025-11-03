@@ -72,4 +72,38 @@ describe("/api/chat/stream route smoke", () => {
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toBe("60");
   });
+
+  it("returns 200 on success with mocked provider and stream", async () => {
+    stubRateLimitDisabled();
+    // Authenticated user
+    vi.doMock("@/lib/supabase/server", () => ({
+      createServerSupabase: vi.fn(async () => ({
+        auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u2" } } })) },
+      })),
+    }));
+    // Provider resolution mock
+    vi.doMock("@/lib/providers/registry", () => ({
+      resolveProvider: vi.fn(async () => ({
+        provider: "openai",
+        modelId: "gpt-4o-mini",
+        model: {} as any,
+      })),
+    }));
+    // Stream stub
+    vi.doMock("ai", () => ({
+      convertToModelMessages: (x: unknown) => x,
+      streamText: () => ({
+        toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
+      }),
+    }));
+    const mod = await import("../route");
+    const res = await mod.POST(
+      buildReq({
+        messages: [
+          { id: "1", role: "user", parts: [{ type: "text", text: "hi" }] },
+        ],
+      })
+    );
+    expect(res.status).toBe(200);
+  });
 });
