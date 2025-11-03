@@ -47,37 +47,37 @@ interface TripFilter {
   value: TripRow[keyof TripRow] | null;
 }
 
-const globalMockData: Record<TripTableName, TripRow[]> = {
+const GLOBAL_MOCK_DATA: Record<TripTableName, TripRow[]> = {
   trips: [],
 };
 
-const toTripRow = (input: TripInsert): TripRow => {
+const TO_TRIP_ROW = (input: TripInsert): TripRow => {
   const now = new Date().toISOString();
 
   return {
-    id: Number(Date.now() + randomInt(0, 1000)),
-    uuid_id: randomUUID(),
-    user_id: "test-user-id",
-    title: input.title ?? input.name ?? "Untitled Trip",
-    name: input.name ?? input.title ?? "Untitled Trip",
-    description: input.description ?? "",
-    start_date: input.startDate ?? null,
-    end_date: input.endDate ?? null,
-    destination: typeof input.destinations === "string" ? input.destinations : null,
     budget: input.budget ?? null,
-    currency: input.currency ?? "USD",
-    spent_amount: 0,
-    visibility: input.isPublic ? "public" : "private",
-    tags: [],
-    preferences: {},
-    status: "planning",
     budget_breakdown: null,
     created_at: now,
+    currency: input.currency ?? "USD",
+    description: input.description ?? "",
+    destination: typeof input.destinations === "string" ? input.destinations : null,
+    end_date: input.endDate ?? null,
+    id: Number(Date.now() + randomInt(0, 1000)),
+    name: input.name ?? input.title ?? "Untitled Trip",
+    preferences: {},
+    spent_amount: 0,
+    start_date: input.startDate ?? null,
+    status: "planning",
+    tags: [],
+    title: input.title ?? input.name ?? "Untitled Trip",
     updated_at: now,
+    user_id: "test-user-id",
+    uuid_id: randomUUID(),
+    visibility: input.isPublic ? "public" : "private",
   };
 };
 
-const applyFilters = (rows: TripRow[], filters: TripFilter[]): TripRow[] =>
+const APPLY_FILTERS = (rows: TripRow[], filters: TripFilter[]): TripRow[] =>
   filters.reduce<TripRow[]>(
     (acc, filter) => acc.filter((row) => row[filter.column] === filter.value),
     rows
@@ -98,8 +98,8 @@ class TripQueryBuilder implements PromiseLike<{ data: TripRow[]; error: null }> 
 
   insert(rows: TripInsert[]): this {
     this.operation = "insert";
-    this.insertedRows = rows.map(toTripRow);
-    globalMockData[this.table].push(...this.insertedRows);
+    this.insertedRows = rows.map(TO_TRIP_ROW);
+    GLOBAL_MOCK_DATA[this.table].push(...this.insertedRows);
     return this;
   }
 
@@ -132,9 +132,9 @@ class TripQueryBuilder implements PromiseLike<{ data: TripRow[]; error: null }> 
       return { data: this.insertedRows[0], error: null };
     }
 
-    const tableData = [...globalMockData[this.table]];
+    const tableData = [...GLOBAL_MOCK_DATA[this.table]];
     const filtered = this.filters.length
-      ? applyFilters(tableData, this.filters)
+      ? APPLY_FILTERS(tableData, this.filters)
       : tableData;
 
     if (this.operation === "update" && filtered[0] && this.updatePatch) {
@@ -145,14 +145,14 @@ class TripQueryBuilder implements PromiseLike<{ data: TripRow[]; error: null }> 
       };
       const index = tableData.findIndex((row) => row.id === filtered[0].id);
       if (index >= 0) {
-        globalMockData[this.table][index] = updated;
+        GLOBAL_MOCK_DATA[this.table][index] = updated;
       }
       return { data: updated, error: null };
     }
 
     if (this.operation === "delete" && filtered[0]) {
       const remaining = tableData.filter((row) => row.id !== filtered[0].id);
-      globalMockData[this.table] = remaining;
+      GLOBAL_MOCK_DATA[this.table] = remaining;
       return { data: filtered[0], error: null };
     }
 
@@ -175,8 +175,8 @@ class TripQueryBuilder implements PromiseLike<{ data: TripRow[]; error: null }> 
   ) {
     if (this.operation === "select") {
       const rows = this.filters.length
-        ? applyFilters(globalMockData[this.table], this.filters)
-        : globalMockData[this.table];
+        ? APPLY_FILTERS(GLOBAL_MOCK_DATA[this.table], this.filters)
+        : GLOBAL_MOCK_DATA[this.table];
       return Promise.resolve({ data: rows, error: null }).then(onFulfilled, onRejected);
     }
     return Promise.resolve({ data: [] as TripRow[], error: null }).then(
@@ -195,8 +195,8 @@ export const createTripStoreMockClient = (): Partial<SupabaseClient<unknown>> =>
     getSession: vi.fn(async () => ({
       data: {
         session: {
-          user: { id: "test-user-id" },
           access_token: "test-token",
+          user: { id: "test-user-id" },
         },
       },
       error: null,
@@ -204,31 +204,31 @@ export const createTripStoreMockClient = (): Partial<SupabaseClient<unknown>> =>
     onAuthStateChange: vi.fn(() => ({
       data: { subscription: { unsubscribe: vi.fn() } },
     })),
-    signUp: vi.fn(async () => ({ data: null, error: null })),
+    resetPasswordForEmail: vi.fn(async () => ({ data: null, error: null })),
     signInWithPassword: vi.fn(async () => ({ data: null, error: null })),
     signOut: vi.fn(async () => ({ error: null })),
-    resetPasswordForEmail: vi.fn(async () => ({ data: null, error: null })),
+    signUp: vi.fn(async () => ({ data: null, error: null })),
     updateUser: vi.fn(async () => ({ data: null, error: null })),
   } as unknown as SupabaseClient<unknown>["auth"],
+  channel: vi.fn(() => ({
+    on: vi.fn().mockReturnThis(),
+    subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })),
+  })) as unknown as SupabaseClient<unknown>["channel"],
   from: vi.fn((table: string) => {
     if (table !== "trips") {
       throw new Error(`Unsupported table ${table} in trip store mock`);
     }
     return new TripQueryBuilder("trips");
   }) as unknown as SupabaseClient<unknown>["from"],
-  channel: vi.fn(() => ({
-    on: vi.fn().mockReturnThis(),
-    subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })),
-  })) as unknown as SupabaseClient<unknown>["channel"],
   removeChannel: vi.fn(),
 });
 
 /** Reset the shared trip data between tests. */
 export const resetTripStoreMockData = () => {
-  globalMockData.trips = [];
+  GLOBAL_MOCK_DATA.trips = [];
 };
 
 /** Pre-populate the trip table with deterministic entries. */
 export const populateTripStoreMockData = (rows: TripRow[]): void => {
-  globalMockData.trips = [...rows];
+  GLOBAL_MOCK_DATA.trips = [...rows];
 };

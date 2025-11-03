@@ -39,11 +39,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
   if (!response.ok) {
     throw new ApiError({
-      message: data.message || response.statusText || "API Error",
-      status: response.status,
       code: data.code,
       details: data.details || data,
+      message: data.message || response.statusText || "API Error",
       path: response.url,
+      status: response.status,
     });
   }
 
@@ -116,43 +116,42 @@ export async function fetchApi<T = any>(
  * Convenience HTTP methods built on `fetchApi`.
  */
 export const api = {
+  /** Issue a DELETE request. */
+  delete: <T = any>(endpoint: string, options?: FetchOptions) =>
+    fetchApi<T>(endpoint, { ...options, method: "DELETE" }),
   /** Issue a GET request. */
   get: <T = any>(endpoint: string, options?: FetchOptions) =>
     fetchApi<T>(endpoint, { ...options, method: "GET" }),
+
+  /** Issue a PATCH request with an optional JSON body. */
+  patch: <T = any>(endpoint: string, data?: any, options?: FetchOptions) =>
+    fetchApi<T>(endpoint, {
+      ...options,
+      body: data ? JSON.stringify(data) : undefined,
+      method: "PATCH",
+    }),
 
   /** Issue a POST request with an optional JSON body. */
   post: <T = any>(endpoint: string, data?: any, options?: FetchOptions) =>
     fetchApi<T>(endpoint, {
       ...options,
-      method: "POST",
       body: data ? JSON.stringify(data) : undefined,
+      method: "POST",
     }),
 
   /** Issue a PUT request with an optional JSON body. */
   put: <T = any>(endpoint: string, data?: any, options?: FetchOptions) =>
     fetchApi<T>(endpoint, {
       ...options,
+      body: data ? JSON.stringify(data) : undefined,
       method: "PUT",
-      body: data ? JSON.stringify(data) : undefined,
     }),
-
-  /** Issue a PATCH request with an optional JSON body. */
-  patch: <T = any>(endpoint: string, data?: any, options?: FetchOptions) =>
-    fetchApi<T>(endpoint, {
-      ...options,
-      method: "PATCH",
-      body: data ? JSON.stringify(data) : undefined,
-    }),
-
-  /** Issue a DELETE request. */
-  delete: <T = any>(endpoint: string, options?: FetchOptions) =>
-    fetchApi<T>(endpoint, { ...options, method: "DELETE" }),
 
   /** Upload files using `FormData` without overriding content-type. */
   upload: <T = any>(endpoint: string, formData: FormData, options?: FetchOptions) =>
     fetchApi<T>(endpoint, {
       ...options,
-      method: "POST",
       body: formData,
+      method: "POST",
     }),
 };

@@ -9,16 +9,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "../route";
 
 // Mock global fetch
-const mockFetch = vi.fn();
-(globalThis as any).fetch = mockFetch;
+const MOCK_FETCH = vi.fn();
+(globalThis as any).fetch = MOCK_FETCH;
 
 describe("/api/attachments/files route (SSR, tagged)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFetch.mockResolvedValue(
+    MOCK_FETCH.mockResolvedValue(
       new Response(
         JSON.stringify({
-          files: [{ id: "1", filename: "test.pdf" }],
+          files: [{ filename: "test.pdf", id: "1" }],
           limit: 50,
           offset: 0,
           total: 1,
@@ -40,8 +40,8 @@ describe("/api/attachments/files route (SSR, tagged)", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(200);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const [calledUrl, options] = mockFetch.mock.calls[0] as [
+    expect(MOCK_FETCH).toHaveBeenCalledTimes(1);
+    const [calledUrl, options] = MOCK_FETCH.mock.calls[0] as [
       string,
       RequestInit & { next?: any },
     ];

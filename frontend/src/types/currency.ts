@@ -13,18 +13,18 @@ export const CurrencyCodeSchema = z
 
 export const CurrencySchema = z.object({
   code: CurrencyCodeSchema,
-  symbol: z.string().min(1),
-  name: z.string().min(1),
-  flag: z.string().optional(),
   decimals: z.number().int().min(0).max(10),
+  flag: z.string().optional(),
+  name: z.string().min(1),
+  symbol: z.string().min(1),
 });
 
 export const ExchangeRateSchema = z.object({
   baseCurrency: CurrencyCodeSchema,
-  targetCurrency: CurrencyCodeSchema,
   rate: z.number().positive(),
-  timestamp: z.string().datetime(),
   source: z.string().optional(),
+  targetCurrency: CurrencyCodeSchema,
+  timestamp: z.string().datetime(),
 });
 
 export const CurrencyPairSchema = z.object({
@@ -35,15 +35,15 @@ export const CurrencyPairSchema = z.object({
 export const ConversionResultSchema = z.object({
   fromAmount: z.number(),
   fromCurrency: CurrencyCodeSchema,
-  toAmount: z.number(),
-  toCurrency: CurrencyCodeSchema,
   rate: z.number().positive(),
   timestamp: z.string().datetime(),
+  toAmount: z.number(),
+  toCurrency: CurrencyCodeSchema,
 });
 
 export const CurrencyStateSchema = z.object({
-  currencies: z.record(CurrencyCodeSchema, CurrencySchema),
   baseCurrency: CurrencyCodeSchema,
+  currencies: z.record(CurrencyCodeSchema, CurrencySchema),
   exchangeRates: z.record(CurrencyCodeSchema, ExchangeRateSchema),
   favoriteCurrencies: z.array(CurrencyCodeSchema),
   lastUpdated: z.string().datetime().nullable(),

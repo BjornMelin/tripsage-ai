@@ -155,32 +155,53 @@ interface TripState {
 export const useTripStore = create<TripState>()(
   persist(
     (set, _get) => ({
-      trips: [],
-      currentTrip: null,
-      isLoading: false,
-      error: null,
-
-      setTrips: (trips) => set({ trips }),
-
-      setCurrentTrip: (trip) => set({ currentTrip: trip }),
-
-      loadTrips: async () => {
-        set({ isLoading: true, error: null });
+      addDestination: async (tripId, destination) => {
+        set({ error: null, isLoading: true });
 
         try {
-          const { listTrips } = await import("@/lib/repositories/trips-repo");
-          const frontendTrips = await listTrips();
-          set({ trips: frontendTrips, isLoading: false });
+          // This will be replaced with actual API call
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          const newDestination: Destination = {
+            ...destination,
+            id: destination.id || Date.now().toString(),
+          };
+
+          set((state) => {
+            const trips = state.trips.map((trip) => {
+              if (trip.id === tripId) {
+                return {
+                  ...trip,
+                  destinations: [...trip.destinations, newDestination],
+                  updatedAt: new Date().toISOString(),
+                };
+              }
+              return trip;
+            });
+
+            const currentTrip =
+              state.currentTrip?.id === tripId
+                ? {
+                    ...state.currentTrip,
+                    destinations: [...state.currentTrip.destinations, newDestination],
+                    updatedAt: new Date().toISOString(),
+                  }
+                : state.currentTrip;
+
+            return { currentTrip, isLoading: false, trips };
+          });
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : "Failed to load trips",
+            error: error instanceof Error ? error.message : "Failed to add destination",
             isLoading: false,
           });
         }
       },
 
+      clearError: () => set({ error: null }),
+
       createTrip: async (data) => {
-        set({ isLoading: true, error: null });
+        set({ error: null, isLoading: true });
 
         try {
           // Import hook will need to be used in component that calls this
@@ -190,55 +211,55 @@ export const useTripStore = create<TripState>()(
           );
 
           const tripData = {
-            title: data.title || data.name || "Untitled Trip",
-            description: data.description || "",
-            start_date: data.startDate || data.start_date,
-            end_date: data.endDate || data.end_date,
             budget: data.budget,
-            currency: data.currency || "USD",
-            spent_amount: 0,
-            visibility: data.visibility || (data.isPublic ? "public" : "private"),
-            tags: data.tags || [],
-            preferences: data.preferences || {},
-            status: data.status || "planning",
             // budget structure
             budget_breakdown: data.budget_breakdown
               ? {
-                  total: data.budget_breakdown.total,
-                  spent: data.budget_breakdown.spent,
                   breakdown: data.budget_breakdown.breakdown,
+                  spent: data.budget_breakdown.spent,
+                  total: data.budget_breakdown.total,
                 }
               : data.budget
                 ? {
-                    total: data.budget,
-                    spent: 0,
                     breakdown: {},
+                    spent: 0,
+                    total: data.budget,
                   }
                 : null,
+            currency: data.currency || "USD",
+            description: data.description || "",
+            end_date: data.endDate || data.end_date,
+            preferences: data.preferences || {},
+            spent_amount: 0,
+            start_date: data.startDate || data.start_date,
+            status: data.status || "planning",
+            tags: data.tags || [],
+            title: data.title || data.name || "Untitled Trip",
+            visibility: data.visibility || (data.isPublic ? "public" : "private"),
           };
 
           const created = await repoCreateTrip({
-            user_id: (data.user_id as string) || "",
-            name: tripData.title,
-            start_date: tripData.start_date || new Date().toISOString(),
-            end_date: tripData.end_date || new Date().toISOString(),
-            destination: (data as { destination?: string })?.destination || "",
             budget: tripData.budget || 0,
             currency: tripData.currency,
             description: tripData.description,
-            visibility: tripData.visibility,
-            travelers: 1,
-            search_metadata: {},
+            destination: (data as { destination?: string })?.destination || "",
+            end_date: tripData.end_date || new Date().toISOString(),
             flexibility: {},
+            name: tripData.title,
+            search_metadata: {},
+            start_date: tripData.start_date || new Date().toISOString(),
+            travelers: 1,
+            user_id: (data.user_id as string) || "",
+            visibility: tripData.visibility,
           } as any);
 
           // Convert to frontend format
           const frontendTrip: Trip = created as any;
 
           set((state) => ({
-            trips: [...state.trips, frontendTrip],
             currentTrip: frontendTrip,
             isLoading: false,
+            trips: [...state.trips, frontendTrip],
           }));
         } catch (error) {
           set({
@@ -247,9 +268,144 @@ export const useTripStore = create<TripState>()(
           });
         }
       },
+      currentTrip: null,
+
+      deleteTrip: async (id) => {
+        set({ error: null, isLoading: true });
+
+        try {
+          const { deleteTrip: repoDeleteTrip } = await import(
+            "@/lib/repositories/trips-repo"
+          );
+          await repoDeleteTrip(
+            Number.parseInt(id, 10),
+            _get().currentTrip?.user_id || undefined
+          );
+
+          set((state) => {
+            const trips = state.trips.filter((trip) => trip.id !== id);
+            const currentTrip = state.currentTrip?.id === id ? null : state.currentTrip;
+
+            return { currentTrip, isLoading: false, trips };
+          });
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : "Failed to delete trip",
+            isLoading: false,
+          });
+        }
+      },
+      error: null,
+      isLoading: false,
+
+      loadTrips: async () => {
+        set({ error: null, isLoading: true });
+
+        try {
+          const { listTrips } = await import("@/lib/repositories/trips-repo");
+          const frontendTrips = await listTrips();
+          set({ isLoading: false, trips: frontendTrips });
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : "Failed to load trips",
+            isLoading: false,
+          });
+        }
+      },
+
+      removeDestination: async (tripId, destinationId) => {
+        set({ error: null, isLoading: true });
+
+        try {
+          // This will be replaced with actual API call
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          set((state) => {
+            const trips = state.trips.map((trip) => {
+              if (trip.id === tripId) {
+                return {
+                  ...trip,
+                  destinations: trip.destinations.filter(
+                    (dest) => dest.id !== destinationId
+                  ),
+                  updatedAt: new Date().toISOString(),
+                };
+              }
+              return trip;
+            });
+
+            const currentTrip =
+              state.currentTrip?.id === tripId
+                ? {
+                    ...state.currentTrip,
+                    destinations: state.currentTrip.destinations.filter(
+                      (dest) => dest.id !== destinationId
+                    ),
+                    updatedAt: new Date().toISOString(),
+                  }
+                : state.currentTrip;
+
+            return { currentTrip, isLoading: false, trips };
+          });
+        } catch (error) {
+          set({
+            error:
+              error instanceof Error ? error.message : "Failed to remove destination",
+            isLoading: false,
+          });
+        }
+      },
+
+      setCurrentTrip: (trip) => set({ currentTrip: trip }),
+
+      setTrips: (trips) => set({ trips }),
+      trips: [],
+
+      updateDestination: async (tripId, destinationId, data) => {
+        set({ error: null, isLoading: true });
+
+        try {
+          // This will be replaced with actual API call
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          set((state) => {
+            const trips = state.trips.map((trip) => {
+              if (trip.id === tripId) {
+                return {
+                  ...trip,
+                  destinations: trip.destinations.map((dest) =>
+                    dest.id === destinationId ? { ...dest, ...data } : dest
+                  ),
+                  updatedAt: new Date().toISOString(),
+                };
+              }
+              return trip;
+            });
+
+            const currentTrip =
+              state.currentTrip?.id === tripId
+                ? {
+                    ...state.currentTrip,
+                    destinations: state.currentTrip.destinations.map((dest) =>
+                      dest.id === destinationId ? { ...dest, ...data } : dest
+                    ),
+                    updatedAt: new Date().toISOString(),
+                  }
+                : state.currentTrip;
+
+            return { currentTrip, isLoading: false, trips };
+          });
+        } catch (error) {
+          set({
+            error:
+              error instanceof Error ? error.message : "Failed to update destination",
+            isLoading: false,
+          });
+        }
+      },
 
       updateTrip: async (id, data) => {
-        set({ isLoading: true, error: null });
+        set({ error: null, isLoading: true });
 
         try {
           const { updateTrip: repoUpdateTrip } = await import(
@@ -287,7 +443,7 @@ export const useTripStore = create<TripState>()(
                 ? { ...state.currentTrip, ...frontendTrip }
                 : state.currentTrip;
 
-            return { trips, currentTrip, isLoading: false };
+            return { currentTrip, isLoading: false, trips };
           });
         } catch (error) {
           set({
@@ -296,169 +452,12 @@ export const useTripStore = create<TripState>()(
           });
         }
       },
-
-      deleteTrip: async (id) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          const { deleteTrip: repoDeleteTrip } = await import(
-            "@/lib/repositories/trips-repo"
-          );
-          await repoDeleteTrip(
-            Number.parseInt(id, 10),
-            _get().currentTrip?.user_id || undefined
-          );
-
-          set((state) => {
-            const trips = state.trips.filter((trip) => trip.id !== id);
-            const currentTrip = state.currentTrip?.id === id ? null : state.currentTrip;
-
-            return { trips, currentTrip, isLoading: false };
-          });
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : "Failed to delete trip",
-            isLoading: false,
-          });
-        }
-      },
-
-      addDestination: async (tripId, destination) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // This will be replaced with actual API call
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-
-          const newDestination: Destination = {
-            ...destination,
-            id: destination.id || Date.now().toString(),
-          };
-
-          set((state) => {
-            const trips = state.trips.map((trip) => {
-              if (trip.id === tripId) {
-                return {
-                  ...trip,
-                  destinations: [...trip.destinations, newDestination],
-                  updatedAt: new Date().toISOString(),
-                };
-              }
-              return trip;
-            });
-
-            const currentTrip =
-              state.currentTrip?.id === tripId
-                ? {
-                    ...state.currentTrip,
-                    destinations: [...state.currentTrip.destinations, newDestination],
-                    updatedAt: new Date().toISOString(),
-                  }
-                : state.currentTrip;
-
-            return { trips, currentTrip, isLoading: false };
-          });
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : "Failed to add destination",
-            isLoading: false,
-          });
-        }
-      },
-
-      updateDestination: async (tripId, destinationId, data) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // This will be replaced with actual API call
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-
-          set((state) => {
-            const trips = state.trips.map((trip) => {
-              if (trip.id === tripId) {
-                return {
-                  ...trip,
-                  destinations: trip.destinations.map((dest) =>
-                    dest.id === destinationId ? { ...dest, ...data } : dest
-                  ),
-                  updatedAt: new Date().toISOString(),
-                };
-              }
-              return trip;
-            });
-
-            const currentTrip =
-              state.currentTrip?.id === tripId
-                ? {
-                    ...state.currentTrip,
-                    destinations: state.currentTrip.destinations.map((dest) =>
-                      dest.id === destinationId ? { ...dest, ...data } : dest
-                    ),
-                    updatedAt: new Date().toISOString(),
-                  }
-                : state.currentTrip;
-
-            return { trips, currentTrip, isLoading: false };
-          });
-        } catch (error) {
-          set({
-            error:
-              error instanceof Error ? error.message : "Failed to update destination",
-            isLoading: false,
-          });
-        }
-      },
-
-      removeDestination: async (tripId, destinationId) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // This will be replaced with actual API call
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-
-          set((state) => {
-            const trips = state.trips.map((trip) => {
-              if (trip.id === tripId) {
-                return {
-                  ...trip,
-                  destinations: trip.destinations.filter(
-                    (dest) => dest.id !== destinationId
-                  ),
-                  updatedAt: new Date().toISOString(),
-                };
-              }
-              return trip;
-            });
-
-            const currentTrip =
-              state.currentTrip?.id === tripId
-                ? {
-                    ...state.currentTrip,
-                    destinations: state.currentTrip.destinations.filter(
-                      (dest) => dest.id !== destinationId
-                    ),
-                    updatedAt: new Date().toISOString(),
-                  }
-                : state.currentTrip;
-
-            return { trips, currentTrip, isLoading: false };
-          });
-        } catch (error) {
-          set({
-            error:
-              error instanceof Error ? error.message : "Failed to remove destination",
-            isLoading: false,
-          });
-        }
-      },
-
-      clearError: () => set({ error: null }),
     }),
     {
       name: "trip-storage",
       partialize: (state) => ({
-        trips: state.trips,
         currentTrip: state.currentTrip,
+        trips: state.trips,
       }),
     }
   )

@@ -20,10 +20,10 @@ export interface UseSearchResult {
  */
 export function useSearch(): UseSearchResult {
   return {
-    search: async () => {},
+    clearSearch: () => {},
+    error: null,
     isSearching: false,
     results: [],
-    error: null,
-    clearSearch: () => {},
+    search: async () => {},
   };
 }

@@ -10,19 +10,19 @@ import { render } from "@/test/test-utils";
 import type { FilterOption } from "@/types/search";
 
 // Mock console.warn to capture React key warnings
-const originalWarn = console.warn;
+const ORIGINAL_WARN = console.warn;
 let warningMessages: string[] = [];
 
 beforeEach(() => {
   warningMessages = [];
   console.warn = vi.fn((message: string) => {
     warningMessages.push(message);
-    originalWarn(message);
+    ORIGINAL_WARN(message);
   });
 });
 
 afterEach(() => {
-  console.warn = originalWarn;
+  console.warn = ORIGINAL_WARN;
 });
 
 describe("React Key Props", () => {
@@ -57,13 +57,13 @@ describe("React Key Props", () => {
       {
         id: "duration",
         label: "Trip Duration",
+        options: [
+          { count: 15, label: "1-3 days", value: "short" },
+          { count: 23, label: "4-7 days", value: "medium" },
+          { count: 8, label: "8+ days", value: "long" },
+        ],
         type: "checkbox",
         value: "duration",
-        options: [
-          { label: "1-3 days", value: "short", count: 15 },
-          { label: "4-7 days", value: "medium", count: 23 },
-          { label: "8+ days", value: "long", count: 8 },
-        ],
       },
     ];
 

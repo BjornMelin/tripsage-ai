@@ -43,9 +43,9 @@ export default function AIDemoPage() {
     setError(null);
     try {
       const res = await fetch("/api/ai/stream", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
         body: JSON.stringify({ prompt }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
       });
 
       if (!res.ok) {

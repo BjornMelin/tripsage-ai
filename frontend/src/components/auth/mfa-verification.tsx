@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-interface MFAVerificationProps {
+interface MfaVerificationProps {
   userEmail: string;
   onVerified: () => void;
   onCancel: () => void;
@@ -26,7 +26,7 @@ export function MFAVerification({
   onVerified,
   onCancel,
   onUseBackupCode,
-}: MFAVerificationProps) {
+}: MfaVerificationProps) {
   const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

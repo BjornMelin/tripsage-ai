@@ -46,9 +46,9 @@ export function useAuthenticatedApi() {
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData.session?.access_token) {
           throw new ApiError({
+            code: "UNAUTHORIZED",
             message: "User not authenticated",
             status: 401,
-            code: "UNAUTHORIZED",
           });
         }
       }
@@ -64,9 +64,9 @@ export function useAuthenticatedApi() {
         } = await supabase.auth.getSession();
         if (sessionError) {
           throw new ApiError({
+            code: "SESSION_ERROR",
             message: `Session error: ${sessionError.message}`,
             status: 401,
-            code: "SESSION_ERROR",
           });
         }
 
@@ -78,9 +78,9 @@ export function useAuthenticatedApi() {
           if (refreshError || !refreshed?.access_token) {
             await supabase.auth.signOut();
             throw new ApiError({
+              code: "SESSION_EXPIRED",
               message: "Authentication session expired",
               status: 401,
-              code: "SESSION_EXPIRED",
             });
           }
           session = refreshed;
@@ -115,15 +115,15 @@ export function useAuthenticatedApi() {
         }
         if (error instanceof DOMException && error.name === "AbortError") {
           throw new ApiError({
+            code: "REQUEST_CANCELLED",
             message: "Request cancelled",
             status: 499,
-            code: "REQUEST_CANCELLED",
           });
         }
         throw new ApiError({
+          code: "NETWORK_ERROR",
           message: error instanceof Error ? error.message : "Request failed",
           status: 0,
-          code: "NETWORK_ERROR",
         });
       }
     },
@@ -132,8 +132,20 @@ export function useAuthenticatedApi() {
 
   const authenticatedApi = useMemo(
     () => ({
+      delete: <T = any>(endpoint: string, options?: Omit<FetchOptions, "method">) =>
+        makeAuthenticatedRequest<T>(endpoint, { ...options, method: "DELETE" }),
       get: <T = any>(endpoint: string, options?: Omit<FetchOptions, "method">) =>
         makeAuthenticatedRequest<T>(endpoint, { ...options, method: "GET" }),
+      patch: <T = any>(
+        endpoint: string,
+        data?: any,
+        options?: Omit<FetchOptions, "method" | "body">
+      ) =>
+        makeAuthenticatedRequest<T>(endpoint, {
+          ...options,
+          body: data ? JSON.stringify(data) : undefined,
+          method: "PATCH",
+        }),
       post: <T = any>(
         endpoint: string,
         data?: any,
@@ -141,8 +153,8 @@ export function useAuthenticatedApi() {
       ) =>
         makeAuthenticatedRequest<T>(endpoint, {
           ...options,
-          method: "POST",
           body: data ? JSON.stringify(data) : undefined,
+          method: "POST",
         }),
       put: <T = any>(
         endpoint: string,
@@ -151,21 +163,9 @@ export function useAuthenticatedApi() {
       ) =>
         makeAuthenticatedRequest<T>(endpoint, {
           ...options,
+          body: data ? JSON.stringify(data) : undefined,
           method: "PUT",
-          body: data ? JSON.stringify(data) : undefined,
         }),
-      patch: <T = any>(
-        endpoint: string,
-        data?: any,
-        options?: Omit<FetchOptions, "method" | "body">
-      ) =>
-        makeAuthenticatedRequest<T>(endpoint, {
-          ...options,
-          method: "PATCH",
-          body: data ? JSON.stringify(data) : undefined,
-        }),
-      delete: <T = any>(endpoint: string, options?: Omit<FetchOptions, "method">) =>
-        makeAuthenticatedRequest<T>(endpoint, { ...options, method: "DELETE" }),
       upload: <T = any>(
         endpoint: string,
         formData: FormData,
@@ -173,8 +173,8 @@ export function useAuthenticatedApi() {
       ) =>
         makeAuthenticatedRequest<T>(endpoint, {
           ...options,
-          method: "POST",
           body: formData,
+          method: "POST",
         }),
     }),
     [makeAuthenticatedRequest]
@@ -191,10 +191,10 @@ export function useAuthenticatedApi() {
   }, []);
 
   return {
-    makeAuthenticatedRequest,
     authenticatedApi,
     cancelRequests,
     isAuthenticated,
+    makeAuthenticatedRequest,
   };
 }
 

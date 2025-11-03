@@ -58,135 +58,135 @@ interface NetworkMetrics {
 
 // Mock Recharts components to avoid canvas rendering issues in tests
 vi.mock("recharts", () => ({
-  LineChart: ({ children }: any) => <div data-testid="line-chart">{children}</div>,
-  Line: () => <div data-testid="line" />,
-  XAxis: () => <div data-testid="x-axis" />,
-  YAxis: () => <div data-testid="y-axis" />,
+  Area: () => <div data-testid="area" />,
+  AreaChart: ({ children }: any) => <div data-testid="area-chart">{children}</div>,
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
-  Tooltip: () => <div data-testid="tooltip" />,
+  Line: () => <div data-testid="line" />,
+  LineChart: ({ children }: any) => <div data-testid="line-chart">{children}</div>,
   ResponsiveContainer: ({ children }: any) => (
     <div data-testid="responsive-container">{children}</div>
   ),
-  AreaChart: ({ children }: any) => <div data-testid="area-chart">{children}</div>,
-  Area: () => <div data-testid="area" />,
+  Tooltip: () => <div data-testid="tooltip" />,
+  XAxis: () => <div data-testid="x-axis" />,
+  YAxis: () => <div data-testid="y-axis" />,
 }));
 
 // Mock framer-motion to avoid animation issues in tests
 vi.mock("framer-motion", () => ({
+  AnimatePresence: ({ children }: any) => <>{children}</>,
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
   },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
 
 describe("Agent Workflow Integration Tests", () => {
   const mockAgentMetrics: AgentMetrics[] = [
     {
+      averageResponseTime: 125,
+      cpuUsage: 68,
+      errorRate: 0.8,
+      healthScore: 94,
       id: "agent-1",
+      lastUpdate: new Date(),
+      memoryUsage: 45,
       name: "Research Agent",
       status: "active",
-      healthScore: 94,
-      cpuUsage: 68,
-      memoryUsage: 45,
-      tokensProcessed: 15420,
-      averageResponseTime: 125,
-      errorRate: 0.8,
-      uptime: 98.5,
       tasksQueued: 3,
-      lastUpdate: new Date(),
+      tokensProcessed: 15420,
+      uptime: 98.5,
     },
     {
+      averageResponseTime: 156,
+      cpuUsage: 78,
+      errorRate: 1.2,
+      healthScore: 87,
       id: "agent-2",
+      lastUpdate: new Date(),
+      memoryUsage: 62,
       name: "Planning Agent",
       status: "active",
-      healthScore: 87,
-      cpuUsage: 78,
-      memoryUsage: 62,
-      tokensProcessed: 12890,
-      averageResponseTime: 156,
-      errorRate: 1.2,
-      uptime: 97.2,
       tasksQueued: 5,
-      lastUpdate: new Date(),
+      tokensProcessed: 12890,
+      uptime: 97.2,
     },
     {
+      averageResponseTime: 98,
+      cpuUsage: 25,
+      errorRate: 0.5,
+      healthScore: 92,
       id: "agent-3",
+      lastUpdate: new Date(),
+      memoryUsage: 38,
       name: "Booking Agent",
       status: "idle",
-      healthScore: 92,
-      cpuUsage: 25,
-      memoryUsage: 38,
-      tokensProcessed: 8750,
-      averageResponseTime: 98,
-      errorRate: 0.5,
-      uptime: 99.1,
       tasksQueued: 1,
-      lastUpdate: new Date(),
+      tokensProcessed: 8750,
+      uptime: 99.1,
     },
   ];
 
   const mockCollaborationAgents: CollaborationAgent[] = [
     {
-      id: "agent-1",
-      name: "Research Agent",
-      status: "active",
-      specialization: "Data Analysis",
       currentTask: "Processing request",
-      performance: { accuracy: 85, speed: 78, efficiency: 89 },
-      workload: 68,
+      id: "agent-1",
       lastActive: new Date(),
+      name: "Research Agent",
+      performance: { accuracy: 85, efficiency: 89, speed: 78 },
+      specialization: "Data Analysis",
+      status: "active",
+      workload: 68,
     },
     {
-      id: "agent-2",
-      name: "Planning Agent",
-      status: "active",
-      specialization: "Trip Planning",
       currentTask: "Processing request",
-      performance: { accuracy: 78, speed: 74, efficiency: 83 },
-      workload: 78,
+      id: "agent-2",
       lastActive: new Date(),
+      name: "Planning Agent",
+      performance: { accuracy: 78, efficiency: 83, speed: 74 },
+      specialization: "Trip Planning",
+      status: "active",
+      workload: 78,
     },
   ];
 
   const mockHandoffs = [
     {
-      id: "handoff-1",
-      fromAgent: "agent-1",
-      toAgent: "agent-2",
-      task: "Create itinerary from research data",
-      reason: "Research completed, planning phase needed",
-      timestamp: new Date(),
-      status: "pending" as const,
       confidence: 0.89,
+      fromAgent: "agent-1",
+      id: "handoff-1",
+      reason: "Research completed, planning phase needed",
+      status: "pending" as const,
+      task: "Create itinerary from research data",
+      timestamp: new Date(),
+      toAgent: "agent-2",
     },
     {
-      id: "handoff-2",
-      fromAgent: "agent-2",
-      toAgent: "agent-1",
-      task: "Review completed bookings",
-      reason: "Quality assurance check",
-      timestamp: new Date(Date.now() - 180000),
-      status: "completed" as const,
       confidence: 0.92,
+      fromAgent: "agent-2",
+      id: "handoff-2",
+      reason: "Quality assurance check",
+      status: "completed" as const,
+      task: "Review completed bookings",
+      timestamp: new Date(Date.now() - 180000),
+      toAgent: "agent-1",
     },
   ];
 
   const mockNetworkMetrics: NetworkMetrics = {
-    latency: 87,
     bandwidth: 15600000,
-    packetLoss: 0.2,
     jitter: 5,
+    latency: 87,
+    packetLoss: 0.2,
     quality: "excellent",
     signalStrength: 92,
   };
 
   const mockConnectionAnalytics: ConnectionAnalytics = {
+    avgResponseTime: 125,
     connectionTime: 45000,
+    failedMessages: 3,
     reconnectCount: 0,
     totalMessages: 1247,
-    failedMessages: 3,
-    avgResponseTime: 125,
     uptime: 3600,
   };
 
@@ -262,7 +262,7 @@ describe("Agent Workflow Integration Tests", () => {
 
       // Simulate real-time update
       const updatedAgents = mockAgentMetrics.map((agent) =>
-        agent.id === "agent-1" ? { ...agent, healthScore: 96, cpuUsage: 72 } : agent
+        agent.id === "agent-1" ? { ...agent, cpuUsage: 72, healthScore: 96 } : agent
       );
 
       rerender(
@@ -429,8 +429,8 @@ describe("Agent Workflow Integration Tests", () => {
       const poorMetrics: NetworkMetrics = {
         ...mockNetworkMetrics,
         latency: 250,
-        quality: "poor",
         packetLoss: 5.0,
+        quality: "poor",
         signalStrength: 45,
       };
 
@@ -483,8 +483,8 @@ describe("Agent Workflow Integration Tests", () => {
       const poorMetrics: NetworkMetrics = {
         ...mockNetworkMetrics,
         latency: 250,
-        quality: "poor",
         packetLoss: 5.0,
+        quality: "poor",
         signalStrength: 45,
       };
 
@@ -571,8 +571,8 @@ describe("Agent Workflow Integration Tests", () => {
       // Simulate real-time updates
       const updatedAgents = mockAgentMetrics.map((agent) => ({
         ...agent,
-        lastUpdate: new Date(),
         healthScore: agent.healthScore + 1,
+        lastUpdate: new Date(),
       }));
 
       const updatedMetrics: NetworkMetrics = {

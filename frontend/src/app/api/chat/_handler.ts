@@ -106,8 +106,8 @@ export async function handleChatNonStream(
   const user = auth?.user ?? null;
   if (!user) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
-      status: 401,
       headers: { "content-type": "application/json" },
+      status: 401,
     });
   }
 
@@ -119,8 +119,8 @@ export async function handleChatNonStream(
     const { success } = await deps.limit(identifier);
     if (!success) {
       return new Response(JSON.stringify({ error: "rate_limited" }), {
+        headers: { "content-type": "application/json", "Retry-After": "60" },
         status: 429,
-        headers: { "Retry-After": "60", "content-type": "application/json" },
       });
     }
   }
@@ -130,7 +130,7 @@ export async function handleChatNonStream(
   if (!att.valid) {
     return new Response(
       JSON.stringify({ error: "invalid_attachment", reason: att.reason }),
-      { status: 400, headers: { "content-type": "application/json" } }
+      { headers: { "content-type": "application/json" }, status: 400 }
     );
   }
 
@@ -172,37 +172,37 @@ export async function handleChatNonStream(
         error: "No output tokens available",
         reasons: ["maxTokens_clamped_model_limit"],
       }),
-      { status: 400, headers: { "content-type": "application/json" } }
+      { headers: { "content-type": "application/json" }, status: 400 }
     );
   }
   const clampInput: ClampMsg[] = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: textParts.join(" ") },
+    { content: systemPrompt, role: "system" },
+    { content: textParts.join(" "), role: "user" },
   ];
   const { maxTokens, reasons } = clampMaxTokens(clampInput, desired, provider.modelId);
 
   const generate = deps.generate ?? defaultGenerateText;
   const result = await generate({
-    model: provider.model,
-    system: systemPrompt,
     maxOutputTokens: maxTokens,
     messages: convertToModelMessages(messages),
+    model: provider.model,
+    system: systemPrompt,
   });
 
   const usage = result.usage
     ? {
-        promptTokens: (result.usage as any).promptTokens,
         completionTokens: (result.usage as any).completionTokens,
+        promptTokens: (result.usage as any).promptTokens,
         totalTokens: result.usage.totalTokens,
       }
     : undefined;
 
   const body = {
     content: result.text ?? "",
+    durationMs: (deps.clock?.now?.() ?? Date.now()) - startedAt,
     model: provider.modelId,
     reasons,
     usage,
-    durationMs: (deps.clock?.now?.() ?? Date.now()) - startedAt,
   } as const;
 
   // Best-effort persistence for assistant message metadata
@@ -210,10 +210,10 @@ export async function handleChatNonStream(
   if (sessionId) {
     try {
       await (deps.supabase as unknown as any).from("chat_messages").insert({
-        session_id: sessionId,
-        role: "assistant",
         content: result.text ?? "",
         metadata: body as any,
+        role: "assistant",
+        session_id: sessionId,
       } as ChatMessageInsert);
     } catch {
       // ignore persistence errors
@@ -221,13 +221,13 @@ export async function handleChatNonStream(
   }
 
   deps.logger?.info?.("chat_non_stream:finish", {
-    userId: user.id,
-    model: provider.modelId,
     durationMs: body.durationMs,
+    model: provider.modelId,
+    userId: user.id,
   });
 
   return new Response(JSON.stringify(body), {
-    status: 200,
     headers: { "content-type": "application/json" },
+    status: 200,
   });
 }

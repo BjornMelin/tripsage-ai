@@ -19,25 +19,25 @@ vi.mock("@/lib/supabase/client", () => {
   };
 });
 
-const initialMessages = [
-  { id: "u-1", role: "user", parts: [{ type: "text", text: "hello" }] },
-  { id: "a-1", role: "assistant", parts: [{ type: "text", text: "(streaming…)" }] },
+const INITIAL_MESSAGES = [
+  { id: "u-1", parts: [{ text: "hello", type: "text" }], role: "user" },
+  { id: "a-1", parts: [{ text: "(streaming…)", type: "text" }], role: "assistant" },
 ] as any[];
 
-const useChatSpy: any = vi.fn((_opts: any) => ({
-  messages: initialMessages,
-  sendMessage: vi.fn(),
-  status: "streaming",
-  stop: vi.fn(),
-  regenerate: vi.fn(),
+const USE_CHAT_SPY: any = vi.fn((_opts: any) => ({
   clearError: vi.fn(),
   error: null,
   experimental_resume: vi.fn(async () => Promise.resolve()),
+  messages: INITIAL_MESSAGES,
+  regenerate: vi.fn(),
+  sendMessage: vi.fn(),
+  status: "streaming",
+  stop: vi.fn(),
 }));
 
 vi.mock("@ai-sdk/react", async () => {
   return {
-    useChat: (opts: any) => useChatSpy(opts),
+    useChat: (opts: any) => USE_CHAT_SPY(opts),
   } as any;
 });
 
@@ -48,11 +48,11 @@ describe("mid-stream resume continuity", () => {
     render(<Page />);
 
     // Invoke the mocked resume to simulate reattach
-    const ret = useChatSpy.mock.results[0].value as any;
+    const ret = USE_CHAT_SPY.mock.results[0].value as any;
     await ret.experimental_resume();
 
     // Ensure the same number of messages are rendered
     const rendered = await screen.findAllByTestId(/msg-/);
-    expect(rendered.length).toBe(initialMessages.length);
+    expect(rendered.length).toBe(INITIAL_MESSAGES.length);
   });
 });

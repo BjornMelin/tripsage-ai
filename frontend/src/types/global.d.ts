@@ -14,7 +14,7 @@ declare global {
   ) => RenderResult;
 
   // Extend NodeJS global if needed
-  namespace NodeJS {
+  namespace NodeJs {
     interface Global {
       renderWithProviders: typeof renderWithProviders;
     }

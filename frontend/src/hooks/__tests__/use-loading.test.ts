@@ -151,7 +151,7 @@ describe("useLoading", () => {
 
   it("handles timeout", () => {
     const onTimeout = vi.fn();
-    const { result } = renderHook(() => useLoading({ timeout: 5000, onTimeout }));
+    const { result } = renderHook(() => useLoading({ onTimeout, timeout: 5000 }));
 
     act(() => {
       result.current.startLoading();
@@ -169,7 +169,7 @@ describe("useLoading", () => {
 
   it("clears timeout when stopped manually", () => {
     const onTimeout = vi.fn();
-    const { result } = renderHook(() => useLoading({ timeout: 5000, onTimeout }));
+    const { result } = renderHook(() => useLoading({ onTimeout, timeout: 5000 }));
 
     act(() => {
       result.current.startLoading();
@@ -210,8 +210,8 @@ describe("useAsyncLoading", () => {
     expect(result.current.error).toBeUndefined();
 
     await act(async () => {
-      const result_value = await promise;
-      expect(result_value).toBe("success");
+      const resultValue = await promise;
+      expect(resultValue).toBe("success");
     });
 
     expect(result.current.data).toBe("success");

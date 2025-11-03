@@ -20,10 +20,10 @@ vi.mock("@upstash/redis", () => ({
 vi.mock("@upstash/ratelimit", () => {
   const mockInstance = {
     limit: vi.fn().mockResolvedValue({
-      success: true,
       limit: 10,
       remaining: 9,
       reset: Date.now() + 60000,
+      success: true,
     }),
   };
 
@@ -66,17 +66,17 @@ describe("/api/keys/validate route", () => {
       // Import after setting up mocks (do not reset after mocking)
       const { POST } = await import("../route");
       const req = {
-        json: async () => ({ service: "openai", api_key: "sk-test" }),
         headers: new Headers(),
+        json: async () => ({ api_key: "sk-test", service: "openai" }),
       } as unknown as NextRequest;
 
       try {
         const res = await POST(req);
         const body = await res.json();
         // Assert both status and body together to surface diff when failing
-        expect({ status: res.status, body }).toEqual({
-          status: 200,
+        expect({ body, status: res.status }).toEqual({
           body: { is_valid: true },
+          status: 200,
         });
       } catch (error) {
         console.error("Test threw an error:", error);

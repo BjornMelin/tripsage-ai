@@ -57,9 +57,9 @@ interface DealsStore extends DealState {
 }
 
 // Helper functions
-const generateId = () =>
+const GENERATE_ID = () =>
   Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const getCurrentTimestamp = () => new Date().toISOString();
+const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
 
 // Utility for validating deal objects
 // const validateDeal = (deal: unknown): deal is Deal => {
@@ -72,43 +72,46 @@ const getCurrentTimestamp = () => new Date().toISOString();
 // }; // Future validation
 
 // Calculate percentage discount
-const calculateDiscountPercentage = (originalPrice: number, price: number): number => {
+const CALCULATE_DISCOUNT_PERCENTAGE = (
+  originalPrice: number,
+  price: number
+): number => {
   if (originalPrice <= 0 || price <= 0 || originalPrice <= price) return 0;
   return Math.round(((originalPrice - price) / originalPrice) * 100);
 };
 
 // Calculate deals statistics
-const calculateDealsStats = (deals: Deal[]): DealStats => {
+const CALCULATE_DEALS_STATS = (deals: Deal[]): DealStats => {
   // Skip if no deals
   if (deals.length === 0) {
     return {
-      totalCount: 0,
-      byType: {
-        flight: 0,
-        activity: 0,
-        accommodation: 0,
-        transportation: 0,
-        package: 0,
-        error_fare: 0,
-        flash_sale: 0,
-        promotion: 0,
-      },
-      byDestination: {},
       avgDiscount: 0,
       avgSavings: 0,
+      byDestination: {},
+      byType: {
+        accommodation: 0,
+        activity: 0,
+        error_fare: 0,
+        flash_sale: 0,
+        flight: 0,
+        package: 0,
+        promotion: 0,
+        transportation: 0,
+      },
+      totalCount: 0,
     };
   }
 
   // Count by type
   const byType: Record<DealType, number> = {
-    flight: 0,
-    activity: 0,
     accommodation: 0,
-    transportation: 0,
-    package: 0,
+    activity: 0,
     error_fare: 0,
     flash_sale: 0,
+    flight: 0,
+    package: 0,
     promotion: 0,
+    transportation: 0,
   };
 
   // Count by destination
@@ -137,7 +140,7 @@ const calculateDealsStats = (deals: Deal[]): DealStats => {
       totalDiscountPercentage += deal.discountPercentage;
       dealsWithDiscount++;
     } else if (deal.originalPrice && deal.originalPrice > deal.price) {
-      const discount = calculateDiscountPercentage(deal.originalPrice, deal.price);
+      const discount = CALCULATE_DISCOUNT_PERCENTAGE(deal.originalPrice, deal.price);
       totalDiscountPercentage += discount;
       dealsWithDiscount++;
     }
@@ -149,16 +152,19 @@ const calculateDealsStats = (deals: Deal[]): DealStats => {
     dealsWithDiscount > 0 ? totalDiscountPercentage / dealsWithDiscount : 0;
 
   return {
-    totalCount: deals.length,
-    byType,
-    byDestination,
     avgDiscount,
     avgSavings,
+    byDestination,
+    byType,
+    totalCount: deals.length,
   };
 };
 
 // Match deal against filters
-const matchDealWithFilters = (deal: Deal, filters?: DealState["filters"]): boolean => {
+const MATCH_DEAL_WITH_FILTERS = (
+  deal: Deal,
+  filters?: DealState["filters"]
+): boolean => {
   if (!filters) return true;
 
   // Match deal type
@@ -192,7 +198,7 @@ const matchDealWithFilters = (deal: Deal, filters?: DealState["filters"]): boole
     const discount =
       deal.discountPercentage ||
       (deal.originalPrice
-        ? calculateDiscountPercentage(deal.originalPrice, deal.price)
+        ? CALCULATE_DISCOUNT_PERCENTAGE(deal.originalPrice, deal.price)
         : 0);
 
     if (discount < filters.minDiscount) {
@@ -226,22 +232,26 @@ const matchDealWithFilters = (deal: Deal, filters?: DealState["filters"]): boole
 export const useDealsStore = create<DealsStore>()(
   persist(
     (set, get) => ({
-      // Initial state
-      deals: {},
-      featuredDeals: [],
-      alerts: [],
-      savedDeals: [],
-      recentlyViewedDeals: [],
-      filters: undefined,
-      lastUpdated: null,
-      isInitialized: false,
+      addAlert: (alert) => {
+        const result = DealAlertSchema.safeParse(alert);
+        if (result.success) {
+          set((state) => {
+            const newAlert = {
+              ...result.data,
+              createdAt: result.data.createdAt || GET_CURRENT_TIMESTAMP(),
+              id: result.data.id || GENERATE_ID(),
+              updatedAt: GET_CURRENT_TIMESTAMP(),
+            };
 
-      // Deals management
-      setDeals: (deals) =>
-        set(() => ({
-          deals,
-          lastUpdated: getCurrentTimestamp(),
-        })),
+            return {
+              alerts: [...state.alerts, newAlert],
+            };
+          });
+          return true;
+        }
+        console.error("Invalid alert data:", result.error);
+        return false;
+      },
 
       addDeal: (deal) => {
         const result = DealSchema.safeParse(deal);
@@ -250,8 +260,8 @@ export const useDealsStore = create<DealsStore>()(
             // Ensure deal has required timestamps
             const newDeal = {
               ...result.data,
-              createdAt: result.data.createdAt || getCurrentTimestamp(),
-              updatedAt: getCurrentTimestamp(),
+              createdAt: result.data.createdAt || GET_CURRENT_TIMESTAMP(),
+              updatedAt: GET_CURRENT_TIMESTAMP(),
             };
 
             return {
@@ -259,7 +269,7 @@ export const useDealsStore = create<DealsStore>()(
                 ...state.deals,
                 [newDeal.id]: newDeal,
               },
-              lastUpdated: getCurrentTimestamp(),
+              lastUpdated: GET_CURRENT_TIMESTAMP(),
             };
           });
           return true;
@@ -268,32 +278,102 @@ export const useDealsStore = create<DealsStore>()(
         return false;
       },
 
-      updateDeal: (id, updates) => {
+      addToFeaturedDeals: (dealId) =>
+        set((state) => {
+          if (!state.deals[dealId] || state.featuredDeals.includes(dealId)) {
+            return state;
+          }
+
+          return {
+            featuredDeals: [...state.featuredDeals, dealId],
+          };
+        }),
+
+      // Recently viewed deals
+      addToRecentlyViewed: (dealId) =>
+        set((state) => {
+          if (!state.deals[dealId]) return state;
+
+          // Remove if already exists (to move to front)
+          const filtered = state.recentlyViewedDeals.filter((id) => id !== dealId);
+
+          // Add to front and limit to 20 items
+          return {
+            recentlyViewedDeals: [dealId, ...filtered].slice(0, 20),
+          };
+        }),
+
+      addToSavedDeals: (dealId) =>
+        set((state) => {
+          if (!state.deals[dealId] || state.savedDeals.includes(dealId)) {
+            return state;
+          }
+
+          return {
+            savedDeals: [...state.savedDeals, dealId],
+          };
+        }),
+      alerts: [],
+
+      clearFilters: () => set({ filters: undefined }),
+
+      clearRecentlyViewed: () => set({ recentlyViewedDeals: [] }),
+      // Initial state
+      deals: {},
+      featuredDeals: [],
+      filters: undefined,
+
+      getAlertById: (id) => {
         const state = get();
-        const existingDeal = state.deals[id];
-        if (!existingDeal) return false;
-
-        const updatedDeal = {
-          ...existingDeal,
-          ...updates,
-          updatedAt: getCurrentTimestamp(),
-        };
-
-        const result = DealSchema.safeParse(updatedDeal);
-        if (!result.success) {
-          console.error("Invalid deal update:", result.error);
-          return false;
-        }
-
-        set({
-          deals: {
-            ...state.deals,
-            [id]: updatedDeal,
-          },
-          lastUpdated: getCurrentTimestamp(),
-        });
-        return true;
+        return state.alerts.find((alert) => alert.id === id);
       },
+
+      // Computed properties & utilities
+      getDealById: (id) => {
+        const state = get();
+        return state.deals[id];
+      },
+
+      getDealsStats: () => {
+        const state = get();
+        const allDeals = Object.values(state.deals);
+        return CALCULATE_DEALS_STATS(allDeals);
+      },
+
+      getFeaturedDeals: () => {
+        const state = get();
+        return state.featuredDeals.map((id) => state.deals[id]).filter(Boolean);
+      },
+
+      getFilteredDeals: () => {
+        const state = get();
+        const allDeals = Object.values(state.deals);
+
+        if (!state.filters) return allDeals;
+
+        return allDeals.filter((deal) => MATCH_DEAL_WITH_FILTERS(deal, state.filters));
+      },
+
+      getRecentlyViewedDeals: () => {
+        const state = get();
+        return state.recentlyViewedDeals.map((id) => state.deals[id]).filter(Boolean);
+      },
+
+      getSavedDeals: () => {
+        const state = get();
+        return state.savedDeals.map((id) => state.deals[id]).filter(Boolean);
+      },
+
+      // State management
+      initialize: () => set({ isInitialized: true }),
+      isInitialized: false,
+      lastUpdated: null,
+      recentlyViewedDeals: [],
+
+      removeAlert: (id) =>
+        set((state) => ({
+          alerts: state.alerts.filter((alert) => alert.id !== id),
+        })),
 
       removeDeal: (id) =>
         set((state) => {
@@ -312,23 +392,9 @@ export const useDealsStore = create<DealsStore>()(
           return {
             deals: newDeals,
             featuredDeals: newFeaturedDeals,
-            savedDeals: newSavedDeals,
+            lastUpdated: GET_CURRENT_TIMESTAMP(),
             recentlyViewedDeals: newRecentlyViewedDeals,
-            lastUpdated: getCurrentTimestamp(),
-          };
-        }),
-
-      // Featured deals
-      setFeaturedDeals: (dealIds) => set({ featuredDeals: dealIds }),
-
-      addToFeaturedDeals: (dealId) =>
-        set((state) => {
-          if (!state.deals[dealId] || state.featuredDeals.includes(dealId)) {
-            return state;
-          }
-
-          return {
-            featuredDeals: [...state.featuredDeals, dealId],
+            savedDeals: newSavedDeals,
           };
         }),
 
@@ -337,29 +403,59 @@ export const useDealsStore = create<DealsStore>()(
           featuredDeals: state.featuredDeals.filter((id) => id !== dealId),
         })),
 
+      removeFromSavedDeals: (dealId) =>
+        set((state) => ({
+          savedDeals: state.savedDeals.filter((id) => id !== dealId),
+        })),
+
+      reset: () =>
+        set({
+          alerts: [],
+          deals: {},
+          featuredDeals: [],
+          filters: undefined,
+          isInitialized: false,
+          lastUpdated: null,
+          recentlyViewedDeals: [],
+          savedDeals: [],
+        }),
+      savedDeals: [],
+
       // Deal alerts
       setAlerts: (alerts) => set({ alerts }),
 
-      addAlert: (alert) => {
-        const result = DealAlertSchema.safeParse(alert);
-        if (result.success) {
-          set((state) => {
-            const newAlert = {
-              ...result.data,
-              id: result.data.id || generateId(),
-              createdAt: result.data.createdAt || getCurrentTimestamp(),
-              updatedAt: getCurrentTimestamp(),
-            };
+      // Deals management
+      setDeals: (deals) =>
+        set(() => ({
+          deals,
+          lastUpdated: GET_CURRENT_TIMESTAMP(),
+        })),
 
-            return {
-              alerts: [...state.alerts, newAlert],
-            };
-          });
-          return true;
-        }
-        console.error("Invalid alert data:", result.error);
-        return false;
-      },
+      // Featured deals
+      setFeaturedDeals: (dealIds) => set({ featuredDeals: dealIds }),
+
+      // Filtering
+      setFilters: (filters) => set({ filters }),
+
+      // Saved deals
+      setSavedDeals: (dealIds) => set({ savedDeals: dealIds }),
+
+      toggleAlertActive: (id) =>
+        set((state) => {
+          const alertIndex = state.alerts.findIndex((alert) => alert.id === id);
+          if (alertIndex === -1) return state;
+
+          const newAlerts = [...state.alerts];
+          newAlerts[alertIndex] = {
+            ...newAlerts[alertIndex],
+            isActive: !newAlerts[alertIndex].isActive,
+            updatedAt: GET_CURRENT_TIMESTAMP(),
+          };
+
+          return {
+            alerts: newAlerts,
+          };
+        }),
 
       updateAlert: (id, updates) => {
         const state = get();
@@ -370,7 +466,7 @@ export const useDealsStore = create<DealsStore>()(
         const updatedAlert = {
           ...existingAlert,
           ...updates,
-          updatedAt: getCurrentTimestamp(),
+          updatedAt: GET_CURRENT_TIMESTAMP(),
         };
 
         const result = DealAlertSchema.safeParse(updatedAlert);
@@ -388,133 +484,42 @@ export const useDealsStore = create<DealsStore>()(
         return true;
       },
 
-      removeAlert: (id) =>
-        set((state) => ({
-          alerts: state.alerts.filter((alert) => alert.id !== id),
-        })),
-
-      toggleAlertActive: (id) =>
-        set((state) => {
-          const alertIndex = state.alerts.findIndex((alert) => alert.id === id);
-          if (alertIndex === -1) return state;
-
-          const newAlerts = [...state.alerts];
-          newAlerts[alertIndex] = {
-            ...newAlerts[alertIndex],
-            isActive: !newAlerts[alertIndex].isActive,
-            updatedAt: getCurrentTimestamp(),
-          };
-
-          return {
-            alerts: newAlerts,
-          };
-        }),
-
-      // Saved deals
-      setSavedDeals: (dealIds) => set({ savedDeals: dealIds }),
-
-      addToSavedDeals: (dealId) =>
-        set((state) => {
-          if (!state.deals[dealId] || state.savedDeals.includes(dealId)) {
-            return state;
-          }
-
-          return {
-            savedDeals: [...state.savedDeals, dealId],
-          };
-        }),
-
-      removeFromSavedDeals: (dealId) =>
-        set((state) => ({
-          savedDeals: state.savedDeals.filter((id) => id !== dealId),
-        })),
-
-      // Recently viewed deals
-      addToRecentlyViewed: (dealId) =>
-        set((state) => {
-          if (!state.deals[dealId]) return state;
-
-          // Remove if already exists (to move to front)
-          const filtered = state.recentlyViewedDeals.filter((id) => id !== dealId);
-
-          // Add to front and limit to 20 items
-          return {
-            recentlyViewedDeals: [dealId, ...filtered].slice(0, 20),
-          };
-        }),
-
-      clearRecentlyViewed: () => set({ recentlyViewedDeals: [] }),
-
-      // Filtering
-      setFilters: (filters) => set({ filters }),
-
-      clearFilters: () => set({ filters: undefined }),
-
-      // Computed properties & utilities
-      getDealById: (id) => {
+      updateDeal: (id, updates) => {
         const state = get();
-        return state.deals[id];
-      },
+        const existingDeal = state.deals[id];
+        if (!existingDeal) return false;
 
-      getAlertById: (id) => {
-        const state = get();
-        return state.alerts.find((alert) => alert.id === id);
-      },
+        const updatedDeal = {
+          ...existingDeal,
+          ...updates,
+          updatedAt: GET_CURRENT_TIMESTAMP(),
+        };
 
-      getFilteredDeals: () => {
-        const state = get();
-        const allDeals = Object.values(state.deals);
+        const result = DealSchema.safeParse(updatedDeal);
+        if (!result.success) {
+          console.error("Invalid deal update:", result.error);
+          return false;
+        }
 
-        if (!state.filters) return allDeals;
-
-        return allDeals.filter((deal) => matchDealWithFilters(deal, state.filters));
-      },
-
-      getFeaturedDeals: () => {
-        const state = get();
-        return state.featuredDeals.map((id) => state.deals[id]).filter(Boolean);
-      },
-
-      getSavedDeals: () => {
-        const state = get();
-        return state.savedDeals.map((id) => state.deals[id]).filter(Boolean);
-      },
-
-      getRecentlyViewedDeals: () => {
-        const state = get();
-        return state.recentlyViewedDeals.map((id) => state.deals[id]).filter(Boolean);
-      },
-
-      getDealsStats: () => {
-        const state = get();
-        const allDeals = Object.values(state.deals);
-        return calculateDealsStats(allDeals);
-      },
-
-      // State management
-      initialize: () => set({ isInitialized: true }),
-
-      reset: () =>
         set({
-          deals: {},
-          featuredDeals: [],
-          alerts: [],
-          savedDeals: [],
-          recentlyViewedDeals: [],
-          filters: undefined,
-          lastUpdated: null,
-          isInitialized: false,
-        }),
+          deals: {
+            ...state.deals,
+            [id]: updatedDeal,
+          },
+          lastUpdated: GET_CURRENT_TIMESTAMP(),
+        });
+        return true;
+      },
     }),
     {
       name: "deals-storage",
       partialize: (state) => ({
+        alerts: state.alerts,
         // Only persist certain parts of the state
         featuredDeals: state.featuredDeals,
-        alerts: state.alerts,
-        savedDeals: state.savedDeals,
-        recentlyViewedDeals: state.recentlyViewedDeals,
         isInitialized: state.isInitialized,
+        recentlyViewedDeals: state.recentlyViewedDeals,
+        savedDeals: state.savedDeals,
         // Don't persist deals, as they may become outdated
         // Don't persist filters, reset them on reload
       }),

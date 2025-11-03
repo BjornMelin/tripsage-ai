@@ -59,7 +59,7 @@ export function useTrips() {
   const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ["trips", userId],
+    enabled: !!userId,
     queryFn: async () => {
       if (!userId) {
         throw new Error("User not authenticated");
@@ -77,7 +77,7 @@ export function useTrips() {
 
       return data;
     },
-    enabled: !!userId,
+    queryKey: ["trips", userId],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -92,7 +92,7 @@ export function useTripData(tripId: number | null) {
   const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ["trip", tripId, userId],
+    enabled: !!userId && !!tripId,
     queryFn: async () => {
       if (!userId || !tripId) {
         return null;
@@ -111,7 +111,7 @@ export function useTripData(tripId: number | null) {
 
       return data;
     },
-    enabled: !!userId && !!tripId,
+    queryKey: ["trip", tripId, userId],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -234,7 +234,7 @@ export function useTripCollaborators(tripId: number) {
   const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ["trip-collaborators", tripId, userId],
+    enabled: !!userId && !!tripId,
     queryFn: async () => {
       if (!userId || !tripId) {
         return [];
@@ -256,7 +256,7 @@ export function useTripCollaborators(tripId: number) {
       // For now, return empty array
       return [] as TripCollaborator[];
     },
-    enabled: !!userId && !!tripId,
+    queryKey: ["trip-collaborators", tripId, userId],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }

@@ -24,27 +24,27 @@ function fakeSupabase(userId: string | null, memories: string[] = []) {
     from: vi.fn((table: string) => {
       if (table === "memories") {
         return {
-          select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockReturnThis(),
           limit: vi
             .fn()
             .mockResolvedValue({ data: memories.map((m) => ({ content: m })) }),
+          order: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
         } as any;
       }
       if (table === "chat_messages") {
         return {
-          insert: vi.fn(async () => ({ error: null })),
-          select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockReturnThis(),
+          insert: vi.fn(async () => ({ error: null })),
           limit: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
         } as any;
       }
       if (table === "chat_sessions") {
         return {
-          update: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
+          update: vi.fn().mockReturnThis(),
         } as any;
       }
       return {} as any;
@@ -64,8 +64,8 @@ describe("handleChatStream", () => {
   it("401 when unauthenticated", async () => {
     const res = await handleChatStream(
       {
-        supabase: fakeSupabase(null),
         resolveProvider: vi.fn(),
+        supabase: fakeSupabase(null),
       },
       { messages: [] }
     );
@@ -89,16 +89,16 @@ describe("handleChatStream", () => {
         }
         if (table === "memories") {
           return {
-            select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
-            order: vi.fn().mockReturnThis(),
             limit: vi.fn().mockResolvedValue({ data: [] }),
+            order: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
           } as any;
         }
         if (table === "chat_sessions") {
           return {
-            update: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
           } as any;
         }
         return {} as any;
@@ -112,8 +112,8 @@ describe("handleChatStream", () => {
         startMeta = messageMetadata?.({ part: { type: "start" } });
         finishMeta = messageMetadata?.({
           part: {
+            totalUsage: { inputTokens: 45, outputTokens: 78, totalTokens: 123 },
             type: "finish",
-            totalUsage: { totalTokens: 123, inputTokens: 45, outputTokens: 78 },
           },
         });
         return new Response("ok", { status: 200 });
@@ -122,20 +122,20 @@ describe("handleChatStream", () => {
 
     const res = await handleChatStream(
       {
-        supabase,
-        resolveProvider: vi.fn(async () => ({
-          provider: "openai",
-          modelId: "gpt-4o-mini",
-          model: {} as any,
-        })),
-        logger: { info: vi.fn(), error: vi.fn() },
         clock: { now: () => 1000 },
         config: { defaultMaxTokens: 256 },
+        logger: { error: vi.fn(), info: vi.fn() },
+        resolveProvider: vi.fn(async () => ({
+          model: {} as any,
+          modelId: "gpt-4o-mini",
+          provider: "openai",
+        })),
         stream: fauxStream as any,
+        supabase,
       },
       {
         messages: [
-          { id: "m", role: "user", parts: [{ type: "text", text: "hello" }] } as any,
+          { id: "m", parts: [{ text: "hello", type: "text" }], role: "user" } as any,
         ],
         session_id: "s1",
       }
@@ -153,11 +153,11 @@ describe("handleChatStream", () => {
   it("429 when rate limited", async () => {
     const res = await handleChatStream(
       {
-        supabase: fakeSupabase("u1"),
-        resolveProvider: vi.fn(),
         limit: vi.fn(async () => ({ success: false })),
+        resolveProvider: vi.fn(),
+        supabase: fakeSupabase("u1"),
       },
-      { messages: [], ip: "1.2.3.4" }
+      { ip: "1.2.3.4", messages: [] }
     );
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toBe("60");
@@ -166,18 +166,18 @@ describe("handleChatStream", () => {
   it("400 on invalid attachment type", async () => {
     const res = await handleChatStream(
       {
-        supabase: fakeSupabase("u2"),
         resolveProvider: vi.fn(),
+        supabase: fakeSupabase("u2"),
       },
       {
         messages: [
           {
             id: "m1",
-            role: "user",
             parts: [
-              { type: "text", text: "hi" },
-              { type: "file", url: "https://x/y.pdf", media_type: "application/pdf" },
+              { text: "hi", type: "text" },
+              { media_type: "application/pdf", type: "file", url: "https://x/y.pdf" },
             ],
+            role: "user",
           } as any,
         ],
       }
@@ -192,18 +192,18 @@ describe("handleChatStream", () => {
     const huge = "x".repeat(600_000);
     const res = await handleChatStream(
       {
-        supabase: fakeSupabase("u3"),
+        config: { defaultMaxTokens: 1024 },
         // Use unknown model to trigger heuristic token counting (fast)
         resolveProvider: vi.fn(async () => ({
-          provider: "openai",
-          modelId: "some-unknown-model",
           model: {} as any,
+          modelId: "some-unknown-model",
+          provider: "openai",
         })),
-        config: { defaultMaxTokens: 1024 },
+        supabase: fakeSupabase("u3"),
       },
       {
         messages: [
-          { id: "u", role: "user", parts: [{ type: "text", text: huge }] } as any,
+          { id: "u", parts: [{ text: huge, type: "text" }], role: "user" } as any,
         ],
       }
     );

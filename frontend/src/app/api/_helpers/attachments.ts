@@ -22,9 +22,9 @@ export function validateImageAttachments(messages: UIMessage[]): Validation {
     for (const p of parts) {
       if (p?.type === "file") {
         const mediaType: string | undefined = p.media_type || p.mediaType;
-        if (!mediaType) return { valid: false, reason: "missing_media_type" };
+        if (!mediaType) return { reason: "missing_media_type", valid: false };
         if (!mediaType.startsWith("image/"))
-          return { valid: false, reason: "unsupported_media_type" };
+          return { reason: "unsupported_media_type", valid: false };
       }
     }
   }
@@ -42,9 +42,9 @@ export function convertUiFilePartToImage(part: any) {
     const mediaType: string | undefined = part.media_type || part.mediaType;
     if (mediaType?.startsWith("image/")) {
       return {
-        type: "image" as const,
         image: part.url,
         mimeType: mediaType,
+        type: "image" as const,
       };
     }
   }

@@ -43,20 +43,20 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
     typeof apiKey !== "string"
   ) {
     return new Response(
-      JSON.stringify({ error: "Invalid request body", code: "BAD_REQUEST" }),
+      JSON.stringify({ code: "BAD_REQUEST", error: "Invalid request body" }),
       {
-        status: 400,
         headers: { "content-type": "application/json" },
+        status: 400,
       }
     );
   }
   const normalized = service.trim().toLowerCase();
   if (!ALLOWED.has(normalized)) {
     return new Response(
-      JSON.stringify({ error: "Unsupported service", code: "BAD_REQUEST" }),
+      JSON.stringify({ code: "BAD_REQUEST", error: "Unsupported service" }),
       {
-        status: 400,
         headers: { "content-type": "application/json" },
+        status: 400,
       }
     );
   }
@@ -65,8 +65,8 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
   const user = auth?.user ?? null;
   if (!user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
       headers: { "content-type": "application/json" },
+      status: 401,
     });
   }
 
@@ -87,8 +87,8 @@ export async function getKeys(deps: {
   const user = auth?.user ?? null;
   if (!user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
       headers: { "content-type": "application/json" },
+      status: 401,
     });
   }
   const { data, error } = await deps.supabase
@@ -98,23 +98,23 @@ export async function getKeys(deps: {
     .order("service_name", { ascending: true });
   if (error) {
     return new Response(
-      JSON.stringify({ error: "Failed to fetch keys", code: "DB_ERROR" }),
+      JSON.stringify({ code: "DB_ERROR", error: "Failed to fetch keys" }),
       {
-        status: 500,
         headers: { "content-type": "application/json" },
+        status: 500,
       }
     );
   }
   const rows = data ?? [];
   const payload = rows.map((r: any) => ({
-    service: String(r.service_name),
     created_at: String(r.created_at),
-    last_used: r.last_used_at ?? null,
     has_key: true,
     is_valid: true,
+    last_used: r.last_used_at ?? null,
+    service: String(r.service_name),
   }));
   return new Response(JSON.stringify(payload), {
-    status: 200,
     headers: { "content-type": "application/json" },
+    status: 200,
   });
 }

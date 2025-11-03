@@ -5,7 +5,7 @@ import type { ComponentProps, ComponentType } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 // Type-safe dynamic import wrapper for Recharts components
-const createDynamicComponent = <P extends object>(
+const CREATE_DYNAMIC_COMPONENT = <P extends object>(
   importFunc: () => Promise<{ default: ComponentType<P> } | ComponentType<P>>
 ) => {
   return dynamic(
@@ -42,11 +42,11 @@ export const LineChart = dynamic(
 );
 
 // Use the safe dynamic wrapper for problematic components
-export const Area = createDynamicComponent(() =>
+export const Area = CREATE_DYNAMIC_COMPONENT(() =>
   import("recharts").then((mod) => mod.Area as any)
 );
 
-export const Line = createDynamicComponent(() =>
+export const Line = CREATE_DYNAMIC_COMPONENT(() =>
   import("recharts").then((mod) => mod.Line as any)
 );
 
@@ -55,15 +55,15 @@ export const CartesianGrid = dynamic(
   { ssr: false }
 );
 
-export const XAxis = createDynamicComponent(() =>
+export const XAxis = CREATE_DYNAMIC_COMPONENT(() =>
   import("recharts").then((mod) => mod.XAxis as any)
 );
 
-export const YAxis = createDynamicComponent(() =>
+export const YAxis = CREATE_DYNAMIC_COMPONENT(() =>
   import("recharts").then((mod) => mod.YAxis as any)
 );
 
-export const Tooltip = createDynamicComponent(() =>
+export const Tooltip = CREATE_DYNAMIC_COMPONENT(() =>
   import("recharts").then((mod) => mod.Tooltip as any)
 );
 

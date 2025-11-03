@@ -6,7 +6,7 @@ import "server-only";
 
 import type { ProviderId, ProviderSettings } from "@/lib/providers/types";
 
-const defaultPreference: ProviderId[] = ["openai", "openrouter", "anthropic", "xai"];
+const DEFAULT_PREFERENCE: ProviderId[] = ["openai", "openrouter", "anthropic", "xai"];
 
 /**
  * Return provider settings. Values are derived from environment variables
@@ -16,10 +16,10 @@ export function getProviderSettings(): ProviderSettings {
   const referer = process.env.OPENROUTER_REFERER;
   const title = process.env.OPENROUTER_TITLE;
   return {
-    preference: defaultPreference,
     openrouterAttribution: {
       referer: referer && referer !== "undefined" ? referer : undefined,
       title: title && title !== "undefined" ? title : undefined,
     },
+    preference: DEFAULT_PREFERENCE,
   } satisfies ProviderSettings;
 }

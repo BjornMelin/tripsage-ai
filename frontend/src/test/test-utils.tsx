@@ -22,8 +22,8 @@ type NextThemesProviderProps = ComponentProps<typeof ThemeProvider>;
 export const createTestQueryClient = () =>
   new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
       mutations: { retry: false },
+      queries: { gcTime: 0, retry: false, staleTime: 0 },
     },
   });
 
@@ -55,8 +55,8 @@ export const AllTheProviders = ({
   theme = {
     attribute: "class" as const,
     defaultTheme: "system",
-    enableSystem: true,
     disableTransitionOnChange: true,
+    enableSystem: true,
   },
   queryClient,
 }: ProvidersProps): ReactElement => {
@@ -70,8 +70,8 @@ export const AllTheProviders = ({
           return {
             attribute: "class" as const,
             defaultTheme: "system",
-            enableSystem: true,
             disableTransitionOnChange: true,
+            enableSystem: true,
           };
         }
         return result.data;
@@ -84,8 +84,8 @@ export const AllTheProviders = ({
         {...((validatedTheme ?? {
           attribute: "class" as const,
           defaultTheme: "system",
-          enableSystem: true,
           disableTransitionOnChange: true,
+          enableSystem: true,
         }) as NextThemesProviderProps)}
       >
         {children}

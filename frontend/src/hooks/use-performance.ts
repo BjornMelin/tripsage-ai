@@ -25,10 +25,10 @@ interface PerformanceMetrics {
  */
 export function usePerformance() {
   const [metrics, setMetrics] = useState<PerformanceMetrics>({
-    loadTime: 0,
-    renderTime: 0,
     bundleSize: 0,
     isHydrated: false,
+    loadTime: 0,
+    renderTime: 0,
   });
 
   useEffect(() => {
@@ -56,18 +56,18 @@ export function usePerformance() {
     }
 
     setMetrics({
-      loadTime,
-      renderTime,
       bundleSize,
       isHydrated: true,
+      loadTime,
+      renderTime,
     });
 
     // Report to console in development
     if (process.env.NODE_ENV === "development") {
       console.log("Performance Metrics:", {
+        bundleSize: `${(bundleSize / 1024).toFixed(2)}KB`,
         loadTime: `${loadTime}ms`,
         renderTime: `${renderTime.toFixed(2)}ms`,
-        bundleSize: `${(bundleSize / 1024).toFixed(2)}KB`,
       });
     }
   }, []);

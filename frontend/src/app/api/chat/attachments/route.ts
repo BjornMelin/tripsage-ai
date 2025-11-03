@@ -25,13 +25,13 @@ const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8001";
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const RATELIMIT_PREFIX = "ratelimit:attachments";
-const ratelimitInstance =
+const RATELIMIT_INSTANCE =
   UPSTASH_URL && UPSTASH_TOKEN
     ? new Ratelimit({
-        redis: Redis.fromEnv(),
-        limiter: Ratelimit.slidingWindow(20, "1 m"),
         analytics: true,
+        limiter: Ratelimit.slidingWindow(20, "1 m"),
         prefix: RATELIMIT_PREFIX,
+        redis: Redis.fromEnv(),
       })
     : undefined;
 
@@ -45,20 +45,20 @@ const ratelimitInstance =
 export async function POST(req: NextRequest) {
   try {
     // Optional rate limit: enable only when Upstash env is configured
-    if (ratelimitInstance) {
+    if (RATELIMIT_INSTANCE) {
       const identifier = buildRateLimitKey(req);
       const { success, limit, remaining, reset } =
-        await ratelimitInstance.limit(identifier);
+        await RATELIMIT_INSTANCE.limit(identifier);
       if (!success) {
         return NextResponse.json(
-          { error: "Rate limit exceeded", code: "RATE_LIMIT" },
+          { code: "RATE_LIMIT", error: "Rate limit exceeded" },
           {
-            status: 429,
             headers: {
               "X-RateLimit-Limit": String(limit),
               "X-RateLimit-Remaining": String(remaining),
               "X-RateLimit-Reset": String(reset),
             },
+            status: 429,
           }
         );
       }
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     const contentType = req.headers.get("content-type");
     if (!contentType?.includes("multipart/form-data")) {
       return Response.json(
-        { error: "Invalid content type", code: "INVALID_CONTENT_TYPE" },
+        { code: "INVALID_CONTENT_TYPE", error: "Invalid content type" },
         { status: 400 }
       );
     }
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     // Validate files
     if (files.length === 0) {
       return Response.json(
-        { error: "No files uploaded", code: "NO_FILES" },
+        { code: "NO_FILES", error: "No files uploaded" },
         { status: 400 }
       );
     }
@@ -89,8 +89,8 @@ export async function POST(req: NextRequest) {
     if (files.length > MAX_FILES_PER_REQUEST) {
       return Response.json(
         {
-          error: `Maximum ${MAX_FILES_PER_REQUEST} files allowed per request`,
           code: "TOO_MANY_FILES",
+          error: `Maximum ${MAX_FILES_PER_REQUEST} files allowed per request`,
         },
         { status: 400 }
       );
@@ -101,8 +101,8 @@ export async function POST(req: NextRequest) {
     if (oversizedFile) {
       return Response.json(
         {
-          error: `File "${oversizedFile.name}" exceeds maximum size of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
           code: "FILE_TOO_LARGE",
+          error: `File "${oversizedFile.name}" exceeds maximum size of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
         },
         { status: 400 }
       );
@@ -124,16 +124,16 @@ export async function POST(req: NextRequest) {
     const headers: HeadersInit | undefined = forwardAuthHeaders(req);
 
     const response = await fetch(`${BACKEND_API_URL}${endpoint}`, {
-      method: "POST",
-      headers,
       body: backendFormData,
+      headers,
+      method: "POST",
     });
 
     const data = await response.json();
 
     if (!response.ok) {
       return Response.json(
-        { error: data.detail || "Upload failed", code: "UPLOAD_ERROR" },
+        { code: "UPLOAD_ERROR", error: data.detail || "Upload failed" },
         { status: response.status }
       );
     }
@@ -146,9 +146,9 @@ export async function POST(req: NextRequest) {
             id: data.file_id,
             name: data.filename,
             size: data.file_size,
+            status: data.processing_status,
             type: data.mime_type,
             url: `/api/attachments/${data.file_id}/download`,
-            status: data.processing_status,
           },
         ],
         urls: [`/api/attachments/${data.file_id}/download`],
@@ -173,9 +173,9 @@ export async function POST(req: NextRequest) {
       id: file.file_id,
       name: file.filename,
       size: file.file_size,
+      status: file.processing_status,
       type: file.mime_type,
       url: `/api/attachments/${file.file_id}/download`,
-      status: file.processing_status,
     }));
 
     const resultPayload = {
@@ -192,7 +192,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("File upload error:", error);
     return Response.json(
-      { error: "Internal server error", code: "INTERNAL_ERROR" },
+      { code: "INTERNAL_ERROR", error: "Internal server error" },
       { status: 500 }
     );
   }

@@ -17,13 +17,13 @@ const ALLOWED_SERVICES = new Set(["openai", "openrouter", "anthropic", "xai"]);
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const RATELIMIT_PREFIX = "ratelimit:keys";
-const ratelimitInstance =
+const RATELIMIT_INSTANCE =
   UPSTASH_URL && UPSTASH_TOKEN
     ? new Ratelimit({
-        redis: Redis.fromEnv(),
-        limiter: Ratelimit.slidingWindow(10, "1 m"),
         analytics: true,
+        limiter: Ratelimit.slidingWindow(10, "1 m"),
         prefix: RATELIMIT_PREFIX,
+        redis: Redis.fromEnv(),
       })
     : undefined;
 
@@ -34,38 +34,43 @@ const ratelimitInstance =
  * @param ctx Route params including the service identifier.
  * @returns 204 No Content on success; 400/401/429/500 on error.
  */
-export async function DELETE(req: NextRequest, ctx: { params: { service: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ service: string }> }
+) {
+  let serviceForLog: string | undefined;
   try {
-    if (ratelimitInstance) {
+    if (RATELIMIT_INSTANCE) {
       const identifier = buildRateLimitKey(req);
       const { success, limit, remaining, reset } =
-        await ratelimitInstance.limit(identifier);
+        await RATELIMIT_INSTANCE.limit(identifier);
       if (!success) {
         return NextResponse.json(
-          { error: "Rate limit exceeded", code: "RATE_LIMIT" },
+          { code: "RATE_LIMIT", error: "Rate limit exceeded" },
           {
-            status: 429,
             headers: {
               "X-RateLimit-Limit": String(limit),
               "X-RateLimit-Remaining": String(remaining),
               "X-RateLimit-Reset": String(reset),
             },
+            status: 429,
           }
         );
       }
     }
 
-    const service = ctx.params?.service;
+    const { service } = await context.params;
+    serviceForLog = service;
     if (!service || typeof service !== "string") {
       return NextResponse.json(
-        { error: "Invalid service", code: "BAD_REQUEST" },
+        { code: "BAD_REQUEST", error: "Invalid service" },
         { status: 400 }
       );
     }
     const normalizedService = service.trim().toLowerCase();
     if (!ALLOWED_SERVICES.has(normalizedService)) {
       return NextResponse.json(
-        { error: "Unsupported service", code: "BAD_REQUEST" },
+        { code: "BAD_REQUEST", error: "Unsupported service" },
         { status: 400 }
       );
     }
@@ -86,10 +91,10 @@ export async function DELETE(req: NextRequest, ctx: { params: { service: string 
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("/api/keys/[service] DELETE error:", {
       message,
-      service: ctx.params?.service,
+      service: serviceForLog,
     });
     return NextResponse.json(
-      { error: "Internal server error", code: "INTERNAL_ERROR" },
+      { code: "INTERNAL_ERROR", error: "Internal server error" },
       { status: 500 }
     );
   }

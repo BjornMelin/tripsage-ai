@@ -18,8 +18,8 @@ export default function DashboardError({
   useEffect(() => {
     // Report the dashboard error
     const errorReport = errorService.createErrorReport(error, undefined, {
-      userId: getUserId(),
       sessionId: getSessionId(),
+      userId: getUserId(),
     });
 
     errorService.reportError(errorReport);

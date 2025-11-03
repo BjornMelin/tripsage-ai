@@ -25,8 +25,8 @@ export function useCurrency() {
     useCurrencyStore();
 
   return {
-    currencies,
     baseCurrency,
+    currencies,
     exchangeRates,
     favoriteCurrencies,
     lastUpdated,
@@ -46,11 +46,11 @@ export function useCurrencyActions() {
   } = useCurrencyStore();
 
   return {
-    setBaseCurrency,
     addCurrency,
-    removeCurrency,
     addFavoriteCurrency,
+    removeCurrency,
     removeFavoriteCurrency,
+    setBaseCurrency,
   };
 }
 
@@ -70,8 +70,8 @@ export function useExchangeRates() {
     baseCurrency,
     exchangeRates,
     lastUpdated,
-    updateExchangeRate,
     updateAllExchangeRates,
+    updateExchangeRate,
   };
 }
 
@@ -121,9 +121,9 @@ export function useCurrencyData() {
   const popularCurrencies = getPopularCurrencies();
 
   return {
-    recentPairs,
-    popularCurrencies,
     getCurrencyByCode,
+    popularCurrencies,
+    recentPairs,
   };
 }
 

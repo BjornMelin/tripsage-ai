@@ -51,12 +51,12 @@ export function DestinationCard({
    */
   const formatDestinationType = (types: string[]) => {
     const typeMap: Record<string, string> = {
-      locality: "City",
-      country: "Country",
       administrative_area: "Region",
+      country: "Country",
       establishment: "Landmark",
-      political: "Administrative",
+      locality: "City",
       natural_feature: "Natural Feature",
+      political: "Administrative",
       tourist_attraction: "Attraction",
     };
 

@@ -67,43 +67,43 @@ interface AgentStatusDashboardProps {
   refreshInterval?: number;
 }
 
-const generateMockTimeSeriesData = () => {
+const GENERATE_MOCK_TIME_SERIES_DATA = () => {
   return Array.from({ length: 30 }, (_, i) => ({
+    errorRate: Math.random() * 5,
+    responseTime: Math.random() * 100 + 50,
     time: new Date(Date.now() - (29 - i) * 60000).toLocaleTimeString("en-US", {
-      hour12: false,
       hour: "2-digit",
+      hour12: false,
       minute: "2-digit",
     }),
-    responseTime: Math.random() * 100 + 50,
     tokensPerSecond: Math.random() * 1000 + 500,
-    errorRate: Math.random() * 5,
   }));
 };
 
-const predictiveIndicators: PredictiveIndicator[] = [
+const PREDICTIVE_INDICATORS: PredictiveIndicator[] = [
   {
-    metric: "Response Time",
-    current: 125,
-    predicted: 145,
     confidence: 0.89,
-    trend: "up",
+    current: 125,
+    metric: "Response Time",
+    predicted: 145,
     timeHorizon: "72h",
+    trend: "up",
   },
   {
-    metric: "Error Rate",
-    current: 2.1,
-    predicted: 1.8,
     confidence: 0.76,
-    trend: "down",
+    current: 2.1,
+    metric: "Error Rate",
+    predicted: 1.8,
     timeHorizon: "72h",
+    trend: "down",
   },
   {
-    metric: "Resource Usage",
-    current: 68,
-    predicted: 72,
     confidence: 0.92,
-    trend: "up",
+    current: 68,
+    metric: "Resource Usage",
+    predicted: 72,
     timeHorizon: "72h",
+    trend: "up",
   },
 ];
 
@@ -122,7 +122,7 @@ const predictiveIndicators: PredictiveIndicator[] = [
 //   }
 // };
 
-const getStatusIcon = (status: AgentMetrics["status"]) => {
+const GET_STATUS_ICON = (status: AgentMetrics["status"]) => {
   switch (status) {
     case "active":
       return <CheckCircle className="h-4 w-4" />;
@@ -137,7 +137,7 @@ const getStatusIcon = (status: AgentMetrics["status"]) => {
   }
 };
 
-const AgentHealthIndicator: React.FC<{ agent: AgentMetrics }> = ({ agent }) => {
+const AGENT_HEALTH_INDICATOR: React.FC<{ agent: AgentMetrics }> = ({ agent }) => {
   const healthColorClass =
     agent.healthScore >= 90
       ? "from-green-400 to-green-600"
@@ -165,7 +165,7 @@ const AgentHealthIndicator: React.FC<{ agent: AgentMetrics }> = ({ agent }) => {
   );
 };
 
-const PredictiveCard: React.FC<{ indicator: PredictiveIndicator }> = ({
+const PREDICTIVE_CARD: React.FC<{ indicator: PredictiveIndicator }> = ({
   indicator,
 }) => {
   const getTrendIcon = () => {
@@ -225,7 +225,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
   refreshInterval: _refreshInterval = 5000,
 }) => {
   const responseTimeGradientId = useId();
-  const [timeSeriesData] = useState(generateMockTimeSeriesData);
+  const [timeSeriesData] = useState(GENERATE_MOCK_TIME_SERIES_DATA);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<string>("");
   const [isClient, setIsClient] = useState(false);
@@ -254,7 +254,13 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
 
   // Convert store agents to metrics format
   const agents: AgentMetrics[] = storeAgents.map((agent) => ({
+    averageResponseTime: 100,
+    cpuUsage: Math.random() * 100, // TODO: Get from resource usage
+    errorRate: agent.status === "error" ? 15 : 2,
+    healthScore: agent.progress || 75,
     id: agent.id,
+    lastUpdate: new Date(agent.updatedAt),
+    memoryUsage: Math.random() * 100, // TODO: Get from resource usage
     name: agent.name,
     status:
       agent.status === "executing" || agent.status === "thinking"
@@ -264,15 +270,9 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
           : agent.status === "error"
             ? "error"
             : "idle",
-    healthScore: agent.progress || 75,
-    cpuUsage: Math.random() * 100, // TODO: Get from resource usage
-    memoryUsage: Math.random() * 100, // TODO: Get from resource usage
-    tokensProcessed: 0, // TODO: Get from resource usage
-    averageResponseTime: 100,
-    errorRate: agent.status === "error" ? 15 : 2,
-    uptime: 3600,
     tasksQueued: agent.tasks?.filter((t) => t.status === "pending").length || 0,
-    lastUpdate: new Date(agent.updatedAt),
+    tokensProcessed: 0, // TODO: Get from resource usage
+    uptime: 3600,
   }));
 
   // Using React 19's useOptimistic for immediate UI updates
@@ -437,14 +437,14 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <AgentHealthIndicator agent={agent} />
+                      <AGENT_HEALTH_INDICATOR agent={agent} />
                       <div>
                         <h3 className="font-semibold">{agent.name}</h3>
                         <Badge
                           variant={agent.status === "active" ? "default" : "secondary"}
                           className="flex items-center gap-1"
                         >
-                          {getStatusIcon(agent.status)}
+                          {GET_STATUS_ICON(agent.status)}
                           {agent.status}
                         </Badge>
                       </div>
@@ -497,8 +497,8 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {predictiveIndicators.map((indicator, index) => (
-              <PredictiveCard
+            {PREDICTIVE_INDICATORS.map((indicator, index) => (
+              <PREDICTIVE_CARD
                 key={`predictive-${indicator.metric}-${index}`}
                 indicator={indicator}
               />
@@ -560,7 +560,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
                   dataKey="tokensPerSecond"
                   stroke="#10b981"
                   strokeWidth={2}
-                  dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
+                  dot={{ fill: "#10b981", r: 4, strokeWidth: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>

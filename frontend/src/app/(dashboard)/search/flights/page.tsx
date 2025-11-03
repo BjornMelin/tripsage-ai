@@ -37,12 +37,12 @@ export default function FlightSearchPage() {
 
     if (origin || destination || departDate) {
       const initialParams: FlightSearchParams = {
-        origin: origin || undefined,
-        destination: destination || undefined,
-        departureDate: departDate || undefined,
-        returnDate: returnDate || undefined,
         adults: passengers ? Number(passengers) : 1,
         cabinClass: (flightClass as FlightSearchParams["cabinClass"]) || "economy",
+        departureDate: departDate || undefined,
+        destination: destination || undefined,
+        origin: origin || undefined,
+        returnDate: returnDate || undefined,
       };
       executeSearch(initialParams);
     }
@@ -53,16 +53,16 @@ export default function FlightSearchPage() {
       const searchId = await executeSearch(params);
       if (searchId) {
         toast({
-          title: "Search Started",
           description: "Searching for flights...",
+          title: "Search Started",
         });
         // Navigate to results page or show results
         router.push(`/search/flights/results?searchId=${searchId}`);
       }
     } catch (error) {
       toast({
-        title: "Search Failed",
         description: error instanceof Error ? error.message : "An error occurred",
+        title: "Search Failed",
         variant: "destructive",
       });
     }

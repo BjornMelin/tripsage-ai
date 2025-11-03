@@ -42,11 +42,11 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
 
-const emailUpdateSchema = z.object({
+const EMAIL_UPDATE_SCHEMA = z.object({
   email: z.string().email("Please enter a valid email address"),
 });
 
-type EmailUpdateFormData = z.infer<typeof emailUpdateSchema>;
+type EmailUpdateFormData = z.infer<typeof EMAIL_UPDATE_SCHEMA>;
 
 /**
  * Account settings panel component.
@@ -57,10 +57,10 @@ export function AccountSettingsSection() {
   const { toast } = useToast();
 
   const emailForm = useForm<EmailUpdateFormData>({
-    resolver: zodResolver(emailUpdateSchema),
     defaultValues: {
       email: profile?.email || "",
     },
+    resolver: zodResolver(EMAIL_UPDATE_SCHEMA),
   });
 
   // TODO: Wire to auth email change; reflect verification state.
@@ -71,13 +71,13 @@ export function AccountSettingsSection() {
 
       // Note: In a real app, this would update the auth email, not the profile
       toast({
-        title: "Email updated",
         description: "Please check your inbox to verify your new email address.",
+        title: "Email updated",
       });
     } catch (_error) {
       toast({
-        title: "Error",
         description: "Failed to update email. Please try again.",
+        title: "Error",
         variant: "destructive",
       });
     }
@@ -90,13 +90,13 @@ export function AccountSettingsSection() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       toast({
-        title: "Verification email sent",
         description: "Please check your inbox and click the verification link.",
+        title: "Verification email sent",
       });
     } catch (_error) {
       toast({
-        title: "Error",
         description: "Failed to send verification email. Please try again.",
+        title: "Error",
         variant: "destructive",
       });
     }
@@ -109,13 +109,13 @@ export function AccountSettingsSection() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       toast({
-        title: "Account deletion initiated",
         description: "Your account deletion request has been processed.",
+        title: "Account deletion initiated",
       });
     } catch (_error) {
       toast({
-        title: "Error",
         description: "Failed to delete account. Please try again.",
+        title: "Error",
         variant: "destructive",
       });
     }
@@ -129,13 +129,13 @@ export function AccountSettingsSection() {
 
       // This would be updated when implementing real notification preferences
       toast({
-        title: "Settings updated",
         description: `${setting} notifications ${enabled ? "enabled" : "disabled"}.`,
+        title: "Settings updated",
       });
     } catch (_error) {
       toast({
-        title: "Error",
         description: "Failed to update notification settings.",
+        title: "Error",
         variant: "destructive",
       });
     }

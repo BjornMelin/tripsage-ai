@@ -182,7 +182,7 @@ export function SearchFilters({
                                     ? Number(e.target.value)
                                     : undefined;
                                   const max = (activeFilters[filter.id] as any)?.max;
-                                  handleFilterChange(filter.id, { min, max });
+                                  handleFilterChange(filter.id, { max, min });
                                 }}
                                 className="flex-1 h-8 rounded-md border px-3 py-1 text-sm"
                               />
@@ -195,7 +195,7 @@ export function SearchFilters({
                                   const max = e.target.value
                                     ? Number(e.target.value)
                                     : undefined;
-                                  handleFilterChange(filter.id, { min, max });
+                                  handleFilterChange(filter.id, { max, min });
                                 }}
                                 className="flex-1 h-8 rounded-md border px-3 py-1 text-sm"
                               />

@@ -27,13 +27,13 @@ vi.mock("@/components/features/profile/security-section", () => ({
   SecuritySection: () => <div data-testid="security-section">Security Section</div>,
 }));
 
-const mockUser = {
-  id: "1",
+const MOCK_USER = {
+  displayName: "John Doe",
   email: "test@example.com",
   firstName: "John",
-  lastName: "Doe",
-  displayName: "John Doe",
+  id: "1",
   isEmailVerified: true,
+  lastName: "Doe",
 };
 
 describe("ProfilePage", () => {
@@ -43,13 +43,13 @@ describe("ProfilePage", () => {
 
   it("renders loading state when user data is loading", () => {
     vi.mocked(useAuthStore).mockReturnValue({
-      user: null,
       isAuthenticated: false,
       isLoading: true,
+      user: null,
     } as any);
     vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: null,
       isLoading: false,
+      profile: null,
     } as any);
 
     render(<ProfilePage />);
@@ -61,13 +61,13 @@ describe("ProfilePage", () => {
 
   it("renders not found state when user is not logged in", () => {
     vi.mocked(useAuthStore).mockReturnValue({
-      user: null,
       isAuthenticated: false,
       isLoading: false,
+      user: null,
     } as any);
     vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: null,
       isLoading: false,
+      profile: null,
     } as any);
 
     render(<ProfilePage />);
@@ -78,13 +78,18 @@ describe("ProfilePage", () => {
 
   it("renders profile page with tabs when user is logged in", () => {
     vi.mocked(useAuthStore).mockReturnValue({
-      user: mockUser as any,
       isAuthenticated: true,
       isLoading: false,
+      user: MOCK_USER as any,
     } as any);
     vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: { id: "p1", email: mockUser.email, createdAt: "", updatedAt: "" } as any,
       isLoading: false,
+      profile: {
+        createdAt: "",
+        email: MOCK_USER.email,
+        id: "p1",
+        updatedAt: "",
+      } as any,
     } as any);
 
     render(<ProfilePage />);
@@ -105,13 +110,18 @@ describe("ProfilePage", () => {
 
   it("displays personal info section by default", () => {
     vi.mocked(useAuthStore).mockReturnValue({
-      user: mockUser as any,
       isAuthenticated: true,
       isLoading: false,
+      user: MOCK_USER as any,
     } as any);
     vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: { id: "p1", email: mockUser.email, createdAt: "", updatedAt: "" } as any,
       isLoading: false,
+      profile: {
+        createdAt: "",
+        email: MOCK_USER.email,
+        id: "p1",
+        updatedAt: "",
+      } as any,
     } as any);
 
     render(<ProfilePage />);
@@ -121,13 +131,18 @@ describe("ProfilePage", () => {
 
   it("switches to account settings tab", async () => {
     vi.mocked(useAuthStore).mockReturnValue({
-      user: mockUser as any,
       isAuthenticated: true,
       isLoading: false,
+      user: MOCK_USER as any,
     } as any);
     vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: { id: "p1", email: mockUser.email, createdAt: "", updatedAt: "" } as any,
       isLoading: false,
+      profile: {
+        createdAt: "",
+        email: MOCK_USER.email,
+        id: "p1",
+        updatedAt: "",
+      } as any,
     } as any);
 
     render(<ProfilePage />);
@@ -142,13 +157,18 @@ describe("ProfilePage", () => {
 
   it("switches to preferences tab", async () => {
     vi.mocked(useAuthStore).mockReturnValue({
-      user: mockUser as any,
       isAuthenticated: true,
       isLoading: false,
+      user: MOCK_USER as any,
     } as any);
     vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: { id: "p1", email: mockUser.email, createdAt: "", updatedAt: "" } as any,
       isLoading: false,
+      profile: {
+        createdAt: "",
+        email: MOCK_USER.email,
+        id: "p1",
+        updatedAt: "",
+      } as any,
     } as any);
 
     render(<ProfilePage />);
@@ -163,13 +183,18 @@ describe("ProfilePage", () => {
 
   it("switches to security tab", async () => {
     vi.mocked(useAuthStore).mockReturnValue({
-      user: mockUser as any,
       isAuthenticated: true,
       isLoading: false,
+      user: MOCK_USER as any,
     } as any);
     vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: { id: "p1", email: mockUser.email, createdAt: "", updatedAt: "" } as any,
       isLoading: false,
+      profile: {
+        createdAt: "",
+        email: MOCK_USER.email,
+        id: "p1",
+        updatedAt: "",
+      } as any,
     } as any);
 
     render(<ProfilePage />);
@@ -184,13 +209,18 @@ describe("ProfilePage", () => {
 
   it("renders tab icons correctly", () => {
     vi.mocked(useAuthStore).mockReturnValue({
-      user: mockUser as any,
       isAuthenticated: true,
       isLoading: false,
+      user: MOCK_USER as any,
     } as any);
     vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: { id: "p1", email: mockUser.email, createdAt: "", updatedAt: "" } as any,
       isLoading: false,
+      profile: {
+        createdAt: "",
+        email: MOCK_USER.email,
+        id: "p1",
+        updatedAt: "",
+      } as any,
     } as any);
 
     render(<ProfilePage />);
@@ -209,13 +239,18 @@ describe("ProfilePage", () => {
 
   it("maintains tab state during navigation", async () => {
     vi.mocked(useAuthStore).mockReturnValue({
-      user: mockUser as any,
       isAuthenticated: true,
       isLoading: false,
+      user: MOCK_USER as any,
     } as any);
     vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: { id: "p1", email: mockUser.email, createdAt: "", updatedAt: "" } as any,
       isLoading: false,
+      profile: {
+        createdAt: "",
+        email: MOCK_USER.email,
+        id: "p1",
+        updatedAt: "",
+      } as any,
     } as any);
 
     render(<ProfilePage />);
@@ -239,13 +274,18 @@ describe("ProfilePage", () => {
 
   it("renders proper heading structure", () => {
     vi.mocked(useAuthStore).mockReturnValue({
-      user: mockUser as any,
       isAuthenticated: true,
       isLoading: false,
+      user: MOCK_USER as any,
     } as any);
     vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: { id: "p1", email: mockUser.email, createdAt: "", updatedAt: "" } as any,
       isLoading: false,
+      profile: {
+        createdAt: "",
+        email: MOCK_USER.email,
+        id: "p1",
+        updatedAt: "",
+      } as any,
     } as any);
 
     render(<ProfilePage />);
@@ -257,8 +297,8 @@ describe("ProfilePage", () => {
 
   it("has accessible tab structure", () => {
     vi.mocked(useUserProfileStore).mockReturnValue({
-      user: mockUser,
       isLoading: false,
+      user: MOCK_USER,
     });
 
     render(<ProfilePage />);
@@ -275,8 +315,8 @@ describe("ProfilePage", () => {
 
   it("handles loading state gracefully with skeletons", () => {
     vi.mocked(useUserProfileStore).mockReturnValue({
-      user: null,
       isLoading: true,
+      user: null,
     });
 
     render(<ProfilePage />);

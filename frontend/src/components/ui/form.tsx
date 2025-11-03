@@ -21,7 +21,7 @@ type FormFieldContextValue<
   name: TName;
 };
 
-const FormFieldContext = React.createContext<FormFieldContextValue>(
+const FORM_FIELD_CONTEXT = React.createContext<FormFieldContextValue>(
   {} as FormFieldContextValue
 );
 
@@ -32,15 +32,15 @@ const FormField = <
   ...props
 }: ControllerProps<TFieldValues, TName>) => {
   return (
-    <FormFieldContext.Provider value={{ name: props.name }}>
+    <FORM_FIELD_CONTEXT.Provider value={{ name: props.name }}>
       <Controller {...props} />
-    </FormFieldContext.Provider>
+    </FORM_FIELD_CONTEXT.Provider>
   );
 };
 
 const useFormField = () => {
-  const fieldContext = React.useContext(FormFieldContext);
-  const itemContext = React.useContext(FormItemContext);
+  const fieldContext = React.useContext(FORM_FIELD_CONTEXT);
+  const itemContext = React.useContext(FORM_ITEM_CONTEXT);
   const { getFieldState, formState } = useFormContext();
 
   const fieldState = getFieldState(fieldContext.name, formState);
@@ -52,11 +52,11 @@ const useFormField = () => {
   const { id } = itemContext;
 
   return {
+    formDescriptionId: `${id}-form-item-description`,
+    formItemId: `${id}-form-item`,
+    formMessageId: `${id}-form-item-message`,
     id,
     name: fieldContext.name,
-    formItemId: `${id}-form-item`,
-    formDescriptionId: `${id}-form-item-description`,
-    formMessageId: `${id}-form-item-message`,
     ...fieldState,
   };
 };
@@ -65,7 +65,7 @@ type FormItemContextValue = {
   id: string;
 };
 
-const FormItemContext = React.createContext<FormItemContextValue>(
+const FORM_ITEM_CONTEXT = React.createContext<FormItemContextValue>(
   {} as FormItemContextValue
 );
 
@@ -74,9 +74,9 @@ const FormItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
     const id = React.useId();
 
     return (
-      <FormItemContext.Provider value={{ id }}>
+      <FORM_ITEM_CONTEXT.Provider value={{ id }}>
         <div ref={ref} className={cn("space-y-2", className)} {...props} />
-      </FormItemContext.Provider>
+      </FORM_ITEM_CONTEXT.Provider>
     );
   }
 );

@@ -29,11 +29,11 @@ export async function createSession(
   const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
   const now = new Date().toISOString();
   const { error } = await deps.supabase.from("chat_sessions").insert({
-    id,
-    user_id: user.id,
-    metadata: title ? ({ title } as any) : ({} as any),
     created_at: now,
+    id,
+    metadata: title ? ({ title } as any) : ({} as any),
     updated_at: now,
+    user_id: user.id,
   });
   if (error) return json({ error: "db_error" }, 500);
   return json({ id }, 201);
@@ -129,11 +129,11 @@ export async function createMessage(
     return json({ error: "bad_request" }, 400);
   const content = JSON.stringify(payload.parts ?? []);
   const { error } = await deps.supabase.from("chat_messages").insert({
-    session_id: id,
-    user_id: user.id as any,
-    role: payload.role,
     content,
     metadata: {},
+    role: payload.role,
+    session_id: id,
+    user_id: user.id as any,
   } as any);
   if (error) return json({ error: "db_error" }, 500);
   return new Response(null, { status: 201 });
@@ -148,7 +148,7 @@ export async function createMessage(
  */
 function json(obj: any, status: number): Response {
   return new Response(JSON.stringify(obj), {
-    status,
     headers: { "content-type": "application/json" },
+    status,
   });
 }

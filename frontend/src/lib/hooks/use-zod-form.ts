@@ -103,8 +103,8 @@ export function useZodForm<T extends FieldValues>(
 
   // Initialize React Hook Form with Zod resolver
   const form = useForm<T>({
-    resolver: zodResolver(schema as any),
     mode: options.validateMode || "onChange",
+    resolver: zodResolver(schema as any),
     reValidateMode: options.reValidateMode || "onChange",
     ...formOptions,
   });
@@ -144,32 +144,32 @@ export function useZodForm<T extends FieldValues>(
         const result = validate(partialSchema, testData, ValidationContext.FORM);
 
         if (result.success) {
-          return { success: true, data: value };
+          return { data: value, success: true };
         }
 
         // Find field-specific errors
         const fieldErrors =
           result.errors?.filter((err) => err.field === fieldName) || [];
         if (fieldErrors.length === 0) {
-          return { success: true, data: value };
+          return { data: value, success: true };
         }
 
         return {
-          success: false,
           errors: fieldErrors,
+          success: false,
         };
       } catch (error) {
         return {
-          success: false,
           errors: [
             {
+              code: "FIELD_VALIDATION_ERROR",
               context: ValidationContext.FORM,
               field: fieldName as string,
               message: error instanceof Error ? error.message : "Validation failed",
-              code: "FIELD_VALIDATION_ERROR",
               timestamp: new Date(),
             },
           ],
+          success: false,
         };
       }
     },
@@ -200,15 +200,15 @@ export function useZodForm<T extends FieldValues>(
       return result;
     } catch (error) {
       const validationResult = {
-        success: false as const,
         errors: [
           {
+            code: "FORM_VALIDATION_ERROR",
             context: ValidationContext.FORM,
             message: error instanceof Error ? error.message : "Validation failed",
-            code: "FORM_VALIDATION_ERROR",
             timestamp: new Date(),
           },
         ],
+        success: false as const,
       };
 
       setValidationState((prev) => ({
@@ -272,7 +272,7 @@ export function useZodForm<T extends FieldValues>(
           if (error instanceof TripSageValidationError) {
             const formErrors = error.getFieldErrors();
             Object.entries(formErrors).forEach(([field, message]) => {
-              form.setError(field as FieldPath<T>, { type: "manual", message });
+              form.setError(field as FieldPath<T>, { message, type: "manual" });
             });
           }
         }
@@ -364,26 +364,26 @@ export function useZodForm<T extends FieldValues>(
 
     return {
       currentStep,
-      totalSteps: wizardSteps.length,
       isFirstStep: currentStep === 0,
       isLastStep: currentStep === wizardSteps.length - 1,
+      totalSteps: wizardSteps.length,
     };
   }, [enableWizard, currentStep, wizardSteps.length]);
 
   return {
     ...form,
-    validateField,
-    validateAllFields,
-    handleSubmitSafe,
-    isFieldValid,
-    getFieldError,
-    hasAnyErrors,
-    isFormComplete,
     getCleanData,
+    getFieldError,
+    handleSubmitSafe,
+    hasAnyErrors,
+    isFieldValid,
+    isFormComplete,
     resetToDefaults,
+    validateAllFields,
+    validateField,
     validationState,
-    wizardState,
     wizardActions,
+    wizardState,
   };
 }
 
@@ -397,8 +397,8 @@ export function useAsyncZodValidation<T extends FieldValues>(
     errors: Record<string, string>;
     lastValidated: Date | null;
   }>({
-    isValidating: false,
     errors: {},
+    isValidating: false,
     lastValidated: null,
   });
 
@@ -411,8 +411,8 @@ export function useAsyncZodValidation<T extends FieldValues>(
 
         if (result.success) {
           setValidationState({
-            isValidating: false,
             errors: {},
+            isValidating: false,
             lastValidated: new Date(),
           });
         } else {
@@ -426,15 +426,15 @@ export function useAsyncZodValidation<T extends FieldValues>(
           );
 
           setValidationState({
-            isValidating: false,
             errors,
+            isValidating: false,
             lastValidated: new Date(),
           });
         }
       } catch (_error) {
         setValidationState({
-          isValidating: false,
           errors: { _global: "Validation error occurred" },
+          isValidating: false,
           lastValidated: new Date(),
         });
       }
@@ -467,8 +467,8 @@ export function useZodFormWizard<T extends FieldValues>(
   const isLastStep = currentStep === steps.length - 1;
 
   const form = useZodForm({
-    schema: currentStepConfig.schema,
     defaultValues: stepData as any,
+    schema: currentStepConfig.schema,
   });
 
   const goToStep = useCallback(
@@ -511,10 +511,10 @@ export function useZodFormWizard<T extends FieldValues>(
     throw new TripSageValidationError(
       ValidationContext.FORM,
       result.error.issues.map((issue) => ({
+        code: issue.code,
         context: ValidationContext.FORM,
         field: issue.path.join("."),
         message: issue.message,
-        code: issue.code,
         timestamp: new Date(),
       }))
     );
@@ -528,31 +528,30 @@ export function useZodFormWizard<T extends FieldValues>(
   }, [form]);
 
   return {
+    // Step data
+    completedSteps,
     // Current step info
     currentStep,
     currentStepConfig,
-    isFirstStep,
-    isLastStep,
-
-    // Step data
-    completedSteps,
-    stepData,
-
-    // Navigation
-    goToStep,
-    nextStep,
-    previousStep,
 
     // Form
     form,
 
-    // Wizard actions
-    submitWizard,
-    resetWizard,
+    // Navigation
+    goToStep,
+    isFirstStep,
+    isLastStep,
+    isStepCompleted: (stepIndex: number) => completedSteps.includes(stepIndex),
+    nextStep,
+    previousStep,
 
     // Progress
     progress: ((currentStep + 1) / steps.length) * 100,
-    isStepCompleted: (stepIndex: number) => completedSteps.includes(stepIndex),
+    resetWizard,
+    stepData,
+
+    // Wizard actions
+    submitWizard,
   };
 }
 

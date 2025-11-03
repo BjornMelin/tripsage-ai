@@ -15,9 +15,9 @@ describe("rpc helpers", () => {
     const { insertUserApiKey } = await import("../rpc");
     await insertUserApiKey("user-1", "OpenAI", "sk-test", mockClient);
     expect(rpc).toHaveBeenCalledWith("insert_user_api_key", {
-      p_user_id: "user-1",
-      p_service: "openai",
       p_api_key: "sk-test",
+      p_service: "openai",
+      p_user_id: "user-1",
     });
   });
 
@@ -27,8 +27,8 @@ describe("rpc helpers", () => {
     const { deleteUserApiKey } = await import("../rpc");
     await deleteUserApiKey("user-1", "xai", mockClient);
     expect(rpc).toHaveBeenCalledWith("delete_user_api_key", {
-      p_user_id: "user-1",
       p_service: "xai",
+      p_user_id: "user-1",
     });
   });
 

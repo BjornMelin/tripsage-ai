@@ -30,9 +30,9 @@ export async function initializeEnvironment(): Promise<{
 }> {
   if (isInitialized) {
     return {
-      success: !initializationError,
-      error: initializationError || undefined,
       environment: environmentInfo || undefined,
+      error: initializationError || undefined,
+      success: !initializationError,
     };
   }
 
@@ -68,8 +68,8 @@ export async function initializeEnvironment(): Promise<{
 
     isInitialized = true;
     return {
-      success: true,
       environment: environmentInfo,
+      success: true,
     };
   } catch (error) {
     initializationError =
@@ -84,8 +84,8 @@ export async function initializeEnvironment(): Promise<{
 
     isInitialized = true;
     return {
-      success: false,
       error: initializationError,
+      success: false,
     };
   }
 }
@@ -233,13 +233,13 @@ export function getConfig(): {
     apiBaseUrl: clientEnv.NEXT_PUBLIC_API_URL
       ? `${clientEnv.NEXT_PUBLIC_API_URL}/api`
       : "/api",
-    supabaseUrl: clientEnv.NEXT_PUBLIC_SUPABASE_URL,
-    supabaseAnonKey: clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    features: envInfo.features || {},
     isDevelopment: envInfo.environment === "development",
     isProduction: envInfo.environment === "production",
     isTest: envInfo.environment === "test",
-    features: envInfo.features || {},
     services: envInfo.services || {},
+    supabaseAnonKey: clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    supabaseUrl: clientEnv.NEXT_PUBLIC_SUPABASE_URL,
   };
 }
 
@@ -251,11 +251,11 @@ export function getApiConfig() {
 
   return {
     baseUrl: config.apiBaseUrl,
-    timeout: config.isDevelopment ? 30000 : 10000,
-    retries: config.isDevelopment ? 1 : 3,
-    validateResponses: config.isDevelopment,
     enableLogging: config.isDevelopment,
     features: config.features,
+    retries: config.isDevelopment ? 1 : 3,
+    timeout: config.isDevelopment ? 30000 : 10000,
+    validateResponses: config.isDevelopment,
   };
 }
 

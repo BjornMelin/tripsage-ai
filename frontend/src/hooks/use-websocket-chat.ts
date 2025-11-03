@@ -134,11 +134,11 @@ export function useWebSocketChat({
         setMessages((prev) => [
           ...prev,
           {
-            id: data.id ?? crypto.randomUUID(),
             content: data.content,
-            timestamp: new Date(data.timestamp ?? Date.now()),
+            id: data.id ?? crypto.randomUUID(),
             sender: data.sender ?? { id: user?.id ?? "unknown", name: "You" },
             status: "sent",
+            timestamp: new Date(data.timestamp ?? Date.now()),
           },
         ]);
       })
@@ -202,13 +202,13 @@ export function useWebSocketChat({
       }
 
       const request: ChannelSendRequest = {
-        type: "broadcast",
         event: "chat:message",
         payload: {
           content,
-          timestamp: new Date().toISOString(),
           sender: { id: user.id, name: "You" },
+          timestamp: new Date().toISOString(),
         },
+        type: "broadcast",
       };
       await channel.send(request);
     },
@@ -221,9 +221,9 @@ export function useWebSocketChat({
       return;
     }
     const request: ChannelSendRequest = {
-      type: "broadcast",
       event: "chat:typing",
-      payload: { userId: user.id, isTyping: true },
+      payload: { isTyping: true, userId: user.id },
+      type: "broadcast",
     };
     void channel.send(request);
   }, [user?.id]);
@@ -234,9 +234,9 @@ export function useWebSocketChat({
       return;
     }
     const request: ChannelSendRequest = {
-      type: "broadcast",
       event: "chat:typing",
-      payload: { userId: user.id, isTyping: false },
+      payload: { isTyping: false, userId: user.id },
+      type: "broadcast",
     };
     void channel.send(request);
   }, [user?.id]);
@@ -247,13 +247,13 @@ export function useWebSocketChat({
   }, []);
 
   return {
-    messages,
     connectionStatus: status,
-    sendMessage,
     isConnected: status === "connected",
+    messages,
     reconnect,
-    typingUsers,
+    sendMessage,
     startTyping,
     stopTyping,
+    typingUsers,
   };
 }

@@ -18,7 +18,7 @@ vi.mock("@/lib/error-service", () => ({
 }));
 
 // Mock console methods
-const consoleSpy = {
+const CONSOLE_SPY = {
   error: vi.spyOn(console, "error").mockImplementation(() => {}),
   group: vi.spyOn(console, "group").mockImplementation(() => {}),
   groupEnd: vi.spyOn(console, "groupEnd").mockImplementation(() => {}),
@@ -30,7 +30,7 @@ const consoleSpy = {
  * @param shouldThrow - Whether the component should throw an error.
  * @returns Either throws an error or renders normal content.
  */
-const ThrowError = ({ shouldThrow = false }: { shouldThrow?: boolean }) => {
+const THROW_ERROR = ({ shouldThrow = false }: { shouldThrow?: boolean }) => {
   if (shouldThrow) {
     throw new Error("Test error");
   }
@@ -42,24 +42,24 @@ const ThrowError = ({ shouldThrow = false }: { shouldThrow?: boolean }) => {
  *
  * @returns A simple div element.
  */
-const NormalComponent = () => <div>Normal component</div>;
+const NORMAL_COMPONENT = () => <div>Normal component</div>;
 
 describe("ErrorBoundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    consoleSpy.error.mockClear();
-    consoleSpy.group.mockClear();
-    consoleSpy.groupEnd.mockClear();
+    CONSOLE_SPY.error.mockClear();
+    CONSOLE_SPY.group.mockClear();
+    CONSOLE_SPY.groupEnd.mockClear();
 
     // Mock createErrorReport to return a valid report
     (errorService.createErrorReport as any).mockReturnValue({
       error: {
-        name: "Error",
         message: "Test error",
+        name: "Error",
       },
+      timestamp: new Date().toISOString(),
       url: "https://example.com",
       userAgent: "Test User Agent",
-      timestamp: new Date().toISOString(),
     });
 
     // Mock reportError to return a resolved promise
@@ -70,7 +70,7 @@ describe("ErrorBoundary", () => {
     it("should render children when there is no error", () => {
       renderWithProviders(
         <ErrorBoundary>
-          <NormalComponent />
+          <NORMAL_COMPONENT />
         </ErrorBoundary>
       );
 
@@ -80,7 +80,7 @@ describe("ErrorBoundary", () => {
     it("should not call error reporting when there is no error", () => {
       renderWithProviders(
         <ErrorBoundary>
-          <NormalComponent />
+          <NORMAL_COMPONENT />
         </ErrorBoundary>
       );
 
@@ -93,7 +93,7 @@ describe("ErrorBoundary", () => {
     it("should catch errors and display fallback UI", () => {
       renderWithProviders(
         <ErrorBoundary>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
 
@@ -104,7 +104,7 @@ describe("ErrorBoundary", () => {
     it("should call error reporting when error occurs", () => {
       renderWithProviders(
         <ErrorBoundary>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
 
@@ -123,7 +123,7 @@ describe("ErrorBoundary", () => {
 
       renderWithProviders(
         <ErrorBoundary onError={onError}>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
 
@@ -141,11 +141,11 @@ describe("ErrorBoundary", () => {
 
       renderWithProviders(
         <ErrorBoundary>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
 
-      expect(consoleSpy.error).toHaveBeenCalled();
+      expect(CONSOLE_SPY.error).toHaveBeenCalled();
       // Group logging may be suppressed in some environments; ensure at least one dev log occurred.
 
       vi.stubEnv("NODE_ENV", originalEnv ?? "test");
@@ -172,7 +172,7 @@ describe("ErrorBoundary", () => {
     it("should reset error state when reset button is clicked", async () => {
       const { rerender } = renderWithProviders(
         <ErrorBoundary fallback={CaptureFallback}>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
 
@@ -181,7 +181,7 @@ describe("ErrorBoundary", () => {
       // First make child safe, then trigger reset to clear boundary state
       rerender(
         <ErrorBoundary fallback={CaptureFallback}>
-          <ThrowError shouldThrow={false} />
+          <THROW_ERROR shouldThrow={false} />
         </ErrorBoundary>
       );
       fireEvent.click(screen.getByLabelText("reset"));
@@ -194,7 +194,7 @@ describe("ErrorBoundary", () => {
     it("should handle retry with retry limit deterministically", async () => {
       const { rerender } = renderWithProviders(
         <ErrorBoundary fallback={CaptureFallback}>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
 
@@ -207,19 +207,19 @@ describe("ErrorBoundary", () => {
       clickTryAgain();
       rerender(
         <ErrorBoundary fallback={CaptureFallback}>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
       clickTryAgain();
       rerender(
         <ErrorBoundary fallback={CaptureFallback}>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
       clickTryAgain();
       rerender(
         <ErrorBoundary fallback={CaptureFallback}>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
 
@@ -249,7 +249,7 @@ describe("ErrorBoundary", () => {
     it("should render custom fallback component", () => {
       renderWithProviders(
         <ErrorBoundary fallback={CustomFallback}>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
 
@@ -261,7 +261,7 @@ describe("ErrorBoundary", () => {
 
   describe("withErrorBoundary HOC", () => {
     it("should wrap component with error boundary", () => {
-      const WrappedComponent = withErrorBoundary(NormalComponent);
+      const WrappedComponent = withErrorBoundary(NORMAL_COMPONENT);
 
       renderWithProviders(<WrappedComponent />);
 
@@ -269,7 +269,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should catch errors in wrapped component", () => {
-      const WrappedComponent = withErrorBoundary(ThrowError);
+      const WrappedComponent = withErrorBoundary(THROW_ERROR);
 
       renderWithProviders(<WrappedComponent shouldThrow={true} />);
 
@@ -283,7 +283,7 @@ describe("ErrorBoundary", () => {
        * @returns Simple custom error UI.
        */
       const CustomFallback = () => <div>HOC Custom Fallback</div>;
-      const WrappedComponent = withErrorBoundary(ThrowError, {
+      const WrappedComponent = withErrorBoundary(THROW_ERROR, {
         fallback: CustomFallback,
       });
 
@@ -307,7 +307,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should handle components without display name", () => {
-      const WrappedComponent = withErrorBoundary(NormalComponent);
+      const WrappedComponent = withErrorBoundary(NORMAL_COMPONENT);
 
       expect(WrappedComponent.displayName).toBe("withErrorBoundary(NormalComponent)");
     });
@@ -330,7 +330,7 @@ describe("ErrorBoundary", () => {
 
       renderWithProviders(
         <ErrorBoundary>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
 
@@ -345,7 +345,7 @@ describe("ErrorBoundary", () => {
 
       renderWithProviders(
         <ErrorBoundary>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
 
@@ -365,7 +365,7 @@ describe("ErrorBoundary", () => {
 
       renderWithProviders(
         <ErrorBoundary>
-          <ThrowError shouldThrow={true} />
+          <THROW_ERROR shouldThrow={true} />
         </ErrorBoundary>
       );
 

@@ -25,80 +25,80 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Mock data for demonstration
-const mockAgentMetrics = [
+const MOCK_AGENT_METRICS = [
   {
+    averageResponseTime: 125,
+    cpuUsage: 68,
+    errorRate: 0.8,
+    healthScore: 94,
     id: "agent-1",
+    lastUpdate: new Date(),
+    memoryUsage: 45,
     name: "Research Agent",
     status: "active" as const,
-    healthScore: 94,
-    cpuUsage: 68,
-    memoryUsage: 45,
-    tokensProcessed: 15420,
-    averageResponseTime: 125,
-    errorRate: 0.8,
-    uptime: 98.5,
     tasksQueued: 3,
-    lastUpdate: new Date(),
+    tokensProcessed: 15420,
+    uptime: 98.5,
   },
   {
+    averageResponseTime: 156,
+    cpuUsage: 78,
+    errorRate: 1.2,
+    healthScore: 87,
     id: "agent-2",
+    lastUpdate: new Date(),
+    memoryUsage: 62,
     name: "Planning Agent",
     status: "active" as const,
-    healthScore: 87,
-    cpuUsage: 78,
-    memoryUsage: 62,
-    tokensProcessed: 12890,
-    averageResponseTime: 156,
-    errorRate: 1.2,
-    uptime: 97.2,
     tasksQueued: 5,
-    lastUpdate: new Date(),
+    tokensProcessed: 12890,
+    uptime: 97.2,
   },
   {
+    averageResponseTime: 98,
+    cpuUsage: 25,
+    errorRate: 0.5,
+    healthScore: 92,
     id: "agent-3",
+    lastUpdate: new Date(),
+    memoryUsage: 38,
     name: "Booking Agent",
     status: "idle" as const,
-    healthScore: 92,
-    cpuUsage: 25,
-    memoryUsage: 38,
-    tokensProcessed: 8750,
-    averageResponseTime: 98,
-    errorRate: 0.5,
-    uptime: 99.1,
     tasksQueued: 1,
-    lastUpdate: new Date(),
+    tokensProcessed: 8750,
+    uptime: 99.1,
   },
   {
+    averageResponseTime: 142,
+    cpuUsage: 55,
+    errorRate: 1.5,
+    healthScore: 89,
     id: "agent-4",
+    lastUpdate: new Date(),
+    memoryUsage: 51,
     name: "Support Agent",
     status: "active" as const,
-    healthScore: 89,
-    cpuUsage: 55,
-    memoryUsage: 51,
-    tokensProcessed: 11200,
-    averageResponseTime: 142,
-    errorRate: 1.5,
-    uptime: 96.8,
     tasksQueued: 2,
-    lastUpdate: new Date(),
+    tokensProcessed: 11200,
+    uptime: 96.8,
   },
 ];
 
-const mockNetworkMetrics: NetworkMetrics = {
-  latency: 87,
+const MOCK_NETWORK_METRICS: NetworkMetrics = {
   bandwidth: 15600000, // 15.6 MB/s
-  packetLoss: 0.2,
   jitter: 5,
+  latency: 87,
+  packetLoss: 0.2,
   quality: "excellent",
   signalStrength: 92,
 };
 
-const mockConnectionAnalytics: ConnectionAnalytics = {
+const MOCK_CONNECTION_ANALYTICS: ConnectionAnalytics = {
+  avgResponseTime: 125,
   connectionTime: 45000,
+  failedMessages: 3,
   reconnectCount: 0,
   totalMessages: 1247,
-  failedMessages: 3,
-  avgResponseTime: 125,
   uptime: 3600,
 };
 
@@ -139,11 +139,11 @@ export default function AgentsPage() {
     // Placeholder for future optimization broadcast.
   };
 
-  const activeAgents = mockAgentMetrics.filter((a) => a.status === "active").length;
+  const activeAgents = MOCK_AGENT_METRICS.filter((a) => a.status === "active").length;
   const averageHealth =
-    mockAgentMetrics.reduce((sum, a) => sum + a.healthScore, 0) /
-    mockAgentMetrics.length;
-  const totalTasks = mockAgentMetrics.reduce((sum, a) => sum + a.tasksQueued, 0);
+    MOCK_AGENT_METRICS.reduce((sum, a) => sum + a.healthScore, 0) /
+    MOCK_AGENT_METRICS.length;
+  const totalTasks = MOCK_AGENT_METRICS.reduce((sum, a) => sum + a.tasksQueued, 0);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -158,8 +158,8 @@ export default function AgentsPage() {
         <div className="flex items-center gap-4">
           <ConnectionStatus
             status={isConnected ? "connected" : "disconnected"}
-            metrics={mockNetworkMetrics}
-            analytics={mockConnectionAnalytics}
+            metrics={MOCK_NETWORK_METRICS}
+            analytics={MOCK_CONNECTION_ANALYTICS}
             onReconnect={connect}
             onOptimize={handleOptimizeConnection}
             variant="compact"
@@ -184,7 +184,7 @@ export default function AgentsPage() {
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{activeAgents}</div>
             <p className="text-xs text-muted-foreground">
-              of {mockAgentMetrics.length} total agents
+              of {MOCK_AGENT_METRICS.length} total agents
             </p>
           </CardContent>
         </Card>
@@ -217,9 +217,9 @@ export default function AgentsPage() {
             <Network className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockNetworkMetrics.quality}</div>
+            <div className="text-2xl font-bold">{MOCK_NETWORK_METRICS.quality}</div>
             <p className="text-xs text-muted-foreground">
-              {mockNetworkMetrics.latency}ms latency
+              {MOCK_NETWORK_METRICS.latency}ms latency
             </p>
           </CardContent>
         </Card>
@@ -248,7 +248,7 @@ export default function AgentsPage() {
 
         <TabsContent value="overview" className="space-y-6">
           <AgentStatusDashboard
-            agents={mockAgentMetrics}
+            agents={MOCK_AGENT_METRICS}
             onAgentSelect={handleAgentSelect}
             refreshInterval={3000}
           />
@@ -256,10 +256,16 @@ export default function AgentsPage() {
 
         <TabsContent value="collaboration" className="space-y-6">
           <AgentCollaborationHub
-            agents={mockAgentMetrics.map((agent) => ({
+            agents={MOCK_AGENT_METRICS.map((agent) => ({
+              currentTask: agent.status === "active" ? "Processing request" : undefined,
               id: agent.id,
+              lastActive: agent.lastUpdate,
               name: agent.name,
-              status: agent.status,
+              performance: {
+                accuracy: Math.round(agent.healthScore * 0.9),
+                efficiency: Math.round(agent.healthScore * 0.95),
+                speed: Math.round(100 - agent.averageResponseTime / 2),
+              },
               specialization: agent.name.includes("Research")
                 ? "Data Analysis"
                 : agent.name.includes("Planning")
@@ -267,14 +273,8 @@ export default function AgentsPage() {
                   : agent.name.includes("Booking")
                     ? "Reservations"
                     : "Customer Service",
-              currentTask: agent.status === "active" ? "Processing request" : undefined,
-              performance: {
-                accuracy: Math.round(agent.healthScore * 0.9),
-                speed: Math.round(100 - agent.averageResponseTime / 2),
-                efficiency: Math.round(agent.healthScore * 0.95),
-              },
+              status: agent.status,
               workload: agent.cpuUsage,
-              lastActive: agent.lastUpdate,
             }))}
             handoffs={[]}
             onAgentSelect={handleAgentSelect}
@@ -285,8 +285,8 @@ export default function AgentsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ConnectionStatus
               status={isConnected ? "connected" : "disconnected"}
-              metrics={mockNetworkMetrics}
-              analytics={mockConnectionAnalytics}
+              metrics={MOCK_NETWORK_METRICS}
+              analytics={MOCK_CONNECTION_ANALYTICS}
               onReconnect={connect}
               onOptimize={handleOptimizeConnection}
               showMetrics

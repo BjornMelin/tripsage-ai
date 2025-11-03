@@ -83,10 +83,10 @@ export function RegisterForm({
     try {
       const { error: signUpError } = await supabase.auth.signUp({
         email,
-        password,
         options: {
           emailRedirectTo: `${origin}/auth/confirm?type=email${nextSuffix}`,
         },
+        password,
       });
       if (signUpError) throw signUpError;
       setMessage("Check your email for a confirmation link to complete registration.");
@@ -100,10 +100,10 @@ export function RegisterForm({
   const handleSocialLogin = async (provider: "github" | "google") => {
     setError(null);
     const { error: oAuthError } = await supabase.auth.signInWithOAuth({
-      provider,
       options: {
         redirectTo: `${origin}/auth/callback${nextParam ? `?next=${encodeURIComponent(nextParam)}` : ""}`,
       },
+      provider,
     });
     if (oAuthError) setError(oAuthError.message);
   };

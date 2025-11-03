@@ -53,11 +53,11 @@ export class ApiClientError extends Error {
 
   public toJSON() {
     return {
-      name: this.name,
-      message: this.message,
-      status: this.status,
       code: this.code,
       endpoint: this.endpoint,
+      message: this.message,
+      name: this.name,
+      status: this.status,
       timestamp: this.timestamp.toISOString(),
       validationErrors: this.getValidationErrors(),
     };
@@ -110,17 +110,17 @@ export class ApiClient {
 
   constructor(config: Partial<ApiClientConfig> = {}) {
     this.config = {
+      authHeaderName: "Authorization",
       baseUrl: process.env.NEXT_PUBLIC_API_URL
         ? `${process.env.NEXT_PUBLIC_API_URL}/api`
         : "/api",
-      timeout: 10000,
-      retries: 3,
-      validateResponses: process.env.NODE_ENV !== "production",
-      validateRequests: true,
-      authHeaderName: "Authorization",
       defaultHeaders: {
         "Content-Type": "application/json",
       },
+      retries: 3,
+      timeout: 10000,
+      validateRequests: true,
+      validateResponses: process.env.NODE_ENV !== "production",
       ...config,
     };
   }
@@ -175,7 +175,7 @@ export class ApiClient {
               "VALIDATION_ERROR",
               finalConfig.data,
               finalConfig.endpoint,
-              { success: false, errors: error.errors }
+              { errors: error.errors, success: false }
             );
           }
           throw error;
@@ -210,8 +210,8 @@ export class ApiClient {
 
     // Prepare request options
     const requestOptions: RequestInit = {
-      method: finalConfig.method || "GET",
       headers,
+      method: finalConfig.method || "GET",
       signal: finalConfig.abortSignal,
     };
 
@@ -370,9 +370,9 @@ export class ApiClient {
   ): Promise<TResponse> {
     return this.request({
       ...options,
+      data,
       endpoint,
       method: "POST",
-      data,
     });
   }
 
@@ -386,9 +386,9 @@ export class ApiClient {
   ): Promise<TResponse> {
     return this.request({
       ...options,
+      data,
       endpoint,
       method: "PUT",
-      data,
     });
   }
 
@@ -402,9 +402,9 @@ export class ApiClient {
   ): Promise<TResponse> {
     return this.request({
       ...options,
+      data,
       endpoint,
       method: "PATCH",
-      data,
     });
   }
 
@@ -495,11 +495,11 @@ export class ApiClient {
       const chunkPromises = chunk.map(async (request, index) => {
         try {
           const data = await request();
-          return { index: i + index, success: true as const, data };
+          return { data, index: i + index, success: true as const };
         } catch (error) {
           const err = error as Error;
           if (failFast) throw err;
-          return { index: i + index, success: false as const, error: err };
+          return { error: err, index: i + index, success: false as const };
         }
       });
 
@@ -507,9 +507,9 @@ export class ApiClient {
         const chunkResults = await Promise.all(chunkPromises);
         chunkResults.forEach((result) => {
           results[result.index] = {
-            success: result.success,
             data: result.data,
             error: result.error,
+            success: result.success,
           };
         });
       } catch (error) {

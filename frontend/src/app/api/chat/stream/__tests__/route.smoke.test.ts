@@ -20,9 +20,9 @@ import {
  */
 function buildReq(body: unknown, headers: Record<string, string> = {}): NextRequest {
   return new Request("http://localhost/api/chat/stream", {
-    method: "POST",
-    headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(body),
+    headers: { "content-type": "application/json", ...headers },
+    method: "POST",
   }) as unknown as NextRequest;
 }
 
@@ -58,10 +58,10 @@ describe("/api/chat/stream route smoke", () => {
           return {};
         }
         limit = vi.fn(async () => ({
-          success: false,
           limit: 40,
           remaining: 0,
           reset: Date.now() + 60_000,
+          success: false,
         }));
       },
     }));
@@ -84,9 +84,9 @@ describe("/api/chat/stream route smoke", () => {
     // Provider resolution mock
     vi.doMock("@/lib/providers/registry", () => ({
       resolveProvider: vi.fn(async () => ({
-        provider: "openai",
-        modelId: "gpt-4o-mini",
         model: {} as any,
+        modelId: "gpt-4o-mini",
+        provider: "openai",
       })),
     }));
     // Stream stub
@@ -99,7 +99,7 @@ describe("/api/chat/stream route smoke", () => {
     const mod = await import("../route");
     const res = await mod.POST(
       buildReq({
-        messages: [{ id: "1", role: "user", parts: [{ type: "text", text: "hi" }] }],
+        messages: [{ id: "1", parts: [{ text: "hi", type: "text" }], role: "user" }],
       })
     );
     expect(res.status).toBe(200);

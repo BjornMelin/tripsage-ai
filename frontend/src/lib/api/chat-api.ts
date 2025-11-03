@@ -5,7 +5,7 @@ import type { ChatCompletionRequest, ChatCompletionResponse } from "@/types/chat
 // const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""; // Future use
 
 // Helper function to get auth headers
-const getAuthHeaders = async () => {
+const GET_AUTH_HEADERS = async () => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -31,7 +31,11 @@ const getAuthHeaders = async () => {
 };
 
 // Extend fetch with timeout functionality
-const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 30000) => {
+const FETCH_WITH_TIMEOUT = async (
+  url: string,
+  options: RequestInit,
+  timeout = 30000
+) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
 
@@ -57,13 +61,13 @@ export async function sendChatRequest(
   request: ChatCompletionRequest
 ): Promise<ChatCompletionResponse> {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetchWithTimeout(
+    const headers = await GET_AUTH_HEADERS();
+    const response = await FETCH_WITH_TIMEOUT(
       "/api/chat",
       {
-        method: "POST",
-        headers,
         body: JSON.stringify(request),
+        headers,
+        method: "POST",
       },
       60000
     ); // 60 second timeout
@@ -92,14 +96,14 @@ export async function uploadAttachments(files: File[]): Promise<{ urls: string[]
       formData.append(`file-${i}`, file);
     });
 
-    const authHeaders = await getAuthHeaders();
+    const authHeaders = await GET_AUTH_HEADERS();
     // Remove Content-Type for FormData (browser will set multipart/form-data automatically)
     const { "Content-Type": _, ...headersWithoutContentType } = authHeaders;
 
     const response = await fetch("/api/chat/attachments", {
-      method: "POST",
-      headers: headersWithoutContentType,
       body: formData,
+      headers: headersWithoutContentType,
+      method: "POST",
     });
 
     if (!response.ok) {

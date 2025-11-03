@@ -10,10 +10,10 @@ interface NavItem {
   href: string;
 }
 
-const navItems: NavItem[] = [
-  { name: "General", href: "/settings" },
-  { name: "API Keys", href: "/settings/api-keys" },
-  { name: "Security", href: "/settings/security" },
+const NAV_ITEMS: NavItem[] = [
+  { href: "/settings", name: "General" },
+  { href: "/settings/api-keys", name: "API Keys" },
+  { href: "/settings/security", name: "Security" },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +24,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       <aside className="flex flex-col gap-2">
         <nav className="flex flex-col gap-2">
           <h3 className="text-lg font-medium mb-2">Settings</h3>
-          {navItems.map((item) => (
+          {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}

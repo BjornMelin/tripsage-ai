@@ -107,8 +107,8 @@ export type PromptInputControllerProps = {
   __unregisterFileInput: (id: string) => void;
 };
 
-const PromptInputController = createContext<PromptInputControllerProps | null>(null);
-const ProviderAttachmentsContext = createContext<AttachmentsContext | null>(null);
+const PROMPT_INPUT_CONTROLLER = createContext<PromptInputControllerProps | null>(null);
+const PROVIDER_ATTACHMENTS_CONTEXT = createContext<AttachmentsContext | null>(null);
 
 /**
  * Access the prompt input controller from a surrounding `PromptInputProvider`.
@@ -117,7 +117,7 @@ const ProviderAttachmentsContext = createContext<AttachmentsContext | null>(null
  * @throws Error when used outside a `PromptInputProvider`.
  */
 export const usePromptInputController = () => {
-  const ctx = useContext(PromptInputController);
+  const ctx = useContext(PROMPT_INPUT_CONTROLLER);
   if (!ctx) {
     throw new Error(
       "Wrap your component inside <PromptInputProvider> to use usePromptInputController()."
@@ -127,7 +127,7 @@ export const usePromptInputController = () => {
 };
 
 // Optional variants (do NOT throw). Useful for dual-mode components.
-const useOptionalPromptInputController = () => useContext(PromptInputController);
+const USE_OPTIONAL_PROMPT_INPUT_CONTROLLER = () => useContext(PROMPT_INPUT_CONTROLLER);
 
 /**
  * Access attachments from the provider scope.
@@ -136,7 +136,7 @@ const useOptionalPromptInputController = () => useContext(PromptInputController)
  * @throws Error when provider is not present.
  */
 export const useProviderAttachments = () => {
-  const ctx = useContext(ProviderAttachmentsContext);
+  const ctx = useContext(PROVIDER_ATTACHMENTS_CONTEXT);
   if (!ctx) {
     throw new Error(
       "Wrap your component inside <PromptInputProvider> to use useProviderAttachments()."
@@ -145,7 +145,8 @@ export const useProviderAttachments = () => {
   return ctx;
 };
 
-const useOptionalProviderAttachments = () => useContext(ProviderAttachmentsContext);
+const USE_OPTIONAL_PROVIDER_ATTACHMENTS = () =>
+  useContext(PROVIDER_ATTACHMENTS_CONTEXT);
 
 export type PromptInputProviderProps = PropsWithChildren<{
   initialInput?: string;
@@ -182,11 +183,11 @@ export function PromptInputProvider({
     setAttachments((prev) =>
       prev.concat(
         incoming.map((file) => ({
+          filename: file.name,
           id: nanoid(),
+          mediaType: file.type,
           type: "file" as const,
           url: URL.createObjectURL(file),
-          mediaType: file.type,
-          filename: file.name,
         }))
       )
     );
@@ -229,19 +230,19 @@ export function PromptInputProvider({
 
   const attachmentsContext = useMemo<AttachmentsContext>(
     () => ({
-      files: attachments,
       add,
-      remove,
       clear,
-      openFileDialog,
       fileInputRef,
+      files: attachments,
+      openFileDialog,
+      remove,
     }),
     [attachments, add, remove, clear, openFileDialog]
   );
 
   const __registerFileInput = useCallback(
     (id: string, ref: RefObject<HTMLInputElement | null>, open: () => void) => {
-      fileInputsRef.current.set(id, { ref, open });
+      fileInputsRef.current.set(id, { open, ref });
     },
     []
   );
@@ -252,14 +253,14 @@ export function PromptInputProvider({
 
   const controller = useMemo<PromptInputControllerProps>(
     () => ({
-      textInput: {
-        value: textInput,
-        setInput: setTextInput,
-        clear: clearInput,
-      },
-      attachments: attachmentsContext,
       __registerFileInput,
       __unregisterFileInput,
+      attachments: attachmentsContext,
+      textInput: {
+        clear: clearInput,
+        setInput: setTextInput,
+        value: textInput,
+      },
     }),
     [
       textInput,
@@ -282,11 +283,11 @@ export function PromptInputProvider({
   }, [attachments]);
 
   return (
-    <PromptInputController.Provider value={controller}>
-      <ProviderAttachmentsContext.Provider value={attachmentsContext}>
+    <PROMPT_INPUT_CONTROLLER.Provider value={controller}>
+      <PROVIDER_ATTACHMENTS_CONTEXT.Provider value={attachmentsContext}>
         {children}
-      </ProviderAttachmentsContext.Provider>
-    </PromptInputController.Provider>
+      </PROVIDER_ATTACHMENTS_CONTEXT.Provider>
+    </PROMPT_INPUT_CONTROLLER.Provider>
   );
 }
 
@@ -294,7 +295,7 @@ export function PromptInputProvider({
 // Component Context & Hooks
 // ============================================================================
 
-const LocalAttachmentsContext = createContext<AttachmentsContext | null>(null);
+const LOCAL_ATTACHMENTS_CONTEXT = createContext<AttachmentsContext | null>(null);
 
 /**
  * Access attachments for the nearest PromptInput or Provider.
@@ -304,8 +305,8 @@ const LocalAttachmentsContext = createContext<AttachmentsContext | null>(null);
  */
 export const usePromptInputAttachments = () => {
   // Dual-mode: prefer provider if present, otherwise use local
-  const provider = useOptionalProviderAttachments();
-  const local = useContext(LocalAttachmentsContext);
+  const provider = USE_OPTIONAL_PROVIDER_ATTACHMENTS();
+  const local = useContext(LOCAL_ATTACHMENTS_CONTEXT);
   const context = provider ?? local;
   if (!context) {
     throw new Error(
@@ -514,7 +515,7 @@ export const PromptInput = ({
   ...props
 }: PromptInputProps) => {
   // Try to use a provider controller if present
-  const controller = useOptionalPromptInputController();
+  const controller = USE_OPTIONAL_PROMPT_INPUT_CONTROLLER();
   const usingProvider = !!controller;
 
   // Refs
@@ -615,11 +616,11 @@ export const PromptInput = ({
         const next: (FileUIPart & { id: string })[] = [];
         for (const file of capped) {
           next.push({
+            filename: file.name,
             id: nanoid(),
+            mediaType: file.type,
             type: "file",
             url: URL.createObjectURL(file),
-            mediaType: file.type,
-            filename: file.name,
           });
         }
         return prev.concat(next);
@@ -746,15 +747,15 @@ export const PromptInput = ({
     }
   };
 
-  const MAX_BLOB_SIZE = 5 * 1024 * 1024; // 5MB
+  const MaxBlobSize = 5 * 1024 * 1024; // 5MB
 
   const convertBlobUrlToDataUrl = async (url: string): Promise<string> => {
     const response = await fetch(url);
     const blob = await response.blob();
 
-    if (blob.size > MAX_BLOB_SIZE) {
+    if (blob.size > MaxBlobSize) {
       throw new Error(
-        `File is too large to convert. Please select a file smaller than ${MAX_BLOB_SIZE / (1024 * 1024)}MB.`
+        `File is too large to convert. Please select a file smaller than ${MaxBlobSize / (1024 * 1024)}MB.`
       );
     }
 
@@ -768,12 +769,12 @@ export const PromptInput = ({
 
   const ctx = useMemo<AttachmentsContext>(
     () => ({
-      files: files.map((item) => ({ ...item, id: item.id })),
       add,
-      remove,
       clear,
-      openFileDialog,
       fileInputRef: inputRef,
+      files: files.map((item) => ({ ...item, id: item.id })),
+      openFileDialog,
+      remove,
     }),
     [files, add, remove, clear, openFileDialog]
   );
@@ -815,7 +816,7 @@ export const PromptInput = ({
     )
       .then((convertedFiles: FileUIPart[]) => {
         try {
-          const result = onSubmit({ text, files: convertedFiles }, event);
+          const result = onSubmit({ files: convertedFiles, text }, event);
 
           // Handle both sync and async onSubmit
           if (result instanceof Promise) {
@@ -884,9 +885,9 @@ export const PromptInput = ({
   return usingProvider ? (
     inner
   ) : (
-    <LocalAttachmentsContext.Provider value={ctx}>
+    <LOCAL_ATTACHMENTS_CONTEXT.Provider value={ctx}>
       {inner}
-    </LocalAttachmentsContext.Provider>
+    </LOCAL_ATTACHMENTS_CONTEXT.Provider>
   );
 };
 
@@ -909,7 +910,7 @@ export const PromptInputTextarea = ({
   accept,
   ...props
 }: PromptInputTextareaProps) => {
-  const controller = useOptionalPromptInputController();
+  const controller = USE_OPTIONAL_PROMPT_INPUT_CONTROLLER();
   const attachments = usePromptInputAttachments();
   const [isComposing, setIsComposing] = useState(false);
 
@@ -981,11 +982,11 @@ export const PromptInputTextarea = ({
 
   const controlledProps = controller
     ? {
-        value: controller.textInput.value,
         onChange: (e: ChangeEvent<HTMLTextAreaElement>) => {
           controller.textInput.setInput(e.currentTarget.value);
           onChange?.(e);
         },
+        value: controller.textInput.value,
       }
     : {
         onChange,

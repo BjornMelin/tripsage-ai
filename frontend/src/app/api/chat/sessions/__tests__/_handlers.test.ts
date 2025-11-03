@@ -28,35 +28,35 @@ function supabase(userId: string | null, store: { sessions: any[]; messages: any
     from: vi.fn((table: string) => {
       if (table === "chat_sessions") {
         return {
+          delete: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
           insert: vi.fn(async (row: any) => {
             store.sessions.push(row);
             return { error: null };
           }),
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({
-            data: store.sessions.filter((s) => s.user_id === userId),
-            error: null,
-          }),
-          delete: vi.fn().mockReturnThis(),
           maybeSingle: vi.fn(async () => ({
             data: store.sessions.find((s) => s.id) ?? null,
             error: null,
           })),
+          order: vi.fn().mockResolvedValue({
+            data: store.sessions.filter((s) => s.user_id === userId),
+            error: null,
+          }),
+          select: vi.fn().mockReturnThis(),
         } as any;
       }
       if (table === "chat_messages") {
         return {
+          eq: vi.fn().mockReturnThis(),
           insert: vi.fn(async (row: any) => {
             store.messages.push(row);
             return { error: null };
           }),
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
           order: vi.fn().mockResolvedValue({
             data: store.messages.filter((m) => m.session_id),
             error: null,
           }),
+          select: vi.fn().mockReturnThis(),
         } as any;
       }
       return {} as any;
@@ -66,7 +66,7 @@ function supabase(userId: string | null, store: { sessions: any[]; messages: any
 
 describe("sessions _handlers", () => {
   it("create/list session happy path", async () => {
-    const store = { sessions: [] as any[], messages: [] as any[] };
+    const store = { messages: [] as any[], sessions: [] as any[] };
     const s = supabase("u1", store);
     const res1 = await createSession({ supabase: s }, "Trip");
     expect(res1.status).toBe(201);
@@ -76,10 +76,10 @@ describe("sessions _handlers", () => {
 
   it("get/delete session auth gating", async () => {
     const store = {
-      sessions: [
-        { id: "s1", user_id: "u2", metadata: {}, created_at: "", updated_at: "" },
-      ],
       messages: [],
+      sessions: [
+        { created_at: "", id: "s1", metadata: {}, updated_at: "", user_id: "u2" },
+      ],
     };
     const s = supabase("u2", store);
     const g = await getSession({ supabase: s }, "s1");
@@ -89,11 +89,11 @@ describe("sessions _handlers", () => {
   });
 
   it("list/create messages happy path", async () => {
-    const store = { sessions: [{ id: "s1", user_id: "u3" }], messages: [] as any[] };
+    const store = { messages: [] as any[], sessions: [{ id: "s1", user_id: "u3" }] };
     const s = supabase("u3", store);
     const r1 = await createMessage({ supabase: s }, "s1", {
+      parts: [{ text: "hi", type: "text" }],
       role: "user",
-      parts: [{ type: "text", text: "hi" }],
     });
     expect(r1.status).toBe(201);
     const r2 = await listMessages({ supabase: s }, "s1");

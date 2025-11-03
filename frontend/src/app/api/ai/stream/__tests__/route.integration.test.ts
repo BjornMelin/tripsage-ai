@@ -18,11 +18,11 @@ vi.mock("@ai-sdk/openai", () => ({
 import { streamText } from "ai";
 import { POST } from "@/app/api/ai/stream/route";
 
-const mockStreamText = vi.mocked(streamText);
+const MOCK_STREAM_TEXT = vi.mocked(streamText);
 
 describe("ai stream route", () => {
   beforeEach(() => {
-    mockStreamText.mockClear();
+    MOCK_STREAM_TEXT.mockClear();
   });
 
   it("returns an SSE response on successful request", async () => {
@@ -30,16 +30,16 @@ describe("ai stream route", () => {
     const mockResponse = new Response('data: {"type":"finish"}\n\n', {
       headers: { "content-type": "text/event-stream" },
     });
-    const mockToUIMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
+    const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    mockStreamText.mockReturnValue({
-      toUIMessageStreamResponse: mockToUIMessageStreamResponse,
+    MOCK_STREAM_TEXT.mockReturnValue({
+      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
     } as any);
 
     const request = new Request("http://localhost", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
       body: JSON.stringify({ prompt: "Hello world" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
     });
 
     const response = await POST(request);
@@ -47,35 +47,35 @@ describe("ai stream route", () => {
     expect(response).toBeInstanceOf(Response);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toMatch(/text\/event-stream/i);
-    expect(mockStreamText).toHaveBeenCalledWith(
+    expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
       expect.objectContaining({
         model: "openai/gpt-4o",
         prompt: "Hello world",
       })
     );
-    expect(mockToUIMessageStreamResponse).toHaveBeenCalled();
+    expect(mockToUiMessageStreamResponse).toHaveBeenCalled();
   });
 
   it("handles requests with empty prompt", async () => {
     const mockResponse = new Response('data: {"type":"finish"}\n\n', {
       headers: { "content-type": "text/event-stream" },
     });
-    const mockToUIMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
+    const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    mockStreamText.mockReturnValue({
-      toUIMessageStreamResponse: mockToUIMessageStreamResponse,
+    MOCK_STREAM_TEXT.mockReturnValue({
+      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
     } as any);
 
     const request = new Request("http://localhost", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
       body: JSON.stringify({ prompt: "" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
     });
 
     const response = await POST(request);
 
     expect(response.status).toBe(200);
-    expect(mockStreamText).toHaveBeenCalledWith(
+    expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
       expect.objectContaining({
         model: "openai/gpt-4o",
         prompt: "Hello from AI SDK v6",
@@ -87,22 +87,22 @@ describe("ai stream route", () => {
     const mockResponse = new Response('data: {"type":"finish"}\n\n', {
       headers: { "content-type": "text/event-stream" },
     });
-    const mockToUIMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
+    const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    mockStreamText.mockReturnValue({
-      toUIMessageStreamResponse: mockToUIMessageStreamResponse,
+    MOCK_STREAM_TEXT.mockReturnValue({
+      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
     } as any);
 
     const request = new Request("http://localhost", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
       body: JSON.stringify({}),
+      headers: { "content-type": "application/json" },
+      method: "POST",
     });
 
     const response = await POST(request);
 
     expect(response.status).toBe(200);
-    expect(mockStreamText).toHaveBeenCalledWith(
+    expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
       expect.objectContaining({
         model: "openai/gpt-4o",
         prompt: "Hello from AI SDK v6",
@@ -114,21 +114,21 @@ describe("ai stream route", () => {
     const mockResponse = new Response('data: {"type":"finish"}\n\n', {
       headers: { "content-type": "text/event-stream" },
     });
-    const mockToUIMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
+    const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    mockStreamText.mockReturnValue({
-      toUIMessageStreamResponse: mockToUIMessageStreamResponse,
+    MOCK_STREAM_TEXT.mockReturnValue({
+      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
     } as any);
 
     const request = new Request("http://localhost", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
       body: "invalid json{",
+      headers: { "content-type": "application/json" },
+      method: "POST",
     });
 
     const response = await POST(request);
     expect(response.status).toBe(200);
-    expect(mockStreamText).toHaveBeenCalledWith(
+    expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
       expect.objectContaining({
         model: "openai/gpt-4o",
         prompt: "Hello from AI SDK v6",
@@ -151,15 +151,15 @@ describe("ai stream route", () => {
     const mockResponse = new Response('data: {"type":"finish"}\n\n', {
       headers: { "content-type": "text/event-stream" },
     });
-    const mockToUIMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
+    const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    mockStreamText.mockReturnValue({
-      toUIMessageStreamResponse: mockToUIMessageStreamResponse,
+    MOCK_STREAM_TEXT.mockReturnValue({
+      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
     } as any);
 
     const request = new Request("http://localhost", {
-      method: "POST",
       body: JSON.stringify({ prompt: "test" }),
+      method: "POST",
     });
 
     const response = await POST(request);
@@ -171,22 +171,22 @@ describe("ai stream route", () => {
     const mockResponse = new Response('data: {"type":"finish"}\n\n', {
       headers: { "content-type": "text/event-stream" },
     });
-    const mockToUIMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
+    const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    mockStreamText.mockReturnValue({
-      toUIMessageStreamResponse: mockToUIMessageStreamResponse,
+    MOCK_STREAM_TEXT.mockReturnValue({
+      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
     } as any);
 
     const request = new Request("http://localhost", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
       body: JSON.stringify({ prompt: "test" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
     });
 
     await POST(request);
 
     // Verify the route uses the expected model and configuration
-    expect(mockStreamText).toHaveBeenCalledWith(
+    expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
       expect.objectContaining({
         model: "openai/gpt-4o",
         prompt: "test",
@@ -196,14 +196,14 @@ describe("ai stream route", () => {
 
   it("handles AI SDK errors gracefully", async () => {
     // Mock AI SDK to throw an error
-    mockStreamText.mockImplementation(() => {
+    MOCK_STREAM_TEXT.mockImplementation(() => {
       throw new Error("AI SDK error");
     });
 
     const request = new Request("http://localhost", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
       body: JSON.stringify({ prompt: "test" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
     });
 
     // Should propagate the error for Next.js error handling
@@ -212,18 +212,18 @@ describe("ai stream route", () => {
 
   it("handles streamText response conversion errors", async () => {
     // Mock successful streamText but failed response conversion
-    const mockToUIMessageStreamResponse = vi.fn().mockImplementation(() => {
+    const mockToUiMessageStreamResponse = vi.fn().mockImplementation(() => {
       throw new Error("Response conversion error");
     });
 
-    mockStreamText.mockReturnValue({
-      toUIMessageStreamResponse: mockToUIMessageStreamResponse,
+    MOCK_STREAM_TEXT.mockReturnValue({
+      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
     } as any);
 
     const request = new Request("http://localhost", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
       body: JSON.stringify({ prompt: "test" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
     });
 
     await expect(POST(request)).rejects.toThrow("Response conversion error");
@@ -234,22 +234,22 @@ describe("ai stream route", () => {
     const mockResponse = new Response('data: {"type":"finish"}\n\n', {
       headers: { "content-type": "text/event-stream" },
     });
-    const mockToUIMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
+    const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
-    mockStreamText.mockReturnValue({
-      toUIMessageStreamResponse: mockToUIMessageStreamResponse,
+    MOCK_STREAM_TEXT.mockReturnValue({
+      toUIMessageStreamResponse: mockToUiMessageStreamResponse,
     } as any);
 
     const request = new Request("http://localhost", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
       body: JSON.stringify({ prompt: longPrompt }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
     });
 
     const response = await POST(request);
 
     expect(response.status).toBe(200);
-    expect(mockStreamText).toHaveBeenCalledWith(
+    expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
       expect.objectContaining({
         model: "openai/gpt-4o",
         prompt: longPrompt,

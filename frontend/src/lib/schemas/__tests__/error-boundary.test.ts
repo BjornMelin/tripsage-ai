@@ -37,9 +37,9 @@ describe("errorBoundaryPropsSchema", () => {
 describe("errorStateSchema", () => {
   it("validates valid error state", () => {
     const validState = {
-      hasError: true,
       error: new Error("Test error"),
       errorInfo: { componentStack: "Component stack" },
+      hasError: true,
     };
 
     expect(() => errorStateSchema.parse(validState)).not.toThrow();
@@ -47,9 +47,9 @@ describe("errorStateSchema", () => {
 
   it("validates state with null error", () => {
     const stateWithNullError = {
-      hasError: false,
       error: null,
       errorInfo: null,
+      hasError: false,
     };
 
     expect(() => errorStateSchema.parse(stateWithNullError)).not.toThrow();
@@ -57,9 +57,9 @@ describe("errorStateSchema", () => {
 
   it("requires hasError boolean", () => {
     const invalidState = {
-      hasError: "true", // should be boolean
       error: null,
       errorInfo: null,
+      hasError: "true", // should be boolean
     };
 
     expect(() => errorStateSchema.parse(invalidState)).toThrow();
@@ -88,8 +88,8 @@ describe("routeErrorPropsSchema", () => {
   it("requires reset function", () => {
     const invalidProps = {
       error: {
-        name: "Error",
         message: "Route error",
+        name: "Error",
       },
       // missing reset function
     };
@@ -140,11 +140,11 @@ describe("loadingStateSchema", () => {
 describe("skeletonPropsSchema", () => {
   it("validates valid skeleton props", () => {
     const validProps = {
+      animation: "wave" as const,
       className: "custom-class",
+      height: 50,
       variant: "circular" as const,
       width: "100px",
-      height: 50,
-      animation: "wave" as const,
     };
 
     expect(() => skeletonPropsSchema.parse(validProps)).not.toThrow();
@@ -170,8 +170,8 @@ describe("skeletonPropsSchema", () => {
   });
 
   it("accepts string and number dimensions", () => {
-    const propsWithStringDimensions = { width: "100px", height: "50px" };
-    const propsWithNumberDimensions = { width: 100, height: 50 };
+    const propsWithStringDimensions = { height: "50px", width: "100px" };
+    const propsWithNumberDimensions = { height: 50, width: 100 };
     expect(() => skeletonPropsSchema.parse(propsWithStringDimensions)).not.toThrow();
     expect(() => skeletonPropsSchema.parse(propsWithNumberDimensions)).not.toThrow();
   });

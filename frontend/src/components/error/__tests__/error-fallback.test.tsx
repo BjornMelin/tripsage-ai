@@ -9,18 +9,18 @@ import {
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
   AlertTriangle: () => <div data-testid="alert-triangle-icon" />,
-  RefreshCw: () => <div data-testid="refresh-icon" />,
-  Home: () => <div data-testid="home-icon" />,
   Bug: () => <div data-testid="bug-icon" />,
+  Home: () => <div data-testid="home-icon" />,
+  RefreshCw: () => <div data-testid="refresh-icon" />,
 }));
 
 // Mock window.location
-const mockLocation = {
+const MOCK_LOCATION = {
   href: "",
   reload: vi.fn(),
 };
 Object.defineProperty(window, "location", {
-  value: mockLocation,
+  value: MOCK_LOCATION,
   writable: true,
 });
 
@@ -33,8 +33,8 @@ describe("Error Fallback Components", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLocation.reload.mockClear();
-    mockLocation.href = "";
+    MOCK_LOCATION.reload.mockClear();
+    MOCK_LOCATION.href = "";
   });
 
   describe("ErrorFallback", () => {
@@ -109,7 +109,7 @@ describe("Error Fallback Components", () => {
       expect(reloadButton).toBeInTheDocument();
 
       fireEvent.click(reloadButton);
-      expect(mockLocation.reload).toHaveBeenCalledTimes(1);
+      expect(MOCK_LOCATION.reload).toHaveBeenCalledTimes(1);
     });
 
     it("should handle go home button", () => {
@@ -119,7 +119,7 @@ describe("Error Fallback Components", () => {
       expect(homeButton).toBeInTheDocument();
 
       fireEvent.click(homeButton);
-      expect(mockLocation.href).toBe("/");
+      expect(MOCK_LOCATION.href).toBe("/");
     });
 
     it("should not render buttons when functions not provided", () => {
@@ -207,7 +207,7 @@ describe("Error Fallback Components", () => {
       expect(dashboardButton).toBeInTheDocument();
 
       fireEvent.click(dashboardButton);
-      expect(mockLocation.href).toBe("/");
+      expect(MOCK_LOCATION.href).toBe("/");
     });
 
     it("should show error stack in development mode", () => {

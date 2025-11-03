@@ -290,38 +290,38 @@ interface ChatState {
 }
 
 // Zod schema for session data validation when importing
-const sessionDataSchema = z.object({
+const SESSION_DATA_SCHEMA = z.object({
+  createdAt: z.string(),
   id: z.string(),
-  title: z.string(),
   messages: z.array(
     z.object({
+      attachments: z
+        .array(
+          z.object({
+            contentType: z.string().optional(),
+            id: z.string(),
+            name: z.string().optional(),
+            url: z.string(),
+          })
+        )
+        .optional(),
+      content: z.string(),
       id: z.string(),
       role: z.enum(["user", "assistant", "system"]),
-      content: z.string(),
       timestamp: z.string(),
       toolCalls: z
         .array(
           z.object({
+            arguments: z.record(z.string(), z.unknown()),
             id: z.string(),
             name: z.string(),
-            arguments: z.record(z.string(), z.unknown()),
             state: z.enum(["call", "partial-call", "result"]),
-          })
-        )
-        .optional(),
-      attachments: z
-        .array(
-          z.object({
-            id: z.string(),
-            url: z.string(),
-            name: z.string().optional(),
-            contentType: z.string().optional(),
           })
         )
         .optional(),
     })
   ),
-  createdAt: z.string(),
+  title: z.string(),
   updatedAt: z.string(),
 });
 
@@ -358,86 +358,6 @@ let abortController: AbortController | null = null;
 export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({
-      sessions: [],
-      currentSessionId: null,
-      isLoading: false,
-      isStreaming: false,
-      error: null,
-
-      // Memory integration defaults
-      memoryEnabled: true,
-      autoSyncMemory: true,
-
-      // Realtime integration defaults
-      realtimeChannel: null,
-      connectionStatus: ConnectionStatus.DISCONNECTED,
-      isRealtimeEnabled: true,
-      typingUsers: {},
-      pendingMessages: [],
-
-      get currentSession() {
-        const { sessions, currentSessionId } = get();
-        if (!currentSessionId) return null;
-        return sessions.find((session) => session.id === currentSessionId) || null;
-      },
-
-      createSession: (title, userId) => {
-        const timestamp = new Date().toISOString();
-        const sessionId = Date.now().toString();
-
-        const newSession: ChatSession = {
-          id: sessionId,
-          title: title || "New Conversation",
-          messages: [],
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          agentStatus: {
-            isActive: false,
-            progress: 0,
-          },
-          userId: userId,
-          memoryContext: undefined,
-          lastMemorySync: undefined,
-        };
-
-        set((state) => ({
-          sessions: [newSession, ...state.sessions],
-          currentSessionId: sessionId,
-        }));
-
-        return sessionId;
-      },
-
-      setCurrentSession: (sessionId) => {
-        set({ currentSessionId: sessionId });
-      },
-
-      deleteSession: (sessionId) => {
-        set((state) => {
-          const sessions = state.sessions.filter((session) => session.id !== sessionId);
-
-          // If we're deleting the current session, select the first available or null
-          const currentSessionId =
-            state.currentSessionId === sessionId
-              ? sessions.length > 0
-                ? sessions[0].id
-                : null
-              : state.currentSessionId;
-
-          return { sessions, currentSessionId };
-        });
-      },
-
-      renameSession: (sessionId, title) => {
-        set((state) => ({
-          sessions: state.sessions.map((session) =>
-            session.id === sessionId
-              ? { ...session, title, updatedAt: new Date().toISOString() }
-              : session
-          ),
-        }));
-      },
-
       addMessage: (sessionId, message) => {
         const timestamp = new Date().toISOString();
         const messageId = Date.now().toString();
@@ -463,17 +383,364 @@ export const useChatStore = create<ChatState>()(
         return messageId;
       },
 
-      updateMessage: (sessionId, messageId, updates) => {
+      addPendingMessage: (message) => {
+        set((state) => ({
+          pendingMessages: [...state.pendingMessages, message],
+        }));
+      },
+
+      addToolResult: (sessionId, messageId, callId, result) => {
         set((state) => ({
           sessions: state.sessions.map((session) =>
             session.id === sessionId
               ? {
                   ...session,
                   messages: session.messages.map((message) =>
-                    message.id === messageId ? { ...message, ...updates } : message
+                    message.id === messageId
+                      ? {
+                          ...message,
+                          toolCalls: (message.toolCalls || []).map((call) =>
+                            call.id === callId ? { ...call, state: "result" } : call
+                          ),
+                          toolResults: [
+                            ...(message.toolResults || []),
+                            { callId, result },
+                          ],
+                        }
+                      : message
                   ),
                   updatedAt: new Date().toISOString(),
                 }
+              : session
+          ),
+        }));
+      },
+      autoSyncMemory: true,
+
+      clearError: () => set({ error: null }),
+
+      clearMessages: (sessionId) => {
+        set((state) => ({
+          sessions: state.sessions.map((session) =>
+            session.id === sessionId
+              ? {
+                  ...session,
+                  messages: [],
+                  updatedAt: new Date().toISOString(),
+                }
+              : session
+          ),
+        }));
+      },
+
+      clearTypingUsers: (sessionId) => {
+        set((state) => {
+          const newTypingUsers = { ...state.typingUsers };
+          for (const key of Object.keys(newTypingUsers)) {
+            if (key.startsWith(`${sessionId}_`)) {
+              delete newTypingUsers[key];
+            }
+          }
+          return { typingUsers: newTypingUsers };
+        });
+      },
+      connectionStatus: ConnectionStatus.DISCONNECTED,
+
+      // Realtime actions
+      connectRealtime: async (sessionId) => {
+        const supabase = getBrowserClient();
+        const prev = get().realtimeChannel;
+        if (prev) {
+          prev.unsubscribe();
+        }
+
+        try {
+          set({ connectionStatus: ConnectionStatus.CONNECTING });
+          const channel = supabase
+            .channel(`session:${sessionId}`, { config: { private: true } })
+            .on("broadcast", { event: "chat:message" }, (payload) => {
+              const data = payload.payload as
+                | { content?: string; role?: string; id?: string }
+                | undefined;
+              get().handleRealtimeMessage({
+                content: data?.content || "",
+                messageId: data?.id,
+                role: (data?.role as "user" | "assistant" | "system") || "assistant",
+                sessionId,
+                type: "chat_message",
+              });
+            })
+            .on("broadcast", { event: "chat:message_chunk" }, (payload) => {
+              const data = payload.payload as
+                | { content?: string; id?: string; is_final?: boolean }
+                | undefined;
+              get().handleRealtimeMessage({
+                content: data?.content || "",
+                isComplete: Boolean(data?.is_final),
+                messageId: data?.id,
+                sessionId,
+                type: "chat_message_chunk",
+              });
+            })
+            .on("broadcast", { event: "chat:typing" }, (payload) => {
+              const data = payload.payload as
+                | { userId?: string; isTyping?: boolean; username?: string }
+                | undefined;
+              if (!data?.userId) return;
+              if (data.isTyping) {
+                get().setUserTyping(sessionId, data.userId, data.username);
+              } else {
+                get().removeUserTyping(sessionId, data.userId);
+              }
+            })
+            .on("broadcast", { event: "agent_status_update" }, (payload) => {
+              const p = payload.payload as
+                | {
+                    isActive?: boolean;
+                    currentTask?: string;
+                    progress?: number;
+                    statusMessage?: string;
+                  }
+                | undefined;
+              get().handleAgentStatusUpdate({
+                currentTask: p?.currentTask,
+                isActive: Boolean(p?.isActive),
+                progress: Number(p?.progress ?? 0),
+                sessionId,
+                statusMessage: p?.statusMessage,
+                type: "agent_status_update",
+              });
+            });
+
+          channel.subscribe((state, err) => {
+            if (state === "SUBSCRIBED") {
+              set({ connectionStatus: ConnectionStatus.CONNECTED });
+            }
+            if (err) {
+              set({
+                connectionStatus: ConnectionStatus.ERROR,
+                error: err.message ?? "Realtime subscription error",
+              });
+            }
+          });
+
+          set({ realtimeChannel: channel });
+        } catch (error) {
+          console.error("Failed to connect Realtime:", error);
+          set({
+            connectionStatus: ConnectionStatus.ERROR,
+            error: error instanceof Error ? error.message : "Realtime connection error",
+          });
+        }
+      },
+
+      createSession: (title, userId) => {
+        const timestamp = new Date().toISOString();
+        const sessionId = Date.now().toString();
+
+        const newSession: ChatSession = {
+          agentStatus: {
+            isActive: false,
+            progress: 0,
+          },
+          createdAt: timestamp,
+          id: sessionId,
+          lastMemorySync: undefined,
+          memoryContext: undefined,
+          messages: [],
+          title: title || "New Conversation",
+          updatedAt: timestamp,
+          userId: userId,
+        };
+
+        set((state) => ({
+          currentSessionId: sessionId,
+          sessions: [newSession, ...state.sessions],
+        }));
+
+        return sessionId;
+      },
+
+      get currentSession() {
+        const { sessions, currentSessionId } = get();
+        if (!currentSessionId) return null;
+        return sessions.find((session) => session.id === currentSessionId) || null;
+      },
+      currentSessionId: null,
+
+      deleteSession: (sessionId) => {
+        set((state) => {
+          const sessions = state.sessions.filter((session) => session.id !== sessionId);
+
+          // If we're deleting the current session, select the first available or null
+          const currentSessionId =
+            state.currentSessionId === sessionId
+              ? sessions.length > 0
+                ? sessions[0].id
+                : null
+              : state.currentSessionId;
+
+          return { currentSessionId, sessions };
+        });
+      },
+
+      disconnectRealtime: () => {
+        const { realtimeChannel } = get();
+        if (realtimeChannel) {
+          realtimeChannel.unsubscribe();
+        }
+        set({
+          connectionStatus: ConnectionStatus.DISCONNECTED,
+          pendingMessages: [],
+          realtimeChannel: null,
+          typingUsers: {},
+        });
+      },
+      error: null,
+
+      exportSessionData: (sessionId) => {
+        const { sessions } = get();
+        const session = sessions.find((s) => s.id === sessionId);
+
+        if (!session) return "";
+
+        // Create a clean copy of the session for export
+        const exportData = {
+          ...session,
+          messages: session.messages.map((msg) => ({
+            ...msg,
+            // Clean up any browser-specific or non-serializable data
+            attachments: msg.attachments?.map((att) => ({
+              contentType: att.contentType,
+              id: att.id,
+              name: att.name,
+              url: att.url.startsWith("blob:") ? "" : att.url, // Don't export blob URLs
+            })),
+          })),
+        };
+
+        return JSON.stringify(exportData, null, 2);
+      },
+
+      handleAgentStatusUpdate: (event) => {
+        const { currentSessionId } = get();
+        if (!currentSessionId || event.sessionId !== currentSessionId) return;
+
+        get().updateAgentStatus(currentSessionId, {
+          currentTask: event.currentTask,
+          isActive: event.isActive,
+          progress: event.progress,
+          statusMessage: event.statusMessage,
+        });
+      },
+
+      handleRealtimeMessage: (event) => {
+        const { currentSessionId } = get();
+        if (!currentSessionId || event.sessionId !== currentSessionId) return;
+
+        if (event.type === "chat_message") {
+          // Add complete message
+          get().addMessage(currentSessionId, {
+            attachments: event.attachments,
+            content: event.content,
+            role: event.role || "assistant",
+            toolCalls: event.toolCalls,
+          });
+        } else if (event.type === "chat_message_chunk") {
+          // Handle streaming message chunks
+          const existingMessage = get()
+            .sessions.find((s) => s.id === currentSessionId)
+            ?.messages.find((m) => m.id === event.messageId);
+
+          if (existingMessage && event.messageId) {
+            // Update existing streaming message
+            get().updateMessage(currentSessionId, event.messageId, {
+              content: existingMessage.content + event.content,
+              isStreaming: !event.isComplete,
+            });
+          } else {
+            // Create new streaming message
+            const messageId = get().addMessage(currentSessionId, {
+              content: event.content,
+              isStreaming: !event.isComplete,
+              role: "assistant",
+            });
+
+            // Store the mapping for future chunks
+            if (event.messageId && messageId !== event.messageId) {
+              // Handle message ID mapping if needed
+            }
+          }
+        }
+      },
+
+      importSessionData: (jsonData) => {
+        try {
+          const data = JSON.parse(jsonData);
+
+          // Validate the data structure
+          const result = SESSION_DATA_SCHEMA.safeParse(data);
+          if (!result.success) {
+            set({ error: "Invalid session data format" });
+            return null;
+          }
+
+          const timestamp = new Date().toISOString();
+          const sessionId = Date.now().toString();
+
+          // Create a new session with the imported data
+          const importedSession: ChatSession = {
+            ...data,
+            id: sessionId, // Generate a new ID for this session
+            messages: data.messages,
+            title: `${data.title} (Imported)`,
+            updatedAt: timestamp,
+          };
+
+          set((state) => ({
+            currentSessionId: sessionId,
+            sessions: [importedSession, ...state.sessions],
+          }));
+
+          return sessionId;
+        } catch (error) {
+          set({
+            error:
+              error instanceof Error ? error.message : "Failed to import session data",
+          });
+          return null;
+        }
+      },
+      isLoading: false,
+      isRealtimeEnabled: true,
+      isStreaming: false,
+
+      // Memory integration defaults
+      memoryEnabled: true,
+      pendingMessages: [],
+
+      // Realtime integration defaults
+      realtimeChannel: null,
+
+      removePendingMessage: (messageId) => {
+        set((state) => ({
+          pendingMessages: state.pendingMessages.filter((m) => m.id !== messageId),
+        }));
+      },
+
+      removeUserTyping: (sessionId, userId) => {
+        set((state) => {
+          const newTypingUsers = { ...state.typingUsers };
+          delete newTypingUsers[`${sessionId}_${userId}`];
+          return { typingUsers: newTypingUsers };
+        });
+      },
+
+      renameSession: (sessionId, title) => {
+        set((state) => ({
+          sessions: state.sessions.map((session) =>
+            session.id === sessionId
+              ? { ...session, title, updatedAt: new Date().toISOString() }
               : session
           ),
         }));
@@ -490,26 +757,26 @@ export const useChatStore = create<ChatState>()(
 
         // Add user message
         get().addMessage(sessionId, {
-          role: "user",
-          content,
           attachments: options.attachments?.map((file) => ({
-            id: Date.now().toString(),
-            url: URL.createObjectURL(file),
-            name: file.name,
             contentType: file.type,
+            id: Date.now().toString(),
+            name: file.name,
             size: file.size,
+            url: URL.createObjectURL(file),
           })),
+          content,
+          role: "user",
         });
 
-        set({ isLoading: true, error: null });
+        set({ error: null, isLoading: true });
 
         // Final-Only: No direct socket send from the store; rely on HTTP or hooks.
 
         try {
           // Update agent status to show it's processing
           get().updateAgentStatus(sessionId, {
-            isActive: true,
             currentTask: "Processing your request",
+            isActive: true,
             progress: 30,
             statusMessage: "Analyzing your query...",
           });
@@ -519,8 +786,8 @@ export const useChatStore = create<ChatState>()(
 
           // Mock AI response
           get().addMessage(sessionId, {
-            role: "assistant",
             content: `I've received your message: "${content}". This is a placeholder response from the AI assistant that will be replaced with the actual API integration.`,
+            role: "assistant",
           });
 
           // Update agent status to show completion
@@ -546,10 +813,106 @@ export const useChatStore = create<ChatState>()(
 
           // Add system error message
           get().addMessage(sessionId, {
-            role: "system",
             content:
               "Sorry, there was an error processing your request. Please try again.",
+            role: "system",
           });
+        }
+      },
+      sessions: [],
+
+      setAutoSyncMemory: (enabled) => {
+        set({ autoSyncMemory: enabled });
+      },
+
+      setCurrentSession: (sessionId) => {
+        set({ currentSessionId: sessionId });
+      },
+
+      setMemoryEnabled: (enabled) => {
+        set({ memoryEnabled: enabled });
+      },
+
+      setRealtimeEnabled: (enabled) => {
+        set({ isRealtimeEnabled: enabled });
+
+        if (!enabled) {
+          get().disconnectRealtime();
+        }
+      },
+
+      setUserTyping: (sessionId, userId, username) => {
+        set((state) => ({
+          typingUsers: {
+            ...state.typingUsers,
+            [`${sessionId}_${userId}`]: {
+              timestamp: new Date().toISOString(),
+              userId,
+              username,
+            },
+          },
+        }));
+
+        // Auto-remove typing indicator after 3 seconds
+        setTimeout(() => {
+          get().removeUserTyping(sessionId, userId);
+        }, 3000);
+      },
+
+      stopStreaming: () => {
+        if (abortController) {
+          abortController.abort();
+          abortController = null;
+          set({ isStreaming: false });
+
+          // Update agent status
+          const { currentSessionId } = get();
+          if (currentSessionId) {
+            get().updateAgentStatus(currentSessionId, {
+              isActive: false,
+              progress: 0,
+              statusMessage: "Response generation stopped",
+            });
+          }
+        }
+      },
+
+      storeConversationMemory: async (sessionId, messages) => {
+        const session = get().sessions.find((s) => s.id === sessionId);
+        if (!session?.userId || !get().memoryEnabled || !get().autoSyncMemory) return;
+
+        try {
+          const messagesToStore = messages || session.messages;
+
+          // Convert messages to conversation format
+          const conversationMessages: ConversationMessage[] = messagesToStore.map(
+            (msg) => ({
+              content: msg.content,
+              metadata: {
+                attachments: msg.attachments,
+                toolCalls: msg.toolCalls,
+                toolResults: msg.toolResults,
+              },
+              role: msg.role,
+              timestamp: msg.timestamp,
+            })
+          );
+
+          // Import memory hooks here to avoid circular dependencies
+          const { useAddConversationMemory: _useAddConversationMemory } = await import(
+            "@/hooks/use-memory"
+          );
+
+          // Note: This would typically be handled by the component using the hook
+          // This is a placeholder for the actual implementation
+          console.log(
+            "Would store conversation memory for session:",
+            sessionId,
+            "messages:",
+            conversationMessages.length
+          );
+        } catch (error) {
+          console.error("Failed to store conversation memory:", error);
         }
       },
 
@@ -564,32 +927,32 @@ export const useChatStore = create<ChatState>()(
 
         // Add user message
         get().addMessage(sessionId, {
-          role: "user",
-          content,
           attachments: options.attachments?.map((file) => ({
-            id: Date.now().toString(),
-            url: URL.createObjectURL(file),
-            name: file.name,
             contentType: file.type,
+            id: Date.now().toString(),
+            name: file.name,
             size: file.size,
+            url: URL.createObjectURL(file),
           })),
+          content,
+          role: "user",
         });
 
         // Create a placeholder message for streaming
         const assistantMessageId = get().addMessage(sessionId, {
-          role: "assistant",
           content: "",
           isStreaming: true,
+          role: "assistant",
         });
 
         // Set streaming state and create abort controller
-        set({ isStreaming: true, error: null });
+        set({ error: null, isStreaming: true });
         abortController = new AbortController();
 
         // Update agent status
         get().updateAgentStatus(sessionId, {
-          isActive: true,
           currentTask: "Generating response",
+          isActive: true,
           progress: 10,
           statusMessage: "Starting response generation...",
         });
@@ -661,50 +1024,25 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
-      stopStreaming: () => {
-        if (abortController) {
-          abortController.abort();
-          abortController = null;
-          set({ isStreaming: false });
+      syncMemoryToSession: async (sessionId) => {
+        const session = get().sessions.find((s) => s.id === sessionId);
+        if (!session?.userId || !get().memoryEnabled) return;
 
-          // Update agent status
-          const { currentSessionId } = get();
-          if (currentSessionId) {
-            get().updateAgentStatus(currentSessionId, {
-              isActive: false,
-              progress: 0,
-              statusMessage: "Response generation stopped",
-            });
-          }
+        try {
+          // Import memory hooks here to avoid circular dependencies
+          const { useMemoryContext: _useMemoryContext } = await import(
+            "@/hooks/use-memory"
+          );
+
+          // Note: This would typically be handled by the component using the hook
+          // This is a placeholder for the actual implementation
+          console.log("Memory sync would fetch context for user:", session.userId);
+        } catch (error) {
+          console.error("Failed to sync memory to session:", error);
+          set({ error: "Failed to sync memory context" });
         }
       },
-
-      addToolResult: (sessionId, messageId, callId, result) => {
-        set((state) => ({
-          sessions: state.sessions.map((session) =>
-            session.id === sessionId
-              ? {
-                  ...session,
-                  messages: session.messages.map((message) =>
-                    message.id === messageId
-                      ? {
-                          ...message,
-                          toolCalls: (message.toolCalls || []).map((call) =>
-                            call.id === callId ? { ...call, state: "result" } : call
-                          ),
-                          toolResults: [
-                            ...(message.toolResults || []),
-                            { callId, result },
-                          ],
-                        }
-                      : message
-                  ),
-                  updatedAt: new Date().toISOString(),
-                }
-              : session
-          ),
-        }));
-      },
+      typingUsers: {},
 
       updateAgentStatus: (sessionId, status) => {
         set((state) => ({
@@ -725,82 +1063,20 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
-      clearMessages: (sessionId) => {
+      updateMessage: (sessionId, messageId, updates) => {
         set((state) => ({
           sessions: state.sessions.map((session) =>
             session.id === sessionId
               ? {
                   ...session,
-                  messages: [],
+                  messages: session.messages.map((message) =>
+                    message.id === messageId ? { ...message, ...updates } : message
+                  ),
                   updatedAt: new Date().toISOString(),
                 }
               : session
           ),
         }));
-      },
-
-      clearError: () => set({ error: null }),
-
-      exportSessionData: (sessionId) => {
-        const { sessions } = get();
-        const session = sessions.find((s) => s.id === sessionId);
-
-        if (!session) return "";
-
-        // Create a clean copy of the session for export
-        const exportData = {
-          ...session,
-          messages: session.messages.map((msg) => ({
-            ...msg,
-            // Clean up any browser-specific or non-serializable data
-            attachments: msg.attachments?.map((att) => ({
-              id: att.id,
-              url: att.url.startsWith("blob:") ? "" : att.url, // Don't export blob URLs
-              name: att.name,
-              contentType: att.contentType,
-            })),
-          })),
-        };
-
-        return JSON.stringify(exportData, null, 2);
-      },
-
-      importSessionData: (jsonData) => {
-        try {
-          const data = JSON.parse(jsonData);
-
-          // Validate the data structure
-          const result = sessionDataSchema.safeParse(data);
-          if (!result.success) {
-            set({ error: "Invalid session data format" });
-            return null;
-          }
-
-          const timestamp = new Date().toISOString();
-          const sessionId = Date.now().toString();
-
-          // Create a new session with the imported data
-          const importedSession: ChatSession = {
-            ...data,
-            id: sessionId, // Generate a new ID for this session
-            title: `${data.title} (Imported)`,
-            updatedAt: timestamp,
-            messages: data.messages,
-          };
-
-          set((state) => ({
-            sessions: [importedSession, ...state.sessions],
-            currentSessionId: sessionId,
-          }));
-
-          return sessionId;
-        } catch (error) {
-          set({
-            error:
-              error instanceof Error ? error.message : "Failed to import session data",
-          });
-          return null;
-        }
       },
 
       // Memory actions
@@ -810,300 +1086,23 @@ export const useChatStore = create<ChatState>()(
             session.id === sessionId
               ? {
                   ...session,
-                  memoryContext,
                   lastMemorySync: new Date().toISOString(),
+                  memoryContext,
                   updatedAt: new Date().toISOString(),
                 }
               : session
           ),
         }));
       },
-
-      syncMemoryToSession: async (sessionId) => {
-        const session = get().sessions.find((s) => s.id === sessionId);
-        if (!session?.userId || !get().memoryEnabled) return;
-
-        try {
-          // Import memory hooks here to avoid circular dependencies
-          const { useMemoryContext: _useMemoryContext } = await import(
-            "@/hooks/use-memory"
-          );
-
-          // Note: This would typically be handled by the component using the hook
-          // This is a placeholder for the actual implementation
-          console.log("Memory sync would fetch context for user:", session.userId);
-        } catch (error) {
-          console.error("Failed to sync memory to session:", error);
-          set({ error: "Failed to sync memory context" });
-        }
-      },
-
-      storeConversationMemory: async (sessionId, messages) => {
-        const session = get().sessions.find((s) => s.id === sessionId);
-        if (!session?.userId || !get().memoryEnabled || !get().autoSyncMemory) return;
-
-        try {
-          const messagesToStore = messages || session.messages;
-
-          // Convert messages to conversation format
-          const conversationMessages: ConversationMessage[] = messagesToStore.map(
-            (msg) => ({
-              role: msg.role,
-              content: msg.content,
-              timestamp: msg.timestamp,
-              metadata: {
-                toolCalls: msg.toolCalls,
-                toolResults: msg.toolResults,
-                attachments: msg.attachments,
-              },
-            })
-          );
-
-          // Import memory hooks here to avoid circular dependencies
-          const { useAddConversationMemory: _useAddConversationMemory } = await import(
-            "@/hooks/use-memory"
-          );
-
-          // Note: This would typically be handled by the component using the hook
-          // This is a placeholder for the actual implementation
-          console.log(
-            "Would store conversation memory for session:",
-            sessionId,
-            "messages:",
-            conversationMessages.length
-          );
-        } catch (error) {
-          console.error("Failed to store conversation memory:", error);
-        }
-      },
-
-      setMemoryEnabled: (enabled) => {
-        set({ memoryEnabled: enabled });
-      },
-
-      setAutoSyncMemory: (enabled) => {
-        set({ autoSyncMemory: enabled });
-      },
-
-      // Realtime actions
-      connectRealtime: async (sessionId) => {
-        const supabase = getBrowserClient();
-        const prev = get().realtimeChannel;
-        if (prev) {
-          prev.unsubscribe();
-        }
-
-        try {
-          set({ connectionStatus: ConnectionStatus.CONNECTING });
-          const channel = supabase
-            .channel(`session:${sessionId}`, { config: { private: true } })
-            .on("broadcast", { event: "chat:message" }, (payload) => {
-              const data = payload.payload as
-                | { content?: string; role?: string; id?: string }
-                | undefined;
-              get().handleRealtimeMessage({
-                type: "chat_message",
-                sessionId,
-                content: data?.content || "",
-                role: (data?.role as "user" | "assistant" | "system") || "assistant",
-                messageId: data?.id,
-              });
-            })
-            .on("broadcast", { event: "chat:message_chunk" }, (payload) => {
-              const data = payload.payload as
-                | { content?: string; id?: string; is_final?: boolean }
-                | undefined;
-              get().handleRealtimeMessage({
-                type: "chat_message_chunk",
-                sessionId,
-                content: data?.content || "",
-                messageId: data?.id,
-                isComplete: Boolean(data?.is_final),
-              });
-            })
-            .on("broadcast", { event: "chat:typing" }, (payload) => {
-              const data = payload.payload as
-                | { userId?: string; isTyping?: boolean; username?: string }
-                | undefined;
-              if (!data?.userId) return;
-              if (data.isTyping) {
-                get().setUserTyping(sessionId, data.userId, data.username);
-              } else {
-                get().removeUserTyping(sessionId, data.userId);
-              }
-            })
-            .on("broadcast", { event: "agent_status_update" }, (payload) => {
-              const p = payload.payload as
-                | {
-                    isActive?: boolean;
-                    currentTask?: string;
-                    progress?: number;
-                    statusMessage?: string;
-                  }
-                | undefined;
-              get().handleAgentStatusUpdate({
-                type: "agent_status_update",
-                sessionId,
-                isActive: Boolean(p?.isActive),
-                currentTask: p?.currentTask,
-                progress: Number(p?.progress ?? 0),
-                statusMessage: p?.statusMessage,
-              });
-            });
-
-          channel.subscribe((state, err) => {
-            if (state === "SUBSCRIBED") {
-              set({ connectionStatus: ConnectionStatus.CONNECTED });
-            }
-            if (err) {
-              set({
-                connectionStatus: ConnectionStatus.ERROR,
-                error: err.message ?? "Realtime subscription error",
-              });
-            }
-          });
-
-          set({ realtimeChannel: channel });
-        } catch (error) {
-          console.error("Failed to connect Realtime:", error);
-          set({
-            connectionStatus: ConnectionStatus.ERROR,
-            error: error instanceof Error ? error.message : "Realtime connection error",
-          });
-        }
-      },
-
-      disconnectRealtime: () => {
-        const { realtimeChannel } = get();
-        if (realtimeChannel) {
-          realtimeChannel.unsubscribe();
-        }
-        set({
-          realtimeChannel: null,
-          connectionStatus: ConnectionStatus.DISCONNECTED,
-          typingUsers: {},
-          pendingMessages: [],
-        });
-      },
-
-      setRealtimeEnabled: (enabled) => {
-        set({ isRealtimeEnabled: enabled });
-
-        if (!enabled) {
-          get().disconnectRealtime();
-        }
-      },
-
-      handleRealtimeMessage: (event) => {
-        const { currentSessionId } = get();
-        if (!currentSessionId || event.sessionId !== currentSessionId) return;
-
-        if (event.type === "chat_message") {
-          // Add complete message
-          get().addMessage(currentSessionId, {
-            role: event.role || "assistant",
-            content: event.content,
-            toolCalls: event.toolCalls,
-            attachments: event.attachments,
-          });
-        } else if (event.type === "chat_message_chunk") {
-          // Handle streaming message chunks
-          const existingMessage = get()
-            .sessions.find((s) => s.id === currentSessionId)
-            ?.messages.find((m) => m.id === event.messageId);
-
-          if (existingMessage && event.messageId) {
-            // Update existing streaming message
-            get().updateMessage(currentSessionId, event.messageId, {
-              content: existingMessage.content + event.content,
-              isStreaming: !event.isComplete,
-            });
-          } else {
-            // Create new streaming message
-            const messageId = get().addMessage(currentSessionId, {
-              role: "assistant",
-              content: event.content,
-              isStreaming: !event.isComplete,
-            });
-
-            // Store the mapping for future chunks
-            if (event.messageId && messageId !== event.messageId) {
-              // Handle message ID mapping if needed
-            }
-          }
-        }
-      },
-
-      handleAgentStatusUpdate: (event) => {
-        const { currentSessionId } = get();
-        if (!currentSessionId || event.sessionId !== currentSessionId) return;
-
-        get().updateAgentStatus(currentSessionId, {
-          isActive: event.isActive,
-          currentTask: event.currentTask,
-          progress: event.progress,
-          statusMessage: event.statusMessage,
-        });
-      },
-
-      setUserTyping: (sessionId, userId, username) => {
-        set((state) => ({
-          typingUsers: {
-            ...state.typingUsers,
-            [`${sessionId}_${userId}`]: {
-              userId,
-              username,
-              timestamp: new Date().toISOString(),
-            },
-          },
-        }));
-
-        // Auto-remove typing indicator after 3 seconds
-        setTimeout(() => {
-          get().removeUserTyping(sessionId, userId);
-        }, 3000);
-      },
-
-      removeUserTyping: (sessionId, userId) => {
-        set((state) => {
-          const newTypingUsers = { ...state.typingUsers };
-          delete newTypingUsers[`${sessionId}_${userId}`];
-          return { typingUsers: newTypingUsers };
-        });
-      },
-
-      clearTypingUsers: (sessionId) => {
-        set((state) => {
-          const newTypingUsers = { ...state.typingUsers };
-          for (const key of Object.keys(newTypingUsers)) {
-            if (key.startsWith(`${sessionId}_`)) {
-              delete newTypingUsers[key];
-            }
-          }
-          return { typingUsers: newTypingUsers };
-        });
-      },
-
-      addPendingMessage: (message) => {
-        set((state) => ({
-          pendingMessages: [...state.pendingMessages, message],
-        }));
-      },
-
-      removePendingMessage: (messageId) => {
-        set((state) => ({
-          pendingMessages: state.pendingMessages.filter((m) => m.id !== messageId),
-        }));
-      },
     }),
     {
       name: "chat-storage",
       partialize: (state) => ({
-        sessions: state.sessions,
-        currentSessionId: state.currentSessionId,
-        memoryEnabled: state.memoryEnabled,
         autoSyncMemory: state.autoSyncMemory,
+        currentSessionId: state.currentSessionId,
         isRealtimeEnabled: state.isRealtimeEnabled,
+        memoryEnabled: state.memoryEnabled,
+        sessions: state.sessions,
       }),
     }
   )

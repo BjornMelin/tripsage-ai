@@ -65,12 +65,12 @@ export function useOptimisticChat({
       }
 
       const optimisticMessage: OptimisticChatMessage = {
-        id: crypto.randomUUID(),
         content: content.trim(),
-        timestamp: new Date(),
+        id: crypto.randomUUID(),
+        isOptimistic: true,
         sender: currentUser,
         status: "sending",
-        isOptimistic: true,
+        timestamp: new Date(),
       };
 
       setIsPending(true);
@@ -98,9 +98,9 @@ export function useOptimisticChat({
   );
 
   return {
+    error,
+    isPending,
     optimisticMessages,
     sendOptimisticMessage,
-    isPending,
-    error,
   };
 }

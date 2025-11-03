@@ -38,9 +38,9 @@ describe("Search Results Store", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
       const searchParams = {
-        origin: "NYC",
-        destination: "LAX",
         departureDate: "2025-07-15",
+        destination: "LAX",
+        origin: "NYC",
       };
 
       let searchId = "";
@@ -137,30 +137,30 @@ describe("Search Results Store", () => {
       const mockResults: SearchResults = {
         flights: [
           {
-            id: "flight-1",
             airline: "Test Airlines",
-            flightNumber: "TA123",
-            price: 299,
-            departureTime: "2025-07-15T08:00:00Z",
             arrivalTime: "2025-07-15T11:00:00Z",
-            origin: "NYC",
+            cabinClass: "economy",
+            departureTime: "2025-07-15T08:00:00Z",
             destination: "LAX",
             duration: 180,
-            stops: 0,
-            cabinClass: "economy",
+            flightNumber: "TA123",
+            id: "flight-1",
+            origin: "NYC",
+            price: 299,
             seatsAvailable: 10,
+            stops: 0,
           },
         ],
       };
 
       const mockMetrics: SearchMetrics = {
-        totalResults: 1,
-        searchDuration: 1500,
+        currentPage: 1,
+        hasMoreResults: false,
         provider: "test-provider",
         requestId: "req-123",
         resultsPerPage: 20,
-        currentPage: 1,
-        hasMoreResults: false,
+        searchDuration: 1500,
+        totalResults: 1,
       };
 
       act(() => {
@@ -181,12 +181,12 @@ describe("Search Results Store", () => {
 
       // Check that metrics are set correctly (without checking searchDuration which is calculated)
       expect(result.current.metrics).toMatchObject({
-        totalResults: 1,
+        currentPage: 1,
+        hasMoreResults: false,
         provider: "test-provider",
         requestId: "req-123",
         resultsPerPage: 20,
-        currentPage: 1,
-        hasMoreResults: false,
+        totalResults: 1,
       });
 
       // Check that results are stored by search ID
@@ -202,10 +202,10 @@ describe("Search Results Store", () => {
       });
 
       const errorDetails: ErrorDetails = {
-        message: "Search failed due to network error",
         code: "NETWORK_ERROR",
-        retryable: true,
+        message: "Search failed due to network error",
         occurredAt: new Date().toISOString(),
+        retryable: true,
       };
 
       act(() => {
@@ -215,8 +215,8 @@ describe("Search Results Store", () => {
       expect(result.current.status).toBe("error");
       expect(result.current.isSearching).toBe(false);
       expect(result.current.error).toMatchObject({
-        message: errorDetails.message,
         code: errorDetails.code,
+        message: errorDetails.message,
         retryable: true,
       });
       expect(result.current.canRetry).toBe(true);
@@ -260,8 +260,8 @@ describe("Search Results Store", () => {
       });
 
       const mockResults = {
-        flights: [{ id: "f1" }] as Partial<Flight>[],
         accommodations: [{ id: "a1" }] as Partial<Accommodation>[],
+        flights: [{ id: "f1" }] as Partial<Flight>[],
       } as SearchResults;
 
       act(() => {
@@ -290,18 +290,18 @@ describe("Search Results Store", () => {
         result.current.setSearchResults(searchId1!, {
           flights: [
             {
-              id: "f1",
               airline: "Test Airline",
-              flightNumber: "TA123",
-              origin: "NYC",
-              destination: "LAX",
-              departureTime: "2023-01-01T10:00:00Z",
               arrivalTime: "2023-01-01T14:00:00Z",
-              duration: 240,
-              stops: 0,
-              price: 299,
               cabinClass: "economy",
+              departureTime: "2023-01-01T10:00:00Z",
+              destination: "LAX",
+              duration: 240,
+              flightNumber: "TA123",
+              id: "f1",
+              origin: "NYC",
+              price: 299,
               seatsAvailable: 100,
+              stops: 0,
             },
           ],
         });
@@ -315,17 +315,17 @@ describe("Search Results Store", () => {
         result.current.setSearchResults(searchId2!, {
           accommodations: [
             {
-              id: "a1",
-              name: "Test Hotel",
-              type: "hotel",
-              location: "Test City",
+              amenities: ["wifi", "parking"],
               checkIn: "2023-01-01",
               checkOut: "2023-01-03",
-              pricePerNight: 150,
-              totalPrice: 300,
-              rating: 4.5,
-              amenities: ["wifi", "parking"],
+              id: "a1",
               images: ["test.jpg"],
+              location: "Test City",
+              name: "Test Hotel",
+              pricePerNight: 150,
+              rating: 4.5,
+              totalPrice: 300,
+              type: "hotel",
             },
           ],
         });
@@ -385,10 +385,10 @@ describe("Search Results Store", () => {
 
       act(() => {
         result.current.setSearchResults(searchId!, { flights: [] }, {
-          totalResults: 100,
-          resultsPerPage: 20,
           currentPage: 1,
           hasMoreResults: true,
+          resultsPerPage: 20,
+          totalResults: 100,
         } as SearchMetrics);
       });
 
@@ -415,10 +415,10 @@ describe("Search Results Store", () => {
 
       act(() => {
         result.current.setSearchResults(searchId!, { flights: [] }, {
-          totalResults: 100,
-          resultsPerPage: 20,
           currentPage: 1,
           hasMoreResults: true,
+          resultsPerPage: 20,
+          totalResults: 100,
         } as SearchMetrics);
       });
 
@@ -487,7 +487,7 @@ describe("Search Results Store", () => {
     it("retries last search", async () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      const originalParams = { origin: "NYC", destination: "LAX" };
+      const originalParams = { destination: "LAX", origin: "NYC" };
       let searchId: string;
 
       act(() => {
@@ -497,8 +497,8 @@ describe("Search Results Store", () => {
       act(() => {
         result.current.setSearchError(searchId!, {
           message: "Network error",
-          retryable: true,
           occurredAt: new Date().toISOString(),
+          retryable: true,
         });
       });
 
@@ -551,11 +551,11 @@ describe("Search Results Store", () => {
 
       act(() => {
         result.current.setSearchResults(id1!, { flights: [] }, {
-          searchDuration: 1000,
-          totalResults: 10,
-          resultsPerPage: 20,
           currentPage: 1,
           hasMoreResults: false,
+          resultsPerPage: 20,
+          searchDuration: 1000,
+          totalResults: 10,
         } as SearchMetrics);
       });
 
@@ -567,11 +567,11 @@ describe("Search Results Store", () => {
 
       act(() => {
         result.current.setSearchResults(id2!, { flights: [] }, {
-          searchDuration: 2000,
-          totalResults: 20,
-          resultsPerPage: 20,
           currentPage: 1,
           hasMoreResults: false,
+          resultsPerPage: 20,
+          searchDuration: 2000,
+          totalResults: 20,
         } as SearchMetrics);
       });
 
@@ -628,11 +628,11 @@ describe("Search Results Store", () => {
       });
       act(() => {
         result.current.setSearchResults(id1!, { flights: [] }, {
-          searchDuration: 1500,
-          totalResults: 10,
-          resultsPerPage: 20,
           currentPage: 1,
           hasMoreResults: false,
+          resultsPerPage: 20,
+          searchDuration: 1500,
+          totalResults: 10,
         } as SearchMetrics);
       });
 

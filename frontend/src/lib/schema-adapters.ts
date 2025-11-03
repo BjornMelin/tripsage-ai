@@ -45,28 +45,28 @@ export class FrontendSchemaAdapter {
    */
   static apiTripToFrontend(apiTrip: ApiTrip): Trip {
     return {
-      id: apiTrip.id,
-      user_id: apiTrip.user_id,
-      name: apiTrip.title, // API uses 'title', frontend uses 'name'
-      title: apiTrip.title, // Keep both for compatibility
+      budget: apiTrip.budget,
+      created_at: apiTrip.created_at,
+      createdAt: apiTrip.created_at, // Camel case version
       description: apiTrip.description,
-      start_date: apiTrip.start_date,
-      end_date: apiTrip.end_date,
-      startDate: apiTrip.start_date, // Camel case version
-      endDate: apiTrip.end_date, // Camel case version
       destinations: apiTrip.destinations.map(
         FrontendSchemaAdapter.apiDestinationToFrontend
       ),
-      budget: apiTrip.budget,
-      visibility: apiTrip.visibility,
+      end_date: apiTrip.end_date,
+      endDate: apiTrip.end_date, // Camel case version
+      id: apiTrip.id,
       isPublic: apiTrip.visibility === "public", // Legacy field
-      tags: apiTrip.tags,
+      name: apiTrip.title, // API uses 'title', frontend uses 'name'
       preferences: apiTrip.preferences,
+      start_date: apiTrip.start_date,
+      startDate: apiTrip.start_date, // Camel case version
       status: apiTrip.status,
-      created_at: apiTrip.created_at,
+      tags: apiTrip.tags,
+      title: apiTrip.title, // Keep both for compatibility
       updated_at: apiTrip.updated_at,
-      createdAt: apiTrip.created_at, // Camel case version
       updatedAt: apiTrip.updated_at, // Camel case version
+      user_id: apiTrip.user_id,
+      visibility: apiTrip.visibility,
     };
   }
 
@@ -75,20 +75,20 @@ export class FrontendSchemaAdapter {
    */
   static frontendTripToApi(trip: Trip): Partial<ApiTrip> {
     return {
-      id: trip.id,
-      user_id: trip.user_id,
-      title: trip.title || trip.name, // Use title if available, fallback to name
+      budget: trip.budget,
       description: trip.description,
-      start_date: trip.start_date || trip.startDate || "",
-      end_date: trip.end_date || trip.endDate || "",
       destinations: trip.destinations.map(
         FrontendSchemaAdapter.frontendDestinationToApi
       ),
-      budget: trip.budget,
-      visibility: trip.visibility || (trip.isPublic ? "public" : "private"),
-      tags: trip.tags || [],
+      end_date: trip.end_date || trip.endDate || "",
+      id: trip.id,
       preferences: trip.preferences || {},
+      start_date: trip.start_date || trip.startDate || "",
       status: trip.status || "planning",
+      tags: trip.tags || [],
+      title: trip.title || trip.name, // Use title if available, fallback to name
+      user_id: trip.user_id,
+      visibility: trip.visibility || (trip.isPublic ? "public" : "private"),
     };
   }
 
@@ -97,14 +97,14 @@ export class FrontendSchemaAdapter {
    */
   static apiDestinationToFrontend(apiDest: ApiDestination): Destination {
     return {
+      activities: [], // Default empty array
+      coordinates: apiDest.coordinates,
+      country: apiDest.country || "",
+      endDate: apiDest.departure_date,
+      estimatedCost: 0, // Default value
       id: `${apiDest.name}-${Date.now()}`, // Generate ID if not provided
       name: apiDest.name,
-      country: apiDest.country || "",
-      coordinates: apiDest.coordinates,
       startDate: apiDest.arrival_date,
-      endDate: apiDest.departure_date,
-      activities: [], // Default empty array
-      estimatedCost: 0, // Default value
     };
   }
 
@@ -113,12 +113,12 @@ export class FrontendSchemaAdapter {
    */
   static frontendDestinationToApi(dest: Destination): ApiDestination {
     return {
-      name: dest.name,
-      country: dest.country,
+      arrival_date: dest.startDate,
       city: dest.country, // Use country as city fallback
       coordinates: dest.coordinates,
-      arrival_date: dest.startDate,
+      country: dest.country,
       departure_date: dest.endDate,
+      name: dest.name,
     };
   }
 
@@ -127,26 +127,26 @@ export class FrontendSchemaAdapter {
    */
   static normalizeTrip(trip: Partial<Trip>): Trip {
     return {
-      id: trip.id || "",
-      name: trip.name || trip.title || "Untitled Trip",
-      title: trip.title || trip.name || "Untitled Trip",
-      description: trip.description || "",
-      start_date: trip.start_date || trip.startDate || "",
-      end_date: trip.end_date || trip.endDate || "",
-      startDate: trip.startDate || trip.start_date || "",
-      endDate: trip.endDate || trip.end_date || "",
-      destinations: trip.destinations || [],
       budget: trip.budget || 0,
-      currency: trip.currency || "USD",
-      visibility: trip.visibility || "private",
-      isPublic: trip.isPublic || trip.visibility === "public",
-      tags: trip.tags || [],
-      preferences: trip.preferences || {},
-      status: trip.status || "planning",
       created_at: trip.created_at || trip.createdAt || new Date().toISOString(),
-      updated_at: trip.updated_at || trip.updatedAt || new Date().toISOString(),
       createdAt: trip.createdAt || trip.created_at || new Date().toISOString(),
+      currency: trip.currency || "USD",
+      description: trip.description || "",
+      destinations: trip.destinations || [],
+      end_date: trip.end_date || trip.endDate || "",
+      endDate: trip.endDate || trip.end_date || "",
+      id: trip.id || "",
+      isPublic: trip.isPublic || trip.visibility === "public",
+      name: trip.name || trip.title || "Untitled Trip",
+      preferences: trip.preferences || {},
+      start_date: trip.start_date || trip.startDate || "",
+      startDate: trip.startDate || trip.start_date || "",
+      status: trip.status || "planning",
+      tags: trip.tags || [],
+      title: trip.title || trip.name || "Untitled Trip",
+      updated_at: trip.updated_at || trip.updatedAt || new Date().toISOString(),
       updatedAt: trip.updatedAt || trip.updated_at || new Date().toISOString(),
+      visibility: trip.visibility || "private",
     };
   }
 
@@ -157,26 +157,26 @@ export class FrontendSchemaAdapter {
     const now = new Date().toISOString();
 
     return FrontendSchemaAdapter.normalizeTrip({
-      id: "",
-      name: "New Trip",
-      title: "New Trip",
-      description: "",
-      start_date: "",
-      end_date: "",
-      startDate: "",
-      endDate: "",
-      destinations: [],
       budget: 0,
-      currency: "USD",
-      visibility: "private",
-      isPublic: false,
-      tags: [],
-      preferences: {},
-      status: "planning",
       created_at: now,
-      updated_at: now,
       createdAt: now,
+      currency: "USD",
+      description: "",
+      destinations: [],
+      end_date: "",
+      endDate: "",
+      id: "",
+      isPublic: false,
+      name: "New Trip",
+      preferences: {},
+      start_date: "",
+      startDate: "",
+      status: "planning",
+      tags: [],
+      title: "New Trip",
+      updated_at: now,
       updatedAt: now,
+      visibility: "private",
       ...overrides,
     });
   }
@@ -212,8 +212,8 @@ export class FrontendSchemaAdapter {
     }
 
     return {
-      valid: errors.length === 0,
       errors,
+      valid: errors.length === 0,
     };
   }
 
@@ -252,9 +252,9 @@ export function formatTripDate(dateString: string): string {
 
   try {
     return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
       day: "numeric",
+      month: "short",
+      year: "numeric",
     });
   } catch {
     return dateString; // Return original if parsing fails

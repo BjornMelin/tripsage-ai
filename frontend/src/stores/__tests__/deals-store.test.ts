@@ -9,47 +9,47 @@ import { useDealsStore } from "../deals-store";
 
 // Mock current timestamp for consistent testing
 /** Mock timestamp for consistent date-based testing */
-const mockTimestamp = "2025-05-20T12:00:00.000Z";
-vi.spyOn(Date.prototype, "toISOString").mockReturnValue(mockTimestamp);
+const MOCK_TIMESTAMP = "2025-05-20T12:00:00.000Z";
+vi.spyOn(Date.prototype, "toISOString").mockReturnValue(MOCK_TIMESTAMP);
 
 // Sample deal data
 /** Sample flight deal for testing purposes */
-const sampleDeal = {
-  id: "deal1",
-  type: "flight" as DealType,
-  title: "Cheap Flight to Paris",
-  description: "Great deal on round-trip flights to Paris",
-  provider: "AirlineCo",
-  url: "https://example.com/deal1",
-  price: 299.99,
-  originalPrice: 599.99,
-  discountPercentage: 50,
-  currency: "USD",
-  destination: "Paris",
-  origin: "New York",
-  expiryDate: "2025-06-01T00:00:00.000Z",
-  imageUrl: "https://example.com/images/paris.jpg",
-  tags: ["europe", "summer", "flight-deal"],
-  featured: true,
-  verified: true,
+const SAMPLE_DEAL = {
   createdAt: "2025-05-01T00:00:00.000Z",
+  currency: "USD",
+  description: "Great deal on round-trip flights to Paris",
+  destination: "Paris",
+  discountPercentage: 50,
+  expiryDate: "2025-06-01T00:00:00.000Z",
+  featured: true,
+  id: "deal1",
+  imageUrl: "https://example.com/images/paris.jpg",
+  origin: "New York",
+  originalPrice: 599.99,
+  price: 299.99,
+  provider: "AirlineCo",
+  tags: ["europe", "summer", "flight-deal"],
+  title: "Cheap Flight to Paris",
+  type: "flight" as DealType,
   updatedAt: "2025-05-01T00:00:00.000Z",
+  url: "https://example.com/deal1",
+  verified: true,
 };
 
 // Sample alert data
 /** Sample deal alert for testing purposes */
-const sampleAlert = {
-  id: "alert1",
-  userId: "user1",
-  dealType: "flight" as DealType,
-  origin: "New York",
-  destination: "Paris",
-  minDiscount: 30,
-  maxPrice: 400,
-  isActive: true,
-  notificationType: "email" as const,
+const SAMPLE_ALERT = {
   createdAt: "2025-05-01T00:00:00.000Z",
+  dealType: "flight" as DealType,
+  destination: "Paris",
+  id: "alert1",
+  isActive: true,
+  maxPrice: 400,
+  minDiscount: 30,
+  notificationType: "email" as const,
+  origin: "New York",
   updatedAt: "2025-05-01T00:00:00.000Z",
+  userId: "user1",
 };
 
 describe("Deals Store", () => {
@@ -66,13 +66,13 @@ describe("Deals Store", () => {
 
       let addResult: boolean;
       act(() => {
-        addResult = result.current.addDeal(sampleDeal);
+        addResult = result.current.addDeal(SAMPLE_DEAL);
       });
 
       expect(addResult!).toBe(true);
-      expect(result.current.deals[sampleDeal.id]).toEqual({
-        ...sampleDeal,
-        updatedAt: mockTimestamp,
+      expect(result.current.deals[SAMPLE_DEAL.id]).toEqual({
+        ...SAMPLE_DEAL,
+        updatedAt: MOCK_TIMESTAMP,
       });
     });
 
@@ -90,48 +90,48 @@ describe("Deals Store", () => {
 
     it("should update a deal", () => {
       const store = useDealsStore.getState();
-      store.addDeal(sampleDeal);
+      store.addDeal(SAMPLE_DEAL);
 
       const updates = {
-        price: 249.99,
         discountPercentage: 58,
+        price: 249.99,
       };
 
-      const result = store.updateDeal(sampleDeal.id, updates);
+      const result = store.updateDeal(SAMPLE_DEAL.id, updates);
       expect(result).toBe(true);
-      expect(store.deals[sampleDeal.id].price).toBe(updates.price);
-      expect(store.deals[sampleDeal.id].discountPercentage).toBe(
+      expect(store.deals[SAMPLE_DEAL.id].price).toBe(updates.price);
+      expect(store.deals[SAMPLE_DEAL.id].discountPercentage).toBe(
         updates.discountPercentage
       );
-      expect(store.deals[sampleDeal.id].updatedAt).toBe(mockTimestamp);
+      expect(store.deals[SAMPLE_DEAL.id].updatedAt).toBe(MOCK_TIMESTAMP);
     });
 
     it("should remove a deal", () => {
       const store = useDealsStore.getState();
-      store.addDeal(sampleDeal);
+      store.addDeal(SAMPLE_DEAL);
 
       // Add to collections
-      store.addToFeaturedDeals(sampleDeal.id);
-      store.addToSavedDeals(sampleDeal.id);
-      store.addToRecentlyViewed(sampleDeal.id);
+      store.addToFeaturedDeals(SAMPLE_DEAL.id);
+      store.addToSavedDeals(SAMPLE_DEAL.id);
+      store.addToRecentlyViewed(SAMPLE_DEAL.id);
 
       // Now remove
-      store.removeDeal(sampleDeal.id);
+      store.removeDeal(SAMPLE_DEAL.id);
 
-      expect(store.deals[sampleDeal.id]).toBeUndefined();
-      expect(store.featuredDeals).not.toContain(sampleDeal.id);
-      expect(store.savedDeals).not.toContain(sampleDeal.id);
-      expect(store.recentlyViewedDeals).not.toContain(sampleDeal.id);
+      expect(store.deals[SAMPLE_DEAL.id]).toBeUndefined();
+      expect(store.featuredDeals).not.toContain(SAMPLE_DEAL.id);
+      expect(store.savedDeals).not.toContain(SAMPLE_DEAL.id);
+      expect(store.recentlyViewedDeals).not.toContain(SAMPLE_DEAL.id);
     });
   });
 
   describe.skip("Featured Deals", () => {
     it("should add a deal to featured deals", () => {
       const store = useDealsStore.getState();
-      store.addDeal(sampleDeal);
-      store.addToFeaturedDeals(sampleDeal.id);
+      store.addDeal(SAMPLE_DEAL);
+      store.addToFeaturedDeals(SAMPLE_DEAL.id);
 
-      expect(store.featuredDeals).toContain(sampleDeal.id);
+      expect(store.featuredDeals).toContain(SAMPLE_DEAL.id);
     });
 
     it("should not add a non-existent deal to featured deals", () => {
@@ -143,23 +143,23 @@ describe("Deals Store", () => {
 
     it("should remove a deal from featured deals", () => {
       const store = useDealsStore.getState();
-      store.addDeal(sampleDeal);
-      store.addToFeaturedDeals(sampleDeal.id);
-      store.removeFromFeaturedDeals(sampleDeal.id);
+      store.addDeal(SAMPLE_DEAL);
+      store.addToFeaturedDeals(SAMPLE_DEAL.id);
+      store.removeFromFeaturedDeals(SAMPLE_DEAL.id);
 
-      expect(store.featuredDeals).not.toContain(sampleDeal.id);
+      expect(store.featuredDeals).not.toContain(SAMPLE_DEAL.id);
     });
 
     it("should get featured deals", () => {
       const store = useDealsStore.getState();
-      store.addDeal(sampleDeal);
-      store.addToFeaturedDeals(sampleDeal.id);
+      store.addDeal(SAMPLE_DEAL);
+      store.addToFeaturedDeals(SAMPLE_DEAL.id);
 
       const featuredDeals = store.getFeaturedDeals();
       expect(featuredDeals).toHaveLength(1);
       expect(featuredDeals[0]).toEqual(
         expect.objectContaining({
-          id: sampleDeal.id,
+          id: SAMPLE_DEAL.id,
         })
       );
     });
@@ -168,14 +168,14 @@ describe("Deals Store", () => {
   describe.skip("Deal Alerts", () => {
     it("should add an alert", () => {
       const store = useDealsStore.getState();
-      const result = store.addAlert(sampleAlert);
+      const result = store.addAlert(SAMPLE_ALERT);
 
       expect(result).toBe(true);
       expect(store.alerts).toHaveLength(1);
       expect(store.alerts[0]).toEqual(
         expect.objectContaining({
-          id: sampleAlert.id,
-          updatedAt: mockTimestamp,
+          id: SAMPLE_ALERT.id,
+          updatedAt: MOCK_TIMESTAMP,
         })
       );
     });
@@ -194,35 +194,35 @@ describe("Deals Store", () => {
 
     it("should update an alert", () => {
       const store = useDealsStore.getState();
-      store.addAlert(sampleAlert);
+      store.addAlert(SAMPLE_ALERT);
 
       const updates = {
-        minDiscount: 40,
         maxPrice: 350,
+        minDiscount: 40,
       };
 
-      const result = store.updateAlert(sampleAlert.id, updates);
+      const result = store.updateAlert(SAMPLE_ALERT.id, updates);
       expect(result).toBe(true);
       expect(store.alerts[0].minDiscount).toBe(updates.minDiscount);
       expect(store.alerts[0].maxPrice).toBe(updates.maxPrice);
-      expect(store.alerts[0].updatedAt).toBe(mockTimestamp);
+      expect(store.alerts[0].updatedAt).toBe(MOCK_TIMESTAMP);
     });
 
     it("should toggle alert active state", () => {
       const store = useDealsStore.getState();
-      store.addAlert(sampleAlert);
+      store.addAlert(SAMPLE_ALERT);
 
       const initialIsActive = store.alerts[0].isActive;
-      store.toggleAlertActive(sampleAlert.id);
+      store.toggleAlertActive(SAMPLE_ALERT.id);
 
       expect(store.alerts[0].isActive).toBe(!initialIsActive);
-      expect(store.alerts[0].updatedAt).toBe(mockTimestamp);
+      expect(store.alerts[0].updatedAt).toBe(MOCK_TIMESTAMP);
     });
 
     it("should remove an alert", () => {
       const store = useDealsStore.getState();
-      store.addAlert(sampleAlert);
-      store.removeAlert(sampleAlert.id);
+      store.addAlert(SAMPLE_ALERT);
+      store.removeAlert(SAMPLE_ALERT.id);
 
       expect(store.alerts).toHaveLength(0);
     });
@@ -231,10 +231,10 @@ describe("Deals Store", () => {
   describe.skip("Saved Deals", () => {
     it("should add a deal to saved deals", () => {
       const store = useDealsStore.getState();
-      store.addDeal(sampleDeal);
-      store.addToSavedDeals(sampleDeal.id);
+      store.addDeal(SAMPLE_DEAL);
+      store.addToSavedDeals(SAMPLE_DEAL.id);
 
-      expect(store.savedDeals).toContain(sampleDeal.id);
+      expect(store.savedDeals).toContain(SAMPLE_DEAL.id);
     });
 
     it("should not add a non-existent deal to saved deals", () => {
@@ -246,23 +246,23 @@ describe("Deals Store", () => {
 
     it("should remove a deal from saved deals", () => {
       const store = useDealsStore.getState();
-      store.addDeal(sampleDeal);
-      store.addToSavedDeals(sampleDeal.id);
-      store.removeFromSavedDeals(sampleDeal.id);
+      store.addDeal(SAMPLE_DEAL);
+      store.addToSavedDeals(SAMPLE_DEAL.id);
+      store.removeFromSavedDeals(SAMPLE_DEAL.id);
 
-      expect(store.savedDeals).not.toContain(sampleDeal.id);
+      expect(store.savedDeals).not.toContain(SAMPLE_DEAL.id);
     });
 
     it("should get saved deals", () => {
       const store = useDealsStore.getState();
-      store.addDeal(sampleDeal);
-      store.addToSavedDeals(sampleDeal.id);
+      store.addDeal(SAMPLE_DEAL);
+      store.addToSavedDeals(SAMPLE_DEAL.id);
 
       const savedDeals = store.getSavedDeals();
       expect(savedDeals).toHaveLength(1);
       expect(savedDeals[0]).toEqual(
         expect.objectContaining({
-          id: sampleDeal.id,
+          id: SAMPLE_DEAL.id,
         })
       );
     });
@@ -271,10 +271,10 @@ describe("Deals Store", () => {
   describe.skip("Recently Viewed Deals", () => {
     it("should add a deal to recently viewed deals", () => {
       const store = useDealsStore.getState();
-      store.addDeal(sampleDeal);
-      store.addToRecentlyViewed(sampleDeal.id);
+      store.addDeal(SAMPLE_DEAL);
+      store.addToRecentlyViewed(SAMPLE_DEAL.id);
 
-      expect(store.recentlyViewedDeals).toContain(sampleDeal.id);
+      expect(store.recentlyViewedDeals).toContain(SAMPLE_DEAL.id);
     });
 
     it("should not add a non-existent deal to recently viewed deals", () => {
@@ -286,8 +286,8 @@ describe("Deals Store", () => {
 
     it("should clear recently viewed deals", () => {
       const store = useDealsStore.getState();
-      store.addDeal(sampleDeal);
-      store.addToRecentlyViewed(sampleDeal.id);
+      store.addDeal(SAMPLE_DEAL);
+      store.addToRecentlyViewed(SAMPLE_DEAL.id);
       store.clearRecentlyViewed();
 
       expect(store.recentlyViewedDeals).toHaveLength(0);
@@ -295,14 +295,14 @@ describe("Deals Store", () => {
 
     it("should get recently viewed deals", () => {
       const store = useDealsStore.getState();
-      store.addDeal(sampleDeal);
-      store.addToRecentlyViewed(sampleDeal.id);
+      store.addDeal(SAMPLE_DEAL);
+      store.addToRecentlyViewed(SAMPLE_DEAL.id);
 
       const recentlyViewedDeals = store.getRecentlyViewedDeals();
       expect(recentlyViewedDeals).toHaveLength(1);
       expect(recentlyViewedDeals[0]).toEqual(
         expect.objectContaining({
-          id: sampleDeal.id,
+          id: SAMPLE_DEAL.id,
         })
       );
     });
@@ -313,7 +313,7 @@ describe("Deals Store", () => {
       // Add 25 deals
       for (let i = 0; i < 25; i++) {
         const deal = {
-          ...sampleDeal,
+          ...SAMPLE_DEAL,
           id: `deal${i}`,
           title: `Deal ${i}`,
         };
@@ -328,31 +328,31 @@ describe("Deals Store", () => {
 
   describe("Filtering", () => {
     const flightDeal = {
-      ...sampleDeal,
-      id: "flight1",
-      type: "flight" as DealType,
+      ...SAMPLE_DEAL,
       destination: "Paris",
+      id: "flight1",
       origin: "New York",
+      type: "flight" as DealType,
     };
 
     const accommodationDeal = {
-      ...sampleDeal,
-      id: "accommodation1",
-      type: "accommodation" as DealType,
+      ...SAMPLE_DEAL,
       destination: "Rome",
-      price: 150,
-      originalPrice: 300,
       discountPercentage: 50,
+      id: "accommodation1",
+      originalPrice: 300,
+      price: 150,
+      type: "accommodation" as DealType,
     };
 
     const packageDeal = {
-      ...sampleDeal,
-      id: "package1",
-      type: "package" as DealType,
+      ...SAMPLE_DEAL,
       destination: "Barcelona",
-      price: 899,
-      originalPrice: 1499,
       discountPercentage: 40,
+      id: "package1",
+      originalPrice: 1499,
+      price: 899,
+      type: "package" as DealType,
     };
 
     beforeEach(() => {
@@ -428,31 +428,31 @@ describe("Deals Store", () => {
   describe("Stats", () => {
     const deals = [
       {
-        ...sampleDeal,
+        ...SAMPLE_DEAL,
+        destination: "Paris",
+        discountPercentage: 50,
         id: "flight1",
-        type: "flight" as DealType,
-        destination: "Paris",
-        price: 299.99,
         originalPrice: 599.99,
-        discountPercentage: 50,
+        price: 299.99,
+        type: "flight" as DealType,
       },
       {
-        ...sampleDeal,
-        id: "accommodation1",
-        type: "accommodation" as DealType,
+        ...SAMPLE_DEAL,
         destination: "Rome",
-        price: 150,
-        originalPrice: 300,
         discountPercentage: 50,
+        id: "accommodation1",
+        originalPrice: 300,
+        price: 150,
+        type: "accommodation" as DealType,
       },
       {
-        ...sampleDeal,
-        id: "package1",
-        type: "package" as DealType,
+        ...SAMPLE_DEAL,
         destination: "Paris",
-        price: 899,
-        originalPrice: 1499,
         discountPercentage: 40,
+        id: "package1",
+        originalPrice: 1499,
+        price: 899,
+        type: "package" as DealType,
       },
     ];
 
@@ -469,14 +469,14 @@ describe("Deals Store", () => {
 
       expect(stats.totalCount).toBe(3);
       expect(stats.byType).toEqual({
-        flight: 1,
-        activity: 0,
         accommodation: 1,
-        transportation: 0,
-        package: 1,
+        activity: 0,
         error_fare: 0,
         flash_sale: 0,
+        flight: 1,
+        package: 1,
         promotion: 0,
+        transportation: 0,
       });
       expect(stats.byDestination).toEqual({
         Paris: 2,
@@ -500,11 +500,11 @@ describe("Deals Store", () => {
       const store = useDealsStore.getState();
 
       // Setup some state
-      store.addDeal(sampleDeal);
-      store.addToFeaturedDeals(sampleDeal.id);
-      store.addToSavedDeals(sampleDeal.id);
-      store.addToRecentlyViewed(sampleDeal.id);
-      store.addAlert(sampleAlert);
+      store.addDeal(SAMPLE_DEAL);
+      store.addToFeaturedDeals(SAMPLE_DEAL.id);
+      store.addToSavedDeals(SAMPLE_DEAL.id);
+      store.addToRecentlyViewed(SAMPLE_DEAL.id);
+      store.addAlert(SAMPLE_ALERT);
       store.setFilters({ types: ["flight"] });
       store.initialize();
 

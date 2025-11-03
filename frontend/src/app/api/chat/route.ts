@@ -53,7 +53,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     } catch {
       return new Response(
         JSON.stringify({ error: "Malformed JSON in request body." }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json" }, status: 400 }
       );
     }
 
@@ -63,10 +63,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     const limiter =
       url && token
         ? new Ratelimit({
-            redis: Redis.fromEnv(),
-            limiter: Ratelimit.slidingWindow(40, "1 m"),
             analytics: true,
+            limiter: Ratelimit.slidingWindow(40, "1 m"),
             prefix: "ratelimit:chat:nonstream",
+            redis: Redis.fromEnv(),
           })
         : undefined;
 
@@ -74,12 +74,12 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     return await handleChatNonStream(
       {
-        supabase,
-        resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
-        logger: { info: console.info, error: console.error },
         clock: { now: () => Date.now() },
         config: { defaultMaxTokens: 1024 },
         limit: limiter ? (id) => limiter.limit(id) : undefined,
+        logger: { error: console.error, info: console.info },
+        resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
+        supabase,
       },
       { ...body!, ip }
     );

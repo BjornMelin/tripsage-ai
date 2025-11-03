@@ -66,8 +66,8 @@ export function useAccommodationSearch() {
   useEffect(() => {
     if (searchMutation.error && currentSearchId) {
       setSearchError(currentSearchId, {
-        message: searchMutation.error.message || "Failed to search accommodations",
         code: "SEARCH_ERROR",
+        message: searchMutation.error.message || "Failed to search accommodations",
         occurredAt: new Date().toISOString(),
         retryable: true,
       });
@@ -75,23 +75,23 @@ export function useAccommodationSearch() {
   }, [searchMutation.error, currentSearchId, setSearchError]);
 
   const getSuggestions = useQuery({
-    queryKey: ["accommodation-suggestions"],
     queryFn: async () => {
       const response = await api.get<Accommodation[]>(
         "/api/accommodations/suggestions"
       );
       return response;
     },
+    queryKey: ["accommodation-suggestions"],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   return {
+    isSearching: searchMutation.isPending,
+    isSuggestionsLoading: getSuggestions.isLoading,
     search: searchMutation.mutate,
     searchAsync: searchMutation.mutateAsync,
-    isSearching: searchMutation.isPending,
     searchError: searchMutation.error,
     suggestions: getSuggestions.data,
-    isSuggestionsLoading: getSuggestions.isLoading,
     updateParams: updateAccommodationParams,
   };
 }

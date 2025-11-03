@@ -43,8 +43,9 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
 
-const passwordChangeSchema = z
+const PASSWORD_CHANGE_SCHEMA = z
   .object({
+    confirmPassword: z.string(),
     currentPassword: z.string().min(1, "Current password is required"),
     newPassword: z
       .string()
@@ -53,14 +54,13 @@ const passwordChangeSchema = z
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
         "Password must contain at least one uppercase letter, one lowercase letter, and one number"
       ),
-    confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
   });
 
-type PasswordChangeFormData = z.infer<typeof passwordChangeSchema>;
+type PasswordChangeFormData = z.infer<typeof PASSWORD_CHANGE_SCHEMA>;
 
 interface SecurityDevice {
   id: string;
@@ -83,39 +83,39 @@ export function SecuritySection() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const passwordForm = useForm<PasswordChangeFormData>({
-    resolver: zodResolver(passwordChangeSchema),
     defaultValues: {
+      confirmPassword: "",
       currentPassword: "",
       newPassword: "",
-      confirmPassword: "",
     },
+    resolver: zodResolver(PASSWORD_CHANGE_SCHEMA),
   });
 
   // Mock security devices data
   const securityDevices: SecurityDevice[] = [
     {
+      current: true,
       id: "1",
-      name: "Chrome on Windows",
-      type: "desktop",
       lastUsed: "2 minutes ago",
       location: "New York, USA",
-      current: true,
+      name: "Chrome on Windows",
+      type: "desktop",
     },
     {
+      current: false,
       id: "2",
-      name: "Safari on iPhone",
-      type: "mobile",
       lastUsed: "3 hours ago",
       location: "New York, USA",
-      current: false,
+      name: "Safari on iPhone",
+      type: "mobile",
     },
     {
+      current: false,
       id: "3",
-      name: "Firefox on MacBook",
-      type: "desktop",
       lastUsed: "2 days ago",
       location: "San Francisco, USA",
-      current: false,
+      name: "Firefox on MacBook",
+      type: "desktop",
     },
   ];
 
@@ -126,36 +126,36 @@ export function SecuritySection() {
 
       passwordForm.reset();
       toast({
-        title: "Password updated",
         description: "Your password has been successfully changed.",
+        title: "Password updated",
       });
     } catch (_error) {
       toast({
-        title: "Error",
         description:
           "Failed to update password. Please check your current password and try again.",
+        title: "Error",
         variant: "destructive",
       });
     }
   };
 
   // TODO: Integrate real 2FA API and persist state.
-  const toggle2FA = async (enabled: boolean) => {
+  const toggle2fa = async (enabled: boolean) => {
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Note: This would be updated when implementing real 2FA settings
       toast({
-        title: enabled ? "2FA enabled" : "2FA disabled",
         description: enabled
           ? "Two-factor authentication has been enabled for your account."
           : "Two-factor authentication has been disabled.",
+        title: enabled ? "2FA enabled" : "2FA disabled",
       });
     } catch (_error) {
       toast({
-        title: "Error",
         description: "Failed to update two-factor authentication settings.",
+        title: "Error",
         variant: "destructive",
       });
     }
@@ -168,13 +168,13 @@ export function SecuritySection() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       toast({
-        title: "Device revoked",
         description: "The device has been successfully revoked from your account.",
+        title: "Device revoked",
       });
     } catch (_error) {
       toast({
-        title: "Error",
         description: "Failed to revoke device access.",
+        title: "Error",
         variant: "destructive",
       });
     }
@@ -333,7 +333,7 @@ export function SecuritySection() {
                   Add an extra layer of security to your account with 2FA.
                 </p>
               </div>
-              <Switch checked={false} onCheckedChange={toggle2FA} />
+              <Switch checked={false} onCheckedChange={toggle2fa} />
             </div>
           </div>
         </CardContent>

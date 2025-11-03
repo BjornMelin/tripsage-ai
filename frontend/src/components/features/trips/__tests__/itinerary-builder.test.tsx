@@ -17,6 +17,15 @@ vi.mock("@hello-pangea/dnd", () => ({
       </div>
     );
   },
+  Draggable: ({ children, draggableId, index: _index }: any) => {
+    const provided = {
+      draggableProps: { "data-draggable-id": draggableId },
+      dragHandleProps: { "data-drag-handle": true },
+      innerRef: vi.fn(),
+    };
+    const snapshot = { isDragging: false };
+    return children(provided, snapshot);
+  },
   Droppable: ({ children, droppableId }: any) => {
     const provided = {
       droppableProps: { "data-droppable-id": droppableId },
@@ -25,71 +34,62 @@ vi.mock("@hello-pangea/dnd", () => ({
     };
     return children(provided);
   },
-  Draggable: ({ children, draggableId, index: _index }: any) => {
-    const provided = {
-      innerRef: vi.fn(),
-      draggableProps: { "data-draggable-id": draggableId },
-      dragHandleProps: { "data-drag-handle": true },
-    };
-    const snapshot = { isDragging: false };
-    return children(provided, snapshot);
-  },
 }));
 
 // Mock the trip store
-const mockUpdateTrip = vi.fn();
-const mockAddDestination = vi.fn();
-const mockUpdateDestination = vi.fn();
-const mockRemoveDestination = vi.fn();
+const MOCK_UPDATE_TRIP = vi.fn();
+const MOCK_ADD_DESTINATION = vi.fn();
+const MOCK_UPDATE_DESTINATION = vi.fn();
+const MOCK_REMOVE_DESTINATION = vi.fn();
 
 vi.mock("@/stores/trip-store", () => ({
   useTripStore: vi.fn(() => ({
-    updateTrip: mockUpdateTrip,
-    addDestination: mockAddDestination,
-    updateDestination: mockUpdateDestination,
-    removeDestination: mockRemoveDestination,
+    addDestination: MOCK_ADD_DESTINATION,
+    removeDestination: MOCK_REMOVE_DESTINATION,
+    updateDestination: MOCK_UPDATE_DESTINATION,
+    updateTrip: MOCK_UPDATE_TRIP,
   })),
 }));
 
 describe("ItineraryBuilder", () => {
   const mockTrip: Trip = {
-    id: "trip-1",
-    name: "European Adventure",
+    budget: 3000,
+    createdAt: "2024-01-01",
+    currency: "USD",
     description: "A wonderful journey through Europe",
-    startDate: "2024-06-15",
-    endDate: "2024-06-25",
     destinations: [
       {
+        accommodation: { name: "Hotel de Ville", type: "hotel" },
+        activities: ["Visit Eiffel Tower", "Louvre Museum"],
+        country: "France",
+        endDate: "2024-06-18",
+        estimatedCost: 800,
         id: "dest-1",
         name: "Paris",
-        country: "France",
-        startDate: "2024-06-15",
-        endDate: "2024-06-18",
-        activities: ["Visit Eiffel Tower", "Louvre Museum"],
-        accommodation: { type: "hotel", name: "Hotel de Ville" },
-        transportation: { type: "flight", details: "Air France AF123" },
-        estimatedCost: 800,
         notes: "Book restaurants in advance",
+        startDate: "2024-06-15",
+        transportation: { details: "Air France AF123", type: "flight" },
       },
       {
+        accommodation: { name: "Central Apartment", type: "airbnb" },
+        activities: ["Colosseum", "Vatican"],
+        country: "Italy",
+        endDate: "2024-06-22",
+        estimatedCost: 600,
         id: "dest-2",
         name: "Rome",
-        country: "Italy",
-        startDate: "2024-06-19",
-        endDate: "2024-06-22",
-        activities: ["Colosseum", "Vatican"],
-        accommodation: { type: "airbnb", name: "Central Apartment" },
-        transportation: { type: "train", details: "High-speed train" },
-        estimatedCost: 600,
         notes: "Check for Vatican tours",
+        startDate: "2024-06-19",
+        transportation: { details: "High-speed train", type: "train" },
       },
     ],
-    budget: 3000,
-    currency: "USD",
+    endDate: "2024-06-25",
+    id: "trip-1",
     isPublic: false,
-    tags: ["adventure", "culture"],
+    name: "European Adventure",
+    startDate: "2024-06-15",
     status: "planning",
-    createdAt: "2024-01-01",
+    tags: ["adventure", "culture"],
     updatedAt: "2024-01-01",
   };
 
@@ -174,9 +174,9 @@ describe("ItineraryBuilder", () => {
         ...mockTrip,
         destinations: [
           {
+            country: "Germany",
             id: "dest-1",
             name: "Berlin",
-            country: "Germany",
           },
         ],
       };
@@ -221,7 +221,7 @@ describe("ItineraryBuilder", () => {
 
     it("should add destination with basic fields", async () => {
       const user = userEvent.setup();
-      mockAddDestination.mockResolvedValue(undefined);
+      MOCK_ADD_DESTINATION.mockResolvedValue(undefined);
 
       render(<ItineraryBuilder trip={mockTrip} />);
 
@@ -241,11 +241,11 @@ describe("ItineraryBuilder", () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockAddDestination).toHaveBeenCalledWith(
+        expect(MOCK_ADD_DESTINATION).toHaveBeenCalledWith(
           "trip-1",
           expect.objectContaining({
-            name: expect.stringContaining("Madrid"),
             country: expect.stringContaining("Spain"),
+            name: expect.stringContaining("Madrid"),
           })
         );
       });
@@ -289,7 +289,7 @@ describe("ItineraryBuilder", () => {
   describe("Destination Actions", () => {
     it("should delete destination when delete button is clicked", async () => {
       const user = userEvent.setup();
-      mockRemoveDestination.mockResolvedValue(undefined);
+      MOCK_REMOVE_DESTINATION.mockResolvedValue(undefined);
 
       render(<ItineraryBuilder trip={mockTrip} />);
 
@@ -304,7 +304,7 @@ describe("ItineraryBuilder", () => {
       }
 
       await waitFor(() => {
-        expect(mockRemoveDestination).toHaveBeenCalledWith(
+        expect(MOCK_REMOVE_DESTINATION).toHaveBeenCalledWith(
           "trip-1",
           expect.any(String)
         );
@@ -354,7 +354,7 @@ describe("ItineraryBuilder", () => {
   describe("Form Validation and Edge Cases", () => {
     it("should handle empty form submission", async () => {
       const user = userEvent.setup();
-      mockAddDestination.mockResolvedValue(undefined);
+      MOCK_ADD_DESTINATION.mockResolvedValue(undefined);
 
       render(<ItineraryBuilder trip={mockTrip} />);
 
@@ -369,11 +369,11 @@ describe("ItineraryBuilder", () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockAddDestination).toHaveBeenCalledWith(
+        expect(MOCK_ADD_DESTINATION).toHaveBeenCalledWith(
           "trip-1",
           expect.objectContaining({
-            name: "",
             country: "",
+            name: "",
           })
         );
       });
@@ -451,28 +451,28 @@ describe("ItineraryBuilder", () => {
         ...mockTrip,
         destinations: [
           {
+            country: "Test Country",
             id: "dest-1",
             name: "Test City",
-            country: "Test Country",
-            transportation: { type: "flight", details: "Flight details" },
+            transportation: { details: "Flight details", type: "flight" },
           },
           {
+            country: "Test Country 2",
             id: "dest-2",
             name: "Test City 2",
-            country: "Test Country 2",
-            transportation: { type: "car", details: "Car details" },
+            transportation: { details: "Car details", type: "car" },
           },
           {
+            country: "Test Country 3",
             id: "dest-3",
             name: "Test City 3",
-            country: "Test Country 3",
-            transportation: { type: "train", details: "Train details" },
+            transportation: { details: "Train details", type: "train" },
           },
           {
+            country: "Test Country 4",
             id: "dest-4",
             name: "Test City 4",
-            country: "Test Country 4",
-            transportation: { type: "other", details: "Other transport" },
+            transportation: { details: "Other transport", type: "other" },
           },
         ],
       };

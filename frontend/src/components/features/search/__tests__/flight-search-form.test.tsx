@@ -9,16 +9,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FlightSearchForm } from "../flight-search-form";
 
 // Mock the onSearch function
-const mockOnSearch = vi.fn();
+const MOCK_ON_SEARCH = vi.fn();
 
 describe("FlightSearchForm", () => {
   beforeEach(() => {
     // Clear mock calls between tests
-    mockOnSearch.mockClear();
+    MOCK_ON_SEARCH.mockClear();
   });
 
   it("renders the form correctly (aligned with current UI)", () => {
-    render(<FlightSearchForm onSearch={mockOnSearch} />);
+    render(<FlightSearchForm onSearch={MOCK_ON_SEARCH} />);
 
     // Title and trip type buttons
     expect(screen.getByText("Find Flights")).toBeInTheDocument();
@@ -44,7 +44,7 @@ describe("FlightSearchForm", () => {
   });
 
   it("handles form submission with valid data", async () => {
-    render(<FlightSearchForm onSearch={mockOnSearch} />);
+    render(<FlightSearchForm onSearch={MOCK_ON_SEARCH} />);
 
     // Fill in required fields matching current placeholders/labels
     fireEvent.change(screen.getByPlaceholderText("Departure city or airport"), {
@@ -72,19 +72,19 @@ describe("FlightSearchForm", () => {
     fireEvent.submit(formEl!);
 
     // onSearch receives schema-validated FlightSearchFormData shape (async)
-    await vi.waitFor(() => expect(mockOnSearch).toHaveBeenCalledTimes(1));
-    expect(mockOnSearch).toHaveBeenCalledWith({
-      tripType: "round-trip",
-      origin: "New York",
-      destination: "London",
-      departureDate: "2099-08-15",
-      returnDate: "2099-08-25",
-      passengers: { adults: 1, children: 0, infants: 0 },
+    await vi.waitFor(() => expect(MOCK_ON_SEARCH).toHaveBeenCalledTimes(1));
+    expect(MOCK_ON_SEARCH).toHaveBeenCalledWith({
       cabinClass: "economy",
+      departureDate: "2099-08-15",
+      destination: "London",
       directOnly: false,
-      maxStops: undefined,
-      preferredAirlines: [],
       excludedAirlines: [],
+      maxStops: undefined,
+      origin: "New York",
+      passengers: { adults: 1, children: 0, infants: 0 },
+      preferredAirlines: [],
+      returnDate: "2099-08-25",
+      tripType: "round-trip",
     });
   });
 });

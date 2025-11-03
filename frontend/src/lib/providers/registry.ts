@@ -19,7 +19,7 @@ import { getUserApiKey } from "@/lib/supabase/rpc";
  * Map a generic model hint to a provider-specific id.
  * Keep conservative and simple; leave full mapping to callers/routes if needed.
  */
-const defaultModelMapper: ModelMapper = (
+const DEFAULT_MODEL_MAPPER: ModelMapper = (
   provider: ProviderId,
   modelHint?: string
 ): string => {
@@ -66,11 +66,11 @@ export async function resolveProvider(
     const apiKey = await getUserApiKey(userId, provider);
     if (!apiKey) continue;
 
-    const modelId = defaultModelMapper(provider, modelHint);
+    const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
 
     if (provider === "openai") {
       const openai = createOpenAI({ apiKey });
-      return { provider, modelId, model: openai(modelId) };
+      return { model: openai(modelId), modelId, provider };
     }
 
     if (provider === "openrouter") {
@@ -86,24 +86,24 @@ export async function resolveProvider(
         headers: Object.keys(headers).length > 0 ? headers : undefined,
       });
       return {
-        provider,
-        modelId,
-        model: client(modelId),
         headers: Object.keys(headers).length ? headers : undefined,
+        model: client(modelId),
+        modelId,
+        provider,
       };
     }
 
     if (provider === "anthropic") {
       // The anthropic() helper reads env by default; to support BYOK, use factory
       const a = createAnthropic({ apiKey });
-      return { provider, modelId, model: a(modelId) };
+      return { model: a(modelId), modelId, provider };
     }
 
     if (provider === "xai") {
       // Use OpenAI-compatible provider for xAI to pass BYOK and base URL.
       // Avoid @ai-sdk/xai here to ensure user-specific keys are respected.
       const xai = createOpenAI({ apiKey, baseURL: "https://api.x.ai/v1" });
-      return { provider, modelId, model: xai(modelId) };
+      return { model: xai(modelId), modelId, provider };
     }
   }
 

@@ -29,8 +29,8 @@ export function useErrorHandler() {
     (error: Error, additionalInfo?: Record<string, unknown>) => {
       // Create error report
       const errorReport = errorService.createErrorReport(error, undefined, {
-        userId: getUserId(),
         sessionId: getSessionId(),
+        userId: getUserId(),
         ...additionalInfo,
       });
 
@@ -61,8 +61,8 @@ export function useErrorHandler() {
   );
 
   return {
-    handleError,
     handleAsyncError,
+    handleError,
   };
 }
 

@@ -66,7 +66,7 @@ export default function ApiKeysPage() {
     if (!apiKey.trim()) return;
     setLoading(true);
     try {
-      await authenticatedApi.post("/api/keys", { service, api_key: apiKey.trim() });
+      await authenticatedApi.post("/api/keys", { api_key: apiKey.trim(), service });
       setApiKey("");
       await load();
     } finally {

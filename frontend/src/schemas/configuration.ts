@@ -85,12 +85,12 @@ export type VersionId = z.infer<typeof VersionIdSchema>;
  */
 export const AgentConfigRequestSchema = z
   .object({
-    temperature: z
-      .number()
-      .min(0.0, "Temperature must be at least 0.0")
-      .max(2.0, "Temperature must be at most 2.0")
-      .multipleOf(0.01, "Temperature must have at most 2 decimal places")
-      .optional(),
+    description: z
+      .string()
+      .max(500, "Description must be at most 500 characters")
+      .trim()
+      .optional()
+      .nullable(),
 
     max_tokens: z
       .number()
@@ -99,11 +99,12 @@ export const AgentConfigRequestSchema = z
       .max(8000, "Max tokens must be at most 8000")
       .optional(),
 
-    top_p: z
+    model: ModelNameSchema.optional(),
+    temperature: z
       .number()
-      .min(0.0, "Top-p must be at least 0.0")
-      .max(1.0, "Top-p must be at most 1.0")
-      .multipleOf(0.01, "Top-p must have at most 2 decimal places")
+      .min(0.0, "Temperature must be at least 0.0")
+      .max(2.0, "Temperature must be at most 2.0")
+      .multipleOf(0.01, "Temperature must have at most 2 decimal places")
       .optional(),
 
     timeout_seconds: z
@@ -113,14 +114,12 @@ export const AgentConfigRequestSchema = z
       .max(300, "Timeout must be at most 300 seconds")
       .optional(),
 
-    model: ModelNameSchema.optional(),
-
-    description: z
-      .string()
-      .max(500, "Description must be at most 500 characters")
-      .trim()
-      .optional()
-      .nullable(),
+    top_p: z
+      .number()
+      .min(0.0, "Top-p must be at least 0.0")
+      .max(1.0, "Top-p must be at most 1.0")
+      .multipleOf(0.01, "Top-p must have at most 2 decimal places")
+      .optional(),
   })
   .refine(
     (data) => {
@@ -140,12 +139,12 @@ export const AgentConfigRequestSchema = z
       if (data.model && data.max_tokens !== undefined) {
         // Model-specific token limits
         const modelLimits: Record<string, number> = {
+          "claude-3-haiku": 4096,
+          "claude-3-sonnet": 8192,
           "gpt-3.5-turbo": 4096,
           "gpt-4": 8192,
           "gpt-4-turbo": 8192,
           "gpt-4o": 8192,
-          "claude-3-haiku": 4096,
-          "claude-3-sonnet": 8192,
         };
 
         const maxLimit = modelLimits[data.model] || 8000;
@@ -174,23 +173,23 @@ export type AgentConfigRequest = z.infer<typeof AgentConfigRequestSchema>;
  */
 export const AgentConfigResponseSchema = z.object({
   agent_type: AgentTypeEnum,
-  temperature: z.number().min(0.0).max(2.0),
-  max_tokens: z.number().int().min(1).max(8000),
-  top_p: z.number().min(0.0).max(1.0),
-  timeout_seconds: z.number().int().min(5).max(300),
-  model: ModelNameSchema,
-  scope: ConfigurationScopeEnum,
   created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
-  updated_by: z.string().nullable().optional(),
+  creativity_level: z.string().optional(),
   description: z.string().max(500).nullable().optional(),
-  is_active: z.boolean().default(true),
 
   // Computed fields from backend
   estimated_cost_per_1k_tokens: z.string().optional(), // Decimal as string
-  creativity_level: z.string().optional(),
-  response_size_category: z.string().optional(),
+  is_active: z.boolean().default(true),
+  max_tokens: z.number().int().min(1).max(8000),
+  model: ModelNameSchema,
   performance_tier: z.string().optional(),
+  response_size_category: z.string().optional(),
+  scope: ConfigurationScopeEnum,
+  temperature: z.number().min(0.0).max(2.0),
+  timeout_seconds: z.number().int().min(5).max(300),
+  top_p: z.number().min(0.0).max(1.0),
+  updated_at: z.string().datetime(),
+  updated_by: z.string().nullable().optional(),
 });
 
 /** TypeScript type for agent configuration responses inferred from AgentConfigResponseSchema. */
@@ -204,18 +203,17 @@ export type AgentConfigResponse = z.infer<typeof AgentConfigResponseSchema>;
  * versions and when they were created.
  */
 export const ConfigurationVersionSchema = z.object({
-  version_id: VersionIdSchema,
+  // Computed fields
+  age_in_days: z.number().int().min(0).optional(),
   agent_type: AgentTypeEnum,
   configuration: z.record(z.string(), z.any()),
-  scope: ConfigurationScopeEnum,
   created_at: z.string().datetime(),
   created_by: z.string(),
   description: z.string().max(500).nullable().optional(),
   is_current: z.boolean().default(false),
-
-  // Computed fields
-  age_in_days: z.number().int().min(0).optional(),
   is_recent: z.boolean().optional(),
+  scope: ConfigurationScopeEnum,
+  version_id: VersionIdSchema,
 });
 
 /** TypeScript type for configuration versions inferred from ConfigurationVersionSchema. */
@@ -231,15 +229,15 @@ export type ConfigurationVersion = z.infer<typeof ConfigurationVersionSchema>;
 export const PerformanceMetricsSchema = z.object({
   agent_type: AgentTypeEnum,
   average_response_time: z.number().min(0),
-  success_rate: z.number().min(0).max(1),
-  error_rate: z.number().min(0).max(1),
-  token_usage: z.record(z.string(), z.number().int()),
   cost_estimate: z.string(), // Decimal as string
+  error_rate: z.number().min(0).max(1),
   measured_at: z.string().datetime(),
-  sample_size: z.number().int().min(1),
 
   // Computed fields
   performance_grade: z.string().optional(),
+  sample_size: z.number().int().min(1),
+  success_rate: z.number().min(0).max(1),
+  token_usage: z.record(z.string(), z.number().int()),
   tokens_per_second: z.number().min(0).optional(),
 });
 
@@ -253,12 +251,12 @@ export type PerformanceMetrics = z.infer<typeof PerformanceMetricsSchema>;
  * error messages, current and suggested values, and severity levels.
  */
 export const ConfigurationValidationErrorSchema = z.object({
-  field: z.string(),
-  error: z.string(),
   current_value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
-  suggested_value: z.union([z.string(), z.number(), z.boolean(), z.null()]).optional(),
-  severity: z.enum(["error", "warning", "info"]).default("error"),
+  error: z.string(),
   error_code: z.string().optional(),
+  field: z.string(),
+  severity: z.enum(["error", "warning", "info"]).default("error"),
+  suggested_value: z.union([z.string(), z.number(), z.boolean(), z.null()]).optional(),
 });
 
 /** TypeScript type for configuration validation errors. */
@@ -273,11 +271,11 @@ export type ConfigurationValidationError = z.infer<
  * warnings, suggestions, and summary information for comprehensive validation feedback.
  */
 export const ConfigurationValidationResponseSchema = z.object({
-  is_valid: z.boolean(),
   errors: z.array(ConfigurationValidationErrorSchema).default([]),
-  warnings: z.array(ConfigurationValidationErrorSchema).default([]),
+  is_valid: z.boolean(),
   suggestions: z.array(z.string()).default([]),
   validation_summary: z.string().optional(),
+  warnings: z.array(ConfigurationValidationErrorSchema).default([]),
 });
 
 /** TypeScript type for configuration validation responses. */
@@ -296,12 +294,12 @@ export type ConfigurationValidationResponse = z.infer<
 export const ConfigurationFormSchema = z
   .object({
     agent_type: AgentTypeEnum,
-    temperature: z.number().optional(),
-    max_tokens: z.number().optional(),
-    top_p: z.number().optional(),
-    timeout_seconds: z.number().optional(),
-    model: z.string().optional(),
     description: z.string().optional().nullable(),
+    max_tokens: z.number().optional(),
+    model: z.string().optional(),
+    temperature: z.number().optional(),
+    timeout_seconds: z.number().optional(),
+    top_p: z.number().optional(),
   })
   .refine((data: any) => {
     // Agent-specific validation rules
@@ -342,9 +340,9 @@ export type ConfigurationForm = z.infer<typeof ConfigurationFormSchema>;
 export const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
   z.object({
     data: dataSchema,
-    success: z.boolean(),
-    message: z.string().optional(),
     errors: z.array(z.string()).optional(),
+    message: z.string().optional(),
+    success: z.boolean(),
   });
 
 /** Zod schema for agent configuration API responses. */
@@ -387,18 +385,18 @@ export const EnvironmentSelectSchema = z.object({
  * feature flags, global defaults, and export metadata for backup and migration purposes.
  */
 export const ConfigurationExportSchema = z.object({
-  export_id: z.string(),
-  environment: z.string(),
   agent_configurations: z.record(AgentTypeEnum, AgentConfigResponseSchema),
-  feature_flags: z.record(z.string(), z.boolean()),
-  global_defaults: z.record(z.string(), z.any()),
+  environment: z.string(),
+  export_id: z.string(),
+  export_size_estimate_kb: z.number().min(0).optional(),
   exported_at: z.string().datetime(),
   exported_by: z.string(),
+  feature_flags: z.record(z.string(), z.boolean()),
   format: z.enum(["json", "yaml"]).default("json"),
+  global_defaults: z.record(z.string(), z.any()),
 
   // Computed fields
   total_configurations: z.number().int().min(0).optional(),
-  export_size_estimate_kb: z.number().min(0).optional(),
 });
 
 /** TypeScript type for configuration exports inferred from ConfigurationExportSchema. */
@@ -496,29 +494,29 @@ export const getFormErrors = (error: z.ZodError): Record<string, string> => {
 export const getDefaultConfigForAgent = (agentType: AgentType): AgentConfigRequest => {
   const defaults: Record<AgentType, AgentConfigRequest> = {
     budget_agent: {
-      temperature: 0.2,
-      max_tokens: 1000,
-      top_p: 0.9,
-      timeout_seconds: 30,
-      model: "gpt-4",
       description: "Budget optimization agent - low creativity, high accuracy",
+      max_tokens: 1000,
+      model: "gpt-4",
+      temperature: 0.2,
+      timeout_seconds: 30,
+      top_p: 0.9,
     },
     destination_research_agent: {
-      temperature: 0.5,
-      max_tokens: 1000,
-      top_p: 0.9,
-      timeout_seconds: 30,
-      model: "gpt-4",
       description: "Destination research agent - moderate creativity for research",
+      max_tokens: 1000,
+      model: "gpt-4",
+      temperature: 0.5,
+      timeout_seconds: 30,
+      top_p: 0.9,
     },
     itinerary_agent: {
-      temperature: 0.4,
-      max_tokens: 1000,
-      top_p: 0.9,
-      timeout_seconds: 30,
-      model: "gpt-4",
       description:
         "Itinerary planning agent - structured creativity for logical planning",
+      max_tokens: 1000,
+      model: "gpt-4",
+      temperature: 0.4,
+      timeout_seconds: 30,
+      top_p: 0.9,
     },
   };
 

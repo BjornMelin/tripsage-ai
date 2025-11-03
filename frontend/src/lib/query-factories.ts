@@ -40,10 +40,7 @@ export const tripQueries = {
     apiCall: (filters?: Record<string, unknown>) => Promise<any[]>,
     filters?: Record<string, unknown>
   ): BaseQueryFactory<any[]> => ({
-    queryKey: queryKeys.trips.list(filters),
-    queryFn: () => apiCall(filters),
     options: {
-      staleTime: staleTimes.trips,
       gcTime: cacheTimes.medium,
       retry: (failureCount, error) => {
         if (error instanceof Error && "status" in error) {
@@ -52,7 +49,10 @@ export const tripQueries = {
         }
         return failureCount < 2;
       },
+      staleTime: staleTimes.trips,
     },
+    queryFn: () => apiCall(filters),
+    queryKey: queryKeys.trips.list(filters),
   }),
 
   /**
@@ -62,12 +62,9 @@ export const tripQueries = {
     apiCall: (id: number) => Promise<any>,
     tripId: number
   ): BaseQueryFactory<any> => ({
-    queryKey: queryKeys.trips.detail(tripId),
-    queryFn: () => apiCall(tripId),
     options: {
-      staleTime: staleTimes.trips,
-      gcTime: cacheTimes.medium,
       enabled: !!tripId,
+      gcTime: cacheTimes.medium,
       retry: (failureCount, error) => {
         if (error instanceof Error && "status" in error) {
           const status = (error as any).status;
@@ -75,7 +72,10 @@ export const tripQueries = {
         }
         return failureCount < 2;
       },
+      staleTime: staleTimes.trips,
     },
+    queryFn: () => apiCall(tripId),
+    queryKey: queryKeys.trips.detail(tripId),
   }),
 
   /**
@@ -85,13 +85,13 @@ export const tripQueries = {
     apiCall: (params?: Record<string, unknown>) => Promise<any[]>,
     params?: Record<string, unknown>
   ): BaseQueryFactory<any[]> => ({
-    queryKey: queryKeys.trips.suggestions(params),
-    queryFn: () => apiCall(params),
     options: {
-      staleTime: staleTimes.suggestions,
       gcTime: cacheTimes.medium,
       retry: 2,
+      staleTime: staleTimes.suggestions,
     },
+    queryFn: () => apiCall(params),
+    queryKey: queryKeys.trips.suggestions(params),
   }),
 };
 
@@ -99,21 +99,6 @@ export const tripQueries = {
  * Chat-related query factories
  */
 export const chatQueries = {
-  /**
-   * Factory for chat sessions
-   */
-  sessions: (
-    apiCall: (tripId?: number) => Promise<any[]>,
-    tripId?: number
-  ): BaseQueryFactory<any[]> => ({
-    queryKey: queryKeys.chat.sessionList(tripId),
-    queryFn: () => apiCall(tripId),
-    options: {
-      staleTime: staleTimes.chat,
-      gcTime: cacheTimes.short,
-    },
-  }),
-
   /**
    * Factory for chat messages (infinite query)
    */
@@ -124,13 +109,27 @@ export const chatQueries = {
     queryKey: readonly unknown[];
     queryFn: any;
   } => ({
-    queryKey: queryKeys.chat.messages(sessionId),
-    queryFn: ({ pageParam = 0 }) => apiCall(sessionId, pageParam),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage: any) => lastPage.nextCursor,
-    staleTime: staleTimes.chat,
-    gcTime: cacheTimes.short,
     enabled: !!sessionId,
+    gcTime: cacheTimes.short,
+    getNextPageParam: (lastPage: any) => lastPage.nextCursor,
+    initialPageParam: 0,
+    queryFn: ({ pageParam = 0 }) => apiCall(sessionId, pageParam),
+    queryKey: queryKeys.chat.messages(sessionId),
+    staleTime: staleTimes.chat,
+  }),
+  /**
+   * Factory for chat sessions
+   */
+  sessions: (
+    apiCall: (tripId?: number) => Promise<any[]>,
+    tripId?: number
+  ): BaseQueryFactory<any[]> => ({
+    options: {
+      gcTime: cacheTimes.short,
+      staleTime: staleTimes.chat,
+    },
+    queryFn: () => apiCall(tripId),
+    queryKey: queryKeys.chat.sessionList(tripId),
   }),
 
   /**
@@ -140,13 +139,13 @@ export const chatQueries = {
     apiCall: (userId: string) => Promise<any>,
     userId: string
   ): BaseQueryFactory<any> => ({
-    queryKey: queryKeys.chat.stats(userId),
-    queryFn: () => apiCall(userId),
     options: {
-      staleTime: staleTimes.stats,
-      gcTime: cacheTimes.long,
       enabled: !!userId,
+      gcTime: cacheTimes.long,
+      staleTime: staleTimes.stats,
     },
+    queryFn: () => apiCall(userId),
+    queryKey: queryKeys.chat.stats(userId),
   }),
 };
 
@@ -155,35 +154,34 @@ export const chatQueries = {
  */
 export const searchQueries = {
   /**
-   * Factory for flight searches
-   */
-  flights: (
-    apiCall: (params: Record<string, unknown>) => Promise<any>,
-    params: Record<string, unknown>
-  ): BaseQueryFactory<any> => ({
-    queryKey: queryKeys.search.flights(params),
-    queryFn: () => apiCall(params),
-    options: {
-      staleTime: staleTimes.search,
-      gcTime: cacheTimes.short,
-      enabled: Object.keys(params).length > 0,
-    },
-  }),
-
-  /**
    * Factory for accommodation searches
    */
   accommodations: (
     apiCall: (params: Record<string, unknown>) => Promise<any>,
     params: Record<string, unknown>
   ): BaseQueryFactory<any> => ({
-    queryKey: queryKeys.search.accommodations(params),
-    queryFn: () => apiCall(params),
     options: {
-      staleTime: staleTimes.search,
-      gcTime: cacheTimes.short,
       enabled: Object.keys(params).length > 0,
+      gcTime: cacheTimes.short,
+      staleTime: staleTimes.search,
     },
+    queryFn: () => apiCall(params),
+    queryKey: queryKeys.search.accommodations(params),
+  }),
+  /**
+   * Factory for flight searches
+   */
+  flights: (
+    apiCall: (params: Record<string, unknown>) => Promise<any>,
+    params: Record<string, unknown>
+  ): BaseQueryFactory<any> => ({
+    options: {
+      enabled: Object.keys(params).length > 0,
+      gcTime: cacheTimes.short,
+      staleTime: staleTimes.search,
+    },
+    queryFn: () => apiCall(params),
+    queryKey: queryKeys.search.flights(params),
   }),
 
   /**
@@ -193,12 +191,12 @@ export const searchQueries = {
     apiCall: () => Promise<any[]>,
     type: "flights" | "accommodations" | "activities" | "destinations"
   ): BaseQueryFactory<any[]> => ({
-    queryKey: queryKeys.search.suggestions(type),
-    queryFn: apiCall,
     options: {
-      staleTime: staleTimes.suggestions,
       gcTime: cacheTimes.long,
+      staleTime: staleTimes.suggestions,
     },
+    queryFn: apiCall,
+    queryKey: queryKeys.search.suggestions(type),
   }),
 };
 
@@ -213,12 +211,12 @@ export const fileQueries = {
     apiCall: (filters?: Record<string, unknown>) => Promise<any[]>,
     filters?: Record<string, unknown>
   ): BaseQueryFactory<any[]> => ({
-    queryKey: queryKeys.files.attachments(filters),
-    queryFn: () => apiCall(filters),
     options: {
-      staleTime: staleTimes.files,
       gcTime: cacheTimes.medium,
+      staleTime: staleTimes.files,
     },
+    queryFn: () => apiCall(filters),
+    queryKey: queryKeys.files.attachments(filters),
   }),
 
   /**
@@ -228,13 +226,13 @@ export const fileQueries = {
     apiCall: (userId: string) => Promise<any>,
     userId: string
   ): BaseQueryFactory<any> => ({
-    queryKey: queryKeys.files.stats(userId),
-    queryFn: () => apiCall(userId),
     options: {
-      staleTime: staleTimes.stats,
-      gcTime: cacheTimes.long,
       enabled: !!userId,
+      gcTime: cacheTimes.long,
+      staleTime: staleTimes.stats,
     },
+    queryFn: () => apiCall(userId),
+    queryKey: queryKeys.files.stats(userId),
   }),
 };
 
@@ -242,53 +240,6 @@ export const fileQueries = {
  * Mutation factories
  */
 export const mutationFactories = {
-  /**
-   * Trip mutations
-   */
-  trips: {
-    create: (apiCall: (data: any) => Promise<any>): BaseMutationFactory<any, any> => ({
-      mutationFn: apiCall,
-      options: {
-        onSuccess: (_data, _variables, context) => {
-          const queryClient = context as QueryClient;
-          queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
-          queryClient.invalidateQueries({ queryKey: queryKeys.trips.suggestions() });
-        },
-        retry: 1,
-      },
-    }),
-
-    update: (
-      apiCall: (data: { id: number; updates: any }) => Promise<any>
-    ): BaseMutationFactory<any, { id: number; updates: any }> => ({
-      mutationFn: apiCall,
-      options: {
-        onSuccess: (_data, variables, context) => {
-          const queryClient = context as QueryClient;
-          queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.trips.detail(variables.id),
-          });
-        },
-        retry: 1,
-      },
-    }),
-
-    delete: (
-      apiCall: (id: number) => Promise<void>
-    ): BaseMutationFactory<void, number> => ({
-      mutationFn: apiCall,
-      options: {
-        onSuccess: (_data, variables, context) => {
-          const queryClient = context as QueryClient;
-          queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
-          queryClient.removeQueries({ queryKey: queryKeys.trips.detail(variables) });
-        },
-        retry: 1,
-      },
-    }),
-  },
-
   /**
    * Chat mutations
    */
@@ -311,20 +262,6 @@ export const mutationFactories = {
     ): BaseMutationFactory<any, { sessionId: string; content: string }> => ({
       mutationFn: apiCall,
       options: {
-        onMutate: async (variables) => {
-          const queryClient = {} as QueryClient; // Would be injected
-          await queryClient.cancelQueries({
-            queryKey: queryKeys.chat.messages(variables.sessionId),
-          });
-
-          const previousMessages = queryClient.getQueryData(
-            queryKeys.chat.messages(variables.sessionId)
-          );
-
-          // Optimistic update would go here
-
-          return { previousMessages };
-        },
         onError: (_err, variables, context) => {
           if (
             context &&
@@ -339,6 +276,20 @@ export const mutationFactories = {
               context.previousMessages
             );
           }
+        },
+        onMutate: async (variables) => {
+          const queryClient = {} as QueryClient; // Would be injected
+          await queryClient.cancelQueries({
+            queryKey: queryKeys.chat.messages(variables.sessionId),
+          });
+
+          const previousMessages = queryClient.getQueryData(
+            queryKeys.chat.messages(variables.sessionId)
+          );
+
+          // Optimistic update would go here
+
+          return { previousMessages };
         },
         onSettled: (_data, _error, variables) => {
           const queryClient = {} as QueryClient; // Would be injected
@@ -355,20 +306,6 @@ export const mutationFactories = {
    * File mutations
    */
   files: {
-    upload: (
-      apiCall: (file: File) => Promise<any>
-    ): BaseMutationFactory<any, File> => ({
-      mutationFn: apiCall,
-      options: {
-        onSuccess: (_data, _variables, context) => {
-          const queryClient = context as QueryClient;
-          queryClient.invalidateQueries({ queryKey: queryKeys.files.all() });
-          queryClient.invalidateQueries({ queryKey: queryKeys.files.stats("") });
-        },
-        retry: 1,
-      },
-    }),
-
     delete: (
       apiCall: (id: string) => Promise<void>
     ): BaseMutationFactory<void, string> => ({
@@ -385,6 +322,65 @@ export const mutationFactories = {
         retry: 1,
       },
     }),
+    upload: (
+      apiCall: (file: File) => Promise<any>
+    ): BaseMutationFactory<any, File> => ({
+      mutationFn: apiCall,
+      options: {
+        onSuccess: (_data, _variables, context) => {
+          const queryClient = context as QueryClient;
+          queryClient.invalidateQueries({ queryKey: queryKeys.files.all() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.files.stats("") });
+        },
+        retry: 1,
+      },
+    }),
+  },
+  /**
+   * Trip mutations
+   */
+  trips: {
+    create: (apiCall: (data: any) => Promise<any>): BaseMutationFactory<any, any> => ({
+      mutationFn: apiCall,
+      options: {
+        onSuccess: (_data, _variables, context) => {
+          const queryClient = context as QueryClient;
+          queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.trips.suggestions() });
+        },
+        retry: 1,
+      },
+    }),
+
+    delete: (
+      apiCall: (id: number) => Promise<void>
+    ): BaseMutationFactory<void, number> => ({
+      mutationFn: apiCall,
+      options: {
+        onSuccess: (_data, variables, context) => {
+          const queryClient = context as QueryClient;
+          queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+          queryClient.removeQueries({ queryKey: queryKeys.trips.detail(variables) });
+        },
+        retry: 1,
+      },
+    }),
+
+    update: (
+      apiCall: (data: { id: number; updates: any }) => Promise<any>
+    ): BaseMutationFactory<any, { id: number; updates: any }> => ({
+      mutationFn: apiCall,
+      options: {
+        onSuccess: (_data, variables, context) => {
+          const queryClient = context as QueryClient;
+          queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.trips.detail(variables.id),
+          });
+        },
+        retry: 1,
+      },
+    }),
   },
 };
 
@@ -396,8 +392,8 @@ export const createPrefetchQuery = (
   factory: BaseQueryFactory<any>
 ) => {
   return queryClient.prefetchQuery({
-    queryKey: factory.queryKey,
     queryFn: factory.queryFn,
+    queryKey: factory.queryKey,
     ...factory.options,
   });
 };
@@ -407,17 +403,16 @@ export const createPrefetchQuery = (
  */
 export const queryInvalidation = {
   /**
+   * Invalidate all search queries
+   */
+  allSearch: (queryClient: QueryClient) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.search.all() });
+  },
+  /**
    * Invalidate all trip-related queries
    */
   allTrips: (queryClient: QueryClient) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
-  },
-
-  /**
-   * Invalidate specific trip
-   */
-  trip: (queryClient: QueryClient, tripId: number) => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(tripId) });
   },
 
   /**
@@ -429,10 +424,10 @@ export const queryInvalidation = {
   },
 
   /**
-   * Invalidate all search queries
+   * Invalidate specific trip
    */
-  allSearch: (queryClient: QueryClient) => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.search.all() });
+  trip: (queryClient: QueryClient, tripId: number) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(tripId) });
   },
 };
 

@@ -44,17 +44,17 @@ import { budgetFormSchema, type ExpenseCategory } from "@/lib/schemas/budget";
 import { cn } from "@/lib/utils";
 
 // Augmented form data with additional UI state
-const budgetFormUISchema = budgetFormSchema.and(
+const BUDGET_FORM_UI_SCHEMA = budgetFormSchema.and(
   z.object({
+    alertThreshold: z.number().min(50).max(95).optional(),
     // UI-specific fields
     autoAllocate: z.boolean().optional(),
     enableAlerts: z.boolean().optional(),
-    alertThreshold: z.number().min(50).max(95).optional(),
     notes: z.string().max(500).optional(),
   })
 );
 
-type BudgetFormViewData = z.infer<typeof budgetFormUISchema>;
+type BudgetFormViewData = z.infer<typeof BUDGET_FORM_UI_SCHEMA>;
 
 interface BudgetFormProps {
   onSubmit: (data: BudgetFormViewData) => Promise<void>;
@@ -78,42 +78,42 @@ const DEFAULT_CURRENCIES = [
 // Expense category options with descriptions
 const EXPENSE_CATEGORIES = [
   {
-    value: "flights",
-    label: "Flights",
     description: "Airfare and airline fees",
     icon: "✈️",
+    label: "Flights",
+    value: "flights",
   },
   {
-    value: "accommodations",
-    label: "Hotels",
     description: "Lodging and accommodation",
     icon: "🏨",
+    label: "Hotels",
+    value: "accommodations",
   },
   {
-    value: "transportation",
-    label: "Transport",
     description: "Local transport and car rentals",
     icon: "🚗",
+    label: "Transport",
+    value: "transportation",
   },
   {
-    value: "food",
-    label: "Food & Dining",
     description: "Meals and beverages",
     icon: "🍽️",
+    label: "Food & Dining",
+    value: "food",
   },
   {
-    value: "activities",
-    label: "Activities",
     description: "Tours, attractions, and entertainment",
     icon: "🎭",
+    label: "Activities",
+    value: "activities",
   },
   {
-    value: "shopping",
-    label: "Shopping",
     description: "Souvenirs and personal purchases",
     icon: "🛍️",
+    label: "Shopping",
+    value: "shopping",
   },
-  { value: "other", label: "Other", description: "Miscellaneous expenses", icon: "📝" },
+  { description: "Miscellaneous expenses", icon: "📝", label: "Other", value: "other" },
 ] as const;
 
 export function BudgetForm({
@@ -128,26 +128,31 @@ export function BudgetForm({
 
   // form with custom validation and error handling
   const form = useZodForm({
-    schema: budgetFormUISchema,
     defaultValues: {
-      name: "",
-      totalAmount: 0,
-      currency: "USD",
-      startDate: "",
-      endDate: "",
-      categories: [
-        { category: "flights" as ExpenseCategory, amount: 0 },
-        { category: "accommodations" as ExpenseCategory, amount: 0 },
-        { category: "food" as ExpenseCategory, amount: 0 },
-      ],
-      autoAllocate: false,
-      enableAlerts: true,
       alertThreshold: 80,
+      autoAllocate: false,
+      categories: [
+        { amount: 0, category: "flights" as ExpenseCategory },
+        { amount: 0, category: "accommodations" as ExpenseCategory },
+        { amount: 0, category: "food" as ExpenseCategory },
+      ],
+      currency: "USD",
+      enableAlerts: true,
+      endDate: "",
+      name: "",
       notes: "",
+      startDate: "",
+      totalAmount: 0,
       ...initialData,
     },
-    validateMode: "onChange",
+    onSubmitError: (error) => {
+      console.error("Budget form submission failed:", error);
+    },
+    onValidationError: (errors) => {
+      console.warn("Budget form validation failed:", errors);
+    },
     reValidateMode: "onChange",
+    schema: BUDGET_FORM_UI_SCHEMA,
     transformSubmitData: (data) => {
       // Transform data before submission - remove UI-specific fields
       const {
@@ -159,12 +164,7 @@ export function BudgetForm({
       } = data;
       return budgetData;
     },
-    onValidationError: (errors) => {
-      console.warn("Budget form validation failed:", errors);
-    },
-    onSubmitError: (error) => {
-      console.error("Budget form submission failed:", error);
-    },
+    validateMode: "onChange",
   });
 
   // Watch form values for dynamic calculations
@@ -206,8 +206,8 @@ export function BudgetForm({
 
     if (availableCategories.length > 0) {
       const newCategory = {
-        category: availableCategories[0].value as ExpenseCategory,
         amount: 0,
+        category: availableCategories[0].value as ExpenseCategory,
       };
       form.setValue("categories", [...categories, newCategory]);
     }

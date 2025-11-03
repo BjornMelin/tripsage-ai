@@ -11,9 +11,9 @@ import ConfigurationManager from "@/components/admin/configuration-manager";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export const metadata: Metadata = {
-  title: "Agent Configuration - TripSage Admin",
   description:
     "Manage AI agent configurations, monitor performance, and track version history",
+  title: "Agent Configuration - TripSage Admin",
 };
 
 export default function ConfigurationPage() {

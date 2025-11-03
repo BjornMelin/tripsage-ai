@@ -27,8 +27,8 @@ export async function GET(req: NextRequest) {
     const url = `${BACKEND_API_URL}/api/attachments/files${qs ? `?${qs}` : ""}`;
 
     const response = await fetch(url, {
-      method: "GET",
       headers: authHeader ? { Authorization: authHeader } : undefined,
+      method: "GET",
       // Tag reads so uploads can revalidate via revalidateTag('attachments', 'max')
       next: { tags: ["attachments"] },
     });
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(data, { status: 200 });
   } catch (_error) {
     return NextResponse.json(
-      { error: "Internal server error", code: "INTERNAL_ERROR" },
+      { code: "INTERNAL_ERROR", error: "Internal server error" },
       { status: 500 }
     );
   }

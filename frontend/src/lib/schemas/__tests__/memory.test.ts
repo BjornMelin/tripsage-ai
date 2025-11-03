@@ -15,13 +15,13 @@ describe("Memory Schemas", () => {
   describe("SearchMemoriesRequestSchema", () => {
     it("should validate a valid search request with proper filters", () => {
       const validRequest = {
-        query: "travel preferences",
-        userId: "user-123",
         filters: {
-          type: ["accommodation"],
           metadata: { category: "accommodation" },
+          type: ["accommodation"],
         },
         limit: 10,
+        query: "travel preferences",
+        userId: "user-123",
       };
 
       const result = SearchMemoriesRequestSchema.safeParse(validRequest);
@@ -33,9 +33,9 @@ describe("Memory Schemas", () => {
 
     it("should validate a search request without filters", () => {
       const validRequest = {
+        limit: 20,
         query: "hotels",
         userId: "user-123",
-        limit: 20,
       };
 
       const result = SearchMemoriesRequestSchema.safeParse(validRequest);
@@ -44,10 +44,10 @@ describe("Memory Schemas", () => {
 
     it("accepts unknown filter properties (backward-compatible)", () => {
       const invalidRequest = {
-        query: "travel preferences",
-        userId: "user-123",
         filters: { category: "accommodation" }, // This should fail
         limit: 10,
+        query: "travel preferences",
+        userId: "user-123",
       };
 
       const result = SearchMemoriesRequestSchema.safeParse(invalidRequest);
@@ -56,15 +56,15 @@ describe("Memory Schemas", () => {
 
     it("should validate filters with dateRange", () => {
       const validRequest = {
+        filters: {
+          dateRange: {
+            end: "2024-12-31",
+            start: "2024-01-01",
+          },
+          type: ["trip"],
+        },
         query: "recent trips",
         userId: "user-123",
-        filters: {
-          type: ["trip"],
-          dateRange: {
-            start: "2024-01-01",
-            end: "2024-12-31",
-          },
-        },
       };
 
       const result = SearchMemoriesRequestSchema.safeParse(validRequest);
@@ -75,8 +75,8 @@ describe("Memory Schemas", () => {
   describe("SearchMemoriesFiltersSchema", () => {
     it("should validate optional filters", () => {
       const validFilters = {
-        type: ["accommodation", "flight"],
         metadata: { source: "booking" },
+        type: ["accommodation", "flight"],
       };
 
       const result = SearchMemoriesFiltersSchema.safeParse(validFilters);
@@ -102,14 +102,14 @@ describe("Memory Schemas", () => {
   describe("MemorySchema", () => {
     it("should validate a complete memory object", () => {
       const validMemory = {
-        id: "mem-123",
         content: "User prefers luxury hotels",
-        type: "accommodation",
-        userId: "user-123",
-        sessionId: "session-123",
-        metadata: { category: "preference", confidence: 0.95 },
         createdAt: "2024-01-01T10:00:00Z",
+        id: "mem-123",
+        metadata: { category: "preference", confidence: 0.95 },
+        sessionId: "session-123",
+        type: "accommodation",
         updatedAt: "2024-01-01T10:00:00Z",
+        userId: "user-123",
       };
 
       const result = MemorySchema.safeParse(validMemory);
@@ -118,12 +118,12 @@ describe("Memory Schemas", () => {
 
     it("should validate memory without optional fields", () => {
       const minimalMemory = {
-        id: "mem-123",
         content: "User likes Paris",
-        type: "destination",
-        userId: "user-123",
         createdAt: "2024-01-01T10:00:00Z",
+        id: "mem-123",
+        type: "destination",
         updatedAt: "2024-01-01T10:00:00Z",
+        userId: "user-123",
       };
 
       const result = MemorySchema.safeParse(minimalMemory);

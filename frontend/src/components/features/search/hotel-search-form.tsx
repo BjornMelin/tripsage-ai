@@ -63,14 +63,14 @@ interface HotelSearchFormProps {
 }
 
 const AMENITIES = [
-  { id: "wifi", label: "Free WiFi", icon: Wifi },
-  { id: "breakfast", label: "Free Breakfast", icon: Coffee },
-  { id: "parking", label: "Free Parking", icon: Car },
-  { id: "pool", label: "Swimming Pool", icon: Building2 },
-  { id: "gym", label: "Fitness Center", icon: Dumbbell },
-  { id: "restaurant", label: "Restaurant", icon: Utensils },
-  { id: "spa", label: "Spa", icon: Sparkles },
-  { id: "aircon", label: "Air Conditioning", icon: Building2 },
+  { icon: Wifi, id: "wifi", label: "Free WiFi" },
+  { icon: Coffee, id: "breakfast", label: "Free Breakfast" },
+  { icon: Car, id: "parking", label: "Free Parking" },
+  { icon: Building2, id: "pool", label: "Swimming Pool" },
+  { icon: Dumbbell, id: "gym", label: "Fitness Center" },
+  { icon: Utensils, id: "restaurant", label: "Restaurant" },
+  { icon: Sparkles, id: "spa", label: "Spa" },
+  { icon: Building2, id: "aircon", label: "Air Conditioning" },
 ];
 
 export function HotelSearchForm({
@@ -89,15 +89,15 @@ export function HotelSearchForm({
 
   // Form state with React 19 patterns
   const [searchParams, setSearchParams] = useState<ModernHotelSearchParams>({
-    location: "",
+    adults: 2,
+    amenities: [],
     checkIn: "",
     checkOut: "",
-    rooms: 1,
-    adults: 2,
     children: 0,
+    location: "",
+    priceRange: { max: 1000, min: 0 },
     rating: 0,
-    priceRange: { min: 0, max: 1000 },
-    amenities: [],
+    rooms: 1,
   });
 
   // Optimistic search state
@@ -108,16 +108,16 @@ export function HotelSearchForm({
 
   // Mock data for demo - would come from backend
   const trendingDestinations = [
-    { name: "Paris", deals: 234, type: "city" as const },
-    { name: "Tokyo", deals: 156, type: "city" as const },
-    { name: "New York", deals: 298, type: "city" as const },
-    { name: "London", deals: 187, type: "city" as const },
+    { deals: 234, name: "Paris", type: "city" as const },
+    { deals: 156, name: "Tokyo", type: "city" as const },
+    { deals: 298, name: "New York", type: "city" as const },
+    { deals: 187, name: "London", type: "city" as const },
   ];
 
   const allInclusiveDeals = {
-    savings: "35%",
-    description: "All-Inclusive Era trending",
     avgSavings: "$127/night",
+    description: "All-Inclusive Era trending",
+    savings: "35%",
   };
 
   const handleInputChange = (field: keyof ModernHotelSearchParams, value: any) => {

@@ -40,10 +40,10 @@ export function useBudget() {
   } = useBudgetStore();
 
   return {
-    budgets,
-    activeBudgetId,
     activeBudget,
+    activeBudgetId,
     budgetSummary,
+    budgets,
     recentExpenses,
     setActiveBudget,
   };
@@ -64,11 +64,11 @@ export function useBudgetActions() {
 
   return {
     addBudget,
-    updateBudget,
-    removeBudget,
     addBudgetCategory,
-    updateBudgetCategory,
+    removeBudget,
     removeBudgetCategory,
+    updateBudget,
+    updateBudgetCategory,
   };
 }
 
@@ -82,10 +82,10 @@ export function useExpenses(budgetId?: string) {
   const budgetExpenses = budgetId ? expenses[budgetId] || [] : [];
 
   return {
-    expenses: budgetExpenses,
     addExpense,
-    updateExpense,
+    expenses: budgetExpenses,
     removeExpense,
+    updateExpense,
   };
 }
 
@@ -99,10 +99,10 @@ export function useAlerts(budgetId?: string) {
   const budgetAlerts = budgetId ? alerts[budgetId] || [] : [];
 
   return {
-    alerts: budgetAlerts,
     addAlert,
-    markAlertAsRead,
+    alerts: budgetAlerts,
     clearAlerts,
+    markAlertAsRead,
   };
 }
 
@@ -375,8 +375,8 @@ export function useFetchCurrencyRates() {
         (acc, [code, rate]) => {
           acc[code] = {
             code,
-            rate,
             lastUpdated: new Date().toISOString(),
+            rate,
           };
           return acc;
         },

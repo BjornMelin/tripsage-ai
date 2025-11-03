@@ -18,8 +18,8 @@ export default function GlobalError({
   useEffect(() => {
     // Report the critical error
     const errorReport = errorService.createErrorReport(error, undefined, {
-      userId: getUserId(),
       sessionId: getSessionId(),
+      userId: getUserId(),
     });
 
     errorService.reportError(errorReport);

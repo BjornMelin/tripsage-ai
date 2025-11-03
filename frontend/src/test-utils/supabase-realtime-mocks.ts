@@ -51,14 +51,14 @@ export type MockSupabaseClient = {
  */
 export function createMockRealtimeChannel(): MockRealtimeChannel {
   const mockChannel: MockRealtimeChannel = {
-    on: vi.fn(),
-    subscribe: vi.fn(),
-    unsubscribe: vi.fn(),
     _callbacks: {
       postgres_changes: [],
       system: [],
     },
     _subscribeCallback: undefined,
+    on: vi.fn(),
+    subscribe: vi.fn(),
+    unsubscribe: vi.fn(),
   };
 
   // Setup method chaining
@@ -68,11 +68,11 @@ export function createMockRealtimeChannel(): MockRealtimeChannel {
         const config = configOrCallback;
         const callback = callbackOrUndefined;
         mockChannel._callbacks.postgres_changes?.push({
+          callback,
           event: config.event || "*",
+          filter: config.filter,
           schema: config.schema || "public",
           table: config.table,
-          filter: config.filter,
-          callback,
         });
       } else if (event === "system") {
         const callback = callbackOrUndefined;
@@ -108,12 +108,12 @@ export function createMockSupabaseClient(
 ): MockSupabaseClient {
   const mockSupabaseClient: MockSupabaseClient = {
     channel: vi.fn(),
-    removeChannel: vi.fn(),
     realtime: {
+      channels: [],
       connect: vi.fn(),
       disconnect: vi.fn(),
-      channels: [],
     },
+    removeChannel: vi.fn(),
   };
 
   mockSupabaseClient.channel.mockImplementation(() => {
@@ -207,6 +207,11 @@ export function createMockSupabaseWithChannels() {
       }
       return channels.get(name)!;
     }),
+    realtime: {
+      channels: [],
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    },
     removeChannel: vi.fn((channel: MockRealtimeChannel) => {
       // Find and remove the channel from the map
       for (const [name, ch] of channels.entries()) {
@@ -216,12 +221,7 @@ export function createMockSupabaseWithChannels() {
         }
       }
     }),
-    realtime: {
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-      channels: [],
-    },
   };
 
-  return { mockSupabaseClient, channels };
+  return { channels, mockSupabaseClient };
 }

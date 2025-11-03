@@ -19,43 +19,43 @@ import { Toaster } from "@/components/ui/toaster";
 /**
  * Primary sans-serif font configuration.
  */
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  display: "swap",
-  preload: true,
-  fallback: ["system-ui", "arial"],
+const GEIST_SANS = Geist({
   adjustFontFallback: true,
+  display: "swap",
+  fallback: ["system-ui", "arial"],
+  preload: true,
+  subsets: ["latin"],
+  variable: "--font-geist-sans",
 });
 
 /**
  * Monospace font configuration for code and technical content.
  */
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: "swap",
-  preload: true,
-  fallback: ["ui-monospace", "SFMono-Regular", "Consolas", "monospace"],
+const GEIST_MONO = Geist_Mono({
   adjustFontFallback: true,
+  display: "swap",
+  fallback: ["ui-monospace", "SFMono-Regular", "Consolas", "monospace"],
+  preload: true,
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
 });
 
 /**
  * Application metadata for SEO and social sharing.
  */
 export const metadata: Metadata = {
-  title: "TripSage AI - Intelligent Travel Planning",
+  authors: [{ name: "TripSage Team" }],
   description: "Plan your perfect trip with AI-powered recommendations and insights",
   keywords: ["travel", "AI", "planning", "trips", "budget", "itinerary"],
-  authors: [{ name: "TripSage Team" }],
+  title: "TripSage AI - Intelligent Travel Planning",
 };
 
 /**
  * Viewport configuration for responsive design.
  */
 export const viewport = {
-  width: "device-width",
   initialScale: 1,
+  width: "device-width",
 };
 
 /**
@@ -76,7 +76,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased min-h-screen`}
+        className={`${GEIST_SANS.variable} ${GEIST_MONO.variable} font-sans antialiased min-h-screen`}
       >
         <PerformanceMonitor>
           <TanStackQueryProvider>

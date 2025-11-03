@@ -82,10 +82,10 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
   const handleSocialLogin = async (provider: "github" | "google") => {
     setError(null);
     const { error: oAuthError } = await supabase.auth.signInWithOAuth({
-      provider,
       options: {
         redirectTo: `${origin}/auth/callback${nextSuffix}`,
       },
+      provider,
     });
     if (oAuthError) setError(oAuthError.message);
   };

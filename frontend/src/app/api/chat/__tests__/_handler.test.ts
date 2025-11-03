@@ -23,12 +23,12 @@ function fakeSupabase(userId: string | null, memories: string[] = []) {
     from: vi.fn((table: string) => {
       if (table === "memories") {
         return {
-          select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockReturnThis(),
           limit: vi
             .fn()
             .mockResolvedValue({ data: memories.map((m) => ({ content: m })) }),
+          order: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
         } as any;
       }
       if (table === "chat_messages") {
@@ -53,7 +53,7 @@ describe("handleChatNonStream", () => {
 
   it("401 when unauthenticated", async () => {
     const res = await handleChatNonStream(
-      { supabase: fakeSupabase(null), resolveProvider: vi.fn() },
+      { resolveProvider: vi.fn(), supabase: fakeSupabase(null) },
       { messages: [] }
     );
     expect(res.status).toBe(401);
@@ -63,16 +63,16 @@ describe("handleChatNonStream", () => {
 
   it("400 on invalid attachment type", async () => {
     const res = await handleChatNonStream(
-      { supabase: fakeSupabase("u2"), resolveProvider: vi.fn() },
+      { resolveProvider: vi.fn(), supabase: fakeSupabase("u2") },
       {
         messages: [
           {
             id: "m1",
-            role: "user",
             parts: [
-              { type: "text", text: "hi" },
-              { type: "file", url: "https://x/y.pdf", media_type: "application/pdf" },
+              { text: "hi", type: "text" },
+              { media_type: "application/pdf", type: "file", url: "https://x/y.pdf" },
             ],
+            role: "user",
           } as any,
         ],
       }
@@ -86,17 +86,17 @@ describe("handleChatNonStream", () => {
     const huge = "x".repeat(600_000);
     const res = await handleChatNonStream(
       {
-        supabase: fakeSupabase("u3"),
-        resolveProvider: vi.fn(async () => ({
-          provider: "openai",
-          modelId: "some-unknown-model",
-          model: {} as any,
-        })),
         config: { defaultMaxTokens: 1024 },
+        resolveProvider: vi.fn(async () => ({
+          model: {} as any,
+          modelId: "some-unknown-model",
+          provider: "openai",
+        })),
+        supabase: fakeSupabase("u3"),
       },
       {
         messages: [
-          { id: "u", role: "user", parts: [{ type: "text", text: huge }] } as any,
+          { id: "u", parts: [{ text: huge, type: "text" }], role: "user" } as any,
         ],
       }
     );
@@ -108,24 +108,24 @@ describe("handleChatNonStream", () => {
     const supabase = fakeSupabase("u4");
     const generateText = vi.fn(async () => ({
       text: "Hello world",
-      usage: { totalTokens: 42, promptTokens: 10, completionTokens: 32 },
+      usage: { completionTokens: 32, promptTokens: 10, totalTokens: 42 },
     }));
     const res = await handleChatNonStream(
       {
-        supabase,
-        resolveProvider: vi.fn(async () => ({
-          provider: "openai",
-          modelId: "gpt-4o-mini",
-          model: {} as any,
-        })),
-        logger: { info: vi.fn(), error: vi.fn() },
         clock: { now: () => 1000 },
         config: { defaultMaxTokens: 256 },
         generate: generateText as any,
+        logger: { error: vi.fn(), info: vi.fn() },
+        resolveProvider: vi.fn(async () => ({
+          model: {} as any,
+          modelId: "gpt-4o-mini",
+          provider: "openai",
+        })),
+        supabase,
       },
       {
         messages: [
-          { id: "u1", role: "user", parts: [{ type: "text", text: "hi" }] } as any,
+          { id: "u1", parts: [{ text: "hi", type: "text" }], role: "user" } as any,
         ],
       }
     );

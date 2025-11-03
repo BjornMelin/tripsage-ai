@@ -65,29 +65,29 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
   // Mock trip data - in real implementation, this would come from useTrip(tripId)
   const [trip, setTrip] = useState<Trip>({
-    id: tripId,
-    user_id: "user-123",
-    name: "Summer Europe Trip",
-    destination: "Paris, France",
-    start_date: "2024-07-01",
-    end_date: "2024-07-15",
     budget: 5000,
-    travelers: 2,
-    status: "planning",
-    trip_type: "leisure",
+    created_at: new Date().toISOString(),
+    destination: "Paris, France",
+    end_date: "2024-07-15",
     flexibility: {},
+    id: tripId,
+    name: "Summer Europe Trip",
     notes: ["Visit Eiffel Tower", "Try local cuisine"],
     search_metadata: {},
-    created_at: new Date().toISOString(),
+    start_date: "2024-07-01",
+    status: "planning",
+    travelers: 2,
+    trip_type: "leisure",
     updated_at: new Date().toISOString(),
+    user_id: "user-123",
   });
 
   useEffect(() => {
     // Initialize form data with current trip values
     setFormData({
-      name: trip.name,
-      destination: trip.destination,
       budget: trip.budget,
+      destination: trip.destination,
+      name: trip.name,
       travelers: trip.travelers,
     });
   }, [trip]);
@@ -99,9 +99,9 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     setOptimisticUpdates((prev) => ({
       ...prev,
       [field]: {
-        value,
         status: "pending",
         timestamp: new Date(),
+        value,
       },
     }));
 
@@ -137,8 +137,8 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       }, 2000);
 
       toast({
-        title: "Updated",
         description: `Trip ${field} has been updated successfully.`,
+        title: "Updated",
       });
     } catch (_error) {
       // Revert optimistic update on error
@@ -158,8 +158,8 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       }));
 
       toast({
-        title: "Update Failed",
         description: `Failed to update trip ${field}. Please try again.`,
+        title: "Update Failed",
         variant: "destructive",
       });
     }
@@ -383,8 +383,8 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
  */
 export function CollaborationIndicator({ tripId: _tripId }: { tripId: number }) {
   const [activeCollaborators] = useState([
-    { id: "user-456", name: "Alice Johnson", editing: "budget" },
-    { id: "user-789", name: "Bob Smith", editing: null },
+    { editing: "budget", id: "user-456", name: "Alice Johnson" },
+    { editing: null, id: "user-789", name: "Bob Smith" },
   ]);
 
   return (
