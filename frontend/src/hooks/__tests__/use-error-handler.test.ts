@@ -164,7 +164,7 @@ describe("useErrorHandler", () => {
     });
 
     it("should handle user store when available", async () => {
-      (window as any).__USER_STORE__ = {
+      (window as any).userStore = {
         user: { id: "test_user_456" },
       };
 
@@ -184,11 +184,11 @@ describe("useErrorHandler", () => {
       );
 
       // Cleanup
-      (window as any).__USER_STORE__ = undefined;
+      (window as any).userStore = undefined;
     });
 
     it("should handle missing user store gracefully", async () => {
-      (window as any).__USER_STORE__ = undefined;
+      (window as any).userStore = undefined;
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
@@ -326,9 +326,9 @@ describe("useErrorHandler", () => {
     });
 
     it("should handle window access errors gracefully", async () => {
-      // Mock window.__USER_STORE__ to throw error
-      const originalUserStore = window.__USER_STORE__;
-      Object.defineProperty(window, "__USER_STORE__", {
+      // Mock window.userStore to throw error
+      const originalUserStore = window.userStore;
+      Object.defineProperty(window, "userStore", {
         configurable: true,
         get: () => {
           throw new Error("Window access error");
@@ -352,7 +352,7 @@ describe("useErrorHandler", () => {
       );
 
       // Restore original
-      Object.defineProperty(window, "__USER_STORE__", {
+      Object.defineProperty(window, "userStore", {
         configurable: true,
         value: originalUserStore,
       });

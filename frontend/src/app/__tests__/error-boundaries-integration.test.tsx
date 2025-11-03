@@ -213,7 +213,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
   describe("User Store Integration", () => {
     it("should include user ID when user store is available", () => {
-      window.__USER_STORE__ = {
+      window.userStore = {
         user: { id: "integration_test_user" },
       };
 
@@ -228,11 +228,11 @@ describe("Next.js Error Boundaries Integration", () => {
       );
 
       // Cleanup
-      window.__USER_STORE__ = undefined;
+      window.userStore = undefined;
     });
 
     it("should handle missing user store gracefully", () => {
-      window.__USER_STORE__ = undefined;
+      window.userStore = undefined;
 
       render(<DashboardError error={mockError} reset={mockReset} />);
 

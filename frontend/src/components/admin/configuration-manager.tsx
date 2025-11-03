@@ -157,11 +157,6 @@ export default function ConfigurationManager() {
 
   // Live WS updates removed; consider Supabase Realtime in a future iteration.
 
-  // Load initial data
-  useEffect(() => {
-    loadAllConfigs();
-  }, [loadAllConfigs]);
-
   const loadAllConfigs = async () => {
     setLoading(true);
     try {
@@ -184,6 +179,11 @@ export default function ConfigurationManager() {
       setLoading(false);
     }
   };
+
+  // Load initial data
+  useEffect(() => {
+    loadAllConfigs();
+  }, [loadAllConfigs]);
 
   const loadAgentConfig = async (agentType: string) => {
     try {

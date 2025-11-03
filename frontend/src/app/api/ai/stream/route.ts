@@ -61,8 +61,8 @@ export async function POST(req: Request): Promise<Response> {
       JSON.stringify({
         error: "No output tokens available for the given prompt and model.",
         model,
-        model_context_limit: modelLimit,
-        prompt_tokens: promptTokens,
+        modelContextLimit: modelLimit,
+        promptTokens: promptTokens,
         reasons,
       }),
       { headers: { "content-type": "application/json" }, status: 400 }

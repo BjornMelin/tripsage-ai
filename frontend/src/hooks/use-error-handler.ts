@@ -13,7 +13,7 @@ import { errorService } from "@/lib/error-service";
 // Extend Window interface for custom properties
 declare global {
   interface Window {
-    __USER_STORE__?: {
+    userStore?: {
       user?: {
         id?: string;
       };
@@ -73,7 +73,7 @@ export function useErrorHandler() {
  */
 function getUserId(): string | undefined {
   try {
-    const userStore = window.__USER_STORE__;
+    const userStore = window.userStore;
     return userStore?.user?.id;
   } catch {
     return undefined;

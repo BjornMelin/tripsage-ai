@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const url = `${BACKEND_API_URL}/api/attachments/files${qs ? `?${qs}` : ""}`;
 
     const response = await fetch(url, {
-      headers: authHeader ? { Authorization: authHeader } : undefined,
+      headers: authHeader ? { authorization: authHeader } : undefined,
       method: "GET",
       // Tag reads so uploads can revalidate via revalidateTag('attachments', 'max')
       next: { tags: ["attachments"] },

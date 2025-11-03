@@ -33,22 +33,6 @@ export function MFAVerification({
   const [timeRemaining, setTimeRemaining] = useState(30);
   const verificationInputId = useId();
 
-  // Auto-submit when 6 digits are entered
-  useEffect(() => {
-    if (verificationCode.length === 6) {
-      handleVerifyCode();
-    }
-  }, [verificationCode, handleVerifyCode]);
-
-  // Countdown timer for resend
-  useEffect(() => {
-    if (timeRemaining > 0) {
-      const timer = setTimeout(() => setTimeRemaining(timeRemaining - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [timeRemaining]);
-
   const handleVerifyCode = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
       setError("Please enter a 6-digit verification code");
@@ -76,6 +60,22 @@ export function MFAVerification({
       setIsLoading(false);
     }
   };
+
+  // Auto-submit when 6 digits are entered
+  useEffect(() => {
+    if (verificationCode.length === 6) {
+      handleVerifyCode();
+    }
+  }, [verificationCode, handleVerifyCode]);
+
+  // Countdown timer for resend
+  useEffect(() => {
+    if (timeRemaining > 0) {
+      const timer = setTimeout(() => setTimeRemaining(timeRemaining - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [timeRemaining]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "").slice(0, 6);

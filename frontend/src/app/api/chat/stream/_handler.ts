@@ -133,7 +133,7 @@ export async function handleChatStream(
   }
 
   // Validate attachments
-  const att = validateImageAttachments(messages);
+  const att = validateImageAttachments(messages as any);
   if (!att.valid) {
     return new Response(
       JSON.stringify({ error: "invalid_attachment", reason: att.reason }),
@@ -192,7 +192,7 @@ export async function handleChatStream(
   const stream = deps.stream ?? defaultStreamText;
   const result = stream({
     maxOutputTokens: maxTokens,
-    messages: convertToModelMessages(messages),
+    messages: convertToModelMessages(messages as any),
     model: provider.model,
     system: systemPrompt,
   });

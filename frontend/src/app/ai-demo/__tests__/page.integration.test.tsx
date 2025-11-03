@@ -8,15 +8,13 @@ import Page from "@/app/ai-demo/page";
 
 // Mock fetch to control API responses
 const MOCK_FETCH = vi.fn();
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(global as any).fetch = MOCK_FETCH;
+(globalThis as { fetch: typeof fetch }).fetch = MOCK_FETCH;
 
 describe("AI Demo Page", () => {
   beforeEach(() => {
     MOCK_FETCH.mockClear();
     // Ensure both global and window fetch are mocked in JSDOM
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).fetch = MOCK_FETCH;
+    (window as { fetch: typeof fetch }).fetch = MOCK_FETCH;
   });
 
   it("renders prompt input and conversation area", () => {

@@ -35,9 +35,8 @@ export default function DashboardError({
 
 function getUserId(): string | undefined {
   try {
-    const userStore = (
-      window as Window & { __USER_STORE__?: { user?: { id?: string } } }
-    ).__USER_STORE__;
+    const userStore = (window as Window & { userStore?: { user?: { id?: string } } })
+      .userStore;
     return userStore?.user?.id;
   } catch {
     return undefined;
