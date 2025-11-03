@@ -1,6 +1,6 @@
 import {
-  type ErrorReport,
   ERROR_REPORT_SCHEMA,
+  type ErrorReport,
   type ErrorServiceConfig,
 } from "@/types/errors";
 

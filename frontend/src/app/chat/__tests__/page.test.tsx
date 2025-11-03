@@ -28,7 +28,7 @@ describe("ChatPage", () => {
   const originalFetch = global.fetch;
 
   afterEach(() => {
-    global.fetch = originalFetch as any;
+    global.fetch = originalFetch;
     vi.resetAllMocks();
   });
 

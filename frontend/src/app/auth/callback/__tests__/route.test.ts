@@ -2,8 +2,8 @@
  * @fileoverview Tests for the auth callback route handler.
  */
 
-import type { MockInstance } from "vitest";
 import type { NextRequest } from "next/server";
+import type { MockInstance } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the server client used by the route handler

@@ -28,7 +28,7 @@ const MOCK_TOAST = toast as unknown as ReturnType<typeof vi.fn>;
 describe("AccountSettingsSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       profile: MOCK_PROFILE,
       updatePersonalInfo: MOCK_UPDATE_PERSONAL_INFO,
     });
@@ -151,7 +151,7 @@ describe("AccountSettingsSection", () => {
 
     // Dialog should close without deletion toast
     expect(
-      MOCK_TOAST.mock.calls.find(([arg]: any[]) =>
+      MOCK_TOAST.mock.calls.find(([arg]: { title?: string }[]) =>
         arg?.title?.includes("Account deletion")
       )
     ).toBeUndefined();

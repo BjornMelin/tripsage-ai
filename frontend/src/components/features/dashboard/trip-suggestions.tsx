@@ -299,8 +299,7 @@ export function TripSuggestions({
       userPreferences.destinations.slice(0, 2).forEach((dest, idx) => {
         memoryBasedSuggestions.push({
           best_time_to_visit: "Year-round",
-          category:
-            userPreferences.travelStyle === "luxury" ? "relaxation" : "culture",
+          category: userPreferences.travelStyle === "luxury" ? "relaxation" : "culture",
           currency: "USD",
           description: `Based on your previous love for ${dest}, here's a personalized return trip.`,
           destination: dest,

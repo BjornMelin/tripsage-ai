@@ -5,12 +5,10 @@
  * patterns and behavioral validation. Following ULTRATHINK methodology.
  */
 
-// biome-ignore lint/style/useNamingConvention: API contract uses snake_case for flight data
-
+import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UpcomingFlight } from "@/hooks/use-trips";
-import type { UseQueryResult } from "@tanstack/react-query";
 import type { AppError } from "@/lib/api/error-types";
 import { render, screen } from "@/test/test-utils";
 import { UpcomingFlights } from "../upcoming-flights";

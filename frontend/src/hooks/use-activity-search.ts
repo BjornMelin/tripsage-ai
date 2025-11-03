@@ -5,7 +5,7 @@
  * Provides interface for search methods and state management.
  */
 
-import type { ActivitySearchParams } from "@/types/search";
+import type { Activity, ActivitySearchParams, SavedSearch } from "@/types/search";
 
 export type { ActivitySearchParams };
 
@@ -15,8 +15,8 @@ export interface UseActivitySearchResult {
   searchError: Error | null;
   resetSearch: () => void;
   saveSearch: (name: string, params: ActivitySearchParams) => Promise<void>;
-  savedSearches: any[];
-  popularActivities: any[];
+  savedSearches: SavedSearch[];
+  popularActivities: Activity[];
   isSavingSearch: boolean;
   saveSearchError: Error | null;
 }
