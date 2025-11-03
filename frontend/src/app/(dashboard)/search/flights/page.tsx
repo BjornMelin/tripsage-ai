@@ -17,7 +17,7 @@ import type { FlightSearchParams } from "@/types/search";
 
 // URL search parameters are handled inline
 
-export default function FlightSearchPage() {
+export default function flightSearchPage() {
   const { initializeSearch, executeSearch } = useSearchStore();
   const router = useRouter();
   const { toast } = useToast();
@@ -83,38 +83,38 @@ export default function FlightSearchPage() {
               <PopularRouteCard
                 origin="New York"
                 destination="London"
-                price={499}
-                date="Dec 2025"
+                price={456}
+                date="May 28, 2025"
               />
               <PopularRouteCard
                 origin="Los Angeles"
                 destination="Tokyo"
-                price={799}
-                date="Nov 2025"
+                price={789}
+                date="Jun 15, 2025"
               />
               <PopularRouteCard
                 origin="Chicago"
                 destination="Paris"
-                price={649}
-                date="Aug 2025"
+                price={567}
+                date="Jun 8, 2025"
               />
               <PopularRouteCard
                 origin="Miami"
-                destination="Cancun"
-                price={299}
-                date="Sep 2025"
+                destination="Barcelona"
+                price={623}
+                date="Jun 22, 2025"
               />
               <PopularRouteCard
                 origin="Seattle"
                 destination="Amsterdam"
                 price={749}
-                date="Oct 2025"
+                date="Jul 10, 2025"
               />
               <PopularRouteCard
                 origin="Dallas"
                 destination="Sydney"
                 price={999}
-                date="Nov 2025"
+                date="Jul 18, 2025"
               />
             </div>
           </CardContent>
@@ -130,6 +130,10 @@ export default function FlightSearchPage() {
               <TravelTip
                 title="Book 1-3 months in advance for the best prices"
                 description="Studies show that booking domestic flights about 1-3 months in advance and international flights 2-8 months in advance typically yields the best prices."
+              />
+              <TravelTip
+                title="Book in Advance"
+                description="Save up to 30% by booking flights 6-8 weeks ahead."
               />
               <TravelTip
                 title="Consider nearby airports"

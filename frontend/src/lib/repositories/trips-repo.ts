@@ -10,44 +10,53 @@ export type TripInsert = InsertTables<"trips">;
 export type TripUpdate = UpdateTables<"trips">;
 
 /** Map DB row → UI store trip shape (minimal mapping). */
-export function mapTripRowToUI(row: TripRow) {
+export function mapTripRowToUi(row: TripRow) {
   return {
     budget: row.budget,
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     created_at: row.created_at,
     createdAt: row.created_at,
     currency: "USD",
-    description: (row as any).description,
+    description: (row as unknown as { description?: string }).description,
     destinations: [],
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     end_date: row.end_date,
     endDate: row.end_date,
     id: String(row.id),
     isPublic: false,
     name: row.name,
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     start_date: row.start_date,
     startDate: row.start_date,
     status: row.status,
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     updated_at: row.updated_at,
     updatedAt: row.updated_at,
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     user_id: row.user_id,
   };
 }
 
 export async function createTrip(
+  // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
   data: Omit<TripInsert, "user_id"> & { user_id: string }
 ) {
   const supabase = createClient();
   const { data: row, error } = await insertSingle(supabase, "trips", data);
   if (error || !row) throw error || new Error("Failed to create trip");
-  return mapTripRowToUI(row);
+  return mapTripRowToUi(row);
 }
 
 export async function updateTrip(id: number, userId: string, updates: TripUpdate) {
   const supabase = createClient();
   const { data, error } = await updateSingle(supabase, "trips", updates, (qb) =>
-    (qb as any).eq("id", id).eq("user_id", userId)
+    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder types are complex
+    (qb as any)
+      .eq("id", id)
+      .eq("user_id", userId)
   );
   if (error || !data) throw error || new Error("Failed to update trip");
-  return mapTripRowToUI(data);
+  return mapTripRowToUi(data);
 }
 
 export async function listTrips() {
@@ -57,7 +66,7 @@ export async function listTrips() {
     .select("*")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data || []).map(mapTripRowToUI);
+  return (data || []).map(mapTripRowToUi);
 }
 
 export async function deleteTrip(id: number, userId?: string) {

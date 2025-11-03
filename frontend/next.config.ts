@@ -49,7 +49,7 @@ const nextConfig: NextConfig = {
   },
 
   // Headers for security and performance
-  async headers() {
+  headers() {
     return [
       {
         headers: [
@@ -92,12 +92,14 @@ const nextConfig: NextConfig = {
   // Image optimization with modern formats
   images: {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // biome-ignore lint/style/useNamingConvention: Next.js ImageConfig requires this exact property name
     dangerouslyAllowSVG: true,
 
     // Enable image optimization for better performance
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     formats: ["image/avif", "image/webp"],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // biome-ignore lint/style/useNamingConvention: Next.js ImageConfig requires this exact property name
     minimumCacheTTL: 86400, // 24 hours
 
     // Define remote patterns for external images if needed
@@ -120,7 +122,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
 
   // Redirects for authentication
-  async redirects() {
+  redirects() {
     return [
       {
         destination: "/login",

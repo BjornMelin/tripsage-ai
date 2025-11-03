@@ -69,8 +69,8 @@ describe("resolveProvider", () => {
 
   it("falls back to OpenRouter and does not attach headers when envs unset", async () => {
     const env2 = { ...process.env };
-    delete (env2 as any).OPENROUTER_REFERER;
-    delete (env2 as any).OPENROUTER_TITLE;
+    (env2 as any).OPENROUTER_REFERER = undefined;
+    (env2 as any).OPENROUTER_TITLE = undefined;
     process.env = env2;
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
     (getUserApiKey as unknown as Mock).mockImplementation(

@@ -10,23 +10,31 @@ type TripTableName = "trips";
 
 interface TripRow {
   id: number;
+  // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
   uuid_id: string;
+  // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
   user_id: string;
   title: string;
   name: string;
   description: string;
+  // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
   start_date: string | null;
+  // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
   end_date: string | null;
   destination: string | null;
   budget: number | null;
   currency: string;
+  // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
   spent_amount: number;
   visibility: "private" | "public";
   tags: string[];
   preferences: Record<string, unknown>;
   status: string;
+  // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
   budget_breakdown: Record<string, unknown> | null;
+  // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
   created_at: string;
+  // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
   updated_at: string;
 }
 
@@ -56,22 +64,30 @@ const TO_TRIP_ROW = (input: TripInsert): TripRow => {
 
   return {
     budget: input.budget ?? null,
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     budget_breakdown: null,
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     created_at: now,
     currency: input.currency ?? "USD",
     description: input.description ?? "",
     destination: typeof input.destinations === "string" ? input.destinations : null,
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     end_date: input.endDate ?? null,
     id: Number(Date.now() + randomInt(0, 1000)),
     name: input.name ?? input.title ?? "Untitled Trip",
     preferences: {},
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     spent_amount: 0,
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     start_date: input.startDate ?? null,
     status: "planning",
     tags: [],
     title: input.title ?? input.name ?? "Untitled Trip",
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     updated_at: now,
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     user_id: "test-user-id",
+    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     uuid_id: randomUUID(),
     visibility: input.isPublic ? "public" : "private",
   };
@@ -83,7 +99,7 @@ const APPLY_FILTERS = (rows: TripRow[], filters: TripFilter[]): TripRow[] =>
     rows
   );
 
-class TripQueryBuilder implements PromiseLike<{ data: TripRow[]; error: null }> {
+class TripQueryBuilder {
   private operation: "select" | "insert" | "update" | "delete" | null = null;
   private filters: TripFilter[] = [];
   private insertedRows: TripRow[] = [];
@@ -127,7 +143,7 @@ class TripQueryBuilder implements PromiseLike<{ data: TripRow[]; error: null }> 
     return this;
   }
 
-  async single() {
+  single() {
     if (this.operation === "insert" && this.insertedRows.length === 1) {
       return { data: this.insertedRows[0], error: null };
     }
@@ -141,6 +157,7 @@ class TripQueryBuilder implements PromiseLike<{ data: TripRow[]; error: null }> 
       const updated: TripRow = {
         ...filtered[0],
         ...this.updatePatch,
+        // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
         updated_at: new Date().toISOString(),
       };
       const index = tableData.findIndex((row) => row.id === filtered[0].id);
@@ -162,28 +179,6 @@ class TripQueryBuilder implements PromiseLike<{ data: TripRow[]; error: null }> 
   maybeSingle() {
     return this.single();
   }
-
-  then<TResult1 = { data: TripRow[]; error: null }, TResult2 = never>(
-    onFulfilled?:
-      | ((value: { data: TripRow[]; error: null }) => TResult1 | PromiseLike<TResult1>)
-      | null
-      | undefined,
-    onRejected?:
-      | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-      | null
-      | undefined
-  ) {
-    if (this.operation === "select") {
-      const rows = this.filters.length
-        ? APPLY_FILTERS(GLOBAL_MOCK_DATA[this.table], this.filters)
-        : GLOBAL_MOCK_DATA[this.table];
-      return Promise.resolve({ data: rows, error: null }).then(onFulfilled, onRejected);
-    }
-    return Promise.resolve({ data: [] as TripRow[], error: null }).then(
-      onFulfilled,
-      onRejected
-    );
-  }
 }
 
 /**
@@ -195,6 +190,7 @@ export const createTripStoreMockClient = (): Partial<SupabaseClient<unknown>> =>
     getSession: vi.fn(async () => ({
       data: {
         session: {
+          // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
           access_token: "test-token",
           user: { id: "test-user-id" },
         },
