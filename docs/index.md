@@ -25,8 +25,7 @@ This documentation site provides everything you need to integrate with the TripS
 
 - [REST Endpoints](api/rest-endpoints.md) - Complete REST API reference
 - [Realtime (Supabase)](api/realtime-api.md) - Private channels + RLS
-- [Supabase Project Setup](operators/supabase-project-setup.md) - Create, link, configure, and verify a new project
-- [Supabase Reproducible Deployment](operators/supabase-repro-deploy.md) - Single-pass CLI sequence to deploy DB + Edge Functions
+- [Manual Supabase Operations](operators/supabase-manual-operations.md) - Manual setup and operations when Vercel integration isn't available
 - [Dashboard API](api/dashboard-api.md) - Administrative endpoints
 - [Error Codes](api/error-codes.md) - Error handling reference
 
@@ -41,7 +40,7 @@ This documentation site provides everything you need to integrate with the TripS
 - Auto-generated API documentation from source code
 - Complete module and class references
 
-## 🔧 Development Setup
+## Development Setup
 
 ### Prerequisites
 
@@ -96,7 +95,7 @@ For real-time features like live pricing updates and collaborative planning, use
 
 All errors follow a consistent JSON format with appropriate HTTP status codes.
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](../CONTRIBUTING.md) for details on:
 
@@ -109,7 +108,7 @@ We welcome contributions! Please see our [Contributing Guide](../CONTRIBUTING.md
 
 This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
 
-## 📞 Support
+## Support
 
 - **Documentation Issues**: [GitHub Issues](https://github.com/tripsage-ai/tripsage-ai/issues)
 - **API Support**: [Support Forum](https://github.com/tripsage-ai/tripsage-ai/discussions)
@@ -117,5 +116,6 @@ This project is licensed under the MIT License - see the [LICENSE](../LICENSE) f
 
 ---
 
-!!! tip "Need Help?"
+**Need Help?**
+
 Can't find what you're looking for? Check the [FAQ](faq.md) or [contact support](support.md).
