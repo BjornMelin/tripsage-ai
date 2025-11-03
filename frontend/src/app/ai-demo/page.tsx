@@ -26,7 +26,7 @@ import {
  *
  * @returns The demo page component.
  */
-export default function AIDemoPage() {
+export default function AiDemoPage() {
   const [_input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [_isLoading, setIsLoading] = useState(false);

@@ -359,7 +359,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should handle user store when available", () => {
-      (window as any).__USER_STORE__ = {
+      (window as any).userStore = {
         user: { id: "test_user_123" },
       };
 
@@ -378,7 +378,7 @@ describe("ErrorBoundary", () => {
       );
 
       // Cleanup
-      (window as any).__USER_STORE__ = undefined;
+      (window as any).userStore = undefined;
     });
   });
 });

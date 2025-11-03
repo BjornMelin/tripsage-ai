@@ -60,7 +60,7 @@ describe("/api/chat route smoke", () => {
         usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
       })),
     }));
-    const mod = (await import("../route")) as any;
+    const mod = await import("../route");
     const res = await mod.POST(buildReq({ messages: [] }));
     expect(res.status).toBe(200);
     const body = await res.json();

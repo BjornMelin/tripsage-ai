@@ -40,8 +40,8 @@ export default function GlobalError({
 function getUserId(): string | undefined {
   try {
     const userStore = (
-      window as typeof window & { __USER_STORE__?: { user?: { id?: string } } }
-    ).__USER_STORE__;
+      window as typeof window & { userStore?: { user?: { id?: string } } }
+    ).userStore;
     return userStore?.user?.id;
   } catch {
     return undefined;

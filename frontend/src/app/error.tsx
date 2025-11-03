@@ -40,8 +40,7 @@ function getUserId(): string | undefined {
         id?: string;
       };
     }
-    const userStore = (window as unknown as { __USER_STORE__?: UserStore })
-      .__USER_STORE__;
+    const userStore = (window as unknown as { userStore?: UserStore }).userStore;
     return userStore?.user?.id;
   } catch {
     return undefined;

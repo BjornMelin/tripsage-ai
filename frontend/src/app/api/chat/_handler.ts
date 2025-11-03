@@ -126,7 +126,7 @@ export async function handleChatNonStream(
   }
 
   // Validate attachments (image/* only)
-  const att = validateImageAttachments(messages);
+  const att = validateImageAttachments(messages as any);
   if (!att.valid) {
     return new Response(
       JSON.stringify({ error: "invalid_attachment", reason: att.reason }),
@@ -184,7 +184,7 @@ export async function handleChatNonStream(
   const generate = deps.generate ?? defaultGenerateText;
   const result = await generate({
     maxOutputTokens: maxTokens,
-    messages: convertToModelMessages(messages),
+    messages: convertToModelMessages(messages as any),
     model: provider.model,
     system: systemPrompt,
   });

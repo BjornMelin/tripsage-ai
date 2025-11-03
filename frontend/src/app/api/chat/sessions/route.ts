@@ -25,7 +25,8 @@ export async function POST(req: NextRequest) {
     const supabase = await createServerSupabase();
     let title: string | undefined;
     try {
-      title = ((await req.json()) as any)?.title;
+      const body = (await req.json()) as { title?: string };
+      title = body?.title;
     } catch {}
     return createSession({ supabase }, title);
   } catch (err) {

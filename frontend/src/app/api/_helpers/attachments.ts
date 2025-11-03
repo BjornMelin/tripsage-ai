@@ -2,7 +2,10 @@
  * @fileoverview Helpers for UI attachments mapping and validation.
  */
 
-import type { UIMessage } from "ai";
+import type { UIMessage, FileUIPart } from "ai";
+
+// Type alias for UIMessage (preserves original parts type with both file and text)
+type UiMessageWithParts = UIMessage;
 
 /**
  * Type representing the result of attachment validation.
@@ -15,13 +18,13 @@ export type Validation = { valid: true } | { valid: false; reason: string };
  * @param messages - Array of UI messages to validate for attachments.
  * @returns Validation result indicating success or failure with reason.
  */
-export function validateImageAttachments(messages: UIMessage[]): Validation {
+export function validateImageAttachments(messages: UiMessageWithParts[]): Validation {
   for (const m of messages) {
-    const parts = (m as any).parts as Array<any> | undefined;
+    const parts = m.parts;
     if (!Array.isArray(parts)) continue;
     for (const p of parts) {
       if (p?.type === "file") {
-        const mediaType: string | undefined = p.media_type || p.mediaType;
+        const mediaType: string | undefined = p.mediaType;
         if (!mediaType) return { reason: "missing_media_type", valid: false };
         if (!mediaType.startsWith("image/"))
           return { reason: "unsupported_media_type", valid: false };
@@ -37,9 +40,9 @@ export function validateImageAttachments(messages: UIMessage[]): Validation {
  * @param part - UI message part to convert.
  * @returns FilePart object for AI SDK or undefined if not convertible.
  */
-export function convertUiFilePartToImage(part: any) {
+export function convertUiFilePartToImage(part: FileUIPart) {
   if (part?.type === "file") {
-    const mediaType: string | undefined = part.media_type || part.mediaType;
+    const mediaType: string | undefined = part.mediaType;
     if (mediaType?.startsWith("image/")) {
       return {
         image: part.url,
@@ -57,10 +60,10 @@ export function convertUiFilePartToImage(part: any) {
  * @param messages - Array of UI messages to extract text from.
  * @returns Array of text strings found in the messages.
  */
-export function extractTexts(messages: UIMessage[]): string[] {
+export function extractTexts(messages: UiMessageWithParts[]): string[] {
   const texts: string[] = [];
   for (const m of messages) {
-    const parts = (m as any).parts as Array<any> | undefined;
+    const parts = m.parts;
     if (!Array.isArray(parts)) continue;
     for (const p of parts) {
       if (p?.type === "text" && typeof p.text === "string") texts.push(p.text);

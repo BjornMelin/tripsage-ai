@@ -147,7 +147,11 @@ export function useSupabaseChat() {
   const useChatMessages = (sessionId: string | null) => {
     return useInfiniteQuery({
       enabled: !!sessionId,
-      getNextPageParam: (lastPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: {
+        data: any[];
+        nextCursor?: number;
+        totalCount?: number;
+      }) => lastPage.nextCursor,
       initialPageParam: 0,
       queryFn: async ({ pageParam = 0 }) => {
         if (!sessionId) throw new Error("Session ID is required");
@@ -168,7 +172,7 @@ export function useSupabaseChat() {
         return {
           data: data as (ChatMessage & { chat_tool_calls: ChatToolCall[] })[],
           nextCursor: data.length === pageSize ? pageParam + pageSize : undefined,
-          totalCount: count,
+          totalCount: count ?? undefined,
         };
       },
       queryKey: ["chat-messages", sessionId],
@@ -255,7 +259,7 @@ export function useSupabaseChat() {
         throw error;
       }
     },
-    onError: (_err, { sessionId }, context) => {
+    onError: (_err, { sessionId }, context: { previousMessages?: any } | undefined) => {
       // Rollback optimistic update on error
       if (context?.previousMessages) {
         queryClient.setQueryData(

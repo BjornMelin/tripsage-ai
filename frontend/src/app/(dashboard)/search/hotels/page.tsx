@@ -24,7 +24,7 @@ export default function HotelSearchPage() {
 
   const handleSearch = async (_params: AccommodationSearchParams) => {
     setHasSearched(true);
-    // search(params); // Disabled for MVP testing
+    // await search(params); // Disabled for MVP testing
   };
 
   return (

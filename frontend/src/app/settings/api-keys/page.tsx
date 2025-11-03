@@ -146,8 +146,8 @@ export default function ApiKeysPage() {
                 <div className="space-y-1">
                   <div className="font-medium">{s.toUpperCase()}</div>
                   <div className="text-sm text-muted-foreground">
-                    {present
-                      ? `Added: ${new Date(row?.created_at).toLocaleString()}`
+                    {present && row?.created_at
+                      ? `Added: ${new Date(row.created_at).toLocaleString()}`
                       : "Not set"}
                   </div>
                 </div>
