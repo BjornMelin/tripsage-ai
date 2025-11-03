@@ -21,7 +21,7 @@ type FormFieldContextValue<
   name: TName;
 };
 
-const FORM_FIELD_CONTEXT = React.createContext<FormFieldContextValue>(
+const FormFieldContext = React.createContext<FormFieldContextValue>(
   {} as FormFieldContextValue
 );
 
@@ -32,15 +32,15 @@ const FormField = <
   ...props
 }: ControllerProps<TFieldValues, TName>) => {
   return (
-    <FORM_FIELD_CONTEXT.Provider value={{ name: props.name }}>
+    <FormFieldContext.Provider value={{ name: props.name }}>
       <Controller {...props} />
-    </FORM_FIELD_CONTEXT.Provider>
+    </FormFieldContext.Provider>
   );
 };
 
 const useFormField = () => {
-  const fieldContext = React.useContext(FORM_FIELD_CONTEXT);
-  const itemContext = React.useContext(FORM_ITEM_CONTEXT);
+  const fieldContext = React.useContext(FormFieldContext);
+  const itemContext = React.useContext(FormItemContext);
   const { getFieldState, formState } = useFormContext();
 
   const fieldState = getFieldState(fieldContext.name, formState);
@@ -65,7 +65,7 @@ type FormItemContextValue = {
   id: string;
 };
 
-const FORM_ITEM_CONTEXT = React.createContext<FormItemContextValue>(
+const FormItemContext = React.createContext<FormItemContextValue>(
   {} as FormItemContextValue
 );
 
@@ -74,9 +74,9 @@ const FormItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
     const id = React.useId();
 
     return (
-      <FORM_ITEM_CONTEXT.Provider value={{ id }}>
+      <FormItemContext.Provider value={{ id }}>
         <div ref={ref} className={cn("space-y-2", className)} {...props} />
-      </FORM_ITEM_CONTEXT.Provider>
+      </FormItemContext.Provider>
     );
   }
 );

@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { type ReactNode, useState } from "react";
 
-function createQueryClient() {
+function CreateQueryClient() {
   return new QueryClient({
     defaultOptions: {
       mutations: {
@@ -44,7 +44,7 @@ function createQueryClient() {
 }
 
 export function TanStackQueryProvider({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(createQueryClient);
+  const [queryClient] = useState(CreateQueryClient);
 
   return (
     <QueryClientProvider client={queryClient}>
