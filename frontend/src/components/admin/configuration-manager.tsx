@@ -160,7 +160,7 @@ export default function ConfigurationManager() {
   // Load initial data
   useEffect(() => {
     loadAllConfigs();
-  }, []);
+  }, [loadAllConfigs]);
 
   const loadAllConfigs = async () => {
     setLoading(true);

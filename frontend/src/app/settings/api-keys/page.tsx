@@ -60,7 +60,7 @@ export default function ApiKeysPage() {
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
 
   const onSave = async () => {
     if (!apiKey.trim()) return;
@@ -147,7 +147,7 @@ export default function ApiKeysPage() {
                   <div className="font-medium">{s.toUpperCase()}</div>
                   <div className="text-sm text-muted-foreground">
                     {present
-                      ? `Added: ${new Date(row!.created_at).toLocaleString()}`
+                      ? `Added: ${new Date(row?.created_at).toLocaleString()}`
                       : "Not set"}
                   </div>
                 </div>

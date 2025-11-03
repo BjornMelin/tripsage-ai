@@ -670,7 +670,7 @@ export const PromptInput = ({
     return () => {
       controller.__unregisterFileInput(inputId);
     };
-  }, [usingProvider, controller, inputRef]);
+  }, [usingProvider, controller]);
 
   // Note: File input cannot be programmatically set for security reasons
   // The syncHiddenInput prop is no longer functional

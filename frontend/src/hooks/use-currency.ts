@@ -159,7 +159,7 @@ export function useFetchExchangeRates() {
         console.error("Invalid exchange rate data:", error);
       }
     }
-  }, [query.data, updateAllExchangeRates]);
+  }, [query.data, updateAllExchangeRates, responseSchema.parse]);
 
   return query;
 }

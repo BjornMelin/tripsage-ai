@@ -91,7 +91,7 @@
   .animate-ping,
   .skeleton-shimmer,
   .wave-loader {
-    animation: none !important;
+    animation: none;
   }
 
   /* Provide static visual indication for loading states */

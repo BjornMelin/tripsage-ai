@@ -253,6 +253,7 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
     startSession,
     supabase,
     user?.id,
+    reconnectAttempts,
   ]);
 
   const startAgentMonitoring = useCallback(() => {

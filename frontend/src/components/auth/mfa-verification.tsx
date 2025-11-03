@@ -38,7 +38,7 @@ export function MFAVerification({
     if (verificationCode.length === 6) {
       handleVerifyCode();
     }
-  }, [verificationCode]);
+  }, [verificationCode, handleVerifyCode]);
 
   // Countdown timer for resend
   useEffect(() => {
