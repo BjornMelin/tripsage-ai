@@ -212,26 +212,6 @@
 
   "overrides": [
     {
-      "includes": [
-        "**/*.test.ts",
-        "**/*.test.tsx",
-        "**/*.spec.ts", 
-        "**/*.spec.tsx",
-        "**/__tests__/**"
-      ],
-      "linter": {
-        "rules": {
-          "style": {
-            "useNamingConvention": "off"
-          },
-          "suspicious": {
-            "noExplicitAny": "warn",
-            "noConsole": "off"
-          }
-        }
-      }
-    },
-    {
       "includes": ["**/database.types.ts"],
       "linter": {
         "rules": {
@@ -257,6 +237,16 @@
         "actions": {
           "source": {
             "useSortedKeys": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/route.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
           }
         }
       }
