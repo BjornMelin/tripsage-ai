@@ -105,10 +105,12 @@ describe("handleChatStream", () => {
       }),
     } as any;
 
+    let startMeta: any | undefined;
+    let finishMeta: any | undefined;
     const fauxStream = vi.fn(() => ({
       toUIMessageStreamResponse: ({ messageMetadata }: any) => {
-        void messageMetadata?.({ part: { type: "start" } });
-        void messageMetadata?.({
+        startMeta = messageMetadata?.({ part: { type: "start" } });
+        finishMeta = messageMetadata?.({
           part: {
             type: "finish",
             totalUsage: { totalTokens: 123, inputTokens: 45, outputTokens: 78 },
@@ -143,6 +145,9 @@ describe("handleChatStream", () => {
     expect(memLog.length).toBe(1);
     expect(memLog[0].session_id).toBe("s1");
     expect(memLog[0].role).toBe("assistant");
+    // provider metadata present in start/finish
+    expect(await startMeta).toMatchObject({ provider: "openai" });
+    expect(await finishMeta).toMatchObject({ provider: "openai" });
   });
 
   it("429 when rate limited", async () => {
