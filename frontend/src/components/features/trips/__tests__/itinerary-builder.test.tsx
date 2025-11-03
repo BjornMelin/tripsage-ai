@@ -37,17 +37,17 @@ vi.mock("@hello-pangea/dnd", () => ({
 }));
 
 // Mock the trip store
-const MOCK_UPDATE_TRIP = vi.fn();
-const MOCK_ADD_DESTINATION = vi.fn();
-const MOCK_UPDATE_DESTINATION = vi.fn();
-const MOCK_REMOVE_DESTINATION = vi.fn();
+const MockUpdateTrip = vi.fn();
+const MockAddDestination = vi.fn();
+const MockUpdateDestination = vi.fn();
+const MockRemoveDestination = vi.fn();
 
 vi.mock("@/stores/trip-store", () => ({
   useTripStore: vi.fn(() => ({
-    addDestination: MOCK_ADD_DESTINATION,
-    removeDestination: MOCK_REMOVE_DESTINATION,
-    updateDestination: MOCK_UPDATE_DESTINATION,
-    updateTrip: MOCK_UPDATE_TRIP,
+    addDestination: MockAddDestination,
+    removeDestination: MockRemoveDestination,
+    updateDestination: MockUpdateDestination,
+    updateTrip: MockUpdateTrip,
   })),
 }));
 
@@ -221,7 +221,7 @@ describe("ItineraryBuilder", () => {
 
     it("should add destination with basic fields", async () => {
       const user = userEvent.setup();
-      MOCK_ADD_DESTINATION.mockResolvedValue(undefined);
+      MockAddDestination.mockResolvedValue(undefined);
 
       render(<ItineraryBuilder trip={mockTrip} />);
 
@@ -241,7 +241,7 @@ describe("ItineraryBuilder", () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(MOCK_ADD_DESTINATION).toHaveBeenCalledWith(
+        expect(MockAddDestination).toHaveBeenCalledWith(
           "trip-1",
           expect.objectContaining({
             country: expect.stringContaining("Spain"),
@@ -289,7 +289,7 @@ describe("ItineraryBuilder", () => {
   describe("Destination Actions", () => {
     it("should delete destination when delete button is clicked", async () => {
       const user = userEvent.setup();
-      MOCK_REMOVE_DESTINATION.mockResolvedValue(undefined);
+      MockRemoveDestination.mockResolvedValue(undefined);
 
       render(<ItineraryBuilder trip={mockTrip} />);
 
@@ -304,7 +304,7 @@ describe("ItineraryBuilder", () => {
       }
 
       await waitFor(() => {
-        expect(MOCK_REMOVE_DESTINATION).toHaveBeenCalledWith(
+        expect(MockRemoveDestination).toHaveBeenCalledWith(
           "trip-1",
           expect.any(String)
         );
@@ -354,7 +354,7 @@ describe("ItineraryBuilder", () => {
   describe("Form Validation and Edge Cases", () => {
     it("should handle empty form submission", async () => {
       const user = userEvent.setup();
-      MOCK_ADD_DESTINATION.mockResolvedValue(undefined);
+      MockAddDestination.mockResolvedValue(undefined);
 
       render(<ItineraryBuilder trip={mockTrip} />);
 
@@ -369,7 +369,7 @@ describe("ItineraryBuilder", () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(MOCK_ADD_DESTINATION).toHaveBeenCalledWith(
+        expect(MockAddDestination).toHaveBeenCalledWith(
           "trip-1",
           expect.objectContaining({
             country: "",

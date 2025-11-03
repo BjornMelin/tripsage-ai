@@ -7,7 +7,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ActivitySearchForm } from "../activity-search-form";
 
-const CREATE_WRAPPER = () => {
+const CreateWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       mutations: { retry: false },
@@ -22,7 +22,7 @@ const CREATE_WRAPPER = () => {
 
 describe("ActivitySearchForm", () => {
   it("renders form with all required fields", () => {
-    render(<ActivitySearchForm />, { wrapper: CREATE_WRAPPER() });
+    render(<ActivitySearchForm />, { wrapper: CreateWrapper() });
 
     expect(screen.getByLabelText(/location/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/start date/i)).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe("ActivitySearchForm", () => {
   });
 
   it("displays activity category options", () => {
-    render(<ActivitySearchForm />, { wrapper: CREATE_WRAPPER() });
+    render(<ActivitySearchForm />, { wrapper: CreateWrapper() });
 
     expect(screen.getByText("Outdoor & Adventure")).toBeInTheDocument();
     expect(screen.getByText("Cultural & Historical")).toBeInTheDocument();
@@ -54,7 +54,7 @@ describe("ActivitySearchForm", () => {
   });
 
   it("validates required fields", async () => {
-    render(<ActivitySearchForm />, { wrapper: CREATE_WRAPPER() });
+    render(<ActivitySearchForm />, { wrapper: CreateWrapper() });
 
     const submitButton = screen.getByRole("button", {
       name: /search activities/i,
@@ -72,7 +72,7 @@ describe("ActivitySearchForm", () => {
   it.skip("handles form submission with valid data", async () => {
     const mockOnSearch = vi.fn();
     render(<ActivitySearchForm onSearch={mockOnSearch} />, {
-      wrapper: CREATE_WRAPPER(),
+      wrapper: CreateWrapper(),
     });
 
     // Fill in required fields
@@ -131,7 +131,7 @@ describe("ActivitySearchForm", () => {
   it("handles participant count changes", async () => {
     const mockOnSearch = vi.fn();
     render(<ActivitySearchForm onSearch={mockOnSearch} />, {
-      wrapper: CREATE_WRAPPER(),
+      wrapper: CreateWrapper(),
     });
 
     // Change participant counts
@@ -173,7 +173,7 @@ describe("ActivitySearchForm", () => {
   });
 
   it("handles category selection and deselection", () => {
-    render(<ActivitySearchForm />, { wrapper: CREATE_WRAPPER() });
+    render(<ActivitySearchForm />, { wrapper: CreateWrapper() });
 
     const outdoorCheckbox = screen.getByLabelText(/outdoor & adventure/i);
     const culturalCheckbox = screen.getByLabelText(/cultural & historical/i);
@@ -206,7 +206,7 @@ describe("ActivitySearchForm", () => {
     };
 
     render(<ActivitySearchForm initialValues={initialValues} />, {
-      wrapper: CREATE_WRAPPER(),
+      wrapper: CreateWrapper(),
     });
 
     expect(screen.getByDisplayValue("Tokyo")).toBeInTheDocument();
@@ -218,7 +218,7 @@ describe("ActivitySearchForm", () => {
   });
 
   it("validates number input ranges", async () => {
-    render(<ActivitySearchForm />, { wrapper: CREATE_WRAPPER() });
+    render(<ActivitySearchForm />, { wrapper: CreateWrapper() });
 
     // Test adults min/max
     const adultsInput = screen.getByLabelText(/adults/i);

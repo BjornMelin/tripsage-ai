@@ -228,7 +228,7 @@ export class ApiClient {
     const timeout = finalConfig.timeout || this.config.timeout;
     const retries = finalConfig.retries || this.config.retries;
 
-    let lastError: Error;
+    let lastError: Error | null = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const controller = new AbortController();
@@ -245,11 +245,14 @@ export class ApiClient {
         if (!response.ok) {
           const errorData = (await this.parseResponseBody(response)) as unknown;
           const errorObject =
-            typeof errorData === "object" && errorData !== null ? errorData : {};
+            (typeof errorData === "object" && errorData !== null ? errorData : {}) as {
+              message?: string;
+              code?: string | number;
+            };
           throw new ApiClientError(
             errorObject.message || `HTTP ${response.status}: ${response.statusText}`,
             response.status,
-            errorObject.code || `HTTP_${response.status}`,
+            String(errorObject.code ?? `HTTP_${response.status}`),
             errorData,
             finalConfig.endpoint
           );

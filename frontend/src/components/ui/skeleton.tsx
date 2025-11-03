@@ -37,7 +37,7 @@ export interface SkeletonProps
 /**
  * Basic skeleton component with accessibility support
  */
-const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
+export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
   (
     {
       className,
@@ -113,5 +113,4 @@ const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
 );
 
 Skeleton.displayName = "Skeleton";
-
-export { Skeleton, skeletonVariants };
+export { skeletonVariants };

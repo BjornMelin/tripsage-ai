@@ -10,12 +10,12 @@ import type { Flight } from "@/types/search";
 import { SearchResults } from "../search-results";
 
 /** Mock function for testing sort functionality. */
-const MOCK_ON_SORT = vi.fn();
+const MockOnSort = vi.fn();
 /** Mock function for testing filter functionality. */
-const MOCK_ON_FILTER = vi.fn();
+const MockOnFilter = vi.fn();
 
 /** Mock flight data for testing search results display. */
-const MOCK_FLIGHTS: Flight[] = [
+const MockFlights: Flight[] = [
   {
     airline: "Test Airline",
     arrivalTime: "10:00 PM",
@@ -55,17 +55,17 @@ const MOCK_FLIGHTS: Flight[] = [
 describe("SearchResults", () => {
   beforeEach(() => {
     // Clear mock calls between tests
-    MOCK_ON_SORT.mockClear();
-    MOCK_ON_FILTER.mockClear();
+    MockOnSort.mockClear();
+    MockOnFilter.mockClear();
   });
 
   it("renders the results correctly", () => {
     render(
       <SearchResults
         type="flight"
-        results={MOCK_FLIGHTS}
-        onSort={MOCK_ON_SORT}
-        onFilter={MOCK_ON_FILTER}
+        results={MockFlights}
+        onSort={MockOnSort}
+        onFilter={MockOnFilter}
       />
     );
 
@@ -95,9 +95,9 @@ describe("SearchResults", () => {
     render(
       <SearchResults
         type="flight"
-        results={MOCK_FLIGHTS}
-        onSort={MOCK_ON_SORT}
-        onFilter={MOCK_ON_FILTER}
+        results={MockFlights}
+        onSort={MockOnSort}
+        onFilter={MockOnFilter}
       />
     );
 
@@ -105,24 +105,24 @@ describe("SearchResults", () => {
     fireEvent.click(screen.getByText("Price"));
 
     // Check if onSort was called with the correct parameters
-    expect(MOCK_ON_SORT).toHaveBeenCalledTimes(1);
-    expect(MOCK_ON_SORT).toHaveBeenCalledWith("price", "desc");
+    expect(MockOnSort).toHaveBeenCalledTimes(1);
+    expect(MockOnSort).toHaveBeenCalledWith("price", "desc");
 
     // Click again to toggle sort direction
     fireEvent.click(screen.getByText("Price"));
 
     // Check if onSort was called again with the opposite direction
-    expect(MOCK_ON_SORT).toHaveBeenCalledTimes(2);
-    expect(MOCK_ON_SORT).toHaveBeenCalledWith("price", "asc");
+    expect(MockOnSort).toHaveBeenCalledTimes(2);
+    expect(MockOnSort).toHaveBeenCalledWith("price", "asc");
   });
 
   it("handles view toggle correctly", () => {
     render(
       <SearchResults
         type="flight"
-        results={MOCK_FLIGHTS}
-        onSort={MOCK_ON_SORT}
-        onFilter={MOCK_ON_FILTER}
+        results={MockFlights}
+        onSort={MockOnSort}
+        onFilter={MockOnFilter}
       />
     );
 
@@ -150,8 +150,8 @@ describe("SearchResults", () => {
         type="flight"
         results={[]}
         loading={true}
-        onSort={MOCK_ON_SORT}
-        onFilter={MOCK_ON_FILTER}
+        onSort={MockOnSort}
+        onFilter={MockOnFilter}
       />
     );
 
@@ -170,8 +170,8 @@ describe("SearchResults", () => {
       <SearchResults
         type="flight"
         results={[]}
-        onSort={MOCK_ON_SORT}
-        onFilter={MOCK_ON_FILTER}
+        onSort={MockOnSort}
+        onFilter={MockOnFilter}
       />
     );
 

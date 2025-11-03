@@ -15,21 +15,17 @@ import {
 } from "../../error";
 
 // Mock console.error to prevent test noise
-const ORIGINAL_CONSOLE_ERROR = console.error;
+const OriginalConsoleError = console.error;
 beforeEach(() => {
   console.error = vi.fn();
 });
 
 afterEach(() => {
-  console.error = ORIGINAL_CONSOLE_ERROR;
+  console.error = OriginalConsoleError;
 });
 
 // Problem component that throws an error
-const ERROR_THROWING_COMPONENT = ({
-  shouldThrow = true,
-}: {
-  shouldThrow?: boolean;
-}) => {
+const ErrorThrowingComponent = ({ shouldThrow = true }: { shouldThrow?: boolean }) => {
   if (shouldThrow) {
     throw new Error("Test error message");
   }
@@ -50,7 +46,7 @@ describe("ErrorBoundary", () => {
   it("renders error UI when an error occurs", () => {
     render(
       <ErrorBoundary>
-        <ERROR_THROWING_COMPONENT />
+        <ErrorThrowingComponent />
       </ErrorBoundary>
     );
 
@@ -63,7 +59,7 @@ describe("ErrorBoundary", () => {
     const onError = vi.fn();
     render(
       <ErrorBoundary onError={onError}>
-        <ERROR_THROWING_COMPONENT />
+        <ErrorThrowingComponent />
       </ErrorBoundary>
     );
 
@@ -80,7 +76,7 @@ describe("ErrorBoundary", () => {
 
     render(
       <ErrorBoundary>
-        <ERROR_THROWING_COMPONENT />
+        <ErrorThrowingComponent />
       </ErrorBoundary>
     );
 
@@ -98,7 +94,7 @@ describe("ErrorBoundary", () => {
           <button type="button" onClick={() => setShouldThrow(false)}>
             Fix error
           </button>
-          <ERROR_THROWING_COMPONENT shouldThrow={shouldThrow} />
+          <ErrorThrowingComponent shouldThrow={shouldThrow} />
         </ErrorBoundary>
       );
     };
@@ -120,7 +116,7 @@ describe("ErrorBoundary", () => {
 
     render(
       <ErrorBoundary fallback={CustomFallback}>
-        <ERROR_THROWING_COMPONENT />
+        <ErrorThrowingComponent />
       </ErrorBoundary>
     );
 

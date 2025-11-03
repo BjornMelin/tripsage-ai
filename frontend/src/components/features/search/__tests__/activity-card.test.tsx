@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Activity } from "@/types/search";
 import { ActivityCard } from "../activity-card";
 
-const MOCK_ACTIVITY: Activity = {
+const MockActivity: Activity = {
   coordinates: {
     lat: 40.7829,
     lng: -73.9654,
@@ -27,14 +27,14 @@ const MOCK_ACTIVITY: Activity = {
   type: "cultural",
 };
 
-const MOCK_ACTIVITY_WITHOUT_IMAGES: Activity = {
-  ...MOCK_ACTIVITY,
+const MockActivityWithoutImages: Activity = {
+  ...MockActivity,
   id: "activity-456",
   images: [],
 };
 
-const MOCK_LONG_DURATION_ACTIVITY: Activity = {
-  ...MOCK_ACTIVITY,
+const MockLongDurationActivity: Activity = {
+  ...MockActivity,
   duration: 25, // 25 hours (multi-day)
   id: "activity-789",
   price: 299,
@@ -42,7 +42,7 @@ const MOCK_LONG_DURATION_ACTIVITY: Activity = {
 
 describe("ActivityCard", () => {
   it("renders activity information correctly", () => {
-    render(<ActivityCard activity={MOCK_ACTIVITY} />);
+    render(<ActivityCard activity={MockActivity} />);
 
     expect(screen.getByText("Central Park Walking Tour")).toBeInTheDocument();
     expect(screen.getByText("cultural")).toBeInTheDocument();
@@ -54,67 +54,67 @@ describe("ActivityCard", () => {
   });
 
   it("displays activity image when available", () => {
-    render(<ActivityCard activity={MOCK_ACTIVITY} />);
+    render(<ActivityCard activity={MockActivity} />);
 
     const image = screen.getByRole("img", { name: /central park walking tour/i });
     expect(image).toBeInTheDocument();
   });
 
   it("displays placeholder when no images available", () => {
-    render(<ActivityCard activity={MOCK_ACTIVITY_WITHOUT_IMAGES} />);
+    render(<ActivityCard activity={MockActivityWithoutImages} />);
 
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(screen.getByText("Central Park Walking Tour")).toBeInTheDocument();
   });
 
   it("formats duration correctly for hours", () => {
-    render(<ActivityCard activity={MOCK_ACTIVITY} />);
+    render(<ActivityCard activity={MockActivity} />);
 
     expect(screen.getByText("2.5 hours")).toBeInTheDocument();
   });
 
   it("formats duration correctly for minutes", () => {
-    const shortActivity = { ...MOCK_ACTIVITY, duration: 0.5 }; // 30 minutes
+    const shortActivity = { ...MockActivity, duration: 0.5 }; // 30 minutes
     render(<ActivityCard activity={shortActivity} />);
 
     expect(screen.getByText("30 mins")).toBeInTheDocument();
   });
 
   it("formats duration correctly for single hour", () => {
-    const oneHourActivity = { ...MOCK_ACTIVITY, duration: 1 };
+    const oneHourActivity = { ...MockActivity, duration: 1 };
     render(<ActivityCard activity={oneHourActivity} />);
 
     expect(screen.getByText("1 hour")).toBeInTheDocument();
   });
 
   it("formats duration correctly for multi-day activities", () => {
-    render(<ActivityCard activity={MOCK_LONG_DURATION_ACTIVITY} />);
+    render(<ActivityCard activity={MockLongDurationActivity} />);
 
     expect(screen.getByText("1d 1h")).toBeInTheDocument();
   });
 
   it("formats duration correctly for exact days", () => {
-    const exactDayActivity = { ...MOCK_ACTIVITY, duration: 48 }; // 2 days
+    const exactDayActivity = { ...MockActivity, duration: 48 }; // 2 days
     render(<ActivityCard activity={exactDayActivity} />);
 
     expect(screen.getByText("2 days")).toBeInTheDocument();
   });
 
   it("formats price correctly", () => {
-    render(<ActivityCard activity={MOCK_ACTIVITY} />);
+    render(<ActivityCard activity={MockActivity} />);
 
     // Price is shown in overlay badge and in primary price area
     expect(screen.getAllByText("$45").length).toBeGreaterThan(0);
   });
 
   it("formats large price correctly", () => {
-    render(<ActivityCard activity={MOCK_LONG_DURATION_ACTIVITY} />);
+    render(<ActivityCard activity={MockLongDurationActivity} />);
 
     expect(screen.getAllByText("$299").length).toBeGreaterThan(0);
   });
 
   it("renders star rating correctly", () => {
-    render(<ActivityCard activity={MOCK_ACTIVITY} />);
+    render(<ActivityCard activity={MockActivity} />);
 
     // Check that rating is displayed
     expect(screen.getByText("(4.7)")).toBeInTheDocument();
@@ -122,26 +122,26 @@ describe("ActivityCard", () => {
 
   it("calls onSelect when Select button is clicked", () => {
     const mockOnSelect = vi.fn();
-    render(<ActivityCard activity={MOCK_ACTIVITY} onSelect={mockOnSelect} />);
+    render(<ActivityCard activity={MockActivity} onSelect={mockOnSelect} />);
 
     const selectButton = screen.getByRole("button", { name: /select/i });
     fireEvent.click(selectButton);
 
-    expect(mockOnSelect).toHaveBeenCalledWith(MOCK_ACTIVITY);
+    expect(mockOnSelect).toHaveBeenCalledWith(MockActivity);
   });
 
   it("calls onCompare when Compare button is clicked", () => {
     const mockOnCompare = vi.fn();
-    render(<ActivityCard activity={MOCK_ACTIVITY} onCompare={mockOnCompare} />);
+    render(<ActivityCard activity={MockActivity} onCompare={mockOnCompare} />);
 
     const compareButton = screen.getByRole("button", { name: /compare/i });
     fireEvent.click(compareButton);
 
-    expect(mockOnCompare).toHaveBeenCalledWith(MOCK_ACTIVITY);
+    expect(mockOnCompare).toHaveBeenCalledWith(MockActivity);
   });
 
   it("renders both action buttons", () => {
-    render(<ActivityCard activity={MOCK_ACTIVITY} />);
+    render(<ActivityCard activity={MockActivity} />);
 
     expect(screen.getByRole("button", { name: /select/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /compare/i })).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe("ActivityCard", () => {
 
   it("truncates long descriptions", () => {
     const longDescActivity = {
-      ...MOCK_ACTIVITY,
+      ...MockActivity,
       description:
         "This is a very long description that should be truncated after two lines to maintain the card layout and prevent it from becoming too tall with excessive text content that would make the card look unbalanced.",
     };
@@ -163,7 +163,7 @@ describe("ActivityCard", () => {
 
   it("truncates long activity names", () => {
     const longNameActivity = {
-      ...MOCK_ACTIVITY,
+      ...MockActivity,
       name: "This Is An Extremely Long Activity Name That Should Be Truncated",
     };
 
@@ -176,7 +176,7 @@ describe("ActivityCard", () => {
 
   it("truncates long location names", () => {
     const longLocationActivity = {
-      ...MOCK_ACTIVITY,
+      ...MockActivity,
       location:
         "This Is An Extremely Long Location Name That Should Be Truncated In The Display",
     };
@@ -189,7 +189,7 @@ describe("ActivityCard", () => {
   });
 
   it("applies hover effects", () => {
-    const { container } = render(<ActivityCard activity={MOCK_ACTIVITY} />);
+    const { container } = render(<ActivityCard activity={MockActivity} />);
     // Card root has hover:shadow-lg
     const hoverCard = container.querySelector('[class*="hover:shadow-lg"]');
     expect(hoverCard).toBeTruthy();
@@ -197,7 +197,7 @@ describe("ActivityCard", () => {
 
   it("handles missing coordinates gracefully", () => {
     const activityWithoutCoords = {
-      ...MOCK_ACTIVITY,
+      ...MockActivity,
       coordinates: undefined,
     };
 
@@ -208,7 +208,7 @@ describe("ActivityCard", () => {
 
   it("handles zero rating", () => {
     const zeroRatingActivity = {
-      ...MOCK_ACTIVITY,
+      ...MockActivity,
       rating: 0,
     };
 
@@ -219,7 +219,7 @@ describe("ActivityCard", () => {
 
   it("handles maximum rating", () => {
     const maxRatingActivity = {
-      ...MOCK_ACTIVITY,
+      ...MockActivity,
       rating: 5,
     };
 

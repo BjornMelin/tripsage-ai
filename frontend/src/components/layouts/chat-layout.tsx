@@ -20,7 +20,7 @@ interface ChatSidebarProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 // Sample chat sessions for placeholder functionality
-const SAMPLE_SESSIONS = [
+const SampleSessions = [
   {
     id: "1",
     lastMessage: "Find me flights to Paris",
@@ -91,7 +91,7 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
             Recent Chats
           </h3>
           <div className="space-y-1">
-            {SAMPLE_SESSIONS.map((session) => (
+            {SampleSessions.map((session) => (
               <Link
                 key={session.id}
                 href={"/chat"}
