@@ -240,10 +240,7 @@ interface AccommodationTipProps {
  * @param props - The tip content to render.
  * @returns Structured tip content.
  */
-function AccommodationTip({
-  title,
-  description,
-}: AccommodationTipProps) {
+function AccommodationTip({ title, description }: AccommodationTipProps) {
   return (
     <div className="p-4 border rounded-lg">
       <h3 className="font-medium mb-1">{title}</h3>

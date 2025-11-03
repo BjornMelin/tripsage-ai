@@ -11,7 +11,8 @@ import type { ChatDeps, ChatPayload, ProviderResolver } from "../_handler";
 
 let handleChatStream: (deps: ChatDeps, payload: ChatPayload) => Promise<Response>;
 
-const createResolver = (modelId: string): ProviderResolver =>
+const createResolver =
+  (modelId: string): ProviderResolver =>
   async () => ({
     model: {} as LanguageModel,
     modelId,
