@@ -1,479 +1,191 @@
-# 🔧 Administrator Guide
+# Administrator Guide
 
-> **Complete Admin Reference for TripSage**  
-> Manage users, configure settings, and maintain your TripSage deployment
+Manage system configuration, monitoring, and TripSage deployment operations.
 
-## 📋 Admin Dashboard Overview
+## Admin Access
 
-### Accessing Admin Panel
+Admin functionality requires JWT tokens with admin privileges (`metadata.is_admin: true` or admin role). Admin endpoints are protected with `AdminPrincipalDep`.
 
-1. **Login** with admin credentials
-2. **Navigate** to Settings → Admin Dashboard
-3. **Verify** admin role indicator in top bar
-4. **Access** admin-only features and controls
+### Admin-Only Endpoints
 
-### Dashboard Layout
+- `/api/config/*`: Agent configuration management
+- `/api/dashboard/*`: System monitoring and analytics
 
-```text
-┌─────────────────────────────────────────────────────┐
-│  🔧 Admin Dashboard                    [👤 Admin]    │
-├─────────────────────────────────────────────────────┤
-│                                                      │
-│  📊 System Status        👥 Active Users: 1,247     │
-│  ✅ All Systems          📈 API Calls: 45.2k/hr    │
-│  🔄 Last Check: 2m       💾 Storage: 67% used      │
-│                                                      │
-│  [Users] [Settings] [Analytics] [Security] [Logs]   │
-│                                                      │
-└─────────────────────────────────────────────────────┘
+## System Configuration
+
+### Agent Configuration
+
+Admin users can manage AI agent configurations through `/api/config` endpoints:
+
+**Available Agents:**
+
+- Budget Agent
+- Destination Research Agent
+- Itinerary Agent
+
+**Configuration Management:**
+
+- View current agent configurations
+- Update model settings and parameters
+- Manage configuration versions
+- Set environment-specific overrides
+
+```bash
+# List available agent types (admin only)
+GET /api/config/agents
+
+# Get configuration for specific agent (admin only)
+GET /api/config/agents/{agent_type}
+
+# Update agent configuration (admin only)
+PUT /api/config/agents/{agent_type}
 ```
 
-## 👥 User Management
+## Analytics & Monitoring
 
-### User Administration
+Admin users can access comprehensive system analytics through `/api/dashboard` endpoints:
 
-**View All Users:**
+### System Overview
 
-- Search by email, name, or ID
-- Filter by plan type, status, join date
-- Sort by activity, spending, trips created
-- Export user lists to CSV
+```bash
+# Get system status and metrics
+GET /api/dashboard/overview
 
-**User Actions:**
+# Get real-time metrics
+GET /api/dashboard/metrics/realtime
 
-- 👁️ View detailed profile and activity
-- ✏️ Edit user information and preferences
-- 🔒 Reset passwords and 2FA
-- 🚫 Suspend or ban accounts
-- 💳 Manage subscriptions
-- 📧 Send direct messages
-
-### Role Management
-
-**Available Roles:**
-
-| Role | Permissions | Use Case |
-|------|-------------|----------|
-| **User** | Standard features | Regular travelers |
-| **Premium** | Full feature set + API | Power users |
-| **Business** | Team features + reporting | Corporate accounts |
-| **Admin** | Full system access | System administrators |
-| **Support** | User assistance tools | Support team |
-
-**Assigning Roles:**
-
-1. Navigate to Users → Select User
-2. Click "Edit Roles"
-3. Select appropriate role(s)
-4. Add role expiration (optional)
-5. Save and notify user
-
-### Team Management
-
-**Creating Teams:**
-
-- Business/Enterprise feature
-- Centralized billing
-- Shared trip planning
-- Usage reporting
-- Policy enforcement
-
-**Team Settings:**
-
-- Member limits
-- Spending controls
-- Approval workflows
-- Feature restrictions
-- Reporting access
-
-## ⚙️ System Configuration
-
-### General Settings
-
-**Application Settings:**
-
-```yaml
-# Core Configuration
-app_name: "TripSage"
-app_url: "https://app.tripsage.ai"
-support_email: "support@tripsage.ai"
-default_language: "en"
-timezone: "UTC"
-
-# Feature Flags
-enable_ai_chat: true
-enable_realtime_collab: true
-enable_api_access: true
-enable_mobile_apps: true
-maintenance_mode: false
+# Get usage statistics
+GET /api/dashboard/usage
 ```
 
-**Email Configuration:**
+**Available Metrics:**
 
-- SMTP settings
-- Email templates
-- Sending limits
-- Bounce handling
-- Unsubscribe management
+- System status and health indicators
+- Real-time performance metrics (response times, throughput)
+- Usage statistics (requests, users, API calls)
+- Rate limiting status and quota information
+- Service health status for all components
 
-### API Configuration
+### Alert Management
 
-**Rate Limiting:**
+```bash
+# Get active alerts
+GET /api/dashboard/alerts
 
-```yaml
-rate_limits:
-  free_tier:
-    requests_per_hour: 100
-    requests_per_month: 1000
-  premium_tier:
-    requests_per_hour: 1000
-    requests_per_month: 50000
-  enterprise:
-    custom: true
+# Get alert history
+GET /api/dashboard/alerts/history
 ```
 
-**API Keys Management:**
+**Alert Types:**
 
-- Generate master keys
-- Set expiration policies
-- Monitor usage
-- Revoke compromised keys
-- Audit access logs
-- All API key CRUD operations now live under `/api/keys`. Update CLI scripts, monitoring probes, and third-party integrations that previously used `/api/user/keys`.
-- Admin-only routes rely on JWT user principals with either `metadata.is_admin = true` or an `admin` role flag. Ensure operator accounts are provisioned accordingly before rotating credentials.
+- Rate limit violations
+- System performance degradation
+- Service availability issues
+- Security events
 
-### Integration Settings
+### User Activity Monitoring
 
-**External Services:**
+```bash
+# Get user activity data
+GET /api/dashboard/users/activity
 
-| Service | Configuration | Status |
-|---------|---------------|---------|
-| **OpenAI** | API key, model selection | ✅ Active |
-| **Duffel** | API credentials, test mode | ✅ Active |
-| **Google Maps** | API key, quotas | ✅ Active |
-| **Supabase** | Project URL, service key | ✅ Active |
-| **Redis** | Connection string | ✅ Active |
-
-**Webhook Configuration:**
-
-- Endpoint URLs
-- Authentication
-- Retry policies
-- Event types
-- Payload formats
-
-## 📊 Analytics & Reporting
-
-### System Metrics
-
-**Real-Time Dashboard:**
-
-- Active users
-- API request rate
-- Response times
-- Error rates
-- Cache hit rates
-
-**Performance Monitoring:**
-
-```text
-┌─────────────────────────────────────┐
-│ Response Time (last 24h)            │
-│ ────────────────────────────        │
-│ P50: 127ms  P95: 342ms  P99: 891ms │
-│                                     │
-│ API Endpoints:                      │
-│ /search     : 89ms avg             │
-│ /flights    : 234ms avg            │
-│ /chat       : 156ms avg            │
-└─────────────────────────────────────┘
+# Get top consumers and usage patterns
+GET /api/dashboard/users/top-consumers
 ```
 
-### Usage Analytics
+## Security & Audit
 
-**User Behavior:**
+### Authentication Auditing
 
-- Trip planning patterns
-- Popular destinations
-- Booking conversion rates
-- Feature adoption
-- User retention
+All authentication events are logged via the audit logging service:
 
-**Business Metrics:**
-
-- Revenue by plan type
-- Customer acquisition cost
-- Lifetime value
-- Churn analysis
-- Growth trends
-
-### Custom Reports
-
-**Report Builder:**
-
-1. Select data source
-2. Choose metrics
-3. Apply filters
-4. Set schedule
-5. Configure delivery
-
-**Available Reports:**
-
-- User activity summary
-- API usage breakdown
-- Revenue reports
-- Error analysis
-- Performance trends
-
-## 🔒 Security Management
+- JWT token validation attempts
+- Authentication successes and failures
+- Security events and violations
+- Admin access patterns
 
 ### Access Control
 
-**Authentication Settings:**
+Admin access is controlled through:
 
-- Password policies
-- 2FA requirements
-- Session management
-- SSO configuration
-- OAuth providers
+- JWT metadata (`is_admin: true`)
+- Role-based permissions (admin, superadmin, site_admin)
+- Endpoint-level authorization checks
 
-**Security Policies:**
+## Health Monitoring
 
-```yaml
-security:
-  password_min_length: 12
-  password_require_special: true
-  session_timeout_minutes: 60
-  max_login_attempts: 5
-  lockout_duration_minutes: 30
-  require_2fa_admin: true
+### Health Endpoints
+
+```bash
+# Basic health check
+GET /health
+
+# Comprehensive health check
+GET /health?full=true
+
+# Database health
+GET /health/database
+
+# Cache health
+GET /health/cache
 ```
 
-### Audit Logging
+**Health Checks Include:**
 
-**Tracked Events:**
+- Database connectivity and performance
+- Redis/Upstash cache availability
+- External API service status
+- System resource utilization
 
-- User logins/logouts
-- Permission changes
-- Data exports
-- API access
-- Configuration changes
-- Security incidents
+## Maintenance Operations
 
-**Log Management:**
+### Database Operations
 
-- Retention policies
-- Search and filter
-- Export capabilities
-- Alert configuration
-- Compliance reports
+- Connection monitoring and recovery
+- Performance optimization checks
+- Query execution monitoring
+- Backup verification procedures
 
-### Data Protection
+### Cache Management
 
-**Privacy Controls:**
-
-- Data retention settings
-- Deletion policies
-- Anonymization rules
-- Export restrictions
-- GDPR compliance tools
-
-**Backup Management:**
-
-- Automated backups
-- Retention periods
-- Recovery testing
-- Encryption verification
-- Off-site storage
-
-## 🚨 Monitoring & Alerts
-
-### System Health
-
-**Health Checks:**
-
-- Database connectivity
-- Cache performance
-- API availability
-- External services
-- Storage capacity
-
-**Alert Configuration:**
-
-```yaml
-alerts:
-  - name: "High Error Rate"
-    condition: "error_rate > 5%"
-    threshold_minutes: 5
-    notify: ["admin@tripsage.ai", "ops-team"]
-    
-  - name: "Low Disk Space"
-    condition: "disk_usage > 90%"
-    notify: ["infrastructure-team"]
-    
-  - name: "API Degradation"
-    condition: "response_time_p95 > 1000ms"
-    notify: ["dev-team", "support-team"]
-```
-
-### Incident Management
-
-**Incident Response:**
-
-1. Alert triggered
-2. Automatic diagnostics
-3. Team notification
-4. Status page update
-5. Resolution tracking
-
-**Status Page Management:**
-
-- Component status
-- Incident creation
-- Update posting
-- Subscriber notifications
-- Historical uptime
-
-## 🛠️ Maintenance Operations
-
-### Database Management
-
-**Regular Tasks:**
-
+- Redis connection health monitoring
+- Memory usage and eviction tracking
 - Performance optimization
-- Index maintenance
-- Backup verification
-- Query analysis
-- Storage monitoring
+- Connection pool management
 
-**Migration Management:**
+### System Updates
 
-- Schema updates
-- Data migrations
-- Rollback procedures
-- Testing protocols
-- Deployment windows
+1. Review configuration changes through admin endpoints
+2. Test agent configuration updates
+3. Monitor system health post-deployment
+4. Rollback procedures available through configuration versioning
 
-### Cache Operations
+## Troubleshooting
 
-**Redis Management:**
+### Common Issues
 
-- Memory usage monitoring
-- Key analysis
-- Performance tuning
-- Cluster health
-- Failover testing
+**Authentication Problems:**
 
-### Update Management
+- Verify JWT token validity and admin claims
+- Check audit logs for authentication failures
+- Validate admin role configuration
 
-**System Updates:**
+**Performance Issues:**
 
-1. Review changelog
-2. Test in staging
-3. Schedule maintenance
-4. Notify users
-5. Deploy update
-6. Verify success
-7. Monitor metrics
+- Check dashboard metrics for bottlenecks
+- Monitor database and cache performance
+- Review rate limiting status
 
-## 📱 Support Tools
+**Configuration Problems:**
 
-### User Support
+- Use admin endpoints to verify agent configurations
+- Check system health for service dependencies
+- Review dashboard alerts for system issues
 
-**Support Dashboard:**
+### Diagnostic Procedures
 
-- Ticket queue
-- User lookup
-- Trip inspection
-- Booking verification
-- Refund processing
-
-**Support Actions:**
-
-- View user sessions
-- Impersonate users (with audit)
-- Modify bookings
-- Issue credits
-- Send notifications
-
-### Troubleshooting
-
-**Diagnostic Tools:**
-
-- User session replay
-- API request logs
-- Error stack traces
-- Performance profiling
-- Database queries
-
-**Common Issues:**
-
-- Payment failures → Check payment logs
-- Sync issues → Verify cache state
-- Login problems → Review auth logs
-- Slow performance → Check metrics
-- Data inconsistency → Run integrity checks
-
-## 🎯 Best Practices
-
-### Daily Tasks
-
-- ✅ Check system health dashboard
-- ✅ Review error logs
-- ✅ Monitor API usage
-- ✅ Address support tickets
-- ✅ Verify backup completion
-
-### Weekly Tasks
-
-- 📊 Generate usage reports
-- 🔍 Review security logs
-- 💾 Database maintenance
-- 📈 Performance analysis
-- 👥 Team sync meeting
-
-### Monthly Tasks
-
-- 🔐 Security audit
-- 💰 Billing reconciliation
-- 📊 Business metrics review
-- 🔄 Update procedures
-- 📚 Documentation updates
-
-## 🚀 Deployment & Scaling
-
-### Infrastructure Management
-
-**Scaling Triggers:**
-
-- CPU usage > 70%
-- Memory usage > 80%
-- Request queue depth
-- Response time degradation
-- Storage capacity
-
-**Scaling Actions:**
-
-- Horizontal pod scaling
-- Database read replicas
-- Cache cluster expansion
-- CDN optimization
-- Load balancer tuning
-
-### Deployment Process
-
-**Production Deployment:**
-
-1. Code review approval
-2. Automated testing
-3. Staging deployment
-4. QA verification
-5. Production rollout
-6. Health monitoring
-7. Rollback ready
-
----
-
-**Need admin support?** Contact the infrastructure team or check the [internal wiki](https://internal.tripsage.ai/wiki) for detailed procedures.
-
-> Remember: With great power comes great responsibility. Always follow security protocols and audit requirements! 🔐
+1. Check system health endpoints
+2. Review dashboard metrics and alerts
+3. Examine audit logs for security events
+4. Verify agent configuration status
+5. Monitor rate limiting and usage patterns
