@@ -15,18 +15,18 @@ import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
 /**
  * Base query factory interface
  */
-interface BaseQueryFactory<TData, TError = AppError> {
+interface BaseQueryFactory<Data, Error = AppError> {
   queryKey: readonly unknown[];
-  queryFn: () => Promise<TData>;
-  options?: Omit<UseQueryOptions<TData, TError>, "queryKey" | "queryFn">;
+  queryFn: () => Promise<Data>;
+  options?: Omit<UseQueryOptions<Data, Error>, "queryKey" | "queryFn">;
 }
 
 /**
  * Base mutation factory interface
  */
-interface BaseMutationFactory<TData, TVariables, TError = AppError> {
-  mutationFn: (variables: TVariables) => Promise<TData>;
-  options?: Omit<UseMutationOptions<TData, TError, TVariables>, "mutationFn">;
+interface BaseMutationFactory<Data, Variables, Error = AppError> {
+  mutationFn: (variables: Variables) => Promise<Data>;
+  options?: Omit<UseMutationOptions<Data, Error, Variables>, "mutationFn">;
 }
 
 /**
@@ -37,14 +37,14 @@ export const tripQueries = {
    * Factory for fetching all trips
    */
   all: (
-    apiCall: (filters?: Record<string, unknown>) => Promise<any[]>,
+    apiCall: (filters?: Record<string, unknown>) => Promise<unknown[]>,
     filters?: Record<string, unknown>
-  ): BaseQueryFactory<any[]> => ({
+  ): BaseQueryFactory<unknown[]> => ({
     options: {
       gcTime: cacheTimes.medium,
       retry: (failureCount, error) => {
         if (error instanceof Error && "status" in error) {
-          const status = (error as any).status;
+          const status = (error as Error & { status?: number }).status;
           if (status === 401 || status === 403) return false;
         }
         return failureCount < 2;
@@ -59,15 +59,15 @@ export const tripQueries = {
    * Factory for fetching a single trip
    */
   detail: (
-    apiCall: (id: number) => Promise<any>,
+    apiCall: (id: number) => Promise<unknown>,
     tripId: number
-  ): BaseQueryFactory<any> => ({
+  ): BaseQueryFactory<unknown> => ({
     options: {
       enabled: !!tripId,
       gcTime: cacheTimes.medium,
       retry: (failureCount, error) => {
         if (error instanceof Error && "status" in error) {
-          const status = (error as any).status;
+          const status = (error as Error & { status?: number }).status;
           if (status === 404 || status === 401 || status === 403) return false;
         }
         return failureCount < 2;
@@ -82,9 +82,9 @@ export const tripQueries = {
    * Factory for trip suggestions
    */
   suggestions: (
-    apiCall: (params?: Record<string, unknown>) => Promise<any[]>,
+    apiCall: (params?: Record<string, unknown>) => Promise<unknown[]>,
     params?: Record<string, unknown>
-  ): BaseQueryFactory<any[]> => ({
+  ): BaseQueryFactory<unknown[]> => ({
     options: {
       gcTime: cacheTimes.medium,
       retry: 2,
@@ -103,15 +103,16 @@ export const chatQueries = {
    * Factory for chat messages (infinite query)
    */
   messages: (
-    apiCall: (sessionId: string, pageParam?: number) => Promise<any>,
+    apiCall: (sessionId: string, pageParam?: number) => Promise<unknown>,
     sessionId: string
-  ): Omit<UseInfiniteQueryOptions<any, AppError>, "queryKey" | "queryFn"> & {
+  ): Omit<UseInfiniteQueryOptions<unknown, AppError>, "queryKey" | "queryFn"> & {
     queryKey: readonly unknown[];
-    queryFn: any;
+    queryFn: ({ pageParam }: { pageParam: number }) => Promise<unknown>;
   } => ({
     enabled: !!sessionId,
     gcTime: cacheTimes.short,
-    getNextPageParam: (lastPage: any) => lastPage.nextCursor,
+    getNextPageParam: (lastPage: unknown) =>
+      (lastPage as { nextCursor?: number }).nextCursor,
     initialPageParam: 0,
     queryFn: ({ pageParam = 0 }) => apiCall(sessionId, pageParam),
     queryKey: queryKeys.chat.messages(sessionId),
@@ -121,9 +122,9 @@ export const chatQueries = {
    * Factory for chat sessions
    */
   sessions: (
-    apiCall: (tripId?: number) => Promise<any[]>,
+    apiCall: (tripId?: number) => Promise<unknown[]>,
     tripId?: number
-  ): BaseQueryFactory<any[]> => ({
+  ): BaseQueryFactory<unknown[]> => ({
     options: {
       gcTime: cacheTimes.short,
       staleTime: staleTimes.chat,
@@ -136,9 +137,9 @@ export const chatQueries = {
    * Factory for chat statistics
    */
   stats: (
-    apiCall: (userId: string) => Promise<any>,
+    apiCall: (userId: string) => Promise<unknown>,
     userId: string
-  ): BaseQueryFactory<any> => ({
+  ): BaseQueryFactory<unknown> => ({
     options: {
       enabled: !!userId,
       gcTime: cacheTimes.long,
@@ -157,9 +158,9 @@ export const searchQueries = {
    * Factory for accommodation searches
    */
   accommodations: (
-    apiCall: (params: Record<string, unknown>) => Promise<any>,
+    apiCall: (params: Record<string, unknown>) => Promise<unknown>,
     params: Record<string, unknown>
-  ): BaseQueryFactory<any> => ({
+  ): BaseQueryFactory<unknown> => ({
     options: {
       enabled: Object.keys(params).length > 0,
       gcTime: cacheTimes.short,
@@ -172,9 +173,9 @@ export const searchQueries = {
    * Factory for flight searches
    */
   flights: (
-    apiCall: (params: Record<string, unknown>) => Promise<any>,
+    apiCall: (params: Record<string, unknown>) => Promise<unknown>,
     params: Record<string, unknown>
-  ): BaseQueryFactory<any> => ({
+  ): BaseQueryFactory<unknown> => ({
     options: {
       enabled: Object.keys(params).length > 0,
       gcTime: cacheTimes.short,
@@ -188,9 +189,9 @@ export const searchQueries = {
    * Factory for search suggestions
    */
   suggestions: (
-    apiCall: () => Promise<any[]>,
+    apiCall: () => Promise<unknown[]>,
     type: "flights" | "accommodations" | "activities" | "destinations"
-  ): BaseQueryFactory<any[]> => ({
+  ): BaseQueryFactory<unknown[]> => ({
     options: {
       gcTime: cacheTimes.long,
       staleTime: staleTimes.suggestions,
@@ -208,9 +209,9 @@ export const fileQueries = {
    * Factory for file attachments
    */
   attachments: (
-    apiCall: (filters?: Record<string, unknown>) => Promise<any[]>,
+    apiCall: (filters?: Record<string, unknown>) => Promise<unknown[]>,
     filters?: Record<string, unknown>
-  ): BaseQueryFactory<any[]> => ({
+  ): BaseQueryFactory<unknown[]> => ({
     options: {
       gcTime: cacheTimes.medium,
       staleTime: staleTimes.files,
@@ -223,9 +224,9 @@ export const fileQueries = {
    * Factory for storage statistics
    */
   stats: (
-    apiCall: (userId: string) => Promise<any>,
+    apiCall: (userId: string) => Promise<unknown>,
     userId: string
-  ): BaseQueryFactory<any> => ({
+  ): BaseQueryFactory<unknown> => ({
     options: {
       enabled: !!userId,
       gcTime: cacheTimes.long,
@@ -245,8 +246,8 @@ export const mutationFactories = {
    */
   chat: {
     createSession: (
-      apiCall: (data: any) => Promise<any>
-    ): BaseMutationFactory<any, any> => ({
+      apiCall: (data: unknown) => Promise<unknown>
+    ): BaseMutationFactory<unknown, unknown> => ({
       mutationFn: apiCall,
       options: {
         onSuccess: (_data, _variables, context) => {
@@ -258,8 +259,8 @@ export const mutationFactories = {
     }),
 
     sendMessage: (
-      apiCall: (data: { sessionId: string; content: string }) => Promise<any>
-    ): BaseMutationFactory<any, { sessionId: string; content: string }> => ({
+      apiCall: (data: { sessionId: string; content: string }) => Promise<unknown>
+    ): BaseMutationFactory<unknown, { sessionId: string; content: string }> => ({
       mutationFn: apiCall,
       options: {
         onError: (_err, variables, context) => {
@@ -323,8 +324,8 @@ export const mutationFactories = {
       },
     }),
     upload: (
-      apiCall: (file: File) => Promise<any>
-    ): BaseMutationFactory<any, File> => ({
+      apiCall: (file: File) => Promise<unknown>
+    ): BaseMutationFactory<unknown, File> => ({
       mutationFn: apiCall,
       options: {
         onSuccess: (_data, _variables, context) => {
@@ -340,7 +341,9 @@ export const mutationFactories = {
    * Trip mutations
    */
   trips: {
-    create: (apiCall: (data: any) => Promise<any>): BaseMutationFactory<any, any> => ({
+    create: (
+      apiCall: (data: unknown) => Promise<unknown>
+    ): BaseMutationFactory<unknown, unknown> => ({
       mutationFn: apiCall,
       options: {
         onSuccess: (_data, _variables, context) => {
@@ -367,8 +370,8 @@ export const mutationFactories = {
     }),
 
     update: (
-      apiCall: (data: { id: number; updates: any }) => Promise<any>
-    ): BaseMutationFactory<any, { id: number; updates: any }> => ({
+      apiCall: (data: { id: number; updates: unknown }) => Promise<unknown>
+    ): BaseMutationFactory<unknown, { id: number; updates: unknown }> => ({
       mutationFn: apiCall,
       options: {
         onSuccess: (_data, variables, context) => {
@@ -389,7 +392,7 @@ export const mutationFactories = {
  */
 export const createPrefetchQuery = (
   queryClient: QueryClient,
-  factory: BaseQueryFactory<any>
+  factory: BaseQueryFactory<unknown>
 ) => {
   return queryClient.prefetchQuery({
     queryFn: factory.queryFn,
@@ -434,5 +437,5 @@ export const queryInvalidation = {
 /**
  * Type helpers for factory usage
  */
-export type QueryFactory<TData> = BaseQueryFactory<TData>;
-export type MutationFactory<TData, TVariables> = BaseMutationFactory<TData, TVariables>;
+export type QueryFactory<Data> = BaseQueryFactory<Data>;
+export type MutationFactory<Data, Variables> = BaseMutationFactory<Data, Variables>;

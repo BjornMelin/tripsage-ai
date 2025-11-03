@@ -46,13 +46,13 @@ interface SecurityEvent {
   /** ISO timestamp when the event occurred. */
   timestamp: string;
   /** IP address associated with the event. */
-  ip_address: string;
+  ipAddress: string;
   /** Optional location information derived from IP. */
   location?: string;
   /** Optional device/browser information. */
   device?: string;
   /** Risk level assessment of the event. */
-  risk_level: "low" | "medium" | "high";
+  riskLevel: "low" | "medium" | "high";
 }
 
 /**
@@ -68,11 +68,11 @@ interface ActiveSession {
   /** Location derived from IP address. */
   location: string;
   /** IP address of the session. */
-  ip_address: string;
+  ipAddress: string;
   /** ISO timestamp of last activity. */
-  last_activity: string;
+  lastActivity: string;
   /** Whether this is the current user's session. */
-  is_current: boolean;
+  isCurrent: boolean;
 }
 
 /**
@@ -80,17 +80,17 @@ interface ActiveSession {
  */
 interface SecurityMetrics {
   /** ISO timestamp of the last successful login. */
-  last_login: string;
+  lastLogin: string;
   /** Number of failed login attempts in the last 24 hours. */
-  failed_login_attempts: number;
+  failedLoginAttempts: number;
   /** Number of currently active sessions. */
-  active_sessions: number;
+  activeSessions: number;
   /** Number of trusted devices registered. */
-  trusted_devices: number;
+  trustedDevices: number;
   /** List of connected OAuth providers. */
-  oauth_connections: string[];
+  oauthConnections: string[];
   /** Overall security score out of 100. */
-  security_score: number;
+  securityScore: number;
 }
 
 /**
@@ -123,9 +123,9 @@ export function SecurityDashboard() {
             description: "Successful login",
             device: "Chrome on MacOS",
             id: "1",
-            ip_address: "192.168.1.100",
+            ipAddress: "192.168.1.100",
             location: "San Francisco, CA",
-            risk_level: "low",
+            riskLevel: "low",
             timestamp: "2025-06-11T10:30:00Z",
             type: "login_success",
           },
@@ -133,9 +133,9 @@ export function SecurityDashboard() {
             description: "Multi-factor authentication enabled",
             device: "Chrome on MacOS",
             id: "2",
-            ip_address: "192.168.1.100",
+            ipAddress: "192.168.1.100",
             location: "San Francisco, CA",
-            risk_level: "low",
+            riskLevel: "low",
             timestamp: "2025-06-10T14:15:00Z",
             type: "mfa_enabled",
           },
@@ -143,9 +143,9 @@ export function SecurityDashboard() {
             description: "Failed login attempt",
             device: "Unknown",
             id: "3",
-            ip_address: "203.0.113.1",
+            ipAddress: "203.0.113.1",
             location: "Unknown",
-            risk_level: "medium",
+            riskLevel: "medium",
             timestamp: "2025-06-09T08:45:00Z",
             type: "login_failure",
           },
@@ -157,30 +157,30 @@ export function SecurityDashboard() {
             browser: "Chrome 120.0",
             device: "MacBook Pro",
             id: "1",
-            ip_address: "192.168.1.100",
-            is_current: true,
-            last_activity: "2025-06-11T10:30:00Z",
+            ipAddress: "192.168.1.100",
+            isCurrent: true,
+            lastActivity: "2025-06-11T10:30:00Z",
             location: "San Francisco, CA",
           },
           {
             browser: "Safari Mobile",
             device: "iPhone 15",
             id: "2",
-            ip_address: "192.168.1.101",
-            is_current: false,
-            last_activity: "2025-06-11T09:15:00Z",
+            ipAddress: "192.168.1.101",
+            isCurrent: false,
+            lastActivity: "2025-06-11T09:15:00Z",
             location: "San Francisco, CA",
           },
         ]);
 
         // Mock security metrics
         setMetrics({
-          active_sessions: 2,
-          failed_login_attempts: 1,
-          last_login: "2025-06-11T10:30:00Z",
-          oauth_connections: ["google", "github"],
-          security_score: 85,
-          trusted_devices: 2,
+          activeSessions: 2,
+          failedLoginAttempts: 1,
+          lastLogin: "2025-06-11T10:30:00Z",
+          oauthConnections: ["google", "github"],
+          securityScore: 85,
+          trustedDevices: 2,
         });
 
         setIsLoading(false);
@@ -252,7 +252,7 @@ export function SecurityDashboard() {
    *
    * @param sessionId - ID of the session to terminate
    */
-  const handleTerminateSession = async (sessionId: string) => {
+  const handleTerminateSession = (sessionId: string) => {
     try {
       // TODO: Implement session termination
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
@@ -266,8 +266,8 @@ export function SecurityDashboard() {
       <div className="space-y-6">
         <div className="h-8 bg-muted animate-pulse rounded" />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
+          {["metric-1", "metric-2", "metric-3", "metric-4"].map((id) => (
+            <Card key={id}>
               <CardContent className="p-6">
                 <div className="h-4 bg-muted animate-pulse rounded mb-2" />
                 <div className="h-8 bg-muted animate-pulse rounded" />
@@ -299,19 +299,19 @@ export function SecurityDashboard() {
       {metrics && (
         <Alert
           className={
-            metrics.security_score >= 80
+            metrics.securityScore >= 80
               ? "border-green-200 bg-green-50"
               : "border-yellow-200 bg-yellow-50"
           }
         >
           <Shield
-            className={`h-4 w-4 ${metrics.security_score >= 80 ? "text-green-600" : "text-yellow-600"}`}
+            className={`h-4 w-4 ${metrics.securityScore >= 80 ? "text-green-600" : "text-yellow-600"}`}
           />
           <AlertDescription>
             <div className="flex items-center justify-between">
               <span>
-                Security Score: <strong>{metrics.security_score}/100</strong>
-                {metrics.security_score >= 80 ? " - Excellent" : " - Good"}
+                Security Score: <strong>{metrics.securityScore}/100</strong>
+                {metrics.securityScore >= 80 ? " - Excellent" : " - Good"}
               </span>
               <Button variant="ghost" size="sm">
                 <Settings className="h-4 w-4" />
@@ -331,7 +331,7 @@ export function SecurityDashboard() {
                 <div className="ml-2">
                   <p className="text-sm font-medium">Last Login</p>
                   <p className="text-2xl font-bold">
-                    {formatTimestamp(metrics.last_login)}
+                    {formatTimestamp(metrics.lastLogin)}
                   </p>
                 </div>
               </div>
@@ -344,7 +344,7 @@ export function SecurityDashboard() {
                 <Monitor className="h-4 w-4 text-muted-foreground" />
                 <div className="ml-2">
                   <p className="text-sm font-medium">Active Sessions</p>
-                  <p className="text-2xl font-bold">{metrics.active_sessions}</p>
+                  <p className="text-2xl font-bold">{metrics.activeSessions}</p>
                 </div>
               </div>
             </CardContent>
@@ -356,7 +356,7 @@ export function SecurityDashboard() {
                 <Smartphone className="h-4 w-4 text-muted-foreground" />
                 <div className="ml-2">
                   <p className="text-sm font-medium">Trusted Devices</p>
-                  <p className="text-2xl font-bold">{metrics.trusted_devices}</p>
+                  <p className="text-2xl font-bold">{metrics.trustedDevices}</p>
                 </div>
               </div>
             </CardContent>
@@ -368,7 +368,7 @@ export function SecurityDashboard() {
                 <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                 <div className="ml-2">
                   <p className="text-sm font-medium">Failed Logins (24h)</p>
-                  <p className="text-2xl font-bold">{metrics.failed_login_attempts}</p>
+                  <p className="text-2xl font-bold">{metrics.failedLoginAttempts}</p>
                 </div>
               </div>
             </CardContent>
@@ -397,7 +397,7 @@ export function SecurityDashboard() {
                     <div>
                       <div className="flex items-center space-x-2">
                         <p className="font-medium">{session.device}</p>
-                        {session.is_current && (
+                        {session.isCurrent && (
                           <Badge variant="outline" className="text-xs">
                             Current
                           </Badge>
@@ -405,11 +405,11 @@ export function SecurityDashboard() {
                       </div>
                       <p className="text-sm text-muted-foreground">{session.browser}</p>
                       <p className="text-xs text-muted-foreground">
-                        {session.location} • {formatTimestamp(session.last_activity)}
+                        {session.location} • {formatTimestamp(session.lastActivity)}
                       </p>
                     </div>
                   </div>
-                  {!session.is_current && (
+                  {!session.isCurrent && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -445,9 +445,9 @@ export function SecurityDashboard() {
                       <p className="font-medium">{event.description}</p>
                       <Badge
                         variant="outline"
-                        className={`text-xs ${getRiskColor(event.risk_level)}`}
+                        className={`text-xs ${getRiskColor(event.riskLevel)}`}
                       >
-                        {event.risk_level}
+                        {event.riskLevel}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -455,7 +455,7 @@ export function SecurityDashboard() {
                       {formatTimestamp(event.timestamp)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      IP: {event.ip_address}
+                      IP: {event.ipAddress}
                     </p>
                   </div>
                 </div>
@@ -466,7 +466,7 @@ export function SecurityDashboard() {
       </div>
 
       {/* OAuth Connections */}
-      {metrics && metrics.oauth_connections.length > 0 && (
+      {metrics && metrics.oauthConnections.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -476,7 +476,7 @@ export function SecurityDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex space-x-4">
-              {metrics.oauth_connections.map((provider) => (
+              {metrics.oauthConnections.map((provider) => (
                 <div
                   key={provider}
                   className="flex items-center space-x-2 p-3 border rounded-lg"
@@ -510,7 +510,7 @@ export function SecurityDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {metrics && metrics.security_score < 90 && (
+            {metrics && metrics.securityScore < 90 && (
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>

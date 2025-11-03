@@ -5,9 +5,23 @@
  * with mocked dependencies and various edge cases.
  */
 
+import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ChatDeps, ChatPayload } from "../_handler";
 
-let handleChatStream: (deps: any, payload: any) => Promise<Response>;
+let handleChatStream: (deps: ChatDeps, payload: ChatPayload) => Promise<Response>;
+
+/**
+ * Type for the mock query builder methods used in tests.
+ */
+type MockQueryBuilder = {
+  eq: ReturnType<typeof vi.fn>;
+  limit?: ReturnType<typeof vi.fn>;
+  order?: ReturnType<typeof vi.fn>;
+  select?: ReturnType<typeof vi.fn>;
+  insert?: ReturnType<typeof vi.fn>;
+  update?: ReturnType<typeof vi.fn>;
+};
 
 /**
  * Creates a mock Supabase client for testing handleChatStream functionality.
@@ -16,40 +30,47 @@ let handleChatStream: (deps: any, payload: any) => Promise<Response>;
  * @param memories - Array of memory content strings for memory hydration testing.
  * @returns Mock Supabase client with basic database operations.
  */
-function fakeSupabase(userId: string | null, memories: string[] = []) {
+function fakeSupabase(
+  userId: string | null,
+  memories: string[] = []
+): ChatDeps["supabase"] {
+  const mockQueryBuilder = (table: string): MockQueryBuilder => {
+    if (table === "memories") {
+      return {
+        eq: vi.fn().mockReturnThis(),
+        limit: vi
+          .fn()
+          .mockResolvedValue({ data: memories.map((m) => ({ content: m })) }),
+        order: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+      };
+    }
+    if (table === "chat_messages") {
+      return {
+        eq: vi.fn().mockReturnThis(),
+        insert: vi.fn(async () => ({ error: null })),
+        limit: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+      };
+    }
+    if (table === "chat_sessions") {
+      return {
+        eq: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+      };
+    }
+    return {
+      eq: vi.fn().mockReturnThis(),
+    };
+  };
+
   return {
     auth: {
       getUser: vi.fn(async () => ({ data: { user: userId ? { id: userId } : null } })),
     },
-    from: vi.fn((table: string) => {
-      if (table === "memories") {
-        return {
-          eq: vi.fn().mockReturnThis(),
-          limit: vi
-            .fn()
-            .mockResolvedValue({ data: memories.map((m) => ({ content: m })) }),
-          order: vi.fn().mockReturnThis(),
-          select: vi.fn().mockReturnThis(),
-        } as any;
-      }
-      if (table === "chat_messages") {
-        return {
-          eq: vi.fn().mockReturnThis(),
-          insert: vi.fn(async () => ({ error: null })),
-          limit: vi.fn().mockReturnThis(),
-          order: vi.fn().mockReturnThis(),
-          select: vi.fn().mockReturnThis(),
-        } as any;
-      }
-      if (table === "chat_sessions") {
-        return {
-          eq: vi.fn().mockReturnThis(),
-          update: vi.fn().mockReturnThis(),
-        } as any;
-      }
-      return {} as any;
-    }),
-  } as any;
+    from: vi.fn(mockQueryBuilder),
+  } as unknown as ChatDeps["supabase"];
 }
 
 describe("handleChatStream", () => {
@@ -75,47 +96,69 @@ describe("handleChatStream", () => {
   });
 
   it("emits usage metadata on finish and persists assistant message (stream stub)", async () => {
-    const memLog: any[] = [];
+    type MessageRow = {
+      // biome-ignore lint/style/useNamingConvention: API field uses snake_case
+      session_id: string;
+      role: string;
+      [key: string]: unknown;
+    };
+    const memLog: MessageRow[] = [];
+
+    const mockQueryBuilder = (table: string): MockQueryBuilder => {
+      if (table === "chat_messages") {
+        return {
+          eq: vi.fn().mockReturnThis(),
+          insert: vi.fn((row: unknown) => {
+            memLog.push(row as MessageRow);
+            return Promise.resolve({ error: null });
+          }),
+        };
+      }
+      if (table === "memories") {
+        return {
+          eq: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockResolvedValue({ data: [] }),
+          order: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+        };
+      }
+      if (table === "chat_sessions") {
+        return {
+          eq: vi.fn().mockReturnThis(),
+          update: vi.fn().mockReturnThis(),
+        };
+      }
+      return {
+        eq: vi.fn().mockReturnThis(),
+      };
+    };
+
     const supabase = {
       auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u4" } } })) },
-      from: vi.fn((table: string) => {
-        if (table === "chat_messages") {
-          return {
-            insert: vi.fn(async (row: any) => {
-              memLog.push(row);
-              return { error: null };
-            }),
-          } as any;
-        }
-        if (table === "memories") {
-          return {
-            eq: vi.fn().mockReturnThis(),
-            limit: vi.fn().mockResolvedValue({ data: [] }),
-            order: vi.fn().mockReturnThis(),
-            select: vi.fn().mockReturnThis(),
-          } as any;
-        }
-        if (table === "chat_sessions") {
-          return {
-            eq: vi.fn().mockReturnThis(),
-            update: vi.fn().mockReturnThis(),
-          } as any;
-        }
-        return {} as any;
-      }),
-    } as any;
+      from: vi.fn(mockQueryBuilder),
+    } as unknown as ChatDeps["supabase"];
 
-    let startMeta: any | undefined;
-    let finishMeta: any | undefined;
+    type MetadataResult = {
+      provider?: string;
+      [key: string]: unknown;
+    };
+
+    let startMeta: MetadataResult | undefined;
+    let finishMeta: MetadataResult | undefined;
     const fauxStream = vi.fn(() => ({
-      toUIMessageStreamResponse: ({ messageMetadata }: any) => {
-        startMeta = messageMetadata?.({ part: { type: "start" } });
+      // biome-ignore lint/style/useNamingConvention: AI SDK method name
+      toUIMessageStreamResponse: ({
+        messageMetadata,
+      }: {
+        messageMetadata?: (event: unknown) => MetadataResult | Promise<MetadataResult>;
+      }) => {
+        startMeta = messageMetadata?.({ part: { type: "start" } }) as MetadataResult;
         finishMeta = messageMetadata?.({
           part: {
             totalUsage: { inputTokens: 45, outputTokens: 78, totalTokens: 123 },
             type: "finish",
           },
-        });
+        }) as MetadataResult;
         return new Response("ok", { status: 200 });
       },
     }));
@@ -126,17 +169,22 @@ describe("handleChatStream", () => {
         config: { defaultMaxTokens: 256 },
         logger: { error: vi.fn(), info: vi.fn() },
         resolveProvider: vi.fn(async () => ({
-          model: {} as any,
+          model: {} as LanguageModel,
           modelId: "gpt-4o-mini",
           provider: "openai",
         })),
-        stream: fauxStream as any,
+        stream: fauxStream as unknown as ChatDeps["stream"],
         supabase,
       },
       {
         messages: [
-          { id: "m", parts: [{ text: "hello", type: "text" }], role: "user" } as any,
+          {
+            id: "m",
+            parts: [{ text: "hello", type: "text" }],
+            role: "user",
+          } satisfies UIMessage,
         ],
+        // biome-ignore lint/style/useNamingConvention: API field uses snake_case
         session_id: "s1",
       }
     );
@@ -175,10 +223,10 @@ describe("handleChatStream", () => {
             id: "m1",
             parts: [
               { text: "hi", type: "text" },
-              { media_type: "application/pdf", type: "file", url: "https://x/y.pdf" },
+              { mediaType: "application/pdf", type: "file", url: "https://x/y.pdf" },
             ],
             role: "user",
-          } as any,
+          } satisfies UIMessage,
         ],
       }
     );
@@ -195,7 +243,7 @@ describe("handleChatStream", () => {
         config: { defaultMaxTokens: 1024 },
         // Use unknown model to trigger heuristic token counting (fast)
         resolveProvider: vi.fn(async () => ({
-          model: {} as any,
+          model: {} as LanguageModel,
           modelId: "some-unknown-model",
           provider: "openai",
         })),
@@ -203,7 +251,11 @@ describe("handleChatStream", () => {
       },
       {
         messages: [
-          { id: "u", parts: [{ text: huge, type: "text" }], role: "user" } as any,
+          {
+            id: "u",
+            parts: [{ text: huge, type: "text" }],
+            role: "user",
+          } satisfies UIMessage,
         ],
       }
     );

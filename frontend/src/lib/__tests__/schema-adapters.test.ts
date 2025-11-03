@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Unit tests for schema adapters that transform between API and frontend data models.
+ * Tests cover trip and destination transformations, date formatting, duration calculations,
+ * and error handling for malformed or missing data.
+ */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Destination, Trip } from "@/stores/trip-store";
 import {
@@ -564,8 +570,10 @@ describe("FrontendSchemaAdapter", () => {
       const trip2 = FrontendSchemaAdapter.createEmptyTrip();
 
       // Timestamps should be close but not necessarily identical
-      const time1 = new Date(trip1.created_at!).getTime();
-      const time2 = new Date(trip2.created_at!).getTime();
+      const createdAt1 = trip1.created_at ?? "";
+      const createdAt2 = trip2.created_at ?? "";
+      const time1 = new Date(createdAt1).getTime();
+      const time2 = new Date(createdAt2).getTime();
       expect(Math.abs(time1 - time2)).toBeLessThan(1000); // Within 1 second
     });
   });
@@ -924,7 +932,8 @@ describe("FrontendSchemaAdapter", () => {
     });
 
     it("should handle circular reference in preferences", () => {
-      const circularRef: any = { a: 1 };
+      type CircularType = { a: number; self?: CircularType };
+      const circularRef: CircularType = { a: 1 };
       circularRef.self = circularRef;
 
       const tripWithCircularRef: ApiTrip = {
@@ -950,9 +959,9 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle null and undefined values in nested objects", () => {
       const tripWithNulls: Partial<Trip> = {
-        destinations: null as any,
-        id: null as any,
-        preferences: null as any,
+        destinations: null as unknown as Trip["destinations"],
+        id: null as unknown as Trip["id"],
+        preferences: null as unknown as Trip["preferences"],
         tags: undefined,
         title: undefined,
       };
@@ -1090,7 +1099,15 @@ describe("FrontendSchemaAdapter", () => {
   describe("Backward Compatibility", () => {
     it("should handle legacy trip format", () => {
       // Simulate old trip format that might exist in storage
-      const legacyTrip: any = {
+      type LegacyTrip = {
+        destinations: Partial<Trip>["destinations"];
+        endDate: string;
+        id: string;
+        isPublic: boolean;
+        name: string;
+        startDate: string;
+      };
+      const legacyTrip: LegacyTrip = {
         destinations: [
           {
             country: "France",

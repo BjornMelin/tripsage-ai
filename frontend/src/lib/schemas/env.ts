@@ -1,5 +1,5 @@
 /**
- * Environment variable validation with Zod
+ * @fileoverview Environment variable validation with Zod
  * Provides runtime type safety for all environment variables
  */
 

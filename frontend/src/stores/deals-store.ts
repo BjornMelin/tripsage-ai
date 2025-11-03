@@ -3,8 +3,8 @@ import { persist } from "zustand/middleware";
 import {
   type Deal,
   type DealAlert,
-  DealAlertSchema,
-  DealSchema,
+  DEAL_ALERT_SCHEMA,
+  DEAL_SCHEMA,
   type DealState,
   type DealStats,
   type DealType,
@@ -233,7 +233,7 @@ export const useDealsStore = create<DealsStore>()(
   persist(
     (set, get) => ({
       addAlert: (alert) => {
-        const result = DealAlertSchema.safeParse(alert);
+        const result = DEAL_ALERT_SCHEMA.safeParse(alert);
         if (result.success) {
           set((state) => {
             const newAlert = {
@@ -254,7 +254,7 @@ export const useDealsStore = create<DealsStore>()(
       },
 
       addDeal: (deal) => {
-        const result = DealSchema.safeParse(deal);
+        const result = DEAL_SCHEMA.safeParse(deal);
         if (result.success) {
           set((state) => {
             // Ensure deal has required timestamps
@@ -469,7 +469,7 @@ export const useDealsStore = create<DealsStore>()(
           updatedAt: GET_CURRENT_TIMESTAMP(),
         };
 
-        const result = DealAlertSchema.safeParse(updatedAlert);
+        const result = DEAL_ALERT_SCHEMA.safeParse(updatedAlert);
         if (!result.success) {
           console.error("Invalid alert update:", result.error);
           return false;
@@ -495,7 +495,7 @@ export const useDealsStore = create<DealsStore>()(
           updatedAt: GET_CURRENT_TIMESTAMP(),
         };
 
-        const result = DealSchema.safeParse(updatedDeal);
+        const result = DEAL_SCHEMA.safeParse(updatedDeal);
         if (!result.success) {
           console.error("Invalid deal update:", result.error);
           return false;
