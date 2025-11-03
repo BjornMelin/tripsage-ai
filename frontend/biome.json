@@ -250,6 +250,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["package.json", "components.json", "tsconfig.json"],
+      "assist": {
+        "actions": {
+          "source": {
+            "useSortedKeys": "off"
+          }
+        }
+      }
     }
   ],
 
