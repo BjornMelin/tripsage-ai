@@ -10,36 +10,36 @@ import { PersonalInfoSection } from "../personal-info-section";
 // Mock the stores and hooks
 vi.mock("@/stores/user-store");
 
-const mockToast = vi.fn();
+const MOCK_TOAST = vi.fn();
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({
-    toast: mockToast,
+    toast: MOCK_TOAST,
   }),
 }));
 
-const mockUser = {
-  id: "1",
+const MOCK_USER = {
+  avatarUrl: "https://example.com/avatar.jpg",
+  bio: "Travel enthusiast",
+  displayName: "John Doe",
   email: "test@example.com",
   firstName: "John",
+  id: "1",
+  isEmailVerified: true,
   lastName: "Doe",
-  displayName: "John Doe",
-  bio: "Travel enthusiast",
   location: "New York, USA",
   website: "https://johndoe.com",
-  avatarUrl: "https://example.com/avatar.jpg",
-  isEmailVerified: true,
 };
 
-const mockUpdateUser = vi.fn();
+const MOCK_UPDATE_USER = vi.fn();
 
 // TODO: Personal info validations, avatar upload, and update flows need final UI and store.
 describe.skip("PersonalInfoSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockToast.mockClear();
+    MOCK_TOAST.mockClear();
     (useUserProfileStore as any).mockReturnValue({
-      user: mockUser,
-      updateUser: mockUpdateUser,
+      updateUser: MOCK_UPDATE_USER,
+      user: MOCK_USER,
     });
   });
 
@@ -56,8 +56,8 @@ describe.skip("PersonalInfoSection", () => {
 
   it("renders avatar with user initials when no avatar URL", () => {
     (useUserProfileStore as any).mockReturnValue({
-      user: { ...mockUser, avatarUrl: undefined },
-      updateUser: mockUpdateUser,
+      updateUser: MOCK_UPDATE_USER,
+      user: { ...MOCK_USER, avatarUrl: undefined },
     });
 
     render(<PersonalInfoSection />);
@@ -109,11 +109,11 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockUpdateUser).toHaveBeenCalledWith({
+      expect(MOCK_UPDATE_USER).toHaveBeenCalledWith({
+        bio: "Travel enthusiast",
+        displayName: "John Doe",
         firstName: "John",
         lastName: "Doe",
-        displayName: "John Doe",
-        bio: "Travel enthusiast",
         location: "New York, USA",
         website: "https://johndoe.com",
       });
@@ -133,9 +133,9 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.change(fileInput, { target: { files: [invalidFile] } });
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: "Invalid file type",
+      expect(MOCK_TOAST).toHaveBeenCalledWith({
         description: "Please select an image file.",
+        title: "Invalid file type",
         variant: "destructive",
       });
     });
@@ -154,9 +154,9 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.change(fileInput, { target: { files: [largeFile] } });
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: "File too large",
+      expect(MOCK_TOAST).toHaveBeenCalledWith({
         description: "Please select an image smaller than 5MB.",
+        title: "File too large",
         variant: "destructive",
       });
     });
@@ -176,15 +176,15 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.change(fileInput, { target: { files: [validFile] } });
 
     await waitFor(() => {
-      expect(mockUpdateUser).toHaveBeenCalledWith({
+      expect(MOCK_UPDATE_USER).toHaveBeenCalledWith({
         avatarUrl: "mocked-url",
       });
     });
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: "Avatar updated",
+      expect(MOCK_TOAST).toHaveBeenCalledWith({
         description: "Your profile picture has been successfully updated.",
+        title: "Avatar updated",
       });
     });
   });
@@ -206,16 +206,16 @@ describe.skip("PersonalInfoSection", () => {
 
   it("generates correct initials for avatar fallback", () => {
     const testCases = [
-      { user: { firstName: "John", lastName: "Doe" }, expected: "JD" },
-      { user: { displayName: "Jane Smith" }, expected: "JS" },
-      { user: { displayName: "Alice" }, expected: "AL" },
-      { user: { email: "test@example.com" }, expected: "TE" },
+      { expected: "JD", user: { firstName: "John", lastName: "Doe" } },
+      { expected: "JS", user: { displayName: "Jane Smith" } },
+      { expected: "AL", user: { displayName: "Alice" } },
+      { expected: "TE", user: { email: "test@example.com" } },
     ];
 
     testCases.forEach(({ user, expected }) => {
       (useUserProfileStore as any).mockReturnValue({
-        user: { ...mockUser, ...user },
-        updateUser: mockUpdateUser,
+        updateUser: MOCK_UPDATE_USER,
+        user: { ...MOCK_USER, ...user },
       });
 
       render(<PersonalInfoSection />);
@@ -241,7 +241,7 @@ describe.skip("PersonalInfoSection", () => {
 
   it("handles form submission error", async () => {
     // Mock a rejected promise to simulate error
-    mockUpdateUser.mockRejectedValueOnce(new Error("Network error"));
+    MOCK_UPDATE_USER.mockRejectedValueOnce(new Error("Network error"));
 
     render(<PersonalInfoSection />);
 
@@ -249,9 +249,9 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: "Error",
+      expect(MOCK_TOAST).toHaveBeenCalledWith({
         description: "Failed to update profile. Please try again.",
+        title: "Error",
         variant: "destructive",
       });
     });

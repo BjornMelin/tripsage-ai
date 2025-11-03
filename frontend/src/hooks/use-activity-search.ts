@@ -28,14 +28,14 @@ export interface UseActivitySearchResult {
  */
 export function useActivitySearch(): UseActivitySearchResult {
   return {
-    searchActivities: async () => {},
-    isSearching: false,
-    searchError: null,
-    resetSearch: () => {},
-    saveSearch: async () => {},
-    savedSearches: [],
-    popularActivities: [],
     isSavingSearch: false,
+    isSearching: false,
+    popularActivities: [],
+    resetSearch: () => {},
+    savedSearches: [],
+    saveSearch: async () => {},
     saveSearchError: null,
+    searchActivities: async () => {},
+    searchError: null,
   };
 }

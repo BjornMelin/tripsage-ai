@@ -152,14 +152,14 @@ export function ModernFlightResults({
   const getPredictionBadge = (prediction: ModernFlightResult["prediction"]) => {
     const colors = {
       buy_now: "bg-green-100 text-green-800 border-green-200",
-      wait: "bg-yellow-100 text-yellow-800 border-yellow-200",
       neutral: "bg-gray-100 text-gray-800 border-gray-200",
+      wait: "bg-yellow-100 text-yellow-800 border-yellow-200",
     };
 
     const text = {
       buy_now: "Book Now",
-      wait: "Wait",
       neutral: "Monitor",
+      wait: "Wait",
     };
 
     return (

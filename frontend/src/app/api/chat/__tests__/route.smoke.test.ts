@@ -16,9 +16,9 @@ import { unstubAllEnvs } from "@/test/env-helpers";
  */
 function buildReq(body: unknown, headers: Record<string, string> = {}): NextRequest {
   return new Request("http://localhost/api/chat", {
-    method: "POST",
-    headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(body),
+    headers: { "content-type": "application/json", ...headers },
+    method: "POST",
   }) as unknown as NextRequest;
 }
 
@@ -48,16 +48,16 @@ describe("/api/chat route smoke", () => {
     }));
     vi.doMock("@/lib/providers/registry", () => ({
       resolveProvider: vi.fn(async () => ({
-        provider: "openai",
-        modelId: "gpt-4o-mini",
         model: {},
+        modelId: "gpt-4o-mini",
+        provider: "openai",
       })),
     }));
     vi.doMock("ai", () => ({
       convertToModelMessages: (x: unknown) => x,
       generateText: vi.fn(async () => ({
         text: "ok",
-        usage: { totalTokens: 3, inputTokens: 1, outputTokens: 2 },
+        usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
       })),
     }));
     const mod = (await import("../route")) as any;

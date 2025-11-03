@@ -19,12 +19,12 @@ describe("useBudgetStore", () => {
   beforeEach(() => {
     act(() => {
       useBudgetStore.setState({
-        budgets: {},
         activeBudgetId: null,
-        expenses: {},
-        baseCurrency: "USD",
-        currencies: {},
         alerts: {},
+        baseCurrency: "USD",
+        budgets: {},
+        currencies: {},
+        expenses: {},
       });
     });
   });
@@ -45,30 +45,30 @@ describe("useBudgetStore", () => {
       const { result } = renderHook(() => useBudgetStore());
 
       const mockBudget: Budget = {
-        id: "budget-1",
-        name: "Summer Vacation",
-        totalAmount: 5000,
-        currency: "USD",
         categories: [
           {
-            id: "cat-1",
-            category: "flights",
             amount: 1500,
-            spent: 0,
-            remaining: 1500,
+            category: "flights",
+            id: "cat-1",
             percentage: 0,
+            remaining: 1500,
+            spent: 0,
           },
           {
-            id: "cat-2",
-            category: "accommodations",
             amount: 2000,
-            spent: 0,
-            remaining: 2000,
+            category: "accommodations",
+            id: "cat-2",
             percentage: 0,
+            remaining: 2000,
+            spent: 0,
           },
         ],
-        isActive: true,
         createdAt: "2025-05-20T12:00:00Z",
+        currency: "USD",
+        id: "budget-1",
+        isActive: true,
+        name: "Summer Vacation",
+        totalAmount: 5000,
         updatedAt: "2025-05-20T12:00:00Z",
       };
 
@@ -89,22 +89,22 @@ describe("useBudgetStore", () => {
 
       // Add a budget first
       const mockBudget: Budget = {
-        id: "budget-1",
-        name: "Summer Vacation",
-        totalAmount: 5000,
-        currency: "USD",
         categories: [
           {
-            id: "cat-1",
-            category: "flights",
             amount: 1500,
-            spent: 0,
-            remaining: 1500,
+            category: "flights",
+            id: "cat-1",
             percentage: 0,
+            remaining: 1500,
+            spent: 0,
           },
         ],
-        isActive: true,
         createdAt: "2025-05-20T12:00:00Z",
+        currency: "USD",
+        id: "budget-1",
+        isActive: true,
+        name: "Summer Vacation",
+        totalAmount: 5000,
         updatedAt: "2025-05-20T12:00:00Z",
       };
 
@@ -133,13 +133,13 @@ describe("useBudgetStore", () => {
 
       // Add a budget
       const mockBudget: Budget = {
+        categories: [],
+        createdAt: "2025-05-20T12:00:00Z",
+        currency: "USD",
         id: "budget-1",
+        isActive: true,
         name: "Summer Vacation",
         totalAmount: 5000,
-        currency: "USD",
-        categories: [],
-        isActive: true,
-        createdAt: "2025-05-20T12:00:00Z",
         updatedAt: "2025-05-20T12:00:00Z",
       };
 
@@ -148,28 +148,28 @@ describe("useBudgetStore", () => {
         // Add some expenses for this budget
         result.current.setExpenses("budget-1", [
           {
-            id: "expense-1",
+            amount: 500,
             budgetId: "budget-1",
             category: "flights",
-            description: "Flight to NYC",
-            amount: 500,
+            createdAt: "2025-05-20T12:00:00Z",
             currency: "USD",
             date: "2025-06-01",
+            description: "Flight to NYC",
+            id: "expense-1",
             isShared: false,
-            createdAt: "2025-05-20T12:00:00Z",
             updatedAt: "2025-05-20T12:00:00Z",
           },
         ]);
         // Add some alerts for this budget
         result.current.setAlerts("budget-1", [
           {
-            id: "alert-1",
             budgetId: "budget-1",
-            type: "threshold",
-            threshold: 80,
-            message: "Almost at budget limit",
-            isRead: false,
             createdAt: "2025-05-20T12:00:00Z",
+            id: "alert-1",
+            isRead: false,
+            message: "Almost at budget limit",
+            threshold: 80,
+            type: "threshold",
           },
         ]);
       });
@@ -191,24 +191,24 @@ describe("useBudgetStore", () => {
       // Add two budgets
       act(() => {
         storeResult.current.addBudget({
+          categories: [],
+          createdAt: "2025-05-20T12:00:00Z",
+          currency: "USD",
           id: "budget-1",
+          isActive: true,
           name: "Summer Vacation",
           totalAmount: 5000,
-          currency: "USD",
-          categories: [],
-          isActive: true,
-          createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
 
         storeResult.current.addBudget({
+          categories: [],
+          createdAt: "2025-05-20T12:00:00Z",
+          currency: "USD",
           id: "budget-2",
+          isActive: true,
           name: "Winter Vacation",
           totalAmount: 3000,
-          currency: "USD",
-          categories: [],
-          isActive: true,
-          createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
       });
@@ -229,25 +229,25 @@ describe("useBudgetStore", () => {
       // Add a budget first
       act(() => {
         storeResult.current.addBudget({
+          categories: [],
+          createdAt: "2025-05-20T12:00:00Z",
+          currency: "USD",
           id: "budget-1",
+          isActive: true,
           name: "Summer Vacation",
           totalAmount: 5000,
-          currency: "USD",
-          categories: [],
-          isActive: true,
-          createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
       });
 
       // Add a category
       const newCategory: BudgetCategory = {
-        id: "cat-1",
-        category: "flights",
         amount: 1500,
-        spent: 0,
-        remaining: 1500,
+        category: "flights",
+        id: "cat-1",
         percentage: 0,
+        remaining: 1500,
+        spent: 0,
       };
 
       act(() => {
@@ -269,22 +269,22 @@ describe("useBudgetStore", () => {
       // Add a budget with a category
       act(() => {
         storeResult.current.addBudget({
-          id: "budget-1",
-          name: "Summer Vacation",
-          totalAmount: 5000,
-          currency: "USD",
           categories: [
             {
-              id: "cat-1",
-              category: "flights",
               amount: 1500,
-              spent: 0,
-              remaining: 1500,
+              category: "flights",
+              id: "cat-1",
               percentage: 0,
+              remaining: 1500,
+              spent: 0,
             },
           ],
-          isActive: true,
           createdAt: "2025-05-20T12:00:00Z",
+          currency: "USD",
+          id: "budget-1",
+          isActive: true,
+          name: "Summer Vacation",
+          totalAmount: 5000,
           updatedAt: "2025-05-20T12:00:00Z",
         });
       });
@@ -293,9 +293,9 @@ describe("useBudgetStore", () => {
       act(() => {
         storeResult.current.updateBudgetCategory("budget-1", "cat-1", {
           amount: 2000,
-          spent: 500,
-          remaining: 1500,
           percentage: 25,
+          remaining: 1500,
+          spent: 500,
         });
       });
 
@@ -313,30 +313,30 @@ describe("useBudgetStore", () => {
       // Add a budget with two categories
       act(() => {
         storeResult.current.addBudget({
-          id: "budget-1",
-          name: "Summer Vacation",
-          totalAmount: 5000,
-          currency: "USD",
           categories: [
             {
-              id: "cat-1",
-              category: "flights",
               amount: 1500,
-              spent: 0,
-              remaining: 1500,
+              category: "flights",
+              id: "cat-1",
               percentage: 0,
+              remaining: 1500,
+              spent: 0,
             },
             {
-              id: "cat-2",
-              category: "accommodations",
               amount: 2000,
-              spent: 0,
-              remaining: 2000,
+              category: "accommodations",
+              id: "cat-2",
               percentage: 0,
+              remaining: 2000,
+              spent: 0,
             },
           ],
-          isActive: true,
           createdAt: "2025-05-20T12:00:00Z",
+          currency: "USD",
+          id: "budget-1",
+          isActive: true,
+          name: "Summer Vacation",
+          totalAmount: 5000,
           updatedAt: "2025-05-20T12:00:00Z",
         });
       });
@@ -357,27 +357,27 @@ describe("useBudgetStore", () => {
 
       const mockExpenses: Expense[] = [
         {
-          id: "expense-1",
+          amount: 500,
           budgetId: "budget-1",
           category: "flights",
-          description: "Flight to NYC",
-          amount: 500,
+          createdAt: "2025-05-20T12:00:00Z",
           currency: "USD",
           date: "2025-06-01",
+          description: "Flight to NYC",
+          id: "expense-1",
           isShared: false,
-          createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         },
         {
-          id: "expense-2",
+          amount: 800,
           budgetId: "budget-1",
           category: "accommodations",
-          description: "Hotel in NYC",
-          amount: 800,
+          createdAt: "2025-05-20T12:00:00Z",
           currency: "USD",
           date: "2025-06-01",
+          description: "Hotel in NYC",
+          id: "expense-2",
           isShared: false,
-          createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         },
       ];
@@ -393,15 +393,15 @@ describe("useBudgetStore", () => {
       const { result } = renderHook(() => useBudgetStore());
 
       const newExpense: Expense = {
-        id: "expense-1",
+        amount: 500,
         budgetId: "budget-1",
         category: "flights",
-        description: "Flight to NYC",
-        amount: 500,
+        createdAt: "2025-05-20T12:00:00Z",
         currency: "USD",
         date: "2025-06-01",
+        description: "Flight to NYC",
+        id: "expense-1",
         isShared: false,
-        createdAt: "2025-05-20T12:00:00Z",
         updatedAt: "2025-05-20T12:00:00Z",
       };
 
@@ -422,15 +422,15 @@ describe("useBudgetStore", () => {
 
       // Add an expense first
       const expense: Expense = {
-        id: "expense-1",
+        amount: 500,
         budgetId: "budget-1",
         category: "flights",
-        description: "Flight to NYC",
-        amount: 500,
+        createdAt: "2025-05-20T12:00:00Z",
         currency: "USD",
         date: "2025-06-01",
+        description: "Flight to NYC",
+        id: "expense-1",
         isShared: false,
-        createdAt: "2025-05-20T12:00:00Z",
         updatedAt: "2025-05-20T12:00:00Z",
       };
 
@@ -462,28 +462,28 @@ describe("useBudgetStore", () => {
       // Add two expenses
       act(() => {
         storeResult.current.addExpense({
-          id: "expense-1",
+          amount: 500,
           budgetId: "budget-1",
           category: "flights",
-          description: "Flight to NYC",
-          amount: 500,
+          createdAt: "2025-05-20T12:00:00Z",
           currency: "USD",
           date: "2025-06-01",
+          description: "Flight to NYC",
+          id: "expense-1",
           isShared: false,
-          createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
 
         storeResult.current.addExpense({
-          id: "expense-2",
+          amount: 800,
           budgetId: "budget-1",
           category: "accommodations",
-          description: "Hotel in NYC",
-          amount: 800,
+          createdAt: "2025-05-20T12:00:00Z",
           currency: "USD",
           date: "2025-06-02",
+          description: "Hotel in NYC",
+          id: "expense-2",
           isShared: false,
-          createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
       });
@@ -528,13 +528,13 @@ describe("useBudgetStore", () => {
 
       const mockAlerts = [
         {
-          id: "alert-1",
           budgetId: "budget-1",
-          type: "threshold" as const,
-          threshold: 80,
-          message: "Almost at budget limit",
-          isRead: false,
           createdAt: "2025-05-20T12:00:00Z",
+          id: "alert-1",
+          isRead: false,
+          message: "Almost at budget limit",
+          threshold: 80,
+          type: "threshold" as const,
         },
       ];
 
@@ -549,13 +549,13 @@ describe("useBudgetStore", () => {
       const { result } = renderHook(() => useBudgetStore());
 
       const newAlert = {
-        id: "alert-1",
         budgetId: "budget-1",
-        type: "threshold" as const,
-        threshold: 80,
-        message: "Almost at budget limit",
-        isRead: false,
         createdAt: "2025-05-20T12:00:00Z",
+        id: "alert-1",
+        isRead: false,
+        message: "Almost at budget limit",
+        threshold: 80,
+        type: "threshold" as const,
       };
 
       act(() => {
@@ -571,13 +571,13 @@ describe("useBudgetStore", () => {
       // Add an alert first
       act(() => {
         result.current.addAlert({
-          id: "alert-1",
           budgetId: "budget-1",
-          type: "threshold" as const,
-          threshold: 80,
-          message: "Almost at budget limit",
-          isRead: false,
           createdAt: "2025-05-20T12:00:00Z",
+          id: "alert-1",
+          isRead: false,
+          message: "Almost at budget limit",
+          threshold: 80,
+          type: "threshold" as const,
         });
       });
 
@@ -595,13 +595,13 @@ describe("useBudgetStore", () => {
       // Add some alerts
       act(() => {
         result.current.addAlert({
-          id: "alert-1",
           budgetId: "budget-1",
-          type: "threshold" as const,
-          threshold: 80,
-          message: "Almost at budget limit",
-          isRead: false,
           createdAt: "2025-05-20T12:00:00Z",
+          id: "alert-1",
+          isRead: false,
+          message: "Almost at budget limit",
+          threshold: 80,
+          type: "threshold" as const,
         });
       });
 
@@ -620,13 +620,13 @@ describe("useBudgetStore", () => {
       const { result: activeBudgetResult } = renderHook(() => useActiveBudget());
 
       const mockBudget: Budget = {
+        categories: [],
+        createdAt: "2025-05-20T12:00:00Z",
+        currency: "USD",
         id: "budget-1",
+        isActive: true,
         name: "Summer Vacation",
         totalAmount: 5000,
-        currency: "USD",
-        categories: [],
-        isActive: true,
-        createdAt: "2025-05-20T12:00:00Z",
         updatedAt: "2025-05-20T12:00:00Z",
       };
 
@@ -648,60 +648,60 @@ describe("useBudgetStore", () => {
       // Add a budget with categories
       act(() => {
         storeResult.current.addBudget({
-          id: "budget-1",
-          name: "Summer Vacation",
-          totalAmount: 5000,
-          currency: "USD",
           categories: [
             {
-              id: "cat-1",
-              category: "flights",
               amount: 1500,
-              spent: 0,
-              remaining: 1500,
+              category: "flights",
+              id: "cat-1",
               percentage: 0,
+              remaining: 1500,
+              spent: 0,
             },
             {
-              id: "cat-2",
-              category: "accommodations",
               amount: 2000,
-              spent: 0,
-              remaining: 2000,
+              category: "accommodations",
+              id: "cat-2",
               percentage: 0,
+              remaining: 2000,
+              spent: 0,
             },
           ],
-          isActive: true,
-          startDate: "2025-06-01",
-          endDate: "2025-06-15",
           createdAt: "2025-05-20T12:00:00Z",
+          currency: "USD",
+          endDate: "2025-06-15",
+          id: "budget-1",
+          isActive: true,
+          name: "Summer Vacation",
+          startDate: "2025-06-01",
+          totalAmount: 5000,
           updatedAt: "2025-05-20T12:00:00Z",
         });
         storeResult.current.setActiveBudget("budget-1");
 
         // Add some expenses
         storeResult.current.addExpense({
-          id: "expense-1",
+          amount: 1000,
           budgetId: "budget-1",
           category: "flights",
-          description: "Flight to NYC",
-          amount: 1000,
+          createdAt: "2025-05-20T12:00:00Z",
           currency: "USD",
           date: "2025-06-01",
+          description: "Flight to NYC",
+          id: "expense-1",
           isShared: false,
-          createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
 
         storeResult.current.addExpense({
-          id: "expense-2",
+          amount: 800,
           budgetId: "budget-1",
           category: "accommodations",
-          description: "Hotel in NYC",
-          amount: 800,
+          createdAt: "2025-05-20T12:00:00Z",
           currency: "USD",
           date: "2025-06-02",
+          description: "Hotel in NYC",
+          id: "expense-2",
           isShared: false,
-          createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
       });
@@ -726,38 +726,38 @@ describe("useBudgetStore", () => {
       // Add budgets with trip IDs
       act(() => {
         storeResult.current.addBudget({
+          categories: [],
+          createdAt: "2025-05-20T12:00:00Z",
+          currency: "USD",
           id: "budget-1",
+          isActive: true,
           name: "Summer Vacation",
-          tripId: "trip-1",
           totalAmount: 5000,
-          currency: "USD",
-          categories: [],
-          isActive: true,
-          createdAt: "2025-05-20T12:00:00Z",
-          updatedAt: "2025-05-20T12:00:00Z",
-        });
-
-        storeResult.current.addBudget({
-          id: "budget-2",
-          name: "Winter Vacation",
-          tripId: "trip-2",
-          totalAmount: 3000,
-          currency: "USD",
-          categories: [],
-          isActive: true,
-          createdAt: "2025-05-20T12:00:00Z",
-          updatedAt: "2025-05-20T12:00:00Z",
-        });
-
-        storeResult.current.addBudget({
-          id: "budget-3",
-          name: "Trip 1 - Food Budget",
           tripId: "trip-1",
-          totalAmount: 1000,
-          currency: "USD",
+          updatedAt: "2025-05-20T12:00:00Z",
+        });
+
+        storeResult.current.addBudget({
           categories: [],
-          isActive: true,
           createdAt: "2025-05-20T12:00:00Z",
+          currency: "USD",
+          id: "budget-2",
+          isActive: true,
+          name: "Winter Vacation",
+          totalAmount: 3000,
+          tripId: "trip-2",
+          updatedAt: "2025-05-20T12:00:00Z",
+        });
+
+        storeResult.current.addBudget({
+          categories: [],
+          createdAt: "2025-05-20T12:00:00Z",
+          currency: "USD",
+          id: "budget-3",
+          isActive: true,
+          name: "Trip 1 - Food Budget",
+          totalAmount: 1000,
+          tripId: "trip-1",
           updatedAt: "2025-05-20T12:00:00Z",
         });
       });
@@ -777,41 +777,41 @@ describe("useBudgetStore", () => {
       // Add expenses with different dates
       act(() => {
         storeResult.current.addExpense({
-          id: "expense-1",
+          amount: 500,
           budgetId: "budget-1",
           category: "flights",
-          description: "Flight to NYC",
-          amount: 500,
+          createdAt: "2025-05-20T12:00:00Z",
           currency: "USD",
           date: "2025-06-01",
+          description: "Flight to NYC",
+          id: "expense-1",
           isShared: false,
-          createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
 
         storeResult.current.addExpense({
-          id: "expense-2",
+          amount: 800,
           budgetId: "budget-1",
           category: "accommodations",
-          description: "Hotel in NYC",
-          amount: 800,
+          createdAt: "2025-05-20T12:00:00Z",
           currency: "USD",
           date: "2025-06-05",
+          description: "Hotel in NYC",
+          id: "expense-2",
           isShared: false,
-          createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
 
         storeResult.current.addExpense({
-          id: "expense-3",
+          amount: 100,
           budgetId: "budget-2",
           category: "food",
-          description: "Dinner in NYC",
-          amount: 100,
+          createdAt: "2025-05-20T12:00:00Z",
           currency: "USD",
           date: "2025-06-10",
+          description: "Dinner in NYC",
+          id: "expense-3",
           isShared: false,
-          createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
       });

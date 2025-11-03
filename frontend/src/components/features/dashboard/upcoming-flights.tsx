@@ -52,15 +52,15 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
   const formatTime = (timeString: string) => {
     return new Date(timeString).toLocaleTimeString("en-US", {
       hour: "2-digit",
-      minute: "2-digit",
       hour12: false,
+      minute: "2-digit",
     });
   };
 
   const formatDate = (timeString: string) => {
     return new Date(timeString).toLocaleDateString("en-US", {
-      month: "short",
       day: "numeric",
+      month: "short",
     });
   };
 

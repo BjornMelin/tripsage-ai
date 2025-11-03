@@ -4,47 +4,52 @@ import { devtools, persist } from "zustand/middleware";
 import type { SearchResults, SearchType } from "@/types/search";
 
 // Validation schemas for search results
-const SearchStatusSchema = z.enum([
+const SEARCH_STATUS_SCHEMA = z.enum([
   "idle",
   "searching",
   "success",
   "error",
   "cancelled",
 ]);
-const SearchTypeSchema = z.enum(["flight", "accommodation", "activity", "destination"]);
+const SEARCH_TYPE_SCHEMA = z.enum([
+  "flight",
+  "accommodation",
+  "activity",
+  "destination",
+]);
 
-const SearchMetricsSchema = z.object({
-  totalResults: z.number().min(0).default(0),
-  searchDuration: z.number().min(0).optional(),
+const SEARCH_METRICS_SCHEMA = z.object({
+  currentPage: z.number().min(1).default(1),
+  hasMoreResults: z.boolean().default(false),
   provider: z.string().optional(),
   requestId: z.string().optional(),
   resultsPerPage: z.number().min(1).default(20),
-  currentPage: z.number().min(1).default(1),
-  hasMoreResults: z.boolean().default(false),
+  searchDuration: z.number().min(0).optional(),
+  totalResults: z.number().min(0).default(0),
 });
 
-const SearchContextSchema = z.object({
-  searchId: z.string(),
-  searchType: SearchTypeSchema,
-  searchParams: z.record(z.string(), z.unknown()),
-  startedAt: z.string(),
+const SEARCH_CONTEXT_SCHEMA = z.object({
   completedAt: z.string().optional(),
-  metrics: SearchMetricsSchema.optional(),
+  metrics: SEARCH_METRICS_SCHEMA.optional(),
+  searchId: z.string(),
+  searchParams: z.record(z.string(), z.unknown()),
+  searchType: SEARCH_TYPE_SCHEMA,
+  startedAt: z.string(),
 });
 
-const ErrorDetailsSchema = z.object({
+const ERROR_DETAILS_SCHEMA = z.object({
   code: z.string().optional(),
-  message: z.string(),
   details: z.record(z.string(), z.unknown()).optional(),
-  retryable: z.boolean().default(true),
+  message: z.string(),
   occurredAt: z.string(),
+  retryable: z.boolean().default(true),
 });
 
 // Types derived from schemas
-export type SearchStatus = z.infer<typeof SearchStatusSchema>;
-export type SearchMetrics = z.infer<typeof SearchMetricsSchema>;
-export type SearchContext = z.infer<typeof SearchContextSchema>;
-export type ErrorDetails = z.infer<typeof ErrorDetailsSchema>;
+export type SearchStatus = z.infer<typeof SEARCH_STATUS_SCHEMA>;
+export type SearchMetrics = z.infer<typeof SEARCH_METRICS_SCHEMA>;
+export type SearchContext = z.infer<typeof SEARCH_CONTEXT_SCHEMA>;
+export type ErrorDetails = z.infer<typeof ERROR_DETAILS_SCHEMA>;
 
 // Search results store interface
 interface SearchResultsState {
@@ -140,12 +145,12 @@ interface SearchResultsState {
 }
 
 // Helper functions
-const generateSearchId = () =>
+const GENERATE_SEARCH_ID = () =>
   `search_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-const getCurrentTimestamp = () => new Date().toISOString();
+const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
 
 // Helper to compute derived state
-const computeDerivedState = (state: Partial<SearchResultsState>) => {
+const COMPUTE_DERIVED_STATE = (state: Partial<SearchResultsState>) => {
   const hasResults = Object.keys(state.results || {}).some((key) => {
     const typeResults = state.results?.[key as keyof SearchResults];
     return Array.isArray(typeResults) && typeResults.length > 0;
@@ -162,25 +167,25 @@ const computeDerivedState = (state: Partial<SearchResultsState>) => {
   }
 
   return {
+    canRetry,
     hasResults,
     isEmptyResults,
-    canRetry,
     searchDuration,
   };
 };
 
 // Default states
-const defaultPagination = {
+const DEFAULT_PAGINATION = {
   currentPage: 1,
-  totalPages: 1,
-  resultsPerPage: 20,
-  totalResults: 0,
   hasNextPage: false,
   hasPreviousPage: false,
+  resultsPerPage: 20,
+  totalPages: 1,
+  totalResults: 0,
 };
 
 // Custom middleware to compute derived state with proper TypeScript typing
-const withComputedState =
+const WITH_COMPUTED_STATE =
   <T extends SearchResultsState>(
     config: StateCreator<T, [], [], T>
   ): StateCreator<T, [], [], T> =>
@@ -192,7 +197,7 @@ const withComputedState =
       const newState = typeof partial === "function" ? partial(get()) : partial;
       const currentState = get();
       const mergedState = replace ? newState : { ...currentState, ...newState };
-      const derived = computeDerivedState(mergedState);
+      const derived = COMPUTE_DERIVED_STATE(mergedState);
       if (replace) {
         set({ ...newState, ...derived } as T, true);
       } else {
@@ -206,255 +211,7 @@ const withComputedState =
 export const useSearchResultsStore = create<SearchResultsState>()(
   devtools(
     persist(
-      withComputedState((set, get) => ({
-        // Initial state
-        status: "idle",
-        currentSearchId: null,
-        currentSearchType: null,
-
-        // Results data
-        results: {},
-        resultsBySearch: {},
-
-        // Search context and metadata
-        searchHistory: [],
-        currentContext: null,
-
-        // Error handling
-        error: null,
-        errorHistory: [],
-
-        // Loading and progress
-        isSearching: false,
-        searchProgress: 0,
-
-        // Pagination
-        pagination: defaultPagination,
-
-        // Performance tracking
-        metrics: null,
-        performanceHistory: [],
-
-        // Computed properties
-        hasResults: false,
-        isEmptyResults: false,
-        canRetry: false,
-        searchDuration: null,
-
-        // Search execution actions
-        startSearch: (searchType: SearchType, params: Record<string, unknown>) => {
-          const searchId = generateSearchId();
-          const timestamp = getCurrentTimestamp();
-
-          const newContext: SearchContext = {
-            searchId,
-            searchType,
-            searchParams: params,
-            startedAt: timestamp,
-          };
-
-          set({
-            status: "searching",
-            currentSearchId: searchId,
-            currentSearchType: searchType,
-            currentContext: newContext,
-            isSearching: true,
-            searchProgress: 0,
-            error: null,
-            results: {}, // Clear previous results
-          });
-
-          return searchId;
-        },
-
-        updateSearchProgress: (searchId: string, progress: number) => {
-          const { currentSearchId } = get();
-          if (currentSearchId === searchId) {
-            const validProgress = Math.max(0, Math.min(100, progress));
-            set({ searchProgress: validProgress });
-          }
-        },
-
-        setSearchResults: (
-          searchId: string,
-          results: SearchResults,
-          metrics?: SearchMetrics
-        ) => {
-          const { currentSearchId, searchHistory, currentContext } = get();
-
-          if (currentSearchId === searchId && currentContext) {
-            const completedAt = getCurrentTimestamp();
-            const calculatedDuration =
-              new Date(completedAt).getTime() -
-              new Date(currentContext.startedAt).getTime();
-
-            const calculatedTotal = Object.values(results).reduce(
-              (total: number, typeResults: unknown) => {
-                if (Array.isArray(typeResults)) {
-                  return total + typeResults.length;
-                }
-                return total;
-              },
-              0
-            );
-
-            const finalMetrics: SearchMetrics = {
-              totalResults: metrics?.totalResults ?? calculatedTotal,
-              resultsPerPage: metrics?.resultsPerPage ?? 20,
-              currentPage: metrics?.currentPage ?? 1,
-              hasMoreResults: metrics?.hasMoreResults ?? false,
-              searchDuration: metrics?.searchDuration ?? calculatedDuration,
-              provider: metrics?.provider,
-              requestId: metrics?.requestId,
-            };
-
-            const updatedContext: SearchContext = {
-              ...currentContext,
-              completedAt,
-              metrics: finalMetrics,
-            };
-
-            // Calculate pagination based on results
-            const totalResults = finalMetrics.totalResults;
-            const resultsPerPage = finalMetrics.resultsPerPage;
-            const totalPages = Math.ceil(totalResults / resultsPerPage);
-
-            set({
-              status: "success",
-              results,
-              isSearching: false,
-              searchProgress: 100,
-              currentContext: updatedContext,
-              metrics: finalMetrics,
-              pagination: {
-                ...get().pagination,
-                totalResults,
-                totalPages,
-                hasNextPage: get().pagination.currentPage < totalPages,
-                hasPreviousPage: get().pagination.currentPage > 1,
-              },
-              resultsBySearch: {
-                ...get().resultsBySearch,
-                [searchId]: results,
-              },
-              searchHistory: [...searchHistory, updatedContext],
-              performanceHistory: [
-                ...get().performanceHistory,
-                { ...finalMetrics, searchId },
-              ].slice(-50), // Keep last 50 searches
-            });
-          }
-        },
-
-        setSearchError: (searchId: string, error: ErrorDetails) => {
-          const { currentSearchId, errorHistory, currentContext, searchHistory } =
-            get();
-
-          if (currentSearchId === searchId && currentContext) {
-            const errorWithTimestamp: ErrorDetails = {
-              ...error,
-              occurredAt: getCurrentTimestamp(),
-            };
-
-            // Mark search as completed (with error) in history
-            const completedAt = getCurrentTimestamp();
-            const updatedContext: SearchContext = {
-              ...currentContext,
-              completedAt,
-            };
-
-            set({
-              status: "error",
-              error: errorWithTimestamp,
-              isSearching: false,
-              searchProgress: 0,
-              currentContext: updatedContext,
-              searchHistory: [...searchHistory, updatedContext],
-              errorHistory: [
-                ...errorHistory,
-                { ...errorWithTimestamp, searchId },
-              ].slice(-20), // Keep last 20 errors
-            });
-          }
-        },
-
-        cancelSearch: (searchId?: string) => {
-          const { currentSearchId } = get();
-          const targetSearchId = searchId || currentSearchId;
-
-          if (currentSearchId === targetSearchId) {
-            set({
-              status: "cancelled",
-              isSearching: false,
-              searchProgress: 0,
-            });
-          }
-        },
-
-        completeSearch: (searchId: string) => {
-          const { currentSearchId, currentContext } = get();
-
-          if (currentSearchId === searchId && currentContext) {
-            const completedAt = getCurrentTimestamp();
-            const updatedContext = {
-              ...currentContext,
-              completedAt,
-            };
-
-            set({
-              currentContext: updatedContext,
-              isSearching: false,
-            });
-          }
-        },
-
-        // Results management
-        clearResults: (searchType?: SearchType) => {
-          if (searchType) {
-            // Map singular search type to plural result key
-            const resultKey =
-              searchType === "accommodation"
-                ? "accommodations"
-                : searchType === "activity"
-                  ? "activities"
-                  : searchType === "destination"
-                    ? "destinations"
-                    : searchType === "flight"
-                      ? "flights"
-                      : searchType;
-
-            set((state) => ({
-              results: {
-                ...state.results,
-                [resultKey]: [],
-              },
-            }));
-          } else {
-            set({
-              results: {},
-              status: "idle",
-              error: null,
-              searchProgress: 0,
-            });
-          }
-        },
-
-        clearAllResults: () => {
-          set({
-            results: {},
-            resultsBySearch: {},
-            status: "idle",
-            currentSearchId: null,
-            currentSearchType: null,
-            currentContext: null,
-            error: null,
-            isSearching: false,
-            searchProgress: 0,
-            pagination: defaultPagination,
-            metrics: null,
-          });
-        },
-
+      WITH_COMPUTED_STATE((set, get) => ({
         appendResults: (searchId: string, newResults: SearchResults) => {
           const { resultsBySearch, currentSearchId, results } = get();
 
@@ -484,120 +241,34 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           }
         },
 
-        // Pagination actions
-        setPage: (page: number) => {
-          const { pagination } = get();
-          const validPage = Math.max(1, Math.min(pagination.totalPages, page));
+        cancelSearch: (searchId?: string) => {
+          const { currentSearchId } = get();
+          const targetSearchId = searchId || currentSearchId;
 
-          set({
-            pagination: {
-              ...pagination,
-              currentPage: validPage,
-              hasNextPage: validPage < pagination.totalPages,
-              hasPreviousPage: validPage > 1,
-            },
-          });
-        },
-
-        nextPage: () => {
-          const { pagination } = get();
-          if (pagination.hasNextPage) {
-            get().setPage(pagination.currentPage + 1);
+          if (currentSearchId === targetSearchId) {
+            set({
+              isSearching: false,
+              searchProgress: 0,
+              status: "cancelled",
+            });
           }
         },
+        canRetry: false,
 
-        previousPage: () => {
-          const { pagination } = get();
-          if (pagination.hasPreviousPage) {
-            get().setPage(pagination.currentPage - 1);
-          }
-        },
-
-        setResultsPerPage: (perPage: number) => {
-          const { pagination } = get();
-          const validPerPage = Math.max(1, Math.min(100, perPage));
-          const totalPages = Math.ceil(pagination.totalResults / validPerPage);
-          const currentPage = Math.min(pagination.currentPage, totalPages);
-
+        clearAllResults: () => {
           set({
-            pagination: {
-              ...pagination,
-              resultsPerPage: validPerPage,
-              totalPages,
-              currentPage: Math.max(1, currentPage),
-              hasNextPage: currentPage < totalPages,
-              hasPreviousPage: currentPage > 1,
-            },
-          });
-        },
-
-        // Search history management
-        getSearchById: (searchId: string) => {
-          const { searchHistory } = get();
-          return searchHistory.find((search) => search.searchId === searchId) || null;
-        },
-
-        getResultsById: (searchId: string) => {
-          const { resultsBySearch } = get();
-          return resultsBySearch[searchId] || null;
-        },
-
-        getRecentSearches: (searchType?: SearchType, limit = 10) => {
-          const { searchHistory } = get();
-          let filtered = searchHistory;
-
-          if (searchType) {
-            filtered = searchHistory.filter(
-              (search) => search.searchType === searchType
-            );
-          }
-
-          return filtered
-            .sort(
-              (a, b) =>
-                new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
-            )
-            .slice(0, limit);
-        },
-
-        clearSearchHistory: () => {
-          set({
-            searchHistory: [],
+            currentContext: null,
+            currentSearchId: null,
+            currentSearchType: null,
+            error: null,
+            isSearching: false,
+            metrics: null,
+            pagination: DEFAULT_PAGINATION,
+            results: {},
             resultsBySearch: {},
-            performanceHistory: [],
-            errorHistory: [],
+            searchProgress: 0,
+            status: "idle",
           });
-        },
-
-        removeSearchFromHistory: (searchId: string) => {
-          set((state) => ({
-            searchHistory: state.searchHistory.filter(
-              (search) => search.searchId !== searchId
-            ),
-            resultsBySearch: (() => {
-              const newResults = { ...state.resultsBySearch };
-              delete newResults[searchId];
-              return newResults;
-            })(),
-            performanceHistory: state.performanceHistory.filter(
-              (perf) => perf.searchId !== searchId
-            ),
-            errorHistory: state.errorHistory.filter(
-              (error) => error.searchId !== searchId
-            ),
-          }));
-        },
-
-        // Error management
-        retryLastSearch: async () => {
-          const { currentContext } = get();
-          if (!currentContext) return null;
-
-          // Start a new search with the same parameters
-          return get().startSearch(
-            currentContext.searchType,
-            currentContext.searchParams
-          );
         },
 
         clearError: () => {
@@ -607,6 +278,70 @@ export const useSearchResultsStore = create<SearchResultsState>()(
         clearErrorHistory: () => {
           set({ errorHistory: [] });
         },
+
+        // Results management
+        clearResults: (searchType?: SearchType) => {
+          if (searchType) {
+            // Map singular search type to plural result key
+            const resultKey =
+              searchType === "accommodation"
+                ? "accommodations"
+                : searchType === "activity"
+                  ? "activities"
+                  : searchType === "destination"
+                    ? "destinations"
+                    : searchType === "flight"
+                      ? "flights"
+                      : searchType;
+
+            set((state) => ({
+              results: {
+                ...state.results,
+                [resultKey]: [],
+              },
+            }));
+          } else {
+            set({
+              error: null,
+              results: {},
+              searchProgress: 0,
+              status: "idle",
+            });
+          }
+        },
+
+        clearSearchHistory: () => {
+          set({
+            errorHistory: [],
+            performanceHistory: [],
+            resultsBySearch: {},
+            searchHistory: [],
+          });
+        },
+
+        completeSearch: (searchId: string) => {
+          const { currentSearchId, currentContext } = get();
+
+          if (currentSearchId === searchId && currentContext) {
+            const completedAt = GET_CURRENT_TIMESTAMP();
+            const updatedContext = {
+              ...currentContext,
+              completedAt,
+            };
+
+            set({
+              currentContext: updatedContext,
+              isSearching: false,
+            });
+          }
+        },
+        currentContext: null,
+        currentSearchId: null,
+        currentSearchType: null,
+
+        // Error handling
+        error: null,
+        errorHistory: [],
 
         // Performance monitoring
         getAverageSearchDuration: (searchType?: SearchType) => {
@@ -627,6 +362,52 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           }, 0);
 
           return totalDuration / relevantMetrics.length;
+        },
+
+        getPerformanceInsights: () => {
+          const {
+            searchHistory,
+            performanceHistory: _performanceHistory,
+            errorHistory,
+          } = get();
+          const totalSearches = searchHistory.length;
+          const totalErrors = errorHistory.length;
+
+          return {
+            averageDuration: get().getAverageSearchDuration(),
+            errorRate: totalSearches > 0 ? (totalErrors / totalSearches) * 100 : 0,
+            successRate: get().getSearchSuccessRate(),
+            totalSearches,
+          };
+        },
+
+        getRecentSearches: (searchType?: SearchType, limit = 10) => {
+          const { searchHistory } = get();
+          let filtered = searchHistory;
+
+          if (searchType) {
+            filtered = searchHistory.filter(
+              (search) => search.searchType === searchType
+            );
+          }
+
+          return filtered
+            .sort(
+              (a, b) =>
+                new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+            )
+            .slice(0, limit);
+        },
+
+        getResultsById: (searchId: string) => {
+          const { resultsBySearch } = get();
+          return resultsBySearch[searchId] || null;
+        },
+
+        // Search history management
+        getSearchById: (searchId: string) => {
+          const { searchHistory } = get();
+          return searchHistory.find((search) => search.searchId === searchId) || null;
         },
 
         getSearchSuccessRate: (searchType?: SearchType) => {
@@ -650,67 +431,290 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           return (successfulSearches / relevantSearches.length) * 100;
         },
 
-        getPerformanceInsights: () => {
-          const {
-            searchHistory,
-            performanceHistory: _performanceHistory,
-            errorHistory,
-          } = get();
-          const totalSearches = searchHistory.length;
-          const totalErrors = errorHistory.length;
+        // Computed properties
+        hasResults: false,
+        isEmptyResults: false,
 
-          return {
-            averageDuration: get().getAverageSearchDuration(),
-            successRate: get().getSearchSuccessRate(),
-            totalSearches,
-            errorRate: totalSearches > 0 ? (totalErrors / totalSearches) * 100 : 0,
-          };
+        // Loading and progress
+        isSearching: false,
+
+        // Performance tracking
+        metrics: null,
+
+        nextPage: () => {
+          const { pagination } = get();
+          if (pagination.hasNextPage) {
+            get().setPage(pagination.currentPage + 1);
+          }
+        },
+
+        // Pagination
+        pagination: DEFAULT_PAGINATION,
+        performanceHistory: [],
+
+        previousPage: () => {
+          const { pagination } = get();
+          if (pagination.hasPreviousPage) {
+            get().setPage(pagination.currentPage - 1);
+          }
+        },
+
+        removeSearchFromHistory: (searchId: string) => {
+          set((state) => ({
+            errorHistory: state.errorHistory.filter(
+              (error) => error.searchId !== searchId
+            ),
+            performanceHistory: state.performanceHistory.filter(
+              (perf) => perf.searchId !== searchId
+            ),
+            resultsBySearch: (() => {
+              const newResults = { ...state.resultsBySearch };
+              delete newResults[searchId];
+              return newResults;
+            })(),
+            searchHistory: state.searchHistory.filter(
+              (search) => search.searchId !== searchId
+            ),
+          }));
         },
 
         // Utility actions
         reset: () => {
           set({
-            status: "idle",
+            currentContext: null,
             currentSearchId: null,
             currentSearchType: null,
-            results: {},
-            resultsBySearch: {},
-            searchHistory: [],
-            currentContext: null,
             error: null,
             errorHistory: [],
             isSearching: false,
-            searchProgress: 0,
-            pagination: defaultPagination,
             metrics: null,
+            pagination: DEFAULT_PAGINATION,
             performanceHistory: [],
+            results: {},
+            resultsBySearch: {},
+            searchHistory: [],
+            searchProgress: 0,
+            status: "idle",
           });
+        },
+
+        // Results data
+        results: {},
+        resultsBySearch: {},
+
+        // Error management
+        retryLastSearch: async () => {
+          const { currentContext } = get();
+          if (!currentContext) return null;
+
+          // Start a new search with the same parameters
+          return get().startSearch(
+            currentContext.searchType,
+            currentContext.searchParams
+          );
+        },
+        searchDuration: null,
+
+        // Search context and metadata
+        searchHistory: [],
+        searchProgress: 0,
+
+        // Pagination actions
+        setPage: (page: number) => {
+          const { pagination } = get();
+          const validPage = Math.max(1, Math.min(pagination.totalPages, page));
+
+          set({
+            pagination: {
+              ...pagination,
+              currentPage: validPage,
+              hasNextPage: validPage < pagination.totalPages,
+              hasPreviousPage: validPage > 1,
+            },
+          });
+        },
+
+        setResultsPerPage: (perPage: number) => {
+          const { pagination } = get();
+          const validPerPage = Math.max(1, Math.min(100, perPage));
+          const totalPages = Math.ceil(pagination.totalResults / validPerPage);
+          const currentPage = Math.min(pagination.currentPage, totalPages);
+
+          set({
+            pagination: {
+              ...pagination,
+              currentPage: Math.max(1, currentPage),
+              hasNextPage: currentPage < totalPages,
+              hasPreviousPage: currentPage > 1,
+              resultsPerPage: validPerPage,
+              totalPages,
+            },
+          });
+        },
+
+        setSearchError: (searchId: string, error: ErrorDetails) => {
+          const { currentSearchId, errorHistory, currentContext, searchHistory } =
+            get();
+
+          if (currentSearchId === searchId && currentContext) {
+            const errorWithTimestamp: ErrorDetails = {
+              ...error,
+              occurredAt: GET_CURRENT_TIMESTAMP(),
+            };
+
+            // Mark search as completed (with error) in history
+            const completedAt = GET_CURRENT_TIMESTAMP();
+            const updatedContext: SearchContext = {
+              ...currentContext,
+              completedAt,
+            };
+
+            set({
+              currentContext: updatedContext,
+              error: errorWithTimestamp,
+              errorHistory: [
+                ...errorHistory,
+                { ...errorWithTimestamp, searchId },
+              ].slice(-20), // Keep last 20 errors
+              isSearching: false,
+              searchHistory: [...searchHistory, updatedContext],
+              searchProgress: 0,
+              status: "error",
+            });
+          }
+        },
+
+        setSearchResults: (
+          searchId: string,
+          results: SearchResults,
+          metrics?: SearchMetrics
+        ) => {
+          const { currentSearchId, searchHistory, currentContext } = get();
+
+          if (currentSearchId === searchId && currentContext) {
+            const completedAt = GET_CURRENT_TIMESTAMP();
+            const calculatedDuration =
+              new Date(completedAt).getTime() -
+              new Date(currentContext.startedAt).getTime();
+
+            const calculatedTotal = Object.values(results).reduce(
+              (total: number, typeResults: unknown) => {
+                if (Array.isArray(typeResults)) {
+                  return total + typeResults.length;
+                }
+                return total;
+              },
+              0
+            );
+
+            const finalMetrics: SearchMetrics = {
+              currentPage: metrics?.currentPage ?? 1,
+              hasMoreResults: metrics?.hasMoreResults ?? false,
+              provider: metrics?.provider,
+              requestId: metrics?.requestId,
+              resultsPerPage: metrics?.resultsPerPage ?? 20,
+              searchDuration: metrics?.searchDuration ?? calculatedDuration,
+              totalResults: metrics?.totalResults ?? calculatedTotal,
+            };
+
+            const updatedContext: SearchContext = {
+              ...currentContext,
+              completedAt,
+              metrics: finalMetrics,
+            };
+
+            // Calculate pagination based on results
+            const totalResults = finalMetrics.totalResults;
+            const resultsPerPage = finalMetrics.resultsPerPage;
+            const totalPages = Math.ceil(totalResults / resultsPerPage);
+
+            set({
+              currentContext: updatedContext,
+              isSearching: false,
+              metrics: finalMetrics,
+              pagination: {
+                ...get().pagination,
+                hasNextPage: get().pagination.currentPage < totalPages,
+                hasPreviousPage: get().pagination.currentPage > 1,
+                totalPages,
+                totalResults,
+              },
+              performanceHistory: [
+                ...get().performanceHistory,
+                { ...finalMetrics, searchId },
+              ].slice(-50), // Keep last 50 searches
+              results,
+              resultsBySearch: {
+                ...get().resultsBySearch,
+                [searchId]: results,
+              },
+              searchHistory: [...searchHistory, updatedContext],
+              searchProgress: 100,
+              status: "success",
+            });
+          }
         },
 
         softReset: () => {
           set({
-            status: "idle",
+            currentContext: null,
             currentSearchId: null,
             currentSearchType: null,
-            results: {},
-            currentContext: null,
             error: null,
             isSearching: false,
-            searchProgress: 0,
-            pagination: defaultPagination,
             metrics: null,
+            pagination: DEFAULT_PAGINATION,
+            results: {},
+            searchProgress: 0,
+            status: "idle",
           });
+        },
+
+        // Search execution actions
+        startSearch: (searchType: SearchType, params: Record<string, unknown>) => {
+          const searchId = GENERATE_SEARCH_ID();
+          const timestamp = GET_CURRENT_TIMESTAMP();
+
+          const newContext: SearchContext = {
+            searchId,
+            searchParams: params,
+            searchType,
+            startedAt: timestamp,
+          };
+
+          set({
+            currentContext: newContext,
+            currentSearchId: searchId,
+            currentSearchType: searchType,
+            error: null,
+            isSearching: true,
+            results: {}, // Clear previous results
+            searchProgress: 0,
+            status: "searching",
+          });
+
+          return searchId;
+        },
+        // Initial state
+        status: "idle",
+
+        updateSearchProgress: (searchId: string, progress: number) => {
+          const { currentSearchId } = get();
+          if (currentSearchId === searchId) {
+            const validProgress = Math.max(0, Math.min(100, progress));
+            set({ searchProgress: validProgress });
+          }
         },
       })),
       {
         name: "search-results-storage",
         partialize: (state) => ({
-          // Persist search history and cached results, but not current search state
-          searchHistory: state.searchHistory.slice(-20), // Keep last 20 searches
+          performanceHistory: state.performanceHistory.slice(-30), // Keep last 30 performance records
           resultsBySearch: Object.fromEntries(
             Object.entries(state.resultsBySearch).slice(-10) // Keep last 10 result sets
           ),
-          performanceHistory: state.performanceHistory.slice(-30), // Keep last 30 performance records
+          // Persist search history and cached results, but not current search state
+          searchHistory: state.searchHistory.slice(-20), // Keep last 20 searches
         }),
       }
     ),

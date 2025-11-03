@@ -12,23 +12,23 @@ export type TripUpdate = UpdateTables<"trips">;
 /** Map DB row → UI store trip shape (minimal mapping). */
 export function mapTripRowToUI(row: TripRow) {
   return {
-    id: String(row.id),
-    user_id: row.user_id,
-    name: row.name,
-    description: (row as any).description,
-    start_date: row.start_date,
-    startDate: row.start_date,
-    end_date: row.end_date,
-    endDate: row.end_date,
-    destinations: [],
     budget: row.budget,
-    currency: "USD",
-    isPublic: false,
-    status: row.status,
     created_at: row.created_at,
     createdAt: row.created_at,
+    currency: "USD",
+    description: (row as any).description,
+    destinations: [],
+    end_date: row.end_date,
+    endDate: row.end_date,
+    id: String(row.id),
+    isPublic: false,
+    name: row.name,
+    start_date: row.start_date,
+    startDate: row.start_date,
+    status: row.status,
     updated_at: row.updated_at,
     updatedAt: row.updated_at,
+    user_id: row.user_id,
   };
 }
 

@@ -41,8 +41,8 @@ describe("clampMaxTokens", () => {
     const model = "gpt-4o";
     const limit = getModelContextLimit(model);
     const messages = [
-      { role: "system" as const, content: "system" },
-      { role: "user" as const, content: "hello world" },
+      { content: "system", role: "system" as const },
+      { content: "hello world", role: "user" as const },
     ];
     const promptTokens = countPromptTokens(messages, model);
     const desired = 999_999; // intentionally too large
@@ -53,7 +53,7 @@ describe("clampMaxTokens", () => {
 
   it("coerces invalid desiredMax to 1 with reason", () => {
     const model = "gpt-4o";
-    const messages = [{ role: "user" as const, content: "test" }];
+    const messages = [{ content: "test", role: "user" as const }];
     const result = clampMaxTokens(messages, 0, model);
     expect(result.maxTokens).toBe(1);
     expect(result.reasons).toContain("maxTokens_clamped_invalid_desired");
@@ -61,7 +61,7 @@ describe("clampMaxTokens", () => {
 
   it("uses default context limit for unknown model", () => {
     const model = "unknown-model";
-    const messages = [{ role: "user" as const, content: "hi" }];
+    const messages = [{ content: "hi", role: "user" as const }];
     const result = clampMaxTokens(messages, 100_000, model);
     // No clamping expected if desired < DEFAULT_CONTEXT_LIMIT
     expect(result.maxTokens).toBeGreaterThan(0);
@@ -72,7 +72,7 @@ describe("clampMaxTokens", () => {
     const model = "some-new-model";
     // Create a prompt larger than default context to force clamp
     const huge = "x".repeat(DEFAULT_CONTEXT_LIMIT * CHARS_PER_TOKEN_HEURISTIC + 1000);
-    const messages = [{ role: "user" as const, content: huge }];
+    const messages = [{ content: huge, role: "user" as const }];
     const result = clampMaxTokens(messages, 1000, model);
     expect(result.maxTokens).toBe(1);
     expect(result.reasons).toContain("maxTokens_clamped_model_limit");
@@ -82,9 +82,9 @@ describe("clampMaxTokens", () => {
 describe("countPromptTokens invariants", () => {
   it("is order-insensitive for total count", () => {
     const model = "gpt-4o";
-    const a = { role: "system" as const, content: "alpha beta" };
-    const b = { role: "user" as const, content: "gamma delta" };
-    const c = { role: "assistant" as const, content: "epsilon zeta" };
+    const a = { content: "alpha beta", role: "system" as const };
+    const b = { content: "gamma delta", role: "user" as const };
+    const c = { content: "epsilon zeta", role: "assistant" as const };
 
     const ordered = countPromptTokens([a, b, c], model);
     const shuffled = countPromptTokens([c, a, b], model);

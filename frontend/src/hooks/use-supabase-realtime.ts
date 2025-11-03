@@ -21,10 +21,10 @@ export interface RealtimeHookResult {
 export function useSupabaseRealtime(): RealtimeHookResult {
   return {
     connectionStatus: "connected",
-    isConnected: true,
+    disconnect: () => {},
     error: null,
     errors: [],
-    disconnect: () => {},
+    isConnected: true,
     reconnect: () => {},
   };
 }
@@ -34,10 +34,10 @@ export function useSupabaseRealtime(): RealtimeHookResult {
  */
 export function useTripRealtime(_tripId: string | number | null): RealtimeHookResult {
   return {
-    connectionStatus: { trips: "connected", destinations: "connected" },
-    isConnected: true,
+    connectionStatus: { destinations: "connected", trips: "connected" },
     error: null,
     errors: [],
+    isConnected: true,
   };
 }
 
@@ -46,12 +46,12 @@ export function useTripRealtime(_tripId: string | number | null): RealtimeHookRe
  */
 export function useChatRealtime(_sessionId: string | null): RealtimeHookResult {
   return {
+    clearMessageCount: () => {},
     connectionStatus: "connected",
-    isConnected: true,
     error: null,
     errors: [],
+    isConnected: true,
     newMessageCount: 0,
-    clearMessageCount: () => {},
   };
 }
 
@@ -60,8 +60,8 @@ export function useChatRealtime(_sessionId: string | null): RealtimeHookResult {
  */
 export function useRealtimeStatus() {
   return {
-    trips: { status: "connected", error: null },
-    destinations: { status: "connected", error: null },
-    chat: { status: "connected", error: null },
+    chat: { error: null, status: "connected" },
+    destinations: { error: null, status: "connected" },
+    trips: { error: null, status: "connected" },
   };
 }

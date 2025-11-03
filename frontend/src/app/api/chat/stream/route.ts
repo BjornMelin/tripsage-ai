@@ -40,10 +40,10 @@ function getRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return undefined;
   cachedLimiter = new Ratelimit({
-    redis: Redis.fromEnv(),
-    limiter: Ratelimit.slidingWindow(40, "1 m"),
     analytics: true,
+    limiter: Ratelimit.slidingWindow(40, "1 m"),
     prefix: RATELIMIT_PREFIX,
+    redis: Redis.fromEnv(),
   });
   return cachedLimiter;
 }
@@ -83,12 +83,12 @@ export async function POST(req: NextRequest): Promise<Response> {
     const limiter = getRateLimiter();
     return handleChatStream(
       {
-        supabase,
-        resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
-        limit: limiter ? (id) => limiter.limit(id) : undefined,
-        logger: { info: console.info, error: console.error },
         clock: { now: () => Date.now() },
         config: { defaultMaxTokens: 1024 },
+        limit: limiter ? (id) => limiter.limit(id) : undefined,
+        logger: { error: console.error, info: console.info },
+        resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
+        supabase,
       },
       { ...body, ip }
     );

@@ -41,30 +41,32 @@ export type SupabaseAuthMock = {
     : never;
 };
 
-const createMockFn = <T extends (...args: any[]) => unknown>(
+const CREATE_MOCK_FN = <T extends (...args: any[]) => unknown>(
   implementation: T
 ): AuthMethodMock<T> => vi.fn(implementation) as unknown as AuthMethodMock<T>;
 
-const createMockUser = (): User => ({
-  id: "mock-user-id",
+const CREATE_MOCK_USER = (): User => ({
   app_metadata: {},
-  user_metadata: {},
   aud: "authenticated",
-  email: "mock-user@example.com",
   created_at: new Date(0).toISOString(),
+  email: "mock-user@example.com",
+  id: "mock-user-id",
+  user_metadata: {},
 });
 
-const createMockSession = (user: User): Session => ({
+const CREATE_MOCK_SESSION = (user: User): Session => ({
   access_token: "mock-access-token",
-  refresh_token: "mock-refresh-token",
   expires_in: 3_600,
+  refresh_token: "mock-refresh-token",
   token_type: "bearer",
   user,
 });
 
-const createMockSubscription = (callback: Subscription["callback"]): Subscription => ({
-  id: "mock-subscription-id",
+const CREATE_MOCK_SUBSCRIPTION = (
+  callback: Subscription["callback"]
+): Subscription => ({
   callback,
+  id: "mock-subscription-id",
   unsubscribe: vi.fn(),
 });
 
@@ -72,74 +74,74 @@ const createMockSubscription = (callback: Subscription["callback"]): Subscriptio
  * Build a Supabase auth client mock that mirrors common behaviours used in tests.
  */
 export const createMockSupabaseAuthClient = (): SupabaseAuthMock => {
-  const user = createMockUser();
-  const session = createMockSession(user);
+  const user = CREATE_MOCK_USER();
+  const session = CREATE_MOCK_SESSION(user);
 
-  const getSession = createMockFn<AuthClient["getSession"]>(async () => ({
+  const getSession = CREATE_MOCK_FN<AuthClient["getSession"]>(async () => ({
     data: { session: null },
     error: null,
   }));
 
-  const onAuthStateChange = createMockFn<AuthClient["onAuthStateChange"]>(
+  const onAuthStateChange = CREATE_MOCK_FN<AuthClient["onAuthStateChange"]>(
     (callback) => ({
-      data: { subscription: createMockSubscription(callback) },
+      data: { subscription: CREATE_MOCK_SUBSCRIPTION(callback) },
     })
   );
 
-  const signUp = createMockFn<AuthClient["signUp"]>(async () => ({
-    data: { user, session },
+  const signUp = CREATE_MOCK_FN<AuthClient["signUp"]>(async () => ({
+    data: { session, user },
     error: null,
   }));
 
-  const signInWithPassword = createMockFn<AuthClient["signInWithPassword"]>(
+  const signInWithPassword = CREATE_MOCK_FN<AuthClient["signInWithPassword"]>(
     async () => ({
-      data: { user, session, weakPassword: undefined },
+      data: { session, user, weakPassword: undefined },
       error: null,
     })
   );
 
-  const signOut = createMockFn<AuthClient["signOut"]>(async () => ({
+  const signOut = CREATE_MOCK_FN<AuthClient["signOut"]>(async () => ({
     error: null,
   }));
 
-  const resetPasswordForEmail = createMockFn<AuthClient["resetPasswordForEmail"]>(
+  const resetPasswordForEmail = CREATE_MOCK_FN<AuthClient["resetPasswordForEmail"]>(
     async () => ({
       data: {},
       error: null,
     })
   );
 
-  const updateUser = createMockFn<AuthClient["updateUser"]>(async () => ({
+  const updateUser = CREATE_MOCK_FN<AuthClient["updateUser"]>(async () => ({
     data: { user },
     error: null,
   }));
 
-  const getUser = createMockFn<AuthClient["getUser"]>(async () => ({
+  const getUser = CREATE_MOCK_FN<AuthClient["getUser"]>(async () => ({
     data: { user },
     error: null,
   }));
 
-  const signInWithOAuth = createMockFn<AuthClient["signInWithOAuth"]>(async () => ({
+  const signInWithOAuth = CREATE_MOCK_FN<AuthClient["signInWithOAuth"]>(async () => ({
     data: { provider: "github", url: "" },
     error: null,
   }));
 
-  const refreshSession = createMockFn<AuthClient["refreshSession"]>(async () => ({
+  const refreshSession = CREATE_MOCK_FN<AuthClient["refreshSession"]>(async () => ({
     data: { session, user },
     error: null,
   }));
 
   return {
     getSession,
+    getUser,
     onAuthStateChange,
-    signUp,
+    refreshSession,
+    resetPasswordForEmail,
+    signInWithOAuth,
     signInWithPassword,
     signOut,
-    resetPasswordForEmail,
+    signUp,
     updateUser,
-    getUser,
-    signInWithOAuth,
-    refreshSession,
   };
 };
 
@@ -216,10 +218,10 @@ export const createMockSupabaseClient = (): SupabaseClient<UnknownRecord> => {
   }));
 
   const storageFrom = vi.fn(() => ({
-    upload: vi.fn(async () => ({ data: null, error: null })),
-    remove: vi.fn(async () => ({ data: null, error: null })),
     download: vi.fn(async () => ({ data: null, error: null })),
     list: vi.fn(async () => ({ data: [], error: null })),
+    remove: vi.fn(async () => ({ data: null, error: null })),
+    upload: vi.fn(async () => ({ data: null, error: null })),
   }));
 
   const storage = {
@@ -230,10 +232,10 @@ export const createMockSupabaseClient = (): SupabaseClient<UnknownRecord> => {
 
   return {
     auth,
-    from,
     channel,
-    storage,
+    from,
     removeChannel: vi.fn(),
+    storage,
   } as unknown as SupabaseClient<UnknownRecord>;
 };
 
@@ -248,30 +250,30 @@ export const createMockUseQueryResult = <TData, TError = Error>(
 ): UseQueryResult<TData, TError> => {
   const result: any = {
     data: (data ?? undefined) as TData | undefined,
-    error: (error ?? null) as TError | null,
-    isLoading,
-    isError,
-    isSuccess: !isLoading && !isError && data !== null,
-    isPending: isLoading,
-    isFetching: false,
-    isFetched: !isLoading,
-    isFetchedAfterMount: !isLoading,
-    isRefetching: false,
-    isLoadingError: isError && isLoading,
-    isRefetchError: false,
-    isPlaceholderData: false,
-    isPaused: false,
-    isStale: false,
     dataUpdatedAt: Date.now(),
+    error: (error ?? null) as TError | null,
+    errorUpdateCount: error ? 1 : 0,
     errorUpdatedAt: error ? Date.now() : 0,
     failureCount: error ? 1 : 0,
     failureReason: error ?? null,
-    errorUpdateCount: error ? 1 : 0,
-    status: isLoading ? "pending" : isError ? "error" : "success",
     fetchStatus: "idle",
-    isInitialLoading: isLoading,
-    promise: Promise.resolve(data as TData),
     isEnabled: !isLoading,
+    isError,
+    isFetched: !isLoading,
+    isFetchedAfterMount: !isLoading,
+    isFetching: false,
+    isInitialLoading: isLoading,
+    isLoading,
+    isLoadingError: isError && isLoading,
+    isPaused: false,
+    isPending: isLoading,
+    isPlaceholderData: false,
+    isRefetchError: false,
+    isRefetching: false,
+    isStale: false,
+    isSuccess: !isLoading && !isError && data !== null,
+    promise: Promise.resolve(data as TData),
+    status: isLoading ? "pending" : isError ? "error" : "success",
   };
 
   result.refetch = vi.fn(async () => result);
@@ -288,19 +290,19 @@ export const createMockInfiniteQueryResult = <TData, TError = Error>(
   const result: any = {
     data: undefined,
     error: null,
-    status: "success",
+    fetchNextPage: vi.fn(),
+    fetchPreviousPage: vi.fn(),
     fetchStatus: "idle",
-    isLoading: false,
+    hasNextPage: false,
+    hasPreviousPage: false,
     isError: false,
-    isSuccess: true,
     isFetching: false,
     isFetchingNextPage: false,
     isFetchingPreviousPage: false,
-    hasNextPage: false,
-    hasPreviousPage: false,
-    fetchNextPage: vi.fn(),
-    fetchPreviousPage: vi.fn(),
+    isLoading: false,
+    isSuccess: true,
     refetch: vi.fn(),
+    status: "success",
     ...overrides,
   };
 

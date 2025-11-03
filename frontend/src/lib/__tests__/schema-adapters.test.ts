@@ -9,77 +9,77 @@ import {
 } from "../schema-adapters";
 
 // Mock console.error to suppress error logs during testing
-const mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+const MOCK_CONSOLE_ERROR = vi.spyOn(console, "error").mockImplementation(() => {});
 
 describe("FrontendSchemaAdapter", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockConsoleError.mockClear();
+    MOCK_CONSOLE_ERROR.mockClear();
   });
 
   describe("apiTripToFrontend", () => {
     const baseApiTrip: ApiTrip = {
-      id: "trip-123",
-      user_id: "user-456",
-      title: "European Adventure",
+      budget: 3000,
+      created_at: "2025-01-01T00:00:00Z",
       description: "Amazing trip through Europe",
-      start_date: "2025-06-01",
-      end_date: "2025-06-15",
       destinations: [
         {
-          name: "Paris",
-          country: "France",
+          arrival_date: "2025-06-01",
           city: "Paris",
           coordinates: { latitude: 48.8566, longitude: 2.3522 },
-          arrival_date: "2025-06-01",
+          country: "France",
           departure_date: "2025-06-05",
           duration_days: 4,
+          name: "Paris",
         },
       ],
-      budget: 3000,
-      visibility: "private",
-      tags: ["culture", "history"],
+      end_date: "2025-06-15",
+      id: "trip-123",
       preferences: { accommodation: { type: "hotel" } },
+      start_date: "2025-06-01",
       status: "planning",
-      created_at: "2025-01-01T00:00:00Z",
+      tags: ["culture", "history"],
+      title: "European Adventure",
       updated_at: "2025-01-01T12:00:00Z",
+      user_id: "user-456",
+      visibility: "private",
     };
 
     it("should convert API trip to frontend format with all fields", () => {
       const result = FrontendSchemaAdapter.apiTripToFrontend(baseApiTrip);
 
       expect(result).toEqual({
-        id: "trip-123",
-        user_id: "user-456",
-        name: "European Adventure", // API title -> frontend name
-        title: "European Adventure", // Keep both for compatibility
+        budget: 3000,
+        created_at: "2025-01-01T00:00:00Z",
+        createdAt: "2025-01-01T00:00:00Z", // Camel case version
         description: "Amazing trip through Europe",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
-        startDate: "2025-06-01", // Camel case version
-        endDate: "2025-06-15", // Camel case version
         destinations: [
           {
+            activities: [],
+            coordinates: { latitude: 48.8566, longitude: 2.3522 },
+            country: "France",
+            endDate: "2025-06-05",
+            estimatedCost: 0,
             id: expect.stringMatching(/^Paris-\d+$/), // Generated ID
             name: "Paris",
-            country: "France",
-            coordinates: { latitude: 48.8566, longitude: 2.3522 },
             startDate: "2025-06-01",
-            endDate: "2025-06-05",
-            activities: [],
-            estimatedCost: 0,
           },
         ],
-        budget: 3000,
-        visibility: "private",
+        end_date: "2025-06-15",
+        endDate: "2025-06-15", // Camel case version
+        id: "trip-123",
         isPublic: false, // Legacy field derived from visibility
-        tags: ["culture", "history"],
+        name: "European Adventure", // API title -> frontend name
         preferences: { accommodation: { type: "hotel" } },
+        start_date: "2025-06-01",
+        startDate: "2025-06-01", // Camel case version
         status: "planning",
-        created_at: "2025-01-01T00:00:00Z",
+        tags: ["culture", "history"],
+        title: "European Adventure", // Keep both for compatibility
         updated_at: "2025-01-01T12:00:00Z",
-        createdAt: "2025-01-01T00:00:00Z", // Camel case version
         updatedAt: "2025-01-01T12:00:00Z", // Camel case version
+        user_id: "user-456",
+        visibility: "private",
       });
     });
 
@@ -93,18 +93,18 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle optional fields gracefully", () => {
       const minimalTrip: ApiTrip = {
-        id: "trip-minimal",
-        user_id: "user-123",
-        title: "Minimal Trip",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
-        destinations: [],
-        visibility: "private",
-        tags: [],
-        preferences: {},
-        status: "planning",
         created_at: "2025-01-01T00:00:00Z",
+        destinations: [],
+        end_date: "2025-06-15",
+        id: "trip-minimal",
+        preferences: {},
+        start_date: "2025-06-01",
+        status: "planning",
+        tags: [],
+        title: "Minimal Trip",
         updated_at: "2025-01-01T00:00:00Z",
+        user_id: "user-123",
+        visibility: "private",
       };
 
       const result = FrontendSchemaAdapter.apiTripToFrontend(minimalTrip);
@@ -134,64 +134,64 @@ describe("FrontendSchemaAdapter", () => {
 
   describe("frontendTripToApi", () => {
     const baseFrontendTrip: Trip = {
-      id: "trip-123",
-      user_id: "user-456",
-      title: "European Adventure",
-      name: "European Adventure",
+      budget: 3000,
+      created_at: "2025-01-01T00:00:00Z",
+      createdAt: "2025-01-01T00:00:00Z",
       description: "Amazing trip through Europe",
-      start_date: "2025-06-01",
-      end_date: "2025-06-15",
-      startDate: "2025-06-01",
-      endDate: "2025-06-15",
       destinations: [
         {
+          activities: ["sightseeing"],
+          coordinates: { latitude: 48.8566, longitude: 2.3522 },
+          country: "France",
+          endDate: "2025-06-05",
+          estimatedCost: 1000,
           id: "dest-1",
           name: "Paris",
-          country: "France",
-          coordinates: { latitude: 48.8566, longitude: 2.3522 },
           startDate: "2025-06-01",
-          endDate: "2025-06-05",
-          activities: ["sightseeing"],
-          estimatedCost: 1000,
         },
       ],
-      budget: 3000,
-      visibility: "private",
+      end_date: "2025-06-15",
+      endDate: "2025-06-15",
+      id: "trip-123",
       isPublic: false,
-      tags: ["culture", "history"],
+      name: "European Adventure",
       preferences: { accommodation: { type: "hotel" } },
+      start_date: "2025-06-01",
+      startDate: "2025-06-01",
       status: "planning",
-      created_at: "2025-01-01T00:00:00Z",
+      tags: ["culture", "history"],
+      title: "European Adventure",
       updated_at: "2025-01-01T12:00:00Z",
-      createdAt: "2025-01-01T00:00:00Z",
       updatedAt: "2025-01-01T12:00:00Z",
+      user_id: "user-456",
+      visibility: "private",
     };
 
     it("should convert frontend trip to API format", () => {
       const result = FrontendSchemaAdapter.frontendTripToApi(baseFrontendTrip);
 
       expect(result).toEqual({
-        id: "trip-123",
-        user_id: "user-456",
-        title: "European Adventure",
+        budget: 3000,
         description: "Amazing trip through Europe",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
         destinations: [
           {
-            name: "Paris",
-            country: "France",
+            arrival_date: "2025-06-01",
             city: "France", // Uses country as city fallback
             coordinates: { latitude: 48.8566, longitude: 2.3522 },
-            arrival_date: "2025-06-01",
+            country: "France",
             departure_date: "2025-06-05",
+            name: "Paris",
           },
         ],
-        budget: 3000,
-        visibility: "private",
-        tags: ["culture", "history"],
+        end_date: "2025-06-15",
+        id: "trip-123",
         preferences: { accommodation: { type: "hotel" } },
+        start_date: "2025-06-01",
         status: "planning",
+        tags: ["culture", "history"],
+        title: "European Adventure",
+        user_id: "user-456",
+        visibility: "private",
       });
     });
 
@@ -205,10 +205,10 @@ describe("FrontendSchemaAdapter", () => {
     it("should prefer snake_case dates over camelCase", () => {
       const tripWithDifferentDates = {
         ...baseFrontendTrip,
-        start_date: "2025-07-01",
-        startDate: "2025-06-01",
         end_date: "2025-07-15",
         endDate: "2025-06-15",
+        start_date: "2025-07-01",
+        startDate: "2025-06-01",
       };
 
       const result = FrontendSchemaAdapter.frontendTripToApi(tripWithDifferentDates);
@@ -220,8 +220,8 @@ describe("FrontendSchemaAdapter", () => {
     it("should fallback to camelCase dates when snake_case not available", () => {
       const tripWithCamelCaseDates = {
         ...baseFrontendTrip,
-        start_date: undefined,
         end_date: undefined,
+        start_date: undefined,
       };
 
       const result = FrontendSchemaAdapter.frontendTripToApi(tripWithCamelCaseDates);
@@ -233,8 +233,8 @@ describe("FrontendSchemaAdapter", () => {
     it("should handle legacy isPublic field", () => {
       const publicTrip = {
         ...baseFrontendTrip,
-        visibility: undefined,
         isPublic: true,
+        visibility: undefined,
       };
 
       const result = FrontendSchemaAdapter.frontendTripToApi(publicTrip);
@@ -244,10 +244,10 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should provide default values for missing fields", () => {
       const minimalTrip: Trip = {
+        destinations: [],
         id: "trip-minimal",
         name: "Minimal Trip",
         title: "Minimal Trip",
-        destinations: [],
       };
 
       const result = FrontendSchemaAdapter.frontendTripToApi(minimalTrip);
@@ -269,27 +269,27 @@ describe("FrontendSchemaAdapter", () => {
 
   describe("apiDestinationToFrontend", () => {
     const baseApiDestination: ApiDestination = {
-      name: "Paris",
-      country: "France",
+      arrival_date: "2025-06-01",
       city: "Paris",
       coordinates: { latitude: 48.8566, longitude: 2.3522 },
-      arrival_date: "2025-06-01",
+      country: "France",
       departure_date: "2025-06-05",
       duration_days: 4,
+      name: "Paris",
     };
 
     it("should convert API destination to frontend format", () => {
       const result = FrontendSchemaAdapter.apiDestinationToFrontend(baseApiDestination);
 
       expect(result).toEqual({
+        activities: [],
+        coordinates: { latitude: 48.8566, longitude: 2.3522 },
+        country: "France",
+        endDate: "2025-06-05",
+        estimatedCost: 0,
         id: expect.stringMatching(/^Paris-\d+$/), // Generated ID with timestamp
         name: "Paris",
-        country: "France",
-        coordinates: { latitude: 48.8566, longitude: 2.3522 },
         startDate: "2025-06-01",
-        endDate: "2025-06-05",
-        activities: [],
-        estimatedCost: 0,
       });
     });
 
@@ -315,14 +315,14 @@ describe("FrontendSchemaAdapter", () => {
       const result = FrontendSchemaAdapter.apiDestinationToFrontend(minimalDestination);
 
       expect(result).toEqual({
+        activities: [],
+        coordinates: undefined,
+        country: "",
+        endDate: undefined,
+        estimatedCost: 0,
         id: expect.stringMatching(/^Rome-\d+$/),
         name: "Rome",
-        country: "",
-        coordinates: undefined,
         startDate: undefined,
-        endDate: undefined,
-        activities: [],
-        estimatedCost: 0,
       });
     });
 
@@ -335,14 +335,14 @@ describe("FrontendSchemaAdapter", () => {
 
   describe("frontendDestinationToApi", () => {
     const baseFrontendDestination: Destination = {
+      activities: ["sightseeing", "museums"],
+      coordinates: { latitude: 48.8566, longitude: 2.3522 },
+      country: "France",
+      endDate: "2025-06-05",
+      estimatedCost: 1000,
       id: "dest-123",
       name: "Paris",
-      country: "France",
-      coordinates: { latitude: 48.8566, longitude: 2.3522 },
       startDate: "2025-06-01",
-      endDate: "2025-06-05",
-      activities: ["sightseeing", "museums"],
-      estimatedCost: 1000,
     };
 
     it("should convert frontend destination to API format", () => {
@@ -351,31 +351,31 @@ describe("FrontendSchemaAdapter", () => {
       );
 
       expect(result).toEqual({
-        name: "Paris",
-        country: "France",
+        arrival_date: "2025-06-01",
         city: "France", // Uses country as city fallback
         coordinates: { latitude: 48.8566, longitude: 2.3522 },
-        arrival_date: "2025-06-01",
+        country: "France",
         departure_date: "2025-06-05",
+        name: "Paris",
       });
     });
 
     it("should handle missing optional fields", () => {
       const minimalDestination: Destination = {
+        country: "Italy",
         id: "dest-minimal",
         name: "Rome",
-        country: "Italy",
       };
 
       const result = FrontendSchemaAdapter.frontendDestinationToApi(minimalDestination);
 
       expect(result).toEqual({
-        name: "Rome",
-        country: "Italy",
+        arrival_date: undefined,
         city: "Italy", // Uses country as city fallback
         coordinates: undefined,
-        arrival_date: undefined,
+        country: "Italy",
         departure_date: undefined,
+        name: "Rome",
       });
     });
 
@@ -391,51 +391,51 @@ describe("FrontendSchemaAdapter", () => {
   describe("normalizeTrip", () => {
     it("should normalize trip with complete data", () => {
       const partialTrip: Partial<Trip> = {
-        id: "trip-123",
-        title: "Test Trip",
+        budget: 2000,
+        created_at: "2025-01-01T00:00:00Z",
+        currency: "EUR",
         description: "Test description",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
         destinations: [
           {
+            country: "France",
             id: "dest-1",
             name: "Paris",
-            country: "France",
           },
         ],
-        budget: 2000,
-        currency: "EUR",
-        visibility: "public",
-        tags: ["fun"],
+        end_date: "2025-06-15",
+        id: "trip-123",
         preferences: { test: "value" },
+        start_date: "2025-06-01",
         status: "confirmed",
-        created_at: "2025-01-01T00:00:00Z",
+        tags: ["fun"],
+        title: "Test Trip",
         updated_at: "2025-01-01T12:00:00Z",
+        visibility: "public",
       };
 
       const result = FrontendSchemaAdapter.normalizeTrip(partialTrip);
 
       expect(result).toEqual({
-        id: "trip-123",
-        name: "Test Trip",
-        title: "Test Trip",
-        description: "Test description",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
-        startDate: "2025-06-01",
-        endDate: "2025-06-15",
-        destinations: partialTrip.destinations,
         budget: 2000,
-        currency: "EUR",
-        visibility: "public",
-        isPublic: true,
-        tags: ["fun"],
-        preferences: { test: "value" },
-        status: "confirmed",
         created_at: "2025-01-01T00:00:00Z",
-        updated_at: "2025-01-01T12:00:00Z",
         createdAt: "2025-01-01T00:00:00Z",
+        currency: "EUR",
+        description: "Test description",
+        destinations: partialTrip.destinations,
+        end_date: "2025-06-15",
+        endDate: "2025-06-15",
+        id: "trip-123",
+        isPublic: true,
+        name: "Test Trip",
+        preferences: { test: "value" },
+        start_date: "2025-06-01",
+        startDate: "2025-06-01",
+        status: "confirmed",
+        tags: ["fun"],
+        title: "Test Trip",
+        updated_at: "2025-01-01T12:00:00Z",
         updatedAt: "2025-01-01T12:00:00Z",
+        visibility: "public",
       });
     });
 
@@ -472,10 +472,10 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should prefer snake_case fields over camelCase", () => {
       const tripWithBothFormats: Partial<Trip> = {
-        start_date: "2025-07-01",
-        startDate: "2025-06-01",
         created_at: "2025-01-01T00:00:00Z",
         createdAt: "2025-02-01T00:00:00Z",
+        start_date: "2025-07-01",
+        startDate: "2025-06-01",
       };
 
       const result = FrontendSchemaAdapter.normalizeTrip(tripWithBothFormats);
@@ -541,11 +541,11 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should apply overrides to default trip", () => {
       const overrides: Partial<Trip> = {
-        name: "Custom Trip",
         budget: 5000,
         currency: "EUR",
-        visibility: "public",
+        name: "Custom Trip",
         tags: ["adventure"],
+        visibility: "public",
       };
 
       const result = FrontendSchemaAdapter.createEmptyTrip(overrides);
@@ -572,18 +572,18 @@ describe("FrontendSchemaAdapter", () => {
 
   describe("validateTripForApi", () => {
     const validTrip: Trip = {
-      id: "trip-123",
-      title: "Valid Trip",
-      name: "Valid Trip",
-      start_date: "2025-06-01",
-      end_date: "2025-06-15",
       destinations: [
         {
+          country: "France",
           id: "dest-1",
           name: "Paris",
-          country: "France",
         },
       ],
+      end_date: "2025-06-15",
+      id: "trip-123",
+      name: "Valid Trip",
+      start_date: "2025-06-01",
+      title: "Valid Trip",
     };
 
     it("should validate a complete valid trip", () => {
@@ -628,8 +628,8 @@ describe("FrontendSchemaAdapter", () => {
     it("should validate end date is after start date", () => {
       const tripWithInvalidDates = {
         ...validTrip,
-        start_date: "2025-06-15",
         end_date: "2025-06-01", // End before start
+        start_date: "2025-06-15",
       };
       const result = FrontendSchemaAdapter.validateTripForApi(tripWithInvalidDates);
 
@@ -640,8 +640,8 @@ describe("FrontendSchemaAdapter", () => {
     it("should validate end date equal to start date", () => {
       const tripWithSameDates = {
         ...validTrip,
-        start_date: "2025-06-01",
         end_date: "2025-06-01", // Same dates
+        start_date: "2025-06-01",
       };
       const result = FrontendSchemaAdapter.validateTripForApi(tripWithSameDates);
 
@@ -659,11 +659,11 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should accumulate multiple validation errors", () => {
       const invalidTrip: Trip = {
+        destinations: [], // No destinations
+        end_date: "2025-06-01", // End before start
         id: "trip-invalid",
         name: "", // Empty name
-        destinations: [], // No destinations
         start_date: "2025-06-15",
-        end_date: "2025-06-01", // End before start
       };
 
       const result = FrontendSchemaAdapter.validateTripForApi(invalidTrip);
@@ -678,10 +678,10 @@ describe("FrontendSchemaAdapter", () => {
     it("should work with camelCase date fields", () => {
       const tripWithCamelCaseDates = {
         ...validTrip,
-        start_date: undefined,
         end_date: undefined,
-        startDate: "2025-06-01",
         endDate: "2025-06-15",
+        start_date: undefined,
+        startDate: "2025-06-01",
       };
 
       const result = FrontendSchemaAdapter.validateTripForApi(tripWithCamelCaseDates);
@@ -693,8 +693,8 @@ describe("FrontendSchemaAdapter", () => {
     it("should handle invalid date strings gracefully", () => {
       const tripWithInvalidDates = {
         ...validTrip,
-        start_date: "invalid-date",
         end_date: "another-invalid-date",
+        start_date: "invalid-date",
       };
 
       const result = FrontendSchemaAdapter.validateTripForApi(tripWithInvalidDates);
@@ -726,8 +726,8 @@ describe("FrontendSchemaAdapter", () => {
         response: {
           data: {
             detail: {
-              type: "value_error",
               msg: "Start date must be in the future",
+              type: "value_error",
             },
           },
         },
@@ -812,22 +812,22 @@ describe("FrontendSchemaAdapter", () => {
 
   describe("Property-based testing", () => {
     const generateRandomTrip = (): Partial<Trip> => ({
-      id: `trip-${Math.random().toString(36).substr(2, 9)}`,
-      title: `Trip ${Math.random().toString(36).substr(2, 9)}`,
-      start_date: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0],
+      budget: Math.floor(Math.random() * 10000),
       end_date: new Date(
         Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000
       )
         .toISOString()
         .split("T")[0],
-      budget: Math.floor(Math.random() * 10000),
-      visibility: Math.random() > 0.5 ? "public" : ("private" as const),
+      id: `trip-${Math.random().toString(36).substr(2, 9)}`,
+      start_date: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
       tags: Array.from(
         { length: Math.floor(Math.random() * 5) },
         () => `tag-${Math.random().toString(36).substr(2, 5)}`
       ),
+      title: `Trip ${Math.random().toString(36).substr(2, 9)}`,
+      visibility: Math.random() > 0.5 ? "public" : ("private" as const),
     });
 
     it("should maintain data integrity through conversion cycles", () => {
@@ -846,11 +846,6 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle various destination configurations", () => {
       const generateDestination = (): ApiDestination => ({
-        name: `City-${Math.random().toString(36).substr(2, 5)}`,
-        country:
-          Math.random() > 0.5
-            ? `Country-${Math.random().toString(36).substr(2, 5)}`
-            : undefined,
         coordinates:
           Math.random() > 0.5
             ? {
@@ -858,6 +853,11 @@ describe("FrontendSchemaAdapter", () => {
                 longitude: (Math.random() - 0.5) * 360,
               }
             : undefined,
+        country:
+          Math.random() > 0.5
+            ? `Country-${Math.random().toString(36).substr(2, 5)}`
+            : undefined,
+        name: `City-${Math.random().toString(36).substr(2, 5)}`,
       });
 
       for (let i = 0; i < 10; i++) {
@@ -877,21 +877,21 @@ describe("FrontendSchemaAdapter", () => {
   describe("Edge Cases and Error Handling", () => {
     it("should handle extremely large datasets", () => {
       const largeTrip: ApiTrip = {
-        id: "large-trip",
-        user_id: "user-123",
-        title: "Large Trip",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
-        destinations: Array.from({ length: 1000 }, (_, i) => ({
-          name: `Destination ${i}`,
-          country: `Country ${i}`,
-        })),
-        visibility: "private",
-        tags: Array.from({ length: 100 }, (_, i) => `tag-${i}`),
-        preferences: {},
-        status: "planning",
         created_at: "2025-01-01T00:00:00Z",
+        destinations: Array.from({ length: 1000 }, (_, i) => ({
+          country: `Country ${i}`,
+          name: `Destination ${i}`,
+        })),
+        end_date: "2025-06-15",
+        id: "large-trip",
+        preferences: {},
+        start_date: "2025-06-01",
+        status: "planning",
+        tags: Array.from({ length: 100 }, (_, i) => `tag-${i}`),
+        title: "Large Trip",
         updated_at: "2025-01-01T00:00:00Z",
+        user_id: "user-123",
+        visibility: "private",
       };
 
       const result = FrontendSchemaAdapter.apiTripToFrontend(largeTrip);
@@ -904,11 +904,11 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle malformed coordinate data", () => {
       const destinationWithBadCoords: ApiDestination = {
-        name: "Bad Coords City",
         coordinates: {
           latitude: Number.NaN,
           longitude: Number.POSITIVE_INFINITY,
         },
+        name: "Bad Coords City",
       };
 
       const result = FrontendSchemaAdapter.apiDestinationToFrontend(
@@ -928,18 +928,18 @@ describe("FrontendSchemaAdapter", () => {
       circularRef.self = circularRef;
 
       const tripWithCircularRef: ApiTrip = {
-        id: "circular-trip",
-        user_id: "user-123",
-        title: "Circular Trip",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
-        destinations: [],
-        visibility: "private",
-        tags: [],
-        preferences: circularRef,
-        status: "planning",
         created_at: "2025-01-01T00:00:00Z",
+        destinations: [],
+        end_date: "2025-06-15",
+        id: "circular-trip",
+        preferences: circularRef,
+        start_date: "2025-06-01",
+        status: "planning",
+        tags: [],
+        title: "Circular Trip",
         updated_at: "2025-01-01T00:00:00Z",
+        user_id: "user-123",
+        visibility: "private",
       };
 
       // Should not crash even with circular references
@@ -950,11 +950,11 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle null and undefined values in nested objects", () => {
       const tripWithNulls: Partial<Trip> = {
-        id: null as any,
-        title: undefined,
         destinations: null as any,
-        tags: undefined,
+        id: null as any,
         preferences: null as any,
+        tags: undefined,
+        title: undefined,
       };
 
       const result = FrontendSchemaAdapter.normalizeTrip(tripWithNulls);
@@ -968,23 +968,23 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle special characters in trip names and descriptions", () => {
       const specialCharsTrip: ApiTrip = {
-        id: "special-trip",
-        user_id: "user-123",
-        title: "🌍 Trip with émojis & spëcial chârs! 中文",
+        created_at: "2025-01-01T00:00:00Z",
         description: "Description with\nnewlines\tand\ttabs\r\nand more 特殊字符",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
         destinations: [
           {
             name: "Pàris with àccents 巴黎",
           },
         ],
-        visibility: "private",
-        tags: ["🏖️", "spécial", "中文标签"],
+        end_date: "2025-06-15",
+        id: "special-trip",
         preferences: {},
+        start_date: "2025-06-01",
         status: "planning",
-        created_at: "2025-01-01T00:00:00Z",
+        tags: ["🏖️", "spécial", "中文标签"],
+        title: "🌍 Trip with émojis & spëcial chârs! 中文",
         updated_at: "2025-01-01T00:00:00Z",
+        user_id: "user-123",
+        visibility: "private",
       };
 
       const result = FrontendSchemaAdapter.apiTripToFrontend(specialCharsTrip);
@@ -1000,24 +1000,24 @@ describe("FrontendSchemaAdapter", () => {
     it("should handle extremely long strings", () => {
       const longString = "a".repeat(10000);
       const tripWithLongStrings: ApiTrip = {
-        id: "long-trip",
-        user_id: "user-123",
-        title: longString,
+        created_at: "2025-01-01T00:00:00Z",
         description: longString,
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
         destinations: [
           {
-            name: longString,
             country: longString,
+            name: longString,
           },
         ],
-        visibility: "private",
-        tags: [longString],
+        end_date: "2025-06-15",
+        id: "long-trip",
         preferences: { longKey: longString },
+        start_date: "2025-06-01",
         status: "planning",
-        created_at: "2025-01-01T00:00:00Z",
+        tags: [longString],
+        title: longString,
         updated_at: "2025-01-01T00:00:00Z",
+        user_id: "user-123",
+        visibility: "private",
       };
 
       const result = FrontendSchemaAdapter.apiTripToFrontend(tripWithLongStrings);
@@ -1035,21 +1035,21 @@ describe("FrontendSchemaAdapter", () => {
 
       for (let i = 0; i < 1000; i++) {
         const trip: ApiTrip = {
-          id: `trip-${i}`,
-          user_id: "user-123",
-          title: `Trip ${i}`,
-          start_date: "2025-06-01",
-          end_date: "2025-06-15",
-          destinations: Array.from({ length: 10 }, (_, j) => ({
-            name: `Destination ${j}`,
-            country: `Country ${j}`,
-          })),
-          visibility: "private",
-          tags: [`tag-${i}`],
-          preferences: { key: `value-${i}` },
-          status: "planning",
           created_at: "2025-01-01T00:00:00Z",
+          destinations: Array.from({ length: 10 }, (_, j) => ({
+            country: `Country ${j}`,
+            name: `Destination ${j}`,
+          })),
+          end_date: "2025-06-15",
+          id: `trip-${i}`,
+          preferences: { key: `value-${i}` },
+          start_date: "2025-06-01",
+          status: "planning",
+          tags: [`tag-${i}`],
+          title: `Trip ${i}`,
           updated_at: "2025-01-01T00:00:00Z",
+          user_id: "user-123",
+          visibility: "private",
         };
 
         FrontendSchemaAdapter.apiTripToFrontend(trip);
@@ -1065,11 +1065,11 @@ describe("FrontendSchemaAdapter", () => {
     it("should handle validation efficiently", () => {
       const trips = Array.from({ length: 1000 }, (_, i) =>
         FrontendSchemaAdapter.createEmptyTrip({
-          id: `trip-${i}`,
-          title: `Trip ${i}`,
-          start_date: "2025-06-01",
+          destinations: [{ country: "Test", id: "dest-1", name: "Test" }],
           end_date: "2025-06-15",
-          destinations: [{ id: "dest-1", name: "Test", country: "Test" }],
+          id: `trip-${i}`,
+          start_date: "2025-06-01",
+          title: `Trip ${i}`,
         })
       );
 
@@ -1091,18 +1091,18 @@ describe("FrontendSchemaAdapter", () => {
     it("should handle legacy trip format", () => {
       // Simulate old trip format that might exist in storage
       const legacyTrip: any = {
-        id: "legacy-trip",
-        name: "Legacy Trip", // Old format used 'name' instead of 'title'
-        startDate: "2025-06-01", // Old format used camelCase
-        endDate: "2025-06-15",
-        isPublic: true, // Old format used boolean instead of visibility enum
         destinations: [
           {
+            country: "France",
             id: "dest-1",
             name: "Paris",
-            country: "France",
           },
         ],
+        endDate: "2025-06-15",
+        id: "legacy-trip",
+        isPublic: true, // Old format used boolean instead of visibility enum
+        name: "Legacy Trip", // Old format used 'name' instead of 'title'
+        startDate: "2025-06-01", // Old format used camelCase
       };
 
       const normalized = FrontendSchemaAdapter.normalizeTrip(legacyTrip);
@@ -1117,9 +1117,9 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle mixed date formats", () => {
       const mixedTrip: Partial<Trip> = {
-        start_date: "2025-06-01",
-        endDate: "2025-06-15", // Mixed formats
         created_at: "2025-01-01T00:00:00Z",
+        endDate: "2025-06-15", // Mixed formats
+        start_date: "2025-06-01",
         updatedAt: "2025-01-01T12:00:00Z", // Mixed formats
       };
 

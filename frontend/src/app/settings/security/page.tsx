@@ -57,12 +57,12 @@ interface SecuritySettings {
  */
 export default function SecuritySettingsPage() {
   const [settings, setSettings] = useState<SecuritySettings>({
-    twoFactorEnabled: false,
-    emailNotifications: true,
-    securityAlerts: true,
-    loginNotifications: true,
-    deviceTracking: true,
     dataEncryption: true,
+    deviceTracking: true,
+    emailNotifications: true,
+    loginNotifications: true,
+    securityAlerts: true,
+    twoFactorEnabled: false,
   });
   const [isLoading, setIsLoading] = useState(false);
 

@@ -88,41 +88,41 @@ describe("User Profile Store", () => {
 
   describe("Profile Management", () => {
     const mockProfile: UserProfile = {
-      id: "user-1",
+      createdAt: "2025-01-01T00:00:00Z",
       email: "test@example.com",
+      favoriteDestinations: [],
+      id: "user-1",
       personalInfo: {
+        bio: "Travel enthusiast",
+        displayName: "John Doe",
         firstName: "John",
         lastName: "Doe",
-        displayName: "John Doe",
-        bio: "Travel enthusiast",
         location: "New York, NY",
         phoneNumber: "+1234567890",
       },
-      travelPreferences: {
-        preferredCabinClass: "business",
-        preferredAirlines: ["Delta", "United"],
-        excludedAirlines: [],
-        maxLayovers: 1,
-        preferredAccommodationType: "hotel",
-        preferredHotelChains: [],
-        requireWifi: true,
-        requireBreakfast: true,
-        requireParking: false,
-        requireGym: false,
-        requirePool: false,
-        accessibilityRequirements: [],
-        dietaryRestrictions: [],
-      },
       privacySettings: {
-        profileVisibility: "friends",
-        showTravelHistory: true,
         allowDataSharing: false,
         enableAnalytics: true,
         enableLocationTracking: false,
+        profileVisibility: "friends",
+        showTravelHistory: true,
       },
-      favoriteDestinations: [],
       travelDocuments: [],
-      createdAt: "2025-01-01T00:00:00Z",
+      travelPreferences: {
+        accessibilityRequirements: [],
+        dietaryRestrictions: [],
+        excludedAirlines: [],
+        maxLayovers: 1,
+        preferredAccommodationType: "hotel",
+        preferredAirlines: ["Delta", "United"],
+        preferredCabinClass: "business",
+        preferredHotelChains: [],
+        requireBreakfast: true,
+        requireGym: false,
+        requireParking: false,
+        requirePool: false,
+        requireWifi: true,
+      },
       updatedAt: "2025-01-01T00:00:00Z",
     };
 
@@ -153,9 +153,9 @@ describe("User Profile Store", () => {
         const { result } = renderHook(() => useUserProfileStore());
 
         const updates: Partial<PersonalInfo> = {
+          bio: "Updated bio",
           firstName: "Jane",
           lastName: "Smith",
-          bio: "Updated bio",
           location: "San Francisco, CA",
         };
 
@@ -221,9 +221,9 @@ describe("User Profile Store", () => {
         const { result } = renderHook(() => useUserProfileStore());
 
         const updates: Partial<TravelPreferences> = {
-          preferredCabinClass: "first",
           maxLayovers: 0,
           preferredAirlines: ["Lufthansa", "Emirates"],
+          preferredCabinClass: "first",
           requireBreakfast: false,
           requirePool: true,
         };
@@ -291,10 +291,10 @@ describe("User Profile Store", () => {
         const { result } = renderHook(() => useUserProfileStore());
 
         const updates: Partial<PrivacySettings> = {
-          profileVisibility: "public",
-          showTravelHistory: false,
           allowDataSharing: true,
           enableAnalytics: false,
+          profileVisibility: "public",
+          showTravelHistory: false,
         };
 
         let updateResult: boolean;
@@ -335,11 +335,11 @@ describe("User Profile Store", () => {
       act(() => {
         useUserProfileStore.setState({
           profile: {
-            id: "user-1",
+            createdAt: "2025-01-01T00:00:00Z",
             email: "test@example.com",
             favoriteDestinations: [],
+            id: "user-1",
             travelDocuments: [],
-            createdAt: "2025-01-01T00:00:00Z",
             updatedAt: "2025-01-01T00:00:00Z",
           },
         });
@@ -445,11 +445,11 @@ describe("User Profile Store", () => {
       act(() => {
         useUserProfileStore.setState({
           profile: {
-            id: "user-1",
+            createdAt: "2025-01-01T00:00:00Z",
             email: "test@example.com",
             favoriteDestinations: [],
+            id: "user-1",
             travelDocuments: [],
-            createdAt: "2025-01-01T00:00:00Z",
             updatedAt: "2025-01-01T00:00:00Z",
           },
         });
@@ -460,8 +460,8 @@ describe("User Profile Store", () => {
       const { result } = renderHook(() => useUserProfileStore());
 
       const destination = {
-        name: "Paris",
         country: "France",
+        name: "Paris",
         notes: "Beautiful city",
       };
 
@@ -483,8 +483,8 @@ describe("User Profile Store", () => {
 
       // First add destinations
       act(() => {
-        result.current.addFavoriteDestination({ name: "Paris", country: "France" });
-        result.current.addFavoriteDestination({ name: "Tokyo", country: "Japan" });
+        result.current.addFavoriteDestination({ country: "France", name: "Paris" });
+        result.current.addFavoriteDestination({ country: "Japan", name: "Tokyo" });
       });
 
       expect(result.current.profile?.favoriteDestinations).toHaveLength(2);
@@ -503,7 +503,7 @@ describe("User Profile Store", () => {
       const { result } = renderHook(() => useUserProfileStore());
 
       act(() => {
-        result.current.addFavoriteDestination({ name: "Paris", country: "France" });
+        result.current.addFavoriteDestination({ country: "France", name: "Paris" });
       });
 
       const destinationId = result.current.profile?.favoriteDestinations[0].id;
@@ -525,7 +525,7 @@ describe("User Profile Store", () => {
       const { result } = renderHook(() => useUserProfileStore());
 
       act(() => {
-        result.current.addFavoriteDestination({ name: "Paris", country: "France" });
+        result.current.addFavoriteDestination({ country: "France", name: "Paris" });
       });
 
       const destinationId = result.current.profile?.favoriteDestinations[0].id;
@@ -553,7 +553,7 @@ describe("User Profile Store", () => {
       });
 
       act(() => {
-        result.current.addFavoriteDestination({ name: "Paris", country: "France" });
+        result.current.addFavoriteDestination({ country: "France", name: "Paris" });
       });
 
       expect(result.current.profile).toBeNull();
@@ -565,11 +565,11 @@ describe("User Profile Store", () => {
       act(() => {
         useUserProfileStore.setState({
           profile: {
-            id: "user-1",
+            createdAt: "2025-01-01T00:00:00Z",
             email: "test@example.com",
             favoriteDestinations: [],
+            id: "user-1",
             travelDocuments: [],
-            createdAt: "2025-01-01T00:00:00Z",
             updatedAt: "2025-01-01T00:00:00Z",
           },
         });
@@ -580,11 +580,11 @@ describe("User Profile Store", () => {
       const { result } = renderHook(() => useUserProfileStore());
 
       const document: Omit<TravelDocument, "id"> = {
-        type: "passport",
-        number: "123456789",
         expiryDate: "2030-12-31",
         issuingCountry: "United States",
         notes: "Valid for 10 years",
+        number: "123456789",
+        type: "passport",
       };
 
       act(() => {
@@ -607,16 +607,16 @@ describe("User Profile Store", () => {
       // Add documents
       act(() => {
         result.current.addTravelDocument({
-          type: "passport",
-          number: "123456789",
           expiryDate: "2030-12-31",
           issuingCountry: "US",
+          number: "123456789",
+          type: "passport",
         });
         result.current.addTravelDocument({
-          type: "visa",
-          number: "987654321",
           expiryDate: "2025-06-30",
           issuingCountry: "France",
+          number: "987654321",
+          type: "visa",
         });
       });
 
@@ -637,10 +637,10 @@ describe("User Profile Store", () => {
 
       act(() => {
         result.current.addTravelDocument({
-          type: "passport",
-          number: "123456789",
           expiryDate: "2030-12-31",
           issuingCountry: "US",
+          number: "123456789",
+          type: "passport",
         });
       });
 
@@ -668,10 +668,10 @@ describe("User Profile Store", () => {
 
       act(() => {
         result.current.addTravelDocument({
-          type: "passport",
-          number: "123456789",
           expiryDate: "2030-12-31",
           issuingCountry: "US",
+          number: "123456789",
+          type: "passport",
         });
       });
 
@@ -689,14 +689,14 @@ describe("User Profile Store", () => {
       // Profile with display name
       act(() => {
         result.current.setProfile({
-          id: "user-1",
+          createdAt: "2025-01-01T00:00:00Z",
           email: "test@example.com",
+          favoriteDestinations: [],
+          id: "user-1",
           personalInfo: {
             displayName: "Custom Name",
           },
-          favoriteDestinations: [],
           travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
           updatedAt: "2025-01-01T00:00:00Z",
         });
       });
@@ -706,15 +706,15 @@ describe("User Profile Store", () => {
       // Profile with first and last name
       act(() => {
         result.current.setProfile({
-          id: "user-1",
+          createdAt: "2025-01-01T00:00:00Z",
           email: "test@example.com",
+          favoriteDestinations: [],
+          id: "user-1",
           personalInfo: {
             firstName: "John",
             lastName: "Doe",
           },
-          favoriteDestinations: [],
           travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
           updatedAt: "2025-01-01T00:00:00Z",
         });
       });
@@ -724,14 +724,14 @@ describe("User Profile Store", () => {
       // Profile with only first name
       act(() => {
         result.current.setProfile({
-          id: "user-1",
+          createdAt: "2025-01-01T00:00:00Z",
           email: "test@example.com",
+          favoriteDestinations: [],
+          id: "user-1",
           personalInfo: {
             firstName: "Jane",
           },
-          favoriteDestinations: [],
           travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
           updatedAt: "2025-01-01T00:00:00Z",
         });
       });
@@ -741,11 +741,11 @@ describe("User Profile Store", () => {
       // Profile with only email
       act(() => {
         result.current.setProfile({
-          id: "user-1",
+          createdAt: "2025-01-01T00:00:00Z",
           email: "username@example.com",
           favoriteDestinations: [],
+          id: "user-1",
           travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
           updatedAt: "2025-01-01T00:00:00Z",
         });
       });
@@ -762,14 +762,14 @@ describe("User Profile Store", () => {
       // Incomplete profile
       act(() => {
         result.current.setProfile({
-          id: "user-1",
+          createdAt: "2025-01-01T00:00:00Z",
           email: "test@example.com",
+          favoriteDestinations: [],
+          id: "user-1",
           personalInfo: {
             firstName: "John",
           },
-          favoriteDestinations: [],
           travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
           updatedAt: "2025-01-01T00:00:00Z",
         });
       });
@@ -779,31 +779,31 @@ describe("User Profile Store", () => {
       // Complete profile
       act(() => {
         result.current.setProfile({
-          id: "user-1",
-          email: "test@example.com",
           avatarUrl: "https://example.com/avatar.jpg",
+          createdAt: "2025-01-01T00:00:00Z",
+          email: "test@example.com",
+          favoriteDestinations: [],
+          id: "user-1",
           personalInfo: {
             firstName: "John",
             lastName: "Doe",
           },
+          travelDocuments: [],
           travelPreferences: {
-            preferredCabinClass: "economy",
-            preferredAirlines: [],
+            accessibilityRequirements: [],
+            dietaryRestrictions: [],
             excludedAirlines: [],
             maxLayovers: 2,
             preferredAccommodationType: "hotel",
+            preferredAirlines: [],
+            preferredCabinClass: "economy",
             preferredHotelChains: [],
-            requireWifi: true,
             requireBreakfast: false,
-            requireParking: false,
             requireGym: false,
+            requireParking: false,
             requirePool: false,
-            accessibilityRequirements: [],
-            dietaryRestrictions: [],
+            requireWifi: true,
           },
-          favoriteDestinations: [],
-          travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
           updatedAt: "2025-01-01T00:00:00Z",
         });
       });
@@ -820,26 +820,26 @@ describe("User Profile Store", () => {
 
       act(() => {
         result.current.setProfile({
-          id: "user-1",
+          createdAt: "2025-01-01T00:00:00Z",
           email: "test@example.com",
           favoriteDestinations: [],
+          id: "user-1",
           travelDocuments: [
             {
-              id: "doc-1",
-              type: "passport",
-              number: "123456789",
               expiryDate: inThirtyDays.toISOString(),
+              id: "doc-1",
               issuingCountry: "US",
+              number: "123456789",
+              type: "passport",
             },
             {
-              id: "doc-2",
-              type: "visa",
-              number: "987654321",
               expiryDate: inNinetyDays.toISOString(),
+              id: "doc-2",
               issuingCountry: "France",
+              number: "987654321",
+              type: "visa",
             },
           ],
-          createdAt: "2025-01-01T00:00:00Z",
           updatedAt: "2025-01-01T00:00:00Z",
         });
       });
@@ -852,30 +852,30 @@ describe("User Profile Store", () => {
 
   describe("Utility Actions", () => {
     const mockProfile: UserProfile = {
-      id: "user-1",
+      createdAt: "2025-01-01T00:00:00Z",
       email: "test@example.com",
+      favoriteDestinations: [
+        {
+          country: "France",
+          id: "dest-1",
+          name: "Paris",
+          visitCount: 2,
+        },
+      ],
+      id: "user-1",
       personalInfo: {
         firstName: "John",
         lastName: "Doe",
       },
-      favoriteDestinations: [
-        {
-          id: "dest-1",
-          name: "Paris",
-          country: "France",
-          visitCount: 2,
-        },
-      ],
       travelDocuments: [
         {
-          id: "doc-1",
-          type: "passport",
-          number: "123456789",
           expiryDate: "2030-12-31",
+          id: "doc-1",
           issuingCountry: "US",
+          number: "123456789",
+          type: "passport",
         },
       ],
-      createdAt: "2025-01-01T00:00:00Z",
       updatedAt: "2025-01-01T00:00:00Z",
     };
 
@@ -906,9 +906,9 @@ describe("User Profile Store", () => {
       const { result } = renderHook(() => useUserProfileStore());
 
       const exportData = {
+        exportedAt: "2025-01-01T00:00:00Z",
         profile: mockProfile,
         version: "1.0",
-        exportedAt: "2025-01-01T00:00:00Z",
       };
 
       let importResult: boolean;
@@ -936,8 +936,8 @@ describe("User Profile Store", () => {
       const { result } = renderHook(() => useUserProfileStore());
 
       const exportData = {
-        version: "1.0",
         exportedAt: "2025-01-01T00:00:00Z",
+        version: "1.0",
       };
 
       let importResult: boolean;
@@ -971,9 +971,9 @@ describe("User Profile Store", () => {
 
       act(() => {
         useUserProfileStore.setState({
-          profile: mockProfile,
-          isLoading: true,
           error: "Some error",
+          isLoading: true,
+          profile: mockProfile,
           uploadError: "Upload error",
         });
       });
@@ -996,11 +996,11 @@ describe("User Profile Store", () => {
       act(() => {
         useUserProfileStore.setState({
           profile: {
-            id: "user-1",
+            createdAt: "2025-01-01T00:00:00Z",
             email: "test@example.com",
             favoriteDestinations: [],
+            id: "user-1",
             travelDocuments: [],
-            createdAt: "2025-01-01T00:00:00Z",
             updatedAt: "2025-01-01T00:00:00Z",
           },
         });
@@ -1047,11 +1047,11 @@ describe("User Profile Store", () => {
       // Start with basic profile
       act(() => {
         result.current.setProfile({
-          id: "user-1",
+          createdAt: "2025-01-01T00:00:00Z",
           email: "test@example.com",
           favoriteDestinations: [],
+          id: "user-1",
           travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
           updatedAt: "2025-01-01T00:00:00Z",
         });
       });
@@ -1061,17 +1061,17 @@ describe("User Profile Store", () => {
       // Update personal info
       await act(async () => {
         await result.current.updatePersonalInfo({
+          bio: "Travel enthusiast",
           firstName: "John",
           lastName: "Doe",
-          bio: "Travel enthusiast",
         });
       });
 
       // Update travel preferences
       await act(async () => {
         await result.current.updateTravelPreferences({
-          preferredCabinClass: "business",
           preferredAirlines: ["Delta", "United"],
+          preferredCabinClass: "business",
           requireWifi: true,
         });
       });
@@ -1090,23 +1090,23 @@ describe("User Profile Store", () => {
       // Add favorite destinations
       act(() => {
         result.current.addFavoriteDestination({
-          name: "Paris",
           country: "France",
+          name: "Paris",
           notes: "Beautiful city",
         });
         result.current.addFavoriteDestination({
-          name: "Tokyo",
           country: "Japan",
+          name: "Tokyo",
         });
       });
 
       // Add travel documents
       act(() => {
         result.current.addTravelDocument({
-          type: "passport",
-          number: "123456789",
           expiryDate: "2030-12-31",
           issuingCountry: "US",
+          number: "123456789",
+          type: "passport",
         });
       });
 
@@ -1120,15 +1120,15 @@ describe("User Profile Store", () => {
       // Create profile with data
       act(() => {
         result.current.setProfile({
-          id: "user-1",
+          createdAt: "2025-01-01T00:00:00Z",
           email: "test@example.com",
+          favoriteDestinations: [],
+          id: "user-1",
           personalInfo: {
             firstName: "John",
             lastName: "Doe",
           },
-          favoriteDestinations: [],
           travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
           updatedAt: "2025-01-01T00:00:00Z",
         });
       });
@@ -1136,8 +1136,8 @@ describe("User Profile Store", () => {
       // Add some data
       act(() => {
         result.current.addFavoriteDestination({
-          name: "Paris",
           country: "France",
+          name: "Paris",
         });
       });
 
@@ -1168,52 +1168,52 @@ describe("User Profile Store", () => {
       const { result } = renderHook(() => useUserProfileStore());
 
       const mockProfile: UserProfile = {
-        id: "user-1",
+        createdAt: "2025-01-01T00:00:00Z",
         email: "test@example.com",
+        favoriteDestinations: [
+          {
+            country: "France",
+            id: "dest-1",
+            name: "Paris",
+            visitCount: 0,
+          },
+        ],
+        id: "user-1",
         personalInfo: {
           firstName: "John",
           lastName: "Doe",
         },
-        travelPreferences: {
-          preferredCabinClass: "business",
-          preferredAirlines: [],
-          excludedAirlines: [],
-          maxLayovers: 1,
-          preferredAccommodationType: "hotel",
-          preferredHotelChains: [],
-          requireWifi: true,
-          requireBreakfast: false,
-          requireParking: false,
-          requireGym: false,
-          requirePool: false,
-          accessibilityRequirements: [],
-          dietaryRestrictions: [],
-        },
         privacySettings: {
-          profileVisibility: "friends",
-          showTravelHistory: true,
           allowDataSharing: false,
           enableAnalytics: true,
           enableLocationTracking: false,
+          profileVisibility: "friends",
+          showTravelHistory: true,
         },
-        favoriteDestinations: [
-          {
-            id: "dest-1",
-            name: "Paris",
-            country: "France",
-            visitCount: 0,
-          },
-        ],
         travelDocuments: [
           {
-            id: "doc-1",
-            type: "passport",
-            number: "123456789",
             expiryDate: "2030-12-31",
+            id: "doc-1",
             issuingCountry: "US",
+            number: "123456789",
+            type: "passport",
           },
         ],
-        createdAt: "2025-01-01T00:00:00Z",
+        travelPreferences: {
+          accessibilityRequirements: [],
+          dietaryRestrictions: [],
+          excludedAirlines: [],
+          maxLayovers: 1,
+          preferredAccommodationType: "hotel",
+          preferredAirlines: [],
+          preferredCabinClass: "business",
+          preferredHotelChains: [],
+          requireBreakfast: false,
+          requireGym: false,
+          requireParking: false,
+          requirePool: false,
+          requireWifi: true,
+        },
         updatedAt: "2025-01-01T00:00:00Z",
       };
 

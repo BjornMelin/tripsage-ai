@@ -48,9 +48,9 @@ export function useDestinationSearch(): UseDestinationSearchResult {
   }, []);
 
   return {
-    searchDestinations,
     isSearching,
-    searchError,
     resetSearch,
+    searchDestinations,
+    searchError,
   };
 }

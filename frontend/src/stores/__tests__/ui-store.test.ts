@@ -9,18 +9,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Ensure matchMedia is mocked before importing the store
 Object.defineProperty(window, "matchMedia", {
-  writable: true,
   configurable: true,
   value: vi.fn().mockImplementation((query: string) => ({
+    addEventListener: vi.fn(),
+    addListener: vi.fn(),
+    dispatchEvent: vi.fn(),
     matches: false,
     media: query,
     onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
+    removeListener: vi.fn(),
   })),
+  writable: true,
 });
 
 import { type Theme, useUIStore } from "../ui-store";
@@ -34,14 +34,14 @@ describe("UI Store", () => {
       // Theme and feature flags are persisted and not included in reset()
       // Reset them explicitly to avoid cross-test leakage.
       useUIStore.setState({
-        theme: "system",
         features: {
-          enableAnimations: true,
-          enableSounds: false,
-          enableHaptics: true,
           enableAnalytics: true,
+          enableAnimations: true,
           enableBetaFeatures: false,
+          enableHaptics: true,
+          enableSounds: false,
         },
+        theme: "system",
       });
     });
   });
@@ -130,19 +130,19 @@ describe("UI Store", () => {
 
       // Mock dark mode preference - update the existing mock
       const matchMediaMock = vi.fn().mockImplementation((query: string) => ({
+        addEventListener: vi.fn(),
+        addListener: vi.fn(),
+        dispatchEvent: vi.fn(),
         matches: query === "(prefers-color-scheme: dark)",
         media: query,
         onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
+        removeListener: vi.fn(),
       }));
 
       Object.defineProperty(window, "matchMedia", {
-        writable: true,
         value: matchMediaMock,
+        writable: true,
       });
 
       act(() => {
@@ -244,8 +244,8 @@ describe("UI Store", () => {
       const { result } = renderHook(() => useUIStore());
 
       const breadcrumbs = [
-        { label: "Home", href: "/" },
-        { label: "Dashboard", href: "/dashboard" },
+        { href: "/", label: "Home" },
+        { href: "/dashboard", label: "Dashboard" },
         { label: "Profile" },
       ];
 
@@ -260,8 +260,8 @@ describe("UI Store", () => {
       const { result } = renderHook(() => useUIStore());
 
       const initialBreadcrumbs = [
-        { label: "Home", href: "/" },
-        { label: "Dashboard", href: "/dashboard" },
+        { href: "/", label: "Home" },
+        { href: "/dashboard", label: "Dashboard" },
       ];
 
       act(() => {
@@ -379,10 +379,10 @@ describe("UI Store", () => {
       const { result } = renderHook(() => useUIStore());
 
       const notification = {
-        type: "success" as const,
-        title: "Success",
-        message: "Operation completed successfully",
         isRead: false,
+        message: "Operation completed successfully",
+        title: "Success",
+        type: "success" as const,
       };
 
       let notificationId: string;
@@ -404,10 +404,10 @@ describe("UI Store", () => {
       const { result } = renderHook(() => useUIStore());
 
       const notification = {
-        type: "info" as const,
-        title: "Info",
         duration: 100,
         isRead: false,
+        title: "Info",
+        type: "info" as const,
       };
 
       act(() => {
@@ -427,9 +427,9 @@ describe("UI Store", () => {
       let notificationId: string;
       act(() => {
         notificationId = result.current.addNotification({
-          type: "warning",
-          title: "Warning",
           isRead: false,
+          title: "Warning",
+          type: "warning",
         });
       });
 
@@ -448,9 +448,9 @@ describe("UI Store", () => {
       let notificationId: string;
       act(() => {
         notificationId = result.current.addNotification({
-          type: "error",
-          title: "Error",
           isRead: false,
+          title: "Error",
+          type: "error",
         });
       });
 
@@ -473,19 +473,19 @@ describe("UI Store", () => {
 
       act(() => {
         result.current.addNotification({
-          type: "info",
+          isRead: false,
           title: "Info 1",
-          isRead: false,
+          type: "info",
         });
         result.current.addNotification({
-          type: "success",
+          isRead: false,
           title: "Success 1",
-          isRead: false,
+          type: "success",
         });
         result.current.addNotification({
-          type: "warning",
-          title: "Warning 1",
           isRead: false,
+          title: "Warning 1",
+          type: "warning",
         });
       });
 
@@ -505,9 +505,9 @@ describe("UI Store", () => {
       act(() => {
         for (let i = 0; i < 55; i++) {
           result.current.addNotification({
-            type: "info",
-            title: `Notification ${i}`,
             isRead: false,
+            title: `Notification ${i}`,
+            type: "info",
           });
         }
       });
@@ -526,19 +526,19 @@ describe("UI Store", () => {
 
       act(() => {
         id1 = result.current.addNotification({
-          type: "info",
-          title: "Info 1",
           isRead: false,
+          title: "Info 1",
+          type: "info",
         });
         id2 = result.current.addNotification({
-          type: "success",
-          title: "Success 1",
           isRead: false,
+          title: "Success 1",
+          type: "success",
         });
         id3 = result.current.addNotification({
-          type: "warning",
-          title: "Warning 1",
           isRead: false,
+          title: "Warning 1",
+          type: "warning",
         });
       });
 
@@ -570,10 +570,10 @@ describe("UI Store", () => {
 
       act(() => {
         result.current.addNotification({
+          isRead: false,
+          title: "Invalid",
           // @ts-expect-error - intentionally testing invalid type
           type: "invalid-type",
-          title: "Invalid",
-          isRead: false,
         });
       });
 
@@ -588,12 +588,12 @@ describe("UI Store", () => {
     it("opens modal with component and props", () => {
       const { result } = renderHook(() => useUIStore());
 
-      const modalProps = { userId: "123", mode: "edit" };
+      const modalProps = { mode: "edit", userId: "123" };
 
       act(() => {
         result.current.openModal("UserEditModal", modalProps, {
-          size: "lg",
           closeOnOverlayClick: false,
+          size: "lg",
         });
       });
 
@@ -644,14 +644,14 @@ describe("UI Store", () => {
       });
 
       act(() => {
-        result.current.updateModalProps({ updated: true, additional: "data" });
+        result.current.updateModalProps({ additional: "data", updated: true });
       });
 
       expect(result.current.modal.isOpen).toBe(true);
       expect(result.current.modal.props).toEqual({
+        additional: "data",
         initial: true,
         updated: true,
-        additional: "data",
       });
     });
   });
@@ -675,9 +675,9 @@ describe("UI Store", () => {
         result.current.setCommandPaletteQuery("test query");
         result.current.setCommandPaletteResults([
           {
+            action: () => {},
             id: "1",
             title: "Test Result",
-            action: () => {},
           },
         ]);
       });
@@ -710,16 +710,16 @@ describe("UI Store", () => {
 
       const results = [
         {
-          id: "1",
-          title: "Result 1",
-          description: "First result",
           action: () => {},
           category: "commands",
+          description: "First result",
+          id: "1",
+          title: "Result 1",
         },
         {
+          action: () => {},
           id: "2",
           title: "Result 2",
-          action: () => {},
         },
       ];
 
@@ -794,7 +794,7 @@ describe("UI Store", () => {
       act(() => {
         result.current.setSidebarOpen(false);
         result.current.setActiveRoute("/custom");
-        result.current.addNotification({ type: "info", title: "Test", isRead: false });
+        result.current.addNotification({ isRead: false, title: "Test", type: "info" });
         result.current.openModal("TestModal");
         result.current.openCommandPalette();
         result.current.setLoadingState("test", "loading");
@@ -831,7 +831,7 @@ describe("UI Store", () => {
       act(() => {
         result.current.setActiveRoute("/dashboard");
         result.current.setBreadcrumbs([
-          { label: "Home", href: "/" },
+          { href: "/", label: "Home" },
           { label: "Dashboard" },
         ]);
       });
@@ -853,14 +853,14 @@ describe("UI Store", () => {
       // let warningId: string; // Future use
       act(() => {
         infoId = result.current.addNotification({
-          type: "info",
-          title: "Data Loading",
           isRead: false,
+          title: "Data Loading",
+          type: "info",
         });
         result.current.addNotification({
-          type: "warning",
-          title: "Network Slow",
           isRead: false,
+          title: "Network Slow",
+          type: "warning",
         });
       });
 
@@ -924,20 +924,20 @@ describe("UI Store", () => {
       // Simulate search results
       const mockResults = [
         {
-          id: "user-1",
-          title: "Edit User Profile",
-          description: "Modify user account settings",
           action: () => {},
           category: "user",
+          description: "Modify user account settings",
           icon: "user",
+          id: "user-1",
+          title: "Edit User Profile",
         },
         {
-          id: "user-2",
-          title: "User Management",
-          description: "Manage all users",
           action: () => {},
           category: "admin",
+          description: "Manage all users",
           icon: "users",
+          id: "user-2",
+          title: "User Management",
         },
       ];
 
@@ -968,28 +968,28 @@ describe("UI Store", () => {
 
       act(() => {
         successId = result.current.addNotification({
-          type: "success",
-          title: "Upload Complete",
-          message: "File uploaded successfully",
           isRead: false,
+          message: "File uploaded successfully",
+          title: "Upload Complete",
+          type: "success",
         });
 
         errorId = result.current.addNotification({
-          type: "error",
-          title: "Upload Failed",
-          message: "Network error occurred",
           isRead: false,
+          message: "Network error occurred",
+          title: "Upload Failed",
+          type: "error",
         });
 
         warningId = result.current.addNotification({
-          type: "warning",
-          title: "Storage Almost Full",
-          message: "Consider upgrading your plan",
-          isRead: false,
           action: {
             label: "Upgrade",
             onClick: () => {},
           },
+          isRead: false,
+          message: "Consider upgrading your plan",
+          title: "Storage Almost Full",
+          type: "warning",
         });
       });
 
@@ -1077,7 +1077,7 @@ describe("UI Store", () => {
       act(() => {
         result.current.setTheme("dark");
         result.current.setSidebarOpen(false);
-        result.current.addNotification({ type: "info", title: "Test", isRead: false });
+        result.current.addNotification({ isRead: false, title: "Test", type: "info" });
       });
 
       expect(themeResult.current).toBe("dark");

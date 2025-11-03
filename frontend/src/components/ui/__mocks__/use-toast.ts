@@ -1,13 +1,13 @@
 import { vi } from "vitest";
 
 export const toast = vi.fn((_props: any) => ({
-  id: `toast-${Date.now()}`,
   dismiss: vi.fn(),
+  id: `toast-${Date.now()}`,
   update: vi.fn(),
 }));
 
 export const useToast = vi.fn(() => ({
-  toast,
   dismiss: vi.fn(),
+  toast,
   toasts: [],
 }));

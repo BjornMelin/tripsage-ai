@@ -113,8 +113,8 @@ export async function handleChatStream(
   const user = auth?.user ?? null;
   if (!user) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
-      status: 401,
       headers: { "content-type": "application/json" },
+      status: 401,
     });
   }
 
@@ -126,8 +126,8 @@ export async function handleChatStream(
     const { success } = await deps.limit(identifier);
     if (!success) {
       return new Response(JSON.stringify({ error: "rate_limited" }), {
+        headers: { "content-type": "application/json", "Retry-After": "60" },
         status: 429,
-        headers: { "Retry-After": "60", "content-type": "application/json" },
       });
     }
   }
@@ -137,7 +137,7 @@ export async function handleChatStream(
   if (!att.valid) {
     return new Response(
       JSON.stringify({ error: "invalid_attachment", reason: att.reason }),
-      { status: 400, headers: { "content-type": "application/json" } }
+      { headers: { "content-type": "application/json" }, status: 400 }
     );
   }
 
@@ -179,22 +179,22 @@ export async function handleChatStream(
         error: "No output tokens available",
         reasons: ["maxTokens_clamped_model_limit"],
       }),
-      { status: 400, headers: { "content-type": "application/json" } }
+      { headers: { "content-type": "application/json" }, status: 400 }
     );
   }
   const clampInput: ClampMsg[] = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: textParts.join(" ") },
+    { content: systemPrompt, role: "system" },
+    { content: textParts.join(" "), role: "user" },
   ];
   const { maxTokens, reasons } = clampMaxTokens(clampInput, desired, provider.modelId);
 
   // Stream via AI SDK (DI allows tests to inject a finite stream stub)
   const stream = deps.stream ?? defaultStreamText;
   const result = stream({
-    model: provider.model,
-    system: systemPrompt,
     maxOutputTokens: maxTokens,
     messages: convertToModelMessages(messages),
+    model: provider.model,
+    system: systemPrompt,
   });
 
   const reqId =
@@ -202,23 +202,22 @@ export async function handleChatStream(
       ? globalThis.crypto.randomUUID()
       : Math.random().toString(36).slice(2);
   deps.logger?.info?.("chat_stream:start", {
+    model: provider.modelId,
     requestId: reqId,
     userId: user.id,
-    model: provider.modelId,
   });
 
   const sessionId = payload.session_id;
 
   return result.toUIMessageStreamResponse({
-    originalMessages: messages,
     messageMetadata: async ({ part }) => {
       if (part.type === "start") {
         // Provide a resumable id to help clients reattach to ongoing streams.
         return {
-          requestId: reqId,
-          provider: provider.provider,
           model: provider.modelId,
+          provider: provider.provider,
           reasons,
+          requestId: reqId,
           // `resumableId` duplicates `requestId` but is specifically used by the AI SDK client
           // for reconnection attempts, while `requestId` is for logging/tracing.
           resumableId: reqId,
@@ -226,22 +225,22 @@ export async function handleChatStream(
       }
       if (part.type === "finish") {
         const meta = {
-          provider: provider.provider,
-          totalTokens: part.totalUsage?.totalTokens ?? undefined,
-          inputTokens: part.totalUsage?.inputTokens ?? undefined,
-          outputTokens: part.totalUsage?.outputTokens ?? undefined,
-          model: provider.modelId,
-          requestId: reqId,
           durationMs: (deps.clock?.now?.() ?? Date.now()) - startedAt,
+          inputTokens: part.totalUsage?.inputTokens ?? undefined,
+          model: provider.modelId,
+          outputTokens: part.totalUsage?.outputTokens ?? undefined,
+          provider: provider.provider,
+          requestId: reqId,
+          totalTokens: part.totalUsage?.totalTokens ?? undefined,
         } as const;
         deps.logger?.info?.("chat_stream:finish", meta);
         if (sessionId) {
           try {
             await (deps.supabase as any).from("chat_messages").insert({
-              session_id: sessionId,
-              role: "assistant",
               content: "(streamed)",
               metadata: meta as any,
+              role: "assistant",
+              session_id: sessionId,
             });
           } catch {
             /* ignore */
@@ -253,10 +252,11 @@ export async function handleChatStream(
     },
     onError: (err) => {
       deps.logger?.error?.("chat_stream:error", {
-        requestId: reqId,
         message: String((err as any)?.message || err),
+        requestId: reqId,
       });
       return "An error occurred while processing your request.";
     },
+    originalMessages: messages,
   });
 }

@@ -10,202 +10,202 @@ import { z } from "zod";
 import { ApiClient, ApiClientError } from "../api-client";
 
 /** Zod schema for validating user response data. */
-const UserResponseSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
-  name: z.string().min(1),
+const USER_RESPONSE_SCHEMA = z.object({
   age: z.number().int().min(0).max(150),
+  createdAt: z.string().datetime(),
+  email: z.string().email(),
+  id: z.string().uuid(),
   isActive: z.boolean(),
   metadata: z.record(z.string(), z.unknown()).optional(),
-  createdAt: z.string().datetime(),
+  name: z.string().min(1),
   updatedAt: z.string().datetime(),
 });
 
 /** Zod schema for validating user creation request data. */
-const UserCreateRequestSchema = z.object({
+const USER_CREATE_REQUEST_SCHEMA = z.object({
+  age: z.number().int().min(18, "Must be at least 18 years old"),
   email: z.string().email("Invalid email format"),
   name: z.string().min(1, "Name is required"),
-  age: z.number().int().min(18, "Must be at least 18 years old"),
   preferences: z
     .object({
-      theme: z.enum(["light", "dark"]),
       notifications: z.boolean(),
+      theme: z.enum(["light", "dark"]),
     })
     .optional(),
 });
 
 /** Zod schema for validating paginated API responses. */
-const PaginatedResponseSchema = z.object({
-  data: z.array(UserResponseSchema),
+const PAGINATED_RESPONSE_SCHEMA = z.object({
+  data: z.array(USER_RESPONSE_SCHEMA),
   pagination: z.object({
-    page: z.number().int().min(1),
-    limit: z.number().int().min(1).max(100),
-    total: z.number().int().min(0),
     hasNext: z.boolean(),
     hasPrev: z.boolean(),
+    limit: z.number().int().min(1).max(100),
+    page: z.number().int().min(1),
+    total: z.number().int().min(0),
   }),
 });
 
-type UserResponse = z.infer<typeof UserResponseSchema>;
-type UserCreateRequest = z.infer<typeof UserCreateRequestSchema>;
-type PaginatedResponse = z.infer<typeof PaginatedResponseSchema>;
+type UserResponse = z.infer<typeof USER_RESPONSE_SCHEMA>;
+type UserCreateRequest = z.infer<typeof USER_CREATE_REQUEST_SCHEMA>;
+type PaginatedResponse = z.infer<typeof PAGINATED_RESPONSE_SCHEMA>;
 
 /** Mock implementation for global fetch function. */
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+const MOCK_FETCH = vi.fn();
+global.fetch = MOCK_FETCH;
 
 /** Dedicated API client instance for testing with absolute base URL. */
-const client = new ApiClient({ baseUrl: "http://localhost" });
+const CLIENT = new ApiClient({ baseUrl: "http://localhost" });
 
 describe("API client with Zod Validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFetch.mockClear();
+    MOCK_FETCH.mockClear();
     // Re-bind fetch in case other suites overwrote the global
     // Ensures deterministic behavior within this file regardless of run order
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = mockFetch;
+    (global as any).fetch = MOCK_FETCH;
   });
 
   describe("Request Validation", () => {
     it("validates request data with Zod schema before sending", async () => {
       const validUserData: UserCreateRequest = {
+        age: 25,
         email: "test@example.com",
         name: "John Doe",
-        age: 25,
         preferences: {
-          theme: "dark",
           notifications: true,
+          theme: "dark",
         },
       };
 
       const mockResponse: UserResponse = {
-        id: "550e8400-e29b-41d4-a716-446655440000",
-        email: validUserData.email,
-        name: validUserData.name,
         age: validUserData.age,
-        isActive: true,
         createdAt: "2025-01-01T00:00:00Z",
+        email: validUserData.email,
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        isActive: true,
+        name: validUserData.name,
         updatedAt: "2025-01-01T00:00:00Z",
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
+      MOCK_FETCH.mockResolvedValue({
         headers: new Headers({ "content-type": "application/json" }),
         json: () => Promise.resolve(mockResponse),
+        ok: true,
+        status: 200,
       });
 
       // Test with validated request data
-      const result = await client.postValidated<UserCreateRequest, UserResponse>(
+      const result = await CLIENT.postValidated<UserCreateRequest, UserResponse>(
         "/api/users",
         validUserData,
-        UserCreateRequestSchema,
-        UserResponseSchema
+        USER_CREATE_REQUEST_SCHEMA,
+        USER_RESPONSE_SCHEMA
       );
 
       expect(result).toEqual(mockResponse);
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(MOCK_FETCH).toHaveBeenCalledWith(
         expect.stringContaining("/api/users"),
         expect.objectContaining({
-          method: "POST",
           body: JSON.stringify(validUserData),
           headers: expect.objectContaining({
             "Content-Type": "application/json",
           }),
+          method: "POST",
         })
       );
     });
 
     it("rejects invalid request data before sending", async () => {
       const invalidUserData = {
+        age: 15, // Too young
         email: "invalid-email", // Invalid email format
         name: "", // Empty name
-        age: 15, // Too young
       };
 
       await expect(
-        client.postValidated<UserCreateRequest, UserResponse>(
+        CLIENT.postValidated<UserCreateRequest, UserResponse>(
           "/api/users",
           invalidUserData,
-          UserCreateRequestSchema,
-          UserResponseSchema
+          USER_CREATE_REQUEST_SCHEMA,
+          USER_RESPONSE_SCHEMA
         )
       ).rejects.toThrow();
 
       // Should not make HTTP request with invalid data
-      expect(mockFetch).not.toHaveBeenCalled();
+      expect(MOCK_FETCH).not.toHaveBeenCalled();
     });
 
     it("handles nested validation errors", async () => {
       const invalidUserData = {
+        age: 25,
         email: "test@example.com",
         name: "John Doe",
-        age: 25,
         preferences: {
-          theme: "invalid-theme" as any, // Invalid enum value
           notifications: "yes" as any, // Should be boolean
+          theme: "invalid-theme" as any, // Invalid enum value
         },
       } as UserCreateRequest;
 
       await expect(
-        client.postValidated<UserCreateRequest, UserResponse>(
+        CLIENT.postValidated<UserCreateRequest, UserResponse>(
           "/api/users",
           invalidUserData,
-          UserCreateRequestSchema,
-          UserResponseSchema
+          USER_CREATE_REQUEST_SCHEMA,
+          USER_RESPONSE_SCHEMA
         )
       ).rejects.toThrow();
 
-      expect(mockFetch).not.toHaveBeenCalled();
+      expect(MOCK_FETCH).not.toHaveBeenCalled();
     });
   });
 
   describe("Response Validation", () => {
     it("validates response data with Zod schema", async () => {
       const validResponse: UserResponse = {
-        id: "550e8400-e29b-41d4-a716-446655440000",
-        email: "test@example.com",
-        name: "John Doe",
         age: 25,
-        isActive: true,
         createdAt: "2025-01-01T00:00:00Z",
+        email: "test@example.com",
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        isActive: true,
+        name: "John Doe",
         updatedAt: "2025-01-01T00:00:00Z",
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
+      MOCK_FETCH.mockResolvedValue({
         headers: new Headers({ "content-type": "application/json" }),
         json: () => Promise.resolve(validResponse),
+        ok: true,
+        status: 200,
       });
 
-      const result = await client.getValidated("/api/users/123", UserResponseSchema);
+      const result = await CLIENT.getValidated("/api/users/123", USER_RESPONSE_SCHEMA);
 
       expect(result).toEqual(validResponse);
-      expect(() => UserResponseSchema.parse(result)).not.toThrow();
+      expect(() => USER_RESPONSE_SCHEMA.parse(result)).not.toThrow();
     });
 
     it("rejects invalid response data", async () => {
       const invalidResponse = {
-        id: "invalid-uuid", // Invalid UUID format
-        email: "invalid-email", // Invalid email
-        name: "", // Empty name
         age: -5, // Negative age
-        isActive: "yes", // Should be boolean
         createdAt: "invalid-date",
+        email: "invalid-email", // Invalid email
+        id: "invalid-uuid", // Invalid UUID format
+        isActive: "yes", // Should be boolean
+        name: "", // Empty name
         updatedAt: "invalid-date",
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
+      MOCK_FETCH.mockResolvedValue({
         headers: new Headers({ "content-type": "application/json" }),
         json: () => Promise.resolve(invalidResponse),
+        ok: true,
+        status: 200,
       });
 
       await expect(
-        client.getValidated("/api/users/123", UserResponseSchema)
+        CLIENT.getValidated("/api/users/123", USER_RESPONSE_SCHEMA)
       ).rejects.toThrow();
     });
 
@@ -213,42 +213,42 @@ describe("API client with Zod Validation", () => {
       const validPaginatedResponse: PaginatedResponse = {
         data: [
           {
-            id: "550e8400-e29b-41d4-a716-446655440000",
-            email: "user1@example.com",
-            name: "User One",
             age: 25,
-            isActive: true,
             createdAt: "2025-01-01T00:00:00Z",
+            email: "user1@example.com",
+            id: "550e8400-e29b-41d4-a716-446655440000",
+            isActive: true,
+            name: "User One",
             updatedAt: "2025-01-01T00:00:00Z",
           },
           {
-            id: "550e8400-e29b-41d4-a716-446655440001",
-            email: "user2@example.com",
-            name: "User Two",
             age: 30,
+            createdAt: "2025-01-02T00:00:00Z",
+            email: "user2@example.com",
+            id: "550e8400-e29b-41d4-a716-446655440001",
             isActive: false,
             metadata: { role: "admin" },
-            createdAt: "2025-01-02T00:00:00Z",
+            name: "User Two",
             updatedAt: "2025-01-02T00:00:00Z",
           },
         ],
         pagination: {
-          page: 1,
-          limit: 10,
-          total: 25,
           hasNext: true,
           hasPrev: false,
+          limit: 10,
+          page: 1,
+          total: 25,
         },
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
+      MOCK_FETCH.mockResolvedValue({
         headers: new Headers({ "content-type": "application/json" }),
         json: () => Promise.resolve(validPaginatedResponse),
+        ok: true,
+        status: 200,
       });
 
-      const result = await client.getValidated("/api/users", PaginatedResponseSchema);
+      const result = await CLIENT.getValidated("/api/users", PAGINATED_RESPONSE_SCHEMA);
 
       expect(result).toEqual(validPaginatedResponse);
       expect(result.data).toHaveLength(2);
@@ -256,7 +256,7 @@ describe("API client with Zod Validation", () => {
 
       // Validate each user in the response
       result.data.forEach((user) => {
-        expect(() => UserResponseSchema.parse(user)).not.toThrow();
+        expect(() => USER_RESPONSE_SCHEMA.parse(user)).not.toThrow();
       });
     });
   });
@@ -264,17 +264,17 @@ describe("API client with Zod Validation", () => {
   describe("Error Handling with Validation", () => {
     it("provides detailed validation error messages", async () => {
       const invalidData = {
+        age: "twenty-five" as any, // Should be number
         email: "not-an-email",
         name: "",
-        age: "twenty-five" as any, // Should be number
       } as UserCreateRequest;
 
       try {
-        await client.postValidated<UserCreateRequest, UserResponse>(
+        await CLIENT.postValidated<UserCreateRequest, UserResponse>(
           "/api/users",
           invalidData,
-          UserCreateRequestSchema,
-          UserResponseSchema
+          USER_CREATE_REQUEST_SCHEMA,
+          USER_RESPONSE_SCHEMA
         );
         expect.fail("Should have thrown validation error");
       } catch (error) {
@@ -284,25 +284,25 @@ describe("API client with Zod Validation", () => {
     });
 
     it("handles API errors with proper error types", async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 400,
-        statusText: "Bad Request",
+      MOCK_FETCH.mockResolvedValue({
         headers: new Headers({ "content-type": "application/json" }),
         json: () =>
           Promise.resolve({
-            error: "Invalid request data",
             code: "VALIDATION_ERROR",
+            error: "Invalid request data",
           }),
+        ok: false,
+        status: 400,
+        statusText: "Bad Request",
       });
 
       await expect(
-        client.getValidated("/api/users/invalid", UserResponseSchema)
+        CLIENT.getValidated("/api/users/invalid", USER_RESPONSE_SCHEMA)
       ).rejects.toThrow(ApiClientError);
     });
 
     it("handles network errors gracefully", async () => {
-      mockFetch.mockRejectedValue(new Error("Network error"));
+      MOCK_FETCH.mockRejectedValue(new Error("Network error"));
 
       // Use a fast client to avoid exceeding the per-test timeout (6s)
       const fastClient = new ApiClient({
@@ -312,7 +312,7 @@ describe("API client with Zod Validation", () => {
       });
 
       await expect(
-        fastClient.getValidated("/api/users", UserResponseSchema)
+        fastClient.getValidated("/api/users", USER_RESPONSE_SCHEMA)
       ).rejects.toThrow("Network error");
     });
   });
@@ -320,26 +320,26 @@ describe("API client with Zod Validation", () => {
   describe("HTTP Methods with Validation", () => {
     it("supports GET requests with response validation", async () => {
       const mockUser: UserResponse = {
-        id: "550e8400-e29b-41d4-a716-446655440000",
-        email: "test@example.com",
-        name: "John Doe",
         age: 25,
-        isActive: true,
         createdAt: "2025-01-01T00:00:00Z",
+        email: "test@example.com",
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        isActive: true,
+        name: "John Doe",
         updatedAt: "2025-01-01T00:00:00Z",
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
+      MOCK_FETCH.mockResolvedValue({
         headers: new Headers({ "content-type": "application/json" }),
         json: () => Promise.resolve(mockUser),
+        ok: true,
+        status: 200,
       });
 
-      const result = await client.getValidated("/api/users/123", UserResponseSchema);
+      const result = await CLIENT.getValidated("/api/users/123", USER_RESPONSE_SCHEMA);
 
       expect(result).toEqual(mockUser);
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(MOCK_FETCH).toHaveBeenCalledWith(
         expect.stringContaining("/api/users/123"),
         expect.objectContaining({ method: "GET" })
       );
@@ -347,67 +347,67 @@ describe("API client with Zod Validation", () => {
 
     it("supports PUT requests with request and response validation", async () => {
       const updateData: Partial<UserCreateRequest> = {
-        name: "Updated Name",
         age: 30,
+        name: "Updated Name",
       };
 
       const updatedUser: UserResponse = {
-        id: "550e8400-e29b-41d4-a716-446655440000",
-        email: "test@example.com",
-        name: "Updated Name",
         age: 30,
-        isActive: true,
         createdAt: "2025-01-01T00:00:00Z",
+        email: "test@example.com",
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        isActive: true,
+        name: "Updated Name",
         updatedAt: "2025-01-01T12:00:00Z",
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
+      MOCK_FETCH.mockResolvedValue({
         headers: new Headers({ "content-type": "application/json" }),
         json: () => Promise.resolve(updatedUser),
+        ok: true,
+        status: 200,
       });
 
-      const partialSchema = UserCreateRequestSchema.partial();
+      const partialSchema = USER_CREATE_REQUEST_SCHEMA.partial();
 
-      const result = await client.putValidated(
+      const result = await CLIENT.putValidated(
         "/api/users/123",
         updateData,
         partialSchema,
-        UserResponseSchema
+        USER_RESPONSE_SCHEMA
       );
 
       expect(result).toEqual(updatedUser);
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(MOCK_FETCH).toHaveBeenCalledWith(
         expect.stringContaining("/api/users/123"),
         expect.objectContaining({
-          method: "PUT",
           body: JSON.stringify(updateData),
+          method: "PUT",
         })
       );
     });
 
     it("supports DELETE requests with response validation", async () => {
-      const deleteResponse = { success: true, deletedId: "123" };
+      const deleteResponse = { deletedId: "123", success: true };
       const DeleteResponseSchema = z.object({
-        success: z.boolean(),
         deletedId: z.string(),
+        success: z.boolean(),
       });
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
+      MOCK_FETCH.mockResolvedValue({
         headers: new Headers({ "content-type": "application/json" }),
         json: () => Promise.resolve(deleteResponse),
+        ok: true,
+        status: 200,
       });
 
-      const result = await client.deleteValidated(
+      const result = await CLIENT.deleteValidated(
         "/api/users/123",
         DeleteResponseSchema
       );
 
       expect(result).toEqual(deleteResponse);
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(MOCK_FETCH).toHaveBeenCalledWith(
         expect.stringContaining("/api/users/123"),
         expect.objectContaining({ method: "DELETE" })
       );
@@ -417,27 +417,27 @@ describe("API client with Zod Validation", () => {
   describe("Validation scenarios", () => {
     it("handles optional fields correctly", async () => {
       const userWithOptionalFields: UserResponse = {
-        id: "550e8400-e29b-41d4-a716-446655440000",
-        email: "test@example.com",
-        name: "John Doe",
         age: 25,
+        createdAt: "2025-01-01T00:00:00Z",
+        email: "test@example.com",
+        id: "550e8400-e29b-41d4-a716-446655440000",
         isActive: true,
         metadata: {
           department: "Engineering",
           level: "Senior",
         },
-        createdAt: "2025-01-01T00:00:00Z",
+        name: "John Doe",
         updatedAt: "2025-01-01T00:00:00Z",
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
+      MOCK_FETCH.mockResolvedValue({
         headers: new Headers({ "content-type": "application/json" }),
         json: () => Promise.resolve(userWithOptionalFields),
+        ok: true,
+        status: 200,
       });
 
-      const result = await client.getValidated("/api/users/123", UserResponseSchema);
+      const result = await CLIENT.getValidated("/api/users/123", USER_RESPONSE_SCHEMA);
 
       expect(result.metadata).toEqual({
         department: "Engineering",
@@ -457,14 +457,14 @@ describe("API client with Zod Validation", () => {
         timestamp: 1735689600000, // Jan 1, 2025
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
+      MOCK_FETCH.mockResolvedValue({
         headers: new Headers({ "content-type": "application/json" }),
         json: () => Promise.resolve(apiResponse),
+        ok: true,
+        status: 200,
       });
 
-      const result = await client.getValidated("/api/dates", _DateTransformSchema);
+      const result = await CLIENT.getValidated("/api/dates", _DateTransformSchema);
 
       expect(result.date).toBeInstanceOf(Date);
       expect(result.timestamp).toBeInstanceOf(Date);
@@ -472,28 +472,28 @@ describe("API client with Zod Validation", () => {
     });
 
     it("validates with strict mode for exact object matching", async () => {
-      const StrictUserSchema = UserResponseSchema.strict();
+      const StrictUserSchema = USER_RESPONSE_SCHEMA.strict();
 
       const responseWithExtraFields = {
-        id: "550e8400-e29b-41d4-a716-446655440000",
-        email: "test@example.com",
-        name: "John Doe",
         age: 25,
-        isActive: true,
         createdAt: "2025-01-01T00:00:00Z",
-        updatedAt: "2025-01-01T00:00:00Z",
+        email: "test@example.com",
         extraField: "should not be here", // This should cause validation to fail
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        isActive: true,
+        name: "John Doe",
+        updatedAt: "2025-01-01T00:00:00Z",
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
+      MOCK_FETCH.mockResolvedValue({
         headers: new Headers({ "content-type": "application/json" }),
         json: () => Promise.resolve(responseWithExtraFields),
+        ok: true,
+        status: 200,
       });
 
       await expect(
-        client.getValidated("/api/users/123", StrictUserSchema)
+        CLIENT.getValidated("/api/users/123", StrictUserSchema)
       ).rejects.toThrow();
     });
   });
@@ -502,26 +502,26 @@ describe("API client with Zod Validation", () => {
     it("validates responses efficiently for large datasets", async () => {
       // Generate large dataset
       const largeDataset = Array.from({ length: 100 }, (_, i) => ({
-        id: `550e8400-e29b-41d4-a716-44665544${i.toString().padStart(4, "0")}`,
-        email: `user${i}@example.com`,
-        name: `User ${i}`,
         age: 20 + (i % 50),
-        isActive: i % 2 === 0,
         createdAt: "2025-01-01T00:00:00Z",
+        email: `user${i}@example.com`,
+        id: `550e8400-e29b-41d4-a716-44665544${i.toString().padStart(4, "0")}`,
+        isActive: i % 2 === 0,
+        name: `User ${i}`,
         updatedAt: "2025-01-01T00:00:00Z",
       }));
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
+      MOCK_FETCH.mockResolvedValue({
         headers: new Headers({ "content-type": "application/json" }),
         json: () => Promise.resolve(largeDataset),
+        ok: true,
+        status: 200,
       });
 
       const start = performance.now();
-      const result = await client.getValidated(
+      const result = await CLIENT.getValidated(
         "/api/users/bulk",
-        z.array(UserResponseSchema)
+        z.array(USER_RESPONSE_SCHEMA)
       );
       const end = performance.now();
 

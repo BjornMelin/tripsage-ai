@@ -121,59 +121,59 @@ import * as storeSchemas from "./stores";
 
 // Central schema registry
 export const schemas = {
+  agentStatus: agentStatusSchemas,
   api: apiSchemas,
+  budget: budgetSchemas,
   components: componentSchemas,
+  env: envSchemas,
   errorBoundary: errorBoundarySchemas,
   forms: formSchemas,
   loading: loadingSchemas,
   memory: memorySchemas,
   search: searchSchemas,
   stores: storeSchemas,
-  budget: budgetSchemas,
-  agentStatus: agentStatusSchemas,
-  env: envSchemas,
 } as const;
 
 // Commonly used validation patterns
 export const commonPatterns = {
-  email: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
-  phone: "^\\+?[1-9]\\d{1,14}$",
-  uuid: "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-  password: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]",
-  currency: "^[A-Z]{3}$",
-  date: "^\\d{4}-\\d{2}-\\d{2}$",
-  time: "^\\d{2}:\\d{2}(:\\d{2})?$",
-  datetime: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3})?Z?$",
-  url: "^https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)$",
-  slug: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-  hexColor: "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$",
   base64: "^[A-Za-z0-9+/]*={0,2}$",
-  ipv4: "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",
   creditCard:
     "^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3[0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})$",
+  currency: "^[A-Z]{3}$",
+  date: "^\\d{4}-\\d{2}-\\d{2}$",
+  datetime: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3})?Z?$",
+  email: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+  hexColor: "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$",
+  ipv4: "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",
+  password: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]",
+  phone: "^\\+?[1-9]\\d{1,14}$",
+  slug: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+  time: "^\\d{2}:\\d{2}(:\\d{2})?$",
+  url: "^https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)$",
+  uuid: "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
 } as const;
 
 // Validation error codes
 export const validationCodes = {
-  REQUIRED: "required",
-  INVALID_TYPE: "invalid_type",
-  INVALID_FORMAT: "invalid_format",
-  MIN_LENGTH: "min_length",
-  MAX_LENGTH: "max_length",
-  MIN_VALUE: "min_value",
-  MAX_VALUE: "max_value",
-  INVALID_EMAIL: "invalid_email",
-  INVALID_URL: "invalid_url",
-  INVALID_DATE: "invalid_date",
-  PASSWORDS_DONT_MATCH: "passwords_dont_match",
   CUSTOM_VALIDATION: "custom_validation",
-  NETWORK_ERROR: "network_error",
-  SERVER_ERROR: "server_error",
-  UNAUTHORIZED: "unauthorized",
   FORBIDDEN: "forbidden",
+  INVALID_DATE: "invalid_date",
+  INVALID_EMAIL: "invalid_email",
+  INVALID_FORMAT: "invalid_format",
+  INVALID_TYPE: "invalid_type",
+  INVALID_URL: "invalid_url",
+  MAX_LENGTH: "max_length",
+  MAX_VALUE: "max_value",
+  MIN_LENGTH: "min_length",
+  MIN_VALUE: "min_value",
+  NETWORK_ERROR: "network_error",
   NOT_FOUND: "not_found",
+  PASSWORDS_DONT_MATCH: "passwords_dont_match",
   RATE_LIMITED: "rate_limited",
+  REQUIRED: "required",
+  SERVER_ERROR: "server_error",
   SERVICE_UNAVAILABLE: "service_unavailable",
+  UNAUTHORIZED: "unauthorized",
 } as const;
 
 // Common error messages
@@ -205,20 +205,10 @@ import { ValidationContext, type ValidationResult, validate } from "../validatio
 
 // Quick validation helpers
 export const quickValidate = {
-  email: (value: unknown): ValidationResult<string> =>
-    validate(z.string().email(), value, ValidationContext.FORM),
-
-  uuid: (value: unknown): ValidationResult<string> =>
-    validate(z.string().uuid(), value, ValidationContext.FORM),
-
   date: (value: unknown): ValidationResult<string> =>
     validate(z.string().date(), value, ValidationContext.FORM),
-
-  url: (value: unknown): ValidationResult<string> =>
-    validate(z.string().url(), value, ValidationContext.FORM),
-
-  positiveNumber: (value: unknown): ValidationResult<number> =>
-    validate(z.number().positive(), value, ValidationContext.FORM),
+  email: (value: unknown): ValidationResult<string> =>
+    validate(z.string().email(), value, ValidationContext.FORM),
 
   nonEmptyString: (value: unknown): ValidationResult<string> =>
     validate(z.string().min(1), value, ValidationContext.FORM),
@@ -235,18 +225,35 @@ export const quickValidate = {
       value,
       ValidationContext.FORM
     ),
+
+  positiveNumber: (value: unknown): ValidationResult<number> =>
+    validate(z.number().positive(), value, ValidationContext.FORM),
+
+  url: (value: unknown): ValidationResult<string> =>
+    validate(z.string().url(), value, ValidationContext.FORM),
+
+  uuid: (value: unknown): ValidationResult<string> =>
+    validate(z.string().uuid(), value, ValidationContext.FORM),
 };
 
 // Schema metadata for documentation
 export const schemaMetadata = {
+  agentStatus: {
+    categories: ["agents", "tasks", "workflows", "sessions", "metrics"],
+    description: "Agent status and workflow management schemas",
+    schemas: Object.keys(agentStatusSchemas).length,
+  },
   api: {
+    categories: ["auth", "user", "chat", "trip", "api-keys", "errors", "websocket"],
     description: "API request and response validation schemas",
     schemas: Object.keys(apiSchemas).length,
-    categories: ["auth", "user", "chat", "trip", "api-keys", "errors", "websocket"],
+  },
+  budget: {
+    categories: ["budget", "expenses", "categories", "alerts", "currency"],
+    description: "Budget and expense management validation schemas",
+    schemas: Object.keys(budgetSchemas).length,
   },
   components: {
-    description: "React component props validation schemas",
-    schemas: Object.keys(componentSchemas).length,
     categories: [
       "ui",
       "forms",
@@ -257,56 +264,74 @@ export const schemaMetadata = {
       "navigation",
       "loading",
     ],
-  },
-  forms: {
-    description: "Form data validation schemas with rules",
-    schemas: Object.keys(formSchemas).length,
-    categories: ["auth", "profile", "search", "trip", "budget", "chat", "contact"],
-  },
-  search: {
-    description: "Search functionality validation schemas",
-    schemas: Object.keys(searchSchemas).length,
-    categories: ["params", "results", "filters", "responses"],
-  },
-  stores: {
-    description: "Zustand store state validation schemas",
-    schemas: Object.keys(storeSchemas).length,
-    categories: ["auth", "user", "search", "trip", "chat", "ui", "budget", "api-keys"],
-  },
-  memory: {
-    description: "Memory and context management schemas",
-    schemas: Object.keys(memorySchemas).length,
-    categories: ["memory", "preferences", "insights", "conversations"],
-  },
-  errorBoundary: {
-    description: "Error boundary and loading state schemas",
-    schemas: Object.keys(errorBoundarySchemas).length,
-    categories: ["errors", "loading", "skeleton"],
-  },
-  loading: {
-    description: "Loading state and skeleton component schemas",
-    schemas: Object.keys(loadingSchemas).length,
-    categories: ["loading", "skeleton"],
-  },
-  budget: {
-    description: "Budget and expense management validation schemas",
-    schemas: Object.keys(budgetSchemas).length,
-    categories: ["budget", "expenses", "categories", "alerts", "currency"],
-  },
-  agentStatus: {
-    description: "Agent status and workflow management schemas",
-    schemas: Object.keys(agentStatusSchemas).length,
-    categories: ["agents", "tasks", "workflows", "sessions", "metrics"],
+    description: "React component props validation schemas",
+    schemas: Object.keys(componentSchemas).length,
   },
   env: {
+    categories: ["server", "client", "features", "security", "integrations"],
     description: "Environment variable validation schemas",
     schemas: Object.keys(envSchemas).length,
-    categories: ["server", "client", "features", "security", "integrations"],
+  },
+  errorBoundary: {
+    categories: ["errors", "loading", "skeleton"],
+    description: "Error boundary and loading state schemas",
+    schemas: Object.keys(errorBoundarySchemas).length,
+  },
+  forms: {
+    categories: ["auth", "profile", "search", "trip", "budget", "chat", "contact"],
+    description: "Form data validation schemas with rules",
+    schemas: Object.keys(formSchemas).length,
+  },
+  loading: {
+    categories: ["loading", "skeleton"],
+    description: "Loading state and skeleton component schemas",
+    schemas: Object.keys(loadingSchemas).length,
+  },
+  memory: {
+    categories: ["memory", "preferences", "insights", "conversations"],
+    description: "Memory and context management schemas",
+    schemas: Object.keys(memorySchemas).length,
+  },
+  search: {
+    categories: ["params", "results", "filters", "responses"],
+    description: "Search functionality validation schemas",
+    schemas: Object.keys(searchSchemas).length,
+  },
+  stores: {
+    categories: ["auth", "user", "search", "trip", "chat", "ui", "budget", "api-keys"],
+    description: "Zustand store state validation schemas",
+    schemas: Object.keys(storeSchemas).length,
   },
 } as const;
 
 // Development helpers
 export const dev = {
+  // Test schema validation performance
+  benchmarkValidation: (iterations = 1000) => {
+    const testData = {
+      email: "test@example.com",
+      number: 42,
+      password: "TestPass123!",
+      string: "test string",
+      uuid: "123e4567-e89b-12d3-a456-426614174000",
+    };
+
+    const results: Record<string, number> = {};
+
+    Object.entries(quickValidate).forEach(([name, validator]) => {
+      const startTime = performance.now();
+
+      for (let i = 0; i < iterations; i++) {
+        validator(testData[name as keyof typeof testData]);
+      }
+
+      const endTime = performance.now();
+      results[name] = endTime - startTime;
+    });
+
+    console.log("Validation benchmark results (ms):", results);
+    return results;
+  },
   // List all available schemas
   listSchemas: () => {
     return Object.entries(schemaMetadata).map(([category, meta]) => ({
@@ -326,33 +351,6 @@ export const dev = {
     console.log("Schema distribution:", schemaMetadata);
 
     return totalSchemas;
-  },
-
-  // Test schema validation performance
-  benchmarkValidation: (iterations = 1000) => {
-    const testData = {
-      email: "test@example.com",
-      uuid: "123e4567-e89b-12d3-a456-426614174000",
-      password: "TestPass123!",
-      number: 42,
-      string: "test string",
-    };
-
-    const results: Record<string, number> = {};
-
-    Object.entries(quickValidate).forEach(([name, validator]) => {
-      const startTime = performance.now();
-
-      for (let i = 0; i < iterations; i++) {
-        validator(testData[name as keyof typeof testData]);
-      }
-
-      const endTime = performance.now();
-      results[name] = endTime - startTime;
-    });
-
-    console.log("Validation benchmark results (ms):", results);
-    return results;
   },
 };
 

@@ -71,10 +71,10 @@ export function useAgentStatus() {
 
       // Add the new agent to the store
       addAgent({
-        name: data.agent.name,
-        type: data.agent.type,
         description: data.agent.description,
         metadata: data.agent.metadata,
+        name: data.agent.name,
+        type: data.agent.type,
       });
     }
   }, [startAgentMutation.data, currentSession, startSession, addAgent]);
@@ -115,7 +115,7 @@ export function useAgentStatus() {
   // Function to start a new agent
   const startAgent = useCallback(
     (type: string, name: string, config?: Record<string, unknown>) => {
-      startAgentMutation.mutate({ type, name, config });
+      startAgentMutation.mutate({ config, name, type });
     },
     [startAgentMutation]
   );
@@ -136,23 +136,23 @@ export function useAgentStatus() {
   );
 
   return {
+    activeAgents,
     // State
     agents,
-    activeAgents,
     currentSession,
-    isMonitoring,
+    error,
     isLoading:
       statusQuery.isLoading ||
       startAgentMutation.isPending ||
       stopAgentMutation.isPending,
-    error,
+    isMonitoring,
+    resetAgentStatus,
+    startAgent,
 
     // Actions
     startMonitoring,
-    stopMonitoring,
-    startAgent,
     stopAgent,
-    resetAgentStatus,
+    stopMonitoring,
   };
 }
 
@@ -178,9 +178,9 @@ export function useAgentTasks(agentId: string) {
   const addTask = useCallback(
     (description: string, status: AgentTask["status"] = "pending") => {
       addAgentTask(agentId, {
-        title: description,
         description,
         status,
+        title: description,
       });
     },
     [agentId, addAgentTask]
@@ -212,17 +212,16 @@ export function useAgentTasks(agentId: string) {
   }, [tasks, updateTaskStatus]);
 
   return {
-    tasks,
-    currentTask,
-    pendingTasks: tasks.filter((task) => task.status === "pending"),
+    addTask,
     completedTasks: tasks.filter((task) => task.status === "completed"),
+    completeTask,
+    currentTask,
     failedTasks: tasks.filter((task) => task.status === "failed"),
     inProgressTasks: tasks.filter((task) => task.status === "in_progress"),
-
-    addTask,
-    updateTaskStatus,
-    completeTask,
+    pendingTasks: tasks.filter((task) => task.status === "pending"),
     startNextTask,
+    tasks,
+    updateTaskStatus,
   };
 }
 
@@ -240,9 +239,9 @@ export function useAgentActivities() {
     (agentId: string, action: string, details?: Record<string, unknown>) => {
       addAgentActivity({
         agentId,
-        type: action,
         message: `Agent activity: ${action}`,
         metadata: details,
+        type: action,
       });
     },
     [addAgentActivity]
@@ -258,9 +257,9 @@ export function useAgentActivities() {
 
   return {
     activities,
-    recordActivity,
     getAgentActivities,
     recentActivities: activities.slice(-20), // Get the 20 most recent activities
+    recordActivity,
   };
 }
 
@@ -277,10 +276,10 @@ export function useResourceUsage() {
   const recordUsage = useCallback(
     (_agentId: string, cpu: number, memory: number, tokens: number) => {
       updateResourceUsage({
+        activeAgents: 1,
         cpuUsage: cpu,
         memoryUsage: memory,
         networkRequests: tokens,
-        activeAgents: 1,
       });
     },
     [updateResourceUsage]
@@ -309,9 +308,9 @@ export function useResourceUsage() {
   );
 
   return {
-    resourceUsage,
-    recordUsage,
     getAgentResourceUsage,
+    recordUsage,
+    resourceUsage,
     totalUsage,
   };
 }

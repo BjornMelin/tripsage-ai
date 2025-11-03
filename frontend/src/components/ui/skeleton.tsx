@@ -6,22 +6,22 @@ import { cn } from "@/lib/utils";
  * Skeleton component variants for consistent styling
  */
 const skeletonVariants = cva("rounded-md bg-muted", {
+  defaultVariants: {
+    animation: "pulse",
+    variant: "default",
+  },
   variants: {
+    animation: {
+      none: "",
+      pulse: "animate-pulse",
+      wave: "animate-[wave_1.5s_ease-in-out_infinite]",
+    },
     variant: {
       default: "bg-slate-100 dark:bg-slate-800",
       light: "bg-slate-50 dark:bg-slate-700",
       medium: "bg-slate-200 dark:bg-slate-600",
       rounded: "rounded-full",
     },
-    animation: {
-      pulse: "animate-pulse",
-      wave: "animate-[wave_1.5s_ease-in-out_infinite]",
-      none: "",
-    },
-  },
-  defaultVariants: {
-    variant: "default",
-    animation: "pulse",
   },
 });
 
@@ -57,8 +57,8 @@ const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
 
     // Build inline styles
     const inlineStyles: React.CSSProperties = {
-      width: typeof width === "number" ? `${width}px` : width,
       height: typeof height === "number" ? `${height}px` : height,
+      width: typeof width === "number" ? `${width}px` : width,
       ...style,
     };
 
@@ -68,7 +68,7 @@ const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
         <div
           ref={ref}
           className={cn(
-            skeletonVariants({ variant, animation: finalAnimation }),
+            skeletonVariants({ animation: finalAnimation, variant }),
             "skeleton",
             className
           )}
@@ -97,12 +97,12 @@ const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
             <div
               key={`skeleton-line-${index}`}
               className={cn(
-                skeletonVariants({ variant, animation: finalAnimation }),
+                skeletonVariants({ animation: finalAnimation, variant }),
                 "skeleton"
               )}
               style={{
-                width: lineWidth,
                 height: inlineStyles.height || "1rem",
+                width: lineWidth,
               }}
             />
           );

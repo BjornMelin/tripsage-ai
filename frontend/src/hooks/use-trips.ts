@@ -44,7 +44,7 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
   };
 
   return useQuery<TripSuggestion[], AppError>({
-    queryKey: queryKeys.trips.suggestions(normalizedParams),
+    gcTime: cacheTimes.medium,
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<TripSuggestion[]>(
@@ -55,8 +55,7 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
         throw handleApiError(error);
       }
     },
-    staleTime: staleTimes.suggestions,
-    gcTime: cacheTimes.medium,
+    queryKey: queryKeys.trips.suggestions(normalizedParams),
     retry: (failureCount, error) => {
       if (error instanceof Error && "status" in error) {
         const status = (error as any).status;
@@ -64,6 +63,7 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
       }
       return failureCount < 2;
     },
+    staleTime: staleTimes.suggestions,
     throwOnError: false,
   });
 }
@@ -79,9 +79,9 @@ export function useCreateTrip() {
     mutationFn: async (tripData: any) => {
       try {
         return await makeAuthenticatedRequest("/api/trips", {
-          method: "POST",
           body: JSON.stringify(tripData),
           headers: { "Content-Type": "application/json" },
+          method: "POST",
         });
       } catch (error) {
         throw handleApiError(error);
@@ -106,7 +106,7 @@ export function useCreateTrip() {
 }
 
 // Helper function to convert unknown values to API params
-const convertToApiParams = (
+const CONVERT_TO_API_PARAMS = (
   filters?: Record<string, unknown>
 ): Record<string, string | number | boolean> | undefined => {
   if (!filters) return undefined;
@@ -138,18 +138,17 @@ export function useTrips(filters?: Record<string, unknown>) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useQuery<any[], AppError>({
-    queryKey: queryKeys.trips.list(filters),
+    gcTime: cacheTimes.medium,
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest("/api/trips", {
-          params: convertToApiParams(filters),
+          params: CONVERT_TO_API_PARAMS(filters),
         });
       } catch (error) {
         throw handleApiError(error);
       }
     },
-    staleTime: staleTimes.trips,
-    gcTime: cacheTimes.medium,
+    queryKey: queryKeys.trips.list(filters),
     retry: (failureCount, error) => {
       if (error instanceof Error && "status" in error) {
         const status = (error as any).status;
@@ -157,6 +156,7 @@ export function useTrips(filters?: Record<string, unknown>) {
       }
       return failureCount < 2;
     },
+    staleTime: staleTimes.trips,
     throwOnError: false,
   });
 }
@@ -198,7 +198,7 @@ export function useUpcomingFlights(params?: UpcomingFlightsParams) {
   };
 
   return useQuery<UpcomingFlight[], AppError>({
-    queryKey: queryKeys.external.upcomingFlights(normalizedParams),
+    gcTime: cacheTimes.short, // 5 minutes
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<UpcomingFlight[]>(
@@ -209,8 +209,7 @@ export function useUpcomingFlights(params?: UpcomingFlightsParams) {
         throw handleApiError(error);
       }
     },
-    staleTime: staleTimes.realtime, // 30 seconds for real-time flight data
-    gcTime: cacheTimes.short, // 5 minutes
+    queryKey: queryKeys.external.upcomingFlights(normalizedParams),
     refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes for fresh flight data
     refetchIntervalInBackground: false, // Only when page is visible
     retry: (failureCount, error) => {
@@ -220,6 +219,7 @@ export function useUpcomingFlights(params?: UpcomingFlightsParams) {
       }
       return failureCount < 3; // More retries for external flight API
     },
+    staleTime: staleTimes.realtime, // 30 seconds for real-time flight data
     throwOnError: false,
   });
 }

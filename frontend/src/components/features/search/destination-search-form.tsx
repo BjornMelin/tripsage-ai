@@ -28,17 +28,17 @@ import { Separator } from "@/components/ui/separator";
 import { useMemoryContext } from "@/hooks/use-memory";
 import type { DestinationSearchParams } from "@/types/search";
 
-const destinationSearchFormSchema = z.object({
+const DESTINATION_SEARCH_FORM_SCHEMA = z.object({
+  language: z.string().optional(),
+  limit: z.number().min(1).max(20),
   query: z.string().min(1, { message: "Destination is required" }),
+  region: z.string().optional(),
   types: z.array(
     z.enum(["locality", "country", "administrative_area", "establishment"])
   ),
-  language: z.string().optional(),
-  region: z.string().optional(),
-  limit: z.number().min(1).max(20),
 });
 
-type DestinationSearchFormValues = z.infer<typeof destinationSearchFormSchema>;
+type DestinationSearchFormValues = z.infer<typeof DESTINATION_SEARCH_FORM_SCHEMA>;
 
 interface DestinationSuggestion {
   placeId: string;
@@ -57,24 +57,24 @@ interface DestinationSearchFormProps {
 
 const DESTINATION_TYPES = [
   {
+    description: "Local municipalities and urban areas",
     id: "locality",
     label: "Cities & Towns",
-    description: "Local municipalities and urban areas",
   },
   {
+    description: "National territories and regions",
     id: "country",
     label: "Countries",
-    description: "National territories and regions",
   },
   {
+    description: "Administrative divisions within countries",
     id: "administrative_area",
     label: "States & Regions",
-    description: "Administrative divisions within countries",
   },
   {
+    description: "Notable buildings, monuments, and attractions",
     id: "establishment",
     label: "Landmarks & Places",
-    description: "Notable buildings, monuments, and attractions",
   },
 ];
 
@@ -92,8 +92,8 @@ const POPULAR_DESTINATIONS = [
 export function DestinationSearchForm({
   onSearch,
   initialValues = {
-    types: ["locality", "country"],
     limit: 10,
+    types: ["locality", "country"],
   },
   userId,
   showMemoryRecommendations = true,
@@ -111,14 +111,14 @@ export function DestinationSearchForm({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<DestinationSearchFormValues>({
-    resolver: zodResolver(destinationSearchFormSchema),
     defaultValues: {
+      limit: 10,
       query: "",
       types: ["locality", "country"],
-      limit: 10,
       ...initialValues,
     },
     mode: "onChange",
+    resolver: zodResolver(DESTINATION_SEARCH_FORM_SCHEMA),
   });
 
   const query = form.watch("query");
@@ -136,16 +136,16 @@ export function DestinationSearchForm({
           // Mock API call - replace with actual Google Places Autocomplete API
           const mockSuggestions: DestinationSuggestion[] = [
             {
-              placeId: "ChIJD7fiBh9u5kcRYJSMaMOCCwQ",
               description: `${query} - Popular Destination`,
               mainText: query,
+              placeId: "ChIJD7fiBh9u5kcRYJSMaMOCCwQ",
               secondaryText: "Tourist Destination",
               types: ["locality", "political"],
             },
             {
-              placeId: "ChIJmysnFgZYSoYRSfPTL2YJuck",
               description: `${query} City Center`,
               mainText: `${query} City Center`,
+              placeId: "ChIJmysnFgZYSoYRSfPTL2YJuck",
               secondaryText: "Urban Area",
               types: ["establishment"],
             },
@@ -185,11 +185,11 @@ export function DestinationSearchForm({
 
   function onSubmit(data: DestinationSearchFormValues) {
     const searchParams: DestinationSearchParams = {
-      query: data.query,
-      types: data.types,
       language: data.language,
-      region: data.region,
       limit: data.limit,
+      query: data.query,
+      region: data.region,
+      types: data.types,
     };
 
     console.log("Destination search params:", searchParams);

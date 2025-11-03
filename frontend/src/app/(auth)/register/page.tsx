@@ -3,9 +3,9 @@ import Link from "next/link";
 import { RegisterForm } from "@/components/auth/register-form";
 
 export const metadata: Metadata = {
-  title: "Create Account - TripSage",
   description:
     "Join TripSage to start planning your perfect trips with AI-powered assistance",
+  title: "Create Account - TripSage",
 };
 
 export default async function RegisterPage({

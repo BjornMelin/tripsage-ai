@@ -5,10 +5,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the server client used by the route handler
-const exchangeMock: any = vi.fn(async (_code: string) => ({ error: null }));
+const EXCHANGE_MOCK: any = vi.fn(async (_code: string) => ({ error: null }));
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({
-    auth: { exchangeCodeForSession: exchangeMock },
+    auth: { exchangeCodeForSession: EXCHANGE_MOCK },
   })),
 }));
 
@@ -22,18 +22,18 @@ import { GET } from "../route";
  * @return A mock request object.
  */
 function makeReq(url: string, headers: Record<string, string> = {}): any {
-  return { url, headers: new Headers(headers) };
+  return { headers: new Headers(headers), url };
 }
 
 describe("auth/callback route", () => {
   beforeEach(() => {
-    exchangeMock.mockClear();
+    EXCHANGE_MOCK.mockClear();
   });
 
   it("exchanges code and redirects to next path (local)", async () => {
     const req = makeReq("http://localhost/auth/callback?code=abc&next=%2Fdashboard");
     const res = await GET(req);
-    expect(exchangeMock).toHaveBeenCalledWith("abc");
+    expect(EXCHANGE_MOCK).toHaveBeenCalledWith("abc");
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe("http://localhost/dashboard");
   });
@@ -47,7 +47,7 @@ describe("auth/callback route", () => {
   });
 
   it("redirects to login on error", async () => {
-    exchangeMock.mockResolvedValueOnce({ error: new Error("bad") });
+    EXCHANGE_MOCK.mockResolvedValueOnce({ error: new Error("bad") });
     const req = makeReq("https://app.example.com/auth/callback?code=bad");
     const res = await GET(req);
     expect(res.headers.get("location")).toBe(

@@ -21,10 +21,13 @@ export const dynamic = "force-dynamic";
  * @param ctx - Route context containing the session ID parameter.
  * @returns Promise resolving to a Response with array of messages.
  */
-export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function GET(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const supabase = await createServerSupabase();
-    const sessionId = ctx.params.id;
+    const { id: sessionId } = await context.params;
     return listMessages({ supabase }, sessionId);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -40,10 +43,13 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
  * @param ctx - Route context containing the session ID parameter.
  * @returns Promise resolving to a Response with no content on success.
  */
-export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const supabase = await createServerSupabase();
-    const sessionId = ctx.params.id;
+    const { id: sessionId } = await context.params;
     let body: any;
     try {
       body = await req.json();

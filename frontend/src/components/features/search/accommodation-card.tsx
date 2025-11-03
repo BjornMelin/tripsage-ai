@@ -20,13 +20,13 @@ interface AccommodationCardProps {
   onCompare?: (accommodation: Accommodation) => void;
 }
 
-const amenityIcons: Record<string, React.ReactNode> = {
-  wifi: <Wifi className="h-4 w-4" />,
-  parking: <Car className="h-4 w-4" />,
+const AMENITY_ICONS: Record<string, React.ReactNode> = {
   breakfast: <Coffee className="h-4 w-4" />,
   gym: <Dumbbell className="h-4 w-4" />,
+  parking: <Car className="h-4 w-4" />,
   pool: <Waves className="h-4 w-4" />,
   restaurant: <Utensils className="h-4 w-4" />,
+  wifi: <Wifi className="h-4 w-4" />,
 };
 
 export function AccommodationCard({
@@ -85,7 +85,7 @@ export function AccommodationCard({
                 key={amenity}
                 className="flex items-center gap-1 text-xs text-muted-foreground"
               >
-                {amenityIcons[amenity] || (
+                {AMENITY_ICONS[amenity] || (
                   <span className="h-4 w-4 rounded-full bg-muted" />
                 )}
                 <span className="capitalize">{amenity.replace("_", " ")}</span>

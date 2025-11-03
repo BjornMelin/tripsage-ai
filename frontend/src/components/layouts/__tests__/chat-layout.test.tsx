@@ -29,9 +29,9 @@ describe("ChatLayout", () => {
   beforeEach(() => {
     // Mock store implementations
     (useChatStore as any).mockReturnValue({
-      sessions: [],
-      currentSessionId: null,
       createSession: vi.fn(),
+      currentSessionId: null,
+      sessions: [],
     });
 
     (useAgentStatusStore as any).mockReturnValue({
@@ -162,12 +162,12 @@ describe("AgentStatusPanel", () => {
     (useAgentStatusStore as any).mockReturnValue({
       activeAgents: [
         {
+          currentTaskId: "t1",
           id: "1",
           name: "Flight Agent",
-          status: "active",
-          currentTaskId: "t1",
-          tasks: [{ id: "t1", description: "Searching for flights" }],
           progress: 75,
+          status: "active",
+          tasks: [{ description: "Searching for flights", id: "t1" }],
         },
       ],
       isMonitoring: false,

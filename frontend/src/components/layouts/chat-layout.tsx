@@ -23,20 +23,20 @@ interface ChatSidebarProps extends React.HTMLAttributes<HTMLElement> {
 const SAMPLE_SESSIONS = [
   {
     id: "1",
-    title: "Flight Search Help",
     lastMessage: "Find me flights to Paris",
+    title: "Flight Search Help",
     updatedAt: "2025-05-21T10:00:00Z",
   },
   {
     id: "2",
-    title: "Budget Planning",
     lastMessage: "How can I save money on travel?",
+    title: "Budget Planning",
     updatedAt: "2025-05-21T09:30:00Z",
   },
   {
     id: "3",
-    title: "Hotel Recommendations",
     lastMessage: "Best hotels in Tokyo",
+    title: "Hotel Recommendations",
     updatedAt: "2025-05-21T08:45:00Z",
   },
 ];

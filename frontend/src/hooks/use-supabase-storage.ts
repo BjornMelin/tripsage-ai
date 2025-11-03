@@ -71,7 +71,7 @@ export function useSupabaseStorage() {
     virusScanStatus?: VirusScanStatus;
   }) => {
     return useQuery({
-      queryKey: ["file-attachments", userId, filters],
+      enabled: !!userId,
       queryFn: async () => {
         if (!userId) throw new Error("User not authenticated");
 
@@ -98,7 +98,7 @@ export function useSupabaseStorage() {
         if (error) throw error;
         return data as FileAttachment[];
       },
-      enabled: !!userId,
+      queryKey: ["file-attachments", userId, filters],
       staleTime: 1000 * 60 * 5, // 5 minutes
     });
   };
@@ -106,7 +106,7 @@ export function useSupabaseStorage() {
   // Get file attachment by ID
   const useFileAttachment = (attachmentId: string | null) => {
     return useQuery({
-      queryKey: ["file-attachment", attachmentId],
+      enabled: !!attachmentId,
       queryFn: async () => {
         if (!attachmentId) throw new Error("Attachment ID is required");
 
@@ -119,7 +119,7 @@ export function useSupabaseStorage() {
         if (error) throw error;
         return data as FileAttachment;
       },
-      enabled: !!attachmentId,
+      queryKey: ["file-attachment", attachmentId],
       staleTime: 1000 * 60 * 10, // 10 minutes
     });
   };
@@ -127,7 +127,7 @@ export function useSupabaseStorage() {
   // Get storage usage statistics
   const useStorageStats = () => {
     return useQuery({
-      queryKey: ["storage-stats", userId],
+      enabled: !!userId,
       queryFn: async () => {
         if (!userId) throw new Error("User not authenticated");
 
@@ -162,14 +162,14 @@ export function useSupabaseStorage() {
         );
 
         return {
+          filesByStatus,
+          filesByType,
           totalFiles: files.length,
           totalSize,
           totalSizeMB: Math.round((totalSize / (1024 * 1024)) * 100) / 100,
-          filesByType,
-          filesByStatus,
         };
       },
-      enabled: !!userId,
+      queryKey: ["storage-stats", userId],
       staleTime: 1000 * 60 * 15, // 15 minutes
     });
   };
@@ -235,21 +235,21 @@ export function useSupabaseStorage() {
 
         // Create file attachment record
         const attachmentData: FileAttachmentInsert = {
-          user_id: userId,
-          trip_id: tripId || null,
-          chat_message_id: chatMessageId || null,
-          filename: fileName,
-          original_filename: file.name,
-          file_size: file.size,
-          mime_type: file.type,
-          file_path: filePath,
           bucket_name: bucket,
-          upload_status: "completed",
-          virus_scan_status: "pending",
+          chat_message_id: chatMessageId || null,
+          file_path: filePath,
+          file_size: file.size,
+          filename: fileName,
           metadata: {
-            upload_timestamp: new Date().toISOString(),
             file_extension: fileExt,
+            upload_timestamp: new Date().toISOString(),
           },
+          mime_type: file.type,
+          original_filename: file.name,
+          trip_id: tripId || null,
+          upload_status: "completed",
+          user_id: userId,
+          virus_scan_status: "pending",
         };
 
         const { data: attachmentRecord, error: attachmentError } = await insertSingle(
@@ -283,8 +283,8 @@ export function useSupabaseStorage() {
           ...prev,
           [fileId]: {
             ...prev[fileId],
-            status: "error",
             error: error instanceof Error ? error.message : "Upload failed",
+            status: "error",
           },
         }));
 
@@ -324,11 +324,11 @@ export function useSupabaseStorage() {
         .map((result) => result.reason);
 
       return {
-        successful,
         failed,
-        totalCount: files.length,
-        successCount: successful.length,
         failureCount: failed.length,
+        successCount: successful.length,
+        successful,
+        totalCount: files.length,
       };
     },
   });
@@ -434,25 +434,25 @@ export function useSupabaseStorage() {
 
   return useMemo(
     () => ({
-      // Query hooks
-      useFileAttachments,
-      useFileAttachment,
-      useStorageStats,
-
-      // Mutations
-      uploadFile,
-      uploadMultipleFiles,
+      clearAllUploadProgress,
+      clearUploadProgress,
       deleteFile,
-      updateFileAttachment,
 
       // Utilities
       getDownloadUrl,
       getPublicUrl,
+      updateFileAttachment,
+
+      // Mutations
+      uploadFile,
+      uploadMultipleFiles,
 
       // Upload progress
       uploadProgress,
-      clearUploadProgress,
-      clearAllUploadProgress,
+      useFileAttachment,
+      // Query hooks
+      useFileAttachments,
+      useStorageStats,
     }),
     [
       useFileAttachments,
@@ -530,11 +530,11 @@ export function useFileTypeUtils() {
   }, []);
 
   return {
-    getFileIcon,
     formatFileSize,
-    isImageFile,
-    isVideoFile,
+    getFileIcon,
     isAudioFile,
     isDocumentFile,
+    isImageFile,
+    isVideoFile,
   };
 }

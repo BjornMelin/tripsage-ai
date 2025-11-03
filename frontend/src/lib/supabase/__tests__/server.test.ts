@@ -87,8 +87,8 @@ describe("Supabase Server Client", () => {
 
     // Test setAll
     const cookiesToSet = [
-      { name: "new1", value: "val1", options: { httpOnly: true } },
-      { name: "new2", value: "val2", options: { secure: true } },
+      { name: "new1", options: { httpOnly: true }, value: "val1" },
+      { name: "new2", options: { secure: true }, value: "val2" },
     ];
     capturedCookieHandlers.setAll(cookiesToSet);
 

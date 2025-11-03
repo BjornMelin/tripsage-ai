@@ -53,9 +53,9 @@ interface AgentStatusState {
   setError: (error: string | null) => void;
 }
 
-const generateId = () =>
+const GENERATE_ID = () =>
   Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-const getCurrentTimestamp = () => new Date().toISOString();
+const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
 
 // Schema for the agent status store state
 // const agentStatusStoreSchema = z.object({ // Future validation
@@ -91,84 +91,16 @@ export const useAgentStatusStore = create<AgentStatusState>()(
 
       const initialState = {
         agents: [] as Agent[],
-        sessions: [] as AgentSession[],
         currentSessionId: null as string | null,
+        error: null as string | null,
         isMonitoring: false,
         lastUpdated: null as string | null,
-        error: null as string | null,
+        sessions: [] as AgentSession[],
       };
 
       return {
         ...initialState,
-        currentSession: computeCurrentSession(initialState),
         activeAgents: computeActiveAgents(initialState.agents),
-
-        getCurrentSession: () => {
-          const { sessions, currentSessionId } = get();
-          if (!currentSessionId) return null;
-          return sessions.find((session) => session.id === currentSessionId) || null;
-        },
-
-        getActiveAgents: () => {
-          return get().agents.filter(
-            (agent) =>
-              agent.status !== "idle" &&
-              agent.status !== "completed" &&
-              agent.status !== "error"
-          );
-        },
-
-        startSession: () => {
-          const sessionId = generateId();
-          const timestamp = getCurrentTimestamp();
-
-          const newSession: AgentSession = {
-            id: sessionId,
-            agents: [],
-            activities: [],
-            resourceUsage: [],
-            startedAt: timestamp,
-            status: "active",
-          };
-
-          set((state) => {
-            const newState = {
-              ...state,
-              sessions: [newSession, ...state.sessions],
-              currentSessionId: sessionId,
-              isMonitoring: true,
-              lastUpdated: timestamp,
-            };
-            return {
-              ...newState,
-              currentSession: computeCurrentSession(newState),
-              activeAgents: computeActiveAgents(newState.agents),
-            };
-          });
-        },
-
-        endSession: (sessionId, status = "completed") => {
-          const timestamp = getCurrentTimestamp();
-
-          set((state) => {
-            const newState = {
-              ...state,
-              sessions: state.sessions.map((session) =>
-                session.id === sessionId
-                  ? { ...session, endedAt: timestamp, status }
-                  : session
-              ),
-              isMonitoring:
-                state.currentSessionId === sessionId ? false : state.isMonitoring,
-              lastUpdated: timestamp,
-            };
-            return {
-              ...newState,
-              currentSession: computeCurrentSession(newState),
-              activeAgents: computeActiveAgents(newState.agents),
-            };
-          });
-        },
 
         addAgent: (agentData) => {
           const { currentSessionId, sessions } = get();
@@ -179,14 +111,14 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           );
           if (!currentSession) return;
 
-          const timestamp = getCurrentTimestamp();
+          const timestamp = GET_CURRENT_TIMESTAMP();
           const newAgent: Agent = {
-            id: generateId(),
+            id: GENERATE_ID(),
             ...agentData,
-            status: "initializing",
-            progress: 0,
-            tasks: [],
             createdAt: timestamp,
+            progress: 0,
+            status: "initializing",
+            tasks: [],
             updatedAt: timestamp,
           };
 
@@ -194,84 +126,57 @@ export const useAgentStatusStore = create<AgentStatusState>()(
             const newState = {
               ...state,
               agents: [...state.agents, newAgent],
+              lastUpdated: timestamp,
               sessions: state.sessions.map((session) =>
                 session.id === currentSessionId
                   ? { ...session, agents: [...session.agents, newAgent] }
                   : session
               ),
-              lastUpdated: timestamp,
             };
             return {
               ...newState,
-              currentSession: computeCurrentSession(newState),
               activeAgents: computeActiveAgents(newState.agents),
+              currentSession: computeCurrentSession(newState),
             };
           });
         },
 
-        updateAgentStatus: (agentId, status) => {
-          const timestamp = getCurrentTimestamp();
+        addAgentActivity: (activityData) => {
+          const { currentSessionId, currentSession } = get();
+          if (!currentSessionId || !currentSession) return;
+
+          const timestamp = GET_CURRENT_TIMESTAMP();
+          const newActivity: AgentActivity = {
+            id: GENERATE_ID(),
+            ...activityData,
+            timestamp,
+          };
 
           set((state) => {
             const newState = {
               ...state,
-              agents: state.agents.map((agent) =>
-                agent.id === agentId
-                  ? { ...agent, status, updatedAt: timestamp }
-                  : agent
-              ),
-              sessions: state.sessions.map((session) => ({
-                ...session,
-                agents: session.agents.map((agent) =>
-                  agent.id === agentId
-                    ? { ...agent, status, updatedAt: timestamp }
-                    : agent
-                ),
-              })),
               lastUpdated: timestamp,
+              sessions: state.sessions.map((session) =>
+                session.id === currentSessionId
+                  ? {
+                      ...session,
+                      activities: [...session.activities, newActivity],
+                    }
+                  : session
+              ),
             };
             return {
               ...newState,
-              currentSession: computeCurrentSession(newState),
               activeAgents: computeActiveAgents(newState.agents),
-            };
-          });
-        },
-
-        updateAgentProgress: (agentId, progress) => {
-          const timestamp = getCurrentTimestamp();
-          const clampedProgress = Math.max(0, Math.min(100, progress));
-
-          set((state) => {
-            const newState = {
-              ...state,
-              agents: state.agents.map((agent) =>
-                agent.id === agentId
-                  ? { ...agent, progress: clampedProgress, updatedAt: timestamp }
-                  : agent
-              ),
-              sessions: state.sessions.map((session) => ({
-                ...session,
-                agents: session.agents.map((agent) =>
-                  agent.id === agentId
-                    ? { ...agent, progress: clampedProgress, updatedAt: timestamp }
-                    : agent
-                ),
-              })),
-              lastUpdated: timestamp,
-            };
-            return {
-              ...newState,
               currentSession: computeCurrentSession(newState),
-              activeAgents: computeActiveAgents(newState.agents),
             };
           });
         },
 
         addAgentTask: (agentId, taskData) => {
-          const timestamp = getCurrentTimestamp();
+          const timestamp = GET_CURRENT_TIMESTAMP();
           const newTask: AgentTask = {
-            id: generateId(),
+            id: GENERATE_ID(),
             ...taskData,
             createdAt: timestamp,
             updatedAt: timestamp,
@@ -287,88 +192,43 @@ export const useAgentStatusStore = create<AgentStatusState>()(
                 agent.id === agentId
                   ? {
                       ...agent,
-                      tasks: [...agent.tasks, newTask],
                       currentTaskId:
                         updateCurrentTask && !agent.currentTaskId
                           ? newTask.id
                           : agent.currentTaskId,
+                      tasks: [...agent.tasks, newTask],
                       updatedAt: timestamp,
                     }
                   : agent
               ),
+              lastUpdated: timestamp,
               sessions: state.sessions.map((session) => ({
                 ...session,
                 agents: session.agents.map((agent) =>
                   agent.id === agentId
                     ? {
                         ...agent,
-                        tasks: [...agent.tasks, newTask],
                         currentTaskId:
                           updateCurrentTask && !agent.currentTaskId
                             ? newTask.id
                             : agent.currentTaskId,
+                        tasks: [...agent.tasks, newTask],
                         updatedAt: timestamp,
                       }
                     : agent
                 ),
               })),
-              lastUpdated: timestamp,
             };
             return {
               ...newState,
-              currentSession: computeCurrentSession(newState),
               activeAgents: computeActiveAgents(newState.agents),
-            };
-          });
-        },
-
-        updateAgentTask: (agentId, taskId, update) => {
-          const timestamp = getCurrentTimestamp();
-
-          set((state) => {
-            const newState = {
-              ...state,
-              agents: state.agents.map((agent) =>
-                agent.id === agentId
-                  ? {
-                      ...agent,
-                      tasks: agent.tasks.map((task) =>
-                        task.id === taskId
-                          ? { ...task, ...update, updatedAt: timestamp }
-                          : task
-                      ),
-                      updatedAt: timestamp,
-                    }
-                  : agent
-              ),
-              sessions: state.sessions.map((session) => ({
-                ...session,
-                agents: session.agents.map((agent) =>
-                  agent.id === agentId
-                    ? {
-                        ...agent,
-                        tasks: agent.tasks.map((task) =>
-                          task.id === taskId
-                            ? { ...task, ...update, updatedAt: timestamp }
-                            : task
-                        ),
-                        updatedAt: timestamp,
-                      }
-                    : agent
-                ),
-              })),
-              lastUpdated: timestamp,
-            };
-            return {
-              ...newState,
               currentSession: computeCurrentSession(newState),
-              activeAgents: computeActiveAgents(newState.agents),
             };
           });
         },
 
         completeAgentTask: (agentId, taskId, error) => {
-          const timestamp = getCurrentTimestamp();
+          const timestamp = GET_CURRENT_TIMESTAMP();
           const status: "completed" | "failed" = error ? "failed" : "completed";
 
           set((state) => {
@@ -386,18 +246,18 @@ export const useAgentStatusStore = create<AgentStatusState>()(
 
               return {
                 ...agent,
+                currentTaskId: nextTaskId,
                 tasks: agent.tasks.map((task) =>
                   task.id === taskId
                     ? {
                         ...task,
-                        status,
                         completedAt: timestamp,
                         error,
+                        status,
                         updatedAt: timestamp,
                       }
                     : task
                 ),
-                currentTaskId: nextTaskId,
                 updatedAt: timestamp,
               };
             };
@@ -405,99 +265,75 @@ export const useAgentStatusStore = create<AgentStatusState>()(
             const newState = {
               ...state,
               agents: state.agents.map(agentUpdate),
+              lastUpdated: timestamp,
               sessions: state.sessions.map((session) => ({
                 ...session,
                 agents: session.agents.map(agentUpdate),
               })),
-              lastUpdated: timestamp,
             };
             return {
               ...newState,
-              currentSession: computeCurrentSession(newState),
               activeAgents: computeActiveAgents(newState.agents),
+              currentSession: computeCurrentSession(newState),
             };
           });
         },
+        currentSession: computeCurrentSession(initialState),
 
-        addAgentActivity: (activityData) => {
-          const { currentSessionId, currentSession } = get();
-          if (!currentSessionId || !currentSession) return;
-
-          const timestamp = getCurrentTimestamp();
-          const newActivity: AgentActivity = {
-            id: generateId(),
-            ...activityData,
-            timestamp,
-          };
+        endSession: (sessionId, status = "completed") => {
+          const timestamp = GET_CURRENT_TIMESTAMP();
 
           set((state) => {
             const newState = {
               ...state,
+              isMonitoring:
+                state.currentSessionId === sessionId ? false : state.isMonitoring,
+              lastUpdated: timestamp,
               sessions: state.sessions.map((session) =>
-                session.id === currentSessionId
-                  ? {
-                      ...session,
-                      activities: [...session.activities, newActivity],
-                    }
+                session.id === sessionId
+                  ? { ...session, endedAt: timestamp, status }
                   : session
               ),
-              lastUpdated: timestamp,
             };
             return {
               ...newState,
-              currentSession: computeCurrentSession(newState),
               activeAgents: computeActiveAgents(newState.agents),
+              currentSession: computeCurrentSession(newState),
             };
           });
         },
 
-        updateResourceUsage: (usageData) => {
-          const { currentSessionId, currentSession } = get();
-          if (!currentSessionId || !currentSession) return;
+        getActiveAgents: () => {
+          return get().agents.filter(
+            (agent) =>
+              agent.status !== "idle" &&
+              agent.status !== "completed" &&
+              agent.status !== "error"
+          );
+        },
 
-          const timestamp = getCurrentTimestamp();
-          const newUsage: ResourceUsage = {
-            ...usageData,
-            timestamp,
-          };
-
-          set((state) => {
-            const newState = {
-              ...state,
-              sessions: state.sessions.map((session) =>
-                session.id === currentSessionId
-                  ? {
-                      ...session,
-                      resourceUsage: [...session.resourceUsage, newUsage],
-                    }
-                  : session
-              ),
-              lastUpdated: timestamp,
-            };
-            return {
-              ...newState,
-              currentSession: computeCurrentSession(newState),
-              activeAgents: computeActiveAgents(newState.agents),
-            };
-          });
+        getCurrentSession: () => {
+          const { sessions, currentSessionId } = get();
+          if (!currentSessionId) return null;
+          return sessions.find((session) => session.id === currentSessionId) || null;
         },
 
         resetAgentStatus: () => {
-          const timestamp = getCurrentTimestamp();
+          const timestamp = GET_CURRENT_TIMESTAMP();
 
           const newState = {
             agents: [],
-            sessions: [],
             currentSessionId: null,
+            error: null,
             isMonitoring: false,
             lastUpdated: timestamp,
-            error: null,
+            sessions: [],
           };
 
           set({
             ...newState,
-            currentSession: computeCurrentSession(newState),
             activeAgents: computeActiveAgents(newState.agents),
+            currentSession: computeCurrentSession(newState),
           });
         },
 
@@ -506,8 +342,172 @@ export const useAgentStatusStore = create<AgentStatusState>()(
             const newState = { ...state, error };
             return {
               ...newState,
-              currentSession: computeCurrentSession(newState),
               activeAgents: computeActiveAgents(newState.agents),
+              currentSession: computeCurrentSession(newState),
+            };
+          });
+        },
+
+        startSession: () => {
+          const sessionId = GENERATE_ID();
+          const timestamp = GET_CURRENT_TIMESTAMP();
+
+          const newSession: AgentSession = {
+            activities: [],
+            agents: [],
+            id: sessionId,
+            resourceUsage: [],
+            startedAt: timestamp,
+            status: "active",
+          };
+
+          set((state) => {
+            const newState = {
+              ...state,
+              currentSessionId: sessionId,
+              isMonitoring: true,
+              lastUpdated: timestamp,
+              sessions: [newSession, ...state.sessions],
+            };
+            return {
+              ...newState,
+              activeAgents: computeActiveAgents(newState.agents),
+              currentSession: computeCurrentSession(newState),
+            };
+          });
+        },
+
+        updateAgentProgress: (agentId, progress) => {
+          const timestamp = GET_CURRENT_TIMESTAMP();
+          const clampedProgress = Math.max(0, Math.min(100, progress));
+
+          set((state) => {
+            const newState = {
+              ...state,
+              agents: state.agents.map((agent) =>
+                agent.id === agentId
+                  ? { ...agent, progress: clampedProgress, updatedAt: timestamp }
+                  : agent
+              ),
+              lastUpdated: timestamp,
+              sessions: state.sessions.map((session) => ({
+                ...session,
+                agents: session.agents.map((agent) =>
+                  agent.id === agentId
+                    ? { ...agent, progress: clampedProgress, updatedAt: timestamp }
+                    : agent
+                ),
+              })),
+            };
+            return {
+              ...newState,
+              activeAgents: computeActiveAgents(newState.agents),
+              currentSession: computeCurrentSession(newState),
+            };
+          });
+        },
+
+        updateAgentStatus: (agentId, status) => {
+          const timestamp = GET_CURRENT_TIMESTAMP();
+
+          set((state) => {
+            const newState = {
+              ...state,
+              agents: state.agents.map((agent) =>
+                agent.id === agentId
+                  ? { ...agent, status, updatedAt: timestamp }
+                  : agent
+              ),
+              lastUpdated: timestamp,
+              sessions: state.sessions.map((session) => ({
+                ...session,
+                agents: session.agents.map((agent) =>
+                  agent.id === agentId
+                    ? { ...agent, status, updatedAt: timestamp }
+                    : agent
+                ),
+              })),
+            };
+            return {
+              ...newState,
+              activeAgents: computeActiveAgents(newState.agents),
+              currentSession: computeCurrentSession(newState),
+            };
+          });
+        },
+
+        updateAgentTask: (agentId, taskId, update) => {
+          const timestamp = GET_CURRENT_TIMESTAMP();
+
+          set((state) => {
+            const newState = {
+              ...state,
+              agents: state.agents.map((agent) =>
+                agent.id === agentId
+                  ? {
+                      ...agent,
+                      tasks: agent.tasks.map((task) =>
+                        task.id === taskId
+                          ? { ...task, ...update, updatedAt: timestamp }
+                          : task
+                      ),
+                      updatedAt: timestamp,
+                    }
+                  : agent
+              ),
+              lastUpdated: timestamp,
+              sessions: state.sessions.map((session) => ({
+                ...session,
+                agents: session.agents.map((agent) =>
+                  agent.id === agentId
+                    ? {
+                        ...agent,
+                        tasks: agent.tasks.map((task) =>
+                          task.id === taskId
+                            ? { ...task, ...update, updatedAt: timestamp }
+                            : task
+                        ),
+                        updatedAt: timestamp,
+                      }
+                    : agent
+                ),
+              })),
+            };
+            return {
+              ...newState,
+              activeAgents: computeActiveAgents(newState.agents),
+              currentSession: computeCurrentSession(newState),
+            };
+          });
+        },
+
+        updateResourceUsage: (usageData) => {
+          const { currentSessionId, currentSession } = get();
+          if (!currentSessionId || !currentSession) return;
+
+          const timestamp = GET_CURRENT_TIMESTAMP();
+          const newUsage: ResourceUsage = {
+            ...usageData,
+            timestamp,
+          };
+
+          set((state) => {
+            const newState = {
+              ...state,
+              lastUpdated: timestamp,
+              sessions: state.sessions.map((session) =>
+                session.id === currentSessionId
+                  ? {
+                      ...session,
+                      resourceUsage: [...session.resourceUsage, newUsage],
+                    }
+                  : session
+              ),
+            };
+            return {
+              ...newState,
+              activeAgents: computeActiveAgents(newState.agents),
+              currentSession: computeCurrentSession(newState),
             };
           });
         },
@@ -516,13 +516,13 @@ export const useAgentStatusStore = create<AgentStatusState>()(
     {
       name: "agent-status-storage",
       partialize: (state) => ({
+        currentSessionId: state.currentSessionId,
         sessions: state.sessions.map((session) => ({
           ...session,
           // Truncate long activity lists to keep storage size reasonable
           activities: session.activities.slice(-100),
           resourceUsage: session.resourceUsage.slice(-50),
         })),
-        currentSessionId: state.currentSessionId,
       }),
     }
   )

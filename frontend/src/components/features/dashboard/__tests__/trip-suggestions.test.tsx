@@ -12,21 +12,21 @@ import { render } from "@/test/test-utils";
 import { TripSuggestions } from "../trip-suggestions";
 
 // Mock the stores with essential methods
-const mockBudgetStore = {
+const MOCK_BUDGET_STORE = {
   activeBudget: null as any,
 };
 
-const mockDealsStore = {
+const MOCK_DEALS_STORE = {
   deals: [],
   isLoading: false,
 };
 
 vi.mock("@/stores/budget-store", () => ({
-  useBudgetStore: vi.fn(() => mockBudgetStore),
+  useBudgetStore: vi.fn(() => MOCK_BUDGET_STORE),
 }));
 
 vi.mock("@/stores/deals-store", () => ({
-  useDealsStore: vi.fn(() => mockDealsStore),
+  useDealsStore: vi.fn(() => MOCK_DEALS_STORE),
 }));
 
 vi.mock("@/hooks/use-trips", () => ({
@@ -45,36 +45,36 @@ vi.mock("next/link", () => ({
 describe("TripSuggestions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockBudgetStore.activeBudget = null;
-    mockDealsStore.deals = [];
+    MOCK_BUDGET_STORE.activeBudget = null;
+    MOCK_DEALS_STORE.deals = [];
     // Provide default API suggestions
     vi.mocked(useTripSuggestions).mockReturnValue({
       data: [
         {
-          id: "sug-1",
-          title: "Paris Getaway",
-          destination: "Paris",
-          description: "Romantic escape in the city of lights",
-          estimated_price: 1500,
-          currency: "USD",
-          duration: 5,
-          rating: 4.5,
-          category: "culture",
           best_time_to_visit: "Spring",
+          category: "culture",
+          currency: "USD",
+          description: "Romantic escape in the city of lights",
+          destination: "Paris",
+          duration: 5,
+          estimated_price: 1500,
           highlights: ["Louvre", "Eiffel Tower", "Seine Cruise"],
+          id: "sug-1",
+          rating: 4.5,
+          title: "Paris Getaway",
         },
         {
-          id: "sug-2",
-          title: "Tokyo Explorer",
-          destination: "Tokyo",
-          description: "Modern meets tradition",
-          estimated_price: 2000,
-          currency: "USD",
-          duration: 7,
-          rating: 4.7,
-          category: "city",
           best_time_to_visit: "Fall",
+          category: "city",
+          currency: "USD",
+          description: "Modern meets tradition",
+          destination: "Tokyo",
+          duration: 7,
+          estimated_price: 2000,
           highlights: ["Shibuya", "Asakusa", "Akihabara"],
+          id: "sug-2",
+          rating: 4.7,
+          title: "Tokyo Explorer",
         },
       ],
       isLoading: false,
@@ -107,14 +107,14 @@ describe("TripSuggestions", () => {
   describe("Budget Filtering", () => {
     it("should filter suggestions based on budget", () => {
       // Set a low budget that should filter out expensive suggestions
-      mockBudgetStore.activeBudget = {
+      MOCK_BUDGET_STORE.activeBudget = {
+        categories: [],
+        createdAt: "2024-01-01T00:00:00Z",
+        currency: "USD",
         id: "test-budget",
+        isActive: true,
         name: "Test Budget",
         totalAmount: 1000,
-        currency: "USD",
-        categories: [],
-        isActive: true,
-        createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-01T00:00:00Z",
       };
 
@@ -125,7 +125,7 @@ describe("TripSuggestions", () => {
     });
 
     it("should show all suggestions when no budget set", () => {
-      mockBudgetStore.activeBudget = null;
+      MOCK_BUDGET_STORE.activeBudget = null;
 
       render(<TripSuggestions />);
 
@@ -138,14 +138,14 @@ describe("TripSuggestions", () => {
   describe("Empty States", () => {
     it("should show empty state when no suggestions match filters", () => {
       // Set extremely low budget to filter out all suggestions
-      mockBudgetStore.activeBudget = {
+      MOCK_BUDGET_STORE.activeBudget = {
+        categories: [],
+        createdAt: "2024-01-01T00:00:00Z",
+        currency: "USD",
         id: "low-budget",
+        isActive: true,
         name: "Low Budget",
         totalAmount: 1,
-        currency: "USD",
-        categories: [],
-        isActive: true,
-        createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-01T00:00:00Z",
       };
       // No API suggestions
@@ -164,14 +164,14 @@ describe("TripSuggestions", () => {
     });
 
     it("should handle showEmpty prop correctly", () => {
-      mockBudgetStore.activeBudget = {
+      MOCK_BUDGET_STORE.activeBudget = {
+        categories: [],
+        createdAt: "2024-01-01T00:00:00Z",
+        currency: "USD",
         id: "minimal-budget",
+        isActive: true,
         name: "Minimal Budget",
         totalAmount: 1,
-        currency: "USD",
-        categories: [],
-        isActive: true,
-        createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-01T00:00:00Z",
       };
 
@@ -243,7 +243,7 @@ describe("TripSuggestions", () => {
     });
 
     it("should handle undefined budget store gracefully", () => {
-      mockBudgetStore.activeBudget = null;
+      MOCK_BUDGET_STORE.activeBudget = null;
 
       render(<TripSuggestions />);
 

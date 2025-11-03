@@ -21,33 +21,33 @@ vi.mock("global", () => ({
 }));
 
 // Helper function to create mock users with Zod validation
-const createMockUser = (overrides: Partial<User> = {}): User => {
+const CREATE_MOCK_USER = (overrides: Partial<User> = {}): User => {
   const mockUserData = {
-    id: "user-1",
-    email: "test@example.com",
-    isEmailVerified: true,
-    createdAt: "2025-01-01T00:00:00Z",
-    updatedAt: "2025-01-01T00:00:00Z",
-    firstName: "John",
-    lastName: "Doe",
-    displayName: "Custom Display Name",
-    bio: "Test bio",
     avatarUrl: "https://example.com/avatar.jpg",
+    bio: "Test bio",
+    createdAt: "2025-01-01T00:00:00Z",
+    displayName: "Custom Display Name",
+    email: "test@example.com",
+    firstName: "John",
+    id: "user-1",
+    isEmailVerified: true,
+    lastName: "Doe",
     preferences: {
-      theme: "light" as const,
       language: "en",
-      timezone: "UTC",
       notifications: {
         email: true,
-        tripReminders: true,
-        priceAlerts: false,
         marketing: false,
+        priceAlerts: false,
+        tripReminders: true,
       },
+      theme: "light" as const,
+      timezone: "UTC",
     },
     security: {
-      twoFactorEnabled: false,
       lastPasswordChange: "2025-01-01T00:00:00Z",
+      twoFactorEnabled: false,
     },
+    updatedAt: "2025-01-01T00:00:00Z",
     ...overrides,
   };
 
@@ -58,19 +58,19 @@ describe("Auth Store", () => {
   beforeEach(() => {
     act(() => {
       useAuthStore.setState({
+        error: null,
         isAuthenticated: false,
-        user: null,
-        tokenInfo: null,
-        session: null,
         isLoading: false,
         isLoggingIn: false,
+        isRefreshingToken: false,
         isRegistering: false,
         isResettingPassword: false,
-        isRefreshingToken: false,
-        error: null,
         loginError: null,
-        registerError: null,
         passwordResetError: null,
+        registerError: null,
+        session: null,
+        tokenInfo: null,
+        user: null,
       });
     });
   });
@@ -216,12 +216,12 @@ describe("Auth Store", () => {
         const { result } = renderHook(() => useAuthStore());
 
         const credentials: RegisterCredentials = {
-          email: "newuser@example.com",
-          password: "password123",
+          acceptTerms: true,
           confirmPassword: "password123",
+          email: "newuser@example.com",
           firstName: "John",
           lastName: "Doe",
-          acceptTerms: true,
+          password: "password123",
         };
 
         let registerResult: boolean;
@@ -243,10 +243,10 @@ describe("Auth Store", () => {
         const { result } = renderHook(() => useAuthStore());
 
         const credentials: RegisterCredentials = {
+          acceptTerms: true,
+          confirmPassword: "differentpassword",
           email: "newuser@example.com",
           password: "password123",
-          confirmPassword: "differentpassword",
-          acceptTerms: true,
         };
 
         let registerResult: boolean;
@@ -263,10 +263,10 @@ describe("Auth Store", () => {
         const { result } = renderHook(() => useAuthStore());
 
         const credentials: RegisterCredentials = {
+          acceptTerms: false,
+          confirmPassword: "password123",
           email: "newuser@example.com",
           password: "password123",
-          confirmPassword: "password123",
-          acceptTerms: false,
         };
 
         let registerResult: boolean;
@@ -284,12 +284,12 @@ describe("Auth Store", () => {
         const { result } = renderHook(() => useAuthStore());
 
         const credentials: RegisterCredentials = {
-          email: "user@example.com",
-          password: "password123",
+          acceptTerms: true,
           confirmPassword: "password123",
+          email: "user@example.com",
           firstName: "Jane",
           lastName: "Smith",
-          acceptTerms: true,
+          password: "password123",
         };
 
         await act(async () => {
@@ -303,10 +303,10 @@ describe("Auth Store", () => {
         const { result } = renderHook(() => useAuthStore());
 
         const credentials: RegisterCredentials = {
+          acceptTerms: true,
+          confirmPassword: "password123",
           email: "username@example.com",
           password: "password123",
-          confirmPassword: "password123",
-          acceptTerms: true,
         };
 
         await act(async () => {
@@ -409,9 +409,9 @@ describe("Auth Store", () => {
         const { result } = renderHook(() => useAuthStore());
 
         const reset: PasswordReset = {
-          token: "valid-reset-token",
-          newPassword: "newpassword123",
           confirmPassword: "newpassword123",
+          newPassword: "newpassword123",
+          token: "valid-reset-token",
         };
 
         let resetResult: boolean;
@@ -428,9 +428,9 @@ describe("Auth Store", () => {
         const { result } = renderHook(() => useAuthStore());
 
         const reset: PasswordReset = {
-          token: "valid-reset-token",
-          newPassword: "newpassword123",
           confirmPassword: "differentpassword",
+          newPassword: "newpassword123",
+          token: "valid-reset-token",
         };
 
         let resetResult: boolean;
@@ -446,9 +446,9 @@ describe("Auth Store", () => {
         const { result } = renderHook(() => useAuthStore());
 
         const reset: PasswordReset = {
-          token: "",
-          newPassword: "newpassword123",
           confirmPassword: "newpassword123",
+          newPassword: "newpassword123",
+          token: "",
         };
 
         let resetResult: boolean;
@@ -553,8 +553,8 @@ describe("Auth Store", () => {
           useAuthStore.setState({
             tokenInfo: {
               accessToken: "valid-token",
-              refreshToken: "refresh-token",
               expiresAt: new Date(Date.now() + 3600000).toISOString(),
+              refreshToken: "refresh-token",
               tokenType: "Bearer",
             },
           });
@@ -576,8 +576,8 @@ describe("Auth Store", () => {
           useAuthStore.setState({
             tokenInfo: {
               accessToken: "expired-token",
-              refreshToken: "refresh-token",
               expiresAt: new Date(Date.now() - 3600000).toISOString(),
+              refreshToken: "refresh-token",
               tokenType: "Bearer",
             },
           });
@@ -610,9 +610,9 @@ describe("Auth Store", () => {
         const { result } = renderHook(() => useAuthStore());
 
         const updates = {
+          bio: "Updated bio",
           firstName: "UpdatedFirst",
           lastName: "UpdatedLast",
-          bio: "Updated bio",
         };
 
         let updateResult: boolean;
@@ -648,12 +648,12 @@ describe("Auth Store", () => {
         const { result } = renderHook(() => useAuthStore());
 
         const preferences: Partial<UserPreferences> = {
-          theme: "dark",
           language: "es",
           notifications: {
             email: true,
             tripReminders: false,
           },
+          theme: "dark",
         };
 
         let updateResult: boolean;
@@ -673,8 +673,8 @@ describe("Auth Store", () => {
         const { result } = renderHook(() => useAuthStore());
 
         const security: Partial<UserSecurity> = {
-          twoFactorEnabled: true,
           lastPasswordChange: "2025-01-01T00:00:00Z",
+          twoFactorEnabled: true,
         };
 
         let updateResult: boolean;
@@ -826,8 +826,8 @@ describe("Auth Store", () => {
 
     it("correctly computes session time remaining", () => {
       const { result } = renderHook(() => ({
-        sessionTimeRemaining: useSessionTimeRemaining(),
         session: useAuthStore((state) => state.session),
+        sessionTimeRemaining: useSessionTimeRemaining(),
       }));
 
       // No session
@@ -837,11 +837,11 @@ describe("Auth Store", () => {
       act(() => {
         useAuthStore.setState({
           session: {
-            id: "session-1",
-            userId: "user-1",
             createdAt: "2025-01-01T00:00:00Z",
-            lastActivity: "2025-01-01T00:00:00Z",
             expiresAt: new Date(Date.now() + 3600000).toISOString(),
+            id: "session-1",
+            lastActivity: "2025-01-01T00:00:00Z",
+            userId: "user-1",
           },
         });
       });
@@ -868,7 +868,7 @@ describe("Auth Store", () => {
 
       // User with display name
       act(() => {
-        const mockUser = createMockUser({ id: "user-1" });
+        const mockUser = CREATE_MOCK_USER({ id: "user-1" });
         result.current.setUser(mockUser);
       });
 
@@ -879,7 +879,7 @@ describe("Auth Store", () => {
 
       // User with first and last name (no display name)
       act(() => {
-        const mockUser = createMockUser({ id: "user-2", displayName: undefined });
+        const mockUser = CREATE_MOCK_USER({ displayName: undefined, id: "user-2" });
         result.current.setUser(mockUser);
       });
 
@@ -887,10 +887,10 @@ describe("Auth Store", () => {
 
       // User with only first name
       act(() => {
-        const mockUser = createMockUser({
-          id: "user-3",
+        const mockUser = CREATE_MOCK_USER({
           displayName: undefined,
           firstName: "Jane",
+          id: "user-3",
           lastName: undefined,
         });
         result.current.setUser(mockUser);
@@ -900,11 +900,11 @@ describe("Auth Store", () => {
 
       // User with only email
       act(() => {
-        const mockUser = createMockUser({
-          id: "user-4",
-          email: "username@example.com",
+        const mockUser = CREATE_MOCK_USER({
           displayName: undefined,
+          email: "username@example.com",
           firstName: undefined,
+          id: "user-4",
           lastName: undefined,
         });
         result.current.setUser(mockUser);
@@ -922,8 +922,8 @@ describe("Auth Store", () => {
         useAuthStore.setState({
           error: "General error",
           loginError: "Login error",
-          registerError: "Register error",
           passwordResetError: "Reset error",
+          registerError: "Register error",
         });
       });
 
@@ -944,8 +944,8 @@ describe("Auth Store", () => {
         useAuthStore.setState({
           error: "General error",
           loginError: "Login error",
-          registerError: "Register error",
           passwordResetError: "Reset error",
+          registerError: "Register error",
         });
       });
 
@@ -970,10 +970,10 @@ describe("Auth Store", () => {
       const { result } = renderHook(() => useAuthStore());
 
       const user: User = {
-        id: "user-1",
-        email: "test@example.com",
-        isEmailVerified: true,
         createdAt: "2025-01-01T00:00:00Z",
+        email: "test@example.com",
+        id: "user-1",
+        isEmailVerified: true,
         updatedAt: "2025-01-01T00:00:00Z",
       };
 
@@ -998,8 +998,8 @@ describe("Auth Store", () => {
         useAuthStore.setState({
           tokenInfo: {
             accessToken: "valid-token",
-            refreshToken: "refresh-token",
             expiresAt: new Date(Date.now() + 3600000).toISOString(),
+            refreshToken: "refresh-token",
             tokenType: "Bearer",
           },
         });
@@ -1038,10 +1038,10 @@ describe("Auth Store", () => {
     it("selector hooks return correct values", () => {
       const { result: authResult } = renderHook(() => ({
         isAuthenticated: useIsAuthenticated(),
-        user: useUser(),
-        userDisplayName: useAuthStore((state) => state.userDisplayName),
         isTokenExpired: useIsTokenExpired(),
         sessionTimeRemaining: useSessionTimeRemaining(),
+        user: useUser(),
+        userDisplayName: useAuthStore((state) => state.userDisplayName),
       }));
 
       expect(authResult.current.isAuthenticated).toBe(false);
@@ -1059,12 +1059,12 @@ describe("Auth Store", () => {
       // Register
       await act(async () => {
         await result.current.register({
-          email: "newuser@example.com",
-          password: "password123",
+          acceptTerms: true,
           confirmPassword: "password123",
+          email: "newuser@example.com",
           firstName: "New",
           lastName: "User",
-          acceptTerms: true,
+          password: "password123",
         });
       });
 
@@ -1099,8 +1099,8 @@ describe("Auth Store", () => {
 
     it("handles token refresh scenarios", async () => {
       const { result } = renderHook(() => ({
-        store: useAuthStore(),
         isTokenExpired: useIsTokenExpired(),
+        store: useAuthStore(),
       }));
 
       // Login to get tokens

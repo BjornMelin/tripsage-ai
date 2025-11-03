@@ -117,17 +117,17 @@ export function useRealtimeChannel<T = unknown>(
       throw new Error("Supabase channel is not connected.");
     }
     const request: ChannelSendRequest = {
-      type: "broadcast",
       event,
       payload,
+      type: "broadcast",
     };
     await channel.send(request);
   };
 
   return {
-    isConnected,
-    error,
     channel: channelRef.current,
+    error,
+    isConnected,
     onBroadcast,
     sendBroadcast,
   };

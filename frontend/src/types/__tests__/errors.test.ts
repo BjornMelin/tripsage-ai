@@ -42,10 +42,10 @@ describe("Error Type Schemas", () => {
   describe("ErrorDetailsSchema", () => {
     it("should validate valid error details", () => {
       const validErrorDetails = {
-        name: "TypeError",
-        message: "Cannot read property 'foo' of undefined",
-        stack: "TypeError: Cannot read property 'foo' of undefined\n    at Component",
         digest: "abc123",
+        message: "Cannot read property 'foo' of undefined",
+        name: "TypeError",
+        stack: "TypeError: Cannot read property 'foo' of undefined\n    at Component",
       };
 
       const result = ErrorDetailsSchema.parse(validErrorDetails);
@@ -54,8 +54,8 @@ describe("Error Type Schemas", () => {
 
     it("should validate error details with only required fields", () => {
       const minimalErrorDetails = {
-        name: "Error",
         message: "Something went wrong",
+        name: "Error",
       };
 
       const result = ErrorDetailsSchema.parse(minimalErrorDetails);
@@ -76,20 +76,20 @@ describe("Error Type Schemas", () => {
     it("should validate complete error report", () => {
       const validErrorReport = {
         error: {
-          name: "TypeError",
-          message: "Cannot read property 'foo' of undefined",
-          stack: "TypeError: Cannot read property 'foo' of undefined\n    at Component",
           digest: "abc123",
+          message: "Cannot read property 'foo' of undefined",
+          name: "TypeError",
+          stack: "TypeError: Cannot read property 'foo' of undefined\n    at Component",
         },
         errorInfo: {
           componentStack: "at Component (src/Component.tsx:10:5)",
           errorBoundary: "ErrorBoundary",
         },
+        sessionId: "session456",
+        timestamp: "2024-01-01T00:00:00.000Z",
         url: "https://example.com/dashboard",
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        timestamp: "2024-01-01T00:00:00.000Z",
         userId: "user123",
-        sessionId: "session456",
       };
 
       const result = ErrorReportSchema.parse(validErrorReport);
@@ -99,12 +99,12 @@ describe("Error Type Schemas", () => {
     it("should validate minimal error report", () => {
       const minimalErrorReport = {
         error: {
-          name: "Error",
           message: "Something went wrong",
+          name: "Error",
         },
+        timestamp: "2024-01-01T00:00:00.000Z",
         url: "https://example.com",
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        timestamp: "2024-01-01T00:00:00.000Z",
       };
 
       const result = ErrorReportSchema.parse(minimalErrorReport);
@@ -117,9 +117,9 @@ describe("Error Type Schemas", () => {
           name: "TypeError",
           // Missing required message field
         },
+        timestamp: "2024-01-01T00:00:00.000Z",
         url: "https://example.com",
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        timestamp: "2024-01-01T00:00:00.000Z",
       };
 
       expect(() => ErrorReportSchema.parse(invalidErrorReport)).toThrow();
@@ -134,15 +134,15 @@ describe("Error Type Schemas", () => {
       };
 
       const errorDetails: ErrorDetails = {
-        name: "Error",
         message: "Test error",
+        name: "Error",
       };
 
       const errorReport: ErrorReport = {
         error: errorDetails,
+        timestamp: "2024-01-01T00:00:00.000Z",
         url: "https://example.com",
         userAgent: "test-agent",
-        timestamp: "2024-01-01T00:00:00.000Z",
       };
 
       // If these assignments work without TypeScript errors, the types are correct

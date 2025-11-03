@@ -57,9 +57,9 @@ describe("useDestinationSearch", () => {
       const { result } = renderHook(() => useDestinationSearch());
 
       const searchParams = {
+        limit: 10,
         query: "Tokyo",
         types: ["city", "country"],
-        limit: 10,
       };
 
       await act(async () => {
@@ -111,8 +111,8 @@ describe("useDestinationSearch", () => {
 
       await act(async () => {
         await result.current.searchDestinations({
-          query: "New York",
           limit: 5,
+          query: "New York",
         });
       });
 
@@ -266,7 +266,7 @@ describe("useDestinationSearch", () => {
 
       for (const limit of testLimits) {
         await act(async () => {
-          await result.current.searchDestinations({ query: "Test", limit });
+          await result.current.searchDestinations({ limit, query: "Test" });
         });
 
         expect(result.current.searchError).toBe(null);
@@ -280,7 +280,7 @@ describe("useDestinationSearch", () => {
 
       for (const limit of edgeCaseLimits) {
         await act(async () => {
-          await result.current.searchDestinations({ query: "Test", limit });
+          await result.current.searchDestinations({ limit, query: "Test" });
         });
 
         // Should not throw errors even with unusual limit values

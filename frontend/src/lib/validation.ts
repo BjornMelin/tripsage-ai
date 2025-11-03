@@ -77,13 +77,13 @@ export const convertZodError = (
   context: ValidationContext
 ): ValidationError[] => {
   return zodError.issues.map((issue) => ({
+    code: issue.code,
     context,
     field: issue.path.join(".") || undefined,
-    path: issue.path.map(String),
     message: issue.message,
-    code: issue.code,
-    value: (issue as any).received,
+    path: issue.path.map(String),
     timestamp: new Date(),
+    value: (issue as any).received,
   }));
 };
 
@@ -98,26 +98,26 @@ export const validate = <T>(
 
     if (result.success) {
       return {
-        success: true,
         data: result.data,
+        success: true,
       };
     }
     const errors = convertZodError(result.error, context);
     return {
-      success: false,
       errors,
+      success: false,
     };
   } catch (error) {
     return {
-      success: false,
       errors: [
         {
+          code: "UNKNOWN_ERROR",
           context,
           message: error instanceof Error ? error.message : "Unknown validation error",
-          code: "UNKNOWN_ERROR",
           timestamp: new Date(),
         },
       ],
+      success: false,
     };
   }
 };
@@ -253,27 +253,27 @@ export const validateBatch = <T>(
   });
 
   if (errors.length > 0) {
-    return { success: false, errors };
+    return { errors, success: false };
   }
 
-  return { success: true, data: results };
+  return { data: results, success: true };
 };
 
 // Validation middleware for React Query
 export const createQueryValidationMiddleware = <T>(schema: z.ZodSchema<T>) => {
   return {
+    onError: (error: unknown) => {
+      if (error instanceof TripSageValidationError) {
+        console.error("Query validation failed:", error.errors);
+      }
+      throw error;
+    },
     onSuccess: (data: unknown) => {
       const result = validateApiResponse(schema, data);
       if (!result.success) {
         throw new TripSageValidationError(ValidationContext.API, result.errors || []);
       }
       return result.data;
-    },
-    onError: (error: unknown) => {
-      if (error instanceof TripSageValidationError) {
-        console.error("Query validation failed:", error.errors);
-      }
-      throw error;
     },
   };
 };
@@ -285,7 +285,6 @@ export const createFormValidationMiddleware = <T>(schema: z.ZodSchema<T>) => {
       const result = validateFormData(schema, data);
       if (!result.success) {
         return {
-          values: {},
           errors: result.errors?.reduce(
             (acc, error) => {
               if (error.field) {
@@ -295,9 +294,10 @@ export const createFormValidationMiddleware = <T>(schema: z.ZodSchema<T>) => {
             },
             {} as Record<string, string>
           ),
+          values: {},
         };
       }
-      return { values: result.data, errors: {} };
+      return { errors: {}, values: result.data };
     },
   };
 };
@@ -373,7 +373,6 @@ export const getValidationSummary = (
   byField: Record<string, number>;
 } => {
   return {
-    total: errors.length,
     byContext: errors.reduce(
       (acc, error) => {
         acc[error.context] = (acc[error.context] || 0) + 1;
@@ -390,6 +389,7 @@ export const getValidationSummary = (
       },
       {} as Record<string, number>
     ),
+    total: errors.length,
   };
 };
 
@@ -416,23 +416,23 @@ export const useValidation = <T>(
   context: ValidationContext
 ) => {
   return {
+    isValid: (data: unknown) => validate(schema, data, context).success,
     validate: (data: unknown) => validate(schema, data, context),
     validateStrict: (data: unknown) => validateStrict(schema, data, context),
-    isValid: (data: unknown) => validate(schema, data, context).success,
   };
 };
 
 // Export commonly used validators
 export const validators = {
+  date: (value: unknown) => validate(z.string().date(), value, ValidationContext.FORM),
   email: (value: unknown) =>
     validate(z.string().email(), value, ValidationContext.FORM),
-  uuid: (value: unknown) => validate(z.string().uuid(), value, ValidationContext.FORM),
-  date: (value: unknown) => validate(z.string().date(), value, ValidationContext.FORM),
-  url: (value: unknown) => validate(z.string().url(), value, ValidationContext.FORM),
-  positiveNumber: (value: unknown) =>
-    validate(z.number().positive(), value, ValidationContext.FORM),
   nonEmptyString: (value: unknown) =>
     validate(z.string().min(1), value, ValidationContext.FORM),
+  positiveNumber: (value: unknown) =>
+    validate(z.number().positive(), value, ValidationContext.FORM),
+  url: (value: unknown) => validate(z.string().url(), value, ValidationContext.FORM),
+  uuid: (value: unknown) => validate(z.string().uuid(), value, ValidationContext.FORM),
 };
 
 // Note: ValidationError interface already exported above

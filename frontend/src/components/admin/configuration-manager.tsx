@@ -100,19 +100,19 @@ interface PerformanceMetrics {
 
 const AGENT_TYPES = [
   {
-    value: "budget_agent",
-    label: "Budget Agent",
     description: "Handles budget optimization and expense tracking",
+    label: "Budget Agent",
+    value: "budget_agent",
   },
   {
-    value: "destination_research_agent",
-    label: "Research Agent",
     description: "Researches destinations and attractions",
+    label: "Research Agent",
+    value: "destination_research_agent",
   },
   {
-    value: "itinerary_agent",
-    label: "Itinerary Agent",
     description: "Plans and optimizes travel itineraries",
+    label: "Itinerary Agent",
+    value: "itinerary_agent",
   },
 ];
 
@@ -176,8 +176,8 @@ export default function ConfigurationManager() {
     } catch (error) {
       console.error("Error loading configurations:", error);
       toast({
-        title: "Error",
         description: "Failed to load configurations",
+        title: "Error",
         variant: "destructive",
       });
     } finally {
@@ -222,14 +222,14 @@ export default function ConfigurationManager() {
       const mockMetrics: PerformanceMetrics = {
         agent_type: agentType,
         average_response_time: Math.random() * 2000 + 500,
-        success_rate: 0.95 + Math.random() * 0.04,
+        cost_estimate: Math.random() * 10,
         error_rate: Math.random() * 0.05,
+        sample_size: Math.floor(Math.random() * 1000) + 100,
+        success_rate: 0.95 + Math.random() * 0.04,
         token_usage: {
           input_tokens: Math.floor(Math.random() * 10000),
           output_tokens: Math.floor(Math.random() * 5000),
         },
-        cost_estimate: Math.random() * 10,
-        sample_size: Math.floor(Math.random() * 1000) + 100,
       };
 
       setMetrics((prev) => ({ ...prev, [agentType]: mockMetrics }));
@@ -269,18 +269,18 @@ export default function ConfigurationManager() {
     setSaving(selectedAgent);
     try {
       const response = await fetch(`/api/config/agents/${selectedAgent}`, {
-        method: "PUT",
+        body: JSON.stringify({
+          description: editedConfig.description,
+          max_tokens: editedConfig.max_tokens,
+          model: editedConfig.model,
+          temperature: editedConfig.temperature,
+          timeout_seconds: editedConfig.timeout_seconds,
+          top_p: editedConfig.top_p,
+        }),
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          temperature: editedConfig.temperature,
-          max_tokens: editedConfig.max_tokens,
-          top_p: editedConfig.top_p,
-          timeout_seconds: editedConfig.timeout_seconds,
-          model: editedConfig.model,
-          description: editedConfig.description,
-        }),
+        method: "PUT",
       });
 
       if (!response.ok) {
@@ -294,8 +294,8 @@ export default function ConfigurationManager() {
       setHasUnsavedChanges(false);
 
       toast({
-        title: "Configuration Saved",
         description: `${selectedAgent} configuration has been updated successfully`,
+        title: "Configuration Saved",
         variant: "default",
       });
 
@@ -304,9 +304,9 @@ export default function ConfigurationManager() {
     } catch (error) {
       console.error("Error saving configuration:", error);
       toast({
-        title: "Save Failed",
         description:
           error instanceof Error ? error.message : "Failed to save configuration",
+        title: "Save Failed",
         variant: "destructive",
       });
     } finally {
@@ -335,16 +335,16 @@ export default function ConfigurationManager() {
       await loadVersionHistory(selectedAgent);
 
       toast({
-        title: "Rollback Successful",
         description: `Configuration rolled back to version ${versionId}`,
+        title: "Rollback Successful",
         variant: "default",
       });
     } catch (error) {
       console.error("Error rolling back:", error);
       toast({
-        title: "Rollback Failed",
         description:
           error instanceof Error ? error.message : "Failed to rollback configuration",
+        title: "Rollback Failed",
         variant: "destructive",
       });
     }

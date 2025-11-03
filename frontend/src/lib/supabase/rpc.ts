@@ -35,9 +35,9 @@ export async function insertUserApiKey(
   const svc = normalizeService(service);
   const supabase = client ?? createAdminSupabase();
   const { error } = await (supabase as any).rpc("insert_user_api_key", {
-    p_user_id: userId,
-    p_service: svc,
     p_api_key: apiKey,
+    p_service: svc,
+    p_user_id: userId,
   });
   if (error) throw error;
 }
@@ -59,8 +59,8 @@ export async function deleteUserApiKey(
   const svc = normalizeService(service);
   const supabase = client ?? createAdminSupabase();
   const { error } = await (supabase as any).rpc("delete_user_api_key", {
-    p_user_id: userId,
     p_service: svc,
+    p_user_id: userId,
   });
   if (error) throw error;
 }
@@ -84,8 +84,8 @@ export async function getUserApiKey(
   const svc = normalizeService(service);
   const supabase = client ?? createAdminSupabase();
   const { data, error } = await (supabase as any).rpc("get_user_api_key", {
-    p_user_id: userId,
     p_service: svc,
+    p_user_id: userId,
   });
   if (error) throw error;
   return data ?? null;
@@ -108,8 +108,8 @@ export async function touchUserApiKey(
   const svc = normalizeService(service);
   const supabase = client ?? createAdminSupabase();
   const { error } = await (supabase as any).rpc("touch_user_api_key", {
-    p_user_id: userId,
     p_service: svc,
+    p_user_id: userId,
   });
   if (error) throw error;
 }

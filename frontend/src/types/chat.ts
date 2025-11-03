@@ -24,32 +24,32 @@ export type ToolCallStatus = z.infer<typeof ToolCallStatusSchema>;
 
 // tool call schema that matches backend
 export const ToolCallSchema = z.object({
-  id: z.string(),
-  name: z.string(),
   arguments: z.record(z.string(), z.unknown()).optional(),
-  status: ToolCallStatusSchema.optional().default("pending"),
-  result: z.unknown().optional(),
   error: z.string().optional(),
   executionTime: z.number().optional(),
-  sessionId: z.string().optional(),
+  id: z.string(),
   messageId: z.string().optional(),
+  name: z.string(),
+  result: z.unknown().optional(),
+  sessionId: z.string().optional(),
+  status: ToolCallStatusSchema.optional().default("pending"),
 });
 export type ToolCall = z.infer<typeof ToolCallSchema>;
 
 // Tool result schema for displaying results
 export const ToolResultSchema = z.object({
   callId: z.string(),
+  errorMessage: z.string().optional(),
+  executionTime: z.number().optional(),
   result: z.unknown(),
   status: z.enum(["success", "error"]),
-  executionTime: z.number().optional(),
-  errorMessage: z.string().optional(),
 });
 export type ToolResult = z.infer<typeof ToolResultSchema>;
 
 // Message part for text content
 export const TextPartSchema = z.object({
-  type: z.literal("text"),
   text: z.string(),
+  type: z.literal("text"),
 });
 export type TextPart = z.infer<typeof TextPartSchema>;
 
@@ -59,59 +59,59 @@ export type MessagePart = z.infer<typeof MessagePartSchema>;
 
 // Attachment schema for files
 export const AttachmentSchema = z.object({
-  id: z.string(),
-  url: z.string(),
-  name: z.string().optional(),
   contentType: z.string().optional(),
+  id: z.string(),
+  name: z.string().optional(),
   size: z.number().optional(),
+  url: z.string(),
 });
 export type Attachment = z.infer<typeof AttachmentSchema>;
 
 // Message schema
 export const MessageSchema = z.object({
-  id: z.string(),
-  role: MessageRoleSchema,
-  content: z.string().optional(),
-  parts: z.array(MessagePartSchema).optional(),
-  createdAt: z.date().or(z.string().datetime()),
-  updatedAt: z.date().or(z.string().datetime()).optional(),
-  attachments: z.array(AttachmentSchema).optional(),
   annotations: z.record(z.string(), z.unknown()).optional(),
-  // tool calling support
-  toolCalls: z.array(ToolCallSchema).optional(),
-  toolResults: z.array(ToolResultSchema).optional(),
+  attachments: z.array(AttachmentSchema).optional(),
+  content: z.string().optional(),
+  createdAt: z.date().or(z.string().datetime()),
+  handledBy: z.string().optional(),
+  id: z.string(),
+  intentDetected: z.record(z.string(), z.unknown()).optional(),
+  parts: z.array(MessagePartSchema).optional(),
+  role: MessageRoleSchema,
   // Agent routing information
   routedTo: z.string().optional(),
   routingConfidence: z.number().optional(),
-  intentDetected: z.record(z.string(), z.unknown()).optional(),
-  handledBy: z.string().optional(),
+  // tool calling support
+  toolCalls: z.array(ToolCallSchema).optional(),
+  toolResults: z.array(ToolResultSchema).optional(),
+  updatedAt: z.date().or(z.string().datetime()).optional(),
 });
 export type Message = z.infer<typeof MessageSchema>;
 
 // Chat session schema
 export const ChatSessionSchema = z.object({
-  id: z.string(),
-  title: z.string(),
   createdAt: z.date().or(z.string().datetime()),
-  updatedAt: z.date().or(z.string().datetime()),
+  id: z.string(),
   messages: z.array(MessageSchema).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  title: z.string(),
+  updatedAt: z.date().or(z.string().datetime()),
 });
 export type ChatSession = z.infer<typeof ChatSessionSchema>;
 
 // Chat store state schema
 export const ChatStoreStateSchema = z.object({
-  sessions: z.array(ChatSessionSchema),
   currentSessionId: z.string().nullable(),
-  status: z.enum(["idle", "loading", "streaming", "error"]),
   error: z.string().nullable(),
+  sessions: z.array(ChatSessionSchema),
+  status: z.enum(["idle", "loading", "streaming", "error"]),
 });
 export type ChatStoreState = z.infer<typeof ChatStoreStateSchema>;
 
 // Agent status schema
 export const AgentStatusSchema = z.object({
-  isActive: z.boolean(),
   currentTask: z.string().nullable(),
+  isActive: z.boolean(),
   progress: z.number().min(0).max(100),
   statusMessage: z.string().optional(),
 });
@@ -119,27 +119,27 @@ export type AgentStatus = z.infer<typeof AgentStatusSchema>;
 
 // Chat completion request schema
 export const ChatCompletionRequestSchema = z.object({
+  attachments: z.array(AttachmentSchema).optional(),
+  maxTokens: z.number().positive().optional(),
   messages: z.array(MessageSchema),
   model: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
-  maxTokens: z.number().positive().optional(),
   tools: z.array(z.string()).optional(),
-  attachments: z.array(AttachmentSchema).optional(),
 });
 export type ChatCompletionRequest = z.infer<typeof ChatCompletionRequestSchema>;
 
 // Chat completion response schema
 export const ChatCompletionResponseSchema = z.object({
   content: z.string(),
+  durationMs: z.number().optional(),
   model: z.string(),
   reasons: z.array(z.string()).optional(),
   usage: z
     .object({
-      promptTokens: z.number().optional(),
       completionTokens: z.number().optional(),
+      promptTokens: z.number().optional(),
       totalTokens: z.number().optional(),
     })
     .optional(),
-  durationMs: z.number().optional(),
 });
 export type ChatCompletionResponse = z.infer<typeof ChatCompletionResponseSchema>;

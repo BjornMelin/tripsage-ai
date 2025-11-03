@@ -13,19 +13,19 @@ export const LoadingStateSchema = z.object({
 });
 
 export const SkeletonConfigSchema = z.object({
-  width: z.union([z.string(), z.number()]).optional(),
+  animate: z.boolean().default(true),
+  avatar: z.boolean().optional(),
+  className: z.string().optional(),
   height: z.union([z.string(), z.number()]).optional(),
   lines: z.number().min(1).max(20).optional(),
-  avatar: z.boolean().optional(),
-  animate: z.boolean().default(true),
-  className: z.string().optional(),
+  width: z.union([z.string(), z.number()]).optional(),
 });
 
 export const LoadingSpinnerConfigSchema = z.object({
+  className: z.string().optional(),
+  color: z.string().optional(),
   size: z.enum(["sm", "md", "lg", "xl"]).default("md"),
   variant: z.enum(["default", "dots", "bars", "pulse"]).default("default"),
-  color: z.string().optional(),
-  className: z.string().optional(),
 });
 
 /**

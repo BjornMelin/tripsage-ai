@@ -60,14 +60,14 @@ export function TripTimeline({
                 : "location";
 
         events.push({
-          id: `arrival-${destination.id}`,
-          type: "arrival",
           date: startDate,
-          title: `Arrive in ${destination.name}`,
           description: destination.transportation?.details,
-          location: `${destination.name}, ${destination.country}`,
           destination,
           iconType: transportType,
+          id: `arrival-${destination.id}`,
+          location: `${destination.name}, ${destination.country}`,
+          title: `Arrive in ${destination.name}`,
+          type: "arrival",
         });
       }
 
@@ -85,13 +85,13 @@ export function TripTimeline({
               : startDate || new Date();
 
           events.push({
-            id: `activity-${destination.id}-${activityIndex}`,
-            type: "activity",
             date: activityDate,
-            title: activity,
-            location: `${destination.name}, ${destination.country}`,
             destination,
             iconType: "calendar",
+            id: `activity-${destination.id}-${activityIndex}`,
+            location: `${destination.name}, ${destination.country}`,
+            title: activity,
+            type: "activity",
           });
         });
       }
@@ -100,16 +100,16 @@ export function TripTimeline({
       if (endDate && index < trip.destinations.length - 1) {
         const nextDestination = trip.destinations[index + 1];
         events.push({
-          id: `departure-${destination.id}`,
-          type: "departure",
           date: endDate,
-          title: `Leave ${destination.name}`,
           description: nextDestination
             ? `Heading to ${nextDestination.name}`
             : undefined,
-          location: `${destination.name}, ${destination.country}`,
           destination,
           iconType: "flight",
+          id: `departure-${destination.id}`,
+          location: `${destination.name}, ${destination.country}`,
+          title: `Leave ${destination.name}`,
+          type: "departure",
         });
       }
     });

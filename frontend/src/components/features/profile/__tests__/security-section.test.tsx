@@ -9,23 +9,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SecuritySection } from "../security-section";
 
 // Mock the stores and hooks
-const mockUpdateUser = vi.fn();
+const MOCK_UPDATE_USER = vi.fn();
 
-const defaultUser = {
-  id: "1",
+const DEFAULT_USER = {
   email: "test@example.com",
+  id: "1",
   security: {
     twoFactorEnabled: false,
   },
 };
 
-const mockUserStore = {
-  user: { ...defaultUser },
-  updateUser: mockUpdateUser,
+const MOCK_USER_STORE = {
+  updateUser: MOCK_UPDATE_USER,
+  user: { ...DEFAULT_USER },
 };
 
 vi.mock("@/stores/user-store", () => ({
-  useUserProfileStore: vi.fn(() => mockUserStore),
+  useUserProfileStore: vi.fn(() => MOCK_USER_STORE),
 }));
 
 // use-toast is globally mocked in test-setup.ts; avoid overriding here.
@@ -33,8 +33,8 @@ vi.mock("@/stores/user-store", () => ({
 describe("SecuritySection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUserStore.user = { ...defaultUser } as any;
-    mockUpdateUser.mockResolvedValue({});
+    MOCK_USER_STORE.user = { ...DEFAULT_USER } as any;
+    MOCK_UPDATE_USER.mockResolvedValue({});
   });
 
   describe("Password Management", () => {
@@ -146,8 +146,8 @@ describe("SecuritySection", () => {
       render(<SecuritySection />);
 
       expect(screen.getByText("Disabled")).toBeInTheDocument();
-      const switch2FA = screen.getByRole("switch");
-      expect(switch2FA).not.toBeChecked();
+      const switch2fa = screen.getByRole("switch");
+      expect(switch2fa).not.toBeChecked();
     });
 
     it("has a 2FA toggle switch", () => {
@@ -190,8 +190,8 @@ describe("SecuritySection", () => {
 
   describe("Error Handling", () => {
     it("should handle missing security settings gracefully", () => {
-      mockUserStore.user = {
-        ...mockUserStore.user!,
+      MOCK_USER_STORE.user = {
+        ...MOCK_USER_STORE.user!,
         security: undefined as any,
       };
 
@@ -202,7 +202,7 @@ describe("SecuritySection", () => {
     });
 
     it("should render with missing user data", () => {
-      mockUserStore.user = null as any;
+      MOCK_USER_STORE.user = null as any;
 
       render(<SecuritySection />);
 

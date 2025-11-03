@@ -74,14 +74,14 @@ export class ApiError extends Error {
    */
   toJSON() {
     return {
-      name: this.name,
-      message: this.message,
-      status: this.status,
       code: this.code,
       details: this.details,
-      timestamp: this.timestamp,
+      message: this.message,
+      name: this.name,
       path: this.path,
       stack: this.stack,
+      status: this.status,
+      timestamp: this.timestamp,
     };
   }
 }
@@ -202,9 +202,9 @@ export const handleApiError = (error: unknown): AppError => {
     // Try to parse as API error if it has status
     if ("status" in error && typeof error.status === "number") {
       return new ApiError({
+        code: "code" in error ? String(error.code) : undefined,
         message: error.message,
         status: error.status,
-        code: "code" in error ? String(error.code) : undefined,
       });
     }
 

@@ -19,9 +19,9 @@ import { useSupabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 
 // Zod schemas for validation
-const TableNameSchema = z.string().min(1, "Table name cannot be empty");
+const TABLE_NAME_SCHEMA = z.string().min(1, "Table name cannot be empty");
 
-const ColumnsSchema = z.string().min(1, "Columns cannot be empty").default("*");
+const COLUMNS_SCHEMA = z.string().min(1, "Columns cannot be empty").default("*");
 
 // const PageSizeSchema = z
 //   .number()
@@ -29,13 +29,13 @@ const ColumnsSchema = z.string().min(1, "Columns cannot be empty").default("*");
 //   .max(100, "Page size cannot exceed 100")
 //   .default(20); // Future validation
 
-const IdSchema = z.union([z.string(), z.number()]).nullable();
+const ID_SCHEMA = z.union([z.string(), z.number()]).nullable();
 
 // const SearchQuerySchema = z // Future validation
 //   .string()
 //   .min(2, "Search query must be at least 2 characters");
 
-const DebounceSchema = z.number().min(0).max(5000).default(300);
+const DEBOUNCE_SCHEMA = z.number().min(0).max(5000).default(300);
 
 function useUserId(): string | null {
   const supabase = useSupabase();
@@ -122,7 +122,7 @@ export function useSupabaseQuery<T extends TableName>(
   } = options;
 
   return useQuery({
-    queryKey: [table, columns, filter?.toString(), userId, ...dependencies],
+    enabled: enabled && !!userId,
     queryFn: async () => {
       let query = supabase.from(table).select(columns);
 
@@ -134,7 +134,7 @@ export function useSupabaseQuery<T extends TableName>(
       if (error) throw error;
       return (data || []) as unknown as TableRow<T>[];
     },
-    enabled: enabled && !!userId,
+    queryKey: [table, columns, filter?.toString(), userId, ...dependencies],
     staleTime,
     ...queryOptions,
   });
@@ -165,14 +165,9 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
   } = options;
 
   return useInfiniteQuery({
-    queryKey: [
-      `${table}-infinite`,
-      columns,
-      filter?.toString(),
-      pageSize,
-      userId,
-      ...dependencies,
-    ],
+    enabled: enabled && !!userId,
+    getNextPageParam: (lastPage: any) => lastPage.nextCursor,
+    initialPageParam: 0 as number,
     queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from(table)
@@ -195,9 +190,14 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
         totalCount: count,
       };
     },
-    initialPageParam: 0 as number,
-    getNextPageParam: (lastPage: any) => lastPage.nextCursor,
-    enabled: enabled && !!userId,
+    queryKey: [
+      `${table}-infinite`,
+      columns,
+      filter?.toString(),
+      pageSize,
+      userId,
+      ...dependencies,
+    ],
     staleTime,
     ...queryOptions,
   } as any);
@@ -225,9 +225,9 @@ export function useSupabaseRecord<T extends TableName>(
   const userId = useUserId();
 
   // Validate inputs with Zod
-  const validatedTable = TableNameSchema.parse(table);
-  const validatedId = IdSchema.parse(id);
-  const validatedColumns = ColumnsSchema.parse(options?.columns);
+  const validatedTable = TABLE_NAME_SCHEMA.parse(table);
+  const validatedId = ID_SCHEMA.parse(id);
+  const validatedColumns = COLUMNS_SCHEMA.parse(options?.columns);
 
   const {
     enabled = true,
@@ -235,7 +235,7 @@ export function useSupabaseRecord<T extends TableName>(
   } = options || {};
 
   return useQuery({
-    queryKey: [validatedTable, "single", validatedId, validatedColumns],
+    enabled: enabled && !!validatedId && !!userId,
     queryFn: async () => {
       if (!validatedId) throw new Error("ID is required");
 
@@ -248,7 +248,7 @@ export function useSupabaseRecord<T extends TableName>(
       if (error) throw error;
       return data as unknown as TableRow<T>;
     },
-    enabled: enabled && !!validatedId && !!userId,
+    queryKey: [validatedTable, "single", validatedId, validatedColumns],
     staleTime,
   });
 }
@@ -281,13 +281,7 @@ export function useSupabaseAggregation<T extends TableName>(
   } = options || {};
 
   return useQuery({
-    queryKey: [
-      `${table}-count`,
-      filter?.toString(),
-      countColumn,
-      userId,
-      ...dependencies,
-    ],
+    enabled: enabled && !!userId,
     queryFn: async () => {
       let query = supabase
         .from(table)
@@ -302,7 +296,13 @@ export function useSupabaseAggregation<T extends TableName>(
 
       return { count: count || 0 };
     },
-    enabled: enabled && !!userId,
+    queryKey: [
+      `${table}-count`,
+      filter?.toString(),
+      countColumn,
+      userId,
+      ...dependencies,
+    ],
     staleTime: 1000 * 60 * 5, // 5 minutes for counts
   });
 }
@@ -331,7 +331,7 @@ export function useSupabaseSearch<T extends TableName>(
   const userId = useUserId();
 
   // Validate inputs with Zod
-  const validatedTable = TableNameSchema.parse(table);
+  const validatedTable = TABLE_NAME_SCHEMA.parse(table);
   const validatedSearchQuery = z.string().parse(searchQuery); // Allow empty for clearing search
 
   const {
@@ -342,21 +342,14 @@ export function useSupabaseSearch<T extends TableName>(
     debounceMs = 300,
   } = options || {};
 
-  const validatedColumns = ColumnsSchema.parse(columns);
-  const validatedDebounceMs = DebounceSchema.parse(debounceMs);
+  const validatedColumns = COLUMNS_SCHEMA.parse(columns);
+  const validatedDebounceMs = DEBOUNCE_SCHEMA.parse(debounceMs);
 
   // Debounce search query
   const debouncedQuery = useDebounce(validatedSearchQuery, validatedDebounceMs);
 
   return useQuery({
-    queryKey: [
-      `${validatedTable}-search`,
-      debouncedQuery,
-      validatedColumns,
-      searchColumns,
-      filter?.toString(),
-      userId,
-    ],
+    enabled: enabled && !!userId && debouncedQuery.trim().length >= 2,
     queryFn: async () => {
       if (!debouncedQuery || debouncedQuery.trim().length < 2) {
         return [];
@@ -381,7 +374,14 @@ export function useSupabaseSearch<T extends TableName>(
 
       return (data || []) as unknown as TableRow<T>[];
     },
-    enabled: enabled && !!userId && debouncedQuery.trim().length >= 2,
+    queryKey: [
+      `${validatedTable}-search`,
+      debouncedQuery,
+      validatedColumns,
+      searchColumns,
+      filter?.toString(),
+      userId,
+    ],
     staleTime: 1000 * 60 * 2, // 2 minutes for search results
   });
 }
@@ -410,7 +410,7 @@ export function useSupabaseRelated<T extends TableName>(
   const userId = useUserId();
 
   // Validate inputs with Zod
-  const validatedTable = TableNameSchema.parse(table);
+  const validatedTable = TABLE_NAME_SCHEMA.parse(table);
   const validatedForeignKey = z
     .string()
     .min(1, "Foreign key cannot be empty")
@@ -421,16 +421,10 @@ export function useSupabaseRelated<T extends TableName>(
     .parse(foreignValue);
 
   const { columns = "*", filter, enabled = true } = options || {};
-  const validatedColumns = ColumnsSchema.parse(columns);
+  const validatedColumns = COLUMNS_SCHEMA.parse(columns);
 
   return useQuery({
-    queryKey: [
-      `${validatedTable}-related`,
-      validatedForeignKey,
-      validatedForeignValue,
-      validatedColumns,
-      filter?.toString(),
-    ],
+    enabled: enabled && !!validatedForeignValue && !!userId,
     queryFn: async () => {
       if (!validatedForeignValue) return [];
 
@@ -448,7 +442,13 @@ export function useSupabaseRelated<T extends TableName>(
 
       return (data || []) as unknown as TableRow<T>[];
     },
-    enabled: enabled && !!validatedForeignValue && !!userId,
+    queryKey: [
+      `${validatedTable}-related`,
+      validatedForeignKey,
+      validatedForeignValue,
+      validatedColumns,
+      filter?.toString(),
+    ],
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -482,7 +482,6 @@ export function useSupabaseQueryHelpers() {
   // User's trips with collaboration info
   const useUserTrips = (filters?: { status?: string; trip_type?: string }) => {
     return useSupabaseQuery({
-      table: "trips",
       columns: `
         *,
         trip_collaborators(
@@ -493,6 +492,7 @@ export function useSupabaseQueryHelpers() {
           added_at
         )
       `,
+      dependencies: [filters],
       filter: (query) => {
         let filtered = query
           .or(`user_id.eq.${userId},trip_collaborators.user_id.eq.${userId}`)
@@ -507,7 +507,7 @@ export function useSupabaseQueryHelpers() {
 
         return filtered;
       },
-      dependencies: [filters],
+      table: "trips",
     });
   };
 
@@ -534,7 +534,7 @@ export function useSupabaseQueryHelpers() {
   // User's chat sessions
   const useChatSessions = (tripId?: number | null) => {
     return useSupabaseQuery({
-      table: "chat_sessions",
+      dependencies: [tripId],
       filter: (query) => {
         let filtered = query
           .eq("user_id", userId!)
@@ -546,23 +546,23 @@ export function useSupabaseQueryHelpers() {
 
         return filtered;
       },
-      dependencies: [tripId],
+      table: "chat_sessions",
     });
   };
 
   // Messages for a session with infinite scroll
   const useChatMessages = (sessionId: string | null) => {
     return useSupabaseInfiniteQuery({
-      table: "chat_messages",
       columns: `
         *,
         chat_tool_calls(*)
       `,
+      dependencies: [sessionId],
+      enabled: !!sessionId,
       filter: (query) =>
         query.eq("session_id", sessionId!).order("created_at", { ascending: false }),
-      enabled: !!sessionId,
-      dependencies: [sessionId],
       pageSize: 50,
+      table: "chat_messages",
     });
   };
 
@@ -573,7 +573,7 @@ export function useSupabaseQueryHelpers() {
     uploadStatus?: string;
   }) => {
     return useSupabaseQuery({
-      table: "file_attachments",
+      dependencies: [filters],
       filter: (query) => {
         let filtered = query
           .eq("user_id", userId!)
@@ -591,15 +591,15 @@ export function useSupabaseQueryHelpers() {
 
         return filtered;
       },
-      dependencies: [filters],
+      table: "file_attachments",
     });
   };
 
   return {
-    useUserTrips,
-    useTripDetails,
-    useChatSessions,
     useChatMessages,
+    useChatSessions,
+    useTripDetails,
     useUserFiles,
+    useUserTrips,
   };
 }

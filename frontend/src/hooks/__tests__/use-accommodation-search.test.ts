@@ -10,8 +10,8 @@ import { useAccommodationSearch } from "../use-accommodation-search";
 // Mock the API
 vi.mock("@/lib/api/client", () => ({
   api: {
-    post: vi.fn(),
     get: vi.fn(),
+    post: vi.fn(),
   },
 }));
 
@@ -39,10 +39,10 @@ describe("useAccommodationSearch", () => {
     });
 
     (useSearchResultsStore as any).mockReturnValue({
-      startSearch: mockStartSearch,
-      setSearchResults: mockSetSearchResults,
-      setSearchError: mockSetSearchError,
       completeSearch: mockCompleteSearch,
+      setSearchError: mockSetSearchError,
+      setSearchResults: mockSetSearchResults,
+      startSearch: mockStartSearch,
     });
 
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
@@ -58,17 +58,17 @@ describe("useAccommodationSearch", () => {
   it("should fetch accommodation suggestions", async () => {
     const mockSuggestions = [
       {
-        id: "1",
-        name: "Popular Hotel",
-        type: "Hotel",
-        location: "Paris",
+        amenities: ["wifi", "spa"],
         checkIn: "",
         checkOut: "",
-        pricePerNight: 200,
-        totalPrice: 0,
-        rating: 4.8,
-        amenities: ["wifi", "spa"],
+        id: "1",
         images: [],
+        location: "Paris",
+        name: "Popular Hotel",
+        pricePerNight: 200,
+        rating: 4.8,
+        totalPrice: 0,
+        type: "Hotel",
       },
     ];
 
@@ -79,10 +79,10 @@ describe("useAccommodationSearch", () => {
     });
 
     (useSearchResultsStore as any).mockReturnValue({
-      startSearch: vi.fn(),
-      setSearchResults: vi.fn(),
-      setSearchError: vi.fn(),
       completeSearch: vi.fn(),
+      setSearchError: vi.fn(),
+      setSearchResults: vi.fn(),
+      startSearch: vi.fn(),
     });
 
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
@@ -101,15 +101,15 @@ describe("useAccommodationSearch", () => {
     });
 
     (useSearchResultsStore as any).mockReturnValue({
-      startSearch: vi.fn(),
-      setSearchResults: vi.fn(),
-      setSearchError: vi.fn(),
       completeSearch: vi.fn(),
+      setSearchError: vi.fn(),
+      setSearchResults: vi.fn(),
+      startSearch: vi.fn(),
     });
 
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
 
-    const newParams = { destination: "London", adults: 3 };
+    const newParams = { adults: 3, destination: "London" };
     result.current.updateParams(newParams);
 
     expect(mockUpdateAccommodationParams).toHaveBeenCalledWith(newParams);
@@ -119,17 +119,17 @@ describe("useAccommodationSearch", () => {
     const mockResults = {
       results: [
         {
-          id: "1",
-          name: "Test Hotel",
-          type: "Hotel",
-          location: "New York",
+          amenities: ["wifi", "breakfast"],
           checkIn: "2024-03-15",
           checkOut: "2024-03-18",
-          pricePerNight: 150,
-          totalPrice: 450,
-          rating: 4.5,
-          amenities: ["wifi", "breakfast"],
+          id: "1",
           images: [],
+          location: "New York",
+          name: "Test Hotel",
+          pricePerNight: 150,
+          rating: 4.5,
+          totalPrice: 450,
+          type: "Hotel",
         },
       ],
       totalResults: 1,
@@ -144,20 +144,20 @@ describe("useAccommodationSearch", () => {
     });
 
     (useSearchResultsStore as any).mockReturnValue({
-      startSearch: mockStartSearch,
-      setSearchResults: vi.fn(),
-      setSearchError: vi.fn(),
       completeSearch: vi.fn(),
+      setSearchError: vi.fn(),
+      setSearchResults: vi.fn(),
+      startSearch: mockStartSearch,
     });
 
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
 
     const searchParams = {
-      destination: "New York",
+      adults: 2,
       checkIn: "2024-03-15",
       checkOut: "2024-03-18",
-      adults: 2,
       children: 0,
+      destination: "New York",
       infants: 0,
       rooms: 1,
     };
@@ -184,10 +184,10 @@ describe("useAccommodationSearch", () => {
     });
 
     (useSearchResultsStore as any).mockReturnValue({
-      startSearch: vi.fn().mockReturnValue("search-123"),
-      setSearchResults: vi.fn(),
-      setSearchError: vi.fn(),
       completeSearch: vi.fn(),
+      setSearchError: vi.fn(),
+      setSearchResults: vi.fn(),
+      startSearch: vi.fn().mockReturnValue("search-123"),
     });
 
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
@@ -196,11 +196,11 @@ describe("useAccommodationSearch", () => {
 
     // Start search
     result.current.search({
-      destination: "New York",
+      adults: 2,
       checkIn: "2024-03-15",
       checkOut: "2024-03-18",
-      adults: 2,
       children: 0,
+      destination: "New York",
       infants: 0,
       rooms: 1,
     });

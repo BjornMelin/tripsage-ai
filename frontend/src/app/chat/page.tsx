@@ -160,8 +160,8 @@ export default function ChatPage(): ReactElement {
     () =>
       new DefaultChatTransport({
         api: "/api/chat/stream",
-        credentials: "include",
         body: () => (userId ? { user_id: userId } : {}),
+        credentials: "include",
         // Enable resumable streams by preparing a reconnect request when needed.
         prepareReconnectToStreamRequest: () => ({
           api: "/api/chat/stream",
@@ -182,7 +182,7 @@ export default function ChatPage(): ReactElement {
   const { messages, sendMessage, status, stop, regenerate, clearError, error } =
     chatHelpers;
   // Experimental resume helper; not part of stable types in all builds.
-  const experimental_resume = (
+  const experimentalResume = (
     chatHelpers as unknown as { experimental_resume?: () => Promise<unknown> }
   ).experimental_resume;
 
@@ -191,7 +191,7 @@ export default function ChatPage(): ReactElement {
   useEffect(() => {
     let mounted = true;
     let timeoutId: NodeJS.Timeout | undefined;
-    const fn = experimental_resume as undefined | (() => Promise<unknown>);
+    const fn = experimentalResume as undefined | (() => Promise<unknown>);
     if (typeof fn === "function") {
       void fn()
         .then(() => {
@@ -208,7 +208,7 @@ export default function ChatPage(): ReactElement {
       mounted = false;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [experimental_resume]);
+  }, [experimentalResume]);
 
   // Filter out system messages from display (e.g., tool instructions)
   const visibleMessages = useMemo(
@@ -239,9 +239,9 @@ export default function ChatPage(): ReactElement {
       }
 
       await sendMessage({
-        text: normalizedText,
         files: preparedFiles,
         metadata: userId ? { userId } : undefined,
+        text: normalizedText,
       });
     },
     [clearError, sendMessage, status, userId]

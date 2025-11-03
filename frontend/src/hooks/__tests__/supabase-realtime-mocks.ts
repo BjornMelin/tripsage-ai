@@ -37,21 +37,21 @@ export interface MockSupabaseClient {
 
 // Connection status constants
 export const CONNECTION_STATUS = {
+  CHANNEL_ERROR: "CHANNEL_ERROR",
+  CLOSED: "CLOSED",
+  CLOSING: "CLOSING",
   CONNECTING: "CONNECTING",
   OPEN: "OPEN",
-  CLOSING: "CLOSING",
-  CLOSED: "CLOSED",
   SUBSCRIBED: "SUBSCRIBED",
-  CHANNEL_ERROR: "CHANNEL_ERROR",
   TIMED_OUT: "TIMED_OUT",
 } as const;
 
 // Event types for postgres changes
 export const POSTGRES_EVENTS = {
+  ALL: "*",
+  DELETE: "DELETE",
   INSERT: "INSERT",
   UPDATE: "UPDATE",
-  DELETE: "DELETE",
-  ALL: "*",
 } as const;
 
 /**
@@ -60,11 +60,11 @@ export const POSTGRES_EVENTS = {
 export function createMockRealtimeChannel(): MockRealtimeChannel {
   return {
     on: vi.fn().mockReturnThis(),
-    subscribe: vi.fn().mockReturnThis(),
-    unsubscribe: vi.fn().mockReturnThis(),
-    send: vi.fn().mockReturnThis(),
     presenceState: vi.fn().mockReturnValue({}),
+    send: vi.fn().mockReturnThis(),
+    subscribe: vi.fn().mockReturnThis(),
     track: vi.fn().mockReturnThis(),
+    unsubscribe: vi.fn().mockReturnThis(),
     untrack: vi.fn().mockReturnThis(),
   };
 }
@@ -76,29 +76,29 @@ export function createMockSupabaseClient(): MockSupabaseClient {
   const mockChannel = createMockRealtimeChannel();
 
   return {
-    channel: vi.fn(() => mockChannel),
-    removeChannel: vi.fn(),
-    realtime: {
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-      channels: [mockChannel],
-      isConnected: vi.fn().mockReturnValue(true),
-    },
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      range: vi.fn().mockReturnThis(),
-      single: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockReturnThis(),
-    })),
     auth: {
       getUser: vi.fn(),
       onAuthStateChange: vi.fn(),
     },
+    channel: vi.fn(() => mockChannel),
+    from: vi.fn(() => ({
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+    })),
+    realtime: {
+      channels: [mockChannel],
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      isConnected: vi.fn().mockReturnValue(true),
+    },
+    removeChannel: vi.fn(),
   };
 }
 
@@ -112,13 +112,13 @@ export function createMockPostgresPayload(
   oldRecord?: Record<string, unknown>
 ) {
   return {
-    eventType,
-    schema: "public",
-    table,
-    new: newRecord || {},
-    old: oldRecord || {},
     commit_timestamp: new Date().toISOString(),
     errors: null,
+    eventType,
+    new: newRecord || {},
+    old: oldRecord || {},
+    schema: "public",
+    table,
   };
 }
 
@@ -130,8 +130,8 @@ export function createMockSystemPayload(
   extension?: string
 ) {
   return {
-    status,
     extension: extension || "postgres_changes",
+    status,
   };
 }
 
@@ -248,34 +248,8 @@ export function createRealtimeTestEnvironment() {
   supabaseClient.channel.mockReturnValue(channel);
 
   return {
-    supabaseClient,
     channel,
     connection,
-    // Convenience methods for common scenarios
-    simulateUserTripsUpdate: (tripId: number, updatedTrip: Record<string, unknown>) => {
-      connection.triggerPostgresEvent(
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "trips",
-          filter: `id=eq.${tripId}`,
-        },
-        createMockPostgresPayload(POSTGRES_EVENTS.UPDATE, "trips", updatedTrip, {
-          id: tripId,
-        })
-      );
-    },
-    simulateNewChatMessage: (sessionId: string, message: Record<string, unknown>) => {
-      connection.triggerPostgresEvent(
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "chat_messages",
-          filter: `session_id=eq.${sessionId}`,
-        },
-        createMockPostgresPayload(POSTGRES_EVENTS.INSERT, "chat_messages", message)
-      );
-    },
     simulateCollaboratorAdded: (
       tripId: number,
       collaborator: Record<string, unknown>
@@ -283,9 +257,9 @@ export function createRealtimeTestEnvironment() {
       connection.triggerPostgresEvent(
         {
           event: "INSERT",
+          filter: `trip_id=eq.${tripId}`,
           schema: "public",
           table: "trip_collaborators",
-          filter: `trip_id=eq.${tripId}`,
         },
         createMockPostgresPayload(
           POSTGRES_EVENTS.INSERT,
@@ -297,9 +271,35 @@ export function createRealtimeTestEnvironment() {
     simulateConnectionFailure: (error: Error) => {
       connection.triggerConnectionError(error);
     },
+    simulateNewChatMessage: (sessionId: string, message: Record<string, unknown>) => {
+      connection.triggerPostgresEvent(
+        {
+          event: "INSERT",
+          filter: `session_id=eq.${sessionId}`,
+          schema: "public",
+          table: "chat_messages",
+        },
+        createMockPostgresPayload(POSTGRES_EVENTS.INSERT, "chat_messages", message)
+      );
+    },
     simulateReconnection: () => {
       connection.triggerReconnection();
     },
+    // Convenience methods for common scenarios
+    simulateUserTripsUpdate: (tripId: number, updatedTrip: Record<string, unknown>) => {
+      connection.triggerPostgresEvent(
+        {
+          event: "UPDATE",
+          filter: `id=eq.${tripId}`,
+          schema: "public",
+          table: "trips",
+        },
+        createMockPostgresPayload(POSTGRES_EVENTS.UPDATE, "trips", updatedTrip, {
+          id: tripId,
+        })
+      );
+    },
+    supabaseClient,
   };
 }
 
@@ -358,8 +358,8 @@ export class RealtimeHookTester {
       () => this.testEnv.simulateNewChatMessage("session-1", { content: "Hello!" }),
       () =>
         this.testEnv.simulateCollaboratorAdded(1, {
-          user_id: "user-456",
           role: "editor",
+          user_id: "user-456",
         }),
     ];
 
@@ -405,9 +405,9 @@ export class RealtimePerformanceTester {
 
     return {
       duration,
-      totalEvents,
-      eventsPerSecond: totalEvents / (duration / 1000),
       eventBreakdown: Object.fromEntries(this.eventCounts),
+      eventsPerSecond: totalEvents / (duration / 1000),
+      totalEvents,
     };
   }
 }
@@ -416,14 +416,14 @@ export class RealtimePerformanceTester {
  * Export all utilities as a default collection
  */
 export default {
+  CONNECTION_STATUS,
+  createMockPostgresPayload,
   createMockRealtimeChannel,
   createMockSupabaseClient,
-  createMockPostgresPayload,
   createMockSystemPayload,
-  MockRealtimeConnection,
   createRealtimeTestEnvironment,
+  MockRealtimeConnection,
+  POSTGRES_EVENTS,
   RealtimeHookTester,
   RealtimePerformanceTester,
-  CONNECTION_STATUS,
-  POSTGRES_EVENTS,
 };

@@ -3,33 +3,33 @@ import type { ErrorReport, ErrorServiceConfig } from "@/types/errors";
 import { ErrorService } from "../error-service";
 
 // Mock fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+const MOCK_FETCH = vi.fn();
+global.fetch = MOCK_FETCH;
 
 // Mock localStorage
-const mockLocalStorage = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
+const MOCK_LOCAL_STORAGE = {
   clear: vi.fn(),
-  length: 0,
+  getItem: vi.fn(),
   key: vi.fn(),
+  length: 0,
+  removeItem: vi.fn(),
+  setItem: vi.fn(),
 };
 Object.defineProperty(window, "localStorage", {
-  value: mockLocalStorage,
+  value: MOCK_LOCAL_STORAGE,
 });
 
 // Mock sessionStorage
-const mockSessionStorage = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
+const MOCK_SESSION_STORAGE = {
   clear: vi.fn(),
-  length: 0,
+  getItem: vi.fn(),
   key: vi.fn(),
+  length: 0,
+  removeItem: vi.fn(),
+  setItem: vi.fn(),
 };
 Object.defineProperty(window, "sessionStorage", {
-  value: mockSessionStorage,
+  value: MOCK_SESSION_STORAGE,
 });
 
 describe("ErrorService", () => {
@@ -38,22 +38,22 @@ describe("ErrorService", () => {
 
   beforeEach(() => {
     mockConfig = {
-      enabled: true,
-      endpoint: "https://api.example.com/errors",
       apiKey: "test-api-key",
-      maxRetries: 2,
+      enabled: true,
       enableLocalStorage: true,
+      endpoint: "https://api.example.com/errors",
+      maxRetries: 2,
     };
 
     errorService = new ErrorService(mockConfig);
 
     // Reset mocks
     vi.clearAllMocks();
-    mockFetch.mockClear();
-    mockLocalStorage.getItem.mockClear();
-    mockLocalStorage.setItem.mockClear();
-    mockSessionStorage.getItem.mockClear();
-    mockSessionStorage.setItem.mockClear();
+    MOCK_FETCH.mockClear();
+    MOCK_LOCAL_STORAGE.getItem.mockClear();
+    MOCK_LOCAL_STORAGE.setItem.mockClear();
+    MOCK_SESSION_STORAGE.getItem.mockClear();
+    MOCK_SESSION_STORAGE.setItem.mockClear();
   });
 
   afterEach(() => {
@@ -81,15 +81,15 @@ describe("ErrorService", () => {
 
       expect(report).toEqual({
         error: {
-          name: "Error",
-          message: "Test error",
-          stack: "Error: Test error\n    at test (test.js:1:1)",
           digest: undefined,
+          message: "Test error",
+          name: "Error",
+          stack: "Error: Test error\n    at test (test.js:1:1)",
         },
         errorInfo: undefined,
+        timestamp: expect.any(String),
         url: "https://example.com/test",
         userAgent: "Test User Agent",
-        timestamp: expect.any(String),
       });
 
       // Validate timestamp format
@@ -110,8 +110,8 @@ describe("ErrorService", () => {
     it("should create error report with additional info", () => {
       const error = new Error("Test error");
       const additionalInfo = {
-        userId: "user123",
         sessionId: "session456",
+        userId: "user123",
       };
 
       const report = errorService.createErrorReport(error, undefined, additionalInfo);
@@ -132,7 +132,7 @@ describe("ErrorService", () => {
 
   describe("reportError", () => {
     it("should report error when enabled", async () => {
-      mockFetch.mockResolvedValueOnce({
+      MOCK_FETCH.mockResolvedValueOnce({
         ok: true,
         status: 200,
         statusText: "OK",
@@ -140,23 +140,23 @@ describe("ErrorService", () => {
 
       const errorReport: ErrorReport = {
         error: {
-          name: "Error",
           message: "Test error",
+          name: "Error",
         },
+        timestamp: new Date().toISOString(),
         url: "https://example.com",
         userAgent: "Test User Agent",
-        timestamp: new Date().toISOString(),
       };
 
       await errorService.reportError(errorReport);
 
-      expect(mockFetch).toHaveBeenCalledWith("https://api.example.com/errors", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer test-api-key",
-        },
+      expect(MOCK_FETCH).toHaveBeenCalledWith("https://api.example.com/errors", {
         body: JSON.stringify(errorReport),
+        headers: {
+          Authorization: "Bearer test-api-key",
+          "Content-Type": "application/json",
+        },
+        method: "POST",
       });
     });
 
@@ -169,45 +169,45 @@ describe("ErrorService", () => {
 
       const errorReport: ErrorReport = {
         error: {
-          name: "Error",
           message: "Test error",
+          name: "Error",
         },
+        timestamp: new Date().toISOString(),
         url: "https://example.com",
         userAgent: "Test User Agent",
-        timestamp: new Date().toISOString(),
       };
 
       await disabledService.reportError(errorReport);
 
-      expect(mockFetch).not.toHaveBeenCalled();
+      expect(MOCK_FETCH).not.toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalledWith("Error reported:", errorReport);
 
       consoleErrorSpy.mockRestore();
     });
 
     it("should store error locally when enabled", async () => {
-      mockFetch.mockResolvedValueOnce({
+      MOCK_FETCH.mockResolvedValueOnce({
         ok: true,
         status: 200,
         statusText: "OK",
       });
 
-      mockLocalStorage.getItem.mockReturnValue(null);
+      MOCK_LOCAL_STORAGE.getItem.mockReturnValue(null);
       Object.keys(localStorage).length = 0;
 
       const errorReport: ErrorReport = {
         error: {
-          name: "Error",
           message: "Test error",
+          name: "Error",
         },
+        timestamp: new Date().toISOString(),
         url: "https://example.com",
         userAgent: "Test User Agent",
-        timestamp: new Date().toISOString(),
       };
 
       await errorService.reportError(errorReport);
 
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+      expect(MOCK_LOCAL_STORAGE.setItem).toHaveBeenCalledWith(
         expect.stringMatching(/^error_\d+_[a-z0-9]+$/),
         JSON.stringify(errorReport)
       );
@@ -221,14 +221,14 @@ describe("ErrorService", () => {
           name: "Error",
           // Missing required message field
         },
+        timestamp: new Date().toISOString(),
         url: "https://example.com",
         userAgent: "Test User Agent",
-        timestamp: new Date().toISOString(),
       } as any;
 
       await errorService.reportError(invalidErrorReport);
 
-      expect(mockFetch).not.toHaveBeenCalled();
+      expect(MOCK_FETCH).not.toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Failed to report error:",
         expect.any(Error)
@@ -249,22 +249,22 @@ describe("ErrorService", () => {
 
     it("should retry failed requests", async () => {
       // First call fails, second succeeds
-      mockFetch
-        .mockRejectedValueOnce(new Error("Network error"))
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          statusText: "OK",
-        });
+      MOCK_FETCH.mockRejectedValueOnce(
+        new Error("Network error")
+      ).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+      });
 
       const errorReport: ErrorReport = {
         error: {
-          name: "Error",
           message: "Test error",
+          name: "Error",
         },
+        timestamp: new Date().toISOString(),
         url: "https://example.com",
         userAgent: "Test User Agent",
-        timestamp: new Date().toISOString(),
       };
 
       const reportPromise = errorService.reportError(errorReport);
@@ -273,23 +273,23 @@ describe("ErrorService", () => {
       await vi.advanceTimersByTimeAsync(1000);
       await reportPromise;
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(MOCK_FETCH).toHaveBeenCalledTimes(2);
     });
 
     it("should give up after max retries", async () => {
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       // All calls fail
-      mockFetch.mockRejectedValue(new Error("Network error"));
+      MOCK_FETCH.mockRejectedValue(new Error("Network error"));
 
       const errorReport: ErrorReport = {
         error: {
-          name: "Error",
           message: "Test error",
+          name: "Error",
         },
+        timestamp: new Date().toISOString(),
         url: "https://example.com",
         userAgent: "Test User Agent",
-        timestamp: new Date().toISOString(),
       };
 
       const reportPromise = errorService.reportError(errorReport);
@@ -299,7 +299,7 @@ describe("ErrorService", () => {
       await reportPromise;
 
       // Should try initial + 2 retries = 3 total calls
-      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(MOCK_FETCH).toHaveBeenCalledTimes(3);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Failed to send error report after retries:",
         expect.any(Error)
@@ -311,7 +311,7 @@ describe("ErrorService", () => {
 
   describe("localStorage cleanup", () => {
     it("should clean up old errors", async () => {
-      mockFetch.mockResolvedValueOnce({
+      MOCK_FETCH.mockResolvedValueOnce({
         ok: true,
         status: 200,
         statusText: "OK",
@@ -320,7 +320,7 @@ describe("ErrorService", () => {
       // Mock 15 existing error keys
       const oldKeys = Array.from({ length: 15 }, (_, i) => `error_${i}_old`);
 
-      Object.defineProperty(mockLocalStorage, "keys", {
+      Object.defineProperty(MOCK_LOCAL_STORAGE, "keys", {
         value: () => [...oldKeys, "other_key"],
       });
 
@@ -330,18 +330,18 @@ describe("ErrorService", () => {
 
       const errorReport: ErrorReport = {
         error: {
-          name: "Error",
           message: "Test error",
+          name: "Error",
         },
+        timestamp: new Date().toISOString(),
         url: "https://example.com",
         userAgent: "Test User Agent",
-        timestamp: new Date().toISOString(),
       };
 
       await errorService.reportError(errorReport);
 
       // Should remove 5 oldest keys (keep 10 + 1 new = 11 total, but cleanup removes extras)
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledTimes(5);
+      expect(MOCK_LOCAL_STORAGE.removeItem).toHaveBeenCalledTimes(5);
 
       // Restore Object.keys
       Object.keys = originalObjectKeys;

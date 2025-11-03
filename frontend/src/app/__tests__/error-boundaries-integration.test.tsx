@@ -29,16 +29,16 @@ vi.mock("@/lib/error-service", () => ({
 import { errorService as mockErrorService } from "@/lib/error-service";
 
 // Mock sessionStorage
-const mockSessionStorage = {
+const MOCK_SESSION_STORAGE = {
   getItem: vi.fn(),
   setItem: vi.fn(),
 };
 Object.defineProperty(window, "sessionStorage", {
-  value: mockSessionStorage,
+  value: MOCK_SESSION_STORAGE,
 });
 
 // Mock console.error to avoid noise in tests
-const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+const CONSOLE_ERROR_SPY = vi.spyOn(console, "error").mockImplementation(() => {});
 
 describe("Next.js Error Boundaries Integration", () => {
   const mockError = new Error("Test integration error") as Error & {
@@ -48,8 +48,8 @@ describe("Next.js Error Boundaries Integration", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    consoleErrorSpy.mockClear();
-    mockSessionStorage.getItem.mockReturnValue("test_session_id");
+    CONSOLE_ERROR_SPY.mockClear();
+    MOCK_SESSION_STORAGE.getItem.mockReturnValue("test_session_id");
   });
 
   describe("Root Error Boundary (error.tsx)", () => {
@@ -116,7 +116,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
     it("should always log critical errors", () => {
       render(<GlobalError error={mockError} reset={mockReset} />);
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(CONSOLE_ERROR_SPY).toHaveBeenCalled();
     });
   });
 
@@ -175,18 +175,18 @@ describe("Next.js Error Boundaries Integration", () => {
 
   describe("Session Management", () => {
     it("should generate session ID when not present", () => {
-      mockSessionStorage.getItem.mockReturnValue(null);
+      MOCK_SESSION_STORAGE.getItem.mockReturnValue(null);
 
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
+      expect(MOCK_SESSION_STORAGE.setItem).toHaveBeenCalledWith(
         "session_id",
         expect.stringMatching(/^session_\d+_[a-z0-9]+$/)
       );
     });
 
     it("should use existing session ID", () => {
-      mockSessionStorage.getItem.mockReturnValue("existing_session_id");
+      MOCK_SESSION_STORAGE.getItem.mockReturnValue("existing_session_id");
 
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
@@ -200,7 +200,7 @@ describe("Next.js Error Boundaries Integration", () => {
     });
 
     it("should handle sessionStorage errors gracefully", () => {
-      mockSessionStorage.getItem.mockImplementation(() => {
+      MOCK_SESSION_STORAGE.getItem.mockImplementation(() => {
         throw new Error("SessionStorage error");
       });
 

@@ -122,9 +122,9 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
         return;
       }
       addAgentTask(agentId, {
-        title: task.title ?? task.description ?? "Untitled Task",
         description: task.description ?? "",
         status: "in_progress",
+        title: task.title ?? task.description ?? "Untitled Task",
       });
     },
     [addAgentTask]
@@ -170,9 +170,9 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
       updateAgentStatus(agentId, "error");
       addAgentActivity({
         agentId,
-        type: "error",
         message: typeof error === "string" ? error : "Agent reported an error",
         metadata: { error },
+        type: "error",
       });
     },
     [addAgentActivity, updateAgentStatus]
@@ -273,15 +273,14 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
       }
 
       const usageUpdate: Omit<ResourceUsage, "timestamp"> = {
+        activeAgents: 1,
         cpuUsage: cpu,
         memoryUsage: memory,
         networkRequests: tokens,
-        activeAgents: 1,
       };
       updateResourceUsage(usageUpdate);
 
       await channelRef.current.send({
-        type: "broadcast",
         event: "resource_usage",
         payload: {
           agent_id: agentId,
@@ -289,6 +288,7 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
           memory,
           tokens,
         },
+        type: "broadcast",
       });
     },
     [isConnected, updateResourceUsage]
@@ -315,14 +315,14 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
   }, [connect, currentSession, disconnect, endSession, user?.id]);
 
   return {
-    isConnected,
-    connectionError,
-    reconnectAttempts,
     connect,
+    connectionError,
     disconnect,
+    isConnected,
+    reconnectAttempts,
+    reportResourceUsage,
     startAgentMonitoring,
     stopAgentMonitoring,
-    reportResourceUsage,
     wsClient: channelRef.current,
   };
 }

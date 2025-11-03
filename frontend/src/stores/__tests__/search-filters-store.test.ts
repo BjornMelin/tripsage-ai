@@ -14,25 +14,25 @@ describe("Search Filters Store", () => {
       const currentState = useSearchFiltersStore.getState();
 
       useSearchFiltersStore.setState({
+        activeFilters: {},
+        activePreset: null,
+        activeSortOption: null,
         availableFilters: {
-          flight: currentState.availableFilters?.flight || [],
           accommodation: currentState.availableFilters?.accommodation || [],
           activity: currentState.availableFilters?.activity || [],
           destination: currentState.availableFilters?.destination || [],
+          flight: currentState.availableFilters?.flight || [],
         },
         availableSortOptions: {
-          flight: currentState.availableSortOptions?.flight || [],
           accommodation: currentState.availableSortOptions?.accommodation || [],
           activity: currentState.availableSortOptions?.activity || [],
           destination: currentState.availableSortOptions?.destination || [],
+          flight: currentState.availableSortOptions?.flight || [],
         },
-        activeFilters: {},
-        activeSortOption: null,
         currentSearchType: currentState.currentSearchType || null,
         filterPresets: [],
-        activePreset: null,
-        isApplyingFilters: false,
         filterValidationErrors: {},
+        isApplyingFilters: false,
       });
     });
   });
@@ -59,9 +59,9 @@ describe("Search Filters Store", () => {
         useSearchFiltersStore.setState({
           activeFilters: {
             price_range: {
-              filterId: "price_range",
-              value: { min: 100, max: 500 },
               appliedAt: new Date().toISOString(),
+              filterId: "price_range",
+              value: { max: 500, min: 100 },
             },
           },
         });
@@ -78,15 +78,15 @@ describe("Search Filters Store", () => {
       act(() => {
         useSearchFiltersStore.setState({
           activeFilters: {
-            price_range: {
-              filterId: "price_range",
-              value: { min: 100, max: 500 },
-              appliedAt: new Date().toISOString(),
-            },
             airline: {
+              appliedAt: new Date().toISOString(),
               filterId: "airline",
               value: ["AA", "UA"],
+            },
+            price_range: {
               appliedAt: new Date().toISOString(),
+              filterId: "price_range",
+              value: { max: 500, min: 100 },
             },
           },
         });
@@ -102,18 +102,18 @@ describe("Search Filters Store", () => {
 
       const mockSortOptions: ValidatedSortOption[] = [
         {
-          id: "relevance",
-          label: "Relevance",
-          field: "score",
           direction: "desc",
+          field: "score",
+          id: "relevance",
           isDefault: true,
+          label: "Relevance",
         },
         {
-          id: "price_low",
-          label: "Price: Low to High",
-          field: "price",
           direction: "asc",
+          field: "price",
+          id: "price_low",
           isDefault: false,
+          label: "Price: Low to High",
         },
       ];
 
@@ -138,12 +138,12 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const mockPreset = {
+        createdAt: new Date().toISOString(),
+        filters: [],
         id: "preset-1",
+        isBuiltIn: false,
         name: "Test Preset",
         searchType: "flight" as const,
-        filters: [],
-        isBuiltIn: false,
-        createdAt: new Date().toISOString(),
         usageCount: 0,
       };
 
@@ -168,18 +168,18 @@ describe("Search Filters Store", () => {
 
       const mockFilters: ValidatedFilterOption[] = [
         {
+          category: "pricing",
           id: "price_range",
           label: "Price Range",
-          type: "range",
-          category: "pricing",
           required: false,
+          type: "range",
         },
         {
+          category: "routing",
           id: "stops",
           label: "Number of Stops",
-          type: "select",
-          category: "routing",
           required: false,
+          type: "select",
         },
       ];
 
@@ -203,11 +203,11 @@ describe("Search Filters Store", () => {
 
       const mockFilters: ValidatedFilterOption[] = [
         {
+          category: "pricing",
           id: "price_range",
           label: "Price Range",
-          type: "range",
-          category: "pricing",
           required: false,
+          type: "range",
         },
       ];
 
@@ -222,11 +222,11 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const newFilter: ValidatedFilterOption = {
+        category: "airline",
         id: "airline",
         label: "Airlines",
-        type: "multiselect",
-        category: "airline",
         required: false,
+        type: "multiselect",
       };
 
       act(() => {
@@ -244,11 +244,11 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const initialFilter: ValidatedFilterOption = {
+        category: "pricing",
         id: "price_range",
         label: "Price Range",
-        type: "range",
-        category: "pricing",
         required: false,
+        type: "range",
       };
 
       act(() => {
@@ -257,8 +257,8 @@ describe("Search Filters Store", () => {
 
       act(() => {
         result.current.updateAvailableFilter("flight", "price_range", {
-          label: "Updated Price Range",
           description: "Filter flights by price",
+          label: "Updated Price Range",
         });
       });
 
@@ -274,18 +274,18 @@ describe("Search Filters Store", () => {
 
       const filters: ValidatedFilterOption[] = [
         {
+          category: "pricing",
           id: "price_range",
           label: "Price Range",
-          type: "range",
-          category: "pricing",
           required: false,
+          type: "range",
         },
         {
+          category: "airline",
           id: "airline",
           label: "Airlines",
-          type: "multiselect",
-          category: "airline",
           required: false,
+          type: "multiselect",
         },
       ];
 
@@ -308,11 +308,11 @@ describe("Search Filters Store", () => {
 
       const mockSortOptions: ValidatedSortOption[] = [
         {
-          id: "price_low",
-          label: "Price: Low to High",
-          field: "price",
           direction: "asc",
+          field: "price",
+          id: "price_low",
           isDefault: false,
+          label: "Price: Low to High",
         },
       ];
 
@@ -327,11 +327,11 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const newSortOption: ValidatedSortOption = {
-        id: "duration",
-        label: "Duration",
-        field: "totalDuration",
         direction: "asc",
+        field: "totalDuration",
+        id: "duration",
         isDefault: false,
+        label: "Duration",
       };
 
       act(() => {
@@ -349,11 +349,11 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const initialSortOption: ValidatedSortOption = {
-        id: "price_low",
-        label: "Price: Low to High",
-        field: "price",
         direction: "asc",
+        field: "price",
+        id: "price_low",
         isDefault: false,
+        label: "Price: Low to High",
       };
 
       act(() => {
@@ -362,8 +362,8 @@ describe("Search Filters Store", () => {
 
       act(() => {
         result.current.updateAvailableSortOption("flight", "price_low", {
-          label: "Price: Lowest First",
           description: "Sort by price ascending",
+          label: "Price: Lowest First",
         });
       });
 
@@ -379,18 +379,18 @@ describe("Search Filters Store", () => {
 
       const sortOptions: ValidatedSortOption[] = [
         {
-          id: "price_low",
-          label: "Price: Low to High",
-          field: "price",
           direction: "asc",
+          field: "price",
+          id: "price_low",
           isDefault: false,
+          label: "Price: Low to High",
         },
         {
-          id: "duration",
-          label: "Duration",
-          field: "totalDuration",
           direction: "asc",
+          field: "totalDuration",
+          id: "duration",
           isDefault: false,
+          label: "Duration",
         },
       ];
 
@@ -411,19 +411,19 @@ describe("Search Filters Store", () => {
     beforeEach(() => {
       const mockFilters: ValidatedFilterOption[] = [
         {
+          category: "pricing",
           id: "price_range",
           label: "Price Range",
-          type: "range",
-          category: "pricing",
           required: false,
-          validation: { min: 0, max: 10000 },
+          type: "range",
+          validation: { max: 10000, min: 0 },
         },
         {
+          category: "airline",
           id: "airline",
           label: "Airlines",
-          type: "multiselect",
-          category: "airline",
           required: false,
+          type: "multiselect",
         },
       ];
 
@@ -441,7 +441,7 @@ describe("Search Filters Store", () => {
     it("sets active filter with validation", async () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
-      const filterValue: FilterValue = { min: 100, max: 500 };
+      const filterValue: FilterValue = { max: 500, min: 100 };
 
       // First set the search type to ensure current filters are available
       act(() => {
@@ -468,9 +468,9 @@ describe("Search Filters Store", () => {
         useSearchFiltersStore.setState({
           activeFilters: {
             price_range: {
-              filterId: "price_range",
-              value: { min: 100, max: 500 },
               appliedAt: new Date().toISOString(),
+              filterId: "price_range",
+              value: { max: 500, min: 100 },
             },
           },
         });
@@ -495,21 +495,21 @@ describe("Search Filters Store", () => {
 
       // Set initial filter
       await act(async () => {
-        await result.current.setActiveFilter("price_range", { min: 100, max: 500 });
+        await result.current.setActiveFilter("price_range", { max: 500, min: 100 });
       });
 
       // Update filter
       await act(async () => {
         const success = await result.current.updateActiveFilter("price_range", {
-          min: 200,
           max: 800,
+          min: 200,
         });
         expect(success).toBe(true);
       });
 
       expect(result.current.activeFilters.price_range.value).toEqual({
-        min: 200,
         max: 800,
+        min: 200,
       });
     });
 
@@ -519,23 +519,23 @@ describe("Search Filters Store", () => {
       act(() => {
         useSearchFiltersStore.setState({
           activeFilters: {
-            price_range: {
-              filterId: "price_range",
-              value: { min: 100, max: 500 },
-              appliedAt: new Date().toISOString(),
-            },
             airline: {
+              appliedAt: new Date().toISOString(),
               filterId: "airline",
               value: ["AA", "UA"],
+            },
+            price_range: {
               appliedAt: new Date().toISOString(),
+              filterId: "price_range",
+              value: { max: 500, min: 100 },
             },
           },
           activeSortOption: {
-            id: "price_low",
-            label: "Price: Low to High",
-            field: "price",
             direction: "asc",
+            field: "price",
+            id: "price_low",
             isDefault: false,
+            label: "Price: Low to High",
           },
         });
       });
@@ -557,15 +557,15 @@ describe("Search Filters Store", () => {
       act(() => {
         useSearchFiltersStore.setState({
           activeFilters: {
-            price_range: {
-              filterId: "price_range",
-              value: { min: 100, max: 500 },
-              appliedAt: new Date().toISOString(),
-            },
             airline: {
+              appliedAt: new Date().toISOString(),
               filterId: "airline",
               value: ["AA", "UA"],
+            },
+            price_range: {
               appliedAt: new Date().toISOString(),
+              filterId: "price_range",
+              value: { max: 500, min: 100 },
             },
           },
         });
@@ -588,8 +588,8 @@ describe("Search Filters Store", () => {
       });
 
       const multipleFilters = {
-        price_range: { min: 100, max: 500 },
         airline: ["AA", "UA"],
+        price_range: { max: 500, min: 100 },
       };
 
       await act(async () => {
@@ -607,18 +607,18 @@ describe("Search Filters Store", () => {
     beforeEach(() => {
       const mockSortOptions: ValidatedSortOption[] = [
         {
-          id: "relevance",
-          label: "Relevance",
-          field: "score",
           direction: "desc",
+          field: "score",
+          id: "relevance",
           isDefault: true,
+          label: "Relevance",
         },
         {
-          id: "price_low",
-          label: "Price: Low to High",
-          field: "price",
           direction: "asc",
+          field: "price",
+          id: "price_low",
           isDefault: false,
+          label: "Price: Low to High",
         },
       ];
 
@@ -637,11 +637,11 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const sortOption: ValidatedSortOption = {
-        id: "price_low",
-        label: "Price: Low to High",
-        field: "price",
         direction: "asc",
+        field: "price",
+        id: "price_low",
         isDefault: false,
+        label: "Price: Low to High",
       };
 
       act(() => {
@@ -705,18 +705,18 @@ describe("Search Filters Store", () => {
     beforeEach(() => {
       const mockFilters: ValidatedFilterOption[] = [
         {
+          category: "pricing",
           id: "price_range",
           label: "Price Range",
-          type: "range",
-          category: "pricing",
           required: false,
-          validation: { min: 0, max: 10000 },
+          type: "range",
+          validation: { max: 10000, min: 0 },
         },
         {
           id: "required_field",
           label: "Required Field",
-          type: "text",
           required: true,
+          type: "text",
           validation: { required: true },
         },
       ];
@@ -736,8 +736,8 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const isValid = await result.current.validateFilter("price_range", {
-        min: 100,
         max: 500,
+        min: 100,
       });
       expect(isValid).toBe(true);
       expect(result.current.filterValidationErrors.price_range).toBeUndefined();
@@ -759,15 +759,15 @@ describe("Search Filters Store", () => {
 
       // Test value below minimum
       const isValidMin = await result.current.validateFilter("price_range", {
-        min: -10,
         max: 500,
+        min: -10,
       });
       expect(isValidMin).toBe(false);
 
       // Test value above maximum
       const isValidMax = await result.current.validateFilter("price_range", {
-        min: 100,
         max: 15000,
+        min: 100,
       });
       expect(isValidMax).toBe(false);
     });
@@ -779,14 +779,14 @@ describe("Search Filters Store", () => {
         useSearchFiltersStore.setState({
           activeFilters: {
             price_range: {
-              filterId: "price_range",
-              value: { min: 100, max: 500 },
               appliedAt: new Date().toISOString(),
+              filterId: "price_range",
+              value: { max: 500, min: 100 },
             },
             required_field: {
+              appliedAt: new Date().toISOString(),
               filterId: "required_field",
               value: "valid value",
-              appliedAt: new Date().toISOString(),
             },
           },
         });
@@ -824,7 +824,7 @@ describe("Search Filters Store", () => {
 
       // Set validation errors for multiple filters
       await result.current.validateFilter("required_field", "");
-      await result.current.validateFilter("price_range", { min: -10, max: 500 });
+      await result.current.validateFilter("price_range", { max: 500, min: -10 });
 
       expect(Object.keys(result.current.filterValidationErrors)).toHaveLength(2);
 
@@ -841,21 +841,21 @@ describe("Search Filters Store", () => {
     beforeEach(() => {
       act(() => {
         useSearchFiltersStore.setState({
-          currentSearchType: "flight",
           activeFilters: {
             price_range: {
-              filterId: "price_range",
-              value: { min: 100, max: 500 },
               appliedAt: new Date().toISOString(),
+              filterId: "price_range",
+              value: { max: 500, min: 100 },
             },
           },
           activeSortOption: {
-            id: "price_low",
-            label: "Price: Low to High",
-            field: "price",
             direction: "asc",
+            field: "price",
+            id: "price_low",
             isDefault: false,
+            label: "Price: Low to High",
           },
+          currentSearchType: "flight",
         });
       });
     });
@@ -903,8 +903,8 @@ describe("Search Filters Store", () => {
       const presetId = await result.current.saveFilterPreset("Budget Flights");
 
       const success = await result.current.updateFilterPreset(presetId!, {
-        name: "Cheap Flights",
         description: "Updated description",
+        name: "Cheap Flights",
       });
 
       expect(success).toBe(true);
@@ -975,20 +975,20 @@ describe("Search Filters Store", () => {
         useSearchFiltersStore.setState({
           activeFilters: {
             price_range: {
-              filterId: "price_range",
-              value: { min: 100, max: 500 },
               appliedAt: new Date().toISOString(),
+              filterId: "price_range",
+              value: { max: 500, min: 100 },
             },
           },
           currentSearchType: "flight",
           filterPresets: [
             {
+              createdAt: new Date().toISOString(),
+              filters: [],
               id: "preset-1",
+              isBuiltIn: false,
               name: "Test Preset",
               searchType: "flight",
-              filters: [],
-              isBuiltIn: false,
-              createdAt: new Date().toISOString(),
               usageCount: 0,
             },
           ],
@@ -1014,11 +1014,11 @@ describe("Search Filters Store", () => {
 
       const mockFilters: ValidatedFilterOption[] = [
         {
+          category: "pricing",
           id: "price_range",
           label: "Price Range",
-          type: "range",
-          category: "pricing",
           required: false,
+          type: "range",
         },
       ];
 
@@ -1027,16 +1027,16 @@ describe("Search Filters Store", () => {
         useSearchFiltersStore.setState({
           activeFilters: {
             price_range: {
-              filterId: "price_range",
-              value: { min: 100, max: 500 },
               appliedAt: new Date().toISOString(),
+              filterId: "price_range",
+              value: { max: 500, min: 100 },
             },
           },
-          currentSearchType: "flight",
           availableFilters: {
             ...useSearchFiltersStore.getState().availableFilters,
             flight: mockFilters,
           },
+          currentSearchType: "flight",
         });
       });
 
@@ -1062,9 +1062,9 @@ describe("Search Filters Store", () => {
         useSearchFiltersStore.setState({
           activeFilters: {
             price_range: {
-              filterId: "price_range",
-              value: { min: 100, max: 500 },
               appliedAt: new Date().toISOString(),
+              filterId: "price_range",
+              value: { max: 500, min: 100 },
             },
           },
         });
@@ -1076,11 +1076,11 @@ describe("Search Filters Store", () => {
         useSearchFiltersStore.setState({
           activeFilters: {},
           activeSortOption: {
-            id: "price_low",
-            label: "Price: Low to High",
-            field: "price",
             direction: "asc",
+            field: "price",
+            id: "price_low",
             isDefault: false,
+            label: "Price: Low to High",
           },
         });
       });
@@ -1093,42 +1093,42 @@ describe("Search Filters Store", () => {
 
       const mockFilters: ValidatedFilterOption[] = [
         {
+          category: "pricing",
           id: "price_range",
           label: "Price Range",
-          type: "range",
-          category: "pricing",
           required: false,
+          type: "range",
         },
         {
+          category: "airline",
           id: "airline",
           label: "Airlines",
-          type: "multiselect",
-          category: "airline",
           required: false,
+          type: "multiselect",
         },
       ];
 
       act(() => {
         useSearchFiltersStore.setState({
+          activeFilters: {
+            airline: {
+              appliedAt: new Date().toISOString(),
+              displayValue: "American Airlines, United Airlines",
+              filterId: "airline",
+              value: ["AA", "UA"],
+            },
+            price_range: {
+              appliedAt: new Date().toISOString(),
+              displayValue: "$100 - $500",
+              filterId: "price_range",
+              value: { max: 500, min: 100 },
+            },
+          },
           availableFilters: {
             ...useSearchFiltersStore.getState().availableFilters,
             flight: mockFilters,
           },
           currentSearchType: "flight",
-          activeFilters: {
-            price_range: {
-              filterId: "price_range",
-              value: { min: 100, max: 500 },
-              displayValue: "$100 - $500",
-              appliedAt: new Date().toISOString(),
-            },
-            airline: {
-              filterId: "airline",
-              value: ["AA", "UA"],
-              displayValue: "American Airlines, United Airlines",
-              appliedAt: new Date().toISOString(),
-            },
-          },
         });
       });
 

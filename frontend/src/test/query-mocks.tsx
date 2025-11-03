@@ -61,8 +61,8 @@ export interface QueryController<TData, TError> {
 export const createMockQueryClient = (): QueryClient =>
   new TanStackQueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
       mutations: { retry: false },
+      queries: { gcTime: 0, retry: false, staleTime: 0 },
     },
   });
 
@@ -112,52 +112,39 @@ export function createControlledMutation<
   });
 
   const mutation: UseMutationResult<TData, TError, TVariables, TContext> = {
+    context: undefined as TContext,
     data: state.data,
     error: state.error,
     failureCount: 0,
     failureReason: null,
     isError: false,
     isIdle: true,
-    isPending: false,
+    isLoadingError: false,
     isPaused: false,
+    isPending: false,
+    isRefetchError: false,
     isSuccess: false,
-    status: "idle",
-    variables: state.variables,
     mutate,
     mutateAsync,
-    reset,
-    context: undefined as TContext,
-    isLoadingError: false,
-    isRefetchError: false,
-    submittedAt: Date.now(),
     promise: Promise.resolve({ data: state.data, error: state.error }),
+    reset,
+    status: "idle",
+    submittedAt: Date.now(),
+    variables: state.variables,
   } as UseMutationResult<TData, TError, TVariables, TContext>;
 
   const controller: MutationController<TData, TError, TVariables> = {
-    triggerMutate: (variables: TVariables) => {
-      mutate(variables);
+    reset: () => {
+      reset();
       Object.assign(mutation, {
-        status: "pending" as const,
-        isPending: true,
-        isIdle: false,
+        data: undefined,
+        error: null,
         isError: false,
-        isSuccess: false,
-        variables,
-        error: null,
-      });
-    },
-    triggerSuccess: (data: TData) => {
-      state.data = data;
-      state.error = null;
-      state.status = "success";
-      Object.assign(mutation, {
-        data,
-        error: null,
-        status: "success" as const,
+        isIdle: true,
         isPending: false,
-        isSuccess: true,
-        isError: false,
-        isIdle: false,
+        isSuccess: false,
+        status: "idle" as const,
+        variables: undefined,
       });
     },
     triggerError: (error: TError) => {
@@ -167,31 +154,44 @@ export function createControlledMutation<
       Object.assign(mutation, {
         data: undefined,
         error,
-        status: "error" as const,
-        isPending: false,
-        isSuccess: false,
+        failureCount: 1,
+        failureReason: error,
         isError: true,
         isIdle: false,
-        failureReason: error,
-        failureCount: 1,
-      });
-    },
-    reset: () => {
-      reset();
-      Object.assign(mutation, {
-        data: undefined,
-        error: null,
-        status: "idle" as const,
         isPending: false,
         isSuccess: false,
+        status: "error" as const,
+      });
+    },
+    triggerMutate: (variables: TVariables) => {
+      mutate(variables);
+      Object.assign(mutation, {
+        error: null,
         isError: false,
-        isIdle: true,
-        variables: undefined,
+        isIdle: false,
+        isPending: true,
+        isSuccess: false,
+        status: "pending" as const,
+        variables,
+      });
+    },
+    triggerSuccess: (data: TData) => {
+      state.data = data;
+      state.error = null;
+      state.status = "success";
+      Object.assign(mutation, {
+        data,
+        error: null,
+        isError: false,
+        isIdle: false,
+        isPending: false,
+        isSuccess: true,
+        status: "success" as const,
       });
     },
   };
 
-  return { mutation, controller };
+  return { controller, mutation };
 }
 
 /**
@@ -226,32 +226,22 @@ export function createControlledQuery<TData, TError = Error>() {
   query.error = null;
 
   const controller: QueryController<TData, TError> = {
-    triggerLoading: () => {
+    reset: () => {
+      state.data = undefined;
+      state.error = null;
       state.status = "pending";
       Object.assign(query, {
-        status: "pending" as const,
-        isPending: true,
-        isLoading: true,
-        isFetching: true,
-        isSuccess: false,
-        isError: false,
-      });
-    },
-    triggerSuccess: (data: TData) => {
-      state.data = data;
-      state.error = null;
-      state.status = "success";
-      Object.assign(query, {
-        data,
+        data: undefined,
         error: null,
-        status: "success" as const,
-        isPending: false,
-        isLoading: false,
-        isFetching: false,
-        isFetched: true,
-        isFetchedAfterMount: true,
-        isSuccess: true,
         isError: false,
+        isFetched: false,
+        isFetchedAfterMount: false,
+        isFetching: false,
+        isLoading: true,
+        isLoadingError: false,
+        isPending: true,
+        isSuccess: false,
+        status: "pending" as const,
       });
     },
     triggerError: (error: TError) => {
@@ -261,39 +251,49 @@ export function createControlledQuery<TData, TError = Error>() {
       Object.assign(query, {
         data: undefined,
         error,
-        status: "error" as const,
-        isPending: false,
-        isLoading: false,
-        isFetching: false,
-        isSuccess: false,
         isError: true,
+        isFetching: false,
+        isLoading: false,
         isLoadingError: true,
+        isPending: false,
+        isSuccess: false,
+        status: "error" as const,
+      });
+    },
+    triggerLoading: () => {
+      state.status = "pending";
+      Object.assign(query, {
+        isError: false,
+        isFetching: true,
+        isLoading: true,
+        isPending: true,
+        isSuccess: false,
+        status: "pending" as const,
       });
     },
     triggerRefetch: () => {
       void query.refetch();
     },
-    reset: () => {
-      state.data = undefined;
+    triggerSuccess: (data: TData) => {
+      state.data = data;
       state.error = null;
-      state.status = "pending";
+      state.status = "success";
       Object.assign(query, {
-        data: undefined,
+        data,
         error: null,
-        status: "pending" as const,
-        isPending: true,
-        isLoading: true,
-        isFetching: false,
-        isSuccess: false,
         isError: false,
-        isLoadingError: false,
-        isFetched: false,
-        isFetchedAfterMount: false,
+        isFetched: true,
+        isFetchedAfterMount: true,
+        isFetching: false,
+        isLoading: false,
+        isPending: false,
+        isSuccess: true,
+        status: "success" as const,
       });
     },
   };
 
-  return { query, controller };
+  return { controller, query };
 }
 
 /**
@@ -316,5 +316,5 @@ export function mockUseQuery<TData, TError>(
     controller.triggerError(initialError);
   }
 
-  return { query, controller };
+  return { controller, query };
 }

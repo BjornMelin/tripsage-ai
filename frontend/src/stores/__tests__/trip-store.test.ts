@@ -21,32 +21,32 @@ vi.mock("@/lib/repositories/trips-repo", () => {
   return {
     createTrip: vi.fn(async (payload: any) => {
       return {
-        id: String(Date.now() + seq++),
-        name: payload.name || payload.title || "Untitled Trip",
-        description: payload.description ?? "",
-        startDate: payload.start_date ?? null,
-        endDate: payload.end_date ?? null,
         budget: payload.budget ?? 0,
+        createdAt: now(),
         currency: payload.currency ?? "USD",
+        description: payload.description ?? "",
         destinations: [],
+        endDate: payload.end_date ?? null,
+        id: String(Date.now() + seq++),
         isPublic: payload.visibility
           ? payload.visibility === "public"
           : Boolean(payload.isPublic),
-        createdAt: now(),
-        updatedAt: now(),
-      };
-    }),
-    updateTrip: vi.fn(async (id: number, _userId: string, patch: any) => {
-      return {
-        id: String(id),
-        name: patch.name || "Untitled Trip",
-        description: patch.description ?? "",
-        budget: patch.budget ?? 0,
+        name: payload.name || payload.title || "Untitled Trip",
+        startDate: payload.start_date ?? null,
         updatedAt: now(),
       };
     }),
     deleteTrip: vi.fn(async () => {}),
     listTrips: vi.fn(async () => []),
+    updateTrip: vi.fn(async (id: number, _userId: string, patch: any) => {
+      return {
+        budget: patch.budget ?? 0,
+        description: patch.description ?? "",
+        id: String(id),
+        name: patch.name || "Untitled Trip",
+        updatedAt: now(),
+      };
+    }),
   };
 });
 
@@ -58,10 +58,10 @@ describe("Trip Store", () => {
     // Reset store state
     act(() => {
       useTripStore.setState({
-        trips: [],
         currentTrip: null,
-        isLoading: false,
         error: null,
+        isLoading: false,
+        trips: [],
       });
     });
   });
@@ -83,20 +83,20 @@ describe("Trip Store", () => {
 
       const mockTrips: Trip[] = [
         {
-          id: "trip-1",
-          name: "Summer Vacation",
+          createdAt: "2025-01-01T00:00:00Z",
           description: "A relaxing summer trip",
           destinations: [],
+          id: "trip-1",
           isPublic: false,
-          createdAt: "2025-01-01T00:00:00Z",
+          name: "Summer Vacation",
           updatedAt: "2025-01-01T00:00:00Z",
         },
         {
-          id: "trip-2",
-          name: "Business Trip",
-          destinations: [],
-          isPublic: false,
           createdAt: "2025-01-02T00:00:00Z",
+          destinations: [],
+          id: "trip-2",
+          isPublic: false,
+          name: "Business Trip",
           updatedAt: "2025-01-02T00:00:00Z",
         },
       ];
@@ -112,11 +112,11 @@ describe("Trip Store", () => {
       const { result } = renderHook(() => useTripStore());
 
       const mockTrip: Trip = {
-        id: "trip-1",
-        name: "Summer Vacation",
-        destinations: [],
-        isPublic: false,
         createdAt: "2025-01-01T00:00:00Z",
+        destinations: [],
+        id: "trip-1",
+        isPublic: false,
+        name: "Summer Vacation",
         updatedAt: "2025-01-01T00:00:00Z",
       };
 
@@ -137,14 +137,14 @@ describe("Trip Store", () => {
       const { result } = renderHook(() => useTripStore());
 
       const tripData = {
-        name: "European Adventure",
-        description: "Exploring Europe",
-        startDate: "2025-06-01",
-        endDate: "2025-06-15",
         budget: 3000,
         currency: "EUR",
-        isPublic: true,
+        description: "Exploring Europe",
         destinations: [],
+        endDate: "2025-06-15",
+        isPublic: true,
+        name: "European Adventure",
+        startDate: "2025-06-01",
       };
 
       await act(async () => {
@@ -205,9 +205,9 @@ describe("Trip Store", () => {
       // Update the trip
       await act(async () => {
         await result.current.updateTrip(tripId, {
-          name: "Updated Trip",
-          description: "Updated description",
           budget: 2000,
+          description: "Updated description",
+          name: "Updated Trip",
         });
       });
 
@@ -359,25 +359,25 @@ describe("Trip Store", () => {
       const { result } = renderHook(() => useTripStore());
 
       const destination: Destination = {
-        id: "dest-1",
-        name: "Paris",
-        country: "France",
-        coordinates: { latitude: 48.8566, longitude: 2.3522 },
-        startDate: "2025-06-01",
-        endDate: "2025-06-05",
-        activities: ["sightseeing", "museums"],
         accommodation: {
-          type: "hotel",
           name: "Hotel de Ville",
           price: 150,
+          type: "hotel",
         },
+        activities: ["sightseeing", "museums"],
+        coordinates: { latitude: 48.8566, longitude: 2.3522 },
+        country: "France",
+        endDate: "2025-06-05",
+        estimatedCost: 1000,
+        id: "dest-1",
+        name: "Paris",
+        notes: "Must visit the Louvre",
+        startDate: "2025-06-01",
         transportation: {
-          type: "flight",
           details: "Direct flight from NYC",
           price: 500,
+          type: "flight",
         },
-        estimatedCost: 1000,
-        notes: "Must visit the Louvre",
       };
 
       await act(async () => {
@@ -402,8 +402,8 @@ describe("Trip Store", () => {
       const { result } = renderHook(() => useTripStore());
 
       const destinationWithoutId = {
-        name: "Rome",
         country: "Italy",
+        name: "Rome",
       };
 
       await act(async () => {
@@ -425,10 +425,10 @@ describe("Trip Store", () => {
 
       // First add a destination
       const destination: Destination = {
-        id: "dest-1",
-        name: "Paris",
         country: "France",
         estimatedCost: 1000,
+        id: "dest-1",
+        name: "Paris",
       };
 
       await act(async () => {
@@ -438,8 +438,8 @@ describe("Trip Store", () => {
       // Update the destination
       await act(async () => {
         await result.current.updateDestination(tripId, "dest-1", {
-          name: "Paris Updated",
           estimatedCost: 1200,
+          name: "Paris Updated",
           notes: "Added notes",
         });
       });
@@ -462,9 +462,9 @@ describe("Trip Store", () => {
       // Add destination
       await act(async () => {
         await result.current.addDestination(tripId, {
+          country: "France",
           id: "dest-1",
           name: "Paris",
-          country: "France",
         });
       });
 
@@ -487,17 +487,17 @@ describe("Trip Store", () => {
       // First add two destinations
       await act(async () => {
         await result.current.addDestination(tripId, {
+          country: "France",
           id: "dest-1",
           name: "Paris",
-          country: "France",
         });
       });
 
       await act(async () => {
         await result.current.addDestination(tripId, {
+          country: "Italy",
           id: "dest-2",
           name: "Rome",
-          country: "Italy",
         });
       });
 
@@ -523,9 +523,9 @@ describe("Trip Store", () => {
       // Add destinations
       await act(async () => {
         await result.current.addDestination(tripId, {
+          country: "France",
           id: "dest-1",
           name: "Paris",
-          country: "France",
         });
       });
 
@@ -545,9 +545,9 @@ describe("Trip Store", () => {
 
       await act(async () => {
         await result.current.addDestination("non-existent-trip", {
+          country: "France",
           id: "dest-1",
           name: "Paris",
-          country: "France",
         });
       });
 
@@ -617,11 +617,11 @@ describe("Trip Store", () => {
       const { result } = renderHook(() => useTripStore());
 
       const mockTrip: Trip = {
-        id: "trip-1",
-        name: "Test Trip",
-        destinations: [],
-        isPublic: false,
         createdAt: "2025-01-01T00:00:00Z",
+        destinations: [],
+        id: "trip-1",
+        isPublic: false,
+        name: "Test Trip",
         updatedAt: "2025-01-01T00:00:00Z",
       };
 
@@ -649,30 +649,30 @@ describe("Trip Store", () => {
       // Add multiple destinations with full data
       const destinations: Destination[] = [
         {
+          accommodation: { name: "Hotel de Ville", price: 150, type: "hotel" },
+          activities: ["sightseeing", "museums"],
+          coordinates: { latitude: 48.8566, longitude: 2.3522 },
+          country: "France",
+          endDate: "2025-06-05",
+          estimatedCost: 1000,
           id: "dest-1",
           name: "Paris",
-          country: "France",
-          coordinates: { latitude: 48.8566, longitude: 2.3522 },
-          startDate: "2025-06-01",
-          endDate: "2025-06-05",
-          activities: ["sightseeing", "museums"],
-          accommodation: { type: "hotel", name: "Hotel de Ville", price: 150 },
-          transportation: { type: "flight", details: "Direct flight", price: 500 },
-          estimatedCost: 1000,
           notes: "Visit the Louvre",
+          startDate: "2025-06-01",
+          transportation: { details: "Direct flight", price: 500, type: "flight" },
         },
         {
+          accommodation: { name: "Roman Apartment", price: 100, type: "apartment" },
+          activities: ["historical sites", "food tours"],
+          coordinates: { latitude: 41.9028, longitude: 12.4964 },
+          country: "Italy",
+          endDate: "2025-06-10",
+          estimatedCost: 800,
           id: "dest-2",
           name: "Rome",
-          country: "Italy",
-          coordinates: { latitude: 41.9028, longitude: 12.4964 },
-          startDate: "2025-06-06",
-          endDate: "2025-06-10",
-          activities: ["historical sites", "food tours"],
-          accommodation: { type: "apartment", name: "Roman Apartment", price: 100 },
-          transportation: { type: "train", details: "High-speed rail", price: 80 },
-          estimatedCost: 800,
           notes: "Try authentic pasta",
+          startDate: "2025-06-06",
+          transportation: { details: "High-speed rail", price: 80, type: "train" },
         },
       ];
 
@@ -696,9 +696,9 @@ describe("Trip Store", () => {
 
       await act(async () => {
         await result.current.createTrip({
-          name: "Budget Trip",
           budget: 2000,
           currency: "EUR",
+          name: "Budget Trip",
         });
       });
 
@@ -707,19 +707,19 @@ describe("Trip Store", () => {
       // Add destinations with costs
       await act(async () => {
         await result.current.addDestination(tripId, {
-          id: "dest-1",
-          name: "Paris",
           country: "France",
           estimatedCost: 800,
+          id: "dest-1",
+          name: "Paris",
         });
       });
 
       await act(async () => {
         await result.current.addDestination(tripId, {
-          id: "dest-2",
-          name: "Rome",
           country: "Italy",
           estimatedCost: 600,
+          id: "dest-2",
+          name: "Rome",
         });
       });
 

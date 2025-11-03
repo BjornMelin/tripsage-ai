@@ -16,19 +16,19 @@ describe("Search History Store", () => {
   beforeEach(() => {
     act(() => {
       useSearchHistoryStore.setState({
-        recentSearches: [],
-        savedSearches: [],
-        searchCollections: [],
-        quickSearches: [],
-        searchSuggestions: [],
-        popularSearchTerms: [],
-        maxRecentSearches: 50,
-        autoSaveEnabled: true,
         autoCleanupDays: 30,
+        autoSaveEnabled: true,
+        error: null,
         isLoading: false,
         isSyncing: false,
         lastSyncAt: null,
-        error: null,
+        maxRecentSearches: 50,
+        popularSearchTerms: [],
+        quickSearches: [],
+        recentSearches: [],
+        savedSearches: [],
+        searchCollections: [],
+        searchSuggestions: [],
         syncError: null,
       });
     });
@@ -56,26 +56,26 @@ describe("Search History Store", () => {
 
       const mockSavedSearches: ValidatedSavedSearch[] = [
         {
-          id: "search-1",
-          name: "Test Search 1",
-          searchType: "flight",
-          params: {},
-          tags: [],
-          isPublic: false,
-          isFavorite: false,
           createdAt: new Date().toISOString(),
+          id: "search-1",
+          isFavorite: false,
+          isPublic: false,
+          name: "Test Search 1",
+          params: {},
+          searchType: "flight",
+          tags: [],
           updatedAt: new Date().toISOString(),
           usageCount: 0,
         },
         {
-          id: "search-2",
-          name: "Test Search 2",
-          searchType: "accommodation",
-          params: {},
-          tags: [],
-          isPublic: false,
-          isFavorite: true,
           createdAt: new Date().toISOString(),
+          id: "search-2",
+          isFavorite: true,
+          isPublic: false,
+          name: "Test Search 2",
+          params: {},
+          searchType: "accommodation",
+          tags: [],
           updatedAt: new Date().toISOString(),
           usageCount: 0,
         },
@@ -93,26 +93,26 @@ describe("Search History Store", () => {
 
       const mockSavedSearches: ValidatedSavedSearch[] = [
         {
-          id: "search-1",
-          name: "Normal Search",
-          searchType: "flight",
-          params: {},
-          tags: [],
-          isPublic: false,
-          isFavorite: false,
           createdAt: new Date().toISOString(),
+          id: "search-1",
+          isFavorite: false,
+          isPublic: false,
+          name: "Normal Search",
+          params: {},
+          searchType: "flight",
+          tags: [],
           updatedAt: new Date().toISOString(),
           usageCount: 0,
         },
         {
-          id: "search-2",
-          name: "Favorite Search",
-          searchType: "accommodation",
-          params: {},
-          tags: [],
-          isPublic: false,
-          isFavorite: true,
           createdAt: new Date().toISOString(),
+          id: "search-2",
+          isFavorite: true,
+          isPublic: false,
+          name: "Favorite Search",
+          params: {},
+          searchType: "accommodation",
+          tags: [],
           updatedAt: new Date().toISOString(),
           usageCount: 0,
         },
@@ -132,20 +132,20 @@ describe("Search History Store", () => {
       const mockRecentSearches: SearchHistoryItem[] = [
         {
           id: "recent-1",
+          params: { destination: "LAX", origin: "NYC" },
           searchType: "flight",
-          params: { origin: "NYC", destination: "LAX" },
           timestamp: new Date().toISOString(),
         },
         {
           id: "recent-2",
-          searchType: "accommodation",
           params: { destination: "Paris" },
+          searchType: "accommodation",
           timestamp: new Date().toISOString(),
         },
         {
           id: "recent-3",
+          params: { destination: "LHR", origin: "SFO" },
           searchType: "flight",
-          params: { origin: "SFO", destination: "LHR" },
           timestamp: new Date().toISOString(),
         },
       ];
@@ -166,7 +166,7 @@ describe("Search History Store", () => {
     it("adds a new recent search", () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
-      const searchParams = { origin: "NYC", destination: "LAX" };
+      const searchParams = { destination: "LAX", origin: "NYC" };
 
       act(() => {
         result.current.addRecentSearch("flight", searchParams);
@@ -180,7 +180,7 @@ describe("Search History Store", () => {
     it("updates existing search timestamp for duplicate", async () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
-      const searchParams = { origin: "NYC", destination: "LAX" };
+      const searchParams = { destination: "LAX", origin: "NYC" };
 
       act(() => {
         result.current.addRecentSearch("flight", searchParams);
@@ -213,8 +213,8 @@ describe("Search History Store", () => {
       for (let i = 1; i <= 5; i++) {
         act(() => {
           result.current.addRecentSearch("flight", {
-            origin: `Origin${i}`,
             destination: `Dest${i}`,
+            origin: `Origin${i}`,
           });
         });
       }
@@ -228,7 +228,7 @@ describe("Search History Store", () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
       act(() => {
-        result.current.addRecentSearch("flight", { origin: "NYC", destination: "LAX" });
+        result.current.addRecentSearch("flight", { destination: "LAX", origin: "NYC" });
         result.current.addRecentSearch("accommodation", { destination: "Paris" });
       });
 
@@ -249,7 +249,7 @@ describe("Search History Store", () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
       act(() => {
-        result.current.addRecentSearch("flight", { origin: "NYC", destination: "LAX" });
+        result.current.addRecentSearch("flight", { destination: "LAX", origin: "NYC" });
         result.current.addRecentSearch("accommodation", { destination: "Paris" });
       });
 
@@ -266,9 +266,9 @@ describe("Search History Store", () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
       act(() => {
-        result.current.addRecentSearch("flight", { origin: "NYC", destination: "LAX" });
+        result.current.addRecentSearch("flight", { destination: "LAX", origin: "NYC" });
         result.current.addRecentSearch("accommodation", { destination: "Paris" });
-        result.current.addRecentSearch("flight", { origin: "SFO", destination: "LHR" });
+        result.current.addRecentSearch("flight", { destination: "LHR", origin: "SFO" });
       });
 
       expect(result.current.recentSearches).toHaveLength(3);
@@ -290,22 +290,22 @@ describe("Search History Store", () => {
 
       const oldSearch: SearchHistoryItem = {
         id: "old-search",
+        params: { destination: "LAX", origin: "NYC" },
         searchType: "flight",
-        params: { origin: "NYC", destination: "LAX" },
         timestamp: oldDate.toISOString(),
       };
 
       const recentSearch: SearchHistoryItem = {
         id: "recent-search",
-        searchType: "accommodation",
         params: { destination: "Paris" },
+        searchType: "accommodation",
         timestamp: recentDate,
       };
 
       act(() => {
         useSearchHistoryStore.setState({
-          recentSearches: [oldSearch, recentSearch],
           autoCleanupDays: 30,
+          recentSearches: [oldSearch, recentSearch],
         });
       });
 
@@ -322,7 +322,7 @@ describe("Search History Store", () => {
     it("saves a new search", async () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
-      const searchParams = { origin: "NYC", destination: "LAX" };
+      const searchParams = { destination: "LAX", origin: "NYC" };
 
       let savedId: string | null = null;
       await act(async () => {
@@ -339,12 +339,12 @@ describe("Search History Store", () => {
     it("saves search with options", async () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
-      const searchParams = { origin: "NYC", destination: "LAX" };
+      const searchParams = { destination: "LAX", origin: "NYC" };
       const options = {
         description: "Budget flight search",
-        tags: ["budget", "domestic"],
         isFavorite: true,
         isPublic: false,
+        tags: ["budget", "domestic"],
       };
 
       await act(async () => {
@@ -370,9 +370,9 @@ describe("Search History Store", () => {
       // Then update it
       await act(async () => {
         const success = await result.current.updateSavedSearch(searchId!, {
-          name: "Updated Name",
           description: "Updated description",
           isFavorite: true,
+          name: "Updated Name",
         });
         expect(success).toBe(true);
       });
@@ -406,7 +406,7 @@ describe("Search History Store", () => {
     it("duplicates a saved search", async () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
-      const originalParams = { origin: "NYC", destination: "LAX" };
+      const originalParams = { destination: "LAX", origin: "NYC" };
 
       // First save a search
       let originalId: string | null = null;
@@ -522,8 +522,8 @@ describe("Search History Store", () => {
       // Update collection
       await act(async () => {
         const success = await result.current.updateCollection(collectionId!, {
-          name: "Updated Name",
           description: "Updated description",
+          name: "Updated Name",
         });
         expect(success).toBe(true);
       });
@@ -605,10 +605,10 @@ describe("Search History Store", () => {
     it("creates a quick search", async () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
-      const params = { origin: "NYC", destination: "LAX" };
+      const params = { destination: "LAX", origin: "NYC" };
       const options = {
-        icon: "✈️",
         color: "#3B82F6",
+        icon: "✈️",
         sortOrder: 1,
       };
 
@@ -649,9 +649,9 @@ describe("Search History Store", () => {
       // Update quick search
       await act(async () => {
         const success = await result.current.updateQuickSearch(quickSearchId!, {
-          label: "Updated Label",
           icon: "🚀",
           isVisible: false,
+          label: "Updated Label",
         });
         expect(success).toBe(true);
       });
@@ -725,28 +725,28 @@ describe("Search History Store", () => {
       const recentSearches: SearchHistoryItem[] = [
         {
           id: "recent-1",
+          params: { destination: "LAX", origin: "NYC" },
           searchType: "flight",
-          params: { origin: "NYC", destination: "LAX" },
           timestamp: new Date().toISOString(),
         },
         {
           id: "recent-2",
-          searchType: "accommodation",
           params: { destination: "Paris" },
+          searchType: "accommodation",
           timestamp: new Date().toISOString(),
         },
       ];
 
       const savedSearches: ValidatedSavedSearch[] = [
         {
-          id: "saved-1",
-          name: "Budget NYC Flights",
-          searchType: "flight",
-          params: { origin: "NYC", destination: "BOS" },
-          tags: [],
-          isPublic: false,
-          isFavorite: false,
           createdAt: new Date().toISOString(),
+          id: "saved-1",
+          isFavorite: false,
+          isPublic: false,
+          name: "Budget NYC Flights",
+          params: { destination: "BOS", origin: "NYC" },
+          searchType: "flight",
+          tags: [],
           updatedAt: new Date().toISOString(),
           usageCount: 5,
         },
@@ -835,28 +835,28 @@ describe("Search History Store", () => {
     beforeEach(() => {
       const savedSearches: ValidatedSavedSearch[] = [
         {
-          id: "search-1",
-          name: "NYC Flights",
-          description: "Flights from New York",
-          searchType: "flight",
-          params: {},
-          tags: ["business", "domestic"],
-          isPublic: false,
-          isFavorite: true,
           createdAt: new Date().toISOString(),
+          description: "Flights from New York",
+          id: "search-1",
+          isFavorite: true,
+          isPublic: false,
+          name: "NYC Flights",
+          params: {},
+          searchType: "flight",
+          tags: ["business", "domestic"],
           updatedAt: new Date().toISOString(),
           usageCount: 0,
         },
         {
-          id: "search-2",
-          name: "Paris Hotels",
-          description: "Luxury hotels in Paris",
-          searchType: "accommodation",
-          params: {},
-          tags: ["luxury", "europe"],
-          isPublic: false,
-          isFavorite: false,
           createdAt: new Date().toISOString(),
+          description: "Luxury hotels in Paris",
+          id: "search-2",
+          isFavorite: false,
+          isPublic: false,
+          name: "Paris Hotels",
+          params: {},
+          searchType: "accommodation",
+          tags: ["luxury", "europe"],
           updatedAt: new Date().toISOString(),
           usageCount: 0,
         },
@@ -946,8 +946,8 @@ describe("Search History Store", () => {
 
       // Add some recent searches
       act(() => {
-        result.current.addRecentSearch("flight", { origin: "NYC", destination: "LAX" });
-        result.current.addRecentSearch("flight", { origin: "SFO", destination: "LHR" });
+        result.current.addRecentSearch("flight", { destination: "LAX", origin: "NYC" });
+        result.current.addRecentSearch("flight", { destination: "LHR", origin: "SFO" });
         result.current.addRecentSearch("accommodation", { destination: "Paris" });
       });
 
@@ -983,24 +983,24 @@ describe("Search History Store", () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
       const importData = {
+        exportedAt: new Date().toISOString(),
+        popularSearchTerms: [],
+        quickSearches: [],
         savedSearches: [
           {
-            id: "imported-1",
-            name: "Imported Search",
-            searchType: "flight",
-            params: {},
-            tags: [],
-            isPublic: false,
-            isFavorite: false,
             createdAt: new Date().toISOString(),
+            id: "imported-1",
+            isFavorite: false,
+            isPublic: false,
+            name: "Imported Search",
+            params: {},
+            searchType: "flight",
+            tags: [],
             updatedAt: new Date().toISOString(),
             usageCount: 0,
           },
         ],
         searchCollections: [],
-        quickSearches: [],
-        popularSearchTerms: [],
-        exportedAt: new Date().toISOString(),
         version: "1.0",
       };
 
@@ -1041,9 +1041,9 @@ describe("Search History Store", () => {
 
       act(() => {
         result.current.updateSettings({
-          maxRecentSearches: 100,
-          autoSaveEnabled: false,
           autoCleanupDays: 60,
+          autoSaveEnabled: false,
+          maxRecentSearches: 100,
         });
       });
 
@@ -1061,8 +1061,8 @@ describe("Search History Store", () => {
 
       const oldSearch: SearchHistoryItem = {
         id: "old-search",
-        searchType: "flight",
         params: {},
+        searchType: "flight",
         timestamp: oldDate.toISOString(),
       };
 
@@ -1086,37 +1086,37 @@ describe("Search History Store", () => {
       const recentSearches: SearchHistoryItem[] = [
         {
           id: "search-1",
-          searchType: "flight",
           params: {},
-          timestamp: new Date().toISOString(),
           searchDuration: 1500,
+          searchType: "flight",
+          timestamp: new Date().toISOString(),
         },
         {
           id: "search-2",
-          searchType: "accommodation",
           params: {},
-          timestamp: new Date().toISOString(),
           searchDuration: 2000,
+          searchType: "accommodation",
+          timestamp: new Date().toISOString(),
         },
         {
           id: "search-3",
-          searchType: "flight",
           params: {},
-          timestamp: new Date().toISOString(),
           searchDuration: 1000,
+          searchType: "flight",
+          timestamp: new Date().toISOString(),
         },
       ];
 
       const savedSearches: ValidatedSavedSearch[] = [
         {
-          id: "saved-1",
-          name: "Popular Search",
-          searchType: "flight",
-          params: {},
-          tags: [],
-          isPublic: false,
-          isFavorite: false,
           createdAt: new Date().toISOString(),
+          id: "saved-1",
+          isFavorite: false,
+          isPublic: false,
+          name: "Popular Search",
+          params: {},
+          searchType: "flight",
+          tags: [],
           updatedAt: new Date().toISOString(),
           usageCount: 10,
         },
@@ -1176,14 +1176,14 @@ describe("Search History Store", () => {
         useSearchHistoryStore.setState({
           savedSearches: [
             {
-              id: "test",
-              name: "Test",
-              searchType: "flight",
-              params: {},
-              tags: [],
-              isPublic: false,
-              isFavorite: false,
               createdAt: new Date().toISOString(),
+              id: "test",
+              isFavorite: false,
+              isPublic: false,
+              name: "Test",
+              params: {},
+              searchType: "flight",
+              tags: [],
               updatedAt: new Date().toISOString(),
               usageCount: 0,
             },
@@ -1232,8 +1232,8 @@ describe("Search History Store", () => {
       act(() => {
         result.current.addRecentSearch("flight", {});
         useSearchHistoryStore.setState({
-          maxRecentSearches: 100,
           autoSaveEnabled: false,
+          maxRecentSearches: 100,
         });
       });
 

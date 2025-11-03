@@ -17,42 +17,42 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const mockTrips: any[] = [
+const MOCK_TRIPS: any[] = [
   {
-    id: "trip-1",
-    name: "Tokyo Adventure",
-    description: "Exploring Japan's capital city",
-    startDate: "2024-06-15T00:00:00Z",
-    endDate: "2024-06-22T00:00:00Z",
-    destinations: [{ id: "dest-1", name: "Tokyo", country: "Japan" }],
     budget: 3000,
-    currency: "USD",
-    isPublic: false,
     created_at: "2024-01-15T00:00:00Z",
+    currency: "USD",
+    description: "Exploring Japan's capital city",
+    destinations: [{ country: "Japan", id: "dest-1", name: "Tokyo" }],
+    endDate: "2024-06-22T00:00:00Z",
+    id: "trip-1",
+    isPublic: false,
+    name: "Tokyo Adventure",
+    startDate: "2024-06-15T00:00:00Z",
     updated_at: "2024-01-16T00:00:00Z",
   },
   {
-    id: "trip-2",
-    name: "European Tour",
-    description: "Multi-city European adventure",
-    startDate: "2024-08-01T00:00:00Z",
-    endDate: "2024-08-15T00:00:00Z",
-    destinations: [
-      { id: "dest-2", name: "Paris", country: "France" },
-      { id: "dest-3", name: "Rome", country: "Italy" },
-    ],
     budget: 5000,
-    currency: "USD",
-    isPublic: true,
     created_at: "2024-01-10T00:00:00Z",
+    currency: "USD",
+    description: "Multi-city European adventure",
+    destinations: [
+      { country: "France", id: "dest-2", name: "Paris" },
+      { country: "Italy", id: "dest-3", name: "Rome" },
+    ],
+    endDate: "2024-08-15T00:00:00Z",
+    id: "trip-2",
+    isPublic: true,
+    name: "European Tour",
+    startDate: "2024-08-01T00:00:00Z",
     updated_at: "2024-01-20T00:00:00Z",
   },
   {
-    id: "trip-3",
-    name: "Beach Getaway",
-    destinations: [],
-    isPublic: false,
     created_at: "2024-01-05T00:00:00Z",
+    destinations: [],
+    id: "trip-3",
+    isPublic: false,
+    name: "Beach Getaway",
     updated_at: "2024-01-05T00:00:00Z",
   },
 ];
@@ -62,8 +62,8 @@ async function doMockTrips(items: any[] | null, isLoading = false) {
   vi.doMock("@/hooks/use-trips", () => ({
     useTrips: () => ({
       data: items === null ? null : { items, total: items.length },
-      isLoading,
       error: null,
+      isLoading,
       refetch: vi.fn(),
     }),
   }));
@@ -93,7 +93,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("renders trip cards for existing trips", async () => {
-    await doMockTrips(mockTrips);
+    await doMockTrips(MOCK_TRIPS);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips />);
     expect(screen.getByText("Tokyo Adventure")).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe.sequential("RecentTrips", () => {
   it("displays trip details correctly", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2024-01-10T00:00:00Z"));
-    await doMockTrips([mockTrips[0], mockTrips[1]]);
+    await doMockTrips([MOCK_TRIPS[0], MOCK_TRIPS[1]]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips />);
     const tokyoLink = within(container).getByRole("link", { name: /Tokyo Adventure/i });
@@ -118,7 +118,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("handles trips with multiple destinations", async () => {
-    await doMockTrips([mockTrips[0], mockTrips[1]]);
+    await doMockTrips([MOCK_TRIPS[0], MOCK_TRIPS[1]]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips />);
     const europeanLink = within(container).getByRole("link", {
@@ -130,7 +130,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("limits the number of trips displayed", async () => {
-    await doMockTrips(mockTrips);
+    await doMockTrips(MOCK_TRIPS);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips limit={2} />);
     expect(screen.getByText("European Tour")).toBeInTheDocument();
@@ -139,7 +139,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("sorts trips by updated date in descending order", async () => {
-    await doMockTrips(mockTrips);
+    await doMockTrips(MOCK_TRIPS);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips />);
     const tripCards = screen.getAllByRole("link");
@@ -148,7 +148,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("navigates to trip details when card is clicked", async () => {
-    await doMockTrips([mockTrips[0], mockTrips[1]]);
+    await doMockTrips([MOCK_TRIPS[0], MOCK_TRIPS[1]]);
     userEvent.setup();
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips />);
@@ -170,15 +170,15 @@ describe.sequential("RecentTrips", () => {
   it("calculates trip status correctly", async () => {
     const now = new Date();
     const pastTrip: Trip = {
-      ...mockTrips[0],
-      startDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+      ...MOCK_TRIPS[0],
       endDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      startDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     };
     const ongoingTrip: Trip = {
-      ...mockTrips[0],
+      ...MOCK_TRIPS[0],
+      endDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
       id: "ongoing-trip",
       startDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      endDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
     };
     await doMockTrips([pastTrip, ongoingTrip]);
     const { RecentTrips } = await import("../recent-trips");
@@ -188,7 +188,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("formats dates correctly", async () => {
-    await doMockTrips([mockTrips[0]]);
+    await doMockTrips([MOCK_TRIPS[0]]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips limit={1} />);
     // Assert US short month format regardless of specific dates present
@@ -197,7 +197,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("handles missing trip description gracefully", async () => {
-    const tripWithoutDescription: Trip = { ...mockTrips[0], description: undefined };
+    const tripWithoutDescription: Trip = { ...MOCK_TRIPS[0], description: undefined };
     await doMockTrips([tripWithoutDescription]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips limit={1} />);

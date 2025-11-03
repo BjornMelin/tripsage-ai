@@ -12,11 +12,11 @@ import { type AppError, handleApiError } from "@/lib/api/error-types";
 import { useAuthenticatedApi } from "./use-authenticated-api";
 
 // Zod schemas for validation
-const ApiQueryParamsSchema = z
+const API_QUERY_PARAMS_SCHEMA = z
   .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
   .optional();
 
-const EndpointSchema = z.string().min(1, "Endpoint cannot be empty");
+const ENDPOINT_SCHEMA = z.string().min(1, "Endpoint cannot be empty");
 
 const _HttpMethodSchema = z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]);
 
@@ -53,8 +53,8 @@ export function useApiQuery<TData = unknown, TError = AppError>(
   options?: ApiQueryOptions<TData, TError>
 ) {
   // Validate inputs with Zod
-  const validatedEndpoint = EndpointSchema.parse(endpoint);
-  const validatedParams = ApiQueryParamsSchema.parse(params);
+  const validatedEndpoint = ENDPOINT_SCHEMA.parse(endpoint);
+  const validatedParams = API_QUERY_PARAMS_SCHEMA.parse(params);
 
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
@@ -65,7 +65,6 @@ export function useApiQuery<TData = unknown, TError = AppError>(
   ];
 
   return useQuery<TData, TError, TData, readonly unknown[]>({
-    queryKey,
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<TData>(validatedEndpoint, {
@@ -75,6 +74,7 @@ export function useApiQuery<TData = unknown, TError = AppError>(
         throw handleApiError(error);
       }
     },
+    queryKey,
     throwOnError: false, // Let components handle errors
     ...options,
   });
@@ -93,13 +93,30 @@ export function useApiMutation<
     mutationFn: async (variables) => {
       try {
         return await makeAuthenticatedRequest<TData>(endpoint, {
-          method: "POST",
           body: JSON.stringify(variables),
           headers: { "Content-Type": "application/json" },
+          method: "POST",
         });
       } catch (error) {
         throw handleApiError(error);
       }
+    },
+    onError: (error, variables, context) => {
+      // Rollback optimistic updates
+      if (context?.previousData && options?.optimisticUpdate) {
+        queryClient.setQueryData(
+          options.optimisticUpdate.queryKey,
+          context.previousData
+        );
+      }
+
+      // Call user-defined onError
+      options?.onError?.(
+        error as any,
+        variables as any,
+        context?.onMutateResult as any,
+        { client: queryClient, meta: undefined } as any
+      );
     },
     onMutate: async (variables) => {
       const context: MutationContext<TVariables> = { variables };
@@ -132,17 +149,15 @@ export function useApiMutation<
 
       return context;
     },
-    onError: (error, variables, context) => {
-      // Rollback optimistic updates
-      if (context?.previousData && options?.optimisticUpdate) {
-        queryClient.setQueryData(
-          options.optimisticUpdate.queryKey,
-          context.previousData
-        );
+    onSettled: (data, error, variables, context) => {
+      // Refetch optimistic update query on settle
+      if (options?.optimisticUpdate) {
+        queryClient.invalidateQueries({ queryKey: options.optimisticUpdate.queryKey });
       }
 
-      // Call user-defined onError
-      options?.onError?.(
+      // Call user-defined onSettled
+      options?.onSettled?.(
+        data as any,
         error as any,
         variables as any,
         context?.onMutateResult as any,
@@ -160,21 +175,6 @@ export function useApiMutation<
       // Call user-defined onSuccess
       options?.onSuccess?.(
         data as any,
-        variables as any,
-        context?.onMutateResult as any,
-        { client: queryClient, meta: undefined } as any
-      );
-    },
-    onSettled: (data, error, variables, context) => {
-      // Refetch optimistic update query on settle
-      if (options?.optimisticUpdate) {
-        queryClient.invalidateQueries({ queryKey: options.optimisticUpdate.queryKey });
-      }
-
-      // Call user-defined onSettled
-      options?.onSettled?.(
-        data as any,
-        error as any,
         variables as any,
         context?.onMutateResult as any,
         { client: queryClient, meta: undefined } as any
@@ -238,6 +238,20 @@ export function useApiDeleteMutation<
         throw handleApiError(error);
       }
     },
+    onError: (error, variables, context) => {
+      if (context?.previousData && options?.optimisticUpdate) {
+        queryClient.setQueryData(
+          options.optimisticUpdate.queryKey,
+          context.previousData
+        );
+      }
+      options?.onError?.(
+        error as any,
+        variables as any,
+        context?.onMutateResult as any,
+        { client: queryClient, meta: undefined } as any
+      );
+    },
     onMutate: async (variables) => {
       const context: MutationContext<TVariables> = { variables };
 
@@ -264,14 +278,12 @@ export function useApiDeleteMutation<
 
       return context;
     },
-    onError: (error, variables, context) => {
-      if (context?.previousData && options?.optimisticUpdate) {
-        queryClient.setQueryData(
-          options.optimisticUpdate.queryKey,
-          context.previousData
-        );
+    onSettled: (data, error, variables, context) => {
+      if (options?.optimisticUpdate) {
+        queryClient.invalidateQueries({ queryKey: options.optimisticUpdate.queryKey });
       }
-      options?.onError?.(
+      options?.onSettled?.(
+        data as any,
         error as any,
         variables as any,
         context?.onMutateResult as any,
@@ -286,18 +298,6 @@ export function useApiDeleteMutation<
       }
       options?.onSuccess?.(
         data as any,
-        variables as any,
-        context?.onMutateResult as any,
-        { client: queryClient, meta: undefined } as any
-      );
-    },
-    onSettled: (data, error, variables, context) => {
-      if (options?.optimisticUpdate) {
-        queryClient.invalidateQueries({ queryKey: options.optimisticUpdate.queryKey });
-      }
-      options?.onSettled?.(
-        data as any,
-        error as any,
         variables as any,
         context?.onMutateResult as any,
         { client: queryClient, meta: undefined } as any
@@ -329,13 +329,27 @@ function useApiMutationWithMethod<
     mutationFn: async (variables) => {
       try {
         return await makeAuthenticatedRequest<TData>(endpoint, {
-          method,
           body: JSON.stringify(variables),
           headers: { "Content-Type": "application/json" },
+          method,
         });
       } catch (error) {
         throw handleApiError(error);
       }
+    },
+    onError: (error, variables, context) => {
+      if (context?.previousData && options?.optimisticUpdate) {
+        queryClient.setQueryData(
+          options.optimisticUpdate.queryKey,
+          context.previousData
+        );
+      }
+      options?.onError?.(
+        error as any,
+        variables as any,
+        context?.onMutateResult as any,
+        { client: queryClient, meta: undefined } as any
+      );
     },
     onMutate: async (variables) => {
       const context: MutationContext<TVariables> = { variables };
@@ -362,14 +376,12 @@ function useApiMutationWithMethod<
 
       return context;
     },
-    onError: (error, variables, context) => {
-      if (context?.previousData && options?.optimisticUpdate) {
-        queryClient.setQueryData(
-          options.optimisticUpdate.queryKey,
-          context.previousData
-        );
+    onSettled: (data, error, variables, context) => {
+      if (options?.optimisticUpdate) {
+        queryClient.invalidateQueries({ queryKey: options.optimisticUpdate.queryKey });
       }
-      options?.onError?.(
+      options?.onSettled?.(
+        data as any,
         error as any,
         variables as any,
         context?.onMutateResult as any,
@@ -384,18 +396,6 @@ function useApiMutationWithMethod<
       }
       options?.onSuccess?.(
         data as any,
-        variables as any,
-        context?.onMutateResult as any,
-        { client: queryClient, meta: undefined } as any
-      );
-    },
-    onSettled: (data, error, variables, context) => {
-      if (options?.optimisticUpdate) {
-        queryClient.invalidateQueries({ queryKey: options.optimisticUpdate.queryKey });
-      }
-      options?.onSettled?.(
-        data as any,
-        error as any,
         variables as any,
         context?.onMutateResult as any,
         { client: queryClient, meta: undefined } as any

@@ -120,67 +120,67 @@ export function SecurityDashboard() {
         // Mock security events
         setEvents([
           {
-            id: "1",
-            type: "login_success",
             description: "Successful login",
+            device: "Chrome on MacOS",
+            id: "1",
+            ip_address: "192.168.1.100",
+            location: "San Francisco, CA",
+            risk_level: "low",
             timestamp: "2025-06-11T10:30:00Z",
-            ip_address: "192.168.1.100",
-            location: "San Francisco, CA",
-            device: "Chrome on MacOS",
-            risk_level: "low",
+            type: "login_success",
           },
           {
-            id: "2",
-            type: "mfa_enabled",
             description: "Multi-factor authentication enabled",
-            timestamp: "2025-06-10T14:15:00Z",
+            device: "Chrome on MacOS",
+            id: "2",
             ip_address: "192.168.1.100",
             location: "San Francisco, CA",
-            device: "Chrome on MacOS",
             risk_level: "low",
+            timestamp: "2025-06-10T14:15:00Z",
+            type: "mfa_enabled",
           },
           {
-            id: "3",
-            type: "login_failure",
             description: "Failed login attempt",
-            timestamp: "2025-06-09T08:45:00Z",
+            device: "Unknown",
+            id: "3",
             ip_address: "203.0.113.1",
             location: "Unknown",
-            device: "Unknown",
             risk_level: "medium",
+            timestamp: "2025-06-09T08:45:00Z",
+            type: "login_failure",
           },
         ]);
 
         // Mock active sessions
         setSessions([
           {
-            id: "1",
-            device: "MacBook Pro",
             browser: "Chrome 120.0",
-            location: "San Francisco, CA",
+            device: "MacBook Pro",
+            id: "1",
             ip_address: "192.168.1.100",
-            last_activity: "2025-06-11T10:30:00Z",
             is_current: true,
+            last_activity: "2025-06-11T10:30:00Z",
+            location: "San Francisco, CA",
           },
           {
-            id: "2",
-            device: "iPhone 15",
             browser: "Safari Mobile",
-            location: "San Francisco, CA",
+            device: "iPhone 15",
+            id: "2",
             ip_address: "192.168.1.101",
-            last_activity: "2025-06-11T09:15:00Z",
             is_current: false,
+            last_activity: "2025-06-11T09:15:00Z",
+            location: "San Francisco, CA",
           },
         ]);
 
         // Mock security metrics
         setMetrics({
-          last_login: "2025-06-11T10:30:00Z",
-          failed_login_attempts: 1,
           active_sessions: 2,
-          trusted_devices: 2,
+          failed_login_attempts: 1,
+          last_login: "2025-06-11T10:30:00Z",
           oauth_connections: ["google", "github"],
           security_score: 85,
+          trusted_devices: 2,
         });
 
         setIsLoading(false);

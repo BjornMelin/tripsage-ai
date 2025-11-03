@@ -14,11 +14,11 @@ import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
  */
 function makeMockFrom(_table: string) {
   const chain: any = {
+    eq: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     single: vi.fn(),
-    eq: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
   };
   return chain;
 }
@@ -42,32 +42,32 @@ describe("typed-helpers", () => {
   it("insertSingle returns the inserted row for trips", async () => {
     const client = makeClient();
     const payload: InsertTables<"trips"> = {
-      user_id: "u1",
+      budget: 1000,
+      destination: "NYC",
+      end_date: "2025-01-10",
       name: "Test Trip",
       start_date: "2025-01-01",
-      end_date: "2025-01-10",
-      destination: "NYC",
-      budget: 1000,
       travelers: 1,
+      user_id: "u1",
     };
 
     // Wire single() to resolve a basic trips row
     const row: Tables<"trips"> = {
-      id: 1,
-      user_id: payload.user_id,
-      name: payload.name,
-      start_date: payload.start_date,
-      end_date: payload.end_date,
-      destination: payload.destination,
       budget: payload.budget,
-      travelers: payload.travelers,
-      status: "planning",
-      trip_type: "leisure",
+      created_at: "2025-01-01T00:00:00Z",
+      destination: payload.destination,
+      end_date: payload.end_date,
       flexibility: {},
+      id: 1,
+      name: payload.name,
       notes: null,
       search_metadata: {},
-      created_at: "2025-01-01T00:00:00Z",
+      start_date: payload.start_date,
+      status: "planning",
+      travelers: payload.travelers,
+      trip_type: "leisure",
       updated_at: "2025-01-01T00:00:00Z",
+      user_id: payload.user_id,
     };
 
     const chain = (client as any).from("trips");
@@ -83,21 +83,21 @@ describe("typed-helpers", () => {
     const client = makeClient();
     const updates: Partial<UpdateTables<"trips">> = { name: "Updated" };
     const row: Tables<"trips"> = {
-      id: 2,
-      user_id: "u2",
-      name: "Updated",
-      start_date: "2025-02-01",
-      end_date: "2025-02-05",
-      destination: "SFO",
       budget: 500,
-      travelers: 2,
-      status: "planning",
-      trip_type: "leisure",
+      created_at: "2025-02-01T00:00:00Z",
+      destination: "SFO",
+      end_date: "2025-02-05",
       flexibility: {},
+      id: 2,
+      name: "Updated",
       notes: null,
       search_metadata: {},
-      created_at: "2025-02-01T00:00:00Z",
+      start_date: "2025-02-01",
+      status: "planning",
+      travelers: 2,
+      trip_type: "leisure",
       updated_at: "2025-02-02T00:00:00Z",
+      user_id: "u2",
     };
     const chain = (client as any).from("trips");
     chain.single.mockResolvedValue({ data: row, error: null });

@@ -79,14 +79,14 @@ class ErrorService {
       }
 
       const response = await fetch(this.config.endpoint, {
-        method: "POST",
+        body: JSON.stringify(report),
         headers: {
           "Content-Type": "application/json",
           ...(this.config.apiKey && {
             Authorization: `Bearer ${this.config.apiKey}`,
           }),
         },
-        body: JSON.stringify(report),
+        method: "POST",
       });
 
       if (!response.ok) {
@@ -150,19 +150,19 @@ class ErrorService {
   ): ErrorReport {
     return {
       error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
         digest: (error as any).digest,
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
       },
       errorInfo: errorInfo
         ? {
             componentStack: errorInfo.componentStack || "",
           }
         : undefined,
+      timestamp: new Date().toISOString(),
       url: window.location.href,
       userAgent: navigator.userAgent,
-      timestamp: new Date().toISOString(),
       ...additionalInfo,
     };
   }
@@ -170,11 +170,11 @@ class ErrorService {
 
 // Default error service instance
 export const errorService = new ErrorService({
-  enabled: process.env.NODE_ENV === "production",
-  endpoint: undefined,
   apiKey: undefined,
-  maxRetries: 3,
+  enabled: process.env.NODE_ENV === "production",
   enableLocalStorage: true,
+  endpoint: undefined,
+  maxRetries: 3,
 });
 
 export { ErrorService };

@@ -54,8 +54,8 @@ export function PersonalizationInsights({
 
   const formatCurrency = (amount: number, currency = "USD") => {
     return new Intl.NumberFormat("en-US", {
-      style: "currency",
       currency,
+      style: "currency",
     }).format(amount);
   };
 
@@ -406,10 +406,10 @@ export function PersonalizationInsights({
       {/* Navigation Tabs */}
       <div className="flex space-x-1 p-1 bg-muted rounded-lg">
         {[
-          { id: "overview", label: "Overview", icon: BarChart3 },
-          { id: "budget", label: "Budget", icon: DollarSign },
-          { id: "destinations", label: "Destinations", icon: MapPin },
-          { id: "recommendations", label: "Recommendations", icon: Lightbulb },
+          { icon: BarChart3, id: "overview", label: "Overview" },
+          { icon: DollarSign, id: "budget", label: "Budget" },
+          { icon: MapPin, id: "destinations", label: "Destinations" },
+          { icon: Lightbulb, id: "recommendations", label: "Recommendations" },
         ].map(({ id, label, icon: Icon }) => (
           <Button
             key={id}

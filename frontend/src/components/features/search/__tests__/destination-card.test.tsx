@@ -9,32 +9,32 @@ import { render } from "@/test/test-utils";
 import type { Destination } from "@/types/search";
 import { DestinationCard } from "../destination-card";
 
-const mockDestination: Destination = {
-  id: "dest_paris_fr",
-  name: "Paris",
+const MOCK_DESTINATION: Destination = {
+  attractions: ["Eiffel Tower", "Louvre Museum", "Notre-Dame", "Arc de Triomphe"],
+  bestTimeToVisit: ["Apr", "May", "Jun", "Sep", "Oct"],
+  climate: {
+    averageTemp: 12,
+    rainfall: 640,
+    season: "temperate",
+  },
+  coordinates: { lat: 48.8566, lng: 2.3522 },
+  country: "France",
   description:
     "The City of Light, known for its art, fashion, gastronomy, and culture.",
   formattedAddress: "Paris, France",
-  types: ["locality", "political"],
-  coordinates: { lat: 48.8566, lng: 2.3522 },
+  id: "dest_paris_fr",
+  name: "Paris",
   photos: ["/images/destinations/paris.jpg"],
   placeId: "ChIJD7fiBh9u5kcRYJSMaMOCCwQ",
-  country: "France",
-  region: "Île-de-France",
-  rating: 4.6,
   popularityScore: 95,
-  climate: {
-    season: "temperate",
-    averageTemp: 12,
-    rainfall: 640,
-  },
-  attractions: ["Eiffel Tower", "Louvre Museum", "Notre-Dame", "Arc de Triomphe"],
-  bestTimeToVisit: ["Apr", "May", "Jun", "Sep", "Oct"],
+  rating: 4.6,
+  region: "Île-de-France",
+  types: ["locality", "political"],
 };
 
-const mockHandlers = {
-  onSelect: vi.fn(),
+const MOCK_HANDLERS = {
   onCompare: vi.fn(),
+  onSelect: vi.fn(),
   onViewDetails: vi.fn(),
 };
 
@@ -44,7 +44,7 @@ describe("DestinationCard", () => {
   });
 
   it("renders destination information correctly", () => {
-    render(<DestinationCard destination={mockDestination} {...mockHandlers} />);
+    render(<DestinationCard destination={MOCK_DESTINATION} {...MOCK_HANDLERS} />);
 
     expect(screen.getByText("Paris")).toBeInTheDocument();
     expect(screen.getByText("Paris, France")).toBeInTheDocument();
@@ -56,26 +56,26 @@ describe("DestinationCard", () => {
   });
 
   it("displays rating when available", () => {
-    render(<DestinationCard destination={mockDestination} {...mockHandlers} />);
+    render(<DestinationCard destination={MOCK_DESTINATION} {...MOCK_HANDLERS} />);
 
     expect(screen.getByText("4.6")).toBeInTheDocument();
   });
 
   it("displays climate information when available", () => {
-    render(<DestinationCard destination={mockDestination} {...mockHandlers} />);
+    render(<DestinationCard destination={MOCK_DESTINATION} {...MOCK_HANDLERS} />);
 
     expect(screen.getByText("12°C avg")).toBeInTheDocument();
     expect(screen.getByText("640mm rain")).toBeInTheDocument();
   });
 
   it("displays best time to visit when available", () => {
-    render(<DestinationCard destination={mockDestination} {...mockHandlers} />);
+    render(<DestinationCard destination={MOCK_DESTINATION} {...MOCK_HANDLERS} />);
 
     expect(screen.getByText("Best: Apr, May, Jun")).toBeInTheDocument();
   });
 
   it("displays top attractions when available", () => {
-    render(<DestinationCard destination={mockDestination} {...mockHandlers} />);
+    render(<DestinationCard destination={MOCK_DESTINATION} {...MOCK_HANDLERS} />);
 
     expect(screen.getByText("Top Attractions:")).toBeInTheDocument();
     expect(screen.getByText("Eiffel Tower")).toBeInTheDocument();
@@ -85,52 +85,52 @@ describe("DestinationCard", () => {
   });
 
   it("displays popularity score when available", () => {
-    render(<DestinationCard destination={mockDestination} {...mockHandlers} />);
+    render(<DestinationCard destination={MOCK_DESTINATION} {...MOCK_HANDLERS} />);
 
     expect(screen.getByText("Popularity: 95/100")).toBeInTheDocument();
   });
 
   it("handles select button click", async () => {
     const user = userEvent.setup();
-    render(<DestinationCard destination={mockDestination} {...mockHandlers} />);
+    render(<DestinationCard destination={MOCK_DESTINATION} {...MOCK_HANDLERS} />);
 
     const selectButton = screen.getByText("Select");
     await user.click(selectButton);
 
-    expect(mockHandlers.onSelect).toHaveBeenCalledWith(mockDestination);
+    expect(MOCK_HANDLERS.onSelect).toHaveBeenCalledWith(MOCK_DESTINATION);
   });
 
   it("handles compare button click", async () => {
     const user = userEvent.setup();
-    render(<DestinationCard destination={mockDestination} {...mockHandlers} />);
+    render(<DestinationCard destination={MOCK_DESTINATION} {...MOCK_HANDLERS} />);
 
     const compareButton = screen.getByText("Compare");
     await user.click(compareButton);
 
-    expect(mockHandlers.onCompare).toHaveBeenCalledWith(mockDestination);
+    expect(MOCK_HANDLERS.onCompare).toHaveBeenCalledWith(MOCK_DESTINATION);
   });
 
   it("handles view details button click", async () => {
     const user = userEvent.setup();
-    render(<DestinationCard destination={mockDestination} {...mockHandlers} />);
+    render(<DestinationCard destination={MOCK_DESTINATION} {...MOCK_HANDLERS} />);
 
     const detailsButton = screen.getByText("Details");
     await user.click(detailsButton);
 
-    expect(mockHandlers.onViewDetails).toHaveBeenCalledWith(mockDestination);
+    expect(MOCK_HANDLERS.onViewDetails).toHaveBeenCalledWith(MOCK_DESTINATION);
   });
 
   it("renders without optional properties", () => {
     const minimalDestination: Destination = {
-      id: "dest_minimal",
-      name: "Test City",
+      coordinates: { lat: 0, lng: 0 },
       description: "A test destination",
       formattedAddress: "Test City, Test Country",
+      id: "dest_minimal",
+      name: "Test City",
       types: ["locality"],
-      coordinates: { lat: 0, lng: 0 },
     };
 
-    render(<DestinationCard destination={minimalDestination} {...mockHandlers} />);
+    render(<DestinationCard destination={minimalDestination} {...MOCK_HANDLERS} />);
 
     expect(screen.getByText("Test City")).toBeInTheDocument();
     expect(screen.getByText("Test City, Test Country")).toBeInTheDocument();
@@ -139,12 +139,12 @@ describe("DestinationCard", () => {
 
   it("formats destination types correctly", () => {
     const establishmentDestination: Destination = {
-      ...mockDestination,
+      ...MOCK_DESTINATION,
       types: ["establishment", "tourist_attraction"],
     };
 
     render(
-      <DestinationCard destination={establishmentDestination} {...mockHandlers} />
+      <DestinationCard destination={establishmentDestination} {...MOCK_HANDLERS} />
     );
 
     expect(screen.getByText("Landmark, Attraction")).toBeInTheDocument();
@@ -153,22 +153,22 @@ describe("DestinationCard", () => {
   it("shows correct icon for different destination types", () => {
     // Test country type
     const countryDestination: Destination = {
-      ...mockDestination,
+      ...MOCK_DESTINATION,
       types: ["country", "political"],
     };
 
     const { rerender } = render(
-      <DestinationCard destination={countryDestination} {...mockHandlers} />
+      <DestinationCard destination={countryDestination} {...MOCK_HANDLERS} />
     );
 
     // Test establishment type
     const establishmentDestination: Destination = {
-      ...mockDestination,
+      ...MOCK_DESTINATION,
       types: ["establishment", "tourist_attraction"],
     };
 
     rerender(
-      <DestinationCard destination={establishmentDestination} {...mockHandlers} />
+      <DestinationCard destination={establishmentDestination} {...MOCK_HANDLERS} />
     );
 
     // The icons are rendered as SVGs, so we can't easily test their specific type
@@ -179,8 +179,8 @@ describe("DestinationCard", () => {
   it("renders only when handlers are provided", () => {
     render(
       <DestinationCard
-        destination={mockDestination}
-        onSelect={mockHandlers.onSelect}
+        destination={MOCK_DESTINATION}
+        onSelect={MOCK_HANDLERS.onSelect}
         // Missing onCompare and onViewDetails
       />
     );
@@ -192,13 +192,13 @@ describe("DestinationCard", () => {
 
   it("truncates long descriptions", () => {
     const longDescriptionDestination: Destination = {
-      ...mockDestination,
+      ...MOCK_DESTINATION,
       description:
         "This is a very long description that should be truncated when displayed in the card component to maintain a clean and consistent layout across all destination cards in the grid view.",
     };
 
     render(
-      <DestinationCard destination={longDescriptionDestination} {...mockHandlers} />
+      <DestinationCard destination={longDescriptionDestination} {...MOCK_HANDLERS} />
     );
 
     // The description should be present but truncated with CSS (line-clamp-3)
@@ -207,11 +207,11 @@ describe("DestinationCard", () => {
 
   it("formats best time to visit with limited months", () => {
     const manyMonthsDestination: Destination = {
-      ...mockDestination,
+      ...MOCK_DESTINATION,
       bestTimeToVisit: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"],
     };
 
-    render(<DestinationCard destination={manyMonthsDestination} {...mockHandlers} />);
+    render(<DestinationCard destination={manyMonthsDestination} {...MOCK_HANDLERS} />);
 
     // Should only show first 3 months
     expect(screen.getByText("Best: Jan, Feb, Mar")).toBeInTheDocument();
@@ -219,11 +219,11 @@ describe("DestinationCard", () => {
 
   it("handles missing best time to visit", () => {
     const noTimeDestination: Destination = {
-      ...mockDestination,
+      ...MOCK_DESTINATION,
       bestTimeToVisit: undefined,
     };
 
-    render(<DestinationCard destination={noTimeDestination} {...mockHandlers} />);
+    render(<DestinationCard destination={noTimeDestination} {...MOCK_HANDLERS} />);
 
     expect(screen.getByText("Best: Year-round")).toBeInTheDocument();
   });

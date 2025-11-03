@@ -4,164 +4,164 @@ import type { DealType } from "@/types/deals";
 import { useDealAlerts, useDeals, useFeaturedDeals, useSavedDeals } from "../use-deals";
 
 // Mock current timestamp for consistent testing
-const mockTimestamp = "2025-05-20T12:00:00.000Z";
-vi.spyOn(Date.prototype, "toISOString").mockReturnValue(mockTimestamp);
+const MOCK_TIMESTAMP = "2025-05-20T12:00:00.000Z";
+vi.spyOn(Date.prototype, "toISOString").mockReturnValue(MOCK_TIMESTAMP);
 
 // Sample deal data
-const sampleDeals = [
+const SAMPLE_DEALS = [
   {
-    id: "deal1",
-    type: "flight" as DealType,
-    title: "Cheap Flight to Paris",
-    description: "Great deal on round-trip flights to Paris",
-    provider: "AirlineCo",
-    url: "https://example.com/deal1",
-    price: 299.99,
-    originalPrice: 599.99,
-    discountPercentage: 50,
-    currency: "USD",
-    destination: "Paris",
-    origin: "New York",
-    expiryDate: "2025-06-01T00:00:00.000Z",
-    imageUrl: "https://example.com/images/paris.jpg",
-    tags: ["europe", "summer", "flight-deal"],
-    featured: true,
-    verified: true,
     createdAt: "2025-05-01T00:00:00.000Z",
+    currency: "USD",
+    description: "Great deal on round-trip flights to Paris",
+    destination: "Paris",
+    discountPercentage: 50,
+    expiryDate: "2025-06-01T00:00:00.000Z",
+    featured: true,
+    id: "deal1",
+    imageUrl: "https://example.com/images/paris.jpg",
+    origin: "New York",
+    originalPrice: 599.99,
+    price: 299.99,
+    provider: "AirlineCo",
+    tags: ["europe", "summer", "flight-deal"],
+    title: "Cheap Flight to Paris",
+    type: "flight" as DealType,
     updatedAt: "2025-05-01T00:00:00.000Z",
+    url: "https://example.com/deal1",
+    verified: true,
   },
   {
-    id: "deal2",
-    type: "accommodation" as DealType,
-    title: "Luxury Hotel in Rome",
-    description: "Discounted stay at 5-star hotel in Rome",
-    provider: "HotelCo",
-    url: "https://example.com/deal2",
-    price: 150,
-    originalPrice: 300,
-    discountPercentage: 50,
+    createdAt: "2025-05-02T00:00:00.000Z",
     currency: "USD",
+    description: "Discounted stay at 5-star hotel in Rome",
     destination: "Rome",
+    discountPercentage: 50,
     expiryDate: "2025-06-15T00:00:00.000Z",
     featured: false,
-    verified: true,
-    createdAt: "2025-05-02T00:00:00.000Z",
+    id: "deal2",
+    originalPrice: 300,
+    price: 150,
+    provider: "HotelCo",
+    title: "Luxury Hotel in Rome",
+    type: "accommodation" as DealType,
     updatedAt: "2025-05-02T00:00:00.000Z",
+    url: "https://example.com/deal2",
+    verified: true,
   },
   {
-    id: "deal3",
-    type: "package" as DealType,
-    title: "Barcelona Vacation Package",
-    description: "All-inclusive package to Barcelona",
-    provider: "TravelCo",
-    url: "https://example.com/deal3",
-    price: 899,
-    originalPrice: 1499,
-    discountPercentage: 40,
-    currency: "USD",
-    destination: "Barcelona",
-    origin: "London",
-    expiryDate: "2025-07-01T00:00:00.000Z",
-    imageUrl: "https://example.com/images/barcelona.jpg",
-    featured: false,
-    verified: true,
     createdAt: "2025-05-03T00:00:00.000Z",
+    currency: "USD",
+    description: "All-inclusive package to Barcelona",
+    destination: "Barcelona",
+    discountPercentage: 40,
+    expiryDate: "2025-07-01T00:00:00.000Z",
+    featured: false,
+    id: "deal3",
+    imageUrl: "https://example.com/images/barcelona.jpg",
+    origin: "London",
+    originalPrice: 1499,
+    price: 899,
+    provider: "TravelCo",
+    title: "Barcelona Vacation Package",
+    type: "package" as DealType,
     updatedAt: "2025-05-03T00:00:00.000Z",
+    url: "https://example.com/deal3",
+    verified: true,
   },
 ];
 
 // Sample alert data
-const sampleAlerts = [
+const SAMPLE_ALERTS = [
   {
-    id: "alert1",
-    userId: "user1",
-    dealType: "flight" as DealType,
-    origin: "New York",
-    destination: "Paris",
-    minDiscount: 30,
-    maxPrice: 400,
-    isActive: true,
-    notificationType: "email" as const,
     createdAt: "2025-05-01T00:00:00.000Z",
+    dealType: "flight" as DealType,
+    destination: "Paris",
+    id: "alert1",
+    isActive: true,
+    maxPrice: 400,
+    minDiscount: 30,
+    notificationType: "email" as const,
+    origin: "New York",
     updatedAt: "2025-05-01T00:00:00.000Z",
+    userId: "user1",
   },
   {
-    id: "alert2",
-    userId: "user1",
+    createdAt: "2025-05-02T00:00:00.000Z",
     dealType: "accommodation" as DealType,
     destination: "Rome",
-    minDiscount: 25,
+    id: "alert2",
     isActive: false,
+    minDiscount: 25,
     notificationType: "both" as const,
-    createdAt: "2025-05-02T00:00:00.000Z",
     updatedAt: "2025-05-02T00:00:00.000Z",
+    userId: "user1",
   },
 ];
 
 // Create mock store state
-const createMockStore = () => {
-  const deals = sampleDeals.reduce((acc, deal) => {
+const CREATE_MOCK_STORE = () => {
+  const deals = SAMPLE_DEALS.reduce((acc, deal) => {
     acc[deal.id] = deal;
     return acc;
   }, {} as any);
 
   return {
-    deals,
-    featuredDeals: [sampleDeals[0].id],
-    savedDeals: [sampleDeals[0].id, sampleDeals[1].id],
-    recentlyViewed: [sampleDeals[0].id, sampleDeals[2].id],
-    alerts: sampleAlerts,
-    filters: null,
-    lastUpdated: mockTimestamp,
-    isInitialized: true,
-    initialize: vi.fn(),
-    addDeal: vi.fn(),
-    updateDeal: vi.fn(),
-    removeDeal: vi.fn(),
-    getDealById: vi.fn((id: string) => deals[id]),
-    addToFeaturedDeals: vi.fn(),
-    removeFromFeaturedDeals: vi.fn(),
-    getFeaturedDeals: vi.fn(() => [sampleDeals[0]]),
-    addToSavedDeals: vi.fn(),
-    removeFromSavedDeals: vi.fn(),
-    getSavedDeals: vi.fn(() => [sampleDeals[0], sampleDeals[1]]),
-    addToRecentlyViewed: vi.fn(),
-    clearRecentlyViewed: vi.fn(),
-    getRecentlyViewedDeals: vi.fn(() => [sampleDeals[0], sampleDeals[2]]),
     addAlert: vi.fn(),
-    updateAlert: vi.fn(),
-    removeAlert: vi.fn(),
-    toggleAlertActive: vi.fn(),
-    getAlertById: vi.fn((id: string) => sampleAlerts.find((a) => a.id === id)),
-    setFilters: vi.fn(),
+    addDeal: vi.fn(),
+    addToFeaturedDeals: vi.fn(),
+    addToRecentlyViewed: vi.fn(),
+    addToSavedDeals: vi.fn(),
+    alerts: SAMPLE_ALERTS,
     clearFilters: vi.fn(),
-    getFilteredDeals: vi.fn(() => sampleDeals),
+    clearRecentlyViewed: vi.fn(),
+    deals,
+    featuredDeals: [SAMPLE_DEALS[0].id],
+    filters: null,
+    getAlertById: vi.fn((id: string) => SAMPLE_ALERTS.find((a) => a.id === id)),
+    getDealById: vi.fn((id: string) => deals[id]),
     getDealsStats: vi.fn(() => ({
-      totalCount: 3,
+      averageDiscount: 46.67,
       byType: {
-        flight: 1,
         accommodation: 1,
+        flight: 1,
         package: 1,
       },
-      averageDiscount: 46.67,
+      totalCount: 3,
       totalSavings: 900.99,
     })),
+    getFeaturedDeals: vi.fn(() => [SAMPLE_DEALS[0]]),
+    getFilteredDeals: vi.fn(() => SAMPLE_DEALS),
+    getRecentlyViewedDeals: vi.fn(() => [SAMPLE_DEALS[0], SAMPLE_DEALS[2]]),
+    getSavedDeals: vi.fn(() => [SAMPLE_DEALS[0], SAMPLE_DEALS[1]]),
+    initialize: vi.fn(),
+    isInitialized: true,
+    lastUpdated: MOCK_TIMESTAMP,
+    recentlyViewed: [SAMPLE_DEALS[0].id, SAMPLE_DEALS[2].id],
+    removeAlert: vi.fn(),
+    removeDeal: vi.fn(),
+    removeFromFeaturedDeals: vi.fn(),
+    removeFromSavedDeals: vi.fn(),
     reset: vi.fn(),
+    savedDeals: [SAMPLE_DEALS[0].id, SAMPLE_DEALS[1].id],
+    setFilters: vi.fn(),
+    toggleAlertActive: vi.fn(),
+    updateAlert: vi.fn(),
+    updateDeal: vi.fn(),
   };
 };
 
 // Mock the deals store
-const mockStore = createMockStore();
+const MOCK_STORE = CREATE_MOCK_STORE();
 vi.mock("@/stores/deals-store", () => ({
-  useDealsStore: vi.fn(() => mockStore),
+  useDealsStore: vi.fn(() => MOCK_STORE),
 }));
 
 describe("useDeals Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset filters for each test
-    mockStore.filters = null;
-    mockStore.getFilteredDeals.mockReturnValue(sampleDeals);
+    MOCK_STORE.filters = null;
+    MOCK_STORE.getFilteredDeals.mockReturnValue(SAMPLE_DEALS);
   });
 
   afterEach(() => {
@@ -172,31 +172,31 @@ describe("useDeals Hook", () => {
     const { result: _result } = renderHook(() => useDeals());
 
     // Check initialization was called
-    expect(mockStore.isInitialized).toBe(true);
+    expect(MOCK_STORE.isInitialized).toBe(true);
   });
 
   it("should provide access to all deals", () => {
     const { result } = renderHook(() => useDeals());
 
     expect(result.current.allDeals).toHaveLength(3);
-    expect(result.current.allDeals.map((d) => d.id)).toContain(sampleDeals[0].id);
-    expect(result.current.allDeals.map((d) => d.id)).toContain(sampleDeals[1].id);
-    expect(result.current.allDeals.map((d) => d.id)).toContain(sampleDeals[2].id);
+    expect(result.current.allDeals.map((d) => d.id)).toContain(SAMPLE_DEALS[0].id);
+    expect(result.current.allDeals.map((d) => d.id)).toContain(SAMPLE_DEALS[1].id);
+    expect(result.current.allDeals.map((d) => d.id)).toContain(SAMPLE_DEALS[2].id);
   });
 
   it("should provide access to featured deals", () => {
     const { result } = renderHook(() => useDeals());
 
     expect(result.current.featuredDeals).toHaveLength(1);
-    expect(result.current.featuredDeals[0].id).toBe(sampleDeals[0].id);
+    expect(result.current.featuredDeals[0].id).toBe(SAMPLE_DEALS[0].id);
   });
 
   it("should provide access to saved deals", () => {
     const { result } = renderHook(() => useDeals());
 
     expect(result.current.savedDeals).toHaveLength(2);
-    expect(result.current.savedDeals.map((d) => d.id)).toContain(sampleDeals[0].id);
-    expect(result.current.savedDeals.map((d) => d.id)).toContain(sampleDeals[1].id);
+    expect(result.current.savedDeals.map((d) => d.id)).toContain(SAMPLE_DEALS[0].id);
+    expect(result.current.savedDeals.map((d) => d.id)).toContain(SAMPLE_DEALS[1].id);
   });
 
   it("should provide access to recently viewed deals", () => {
@@ -204,10 +204,10 @@ describe("useDeals Hook", () => {
 
     expect(result.current.recentlyViewedDeals).toHaveLength(2);
     expect(result.current.recentlyViewedDeals.map((d) => d.id)).toContain(
-      sampleDeals[0].id
+      SAMPLE_DEALS[0].id
     );
     expect(result.current.recentlyViewedDeals.map((d) => d.id)).toContain(
-      sampleDeals[2].id
+      SAMPLE_DEALS[2].id
     );
   });
 
@@ -216,8 +216,8 @@ describe("useDeals Hook", () => {
 
     expect(result.current.dealStats.totalCount).toBe(3);
     expect(result.current.dealStats.byType).toEqual({
-      flight: 1,
       accommodation: 1,
+      flight: 1,
       package: 1,
     });
   });
@@ -225,28 +225,28 @@ describe("useDeals Hook", () => {
   it("should check if a deal is saved", () => {
     const { result } = renderHook(() => useDeals());
 
-    expect(result.current.isDealSaved(sampleDeals[0].id)).toBe(true);
-    expect(result.current.isDealSaved(sampleDeals[2].id)).toBe(false);
+    expect(result.current.isDealSaved(SAMPLE_DEALS[0].id)).toBe(true);
+    expect(result.current.isDealSaved(SAMPLE_DEALS[2].id)).toBe(false);
   });
 
   it("should check if a deal is featured", () => {
     const { result } = renderHook(() => useDeals());
 
-    expect(result.current.isDealFeatured(sampleDeals[0].id)).toBe(true);
-    expect(result.current.isDealFeatured(sampleDeals[1].id)).toBe(false);
+    expect(result.current.isDealFeatured(SAMPLE_DEALS[0].id)).toBe(true);
+    expect(result.current.isDealFeatured(SAMPLE_DEALS[1].id)).toBe(false);
   });
 
   it("should filter deals by type", () => {
     const { result } = renderHook(() => useDeals());
 
     // Mock the filtered results
-    mockStore.getFilteredDeals.mockReturnValue([sampleDeals[0]]);
+    MOCK_STORE.getFilteredDeals.mockReturnValue([SAMPLE_DEALS[0]]);
 
     act(() => {
       result.current.filterByType("flight");
     });
 
-    expect(mockStore.setFilters).toHaveBeenCalledWith({
+    expect(MOCK_STORE.setFilters).toHaveBeenCalledWith({
       types: ["flight"],
     });
   });
@@ -255,13 +255,13 @@ describe("useDeals Hook", () => {
     const { result } = renderHook(() => useDeals());
 
     // Mock the filtered results
-    mockStore.getFilteredDeals.mockReturnValue([sampleDeals[1]]);
+    MOCK_STORE.getFilteredDeals.mockReturnValue([SAMPLE_DEALS[1]]);
 
     act(() => {
       result.current.filterByDestination("Rome");
     });
 
-    expect(mockStore.setFilters).toHaveBeenCalledWith({
+    expect(MOCK_STORE.setFilters).toHaveBeenCalledWith({
       destinations: ["Rome"],
     });
   });
@@ -273,7 +273,7 @@ describe("useDeals Hook", () => {
       result.current.clearFilters();
     });
 
-    expect(mockStore.clearFilters).toHaveBeenCalled();
+    expect(MOCK_STORE.clearFilters).toHaveBeenCalled();
   });
 
   it("should sort deals by discount", () => {
@@ -285,9 +285,9 @@ describe("useDeals Hook", () => {
       "desc"
     );
 
-    expect(sortedDeals[0].id).toBe(sampleDeals[0].id); // 50% discount
-    expect(sortedDeals[1].id).toBe(sampleDeals[1].id); // 50% discount
-    expect(sortedDeals[2].id).toBe(sampleDeals[2].id); // 40% discount
+    expect(sortedDeals[0].id).toBe(SAMPLE_DEALS[0].id); // 50% discount
+    expect(sortedDeals[1].id).toBe(SAMPLE_DEALS[1].id); // 50% discount
+    expect(sortedDeals[2].id).toBe(SAMPLE_DEALS[2].id); // 40% discount
   });
 
   it("should sort deals by price", () => {
@@ -299,9 +299,9 @@ describe("useDeals Hook", () => {
       "asc"
     );
 
-    expect(sortedDeals[0].id).toBe(sampleDeals[1].id); // $150
-    expect(sortedDeals[1].id).toBe(sampleDeals[0].id); // $299.99
-    expect(sortedDeals[2].id).toBe(sampleDeals[2].id); // $899
+    expect(sortedDeals[0].id).toBe(SAMPLE_DEALS[1].id); // $150
+    expect(sortedDeals[1].id).toBe(SAMPLE_DEALS[0].id); // $299.99
+    expect(sortedDeals[2].id).toBe(SAMPLE_DEALS[2].id); // $899
   });
 
   it("should group deals by destination", () => {
@@ -345,22 +345,22 @@ describe("useDealAlerts Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset alerts in mock
-    mockStore.alerts = sampleAlerts;
+    MOCK_STORE.alerts = SAMPLE_ALERTS;
   });
 
   it("should provide access to all alerts", () => {
     const { result } = renderHook(() => useDealAlerts());
 
     expect(result.current.alerts).toHaveLength(2);
-    expect(result.current.alerts.map((a) => a.id)).toContain(sampleAlerts[0].id);
-    expect(result.current.alerts.map((a) => a.id)).toContain(sampleAlerts[1].id);
+    expect(result.current.alerts.map((a) => a.id)).toContain(SAMPLE_ALERTS[0].id);
+    expect(result.current.alerts.map((a) => a.id)).toContain(SAMPLE_ALERTS[1].id);
   });
 
   it("should provide access to active alerts", () => {
     const { result } = renderHook(() => useDealAlerts());
 
     expect(result.current.activeAlerts).toHaveLength(1);
-    expect(result.current.activeAlerts[0].id).toBe(sampleAlerts[0].id);
+    expect(result.current.activeAlerts[0].id).toBe(SAMPLE_ALERTS[0].id);
   });
 
   it("should group alerts by type", () => {
@@ -375,10 +375,10 @@ describe("useDealAlerts Hook", () => {
     const { result } = renderHook(() => useDealAlerts());
 
     act(() => {
-      result.current.toggleAlertActive(sampleAlerts[0].id);
+      result.current.toggleAlertActive(SAMPLE_ALERTS[0].id);
     });
 
-    expect(mockStore.toggleAlertActive).toHaveBeenCalledWith(sampleAlerts[0].id);
+    expect(MOCK_STORE.toggleAlertActive).toHaveBeenCalledWith(SAMPLE_ALERTS[0].id);
   });
 });
 
@@ -386,54 +386,54 @@ describe("useFeaturedDeals Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset featured deals in mock
-    mockStore.featuredDeals = [sampleDeals[0].id];
-    mockStore.getFeaturedDeals.mockReturnValue([sampleDeals[0]]);
+    MOCK_STORE.featuredDeals = [SAMPLE_DEALS[0].id];
+    MOCK_STORE.getFeaturedDeals.mockReturnValue([SAMPLE_DEALS[0]]);
   });
 
   it("should provide access to featured deals", () => {
     const { result } = renderHook(() => useFeaturedDeals());
 
     expect(result.current.featuredDeals).toHaveLength(1);
-    expect(result.current.featuredDeals[0].id).toBe(sampleDeals[0].id);
+    expect(result.current.featuredDeals[0].id).toBe(SAMPLE_DEALS[0].id);
   });
 
   it("should provide sorted featured deals", () => {
     const { result } = renderHook(() => useFeaturedDeals());
 
     expect(result.current.sortedByDiscount).toHaveLength(1);
-    expect(result.current.sortedByDiscount[0].id).toBe(sampleDeals[0].id);
+    expect(result.current.sortedByDiscount[0].id).toBe(SAMPLE_DEALS[0].id);
   });
 
   it("should provide top deals", () => {
     const { result } = renderHook(() => useFeaturedDeals());
 
     expect(result.current.topDeals).toHaveLength(1);
-    expect(result.current.topDeals[0].id).toBe(sampleDeals[0].id);
+    expect(result.current.topDeals[0].id).toBe(SAMPLE_DEALS[0].id);
   });
 
   it("should toggle featured status", () => {
     const { result } = renderHook(() => useFeaturedDeals());
 
     // Initially featured
-    expect(result.current.isDealFeatured(sampleDeals[0].id)).toBe(true);
+    expect(result.current.isDealFeatured(SAMPLE_DEALS[0].id)).toBe(true);
 
     // Remove from featured
     act(() => {
-      result.current.toggleFeatured(sampleDeals[0].id);
+      result.current.toggleFeatured(SAMPLE_DEALS[0].id);
     });
 
-    expect(mockStore.removeFromFeaturedDeals).toHaveBeenCalledWith(sampleDeals[0].id);
+    expect(MOCK_STORE.removeFromFeaturedDeals).toHaveBeenCalledWith(SAMPLE_DEALS[0].id);
 
     // Mock state update
-    mockStore.featuredDeals = [];
-    mockStore.getFeaturedDeals.mockReturnValue([]);
+    MOCK_STORE.featuredDeals = [];
+    MOCK_STORE.getFeaturedDeals.mockReturnValue([]);
 
     // Add back to featured
     act(() => {
-      result.current.toggleFeatured(sampleDeals[1].id);
+      result.current.toggleFeatured(SAMPLE_DEALS[1].id);
     });
 
-    expect(mockStore.addToFeaturedDeals).toHaveBeenCalledWith(sampleDeals[1].id);
+    expect(MOCK_STORE.addToFeaturedDeals).toHaveBeenCalledWith(SAMPLE_DEALS[1].id);
   });
 });
 
@@ -441,16 +441,16 @@ describe("useSavedDeals Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset saved deals in mock
-    mockStore.savedDeals = [sampleDeals[0].id, sampleDeals[1].id];
-    mockStore.getSavedDeals.mockReturnValue([sampleDeals[0], sampleDeals[1]]);
+    MOCK_STORE.savedDeals = [SAMPLE_DEALS[0].id, SAMPLE_DEALS[1].id];
+    MOCK_STORE.getSavedDeals.mockReturnValue([SAMPLE_DEALS[0], SAMPLE_DEALS[1]]);
   });
 
   it("should provide access to saved deals", () => {
     const { result } = renderHook(() => useSavedDeals());
 
     expect(result.current.savedDeals).toHaveLength(2);
-    expect(result.current.savedDeals.map((d) => d.id)).toContain(sampleDeals[0].id);
-    expect(result.current.savedDeals.map((d) => d.id)).toContain(sampleDeals[1].id);
+    expect(result.current.savedDeals.map((d) => d.id)).toContain(SAMPLE_DEALS[0].id);
+    expect(result.current.savedDeals.map((d) => d.id)).toContain(SAMPLE_DEALS[1].id);
   });
 
   it("should provide sorted saved deals", () => {
@@ -458,32 +458,32 @@ describe("useSavedDeals Hook", () => {
 
     // Deals are sorted by expiry date, so the closer date should be first
     expect(result.current.sortedByExpiry).toHaveLength(2);
-    expect(result.current.sortedByExpiry[0].id).toBe(sampleDeals[0].id); // Expires on June 1
-    expect(result.current.sortedByExpiry[1].id).toBe(sampleDeals[1].id); // Expires on June 15
+    expect(result.current.sortedByExpiry[0].id).toBe(SAMPLE_DEALS[0].id); // Expires on June 1
+    expect(result.current.sortedByExpiry[1].id).toBe(SAMPLE_DEALS[1].id); // Expires on June 15
   });
 
   it("should toggle saved status", () => {
     const { result } = renderHook(() => useSavedDeals());
 
     // Initially saved
-    expect(result.current.isDealSaved(sampleDeals[0].id)).toBe(true);
+    expect(result.current.isDealSaved(SAMPLE_DEALS[0].id)).toBe(true);
 
     // Remove from saved
     act(() => {
-      result.current.toggleSaved(sampleDeals[0].id);
+      result.current.toggleSaved(SAMPLE_DEALS[0].id);
     });
 
-    expect(mockStore.removeFromSavedDeals).toHaveBeenCalledWith(sampleDeals[0].id);
+    expect(MOCK_STORE.removeFromSavedDeals).toHaveBeenCalledWith(SAMPLE_DEALS[0].id);
 
     // Mock state update
-    mockStore.savedDeals = [sampleDeals[1].id];
-    mockStore.getSavedDeals.mockReturnValue([sampleDeals[1]]);
+    MOCK_STORE.savedDeals = [SAMPLE_DEALS[1].id];
+    MOCK_STORE.getSavedDeals.mockReturnValue([SAMPLE_DEALS[1]]);
 
     // Add back to saved
     act(() => {
-      result.current.toggleSaved(sampleDeals[2].id);
+      result.current.toggleSaved(SAMPLE_DEALS[2].id);
     });
 
-    expect(mockStore.addToSavedDeals).toHaveBeenCalledWith(sampleDeals[2].id);
+    expect(MOCK_STORE.addToSavedDeals).toHaveBeenCalledWith(SAMPLE_DEALS[2].id);
   });
 });

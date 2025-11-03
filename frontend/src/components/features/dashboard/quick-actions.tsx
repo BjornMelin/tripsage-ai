@@ -60,75 +60,75 @@ interface QuickActionsProps {
   compact?: boolean;
 }
 
-const quickActions: QuickAction[] = [
+const QUICK_ACTIONS: QuickAction[] = [
   {
+    className: "bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700",
+    description: "Find the best flight deals for your next trip",
+    href: "/dashboard/search/flights",
+    icon: <Plane className="h-4 w-4" />,
     id: "search-flights",
     title: "Search Flights",
-    description: "Find the best flight deals for your next trip",
-    icon: <Plane className="h-4 w-4" />,
-    href: "/dashboard/search/flights",
     variant: "default",
-    className: "bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700",
   },
   {
+    className: "bg-green-50 border-green-200 hover:bg-green-100 text-green-700",
+    description: "Discover comfortable accommodations worldwide",
+    href: "/dashboard/search/hotels",
+    icon: <MapPin className="h-4 w-4" />,
     id: "search-hotels",
     title: "Find Hotels",
-    description: "Discover comfortable accommodations worldwide",
-    icon: <MapPin className="h-4 w-4" />,
-    href: "/dashboard/search/hotels",
     variant: "outline",
-    className: "bg-green-50 border-green-200 hover:bg-green-100 text-green-700",
   },
   {
+    className: "bg-purple-50 border-purple-200 hover:bg-purple-100 text-purple-700",
+    description: "Start planning your next adventure",
+    href: "/dashboard/trips/create",
+    icon: <Plus className="h-4 w-4" />,
     id: "create-trip",
     title: "Plan New Trip",
-    description: "Start planning your next adventure",
-    icon: <Plus className="h-4 w-4" />,
-    href: "/dashboard/trips/create",
     variant: "secondary",
-    className: "bg-purple-50 border-purple-200 hover:bg-purple-100 text-purple-700",
   },
   {
+    badge: "AI",
+    className: "bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700",
+    description: "Get personalized travel recommendations",
+    href: "/chat",
+    icon: <MessageCircle className="h-4 w-4" />,
     id: "ai-chat",
     title: "Ask AI Assistant",
-    description: "Get personalized travel recommendations",
-    icon: <MessageCircle className="h-4 w-4" />,
-    href: "/chat",
     variant: "outline",
-    className: "bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700",
-    badge: "AI",
   },
   {
+    className: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100 text-indigo-700",
+    description: "Discover new places to visit",
+    href: "/dashboard/search/destinations",
+    icon: <Compass className="h-4 w-4" />,
     id: "explore-destinations",
     title: "Explore Destinations",
-    description: "Discover new places to visit",
-    icon: <Compass className="h-4 w-4" />,
-    href: "/dashboard/search/destinations",
     variant: "outline",
-    className: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100 text-indigo-700",
   },
   {
+    description: "View and manage your travel plans",
+    href: "/dashboard/trips",
+    icon: <Calendar className="h-4 w-4" />,
     id: "my-trips",
     title: "My Trips",
-    description: "View and manage your travel plans",
-    icon: <Calendar className="h-4 w-4" />,
-    href: "/dashboard/trips",
     variant: "outline",
   },
   {
+    description: "Use filters for specific requirements",
+    href: "/dashboard/search",
+    icon: <Search className="h-4 w-4" />,
     id: "advanced-search",
     title: "Detailed Search",
-    description: "Use filters for specific requirements",
-    icon: <Search className="h-4 w-4" />,
-    href: "/dashboard/search",
     variant: "outline",
   },
   {
+    description: "Manage your account and preferences",
+    href: "/dashboard/settings",
+    icon: <Settings className="h-4 w-4" />,
     id: "settings",
     title: "Settings",
-    description: "Manage your account and preferences",
-    icon: <Settings className="h-4 w-4" />,
-    href: "/dashboard/settings",
     variant: "outline",
   },
 ];
@@ -291,7 +291,7 @@ export function QuickActions({
   compact = false,
 }: QuickActionsProps) {
   // Show different actions based on layout and space
-  const actionsToShow = compact ? quickActions.slice(0, 6) : quickActions;
+  const actionsToShow = compact ? QUICK_ACTIONS.slice(0, 6) : QUICK_ACTIONS;
 
   return (
     <Card>

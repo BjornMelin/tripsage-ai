@@ -49,12 +49,12 @@ describe("useActivitySearch", () => {
   it("searchActivities is callable and resolves without side effects", async () => {
     const { result } = renderHook(() => useActivitySearch(), { wrapper });
     const searchParams: ActivitySearchParams = {
-      destination: "New York",
-      date: "2024-07-01",
       adults: 2,
-      children: 0,
-      infants: 0,
       category: "cultural",
+      children: 0,
+      date: "2024-07-01",
+      destination: "New York",
+      infants: 0,
     };
     await expect(
       result.current.searchActivities(searchParams)
@@ -65,12 +65,12 @@ describe("useActivitySearch", () => {
   it("saveSearch is callable and resolves without side effects", async () => {
     const { result } = renderHook(() => useActivitySearch(), { wrapper });
     const searchParams: ActivitySearchParams = {
-      destination: "Tokyo",
-      date: "2024-09-01",
       adults: 2,
-      children: 1,
-      infants: 0,
       category: "food",
+      children: 1,
+      date: "2024-09-01",
+      destination: "Tokyo",
+      infants: 0,
     };
     await expect(
       result.current.saveSearch("Tokyo Food & Culture", searchParams)
@@ -82,11 +82,11 @@ describe("useActivitySearch", () => {
     const { result } = renderHook(() => useActivitySearch(), { wrapper });
     expect(result.current.isSearching).toBe(false);
     await result.current.searchActivities({
-      destination: "New York",
-      date: "2024-07-01",
-      category: "sightseeing",
       adults: 2,
+      category: "sightseeing",
       children: 0,
+      date: "2024-07-01",
+      destination: "New York",
       infants: 0,
     } as ActivitySearchParams);
     expect(result.current.isSearching).toBe(false);

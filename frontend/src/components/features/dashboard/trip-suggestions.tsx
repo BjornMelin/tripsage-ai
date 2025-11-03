@@ -129,9 +129,9 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
    */
   const formatPrice = (price: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
-      style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
+      style: "currency",
     }).format(price);
   };
 
@@ -262,8 +262,8 @@ export function TripSuggestions({
 
   // Use React Query hook to fetch trip suggestions
   const { data: apiSuggestions, isLoading } = useTripSuggestions({
-    limit: limit + 2, // Get extra in case we filter some out
     budget_max: activeBudget?.totalAmount,
+    limit: limit + 2, // Get extra in case we filter some out
   });
 
   // Memory-based recommendations
@@ -298,18 +298,18 @@ export function TripSuggestions({
     if (userPreferences.destinations) {
       userPreferences.destinations.slice(0, 2).forEach((dest, idx) => {
         memoryBasedSuggestions.push({
-          id: `memory-dest-${idx}`,
-          title: `Return to ${dest}`,
-          destination: dest,
-          description: `Based on your previous love for ${dest}, here's a personalized return trip.`,
-          estimated_price: budgetPatterns?.averageSpending?.accommodation || 2000,
-          currency: "USD",
-          duration: 7,
-          rating: 4.7,
+          best_time_to_visit: "Year-round",
           category:
             userPreferences.travel_style === "luxury" ? "relaxation" : "culture",
-          best_time_to_visit: "Year-round",
+          currency: "USD",
+          description: `Based on your previous love for ${dest}, here's a personalized return trip.`,
+          destination: dest,
+          duration: 7,
+          estimated_price: budgetPatterns?.averageSpending?.accommodation || 2000,
           highlights: userPreferences.activities?.slice(0, 3) || ["Sightseeing"],
+          id: `memory-dest-${idx}`,
+          rating: 4.7,
+          title: `Return to ${dest}`,
           trending: true,
         });
       });
@@ -320,17 +320,17 @@ export function TripSuggestions({
       recommendations.slice(0, 2).forEach((rec, idx) => {
         if (rec.type === "destination") {
           memoryBasedSuggestions.push({
-            id: `memory-ai-${idx}`,
-            title: rec.recommendation,
-            destination: rec.recommendation.split(" ")[0] || "Somewhere Amazing",
-            description: rec.reasoning,
-            estimated_price: budgetPatterns?.averageSpending?.total || 2500,
-            currency: "USD",
-            duration: 5,
-            rating: 4.6,
-            category: "adventure",
             best_time_to_visit: "Spring/Fall",
+            category: "adventure",
+            currency: "USD",
+            description: rec.reasoning,
+            destination: rec.recommendation.split(" ")[0] || "Somewhere Amazing",
+            duration: 5,
+            estimated_price: budgetPatterns?.averageSpending?.total || 2500,
             highlights: ["AI Recommended", "Personalized"],
+            id: `memory-ai-${idx}`,
+            rating: 4.6,
+            title: rec.recommendation,
             trending: true,
           });
         }

@@ -19,144 +19,144 @@ export type DealType = z.infer<typeof DealTypeSchema>;
 
 // Deal schema
 export const DealSchema = z.object({
-  id: z.string(),
-  type: DealTypeSchema,
-  title: z.string().min(3).max(100),
-  description: z.string().max(500),
-  provider: z.string(),
-  url: z.string().url(),
-  price: z.number().positive(),
-  originalPrice: z.number().positive().optional(),
-  discountPercentage: z.number().min(0).max(100).optional(),
+  createdAt: z.string().datetime(),
   currency: z.string().length(3),
+  description: z.string().max(500),
   destination: z.string(),
-  origin: z.string().optional(),
-  startDate: z.string().datetime().optional(),
+  discountPercentage: z.number().min(0).max(100).optional(),
   endDate: z.string().datetime().optional(),
   expiryDate: z.string().datetime(), // When the deal expires
-  imageUrl: z.string().url().optional(),
-  tags: z.array(z.string()).optional(),
   featured: z.boolean().default(false),
-  verified: z.boolean().default(false),
-  createdAt: z.string().datetime(),
+  id: z.string(),
+  imageUrl: z.string().url().optional(),
+  origin: z.string().optional(),
+  originalPrice: z.number().positive().optional(),
+  price: z.number().positive(),
+  provider: z.string(),
+  startDate: z.string().datetime().optional(),
+  tags: z.array(z.string()).optional(),
+  title: z.string().min(3).max(100),
+  type: DealTypeSchema,
   updatedAt: z.string().datetime(),
+  url: z.string().url(),
+  verified: z.boolean().default(false),
 });
 
 export type Deal = z.infer<typeof DealSchema>;
 
 // Deal alert schema
 export const DealAlertSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-  dealType: DealTypeSchema.optional(),
-  origin: z.string().optional(),
-  destination: z.string().optional(),
-  minDiscount: z.number().min(0).max(100).optional(),
-  maxPrice: z.number().positive().optional(),
+  createdAt: z.string().datetime(),
   dateRange: z
     .object({
-      start: z.string().datetime().optional(),
       end: z.string().datetime().optional(),
+      start: z.string().datetime().optional(),
     })
     .optional(),
+  dealType: DealTypeSchema.optional(),
+  destination: z.string().optional(),
+  id: z.string(),
   isActive: z.boolean().default(true),
+  maxPrice: z.number().positive().optional(),
+  minDiscount: z.number().min(0).max(100).optional(),
   notificationType: z.enum(["email", "push", "both"]).default("both"),
-  createdAt: z.string().datetime(),
+  origin: z.string().optional(),
   updatedAt: z.string().datetime(),
+  userId: z.string(),
 });
 
 export type DealAlert = z.infer<typeof DealAlertSchema>;
 
 // Deal state schema
 export const DealStateSchema = z.object({
+  alerts: z.array(DealAlertSchema),
   deals: z.record(z.string(), DealSchema),
   featuredDeals: z.array(z.string()), // IDs of featured deals
-  alerts: z.array(DealAlertSchema),
-  savedDeals: z.array(z.string()), // IDs of saved deals
-  recentlyViewedDeals: z.array(z.string()), // IDs of recently viewed deals
   filters: z
     .object({
-      types: z.array(DealTypeSchema).optional(),
-      origins: z.array(z.string()).optional(),
-      destinations: z.array(z.string()).optional(),
-      providers: z.array(z.string()).optional(),
-      minDiscount: z.number().min(0).max(100).optional(),
-      maxPrice: z.number().positive().optional(),
       dateRange: z
         .object({
-          start: z.string().datetime().optional(),
           end: z.string().datetime().optional(),
+          start: z.string().datetime().optional(),
         })
         .optional(),
+      destinations: z.array(z.string()).optional(),
+      maxPrice: z.number().positive().optional(),
+      minDiscount: z.number().min(0).max(100).optional(),
+      origins: z.array(z.string()).optional(),
+      providers: z.array(z.string()).optional(),
+      types: z.array(DealTypeSchema).optional(),
     })
     .optional(),
-  lastUpdated: z.string().datetime().nullable(),
   isInitialized: z.boolean().default(false),
+  lastUpdated: z.string().datetime().nullable(),
+  recentlyViewedDeals: z.array(z.string()), // IDs of recently viewed deals
+  savedDeals: z.array(z.string()), // IDs of saved deals
 });
 
 export type DealState = z.infer<typeof DealStateSchema>;
 
 // Deal notification schema
 export const DealNotificationSchema = z.object({
-  id: z.string(),
-  dealId: z.string(),
-  userId: z.string(),
-  title: z.string(),
-  message: z.string(),
-  isRead: z.boolean().default(false),
   createdAt: z.string().datetime(),
+  dealId: z.string(),
+  id: z.string(),
+  isRead: z.boolean().default(false),
+  message: z.string(),
+  title: z.string(),
+  userId: z.string(),
 });
 
 export type DealNotification = z.infer<typeof DealNotificationSchema>;
 
 // API Request/Response schemas
 export const SearchDealsRequestSchema = z.object({
-  types: z.array(DealTypeSchema).optional(),
-  origin: z.string().optional(),
-  destination: z.string().optional(),
-  providers: z.array(z.string()).optional(),
-  minDiscount: z.number().min(0).max(100).optional(),
-  maxPrice: z.number().positive().optional(),
   dateRange: z
     .object({
-      start: z.string().datetime().optional(),
       end: z.string().datetime().optional(),
+      start: z.string().datetime().optional(),
     })
     .optional(),
+  destination: z.string().optional(),
   featured: z.boolean().optional(),
-  verified: z.boolean().optional(),
   limit: z.number().positive().optional(),
+  maxPrice: z.number().positive().optional(),
+  minDiscount: z.number().min(0).max(100).optional(),
   offset: z.number().nonnegative().optional(),
+  origin: z.string().optional(),
+  providers: z.array(z.string()).optional(),
   sort: z.enum(["price", "discount", "expiry", "created"]).optional(),
   sortDirection: z.enum(["asc", "desc"]).optional(),
+  types: z.array(DealTypeSchema).optional(),
+  verified: z.boolean().optional(),
 });
 
 export type SearchDealsRequest = z.infer<typeof SearchDealsRequestSchema>;
 
 export const CreateDealAlertRequestSchema = z.object({
-  dealType: DealTypeSchema.optional(),
-  origin: z.string().optional(),
-  destination: z.string().optional(),
-  minDiscount: z.number().min(0).max(100).optional(),
-  maxPrice: z.number().positive().optional(),
   dateRange: z
     .object({
-      start: z.string().datetime().optional(),
       end: z.string().datetime().optional(),
+      start: z.string().datetime().optional(),
     })
     .optional(),
+  dealType: DealTypeSchema.optional(),
+  destination: z.string().optional(),
+  maxPrice: z.number().positive().optional(),
+  minDiscount: z.number().min(0).max(100).optional(),
   notificationType: z.enum(["email", "push", "both"]).default("both"),
+  origin: z.string().optional(),
 });
 
 export type CreateDealAlertRequest = z.infer<typeof CreateDealAlertRequestSchema>;
 
 // Stats
 export const DealStatsSchema = z.object({
-  totalCount: z.number().nonnegative(),
-  byType: z.record(DealTypeSchema, z.number().nonnegative()),
-  byDestination: z.record(z.string(), z.number().nonnegative()),
   avgDiscount: z.number().nonnegative(),
   avgSavings: z.number().nonnegative(),
+  byDestination: z.record(z.string(), z.number().nonnegative()),
+  byType: z.record(DealTypeSchema, z.number().nonnegative()),
+  totalCount: z.number().nonnegative(),
 });
 
 export type DealStats = z.infer<typeof DealStatsSchema>;

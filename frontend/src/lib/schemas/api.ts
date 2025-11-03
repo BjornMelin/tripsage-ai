@@ -5,32 +5,32 @@
 import { z } from "zod";
 
 // Common validation patterns
-const timestampSchema = z.string().datetime();
-const uuidSchema = z.string().uuid();
-const emailSchema = z.string().email();
-const urlSchema = z.string().url();
-const positiveNumberSchema = z.number().positive();
-const nonNegativeNumberSchema = z.number().nonnegative();
+const TIMESTAMP_SCHEMA = z.string().datetime();
+const UUID_SCHEMA = z.string().uuid();
+const EMAIL_SCHEMA = z.string().email();
+const URL_SCHEMA = z.string().url();
+const POSITIVE_NUMBER_SCHEMA = z.number().positive();
+const NON_NEGATIVE_NUMBER_SCHEMA = z.number().nonnegative();
 
 // Generic API response wrapper
 export const apiResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
   z.object({
-    success: z.boolean(),
     data: dataSchema.optional(),
     error: z
       .object({
         code: z.string(),
-        message: z.string(),
         details: z.unknown().optional(),
+        message: z.string(),
       })
       .optional(),
     metadata: z
       .object({
         requestId: z.string().optional(),
-        timestamp: timestampSchema,
+        timestamp: TIMESTAMP_SCHEMA,
         version: z.string().optional(),
       })
       .optional(),
+    success: z.boolean(),
   });
 
 // Paginated response wrapper
@@ -38,24 +38,29 @@ export const paginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =
   z.object({
     items: z.array(itemSchema),
     pagination: z.object({
-      page: z.number().int().positive(),
-      pageSize: z.number().int().positive().max(100),
-      total: nonNegativeNumberSchema,
-      totalPages: z.number().int().nonnegative(),
       hasNext: z.boolean(),
       hasPrevious: z.boolean(),
+      page: z.number().int().positive(),
+      pageSize: z.number().int().positive().max(100),
+      total: NON_NEGATIVE_NUMBER_SCHEMA,
+      totalPages: z.number().int().nonnegative(),
     }),
   });
 
 // Authentication API schemas
 export const loginRequestSchema = z.object({
-  email: emailSchema.max(255),
+  email: EMAIL_SCHEMA.max(255),
   password: z.string().min(8).max(128),
   rememberMe: z.boolean().optional(),
 });
 
 export const registerRequestSchema = z.object({
-  email: emailSchema.max(255),
+  acceptTerms: z.boolean().refine((val) => val === true, {
+    message: "You must accept the terms and conditions",
+  }),
+  email: EMAIL_SCHEMA.max(255),
+  firstName: z.string().min(1).max(50),
+  lastName: z.string().min(1).max(50),
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")
@@ -64,27 +69,22 @@ export const registerRequestSchema = z.object({
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
       "Password must contain uppercase, lowercase, and number"
     ),
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50),
-  acceptTerms: z.boolean().refine((val) => val === true, {
-    message: "You must accept the terms and conditions",
-  }),
 });
 
 export const authResponseSchema = z.object({
+  accessToken: z.string().min(1),
+  expiresIn: POSITIVE_NUMBER_SCHEMA,
+  refreshToken: z.string().min(1),
   user: z.object({
-    id: uuidSchema,
-    email: emailSchema,
+    createdAt: TIMESTAMP_SCHEMA,
+    email: EMAIL_SCHEMA,
+    emailVerified: z.boolean(),
     firstName: z.string(),
+    id: UUID_SCHEMA,
     lastName: z.string(),
     role: z.enum(["user", "admin", "moderator"]),
-    emailVerified: z.boolean(),
-    createdAt: timestampSchema,
-    updatedAt: timestampSchema,
+    updatedAt: TIMESTAMP_SCHEMA,
   }),
-  accessToken: z.string().min(1),
-  refreshToken: z.string().min(1),
-  expiresIn: positiveNumberSchema,
 });
 
 export const refreshTokenRequestSchema = z.object({
@@ -92,155 +92,153 @@ export const refreshTokenRequestSchema = z.object({
 });
 
 export const resetPasswordRequestSchema = z.object({
-  email: emailSchema.max(255),
+  email: EMAIL_SCHEMA.max(255),
 });
 
 export const confirmResetPasswordRequestSchema = z.object({
-  token: z.string().min(1),
   newPassword: z.string().min(8).max(128),
+  token: z.string().min(1),
 });
 
 // User profile API schemas
 export const userProfileSchema = z.object({
-  id: uuidSchema,
-  email: emailSchema,
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50),
-  displayName: z.string().max(100).optional(),
-  avatar: urlSchema.optional(),
+  avatar: URL_SCHEMA.optional(),
   bio: z.string().max(500).optional(),
-  timezone: z.string().optional(),
-  language: z.string().min(2).max(5).optional(),
-  dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]).optional(),
+  createdAt: TIMESTAMP_SCHEMA,
   currency: z.string().length(3).optional(),
+  dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]).optional(),
+  displayName: z.string().max(100).optional(),
+  email: EMAIL_SCHEMA,
   emailVerified: z.boolean(),
+  firstName: z.string().min(1).max(50),
+  id: UUID_SCHEMA,
+  language: z.string().min(2).max(5).optional(),
+  lastName: z.string().min(1).max(50),
   phoneNumber: z.string().optional(),
   phoneVerified: z.boolean().optional(),
+  timezone: z.string().optional(),
   twoFactorEnabled: z.boolean(),
-  createdAt: timestampSchema,
-  updatedAt: timestampSchema,
+  updatedAt: TIMESTAMP_SCHEMA,
 });
 
 export const updateUserProfileRequestSchema = z.object({
-  firstName: z.string().min(1).max(50).optional(),
-  lastName: z.string().min(1).max(50).optional(),
-  displayName: z.string().max(100).optional(),
-  avatar: urlSchema.optional(),
+  avatar: URL_SCHEMA.optional(),
   bio: z.string().max(500).optional(),
-  timezone: z.string().optional(),
-  language: z.string().min(2).max(5).optional(),
-  dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]).optional(),
   currency: z.string().length(3).optional(),
+  dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]).optional(),
+  displayName: z.string().max(100).optional(),
+  firstName: z.string().min(1).max(50).optional(),
+  language: z.string().min(2).max(5).optional(),
+  lastName: z.string().min(1).max(50).optional(),
   phoneNumber: z.string().optional(),
+  timezone: z.string().optional(),
 });
 
 // Chat API schemas
 export const chatMessageSchema = z.object({
-  id: uuidSchema,
-  conversationId: uuidSchema,
-  role: z.enum(["user", "assistant", "system"]),
-  content: z.string().min(1),
-  timestamp: timestampSchema,
-  metadata: z
-    .object({
-      tokens: z.number().int().nonnegative().optional(),
-      model: z.string().optional(),
-      temperature: z.number().min(0).max(2).optional(),
-      processingTime: z.number().nonnegative().optional(),
-    })
-    .optional(),
   attachments: z
     .array(
       z.object({
-        id: uuidSchema,
-        type: z.enum(["image", "document", "audio", "video"]),
-        name: z.string().min(1),
-        url: urlSchema,
-        size: positiveNumberSchema,
+        id: UUID_SCHEMA,
         mimeType: z.string(),
+        name: z.string().min(1),
+        size: POSITIVE_NUMBER_SCHEMA,
+        type: z.enum(["image", "document", "audio", "video"]),
+        url: URL_SCHEMA,
       })
     )
     .optional(),
+  content: z.string().min(1),
+  conversationId: UUID_SCHEMA,
+  id: UUID_SCHEMA,
+  metadata: z
+    .object({
+      model: z.string().optional(),
+      processingTime: z.number().nonnegative().optional(),
+      temperature: z.number().min(0).max(2).optional(),
+      tokens: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
+  role: z.enum(["user", "assistant", "system"]),
+  timestamp: TIMESTAMP_SCHEMA,
 });
 
 export const conversationSchema = z.object({
-  id: uuidSchema,
-  title: z.string().min(1).max(200),
-  userId: uuidSchema,
+  createdAt: TIMESTAMP_SCHEMA,
+  id: UUID_SCHEMA,
   messages: z.array(chatMessageSchema),
-  status: z.enum(["active", "archived", "deleted"]),
-  createdAt: timestampSchema,
-  updatedAt: timestampSchema,
   metadata: z
     .object({
-      messageCount: nonNegativeNumberSchema,
-      totalTokens: nonNegativeNumberSchema,
-      lastMessageAt: timestampSchema.optional(),
+      lastMessageAt: TIMESTAMP_SCHEMA.optional(),
+      messageCount: NON_NEGATIVE_NUMBER_SCHEMA,
+      totalTokens: NON_NEGATIVE_NUMBER_SCHEMA,
     })
     .optional(),
+  status: z.enum(["active", "archived", "deleted"]),
+  title: z.string().min(1).max(200),
+  updatedAt: TIMESTAMP_SCHEMA,
+  userId: UUID_SCHEMA,
 });
 
 export const sendMessageRequestSchema = z.object({
-  conversationId: uuidSchema.optional(),
-  message: z.string().min(1).max(10000),
   attachments: z
     .array(
       z.object({
-        type: z.enum(["image", "document", "audio", "video"]),
         data: z.string().min(1), // Base64 encoded data
-        name: z.string().min(1),
         mimeType: z.string(),
+        name: z.string().min(1),
+        type: z.enum(["image", "document", "audio", "video"]),
       })
     )
     .optional(),
   context: z
     .object({
-      searchResults: z.unknown().optional(),
       currentLocation: z
         .object({
           lat: z.number().min(-90).max(90),
           lng: z.number().min(-180).max(180),
         })
         .optional(),
+      searchResults: z.unknown().optional(),
       userPreferences: z.unknown().optional(),
     })
     .optional(),
+  conversationId: UUID_SCHEMA.optional(),
+  message: z.string().min(1).max(10000),
 });
 
 // Trip API schemas
 export const tripSchema = z.object({
-  id: uuidSchema,
-  userId: uuidSchema,
-  title: z.string().min(1).max(200),
-  description: z.string().max(1000).optional(),
-  destination: z.string().min(1),
-  startDate: z.string().date(),
-  endDate: z.string().date(),
-  status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
   budget: z
     .object({
-      total: positiveNumberSchema,
-      spent: nonNegativeNumberSchema,
       currency: z.string().length(3),
+      spent: NON_NEGATIVE_NUMBER_SCHEMA,
+      total: POSITIVE_NUMBER_SCHEMA,
     })
     .optional(),
-  travelers: z.array(
-    z.object({
-      id: uuidSchema.optional(),
-      name: z.string().min(1),
-      email: emailSchema.optional(),
-      role: z.enum(["owner", "collaborator", "viewer"]),
-      ageGroup: z.enum(["adult", "child", "infant"]).optional(),
-    })
-  ),
+  createdAt: TIMESTAMP_SCHEMA,
+  description: z.string().max(1000).optional(),
+  destination: z.string().min(1),
+  endDate: z.string().date(),
+  id: UUID_SCHEMA,
   itinerary: z.array(
     z.object({
-      id: uuidSchema,
-      day: z.number().int().positive(),
-      date: z.string().date(),
       activities: z.array(
         z.object({
-          id: uuidSchema,
+          bookingReference: z.string().optional(),
+          cost: z
+            .object({
+              amount: NON_NEGATIVE_NUMBER_SCHEMA,
+              currency: z.string().length(3),
+            })
+            .optional(),
+          description: z.string().optional(),
+          endTime: z.string().time().optional(),
+          id: UUID_SCHEMA,
+          location: z.string().optional(),
+          startTime: z.string().time().optional(),
+          status: z.enum(["planned", "booked", "confirmed", "cancelled"]),
+          title: z.string().min(1),
           type: z.enum([
             "flight",
             "accommodation",
@@ -249,45 +247,47 @@ export const tripSchema = z.object({
             "meal",
             "other",
           ]),
-          title: z.string().min(1),
-          description: z.string().optional(),
-          startTime: z.string().time().optional(),
-          endTime: z.string().time().optional(),
-          location: z.string().optional(),
-          cost: z
-            .object({
-              amount: nonNegativeNumberSchema,
-              currency: z.string().length(3),
-            })
-            .optional(),
-          bookingReference: z.string().optional(),
-          status: z.enum(["planned", "booked", "confirmed", "cancelled"]),
         })
       ),
+      date: z.string().date(),
+      day: z.number().int().positive(),
+      id: UUID_SCHEMA,
     })
   ),
-  createdAt: timestampSchema,
-  updatedAt: timestampSchema,
+  startDate: z.string().date(),
+  status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
+  title: z.string().min(1).max(200),
+  travelers: z.array(
+    z.object({
+      ageGroup: z.enum(["adult", "child", "infant"]).optional(),
+      email: EMAIL_SCHEMA.optional(),
+      id: UUID_SCHEMA.optional(),
+      name: z.string().min(1),
+      role: z.enum(["owner", "collaborator", "viewer"]),
+    })
+  ),
+  updatedAt: TIMESTAMP_SCHEMA,
+  userId: UUID_SCHEMA,
 });
 
 export const createTripRequestSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(1000).optional(),
-  destination: z.string().min(1),
-  startDate: z.string().date(),
-  endDate: z.string().date(),
   budget: z
     .object({
-      total: positiveNumberSchema,
       currency: z.string().length(3),
+      total: POSITIVE_NUMBER_SCHEMA,
     })
     .optional(),
+  description: z.string().max(1000).optional(),
+  destination: z.string().min(1),
+  endDate: z.string().date(),
+  startDate: z.string().date(),
+  title: z.string().min(1).max(200),
   travelers: z
     .array(
       z.object({
-        name: z.string().min(1),
-        email: emailSchema.optional(),
         ageGroup: z.enum(["adult", "child", "infant"]).optional(),
+        email: EMAIL_SCHEMA.optional(),
+        name: z.string().min(1),
       })
     )
     .min(1, "At least one traveler is required"),
@@ -297,74 +297,74 @@ export const updateTripRequestSchema = createTripRequestSchema.partial();
 
 // API Key management schemas
 export const apiKeySchema = z.object({
-  id: uuidSchema,
-  name: z.string().min(1).max(100),
-  service: z.enum(["openai", "anthropic", "google", "amadeus", "skyscanner"]),
-  key: z.string().min(1),
+  createdAt: TIMESTAMP_SCHEMA,
+  id: UUID_SCHEMA,
   isActive: z.boolean(),
-  lastUsed: timestampSchema.optional(),
-  usageCount: nonNegativeNumberSchema,
+  key: z.string().min(1),
+  lastUsed: TIMESTAMP_SCHEMA.optional(),
+  name: z.string().min(1).max(100),
   rateLimit: z
     .object({
-      requestsPerMinute: positiveNumberSchema,
-      requestsPerDay: positiveNumberSchema,
+      requestsPerDay: POSITIVE_NUMBER_SCHEMA,
+      requestsPerMinute: POSITIVE_NUMBER_SCHEMA,
     })
     .optional(),
-  createdAt: timestampSchema,
-  updatedAt: timestampSchema,
+  service: z.enum(["openai", "anthropic", "google", "amadeus", "skyscanner"]),
+  updatedAt: TIMESTAMP_SCHEMA,
+  usageCount: NON_NEGATIVE_NUMBER_SCHEMA,
 });
 
 export const createApiKeyRequestSchema = z.object({
+  key: z.string().min(1).max(500),
   name: z.string().min(1).max(100),
   service: z.enum(["openai", "anthropic", "google", "amadeus", "skyscanner"]),
-  key: z.string().min(1).max(500),
 });
 
 export const updateApiKeyRequestSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  key: z.string().min(1).max(500).optional(),
   isActive: z.boolean().optional(),
+  key: z.string().min(1).max(500).optional(),
+  name: z.string().min(1).max(100).optional(),
 });
 
 // Error schemas
 export const apiErrorSchema = z.object({
   code: z.string().min(1),
-  message: z.string().min(1),
   details: z.unknown().optional(),
+  message: z.string().min(1),
   path: z.string().optional(),
-  timestamp: timestampSchema,
   requestId: z.string().optional(),
+  timestamp: TIMESTAMP_SCHEMA,
 });
 
 export const validationErrorSchema = z.object({
   code: z.literal("VALIDATION_ERROR"),
-  message: z.string(),
   details: z.object({
+    constraint: z.string(),
     field: z.string(),
     value: z.unknown(),
-    constraint: z.string(),
   }),
+  message: z.string(),
 });
 
 // WebSocket message schemas
 export const websocketMessageSchema = z.object({
-  type: z.enum(["ping", "pong", "data", "error", "subscribe", "unsubscribe"]),
-  id: z.string().optional(),
   data: z.unknown().optional(),
   error: apiErrorSchema.optional(),
-  timestamp: timestampSchema,
+  id: z.string().optional(),
+  timestamp: TIMESTAMP_SCHEMA,
+  type: z.enum(["ping", "pong", "data", "error", "subscribe", "unsubscribe"]),
 });
 
 export const websocketSubscriptionSchema = z.object({
-  type: z.literal("subscribe"),
   channel: z.enum(["chat", "trip_updates", "search_results", "notifications"]),
   params: z
     .object({
-      userId: uuidSchema.optional(),
-      conversationId: uuidSchema.optional(),
-      tripId: uuidSchema.optional(),
+      conversationId: UUID_SCHEMA.optional(),
+      tripId: UUID_SCHEMA.optional(),
+      userId: UUID_SCHEMA.optional(),
     })
     .optional(),
+  type: z.literal("subscribe"),
 });
 
 // API validation utilities
@@ -383,11 +383,11 @@ export const validateApiResponse = <T>(schema: z.ZodSchema<T>, data: unknown): T
 
 export const safeValidateApiResponse = <T>(schema: z.ZodSchema<T>, data: unknown) => {
   try {
-    return { success: true as const, data: schema.parse(data) };
+    return { data: schema.parse(data), success: true as const };
   } catch (error) {
     return {
-      success: false as const,
       error: error instanceof z.ZodError ? error : new Error("Validation failed"),
+      success: false as const,
     };
   }
 };

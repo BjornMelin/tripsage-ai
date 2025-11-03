@@ -12,26 +12,26 @@ import { cn } from "@/lib/utils";
  * Loading spinner variants for different styles and sizes using class-variance-authority.
  */
 const spinnerVariants = cva("animate-spin", {
+  defaultVariants: {
+    color: "default",
+    size: "md",
+  },
   variants: {
-    size: {
-      sm: "h-4 w-4",
-      md: "h-6 w-6",
-      lg: "h-8 w-8",
-      xl: "h-12 w-12",
-    },
     color: {
       default: "text-primary",
-      white: "text-white",
-      muted: "text-muted-foreground",
       destructive: "text-destructive",
+      info: "text-blue-600",
+      muted: "text-muted-foreground",
       success: "text-green-600",
       warning: "text-yellow-600",
-      info: "text-blue-600",
+      white: "text-white",
     },
-  },
-  defaultVariants: {
-    size: "md",
-    color: "default",
+    size: {
+      lg: "h-8 w-8",
+      md: "h-6 w-6",
+      sm: "h-4 w-4",
+      xl: "h-12 w-12",
+    },
   },
 });
 
@@ -62,11 +62,11 @@ export interface SVGSpinnerProps
  * @param ref - Forwarded ref to the spinner container div.
  * @returns The default spinner component.
  */
-const DefaultSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
+const DEFAULT_SPINNER = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(spinnerVariants({ size, color }), className)}
+      className={cn(spinnerVariants({ color, size }), className)}
       role="status"
       aria-label="Loading"
       {...props}
@@ -96,7 +96,7 @@ const DefaultSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   )
 );
 
-DefaultSpinner.displayName = "DefaultSpinner";
+DEFAULT_SPINNER.displayName = "DefaultSpinner";
 
 /**
  * Animated dots loader component with staggered pulse animations.
@@ -105,12 +105,12 @@ DefaultSpinner.displayName = "DefaultSpinner";
  * @param ref - Forwarded ref to the spinner container div.
  * @returns The dots spinner component.
  */
-const DotsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
+const DOTS_SPINNER = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => {
     const dotSizes = {
-      sm: "h-1 w-1",
-      md: "h-1.5 w-1.5",
       lg: "h-2 w-2",
+      md: "h-1.5 w-1.5",
+      sm: "h-1 w-1",
       xl: "h-3 w-3",
     };
 
@@ -143,7 +143,7 @@ const DotsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   }
 );
 
-DotsSpinner.displayName = "DotsSpinner";
+DOTS_SPINNER.displayName = "DotsSpinner";
 
 /**
  * Animated bars loader component with sequential pulse animations.
@@ -152,12 +152,12 @@ DotsSpinner.displayName = "DotsSpinner";
  * @param ref - Forwarded ref to the spinner container div.
  * @returns The bars spinner component.
  */
-const BarsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
+const BARS_SPINNER = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => {
     const barSizes = {
-      sm: "h-3 w-0.5",
-      md: "h-4 w-0.5",
       lg: "h-6 w-1",
+      md: "h-4 w-0.5",
+      sm: "h-3 w-0.5",
       xl: "h-8 w-1",
     };
 
@@ -190,7 +190,7 @@ const BarsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   }
 );
 
-BarsSpinner.displayName = "BarsSpinner";
+BARS_SPINNER.displayName = "BarsSpinner";
 
 /**
  * Pulsing circle loader component with continuous ping animation.
@@ -199,12 +199,12 @@ BarsSpinner.displayName = "BarsSpinner";
  * @param ref - Forwarded ref to the spinner container div.
  * @returns The pulse spinner component.
  */
-const PulseSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
+const PULSE_SPINNER = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => {
     const pulseSizes = {
-      sm: "h-4 w-4",
-      md: "h-6 w-6",
       lg: "h-8 w-8",
+      md: "h-6 w-6",
+      sm: "h-4 w-4",
       xl: "h-12 w-12",
     };
 
@@ -227,7 +227,7 @@ const PulseSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   }
 );
 
-PulseSpinner.displayName = "PulseSpinner";
+PULSE_SPINNER.displayName = "PulseSpinner";
 
 /**
  * Main Loading Spinner component that renders different spinner variants.
@@ -244,13 +244,13 @@ const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ variant = "default", ...props }, ref) => {
     switch (variant) {
       case "dots":
-        return <DotsSpinner ref={ref} {...props} />;
+        return <DOTS_SPINNER ref={ref} {...props} />;
       case "bars":
-        return <BarsSpinner ref={ref} {...props} />;
+        return <BARS_SPINNER ref={ref} {...props} />;
       case "pulse":
-        return <PulseSpinner ref={ref} {...props} />;
+        return <PULSE_SPINNER ref={ref} {...props} />;
       default:
-        return <DefaultSpinner ref={ref} {...props} />;
+        return <DEFAULT_SPINNER ref={ref} {...props} />;
     }
   }
 );

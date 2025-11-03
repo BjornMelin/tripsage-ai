@@ -7,16 +7,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import Page from "@/app/ai-demo/page";
 
 // Mock fetch to control API responses
-const mockFetch = vi.fn();
+const MOCK_FETCH = vi.fn();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-(global as any).fetch = mockFetch;
+(global as any).fetch = MOCK_FETCH;
 
 describe("AI Demo Page", () => {
   beforeEach(() => {
-    mockFetch.mockClear();
+    MOCK_FETCH.mockClear();
     // Ensure both global and window fetch are mocked in JSDOM
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).fetch = mockFetch;
+    (window as any).fetch = MOCK_FETCH;
   });
 
   it("renders prompt input and conversation area", () => {
@@ -49,11 +49,11 @@ describe("AI Demo Page", () => {
         .mockResolvedValueOnce({ done: true, value: null }),
     };
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
+    MOCK_FETCH.mockResolvedValueOnce({
       body: {
         getReader: () => mockReader,
       },
+      ok: true,
     } as unknown as Response);
 
     render(<Page />);
@@ -70,7 +70,7 @@ describe("AI Demo Page", () => {
   });
 
   it("handles fetch errors gracefully", async () => {
-    mockFetch.mockRejectedValueOnce(new Error("Network error"));
+    MOCK_FETCH.mockRejectedValueOnce(new Error("Network error"));
 
     render(<Page />);
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
@@ -86,7 +86,7 @@ describe("AI Demo Page", () => {
   });
 
   it("handles HTTP error responses", async () => {
-    mockFetch.mockResolvedValueOnce({
+    MOCK_FETCH.mockResolvedValueOnce({
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
@@ -106,9 +106,9 @@ describe("AI Demo Page", () => {
   });
 
   it("handles missing response body", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
+    MOCK_FETCH.mockResolvedValueOnce({
       body: null,
+      ok: true,
     } as unknown as Response);
 
     render(<Page />);
@@ -126,7 +126,7 @@ describe("AI Demo Page", () => {
 
   it("clears error state on new submission", async () => {
     // First call fails
-    mockFetch.mockRejectedValueOnce(new Error("First error"));
+    MOCK_FETCH.mockRejectedValueOnce(new Error("First error"));
 
     render(<Page />);
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
@@ -151,11 +151,11 @@ describe("AI Demo Page", () => {
         .mockResolvedValueOnce({ done: true, value: null }),
     };
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
+    MOCK_FETCH.mockResolvedValueOnce({
       body: {
         getReader: () => mockReader,
       },
+      ok: true,
     } as unknown as Response);
 
     // Submit again
@@ -180,11 +180,11 @@ describe("AI Demo Page", () => {
         .mockResolvedValueOnce({ done: true, value: null }),
     };
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
+    MOCK_FETCH.mockResolvedValueOnce({
       body: {
         getReader: () => mockReader,
       },
+      ok: true,
     } as unknown as Response);
 
     render(<Page />);

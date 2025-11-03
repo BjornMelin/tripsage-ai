@@ -3,7 +3,7 @@
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 
 // Error handling for query cache
-const queryCache = new QueryCache({
+const QUERY_CACHE = new QueryCache({
   onError: (error, query) => {
     // Log errors for debugging
     console.error(`Query failed for key: ${JSON.stringify(query.queryKey)}`, error);
@@ -19,17 +19,19 @@ const queryCache = new QueryCache({
 // Create optimized query client with performance-focused defaults
 export const createOptimizedQueryClient = () => {
   return new QueryClient({
-    queryCache,
     defaultOptions: {
+      mutations: {
+        // Retry failed mutations only once
+        retry: 1,
+        retryDelay: 1000,
+      },
       queries: {
-        // Stale while revalidate strategy - serve cached data while fetching fresh data
-        staleTime: 5 * 60 * 1000, // 5 minutes
         gcTime: 10 * 60 * 1000, // 10 minutes (renamed from cacheTime in v5)
+        refetchInterval: false, // Disable automatic polling by default
+        refetchOnReconnect: "always", // Ensure fresh data on reconnect
 
         // Performance optimizations
         refetchOnWindowFocus: false, // Reduce unnecessary requests
-        refetchOnReconnect: "always", // Ensure fresh data on reconnect
-        refetchInterval: false, // Disable automatic polling by default
 
         // Retry configuration
         retry: (failureCount, error: any) => {
@@ -41,18 +43,20 @@ export const createOptimizedQueryClient = () => {
           return failureCount < 3;
         },
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      },
-      mutations: {
-        // Retry failed mutations only once
-        retry: 1,
-        retryDelay: 1000,
+        // Stale while revalidate strategy - serve cached data while fetching fresh data
+        staleTime: 5 * 60 * 1000, // 5 minutes
       },
     },
+    queryCache: QUERY_CACHE,
   });
 };
 
 // Cache invalidation utilities
 export const cacheUtils = {
+  // Clear all cached data (use sparingly)
+  clearAll: (queryClient: QueryClient) => {
+    queryClient.clear();
+  },
   // Invalidate all queries for a specific resource
   invalidateResource: (queryClient: QueryClient, resource: string) => {
     queryClient.invalidateQueries({
@@ -61,26 +65,12 @@ export const cacheUtils = {
     });
   },
 
-  // Optimistically update cache for better UX
-  updateCache: <T>(
-    queryClient: QueryClient,
-    queryKey: unknown[],
-    updater: (oldData: T | undefined) => T
-  ) => {
-    queryClient.setQueryData(queryKey, updater);
-  },
-
-  // Clear all cached data (use sparingly)
-  clearAll: (queryClient: QueryClient) => {
-    queryClient.clear();
-  },
-
   // Prefetch critical data
   prefetchCritical: async (queryClient: QueryClient) => {
     // Prefetch user profile and common data
     const criticalQueries = [
-      { queryKey: ["user", "profile"], enabled: false },
-      { queryKey: ["trips", "recent"], enabled: false },
+      { enabled: false, queryKey: ["user", "profile"] },
+      { enabled: false, queryKey: ["trips", "recent"] },
     ];
 
     await Promise.allSettled(
@@ -92,50 +82,58 @@ export const cacheUtils = {
       )
     );
   },
+
+  // Optimistically update cache for better UX
+  updateCache: <T>(
+    queryClient: QueryClient,
+    queryKey: unknown[],
+    updater: (oldData: T | undefined) => T
+  ) => {
+    queryClient.setQueryData(queryKey, updater);
+  },
 };
 
 // Query key factories for consistency
 export const queryKeys = {
-  // User-related queries
-  user: {
-    all: ["user"] as const,
-    profile: () => ["user", "profile"] as const,
-    settings: () => ["user", "settings"] as const,
-    apiKeys: () => ["user", "api-keys"] as const,
-  },
-
-  // Trip-related queries
-  trips: {
-    all: ["trips"] as const,
-    lists: () => ["trips", "list"] as const,
-    list: (filters: Record<string, unknown>) => ["trips", "list", filters] as const,
-    details: (id: string) => ["trips", "detail", id] as const,
-    recent: () => ["trips", "recent"] as const,
-  },
-
-  // Search-related queries
-  search: {
-    all: ["search"] as const,
-    flights: (params: Record<string, unknown>) =>
-      ["search", "flights", params] as const,
-    hotels: (params: Record<string, unknown>) => ["search", "hotels", params] as const,
-    activities: (params: Record<string, unknown>) =>
-      ["search", "activities", params] as const,
-    destinations: (query: string) => ["search", "destinations", query] as const,
+  // Agent-related queries
+  agents: {
+    all: ["agents"] as const,
+    metrics: (agentId: string) => ["agents", "metrics", agentId] as const,
+    status: () => ["agents", "status"] as const,
   },
 
   // Chat-related queries
   chat: {
     all: ["chat"] as const,
-    sessions: () => ["chat", "sessions"] as const,
-    session: (id: string) => ["chat", "session", id] as const,
     messages: (sessionId: string) => ["chat", "messages", sessionId] as const,
+    session: (id: string) => ["chat", "session", id] as const,
+    sessions: () => ["chat", "sessions"] as const,
   },
 
-  // Agent-related queries
-  agents: {
-    all: ["agents"] as const,
-    status: () => ["agents", "status"] as const,
-    metrics: (agentId: string) => ["agents", "metrics", agentId] as const,
+  // Search-related queries
+  search: {
+    activities: (params: Record<string, unknown>) =>
+      ["search", "activities", params] as const,
+    all: ["search"] as const,
+    destinations: (query: string) => ["search", "destinations", query] as const,
+    flights: (params: Record<string, unknown>) =>
+      ["search", "flights", params] as const,
+    hotels: (params: Record<string, unknown>) => ["search", "hotels", params] as const,
+  },
+
+  // Trip-related queries
+  trips: {
+    all: ["trips"] as const,
+    details: (id: string) => ["trips", "detail", id] as const,
+    list: (filters: Record<string, unknown>) => ["trips", "list", filters] as const,
+    lists: () => ["trips", "list"] as const,
+    recent: () => ["trips", "recent"] as const,
+  },
+  // User-related queries
+  user: {
+    all: ["user"] as const,
+    apiKeys: () => ["user", "api-keys"] as const,
+    profile: () => ["user", "profile"] as const,
+    settings: () => ["user", "settings"] as const,
   },
 };

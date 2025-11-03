@@ -60,10 +60,10 @@ function TripCard({ trip }: { trip: Trip }) {
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
     return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
       day: "numeric",
-      year: "numeric",
+      month: "short",
       timeZone: "UTC",
+      year: "numeric",
     });
   };
 

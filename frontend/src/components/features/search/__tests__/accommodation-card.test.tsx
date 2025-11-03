@@ -5,21 +5,21 @@ import { AccommodationCard } from "../accommodation-card";
 
 describe("AccommodationCard", () => {
   const mockAccommodation: Accommodation = {
-    id: "1",
-    name: "Luxury Beach Resort",
-    type: "Resort",
-    location: "Miami Beach, FL",
+    amenities: ["wifi", "pool", "gym", "spa", "restaurant", "parking", "breakfast"],
     checkIn: "2024-03-15",
     checkOut: "2024-03-18",
-    pricePerNight: 250,
-    totalPrice: 750,
-    rating: 4.8,
-    amenities: ["wifi", "pool", "gym", "spa", "restaurant", "parking", "breakfast"],
-    images: ["https://example.com/image1.jpg"],
     coordinates: {
       lat: 25.7907,
       lng: -80.13,
     },
+    id: "1",
+    images: ["https://example.com/image1.jpg"],
+    location: "Miami Beach, FL",
+    name: "Luxury Beach Resort",
+    pricePerNight: 250,
+    rating: 4.8,
+    totalPrice: 750,
+    type: "Resort",
   };
 
   it("should render accommodation details correctly", () => {

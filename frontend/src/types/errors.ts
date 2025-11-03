@@ -17,10 +17,10 @@ export const ErrorInfoSchema = z.object({
  * Zod schema for error details
  */
 export const ErrorDetailsSchema = z.object({
-  name: z.string(),
-  message: z.string(),
-  stack: z.string().optional(),
   digest: z.string().optional(),
+  message: z.string(),
+  name: z.string(),
+  stack: z.string().optional(),
 });
 
 /**
@@ -29,11 +29,11 @@ export const ErrorDetailsSchema = z.object({
 export const ErrorReportSchema = z.object({
   error: ErrorDetailsSchema,
   errorInfo: ErrorInfoSchema.optional(),
+  sessionId: z.string().optional(),
+  timestamp: z.string(),
   url: z.string(),
   userAgent: z.string(),
-  timestamp: z.string(),
   userId: z.string().optional(),
-  sessionId: z.string().optional(),
 });
 
 /**

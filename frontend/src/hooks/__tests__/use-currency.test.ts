@@ -18,8 +18,8 @@ vi.mock("zustand/middleware", () => ({
 vi.mock("@/hooks/use-api-query", () => ({
   useApiQuery: vi.fn().mockReturnValue({
     data: null,
-    isLoading: false,
     error: null,
+    isLoading: false,
     refetch: vi.fn(),
   }),
 }));
@@ -29,41 +29,41 @@ describe("Currency Hooks", () => {
   beforeEach(() => {
     act(() => {
       useCurrencyStore.setState({
+        baseCurrency: "USD",
         currencies: {
-          USD: {
-            code: "USD",
-            symbol: "$",
-            name: "US Dollar",
-            decimals: 2,
-            flag: "🇺🇸",
-          },
           EUR: {
             code: "EUR",
-            symbol: "€",
-            name: "Euro",
             decimals: 2,
             flag: "🇪🇺",
+            name: "Euro",
+            symbol: "€",
           },
           GBP: {
             code: "GBP",
-            symbol: "£",
-            name: "British Pound",
             decimals: 2,
             flag: "🇬🇧",
+            name: "British Pound",
+            symbol: "£",
+          },
+          USD: {
+            code: "USD",
+            decimals: 2,
+            flag: "🇺🇸",
+            name: "US Dollar",
+            symbol: "$",
           },
         },
-        baseCurrency: "USD",
         exchangeRates: {
           EUR: {
             baseCurrency: "USD",
-            targetCurrency: "EUR",
             rate: 0.85,
+            targetCurrency: "EUR",
             timestamp: "2025-05-20T12:00:00Z",
           },
           GBP: {
             baseCurrency: "USD",
-            targetCurrency: "GBP",
             rate: 0.75,
+            targetCurrency: "GBP",
             timestamp: "2025-05-20T12:00:00Z",
           },
         },
@@ -121,10 +121,10 @@ describe("Currency Hooks", () => {
 
       const newCurrency = {
         code: "JPY",
-        symbol: "¥",
-        name: "Japanese Yen",
         decimals: 0,
         flag: "🇯🇵",
+        name: "Japanese Yen",
+        symbol: "¥",
       };
 
       act(() => {
@@ -141,9 +141,9 @@ describe("Currency Hooks", () => {
 
       const invalidCurrency = {
         code: "INVALID", // Invalid code (too long)
-        symbol: "$",
-        name: "Invalid Currency",
         decimals: 2,
+        name: "Invalid Currency",
+        symbol: "$",
       };
 
       let success;

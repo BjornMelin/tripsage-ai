@@ -56,10 +56,10 @@ export function useLoading(options: UseLoadingOptions = {}): UseLoadingReturn {
   const { initialLoading = false, initialMessage, timeout, onTimeout } = options;
 
   const [state, setState] = useState<UseLoadingState>({
+    error: undefined,
     isLoading: initialLoading,
     message: initialMessage,
     progress: undefined,
-    error: undefined,
   });
 
   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -77,9 +77,9 @@ export function useLoading(options: UseLoadingOptions = {}): UseLoadingReturn {
     (message?: string) => {
       setState((prev) => ({
         ...prev,
+        error: undefined,
         isLoading: true,
         message,
-        error: undefined,
       }));
 
       // Set timeout if specified
@@ -138,25 +138,25 @@ export function useLoading(options: UseLoadingOptions = {}): UseLoadingReturn {
     }
 
     setState({
+      error: undefined,
       isLoading: false,
       message: undefined,
       progress: undefined,
-      error: undefined,
     });
   }, []);
 
   return {
+    clearError,
+    error: state.error,
     isLoading: state.isLoading,
     message: state.message,
     progress: state.progress,
-    error: state.error,
+    reset,
+    setError,
+    setMessage,
+    setProgress,
     startLoading,
     stopLoading,
-    setProgress,
-    setMessage,
-    setError,
-    clearError,
-    reset,
   };
 }
 
@@ -210,9 +210,9 @@ export function useAsyncLoading<T>(
 
   return {
     data,
-    isLoading,
     error,
     execute,
+    isLoading,
     reset,
   };
 }

@@ -3,32 +3,32 @@ import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
 // Validation schemas for UI state
-const ThemeSchema = z.enum(["light", "dark", "system"]);
-const NotificationTypeSchema = z.enum(["info", "success", "warning", "error"]);
-const LoadingStateSchema = z.enum(["idle", "loading", "success", "error"]);
+const THEME_SCHEMA = z.enum(["light", "dark", "system"]);
+const NOTIFICATION_TYPE_SCHEMA = z.enum(["info", "success", "warning", "error"]);
+const LOADING_STATE_SCHEMA = z.enum(["idle", "loading", "success", "error"]);
 
 export const NotificationSchema = z.object({
-  id: z.string(),
-  type: NotificationTypeSchema,
-  title: z.string(),
-  message: z.string().optional(),
-  duration: z.number().positive().optional(),
   action: z
     .object({
       label: z.string(),
       onClick: z.function().optional(),
     })
     .optional(),
-  isRead: z.boolean().default(false),
   createdAt: z.string(),
+  duration: z.number().positive().optional(),
+  id: z.string(),
+  isRead: z.boolean().default(false),
+  message: z.string().optional(),
+  title: z.string(),
+  type: NOTIFICATION_TYPE_SCHEMA,
 });
 
-export const LoadingStatesSchema = z.record(z.string(), LoadingStateSchema);
+export const LoadingStatesSchema = z.record(z.string(), LOADING_STATE_SCHEMA);
 
 // Types derived from schemas
-export type Theme = z.infer<typeof ThemeSchema>;
-export type NotificationType = z.infer<typeof NotificationTypeSchema>;
-export type LoadingState = z.infer<typeof LoadingStateSchema>;
+export type Theme = z.infer<typeof THEME_SCHEMA>;
+export type NotificationType = z.infer<typeof NOTIFICATION_TYPE_SCHEMA>;
+export type LoadingState = z.infer<typeof LOADING_STATE_SCHEMA>;
 export type Notification = z.infer<typeof NotificationSchema>;
 export type LoadingStates = z.infer<typeof LoadingStatesSchema>;
 
@@ -71,7 +71,7 @@ export interface CommandPaletteState {
 }
 
 // Complete UI store interface
-interface UIState {
+interface UiState {
   // Theme and appearance
   theme: Theme;
   isDarkMode: boolean;
@@ -147,164 +147,48 @@ interface UIState {
   setCommandPaletteResults: (results: CommandPaletteState["results"]) => void;
 
   // Feature flag actions
-  toggleFeature: (feature: keyof UIState["features"]) => void;
-  setFeature: (feature: keyof UIState["features"], enabled: boolean) => void;
+  toggleFeature: (feature: keyof UiState["features"]) => void;
+  setFeature: (feature: keyof UiState["features"], enabled: boolean) => void;
 
   // Utility actions
   reset: () => void;
 }
 
 // Helper functions
-const generateId = () =>
+const GENERATE_ID = () =>
   Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const getCurrentTimestamp = () => new Date().toISOString();
+const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
 
 // Default states
-const defaultSidebarState: SidebarState = {
-  isOpen: true,
+const DEFAULT_SIDEBAR_STATE: SidebarState = {
   isCollapsed: false,
+  isOpen: true,
   isPinned: true,
 };
 
-const defaultNavigationState: NavigationState = {
+const DEFAULT_NAVIGATION_STATE: NavigationState = {
   activeRoute: "/",
   breadcrumbs: [],
 };
 
-const defaultModalState: ModalState = {
-  isOpen: false,
+const DEFAULT_MODAL_STATE: ModalState = {
+  closeOnOverlayClick: true,
   component: null,
+  isOpen: false,
   props: {},
   size: "md",
-  closeOnOverlayClick: true,
 };
 
-const defaultCommandPaletteState: CommandPaletteState = {
+const DEFAULT_COMMAND_PALETTE_STATE: CommandPaletteState = {
   isOpen: false,
   query: "",
   results: [],
 };
 
-export const useUIStore = create<UIState>()(
+export const useUIStore = create<UiState>()(
   devtools(
     persist(
       (set, get) => ({
-        // Initial state
-        theme: "system",
-        get isDarkMode() {
-          const { theme } = get();
-          if (theme === "system") {
-            if (typeof window === "undefined") return false;
-
-            try {
-              const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-              return mediaQuery?.matches ?? false;
-            } catch {
-              // Fallback for test environments
-              return false;
-            }
-          }
-          return theme === "dark";
-        },
-
-        sidebar: defaultSidebarState,
-        navigation: defaultNavigationState,
-        loadingStates: {},
-        notifications: [],
-        modal: defaultModalState,
-        commandPalette: defaultCommandPaletteState,
-
-        features: {
-          enableAnimations: true,
-          enableSounds: false,
-          enableHaptics: true,
-          enableAnalytics: true,
-          enableBetaFeatures: false,
-        },
-
-        // Computed properties
-        get unreadNotificationCount() {
-          return get().notifications.filter((n) => !n.isRead).length;
-        },
-
-        get isLoading() {
-          return Object.values(get().loadingStates).some(
-            (state) => state === "loading"
-          );
-        },
-
-        // Theme actions
-        setTheme: (theme) => {
-          const result = ThemeSchema.safeParse(theme);
-          if (result.success) {
-            set({ theme: result.data });
-          } else {
-            console.error("Invalid theme:", result.error);
-          }
-        },
-
-        toggleTheme: () => {
-          const { theme } = get();
-          const nextTheme = theme === "light" ? "dark" : "light";
-          get().setTheme(nextTheme);
-        },
-
-        // Sidebar actions
-        toggleSidebar: () => {
-          set((state) => ({
-            sidebar: {
-              ...state.sidebar,
-              isOpen: !state.sidebar.isOpen,
-            },
-          }));
-        },
-
-        setSidebarOpen: (isOpen) => {
-          set((state) => ({
-            sidebar: {
-              ...state.sidebar,
-              isOpen,
-            },
-          }));
-        },
-
-        setSidebarCollapsed: (isCollapsed) => {
-          set((state) => ({
-            sidebar: {
-              ...state.sidebar,
-              isCollapsed,
-            },
-          }));
-        },
-
-        setSidebarPinned: (isPinned) => {
-          set((state) => ({
-            sidebar: {
-              ...state.sidebar,
-              isPinned,
-            },
-          }));
-        },
-
-        // Navigation actions
-        setActiveRoute: (route) => {
-          set((state) => ({
-            navigation: {
-              ...state.navigation,
-              activeRoute: route,
-            },
-          }));
-        },
-
-        setBreadcrumbs: (breadcrumbs) => {
-          set((state) => ({
-            navigation: {
-              ...state.navigation,
-              breadcrumbs,
-            },
-          }));
-        },
-
         addBreadcrumb: (breadcrumb) => {
           set((state) => ({
             navigation: {
@@ -314,40 +198,13 @@ export const useUIStore = create<UIState>()(
           }));
         },
 
-        // Loading state actions
-        setLoadingState: (key, state) => {
-          const result = LoadingStateSchema.safeParse(state);
-          if (result.success) {
-            set((currentState) => ({
-              loadingStates: {
-                ...currentState.loadingStates,
-                [key]: result.data,
-              },
-            }));
-          } else {
-            console.error("Invalid loading state:", result.error);
-          }
-        },
-
-        clearLoadingState: (key) => {
-          set((state) => {
-            const newLoadingStates = { ...state.loadingStates };
-            delete newLoadingStates[key];
-            return { loadingStates: newLoadingStates };
-          });
-        },
-
-        clearAllLoadingStates: () => {
-          set({ loadingStates: {} });
-        },
-
         // Notification actions
         addNotification: (notification) => {
-          const id = generateId();
+          const id = GENERATE_ID();
           const result = NotificationSchema.safeParse({
             ...notification,
+            createdAt: GET_CURRENT_TIMESTAMP(),
             id,
-            createdAt: getCurrentTimestamp(),
             isRead: notification.isRead ?? false,
           });
 
@@ -369,11 +226,67 @@ export const useUIStore = create<UIState>()(
           return "";
         },
 
-        removeNotification: (id) => {
+        clearAllLoadingStates: () => {
+          set({ loadingStates: {} });
+        },
+
+        clearAllNotifications: () => {
+          set({ notifications: [] });
+        },
+
+        clearLoadingState: (key) => {
+          set((state) => {
+            const newLoadingStates = { ...state.loadingStates };
+            delete newLoadingStates[key];
+            return { loadingStates: newLoadingStates };
+          });
+        },
+
+        closeCommandPalette: () => {
           set((state) => ({
-            notifications: state.notifications.filter((n) => n.id !== id),
+            commandPalette: {
+              ...state.commandPalette,
+              isOpen: false,
+              query: "",
+              results: [],
+            },
           }));
         },
+
+        closeModal: () => {
+          set({ modal: DEFAULT_MODAL_STATE });
+        },
+        commandPalette: DEFAULT_COMMAND_PALETTE_STATE,
+
+        features: {
+          enableAnalytics: true,
+          enableAnimations: true,
+          enableBetaFeatures: false,
+          enableHaptics: true,
+          enableSounds: false,
+        },
+        get isDarkMode() {
+          const { theme } = get();
+          if (theme === "system") {
+            if (typeof window === "undefined") return false;
+
+            try {
+              const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+              return mediaQuery?.matches ?? false;
+            } catch {
+              // Fallback for test environments
+              return false;
+            }
+          }
+          return theme === "dark";
+        },
+
+        get isLoading() {
+          return Object.values(get().loadingStates).some(
+            (state) => state === "loading"
+          );
+        },
+        loadingStates: {},
 
         markNotificationAsRead: (id) => {
           set((state) => ({
@@ -382,39 +295,9 @@ export const useUIStore = create<UIState>()(
             ),
           }));
         },
-
-        clearAllNotifications: () => {
-          set({ notifications: [] });
-        },
-
-        // Modal actions
-        openModal: (component, props = {}, options = {}) => {
-          set({
-            modal: {
-              isOpen: true,
-              component,
-              props,
-              size: options.size || "md",
-              closeOnOverlayClick: options.closeOnOverlayClick ?? true,
-            },
-          });
-        },
-
-        closeModal: () => {
-          set({ modal: defaultModalState });
-        },
-
-        updateModalProps: (props) => {
-          set((state) => ({
-            modal: {
-              ...state.modal,
-              props: {
-                ...state.modal.props,
-                ...props,
-              },
-            },
-          }));
-        },
+        modal: DEFAULT_MODAL_STATE,
+        navigation: DEFAULT_NAVIGATION_STATE,
+        notifications: [],
 
         // Command palette actions
         openCommandPalette: () => {
@@ -426,13 +309,52 @@ export const useUIStore = create<UIState>()(
           }));
         },
 
-        closeCommandPalette: () => {
+        // Modal actions
+        openModal: (component, props = {}, options = {}) => {
+          set({
+            modal: {
+              closeOnOverlayClick: options.closeOnOverlayClick ?? true,
+              component,
+              isOpen: true,
+              props,
+              size: options.size || "md",
+            },
+          });
+        },
+
+        removeNotification: (id) => {
           set((state) => ({
-            commandPalette: {
-              ...state.commandPalette,
-              isOpen: false,
-              query: "",
-              results: [],
+            notifications: state.notifications.filter((n) => n.id !== id),
+          }));
+        },
+
+        // Utility actions
+        reset: () => {
+          set({
+            commandPalette: DEFAULT_COMMAND_PALETTE_STATE,
+            loadingStates: {},
+            modal: DEFAULT_MODAL_STATE,
+            navigation: DEFAULT_NAVIGATION_STATE,
+            notifications: [],
+            sidebar: DEFAULT_SIDEBAR_STATE,
+          });
+        },
+
+        // Navigation actions
+        setActiveRoute: (route) => {
+          set((state) => ({
+            navigation: {
+              ...state.navigation,
+              activeRoute: route,
+            },
+          }));
+        },
+
+        setBreadcrumbs: (breadcrumbs) => {
+          set((state) => ({
+            navigation: {
+              ...state.navigation,
+              breadcrumbs,
             },
           }));
         },
@@ -455,6 +377,71 @@ export const useUIStore = create<UIState>()(
           }));
         },
 
+        setFeature: (feature, enabled) => {
+          set((state) => ({
+            features: {
+              ...state.features,
+              [feature]: enabled,
+            },
+          }));
+        },
+
+        // Loading state actions
+        setLoadingState: (key, state) => {
+          const result = LOADING_STATE_SCHEMA.safeParse(state);
+          if (result.success) {
+            set((currentState) => ({
+              loadingStates: {
+                ...currentState.loadingStates,
+                [key]: result.data,
+              },
+            }));
+          } else {
+            console.error("Invalid loading state:", result.error);
+          }
+        },
+
+        setSidebarCollapsed: (isCollapsed) => {
+          set((state) => ({
+            sidebar: {
+              ...state.sidebar,
+              isCollapsed,
+            },
+          }));
+        },
+
+        setSidebarOpen: (isOpen) => {
+          set((state) => ({
+            sidebar: {
+              ...state.sidebar,
+              isOpen,
+            },
+          }));
+        },
+
+        setSidebarPinned: (isPinned) => {
+          set((state) => ({
+            sidebar: {
+              ...state.sidebar,
+              isPinned,
+            },
+          }));
+        },
+
+        // Theme actions
+        setTheme: (theme) => {
+          const result = THEME_SCHEMA.safeParse(theme);
+          if (result.success) {
+            set({ theme: result.data });
+          } else {
+            console.error("Invalid theme:", result.error);
+          }
+        },
+
+        sidebar: DEFAULT_SIDEBAR_STATE,
+        // Initial state
+        theme: "system",
+
         // Feature flag actions
         toggleFeature: (feature) => {
           set((state) => ({
@@ -465,37 +452,49 @@ export const useUIStore = create<UIState>()(
           }));
         },
 
-        setFeature: (feature, enabled) => {
+        // Sidebar actions
+        toggleSidebar: () => {
           set((state) => ({
-            features: {
-              ...state.features,
-              [feature]: enabled,
+            sidebar: {
+              ...state.sidebar,
+              isOpen: !state.sidebar.isOpen,
             },
           }));
         },
 
-        // Utility actions
-        reset: () => {
-          set({
-            sidebar: defaultSidebarState,
-            navigation: defaultNavigationState,
-            loadingStates: {},
-            notifications: [],
-            modal: defaultModalState,
-            commandPalette: defaultCommandPaletteState,
-          });
+        toggleTheme: () => {
+          const { theme } = get();
+          const nextTheme = theme === "light" ? "dark" : "light";
+          get().setTheme(nextTheme);
+        },
+
+        // Computed properties
+        get unreadNotificationCount() {
+          return get().notifications.filter((n) => !n.isRead).length;
+        },
+
+        updateModalProps: (props) => {
+          set((state) => ({
+            modal: {
+              ...state.modal,
+              props: {
+                ...state.modal.props,
+                ...props,
+              },
+            },
+          }));
         },
       }),
       {
         name: "ui-storage",
         partialize: (state) => ({
-          // Only persist certain UI preferences
-          theme: state.theme,
+          features: state.features,
           sidebar: {
             isCollapsed: state.sidebar.isCollapsed,
             isPinned: state.sidebar.isPinned,
           },
-          features: state.features,
+          // Only persist certain UI preferences
+          theme: state.theme,
         }),
       }
     ),

@@ -8,63 +8,63 @@ import { z } from "zod";
  * Base memory schema
  */
 export const MemorySchema = z.object({
-  id: z.string(),
   content: z.string(),
-  type: z.string(),
-  userId: z.string(),
-  sessionId: z.string().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
   createdAt: z.string(),
+  id: z.string(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  sessionId: z.string().optional(),
+  type: z.string(),
   updatedAt: z.string(),
+  userId: z.string(),
 });
 
 /**
  * User preferences schema
  */
 export const UserPreferencesSchema = z.object({
-  destinations: z.array(z.string()).optional(),
+  accessibility_needs: z.array(z.string()).optional(),
+  accommodation_type: z.array(z.string()).optional(),
   activities: z.array(z.string()).optional(),
   budget_range: z
     .object({
-      min: z.number(),
-      max: z.number(),
       currency: z.string(),
+      max: z.number(),
+      min: z.number(),
     })
     .optional(),
-  travel_style: z.string().optional(),
-  accommodation_type: z.array(z.string()).optional(),
-  transportation_preferences: z.array(z.string()).optional(),
+  destinations: z.array(z.string()).optional(),
   dietary_restrictions: z.array(z.string()).optional(),
-  accessibility_needs: z.array(z.string()).optional(),
   language_preferences: z.array(z.string()).optional(),
   time_preferences: z
     .object({
       preferred_departure_times: z.array(z.string()).optional(),
-      trip_duration_preferences: z.array(z.string()).optional(),
       seasonality_preferences: z.array(z.string()).optional(),
+      trip_duration_preferences: z.array(z.string()).optional(),
     })
     .optional(),
+  transportation_preferences: z.array(z.string()).optional(),
+  travel_style: z.string().optional(),
 });
 
 /**
  * Memory insight schema
  */
 export const MemoryInsightSchema = z.object({
-  category: z.string(),
-  insight: z.string(),
-  confidence: z.number(),
-  relatedMemories: z.array(z.string()),
   actionable: z.boolean(),
+  category: z.string(),
+  confidence: z.number(),
+  insight: z.string(),
+  relatedMemories: z.array(z.string()),
 });
 
 /**
  * Conversation message schema
  */
 export const ConversationMessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]),
   content: z.string(),
-  timestamp: z.string().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  role: z.enum(["user", "assistant", "system"]),
+  timestamp: z.string().optional(),
 });
 
 /**
@@ -72,14 +72,14 @@ export const ConversationMessageSchema = z.object({
  */
 export const SearchMemoriesFiltersSchema = z
   .object({
-    type: z.array(z.string()).optional(),
     dateRange: z
       .object({
-        start: z.string(),
         end: z.string(),
+        start: z.string(),
       })
       .optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
+    type: z.array(z.string()).optional(),
   })
   .optional();
 
@@ -87,162 +87,162 @@ export const SearchMemoriesFiltersSchema = z
  * Search memories request schema
  */
 export const SearchMemoriesRequestSchema = z.object({
-  query: z.string(),
-  userId: z.string(),
   filters: SearchMemoriesFiltersSchema,
   limit: z.number().optional(),
+  query: z.string(),
   similarity_threshold: z.number().optional(),
+  userId: z.string(),
 });
 
 /**
  * Search memories response schema
  */
 export const SearchMemoriesResponseSchema = z.object({
-  success: z.boolean(),
   memories: z.array(
     z.object({
       memory: MemorySchema,
-      similarity_score: z.number(),
       relevance_reason: z.string(),
+      similarity_score: z.number(),
     })
   ),
-  total_found: z.number(),
   search_metadata: z.object({
     query_processed: z.string(),
     search_time_ms: z.number(),
     similarity_threshold_used: z.number(),
   }),
+  success: z.boolean(),
+  total_found: z.number(),
 });
 
 /**
  * Memory context response schema
  */
 export const MemoryContextResponseSchema = z.object({
-  success: z.boolean(),
   context: z.object({
-    userPreferences: UserPreferencesSchema,
-    recentMemories: z.array(MemorySchema),
     insights: z.array(MemoryInsightSchema),
+    recentMemories: z.array(MemorySchema),
     travelPatterns: z.object({
-      frequentDestinations: z.array(z.string()),
       averageBudget: z.number(),
+      frequentDestinations: z.array(z.string()),
       preferredTravelStyle: z.string(),
       seasonalPatterns: z.record(z.string(), z.array(z.string())),
     }),
+    userPreferences: UserPreferencesSchema,
   }),
   metadata: z.object({
-    totalMemories: z.number(),
     lastUpdated: z.string(),
+    totalMemories: z.number(),
   }),
+  success: z.boolean(),
 });
 
 /**
  * Update preferences request schema
  */
 export const UpdatePreferencesRequestSchema = z.object({
-  preferences: UserPreferencesSchema.partial(),
   merge_strategy: z.enum(["replace", "merge", "append"]).optional(),
+  preferences: UserPreferencesSchema.partial(),
 });
 
 /**
  * Update preferences response schema
  */
 export const UpdatePreferencesResponseSchema = z.object({
-  success: z.boolean(),
-  updated_preferences: UserPreferencesSchema,
   changes_made: z.array(z.string()),
   metadata: z.object({
     updated_at: z.string(),
     version: z.number(),
   }),
+  success: z.boolean(),
+  updated_preferences: UserPreferencesSchema,
 });
 
 /**
  * Add conversation memory request schema
  */
 export const AddConversationMemoryRequestSchema = z.object({
-  messages: z.array(ConversationMessageSchema),
-  userId: z.string(),
-  sessionId: z.string().optional(),
   context_type: z.string().optional(),
+  messages: z.array(ConversationMessageSchema),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  sessionId: z.string().optional(),
+  userId: z.string(),
 });
 
 /**
  * Add conversation memory response schema
  */
 export const AddConversationMemoryResponseSchema = z.object({
-  success: z.boolean(),
-  memories_created: z.array(z.string()),
   insights_generated: z.array(MemoryInsightSchema),
-  updated_preferences: UserPreferencesSchema.partial(),
+  memories_created: z.array(z.string()),
   metadata: z.object({
-    processing_time_ms: z.number(),
     extraction_method: z.string(),
+    processing_time_ms: z.number(),
   }),
+  success: z.boolean(),
+  updated_preferences: UserPreferencesSchema.partial(),
 });
 
 /**
  * Memory insights response schema
  */
 export const MemoryInsightsResponseSchema = z.object({
-  success: z.boolean(),
   insights: z.object({
-    travelPersonality: z.object({
-      type: z.string(),
-      confidence: z.number(),
-      description: z.string(),
-      keyTraits: z.array(z.string()),
-    }),
     budgetPatterns: z.object({
       averageSpending: z.record(z.string(), z.number()),
       spendingTrends: z.array(
         z.object({
           category: z.string(),
-          trend: z.enum(["increasing", "decreasing", "stable"]),
           percentage_change: z.number(),
+          trend: z.enum(["increasing", "decreasing", "stable"]),
         })
       ),
     }),
     destinationPreferences: z.object({
+      discoveryPatterns: z.array(z.string()),
       topDestinations: z.array(
         z.object({
           destination: z.string(),
-          visits: z.number(),
           lastVisit: z.string(),
           satisfaction_score: z.number().optional(),
+          visits: z.number(),
         })
       ),
-      discoveryPatterns: z.array(z.string()),
     }),
     recommendations: z.array(
       z.object({
-        type: z.enum(["destination", "activity", "budget", "timing"]),
-        recommendation: z.string(),
-        reasoning: z.string(),
         confidence: z.number(),
+        reasoning: z.string(),
+        recommendation: z.string(),
+        type: z.enum(["destination", "activity", "budget", "timing"]),
       })
     ),
+    travelPersonality: z.object({
+      confidence: z.number(),
+      description: z.string(),
+      keyTraits: z.array(z.string()),
+      type: z.string(),
+    }),
   }),
   metadata: z.object({
     analysis_date: z.string(),
-    data_coverage_months: z.number(),
     confidence_level: z.number(),
+    data_coverage_months: z.number(),
   }),
+  success: z.boolean(),
 });
 
 /**
  * Delete user memories response schema
  */
 export const DeleteUserMemoriesResponseSchema = z.object({
-  success: z.boolean(),
-  deleted_count: z.number(),
   backup_created: z.boolean(),
   backup_location: z.string().optional(),
+  deleted_count: z.number(),
   metadata: z.object({
     deletion_time: z.string(),
     user_id: z.string(),
   }),
+  success: z.boolean(),
 });
 
 // Type exports
