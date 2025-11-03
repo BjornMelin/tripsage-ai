@@ -273,6 +273,10 @@
                   {
                     "formats": ["camelCase", "snake_case"],
                     "selector": { "kind": "variable", "scope": "global" }
+                  },
+                  {
+                    "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"],
+                    "selector": { "kind": "objectLiteralProperty" }
                   }
                 ],
                 "requireAscii": true,
@@ -296,7 +300,12 @@
               "options": {
                 "conventions": [
                   {
-                    "formats": ["CONSTANT_CASE", "camelCase"],
+                    "match": "[A-Z].*",
+                    "formats": ["PascalCase"],
+                    "selector": { "kind": "const", "scope": "global" }
+                  },
+                  {
+                    "formats": ["camelCase"],
                     "selector": { "kind": "const", "scope": "global" }
                   },
                   {
@@ -304,8 +313,13 @@
                     "selector": { "kind": "function", "scope": "global" }
                   },
                   {
-                    "formats": ["PascalCase"],
-                    "selector": { "kind": "variable", "scope": "global" }
+                    "match": "use[A-Z].*",
+                    "formats": ["camelCase"],
+                    "selector": { "kind": "function" }
+                  },
+                  {
+                    "formats": ["camelCase", "PascalCase", "snake_case"],
+                    "selector": { "kind": "objectLiteralProperty" }
                   }
                 ],
                 "requireAscii": true,
