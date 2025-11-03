@@ -46,10 +46,10 @@ describe("RealtimeAuthProvider", () => {
     // Simulate login event
     const authCallback = mockOnAuthStateChange.mock.calls[0][0];
     authCallback("SIGNED_IN", {
-      access_token: token,
-      expires_in: 3600,
-      refresh_token: "refresh",
-      token_type: "bearer",
+      accessToken: token,
+      expiresIn: 3600,
+      refreshToken: "refresh",
+      tokenType: "bearer",
       user: { id: "user-id" },
     } as unknown as Session);
     expect(mockSetAuth).toHaveBeenCalledWith(token);

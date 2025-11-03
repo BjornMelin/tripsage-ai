@@ -34,7 +34,13 @@ vi.mock("@/lib/supabase/client", () => {
       auth: {
         getUser: async () => ({ data: { user: { id: "u1" } } }),
         onAuthStateChange: () => ({
-          data: { subscription: { unsubscribe: () => {} } },
+          data: {
+            subscription: {
+              unsubscribe: () => {
+                // Intentional no-op for cleanup mock
+              },
+            },
+          },
         }),
       },
     }),

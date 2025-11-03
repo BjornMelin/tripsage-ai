@@ -38,7 +38,9 @@ Object.defineProperty(window, "sessionStorage", {
 });
 
 // Mock console.error to avoid noise in tests
-const CONSOLE_ERROR_SPY = vi.spyOn(console, "error").mockImplementation(() => {});
+const CONSOLE_ERROR_SPY = vi.spyOn(console, "error").mockImplementation(() => {
+  // Intentional no-op to avoid noise in tests
+});
 
 describe("Next.js Error Boundaries Integration", () => {
   const mockError = new Error("Test integration error") as Error & {

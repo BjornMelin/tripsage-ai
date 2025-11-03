@@ -71,8 +71,12 @@ describe("React Key Props", () => {
       <SearchFilters
         type="accommodation"
         filters={mockFilters}
-        onApplyFilters={() => {}}
-        onResetFilters={() => {}}
+        onApplyFilters={() => {
+          // Intentional no-op for testing
+        }}
+        onResetFilters={() => {
+          // Intentional no-op for testing
+        }}
       />
     );
 

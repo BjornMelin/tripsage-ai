@@ -126,8 +126,8 @@ describe("handleChatNonStream", () => {
     const supabase = fakeSupabase("u4");
     const generateText = vi.fn(async () => ({
       content: [],
-      experimental_providerMetadata: undefined,
-      experimental_stream: undefined,
+      experimentalProviderMetadata: undefined,
+      experimentalStream: undefined,
       finishReason: "stop",
       messages: [],
       reasoning: [],
