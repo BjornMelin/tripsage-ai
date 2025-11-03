@@ -30,7 +30,7 @@ interface LinkProps {
 type UseUpcomingFlightsReturn = UseQueryResult<UpcomingFlight[], AppError>;
 
 // Helper function to create complete mock return value
-function createMockReturnValue(
+function CreateMockReturnValue(
   data: UpcomingFlight[],
   isLoading = false
 ): UseUpcomingFlightsReturn {
@@ -95,7 +95,7 @@ describe("UpcomingFlights", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     // Default: no flights, not loading
-    vi.mocked(useUpcomingFlights).mockReturnValue(createMockReturnValue([]));
+    vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue([]));
   });
 
   describe("Basic Rendering", () => {
@@ -114,7 +114,7 @@ describe("UpcomingFlights", () => {
 
   describe("Empty States", () => {
     it("should show empty state when no flights exist", () => {
-      vi.mocked(useUpcomingFlights).mockReturnValue(createMockReturnValue([]));
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue([]));
 
       render(<UpcomingFlights />);
 
@@ -122,7 +122,7 @@ describe("UpcomingFlights", () => {
     });
 
     it("should handle showEmpty prop correctly", () => {
-      vi.mocked(useUpcomingFlights).mockReturnValue(createMockReturnValue([]));
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue([]));
 
       const { rerender } = render(<UpcomingFlights showEmpty={false} />);
 
@@ -157,7 +157,7 @@ describe("UpcomingFlights", () => {
         },
       ];
 
-      vi.mocked(useUpcomingFlights).mockReturnValue(createMockReturnValue(flights));
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -205,7 +205,7 @@ describe("UpcomingFlights", () => {
         },
       ];
 
-      vi.mocked(useUpcomingFlights).mockReturnValue(createMockReturnValue(flights));
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -256,7 +256,7 @@ describe("UpcomingFlights", () => {
       // Mock the hook to return limited results based on the limit parameter
       vi.mocked(useUpcomingFlights).mockImplementation(
         ({ limit }: { limit?: number } = {}) =>
-          createMockReturnValue(flights.slice(0, limit ?? flights.length))
+          CreateMockReturnValue(flights.slice(0, limit ?? flights.length))
       );
 
       render(<UpcomingFlights limit={1} />);
@@ -289,7 +289,7 @@ describe("UpcomingFlights", () => {
           trip_name: "Test Trip",
         },
       ];
-      vi.mocked(useUpcomingFlights).mockReturnValue(createMockReturnValue(flights));
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
     });
 
     it("should display flight times", () => {
@@ -348,7 +348,7 @@ describe("UpcomingFlights", () => {
           trip_name: "Test Trip",
         },
       ];
-      vi.mocked(useUpcomingFlights).mockReturnValue(createMockReturnValue(flights));
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -377,7 +377,7 @@ describe("UpcomingFlights", () => {
           stops: 0,
         },
       ];
-      vi.mocked(useUpcomingFlights).mockReturnValue(createMockReturnValue(flights));
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -410,7 +410,7 @@ describe("UpcomingFlights", () => {
           trip_name: "Future Trip",
         },
       ];
-      vi.mocked(useUpcomingFlights).mockReturnValue(createMockReturnValue(flights));
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -440,7 +440,7 @@ describe("UpcomingFlights", () => {
           trip_name: "Today Trip",
         },
       ];
-      vi.mocked(useUpcomingFlights).mockReturnValue(createMockReturnValue(flights));
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -477,7 +477,7 @@ describe("UpcomingFlights", () => {
           trip_name: "Test Trip",
         },
       ];
-      vi.mocked(useUpcomingFlights).mockReturnValue(createMockReturnValue(flights));
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -504,7 +504,7 @@ describe("UpcomingFlights", () => {
           stops: 0,
         },
       ];
-      vi.mocked(useUpcomingFlights).mockReturnValue(createMockReturnValue(flights));
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 

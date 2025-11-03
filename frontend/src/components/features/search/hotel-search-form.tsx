@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Hotel search form component for searching hotels.
+ */
 "use client";
 
 import {
@@ -62,7 +65,7 @@ interface HotelSearchFormProps {
   showRecommendations?: boolean;
 }
 
-const AMENITIES = [
+const Amenities = [
   { icon: Wifi, id: "wifi", label: "Free WiFi" },
   { icon: Coffee, id: "breakfast", label: "Free Breakfast" },
   { icon: Car, id: "parking", label: "Free Parking" },
@@ -364,7 +367,7 @@ export function HotelSearchForm({
         <div className="space-y-3">
           <Label className="text-sm font-medium">Popular Amenities</Label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {AMENITIES.map((amenity) => {
+            {Amenities.map((amenity) => {
               const Icon = amenity.icon;
               const isSelected = searchParams.amenities.includes(amenity.id);
               return (

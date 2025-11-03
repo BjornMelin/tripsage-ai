@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Accommodation card component for displaying accommodation information.
+ */
 import {
   Car,
   Coffee,
@@ -20,7 +23,7 @@ interface AccommodationCardProps {
   onCompare?: (accommodation: Accommodation) => void;
 }
 
-const AMENITY_ICONS: Record<string, React.ReactNode> = {
+const AmenityIcons: Record<string, React.ReactNode> = {
   breakfast: <Coffee className="h-4 w-4" />,
   gym: <Dumbbell className="h-4 w-4" />,
   parking: <Car className="h-4 w-4" />,
@@ -85,7 +88,7 @@ export function AccommodationCard({
                 key={amenity}
                 className="flex items-center gap-1 text-xs text-muted-foreground"
               >
-                {AMENITY_ICONS[amenity] || (
+                {AmenityIcons[amenity] || (
                   <span className="h-4 w-4 rounded-full bg-muted" />
                 )}
                 <span className="capitalize">{amenity.replace("_", " ")}</span>

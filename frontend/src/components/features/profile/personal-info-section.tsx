@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Personal info section: update profile picture and personal details.
+ * UI only; server actions are stubbed.
+ */
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,7 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
 
-const PERSONAL_INFO_SCHEMA = z.object({
+const PersonalInfoSchema = z.object({
   bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
   displayName: z
     .string()
@@ -46,7 +51,7 @@ const PERSONAL_INFO_SCHEMA = z.object({
   website: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
 });
 
-type PersonalInfoFormData = z.infer<typeof PERSONAL_INFO_SCHEMA>;
+type PersonalInfoFormData = z.infer<typeof PersonalInfoSchema>;
 
 export function PersonalInfoSection() {
   const avatarInputId = useId();
@@ -63,7 +68,7 @@ export function PersonalInfoSection() {
       location: profile?.personalInfo?.location || "",
       website: profile?.personalInfo?.website || "",
     },
-    resolver: zodResolver(PERSONAL_INFO_SCHEMA),
+    resolver: zodResolver(PersonalInfoSchema),
   });
 
   const onSubmit = async (data: PersonalInfoFormData) => {

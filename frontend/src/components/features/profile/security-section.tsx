@@ -43,7 +43,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
 
-const PASSWORD_CHANGE_SCHEMA = z
+const PasswordChangeSchema = z
   .object({
     confirmPassword: z.string(),
     currentPassword: z.string().min(1, "Current password is required"),
@@ -60,7 +60,7 @@ const PASSWORD_CHANGE_SCHEMA = z
     path: ["confirmPassword"],
   });
 
-type PasswordChangeFormData = z.infer<typeof PASSWORD_CHANGE_SCHEMA>;
+type PasswordChangeFormData = z.infer<typeof PasswordChangeSchema>;
 
 interface SecurityDevice {
   id: string;
@@ -88,7 +88,7 @@ export function SecuritySection() {
       currentPassword: "",
       newPassword: "",
     },
-    resolver: zodResolver(PASSWORD_CHANGE_SCHEMA),
+    resolver: zodResolver(PasswordChangeSchema),
   });
 
   // Mock security devices data

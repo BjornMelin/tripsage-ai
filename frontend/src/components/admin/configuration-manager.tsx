@@ -98,7 +98,7 @@ interface PerformanceMetrics {
   sampleSize: number;
 }
 
-const AGENT_TYPES = [
+const AgentTypes = [
   {
     description: "Handles budget optimization and expense tracking",
     label: "Budget Agent",
@@ -116,7 +116,7 @@ const AGENT_TYPES = [
   },
 ];
 
-const MODEL_OPTIONS = ["gpt-4", "gpt-4-turbo", "gpt-5", "gpt-5-mini", "gpt-3.5-turbo"];
+const ModelOptions = ["gpt-4", "gpt-4-turbo", "gpt-5", "gpt-5-mini", "gpt-3.5-turbo"];
 
 /**
  * Agent configuration management component.
@@ -217,7 +217,7 @@ export default function ConfigurationManager() {
     setLoading(true);
     try {
       // Load configurations for all agent types
-      for (const agentType of AGENT_TYPES) {
+      for (const agentType of AgentTypes) {
         await Promise.all([
           loadAgentConfig(agentType.value),
           loadVersionHistory(agentType.value),
@@ -402,7 +402,7 @@ export default function ConfigurationManager() {
               <SelectValue placeholder="Select an agent to configure" />
             </SelectTrigger>
             <SelectContent>
-              {AGENT_TYPES.map((agent) => (
+              {AgentTypes.map((agent) => (
                 <SelectItem key={agent.value} value={agent.value}>
                   <div>
                     <div className="font-medium">{agent.label}</div>
@@ -474,7 +474,7 @@ export default function ConfigurationManager() {
                       <SelectValue placeholder="Select a model" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MODEL_OPTIONS.map((model) => (
+                      {ModelOptions.map((model) => (
                         <SelectItem key={model} value={model}>
                           {model}
                         </SelectItem>

@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Activity search form component for searching activities.
+ */
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,7 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import type { ActivitySearchParams } from "@/types/search";
 
-const ACTIVITY_SEARCH_FORM_SCHEMA = z.object({
+const ActivitySearchFormSchema = z.object({
   adults: z.number().min(1).max(20),
   categories: z.array(z.string()),
   children: z.number().min(0).max(10),
@@ -37,14 +40,14 @@ const ACTIVITY_SEARCH_FORM_SCHEMA = z.object({
   startDate: z.string().min(1, { message: "Start date is required" }),
 });
 
-type ActivitySearchFormValues = z.infer<typeof ACTIVITY_SEARCH_FORM_SCHEMA>;
+type ActivitySearchFormValues = z.infer<typeof ActivitySearchFormSchema>;
 
 interface ActivitySearchFormProps {
   onSearch?: (data: ActivitySearchParams) => void;
   initialValues?: Partial<ActivitySearchFormValues>;
 }
 
-const ACTIVITY_CATEGORIES = [
+const ActivityCategories = [
   { id: "outdoor", label: "Outdoor & Adventure" },
   { id: "cultural", label: "Cultural & Historical" },
   { id: "food", label: "Food & Drink" },
@@ -75,7 +78,7 @@ export function ActivitySearchForm({
       ...initialValues,
     },
     mode: "onChange",
-    resolver: zodResolver(ACTIVITY_SEARCH_FORM_SCHEMA),
+    resolver: zodResolver(ActivitySearchFormSchema),
   });
 
   function onSubmit(data: ActivitySearchFormValues) {
@@ -239,7 +242,7 @@ export function ActivitySearchForm({
                       Select the types of activities you're interested in
                     </FormDescription>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {ACTIVITY_CATEGORIES.map((category) => (
+                      {ActivityCategories.map((category) => (
                         <label
                           key={category.id}
                           className="flex items-center space-x-2 border rounded-md p-2 cursor-pointer hover:bg-accent"

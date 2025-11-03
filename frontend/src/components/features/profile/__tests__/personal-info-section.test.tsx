@@ -10,14 +10,14 @@ import { PersonalInfoSection } from "../personal-info-section";
 // Mock the stores and hooks
 vi.mock("@/stores/user-store");
 
-const MOCK_TOAST = vi.fn();
+const MockToast = vi.fn();
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({
-    toast: MOCK_TOAST,
+    toast: MockToast,
   }),
 }));
 
-const MOCK_USER = {
+const MockUser = {
   avatarUrl: "https://example.com/avatar.jpg",
   bio: "Travel enthusiast",
   displayName: "John Doe",
@@ -30,16 +30,16 @@ const MOCK_USER = {
   website: "https://johndoe.com",
 };
 
-const MOCK_UPDATE_USER = vi.fn();
+const MockUpdateUser = vi.fn();
 
 // TODO: Personal info validations, avatar upload, and update flows need final UI and store.
 describe.skip("PersonalInfoSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    MOCK_TOAST.mockClear();
+    MockToast.mockClear();
     (useUserProfileStore as any).mockReturnValue({
-      updateUser: MOCK_UPDATE_USER,
-      user: MOCK_USER,
+      updateUser: MockUpdateUser,
+      user: MockUser,
     });
   });
 
@@ -56,8 +56,8 @@ describe.skip("PersonalInfoSection", () => {
 
   it("renders avatar with user initials when no avatar URL", () => {
     (useUserProfileStore as any).mockReturnValue({
-      updateUser: MOCK_UPDATE_USER,
-      user: { ...MOCK_USER, avatarUrl: undefined },
+      updateUser: MockUpdateUser,
+      user: { ...MockUser, avatarUrl: undefined },
     });
 
     render(<PersonalInfoSection />);
@@ -109,7 +109,7 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(MOCK_UPDATE_USER).toHaveBeenCalledWith({
+      expect(MockUpdateUser).toHaveBeenCalledWith({
         bio: "Travel enthusiast",
         displayName: "John Doe",
         firstName: "John",
@@ -133,7 +133,7 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.change(fileInput, { target: { files: [invalidFile] } });
 
     await waitFor(() => {
-      expect(MOCK_TOAST).toHaveBeenCalledWith({
+      expect(MockToast).toHaveBeenCalledWith({
         description: "Please select an image file.",
         title: "Invalid file type",
         variant: "destructive",
@@ -154,7 +154,7 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.change(fileInput, { target: { files: [largeFile] } });
 
     await waitFor(() => {
-      expect(MOCK_TOAST).toHaveBeenCalledWith({
+      expect(MockToast).toHaveBeenCalledWith({
         description: "Please select an image smaller than 5MB.",
         title: "File too large",
         variant: "destructive",
@@ -176,13 +176,13 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.change(fileInput, { target: { files: [validFile] } });
 
     await waitFor(() => {
-      expect(MOCK_UPDATE_USER).toHaveBeenCalledWith({
+      expect(MockUpdateUser).toHaveBeenCalledWith({
         avatarUrl: "mocked-url",
       });
     });
 
     await waitFor(() => {
-      expect(MOCK_TOAST).toHaveBeenCalledWith({
+      expect(MockToast).toHaveBeenCalledWith({
         description: "Your profile picture has been successfully updated.",
         title: "Avatar updated",
       });
@@ -214,8 +214,8 @@ describe.skip("PersonalInfoSection", () => {
 
     testCases.forEach(({ user, expected }) => {
       (useUserProfileStore as any).mockReturnValue({
-        updateUser: MOCK_UPDATE_USER,
-        user: { ...MOCK_USER, ...user },
+        updateUser: MockUpdateUser,
+        user: { ...MockUser, ...user },
       });
 
       render(<PersonalInfoSection />);
@@ -241,7 +241,7 @@ describe.skip("PersonalInfoSection", () => {
 
   it("handles form submission error", async () => {
     // Mock a rejected promise to simulate error
-    MOCK_UPDATE_USER.mockRejectedValueOnce(new Error("Network error"));
+    MockUpdateUser.mockRejectedValueOnce(new Error("Network error"));
 
     render(<PersonalInfoSection />);
 
@@ -249,7 +249,7 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(MOCK_TOAST).toHaveBeenCalledWith({
+      expect(MockToast).toHaveBeenCalledWith({
         description: "Failed to update profile. Please try again.",
         title: "Error",
         variant: "destructive",

@@ -42,11 +42,11 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
 
-const EMAIL_UPDATE_SCHEMA = z.object({
+const EmailUpdateSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
 });
 
-type EmailUpdateFormData = z.infer<typeof EMAIL_UPDATE_SCHEMA>;
+type EmailUpdateFormData = z.infer<typeof EmailUpdateSchema>;
 
 /**
  * Account settings panel component.
@@ -60,7 +60,7 @@ export function AccountSettingsSection() {
     defaultValues: {
       email: profile?.email || "",
     },
-    resolver: zodResolver(EMAIL_UPDATE_SCHEMA),
+    resolver: zodResolver(EmailUpdateSchema),
   });
 
   // TODO: Wire to auth email change; reflect verification state.

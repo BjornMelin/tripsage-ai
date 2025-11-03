@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Preferences section: update currency, language, timezone, and units.
+ * UI only; server actions are stubbed.
+ */
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,7 +38,7 @@ import { useCurrencyStore } from "@/stores/currency-store";
 import { useUserProfileStore } from "@/stores/user-store";
 import type { CurrencyCode } from "@/types/currency";
 
-const PREFERENCES_SCHEMA = z.object({
+const PreferencesSchema = z.object({
   currency: z.string().min(1, "Please select a currency"),
   dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]),
   language: z.string().min(1, "Please select a language"),
@@ -43,7 +48,7 @@ const PREFERENCES_SCHEMA = z.object({
   units: z.enum(["metric", "imperial"]),
 });
 
-type PreferencesFormData = z.infer<typeof PREFERENCES_SCHEMA>;
+type PreferencesFormData = z.infer<typeof PreferencesSchema>;
 
 export function PreferencesSection() {
   const { profile: _profile } = useUserProfileStore();
@@ -60,7 +65,7 @@ export function PreferencesSection() {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       units: "metric",
     },
-    resolver: zodResolver(PREFERENCES_SCHEMA),
+    resolver: zodResolver(PreferencesSchema),
   });
 
   const onSubmit = async (data: PreferencesFormData) => {
