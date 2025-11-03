@@ -216,6 +216,7 @@ export async function handleChatStream(
         // Provide a resumable id to help clients reattach to ongoing streams.
         return {
           requestId: reqId,
+          provider: provider.provider,
           model: provider.modelId,
           reasons,
           // `resumableId` duplicates `requestId` but is specifically used by the AI SDK client
@@ -225,6 +226,7 @@ export async function handleChatStream(
       }
       if (part.type === "finish") {
         const meta = {
+          provider: provider.provider,
           totalTokens: part.totalUsage?.totalTokens ?? undefined,
           inputTokens: part.totalUsage?.inputTokens ?? undefined,
           outputTokens: part.totalUsage?.outputTokens ?? undefined,
