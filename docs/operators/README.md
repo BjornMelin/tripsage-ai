@@ -12,7 +12,8 @@
 - [Deployment Guide](./deployment-guide.md) - Production deployment checklist and procedures
 - [Deployment Guide Full](./deployment-guide-full.md) - Complete deployment for all environments with CI/CD, monitoring, and cloud platforms
 - [Configuration Management](./configuration-management.md) - Modern Pydantic-based configuration system with security
-- [Supabase Configuration](./supabase-configuration.md) - Database setup and extensions
+- [Supabase Configuration](./supabase-configuration.md) - Database concepts, security, and troubleshooting
+- [Manual Supabase Operations](./supabase-manual-operations.md) - Manual setup and operations when Vercel integration isn't available
 
 ### Security & Authentication
 
