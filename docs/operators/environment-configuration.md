@@ -1,496 +1,241 @@
-# 🌍 TripSage Environment Configuration
+# Environment Configuration
 
-> **Centralized Environment Variable Reference**
-> All configuration settings organized by service and environment
+> **TripSage Environment Variables Reference**
+> Configuration settings for all services and environments
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Environment Variable Reference](#environment-variable-reference)
-- [Configuration by Service](#configuration-by-service)
-- [Development vs Production](#development-vs-production)
-- [Validation and Testing](#validation-and-testing)
+- [Core Configuration](#core-configuration)
+- [Database Configuration](#database-configuration)
+- [AI Services](#ai-services)
+- [Rate Limiting](#rate-limiting)
+- [Monitoring](#monitoring)
+- [Google Maps](#google-maps)
+- [Environment Examples](#environment-examples)
+- [Validation](#validation)
 
 ---
 
-## Environment Variable Reference
+## Core Configuration
 
 ```bash
-# Environment
-ENVIRONMENT=development  # Options: development, staging, production
+# Environment & Core
+ENVIRONMENT=development  # Options: development, production, test, testing
+DEBUG=false  # Set to true only for development
+LOG_LEVEL=INFO  # Logging level
 
 # API Configuration
-API_HOST=0.0.0.0
-API_PORT=8000
-DEBUG=false  # Set to true only for development
+API_TITLE=TripSage API
+API_VERSION=1.0.0
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+CORS_CREDENTIALS=true
 
 # Security
-SECRET_KEY=your-secret-key-here  # Use strong random key for production
-CORS_ORIGINS=http://localhost:3000,https://yourdomain.com
-
+SECRET_KEY=your-application-secret-key  # Strong random key for production
 ```
 
 ## Database Configuration
 
-### Supabase + pgvector (Primary Database)
+### Supabase (Primary Database)
 
 ```bash
 # Supabase Configuration
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key  # For admin operations
+DATABASE_URL=https://your-project.supabase.co  # Supabase project URL
+DATABASE_PUBLIC_KEY=your-anon-key  # Supabase public anon key
+DATABASE_SERVICE_KEY=your-service-role-key  # Service role key for admin operations
+DATABASE_JWT_SECRET=your-jwt-secret  # JWT secret for token validation
 
-# Connection Settings
-SUPABASE_TIMEOUT=30
-SUPABASE_POOL_SIZE=20
-SUPABASE_MAX_OVERFLOW=30
-
-# pgvector Extension (enabled by default in Supabase)
-VECTOR_DIMENSION=1536  # OpenAI embedding dimension
+# Optional PostgreSQL direct connection (overrides DATABASE_URL if provided)
+POSTGRES_URL=postgresql://user:password@host:port/database
 ```
 
-### Upstash Redis (Serverless Cache)
+### Redis/Cache Configuration
 
 ```bash
-# Upstash Redis Configuration (HTTP)
-UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
-UPSTASH_REDIS_REST_TOKEN=<token>
+# Redis Connection (optional, for direct Redis connections)
+REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=your-redis-password
+REDIS_MAX_CONNECTIONS=50
 
-# For production with authentication
-UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
-
-# For SSL/TLS (recommended for production)
-UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
-
-# Connection Pool Settings (TCP Redis)
-REDIS_POOL_SIZE=20
-REDIS_POOL_TIMEOUT=5
+# Upstash Redis (HTTP) - Preferred for serverless deployments
+UPSTASH_REDIS_REST_URL=https://<id>.upstash.io  # Upstash REST URL
+UPSTASH_REDIS_REST_TOKEN=<token>  # Upstash REST token
 ```
 
-## Memory System (Mem0)
-
-```bash
-# Mem0 Configuration
-MEM0_API_KEY=your-mem0-api-key
-MEM0_BASE_URL=https://api.mem0.ai
-MEM0_TIMEOUT=30
-
-# Memory Configuration
-MEMORY_EMBEDDING_MODEL=text-embedding-3-small
-MEMORY_VECTOR_STORE=supabase  # Uses pgvector in Supabase
-MEMORY_GRAPH_STORE=supabase   # Unified storage approach
-```
-
-## AI & Orchestration (LangGraph)
+## AI Services
 
 ```bash
 # OpenAI Configuration
-OPENAI_API_KEY=sk-your-openai-api-key
-OPENAI_MODEL=gpt-5
+OPENAI_API_KEY=sk-your-openai-api-key  # OpenAI API key
+OPENAI_MODEL=gpt-5  # Default OpenAI model
+MODEL_TEMPERATURE=0.7  # Default temperature for AI responses
 
-# LangGraph Orchestration
+# LangGraph Features (comma-separated)
 LANGGRAPH_FEATURES=conversation_memory,advanced_routing,memory_updates,error_recovery
-LANGGRAPH_DEFAULT_MODEL=gpt-5
-LANGGRAPH_TEMPERATURE=0.7
-LANGGRAPH_MAX_TOKENS=4096
 
-# LangSmith (optional monitoring)
-LANGSMITH_PROJECT=tripsage-langgraph
-LANGSMITH_API_KEY=your-langsmith-api-key
+# OpenRouter Attribution (optional)
+OPENROUTER_REFERER=your-referer-url
+OPENROUTER_TITLE=your-app-title
 ```
 
-## BYOK (Bring Your Own Key) System
-
-The BYOK system allows users to provide their own API keys for external services. These are stored securely in the database per user.
-
-### User-Provided API Keys (Stored in Database)
+## Rate Limiting
 
 ```bash
-# Listed here for reference only:
+# Rate Limiting Configuration
+RATE_LIMIT_ENABLED=true  # Enable rate limiting middleware
+RATE_LIMIT_REQUESTS_PER_MINUTE=60  # Default requests per minute
+RATE_LIMIT_REQUESTS_PER_HOUR=1000  # Default requests per hour
+RATE_LIMIT_REQUESTS_PER_DAY=10000  # Default requests per day
+RATE_LIMIT_BURST_SIZE=10  # Burst size for token bucket
 
-# Flight APIs
-# - DUFFEL_ACCESS_TOKEN (user-provided, if you implement per-user Duffel access)
+# Rate Limiting Strategy (comma-separated)
+RATE_LIMIT_STRATEGY=sliding_window,token_bucket,burst_protection
 
-# Map/Location APIs  
-# - GOOGLE_MAPS_API_KEY (user-provided)
-# - GOOGLE_CALENDAR_API_KEY (user-provided)
+# Rate Limiting Monitoring
+RATE_LIMIT_ENABLE_MONITORING=true  # Enable rate limit monitoring
 
-# Weather APIs
-# - OPENWEATHERMAP_API_KEY (user-provided)
-# - VISUAL_CROSSING_API_KEY (user-provided)
-
-# Web Crawling
-# - CRAWL4AI_API_KEY (user-provided, optional - has free tier)
-
-# Accommodation APIs
-# - Airbnb uses MCP server (no API key needed)
+# Outbound HTTP Limits
+OUTBOUND_DEFAULT_QPM=60.0  # Default queries per minute for outbound HTTP
 ```
 
-## External Service SDKs
-
-### Flight Service (Duffel API v2)
+## Monitoring
 
 ```bash
-# Provider configuration (used by the built-in DuffelProvider)
-DUFFEL_ACCESS_TOKEN=your_duffel_access_token
-# Optional legacy alias also supported by the DI factory:
-# DUFFEL_ACCESS_TOKEN=your_duffel_access_token
-# Base URL and timeouts are sensible defaults; override only if needed.
-# DUFFEL_BASE_URL=https://api.duffel.com
-# DUFFEL_TIMEOUT=30
-```
+# Database Monitoring
+ENABLE_DATABASE_MONITORING=true  # Enable database connection monitoring
+ENABLE_SECURITY_MONITORING=true  # Enable security event monitoring
+ENABLE_AUTO_RECOVERY=true  # Enable automatic database recovery
 
-### Google Services SDK
-
-```bash
-# Google Maps/Calendar SDK Configuration
-GOOGLE_API_BASE_URL=https://maps.googleapis.com
-GOOGLE_CALENDAR_BASE_URL=https://www.googleapis.com/calendar
-GOOGLE_TIMEOUT=15
-GOOGLE_RATE_LIMIT=2000  # requests per day default
-```
-
-### Weather Services SDK
-
-```bash
-# OpenWeatherMap SDK Configuration
-OPENWEATHERMAP_BASE_URL=https://api.openweathermap.org
-OPENWEATHERMAP_TIMEOUT=10
-
-# Visual Crossing SDK Configuration
-VISUAL_CROSSING_BASE_URL=https://weather.visualcrossing.com
-VISUAL_CROSSING_TIMEOUT=10
-```
-
-### Web Crawling (Crawl4AI SDK)
-
-```bash
-# Crawl4AI Configuration
-CRAWL4AI_BASE_URL=https://api.crawl4ai.com
-CRAWL4AI_TIMEOUT=60
-CRAWL4AI_MAX_PAGES=100  # per crawl session
-CRAWL4AI_RATE_LIMIT=50  # requests per minute
-```
-
-## MCP Integration (Airbnb Only)
-
-```bash
-# Airbnb MCP Server (only remaining MCP integration)
-AIRBNB_MCP_SERVER_PATH=/path/to/airbnb-mcp-server
-AIRBNB_MCP_TIMEOUT=30
-AIRBNB_MCP_RETRY_ATTEMPTS=3
-```
-
-## Frontend Configuration (Next.js 15)
-
-```bash
-# Next.js Environment Variables
-NEXT_PUBLIC_API_URL=http://localhost:8000  # Backend API URL
-# Realtime uses supabase-js with project URL/anon key; no separate Realtime URL required
-NEXT_PUBLIC_ENVIRONMENT=development
-
-# Authentication
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-nextauth-secret
-
-# Supabase Frontend Client
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-```
-
-## Production Environment
-
-### Security Configuration
-
-```bash
-# Production Security Settings
-ENVIRONMENT=production
-DEBUG=false
-SECRET_KEY=your-production-secret-key  # Strong random key
-CORS_ORIGINS=https://yourdomain.com
-ALLOWED_HOSTS=yourdomain.com,api.yourdomain.com
-
-# SSL/TLS
-SSL_REDIRECT=true
-SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https
-```
-
-### Production Database
-
-```bash
-# Production Supabase
-SUPABASE_URL=https://your-prod-project.supabase.co
-SUPABASE_ANON_KEY=your-prod-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-prod-service-role-key
-
-# Production Upstash Redis
-UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
-```
-
-### Production Monitoring
-
-```bash
-# Logging
-LOG_LEVEL=INFO
-LOG_FORMAT=json
-SENTRY_DSN=your-sentry-dsn  # Error tracking
-
-# Metrics
-PROMETHEUS_ENABLED=true
-PROMETHEUS_PORT=9090
-
-# Health Checks
-HEALTH_CHECK_TIMEOUT=5
+# Database Health Checks
+DB_HEALTH_CHECK_INTERVAL=30.0  # Health check interval in seconds
+DB_SECURITY_CHECK_INTERVAL=60.0  # Security check interval in seconds
+DB_MAX_RECOVERY_ATTEMPTS=3  # Maximum recovery attempts
+DB_RECOVERY_DELAY=5.0  # Delay between recovery attempts
 
 # OpenTelemetry Instrumentation (comma-separated)
-OTEL_INSTRUMENTATION=fastapi,asgi,httpx,redis
+OTEL_INSTRUMENTATION=  # fastapi,asgi,httpx,redis
+
+# API Key Caching
+ENABLE_API_KEY_CACHING=false  # Enable caching for API key validations
 ```
 
-## Testing Environment
+## Google Maps
+
+```bash
+# Google Maps Platform API Key
+GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+
+# Google Maps Configuration
+GOOGLE_MAPS_TIMEOUT=10.0  # Combined connect+read timeout in seconds
+GOOGLE_MAPS_RETRY_TIMEOUT=60  # Total retry timeout across requests
+GOOGLE_MAPS_QUERIES_PER_SECOND=10  # Client-side QPS throttle
+```
+
+## Frontend Configuration (Next.js 16)
+
+```bash
+# Next.js Environment Variables (set via deployment platform)
+NEXT_PUBLIC_ENVIRONMENT=development
+```
+
+## Environment Examples
+
+### Production Configuration
+
+```bash
+# Production Environment
+ENVIRONMENT=production
+DEBUG=false
+LOG_LEVEL=INFO
+
+# Production Database
+DATABASE_URL=https://your-prod-project.supabase.co
+DATABASE_PUBLIC_KEY=your-prod-anon-key
+DATABASE_SERVICE_KEY=your-prod-service-role-key
+DATABASE_JWT_SECRET=your-prod-jwt-secret
+
+# Production Redis
+UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
+UPSTASH_REDIS_REST_TOKEN=<token>
+
+# Production AI Services
+OPENAI_API_KEY=sk-your-production-openai-key
+
+# Production Google Maps (if used)
+GOOGLE_MAPS_API_KEY=your-production-google-maps-key
+```
+
+### Development Configuration
+
+```bash
+# Development Environment
+ENVIRONMENT=development
+DEBUG=true
+LOG_LEVEL=DEBUG
+
+# Development Database (use test values or local Supabase)
+DATABASE_URL=https://test.supabase.com
+DATABASE_PUBLIC_KEY=test-public-key
+DATABASE_SERVICE_KEY=test-service-key
+DATABASE_JWT_SECRET=test-jwt-secret
+
+# Development AI Services (use test keys)
+OPENAI_API_KEY=sk-test-1234567890
+
+# Optional Redis for development
+UPSTASH_REDIS_REST_URL=https://<dev-id>.upstash.io
+UPSTASH_REDIS_REST_TOKEN=<dev-token>
+```
 
 ### Test Configuration
 
 ```bash
-# Test Environment (.env.test)
+# Test Environment
 ENVIRONMENT=test
 DEBUG=true
 
 # Test Database (separate from development)
-SUPABASE_URL=https://your-test-project.supabase.co
-SUPABASE_ANON_KEY=your-test-anon-key
-
-# Test Cache (in-memory)
-# For local-only dev, prefer in-memory cache for tests
-
-# Mock API Keys for Testing
-TEST_DUFFEL_ACCESS_TOKEN=test_access_token_123
-TEST_GOOGLE_MAPS_API_KEY=test_key_456
-TEST_OPENWEATHERMAP_API_KEY=test_key_789
+DATABASE_URL=https://test-project.supabase.co
+DATABASE_PUBLIC_KEY=test-anon-key
+DATABASE_SERVICE_KEY=test-service-key
+DATABASE_JWT_SECRET=test-jwt-secret
 ```
 
-### Test Data
-
-```bash
-# Test User Configuration
-TEST_USER_EMAIL=test@example.com
-TEST_USER_PASSWORD=testpassword123
-
-# Mock External APIs
-MOCK_EXTERNAL_APIS=true  # Use mocks instead of real APIs
-```
-
-## Performance Configuration
-
-### Connection Pooling
-
-```bash
-# Database Connection Pool
-SUPABASE_POOL_SIZE=20
-SUPABASE_MAX_OVERFLOW=30
-SUPABASE_POOL_TIMEOUT=30
-
-# Cache Connection Pool (Redis)
-REDIS_POOL_SIZE=20
-REDIS_POOL_TIMEOUT=5
-```
-
-### Rate Limiting
-
-```bash
-# Rate Limiting Configuration
-RATE_LIMIT_ENABLED=true
-
-# Default Rate Limits (per API key/user)
-RATE_LIMIT_REQUESTS_PER_MINUTE=60
-RATE_LIMIT_REQUESTS_PER_HOUR=1000
-RATE_LIMIT_REQUESTS_PER_DAY=10000
-RATE_LIMIT_BURST_SIZE=10
-
-# Consolidated Rate Limiting Strategy (comma-separated)
-RATE_LIMIT_STRATEGY=sliding_window,token_bucket,burst_protection
-
-# Monitoring
-RATE_LIMIT_ENABLE_MONITORING=true
-```
-
-## Security Best Practices
-
-### Secret Management
-
-```bash
-# Development: Use .env files
-# Production: Use secure secret management
-# - AWS Secrets Manager
-# - Azure Key Vault  
-# - Google Secret Manager
-# - Kubernetes Secrets
-```
-
-### Database Security
-
-```bash
-# Supabase Security
-# - Enable Row Level Security (RLS)
-# - Use service role key only for admin operations
-# - Rotate keys quarterly
-# - Monitor usage with Supabase Analytics
-
-# API Key Security
-# - Store user API keys encrypted in database
-# - Use AES-256 encryption
-# - Never log API keys
-# - Implement key rotation reminders
-```
-
-### Network Security
-
-```bash
-# Production Network Security
-# - Use SSL/TLS for all connections
-# - Restrict database access to application servers
-# - Use VPC/private networks where possible
-# - Implement IP whitelisting for admin access
-```
-
-## Validation and Health Checks
-
-### Startup Validation
-
-The system validates all configuration at startup:
-
-1. **Database Connection**: Tests Supabase connectivity
-2. **Cache Connection**: Tests Upstash Redis connectivity  
-3. **Memory System**: Validates Mem0 API access
-4. **External APIs**: Tests connectivity to required services
-5. **Environment**: Validates all required variables are set
-
-### Health Check Endpoints
-
-```bash
-# Health check URLs
-GET /health              # Basic health check
-GET /health/detailed     # Detailed component status
-GET /health/database     # Database connectivity
-GET /health/cache        # Cache connectivity
-GET /health/external     # External API status
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**Database Connection Failed:**
-
-```bash
-# Check Supabase URL format
-SUPABASE_URL=https://your-project.supabase.co  # Must be HTTPS
-
-# Verify API keys
-SUPABASE_ANON_KEY=eyJ...  # Should be JWT format, >100 characters
-```
-
-**Cache Connection Failed:**
-
-```bash
-# Check Upstash URL format
-UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
-
-# For authentication
-UPSTASH_REDIS_REST_URL=https://<id>.upstash.io
-```
-
-**BYOK API Key Issues:**
-
-```bash
-# User API keys are stored in database, not environment
-# Verify key encryption/decryption is working
-```
-
-### Debug Commands
-
-**Check System Health:**
-
-```bash
-curl http://localhost:8000/health/detailed
-```
-
-**Test Database Connection:**
-
-```python
-from tripsage_core.services.infrastructure.database_service import DatabaseService
-db = DatabaseService()
-await db.health_check()
-```
-
-**Test Cache Connection:**
-
-```python
-from tripsage_core.services.infrastructure.cache_service import CacheService
-cache = CacheService()
-await cache.health_check()
-```
-
-## Migration from Legacy
-
-This unified architecture represents the complete migration from the previous MCP-heavy architecture. All feature flags have been removed, and the system now uses:
-
-- **7 Direct SDKs**: Duffel, Google Maps/Calendar, OpenWeatherMap, Visual Crossing, Crawl4AI, Mem0
-- **1 MCP Integration**: Airbnb (unofficial API, remains MCP)
-- **Unified Storage**: Supabase + pgvector for both relational and vector data
-- **Serverless Cache**: Upstash Redis (HTTP)
-- **BYOK Security**: User-provided API keys stored encrypted in database
-
-The migration is complete and production-ready.
-
-## Configuration by Service
-
-### Database Services
-
-- **Supabase**: Primary database with pgvector extensions
-- **Upstash Redis**: Serverless caching layer
-
-### External APIs
-
-- **Duffel**: Flight booking and search
-- **Google Maps/Calendar**: Location and calendar services
-- **OpenWeatherMap/Visual Crossing**: Weather data
-- **Crawl4AI**: Web scraping capabilities
-- **Mem0**: Memory and embedding services
-
-### MCP Integrations
-
-- **Airbnb**: Accommodation search (unofficial API)
-
-## Development vs Production
-
-### Development Environment
-
-- Use `.env.development` for local development
-- Enable DEBUG mode for detailed logging
-- Use test API keys where possible
-- No local cache service needed (managed Upstash)
-
-### Production Environment (Vercel)
-
-- Use `.env.production` with real credentials
-- Disable DEBUG mode
-- Use production Supabase instance
-- Enable all security features
-
-## Validation and Testing
+## Validation
 
 ### Environment Validation
 
 ```bash
-# Validate all required environment variables are set
-uv run python -c "from tripsage.core.settings import get_settings; print('✅ All env vars validated')"
+# Validate configuration at startup
+uv run python -c "from tripsage_core.config import get_settings; settings = get_settings(); print('✅ Configuration loaded successfully')"
 ```
 
-### Connection Testing
+### Health Checks
 
 ```bash
-# Test database connection
-uv run python scripts/verification/verify_supabase_connection.py
-
-# Test cache connection  
-uv run python scripts/verification/verify_upstash.py
+# Health check endpoints
+GET /health              # Basic health check
+GET /health/detailed     # Detailed component status
 ```
+
+## Configuration by Service
+
+### Core Services
+
+- **Database**: Supabase PostgreSQL with pgvector
+- **Cache**: Upstash Redis (HTTP client)
+- **AI**: OpenAI API integration
+- **Maps**: Google Maps Platform
+
+### Environment-Specific Setup
+
+- **Development**: Use test credentials and local debugging
+- **Production**: Use production credentials and monitoring
+- **Testing**: Use isolated test environments
+
+## Security Notes
+
+- Store secrets as environment variables, never in code
+- Use different credentials for each environment
+- Rotate API keys regularly
+- Enable monitoring and logging in production

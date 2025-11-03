@@ -13,11 +13,12 @@
 - [Configuration Management](./configuration-management.md) - Modern Pydantic-based configuration system with security
 - [Supabase Configuration](./supabase-configuration.md) - Database concepts, security, and troubleshooting
 - [Manual Supabase Operations](./supabase-manual-operations.md) - Manual setup and operations when Vercel integration isn't available
+- [Admin Guide](./admin-guide.md) - Agent configuration management, system monitoring, and administrative operations
 
 ### Security & Authentication
 
 - [Security Guide](./security-guide.md) - Security implementation
-- [Authentication Guide](./authentication-guide.md) - OAuth setup and troubleshooting
+- [OAuth Provider Setup Guide](./oauth-provider-setup.md) - OAuth setup with Supabase, Google, and GitHub
 
 ### Operations Bulletins
 
