@@ -114,12 +114,12 @@ describe("Auth Store", () => {
           rememberMe: true,
         };
 
-        let loginResult: boolean;
+        let loginResult: boolean | undefined;
         await act(async () => {
           loginResult = await result.current.login(credentials);
         });
 
-        expect(loginResult!).toBe(true);
+        expect(loginResult).toBe(true);
         expect(result.current.isAuthenticated).toBe(true);
         expect(result.current.user).toBeDefined();
         expect(result.current.user?.email).toBe("test@example.com");
@@ -138,12 +138,12 @@ describe("Auth Store", () => {
           password: "password123",
         } as LoginCredentials;
 
-        let loginResult: boolean;
+        let loginResult: boolean | undefined;
         await act(async () => {
           loginResult = await result.current.login(credentials);
         });
 
-        expect(loginResult!).toBe(false);
+        expect(loginResult).toBe(false);
         expect(result.current.isAuthenticated).toBe(false);
         expect(result.current.user).toBeNull();
         expect(result.current.loginError).toBe("Email and password are required");
@@ -159,12 +159,12 @@ describe("Auth Store", () => {
           password: "",
         } as LoginCredentials;
 
-        let loginResult: boolean;
+        let loginResult: boolean | undefined;
         await act(async () => {
           loginResult = await result.current.login(credentials);
         });
 
-        expect(loginResult!).toBe(false);
+        expect(loginResult).toBe(false);
         expect(result.current.isAuthenticated).toBe(false);
         expect(result.current.loginError).toBe("Email and password are required");
       });
@@ -224,12 +224,12 @@ describe("Auth Store", () => {
           password: "password123",
         };
 
-        let registerResult: boolean;
+        let registerResult: boolean | undefined;
         await act(async () => {
           registerResult = await result.current.register(credentials);
         });
 
-        expect(registerResult!).toBe(true);
+        expect(registerResult).toBe(true);
         expect(result.current.user).toBeDefined();
         expect(result.current.user?.email).toBe("newuser@example.com");
         expect(result.current.user?.firstName).toBe("John");
@@ -249,12 +249,12 @@ describe("Auth Store", () => {
           password: "password123",
         };
 
-        let registerResult: boolean;
+        let registerResult: boolean | undefined;
         await act(async () => {
           registerResult = await result.current.register(credentials);
         });
 
-        expect(registerResult!).toBe(false);
+        expect(registerResult).toBe(false);
         expect(result.current.user).toBeNull();
         expect(result.current.registerError).toBe("Passwords do not match");
       });
@@ -269,12 +269,12 @@ describe("Auth Store", () => {
           password: "password123",
         };
 
-        let registerResult: boolean;
+        let registerResult: boolean | undefined;
         await act(async () => {
           registerResult = await result.current.register(credentials);
         });
 
-        expect(registerResult!).toBe(false);
+        expect(registerResult).toBe(false);
         expect(result.current.registerError).toBe(
           "You must accept the terms and conditions"
         );
@@ -377,12 +377,12 @@ describe("Auth Store", () => {
           email: "test@example.com",
         };
 
-        let resetResult: boolean;
+        let resetResult: boolean | undefined;
         await act(async () => {
           resetResult = await result.current.requestPasswordReset(request);
         });
 
-        expect(resetResult!).toBe(true);
+        expect(resetResult).toBe(true);
         expect(result.current.isResettingPassword).toBe(false);
         expect(result.current.passwordResetError).toBeNull();
       });
@@ -394,12 +394,12 @@ describe("Auth Store", () => {
           email: "",
         };
 
-        let resetResult: boolean;
+        let resetResult: boolean | undefined;
         await act(async () => {
           resetResult = await result.current.requestPasswordReset(request);
         });
 
-        expect(resetResult!).toBe(false);
+        expect(resetResult).toBe(false);
         expect(result.current.passwordResetError).toBe("Email is required");
       });
     });
@@ -414,12 +414,12 @@ describe("Auth Store", () => {
           token: "valid-reset-token",
         };
 
-        let resetResult: boolean;
+        let resetResult: boolean | undefined;
         await act(async () => {
           resetResult = await result.current.resetPassword(reset);
         });
 
-        expect(resetResult!).toBe(true);
+        expect(resetResult).toBe(true);
         expect(result.current.isResettingPassword).toBe(false);
         expect(result.current.passwordResetError).toBeNull();
       });
@@ -433,12 +433,12 @@ describe("Auth Store", () => {
           token: "valid-reset-token",
         };
 
-        let resetResult: boolean;
+        let resetResult: boolean | undefined;
         await act(async () => {
           resetResult = await result.current.resetPassword(reset);
         });
 
-        expect(resetResult!).toBe(false);
+        expect(resetResult).toBe(false);
         expect(result.current.passwordResetError).toBe("Passwords do not match");
       });
 
@@ -451,12 +451,12 @@ describe("Auth Store", () => {
           token: "",
         };
 
-        let resetResult: boolean;
+        let resetResult: boolean | undefined;
         await act(async () => {
           resetResult = await result.current.resetPassword(reset);
         });
 
-        expect(resetResult!).toBe(false);
+        expect(resetResult).toBe(false);
         expect(result.current.passwordResetError).toBe(
           "Token and new password are required"
         );
@@ -467,7 +467,7 @@ describe("Auth Store", () => {
       it("successfully changes password", async () => {
         const { result } = renderHook(() => useAuthStore());
 
-        let changeResult: boolean;
+        let changeResult: boolean | undefined;
         await act(async () => {
           changeResult = await result.current.changePassword(
             "currentpassword",
@@ -475,7 +475,7 @@ describe("Auth Store", () => {
           );
         });
 
-        expect(changeResult!).toBe(true);
+        expect(changeResult).toBe(true);
         expect(result.current.isLoading).toBe(false);
         expect(result.current.error).toBeNull();
       });
@@ -483,12 +483,12 @@ describe("Auth Store", () => {
       it("handles change password with missing current password", async () => {
         const { result } = renderHook(() => useAuthStore());
 
-        let changeResult: boolean;
+        let changeResult: boolean | undefined;
         await act(async () => {
           changeResult = await result.current.changePassword("", "newpassword123");
         });
 
-        expect(changeResult!).toBe(false);
+        expect(changeResult).toBe(false);
         expect(result.current.error).toBe("Current and new passwords are required");
       });
     });
@@ -509,12 +509,12 @@ describe("Auth Store", () => {
 
         const originalToken = result.current.tokenInfo?.accessToken;
 
-        let refreshResult: boolean;
+        let refreshResult: boolean | undefined;
         await act(async () => {
           refreshResult = await result.current.refreshToken();
         });
 
-        expect(refreshResult!).toBe(true);
+        expect(refreshResult).toBe(true);
         expect(result.current.tokenInfo?.accessToken).toBeDefined();
         expect(result.current.tokenInfo?.accessToken).not.toBe(originalToken);
         expect(result.current.isRefreshingToken).toBe(false);
@@ -534,12 +534,12 @@ describe("Auth Store", () => {
           });
         });
 
-        let refreshResult: boolean;
+        let refreshResult: boolean | undefined;
         await act(async () => {
           refreshResult = await result.current.refreshToken();
         });
 
-        expect(refreshResult!).toBe(false);
+        expect(refreshResult).toBe(false);
         expect(result.current.isAuthenticated).toBe(false);
       });
     });
@@ -560,12 +560,12 @@ describe("Auth Store", () => {
           });
         });
 
-        let validateResult: boolean;
+        let validateResult: boolean | undefined;
         await act(async () => {
           validateResult = await result.current.validateToken();
         });
 
-        expect(validateResult!).toBe(true);
+        expect(validateResult).toBe(true);
       });
 
       it("refreshes expired token", async () => {
@@ -583,12 +583,12 @@ describe("Auth Store", () => {
           });
         });
 
-        let validateResult: boolean;
+        let validateResult: boolean | undefined;
         await act(async () => {
           validateResult = await result.current.validateToken();
         });
 
-        expect(validateResult!).toBe(true);
+        expect(validateResult).toBe(true);
       });
     });
   });
@@ -615,12 +615,12 @@ describe("Auth Store", () => {
           lastName: "UpdatedLast",
         };
 
-        let updateResult: boolean;
+        let updateResult: boolean | undefined;
         await act(async () => {
           updateResult = await result.current.updateUser(updates);
         });
 
-        expect(updateResult!).toBe(true);
+        expect(updateResult).toBe(true);
         expect(result.current.user?.firstName).toBe("UpdatedFirst");
         expect(result.current.user?.lastName).toBe("UpdatedLast");
         expect(result.current.user?.bio).toBe("Updated bio");
@@ -634,12 +634,12 @@ describe("Auth Store", () => {
           await result.current.logout();
         });
 
-        let updateResult: boolean;
+        let updateResult: boolean | undefined;
         await act(async () => {
           updateResult = await result.current.updateUser({ firstName: "Test" });
         });
 
-        expect(updateResult!).toBe(false);
+        expect(updateResult).toBe(false);
       });
     });
 
@@ -656,12 +656,12 @@ describe("Auth Store", () => {
           theme: "dark",
         };
 
-        let updateResult: boolean;
+        let updateResult: boolean | undefined;
         await act(async () => {
           updateResult = await result.current.updatePreferences(preferences);
         });
 
-        expect(updateResult!).toBe(true);
+        expect(updateResult).toBe(true);
         expect(result.current.user?.preferences?.theme).toBe("dark");
         expect(result.current.user?.preferences?.language).toBe("es");
         expect(result.current.user?.preferences?.notifications?.email).toBe(true);
@@ -677,12 +677,12 @@ describe("Auth Store", () => {
           twoFactorEnabled: true,
         };
 
-        let updateResult: boolean;
+        let updateResult: boolean | undefined;
         await act(async () => {
           updateResult = await result.current.updateSecurity(security);
         });
 
-        expect(updateResult!).toBe(true);
+        expect(updateResult).toBe(true);
         expect(result.current.user?.security?.twoFactorEnabled).toBe(true);
         expect(result.current.user?.security?.lastPasswordChange).toBe(
           "2025-01-01T00:00:00Z"
@@ -694,12 +694,12 @@ describe("Auth Store", () => {
       it("successfully verifies email", async () => {
         const { result } = renderHook(() => useAuthStore());
 
-        let verifyResult: boolean;
+        let verifyResult: boolean | undefined;
         await act(async () => {
           verifyResult = await result.current.verifyEmail("valid-token");
         });
 
-        expect(verifyResult!).toBe(true);
+        expect(verifyResult).toBe(true);
         expect(result.current.user?.isEmailVerified).toBe(true);
       });
 
@@ -716,24 +716,24 @@ describe("Auth Store", () => {
           }
         });
 
-        let resendResult: boolean;
+        let resendResult: boolean | undefined;
         await act(async () => {
           resendResult = await result.current.resendEmailVerification();
         });
 
-        expect(resendResult!).toBe(true);
+        expect(resendResult).toBe(true);
       });
 
       it("does not resend verification for verified user", async () => {
         const { result } = renderHook(() => useAuthStore());
 
         // User is already verified from login
-        let resendResult: boolean;
+        let resendResult: boolean | undefined;
         await act(async () => {
           resendResult = await result.current.resendEmailVerification();
         });
 
-        expect(resendResult!).toBe(false);
+        expect(resendResult).toBe(false);
       });
     });
   });
@@ -755,35 +755,35 @@ describe("Auth Store", () => {
 
       const originalExpiresAt = result.current.session?.expiresAt;
 
-      let extendResult: boolean;
+      let extendResult: boolean | undefined;
       await act(async () => {
         extendResult = await result.current.extendSession();
       });
 
-      expect(extendResult!).toBe(true);
+      expect(extendResult).toBe(true);
       expect(result.current.session?.expiresAt).not.toBe(originalExpiresAt);
     });
 
     it("gets active sessions", async () => {
       const { result } = renderHook(() => useAuthStore());
 
-      let sessions: any[];
+      let sessions: unknown[] | undefined;
       await act(async () => {
         sessions = await result.current.getActiveSessions();
       });
 
-      expect(sessions!).toEqual([]);
+      expect(sessions).toEqual([]);
     });
 
     it("revokes a session", async () => {
       const { result } = renderHook(() => useAuthStore());
 
-      let revokeResult: boolean;
+      let revokeResult: boolean | undefined;
       await act(async () => {
         revokeResult = await result.current.revokeSession("session-id");
       });
 
-      expect(revokeResult!).toBe(true);
+      expect(revokeResult).toBe(true);
     });
   });
 
@@ -851,7 +851,7 @@ describe("Auth Store", () => {
 
     it("correctly computes user display name", () => {
       // Helper function to mimic the getUserDisplayName logic
-      const getUserDisplayName = (user: any | null): string => {
+      const getUserDisplayName = (user: User | null): string => {
         if (!user) return "";
         if (user.displayName) return user.displayName;
         if (user.firstName && user.lastName)

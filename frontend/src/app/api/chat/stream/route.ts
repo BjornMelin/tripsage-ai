@@ -53,7 +53,7 @@ function getRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
  */
 type IncomingBody = {
   messages?: UIMessage[];
-  session_id?: string;
+  sessionId?: string;
   model?: string;
   desiredMaxTokens?: number;
 };
