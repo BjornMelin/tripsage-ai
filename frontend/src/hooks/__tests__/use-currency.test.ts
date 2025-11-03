@@ -146,7 +146,7 @@ describe("Currency Hooks", () => {
         symbol: "$",
       };
 
-      let success;
+      let success = false;
       act(() => {
         success = result.current.addCurrency(invalidCurrency);
       });
