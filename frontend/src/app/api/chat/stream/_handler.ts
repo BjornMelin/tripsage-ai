@@ -5,10 +5,11 @@
  * streaming. It is fully dependency-injected to ensure deterministic tests.
  */
 
-import type { TypedServerSupabase } from "@/lib/supabase/server";
 import type { LanguageModel, UIMessage } from "ai";
 import { convertToModelMessages, streamText as defaultStreamText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { insertSingle } from "@/lib/supabase/typed-helpers";
 import {
   type ChatMessage as ClampMsg,
   clampMaxTokens,
@@ -238,13 +239,13 @@ export async function handleChatStream(
         deps.logger?.info?.("chat_stream:finish", meta);
         if (sessionId) {
           try {
-            await deps.supabase.from("chat_messages").insert({
+            await insertSingle(deps.supabase, "chat_messages", {
               content: "(streamed)",
               metadata: meta,
               role: "assistant",
               // biome-ignore lint/style/useNamingConvention: Database field name
               session_id: sessionId,
-            } as any);
+            });
           } catch {
             /* ignore */
           }

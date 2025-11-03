@@ -188,11 +188,14 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
   const { data: tripsResponse, isLoading } = useTrips();
 
   // Extract trips from the response and sort by updatedAt/createdAt, take the most recent ones
-  let tripsData: any[] = [];
+  let tripsData: Trip[] = [];
   if (Array.isArray(tripsResponse)) {
     tripsData = tripsResponse;
   } else if (tripsResponse && typeof tripsResponse === "object") {
-    const anyResp = tripsResponse as any;
+    const anyResp = tripsResponse as {
+      items?: Trip[];
+      data?: Trip[] | { items?: Trip[] };
+    };
     if (Array.isArray(anyResp.items)) {
       tripsData = anyResp.items;
     } else if (anyResp.data) {
@@ -201,9 +204,9 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
     }
   }
   const recentTrips = tripsData
-    .sort((a: any, b: any) => {
-      const dateA = new Date(a.updated_at || a.created_at);
-      const dateB = new Date(b.updated_at || b.created_at);
+    .sort((a: Trip, b: Trip) => {
+      const dateA = new Date(a.updated_at || a.created_at || "1970-01-01T00:00:00Z");
+      const dateB = new Date(b.updated_at || b.created_at || "1970-01-01T00:00:00Z");
       return dateB.getTime() - dateA.getTime();
     })
     .slice(0, limit);

@@ -5,13 +5,15 @@
  * Adapters (route.ts files) provide SSR-only dependencies and translate the
  * HTTP details to simple POJOs used here.
  */
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { ChatMessageInsert } from "@/lib/supabase/database.types";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { insertSingle } from "@/lib/supabase/typed-helpers";
 
 /**
  * Dependencies interface for sessions handlers.
  */
 export interface SessionsDeps {
-  supabase: SupabaseClient<any>;
+  supabase: TypedServerSupabase;
 }
 
 /**
@@ -28,11 +30,14 @@ export async function createSession(
   if (!user) return json({ error: "unauthorized" }, 401);
   const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
   const now = new Date().toISOString();
-  const { error } = await deps.supabase.from("chat_sessions").insert({
+  const { error } = await insertSingle(deps.supabase, "chat_sessions", {
+    // biome-ignore lint/style/useNamingConvention: Database field name
     created_at: now,
     id,
-    metadata: title ? ({ title } as any) : ({} as any),
+    metadata: title ? { title } : {},
+    // biome-ignore lint/style/useNamingConvention: Database field name
     updated_at: now,
+    // biome-ignore lint/style/useNamingConvention: Database field name
     user_id: user.id,
   });
   if (error) return json({ error: "db_error" }, 500);
@@ -120,7 +125,7 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
 export async function createMessage(
   deps: SessionsDeps,
   id: string,
-  payload: { role?: string; parts?: any[] }
+  payload: { role?: string; parts?: unknown[] }
 ): Promise<Response> {
   const { data: auth } = await deps.supabase.auth.getUser();
   const user = auth?.user ?? null;
@@ -128,13 +133,13 @@ export async function createMessage(
   if (!payload?.role || typeof payload.role !== "string")
     return json({ error: "bad_request" }, 400);
   const content = JSON.stringify(payload.parts ?? []);
-  const { error } = await deps.supabase.from("chat_messages").insert({
+  const { error } = await insertSingle(deps.supabase, "chat_messages", {
     content,
     metadata: {},
-    role: payload.role,
+    role: payload.role as "user" | "system" | "assistant",
+    // biome-ignore lint/style/useNamingConvention: Database field name
     session_id: id,
-    user_id: user.id as any,
-  } as any);
+  });
   if (error) return json({ error: "db_error" }, 500);
   return new Response(null, { status: 201 });
 }
@@ -146,7 +151,7 @@ export async function createMessage(
  * @param status - HTTP status code for the response.
  * @returns Response with JSON content and appropriate headers.
  */
-function json(obj: any, status: number): Response {
+function json(obj: unknown, status: number): Response {
   return new Response(JSON.stringify(obj), {
     headers: { "content-type": "application/json" },
     status,

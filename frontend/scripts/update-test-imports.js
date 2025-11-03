@@ -4,8 +4,8 @@
  * This ensures all component tests use the renderWithProviders utility
  */
 
-const fs = require("fs").promises;
-const path = require("path");
+const fs = require("node:fs").promises;
+const path = require("node:path");
 
 const findTestFiles = async (dir, files = []) => {
   const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -40,7 +40,7 @@ const updateImports = async (filePath) => {
       const oldImportRegex =
         /import\s*{\s*([^}]+)\s*}\s*from\s*["']@testing-library\/react["']/g;
 
-      content = content.replace(oldImportRegex, (match, imports) => {
+      content = content.replace(oldImportRegex, (_match, imports) => {
         const importList = imports.split(",").map((imp) => imp.trim());
         const _testUtilImports = ["render", "renderWithProviders", "createMockUser"];
         const remainingImports = [];
@@ -88,7 +88,7 @@ const updateImports = async (filePath) => {
       const testUtilsRegex =
         /import\s*{\s*([^}]+)\s*}\s*from\s*["']@\/test\/test-utils["']/g;
 
-      content = content.replace(testUtilsRegex, (match, imports) => {
+      content = content.replace(testUtilsRegex, (_match, imports) => {
         const importList = imports.split(",").map((imp) => imp.trim());
         if (!importList.includes("createMockUser")) {
           importList.push("createMockUser");
