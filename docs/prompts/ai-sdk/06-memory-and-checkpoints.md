@@ -81,6 +81,7 @@
 - Summary of changes and decisions:
 - Outstanding items / tracked tech debt:
 - Follow-up prompts or tasks:
+  - Integrate hybrid retrieval and reranking for context assembly: see 18-embeddings-and-rag-advanced.md
 
 ---
 

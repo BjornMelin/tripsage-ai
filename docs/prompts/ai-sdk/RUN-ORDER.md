@@ -57,6 +57,24 @@ Order & dependencies
 17) 16-otel-and-drains-validation.md (after 08)
     - Confirms OTel init and Trace Drains export
 
+18) 17-structured-outputs-and-object-generation.md (after 04)
+    - Schema-first server responses; optional UI object rendering
+
+19) 18-embeddings-and-rag-advanced.md (after 06, 04)
+    - Hybrid retrieval + provider reranking; caching; indexer/retriever
+
+20) 19-ai-sdk-ui-generative-ui-and-streaming-data.md (optional)
+    - Optional generative UI blocks and streaming custom data; not core
+
+21) 21-attachments-and-file-uploads-migration.md (after 00)
+    - Next handlers; Supabase Storage; signed URLs; RL; delete FastAPI attachments
+
+22) 22-centralized-rate-limiting-and-identifiers.md (after 00)
+    - Shared Upstash helper; wrappers; budgets; delete Python limiter
+
+23) 23-auth-and-rls-validation-suite.md (after 00, 01)
+    - SSR + proxy.ts verification; RLS tests across tables
+
 Parallelization notes
 
 - Safe in parallel: 01, 02, 03, 07 (they modify distinct areas)

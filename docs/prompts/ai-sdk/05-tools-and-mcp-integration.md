@@ -101,7 +101,7 @@
 
 - Core decisions impacting Tools/MCP:
   - Implement tools with AI SDK `tool()` and Zod; orchestrate in `streamText` with `tools` and optional `toolChoice: 'auto'`.
-  - For sensitive actions, follow AI SDK UI Chatbot tool usage approval flow (approval property names UNVERIFIED—follow docs pattern).
+  - For sensitive actions, follow AI SDK UI Chatbot Tool Usage approval flow (`useChat` tool callbacks + approval response API) per docs.
   - Ensure tools are server‑side, with strict input validation and concise, safe outputs.
 
 - Implementation checklist delta:
