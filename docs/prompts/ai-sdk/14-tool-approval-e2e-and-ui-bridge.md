@@ -3,7 +3,7 @@
 ## Executive summary
 
 - Goal: Implement and validate end-to-end tool approval flow using AI SDK v6 tools and the AI SDK UI Chatbot tool-usage pattern. Ensure the server pauses for approval and the UI provides a confirmation UX.
-- Outcome: A working approval flow, tests, and UX hooks wired to `addToolApprovalResponse` (or current equivalent) with UNVERIFIED property names noted.
+- Outcome: A working approval flow, tests, and UX hooks wired per Chatbot Tool Usage (e.g., `onToolCall` callback and `addToolApprovalResponse`).
 
 ## Custom persona
 
@@ -23,7 +23,7 @@
 
 ## Checklist (mark off; add notes under each)
 
-- [ ] Sensitive tool defined in server registry (UNVERIFIED approval property name; follow docs pattern)
+- [ ] Sensitive tool defined in server registry (approval handled per Chatbot Tool Usage)
   - Notes:
 - [ ] Chat route wires tools with approval flow; pause/resume works
   - Notes:

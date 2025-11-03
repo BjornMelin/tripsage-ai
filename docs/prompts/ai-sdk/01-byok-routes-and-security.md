@@ -140,6 +140,8 @@
 - Summary of changes and decisions:
 - Outstanding items / tracked tech debt:
 - Follow-up prompts or tasks:
+  - Auth & RLS validation suite across tables and routes: see 23-auth-and-rls-validation-suite.md
+  - Validate Gateway default vs BYOK routing policies and tests: see 15-gateway-vs-byok-routing-validation.md
 
 ## Additional context & assumptions
 

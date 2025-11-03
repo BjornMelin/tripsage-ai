@@ -37,6 +37,7 @@ Key references:
 - Agents Overview: <https://ai-sdk.dev/docs/agents/overview>
 - Tool Calling: <https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling>
 - Chatbot Tool Usage: <https://ai-sdk.dev/docs/ai-sdk-ui/chatbot-tool-usage>
+- Reranking: <https://v6.ai-sdk.dev/docs/ai-sdk-core/reranking>
 - Next.js 16 blog (Proxy): <https://nextjs.org/blog/next-16#proxyts-formerly-middlewarets>
 - Supabase SSR (Next.js): <https://supabase.com/docs/guides/auth/server-side/nextjs>
 - Upstash Ratelimit template: <https://vercel.com/templates/next.js/ratelimit-with-upstash-redis>
@@ -49,24 +50,24 @@ Key references:
 Use AI SDK v6 Agents and the documented loop pattern. Implement tools with `tool()` and orchestrate with `streamText` including the `tools` set and `toolChoice: 'auto'` when desired. The model proposes tool invocations; server executes; outputs are fed back as part of the loop until completion.
 
 - Tools: Define with Zod `inputSchema` and an async `execute` function.
-- Approval: For sensitive tools, use the AI SDK UI Chatbot tool‑usage pattern to request user confirmation before executing. Property names for tool approval are UNVERIFIED—follow the documented UI approval flow in Chatbot Tool Usage.
+- Approval: For sensitive tools, use the AI SDK UI Chatbot Tool Usage pattern to request user confirmation before executing; wire approvals via `useChat` tool callbacks and the documented approval response API. See Chatbot Tool Usage for the canonical event and API names.
 - Structured outputs: Where appropriate, return objects via AI SDK v6 structured output facilities and validate client consumption accordingly.
 
 Notes:
 
-- Reranker support is provider‑dependent (UNVERIFIED in general v6 docs); integrate via the relevant provider’s rerank API when needed.
+- Reranking is available in v6; integrate provider rerankers (e.g., Cohere) when beneficial.
 
 ### 2) Chat UI and Streaming
 
 - Use `@ai-sdk/react` `useChat` with the AI SDK UI Chatbot components.
-- In Route Handlers, call `streamText({ model, messages, tools, toolChoice })` and return a streaming response.
+- In Route Handlers, call `streamText({ model, messages, tools, toolChoice })` and return a streaming response; prefer `toUIMessageStreamResponse()` to emit UIMessage.parts for v6 UI compatibility.
 - Enable resume support where needed (UI Resume Streams) and message persistence as applicable.
 
 ### 3) Retrieval‑Augmented Generation (RAG)
 
 - Storage: Supabase Postgres with pgvector.
 - Indexing: Use provider embeddings to upsert document chunks into `embeddings` table.
-- Query: Hybrid search (vector + keywords as needed). Consider a reranker (provider‑dependent, UNVERIFIED) to refine top‑k before final prompt assembly.
+- Query: Hybrid search (vector + keywords as needed). Apply v6 Reranking (e.g., Cohere) to refine top‑k before final prompt assembly when it materially improves answer quality.
 - Caching: Cache frequent queries briefly in Upstash when end‑to‑end latency is dominated by external calls.
 
 ### 4) Multi‑Provider Models and BYOK
@@ -113,7 +114,7 @@ Notes:
    - Add sensitive‑action approval flow via UI tool usage pattern.
 5) RAG
    - Migrate/verify embeddings schema in Supabase; implement indexer and retriever.
-   - Optionally integrate provider reranker (UNVERIFIED) behind a clean interface.
+   - Optionally integrate provider reranker behind a clean interface (validate provider availability in the environment).
 6) Rate limiting & Cache
    - Add Upstash Ratelimit per route; short‑TTL caching where it demonstrably helps.
 7) Observability
@@ -127,6 +128,6 @@ Notes:
 
 ## Notes and Caveats
 
-- Tool approval property names are UNVERIFIED; follow the Chatbot Tool Usage docs for user confirmation flows.
+- Tool approvals: follow the Chatbot Tool Usage documentation (use `useChat` tool callbacks and the documented approval response API).
 - Rerankers are provider dependent and may require specific provider SDKs or Gateway configuration.
 - Ensure all dependencies used on Edge are fetch/HTTP‑based; if you require Node‑only clients, keep those endpoints on the Node runtime.
