@@ -1,6 +1,34 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.3.2/schema.json",
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "root": true,
+
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+
+  "files": {
+    "includes": [
+      "**",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.mjs",
+      "**/*.cjs",
+      "**/*.mts",
+      "**/*.cts",
+      "**/*.json",
+      "!**/node_modules/**",
+      "!**/.next/**",
+      "!**/dist/**",
+      "!**/build/**",
+      "!**/coverage/**",
+      "!**/.turbo/**",
+      "!**/.vercel/**",
+      "!**/storybook-static/**",
+      "!**/out/**"
+    ],
+    "ignoreUnknown": false
+  },
+
   "formatter": {
     "enabled": true,
     "formatWithErrors": false,
@@ -9,63 +37,9 @@
     "lineWidth": 88,
     "lineEnding": "lf"
   },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true,
-      "correctness": {
-        "useHookAtTopLevel": "off",
-        "useExhaustiveDependencies": "off",
-        "noUnusedImports": {
-          "level": "error",
-          "fix": "safe"
-        },
-        "noUnusedVariables": {
-          "level": "error",
-          "fix": "safe"
-        }
-      },
-      "style": {
-        "useConst": "error",
-        "useTemplate": "error",
-        "noParameterAssign": "error",
-        "noNonNullAssertion": "off",
-        "useImportType": {
-          "level": "error",
-          "fix": "safe"
-        },
-        "useExportType": {
-          "level": "error",
-          "fix": "safe"
-        }
-      },
-      "suspicious": {
-        "noExplicitAny": "off",
-        "noArrayIndexKey": "off",
-        "noAssignInExpressions": "off",
-        "noThenProperty": "off",
-        "noShadowRestrictedNames": "off",
-        "noImplicitAnyLet": "off"
-      },
-      "performance": {
-        "noAccumulatingSpread": "warn"
-      },
-      "a11y": {
-        "useKeyWithClickEvents": "off",
-        "useKeyWithMouseEvents": "off",
-        "noAccessKey": "error",
-        "useAltText": "error",
-        "useButtonType": "off",
-        "useSemanticElements": "off"
-      },
-      "complexity": {
-        "noForEach": "off",
-        "noBannedTypes": "off",
-        "noStaticOnlyClass": "off"
-      }
-    }
-  },
+
   "javascript": {
+    "jsxRuntime": "transparent",
     "formatter": {
       "quoteStyle": "double",
       "jsxQuoteStyle": "double",
@@ -74,23 +48,88 @@
       "arrowParentheses": "always"
     }
   },
-  "files": {
-    "includes": [
-      "**/src/**/*.ts",
-      "**/src/**/*.tsx",
-      "**/src/**/*.js",
-      "**/src/**/*.jsx",
-      "**/e2e/**/*.ts",
-      "**/*.ts",
-      "**/*.tsx",
-      "!**/node_modules",
-      "!**/.next",
-      "!**/dist",
-      "!**/build",
-      "!**/coverage",
-      "!**/public",
-      "!**/*.config.js",
-      "!**/*.config.mjs"
-    ]
+
+  "css": {
+    "parser": { "tailwindDirectives": true }
+  },
+
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": {
+          "options": {
+            "identifierOrder": "lexicographic",
+            "groups": [{ "type": true }]
+          }
+        },
+        "useSortedKeys": "on"
+      }
+    }
+  },
+
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+
+      "correctness": {
+        "noUnusedImports": { "level": "error", "fix": "safe" },
+        "noUnusedVariables": { "level": "error", "fix": "safe" },
+        "noUnusedFunctionParameters": {
+          "level": "error",
+          "options": { "ignoreRestSiblings": false }
+        },
+        "useExhaustiveDependencies": "error",
+        "useHookAtTopLevel": "error"
+      },
+
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noImplicitAnyLet": "error",
+        "useAwait": "error",
+        "noAssignInExpressions": "error",
+        "noShadowRestrictedNames": "error",
+        "noArrayIndexKey": "warn",
+        "noConstEnum": { "level": "error", "fix": "safe" }
+      },
+
+      "style": {
+        "useImportType": { "level": "error", "fix": "safe" },
+        "useExportType": { "level": "error", "fix": "safe" },
+        "useConst": { "level": "error", "fix": "safe" },
+        "useTemplate": { "level": "error", "fix": "safe" },
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "strictCase": true,
+            "requireAscii": true,
+            "conventions": [
+              {
+                "selector": { "kind": "const", "scope": "global" },
+                "formats": ["CONSTANT_CASE"]
+              }
+            ]
+          }
+        },
+        "noParameterAssign": "error"
+      },
+
+      "performance": {
+        "noAccumulatingSpread": "warn"
+      },
+
+      "a11y": {
+        "noAccessKey": "error",
+        "useAltText": "error",
+        "useValidAnchor": "error"
+      },
+
+      "complexity": {
+        "noBannedTypes": "error",
+        "noUselessConstructor": "error",
+        "noStaticOnlyClass": "error"
+      }
+    }
   }
 }
