@@ -185,3 +185,5 @@ Final Notes & Next Steps (compile from task notes)
   - Proceed with 01-byok-routes-and-security.md to implement secure BYOK flows.
   - Add provider registry/resolution and tool-calling in subsequent prompts.
   - Decommission Python chat routes once parity is achieved (per later prompt).
+  - Validate Edge and proxy boundary: see 13-proxy-and-edge-runtime-validation.md
+  - Centralize rate limiting identifiers and budgets: see 22-centralized-rate-limiting-and-identifiers.md

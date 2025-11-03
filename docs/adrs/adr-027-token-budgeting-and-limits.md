@@ -16,7 +16,7 @@ We are migrating to AI SDK v6 and must enforce safe token budgets across provide
 
 1. Use provider-reported usage as the source of truth whenever available.
 2. For OpenAI models, use `js-tiktoken` (lite) to estimate prompt token counts.
-3. For non-OpenAI models (Anthropic, xAI) without a first-party JS tokenizer, use a conservative heuristic of ~4 characters per token (UNVERIFIED).
+3. For non-OpenAI models (Anthropic, xAI) without a first-party JS tokenizer, use a conservative heuristic of ~4 characters per token (approximation; verify against provider usage where available).
 4. Maintain a per-model context window table in TypeScript; default to 128k when unknown.
 5. Clamp `maxOutputTokens` to `max(1, min(desiredMax, limit - promptTokens))`, recording reasons when clamped.
 

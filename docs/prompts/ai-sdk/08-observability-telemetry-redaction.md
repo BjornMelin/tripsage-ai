@@ -1,8 +1,8 @@
-# Prompt: Observability (Telemetry, Spans, Counters) + Redaction + Rate Limits
+# Prompt: Observability (Telemetry, Spans, Counters) + Redaction
 
 ## Executive summary
 
-- Goal: Add structured telemetry across BYOK RPCs, provider calls, and tools; ensure redaction of `api_key`; enforce rate limits on key endpoints.
+- Goal: Add structured telemetry across BYOK RPCs, provider calls, and tools; ensure redaction of `api_key`. Verify rate-limit exposure (headers/attributes) implemented by the centralized RL prompt.
 
 ## Custom persona
 
@@ -23,8 +23,8 @@
 1) Telemetry module `frontend/lib/observability/index.ts` exporting span helpers
 2) Wrap BYOK RPCs and chat provider calls with spans; counters for errors/usage
 3) Implement log redaction middleware/util; scrub `api_key` fields
-4) Add rate limits: strict for `/api/keys*` routes; moderate for `/api/chat*`
-5) Vitest tests: unit for redaction utils; integration smoke for rate limit headers
+4) Verify rate-limit headers and minimal attributes are exposed (implementation centralized in 22-centralized-rate-limiting-and-identifiers.md)
+5) Vitest tests: unit for redaction utils; integration smoke asserting 429 `Retry-After` and RL attributes where present
 
 ## Checklist (mark off; add notes under each)
 
@@ -34,8 +34,8 @@
   - Notes:
 - [ ] Implement redaction util for `api_key` and other sensitive fields
   - Notes:
-- [x] Add rate limits to `/api/keys*` and `/api/chat*`
-  - Notes:
+- [ ] Verify rate-limit headers present on `/api/keys*` and `/api/chat*` (implementation in RL prompt)
+  - Notes: assert `Retry-After` on 429 and basic RL attributes; do not implement RL here
 - [ ] Vitest tests: redaction + rate-limit smoke
   - Notes:
 - [ ] Write ADR(s) and Spec(s) for telemetry schema and policies
@@ -82,6 +82,27 @@
 - Outstanding items / tracked tech debt:
 - Follow-up prompts or tasks:
 
+---
+
+## Final Alignment with TripSage Migration Plan (Next.js 16 + AI SDK v6)
+
+- Core decisions impacting Observability:
+  - Initialize OTel via `@vercel/otel` and export via Trace Drains; prefer spans over verbose logs; redact PII.
+  - Add spans to BYOK RPCs, provider calls, tools, and persistence with request ids.
+
+- Implementation checklist delta:
+  - Add `instrumentation.ts` at repo root (or `src/`); verify traces.
+  - Standardize structured logs with redaction; avoid logging prompts/bodies.
+
+- References:
+  - Vercel OTel: <https://vercel.com/docs/otel>
+  - Trace Drains: <https://vercel.com/docs/drains/reference/traces>
+  - Centralized RL (implementation & budgets): 22-centralized-rate-limiting-and-identifiers.md
+
+Verification
+
+- Traces are visible and complete; logs are minimal; no secrets appear in any output.
+
 ## Additional context & assumptions
 
 - Span naming conventions:
@@ -91,13 +112,13 @@
 - Counters:
   - `svc.op.errors_total` (labeled by operation)
   - `svc.op.usage_tokens_total` (prompt/completion)
-- Rate-limit libraries: e.g., `@upstash/ratelimit` or similar; attach headers for RL status.
+- Rate limits are implemented and maintained via the centralized RL prompt; this prompt only validates exposure (headers/attributes) and observability around denials.
 
 ## File & module targets
 
 - `frontend/lib/observability/index.ts` (spans/counters)
 - `frontend/lib/logging/redact.ts` (scrub api_key and similar)
-- Rate-limit middleware under `frontend/middleware.ts` or per-route wrappers
+- Rate-limit per-route wrappers; Next 16 uses `proxy.ts` (root or `src/`) instead of `middleware.ts`
 
 ## Security checks
 

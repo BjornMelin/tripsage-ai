@@ -42,7 +42,7 @@ class RouterNode(BaseAgentNode):
         super().__init__("router", services)
 
         # Classifier instantiated per-call to support BYOK; keep constructor lean.
-        self.classifier = None  # legacy field no longer used
+        self.classifier = None  # field no longer used
 
         # Available agent types and their capabilities
         self.agent_capabilities = {

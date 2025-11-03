@@ -45,9 +45,40 @@ Order & dependencies
 13) 12-decommission-python-cleanup.md (final)
     - Only after all above pass and parity confirmed
 
+14) 13-proxy-and-edge-runtime-validation.md (after 00, 04)
+    - Verifies proxy.ts boundary and Edge runtime for streaming
+
+15) 14-tool-approval-e2e-and-ui-bridge.md (after 04, 05)
+    - End-to-end tool approval flow across server and UI
+
+16) 15-gateway-vs-byok-routing-validation.md (after 02, 04)
+    - Validates Gateway default vs BYOK routing and tests
+
+17) 16-otel-and-drains-validation.md (after 08)
+    - Confirms OTel init and Trace Drains export
+
+18) 17-structured-outputs-and-object-generation.md (after 04)
+    - Schema-first server responses; optional UI object rendering
+
+19) 18-embeddings-and-rag-advanced.md (after 06, 04)
+    - Hybrid retrieval + provider reranking; caching; indexer/retriever
+
+20) 19-ai-sdk-ui-generative-ui-and-streaming-data.md (optional)
+    - Optional generative UI blocks and streaming custom data; not core
+
+21) 21-attachments-and-file-uploads-migration.md (after 00)
+    - Next handlers; Supabase Storage; signed URLs; RL; delete FastAPI attachments
+
+22) 22-centralized-rate-limiting-and-identifiers.md (after 00)
+    - Shared Upstash helper; wrappers; budgets; delete Python limiter
+
+23) 23-auth-and-rls-validation-suite.md (after 00, 01)
+    - SSR + proxy.ts verification; RLS tests across tables
+
 Parallelization notes
 
 - Safe in parallel: 01, 02, 03, 07 (they modify distinct areas)
+- Validation prompts (13–17) can run after their prerequisites without blocking others; 14 depends on 05; 16 depends on 08
 - Avoid running 04 and 05 concurrently until 04 scaffolds chat routes; then 05 can plug tools
 - 08 depends on 01 + 04 to instrument meaningful spans
 

@@ -37,7 +37,7 @@ export function countPromptTokens(messages: ChatMessage[], modelHint?: string): 
 
 - Prefer provider usage when available.
 - OpenAI: `js-tiktoken/lite` with `o200k_base` (modern) and `cl100k_base` (older) encodings.
-- Others: heuristic ~4 chars/token (UNVERIFIED). Documented in code and tests.
+- Others: heuristic ~4 chars/token (approximation; verify against provider usage when reported). Documented in code and tests.
 
 ## Clamping
 

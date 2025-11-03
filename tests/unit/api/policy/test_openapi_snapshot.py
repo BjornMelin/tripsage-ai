@@ -32,7 +32,7 @@ def test_openapi_snapshot_matches() -> None:
     )
     snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
 
-    # Exclude legacy chat endpoints that are now implemented in Next.js AI SDK.
+    # Exclude chat endpoints that are now implemented in Next.js AI SDK.
     def _strip_chat_paths(spec: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
         paths = dict(spec.get("paths", {}))
         filtered = {k: v for k, v in paths.items() if not k.startswith("/api/chat")}
