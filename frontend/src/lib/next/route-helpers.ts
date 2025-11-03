@@ -36,5 +36,6 @@ export function buildRateLimitKey(req: NextRequest): string {
  */
 export function forwardAuthHeaders(req: NextRequest): HeadersInit | undefined {
   const auth = getAuthorization(req);
+  // biome-ignore lint/style/useNamingConvention: HTTP headers conventionally use PascalCase
   return auth ? { Authorization: auth } : undefined;
 }

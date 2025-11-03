@@ -5,6 +5,28 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { UIMessage, ChatStatus, FileUIPart } from "ai";
+
+type UseChatOptions = {
+  id?: string;
+  resume?: boolean;
+  transport?: unknown;
+};
+
+type UseChatReturn = {
+  clearError: () => void;
+  error: Error | null;
+  experimental_resume: () => Promise<unknown>;
+  messages: UIMessage[];
+  regenerate: () => void;
+  sendMessage: (message: {
+    text: string;
+    files?: FileUIPart[];
+    metadata?: Record<string, unknown>;
+  }) => Promise<void>;
+  status: ChatStatus;
+  stop: () => void;
+};
 
 vi.mock("@/lib/supabase/client", () => {
   return {
@@ -19,36 +41,38 @@ vi.mock("@/lib/supabase/client", () => {
   };
 });
 
-const INITIAL_MESSAGES = [
+const INITIAL_MESSAGES: UIMessage[] = [
   { id: "u-1", parts: [{ text: "hello", type: "text" }], role: "user" },
   { id: "a-1", parts: [{ text: "(streaming…)", type: "text" }], role: "assistant" },
-] as any[];
+];
 
-const USE_CHAT_SPY: any = vi.fn((_opts: any) => ({
-  clearError: vi.fn(),
-  error: null,
-  experimental_resume: vi.fn(async () => Promise.resolve()),
-  messages: INITIAL_MESSAGES,
-  regenerate: vi.fn(),
-  sendMessage: vi.fn(),
-  status: "streaming",
-  stop: vi.fn(),
-}));
+const USE_CHAT_SPY = vi.fn(
+  (_opts: UseChatOptions): UseChatReturn => ({
+    clearError: vi.fn(),
+    error: null,
+    experimental_resume: vi.fn(async () => Promise.resolve()),
+    messages: INITIAL_MESSAGES,
+    regenerate: vi.fn(),
+    sendMessage: vi.fn(),
+    status: "streaming" as ChatStatus,
+    stop: vi.fn(),
+  })
+);
 
-vi.mock("@ai-sdk/react", async () => {
+vi.mock("@ai-sdk/react", () => {
   return {
-    useChat: (opts: any) => USE_CHAT_SPY(opts),
-  } as any;
+    useChat: (opts: UseChatOptions) => USE_CHAT_SPY(opts),
+  };
 });
 
 describe("mid-stream resume continuity", () => {
   it("retains existing messages after resume", async () => {
     const mod = await import("../../chat/page");
-    const Page = mod.default as any;
+    const Page = mod.default;
     render(<Page />);
 
     // Invoke the mocked resume to simulate reattach
-    const ret = USE_CHAT_SPY.mock.results[0].value as any;
+    const ret = USE_CHAT_SPY.mock.results[0].value;
     await ret.experimental_resume();
 
     // Ensure the same number of messages are rendered

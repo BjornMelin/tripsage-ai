@@ -32,7 +32,7 @@ describe("ChatPage", () => {
     vi.resetAllMocks();
   });
 
-  it("renders empty state and input controls", async () => {
+  it("renders empty state and input controls", () => {
     render(<ChatPage />);
     expect(
       screen.getByText(/Start a conversation to see messages here/i)

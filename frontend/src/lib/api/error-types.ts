@@ -72,6 +72,7 @@ export class ApiError extends Error {
   /**
    * Convert to JSON for logging
    */
+  // biome-ignore lint/style/useNamingConvention: Standard JSON serialization method
   toJSON() {
     return {
       code: this.code,

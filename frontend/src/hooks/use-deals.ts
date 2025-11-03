@@ -281,7 +281,7 @@ export function useDealAlerts() {
         }
         return acc;
       },
-      {} as Record<DealType, DealAlert[]>
+      {} as Record<string, DealAlert[]>
     );
   }, [alerts]);
 

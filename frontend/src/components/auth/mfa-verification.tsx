@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, ArrowLeft, Loader2, Shield, Smartphone } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +21,7 @@ interface MfaVerificationProps {
   onUseBackupCode: () => void;
 }
 
-export function MFAVerification({
+export function MfaVerification({
   userEmail,
   onVerified,
   onCancel,
@@ -33,7 +33,7 @@ export function MFAVerification({
   const [timeRemaining, setTimeRemaining] = useState(30);
   const verificationInputId = useId();
 
-  const handleVerifyCode = async () => {
+  const handleVerifyCode = useCallback(async () => {
     if (!verificationCode || verificationCode.length !== 6) {
       setError("Please enter a 6-digit verification code");
       return;
@@ -59,7 +59,7 @@ export function MFAVerification({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [verificationCode, onVerified]);
 
   // Auto-submit when 6 digits are entered
   useEffect(() => {

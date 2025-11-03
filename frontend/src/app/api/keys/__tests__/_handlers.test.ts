@@ -3,6 +3,8 @@
  * with mocked Supabase client and authentication scenarios.
  */
 
+import type { Tables } from "@/lib/supabase/database.types";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { describe, expect, it, vi } from "vitest";
 import { getKeys, postKey } from "../_handlers";
 
@@ -13,7 +15,12 @@ import { getKeys, postKey } from "../_handlers";
  * @param rows - Array of database rows for query result mocking.
  * @returns Mock Supabase client with basic operations.
  */
-function makeSupabase(userId: string | null, rows: any[] = []) {
+function makeSupabase(
+  userId: string | null,
+  rows: Array<
+    Pick<Tables<"api_keys">, "service_name" | "created_at" | "last_used_at">
+  > = []
+) {
   return {
     auth: {
       getUser: vi.fn(async () => ({ data: { user: userId ? { id: userId } : null } })),
@@ -23,7 +30,7 @@ function makeSupabase(userId: string | null, rows: any[] = []) {
       order: vi.fn().mockResolvedValue({ data: rows, error: null }),
       select: vi.fn().mockReturnThis(),
     })),
-  } as any;
+  } as unknown as TypedServerSupabase;
 }
 
 describe("keys _handlers", () => {
@@ -31,7 +38,7 @@ describe("keys _handlers", () => {
     const supabase = makeSupabase("u1");
     const res = await postKey(
       { insertUserApiKey: vi.fn(), supabase },
-      { api_key: undefined, service: undefined }
+      { apiKey: undefined, service: undefined }
     );
     expect(res.status).toBe(400);
   });
@@ -40,7 +47,7 @@ describe("keys _handlers", () => {
     const supabase = makeSupabase(null);
     const res = await postKey(
       { insertUserApiKey: vi.fn(), supabase },
-      { api_key: "sk", service: "openai" }
+      { apiKey: "sk", service: "openai" }
     );
     expect(res.status).toBe(401);
   });
@@ -50,7 +57,7 @@ describe("keys _handlers", () => {
     const insert = vi.fn(async () => {});
     const res = await postKey(
       { insertUserApiKey: insert, supabase },
-      { api_key: "sk", service: "openai" }
+      { apiKey: "sk", service: "openai" }
     );
     expect(res.status).toBe(204);
     expect(insert).toHaveBeenCalledWith("u2", "openai", "sk");

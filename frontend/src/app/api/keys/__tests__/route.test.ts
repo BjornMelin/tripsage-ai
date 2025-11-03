@@ -45,7 +45,7 @@ describe("/api/keys routes", () => {
     const req = { headers: new Headers() } as unknown as NextRequest;
     const res = await route.DELETE(req, {
       params: Promise.resolve({ service: "openai" }),
-    } as any);
+    });
     expect(res.status).toBe(204);
     expect(MOCK_DELETE).toHaveBeenCalledWith("u1", "openai");
   });

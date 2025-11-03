@@ -5,7 +5,7 @@
  * streaming. It is fully dependency-injected to ensure deterministic tests.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import type { LanguageModel, UIMessage } from "ai";
 import { convertToModelMessages, streamText as defaultStreamText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
@@ -66,12 +66,12 @@ export type RateLimiter = (identifier: string) => Promise<{
  * @param stream - The function to stream the chat.
  */
 export interface ChatDeps {
-  supabase: SupabaseClient<any>;
+  supabase: TypedServerSupabase;
   resolveProvider: ProviderResolver;
   limit?: RateLimiter;
   logger?: {
-    info: (msg: string, meta?: any) => void;
-    error: (msg: string, meta?: any) => void;
+    info: (msg: string, meta?: Record<string, unknown>) => void;
+    error: (msg: string, meta?: Record<string, unknown>) => void;
   };
   clock?: { now: () => number };
   config?: { defaultMaxTokens?: number };
@@ -79,17 +79,17 @@ export interface ChatDeps {
 }
 
 /**
- * Interface defining the payload structure for chat stream requests.
+ * Type representing the payload for chat streaming.
  *
  * @param messages - The messages.
- * @param session_id - The session ID.
+ * @param sessionId - The session ID.
  * @param model - The model.
  * @param desiredMaxTokens - The desired maximum tokens.
  * @param ip - The IP address.
  */
 export interface ChatPayload {
   messages?: UIMessage[];
-  session_id?: string;
+  sessionId?: string;
   model?: string;
   desiredMaxTokens?: number;
   ip?: string;
@@ -133,7 +133,7 @@ export async function handleChatStream(
   }
 
   // Validate attachments
-  const att = validateImageAttachments(messages as any);
+  const att = validateImageAttachments(messages);
   if (!att.valid) {
     return new Response(
       JSON.stringify({ error: "invalid_attachment", reason: att.reason }),
@@ -150,14 +150,16 @@ export async function handleChatStream(
   // Memory hydration: prepend system prompt with a short memory summary if present
   let systemPrompt = "You are a helpful travel planning assistant.";
   try {
-    const { data: memRows } = await (deps.supabase as any)
+    const { data: memRows } = await deps.supabase
       .from("memories")
       .select("content")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(3);
     if (Array.isArray(memRows) && memRows.length > 0) {
-      const summary = memRows.map((r: any) => String(r.content)).join("\n");
+      const summary = memRows
+        .map((r: { content: unknown }) => String(r.content))
+        .join("\n");
       systemPrompt += `\n\nUser memory (summary):\n${summary}`;
     }
   } catch {
@@ -165,8 +167,8 @@ export async function handleChatStream(
   }
 
   // Tokens clamp
-  const desired = Number.isFinite(payload.desiredMaxTokens as number)
-    ? Math.max(1, Math.floor(payload.desiredMaxTokens!))
+  const desired = Number.isFinite(payload.desiredMaxTokens)
+    ? Math.max(1, Math.floor(payload.desiredMaxTokens ?? 0))
     : (deps.config?.defaultMaxTokens ?? 1024);
 
   const textParts = extractTexts(messages);
@@ -192,7 +194,7 @@ export async function handleChatStream(
   const stream = deps.stream ?? defaultStreamText;
   const result = stream({
     maxOutputTokens: maxTokens,
-    messages: convertToModelMessages(messages as any),
+    messages: convertToModelMessages(messages),
     model: provider.model,
     system: systemPrompt,
   });
@@ -207,7 +209,7 @@ export async function handleChatStream(
     userId: user.id,
   });
 
-  const sessionId = payload.session_id;
+  const sessionId = payload.sessionId;
 
   return result.toUIMessageStreamResponse({
     messageMetadata: async ({ part }) => {
@@ -236,12 +238,13 @@ export async function handleChatStream(
         deps.logger?.info?.("chat_stream:finish", meta);
         if (sessionId) {
           try {
-            await (deps.supabase as any).from("chat_messages").insert({
+            await deps.supabase.from("chat_messages").insert({
               content: "(streamed)",
-              metadata: meta as any,
+              metadata: meta,
               role: "assistant",
+              // biome-ignore lint/style/useNamingConvention: Database field name
               session_id: sessionId,
-            });
+            } as any);
           } catch {
             /* ignore */
           }
@@ -252,7 +255,7 @@ export async function handleChatStream(
     },
     onError: (err) => {
       deps.logger?.error?.("chat_stream:error", {
-        message: String((err as any)?.message || err),
+        message: String((err as { message?: unknown })?.message || err),
         requestId: reqId,
       });
       return "An error occurred while processing your request.";

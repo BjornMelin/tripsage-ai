@@ -300,7 +300,7 @@ export function TripSuggestions({
         memoryBasedSuggestions.push({
           best_time_to_visit: "Year-round",
           category:
-            userPreferences.travel_style === "luxury" ? "relaxation" : "culture",
+            userPreferences.travelStyle === "luxury" ? "relaxation" : "culture",
           currency: "USD",
           description: `Based on your previous love for ${dest}, here's a personalized return trip.`,
           destination: dest,

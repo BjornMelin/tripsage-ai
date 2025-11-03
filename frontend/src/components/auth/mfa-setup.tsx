@@ -35,7 +35,7 @@ interface MfaSetupData {
   manualEntryKey: string;
 }
 
-export function MFASetup({ onComplete, onCancel }: MfaSetupProps) {
+export function MfaSetup({ onComplete, onCancel }: MfaSetupProps) {
   const [step, setStep] = useState<"setup" | "verify" | "complete">("setup");
   const [setupData, setSetupData] = useState<MfaSetupData | null>(null);
   const [verificationCode, setVerificationCode] = useState("");

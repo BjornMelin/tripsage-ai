@@ -1,6 +1,7 @@
 /**
  * @fileoverview Unit tests for BYOK GET /api/keys route handler.
  */
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const MOCK_CREATE_SERVER_SUPABASE = vi.hoisted(() => vi.fn());
@@ -31,7 +32,7 @@ describe("GET /api/keys route", () => {
     MOCK_CREATE_SERVER_SUPABASE.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })) },
       from,
-    } as any);
+    } as unknown as TypedServerSupabase);
     const { GET } = await import("../route");
     const res = await GET();
     expect(res.status).toBe(200);
@@ -42,7 +43,7 @@ describe("GET /api/keys route", () => {
   it("returns 401 when not authenticated", async () => {
     MOCK_CREATE_SERVER_SUPABASE.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
-    } as any);
+    } as unknown as TypedServerSupabase);
     const { GET } = await import("../route");
     const res = await GET();
     expect(res.status).toBe(401);

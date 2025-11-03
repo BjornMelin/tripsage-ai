@@ -4,6 +4,7 @@
  */
 
 import type { NextRequest } from "next/server";
+import type { LanguageModel } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   stubRateLimitDisabled,
@@ -84,7 +85,7 @@ describe("/api/chat/stream route smoke", () => {
     // Provider resolution mock
     vi.doMock("@/lib/providers/registry", () => ({
       resolveProvider: vi.fn(async () => ({
-        model: {} as any,
+        model: {} as LanguageModel,
         modelId: "gpt-4o-mini",
         provider: "openai",
       })),

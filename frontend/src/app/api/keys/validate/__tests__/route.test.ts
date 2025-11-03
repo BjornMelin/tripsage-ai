@@ -52,8 +52,8 @@ describe("/api/keys/validate route", () => {
     unstubAllEnvs();
     stubRateLimitDisabled();
     // Ensure Supabase SSR client does not throw when real module is imported
-    (vi as any).stubEnv?.("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
-    (vi as any).stubEnv?.("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
   });
 
   describe("successful validation", () => {
@@ -67,7 +67,7 @@ describe("/api/keys/validate route", () => {
       const { POST } = await import("../route");
       const req = {
         headers: new Headers(),
-        json: async () => ({ api_key: "sk-test", service: "openai" }),
+        json: async () => ({ apiKey: "sk-test", service: "openai" }),
       } as unknown as NextRequest;
 
       try {
@@ -75,7 +75,7 @@ describe("/api/keys/validate route", () => {
         const body = await res.json();
         // Assert both status and body together to surface diff when failing
         expect({ body, status: res.status }).toEqual({
-          body: { is_valid: true },
+          body: { isValid: true },
           status: 200,
         });
       } catch (error) {

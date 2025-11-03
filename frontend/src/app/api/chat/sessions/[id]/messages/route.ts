@@ -50,7 +50,7 @@ export async function POST(
   try {
     const supabase = await createServerSupabase();
     const { id: sessionId } = await context.params;
-    let body: any;
+    let body: { content: string; role?: string };
     try {
       body = await req.json();
     } catch {

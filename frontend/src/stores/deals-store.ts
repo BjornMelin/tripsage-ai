@@ -62,14 +62,14 @@ const GENERATE_ID = () =>
 const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
 
 // Utility for validating deal objects
-// const validateDeal = (deal: unknown): deal is Deal => {
-//   return DealSchema.safeParse(deal).success;
-// }; // Future validation
+const validateDeal = (deal: unknown): deal is Deal => {
+  return DEAL_SCHEMA.safeParse(deal).success;
+}; 
 
 // Utility for validating alert objects
-// const validateAlert = (alert: unknown): alert is DealAlert => {
-//   return DealAlertSchema.safeParse(alert).success;
-// }; // Future validation
+const validateAlert = (alert: unknown): alert is DealAlert => {
+  return DEAL_ALERT_SCHEMA.safeParse(alert).success;
+}; 
 
 // Calculate percentage discount
 const CALCULATE_DISCOUNT_PERCENTAGE = (

@@ -9,17 +9,21 @@ const path = require("path");
 
 const findTestFiles = async (dir, files = []) => {
   const entries = await fs.readdir(dir, { withFileTypes: true });
-  
+
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
-    
-    if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+
+    if (
+      entry.isDirectory() &&
+      !entry.name.startsWith(".") &&
+      entry.name !== "node_modules"
+    ) {
       await findTestFiles(fullPath, files);
     } else if (entry.isFile() && entry.name.match(/\.test\.(ts|tsx)$/)) {
       files.push(fullPath);
     }
   }
-  
+
   return files;
 };
 
@@ -29,16 +33,20 @@ const updateImports = async (filePath) => {
     let updated = false;
 
     // Pattern 1: Import render from @testing-library/react
-    if (content.includes('import { render') && content.includes('from "@testing-library/react"')) {
-      const oldImportRegex = /import\s*{\s*([^}]+)\s*}\s*from\s*["']@testing-library\/react["']/g;
-      
+    if (
+      content.includes("import { render") &&
+      content.includes('from "@testing-library/react"')
+    ) {
+      const oldImportRegex =
+        /import\s*{\s*([^}]+)\s*}\s*from\s*["']@testing-library\/react["']/g;
+
       content = content.replace(oldImportRegex, (match, imports) => {
-        const importList = imports.split(",").map(imp => imp.trim());
-        const testUtilImports = ["render", "renderWithProviders", "createMockUser"];
+        const importList = imports.split(",").map((imp) => imp.trim());
+        const _testUtilImports = ["render", "renderWithProviders", "createMockUser"];
         const remainingImports = [];
         const movedImports = [];
 
-        importList.forEach(imp => {
+        importList.forEach((imp) => {
           if (imp === "render") {
             movedImports.push(imp);
           } else {
@@ -72,11 +80,16 @@ const updateImports = async (filePath) => {
     }
 
     // Pattern 2: Update existing test-utils imports to include createMockUser if needed
-    if (content.includes('from "@/test/test-utils"') && content.includes("useAuth") && !content.includes("createMockUser")) {
-      const testUtilsRegex = /import\s*{\s*([^}]+)\s*}\s*from\s*["']@\/test\/test-utils["']/g;
-      
+    if (
+      content.includes('from "@/test/test-utils"') &&
+      content.includes("useAuth") &&
+      !content.includes("createMockUser")
+    ) {
+      const testUtilsRegex =
+        /import\s*{\s*([^}]+)\s*}\s*from\s*["']@\/test\/test-utils["']/g;
+
       content = content.replace(testUtilsRegex, (match, imports) => {
-        const importList = imports.split(",").map(imp => imp.trim());
+        const importList = imports.split(",").map((imp) => imp.trim());
         if (!importList.includes("createMockUser")) {
           importList.push("createMockUser");
           updated = true;
@@ -86,23 +99,27 @@ const updateImports = async (filePath) => {
     }
 
     // Pattern 3: Update mock user objects to use createMockUser
-    if (content.includes("useAuth") && content.includes('user: {')) {
+    if (content.includes("useAuth") && content.includes("user: {")) {
       // Replace inline user objects with createMockUser calls
-      const userObjectRegex = /user:\s*{\s*id:\s*["'][^"']+["'],\s*email:\s*["'][^"']+["'][^}]*}/g;
-      
+      const userObjectRegex =
+        /user:\s*{\s*id:\s*["'][^"']+["'],\s*email:\s*["'][^"']+["'][^}]*}/g;
+
       content = content.replace(userObjectRegex, (match) => {
         // Extract properties from the match
         const idMatch = match.match(/id:\s*["']([^"']+)["']/);
         const emailMatch = match.match(/email:\s*["']([^"']+)["']/);
         const nameMatch = match.match(/name:\s*["']([^"']+)["']/);
-        
+
         if (idMatch || emailMatch || nameMatch) {
           updated = true;
           const props = [];
-          if (idMatch && idMatch[1] !== "test-user-id") props.push(`id: "${idMatch[1]}"`);
-          if (emailMatch && emailMatch[1] !== "test@example.com") props.push(`email: "${emailMatch[1]}"`);
-          if (nameMatch && nameMatch[1] !== "Test User") props.push(`name: "${nameMatch[1]}"`);
-          
+          if (idMatch && idMatch[1] !== "test-user-id")
+            props.push(`id: "${idMatch[1]}"`);
+          if (emailMatch && emailMatch[1] !== "test@example.com")
+            props.push(`email: "${emailMatch[1]}"`);
+          if (nameMatch && nameMatch[1] !== "Test User")
+            props.push(`name: "${nameMatch[1]}"`);
+
           if (props.length > 0) {
             return `user: createMockUser({ ${props.join(", ")} })`;
           } else {
@@ -116,12 +133,12 @@ const updateImports = async (filePath) => {
     if (updated) {
       // Clean up double line breaks
       content = content.replace(/\n\n\n+/g, "\n\n");
-      
+
       await fs.writeFile(filePath, content, "utf8");
       console.log(`✅ Updated: ${path.relative(process.cwd(), filePath)}`);
       return true;
     }
-    
+
     return false;
   } catch (error) {
     console.error(`❌ Error processing ${filePath}:`, error.message);
@@ -131,7 +148,7 @@ const updateImports = async (filePath) => {
 
 const main = async () => {
   console.log("🔍 Finding component test files...");
-  
+
   const srcPath = path.join(process.cwd(), "src");
   const testFiles = await findTestFiles(srcPath);
 

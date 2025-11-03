@@ -1,6 +1,6 @@
 import {
   type ErrorReport,
-  ErrorReportSchema,
+  ERROR_REPORT_SCHEMA,
   type ErrorServiceConfig,
 } from "@/types/errors";
 
@@ -22,7 +22,7 @@ class ErrorService {
   async reportError(report: ErrorReport): Promise<void> {
     try {
       // Validate the error report using Zod
-      const validatedReport = ErrorReportSchema.parse(report);
+      const validatedReport = ERROR_REPORT_SCHEMA.parse(report);
 
       if (!this.config.enabled) {
         console.error("Error reported:", validatedReport);

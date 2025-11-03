@@ -32,7 +32,7 @@ export const maxDuration = 30;
  */
 type IncomingBody = {
   messages?: UIMessage[];
-  session_id?: string;
+  sessionId?: string;
   model?: string;
   desiredMaxTokens?: number;
 };
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
         supabase,
       },
-      { ...body!, ip }
+      { ...(body || {}), ip }
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

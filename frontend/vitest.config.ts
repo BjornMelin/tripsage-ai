@@ -8,21 +8,25 @@ import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-const isCI = process.env.CI === "true" || process.env.CI === "1";
+const isCi = process.env.CI === "true" || process.env.CI === "1";
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      // Shim Next.js server-only import for tests
+      "server-only": path.resolve(__dirname, "./src/test/mocks/server-only.ts"),
+    },
+  },
   test: {
-    globals: true,
-    environment: "jsdom",
-    unstubEnvs: true,
-    setupFiles: ["./src/test-setup.ts"],
-    include: ["**/*.{test,spec}.ts?(x)"],
-    exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*"],
+    // Stop early on cascading failures in CI
+    bail: isCi ? 5 : 0,
+    clearMocks: true,
     coverage: {
+      exclude: ["**/dist/**", "**/e2e/**", "**/*.config.*"],
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
-      exclude: ["**/dist/**", "**/e2e/**", "**/*.config.*"],
       thresholds: {
         global: {
           branches: 85,
@@ -32,26 +36,22 @@ export default defineConfig({
         },
       },
     },
+    environment: "jsdom",
+    exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*"],
+    globals: true,
+    hookTimeout: 12000,
+    include: ["**/*.{test,spec}.ts?(x)"],
     // Runtime stability
     isolate: true,
-    clearMocks: true,
-    restoreMocks: true,
-    // Timeouts
-    testTimeout: 7500,
-    hookTimeout: 12000,
-    teardownTimeout: 10000,
-    // Stop early on cascading failures in CI
-    bail: isCI ? 5 : 0,
+    maxWorkers: isCi ? 2 : 1,
     passWithNoTests: true,
     // Pools/workers: default to forks; prefer threads in CI for big suites
     pool: "threads",
-    maxWorkers: isCI ? 2 : 1,
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      // Shim Next.js server-only import for tests
-      "server-only": path.resolve(__dirname, "./src/test/mocks/server-only.ts"),
-    },
+    restoreMocks: true,
+    setupFiles: ["./src/test-setup.ts"],
+    teardownTimeout: 10000,
+    // Timeouts
+    testTimeout: 7500,
+    unstubEnvs: true,
   },
 });

@@ -2,16 +2,16 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
   type ConversionResult,
-  ConversionResultSchema,
+  CONVERSION_RESULT_SCHEMA,
   type Currency,
   type CurrencyCode,
-  CurrencyCodeSchema,
+  CURRENCY_CODE_SCHEMA,
   type CurrencyPair,
-  CurrencyPairSchema,
-  CurrencySchema,
+  CURRENCY_PAIR_SCHEMA,
+  CURRENCY_SCHEMA,
   type CurrencyState,
   type ExchangeRate,
-  ExchangeRateSchema,
+  EXCHANGE_RATE_SCHEMA,
 } from "@/types/currency";
 
 // Common currencies with symbols and decimal places
@@ -113,7 +113,7 @@ const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
 
 // Validate the currency code
 const VALIDATE_CURRENCY_CODE = (code: unknown): code is CurrencyCode => {
-  return CurrencyCodeSchema.safeParse(code).success;
+  return CURRENCY_CODE_SCHEMA.safeParse(code).success;
 };
 
 // Validate the currency object
@@ -126,7 +126,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
     (set, get) => ({
       addCurrency: (currency) => {
         // Validate the currency against the schema
-        const result = CurrencySchema.safeParse(currency);
+        const result = CURRENCY_SCHEMA.safeParse(currency);
         if (result.success) {
           set((state) => ({
             currencies: {
@@ -184,7 +184,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
             toCurrency,
           };
 
-          return ConversionResultSchema.parse(result);
+          return CONVERSION_RESULT_SCHEMA.parse(result);
         }
 
         // Convert from base currency
@@ -203,7 +203,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
             toCurrency,
           };
 
-          return ConversionResultSchema.parse(result);
+          return CONVERSION_RESULT_SCHEMA.parse(result);
         }
 
         // Convert to base currency
@@ -222,7 +222,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
             toCurrency,
           };
 
-          return ConversionResultSchema.parse(result);
+          return CONVERSION_RESULT_SCHEMA.parse(result);
         }
 
         // Convert between two non-base currencies
@@ -245,7 +245,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
           toCurrency,
         };
 
-        return ConversionResultSchema.parse(result);
+        return CONVERSION_RESULT_SCHEMA.parse(result);
       },
       // Initial state
       currencies: COMMON_CURRENCIES,
@@ -254,7 +254,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
 
       formatAmountWithCurrency: (amount, currencyCode) => {
         const state = get();
-        const result = CurrencyCodeSchema.safeParse(currencyCode);
+        const result = CURRENCY_CODE_SCHEMA.safeParse(currencyCode);
 
         if (!result.success) {
           return `${amount} ${currencyCode}`;
@@ -282,7 +282,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
 
       getCurrencyByCode: (code) => {
         const state = get();
-        const result = CurrencyCodeSchema.safeParse(code);
+        const result = CURRENCY_CODE_SCHEMA.safeParse(code);
         if (result.success) {
           return state.currencies[result.data];
         }
@@ -309,7 +309,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
               toCurrency: code,
             };
 
-            if (CurrencyPairSchema.safeParse(pair).success) {
+            if (CURRENCY_PAIR_SCHEMA.safeParse(pair).success) {
               pairs.push(pair);
             }
           }
@@ -398,7 +398,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
               timestamp: GET_CURRENT_TIMESTAMP(),
             };
 
-            if (ExchangeRateSchema.safeParse(newExchangeRate).success) {
+            if (EXCHANGE_RATE_SCHEMA.safeParse(newExchangeRate).success) {
               newExchangeRates[currencyCode] = newExchangeRate;
             }
           });
@@ -411,7 +411,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
             timestamp: GET_CURRENT_TIMESTAMP(),
           };
 
-          if (ExchangeRateSchema.safeParse(oldBaseExchangeRate).success) {
+          if (EXCHANGE_RATE_SCHEMA.safeParse(oldBaseExchangeRate).success) {
             newExchangeRates[oldBaseCurrency] = oldBaseExchangeRate;
           }
 
@@ -445,7 +445,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
               timestamp,
             };
 
-            const result = ExchangeRateSchema.safeParse(newExchangeRate);
+            const result = EXCHANGE_RATE_SCHEMA.safeParse(newExchangeRate);
             if (result.success) {
               newExchangeRates[currencyCode] = newExchangeRate;
             }
@@ -482,7 +482,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
             timestamp,
           };
 
-          const result = ExchangeRateSchema.safeParse(newExchangeRate);
+          const result = EXCHANGE_RATE_SCHEMA.safeParse(newExchangeRate);
           if (!result.success) {
             console.error("Invalid exchange rate data:", result.error);
             return state;

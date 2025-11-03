@@ -46,20 +46,29 @@ const PROVIDERS: Record<string, ProviderConfig> = {
     url: "https://api.anthropic.com/v1/models",
   },
   openai: {
-    buildHeaders: (key) => ({ Authorization: `Bearer ${key}` }),
+    buildHeaders: (key) => ({
+      // biome-ignore lint/style/useNamingConvention: HTTP header name
+      Authorization: `Bearer ${key}`,
+    }),
     url: "https://api.openai.com/v1/models",
   },
   openrouter: {
-    buildHeaders: (key) => ({ Authorization: `Bearer ${key}` }),
+    buildHeaders: (key) => ({
+      // biome-ignore lint/style/useNamingConvention: HTTP header name
+      Authorization: `Bearer ${key}`,
+    }),
     url: "https://openrouter.ai/api/v1/models",
   },
   xai: {
-    buildHeaders: (key) => ({ Authorization: `Bearer ${key}` }),
+    buildHeaders: (key) => ({
+      // biome-ignore lint/style/useNamingConvention: HTTP header name
+      Authorization: `Bearer ${key}`,
+    }),
     url: "https://api.x.ai/v1/models",
   },
 };
 
-type ValidateResult = { is_valid: boolean; reason?: string };
+type ValidateResult = { isValid: boolean; reason?: string };
 
 /**
  * Generic validator using provider configuration map.
@@ -73,19 +82,19 @@ async function validateProviderKey(
   apiKey: string
 ): Promise<ValidateResult> {
   const cfg = PROVIDERS[service.trim().toLowerCase()];
-  if (!cfg) return { is_valid: false, reason: `Invalid service: ${service}` };
+  if (!cfg) return { isValid: false, reason: `Invalid service: ${service}` };
 
   try {
     const res = await fetch(cfg.url, {
       headers: cfg.buildHeaders(apiKey),
       method: "GET",
     });
-    if (res.status === 200) return { is_valid: true };
+    if (res.status === 200) return { isValid: true };
     if ([401, 403].includes(res.status))
-      return { is_valid: false, reason: "Unauthorized" };
-    return { is_valid: false, reason: `HTTP_${res.status}` };
+      return { isValid: false, reason: "Unauthorized" };
+    return { isValid: false, reason: `HTTP_${res.status}` };
   } catch {
-    return { is_valid: false, reason: "NETWORK_ERROR" };
+    return { isValid: false, reason: "NETWORK_ERROR" };
   }
 }
 
@@ -139,7 +148,7 @@ async function requireUser(): Promise<NextResponse | string> {
  *
  * Orchestrates rate limiting, authentication, and provider validation.
  *
- * @param req Next.js request containing JSON body with { service, api_key }.
+ * @param req Next.js request containing JSON body with { service, apiKey }.
  * @returns 200 with validation result; 400/401/429/500 on error.
  */
 export async function POST(req: NextRequest) {
@@ -154,7 +163,7 @@ export async function POST(req: NextRequest) {
     try {
       const body = await req.json();
       service = body.service;
-      apiKey = body.api_key;
+      apiKey = body.apiKey;
     } catch (parseError) {
       const message =
         parseError instanceof Error ? parseError.message : "Unknown JSON parse error";
