@@ -2,10 +2,6 @@
 
 ## **AI-powered travel planning platform documentation**
 
-Concise, task-focused documentation for users, developers, and operators.
-
-## Documentation by Role
-
 ### Users (./users/)
 
 End-user guides and getting started.
@@ -32,9 +28,7 @@ Architecture Decision Records documenting technical choices.
 
 ## Quick Links
 
-- Users: ./users/getting-started.md
-- API: ./api/getting-started.md
-- Developers: ./developers/README.md
-- Operators: ./operators/README.md
-
-<!-- Archive content is intentionally excluded from the repository and index. -->
+- Users: ./users/user-guide.md
+- API: ./api/api-reference.md
+- Developers: ./developers/development-guide.md
+- Operators: ./operators/operators-reference.md
