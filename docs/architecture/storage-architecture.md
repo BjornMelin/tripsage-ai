@@ -2,381 +2,279 @@
 
 > **Target Audience**: System architects, security engineers, infrastructure leads
 
-This document describes TripSage's storage architecture, security model, and file processing patterns. For implementation details and API usage, see the [Storage Implementation Guide](../developers/storage-guide.md).
+This document describes TripSage's file storage system, security policies, and processing workflows. For implementation details, see the storage migration files in `supabase/migrations/`.
 
 ## Storage Buckets
 
-### 1. Attachments Bucket (`attachments`)
+### Attachments Bucket
 
-**Purpose**: Store trip-related documents and chat attachments
-
-**Configuration**:
-
-- **Access**: Private (authentication required)
-- **Size Limit**: 50MB per file
-- **Allowed Types**: PDF, Word docs, Excel files, images, text files
-- **Security**: RLS policies based on trip ownership/collaboration
-
-**File Organization**:
-
-```text
-attachments/
-├── trip_123/
-│   ├── documents/
-│   │   ├── itinerary.pdf
-│   │   └── booking_confirmation.docx
-│   └── images/
-│       ├── passport.jpg
-│       └── visa.png
-└── user_uuid/
-    ├── personal_documents/
-    └── temp_uploads/
-```
-
-### 2. Avatars Bucket (`avatars`)
-
-**Purpose**: Store user profile images
+**Purpose**: Trip documents and chat file attachments
 
 **Configuration**:
 
-- **Access**: Public (anyone can view)
-- **Size Limit**: 5MB per file
-- **Allowed Types**: JPEG, PNG, GIF, WebP, AVIF
-- **Security**: Users can only upload/modify their own avatar
+- Access: Private (authenticated users only)
+- Size limit: 50MB per file
+- MIME types: PDF, Word, Excel, text files, images
+- Security: RLS policies based on trip ownership and collaboration
 
-**File Organization**:
+### Avatars Bucket
 
-```text
-avatars/
-├── user_uuid_1.jpg
-├── user_uuid_2.png
-└── user_uuid_3.webp
-```
-
-### 3. Trip Images Bucket (`trip-images`)
-
-**Purpose**: Store trip-related photos and media
+**Purpose**: User profile images
 
 **Configuration**:
 
-- **Access**: Private (controlled by RLS)
-- **Size Limit**: 20MB per file
-- **Allowed Types**: All image formats including HEIC/HEIF
-- **Security**: Trip collaboration permissions apply
+- Access: Public (browsable without authentication)
+- Size limit: 5MB per file
+- MIME types: JPEG, PNG, GIF, WebP, AVIF
+- Security: Users can only modify their own avatars
 
-**File Organization**:
+### Trip Images Bucket
 
-```text
-trip-images/
-├── trip_123/
-│   ├── destinations/
-│   │   ├── paris_eiffel_tower.jpg
-│   │   └── rome_colosseum.heic
-│   ├── accommodations/
-│   │   └── hotel_room.png
-│   └── activities/
-│       └── museum_visit.jpg
-```
-
-### 4. Thumbnails Bucket (`thumbnails`)
-
-**Purpose**: Store auto-generated thumbnails
+**Purpose**: Trip-related photos and media
 
 **Configuration**:
 
-- **Access**: Private (auto-generated)
-- **Size Limit**: 10MB per file
-- **Allowed Types**: JPEG, PNG, WebP, AVIF
-- **Security**: Inherited from original file permissions
-
-### 5. Quarantine Bucket (`quarantine`)
-
-**Purpose**: Isolate files flagged by virus scanning
-
-**Configuration**:
-
-- **Access**: Service role only
-- **Size Limit**: 100MB per file
-- **Allowed Types**: Any (for quarantine purposes)
-- **Security**: Admin access only
+- Access: Private (authenticated users with trip access)
+- Size limit: 20MB per file
+- MIME types: JPEG, PNG, GIF, WebP, AVIF, HEIC, HEIF
+- Security: Trip collaboration permissions required
 
 ## Security Model
 
-### Row Level Security (RLS)
+### Row Level Security
 
-The storage system implements **fine-grained access control** at the database level:
+File access is controlled through PostgreSQL Row Level Security policies:
 
-#### Access Control Patterns
+#### Bucket-Specific Policies
 
-- **Trip-Based Access**: Files scoped to trips with collaboration permissions
-- **User Ownership**: Upload-based ownership tracking
-- **Bucket Isolation**: Different security rules per storage bucket
-- **Path-Based Security**: Hierarchical permission inheritance
-- **Role-Based Access**: Admin, editor, viewer permission levels
+**Attachments**:
 
-### Permission Hierarchy
+- Users can access files for trips they own or collaborate on
+- Collaboration levels: view, edit, admin
+- File ownership tracked via `user_id` in `file_attachments` table
 
-1. **Trip Owner**: Full access to all trip files
-2. **Admin Collaborator**: Can upload/delete trip files
-3. **Edit Collaborator**: Can upload files, view all
-4. **View Collaborator**: Can only view files
-5. **File Owner**: Can always modify their own uploads
+**Avatars**:
 
-## File Processing Pipeline
+- Public read access for all users
+- Users can only modify their own avatar files
+- File ownership verified against authenticated user ID
 
-### 1. Upload Flow
+**Trip Images**:
+
+- Access requires trip collaboration permissions
+- Path-based trip ID extraction for permission checking
+- Collaboration roles determine upload/delete capabilities
+
+#### Permission Levels
+
+- **Owner**: Full access to all trip-related files
+- **Admin**: Can upload, delete, and modify trip files
+- **Edit**: Can upload and view all trip files
+- **View**: Can only view trip files
+
+## File Processing
+
+### Upload Flow
 
 ```mermaid
 graph TD
-    A[Client Upload] --> B[Validation]
-    B --> C{Valid?}
-    C -->|No| D[Reject Upload]
-    C -->|Yes| E[Create file_attachments Record]
-    E --> F[Upload to Bucket]
-    F --> G[Trigger Processing]
-    G --> H[Edge Function]
+    A[Client Upload] --> B[Validate File]
+    B --> C[Create Database Record]
+    C --> D[Upload to Supabase Storage]
+    D --> E[Queue Processing Tasks]
+    E --> F[Async Processing]
 ```
 
-### 2. Processing Operations
+### Processing Operations
 
 #### Virus Scanning
 
-- **Trigger**: On upload completion
-- **Service**: ClamAV integration
-- **Action**: Quarantine infected files
-- **Status**: Tracked in `virus_scan_status`
-
-#### Thumbnail Generation
-
-- **Trigger**: Image uploads
-- **Output**: Multiple sizes (150x150, 300x300, 600x600)
-- **Format**: WebP for efficiency
-- **Storage**: Thumbnails bucket
+- Trigger: Post-upload via edge functions
+- Status tracking: `virus_scan_status` and `virus_scan_result` fields
+- Quarantine: Infected files moved to restricted access
 
 #### Metadata Extraction
 
-- **Documents**: Page count, word count, language
-- **Images**: EXIF data, dimensions, GPS coordinates
-- **Storage**: JSON metadata in `file_attachments.metadata`
+- Documents: File type, size, page count (when available)
+- Images: Dimensions, format, EXIF data
+- Storage: Metadata stored in `file_attachments.metadata` JSONB field
 
-### 3. File Versioning Architecture
+### File Tracking
 
-The system maintains **version history**:
+Files are tracked in the `file_attachments` table with:
 
-- **Version Tracking**: All file modifications create new versions
-- **Checksum Validation**: Integrity verification for each version
-- **Current Version Pointer**: Fast access to latest version
-- **Version Metadata**: Upload user, timestamp, and changes
-- **Rollback Support**: Restore to any previous version
+- Upload status: `uploading`, `completed`, `failed`
+- Processing status: Scan results and metadata
+- Ownership: Linked to users and trips
+- Access control: RLS policies enforce permissions
 
-## API Architecture
+## API Integration
 
-### Upload Architecture
+### Upload Methods
 
-The system provides **multiple upload patterns** for flexibility:
+File uploads support multiple approaches:
 
-#### Upload Patterns - Storage
+- **Direct upload**: Client uploads directly to Supabase Storage
+- **Signed URLs**: Pre-authenticated URLs for secure uploads
+- **Server-mediated**: API handles upload with validation
 
-1. **Signed URL Upload**: Pre-authenticated URLs for direct client upload
-2. **Direct Upload**: Server-mediated upload with validation
-3. **Chunked Upload**: Large file support with resume capability
-4. **Batch Upload**: Multiple files in single operation
-5. **Background Upload**: Async processing for large operations
+### Download Access
 
-#### Validation Architecture
+File downloads use Supabase Storage URLs:
 
-- **Pre-upload Validation**: Size, type, and quota checks
-- **Server-side Validation**: Additional security verification
-- **Async Validation**: Virus scanning and content analysis
-- **Quota Enforcement**: User and trip-level limits
-- **Error Recovery**: Partial upload cleanup
+- **Public access**: Avatars accessible without authentication
+- **Authenticated access**: Private files require valid JWT
+- **Signed URLs**: Time-limited access for secure sharing
 
-### Download Architecture
+### Validation
 
-**Secure file access** with multiple patterns:
+Upload validation includes:
 
-- **Public URLs**: CDN-accelerated public assets
-- **Signed URLs**: Time-limited authenticated access
-- **Streaming Download**: Large file support
-- **Batch Download**: Multiple files as archive
-- **Progressive Download**: Partial content support
+- File size limits per bucket
+- MIME type restrictions
+- User permissions via RLS
+- Virus scanning (async post-upload)
 
 ## Storage Quotas
 
-### User Quotas
+### Per-User Limits
 
-- **Attachments**: 5GB per user
-- **Avatars**: 50MB per user
-- **Trip Images**: 2GB per user
+Storage quotas are enforced per user across all buckets:
 
-### Trip Quotas
+- **Attachments**: 5GB total
+- **Avatars**: 50MB total
+- **Trip Images**: 2GB total
 
-- **Documents**: 10GB per trip
-- **Images**: 20GB per trip
-- **Collaborators**: Shared quota pool
+### Quota Enforcement
 
-### Quota Management Architecture
+Quota checking occurs before file uploads:
 
-**Intelligent quota system** with multiple enforcement levels:
-
-- **Real-time Tracking**: Live usage monitoring
-- **Pre-flight Checks**: Validation before upload
-- **Soft Limits**: Warnings before hard limits
-- **Grace Periods**: Temporary quota extensions
-- **Usage Analytics**: Historical usage patterns
+- **Pre-upload validation**: Size checked against remaining quota
+- **Database tracking**: Usage calculated via storage functions
+- **Hard limits**: Uploads rejected when quota exceeded
+- **Per-bucket limits**: Separate quotas for different file types
 
 ## Monitoring and Maintenance
 
-### Maintenance Architecture
+### Automated Maintenance
 
-The system implements **automated maintenance** procedures:
+Database functions handle storage maintenance:
 
-#### Cleanup Strategies
+#### Cleanup Operations
 
-- **Orphaned File Detection**: Identify unlinked files
-- **Expired File Removal**: Time-based cleanup policies
-- **Version Pruning**: Keep only recent versions
-- **Temporary File Cleanup**: Session-based file removal
-- **Failed Upload Cleanup**: Incomplete upload recovery
+- **Orphaned files**: Remove files not referenced in database
+- **Failed uploads**: Clean incomplete upload records
+- **Usage tracking**: Monitor storage consumption per user
 
-#### Performance Optimization - Storage
+#### Storage Functions
 
-**Storage performance** maintained through:
+Database provides utility functions for:
 
-- **Strategic Indexing**: Optimized query performance
-- **Partitioning**: Large table management
-- **Archival Strategy**: Cold storage for old files
-- **CDN Caching**: Edge delivery optimization
-- **Compression**: Storage efficiency for text files
+- **Quota checking**: Validate uploads against limits
+- **Usage calculation**: Track per-user storage consumption
+- **File cleanup**: Remove orphaned storage objects
 
 ## Processing Architecture
 
-### Edge Function Integration
+### Async Processing
 
-The system uses **serverless functions** for file processing:
+File processing uses database-driven queues:
 
-#### Processing Operations
+#### Processing Queue
 
-- **Virus Scanning**: Real-time malware detection
-- **Thumbnail Generation**: Multiple sizes and formats
-- **Metadata Extraction**: Document analysis and indexing
-- **Content Optimization**: Compression and format conversion
-- **AI Analysis**: Content classification and tagging
+- **file_processing_queue table**: Tracks async processing tasks
+- **Priority levels**: High/low priority processing
+- **Status tracking**: Monitor processing completion
+- **Retry handling**: Failed operations can be retried
 
-#### Processing Queue Architecture
+#### Processing Types
 
-**Asynchronous processing** ensures performance:
-
-- **Priority Queue**: Critical operations processed first
-- **Retry Logic**: Automatic failure recovery
-- **Batch Processing**: Efficient resource utilization
-- **Status Tracking**: Real-time processing visibility
-- **Resource Limits**: Prevent system overload
+- **Virus scanning**: Malware detection via ClamAV
+- **Metadata extraction**: File information and properties
+- **Content analysis**: Basic file validation and processing
 
 ## Error Handling
 
-### Upload Failures
+### Upload Errors
 
-- Automatic retry for network issues
-- Size/type validation before upload
-- Quota checking with user feedback
-- Partial upload cleanup
+- **Validation failures**: Size, type, or permission errors
+- **Quota exceeded**: User storage limit reached
+- **Network issues**: Connection problems during upload
+- **Permission denied**: RLS policy violations
 
-### Processing Failures
+### Processing Errors
 
-- Retry mechanism with exponential backoff
-- Error logging with context
-- Manual retry capability
-- Fallback processing modes
+- **Virus detection**: Infected files quarantined
+- **Metadata extraction failures**: Logged with retry capability
+- **Storage errors**: Supabase Storage API failures
 
-### Security Incidents
+### Recovery
 
-- Automatic quarantine for infected files
-- Admin notification system
-- Audit trail for all file operations
-- Incident response procedures
+- **Failed uploads**: Cleanup of partial database records
+- **Processing failures**: Retry queue for failed operations
+- **Quarantine**: Admin review process for flagged files
 
 ## Security Architecture
 
-### Multi-Layer Security
+### Security Layers
 
-The storage system implements **defense in depth**:
+File storage security includes multiple controls:
 
-#### Security Layers
+#### Access Control
 
-1. **Authentication**: JWT-based user verification
-2. **Authorization**: RLS policies at database level
-3. **Validation**: File type and size restrictions
-4. **Scanning**: Real-time virus detection
-5. **Encryption**: At-rest and in-transit protection
+- **Authentication**: Supabase JWT token validation
+- **Authorization**: PostgreSQL RLS policies per bucket
+- **File ownership**: User ID tracking and verification
+- **Collaboration**: Trip-based permission sharing
 
-#### Security Patterns
+#### Content Security
 
-- **Least Privilege**: Minimal required permissions
-- **Separation of Concerns**: Isolated bucket security
-- **Audit Trail**: Complete operation logging
-- **Incident Response**: Automated threat handling
-- **Compliance**: GDPR and data protection
+- **Virus scanning**: ClamAV integration for malware detection
+- **File validation**: Type and size restrictions per bucket
+- **Quarantine**: Automatic isolation of suspicious files
 
-## Architectural Patterns
+#### Data Protection
+
+- **Encryption**: Supabase-managed encryption at rest
+- **Access logging**: File operation audit trail
+- **Secure URLs**: Signed URLs for private file access
+
+## Architecture Patterns
 
 ### Upload Patterns
 
-**Best practices** for file uploads:
+File uploads follow these patterns:
 
-1. **Progressive Enhancement**: Basic upload with advanced features
-2. **Optimistic UI**: Immediate feedback with async processing
-3. **Resilient Design**: Automatic retry and resume
-4. **Security First**: Client and server validation
-5. **Performance**: Chunked uploads for large files
+- **Direct uploads**: Client to Supabase Storage with validation
+- **Server validation**: API checks permissions and quotas
+- **Async processing**: Post-upload tasks via database queues
+- **Error recovery**: Cleanup on failed operations
 
-### Storage Patterns
+### Storage Organization
 
-**Architectural patterns** for storage:
+Files are organized by:
 
-- **Hierarchical Organization**: Logical file structure
-- **Metadata-Driven**: Rich file metadata for search
-- **Version Control**: Complete file history
-- **Access Patterns**: Optimize for common queries
-- **Lifecycle Management**: Automated retention policies
+- **Bucket separation**: Different buckets for different content types
+- **User ownership**: Files linked to uploading users
+- **Trip association**: Files optionally linked to specific trips
+- **Metadata storage**: File properties stored in database
 
-## Scalability Architecture
+## Scalability
 
-### Horizontal Scaling
+### Storage Scaling
 
-The storage system supports **unlimited scale**:
+- **Supabase Storage**: Managed object storage with global CDN
+- **Database scaling**: PostgreSQL handles metadata at scale
+- **Quota management**: Per-user limits prevent abuse
+- **Processing queues**: Async operations prevent bottlenecks
 
-- **Bucket Sharding**: Distribute files across buckets
-- **CDN Integration**: Global edge delivery
-- **Parallel Processing**: Concurrent file operations
-- **Queue Scaling**: Dynamic worker allocation
-- **Database Partitioning**: Large table management
+### Performance
 
-### Performance Optimization
-
-**Multi-level optimization** strategy:
-
-1. **Edge Caching**: CDN for public assets
-2. **Database Caching**: Query result caching
-3. **Processing Pipeline**: Parallel operations
-4. **Lazy Loading**: On-demand processing
-5. **Resource Pooling**: Connection reuse
-
-## Architecture Summary
-
-TripSage's storage architecture provides:
-
-- **Security**: Multi-layer protection with RLS
-- **Scalability**: Unlimited storage with CDN delivery
-- **Performance**: Async processing with queuing
-- **Reliability**: Version control and backup
-- **Flexibility**: Multiple upload/download patterns
-
-The architecture balances security, performance, and user experience while maintaining simplicity and reliability.
+- **CDN delivery**: Fast access to stored files
+- **Direct uploads**: Client-side uploads reduce server load
+- **Async processing**: Non-blocking file operations
+- **Database indexing**: Optimized queries for file metadata
 
 ---
 
-*Architecture Version: 2.0.0*  
-*Last Updated: June 2025*
-
-For implementation details, see the [Storage Implementation Guide](../developers/storage-guide.md). For operational procedures, see the [Storage Operations Guide](../operators/storage-operations.md).
+This storage architecture provides secure, scalable file management integrated with TripSage's travel planning platform.

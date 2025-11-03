@@ -9,8 +9,7 @@
 
 ### Deployment & Operations
 
-- [Deployment Guide](./deployment-guide.md) - Production deployment checklist and procedures
-- [Deployment Guide Full](./deployment-guide-full.md) - Complete deployment for all environments with CI/CD, monitoring, and cloud platforms
+- [Deployment Guide](./deployment-guide.md) - Complete deployment guide with Supabase, Docker, and cloud platforms
 - [Configuration Management](./configuration-management.md) - Modern Pydantic-based configuration system with security
 - [Supabase Configuration](./supabase-configuration.md) - Database concepts, security, and troubleshooting
 - [Manual Supabase Operations](./supabase-manual-operations.md) - Manual setup and operations when Vercel integration isn't available
@@ -32,7 +31,7 @@
 
 | **Task** | **Documentation** | **Time Estimate** |
 |----------|-------------------|-------------------|
-| New deployment | [Installation](./installation-guide.md) → [Deployment](./deployment-guide.md) | 2-4 hours |
+| New deployment | [Installation](./installation-guide.md) → [Deployment](./deployment-guide.md) | 1-2 hours |
 | Environment setup | [Environment Configuration](./environment-configuration.md) | 30-60 min |
 | Security review | [Security Guide](./security-guide.md) | 1-2 hours |
 | OAuth integration | [Authentication Guide](./authentication-guide.md) | 1-3 hours |

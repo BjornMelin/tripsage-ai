@@ -1,380 +1,285 @@
-# TripSage System Architecture Overview
+# System Architecture
 
 > **Target Audience**: Technical architects, senior developers, technical stakeholders
 
-This document provides an overview of TripSage's system architecture, focusing on design patterns and component interactions. For implementation details, see the Developer Guide.
+This document describes TripSage's system architecture, focusing on component interactions and design patterns. For implementation details, see the codebase documentation.
 
 ## High-Level Architecture
 
 ```mermaid
 graph TD
     subgraph "Presentation Layer"
-        F[Frontend<br/>Next.js 15<br/>• React Server<br/>Components<br/>• Real-time UI<br/>• Supabase Realtime<br/>• State Mgmt]
-        A[AI Agents<br/>LangGraph<br/>• Planning<br/>• Flight Agent<br/>• Hotel Agent<br/>• Budget Agent<br/>• Memory Agent]
-        E[External APIs<br/>Travel Partners<br/>• Flight APIs<br/>• Hotel APIs<br/>• Maps APIs<br/>• Weather APIs<br/>• Calendar APIs]
+        FE[Frontend<br/>Next.js 16<br/>• App Router<br/>• Server Components<br/>• AI SDK<br/>• Zustand State<br/>• Supabase Realtime]
     end
 
-    subgraph "Unified API Layer<br/>FastAPI with<br/>Consumer Support"
-        G[API Gateway<br/>• Frontend Adapter<br/>• Agent Adapter<br/>• Auth Middleware]
-        R["API Routers<br/>Auth | Chat | Trips | Flights |<br/>Hotels | Destinations |<br/>Memory | WS"]
+    subgraph "API Layer"
+        API[FastAPI<br/>• Route Handlers<br/>• Dependency Injection<br/>• Rate Limiting<br/>• Authentication]
     end
 
-    subgraph "Business Logic Layer<br/>TripSage Core"
-        BS[Business Services<br/>• Auth Service<br/>• Memory Svc<br/>• Chat Service<br/>• Flight Svc<br/>• Hotel Service]
-        ES[External API Services<br/>• Google Maps<br/>• Weather API<br/>• Calendar API<br/>• Document AI<br/>• Crawl4AI]
-        IS[Infrastructure Services<br/>• Database Service<br/>• Cache Service<br/>Upstash Redis (HTTP)<br/>• Key Monitoring
-Service<br/>• Security Service]
-        LG["LangGraph Orchestration<br/>PostgreSQL Checkpointing |<br/>Memory Bridge |<br/>Handoff Coordination"]
+    subgraph "Business Logic Layer"
+        CORE[TripSage Core<br/>• Business Services<br/>• External API Services<br/>• Infrastructure Services]
     end
 
-    subgraph "Infrastructure Layer<br/>Storage<br/>Architecture"
-        D[Database<br/>Supabase<br/>• PostgreSQL<br/>• pgvector<br/>• Mem0 backend<br/>• RLS security<br/>• Migrations]
-        C[Cache<br/>Upstash Redis (HTTP)
-• Redis compat
-• HTTP client
-• Smart TTL]
-        EX[External Services<br/>• Duffel Flights<br/>• Google Maps/Cal<br/>• Weather API<br/>• Airbnb MCP<br/>Only MCP]
+    subgraph "Infrastructure Layer"
+        DB[Supabase PostgreSQL<br/>• pgvector<br/>• RLS Security<br/>• Vault API Keys<br/>• Realtime]
+        CACHE[Upstash Redis<br/>• HTTP Client<br/>• Rate Limiting<br/>• Caching]
+        MEM0[Mem0 SDK<br/>• AI Memory<br/>• Context Management]
     end
 
-    F --> G
-    A --> G
-    E --> G
-    G --> BS
-    G --> ES
-    G --> IS
-    G --> R
-    BS --> LG
-    ES --> LG
-    IS --> LG
-    BS --> D
-    BS --> C
-    BS --> EX
-    ES --> D
-    ES --> C
-    ES --> EX
-    IS --> D
-    IS --> C
-    IS --> EX
-    LG --> D
-    LG --> C
-    LG --> EX
+    FE --> API
+    API --> CORE
+    CORE --> DB
+    CORE --> CACHE
+    CORE --> MEM0
 ```
 
 ## Technology Stack
 
-### Technology Selection Principles
-
-1. **Production-Proven**: Technologies with demonstrated reliability at scale
-2. **Developer Experience**: Tools that enhance productivity and reduce complexity
-3. **Performance First**: Technologies delivering measurable performance benefits
-4. **Cost Efficient**: Solutions optimizing infrastructure and operational costs
-5. **Future-Proof**: Technologies with strong communities and long-term viability
-
 ### Core Technologies
 
-- **Backend**: FastAPI (Python 3.11+) - Async performance, type safety, auto-documentation
-- **Database**: Supabase PostgreSQL - Unified platform with pgvector for AI workloads
-- **Cache**: Upstash Redis (HTTP) - Serverless, connectionless HTTP client
-- **AI Framework**: LangGraph - Production-ready agent orchestration with state persistence
-- **Memory System**: Mem0 + pgvector - Intelligent context management
-- **Frontend**: Next.js 15 - Server components, App Router, TypeScript
-- **Testing**: pytest, vitest, Playwright - Comprehensive test coverage (90%+)
+- **Backend**: FastAPI (Python 3.11+) - Async API framework with automatic OpenAPI documentation
+- **Database**: Supabase PostgreSQL - Database with pgvector for embeddings
+- **Cache**: Upstash Redis (HTTP) - Serverless Redis with HTTP client
+- **Memory System**: Mem0 SDK - AI context and conversation memory
+- **Frontend**: Next.js 16 - React framework with App Router and Server Components
+- **AI**: AI SDK (@ai-sdk/react) - Unified interface for AI providers
+- **State Management**: Zustand - Lightweight state management
+- **UI**: shadcn/ui + Tailwind CSS v4 - Component library and styling
+- **Testing**: pytest, vitest, Playwright - Unit, integration, and e2e testing
 
 ### External Integrations
 
-- **Flight API**: Duffel SDK - Direct integration, 70% latency reduction
-- **Maps**: Google Maps Platform SDK - Location services and geocoding
-- **Weather**: OpenWeatherMap API - Real-time weather data
-- **Browser Automation**: Playwright - Headless browser operations
+- **Flight API**: Duffel SDK - Flight search and booking
+- **Maps**: Google Maps Platform - Location services and geocoding
+- **Weather**: OpenWeatherMap API - Weather data
+- **Calendar**: Google Calendar API - Calendar integration
+- **Browser Automation**: Playwright - Web scraping and automation
 
 ## Architecture Components
 
 ### Presentation Layer
 
-#### Frontend (Next.js 15)
+#### Frontend (Next.js 16)
 
-- App Router: Routing with server-side rendering
-- React Server Components: Server-side rendering
-- Real-time Features: Supabase Realtime (private channels + RLS)
+- App Router: File-based routing with nested layouts
+- Server Components: Server-side rendering with client components for interactivity
+- AI Integration: AI SDK for streaming chat and tool calling
 - State Management: Zustand stores with persistence
-- Component Architecture: Modular components
-- Performance: Code splitting and lazy loading
+- Real-time: Supabase Realtime for live updates
+- UI: shadcn/ui components with Tailwind CSS v4
+- Authentication: Supabase auth with SSR support
 
-#### AI Agents (LangGraph)
+### API Layer (FastAPI)
 
-- Planning Agent: Coordinator for trip planning
-- Specialized Agents: Flight, Accommodation, Budget,
-  Destination
-- Memory Agent: Context management and user preference
-  learning
-- Orchestration: PostgreSQL checkpointing and agent
-  handoffs
-- Tool Integration: External service integration
+#### Route Handlers
 
-### Unified API Layer (FastAPI)
+- Thin adapters: Parse requests and construct dependencies
+- Dependency injection: Pure handler functions with injected services
+- Authentication: JWT tokens and API keys with BYOK support
+- Rate limiting: Per-user and per-API key limits using Upstash Redis
+- Error handling: Structured error responses with appropriate HTTP codes
+- OpenAPI: Automatic API documentation generation
 
-#### Consumer-Aware Design
+#### API Routers
 
-The API adapts responses based on consumer type:
+Available routers for different domains:
 
-**Frontend Consumers**:
-
-- Error messages and UI metadata
-- Pagination and display hints
-- Rate limits for human interaction
-- Sanitized data for web display
-
-**Agent Consumers**:
-
-- Error context and debugging information
-- Tool integration metadata
-- Rate limits for automated workflows
-- Raw data access for AI processing
-
-#### Core Features
-
-- Authentication: JWT for users, API keys for agents, BYOK
-  support
-- Rate Limiting: Limits with principal tracking
-- Realtime (Supabase): Private channels with RLS for live updates
-- Error Handling: Error processing with context
-- Response Formatting: Response adaptation
+- auth: User authentication and session management
+- users: User profiles and preferences
+- trips: Trip planning and management
+- flights: Flight search and booking
+- accommodations: Hotel search and booking
+- destinations: Location and destination data
+- activities: Activity recommendations
+- itineraries: Trip itinerary management
+- memory: AI memory and context
+- search: Unified search across providers
+- attachments: File upload and management
+- dashboard: Analytics and reporting
+- health: Health checks and monitoring
 
 ### Business Logic Layer (TripSage Core)
 
-#### Service Architecture
+#### Service Organization
 
-Unified service design in TripSage Core:
+TripSage Core provides modular services organized by responsibility:
 
-**Business Services** (tripsage_core/services/business/):
+**Business Services** (`tripsage_core/services/business/`):
 
-- AuthService, MemoryService, ChatService
-- FlightService, AccommodationService, DestinationService
-- TripService, ItineraryService, UserService
-- KeyManagementService, FileProcessingService
+- `AuthService`: User authentication and authorization
+- `TripService`: Trip planning and management
+- `FlightService`: Flight search and booking via Duffel
+- `AccommodationService`: Hotel search and booking
+- `DestinationService`: Location research and insights
+- `ActivityService`: Activity recommendations
+- `ItineraryService`: Trip itinerary management
+- `MemoryService`: AI memory and context management via Mem0
+- `ChatService`: Chat session management
+- `UserService`: User profiles and preferences
+- `SearchService`: Multi-provider search orchestration
+- `FileProcessingService`: Document analysis and processing
 
-**External API Services**
-(tripsage_core/services/external_apis/):
+**External API Services** (`tripsage_core/services/external_apis/`):
 
-- GoogleMapsService, WeatherService, CalendarService
-- DocumentAnalyzer, WebcrawlService, PlaywrightService
-- TimeService with timezone handling
+- `GoogleMapsService`: Location services and geocoding
+- `WeatherService`: Weather data and forecasting
+- `CalendarService`: Calendar integration
+- `DuffelProvider`: Flight search and booking
+- `PlaywrightService`: Browser automation
+- `DocumentAnalyzer`: File processing
+- `TimeService`: Timezone utilities
 
-**Infrastructure Services**
-(tripsage_core/services/infrastructure/):
+**Infrastructure Services** (`tripsage_core/services/infrastructure/`):
 
-- DatabaseService with transaction management
-- CacheService with Upstash Redis (HTTP) integration
-- Realtime integration (Supabase) for client channels; backend publishes via DB functions/REST when needed
-- KeyMonitoringService for security
-
-#### LangGraph Orchestration
-
-- **Graph-based Workflows**: Deterministic multi-step planning processes
-- **PostgreSQL Checkpointing**: Persistent state management across sessions
-- **Memory Bridge**: Mem0 integration for contextual relationship data
-- **Handoff Coordination**: Seamless agent collaboration and state transfer
-- **Error Recovery**: Built-in retry mechanisms and graceful degradation
-
-#### Specialized Agent Nodes
-
-**Router Node**: Intelligent request routing based on conversation analysis and intent classification.
-
-**Flight Agent**: Multi-airline search, price comparison, route optimization, and booking assistance with user preference learning.
-
-**Accommodation Agent**: Hotel/Airbnb search, property comparison, amenity filtering, and location-based recommendations.
-
-**Budget Agent**: Expense tracking, cost optimization, multi-currency support, and personalized spending recommendations.
-
-**Destination Research Agent**: Local insights, activity recommendations, weather integration, and personalized destination guidance.
-
-**Itinerary Agent**: Day-by-day planning, scheduling optimization, calendar integration, and logistics coordination.
+- `DatabaseService`: Supabase operations and transactions
+- `CacheService`: Upstash Redis caching
+- `SupabaseClient`: Supabase client management
+- `DatabaseMonitor`: Connection health monitoring
+- `KeyMonitoringService`: API key usage tracking
 
 ### Infrastructure Layer
 
-#### Database (Supabase)
+#### Database (Supabase PostgreSQL)
 
-- PostgreSQL: Data storage with ACID compliance
-- pgvector Extension: Vector similarity search
-- Row Level Security: Access control
-- Real-time Subscriptions: Data updates
-- Migration System: Schema evolution
+- Relational data: ACID-compliant PostgreSQL with JSONB support
+- Vector search: pgvector extension for 1536-dimensional embeddings
+- Security: Row Level Security (RLS) for data access control
+- Real-time: Live data synchronization via Supabase Realtime
+- Migrations: Versioned schema changes with rollback support
+- API keys: Encrypted storage via Supabase Vault
 
 #### Cache (Upstash Redis)
 
-- Redis Compatibility: Replacement with features
-- Multi-tier TTL Strategy: Data management
-- Memory Efficiency: For large datasets
+- HTTP client: Serverless Redis with REST API
+- Rate limiting: Per-user and per-API key limits
+- Session data: Temporary storage with configurable TTL
+- Search cache: API response caching for performance
 
-#### Memory System (Mem0 + pgvector)
+#### Memory System (Mem0)
 
-- Vector Storage: pgvector backend for similarity search
-- Context Compression: Memory summarization
-- User Learning: Preference and behavior patterns
-- Conversation Continuity: Context across sessions
+- Context management: AI conversation memory and user preferences
+- Vector storage: Embeddings stored in PostgreSQL via pgvector
+- Session continuity: Persistent context across chat sessions
+- Learning: User behavior pattern recognition
 
 ## Data Flow
 
-### Unified Request Processing
+### Request Processing
 
 ```mermaid
 sequenceDiagram
-    participant U as User/Agent
-    participant API as Unified API
+    participant FE as Frontend
+    participant API as FastAPI
     participant Core as TripSage Core
-    participant LG as LangGraph
     participant DB as Supabase
     participant Cache as Upstash Redis
     participant Ext as External APIs
 
-    U->>API: Request (JWT/API Key)
-    API->>API: Consumer Detection & Auth
-    API->>Core: Route to Business Service
+    FE->>API: HTTP Request
+    API->>API: Authentication & Rate Limiting
+    API->>Core: Business Logic
     Core->>Cache: Check Cache
-    
+
     alt Cache Hit
         Cache->>Core: Return Cached Data
     else Cache Miss
-        Core->>LG: Invoke Agent if Complex
-        LG->>Ext: Direct SDK Calls
-        Ext->>LG: Return Data
-        LG->>DB: Store Results
-        DB->>Core: Confirm Storage
+        Core->>Ext: External API Call
+        Ext->>Core: Response Data
+        Core->>DB: Store Results
         Core->>Cache: Update Cache
     end
-    
-    Core->>API: Return Response
-    API->>API: Format for Consumer
-    API->>U: Consumer-Specific Response
+
+    Core->>API: Response Data
+    API->>FE: HTTP Response
 ```
 
-### Memory and Context Flow
+### AI Memory Flow
 
-The memory system uses a context pipeline:
+Memory operations follow this pattern:
 
-1. Memory Retrieval: Vector similarity search retrieves
-   context
-2. Context Aggregation: Conversation history and user
-   preferences combined
-3. Agent Processing: LangGraph agents process with context
-   awareness
-4. Memory Persistence: Insights stored for future use
+1. Context retrieval: Mem0 SDK fetches relevant conversation history
+2. AI processing: Frontend uses AI SDK with retrieved context
+3. Memory updates: New interactions stored via Mem0 for future use
+4. Vector storage: Embeddings persisted in PostgreSQL via pgvector
 
 ## Security Architecture
 
-### Multi-Layer Security
+### Authentication
 
-**Authentication & Authorization**:
+- JWT tokens: Supabase-managed authentication with refresh tokens
+- API keys: Bring Your Own Key (BYOK) system with Vault encryption
+- Session management: Secure token handling with automatic refresh
+- Multi-factor support: Supabase auth with MFA capabilities
 
-- JWT Tokens: For user sessions with refresh
-- API Keys: For service-to-service communication
-- BYOK System: User-provided API key management
-- Row Level Security: Database-level access control
+### Authorization
 
-**Data Protection**:
+- Row Level Security: PostgreSQL RLS policies for data access control
+- User ownership: All data scoped to authenticated users
+- Trip collaboration: Granular permissions (view, edit, admin) for shared trips
+- API key scoping: Keys limited to specific services and users
 
-- Encryption at Rest: AES-256 for sensitive data
-- Encryption in Transit: TLS 1.3 for communications
-- Key Rotation: Encryption key rotation
-- BYOK Encryption: User-specific salt and key derivation
+### Data Protection
 
-**Rate Limiting & Monitoring**:
+- Encryption at rest: Supabase-managed encryption for all data
+- Encryption in transit: TLS 1.3 for all communications
+- API key encryption: Vault-secured storage with service role access
+- File security: Virus scanning and secure upload handling
 
-- Consumer-Aware Limits: Limits for frontend vs agents
-- Principal-Based Tracking: Per-user and per-API key
-  monitoring
-- Security Event Logging: Audit trail
-- Anomaly Detection: Threat detection
+### Rate Limiting
 
-## Real-time Communication Architecture
+- Per-user limits: Request throttling based on user identity
+- Per-API key limits: Service-specific rate limiting
+- Upstash Redis: Distributed rate limiting with burst protection
+- Monitoring: Rate limit events logged for analysis
 
-### Realtime Management (Supabase)
+## Real-time Features
 
-The system uses Supabase Realtime for real-time features:
+### Supabase Realtime
 
-- Consumer-Aware Connections: Handling for frontend vs
-  agent connections
-- Channel Management: Join/leave private topics; presence/broadcast APIs
-- Message Routing: Routing based on message type and consumer
-- Graceful Disconnection: Cleanup and state preservation
-- Error Recovery: supabase-js connection lifecycle handling and resubscribe
+Real-time functionality is provided by Supabase Realtime:
 
-### Real-time Features
+- Live updates: Automatic UI updates for data changes
+- Private channels: User-scoped real-time subscriptions
+- Row Level Security: Real-time queries respect RLS policies
+- Connection management: Automatic reconnection and error handling
+- Presence: User online/offline status tracking
 
-**Live Trip Planning**:
+### Real-time Use Cases
 
-- Multi-user collaboration on trip planning
-- Updates for itinerary changes
-- Shared workspace with conflict resolution
+- Trip collaboration: Multiple users editing trips simultaneously
+- Chat updates: Live message delivery and typing indicators
+- Status notifications: Real-time progress updates for long operations
+- Live search results: Streaming results from external APIs
 
-**Agent Status Updates**:
+## Deployment
 
-- Progress tracking for AI agent operations
-- Notifications for long-running tasks
-- Error reporting and recovery status
+### Development
 
-**Chat Integration**:
+- Docker Compose: Local development environment
+- Hot reloading: FastAPI and Next.js development servers
+- Local Supabase: Supabase CLI for local database development
 
-- Messaging with AI agents
-- Typing indicators and presence
-- Message delivery confirmation
+### Production
 
-## Deployment Architecture
+- Vercel: Frontend deployment with edge functions
+- Railway/Fly.io: Backend deployment options
+- Supabase: Managed database and real-time services
+- Upstash Redis: Managed caching and rate limiting
 
-### Container Orchestration
+## Monitoring
 
-**Production Deployment**:
+### Health Checks
 
-- Kubernetes: Container orchestration with auto-scaling
-- Docker Compose: Development environment
-- Service Mesh: Inter-service communication
-- Load Balancing: Traffic distribution and failover
+- API endpoints: `/health` endpoint for service status
+- Database monitoring: Connection health and performance metrics
+- External API status: Provider availability tracking
 
-**Scaling Strategy**:
+### Observability
 
-- API Service: Auto-scaling based on request volume
-- Frontend: CDN distribution with edge caching
-- Database: Read replicas for query distribution
-- Cache: Upstash Redis (managed)
-
-### Monitoring & Observability
-
-**Performance Monitoring**:
-
-- Request/Response Times: Per-endpoint monitoring
-- Error Rates: By consumer type and service
-- Cache Metrics: Hit rates and performance data
-- Database Performance: Query optimization and indexing
-
-**Health Checks**:
-
-- Service Health: Individual service monitoring
-- Database Connectivity: Connection pool status
-- External API Status: Provider availability
-- Memory System: Context and performance metrics
-
-## Future Considerations
-
-### Planned Enhancements
-
-**SDK Migration Completion**:
-
-- Google Maps, Calendar, Weather, Time services
-
-**AI Features**:
-
-- LangGraph workflows
-- Multi-modal input processing
-- Reasoning capabilities
-
-**Scalability Improvements**:
-
-- Global deployment with edge computing
-- Caching strategies
-- Database sharding for scale
+- OpenTelemetry: Distributed tracing and metrics
+- Error logging: Structured logging with context
+- Performance monitoring: Response times and error rates
 
 ---
 
-TripSage's architecture uses LangGraph for AI orchestration,
-Supabase for storage, Upstash Redis for caching, consolidated
-TripSage Core services, and direct SDK integrations.
+This architecture provides a scalable foundation for TripSage's travel planning platform with integrated AI capabilities and real-time collaboration features.

@@ -1,149 +1,181 @@
-# Production Deployment Guide
+# TripSage Deployment Guide
 
-## Pre-Deployment Checklist
+## Architecture Overview
 
-### Environment Preparation
+TripSage uses a modern, serverless-first architecture:
 
-- [ ] Database migration scripts tested
-- [ ] Environment variables configured
-- [ ] Upstash Redis credentials set (UPSTASH_REDIS_REST_URL/TOKEN)
-- [ ] SSL certificates installed
-- [ ] Domain DNS configured
+- **Backend**: FastAPI application (Python 3.13+) with async architecture
+- **Database**: Supabase PostgreSQL with pgvector extension
+- **Cache**: Upstash Redis (HTTP REST API)
+- **Auth**: Supabase authentication with JWT tokens
+- **Observability**: OpenTelemetry with Jaeger tracing
+- **Deployment**: Containerized with Docker
 
-### Build Validation
+## Prerequisites
 
-- [ ] TypeScript compilation clean: `npm run type-check`
-- [ ] Frontend build successful: `npm run build`
-- [ ] Backend tests passing: `pytest`
-- [ ] Security validation complete: `python scripts/security/security_validation.py`
+- Docker and Docker Compose
+- Python 3.13+
+- Supabase project with database access
+- Upstash Redis instance
+- OpenAI API key
 
-## Deployment Sequence
+## Environment Configuration
 
-### 1. Database Migration
-
-```bash
-# Run database migrations
-python scripts/database/run_migrations.py
-
-# Verify pgvector optimization
-python -c "from tripsage_core.services.infrastructure.database_service import DatabaseService; print('✅ Database service ready')"
-```
-
-### 2. Cache System Setup
+### Required Environment Variables
 
 ```bash
-# Configure Upstash Redis (managed) — no local container required
-# Verify connection
-python scripts/verification/verify_upstash.py
+# Core
+ENVIRONMENT=production
+DEBUG=false
+LOG_LEVEL=INFO
+
+# Supabase
+DATABASE_URL=https://your-project.supabase.co
+DATABASE_PUBLIC_KEY=your-supabase-anon-key
+DATABASE_SERVICE_KEY=your-supabase-service-key
+DATABASE_JWT_SECRET=your-supabase-jwt-secret
+
+# Application Security
+SECRET_KEY=your-application-secret-key
+
+# AI Services
+OPENAI_API_KEY=your-openai-api-key
+
+# Upstash Redis (HTTP REST API)
+UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-upstash-token
 ```
-
-### 3. Frontend Deployment
-
-```bash
-cd frontend
-npm ci --production
-npm run build
-npm start
-```
-
-### 4. Backend Deployment
-
-```bash
-uv install --production
-uv run python -m tripsage.api.main
-```
-
-## Performance Monitoring
-
-### Key Metrics to Monitor
-
-- Vector search latency: Target <20ms
-- Database connection pool: Target <80% utilization
-- Realtime channels: Monitor authorization errors and reconnect rates
-- Memory usage: Target <512MB per service
-- Cache hit rate: Target >90%
-
-### Monitoring Endpoints
-
-- Health check: `GET /api/health`
-- Metrics: `GET /api/metrics`
-- Database status: `GET /api/health/database`
-- Realtime status: use Supabase Dashboard Realtime metrics; backend exposes only `GET /api/health`
-
-## Troubleshooting
-
-### Common Issues
-
-#### Database Connection Issues
-
-```bash
-# Check connection
-python scripts/verification/verify_connection.py
-
-# Reset connection pool
-docker restart tripsage-database
-```
-
-#### Realtime Subscription Failures
-
-```bash
-# Common causes
-# 1) Missing/expired access token in supabase.realtime.setAuth()
-# 2) Topic not authorized by RLS policies (see supabase/migrations/20251027_01_realtime_policies.sql)
-# 3) Realtime Authorization disabled in Supabase project settings
-```
-
-#### Performance Degradation
-
-```bash
-# Run performance benchmark
-python scripts/benchmarks/benchmark.py --database-only
-
-# Check resource usage
-htop
-iotop
-```
-
-## Rollback Procedure
-
-### Emergency Rollback
-
-1. Switch traffic to previous version
-2. Revert database migrations if needed
-3. Clear cache to prevent stale data
-4. Monitor error rates
-
-### Database Rollback
-
-```bash
-# Backup current state
-pg_dump tripsage > backup_$(date +%Y%m%d_%H%M%S).sql
-
-# Revert migrations (if needed)
-python scripts/database/rollback_migrations.py --to-version <previous_version>
-```
-
-## Security Considerations
 
 ### Production Security Settings
 
 - CORS origins restricted to production domains
-- Supabase Realtime Authorization enabled (private channels only)
+- Supabase Realtime Authorization enabled
 - Rate limiting configured for production load
 - API keys rotated and secured
 - Database connection strings encrypted
 
-### Security Validation
+## Supabase Setup
+
+### Project Configuration
+
+1. Create Supabase project
+2. Enable pgvector extension in database settings
+3. Configure authentication providers
+4. Set up Row Level Security (RLS) policies
+
+### Database Migrations
 
 ```bash
-# Run security audit
-python scripts/security/security_validation.py
+# Link local project to Supabase
+make supa.link PROJECT_REF=your-project-ref
 
-# Check for vulnerabilities
-bandit -r . -f json -o security_report.json
+# Push migrations to remote
+make supa.db.push
+
+# Deploy edge functions
+make supa.functions.deploy-all PROJECT_REF=your-project-ref
 ```
 
-## Performance Optimization Tips
+### Secrets Management
+
+```bash
+# Set minimal required secrets
+make supa.secrets-min \
+  SUPABASE_URL=https://your-project.supabase.co \
+  SUPABASE_ANON_KEY=your-anon-key \
+  SUPABASE_SERVICE_ROLE_KEY=your-service-key
+
+# Set Upstash Redis secrets
+make supa.secrets-upstash \
+  UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io \
+  UPSTASH_REDIS_REST_TOKEN=your-token
+```
+
+## Container Deployment
+
+### Build and Run
+
+```bash
+# Build container
+docker build -f docker/Dockerfile.api -t tripsage-api .
+
+# Run locally for testing
+docker run -p 8080:8080 \
+  --env-file .env \
+  tripsage-api
+
+# Health check
+curl http://localhost:8080/health
+```
+
+### Production Deployment Options
+
+#### Docker Compose (Development/Staging)
+
+```yaml
+version: '3.8'
+services:
+  tripsage-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+```
+
+#### Cloud Platforms
+
+**Railway/Render**:
+
+- Connect GitHub repository
+- Set environment variables
+- Deploy from main branch
+- Configure health checks
+
+**AWS ECS/Google Cloud Run**:
+
+- Build container image
+- Push to container registry
+- Create service with environment variables
+- Configure load balancer and health checks
+
+## Observability Setup
+
+### OpenTelemetry Configuration
+
+TripSage includes OpenTelemetry instrumentation for:
+
+- FastAPI request/response tracing
+- Database query monitoring
+- Redis operation tracking
+- External API call tracing
+
+### Jaeger Integration
+
+```bash
+# Run Jaeger locally for development
+docker-compose up otel-collector jaeger
+```
+
+Access Jaeger UI at `http://localhost:16686`
+
+### Metrics Collection
+
+The application exposes:
+
+- Health endpoint: `GET /health`
+- Metrics endpoint: `GET /metrics` (if configured)
+- Database status: `GET /health/database`
+
+## Performance Optimization
 
 ### Database Optimization
 
@@ -152,20 +184,120 @@ bandit -r . -f json -o security_report.json
 - Use connection pooling efficiently
 - Monitor disk I/O and memory usage
 
-### Frontend Optimization
+### Caching Strategy
 
-- Enable production build optimizations
-- Use CDN for static assets
-- Monitor Core Web Vitals
-- Implement proper caching headers
+- Upstash Redis for session storage and API response caching
+- Configure appropriate TTL values
+- Monitor cache hit rates
 
-### Realtime Optimization
+### Rate Limiting
 
-- Monitor connection count
-- Use Redis pub/sub for scaling
-- Implement proper error recovery
-- Monitor heartbeat performance
+- Configurable per-endpoint rate limits
+- Redis-backed rate limiting storage
+- Automatic cleanup of expired keys
 
----
+## CI/CD Pipeline
 
-> *Deployment guide for TripSage AI platform*
+### GitHub Actions
+
+The deployment workflow supports:
+
+- Automated testing and linting
+- Container image building
+- Deployment to multiple environments
+- Health checks and rollback
+
+### Environment Management
+
+- **Development**: Feature branches with preview deployments
+- **Staging**: Integration testing environment
+- **Production**: Stable releases from main branch
+
+## Troubleshooting
+
+### Common Issues
+
+#### Database Connection Issues
+
+```bash
+# Test Supabase connection
+python -c "
+from supabase import create_client
+client = create_client('https://your-project.supabase.co', 'service-key')
+print('Connection successful')
+"
+
+# Check Upstash Redis
+curl https://your-redis.upstash.io/ping \
+  -H 'Authorization: Bearer your-token'
+```
+
+#### Container Health Check Failures
+
+```bash
+# Check container logs
+docker logs tripsage-container
+
+# Test health endpoint directly
+curl -v http://localhost:8080/health
+```
+
+#### Performance Degradation
+
+```bash
+# Monitor resource usage
+docker stats tripsage-container
+
+# Check application logs
+docker logs --tail 100 tripsage-container
+```
+
+### Rollback Procedure
+
+1. Identify failed deployment
+2. Revert to previous container image
+3. Clear application cache if needed
+4. Monitor error rates and performance
+5. Update deployment status in CI/CD
+
+### Security Validation
+
+```bash
+# Run security audit
+python -c "
+from tripsage_core.config import get_settings
+settings = get_settings()
+report = settings.get_security_report()
+print('Security validation:', report)
+"
+```
+
+## Maintenance Tasks
+
+### Database Maintenance
+
+- Regular vacuum and analyze operations
+- Monitor index usage and rebuild if needed
+- Backup verification and testing
+
+### Cache Management
+
+- Monitor Redis memory usage
+- Clear stale cache entries
+- Update cache TTL policies as needed
+
+### Dependency Updates
+
+- Regular security updates for Python packages
+- Update base container images
+- Test compatibility before production deployment
+
+## Support
+
+For deployment issues:
+
+1. Check application logs
+2. Verify environment configuration
+3. Test individual service connectivity
+4. Review Supabase dashboard for database issues
+5. Check Upstash Redis metrics
