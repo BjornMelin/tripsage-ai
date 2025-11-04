@@ -336,3 +336,9 @@ scan-results/
 # Project specific files
 .agent/
 supabase/.temp/
+ 
+# Frontend workspace (consolidated from frontend/.gitignore)
+frontend/next-env.d.ts
+frontend/.vercel
+frontend/.pnpm-debug.log*
+frontend/build/
