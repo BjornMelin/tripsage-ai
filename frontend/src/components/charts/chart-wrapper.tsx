@@ -124,7 +124,9 @@ export const YAxis = CreateDynamicComponent(() =>
 export const Tooltip = CreateDynamicComponent(() =>
   import("recharts").then(
     (mod) =>
-      mod.Tooltip as unknown as React.ComponentType<RechartsTooltipProps<any, any>>
+      mod.Tooltip as unknown as React.ComponentType<
+        RechartsTooltipProps<string | number, string | number>
+      >
   )
 );
 

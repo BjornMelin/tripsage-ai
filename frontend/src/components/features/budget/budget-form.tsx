@@ -45,7 +45,7 @@ import {
   type ExpenseCategory,
   expenseCategorySchema,
 } from "@/lib/schemas/budget";
-import { secureUUID } from "@/lib/security/random";
+import { secureUuid } from "@/lib/security/random";
 import { cn } from "@/lib/utils";
 
 // Augmented form schema with UI-specific state fields
@@ -151,7 +151,7 @@ export const BudgetForm = ({
         ]
       ).map((cat) => ({
         ...cat,
-        id: cat.id ?? secureUUID(),
+        id: cat.id ?? secureUuid(),
       })),
       currency: "USD",
       enableAlerts: true,
@@ -220,7 +220,7 @@ export const BudgetForm = ({
       const newCategory = {
         amount: 0,
         category: availableCategories[0].value as ExpenseCategory,
-        id: secureUUID(),
+        id: secureUuid(),
       };
       form.setValue("categories", [...categories, newCategory]);
     }

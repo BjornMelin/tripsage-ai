@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  MemorySchema,
-  SearchMemoriesFiltersSchema,
-  SearchMemoriesRequestSchema,
+  MEMORY_SCHEMA,
+  SEARCH_MEMORIES_FILTERS_SCHEMA,
+  SEARCH_MEMORIES_REQUEST_SCHEMA,
 } from "../memory";
 
 describe("Memory Schemas", () => {
-  describe("SearchMemoriesRequestSchema", () => {
+  describe("SEARCH_MEMORIES_REQUEST_SCHEMA", () => {
     it("should validate a valid search request with proper filters", () => {
       const validRequest = {
         filters: {
@@ -18,7 +18,7 @@ describe("Memory Schemas", () => {
         userId: "user-123",
       };
 
-      const result = SearchMemoriesRequestSchema.safeParse(validRequest);
+      const result = SEARCH_MEMORIES_REQUEST_SCHEMA.safeParse(validRequest);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data).toEqual(validRequest);
@@ -32,7 +32,7 @@ describe("Memory Schemas", () => {
         userId: "user-123",
       };
 
-      const result = SearchMemoriesRequestSchema.safeParse(validRequest);
+      const result = SEARCH_MEMORIES_REQUEST_SCHEMA.safeParse(validRequest);
       expect(result.success).toBe(true);
     });
 
@@ -44,7 +44,7 @@ describe("Memory Schemas", () => {
         userId: "user-123",
       };
 
-      const result = SearchMemoriesRequestSchema.safeParse(invalidRequest);
+      const result = SEARCH_MEMORIES_REQUEST_SCHEMA.safeParse(invalidRequest);
       expect(result.success).toBe(true);
     });
 
@@ -61,24 +61,24 @@ describe("Memory Schemas", () => {
         userId: "user-123",
       };
 
-      const result = SearchMemoriesRequestSchema.safeParse(validRequest);
+      const result = SEARCH_MEMORIES_REQUEST_SCHEMA.safeParse(validRequest);
       expect(result.success).toBe(true);
     });
   });
 
-  describe("SearchMemoriesFiltersSchema", () => {
+  describe("SEARCH_MEMORIES_FILTERS_SCHEMA", () => {
     it("should validate optional filters", () => {
       const validFilters = {
         metadata: { source: "booking" },
         type: ["accommodation", "flight"],
       };
 
-      const result = SearchMemoriesFiltersSchema.safeParse(validFilters);
+      const result = SEARCH_MEMORIES_FILTERS_SCHEMA.safeParse(validFilters);
       expect(result.success).toBe(true);
     });
 
     it("should validate undefined filters", () => {
-      const result = SearchMemoriesFiltersSchema.safeParse(undefined);
+      const result = SEARCH_MEMORIES_FILTERS_SCHEMA.safeParse(undefined);
       expect(result.success).toBe(true);
     });
 
@@ -88,12 +88,12 @@ describe("Memory Schemas", () => {
         invalidProp: "test",
       };
 
-      const result = SearchMemoriesFiltersSchema.safeParse(invalidFilters);
+      const result = SEARCH_MEMORIES_FILTERS_SCHEMA.safeParse(invalidFilters);
       expect(result.success).toBe(true);
     });
   });
 
-  describe("MemorySchema", () => {
+  describe("MEMORY_SCHEMA", () => {
     it("should validate a complete memory object", () => {
       const validMemory = {
         content: "User prefers luxury hotels",
@@ -106,7 +106,7 @@ describe("Memory Schemas", () => {
         userId: "user-123",
       };
 
-      const result = MemorySchema.safeParse(validMemory);
+      const result = MEMORY_SCHEMA.safeParse(validMemory);
       expect(result.success).toBe(true);
     });
 
@@ -120,7 +120,7 @@ describe("Memory Schemas", () => {
         userId: "user-123",
       };
 
-      const result = MemorySchema.safeParse(minimalMemory);
+      const result = MEMORY_SCHEMA.safeParse(minimalMemory);
       expect(result.success).toBe(true);
     });
   });

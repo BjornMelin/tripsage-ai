@@ -79,6 +79,7 @@ const CHAT_SESSION_INSERT_SCHEMA = z
   .object({
     metadata: z.record(z.string(), z.unknown()).optional(),
     title: z.string().optional(),
+    // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
     trip_id: z.number().nullable().optional(),
   })
   .partial();
@@ -148,7 +149,10 @@ export function useSupabaseChat() {
     return useInfiniteQuery({
       enabled: !!sessionId,
       getNextPageParam: (lastPage: {
-        data: any[];
+        data: (ChatMessage & {
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          chat_tool_calls: ChatToolCall[];
+        })[];
         nextCursor?: number;
         totalCount?: number;
       }) => lastPage.nextCursor,
@@ -170,6 +174,7 @@ export function useSupabaseChat() {
         if (error) throw error;
 
         return {
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           data: data as (ChatMessage & { chat_tool_calls: ChatToolCall[] })[],
           nextCursor: data.length === pageSize ? pageParam + pageSize : undefined,
           totalCount: count ?? undefined,
@@ -191,8 +196,9 @@ export function useSupabaseChat() {
 
         // Cast metadata to Json to satisfy type
         const prepared: ChatSessionInsert = {
-          ...(validatedSessionData as any),
+          ...validatedSessionData,
           metadata: (validatedSessionData.metadata as unknown as Json) ?? undefined,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           user_id: userId,
         };
         const { data, error } = await insertSingle(supabase, "chat_sessions", [
@@ -236,6 +242,7 @@ export function useSupabaseChat() {
           content: validatedContent,
           metadata: {},
           role: validatedRole,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           session_id: validatedSessionId,
         });
 
@@ -245,7 +252,9 @@ export function useSupabaseChat() {
         await updateSingle(
           supabase,
           "chat_sessions",
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           { updated_at: new Date().toISOString() },
+          // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
           (qb) => (qb as any).eq("id", validatedSessionId)
         );
 
@@ -259,7 +268,11 @@ export function useSupabaseChat() {
         throw error;
       }
     },
-    onError: (_err, { sessionId }, context: { previousMessages?: any } | undefined) => {
+    onError: (
+      _err,
+      { sessionId },
+      context: { previousMessages?: unknown } | undefined
+    ) => {
       // Rollback optimistic update on error
       if (context?.previousMessages) {
         queryClient.setQueryData(
@@ -276,28 +289,50 @@ export function useSupabaseChat() {
       const previousMessages = queryClient.getQueryData(["chat-messages", sessionId]);
 
       // Optimistically update the cache
-      const optimisticMessage: ChatMessage = {
+      const optimisticMessage: ChatMessage & {
+        // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+        chat_tool_calls: ChatToolCall[];
+      } = {
+        // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+        chat_tool_calls: [],
         content,
+        // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
         created_at: new Date().toISOString(),
-        id: Date.now(), // temporary ID
+        id: -Date.now(), // temporary negative ID
         metadata: {},
         role,
+        // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
         session_id: sessionId,
-      } as any;
+      };
 
-      queryClient.setQueryData(["chat-messages", sessionId], (old: any) => {
-        if (!old) return { pageParams: [0], pages: [{ data: [optimisticMessage] }] };
+      queryClient.setQueryData(
+        ["chat-messages", sessionId],
+        (
+          old:
+            | {
+                pageParams: number[];
+                pages: Array<{
+                  // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+                  data: (ChatMessage & { chat_tool_calls: ChatToolCall[] })[];
+                  nextCursor?: number;
+                  totalCount?: number;
+                }>;
+              }
+            | undefined
+        ) => {
+          if (!old) return { pageParams: [0], pages: [{ data: [optimisticMessage] }] };
 
-        const newPages = [...old.pages];
-        if (newPages[0]) {
-          newPages[0] = {
-            ...newPages[0],
-            data: [optimisticMessage, ...newPages[0].data],
-          };
+          const newPages = [...old.pages];
+          if (newPages[0]) {
+            newPages[0] = {
+              ...newPages[0],
+              data: [optimisticMessage, ...newPages[0].data],
+            };
+          }
+
+          return { ...old, pages: newPages };
         }
-
-        return { ...old, pages: newPages };
-      });
+      );
 
       return { previousMessages };
     },
@@ -336,7 +371,8 @@ export function useSupabaseChat() {
     }: {
       id: number;
       status: string;
-      result?: any;
+      result?: unknown;
+      // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
       error_message?: string;
     }) => {
       try {
@@ -351,6 +387,7 @@ export function useSupabaseChat() {
           : undefined;
 
         const updates: Partial<UpdateTables<"chat_tool_calls">> = {
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           completed_at:
             validatedStatus === "completed" || validatedStatus === "failed"
               ? new Date().toISOString()
@@ -358,15 +395,25 @@ export function useSupabaseChat() {
           status: validatedStatus,
         };
 
-        if (validatedResult !== undefined)
-          (updates as any).result = validatedResult as unknown as Json;
-        if (validatedErrorMessage !== undefined)
-          (updates as any).error_message = validatedErrorMessage;
+        if (validatedResult !== undefined) {
+          (
+            updates as Partial<UpdateTables<"chat_tool_calls">> & { result?: Json }
+          ).result = validatedResult as unknown as Json;
+        }
+        if (validatedErrorMessage !== undefined) {
+          (
+            updates as Partial<UpdateTables<"chat_tool_calls">> & {
+              // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+              error_message?: string;
+            }
+          ).error_message = validatedErrorMessage;
+        }
 
         const { data, error } = await updateSingle(
           supabase,
           "chat_tool_calls",
           updates,
+          // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
           (qb) => (qb as any).eq("id", validatedId)
         );
 
@@ -419,9 +466,12 @@ export function useSupabaseChat() {
           supabase,
           "chat_sessions",
           {
+            // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
             ended_at: new Date().toISOString(),
+            // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
             updated_at: new Date().toISOString(),
           },
+          // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
           (qb) => (qb as any).eq("id", validatedSessionId)
         );
 
@@ -468,15 +518,16 @@ export function useSupabaseChat() {
       useChatSessions,
     }),
     [
-      useChatSessions,
-      useChatSession,
-      useChatMessages,
       createChatSession,
       sendMessage,
       addToolCall,
       updateToolCall,
       endChatSession,
       deleteChatSession,
+      // biome-ignore lint/correctness/useExhaustiveDependencies: Query hook functions are stable and don't need to be in dependencies
+      useChatMessages,
+      useChatSession,
+      useChatSessions,
     ]
   );
 }
@@ -539,13 +590,37 @@ export function useChatStats() {
         .select("*", { count: "exact", head: true })
         .in(
           "session_id",
-          (sessions as ChatSession[]).map((s) => s.id)
+          (
+            sessions as Array<{
+              id: string;
+              // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+              created_at: string;
+              // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+              ended_at: string | null;
+            }>
+          ).map((s) => s.id)
         );
 
       if (messagesError) throw messagesError;
 
-      const activeSessions = (sessions as any[]).filter((s) => !s.ended_at);
-      const completedSessions = (sessions as any[]).filter((s) => s.ended_at);
+      const activeSessions = (
+        sessions as Array<{
+          id: string;
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          created_at: string;
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          ended_at: string | null;
+        }>
+      ).filter((s) => !s.ended_at);
+      const completedSessions = (
+        sessions as Array<{
+          id: string;
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          created_at: string;
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          ended_at: string | null;
+        }>
+      ).filter((s) => s.ended_at);
 
       return {
         activeSessions: activeSessions.length,

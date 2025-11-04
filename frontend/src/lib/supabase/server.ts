@@ -27,7 +27,7 @@ export async function createServerSupabase(): Promise<TypedServerSupabase> {
   // Access cookies once to ensure store is initialized in all environments
   try {
     // Ignored result; ensures getAll path remains exercised
-    void cookieStore.getAll();
+    cookieStore.getAll();
   } catch {
     // ignore
   }

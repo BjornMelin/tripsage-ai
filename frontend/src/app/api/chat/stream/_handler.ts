@@ -8,7 +8,7 @@
 import type { LanguageModel, UIMessage } from "ai";
 import { convertToModelMessages, streamText as defaultStreamText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
-import { secureUUID } from "@/lib/security/random";
+import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 import {
@@ -201,7 +201,7 @@ export async function handleChatStream(
     system: systemPrompt,
   });
 
-  const reqId = secureUUID();
+  const reqId = secureUuid();
   deps.logger?.info?.("chat_stream:start", {
     model: provider.modelId,
     requestId: reqId,
