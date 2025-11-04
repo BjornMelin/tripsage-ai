@@ -159,12 +159,12 @@ describe("User Profile Store", () => {
           location: "San Francisco, CA",
         };
 
-        let updateResult: boolean;
+        let updateResult = false;
         await act(async () => {
           updateResult = await result.current.updatePersonalInfo(updates);
         });
 
-        expect(updateResult!).toBe(true);
+        expect(updateResult).toBe(true);
         expect(result.current.profile?.personalInfo?.firstName).toBe("Jane");
         expect(result.current.profile?.personalInfo?.lastName).toBe("Smith");
         expect(result.current.profile?.personalInfo?.bio).toBe("Updated bio");
@@ -183,14 +183,14 @@ describe("User Profile Store", () => {
           result.current.setProfile(null);
         });
 
-        let updateResult: boolean;
+        let updateResult = true;
         await act(async () => {
           updateResult = await result.current.updatePersonalInfo({
             firstName: "Test",
           });
         });
 
-        expect(updateResult!).toBe(false);
+        expect(updateResult).toBe(false);
       });
 
       it("preserves existing personal info when updating partial data", async () => {
@@ -228,12 +228,12 @@ describe("User Profile Store", () => {
           requirePool: true,
         };
 
-        let updateResult: boolean;
+        let updateResult = false;
         await act(async () => {
           updateResult = await result.current.updateTravelPreferences(updates);
         });
 
-        expect(updateResult!).toBe(true);
+        expect(updateResult).toBe(true);
         expect(result.current.profile?.travelPreferences?.preferredCabinClass).toBe(
           "first"
         );
@@ -253,14 +253,14 @@ describe("User Profile Store", () => {
           result.current.setProfile(null);
         });
 
-        let updateResult: boolean;
+        let updateResult = true;
         await act(async () => {
           updateResult = await result.current.updateTravelPreferences({
             preferredCabinClass: "economy",
           });
         });
 
-        expect(updateResult!).toBe(false);
+        expect(updateResult).toBe(false);
       });
 
       it("preserves existing preferences when updating partial data", async () => {
@@ -297,12 +297,12 @@ describe("User Profile Store", () => {
           showTravelHistory: false,
         };
 
-        let updateResult: boolean;
+        let updateResult = false;
         await act(async () => {
           updateResult = await result.current.updatePrivacySettings(updates);
         });
 
-        expect(updateResult!).toBe(true);
+        expect(updateResult).toBe(true);
         expect(result.current.profile?.privacySettings?.profileVisibility).toBe(
           "public"
         );
@@ -318,14 +318,14 @@ describe("User Profile Store", () => {
           result.current.setProfile(null);
         });
 
-        let updateResult: boolean;
+        let updateResult = true;
         await act(async () => {
           updateResult = await result.current.updatePrivacySettings({
             profileVisibility: "private",
           });
         });
 
-        expect(updateResult!).toBe(false);
+        expect(updateResult).toBe(false);
       });
     });
   });
@@ -414,12 +414,12 @@ describe("User Profile Store", () => {
         }
       });
 
-      let removeResult: boolean;
+      let removeResult = false;
       await act(async () => {
         removeResult = await result.current.removeAvatar();
       });
 
-      expect(removeResult!).toBe(true);
+      expect(removeResult).toBe(true);
       expect(result.current.profile?.avatarUrl).toBeUndefined();
       expect(result.current.isUpdatingProfile).toBe(false);
     });
@@ -431,12 +431,12 @@ describe("User Profile Store", () => {
         result.current.setProfile(null);
       });
 
-      let removeResult: boolean;
+      let removeResult = true;
       await act(async () => {
         removeResult = await result.current.removeAvatar();
       });
 
-      expect(removeResult!).toBe(false);
+      expect(removeResult).toBe(false);
     });
   });
 
@@ -489,10 +489,13 @@ describe("User Profile Store", () => {
 
       expect(result.current.profile?.favoriteDestinations).toHaveLength(2);
 
-      const parisId = result.current.profile?.favoriteDestinations[0].id;
+      const parisId = result.current.profile?.favoriteDestinations[0]?.id;
+      if (!parisId) {
+        throw new Error("Paris destination ID is undefined");
+      }
 
       act(() => {
-        result.current.removeFavoriteDestination(parisId!);
+        result.current.removeFavoriteDestination(parisId);
       });
 
       expect(result.current.profile?.favoriteDestinations).toHaveLength(1);
@@ -506,10 +509,13 @@ describe("User Profile Store", () => {
         result.current.addFavoriteDestination({ country: "France", name: "Paris" });
       });
 
-      const destinationId = result.current.profile?.favoriteDestinations[0].id;
+      const destinationId = result.current.profile?.favoriteDestinations[0]?.id;
+      if (!destinationId) {
+        throw new Error("Destination ID is undefined");
+      }
 
       act(() => {
-        result.current.updateFavoriteDestination(destinationId!, {
+        result.current.updateFavoriteDestination(destinationId, {
           notes: "City of lights",
           visitCount: 2,
         });
@@ -528,10 +534,13 @@ describe("User Profile Store", () => {
         result.current.addFavoriteDestination({ country: "France", name: "Paris" });
       });
 
-      const destinationId = result.current.profile?.favoriteDestinations[0].id;
+      const destinationId = result.current.profile?.favoriteDestinations[0]?.id;
+      if (!destinationId) {
+        throw new Error("Destination ID is undefined");
+      }
 
       act(() => {
-        result.current.incrementDestinationVisit(destinationId!);
+        result.current.incrementDestinationVisit(destinationId);
       });
 
       const destination = result.current.profile?.favoriteDestinations[0];
@@ -539,7 +548,7 @@ describe("User Profile Store", () => {
       expect(destination?.lastVisited).toBeDefined();
 
       act(() => {
-        result.current.incrementDestinationVisit(destinationId!);
+        result.current.incrementDestinationVisit(destinationId);
       });
 
       expect(result.current.profile?.favoriteDestinations[0].visitCount).toBe(2);
@@ -622,10 +631,13 @@ describe("User Profile Store", () => {
 
       expect(result.current.profile?.travelDocuments).toHaveLength(2);
 
-      const passportId = result.current.profile?.travelDocuments[0].id;
+      const passportId = result.current.profile?.travelDocuments[0]?.id;
+      if (!passportId) {
+        throw new Error("Passport ID is undefined");
+      }
 
       act(() => {
-        result.current.removeTravelDocument(passportId!);
+        result.current.removeTravelDocument(passportId);
       });
 
       expect(result.current.profile?.travelDocuments).toHaveLength(1);
@@ -644,10 +656,13 @@ describe("User Profile Store", () => {
         });
       });
 
-      const documentId = result.current.profile?.travelDocuments[0].id;
+      const documentId = result.current.profile?.travelDocuments[0]?.id;
+      if (!documentId) {
+        throw new Error("Document ID is undefined");
+      }
 
       act(() => {
-        result.current.updateTravelDocument(documentId!, {
+        result.current.updateTravelDocument(documentId, {
           expiryDate: "2031-12-31",
           notes: "Renewed passport",
         });
@@ -911,24 +926,24 @@ describe("User Profile Store", () => {
         version: "1.0",
       };
 
-      let importResult: boolean;
+      let importResult = false;
       await act(async () => {
         importResult = await result.current.importProfile(JSON.stringify(exportData));
       });
 
-      expect(importResult!).toBe(true);
+      expect(importResult).toBe(true);
       expect(result.current.profile).toEqual(mockProfile);
     });
 
     it("handles invalid import data", async () => {
       const { result } = renderHook(() => useUserProfileStore());
 
-      let importResult: boolean;
+      let importResult = true;
       await act(async () => {
         importResult = await result.current.importProfile("invalid json");
       });
 
-      expect(importResult!).toBe(false);
+      expect(importResult).toBe(false);
       expect(result.current.error).toBeDefined();
     });
 
@@ -940,12 +955,12 @@ describe("User Profile Store", () => {
         version: "1.0",
       };
 
-      let importResult: boolean;
+      let importResult = true;
       await act(async () => {
         importResult = await result.current.importProfile(JSON.stringify(exportData));
       });
 
-      expect(importResult!).toBe(false);
+      expect(importResult).toBe(false);
     });
 
     it("clears errors", () => {

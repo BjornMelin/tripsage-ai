@@ -198,7 +198,7 @@ describe("Search Results Store", () => {
     it("handles search errors", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      let searchId: string;
+      let searchId = "";
       act(() => {
         searchId = result.current.startSearch("flight", {});
       });
@@ -211,7 +211,7 @@ describe("Search Results Store", () => {
       };
 
       act(() => {
-        result.current.setSearchError(searchId!, errorDetails);
+        result.current.setSearchError(searchId, errorDetails);
       });
 
       expect(result.current.status).toBe("error");
@@ -256,7 +256,7 @@ describe("Search Results Store", () => {
     it("clears results by search type", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      let searchId: string;
+      let searchId = "";
       act(() => {
         searchId = result.current.startSearch("flight", {});
       });
@@ -267,7 +267,7 @@ describe("Search Results Store", () => {
       } as SearchResults;
 
       act(() => {
-        result.current.setSearchResults(searchId!, mockResults);
+        result.current.setSearchResults(searchId, mockResults);
       });
 
       act(() => {
@@ -289,7 +289,7 @@ describe("Search Results Store", () => {
       });
 
       act(() => {
-        result.current.setSearchResults(searchId1!, {
+        result.current.setSearchResults(searchId1, {
           flights: [
             {
               airline: "Test Airline",
@@ -314,7 +314,7 @@ describe("Search Results Store", () => {
       });
 
       act(() => {
-        result.current.setSearchResults(searchId2!, {
+        result.current.setSearchResults(searchId2, {
           accommodations: [
             {
               amenities: ["wifi", "parking"],
@@ -349,7 +349,7 @@ describe("Search Results Store", () => {
     it("appends results to existing results", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      let searchId: string;
+      let searchId = "";
       act(() => {
         searchId = result.current.startSearch("flight", {});
       });
@@ -380,13 +380,13 @@ describe("Search Results Store", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
       // Set up pagination with multiple pages
-      let searchId: string;
+      let searchId = "";
       act(() => {
         searchId = result.current.startSearch("flight", {});
       });
 
       act(() => {
-        result.current.setSearchResults(searchId!, { flights: [] }, {
+        result.current.setSearchResults(searchId, { flights: [] }, {
           currentPage: 1,
           hasMoreResults: true,
           resultsPerPage: 20,
@@ -410,13 +410,13 @@ describe("Search Results Store", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
       // Set up pagination
-      let searchId: string;
+      let searchId = "";
       act(() => {
         searchId = result.current.startSearch("flight", {});
       });
 
       act(() => {
-        result.current.setSearchResults(searchId!, { flights: [] }, {
+        result.current.setSearchResults(searchId, { flights: [] }, {
           currentPage: 1,
           hasMoreResults: true,
           resultsPerPage: 20,
@@ -442,23 +442,24 @@ describe("Search Results Store", () => {
     it("retrieves search by ID", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      let searchId: string;
+      let searchId = "";
       act(() => {
         searchId = result.current.startSearch("flight", { origin: "NYC" });
       });
+      expect(searchId).toBeTruthy();
 
       const mockResults: SearchResults = { flights: [] };
 
       act(() => {
-        result.current.setSearchResults(searchId!, mockResults);
+        result.current.setSearchResults(searchId, mockResults);
       });
 
-      const search = result.current.getSearchById(searchId!);
+      const search = result.current.getSearchById(searchId);
       expect(search).not.toBeNull();
-      expect(search?.searchId).toBe(searchId!);
+      expect(search?.searchId).toBe(searchId);
       expect(search?.searchType).toBe("flight");
 
-      const results = result.current.getResultsById(searchId!);
+      const results = result.current.getResultsById(searchId);
       expect(results).toEqual(mockResults);
     });
 
@@ -490,14 +491,15 @@ describe("Search Results Store", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
       const originalParams = { destination: "LAX", origin: "NYC" };
-      let searchId: string;
+      let searchId = "";
 
       act(() => {
         searchId = result.current.startSearch("flight", originalParams);
       });
+      expect(searchId).toBeTruthy();
 
       act(() => {
-        result.current.setSearchError(searchId!, {
+        result.current.setSearchError(searchId, {
           message: "Network error",
           occurredAt: new Date().toISOString(),
           retryable: true,
@@ -510,7 +512,7 @@ describe("Search Results Store", () => {
       });
 
       expect(newSearchId).toBeTruthy();
-      expect(newSearchId).not.toBe(searchId!);
+      expect(newSearchId).not.toBe(searchId);
       expect(result.current.currentContext?.searchParams).toEqual(originalParams);
       expect(result.current.status).toBe("searching");
     });
@@ -518,13 +520,13 @@ describe("Search Results Store", () => {
     it("clears error", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      let searchId: string;
+      let searchId = "";
       act(() => {
         searchId = result.current.startSearch("flight", {});
       });
 
       act(() => {
-        result.current.setSearchError(searchId!, {
+        result.current.setSearchError(searchId, {
           message: "Error",
           occurredAt: new Date().toISOString(),
           retryable: true,
@@ -552,7 +554,7 @@ describe("Search Results Store", () => {
       });
 
       act(() => {
-        result.current.setSearchResults(id1!, { flights: [] }, {
+        result.current.setSearchResults(id1, { flights: [] }, {
           currentPage: 1,
           hasMoreResults: false,
           resultsPerPage: 20,
@@ -593,7 +595,7 @@ describe("Search Results Store", () => {
         id1 = result.current.startSearch("flight", {});
       });
       act(() => {
-        result.current.setSearchResults(id1!, { flights: [] });
+        result.current.setSearchResults(id1, { flights: [] });
       });
 
       // Failed search
@@ -602,7 +604,7 @@ describe("Search Results Store", () => {
         id2 = result.current.startSearch("flight", {});
       });
       act(() => {
-        result.current.setSearchError(id2!, {
+        result.current.setSearchError(id2, {
           message: "Error",
           occurredAt: new Date().toISOString(),
           retryable: false,
@@ -615,7 +617,7 @@ describe("Search Results Store", () => {
         id3 = result.current.startSearch("flight", {});
       });
       act(() => {
-        result.current.setSearchResults(id3!, { flights: [] });
+        result.current.setSearchResults(id3, { flights: [] });
       });
 
       const successRate = result.current.getSearchSuccessRate("flight");
@@ -631,7 +633,7 @@ describe("Search Results Store", () => {
         id1 = result.current.startSearch("flight", {});
       });
       act(() => {
-        result.current.setSearchResults(id1!, { flights: [] }, {
+        result.current.setSearchResults(id1, { flights: [] }, {
           currentPage: 1,
           hasMoreResults: false,
           resultsPerPage: 20,
@@ -646,7 +648,7 @@ describe("Search Results Store", () => {
         id2 = result.current.startSearch("accommodation", {});
       });
       act(() => {
-        result.current.setSearchError(id2!, {
+        result.current.setSearchError(id2, {
           message: "Error",
           occurredAt: new Date().toISOString(),
           retryable: true,

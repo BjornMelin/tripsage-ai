@@ -397,7 +397,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
         },
 
         // Search collections
-        createCollection: async (name, description, searchIds = []) => {
+        createCollection: (name, description, searchIds = []) => {
           set({ isLoading: true });
 
           try {
@@ -422,19 +422,19 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
                 searchCollections: [...state.searchCollections, result.data],
               }));
 
-              return collectionId;
+              return Promise.resolve(collectionId);
             }
             throw new Error("Invalid collection data");
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to create collection";
             set({ error: message, isLoading: false });
-            return null;
+            return Promise.resolve(null);
           }
         },
 
         // Quick searches
-        createQuickSearch: async (label, searchType, params, options = {}) => {
+        createQuickSearch: (label, searchType, params, options = {}) => {
           try {
             const quickSearchId = GENERATE_ID();
             const timestamp = GET_CURRENT_TIMESTAMP();
@@ -457,18 +457,18 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
                 quickSearches: [...state.quickSearches, result.data],
               }));
 
-              return quickSearchId;
+              return Promise.resolve(quickSearchId);
             }
             throw new Error("Invalid quick search data");
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to create quick search";
             set({ error: message });
-            return null;
+            return Promise.resolve(null);
           }
         },
 
-        deleteCollection: async (collectionId) => {
+        deleteCollection: (collectionId) => {
           set({ isLoading: true });
 
           try {
@@ -479,12 +479,12 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               ),
             }));
 
-            return true;
+            return Promise.resolve(true);
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to delete collection";
             set({ error: message, isLoading: false });
-            return false;
+            return Promise.resolve(false);
           }
         },
 
@@ -496,7 +496,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
           }));
         },
 
-        deleteSavedSearch: async (searchId) => {
+        deleteSavedSearch: (searchId) => {
           set({ isLoading: true });
 
           try {
@@ -511,12 +511,12 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               })),
             }));
 
-            return true;
+            return Promise.resolve(true);
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to delete search";
             set({ error: message, isLoading: false });
-            return false;
+            return Promise.resolve(false);
           }
         },
 
@@ -722,7 +722,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
           return trends;
         },
 
-        importSearchHistory: async (data) => {
+        importSearchHistory: (data) => {
           set({ isLoading: true });
 
           try {
@@ -771,14 +771,14 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             }
 
             set({ isLoading: false });
-            return true;
+            return Promise.resolve(true);
           } catch (error) {
             const message =
               error instanceof Error
                 ? error.message
                 : "Failed to import search history";
             set({ error: message, isLoading: false });
-            return false;
+            return Promise.resolve(false);
           }
         },
 
@@ -880,7 +880,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
         savedSearches: [],
 
         // Saved search management
-        saveSearch: async (name, searchType, params, options = {}) => {
+        saveSearch: (name, searchType, params, options = {}) => {
           set({ isLoading: true });
 
           try {
@@ -912,14 +912,14 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
                 savedSearches: [...state.savedSearches, result.data],
               }));
 
-              return searchId;
+              return Promise.resolve(searchId);
             }
             throw new Error("Invalid saved search data");
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to save search";
             set({ error: message, isLoading: false });
-            return null;
+            return Promise.resolve(null);
           }
         },
 
@@ -1008,7 +1008,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
           return get().savedSearches.length;
         },
 
-        updateCollection: async (collectionId, updates) => {
+        updateCollection: (collectionId, updates) => {
           set({ isLoading: true });
 
           try {
@@ -1033,16 +1033,16 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               };
             });
 
-            return true;
+            return Promise.resolve(true);
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to update collection";
             set({ error: message, isLoading: false });
-            return false;
+            return Promise.resolve(false);
           }
         },
 
-        updateQuickSearch: async (quickSearchId, updates) => {
+        updateQuickSearch: (quickSearchId, updates) => {
           try {
             set((state) => ({
               quickSearches: state.quickSearches.map((quickSearch) => {
@@ -1055,16 +1055,16 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               }),
             }));
 
-            return true;
+            return Promise.resolve(true);
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to update quick search";
             set({ error: message });
-            return false;
+            return Promise.resolve(false);
           }
         },
 
-        updateSavedSearch: async (searchId, updates) => {
+        updateSavedSearch: (searchId, updates) => {
           set({ isLoading: true });
 
           try {
@@ -1089,12 +1089,12 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               };
             });
 
-            return true;
+            return Promise.resolve(true);
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to update search";
             set({ error: message, isLoading: false });
-            return false;
+            return Promise.resolve(false);
           }
         },
 

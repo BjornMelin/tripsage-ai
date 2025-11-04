@@ -361,9 +361,15 @@ describe("Search History Store", () => {
         searchId = await result.current.saveSearch("Original Name", "flight", {});
       });
 
+      if (!searchId) {
+        throw new Error("Search ID is null");
+      }
+
+      const savedSearchId = searchId;
+
       // Then update it
       await act(async () => {
-        const success = await result.current.updateSavedSearch(searchId!, {
+        const success = await result.current.updateSavedSearch(savedSearchId, {
           description: "Updated description",
           isFavorite: true,
           name: "Updated Name",
@@ -388,9 +394,15 @@ describe("Search History Store", () => {
 
       expect(result.current.savedSearches).toHaveLength(1);
 
+      if (!searchId) {
+        throw new Error("Search ID is null");
+      }
+
+      const savedSearchId = searchId;
+
       // Then delete it
       await act(async () => {
-        const success = await result.current.deleteSavedSearch(searchId!);
+        const success = await result.current.deleteSavedSearch(savedSearchId);
         expect(success).toBe(true);
       });
 
@@ -413,11 +425,17 @@ describe("Search History Store", () => {
         );
       });
 
+      if (!originalId) {
+        throw new Error("Original ID is null");
+      }
+
+      const savedOriginalId = originalId;
+
       // Then duplicate it
       let duplicateId: string | null = null;
       await act(async () => {
         duplicateId = await result.current.duplicateSavedSearch(
-          originalId!,
+          savedOriginalId,
           "Duplicated Search"
         );
       });
@@ -447,9 +465,15 @@ describe("Search History Store", () => {
       const initialUsageCount = result.current.savedSearches[0].usageCount;
       expect(initialUsageCount).toBe(0);
 
+      if (!searchId) {
+        throw new Error("Search ID is null");
+      }
+
+      const savedSearchId = searchId;
+
       // Mark as used
       act(() => {
-        result.current.markSearchAsUsed(searchId!);
+        result.current.markSearchAsUsed(savedSearchId);
       });
 
       const updatedSearch = result.current.savedSearches[0];
@@ -468,16 +492,22 @@ describe("Search History Store", () => {
 
       expect(result.current.savedSearches[0].isFavorite).toBe(false);
 
+      if (!searchId) {
+        throw new Error("Search ID is null");
+      }
+
+      const savedSearchId = searchId;
+
       // Toggle to favorite
       act(() => {
-        result.current.toggleSearchFavorite(searchId!);
+        result.current.toggleSearchFavorite(savedSearchId);
       });
 
       expect(result.current.savedSearches[0].isFavorite).toBe(true);
 
       // Toggle back
       act(() => {
-        result.current.toggleSearchFavorite(searchId!);
+        result.current.toggleSearchFavorite(savedSearchId);
       });
 
       expect(result.current.savedSearches[0].isFavorite).toBe(false);
@@ -513,9 +543,15 @@ describe("Search History Store", () => {
         collectionId = await result.current.createCollection("Original Name");
       });
 
+      if (!collectionId) {
+        throw new Error("Collection ID is null");
+      }
+
+      const savedCollectionId = collectionId;
+
       // Update collection
       await act(async () => {
-        const success = await result.current.updateCollection(collectionId!, {
+        const success = await result.current.updateCollection(savedCollectionId, {
           description: "Updated description",
           name: "Updated Name",
         });
@@ -538,9 +574,15 @@ describe("Search History Store", () => {
 
       expect(result.current.searchCollections).toHaveLength(1);
 
+      if (!collectionId) {
+        throw new Error("Collection ID is null");
+      }
+
+      const savedCollectionId = collectionId;
+
       // Delete collection
       await act(async () => {
-        const success = await result.current.deleteCollection(collectionId!);
+        const success = await result.current.deleteCollection(savedCollectionId);
         expect(success).toBe(true);
       });
 
@@ -559,13 +601,20 @@ describe("Search History Store", () => {
         searchId = await result.current.saveSearch("Test Search", "flight", {});
       });
 
+      if (!collectionId || !searchId) {
+        throw new Error("Collection ID or Search ID is null");
+      }
+
+      const savedCollectionId = collectionId;
+      const savedSearchId = searchId;
+
       // Add search to collection
       act(() => {
-        result.current.addSearchToCollection(collectionId!, searchId!);
+        result.current.addSearchToCollection(savedCollectionId, savedSearchId);
       });
 
       const collection = result.current.searchCollections[0];
-      expect(collection.searchIds).toContain(searchId);
+      expect(collection.searchIds).toContain(savedSearchId);
     });
 
     it("removes search from collection", async () => {
@@ -580,18 +629,27 @@ describe("Search History Store", () => {
         searchId = await result.current.saveSearch("Test Search", "flight", {});
       });
 
+      if (!collectionId || !searchId) {
+        throw new Error("Collection ID or Search ID is null");
+      }
+
+      const savedCollectionId = collectionId;
+      const savedSearchId = searchId;
+
       // Add then remove search from collection
       act(() => {
-        result.current.addSearchToCollection(collectionId!, searchId!);
+        result.current.addSearchToCollection(savedCollectionId, savedSearchId);
       });
 
-      expect(result.current.searchCollections[0].searchIds).toContain(searchId);
+      expect(result.current.searchCollections[0].searchIds).toContain(savedSearchId);
 
       act(() => {
-        result.current.removeSearchFromCollection(collectionId!, searchId!);
+        result.current.removeSearchFromCollection(savedCollectionId, savedSearchId);
       });
 
-      expect(result.current.searchCollections[0].searchIds).not.toContain(searchId);
+      expect(result.current.searchCollections[0].searchIds).not.toContain(
+        savedSearchId
+      );
     });
   });
 
@@ -640,9 +698,15 @@ describe("Search History Store", () => {
         );
       });
 
+      if (!quickSearchId) {
+        throw new Error("Quick search ID is null");
+      }
+
+      const savedQuickSearchId = quickSearchId;
+
       // Update quick search
       await act(async () => {
-        const success = await result.current.updateQuickSearch(quickSearchId!, {
+        const success = await result.current.updateQuickSearch(savedQuickSearchId, {
           icon: "🚀",
           isVisible: false,
           label: "Updated Label",
@@ -671,9 +735,15 @@ describe("Search History Store", () => {
 
       expect(result.current.quickSearches).toHaveLength(1);
 
+      if (!quickSearchId) {
+        throw new Error("Quick search ID is null");
+      }
+
+      const savedQuickSearchId = quickSearchId;
+
       // Delete quick search
       act(() => {
-        result.current.deleteQuickSearch(quickSearchId!);
+        result.current.deleteQuickSearch(savedQuickSearchId);
       });
 
       expect(result.current.quickSearches).toHaveLength(0);
@@ -691,7 +761,9 @@ describe("Search History Store", () => {
             "flight",
             {}
           );
-          quickSearchIds.push(id!);
+          if (id) {
+            quickSearchIds.push(id);
+          }
         });
       }
 

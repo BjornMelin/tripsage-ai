@@ -202,10 +202,10 @@ const GET_DEFAULT_PARAMS = (type: SearchType): Partial<SearchParams> => {
 };
 
 // Validation helpers
-const VALIDATE_SEARCH_PARAMS = async (
+const VALIDATE_SEARCH_PARAMS = (
   params: Partial<SearchParams>,
   type: SearchType
-): Promise<boolean> => {
+): boolean => {
   try {
     switch (type) {
       case "flight":
@@ -531,7 +531,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           }
         },
 
-        updateAccommodationParams: async (params) => {
+        updateAccommodationParams: (params) => {
           set((state) => ({
             isValidating: { ...state.isValidating, accommodation: true },
             validationErrors: { ...state.validationErrors, accommodation: null },
@@ -546,7 +546,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
                 accommodationParams: result.data,
                 isValidating: { ...state.isValidating, accommodation: false },
               }));
-              return true;
+              return Promise.resolve(true);
             }
             throw new Error("Invalid accommodation parameters");
           } catch (error) {
@@ -556,11 +556,11 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               isValidating: { ...state.isValidating, accommodation: false },
               validationErrors: { ...state.validationErrors, accommodation: message },
             }));
-            return false;
+            return Promise.resolve(false);
           }
         },
 
-        updateActivityParams: async (params) => {
+        updateActivityParams: (params) => {
           set((state) => ({
             isValidating: { ...state.isValidating, activity: true },
             validationErrors: { ...state.validationErrors, activity: null },
@@ -575,7 +575,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
                 activityParams: result.data,
                 isValidating: { ...state.isValidating, activity: false },
               }));
-              return true;
+              return Promise.resolve(true);
             }
             throw new Error("Invalid activity parameters");
           } catch (error) {
@@ -585,11 +585,11 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               isValidating: { ...state.isValidating, activity: false },
               validationErrors: { ...state.validationErrors, activity: message },
             }));
-            return false;
+            return Promise.resolve(false);
           }
         },
 
-        updateDestinationParams: async (params) => {
+        updateDestinationParams: (params) => {
           set((state) => ({
             isValidating: { ...state.isValidating, destination: true },
             validationErrors: { ...state.validationErrors, destination: null },
@@ -604,7 +604,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
                 destinationParams: result.data,
                 isValidating: { ...state.isValidating, destination: false },
               }));
-              return true;
+              return Promise.resolve(true);
             }
             throw new Error("Invalid destination parameters");
           } catch (error) {
@@ -614,11 +614,11 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               isValidating: { ...state.isValidating, destination: false },
               validationErrors: { ...state.validationErrors, destination: message },
             }));
-            return false;
+            return Promise.resolve(false);
           }
         },
 
-        updateFlightParams: async (params) => {
+        updateFlightParams: (params) => {
           set((state) => ({
             isValidating: { ...state.isValidating, flight: true },
             validationErrors: { ...state.validationErrors, flight: null },
@@ -633,7 +633,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
                 flightParams: result.data,
                 isValidating: { ...state.isValidating, flight: false },
               }));
-              return true;
+              return Promise.resolve(true);
             }
             throw new Error("Invalid flight parameters");
           } catch (error) {
@@ -643,7 +643,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               isValidating: { ...state.isValidating, flight: false },
               validationErrors: { ...state.validationErrors, flight: message },
             }));
-            return false;
+            return Promise.resolve(false);
           }
         },
 
@@ -654,7 +654,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           return await get().validateParams(currentSearchType);
         },
 
-        validateParams: async (type) => {
+        validateParams: (type) => {
           const {
             flightParams,
             accommodationParams,
@@ -677,10 +677,10 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               params = destinationParams as Partial<SearchParams>;
               break;
             default:
-              return false;
+              return Promise.resolve(false);
           }
 
-          return await VALIDATE_SEARCH_PARAMS(params, type);
+          return Promise.resolve(VALIDATE_SEARCH_PARAMS(params, type));
         },
         validationErrors: {
           accommodation: null,

@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Currency store for managing currency data, exchange rates,
+ * and currency conversion functionality using Zustand with persistence.
+ */
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
@@ -16,86 +21,125 @@ import {
 
 // Common currencies with symbols and decimal places
 // ISO 4217 defines currency codes in UPPER_CASE (international standard)
-const COMMON_CURRENCIES: Record<CurrencyCode, Currency> = {
-  AUD: {
-    code: "AUD",
-    decimals: 2,
-    flag: "🇦🇺",
-    name: "Australian Dollar",
-    symbol: "A$",
-  },
-  CAD: {
-    code: "CAD",
-    decimals: 2,
-    flag: "🇨🇦",
-    name: "Canadian Dollar",
-    symbol: "C$",
-  },
-  CHF: {
-    code: "CHF",
-    decimals: 2,
-    flag: "🇨🇭",
-    name: "Swiss Franc",
-    symbol: "Fr",
-  },
-  CNY: {
-    code: "CNY",
-    decimals: 2,
-    flag: "🇨🇳",
-    name: "Chinese Yuan",
-    symbol: "¥",
-  },
-  EUR: { code: "EUR", decimals: 2, flag: "🇪🇺", name: "Euro", symbol: "€" },
-  GBP: {
-    code: "GBP",
-    decimals: 2,
-    flag: "🇬🇧",
-    name: "British Pound",
-    symbol: "£",
-  },
-  INR: {
-    code: "INR",
-    decimals: 2,
-    flag: "🇮🇳",
-    name: "Indian Rupee",
-    symbol: "₹",
-  },
-  JPY: {
-    code: "JPY",
-    decimals: 0,
-    flag: "🇯🇵",
-    name: "Japanese Yen",
-    symbol: "¥",
-  },
-  MXN: {
-    code: "MXN",
-    decimals: 2,
-    flag: "🇲🇽",
-    name: "Mexican Peso",
-    symbol: "$",
-  },
-  USD: { code: "USD", decimals: 2, flag: "🇺🇸", name: "US Dollar", symbol: "$" },
-};
+const COMMON_CURRENCIES = new Map<CurrencyCode, Currency>([
+  [
+    "AUD",
+    {
+      code: "AUD",
+      decimals: 2,
+      flag: "🇦🇺",
+      name: "Australian Dollar",
+      symbol: "A$",
+    },
+  ],
+  [
+    "CAD",
+    {
+      code: "CAD",
+      decimals: 2,
+      flag: "🇨🇦",
+      name: "Canadian Dollar",
+      symbol: "C$",
+    },
+  ],
+  [
+    "CHF",
+    {
+      code: "CHF",
+      decimals: 2,
+      flag: "🇨🇭",
+      name: "Swiss Franc",
+      symbol: "Fr",
+    },
+  ],
+  [
+    "CNY",
+    {
+      code: "CNY",
+      decimals: 2,
+      flag: "🇨🇳",
+      name: "Chinese Yuan",
+      symbol: "¥",
+    },
+  ],
+  ["EUR", { code: "EUR", decimals: 2, flag: "🇪🇺", name: "Euro", symbol: "€" }],
+  [
+    "GBP",
+    {
+      code: "GBP",
+      decimals: 2,
+      flag: "🇬🇧",
+      name: "British Pound",
+      symbol: "£",
+    },
+  ],
+  [
+    "INR",
+    {
+      code: "INR",
+      decimals: 2,
+      flag: "🇮🇳",
+      name: "Indian Rupee",
+      symbol: "₹",
+    },
+  ],
+  [
+    "JPY",
+    {
+      code: "JPY",
+      decimals: 0,
+      flag: "🇯🇵",
+      name: "Japanese Yen",
+      symbol: "¥",
+    },
+  ],
+  [
+    "MXN",
+    {
+      code: "MXN",
+      decimals: 2,
+      flag: "🇲🇽",
+      name: "Mexican Peso",
+      symbol: "$",
+    },
+  ],
+  ["USD", { code: "USD", decimals: 2, flag: "🇺🇸", name: "US Dollar", symbol: "$" }],
+]);
 
+/**
+ * Interface for the currency store extending base currency state with actions.
+ */
 interface CurrencyStore extends CurrencyState {
   // Currency management
+  /** Sets the base currency for conversions and rate calculations. */
   setBaseCurrency: (currency: CurrencyCode) => void;
+
+  /** Adds a new currency to the store after validation. */
   addCurrency: (currency: unknown) => boolean;
+
+  /** Removes a currency from the store and cleans up related data. */
   removeCurrency: (code: CurrencyCode) => void;
 
   // Exchange rate management
+  /** Updates the exchange rate for a specific currency pair. */
   updateExchangeRate: (
     targetCurrency: CurrencyCode,
     rate: number,
     timestamp?: string
   ) => void;
+
+  /** Updates multiple exchange rates at once. */
   updateAllExchangeRates: (rates: Record<string, number>, timestamp?: string) => void;
 
   // Favorites management
+  /** Adds a currency to the favorites list. */
   addFavoriteCurrency: (code: CurrencyCode) => void;
+
+  /** Removes a currency from the favorites list. */
   removeFavoriteCurrency: (code: CurrencyCode) => void;
 
   // Conversion utilities
+  /** Converts an amount between two currencies. */
   convertAmount: (
     amount: number,
     fromCurrency: CurrencyCode,
@@ -103,9 +147,16 @@ interface CurrencyStore extends CurrencyState {
   ) => ConversionResult | null;
 
   // Additional features
+  /** Gets recent currency pairs for quick access. */
   getRecentCurrencyPairs: () => CurrencyPair[];
+
+  /** Gets the list of popular/favorite currencies. */
   getPopularCurrencies: () => Currency[];
+
+  /** Retrieves currency information by code. */
   getCurrencyByCode: (code: string) => Currency | undefined;
+
+  /** Formats an amount with appropriate currency symbol and locale. */
   formatAmountWithCurrency: (amount: number, currencyCode: string) => string;
 }
 
@@ -122,6 +173,17 @@ const VALIDATE_CURRENCY_CODE = (code: unknown): code is CurrencyCode => {
 //   return CurrencySchema.safeParse(currency).success;
 // }; // Future validation
 
+/**
+ * Zustand store hook for currency management with persistence.
+ *
+ * Provides comprehensive currency functionality including:
+ * - Currency data management and validation
+ * - Exchange rate handling and conversion calculations
+ * - Favorite currencies management
+ * - Formatted currency display
+ *
+ * @returns Currency store hook with state and actions
+ */
 export const useCurrencyStore = create<CurrencyStore>()(
   persist(
     (set, get) => ({
@@ -249,7 +311,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
         return CONVERSION_RESULT_SCHEMA.parse(result);
       },
       // Initial state
-      currencies: COMMON_CURRENCIES,
+      currencies: Object.fromEntries(COMMON_CURRENCIES),
       exchangeRates: {},
       favoriteCurrencies: ["USD", "EUR", "GBP"],
 

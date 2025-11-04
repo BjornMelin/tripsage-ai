@@ -157,15 +157,15 @@ interface SearchFiltersState {
   removeAvailableSortOption: (searchType: SearchType, optionId: string) => void;
 
   // Active filter management
-  setActiveFilter: (filterId: string, value: FilterValue) => Promise<boolean>;
+  setActiveFilter: (filterId: string, value: FilterValue) => boolean;
   removeActiveFilter: (filterId: string) => void;
-  updateActiveFilter: (filterId: string, value: FilterValue) => Promise<boolean>;
+  updateActiveFilter: (filterId: string, value: FilterValue) => boolean;
   clearAllFilters: () => void;
   clearFiltersByCategory: (category: string) => void;
 
   // Bulk filter operations
-  setMultipleFilters: (filters: Record<string, FilterValue>) => Promise<boolean>;
-  applyFiltersFromObject: (filterObject: Record<string, unknown>) => Promise<boolean>;
+  setMultipleFilters: (filters: Record<string, FilterValue>) => boolean;
+  applyFiltersFromObject: (filterObject: Record<string, unknown>) => boolean;
   resetFiltersToDefault: (searchType?: SearchType) => void;
 
   // Sort management
@@ -175,19 +175,16 @@ interface SearchFiltersState {
   resetSortToDefault: (searchType?: SearchType) => void;
 
   // Filter presets
-  saveFilterPreset: (name: string, description?: string) => Promise<string | null>;
-  loadFilterPreset: (presetId: string) => Promise<boolean>;
-  updateFilterPreset: (
-    presetId: string,
-    updates: Partial<FilterPreset>
-  ) => Promise<boolean>;
+  saveFilterPreset: (name: string, description?: string) => string | null;
+  loadFilterPreset: (presetId: string) => boolean;
+  updateFilterPreset: (presetId: string, updates: Partial<FilterPreset>) => boolean;
   deleteFilterPreset: (presetId: string) => void;
-  duplicateFilterPreset: (presetId: string, newName: string) => Promise<string | null>;
+  duplicateFilterPreset: (presetId: string, newName: string) => string | null;
   incrementPresetUsage: (presetId: string) => void;
 
   // Filter validation
-  validateFilter: (filterId: string, value: FilterValue) => Promise<boolean>;
-  validateAllFilters: () => Promise<boolean>;
+  validateFilter: (filterId: string, value: FilterValue) => boolean;
+  validateAllFilters: () => boolean;
   getFilterValidationError: (filterId: string) => string | null;
 
   // Search type context
@@ -554,7 +551,7 @@ const COMPUTE_DERIVED_STATE = (state: Partial<SearchFiltersState>) => {
       const valueStr = Array.isArray(activeFilter.value)
         ? activeFilter.value.join(", ")
         : typeof activeFilter.value === "object" && activeFilter.value !== null
-          ? `${(activeFilter.value as any).min || ""} - ${(activeFilter.value as any).max || ""}`
+          ? `${(activeFilter.value as { min?: number; max?: number }).min || ""} - ${(activeFilter.value as { min?: number; max?: number }).max || ""}`
           : String(activeFilter.value);
       summaries.push(`${filter.label}: ${valueStr}`);
     }
@@ -658,7 +655,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         },
         appliedFilterSummary: "",
 
-        applyFiltersFromObject: async (filterObject) => {
+        applyFiltersFromObject: (filterObject) => {
           // Convert Record<string, unknown> to Record<string, FilterValue>
           const validatedFilters: Record<string, FilterValue> = {};
           for (const [key, value] of Object.entries(filterObject)) {
@@ -675,7 +672,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
               validatedFilters[key] = value as FilterValue;
             }
           }
-          return await get().setMultipleFilters(validatedFilters);
+          return get().setMultipleFilters(validatedFilters);
         },
         // Initial state
         availableFilters: {
@@ -739,7 +736,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           }));
         },
 
-        duplicateFilterPreset: async (presetId, newName) => {
+        duplicateFilterPreset: (presetId, newName) => {
           const { filterPresets } = get();
           const originalPreset = filterPresets.find((p) => p.id === presetId);
 
@@ -836,7 +833,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         // Filter state management
         isApplyingFilters: false,
 
-        loadFilterPreset: async (presetId) => {
+        loadFilterPreset: (presetId) => {
           const { filterPresets } = get();
           const preset = filterPresets.find((p) => p.id === presetId);
 
@@ -943,7 +940,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         },
 
         // Filter presets
-        saveFilterPreset: async (name, description) => {
+        saveFilterPreset: (name, description) => {
           const { currentSearchType, activeFilters, activeSortOption } = get();
           if (!currentSearchType) return null;
 
@@ -977,11 +974,11 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         },
 
         // Active filter management
-        setActiveFilter: async (filterId, value) => {
+        setActiveFilter: (filterId, value) => {
           set({ isApplyingFilters: true });
 
           try {
-            const isValid = await get().validateFilter(filterId, value);
+            const isValid = get().validateFilter(filterId, value);
             if (!isValid) {
               set({ isApplyingFilters: false });
               return false;
@@ -1070,7 +1067,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         },
 
         // Bulk filter operations
-        setMultipleFilters: async (filters) => {
+        setMultipleFilters: (filters) => {
           set({ isApplyingFilters: true });
 
           try {
@@ -1078,7 +1075,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             const timestamp = GET_CURRENT_TIMESTAMP();
 
             for (const [filterId, value] of Object.entries(filters)) {
-              const isValid = await get().validateFilter(filterId, value);
+              const isValid = get().validateFilter(filterId, value);
               if (isValid) {
                 newActiveFilters[filterId] = {
                   appliedAt: timestamp,
@@ -1150,8 +1147,8 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           }
         },
 
-        updateActiveFilter: async (filterId, value) => {
-          return await get().setActiveFilter(filterId, value);
+        updateActiveFilter: (filterId, value) => {
+          return get().setActiveFilter(filterId, value);
         },
 
         updateAvailableFilter: (
@@ -1200,7 +1197,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           });
         },
 
-        updateFilterPreset: async (presetId, updates) => {
+        updateFilterPreset: (presetId, updates) => {
           try {
             set((state) => {
               const updatedPresets = state.filterPresets.map((preset) => {
@@ -1222,20 +1219,17 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           }
         },
 
-        validateAllFilters: async () => {
+        validateAllFilters: () => {
           const { activeFilters } = get();
-          const validationPromises = Object.entries(activeFilters).map(
-            async ([filterId, filter]) => {
-              return await get().validateFilter(filterId, filter.value);
-            }
-          );
+          const results = Object.entries(activeFilters).map(([filterId, filter]) => {
+            return get().validateFilter(filterId, filter.value);
+          });
 
-          const results = await Promise.all(validationPromises);
           return results.every((result) => result);
         },
 
         // Filter validation
-        validateFilter: async (filterId, value) => {
+        validateFilter: (filterId, value) => {
           const { currentFilters } = get();
           const filterConfig = currentFilters.find((f) => f.id === filterId);
 
