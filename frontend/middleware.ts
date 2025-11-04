@@ -20,6 +20,7 @@ export async function middleware(request: NextRequest) {
   const supabase = createServerClient(
     // biome-ignore lint/style/noNonNullAssertion: Required environment variables for Supabase
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    // biome-ignore lint/style/noNonNullAssertion: Required environment variables for Supabase
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
