@@ -339,6 +339,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["next.config.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
     }
   ],
 
