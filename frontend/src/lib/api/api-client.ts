@@ -13,15 +13,34 @@ import {
   validateStrict,
 } from "../validation";
 
-// API error class with validation context
+/**
+ * Error class for API client operations with validation context and structured error information.
+ * Extends the base Error class with HTTP status codes, error codes, and validation details.
+ */
 export class ApiClientError extends Error {
+  /** HTTP status code from the failed request. */
   public readonly status: number;
+  /** Application-specific error code for categorization. */
   public readonly code: string;
+  /** Raw response data that caused the error. */
   public readonly data?: unknown;
+  /** API endpoint that was being called when the error occurred. */
   public readonly endpoint?: string;
+  /** Timestamp when the error was created. */
   public readonly timestamp: Date;
+  /** Validation errors if the error was caused by request/response validation. */
   public readonly validationErrors?: ValidationResult<unknown>;
 
+  /**
+   * Creates a new ApiClientError instance.
+   *
+   * @param message Human-readable error message.
+   * @param status HTTP status code from the failed request.
+   * @param code Application-specific error code for categorization.
+   * @param data Raw response data that caused the error.
+   * @param endpoint API endpoint that was being called.
+   * @param validationErrors Validation errors if applicable.
+   */
   constructor(
     message: string,
     status: number,
@@ -40,10 +59,20 @@ export class ApiClientError extends Error {
     this.validationErrors = validationErrors;
   }
 
+  /**
+   * Checks if this error was caused by validation failures.
+   *
+   * @returns True if the error contains validation errors.
+   */
   public isValidationError(): boolean {
     return Boolean(this.validationErrors && !this.validationErrors.success);
   }
 
+  /**
+   * Extracts validation error messages from the error.
+   *
+   * @returns Array of validation error messages, or empty array if none.
+   */
   public getValidationErrors(): string[] {
     if (!this.validationErrors || this.validationErrors.success) {
       return [];
@@ -51,6 +80,11 @@ export class ApiClientError extends Error {
     return this.validationErrors.errors?.map((err) => err.message) || [];
   }
 
+  /**
+   * Converts the error to a JSON-serializable object for logging or debugging.
+   *
+   * @returns JSON representation of the error with all properties.
+   */
   public toJSON() {
     return {
       code: this.code,
@@ -64,50 +98,88 @@ export class ApiClientError extends Error {
   }
 }
 
-// Request configuration interface
+/**
+ * Configuration options for individual API requests.
+ */
 interface RequestConfig<TRequest = unknown, TResponse = unknown> {
+  /** API endpoint path (relative to base URL). */
   endpoint: string;
+  /** HTTP method for the request. */
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  /** Request body data for POST/PUT/PATCH requests. */
   data?: TRequest;
+  /** Query parameters to append to the URL. */
   params?: Record<string, string | number | boolean>;
+  /** Additional headers to send with the request. */
   headers?: Record<string, string>;
+  /** Request timeout in milliseconds. */
   timeout?: number;
+  /** Number of retry attempts for failed requests. */
   retries?: number;
+  /** Zod schema for validating request data. */
   requestSchema?: z.ZodType<TRequest>;
+  /** Zod schema for validating response data. */
   responseSchema?: z.ZodType<TResponse>;
+  /** Whether to validate the response against the schema. */
   validateResponse?: boolean;
+  /** Whether to validate the request against the schema. */
   validateRequest?: boolean;
+  /** AbortSignal for cancelling the request. */
   abortSignal?: AbortSignal;
 }
 
-// Client configuration
+/**
+ * Configuration options for the ApiClient instance.
+ */
 interface ApiClientConfig {
+  /** Base URL for all API requests. */
   baseUrl: string;
+  /** Default timeout in milliseconds for requests. */
   timeout: number;
+  /** Default number of retry attempts for failed requests. */
   retries: number;
+  /** Whether to validate responses by default. */
   validateResponses: boolean;
+  /** Whether to validate requests by default. */
   validateRequests: boolean;
+  /** Name of the header used for authentication tokens. */
   authHeaderName: string;
+  /** Default headers to include in all requests. */
   defaultHeaders: Record<string, string>;
 }
 
-// Response interceptor function type
+/**
+ * Function signature for response interceptors that can modify the response data.
+ */
 type ResponseInterceptor<T = unknown> = (
   response: T,
   config: RequestConfig<unknown, T>
 ) => T | Promise<T>;
 
-// Request interceptor function type
+/**
+ * Function signature for request interceptors that can modify the request configuration.
+ */
 type RequestInterceptor = (
   config: RequestConfig
 ) => RequestConfig | Promise<RequestConfig>;
 
-// API client class
+/**
+ * HTTP client for making API requests with validation, retry logic, and interceptors.
+ * Provides type-safe request methods with optional Zod schema validation.
+ */
 export class ApiClient {
+  /** Client configuration with defaults and user overrides. */
   private config: ApiClientConfig;
+  /** Array of request interceptors that modify requests before sending. */
   private requestInterceptors: RequestInterceptor[] = [];
+  /** Array of response interceptors that modify responses after receiving. */
   private responseInterceptors: ResponseInterceptor[] = [];
 
+  /**
+   * Creates a new ApiClient instance with the provided configuration.
+   *
+   * @param config Partial configuration to override defaults.
+   */
   constructor(config: Partial<ApiClientConfig> = {}) {
     this.config = {
       authHeaderName: "Authorization",
@@ -125,27 +197,46 @@ export class ApiClient {
     };
   }
 
-  // Add request interceptor
+  /**
+   * Adds a request interceptor that can modify request configurations before sending.
+   *
+   * @param interceptor Function that receives and can modify the request config.
+   */
   public addRequestInterceptor(interceptor: RequestInterceptor): void {
     this.requestInterceptors.push(interceptor);
   }
 
-  // Add response interceptor
+  /**
+   * Adds a response interceptor that can modify response data after receiving.
+   *
+   * @param interceptor Function that receives and can modify the response data.
+   */
   public addResponseInterceptor<T>(interceptor: ResponseInterceptor<T>): void {
     this.responseInterceptors.push(interceptor as ResponseInterceptor);
   }
 
-  // Set authentication token
+  /**
+   * Sets the authentication token for all subsequent requests.
+   *
+   * @param token JWT or other authentication token to include in requests.
+   */
   public setAuthToken(token: string): void {
     this.config.defaultHeaders[this.config.authHeaderName] = `Bearer ${token}`;
   }
 
-  // Clear authentication token
+  /**
+   * Removes the authentication token from all subsequent requests.
+   */
   public clearAuthToken(): void {
     delete this.config.defaultHeaders[this.config.authHeaderName];
   }
 
-  // Generic request method
+  /**
+   * Internal method that handles the core request logic with validation, retries, and interceptors.
+   *
+   * @param config Request configuration including endpoint, method, data, and options.
+   * @returns Promise that resolves with the validated response data.
+   */
   private async request<TRequest, TResponse>(
     config: RequestConfig<TRequest, TResponse>
   ): Promise<TResponse> {
@@ -244,11 +335,12 @@ export class ApiClient {
         // Handle HTTP errors
         if (!response.ok) {
           const errorData = (await this.parseResponseBody(response)) as unknown;
-          const errorObject =
-            (typeof errorData === "object" && errorData !== null ? errorData : {}) as {
-              message?: string;
-              code?: string | number;
-            };
+          const errorObject = (
+            typeof errorData === "object" && errorData !== null ? errorData : {}
+          ) as {
+            message?: string;
+            code?: string | number;
+          };
           throw new ApiClientError(
             errorObject.message || `HTTP ${response.status}: ${response.statusText}`,
             response.status,
@@ -328,7 +420,13 @@ export class ApiClient {
     throw lastError || new Error("Request failed after all retries");
   }
 
-  // Parse response body based on content type
+  /**
+   * Parses the response body based on the Content-Type header.
+   * Supports JSON, text, and binary data parsing.
+   *
+   * @param response Fetch Response object to parse.
+   * @returns Parsed response data based on content type.
+   */
   private async parseResponseBody(response: Response): Promise<unknown> {
     const contentType = response.headers.get("content-type");
 
@@ -351,7 +449,13 @@ export class ApiClient {
     return await response.text();
   }
 
-  // Convenience methods
+  /**
+   * Makes a GET request to the specified endpoint.
+   *
+   * @param endpoint API endpoint path.
+   * @param options Additional request options.
+   * @returns Promise that resolves with the response data.
+   */
   public async get<TResponse = unknown>(
     endpoint: string,
     options: Omit<RequestConfig<never, TResponse>, "endpoint" | "method"> = {}
@@ -363,6 +467,14 @@ export class ApiClient {
     });
   }
 
+  /**
+   * Makes a POST request to the specified endpoint.
+   *
+   * @param endpoint API endpoint path.
+   * @param data Request body data.
+   * @param options Additional request options.
+   * @returns Promise that resolves with the response data.
+   */
   public async post<TRequest = unknown, TResponse = unknown>(
     endpoint: string,
     data?: TRequest,
@@ -379,6 +491,14 @@ export class ApiClient {
     });
   }
 
+  /**
+   * Makes a PUT request to the specified endpoint.
+   *
+   * @param endpoint API endpoint path.
+   * @param data Request body data.
+   * @param options Additional request options.
+   * @returns Promise that resolves with the response data.
+   */
   public async put<TRequest = unknown, TResponse = unknown>(
     endpoint: string,
     data?: TRequest,
@@ -395,6 +515,14 @@ export class ApiClient {
     });
   }
 
+  /**
+   * Makes a PATCH request to the specified endpoint.
+   *
+   * @param endpoint API endpoint path.
+   * @param data Request body data.
+   * @param options Additional request options.
+   * @returns Promise that resolves with the response data.
+   */
   public async patch<TRequest = unknown, TResponse = unknown>(
     endpoint: string,
     data?: TRequest,
@@ -411,6 +539,13 @@ export class ApiClient {
     });
   }
 
+  /**
+   * Makes a DELETE request to the specified endpoint.
+   *
+   * @param endpoint API endpoint path.
+   * @param options Additional request options.
+   * @returns Promise that resolves with the response data.
+   */
   public async delete<TResponse = unknown>(
     endpoint: string,
     options: Omit<RequestConfig<never, TResponse>, "endpoint" | "method"> = {}
@@ -422,7 +557,14 @@ export class ApiClient {
     });
   }
 
-  // Type-safe API methods with schemas
+  /**
+   * Makes a GET request with automatic response validation using a Zod schema.
+   *
+   * @param endpoint API endpoint path.
+   * @param responseSchema Zod schema for validating the response.
+   * @param options Additional request options.
+   * @returns Promise that resolves with validated response data.
+   */
   public async getValidated<TResponse>(
     endpoint: string,
     responseSchema: z.ZodType<TResponse>,
@@ -434,6 +576,16 @@ export class ApiClient {
     return this.get(endpoint, { ...options, responseSchema });
   }
 
+  /**
+   * Makes a POST request with automatic request and response validation using Zod schemas.
+   *
+   * @param endpoint API endpoint path.
+   * @param data Request body data.
+   * @param requestSchema Zod schema for validating the request.
+   * @param responseSchema Zod schema for validating the response.
+   * @param options Additional request options.
+   * @returns Promise that resolves with validated response data.
+   */
   public async postValidated<TRequest, TResponse>(
     endpoint: string,
     data: TRequest,
@@ -447,6 +599,16 @@ export class ApiClient {
     return this.post(endpoint, data, { ...options, requestSchema, responseSchema });
   }
 
+  /**
+   * Makes a PUT request with automatic request and response validation using Zod schemas.
+   *
+   * @param endpoint API endpoint path.
+   * @param data Request body data.
+   * @param requestSchema Zod schema for validating the request.
+   * @param responseSchema Zod schema for validating the response.
+   * @param options Additional request options.
+   * @returns Promise that resolves with validated response data.
+   */
   public async putValidated<TRequest, TResponse>(
     endpoint: string,
     data: TRequest,
@@ -460,6 +622,16 @@ export class ApiClient {
     return this.put(endpoint, data, { ...options, requestSchema, responseSchema });
   }
 
+  /**
+   * Makes a PATCH request with automatic request and response validation using Zod schemas.
+   *
+   * @param endpoint API endpoint path.
+   * @param data Request body data.
+   * @param requestSchema Zod schema for validating the request.
+   * @param responseSchema Zod schema for validating the response.
+   * @param options Additional request options.
+   * @returns Promise that resolves with validated response data.
+   */
   public async patchValidated<TRequest, TResponse>(
     endpoint: string,
     data: TRequest,
@@ -473,6 +645,14 @@ export class ApiClient {
     return this.patch(endpoint, data, { ...options, requestSchema, responseSchema });
   }
 
+  /**
+   * Makes a DELETE request with automatic response validation using a Zod schema.
+   *
+   * @param endpoint API endpoint path.
+   * @param responseSchema Zod schema for validating the response.
+   * @param options Additional request options.
+   * @returns Promise that resolves with validated response data.
+   */
   public async deleteValidated<TResponse>(
     endpoint: string,
     responseSchema: z.ZodType<TResponse>,
@@ -484,7 +664,13 @@ export class ApiClient {
     return this.delete(endpoint, { ...options, responseSchema });
   }
 
-  // Batch request method
+  /**
+   * Executes multiple requests concurrently with controlled concurrency and error handling.
+   *
+   * @param requests Array of request functions to execute.
+   * @param options Configuration for concurrency and error handling.
+   * @returns Array of results with success/error status for each request.
+   */
   public async batch<T>(
     requests: Array<() => Promise<T>>,
     options: { concurrency?: number; failFast?: boolean } = {}
@@ -523,13 +709,20 @@ export class ApiClient {
     return results;
   }
 
-  // Health check method
+  /**
+   * Performs a health check request to verify API availability.
+   *
+   * @returns Promise that resolves with health check response containing status and timestamp.
+   */
   public async healthCheck(): Promise<{ status: string; timestamp: string }> {
     return this.get("/health");
   }
 }
 
-// Create and export default instance
+/**
+ * Default API client instance with standard configuration and interceptors.
+ * Configured with authentication and development logging interceptors.
+ */
 const defaultClient = new ApiClient();
 
 // Add common request interceptor for authentication
@@ -546,13 +739,18 @@ defaultClient.addResponseInterceptor(async (response, config) => {
   return response;
 });
 
+/**
+ * Default API client instance pre-configured with interceptors.
+ * Use this for most API calls requiring authentication and logging.
+ */
 export { defaultClient as apiClient };
 
-// Export utility functions
 // NOTE: A previously exported `createTypedApiClient` factory was removed in the
 // Zod v4 migration because it was unused and introduced brittle generic
 // constraints. Reintroduce a typed factory when concrete endpoint schemas and
 // tests require it.
 
-// Export types
+/**
+ * Exported types for API client configuration and interceptors.
+ */
 export type { RequestConfig, ResponseInterceptor, RequestInterceptor };
