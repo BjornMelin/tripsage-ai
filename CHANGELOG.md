@@ -35,10 +35,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Architecture docs: ADR and Spec for provider order, attribution, and SSR boundaries
   - `docs/adrs/2025-11-01-provider-registry.md`, `docs/specs/provider-registry.md`
 - Dependency: `@ai-sdk/anthropic@3.0.0-beta.47`
+- AI Elements Response and Sources components with focused tests:
+  - `frontend/src/components/ai-elements/response.tsx`
+  - `frontend/src/components/ai-elements/sources.tsx`
+  - Tests in `frontend/src/components/ai-elements/__tests__/`
+- Streamdown CSS source for Response rendering:
+  - `frontend/src/app/globals.css`
+- Architecture records and specs:
+  - `docs/adrs/adr-0035-react-compiler-and-component-declarations.md`
+  - `docs/adrs/adr-0036-ai-elements-response-and-sources.md`
+  - `docs/adrs/adr-0037-reasoning-tool-codeblock-phased-adoption.md`
+  - `docs/specs/0015-spec-ai-elements-response-sources.md`
+  - `docs/specs/0016-spec-react-compiler-enable.md`
 
 ### Changed
 
 - Chat page now consumes AI SDK v6 `useChat` + `DefaultChatTransport`, removing the bespoke SSE parser and wiring Supabase user IDs into the payload (`frontend/src/app/chat/page.tsx`).
+- Chat page renders message `text` via AI Elements `Response` and shows `Sources` when `source-url` parts are present (`frontend/src/app/chat/page.tsx`).
+- Enabled React Compiler in Next.js configuration (`frontend/next.config.ts`).
 - Chat stream adapter now delegates to DI handler and builds the Upstash rate limiter lazily:
   - `frontend/src/app/api/chat/stream/route.ts`
 - Chat non-stream route added with DI handler, usage mapping, image-only validation, and RL parity (40/min):
