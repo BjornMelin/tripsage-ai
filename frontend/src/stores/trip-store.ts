@@ -5,7 +5,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Trip as DatabaseTrip } from "@/lib/supabase/database.types";
+import type { Json, UpdateTables } from "@/lib/supabase/database.types";
 
 /**
  * Interface representing a destination within a trip.
@@ -52,30 +52,30 @@ export interface TripPreferences {
   budget?: {
     total?: number;
     currency?: string;
-    accommodation_budget?: number;
-    transportation_budget?: number;
-    food_budget?: number;
-    activities_budget?: number;
+    accommodationBudget?: number;
+    transportationBudget?: number;
+    foodBudget?: number;
+    activitiesBudget?: number;
   };
   accommodation?: {
     type?: string;
-    min_rating?: number;
+    minRating?: number;
     amenities?: string[];
-    location_preference?: string;
+    locationPreference?: string;
   };
   transportation?: {
-    flight_preferences?: {
-      seat_class?: string;
-      max_stops?: number;
-      preferred_airlines?: string[];
-      time_window?: string;
+    flightPreferences?: {
+      seatClass?: string;
+      maxStops?: number;
+      preferredAirlines?: string[];
+      timeWindow?: string;
     };
-    local_transportation?: string[];
+    localTransportation?: string[];
   };
   activities?: string[];
-  dietary_restrictions?: string[];
-  accessibility_needs?: string[];
-  [key: string]: any; // Allow additional preferences
+  dietaryRestrictions?: string[];
+  accessibilityNeeds?: string[];
+  [key: string]: unknown; // Allow additional preferences
 }
 
 /**
@@ -84,7 +84,9 @@ export interface TripPreferences {
 export interface Trip {
   // ID fields - supporting both legacy and new systems
   id: string;
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   uuid_id?: string;
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   user_id?: string;
 
   // Core trip information (aligned with backend)
@@ -93,7 +95,9 @@ export interface Trip {
   description?: string;
 
   // Date fields - supporting both formats
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   start_date?: string; // Snake case for API compatibility
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   end_date?: string; // Snake case for API compatibility
   startDate?: string; // Camel case for frontend compatibility
   endDate?: string; // Camel case for frontend compatibility
@@ -103,8 +107,10 @@ export interface Trip {
 
   // Budget - supporting both legacy and enhanced
   budget?: number; // Legacy simple budget
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   budget_breakdown?: Budget; // New enhanced budget
   currency?: string;
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   spent_amount?: number;
 
   // fields
@@ -115,7 +121,9 @@ export interface Trip {
   status?: string;
 
   // Timestamp fields - supporting both formats
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   created_at?: string; // Snake case for API compatibility
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   updated_at?: string; // Snake case for API compatibility
   createdAt?: string; // Camel case for frontend compatibility
   updatedAt?: string; // Camel case for frontend compatibility
@@ -212,8 +220,7 @@ export const useTripStore = create<TripState>()(
 
           const tripData = {
             budget: data.budget,
-            // budget structure
-            budget_breakdown: data.budget_breakdown
+            budgetBreakdown: data.budget_breakdown
               ? {
                   breakdown: data.budget_breakdown.breakdown,
                   spent: data.budget_breakdown.spent,
@@ -226,35 +233,37 @@ export const useTripStore = create<TripState>()(
                     total: data.budget,
                   }
                 : null,
-            currency: data.currency || "USD",
-            description: data.description || "",
-            end_date: data.endDate || data.end_date,
-            preferences: data.preferences || {},
-            spent_amount: 0,
-            start_date: data.startDate || data.start_date,
-            status: data.status || "planning",
-            tags: data.tags || [],
-            title: data.title || data.name || "Untitled Trip",
-            visibility: data.visibility || (data.isPublic ? "public" : "private"),
+            currency: data.currency ?? "USD",
+            description: data.description ?? "",
+            endDate: data.endDate ?? data.end_date,
+            preferences: data.preferences ?? {},
+            spentAmount: 0,
+            startDate: data.startDate ?? data.start_date,
+            status: data.status ?? "planning",
+            tags: data.tags ?? [],
+            title: data.title ?? data.name ?? "Untitled Trip",
+            visibility: data.visibility ?? (data.isPublic ? "public" : "private"),
           };
 
           const created = await repoCreateTrip({
-            budget: tripData.budget || 0,
-            currency: tripData.currency,
-            description: tripData.description,
-            destination: (data as { destination?: string })?.destination || "",
-            end_date: tripData.end_date || new Date().toISOString(),
-            flexibility: {},
+            budget: tripData.budget ?? 0,
+            destination: (data as { destination?: string })?.destination ?? "",
+            // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
+            end_date: tripData.endDate ?? new Date().toISOString(),
+            flexibility: (tripData.preferences ?? {}) as Json,
             name: tripData.title,
+            notes: tripData.tags ?? [],
+            // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
             search_metadata: {},
-            start_date: tripData.start_date || new Date().toISOString(),
+            // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
+            start_date: tripData.startDate ?? new Date().toISOString(),
             travelers: 1,
-            user_id: (data.user_id as string) || "",
-            visibility: tripData.visibility,
-          } as any);
+            // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
+            user_id: (data.user_id as string | undefined) ?? "",
+          });
 
           // Convert to frontend format
-          const frontendTrip: Trip = created as any;
+          const frontendTrip: Trip = created;
 
           set((state) => ({
             currentTrip: frontendTrip,
@@ -413,23 +422,33 @@ export const useTripStore = create<TripState>()(
           );
 
           // Map to DB update shape
-          const updateData: Partial<DatabaseTrip> = {} as Partial<DatabaseTrip>;
-          if (data.name || data.title) updateData.name = data.name || data.title!;
-          if (data.startDate || data.start_date)
-            updateData.start_date = (data.startDate || data.start_date)!;
-          if (data.endDate || data.end_date)
-            updateData.end_date = (data.endDate || data.end_date)!;
-          if (typeof data.budget === "number") updateData.budget = data.budget;
-          if (data.status) updateData.status = data.status as DatabaseTrip["status"];
-          if (data.preferences) updateData.flexibility = data.preferences as any;
-          if (data.tags) updateData.notes = data.tags as string[];
-          if (data.description !== undefined)
-            (updateData as any).description = data.description as string;
+          const updateData: UpdateTables<"trips"> = {};
+          if (data.name ?? data.title) {
+            updateData.name = data.name ?? data.title ?? "";
+          }
+          if (data.startDate ?? data.start_date) {
+            updateData.start_date = data.startDate ?? data.start_date ?? "";
+          }
+          if (data.endDate ?? data.end_date) {
+            updateData.end_date = data.endDate ?? data.end_date ?? "";
+          }
+          if (typeof data.budget === "number") {
+            updateData.budget = data.budget;
+          }
+          if (data.status) {
+            updateData.status = data.status as UpdateTables<"trips">["status"];
+          }
+          if (data.preferences) {
+            updateData.flexibility = data.preferences as Json;
+          }
+          if (data.tags) {
+            updateData.notes = data.tags;
+          }
 
           const updated = await repoUpdateTrip(
             Number.parseInt(id, 10),
-            _get().currentTrip?.user_id || "",
-            updateData as any
+            _get().currentTrip?.user_id ?? "",
+            updateData
           );
           const frontendTrip: Partial<Trip> = updated;
 

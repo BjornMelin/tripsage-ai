@@ -138,7 +138,7 @@ describe("Search Store Orchestrator", () => {
           origin: "NYC",
           // biome-ignore lint/suspicious/noExplicitAny: Test data casting
         } as any);
-        await filtersStore.current.setActiveFilter("price_range", {
+        filtersStore.current.setActiveFilter("price_range", {
           max: 500,
           min: 100,
         });
@@ -169,7 +169,7 @@ describe("Search Store Orchestrator", () => {
           origin: "NYC",
           // biome-ignore lint/suspicious/noExplicitAny: Test data casting
         } as any);
-        await filtersStore.current.setActiveFilter("price_range", { min: 100 });
+        filtersStore.current.setActiveFilter("price_range", { min: 100 });
       });
 
       expect(paramsStore.current.currentSearchType).toBe("flight");
@@ -230,11 +230,11 @@ describe("Search Store Orchestrator", () => {
           origin: "NYC",
           // biome-ignore lint/suspicious/noExplicitAny: Test data casting
         } as any);
-        await filtersStore.current.setActiveFilter("price_range", {
+        filtersStore.current.setActiveFilter("price_range", {
           max: 500,
           min: 100,
         });
-        await filtersStore.current.setActiveFilter("airlines", ["AA", "UA"]);
+        filtersStore.current.setActiveFilter("airlines", ["AA", "UA"]);
       });
 
       // Mock search
@@ -401,9 +401,9 @@ describe("Search Store Orchestrator", () => {
 
       expect(result.current.hasActiveFilters).toBe(false);
 
-      await act(async () => {
+      act(() => {
         result.current.initializeSearch("flight");
-        await filtersStore.current.setActiveFilter("price_range", { min: 100 });
+        filtersStore.current.setActiveFilter("price_range", { min: 100 });
       });
       await act(async () => {
         // allow derived state to compute

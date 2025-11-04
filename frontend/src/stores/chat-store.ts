@@ -18,11 +18,11 @@ import { persist } from "zustand/middleware";
  * Used for UI state management and connection status indicators.
  */
 export enum ConnectionStatus {
-  CONNECTING = "connecting",
-  CONNECTED = "connected",
-  DISCONNECTED = "disconnected",
-  RECONNECTING = "reconnecting",
-  ERROR = "error",
+  Connecting = "connecting",
+  Connected = "connected",
+  Disconnected = "disconnected",
+  Reconnecting = "reconnecting",
+  Error = "error",
 }
 
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -277,7 +277,7 @@ export interface ChatState {
   setAutoSyncMemory: (enabled: boolean) => void;
 
   // Realtime actions (no direct WS usage)
-  connectRealtime: (sessionId: string) => Promise<void>;
+  connectRealtime: (sessionId: string) => void;
   disconnectRealtime: () => void;
   setRealtimeEnabled: (enabled: boolean) => void;
   handleRealtimeMessage: (event: WebSocketMessageEvent) => void;
@@ -444,10 +444,10 @@ export const useChatStore = create<ChatState>()(
           return { typingUsers: newTypingUsers };
         });
       },
-      connectionStatus: ConnectionStatus.DISCONNECTED,
+      connectionStatus: ConnectionStatus.Disconnected,
 
       // Realtime actions
-      connectRealtime: async (sessionId) => {
+      connectRealtime: (sessionId) => {
         const supabase = getBrowserClient();
         const prev = get().realtimeChannel;
         if (prev) {
@@ -455,7 +455,7 @@ export const useChatStore = create<ChatState>()(
         }
 
         try {
-          set({ connectionStatus: ConnectionStatus.CONNECTING });
+          set({ connectionStatus: ConnectionStatus.Connecting });
           const channel = supabase
             .channel(`session:${sessionId}`, { config: { private: true } })
             .on("broadcast", { event: "chat:message" }, (payload) => {
@@ -472,11 +472,11 @@ export const useChatStore = create<ChatState>()(
             })
             .on("broadcast", { event: "chat:message_chunk" }, (payload) => {
               const data = payload.payload as
-                | { content?: string; id?: string; is_final?: boolean }
+                | { content?: string; id?: string; isFinal?: boolean }
                 | undefined;
               get().handleRealtimeMessage({
                 content: data?.content || "",
-                isComplete: Boolean(data?.is_final),
+                isComplete: Boolean(data?.isFinal),
                 messageId: data?.id,
                 sessionId,
                 type: "chat_message_chunk",
@@ -514,11 +514,11 @@ export const useChatStore = create<ChatState>()(
 
           channel.subscribe((state, err) => {
             if (state === "SUBSCRIBED") {
-              set({ connectionStatus: ConnectionStatus.CONNECTED });
+              set({ connectionStatus: ConnectionStatus.Connected });
             }
             if (err) {
               set({
-                connectionStatus: ConnectionStatus.ERROR,
+                connectionStatus: ConnectionStatus.Error,
                 error: err.message ?? "Realtime subscription error",
               });
             }
@@ -528,7 +528,7 @@ export const useChatStore = create<ChatState>()(
         } catch (error) {
           console.error("Failed to connect Realtime:", error);
           set({
-            connectionStatus: ConnectionStatus.ERROR,
+            connectionStatus: ConnectionStatus.Error,
             error: error instanceof Error ? error.message : "Realtime connection error",
           });
         }
@@ -590,7 +590,7 @@ export const useChatStore = create<ChatState>()(
           realtimeChannel.unsubscribe();
         }
         set({
-          connectionStatus: ConnectionStatus.DISCONNECTED,
+          connectionStatus: ConnectionStatus.Disconnected,
           pendingMessages: [],
           realtimeChannel: null,
           typingUsers: {},

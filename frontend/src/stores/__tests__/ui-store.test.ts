@@ -104,7 +104,9 @@ describe("UI Store", () => {
 
     it("handles invalid theme values gracefully", () => {
       const { result } = renderHook(() => useUiStore());
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        /* silence console errors during test */
+      });
       const previousTheme = result.current.theme;
 
       act(() => {
@@ -354,7 +356,9 @@ describe("UI Store", () => {
 
     it("handles invalid loading state values gracefully", () => {
       const { result } = renderHook(() => useUiStore());
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        /* silence console errors during test */
+      });
 
       act(() => {
         // @ts-expect-error Testing invalid loading state
@@ -564,7 +568,9 @@ describe("UI Store", () => {
 
     it("handles invalid notification gracefully", () => {
       const { result } = renderHook(() => useUiStore());
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        /* silence console errors during test */
+      });
 
       act(() => {
         result.current.addNotification({
@@ -673,7 +679,9 @@ describe("UI Store", () => {
         result.current.setCommandPaletteQuery("test query");
         result.current.setCommandPaletteResults([
           {
-            action: () => {},
+            action: () => {
+              /* empty callback for test */
+            },
             id: "1",
             title: "Test Result",
           },
@@ -708,14 +716,18 @@ describe("UI Store", () => {
 
       const results = [
         {
-          action: () => {},
+          action: () => {
+            /* empty callback for test */
+          },
           category: "commands",
           description: "First result",
           id: "1",
           title: "Result 1",
         },
         {
-          action: () => {},
+          action: () => {
+            /* empty callback for test */
+          },
           id: "2",
           title: "Result 2",
         },
@@ -922,7 +934,9 @@ describe("UI Store", () => {
       // Simulate search results
       const mockResults = [
         {
-          action: () => {},
+          action: () => {
+            /* empty callback for test */
+          },
           category: "user",
           description: "Modify user account settings",
           icon: "user",
@@ -930,7 +944,9 @@ describe("UI Store", () => {
           title: "Edit User Profile",
         },
         {
-          action: () => {},
+          action: () => {
+            /* empty callback for test */
+          },
           category: "admin",
           description: "Manage all users",
           icon: "users",
@@ -982,7 +998,9 @@ describe("UI Store", () => {
         warningId = result.current.addNotification({
           action: {
             label: "Upgrade",
-            onClick: () => {},
+            onClick: () => {
+              /* empty callback for test */
+            },
           },
           isRead: false,
           message: "Consider upgrading your plan",
