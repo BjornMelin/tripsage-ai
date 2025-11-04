@@ -23,13 +23,6 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-all]
-        args: [--ignore-missing-imports]
-
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.11
     hooks:
@@ -37,13 +30,19 @@ repos:
         args: [-r, ., -x, tests/]
         exclude: ^tests/
 
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.10.0
-    hooks:
-      - id: black-jupyter
+  
+  # Type checking: prefer Pyright per repo guidelines
+  # Executed via uv-managed environment if pyright is available as a Python wrapper
+  # Otherwise, ensure pyright is available in CI PATH
 
   - repo: local
     hooks:
+      - id: pyright-check
+        name: pyright-check
+        entry: uv run pyright
+        language: system
+        pass_filenames: false
+        always_run: false
       - id: pytest-check
         name: pytest-check
         entry: bash -c 'cd frontend && pnpm test:coverage || true'
