@@ -11,12 +11,14 @@ versions:
   node-full: "24.x"
   
   # Tool versions
-  uv: "0.5.20"
+  uv: "0.9.7"
   ruff: "0.14.3"
   mypy: "1.18.2"
   pnpm: "10.20.0"
   biome: "2.3.2"
   playwright: "1.56.1"
+  vitest: "4.0.6"
+  typescript: "5.9.3"
   
   # Docker versions
   docker-buildx: "0.29.1"
