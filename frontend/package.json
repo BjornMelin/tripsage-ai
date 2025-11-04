@@ -7,6 +7,7 @@
     "build": "next build",
     "build:analyze": "ANALYZE=true next build",
     "start": "next start",
+    "lint": "biome lint ./src",
     "format:biome": "biome format ./src --write",
     "biome:check": "biome check ./src",
     "biome:fix": "biome check ./src --fix",
@@ -104,6 +105,7 @@
     "@vitest/coverage-v8": "^4.0.1",
     "@vitest/ui": "^4.0.1",
     "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
     "jose": "^6.1.0",
     "jscodeshift": "^17.3.0",
     "jsdom": "^27.0.1",
@@ -112,6 +114,11 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.9.3",
     "vitest": "^4.0.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,css,mjs,cjs,mts,cts}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   },
   "engines": {
     "node": "^24 || >=24",

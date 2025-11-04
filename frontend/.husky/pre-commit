@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# Run Biome check
-pnpm biome:check
+# Run Biome on staged files via lint-staged
+pnpm lint-staged

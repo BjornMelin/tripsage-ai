@@ -43,6 +43,7 @@ Scope: how to build, run, and test AI features with AI SDK v6, BYOK multi‑prov
 ### Biome Configuration
 
 - Single gate for formatting/lint/imports: `pnpm biome:check` (fail on warnings), `pnpm biome:fix`, `pnpm format:biome`.
+- Husky pre-commit runs lint-staged (Biome on staged files). CI runs full `pnpm biome:check`, `pnpm type-check`, and tests.
 - Do not change `biome.json` unless explicitly requested. Fix code, don’t relax rules.
 - Key settings (see `frontend/biome.json:1`): lineWidth 88; 2‑space indent; LF; double quotes; ES5 trailing commas; strict naming; `noExplicitAny`; unused variables/imports forbidden; React hook/exhaustive‑deps enabled.
 
