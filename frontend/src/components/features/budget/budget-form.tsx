@@ -686,4 +686,4 @@ export const BudgetForm = ({
       </CardContent>
     </Card>
   );
-}
+};

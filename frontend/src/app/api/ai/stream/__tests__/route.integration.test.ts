@@ -1,6 +1,7 @@
 /**
  * @fileoverview Integration tests for the AI stream route ensuring SSE flow and error handling.
  */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the `ai` package to avoid network/model dependencies
@@ -64,7 +65,7 @@ const createMockStreamResult = (responseFn: () => Response) => {
     toUIMessageStreamResponse: responseFn,
     usage: Promise.resolve(undefined),
     warnings: Promise.resolve([]),
-  } as unknown; // Type assertion necessary due to complex AI SDK interface
+  } as unknown; // Minimal shape for tests
 };
 
 describe("ai stream route", () => {
@@ -80,7 +81,9 @@ describe("ai stream route", () => {
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
     MOCK_STREAM_TEXT.mockReturnValue(
-      createMockStreamResult(mockToUiMessageStreamResponse) as any
+      createMockStreamResult(
+        mockToUiMessageStreamResponse
+      ) as unknown as ReturnType<typeof streamText>
     );
 
     const request = new Request("http://localhost", {
@@ -110,7 +113,9 @@ describe("ai stream route", () => {
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
     MOCK_STREAM_TEXT.mockReturnValue(
-      createMockStreamResult(mockToUiMessageStreamResponse) as any
+      createMockStreamResult(
+        mockToUiMessageStreamResponse
+      ) as unknown as ReturnType<typeof streamText>
     );
 
     const request = new Request("http://localhost", {
@@ -137,7 +142,9 @@ describe("ai stream route", () => {
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
     MOCK_STREAM_TEXT.mockReturnValue(
-      createMockStreamResult(mockToUiMessageStreamResponse) as any
+      createMockStreamResult(
+        mockToUiMessageStreamResponse
+      ) as unknown as ReturnType<typeof streamText>
     );
 
     const request = new Request("http://localhost", {
@@ -164,7 +171,9 @@ describe("ai stream route", () => {
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
     MOCK_STREAM_TEXT.mockReturnValue(
-      createMockStreamResult(mockToUiMessageStreamResponse) as any
+      createMockStreamResult(
+        mockToUiMessageStreamResponse
+      ) as unknown as ReturnType<typeof streamText>
     );
 
     const request = new Request("http://localhost", {
@@ -201,7 +210,9 @@ describe("ai stream route", () => {
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
     MOCK_STREAM_TEXT.mockReturnValue(
-      createMockStreamResult(mockToUiMessageStreamResponse) as any
+      createMockStreamResult(
+        mockToUiMessageStreamResponse
+      ) as unknown as ReturnType<typeof streamText>
     );
 
     const request = new Request("http://localhost", {
@@ -221,7 +232,9 @@ describe("ai stream route", () => {
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
     MOCK_STREAM_TEXT.mockReturnValue(
-      createMockStreamResult(mockToUiMessageStreamResponse) as any
+      createMockStreamResult(
+        mockToUiMessageStreamResponse
+      ) as unknown as ReturnType<typeof streamText>
     );
 
     const request = new Request("http://localhost", {
@@ -264,7 +277,9 @@ describe("ai stream route", () => {
     });
 
     MOCK_STREAM_TEXT.mockReturnValue(
-      createMockStreamResult(mockToUiMessageStreamResponse) as any
+      createMockStreamResult(
+        mockToUiMessageStreamResponse
+      ) as unknown as ReturnType<typeof streamText>
     );
 
     const request = new Request("http://localhost", {
@@ -284,7 +299,9 @@ describe("ai stream route", () => {
     const mockToUiMessageStreamResponse = vi.fn().mockReturnValue(mockResponse);
 
     MOCK_STREAM_TEXT.mockReturnValue(
-      createMockStreamResult(mockToUiMessageStreamResponse) as any
+      createMockStreamResult(
+        mockToUiMessageStreamResponse
+      ) as unknown as ReturnType<typeof streamText>
     );
 
     const request = new Request("http://localhost", {

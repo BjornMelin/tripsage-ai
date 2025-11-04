@@ -1,6 +1,6 @@
 /**
- * @fileoverview Prompt input primitives for AI chat UIs. Provides a flexible input group
- * with attachments support and submission handling. Optimized for Next.js App Router.
+ * @fileoverview Prompt input components for AI chat interfaces. Provides input forms
+ * with file attachments, drag-and-drop, and form submission handling.
  */
 
 "use client";
@@ -74,29 +74,47 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-// ============================================================================
-// Provider Context & Types
-// ============================================================================
+// Provider Context & Types ----------------------------------------------------
 
+/**
+ * Context interface for managing file attachments in prompt input components.
+ */
 export type AttachmentsContext = {
+  /** Array of attached files with unique IDs. */
   files: (FileUIPart & { id: string })[];
+  /** Adds one or more files to the attachments. */
   add: (files: File[] | FileList) => void;
+  /** Removes an attachment by its unique ID. */
   remove: (id: string) => void;
+  /** Clears all attachments. */
   clear: () => void;
+  /** Opens the file selection dialog. */
   openFileDialog: () => void;
+  /** Reference to the hidden file input element. */
   fileInputRef: RefObject<HTMLInputElement | null>;
 };
 
+/**
+ * Context interface for managing text input state in prompt input components.
+ */
 export type TextInputContext = {
+  /** Current text input value. */
   value: string;
+  /** Sets the text input value. */
   setInput: (v: string) => void;
+  /** Clears the text input. */
   clear: () => void;
 };
 
+/**
+ * Props for the PromptInputController context provider.
+ */
 export type PromptInputControllerProps = {
+  /** Text input context for managing input state. */
   textInput: TextInputContext;
+  /** Attachments context for managing file attachments. */
   attachments: AttachmentsContext;
-  /** INTERNAL: Allows PromptInput to register its file textInput + "open" callback */
+  /** INTERNAL: Allows PromptInput to register its file input ref and open callback. */
   __registerFileInput: (
     ref: RefObject<HTMLInputElement | null>,
     open: () => void
@@ -125,7 +143,6 @@ export const usePromptInputController = () => {
 // Optional variants (do NOT throw). Useful for dual-mode components.
 const useOptionalPromptInputController = () => useContext(PromptInputController);
 
-
 /**
  * Hook to access the ProviderAttachmentsContext context.
  *
@@ -144,13 +161,21 @@ export const useProviderAttachments = () => {
 
 const useOptionalProviderAttachments = () => useContext(ProviderAttachmentsContext);
 
+/**
+ * Props for the PromptInputProvider component.
+ */
 export type PromptInputProviderProps = PropsWithChildren<{
+  /** Initial text input value. Defaults to empty string. */
   initialInput?: string;
 }>;
 
 /**
  * Optional global provider that lifts PromptInput state outside of PromptInput.
  * If you don't use it, PromptInput stays fully self-managed.
+ *
+ * @param initialInput Initial text input value. Defaults to empty string.
+ * @param children Child components to render.
+ * @returns Provider component wrapping children with PromptInput contexts.
  */
 export function PromptInputProvider({
   initialInput: initialTextInput = "",
@@ -163,7 +188,9 @@ export function PromptInputProvider({
   // ----- attachments state (global when wrapped)
   const [attachements, setAttachements] = useState<(FileUIPart & { id: string })[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const openRef = useRef<() => void>(() => {});
+  const openRef = useRef<() => void>(() => {
+    // Initial empty function, will be replaced by __registerFileInput
+  });
 
   const add = useCallback((files: File[] | FileList) => {
     const incoming = Array.from(files);
@@ -243,12 +270,16 @@ export function PromptInputProvider({
   );
 }
 
-// ============================================================================
-// Component Context & Hooks
-// ============================================================================
+// Component Context & Hooks ---------------------------------------------------
 
 const LocalAttachmentsContext = createContext<AttachmentsContext | null>(null);
 
+/**
+ * Hook to access the attachments context.
+ *
+ * @returns The attachments context.
+ * @throws An error if the context is not found.
+ */
 export const usePromptInputAttachments = () => {
   // Dual-mode: prefer provider if present, otherwise use local
   const provider = useOptionalProviderAttachments();
@@ -262,17 +293,23 @@ export const usePromptInputAttachments = () => {
   return context;
 };
 
+/**
+ * Props for the PromptInputAttachment component.
+ */
 export type PromptInputAttachmentProps = HTMLAttributes<HTMLDivElement> & {
+  /** The attachment data including file information and unique ID. */
   data: FileUIPart & { id: string };
+  /** Optional additional CSS classes. */
   className?: string;
 };
 
 /**
- * Prompt input attachment component for displaying a file or image attachment.
+ * Component for displaying a file or image attachment with preview and removal functionality.
  *
- * @param data The attachment data.
- * @param className Optional extra classes.
- * @returns A hover card with the attachment preview.
+ * @param data The attachment data including file information and unique ID.
+ * @param className Optional additional CSS classes.
+ * @param props Additional HTML div element props.
+ * @returns A hover card containing the attachment preview with remove button.
  */
 export function PromptInputAttachment({
   data,
@@ -364,14 +401,24 @@ export function PromptInputAttachment({
   );
 }
 
-/** Props for the PromptInputAttachments component. */
+/**
+ * Props for the PromptInputAttachments component.
+ */
 export type PromptInputAttachmentsProps = Omit<
   HTMLAttributes<HTMLDivElement>,
   "children"
 > & {
+  /** Render function for each attachment. */
   children: (attachment: FileUIPart & { id: string }) => ReactNode;
 };
 
+/**
+ * Container component that renders all current attachments using a render prop pattern.
+ * Only renders when there are attachments to display.
+ *
+ * @param children Render function that receives each attachment and returns JSX.
+ * @returns Fragment containing rendered attachments, or null if no attachments exist.
+ */
 export function PromptInputAttachments({ children }: PromptInputAttachmentsProps) {
   const attachments = usePromptInputAttachments();
 
@@ -384,19 +431,23 @@ export function PromptInputAttachments({ children }: PromptInputAttachmentsProps
   ));
 }
 
-/** Props for the PromptInputActionAddAttachments component. */
+/**
+ * Props for the PromptInputActionAddAttachments component.
+ */
 export type PromptInputActionAddAttachmentsProps = ComponentProps<
   typeof DropdownMenuItem
 > & {
+  /** Optional label for the add attachments action. */
   label?: string;
 };
 
 /**
- * Prompt input action add attachments component for adding photos or files.
+ * Dropdown menu item component that triggers the file selection dialog.
+ * Integrates with PromptInput's attachment system for adding files/photos.
  *
- * @param label Optional label.
- * @param props Additional props.
- * @returns A dropdown menu item with the add attachments action.
+ * @param label Optional custom label text. Defaults to "Add photos or files".
+ * @param props Additional dropdown menu item props.
+ * @returns Dropdown menu item that opens file selection when clicked.
  */
 export const PromptInputActionAddAttachments = ({
   label = "Add photos or files",
@@ -417,30 +468,41 @@ export const PromptInputActionAddAttachments = ({
   );
 };
 
-/** Props for the PromptInputMessage component. */
+/**
+ * Message data structure for prompt input submissions.
+ */
 export type PromptInputMessage = {
+  /** Optional text content of the message. */
   text?: string;
+  /** Optional array of attached files. */
   files?: FileUIPart[];
 };
 
-/** Props for the PromptInput component. */
+/**
+ * Props for the PromptInput component.
+ */
 export type PromptInputProps = Omit<
   HTMLAttributes<HTMLFormElement>,
   "onSubmit" | "onError"
 > & {
-  accept?: string; // e.g., "image/*" or leave undefined for any
+  /** File accept pattern (e.g., "image/*"). Leave undefined for any file type. */
+  accept?: string;
+  /** Whether multiple files can be selected. */
   multiple?: boolean;
-  // When true, accepts drops anywhere on document. Default false (opt-in).
+  /** When true, accepts drops anywhere on document. Default false (opt-in). */
   globalDrop?: boolean;
-  // Render a hidden input with given name and keep it in sync for native form posts. Default false.
+  /** Render a hidden input with given name and keep it in sync for native form posts. Default false. */
   syncHiddenInput?: boolean;
-  // Minimal constraints
+  /** Maximum number of files allowed. */
   maxFiles?: number;
-  maxFileSize?: number; // bytes
+  /** Maximum file size in bytes. */
+  maxFileSize?: number;
+  /** Error handler for file validation failures. */
   onError?: (err: {
     code: "max_files" | "max_file_size" | "accept";
     message: string;
   }) => void;
+  /** Submit handler for the prompt input. */
   onSubmit: (
     message: PromptInputMessage,
     event: FormEvent<HTMLFormElement>
@@ -448,20 +510,21 @@ export type PromptInputProps = Omit<
 };
 
 /**
- * Prompt input component for the AI chat UI.
+ * Main prompt input component for AI chat interfaces. Provides a form
+ * with file attachments, drag-and-drop, and input controls.
  *
- * @param className Optional extra classes.
- * @param accept Accept type.
- * @param multiple Whether multiple files are allowed.
- * @param globalDrop Whether global drop is allowed.
- * @param syncHiddenInput Whether to sync the hidden input.
- * @param maxFiles Maximum number of files.
- * @param maxFileSize Maximum file size.
- * @param onError Error handler.
- * @param onSubmit Submit handler.
- * @param children Children components.
- * @param props Additional props.
- * @returns A form with the prompt input.
+ * @param accept File accept pattern (e.g., "image/*"). Leave undefined for any file type.
+ * @param multiple Whether multiple files can be selected.
+ * @param globalDrop When true, accepts drops anywhere on document. Default false (opt-in).
+ * @param syncHiddenInput Whether to render a hidden input synced for native form posts. Default false.
+ * @param maxFiles Maximum number of files allowed.
+ * @param maxFileSize Maximum file size in bytes.
+ * @param onError Error handler for file validation failures.
+ * @param onSubmit Submit handler for the prompt input.
+ * @param className Optional additional CSS classes.
+ * @param children Child components to render within the form.
+ * @param props Additional HTML form element props.
+ * @returns A form element containing the prompt input interface.
  */
 export const PromptInput = ({
   className,
@@ -480,7 +543,6 @@ export const PromptInput = ({
   const controller = useOptionalPromptInputController();
   const usingProvider = !!controller;
 
-  // Refs
   const inputRef = useRef<HTMLInputElement | null>(null);
   const anchorRef = useRef<HTMLSpanElement>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -497,10 +559,12 @@ export const PromptInput = ({
   const [items, setItems] = useState<(FileUIPart & { id: string })[]>([]);
   const files = usingProvider ? controller.attachments.files : items;
 
+  // Opens the hidden file input dialog when no provider is available
   const openFileDialogLocal = useCallback(() => {
     inputRef.current?.click();
   }, []);
 
+  // Validates if a file matches the accept pattern (simplified implementation)
   const matchesAccept = useCallback(
     (f: File) => {
       if (!accept || accept.trim() === "") {
@@ -509,12 +573,13 @@ export const PromptInput = ({
       if (accept.includes("image/*")) {
         return f.type.startsWith("image/");
       }
-      // NOTE: keep simple; expand as needed
+      // NOTE: keep simple; expand as needed for more complex accept patterns
       return true;
     },
     [accept]
   );
 
+  // Adds files to local state with validation and capacity limits (when no provider)
   const addLocal = useCallback(
     (fileList: File[] | FileList) => {
       const incoming = Array.from(fileList);
@@ -676,6 +741,7 @@ export const PromptInput = ({
     }
   };
 
+  // Converts blob URLs to data URLs for form submission compatibility
   const convertBlobUrlToDataUrl = async (url: string): Promise<string> => {
     const response = await fetch(url);
     const blob = await response.blob();
@@ -718,14 +784,16 @@ export const PromptInput = ({
 
     // Convert blob URLs to data URLs asynchronously
     Promise.all(
-      files.map(async ({ id, ...item }) => {
+      files.map(async (file) => {
+        const { id, ...item } = file;
         if (item.url && item.url.startsWith("blob:")) {
           return {
+            id,
             ...item,
             url: await convertBlobUrlToDataUrl(item.url),
           };
         }
-        return item;
+        return file;
       })
     ).then((convertedFiles: FileUIPart[]) => {
       try {
@@ -785,33 +853,41 @@ export const PromptInput = ({
   );
 };
 
-/** Props for the PromptInputBody component. */
+/**
+ * Props for the PromptInputBody component.
+ */
 export type PromptInputBodyProps = HTMLAttributes<HTMLDivElement>;
 
 /**
- * Prompt input body component for the AI chat UI.
+ * Semantic container for the main content area of the prompt input.
+ * Provides consistent spacing and layout structure for input elements.
  *
- * @param className Optional extra classes.
- * @param props Additional props.
- * @returns A div with the prompt input body.
+ * @param className Optional additional CSS classes.
+ * @param props Additional HTML div element props.
+ * @returns Styled div element with "contents" class for layout purposes.
  */
 export const PromptInputBody = ({ className, ...props }: PromptInputBodyProps) => (
   <div className={cn("contents", className)} {...props} />
 );
 
-/** Props for the PromptInputTextarea component. */
+/**
+ * Props for the PromptInputTextarea component.
+ */
 export type PromptInputTextareaProps = ComponentProps<typeof InputGroupTextarea> & {
+  /** Placeholder text for the textarea. */
   placeholder?: string;
 };
 
 /**
- * Prompt input textarea component for the AI chat UI.
+ * Textarea component with keyboard shortcuts and paste handling for attachments.
+ * Supports Enter to submit (Shift+Enter for new line) and Backspace to remove attachments.
+ * Handles file paste operations for drag-and-drop workflow.
  *
- * @param onChange Change handler.
- * @param className Optional extra classes.
- * @param placeholder Placeholder text.
- * @param props Additional props.
- * @returns A textarea with the prompt input.
+ * @param onChange Optional change handler (only used when not controlled by provider).
+ * @param className Optional additional CSS classes.
+ * @param placeholder Placeholder text for empty state.
+ * @param props Additional textarea element props.
+ * @returns Controlled or uncontrolled textarea with attachment integration.
  */
 export const PromptInputTextarea = ({
   onChange,
@@ -900,11 +976,22 @@ export const PromptInputTextarea = ({
   );
 };
 
+/**
+ * Props for the PromptInputHeader component.
+ */
 export type PromptInputHeaderProps = Omit<
   ComponentProps<typeof InputGroupAddon>,
   "align"
 >;
 
+/**
+ * Layout component for header content above the input area.
+ * Uses flexbox with wrap for responsive arrangement of header elements.
+ *
+ * @param className Optional additional CSS classes.
+ * @param props Additional addon props.
+ * @returns InputGroupAddon positioned at the start with flex-wrap styling.
+ */
 export const PromptInputHeader = ({ className, ...props }: PromptInputHeaderProps) => (
   <InputGroupAddon
     align="block-end"
@@ -913,11 +1000,22 @@ export const PromptInputHeader = ({ className, ...props }: PromptInputHeaderProp
   />
 );
 
+/**
+ * Props for the PromptInputFooter component.
+ */
 export type PromptInputFooterProps = Omit<
   ComponentProps<typeof InputGroupAddon>,
   "align"
 >;
 
+/**
+ * Layout component for footer content below the input area.
+ * Uses space-between justification for left/right aligned footer elements.
+ *
+ * @param className Optional additional CSS classes.
+ * @param props Additional addon props.
+ * @returns InputGroupAddon with space-between justification for footer layout.
+ */
 export const PromptInputFooter = ({ className, ...props }: PromptInputFooterProps) => (
   <InputGroupAddon
     align="block-end"
@@ -926,14 +1024,38 @@ export const PromptInputFooter = ({ className, ...props }: PromptInputFooterProp
   />
 );
 
+/**
+ * Props for the PromptInputTools component.
+ */
 export type PromptInputToolsProps = HTMLAttributes<HTMLDivElement>;
 
+/**
+ * Container for toolbar buttons and controls within the prompt input.
+ * Provides consistent horizontal layout with small gaps between tool elements.
+ *
+ * @param className Optional additional CSS classes.
+ * @param props Additional HTML div element props.
+ * @returns Flex container for tool buttons and controls.
+ */
 export const PromptInputTools = ({ className, ...props }: PromptInputToolsProps) => (
   <div className={cn("flex items-center gap-1", className)} {...props} />
 );
 
+/**
+ * Props for the PromptInputButton component.
+ */
 export type PromptInputButtonProps = ComponentProps<typeof InputGroupButton>;
 
+/**
+ * Button component for prompt input toolbars.
+ * Adjusts size based on content for consistent appearance.
+ *
+ * @param variant Button variant. Defaults to "ghost".
+ * @param className Optional additional CSS classes.
+ * @param size Optional explicit size. Auto-calculated if not provided.
+ * @param props Additional button props.
+ * @returns InputGroupButton with size auto-adjustment based on children count.
+ */
 export const PromptInputButton = ({
   variant = "ghost",
   className,
@@ -953,11 +1075,17 @@ export const PromptInputButton = ({
   );
 };
 
+/**
+ * Props for the PromptInputActionMenu component.
+ */
 export type PromptInputActionMenuProps = ComponentProps<typeof DropdownMenu>;
 export const PromptInputActionMenu = (props: PromptInputActionMenuProps) => (
   <DropdownMenu {...props} />
 );
 
+/**
+ * Props for the PromptInputActionMenuTrigger component.
+ */
 export type PromptInputActionMenuTriggerProps = PromptInputButtonProps;
 
 export const PromptInputActionMenuTrigger = ({
@@ -972,6 +1100,9 @@ export const PromptInputActionMenuTrigger = ({
   </DropdownMenuTrigger>
 );
 
+/**
+ * Props for the PromptInputActionMenuContent component.
+ */
 export type PromptInputActionMenuContentProps = ComponentProps<
   typeof DropdownMenuContent
 >;
@@ -982,6 +1113,9 @@ export const PromptInputActionMenuContent = ({
   <DropdownMenuContent align="start" className={cn(className)} {...props} />
 );
 
+/**
+ * Props for the PromptInputActionMenuItem component.
+ */
 export type PromptInputActionMenuItemProps = ComponentProps<typeof DropdownMenuItem>;
 export const PromptInputActionMenuItem = ({
   className,
@@ -993,7 +1127,11 @@ export const PromptInputActionMenuItem = ({
 // Note: Actions that perform side-effects (like opening a file dialog)
 // are provided in opt-in modules (e.g., prompt-input-attachments).
 
+/**
+ * Props for the PromptInputSubmit component.
+ */
 export type PromptInputSubmitProps = ComponentProps<typeof InputGroupButton> & {
+  /** Current chat status to determine icon display. */
   status?: ChatStatus;
 };
 
@@ -1078,8 +1216,13 @@ declare global {
   }
 }
 
+/**
+ * Props for the PromptInputSpeechButton component.
+ */
 export type PromptInputSpeechButtonProps = ComponentProps<typeof PromptInputButton> & {
+  /** Reference to the textarea element for transcription insertion. */
   textareaRef?: RefObject<HTMLTextAreaElement | null>;
+  /** Callback fired when transcription text changes. */
   onTranscriptionChange?: (text: string) => void;
 };
 
@@ -1152,6 +1295,7 @@ export const PromptInputSpeechButton = ({
     };
   }, [textareaRef, onTranscriptionChange]);
 
+  // Toggles speech recognition on/off based on current listening state
   const toggleListening = useCallback(() => {
     if (!recognition) {
       return;
@@ -1180,7 +1324,9 @@ export const PromptInputSpeechButton = ({
   );
 };
 
-/** Props for the PromptInputModelSelect component. */
+/**
+ * Props for the PromptInputModelSelect component.
+ */
 export type PromptInputModelSelectProps = ComponentProps<typeof Select>;
 
 /**
@@ -1193,7 +1339,9 @@ export const PromptInputModelSelect = (props: PromptInputModelSelectProps) => (
   <Select {...props} />
 );
 
-/** Props for the PromptInputModelSelectTrigger component. */
+/**
+ * Props for the PromptInputModelSelectTrigger component.
+ */
 export type PromptInputModelSelectTriggerProps = ComponentProps<typeof SelectTrigger>;
 
 /**
@@ -1210,14 +1358,16 @@ export const PromptInputModelSelectTrigger = ({
   <SelectTrigger
     className={cn(
       "border-none bg-transparent font-medium text-muted-foreground shadow-none transition-colors",
-      'hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground',
+      "hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground",
       className
     )}
     {...props}
   />
 );
 
-/** Props for the PromptInputModelSelectContent component. */
+/**
+ * Props for the PromptInputModelSelectContent component.
+ */
 export type PromptInputModelSelectContentProps = ComponentProps<typeof SelectContent>;
 
 /**
@@ -1234,7 +1384,9 @@ export const PromptInputModelSelectContent = ({
   <SelectContent className={cn(className)} {...props} />
 );
 
-/** Props for the PromptInputModelSelectItem component. */
+/**
+ * Props for the PromptInputModelSelectItem component.
+ */
 export type PromptInputModelSelectItemProps = ComponentProps<typeof SelectItem>;
 
 /**
@@ -1251,6 +1403,9 @@ export const PromptInputModelSelectItem = ({
   <SelectItem className={cn(className)} {...props} />
 );
 
+/**
+ * Props for the PromptInputModelSelectValue component.
+ */
 export type PromptInputModelSelectValueProps = ComponentProps<typeof SelectValue>;
 
 /**
@@ -1267,6 +1422,9 @@ export const PromptInputModelSelectValue = ({
   <SelectValue className={cn(className)} {...props} />
 );
 
+/**
+ * Props for the PromptInputHoverCard component.
+ */
 export type PromptInputHoverCardProps = ComponentProps<typeof HoverCard>;
 
 /**
@@ -1285,6 +1443,9 @@ export const PromptInputHoverCard = ({
   <HoverCard closeDelay={closeDelay} openDelay={openDelay} {...props} />
 );
 
+/**
+ * Props for the PromptInputHoverCardTrigger component.
+ */
 export type PromptInputHoverCardTriggerProps = ComponentProps<typeof HoverCardTrigger>;
 
 /**
@@ -1297,6 +1458,9 @@ export const PromptInputHoverCardTrigger = (
   props: PromptInputHoverCardTriggerProps
 ) => <HoverCardTrigger {...props} />;
 
+/**
+ * Props for the PromptInputHoverCardContent component.
+ */
 export type PromptInputHoverCardContentProps = ComponentProps<typeof HoverCardContent>;
 
 /**
@@ -1311,6 +1475,9 @@ export const PromptInputHoverCardContent = ({
   ...props
 }: PromptInputHoverCardContentProps) => <HoverCardContent align={align} {...props} />;
 
+/**
+ * Props for the PromptInputTabsList component.
+ */
 export type PromptInputTabsListProps = HTMLAttributes<HTMLDivElement>;
 
 /**
@@ -1325,6 +1492,9 @@ export const PromptInputTabsList = ({
   ...props
 }: PromptInputTabsListProps) => <div className={cn(className)} {...props} />;
 
+/**
+ * Props for the PromptInputTab component.
+ */
 export type PromptInputTabProps = HTMLAttributes<HTMLDivElement>;
 
 /**
@@ -1338,7 +1508,9 @@ export const PromptInputTab = ({ className, ...props }: PromptInputTabProps) => 
   <div className={cn(className)} {...props} />
 );
 
-/** Props for the PromptInputTabLabel component. */
+/**
+ * Props for the PromptInputTabLabel component.
+ */
 export type PromptInputTabLabelProps = HTMLAttributes<HTMLHeadingElement>;
 
 /**
@@ -1358,7 +1530,9 @@ export const PromptInputTabLabel = ({
   />
 );
 
-/** Props for the PromptInputTabBody component. */
+/**
+ * Props for the PromptInputTabBody component.
+ */
 export type PromptInputTabBodyProps = HTMLAttributes<HTMLDivElement>;
 
 /**
@@ -1375,7 +1549,9 @@ export const PromptInputTabBody = ({
   <div className={cn("space-y-1", className)} {...props} />
 );
 
-/** Props for the PromptInputTabItem component. */
+/**
+ * Props for the PromptInputTabItem component.
+ */
 export type PromptInputTabItemProps = HTMLAttributes<HTMLDivElement>;
 
 /**
@@ -1398,7 +1574,9 @@ export const PromptInputTabItem = ({
   />
 );
 
-/** Props for the PromptInputCommand component. */
+/**
+ * Props for the PromptInputCommand component.
+ */
 export type PromptInputCommandProps = ComponentProps<typeof Command>;
 
 /**
@@ -1413,7 +1591,9 @@ export const PromptInputCommand = ({
   ...props
 }: PromptInputCommandProps) => <Command className={cn(className)} {...props} />;
 
-/** Props for the PromptInputCommandInput component. */
+/**
+ * Props for the PromptInputCommandInput component.
+ */
 export type PromptInputCommandInputProps = ComponentProps<typeof CommandInput>;
 
 /**
@@ -1430,7 +1610,9 @@ export const PromptInputCommandInput = ({
   <CommandInput className={cn(className)} {...props} />
 );
 
-/** Props for the PromptInputCommandList component. */
+/**
+ * Props for the PromptInputCommandList component.
+ */
 export type PromptInputCommandListProps = ComponentProps<typeof CommandList>;
 
 /**
@@ -1445,7 +1627,9 @@ export const PromptInputCommandList = ({
   ...props
 }: PromptInputCommandListProps) => <CommandList className={cn(className)} {...props} />;
 
-/** Props for the PromptInputCommandEmpty component. */
+/**
+ * Props for the PromptInputCommandEmpty component.
+ */
 export type PromptInputCommandEmptyProps = ComponentProps<typeof CommandEmpty>;
 
 /**
@@ -1462,7 +1646,9 @@ export const PromptInputCommandEmpty = ({
   <CommandEmpty className={cn(className)} {...props} />
 );
 
-/** Props for the PromptInputCommandGroup component. */
+/**
+ * Props for the PromptInputCommandGroup component.
+ */
 export type PromptInputCommandGroupProps = ComponentProps<typeof CommandGroup>;
 
 /**
@@ -1479,7 +1665,9 @@ export const PromptInputCommandGroup = ({
   <CommandGroup className={cn(className)} {...props} />
 );
 
-/** Props for the PromptInputCommandItem component. */
+/**
+ * Props for the PromptInputCommandItem component.
+ */
 export type PromptInputCommandItemProps = ComponentProps<typeof CommandItem>;
 
 /**
@@ -1494,7 +1682,9 @@ export const PromptInputCommandItem = ({
   ...props
 }: PromptInputCommandItemProps) => <CommandItem className={cn(className)} {...props} />;
 
-/** Props for the PromptInputCommandSeparator component. */
+/**
+ * Props for the PromptInputCommandSeparator component.
+ */
 export type PromptInputCommandSeparatorProps = ComponentProps<typeof CommandSeparator>;
 
 /**

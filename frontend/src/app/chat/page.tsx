@@ -2,6 +2,7 @@
  * @fileoverview Chat page integrating AI Elements primitives with AI SDK v6.
  * Uses the official `useChat` hook to manage UI message streams and state.
  */
+
 "use client";
 
 import { useChat } from "@ai-sdk/react";
@@ -37,6 +38,13 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
+import { Response } from "@/components/ai-elements/response";
+import {
+  Source,
+  Sources,
+  SourcesContent,
+  SourcesTrigger,
+} from "@/components/ai-elements/sources";
 import { useSupabase } from "@/lib/supabase/client";
 
 /**
@@ -84,6 +92,8 @@ function useCurrentUserId(): string | null {
  * @param message UI message streamed by the AI SDK transport.
  * @returns Rendered message content.
  */
+// Type intentionally inferred from parts; explicit alias not required.
+
 function ChatMessageItem({ message }: { message: UIMessage }) {
   const parts = message.parts ?? [];
   return (
@@ -97,11 +107,7 @@ function ChatMessageItem({ message }: { message: UIMessage }) {
           parts.map((part, idx) => {
             switch (part?.type) {
               case "text":
-                return (
-                  <p key={`${message.id}-t-${idx}`} className="whitespace-pre-wrap">
-                    {part.text}
-                  </p>
-                );
+                return <Response key={`${message.id}-t-${idx}`}>{part.text}</Response>;
               case "tool-call":
               case "tool-call-result":
                 return (
@@ -138,6 +144,52 @@ function ChatMessageItem({ message }: { message: UIMessage }) {
         ) : (
           <span className="opacity-70">(no content)</span>
         )}
+        {/* Assistant citations (if provided) */}
+        {message.role === "assistant" &&
+        parts.some((p) => {
+          if (typeof p !== "object" || p === null) return false;
+          const r = p as Record<string, unknown>;
+          return r.type === "source-url" && typeof r.url === "string";
+        }) ? (
+          <div className="mt-2">
+            <Sources>
+              <SourcesTrigger
+                count={
+                  parts.filter(
+                    (p) =>
+                      typeof p === "object" &&
+                      p !== null &&
+                      (p as Record<string, unknown>).type === "source-url"
+                  ).length
+                }
+              />
+              <SourcesContent>
+                <div className="space-y-1">
+                  {parts
+                    .map((p, i) => ({ i, p }))
+                    .filter(
+                      ({ p }) =>
+                        typeof p === "object" &&
+                        p !== null &&
+                        (p as Record<string, unknown>).type === "source-url" &&
+                        typeof (p as Record<string, unknown>).url === "string"
+                    )
+                    .map(({ p, i }) => {
+                      const rec = p as Record<string, unknown>;
+                      const href = String(rec.url);
+                      const title =
+                        typeof rec.title === "string" ? rec.title : undefined;
+                      return (
+                        <Source key={`${message.id}-src-${i}`} href={href}>
+                          {title ?? href}
+                        </Source>
+                      );
+                    })}
+                </div>
+              </SourcesContent>
+            </Sources>
+          </div>
+        ) : null}
       </MessageContent>
     </Message>
   );
@@ -201,7 +253,7 @@ export default function chatPage(): ReactElement {
           timeoutId = setTimeout(() => setShowReconnected(false), 3000);
         })
         .catch((_err) => {
-          // biome-ignore lint/suspicious/noEmptyBlockStatements: Error intentionally ignored for user experience
+          /* Intentionally ignored to avoid UX disruption on reconnect */
         });
     }
     return () => {
