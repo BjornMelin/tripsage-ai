@@ -15,9 +15,8 @@ import {
 } from "@/types/currency";
 
 // Common currencies with symbols and decimal places
-// biome-ignore-next-line lint/style/useNamingConvention
+// FIXME: ISO 4217 currency codes use UPPER_CASE naming convention
 const COMMON_CURRENCIES: Record<CurrencyCode, Currency> = {
-  // biome-ignore lint/style/useNamingConvention: ISO currency codes use UPPER_CASE
   AUD: {
     code: "AUD",
     decimals: 2,
