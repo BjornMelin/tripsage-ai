@@ -54,12 +54,12 @@ describe("PersonalizationInsights", () => {
           spendingTrends: [
             {
               category: "accommodation",
-              percentage_change: 15,
+              percentageChange: 15,
               trend: "increasing" as const,
             },
             {
               category: "flights",
-              percentage_change: 2,
+              percentageChange: 2,
               trend: "stable" as const,
             },
           ],
@@ -69,13 +69,13 @@ describe("PersonalizationInsights", () => {
             {
               destination: "Tokyo",
               lastVisit: "2024-03-15T10:00:00Z",
-              satisfaction_score: 4.8,
+              satisfactionScore: 4.8,
               visits: 3,
             },
             {
               destination: "Paris",
               lastVisit: "2024-01-20T10:00:00Z",
-              satisfaction_score: 4.5,
+              satisfactionScore: 4.5,
               visits: 2,
             },
           ],
@@ -102,9 +102,9 @@ describe("PersonalizationInsights", () => {
         },
       },
       metadata: {
-        analysis_date: "2024-01-01T10:00:00Z",
-        confidence_level: 0.87,
-        data_coverage_months: 12,
+        analysisDate: "2024-01-01T10:00:00Z",
+        confidenceLevel: 0.87,
+        dataCoverageMonths: 12,
       },
     },
     error: null,
@@ -201,9 +201,9 @@ describe("PersonalizationInsights", () => {
     // Should show total memories
     expect(screen.getByText("245")).toBeInTheDocument();
 
-    // Should show memory types
+    // Should show first three memory type counts (rendered slice)
     expect(screen.getByText("68")).toBeInTheDocument(); // accommodation count
-    expect(screen.getByText("52")).toBeInTheDocument(); // flights count
+    expect(screen.getByText("35")).toBeInTheDocument(); // activities count
     expect(screen.getByText("41")).toBeInTheDocument(); // destinations count
   });
 
