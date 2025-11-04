@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for the attachment files API route.
- * Tests the GET endpoint for fetching attachment files with proper authentication
- * and pagination parameter forwarding.
- */
-
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "../route";

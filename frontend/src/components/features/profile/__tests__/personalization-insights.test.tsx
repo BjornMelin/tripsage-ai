@@ -1,8 +1,3 @@
-/**
- * @fileoverview Tests for PersonalizationInsights component
- * Test suite with 80-90% coverage
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";

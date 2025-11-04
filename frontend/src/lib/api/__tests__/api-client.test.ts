@@ -1,9 +1,3 @@
-/**
- * @fileoverview Comprehensive test suite for API client with Zod validation,
- * covering request/response validation, error handling, authentication, retries,
- * rate limiting, and various HTTP scenarios with mocked fetch implementation.
- */
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 

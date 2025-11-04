@@ -1,7 +1,3 @@
-/**
- * @fileoverview Test utilities and providers for React component testing.
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { RenderOptions } from "@testing-library/react";
 import { render } from "@testing-library/react";

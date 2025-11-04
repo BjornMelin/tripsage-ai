@@ -1,7 +1,3 @@
-/**
- * @fileoverview Account settings section tests: email, verification, notices.
- */
-
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -169,8 +165,3 @@ describe("AccountSettingsSection", () => {
     expect(screen.getByText("Updating...")).toBeInTheDocument();
   });
 });
-/**
- * @fileoverview Tests for AccountSettingsSection component covering email updates,
- * notification toggles, and account deletion dialog behavior. Uses userEvent
- * with semantic queries and avoids brittle class assertions.
- */

@@ -1,9 +1,9 @@
-"use client";
-
 /**
  * @fileoverview React provider that synchronizes Supabase Realtime authentication
  * with the current Supabase session token.
  */
+
+"use client";
 
 import { useEffect } from "react";
 import { getBrowserClient } from "@/lib/supabase/client";
@@ -13,7 +13,7 @@ import { getAccessToken } from "@/lib/supabase/token";
  * Keeps Supabase Realtime authorized with the latest access token, reacting to
  * authentication lifecycle events and cleaning up on unmount.
  *
- * @returns {null} This component renders nothing; it purely manages side effects.
+ * @returns This component renders nothing; it purely manages side effects.
  */
 export function RealtimeAuthProvider(): null {
   useEffect(() => {

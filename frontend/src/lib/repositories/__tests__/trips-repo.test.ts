@@ -1,6 +1,3 @@
-/**
- * @fileoverview Smoke tests for trips repository using typed helpers.
- */
 import { describe, expect, it, vi } from "vitest";
 import { createTrip, mapTripRowToUi, updateTrip } from "@/lib/repositories/trips-repo";
 import type { Tables } from "@/lib/supabase/database.types";

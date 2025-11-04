@@ -1,8 +1,4 @@
-/**
- * @vitest-environment jsdom
- * @fileoverview Tests for ActivityCard component aligned with current UI.
- * Assertions prefer accessibility roles/text over fragile DOM details.
- */
+/** @vitest-environment jsdom */
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";

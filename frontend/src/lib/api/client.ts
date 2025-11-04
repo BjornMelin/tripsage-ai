@@ -9,9 +9,6 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 /**
  * Options for `fetchApi` including query params and optional auth header.
- *
- * @property params Optional query parameters appended to the URL.
- * @property auth Optional value for the `Authorization` header (e.g. `Bearer <jwt>`).
  */
 export interface FetchOptions extends RequestInit {
   params?: Record<string, string | number | boolean>;
@@ -25,7 +22,6 @@ export { ApiError };
 /**
  * Normalize a fetch `Response`, throwing `ApiError` for non-2xx results.
  *
- * @typeParam T Parsed response type when the request succeeds.
  * @param response Fetch response to normalize.
  * @returns Parsed body as type `T`.
  * @throws {ApiError} When the response status is not OK (>=400).
@@ -56,9 +52,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
  * - Adds `Content-Type: application/json` when sending JSON bodies.
  * - Merges provided headers and optional `Authorization` token.
  * - Serializes `options.params` into a query string.
- *
- * @typeParam T Expected response payload type.
- * @param endpoint Path beginning with `/`, relative to `API_BASE_URL`.
+ * * @param endpoint Path beginning with `/`, relative to `API_BASE_URL`.
  * @param options Extended fetch options with `params` and `auth`.
  * @returns Parsed response of type `T`.
  * @throws {ApiError} If the HTTP status indicates an error.

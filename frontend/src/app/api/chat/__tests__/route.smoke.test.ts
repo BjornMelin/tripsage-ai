@@ -1,8 +1,3 @@
-/**
- * @fileoverview Smoke tests for /api/chat route, verifying basic auth handling
- * and happy-path wiring with minimal mocking.
- */
-
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { unstubAllEnvs } from "@/test/env-helpers";

@@ -1,10 +1,3 @@
-/**
- * @fileoverview Unit tests for upcoming flights functionality.
- *
- * Focused tests for upcoming flights functionality using proper mocking
- * patterns and behavioral validation. Following ULTRATHINK methodology.
- */
-
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";

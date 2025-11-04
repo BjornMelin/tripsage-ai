@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for FlightSearchForm component, covering form rendering,
- * user input handling, validation, trip type switching, passenger selection,
- * and search submission with various scenarios and edge cases.
- */
-
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FlightSearchForm } from "../flight-search-form";

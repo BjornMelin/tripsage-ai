@@ -1,7 +1,3 @@
-/**
- * @fileoverview Sanity test to ensure zod v4 + @hookform/resolvers interop.
- */
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import { render } from "@testing-library/react";
 import React from "react";

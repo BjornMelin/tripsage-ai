@@ -1,7 +1,3 @@
-/**
- * @fileoverview Unit tests for ErrorFallback component, covering default UI,
- * error message display, button functionality, and accessibility features.
- */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {

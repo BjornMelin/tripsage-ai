@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for the Profile Page component and its integration with user stores.
- */
-
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";

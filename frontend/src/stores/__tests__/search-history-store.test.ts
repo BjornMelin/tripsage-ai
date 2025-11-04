@@ -1,9 +1,3 @@
-/**
- * @fileoverview Comprehensive unit tests for search history store, covering search
- * history management, saved searches, search collections, synchronization, cleanup,
- * and persistence with extensive state management and edge case testing.
- */
-
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SearchHistoryItem, ValidatedSavedSearch } from "../search-history-store";

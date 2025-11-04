@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for the useSupabaseStorage hook.
- */
-
 import { waitFor } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";

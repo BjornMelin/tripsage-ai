@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for error boundary Zod schemas, validating component props,
- * error states, loading states, skeleton configurations, and route error handling
- * with type checking and edge case coverage.
- */
-
 import { describe, expect, it } from "vitest";
 import {
   errorBoundaryPropsSchema,

@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for loading state components, covering overlay rendering,
- * button loading states, container loading modes, page-level loading indicators,
- * and accessibility features for various loading UI patterns.
- */
-
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {

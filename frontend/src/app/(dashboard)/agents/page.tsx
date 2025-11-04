@@ -116,7 +116,7 @@ const MOCK_CONNECTION_ANALYTICS: ConnectionAnalytics = {
  * - Tabbed interface for overview, collaboration, network, and settings views
  * - Responsive design with mobile-friendly layouts
  *
- * @returns {JSX.Element} The rendered agent monitoring dashboard page.
+ * @returns The rendered agent monitoring dashboard page.
  */
 export default function AgentsPage() {
   const [selectedTab, setSelectedTab] = useState("overview");

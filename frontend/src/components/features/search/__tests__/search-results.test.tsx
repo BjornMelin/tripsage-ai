@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for SearchResults component, verifying flight display,
- * sorting functionality, filtering capabilities, loading states, and user
- * interactions with flight cards, price display, and booking actions.
- */
-
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Flight } from "@/types/search";

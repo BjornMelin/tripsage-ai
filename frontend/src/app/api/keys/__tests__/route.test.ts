@@ -1,7 +1,5 @@
-/* @vitest-environment node */
-/**
- * @fileoverview Unit tests for BYOK CRUD route handlers (POST/DELETE).
- */
+/** @vitest-environment node */
+
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { stubRateLimitDisabled } from "@/test/env-helpers";

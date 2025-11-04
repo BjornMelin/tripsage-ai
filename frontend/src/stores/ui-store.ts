@@ -73,11 +73,6 @@ export type LoadingStates = z.infer<typeof LOADING_STATES_SCHEMA>;
 
 /**
  * Interface for sidebar state management.
- *
- * @interface
- * @property {boolean} isOpen - Whether the sidebar is currently open
- * @property {boolean} isCollapsed - Whether the sidebar is in collapsed state
- * @property {boolean} isPinned - Whether the sidebar is pinned open
  */
 export interface SidebarState {
   isOpen: boolean;
@@ -87,10 +82,6 @@ export interface SidebarState {
 
 /**
  * Interface for navigation state management.
- *
- * @interface
- * @property {string} activeRoute - The currently active route path
- * @property {Array<{label: string, href?: string}>} breadcrumbs - Array of breadcrumb items
  */
 export interface NavigationState {
   activeRoute: string;
@@ -102,13 +93,6 @@ export interface NavigationState {
 
 /**
  * Interface for modal and dialog state management.
- *
- * @interface
- * @property {boolean} isOpen - Whether the modal is currently open
- * @property {string | null} component - The component name to render in the modal
- * @property {Record<string, unknown>} [props] - Props to pass to the modal component
- * @property {"sm" | "md" | "lg" | "xl" | "full"} [size] - Size variant for the modal
- * @property {boolean} [closeOnOverlayClick] - Whether clicking overlay closes modal
  */
 export interface ModalState {
   isOpen: boolean;
@@ -120,11 +104,6 @@ export interface ModalState {
 
 /**
  * Interface for command palette state.
- *
- * @interface
- * @property {boolean} isOpen - Whether the command palette is currently open
- * @property {string} query - Current search query in the command palette
- * @property {Array<{id: string, title: string, description?: string, action: () => void, category?: string, icon?: string}>} results - Search results
  */
 export interface CommandPaletteState {
   isOpen: boolean;
@@ -145,8 +124,6 @@ export interface CommandPaletteState {
  * This interface defines the entire state structure and actions for the UI store,
  * including theme management, sidebar state, navigation, loading states, notifications,
  * modals, command palette, and feature flags.
- *
- * @interface UiState
  */
 interface UiState {
   // Theme and appearance
@@ -176,12 +153,6 @@ interface UiState {
 
   /**
    * Feature flag configuration for UI capabilities.
-   *
-   * @property {boolean} enableAnimations - Whether animations are enabled
-   * @property {boolean} enableSounds - Whether sound effects are enabled
-   * @property {boolean} enableHaptics - Whether haptic feedback is enabled
-   * @property {boolean} enableAnalytics - Whether analytics tracking is enabled
-   * @property {boolean} enableBetaFeatures - Whether beta features are enabled
    */
   features: {
     enableAnimations: boolean;
@@ -199,7 +170,7 @@ interface UiState {
 
   /**
    * Set the application theme.
-   * @param {Theme} theme - The theme to set
+   * @param theme - The theme to set
    */
   setTheme: (theme: Theme) => void;
 
@@ -211,49 +182,49 @@ interface UiState {
 
   /**
    * Set the sidebar open state.
-   * @param {boolean} isOpen - Whether the sidebar should be open
+   * @param isOpen - Whether the sidebar should be open
    */
   setSidebarOpen: (isOpen: boolean) => void;
 
   /**
    * Set the sidebar collapsed state.
-   * @param {boolean} isCollapsed - Whether the sidebar should be collapsed
+   * @param isCollapsed - Whether the sidebar should be collapsed
    */
   setSidebarCollapsed: (isCollapsed: boolean) => void;
 
   /**
    * Set the sidebar pinned state.
-   * @param {boolean} isPinned - Whether the sidebar should be pinned
+   * @param isPinned - Whether the sidebar should be pinned
    */
   setSidebarPinned: (isPinned: boolean) => void;
 
   /** Sets the active route.
-   * @param {string} route - The route path to set as active
+   * @param route - The route path to set as active
    */
   setActiveRoute: (route: string) => void;
 
   /**
    * Set the breadcrumbs array.
-   * @param {NavigationState["breadcrumbs"]} breadcrumbs - Array of breadcrumb items
+   * @param breadcrumbs - Array of breadcrumb items
    */
   setBreadcrumbs: (breadcrumbs: NavigationState["breadcrumbs"]) => void;
 
   /**
    * Add a breadcrumb to the navigation state.
-   * @param {NavigationState["breadcrumbs"][0]} breadcrumb - Breadcrumb item to add
+   * @param breadcrumb - Breadcrumb item to add
    */
   addBreadcrumb: (breadcrumb: NavigationState["breadcrumbs"][0]) => void;
 
   /**
    * Set the loading state for a specific operation.
-   * @param {string} key - Operation identifier
-   * @param {LoadingState} state - Loading state to set
+   * @param key - Operation identifier
+   * @param state - Loading state to set
    */
   setLoadingState: (key: string, state: LoadingState) => void;
 
   /**
    * Clear the loading state for a specific operation.
-   * @param {string} key - Operation identifier to clear
+   * @param key - Operation identifier to clear
    */
   clearLoadingState: (key: string) => void;
 
@@ -262,20 +233,20 @@ interface UiState {
 
   /**
    * Add a new notification and returns its ID.
-   * @param {Omit<Notification, "id" | "createdAt">} notification - Notification to add
-   * @returns {string} The generated notification ID
+   * @param notification - Notification to add
+   * @returns The generated notification ID
    */
   addNotification: (notification: Omit<Notification, "id" | "createdAt">) => string;
 
   /**
    * Remove a notification by ID.
-   * @param {string} id - Notification ID to remove
+   * @param id - Notification ID to remove
    */
   removeNotification: (id: string) => void;
 
   /**
    * Mark a notification as read.
-   * @param {string} id - Notification ID to mark as read
+   * @param id - Notification ID to mark as read
    */
   markNotificationAsRead: (id: string) => void;
 
@@ -284,9 +255,9 @@ interface UiState {
 
   /**
    * Open a modal with the specified component and props.
-   * @param {string} component - Component name to render in modal
-   * @param {Record<string, unknown>} [props] - Props to pass to component
-   * @param {Partial<ModalState>} [options] - Modal configuration options
+   * @param component - Component name to render in modal
+   * @param [props] - Props to pass to component
+   * @param [options] - Modal configuration options
    */
   openModal: (
     component: string,
@@ -298,7 +269,7 @@ interface UiState {
   closeModal: () => void;
 
   /** Updates props for the currently open modal.
-   * @param {Record<string, unknown>} props - Props to update
+   * @param props - Props to update
    */
   updateModalProps: (props: Record<string, unknown>) => void;
 
@@ -310,26 +281,26 @@ interface UiState {
 
   /**
    * Set the search query for the command palette.
-   * @param {string} query - Search query string
+   * @param query - Search query string
    */
   setCommandPaletteQuery: (query: string) => void;
 
   /**
    * Set the search results for the command palette.
-   * @param {CommandPaletteState["results"]} results - Array of search results
+   * @param results - Array of search results
    */
   setCommandPaletteResults: (results: CommandPaletteState["results"]) => void;
 
   /**
    * Toggle a feature flag on/off.
-   * @param {keyof UiState["features"]} feature - Feature flag to toggle
+   * @param feature - Feature flag to toggle
    */
   toggleFeature: (feature: keyof UiState["features"]) => void;
 
   /**
    * Set a feature flag to a specific value.
-   * @param {keyof UiState["features"]} feature - Feature flag to set
-   * @param {boolean} enabled - Whether the feature should be enabled
+   * @param feature - Feature flag to set
+   * @param enabled - Whether the feature should be enabled
    */
   setFeature: (feature: keyof UiState["features"], enabled: boolean) => void;
 
@@ -339,14 +310,14 @@ interface UiState {
 
 /**
  * Generates a unique ID using timestamp and random string.
- * @returns {string} A unique identifier string
+ * @returns A unique identifier string
  */
 const GENERATE_ID = () =>
   Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
 
 /**
  * Gets the current timestamp in ISO string format.
- * @returns {string} Current timestamp as ISO string
+ * @returns Current timestamp as ISO string
  */
 const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
 
@@ -722,67 +693,67 @@ export const useUiStore = create<UiState>()(
 
 /**
  * Selector hook for the current theme setting.
- * @returns {Theme} Current theme value
+ * @returns Current theme value
  */
 export const useTheme = () => useUiStore((state) => state.theme);
 
 /**
  * Selector hook for dark mode status.
- * @returns {boolean} True if dark mode is active
+ * @returns True if dark mode is active
  */
 export const useIsDarkMode = () => useUiStore((state) => state.isDarkMode);
 
 /**
  * Selector hook for sidebar state.
- * @returns {SidebarState} Current sidebar state
+ * @returns Current sidebar state
  */
 export const useSidebar = () => useUiStore((state) => state.sidebar);
 
 /**
  * Selector hook for navigation state.
- * @returns {NavigationState} Current navigation state
+ * @returns Current navigation state
  */
 export const useNavigation = () => useUiStore((state) => state.navigation);
 
 /**
  * Selector hook for notifications array.
- * @returns {Notification[]} Array of current notifications
+ * @returns Array of current notifications
  */
 export const useNotifications = () => useUiStore((state) => state.notifications);
 
 /**
  * Selector hook for unread notification count.
- * @returns {number} Number of unread notifications
+ * @returns Number of unread notifications
  */
 export const useUnreadNotificationCount = () =>
   useUiStore((state) => state.unreadNotificationCount);
 
 /**
  * Selector hook for modal state.
- * @returns {ModalState} Current modal state
+ * @returns Current modal state
  */
 export const useModal = () => useUiStore((state) => state.modal);
 
 /**
  * Selector hook for command palette state.
- * @returns {CommandPaletteState} Current command palette state
+ * @returns Current command palette state
  */
 export const useCommandPalette = () => useUiStore((state) => state.commandPalette);
 
 /**
  * Selector hook for loading states map.
- * @returns {LoadingStates} Map of loading states by operation
+ * @returns Map of loading states by operation
  */
 export const useLoadingStates = () => useUiStore((state) => state.loadingStates);
 
 /**
  * Selector hook for global loading status.
- * @returns {boolean} True if any operation is loading
+ * @returns True if any operation is loading
  */
 export const useIsLoading = () => useUiStore((state) => state.isLoading);
 
 /**
  * Selector hook for feature flags.
- * @returns {UiState["features"]} Current feature flag configuration
+ * @returns Current feature flag configuration
  */
 export const useFeatures = () => useUiStore((state) => state.features);

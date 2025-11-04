@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for the search store orchestrator, covering search
- * initialization, execution, filtering, history management, and state synchronization
- * across multiple search-related stores.
- */
-
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SearchParams, SearchType } from "@/types/search";

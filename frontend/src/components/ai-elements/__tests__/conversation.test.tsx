@@ -1,6 +1,3 @@
-/**
- * @fileoverview Tests for Conversation component, verifying empty state rendering and message display.
- */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {

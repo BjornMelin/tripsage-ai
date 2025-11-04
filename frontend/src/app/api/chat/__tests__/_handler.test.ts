@@ -1,8 +1,4 @@
-/* @vitest-environment node */
-/**
- * @fileoverview Unit tests for handleChatNonStream covering auth, attachments, clamping,
- * and usage mapping using injected dependencies and mocked AI SDK interactions.
- */
+/** @vitest-environment node */
 
 import type { LanguageModel } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";

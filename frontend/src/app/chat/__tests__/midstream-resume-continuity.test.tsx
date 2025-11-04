@@ -1,8 +1,3 @@
-/**
- * @fileoverview Simulates a mid-stream reconnect and verifies message list
- * continuity (no duplication or loss) after calling the experimental resume.
- */
-
 import { render, screen } from "@testing-library/react";
 import type { ChatStatus, FileUIPart, UIMessage } from "ai";
 import { describe, expect, it, vi } from "vitest";

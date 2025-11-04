@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for the auth confirm route handler.
- */
-
 import type { NextRequest } from "next/server";
 import type { MockInstance } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";

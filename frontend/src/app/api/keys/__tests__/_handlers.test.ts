@@ -1,8 +1,3 @@
-/**
- * @fileoverview Unit tests for keys handler functions, testing BYOK CRUD operations
- * with mocked Supabase client and authentication scenarios.
- */
-
 import { describe, expect, it, vi } from "vitest";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";

@@ -1,6 +1,3 @@
-/**
- * @fileoverview Tests for Message component, verifying user and assistant message rendering with different variants.
- */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {

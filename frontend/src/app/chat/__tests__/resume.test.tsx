@@ -1,8 +1,3 @@
-/**
- * @fileoverview Tests for ChatPage resume wiring. Ensures useChat is called with
- * resume enabled and a transport that defines prepareReconnectToStreamRequest.
- */
-
 import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

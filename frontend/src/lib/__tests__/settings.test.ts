@@ -1,6 +1,3 @@
-/**
- * @fileoverview Unit tests for provider settings mapping from env.
- */
 import { beforeEach, describe, expect, it } from "vitest";
 
 describe("getProviderSettings", () => {

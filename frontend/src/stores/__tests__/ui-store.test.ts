@@ -1,9 +1,3 @@
-/**
- * @fileoverview Comprehensive unit tests for UI store, covering theme management,
- * sidebar state, feature flags, notifications, dialogs, modals, responsive behavior,
- * and persistence with extensive state management and cross-test isolation.
- */
-
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
