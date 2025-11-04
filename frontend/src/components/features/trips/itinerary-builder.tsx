@@ -268,7 +268,7 @@ function DestinationDialog({
               </Button>
             </div>
             {formData.activities.map((activity, index) => (
-              <div key={activity} className="flex gap-2">
+              <div key={`activity-${index}`} className="flex gap-2">
                 <Input
                   value={activity}
                   onChange={(event) => updateActivity(index, event.target.value)}
