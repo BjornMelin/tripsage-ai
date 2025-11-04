@@ -22,7 +22,13 @@ declare global {
 }
 
 /**
- * Hook for handling errors in components.
+ * Hook for handling errors in React components with automatic reporting.
+ *
+ * Provides utilities for consistent error handling across the application,
+ * including automatic error reporting, user context tracking, and session
+ * information collection.
+ *
+ * @returns Object containing error handling functions
  */
 export function useErrorHandler() {
   const handleError = useCallback(
@@ -46,7 +52,7 @@ export function useErrorHandler() {
   );
 
   const handleAsyncError = useCallback(
-    async (asyncOperation: () => Promise<any>, fallback?: () => void) => {
+    async <T>(asyncOperation: () => Promise<T>, fallback?: () => void): Promise<T> => {
       try {
         return await asyncOperation();
       } catch (error) {

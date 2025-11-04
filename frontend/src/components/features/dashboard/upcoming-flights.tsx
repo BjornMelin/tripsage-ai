@@ -91,7 +91,7 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
         <div className="flex items-center gap-2">
           <Plane className="h-4 w-4 text-primary" />
           <span className="font-medium text-sm">
-            {flight.airline_name} {flight.flight_number}
+            {flight.airlineName} {flight.flightNumber}
           </span>
         </div>
         <Badge variant={getStatusColor(flight.status)} className="text-xs">
@@ -104,14 +104,14 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
           <p className="text-xs text-muted-foreground mb-1">Departure</p>
           <p className="font-medium text-sm">{flight.origin}</p>
           <p className="text-xs text-muted-foreground">
-            {formatTime(flight.departure_time)} • {formatDate(flight.departure_time)}
+            {formatTime(flight.departureTime)} • {formatDate(flight.departureTime)}
           </p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground mb-1">Arrival</p>
           <p className="font-medium text-sm">{flight.destination}</p>
           <p className="text-xs text-muted-foreground">
-            {formatTime(flight.arrival_time)} • {formatDate(flight.arrival_time)}
+            {formatTime(flight.arrivalTime)} • {formatDate(flight.arrivalTime)}
           </p>
         </div>
       </div>
@@ -133,15 +133,15 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
         </div>
       </div>
 
-      {flight.trip_name && (
+      {flight.tripName && (
         <div className="mt-2 pt-2 border-t border-border">
           <p className="text-xs text-muted-foreground">
             Part of:{" "}
             <Link
-              href={`/dashboard/trips/${flight.trip_id}`}
+              href={`/dashboard/trips/${flight.tripId}`}
               className="text-primary hover:underline"
             >
-              {flight.trip_name}
+              {flight.tripName}
             </Link>
           </p>
         </div>

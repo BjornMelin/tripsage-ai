@@ -8,7 +8,7 @@
 export interface UseSearchResult {
   search: (query: string) => Promise<void>;
   isSearching: boolean;
-  results: any[];
+  results: unknown[];
   error: Error | null;
   clearSearch: () => void;
 }
@@ -20,10 +20,14 @@ export interface UseSearchResult {
  */
 export function useSearch(): UseSearchResult {
   return {
-    clearSearch: () => {},
+    clearSearch: () => {
+      // Mock implementation - no-op for placeholder
+    },
     error: null,
     isSearching: false,
     results: [],
-    search: async () => {},
+    search: async () => {
+      // Mock implementation - no-op for placeholder
+    },
   };
 }

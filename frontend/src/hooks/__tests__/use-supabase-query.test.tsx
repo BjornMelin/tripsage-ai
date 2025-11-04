@@ -19,16 +19,22 @@ vi.mock("@/lib/supabase/client", () => ({
 
 const CREATE_SELECT_BUILDER = (rows: TripsTable[]) => {
   const result = { data: rows, error: null };
-  return {
+
+  // Create a mock builder that behaves like a Promise
+  const builder = {
     eq: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     range: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
-    then: (
-      onFulfilled?: (value: typeof result) => unknown,
-      onRejected?: (reason: unknown) => unknown
-    ) => Promise.resolve(result).then(onFulfilled, onRejected),
+    // biome-ignore lint/suspicious/noThenProperty: Mock needs Promise-like then method
+    then: vi
+      .fn()
+      .mockImplementation((onFulfilled: (value: typeof result) => unknown) =>
+        Promise.resolve(result).then(onFulfilled)
+      ),
   };
+
+  return builder;
 };
 
 const CREATE_TRIP_ROW = (overrides: Partial<TripsTable> = {}): TripsTable => ({

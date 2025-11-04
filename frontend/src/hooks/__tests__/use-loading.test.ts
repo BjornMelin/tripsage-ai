@@ -201,7 +201,7 @@ describe("useAsyncLoading", () => {
     const asyncFn = vi.fn().mockResolvedValue("success");
     const { result } = renderHook(() => useAsyncLoading(asyncFn));
 
-    let promise: Promise<any>;
+    let promise: Promise<unknown>;
     act(() => {
       promise = result.current.execute("arg1", "arg2");
     });
@@ -225,7 +225,7 @@ describe("useAsyncLoading", () => {
     const asyncFn = vi.fn().mockRejectedValue(error);
     const { result } = renderHook(() => useAsyncLoading(asyncFn));
 
-    let promise: Promise<any>;
+    let promise: Promise<unknown>;
     act(() => {
       promise = result.current.execute();
     });

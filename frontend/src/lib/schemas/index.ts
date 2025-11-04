@@ -1,5 +1,5 @@
 /**
- * Central schema registry and exports
+ * @fileoverview Central schema registry and exports
  * All Zod schemas for runtime type safety
  */
 
@@ -155,48 +155,48 @@ export const commonPatterns = {
 
 // Validation error codes
 export const validationCodes = {
-  CUSTOM_VALIDATION: "custom_validation",
-  FORBIDDEN: "forbidden",
-  INVALID_DATE: "invalid_date",
-  INVALID_EMAIL: "invalid_email",
-  INVALID_FORMAT: "invalid_format",
-  INVALID_TYPE: "invalid_type",
-  INVALID_URL: "invalid_url",
-  MAX_LENGTH: "max_length",
-  MAX_VALUE: "max_value",
-  MIN_LENGTH: "min_length",
-  MIN_VALUE: "min_value",
-  NETWORK_ERROR: "network_error",
-  NOT_FOUND: "not_found",
-  PASSWORDS_DONT_MATCH: "passwords_dont_match",
-  RATE_LIMITED: "rate_limited",
-  REQUIRED: "required",
-  SERVER_ERROR: "server_error",
-  SERVICE_UNAVAILABLE: "service_unavailable",
-  UNAUTHORIZED: "unauthorized",
+  customValidation: "custom_validation",
+  forbidden: "forbidden",
+  invalidDate: "invalid_date",
+  invalidEmail: "invalid_email",
+  invalidFormat: "invalid_format",
+  invalidType: "invalid_type",
+  invalidUrl: "invalid_url",
+  maxLength: "max_length",
+  maxValue: "max_value",
+  minLength: "min_length",
+  minValue: "min_value",
+  networkError: "network_error",
+  notFound: "not_found",
+  passwordsDontMatch: "passwords_dont_match",
+  rateLimited: "rate_limited",
+  required: "required",
+  serverError: "server_error",
+  serviceUnavailable: "service_unavailable",
+  unauthorized: "unauthorized",
 } as const;
 
 // Common error messages
 export const errorMessages = {
-  [validationCodes.REQUIRED]: "This field is required",
-  [validationCodes.INVALID_TYPE]: "Invalid data type",
-  [validationCodes.INVALID_FORMAT]: "Invalid format",
-  [validationCodes.MIN_LENGTH]: "Too short",
-  [validationCodes.MAX_LENGTH]: "Too long",
-  [validationCodes.MIN_VALUE]: "Value too small",
-  [validationCodes.MAX_VALUE]: "Value too large",
-  [validationCodes.INVALID_EMAIL]: "Please enter a valid email address",
-  [validationCodes.INVALID_URL]: "Please enter a valid URL",
-  [validationCodes.INVALID_DATE]: "Please enter a valid date",
-  [validationCodes.PASSWORDS_DONT_MATCH]: "Passwords don't match",
-  [validationCodes.CUSTOM_VALIDATION]: "Validation failed",
-  [validationCodes.NETWORK_ERROR]: "Network error occurred",
-  [validationCodes.SERVER_ERROR]: "Server error occurred",
-  [validationCodes.UNAUTHORIZED]: "Unauthorized access",
-  [validationCodes.FORBIDDEN]: "Access forbidden",
-  [validationCodes.NOT_FOUND]: "Resource not found",
-  [validationCodes.RATE_LIMITED]: "Too many requests",
-  [validationCodes.SERVICE_UNAVAILABLE]: "Service temporarily unavailable",
+  [validationCodes.required]: "This field is required",
+  [validationCodes.invalidType]: "Invalid data type",
+  [validationCodes.invalidFormat]: "Invalid format",
+  [validationCodes.minLength]: "Too short",
+  [validationCodes.maxLength]: "Too long",
+  [validationCodes.minValue]: "Value too small",
+  [validationCodes.maxValue]: "Value too large",
+  [validationCodes.invalidEmail]: "Please enter a valid email address",
+  [validationCodes.invalidUrl]: "Please enter a valid URL",
+  [validationCodes.invalidDate]: "Please enter a valid date",
+  [validationCodes.passwordsDontMatch]: "Passwords don't match",
+  [validationCodes.customValidation]: "Validation failed",
+  [validationCodes.networkError]: "Network error occurred",
+  [validationCodes.serverError]: "Server error occurred",
+  [validationCodes.unauthorized]: "Unauthorized access",
+  [validationCodes.forbidden]: "Access forbidden",
+  [validationCodes.notFound]: "Resource not found",
+  [validationCodes.rateLimited]: "Too many requests",
+  [validationCodes.serviceUnavailable]: "Service temporarily unavailable",
 } as const;
 
 // Schema validation utilities

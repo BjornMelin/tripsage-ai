@@ -166,7 +166,7 @@ export function useSupabaseStorage() {
           filesByType,
           totalFiles: files.length,
           totalSize,
-          totalSizeMB: Math.round((totalSize / (1024 * 1024)) * 100) / 100,
+          totalSizeMb: Math.round((totalSize / (1024 * 1024)) * 100) / 100,
         };
       },
       queryKey: ["storage-stats", userId],
@@ -235,20 +235,32 @@ export function useSupabaseStorage() {
 
         // Create file attachment record
         const attachmentData: FileAttachmentInsert = {
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           bucket_name: bucket,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           chat_message_id: chatMessageId || null,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           file_path: filePath,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           file_size: file.size,
           filename: fileName,
           metadata: {
+            // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
             file_extension: fileExt,
+            // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
             upload_timestamp: new Date().toISOString(),
           },
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           mime_type: file.type,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           original_filename: file.name,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           trip_id: tripId || null,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           upload_status: "completed",
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           user_id: userId,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           virus_scan_status: "pending",
         };
 
@@ -312,8 +324,12 @@ export function useSupabaseStorage() {
 
       const successful = results
         .filter(
-          (result): result is PromiseFulfilledResult<any> =>
-            result.status === "fulfilled"
+          (
+            result
+          ): result is PromiseFulfilledResult<{
+            attachment: FileAttachment;
+            storagePath: string;
+          }> => result.status === "fulfilled"
         )
         .map((result) => result.value);
 
@@ -455,8 +471,12 @@ export function useSupabaseStorage() {
       useStorageStats,
     }),
     [
+      // Hook factories are stable functions that don't depend on changing state
+      // biome-ignore lint/correctness/useExhaustiveDependencies: Hook factories are stable
       useFileAttachments,
+      // biome-ignore lint/correctness/useExhaustiveDependencies: Hook factories are stable
       useFileAttachment,
+      // biome-ignore lint/correctness/useExhaustiveDependencies: Hook factories are stable
       useStorageStats,
       uploadFile,
       uploadMultipleFiles,

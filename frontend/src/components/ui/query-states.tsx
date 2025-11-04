@@ -1,23 +1,50 @@
+/**
+ * @fileoverview React Query state management components.
+ * Provides reusable components for handling loading, error, and empty states
+ * in React Query operations.
+ */
+
 "use client";
 
-import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
+import type {
+  UseInfiniteQueryResult,
+  UseMutationResult,
+  UseQueryResult,
+} from "@tanstack/react-query";
 import { AlertCircle, Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { InlineQueryError } from "@/components/providers/query-error-boundary";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
+/**
+ * Props for the QueryStateHandler component.
+ */
 interface QueryStateHandlerProps<TData = unknown, TError = Error> {
+  /** The React Query result object to handle. */
   query: UseQueryResult<TData, TError>;
+  /** Render function that receives the query data when available. */
   children: (data: TData) => ReactNode;
+  /** Optional fallback component to show during loading state. */
   loadingFallback?: ReactNode;
+  /** Optional error fallback that receives error and retry function. */
   errorFallback?: (error: TError, retry: () => void) => ReactNode;
+  /** Optional fallback component to show when data is empty. */
   emptyFallback?: ReactNode;
+  /** Optional function to determine if data should be considered empty. */
   isEmpty?: (data: TData) => boolean;
 }
 
 /**
- * Query state handler with loading, error, and empty states
+ * Query state handler component that manages loading, error, and empty states.
+ *
+ * @param query - The React Query result object to handle.
+ * @param children - Render function for successful data state.
+ * @param loadingFallback - Optional loading state fallback.
+ * @param errorFallback - Optional error state fallback.
+ * @param emptyFallback - Optional empty state fallback.
+ * @param isEmpty - Optional function to check if data is empty.
+ * @returns The appropriate component based on query state.
  */
 export function QueryStateHandler<TData = unknown, TError = Error>({
   query,
@@ -62,20 +89,35 @@ export function QueryStateHandler<TData = unknown, TError = Error>({
 }
 
 /**
- * Mutation state handler for form submissions and actions
+ * Props for the MutationStateHandler component.
  */
 interface MutationStateHandlerProps<
   TData = unknown,
   TError = Error,
   TVariables = unknown,
 > {
+  /** The React Query mutation result object to handle. */
   mutation: UseMutationResult<TData, TError, TVariables>;
+  /** Child components to render alongside mutation state indicators. */
   children: ReactNode;
+  /** Whether to show success message after successful mutation. */
   showSuccess?: boolean;
+  /** Success message to display. Defaults to "Success!". */
   successMessage?: string;
+  /** Duration in milliseconds to show success message. Defaults to 3000. */
   successDuration?: number;
 }
 
+/**
+ * Mutation state handler component for form submissions and actions.
+ *
+ * @param mutation - The React Query mutation result object to handle.
+ * @param children - Child components to render.
+ * @param showSuccess - Whether to show success message. Defaults to false.
+ * @param successMessage - Success message text. Defaults to "Success!".
+ * @param successDuration - How long to show success message. Defaults to 3000.
+ * @returns Component with mutation state indicators.
+ */
 export function MutationStateHandler<
   TData = unknown,
   TError = Error,
@@ -124,7 +166,9 @@ export function MutationStateHandler<
 }
 
 /**
- * Default loading skeleton
+ * Default loading skeleton component.
+ *
+ * @returns A simple skeleton with three lines of varying widths.
  */
 function DefaultLoadingSkeleton() {
   return (
@@ -137,7 +181,9 @@ function DefaultLoadingSkeleton() {
 }
 
 /**
- * Default empty state
+ * Default empty state component.
+ *
+ * @returns A centered empty state with icon and message.
  */
 function DefaultEmptyState() {
   return (
@@ -149,13 +195,16 @@ function DefaultEmptyState() {
 }
 
 /**
- * Card-based loading skeleton for lists
+ * Card-based loading skeleton for lists.
+ *
+ * @param count - Number of skeleton cards to display. Defaults to 3.
+ * @returns A list of skeleton cards mimicking content cards.
  */
 export function CardLoadingSkeleton({ count = 3 }: { count?: number }) {
   return (
     <div className="space-y-4">
       {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="border rounded-lg p-4 space-y-3">
+        <div key={`card-skeleton-${index}`} className="border rounded-lg p-4 space-y-3">
           <Skeleton className="h-5 w-1/3" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-3/4" />
@@ -170,7 +219,11 @@ export function CardLoadingSkeleton({ count = 3 }: { count?: number }) {
 }
 
 /**
- * Table loading skeleton
+ * Table loading skeleton component.
+ *
+ * @param rows - Number of skeleton rows to display. Defaults to 5.
+ * @param columns - Number of skeleton columns to display. Defaults to 4.
+ * @returns A skeleton component mimicking a table layout.
  */
 export function TableLoadingSkeleton({
   rows = 5,
@@ -184,15 +237,15 @@ export function TableLoadingSkeleton({
       {/* Header */}
       <div className="grid grid-cols-4 gap-4 p-2">
         {Array.from({ length: columns }).map((_, index) => (
-          <Skeleton key={index} className="h-4" />
+          <Skeleton key={`table-header-${index}`} className="h-4" />
         ))}
       </div>
 
       {/* Rows */}
       {Array.from({ length: rows }).map((_, rowIndex) => (
-        <div key={rowIndex} className="grid grid-cols-4 gap-4 p-2">
+        <div key={`table-row-${rowIndex}`} className="grid grid-cols-4 gap-4 p-2">
           {Array.from({ length: columns }).map((_, colIndex) => (
-            <Skeleton key={colIndex} className="h-4" />
+            <Skeleton key={`table-cell-${rowIndex}-${colIndex}`} className="h-4" />
           ))}
         </div>
       ))}
@@ -201,15 +254,28 @@ export function TableLoadingSkeleton({
 }
 
 /**
- * Suspense-like query wrapper with enhanced loading states
+ * Props for the SuspenseQuery component.
  */
 interface SuspenseQueryProps<TData = unknown, TError = Error> {
+  /** The React Query result object to handle. */
   query: UseQueryResult<TData, TError>;
+  /** Render function that receives the query data. */
   children: (data: TData) => ReactNode;
+  /** Optional fallback component to show during loading. */
   fallback?: ReactNode;
+  /** Optional placeholder data to show while loading. */
   placeholderData?: TData;
 }
 
+/**
+ * Suspense-like query wrapper with enhanced loading states.
+ *
+ * @param query - The React Query result object to handle.
+ * @param children - Render function for the data.
+ * @param fallback - Optional loading fallback component.
+ * @param placeholderData - Optional placeholder data for loading state.
+ * @returns Component that handles query states with placeholder support.
+ */
 export function SuspenseQuery<TData = unknown, TError = Error>({
   query,
   children,
@@ -246,22 +312,37 @@ export function SuspenseQuery<TData = unknown, TError = Error>({
 }
 
 /**
- * Infinite query state handler
+ * Props for the InfiniteQueryStateHandler component.
  */
 interface InfiniteQueryStateHandlerProps<TData = unknown> {
-  query: any; // UseInfiniteQueryResult type is complex
+  /** The React Query infinite result object to handle. */
+  query: UseInfiniteQueryResult<TData, Error>;
+  /** Render function that receives flattened array of all pages data. */
   children: (data: TData[]) => ReactNode;
+  /** Optional fallback component to show during loading. */
   loadingFallback?: ReactNode;
+  /** Optional fallback component to show when no data is available. */
   emptyFallback?: ReactNode;
-  LoadMoreButton?: ReactNode;
+  /** Optional custom load more button component. */
+  loadMoreButton?: ReactNode;
 }
 
+/**
+ * Infinite query state handler component.
+ *
+ * @param query - The React Query infinite result object to handle.
+ * @param children - Render function for the flattened data array.
+ * @param loadingFallback - Optional loading state fallback.
+ * @param emptyFallback - Optional empty state fallback.
+ * @param loadMoreButton - Optional custom load more button.
+ * @returns Component that handles infinite query states with load more functionality.
+ */
 export function InfiniteQueryStateHandler<TData = unknown>({
   query,
   children,
   loadingFallback,
   emptyFallback,
-  LoadMoreButton,
+  loadMoreButton,
 }: InfiniteQueryStateHandlerProps<TData>) {
   const {
     data,
@@ -274,15 +355,26 @@ export function InfiniteQueryStateHandler<TData = unknown>({
     refetch,
   } = query;
 
+  // Type assertion for infinite query data structure
+  const infiniteData = data as { pages?: TData[] } | undefined;
+
   if (isPending) {
     return <>{loadingFallback || <DefaultLoadingSkeleton />}</>;
   }
 
   if (isError && error) {
-    return <InlineQueryError error={error as Error} retry={refetch} />;
+    // Convert error to Error type for InlineQueryError
+    const errorObject =
+      error instanceof Error
+        ? error
+        : new Error(typeof error === "string" ? error : "An error occurred");
+    return <InlineQueryError error={errorObject} retry={refetch} />;
   }
 
-  const allData = data?.pages?.flatMap((page: any) => page.data || page) || [];
+  // Extract data from infinite query pages structure
+  const allData = (infiniteData?.pages?.flatMap((page) =>
+    Array.isArray(page) ? page : (page as { data?: unknown[] })?.data || page
+  ) || []) as TData[];
 
   if (allData.length === 0) {
     return <>{emptyFallback || <DefaultEmptyState />}</>;
@@ -295,7 +387,7 @@ export function InfiniteQueryStateHandler<TData = unknown>({
       {/* Load more button */}
       {hasNextPage && (
         <div className="text-center">
-          {LoadMoreButton || (
+          {loadMoreButton || (
             <Button
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}

@@ -66,7 +66,7 @@ type TableName = keyof Database["public"]["Tables"];
 
 type TableRow<T extends TableName> = Database["public"]["Tables"][T]["Row"];
 
-type SupabaseQueryBuilder<_T extends TableName> = any;
+type SupabaseQueryBuilder<T extends TableName> = any;
 
 type QueryHandler<T extends TableName> = (
   query: SupabaseQueryBuilder<T>
@@ -87,7 +87,7 @@ interface UseSupabaseInfiniteQueryOptions<T extends TableName>
       Error,
       { data: TableRow<T>[]; nextCursor?: number; totalCount?: number | null },
       { data: TableRow<T>[]; nextCursor?: number; totalCount?: number | null }[],
-      (string | number)[]
+      number
     >,
     "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam"
   > {
@@ -166,8 +166,12 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
 
   return useInfiniteQuery({
     enabled: enabled && !!userId,
-    getNextPageParam: (lastPage: any) => lastPage.nextCursor,
-    initialPageParam: 0 as number,
+    getNextPageParam: (lastPage: {
+      data: TableRow<T>[];
+      nextCursor?: number;
+      totalCount?: number | null;
+    }) => lastPage.nextCursor,
+    initialPageParam: 0,
     queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from(table)
@@ -480,7 +484,7 @@ export function useSupabaseQueryHelpers() {
   const userId = useUserId();
 
   // User's trips with collaboration info
-  const useUserTrips = (filters?: { status?: string; trip_type?: string }) => {
+  const useUserTrips = (filters?: { status?: string; tripType?: string }) => {
     return useSupabaseQuery({
       columns: `
         *,
@@ -501,8 +505,8 @@ export function useSupabaseQueryHelpers() {
         if (filters?.status) {
           filtered = filtered.eq("status", filters.status);
         }
-        if (filters?.trip_type) {
-          filtered = filtered.eq("trip_type", filters.trip_type);
+        if (filters?.tripType) {
+          filtered = filtered.eq("trip_type", filters.tripType);
         }
 
         return filtered;
@@ -536,8 +540,10 @@ export function useSupabaseQueryHelpers() {
     return useSupabaseQuery({
       dependencies: [tripId],
       filter: (query) => {
+        // userId is guaranteed to be non-null due to enabled condition
+        const currentUserId = userId as string;
         let filtered = query
-          .eq("user_id", userId!)
+          .eq("user_id", currentUserId)
           .order("updated_at", { ascending: false });
 
         if (tripId) {
@@ -559,8 +565,13 @@ export function useSupabaseQueryHelpers() {
       `,
       dependencies: [sessionId],
       enabled: !!sessionId,
-      filter: (query) =>
-        query.eq("session_id", sessionId!).order("created_at", { ascending: false }),
+      filter: (query) => {
+        // sessionId is guaranteed to be non-null due to enabled condition
+        const currentSessionId = sessionId as string;
+        return query
+          .eq("session_id", currentSessionId)
+          .order("created_at", { ascending: false });
+      },
       pageSize: 50,
       table: "chat_messages",
     });
@@ -575,8 +586,10 @@ export function useSupabaseQueryHelpers() {
     return useSupabaseQuery({
       dependencies: [filters],
       filter: (query) => {
+        // userId is guaranteed to be non-null due to enabled condition
+        const currentUserId = userId as string;
         let filtered = query
-          .eq("user_id", userId!)
+          .eq("user_id", currentUserId)
           .order("created_at", { ascending: false });
 
         if (filters?.tripId) {

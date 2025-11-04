@@ -8,10 +8,13 @@ import type { UseInfiniteQueryResult, UseQueryResult } from "@tanstack/react-que
 import type { MockInstance } from "vitest";
 import { vi } from "vitest";
 
+/** Generic record type for unknown database row structures. */
 type UnknownRecord = Record<string, unknown>;
 
+/** Type alias for Supabase auth client methods. */
 type AuthClient = SupabaseClient<UnknownRecord>["auth"];
 
+/** Supported authentication methods that can be mocked. */
 type SupportedAuthMethod =
   | "getSession"
   | "onAuthStateChange"
@@ -24,18 +27,36 @@ type SupportedAuthMethod =
   | "signInWithOAuth"
   | "refreshSession";
 
-type AuthMethodMock<T extends (...args: any[]) => any> = MockInstance<T> & T;
+/**
+ * Mock type that combines Vitest MockInstance with the original function type.
+ * This allows mocks to be used as both spies and the original function signature.
+ */
+type AuthMethodMock<T extends (...args: never[]) => unknown> = MockInstance<T> & T;
 
+/**
+ * Type definition for a complete Supabase auth client mock.
+ * All supported auth methods are mocked with their original signatures.
+ */
 export type SupabaseAuthMock = {
-  [K in SupportedAuthMethod]: AuthClient[K] extends (...args: any[]) => any
-    ? AuthMethodMock<AuthClient[K]>
-    : never;
+  [K in SupportedAuthMethod]: AuthMethodMock<AuthClient[K]>;
 };
 
-const CREATE_MOCK_FN = <T extends (...args: any[]) => any>(
+/**
+ * Creates a mocked function that combines Vitest MockInstance with the original type.
+ * This allows the mock to be used both as a spy and with the original function signature.
+ *
+ * @param implementation The function implementation to mock
+ * @returns A mocked function that can be used as both MockInstance and the original type
+ */
+const CREATE_MOCK_FN = <T extends (...args: never[]) => unknown>(
   implementation: T
 ): AuthMethodMock<T> => vi.fn(implementation) as unknown as AuthMethodMock<T>;
 
+/**
+ * Creates a mock User object with default test values.
+ *
+ * @returns A mock User object for testing
+ */
 const CREATE_MOCK_USER = (): User =>
   ({
     app_metadata: {},
@@ -46,6 +67,12 @@ const CREATE_MOCK_USER = (): User =>
     user_metadata: {},
   }) as User;
 
+/**
+ * Creates a mock Session object for a given user.
+ *
+ * @param user The user associated with the session
+ * @returns A mock Session object for testing
+ */
 const CREATE_MOCK_SESSION = (user: User): Session =>
   ({
     access_token: "mock-access-token",
@@ -55,6 +82,12 @@ const CREATE_MOCK_SESSION = (user: User): Session =>
     user,
   }) as Session;
 
+/**
+ * Creates a mock Subscription object with a callback function.
+ *
+ * @param callback The callback function for auth state changes
+ * @returns A mock Subscription object for testing
+ */
 const CREATE_MOCK_SUBSCRIPTION = (
   callback: Subscription["callback"]
 ): Subscription => ({
@@ -64,7 +97,10 @@ const CREATE_MOCK_SUBSCRIPTION = (
 });
 
 /**
- * Build a Supabase auth client mock that mirrors common behaviours used in tests.
+ * Creates a complete Supabase auth client mock with all supported methods.
+ * Each auth method returns sensible default values for testing purposes.
+ *
+ * @returns A fully mocked Supabase auth client with type-safe method signatures
  */
 export const createMockSupabaseAuthClient = (): SupabaseAuthMock => {
   const user = CREATE_MOCK_USER();
@@ -135,36 +171,55 @@ export const createMockSupabaseAuthClient = (): SupabaseAuthMock => {
     signUp,
     updateUser,
   };
-  (result as any).signInWithOAuth = signInWithOauth;
+  (result as Record<string, unknown>).signInWithOAuth = signInWithOauth;
   return result as SupabaseAuthMock;
 };
 
 /**
- * Mock query builder class
+ * Mock implementation of Supabase's PostgrestFilterBuilder for testing.
+ * Provides chainable query methods that return mock data.
  */
 class MockQueryBuilder<T, S = T> {
+  /** Mock data returned by single() and maybeSingle() methods. */
   private singleData: S;
+  /** Mock error returned by query methods. */
   private error: unknown;
 
+  /** Mock select method - chains to allow further filtering. */
   readonly select = vi.fn(() => this);
+  /** Mock insert method - updates singleData with transformed input. */
   readonly insert = vi.fn((rows: T) => {
     this.singleData = this.toSingle(rows);
     return this;
   });
+  /** Mock update method - chains to allow further filtering. */
   readonly update = vi.fn(() => this);
+  /** Mock delete method - chains to allow further filtering. */
   readonly delete = vi.fn(() => this);
+  /** Mock eq method - chains to allow further filtering. */
   readonly eq = vi.fn(() => this);
+  /** Mock order method - chains to allow further filtering. */
   readonly order = vi.fn(() => this);
+  /** Mock range method - chains to allow further filtering. */
   readonly range = vi.fn(() => this);
+  /** Mock single method - returns single data result. */
   readonly single = vi.fn(async () => ({
     data: this.singleData,
     error: this.error,
   }));
+  /** Mock maybeSingle method - returns single data result (nullable). */
   readonly maybeSingle = vi.fn(async () => ({
     data: this.singleData,
     error: this.error,
   }));
 
+  /**
+   * Creates a new MockQueryBuilder instance.
+   *
+   * @param initialData Initial data for the mock
+   * @param toSingle Function to transform array data to single result
+   * @param error Optional error to return from queries
+   */
   constructor(
     initialData: T,
     private readonly toSingle: (data: T) => S,
@@ -176,7 +231,10 @@ class MockQueryBuilder<T, S = T> {
 }
 
 /**
- * Create a typed Supabase client mock with chainable query builders.
+ * Creates a complete Supabase client mock with auth, database, and storage methods.
+ * Useful for testing components that interact with the full Supabase API.
+ *
+ * @returns A fully mocked Supabase client with auth, database, and storage methods
  */
 export const createMockSupabaseClient = (): SupabaseClient<UnknownRecord> => {
   const auth = createMockSupabaseAuthClient();
@@ -216,7 +274,14 @@ export const createMockSupabaseClient = (): SupabaseClient<UnknownRecord> => {
 };
 
 /**
- * Build a TanStack Query result mock for unit tests.
+ * Creates a mock TanStack Query result for testing React Query hooks.
+ * Provides realistic query state with customizable data, error, and loading states.
+ *
+ * @param data Optional data to return from the query
+ * @param error Optional error to return from the query
+ * @param isLoading Whether the query is in loading state
+ * @param isError Whether the query is in error state
+ * @returns A complete UseQueryResult mock with all required properties
  */
 export const createMockUseQueryResult = <T, E = Error>(
   data: T | null = null,
@@ -260,7 +325,11 @@ export const createMockUseQueryResult = <T, E = Error>(
 };
 
 /**
- * Build a placeholder UseInfiniteQueryResult mock.
+ * Creates a mock TanStack Query infinite query result for testing infinite scroll hooks.
+ * Provides default values for all infinite query properties with optional overrides.
+ *
+ * @param overrides Optional properties to override in the mock result
+ * @returns A complete UseInfiniteQueryResult mock with realistic default values
  */
 export const createMockInfiniteQueryResult = <T, E = Error>(
   overrides: Partial<UseInfiniteQueryResult<T, E>> = {}

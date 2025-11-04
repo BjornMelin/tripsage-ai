@@ -1,3 +1,12 @@
+/**
+ * @fileoverview React hook for Supabase realtime connections.
+ *
+ * Provides realtime connection status and error handling for Supabase realtime
+ * connections to the trips, destinations, and chat channels.
+ */
+
+"use client";
+
 export interface RealtimeConnectionStatus {
   trips?: "connected" | "disconnected" | "error";
   destinations?: "connected" | "disconnected" | "error";
@@ -21,11 +30,15 @@ export interface RealtimeHookResult {
 export function useSupabaseRealtime(): RealtimeHookResult {
   return {
     connectionStatus: "connected",
-    disconnect: () => {},
+    disconnect: () => {
+      // Mock implementation - no-op for placeholder
+    },
     error: null,
     errors: [],
     isConnected: true,
-    reconnect: () => {},
+    reconnect: () => {
+      // Mock implementation - no-op for placeholder
+    },
   };
 }
 
@@ -46,7 +59,9 @@ export function useTripRealtime(_tripId: string | number | null): RealtimeHookRe
  */
 export function useChatRealtime(_sessionId: string | null): RealtimeHookResult {
   return {
-    clearMessageCount: () => {},
+    clearMessageCount: () => {
+      // Mock implementation - no-op for placeholder
+    },
     connectionStatus: "connected",
     error: null,
     errors: [],

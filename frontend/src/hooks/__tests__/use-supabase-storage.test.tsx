@@ -17,20 +17,25 @@ vi.mock("@/lib/supabase/client", () => ({
 
 const CREATE_QUERY_BUILDER = (rows: FileAttachment[]) => {
   const result = { data: rows, error: null };
+
+  // Create a mock builder that behaves like a Promise
   const builder = {
     eq: vi.fn().mockImplementation((column: string, value: unknown) => {
       if (column === "user_id") {
         expect(value).toBe("mock-user-id");
       }
-      return builder;
+      return CREATE_QUERY_BUILDER(rows);
     }),
-    order: vi.fn().mockImplementation(() => builder),
+    order: vi.fn().mockImplementation(() => CREATE_QUERY_BUILDER(rows)),
     select: vi.fn().mockReturnThis(),
-    then: (
-      onFulfilled?: (value: typeof result) => unknown,
-      onRejected?: (reason: unknown) => unknown
-    ) => Promise.resolve(result).then(onFulfilled, onRejected),
+    // biome-ignore lint/suspicious/noThenProperty: Mock needs Promise-like then method
+    then: vi
+      .fn()
+      .mockImplementation((onFulfilled: (value: typeof result) => unknown) =>
+        Promise.resolve(result).then(onFulfilled)
+      ),
   };
+
   return builder;
 };
 

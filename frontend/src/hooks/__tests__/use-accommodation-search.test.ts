@@ -34,11 +34,11 @@ describe("useAccommodationSearch", () => {
     const mockSetSearchError = vi.fn();
     const mockCompleteSearch = vi.fn();
 
-    (useSearchParamsStore as any).mockReturnValue({
+    vi.mocked(useSearchParamsStore).mockReturnValue({
       updateAccommodationParams: mockUpdateAccommodationParams,
     });
 
-    (useSearchResultsStore as any).mockReturnValue({
+    vi.mocked(useSearchResultsStore).mockReturnValue({
       completeSearch: mockCompleteSearch,
       setSearchError: mockSetSearchError,
       setSearchResults: mockSetSearchResults,
@@ -72,13 +72,13 @@ describe("useAccommodationSearch", () => {
       },
     ];
 
-    (api.get as any).mockResolvedValueOnce(mockSuggestions);
+    vi.mocked(api.get).mockResolvedValueOnce(mockSuggestions);
 
-    (useSearchParamsStore as any).mockReturnValue({
+    vi.mocked(useSearchParamsStore).mockReturnValue({
       updateAccommodationParams: vi.fn(),
     });
 
-    (useSearchResultsStore as any).mockReturnValue({
+    vi.mocked(useSearchResultsStore).mockReturnValue({
       completeSearch: vi.fn(),
       setSearchError: vi.fn(),
       setSearchResults: vi.fn(),
@@ -96,11 +96,11 @@ describe("useAccommodationSearch", () => {
   it("should update accommodation parameters", () => {
     const mockUpdateAccommodationParams = vi.fn();
 
-    (useSearchParamsStore as any).mockReturnValue({
+    vi.mocked(useSearchParamsStore).mockReturnValue({
       updateAccommodationParams: mockUpdateAccommodationParams,
     });
 
-    (useSearchResultsStore as any).mockReturnValue({
+    vi.mocked(useSearchResultsStore).mockReturnValue({
       completeSearch: vi.fn(),
       setSearchError: vi.fn(),
       setSearchResults: vi.fn(),
@@ -135,15 +135,15 @@ describe("useAccommodationSearch", () => {
       totalResults: 1,
     };
 
-    (api.post as any).mockResolvedValueOnce(mockResults);
+    vi.mocked(api.post).mockResolvedValueOnce(mockResults);
 
     const mockStartSearch = vi.fn().mockReturnValue("search-123");
 
-    (useSearchParamsStore as any).mockReturnValue({
+    vi.mocked(useSearchParamsStore).mockReturnValue({
       updateAccommodationParams: vi.fn(),
     });
 
-    (useSearchResultsStore as any).mockReturnValue({
+    vi.mocked(useSearchResultsStore).mockReturnValue({
       completeSearch: vi.fn(),
       setSearchError: vi.fn(),
       setSearchResults: vi.fn(),
@@ -172,18 +172,18 @@ describe("useAccommodationSearch", () => {
   });
 
   it("should handle loading state", async () => {
-    let resolvePromise: (value: any) => void = () => {};
-    const promise = new Promise((resolve) => {
+    let resolvePromise!: (value: unknown) => void;
+    const promise = new Promise<unknown>((resolve) => {
       resolvePromise = resolve;
     });
 
-    (api.post as any).mockReturnValueOnce(promise);
+    vi.mocked(api.post).mockReturnValueOnce(promise);
 
-    (useSearchParamsStore as any).mockReturnValue({
+    vi.mocked(useSearchParamsStore).mockReturnValue({
       updateAccommodationParams: vi.fn(),
     });
 
-    (useSearchResultsStore as any).mockReturnValue({
+    vi.mocked(useSearchResultsStore).mockReturnValue({
       completeSearch: vi.fn(),
       setSearchError: vi.fn(),
       setSearchResults: vi.fn(),
