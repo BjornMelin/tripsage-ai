@@ -3,6 +3,7 @@
  * Renders recent trip cards using data from useTrips with resilient parsing
  * for items/data.items shapes. Includes accessible links and stable date text.
  */
+
 "use client";
 
 import { Calendar, Clock, MapPin } from "lucide-react";
@@ -219,8 +220,8 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
           <CardDescription>Your latest travel plans</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <TripCardSkeleton key={`trip-skeleton-${Date.now()}-${i}`} />
+          {["a", "b", "c"].map((k) => (
+            <TripCardSkeleton key={`trip-skeleton-${k}`} />
           ))}
         </CardContent>
         <CardFooter>

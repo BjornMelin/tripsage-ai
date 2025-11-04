@@ -38,7 +38,7 @@ const SUPPORTED: AllowedService[] = ["openai", "openrouter", "anthropic", "xai"]
  *
  * @returns The BYOK management UI component.
  */
-export default function apiKeysPage() {
+export default function ApiKeysPage() {
   const { authenticatedApi } = useAuthenticatedApi();
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<ApiKeySummary[]>([]);

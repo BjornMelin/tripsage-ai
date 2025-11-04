@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Zustand store for agent status state and actions.
+ */
+
 // import { z } from "zod"; // Future validation
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -9,8 +13,13 @@ import type {
   AgentTask,
   ResourceUsage,
 } from "@/lib/schemas/agent-status";
+import { nowIso, secureId } from "@/lib/security/random";
 
+/**
+ * Interface for the agent status state.
+ */
 export interface AgentStatusState {
+  // Agent status state
   agents: Agent[];
   sessions: AgentSession[];
   currentSessionId: string | null;
@@ -53,9 +62,8 @@ export interface AgentStatusState {
   setError: (error: string | null) => void;
 }
 
-const GENERATE_ID = () =>
-  Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
+const GENERATE_ID = () => secureId(12);
+const GET_CURRENT_TIMESTAMP = () => nowIso();
 
 // Schema for the agent status store state
 // const agentStatusStoreSchema = z.object({ // Future validation
@@ -69,6 +77,11 @@ const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
 //   activeAgents: z.array(z.any()),
 // });
 
+/**
+ * Zustand store for the agent status state and actions.
+ *
+ * @returns The agent status store.
+ */
 export const useAgentStatusStore = create<AgentStatusState>()(
   persist(
     (set, get) => {
@@ -80,6 +93,12 @@ export const useAgentStatusStore = create<AgentStatusState>()(
         );
       };
 
+      /**
+       * Compute the active agents.
+       *
+       * @param agents - The agents to compute the active agents from.
+       * @returns The active agents.
+       */
       const computeActiveAgents = (agents: Agent[]) => {
         return agents.filter(
           (agent) =>
@@ -89,6 +108,11 @@ export const useAgentStatusStore = create<AgentStatusState>()(
         );
       };
 
+      /**
+       * Initial state for the agent status store.
+       *
+       * @returns The initial state.
+       */
       const initialState = {
         agents: [] as Agent[],
         currentSessionId: null as string | null,
@@ -102,6 +126,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
         ...initialState,
         activeAgents: computeActiveAgents(initialState.agents),
 
+        // Add an agent to the session.
         addAgent: (agentData) => {
           const { currentSessionId, sessions } = get();
           if (!currentSessionId) return;
@@ -141,6 +166,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           });
         },
 
+        // Add an activity to the session.
         addAgentActivity: (activityData) => {
           const { currentSessionId, currentSession } = get();
           if (!currentSessionId || !currentSession) return;
@@ -173,6 +199,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           });
         },
 
+        // Add a task to the agent.
         addAgentTask: (agentId, taskData) => {
           const timestamp = GET_CURRENT_TIMESTAMP();
           const newTask: AgentTask = {
@@ -227,6 +254,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           });
         },
 
+        // Complete a task for an agent.
         completeAgentTask: (agentId, taskId, error) => {
           const timestamp = GET_CURRENT_TIMESTAMP();
           const status: "completed" | "failed" = error ? "failed" : "completed";
@@ -278,8 +306,11 @@ export const useAgentStatusStore = create<AgentStatusState>()(
             };
           });
         },
+
+        // The current session.
         currentSession: computeCurrentSession(initialState),
 
+        // End a session.
         endSession: (sessionId, status = "completed") => {
           const timestamp = GET_CURRENT_TIMESTAMP();
 
@@ -303,6 +334,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           });
         },
 
+        // Get the active agents.
         getActiveAgents: () => {
           return get().agents.filter(
             (agent) =>
@@ -312,12 +344,14 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           );
         },
 
+        // Get the current session.
         getCurrentSession: () => {
           const { sessions, currentSessionId } = get();
           if (!currentSessionId) return null;
           return sessions.find((session) => session.id === currentSessionId) || null;
         },
 
+        // Reset the agent status.
         resetAgentStatus: () => {
           const timestamp = GET_CURRENT_TIMESTAMP();
 
@@ -337,6 +371,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           });
         },
 
+        // Set an error.
         setError: (error) => {
           set((state) => {
             const newState = { ...state, error };
@@ -348,6 +383,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           });
         },
 
+        // Start a new session.
         startSession: () => {
           const sessionId = GENERATE_ID();
           const timestamp = GET_CURRENT_TIMESTAMP();
@@ -377,6 +413,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           });
         },
 
+        // Update the progress of an agent.
         updateAgentProgress: (agentId, progress) => {
           const timestamp = GET_CURRENT_TIMESTAMP();
           const clampedProgress = Math.max(0, Math.min(100, progress));
@@ -407,6 +444,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           });
         },
 
+        // Update the status of an agent.
         updateAgentStatus: (agentId, status) => {
           const timestamp = GET_CURRENT_TIMESTAMP();
 
@@ -436,6 +474,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           });
         },
 
+        // Update a task for an agent.
         updateAgentTask: (agentId, taskId, update) => {
           const timestamp = GET_CURRENT_TIMESTAMP();
 
@@ -481,6 +520,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           });
         },
 
+        // Update the resource usage for a session.
         updateResourceUsage: (usageData) => {
           const { currentSessionId, currentSession } = get();
           if (!currentSessionId || !currentSession) return;
