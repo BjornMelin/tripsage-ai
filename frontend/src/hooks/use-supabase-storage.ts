@@ -9,7 +9,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { nowIso, secureUUID } from "@/lib/security/random";
+import { nowIso, secureUuid } from "@/lib/security/random";
 import { useSupabase } from "@/lib/supabase/client";
 import type {
   FileAttachment,
@@ -212,7 +212,7 @@ export function useSupabaseStorage() {
         throw new Error(`File type ${file.type} is not allowed`);
       }
 
-      const fileId = secureUUID();
+      const fileId = secureUuid();
       const fileExt = file.name.split(".").pop();
       const fileName = `${fileId}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
@@ -404,6 +404,7 @@ export function useSupabaseStorage() {
         supabase,
         "file_attachments",
         updates,
+        // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
         (qb) => (qb as any).eq("id", id)
       );
 

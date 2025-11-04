@@ -8,7 +8,7 @@
 import { useEffect } from "react";
 import { MinimalErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
-import { secureUUID } from "@/lib/security/random";
+import { secureUuid } from "@/lib/security/random";
 
 /**
  * Global error boundary for the app.
@@ -69,7 +69,7 @@ function getSessionId(): string | undefined {
   try {
     let sessionId = sessionStorage.getItem("session_id");
     if (!sessionId) {
-      sessionId = `session_${secureUUID()}`;
+      sessionId = `session_${secureUuid()}`;
       sessionStorage.setItem("session_id", sessionId);
     }
     return sessionId;

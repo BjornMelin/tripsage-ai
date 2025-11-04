@@ -8,7 +8,6 @@
 "use client";
 
 import {
-  type UseInfiniteQueryOptions,
   type UseQueryOptions,
   useInfiniteQuery,
   useQuery,
@@ -66,11 +65,12 @@ type TableName = keyof Database["public"]["Tables"];
 
 type TableRow<T extends TableName> = Database["public"]["Tables"][T]["Row"];
 
-type SupabaseQueryBuilder<T extends TableName> = any;
+// biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
+type SupabaseQueryBuilder = any;
 
-type QueryHandler<T extends TableName> = (
-  query: SupabaseQueryBuilder<T>
-) => SupabaseQueryBuilder<T>;
+type QueryHandler<_T extends TableName> = (
+  query: SupabaseQueryBuilder
+) => SupabaseQueryBuilder;
 
 interface UseSupabaseQueryOptions<T extends TableName>
   extends Omit<UseQueryOptions<TableRow<T>[]>, "queryKey" | "queryFn"> {
@@ -80,23 +80,21 @@ interface UseSupabaseQueryOptions<T extends TableName>
   dependencies?: unknown[];
 }
 
-interface UseSupabaseInfiniteQueryOptions<T extends TableName>
-  extends Omit<
-    UseInfiniteQueryOptions<
-      { data: TableRow<T>[]; nextCursor?: number; totalCount?: number | null },
-      Error,
-      { data: TableRow<T>[]; nextCursor?: number; totalCount?: number | null },
-      { data: TableRow<T>[]; nextCursor?: number; totalCount?: number | null }[],
-      number
-    >,
-    "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam"
-  > {
+interface UseSupabaseInfiniteQueryOptions<T extends TableName> {
   table: T;
   columns?: string;
   filter?: QueryHandler<T>;
   pageSize?: number;
   dependencies?: unknown[];
+  enabled?: boolean;
+  staleTime?: number;
 }
+
+type InfiniteQueryData = {
+  data: unknown[];
+  nextCursor?: number;
+  totalCount?: number | null;
+};
 
 /**
  * Hook for Supabase queries with caching and filtering.
@@ -161,18 +159,13 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
     dependencies = [],
     enabled = true,
     staleTime = 1000 * 60 * 5,
-    ...queryOptions
   } = options;
 
   return useInfiniteQuery({
     enabled: enabled && !!userId,
-    getNextPageParam: (lastPage: {
-      data: TableRow<T>[];
-      nextCursor?: number;
-      totalCount?: number | null;
-    }) => lastPage.nextCursor,
+    getNextPageParam: (lastPage: InfiniteQueryData) => lastPage.nextCursor,
     initialPageParam: 0,
-    queryFn: async ({ pageParam = 0 }) => {
+    queryFn: async ({ pageParam = 0 }): Promise<InfiniteQueryData> => {
       let query = supabase
         .from(table)
         .select(columns)
@@ -203,8 +196,7 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
       ...dependencies,
     ],
     staleTime,
-    ...queryOptions,
-  } as any);
+  });
 }
 
 /**

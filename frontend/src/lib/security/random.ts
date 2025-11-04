@@ -13,7 +13,7 @@
  *
  * @returns A UUID v4 string.
  */
-export function secureUUID(): string {
+export function secureUuid(): string {
   const g = globalThis as unknown as { crypto?: Crypto };
   if (g.crypto && typeof g.crypto.randomUUID === "function") {
     return g.crypto.randomUUID();
@@ -39,12 +39,14 @@ export function secureUUID(): string {
     );
   }
   // Monotonic fallback (non-secure environments only)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const anyGlobal = globalThis as any;
-  if (typeof anyGlobal.__secure_uuid_counter !== "number") {
-    anyGlobal.__secure_uuid_counter = 0;
+  const globalWithCounter = globalThis as typeof globalThis & {
+    // biome-ignore lint/style/useNamingConvention: Global counter property uses snake_case
+    __secure_uuid_counter?: number;
+  };
+  if (typeof globalWithCounter.__secure_uuid_counter !== "number") {
+    globalWithCounter.__secure_uuid_counter = 0;
   }
-  const counter = ++anyGlobal.__secure_uuid_counter;
+  const counter = ++(globalWithCounter.__secure_uuid_counter as number);
   const ts = Date.now().toString(36);
   return `${ts}-${counter.toString(36)}`;
 }
@@ -55,7 +57,7 @@ export function secureUUID(): string {
  * @returns A compact identifier string.
  */
 export function secureId(length = 12): string {
-  const base = secureUUID().replaceAll("-", "");
+  const base = secureUuid().replaceAll("-", "");
   return base.slice(0, Math.max(1, Math.min(length, base.length)));
 }
 

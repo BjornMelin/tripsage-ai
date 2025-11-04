@@ -48,8 +48,11 @@ export async function insertUserApiKey(
   const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
     "insert_user_api_key",
     {
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
       p_api_key: apiKey,
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
       p_service: svc,
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
       p_user_id: userId,
     }
   );
@@ -75,7 +78,9 @@ export async function deleteUserApiKey(
   const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
     "delete_user_api_key",
     {
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
       p_service: svc,
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
       p_user_id: userId,
     }
   );
@@ -103,7 +108,9 @@ export async function getUserApiKey(
   const { data, error } = await (supabase as unknown as SupabaseRpcClient).rpc(
     "get_user_api_key",
     {
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
       p_service: svc,
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
       p_user_id: userId,
     }
   );
@@ -130,7 +137,9 @@ export async function touchUserApiKey(
   const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
     "touch_user_api_key",
     {
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
       p_service: svc,
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
       p_user_id: userId,
     }
   );
