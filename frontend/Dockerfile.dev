@@ -2,12 +2,12 @@
 # =============================================================================
 # TripSage Frontend Development Container
 # =============================================================================
-# Next.js 15 frontend with modern development features:
+# Next.js 16 frontend with modern development features:
 # - App Router with React Server Components
 # - WebSocket integration for real-time chat
 # - Optimized development environment with hot reload
 
-FROM node:20-alpine
+FROM node:24-alpine
 
 # Set working directory
 WORKDIR /app
