@@ -10,6 +10,7 @@
 import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { nowIso, secureId } from "@/lib/security/random";
 
 /** Zod schema for validating theme values. */
 const THEME_SCHEMA = z.enum(["light", "dark", "system"]);
@@ -312,14 +313,13 @@ interface UiState {
  * Generates a unique ID using timestamp and random string.
  * @returns A unique identifier string
  */
-const GENERATE_ID = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+const GENERATE_ID = () => secureId(12);
 
 /**
  * Gets the current timestamp in ISO string format.
  * @returns Current timestamp as ISO string
  */
-const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
+const GET_CURRENT_TIMESTAMP = () => nowIso();
 
 /** Default sidebar state configuration. */
 const DEFAULT_SIDEBAR_STATE: SidebarState = {

@@ -11,6 +11,7 @@ Scope: how to build, run, and test AI features with AI SDK v6, BYOK multi‑prov
 - Library‑first: prefer maintained libs that cover ≥80% needs with ≤30% custom code. Use AI SDK v6 primitives (streaming, tools, structured outputs) instead of bespoke orchestrators.
 - KISS/DRY/YAGNI: keep adapters thin, handlers/services cohesive; avoid wrapping AI SDK streaming; don’t duplicate schema types between client/server—share Zod schemas.
 - Repo gates: Biome formatting+linting, `tsc --noEmit`, and targeted Vitest. Treat warnings as failures; fix code rather than relaxing rules.
+- IDs & timestamps: Use `@/lib/security/random` (`secureUUID`, `secureId`, `nowIso`) for all identifier generation and ISO timestamps in the frontend. Do not use `Math.random` or direct `crypto.randomUUID` in app code.
 - Auth & caching: Next 16 `cacheComponents: true` is enabled; do not publicly cache auth‑dependent responses. Keep Supabase cookie reads in server contexts only.
 - Evidence & safety: follow primary docs; don’t echo secrets; no client‑side env usage for server keys.
 

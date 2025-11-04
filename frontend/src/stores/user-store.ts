@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { nowIso, secureId } from "@/lib/security/random";
 
 // Validation schemas for user profile
 const TRAVEL_PREFERENCES_SCHEMA = z.object({
@@ -64,7 +65,7 @@ const PRIVACY_SETTINGS_SCHEMA = z.object({
   showTravelHistory: z.boolean().default(false),
 });
 
-export const UserProfileSchema = z.object({
+export const userProfileSchema = z.object({
   avatarUrl: z.string().url().optional(),
   createdAt: z.string(),
   email: z.string().email(),
@@ -103,7 +104,7 @@ export const UserProfileSchema = z.object({
 export type TravelPreferences = z.infer<typeof TRAVEL_PREFERENCES_SCHEMA>;
 export type PersonalInfo = z.infer<typeof PERSONAL_INFO_SCHEMA>;
 export type PrivacySettings = z.infer<typeof PRIVACY_SETTINGS_SCHEMA>;
-export type UserProfile = z.infer<typeof UserProfileSchema>;
+export type UserProfile = z.infer<typeof userProfileSchema>;
 export type FavoriteDestination = UserProfile["favoriteDestinations"][0];
 export type TravelDocument = UserProfile["travelDocuments"][0];
 
@@ -163,7 +164,7 @@ interface UserProfileState {
 
 // Validation schema for the user profile store state
 // const userProfileStoreSchema = z.object({ // Future validation
-//   profile: UserProfileSchema.nullable(),
+//   profile: userProfileSchema.nullable(),
 //   isLoading: z.boolean(),
 //   isUpdatingProfile: z.boolean(),
 //   isUploadingAvatar: z.boolean(),
@@ -175,9 +176,8 @@ interface UserProfileState {
 // });
 
 // Helper functions
-const GENERATE_ID = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
+const GENERATE_ID = () => secureId(12);
+const GET_CURRENT_TIMESTAMP = () => nowIso();
 
 // Get display name helper
 const GET_DISPLAY_NAME = (profile: UserProfile | null): string => {
@@ -300,19 +300,22 @@ export const useUserProfileStore = create<UserProfileState>()(
             const importData = JSON.parse(data);
 
             if (importData.profile) {
-              const result = UserProfileSchema.safeParse(importData.profile);
+              const result = userProfileSchema.safeParse(importData.profile);
               if (result.success) {
                 set({ profile: result.data, ...COMPUTE_DERIVED(result.data) });
+                await Promise.resolve();
                 return true;
               }
               throw new Error("Invalid profile data");
             }
 
+            await Promise.resolve();
             return false;
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to import profile";
             set({ error: message });
+            await Promise.resolve();
             return false;
           }
         },
