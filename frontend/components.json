@@ -8,7 +8,7 @@
   "style": "default",
   "tailwind": {
     "baseColor": "zinc",
-    "config": "tailwind.config.js",
+    "config": "tailwind.config.mjs",
     "css": "src/app/globals.css",
     "cssVariables": true
   },
