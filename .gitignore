@@ -66,6 +66,7 @@ yarn-error.log*
 
 # OS-specific files
 .DS_Store
+*.pem
 Thumbs.db
 
 # IDE / Editor specific files
@@ -338,7 +339,6 @@ scan-results/
 supabase/.temp/
  
 # Frontend workspace (consolidated from frontend/.gitignore)
-frontend/next-env.d.ts
-frontend/.vercel
-frontend/.pnpm-debug.log*
-frontend/build/
+next-env.d.ts
+.vercel/
+.pnpm-debug.log*

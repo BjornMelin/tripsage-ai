@@ -162,9 +162,7 @@ pnpm test:e2e     # Run E2E tests
 
 ### Maintenance
 
-```bash
-pnpm prepare      # Set up Husky git hooks
-```
+No Git hooks setup is required in the frontend. Repository-level hooks are managed via pre-commit in the repo root.
 
 ### Code Mods (AI SDK v6 migration)
 
