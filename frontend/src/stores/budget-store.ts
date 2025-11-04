@@ -4,7 +4,6 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { nowIso, secureId } from "@/lib/security/random";
 import type {
   Budget,
   BudgetAlert,
@@ -14,6 +13,7 @@ import type {
   Expense,
   ExpenseCategory,
 } from "@/lib/schemas/budget";
+import { nowIso, secureId } from "@/lib/security/random";
 import type { CurrencyCode } from "@/types/currency";
 
 // Helper functions
@@ -80,7 +80,7 @@ interface BudgetState {
 
 /**
  * Calculate the budget summary.
- * 
+ *
  * @param budget - The budget to calculate the summary for.
  * @param expenses - The expenses to calculate the summary for.
  * @returns The budget summary.
@@ -167,7 +167,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Add an alert to the budget.
-       * 
+       *
        * @param alert - The alert to add.
        * @returns The updated state.
        */
@@ -193,7 +193,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Add a budget to the budget.
-       * 
+       *
        * @param budget - The budget to add.
        * @returns The updated state.
        */
@@ -219,7 +219,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Add a budget category to the budget.
-       * 
+       *
        * @param budgetId - The ID of the budget to add the category to.
        * @param category - The category to add.
        * @returns The updated state.
@@ -248,7 +248,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Add an expense to the budget.
-       * 
+       *
        * @param expense - The expense to add.
        * @returns The updated state.
        */
@@ -276,7 +276,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Get the budget summary.
-       * 
+       *
        * @returns The budget summary.
        */
       get budgetSummary(): BudgetSummary | null {
@@ -293,7 +293,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Get the budgets by trip.
-       * 
+       *
        * @returns The budgets by trip.
        */
       get budgetsByTrip(): Record<string, string[]> {
@@ -315,7 +315,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Clear the alerts for a budget.
-       * 
+       *
        * @param budgetId - The ID of the budget to clear the alerts for.
        * @returns The updated state.
        */
@@ -333,7 +333,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Mark an alert as read.
-       * 
+       *
        * @param id - The ID of the alert to mark as read.
        * @param budgetId - The ID of the budget to mark the alert for.
        * @returns The updated state.
@@ -361,7 +361,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Get the recent expenses.
-       * 
+       *
        * @returns The recent expenses.
        */
       get recentExpenses(): Expense[] {
@@ -376,7 +376,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Remove a budget.
-       * 
+       *
        * @param id - The ID of the budget to remove.
        * @returns The updated state.
        */
@@ -405,7 +405,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Remove a budget category.
-       * 
+       *
        * @param budgetId - The ID of the budget to remove the category from.
        * @param categoryId - The ID of the category to remove.
        * @returns The updated state.
@@ -429,7 +429,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Remove an expense.
-       * 
+       *
        * @param id - The ID of the expense to remove.
        * @param budgetId - The ID of the budget to remove the expense from.
        * @returns The updated state.
@@ -448,7 +448,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Set the active budget.
-       * 
+       *
        * @param id - The ID of the budget to set as active.
        * @returns The updated state.
        */
@@ -457,7 +457,7 @@ export const useBudgetStore = create<BudgetState>()(
       // Alert actions
       /**
        * Set the alerts for a budget.
-       * 
+       *
        * @param budgetId - The ID of the budget to set the alerts for.
        * @param alerts - The alerts to set.
        * @returns The updated state.
@@ -478,7 +478,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Set the currencies.
-       * 
+       *
        * @param currencies - The currencies to set.
        * @returns The updated state.
        */
@@ -487,7 +487,7 @@ export const useBudgetStore = create<BudgetState>()(
       // Expense actions
       /**
        * Set the expenses for a budget.
-       * 
+       *
        * @param budgetId - The ID of the budget to set the expenses for.
        * @param expenses - The expenses to set.
        * @returns The updated state.
@@ -502,7 +502,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Update a budget.
-       * 
+       *
        * @param id - The ID of the budget to update.
        * @param updates - The updates to apply to the budget.
        * @returns The updated state.
@@ -529,7 +529,7 @@ export const useBudgetStore = create<BudgetState>()(
       // Budget category actions
       /**
        * Update a budget category.
-       * 
+       *
        * @param budgetId - The ID of the budget to update the category for.
        * @param categoryId - The ID of the category to update.
        * @param updates - The updates to apply to the category.
@@ -565,7 +565,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Update a currency rate.
-       * 
+       *
        * @param code - The code of the currency to update.
        * @param rate - The rate to set for the currency.
        * @returns The updated state.
@@ -584,7 +584,7 @@ export const useBudgetStore = create<BudgetState>()(
 
       /**
        * Update an expense.
-       * 
+       *
        * @param id - The ID of the expense to update.
        * @param budgetId - The ID of the budget to update the expense for.
        * @param updates - The updates to apply to the expense.
