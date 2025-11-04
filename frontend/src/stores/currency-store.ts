@@ -15,7 +15,7 @@ import {
 } from "@/types/currency";
 
 // Common currencies with symbols and decimal places
-// FIXME: ISO 4217 currency codes use UPPER_CASE naming convention
+// ISO 4217 defines currency codes in UPPER_CASE (international standard)
 const COMMON_CURRENCIES: Record<CurrencyCode, Currency> = {
   AUD: {
     code: "AUD",
