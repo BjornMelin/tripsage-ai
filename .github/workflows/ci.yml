@@ -15,7 +15,6 @@ on:
       - 'ruff.toml'
       - 'pyrightconfig.json'
       - 'setup.cfg'
-      - 'pytest.ini'
       - '.github/workflows/**'
   pull_request:
     branches: [main, develop]
@@ -31,7 +30,6 @@ on:
       - 'ruff.toml'
       - 'pyrightconfig.json'
       - 'setup.cfg'
-      - 'pytest.ini'
       - '.github/workflows/**'
   workflow_dispatch: {}
 
