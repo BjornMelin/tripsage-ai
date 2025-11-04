@@ -12,13 +12,13 @@
   },
 
   "css": {
+    "linter": {
+      "enabled": true
+    },
     "parser": {
       "allowWrongLineComments": false,
       "cssModules": false,
       "tailwindDirectives": true
-    },
-    "linter": {
-      "enabled": true
     }
   },
 
@@ -26,7 +26,7 @@
     "ignoreUnknown": false,
     "includes": [
       "**/*.ts",
-      "**/*.tsx", 
+      "**/*.tsx",
       "**/*.js",
       "**/*.jsx",
       "**/*.mjs",
@@ -49,26 +49,26 @@
   },
 
   "formatter": {
+    "attributePosition": "auto",
+    "bracketSpacing": true,
     "enabled": true,
+    "expand": "auto",
     "formatWithErrors": false,
     "indentStyle": "space",
     "indentWidth": 2,
     "lineEnding": "lf",
-    "lineWidth": 88,
-    "attributePosition": "auto",
-    "bracketSpacing": true,
-    "expand": "auto"
+    "lineWidth": 88
   },
 
   "javascript": {
     "formatter": {
       "arrowParentheses": "always",
+      "bracketSameLine": false,
       "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
       "quoteStyle": "double",
       "semicolons": "always",
-      "trailingCommas": "es5",
-      "quoteProperties": "asNeeded",
-      "bracketSameLine": false
+      "trailingCommas": "es5"
     },
     "jsxRuntime": "transparent"
   },
@@ -85,33 +85,23 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
-
       "a11y": {
         "noAccessKey": "error",
         "useAltText": "error",
-        "useValidAnchor": "error",
         "useKeyWithClickEvents": "error",
-        "useKeyWithMouseEvents": "error"
+        "useKeyWithMouseEvents": "error",
+        "useValidAnchor": "error"
       },
 
       "complexity": {
         "noBannedTypes": "error",
+        "noForEach": "off",
         "noStaticOnlyClass": "error",
         "noUselessConstructor": "error",
-        "noForEach": "off",
         "noVoid": "error"
       },
 
       "correctness": {
-        "noUnusedFunctionParameters": {
-          "level": "error",
-          "options": { "ignoreRestSiblings": false }
-        },
-        "noUnusedImports": "error",
-        "noUnusedVariables": "error",
-        "useExhaustiveDependencies": "error",
-        "useHookAtTopLevel": "error",
         "noConstAssign": "error",
         "noConstantCondition": "error",
         "noEmptyPattern": "error",
@@ -122,13 +112,22 @@
         "noSetterReturn": "error",
         "noUndeclaredVariables": "error",
         "noUnreachable": "error",
-        "noUnreachableSuper": "error"
+        "noUnreachableSuper": "error",
+        "noUnusedFunctionParameters": {
+          "level": "error",
+          "options": { "ignoreRestSiblings": false }
+        },
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error",
+        "useExhaustiveDependencies": "error",
+        "useHookAtTopLevel": "error"
       },
 
       "performance": {
         "noAccumulatingSpread": "warn",
         "noDelete": "error"
       },
+      "recommended": true,
 
       "security": {
         "noDangerouslySetInnerHtml": "error",
@@ -136,7 +135,9 @@
       },
 
       "style": {
+        "noNegationElse": "error",
         "noParameterAssign": "error",
+        "noUnusedTemplateLiteral": "error",
         "useConst": "error",
         "useExportType": "error",
         "useImportType": "error",
@@ -173,39 +174,37 @@
             "strictCase": true
           }
         },
-        "useTemplate": "error",
-        "noNegationElse": "error",
         "useSingleVarDeclarator": "error",
-        "noUnusedTemplateLiteral": "error"
+        "useTemplate": "error"
       },
 
       "suspicious": {
         "noArrayIndexKey": "error",
         "noAssignInExpressions": "error",
-        "noConstEnum": "error",
-        "noExplicitAny": "error",
-        "noImplicitAnyLet": "error",
-        "noShadowRestrictedNames": "error",
-        "useAwait": "error",
         "noCatchAssign": "error",
         "noConfusingVoidType": "error",
         "noConsole": "off",
+        "noConstEnum": "error",
         "noDebugger": "error",
         "noDuplicateCase": "error",
         "noDuplicateClassMembers": "error",
         "noDuplicateObjectKeys": "error",
         "noEmptyBlockStatements": "error",
+        "noExplicitAny": "error",
         "noExtraNonNullAssertion": "error",
         "noFallthroughSwitchClause": "error",
         "noFunctionAssign": "error",
         "noGlobalIsFinite": "error",
         "noGlobalIsNan": "error",
+        "noImplicitAnyLet": "error",
         "noImportAssign": "error",
         "noMisleadingCharacterClass": "error",
         "noMisleadingInstantiator": "error",
         "noPrototypeBuiltins": "error",
         "noRedeclare": "error",
-        "noUnsafeNegation": "error"
+        "noShadowRestrictedNames": "error",
+        "noUnsafeNegation": "error",
+        "useAwait": "error"
       }
     }
   },
@@ -232,14 +231,14 @@
       }
     },
     {
-      "includes": ["package.json", "components.json", "tsconfig.json"],
       "assist": {
         "actions": {
           "source": {
             "useSortedKeys": "off"
           }
         }
-      }
+      },
+      "includes": ["package.json", "components.json", "tsconfig.json"]
     },
     {
       "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
@@ -275,7 +274,12 @@
                     "selector": { "kind": "variable", "scope": "global" }
                   },
                   {
-                    "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"],
+                    "formats": [
+                      "camelCase",
+                      "snake_case",
+                      "PascalCase",
+                      "CONSTANT_CASE"
+                    ],
                     "selector": { "kind": "objectLiteralProperty" }
                   }
                 ],
@@ -300,8 +304,8 @@
               "options": {
                 "conventions": [
                   {
-                    "match": "[A-Z].*",
                     "formats": ["PascalCase"],
+                    "match": "[A-Z].*",
                     "selector": { "kind": "const", "scope": "global" }
                   },
                   {
@@ -313,8 +317,8 @@
                     "selector": { "kind": "function", "scope": "global" }
                   },
                   {
-                    "match": "use[A-Z].*",
                     "formats": ["camelCase"],
+                    "match": "use[A-Z].*",
                     "selector": { "kind": "function" }
                   },
                   {
@@ -351,12 +355,12 @@
       }
     },
     {
-      "includes": ["src/app/globals.css"],
       "css": {
         "linter": {
           "enabled": false
         }
-      }
+      },
+      "includes": ["src/app/globals.css"]
     }
   ],
 
