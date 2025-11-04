@@ -12,7 +12,7 @@ import {
   validateThemeProviderProps,
 } from "@/schemas/theme-provider";
 
-/** Type for next-themes provider props. */
+// Type for next-themes provider props.
 type NextThemesProviderProps = ComponentProps<typeof ThemeProvider>;
 
 /**
@@ -27,17 +27,17 @@ export const createTestQueryClient = () =>
     },
   });
 
-/** Props for the AllTheProviders component. */
+// Props for the AllTheProviders component.
 export interface ProvidersProps {
-  /** The child components to render. */
+  // The child components to render.
   children: ReactNode;
-  /** Optional theme configuration. */
+  // Optional theme configuration.
   theme?: ValidatedThemeProviderProps;
-  /** Optional QueryClient instance. */
+  // Optional QueryClient instance.
   queryClient?: QueryClient;
 }
 
-/** Options for renderWithProviders function. */
+// Options for renderWithProviders function.
 export interface RenderWithProvidersOptions extends Omit<RenderOptions, "wrapper"> {
   /** Optional theme configuration. */
   theme?: ProvidersProps["theme"];
@@ -50,6 +50,7 @@ export interface RenderWithProvidersOptions extends Omit<RenderOptions, "wrapper
  * @param props The props for the providers.
  * @returns JSX element with providers wrapped around children.
  */
+// biome-ignore lint/style/useNamingConvention: React components should be PascalCase
 export const AllTheProviders = ({
   children,
   theme = {

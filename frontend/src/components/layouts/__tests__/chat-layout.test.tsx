@@ -10,7 +10,7 @@ import type { AgentStatusState } from "@/stores/agent-status-store";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 import type { ChatState } from "@/stores/chat-store";
 import { useChatStore } from "@/stores/chat-store";
-import { render } from "@/test/test-utils";
+import { render } from "@/test/test-utils.test";
 import { AgentStatusPanel, ChatLayout, ChatSidebar } from "../chat-layout";
 
 // Mock the stores

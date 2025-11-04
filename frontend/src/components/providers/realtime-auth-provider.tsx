@@ -21,7 +21,8 @@ export function RealtimeAuthProvider(): null {
 
     let isMounted = true;
 
-    async function initializeRealtimeAuth(): Promise<void> {
+    // biome-ignore lint/style/useNamingConvention: Not a React hook
+    async function initializeRealtimeAuthHandler(): Promise<void> {
       try {
         const token = await getAccessToken(supabase);
         if (!isMounted) {
@@ -34,13 +35,13 @@ export function RealtimeAuthProvider(): null {
     }
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         const token = session?.access_token ?? null;
         supabase.realtime.setAuth(token ?? "");
       }
     );
 
-    void initializeRealtimeAuth();
+    initializeRealtimeAuthHandler();
 
     return () => {
       isMounted = false;

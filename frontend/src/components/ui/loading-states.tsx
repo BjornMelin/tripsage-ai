@@ -239,6 +239,7 @@ export const LoadingContainer = React.forwardRef<HTMLDivElement, LoadingContaine
         {isLoading ? (
           <div
             className="flex flex-col items-center justify-center p-8 space-y-4"
+            // biome-ignore lint/a11y/useSemanticElements: Design system component maintains div with role
             role="status"
             aria-live="polite"
             aria-label={loadingMessage || "Loading content"}

@@ -7,12 +7,12 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders } from "@/test/test-utils";
+import { renderWithProviders } from "@/test/test-utils.test";
 import { DestinationSearchForm } from "../destination-search-form";
 
 // Use real react-hook-form behavior; keep tests focused on visible output
 
-/** Mock function for testing search form submission. */
+// Mock function for testing search form submission.
 const MockOnSearch = vi.fn();
 
 describe("DestinationSearchForm", () => {

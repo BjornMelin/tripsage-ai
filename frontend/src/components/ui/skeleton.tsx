@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Skeleton component with accessibility support and customizable variants.
+ */
+
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 import { cn } from "@/lib/utils";
@@ -5,7 +9,7 @@ import { cn } from "@/lib/utils";
 /**
  * Skeleton component variants for consistent styling
  */
-const skeletonVariants = cva("rounded-md bg-muted", {
+const SkeletonVariants = cva("rounded-md bg-muted", {
   defaultVariants: {
     animation: "pulse",
     variant: "default",
@@ -27,7 +31,7 @@ const skeletonVariants = cva("rounded-md bg-muted", {
 
 export interface SkeletonProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof skeletonVariants> {
+    VariantProps<typeof SkeletonVariants> {
   width?: string | number;
   height?: string | number;
   lines?: number;
@@ -68,7 +72,7 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
         <div
           ref={ref}
           className={cn(
-            skeletonVariants({ animation: finalAnimation, variant }),
+            SkeletonVariants({ animation: finalAnimation, variant }),
             "skeleton",
             className
           )}
@@ -85,6 +89,7 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
       <div
         ref={ref}
         className={cn("space-y-2", className)}
+        // biome-ignore lint/a11y/useSemanticElements: Design system component maintains div with role
         role="status"
         aria-label="Loading content..."
         {...props}
@@ -95,9 +100,9 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
 
           return (
             <div
-              key={`skeleton-line-${index}`}
+              key={`skeleton-line-${index}-${lines}`}
               className={cn(
-                skeletonVariants({ animation: finalAnimation, variant }),
+                SkeletonVariants({ animation: finalAnimation, variant }),
                 "skeleton"
               )}
               style={{
@@ -113,4 +118,4 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
 );
 
 Skeleton.displayName = "Skeleton";
-export { skeletonVariants };
+export { SkeletonVariants };

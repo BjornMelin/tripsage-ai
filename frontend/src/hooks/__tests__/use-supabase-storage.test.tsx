@@ -7,8 +7,8 @@ import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSupabaseStorage } from "@/hooks/use-supabase-storage";
 import type { FileAttachment } from "@/lib/supabase/database.types";
-import { createMockSupabaseClient } from "@/test/mock-helpers";
-import { render } from "@/test/test-utils";
+import { createMockSupabaseClient } from "@/test/mock-helpers.test";
+import { render } from "@/test/test-utils.test";
 
 const SUPABASE = createMockSupabaseClient();
 const FROM_MOCK = SUPABASE.from as unknown as Mock;

@@ -23,7 +23,6 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="input-group"
-      role="group"
       className={cn(
         "group/input-group border-input dark:bg-input/30 relative flex w-full items-center rounded-md border shadow-xs transition-[color,box-shadow] outline-none",
         "h-9 min-w-0 has-[>textarea]:h-auto",
@@ -53,7 +52,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
  * @param align Alignment of the addon within the group.
  * @returns A string of classes for the addon.
  */
-const inputGroupAddonVariants = cva(
+const InputGroupAddonVariants = cva(
   "text-muted-foreground flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-sm font-medium select-none [&>svg:not([class*='size-'])]:size-4 [&>kbd]:rounded-[calc(var(--radius)-5px)] group-data-[disabled=true]/input-group:opacity-50",
   {
     defaultVariants: {
@@ -85,25 +84,34 @@ function InputGroupAddon({
   className,
   align = "inline-start",
   ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
+}: React.ComponentProps<"div"> & VariantProps<typeof InputGroupAddonVariants>) {
   return (
     <div
       role="group"
       data-slot="input-group-addon"
       data-align={align}
-      className={cn(inputGroupAddonVariants({ align }), className)}
+      className={cn(InputGroupAddonVariants({ align }), className)}
       onClick={(e) => {
         if ((e.target as HTMLElement).closest("button")) {
           return;
         }
         e.currentTarget.parentElement?.querySelector("input")?.focus();
       }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if ((e.target as HTMLElement).closest("button")) {
+            return;
+          }
+          e.currentTarget.parentElement?.querySelector("input")?.focus();
+        }
+      }}
       {...props}
     />
   );
 }
 
-const inputGroupButtonVariants = cva("text-sm shadow-none flex gap-2 items-center", {
+const InputGroupButtonVariants = cva("text-sm shadow-none flex gap-2 items-center", {
   defaultVariants: {
     size: "xs",
   },
@@ -133,13 +141,13 @@ function InputGroupButton({
   size = "xs",
   ...props
 }: Omit<React.ComponentProps<typeof Button>, "size"> &
-  VariantProps<typeof inputGroupButtonVariants>) {
+  VariantProps<typeof InputGroupButtonVariants>) {
   return (
     <Button
       type={type}
       data-size={size}
       variant={variant}
-      className={cn(inputGroupButtonVariants({ size }), className)}
+      className={cn(InputGroupButtonVariants({ size }), className)}
       {...props}
     />
   );

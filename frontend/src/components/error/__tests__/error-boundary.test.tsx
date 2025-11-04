@@ -6,7 +6,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { errorService } from "@/lib/error-service";
-import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils";
+import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils.test";
 import { ErrorBoundary, WithErrorBoundary } from "../error-boundary";
 
 // Mock the error service

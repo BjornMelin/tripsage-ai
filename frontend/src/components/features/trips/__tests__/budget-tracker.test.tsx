@@ -93,7 +93,7 @@ describe("BudgetTracker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset mock implementation to default for each test
-    vi.mocked(useBudgetStore).mockImplementation(DefaultStore as any);
+    vi.mocked(useBudgetStore).mockImplementation(DefaultStore);
   });
 
   describe("Budget Display", () => {
@@ -513,8 +513,8 @@ describe("BudgetTracker", () => {
       const mockOnCreateBudget = vi.fn();
       // Override store to simulate no active budget and no budgets for trip
       vi.mocked(useBudgetStore).mockReturnValue({
-        activeBudget: null as any,
-        budgetSummary: null as any,
+        activeBudget: null,
+        budgetSummary: null,
         budgets: {},
         budgetsByTrip: {},
         setActiveBudget: MockSetActiveBudget,

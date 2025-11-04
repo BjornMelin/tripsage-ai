@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Connection status component with real-time network metrics and analytics.
+ */
+
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -35,6 +39,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+// Type for the connection status
 export type ConnectionStatus =
   | "connecting"
   | "connected"
@@ -42,6 +47,7 @@ export type ConnectionStatus =
   | "reconnecting"
   | "error";
 
+// Type for the network metrics interface
 export interface NetworkMetrics {
   latency: number;
   bandwidth: number;
@@ -51,6 +57,7 @@ export interface NetworkMetrics {
   signalStrength: number; // 0-100
 }
 
+// Type for the connection analytics interface
 export interface ConnectionAnalytics {
   connectionTime: number;
   reconnectCount: number;
@@ -61,6 +68,7 @@ export interface ConnectionAnalytics {
   uptime: number; // in seconds
 }
 
+// Type for the connection status props
 interface ConnectionStatusProps {
   status: ConnectionStatus;
   metrics?: NetworkMetrics;
@@ -73,6 +81,7 @@ interface ConnectionStatusProps {
   showOptimizations?: boolean;
 }
 
+// Default metrics for the connection status
 const DefaultMetrics: NetworkMetrics = {
   bandwidth: 0,
   jitter: 0,
@@ -82,6 +91,7 @@ const DefaultMetrics: NetworkMetrics = {
   signalStrength: 0,
 };
 
+// Default analytics for the connection status
 const DefaultAnalytics: ConnectionAnalytics = {
   avgResponseTime: 0,
   connectionTime: 0,
@@ -91,6 +101,12 @@ const DefaultAnalytics: ConnectionAnalytics = {
   uptime: 0,
 };
 
+/**
+ * Get the quality color for the connection status
+ * 
+ * @param quality - The quality of the connection
+ * @returns {string} The quality color
+ */
 const GetQualityColor = (quality: NetworkMetrics["quality"]) => {
   switch (quality) {
     case "excellent":
@@ -105,7 +121,12 @@ const GetQualityColor = (quality: NetworkMetrics["quality"]) => {
       return "text-gray-500";
   }
 };
-
+/**
+ * Get the signal icon for the connection status
+ * 
+ * @param strength - The signal strength
+ * @returns {React.ReactNode} The signal icon
+ */
 const GetSignalIcon = (strength: number) => {
   if (strength >= 80) return <SignalHigh className="h-4 w-4" />;
   if (strength >= 60) return <SignalMedium className="h-4 w-4" />;
@@ -113,17 +134,35 @@ const GetSignalIcon = (strength: number) => {
   return <Signal className="h-4 w-4" />;
 };
 
+/**
+ * Format the latency for the connection status
+ * 
+ * @param ms - The latency in milliseconds
+ * @returns {string} The formatted latency
+ */
 const FormatLatency = (ms: number) => {
   if (ms < 1000) return `${ms.toFixed(0)}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
 };
 
+/**
+ * Format the bandwidth for the connection status
+ * 
+ * @param bps - The bandwidth in bits per second
+ * @returns {string} The formatted bandwidth
+ */
 const FormatBandwidth = (bps: number) => {
   if (bps < 1024) return `${bps.toFixed(0)} B/s`;
   if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} KB/s`;
   return `${(bps / (1024 * 1024)).toFixed(1)} MB/s`;
 };
 
+/**
+ * Format the uptime for the connection status
+ * 
+ * @param seconds - The uptime in seconds
+ * @returns {string} The formatted uptime
+ */
 const FormatUptime = (seconds: number) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -134,6 +173,12 @@ const FormatUptime = (seconds: number) => {
   return `${secs}s`;
 };
 
+/**
+ * Connection quality indicator component
+ * 
+ * @param metrics - The network metrics
+ * @returns {React.ReactNode} The connection quality indicator
+ */
 const ConnectionQualityIndicator: React.FC<{ metrics: NetworkMetrics }> = ({
   metrics,
 }) => {
@@ -152,7 +197,7 @@ const ConnectionQualityIndicator: React.FC<{ metrics: NetworkMetrics }> = ({
       <div className="flex items-center gap-1">
         {Array.from({ length: 4 }, (_, i) => (
           <motion.div
-            key={i}
+            key={`connection-quality-bar-${i}`}
             className={cn(
               "w-1 rounded-full",
               qualityScore > (i + 1) * 25 ? "bg-green-500" : "bg-gray-300"
@@ -171,6 +216,13 @@ const ConnectionQualityIndicator: React.FC<{ metrics: NetworkMetrics }> = ({
   );
 };
 
+/**
+ * Network optimization suggestions component
+ * 
+ * @param metrics - The network metrics
+ * @param onOptimize - The function to optimize the network
+ * @returns {React.ReactNode} The network optimization suggestions
+ */
 const NetworkOptimizationSuggestions: React.FC<{
   metrics: NetworkMetrics;
   onOptimize?: () => void;
@@ -215,8 +267,8 @@ const NetworkOptimizationSuggestions: React.FC<{
       <Info className="h-4 w-4" />
       <AlertDescription>
         <div className="space-y-2">
-          {suggestions.map((suggestion, index) => (
-            <div key={index} className="flex items-center justify-between">
+          {suggestions.map((suggestion) => (
+            <div key={suggestion.title} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {suggestion.icon}
                 <div>

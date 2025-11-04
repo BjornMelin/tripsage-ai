@@ -6,7 +6,7 @@
 
 import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { render } from "@/test/test-utils";
+import { render } from "@/test/test-utils.test";
 import { AccountSettingsSection } from "../account-settings-section";
 import { PersonalInfoSection } from "../personal-info-section";
 import { PreferencesSection } from "../preferences-section";
