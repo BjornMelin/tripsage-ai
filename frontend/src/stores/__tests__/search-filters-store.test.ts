@@ -897,9 +897,9 @@ describe("Search Filters Store", () => {
       if (!presetId) {
         throw new Error("Preset ID is null");
       }
-      let success: boolean;
+      let success = false;
       act(() => {
-        success = result.current.loadFilterPreset(presetId);
+        success = result.current.loadFilterPreset(presetId!);
       });
       expect(success).toBe(true);
       expect(result.current.activeFilterCount).toBe(1);
