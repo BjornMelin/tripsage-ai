@@ -1,8 +1,14 @@
+/**
+ * @fileoverview Authentication-level error boundary for the auth directory.
+ * This catches errors within the auth layout and pages.
+ */
+
 "use client";
 
 import { useEffect } from "react";
 import { ErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
+import { secureUUID } from "@/lib/security/random";
 
 /**
  * Authentication-level error boundary
@@ -32,11 +38,16 @@ export default function AuthError({
   return <ErrorFallback error={error} reset={reset} />;
 }
 
+/**
+ * Gets or creates a session ID from sessionStorage for error tracking.
+ *
+ * @returns Session ID or undefined if sessionStorage is unavailable
+ */
 function getSessionId(): string | undefined {
   try {
     let sessionId = sessionStorage.getItem("session_id");
     if (!sessionId) {
-      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      sessionId = `session_${secureUUID()}`;
       sessionStorage.setItem("session_id", sessionId);
     }
     return sessionId;

@@ -1,8 +1,14 @@
+/**
+ * @fileoverview Dashboard-level error boundary for the dashboard directory.
+ * This catches errors within the dashboard layout and pages.
+ */
+
 "use client";
 
 import { useEffect } from "react";
 import { ErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
+import { secureUUID } from "@/lib/security/random";
 
 /**
  * Dashboard-level error boundary
@@ -33,6 +39,11 @@ export default function DashboardError({
   return <ErrorFallback error={error} reset={reset} />;
 }
 
+/**
+ * Gets the current user ID from the user store.
+ *
+ * @returns User ID or undefined if not available
+ */
 function getUserId(): string | undefined {
   try {
     const userStore = (window as Window & { userStore?: { user?: { id?: string } } })
@@ -43,11 +54,16 @@ function getUserId(): string | undefined {
   }
 }
 
+/**
+ * Gets or creates a session ID from sessionStorage for error tracking.
+ *
+ * @returns Session ID or undefined if sessionStorage is unavailable
+ */
 function getSessionId(): string | undefined {
   try {
     let sessionId = sessionStorage.getItem("session_id");
     if (!sessionId) {
-      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      sessionId = `session_${secureUUID()}`;
       sessionStorage.setItem("session_id", sessionId);
     }
     return sessionId;

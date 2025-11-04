@@ -1,6 +1,11 @@
+/**
+ * @fileoverview Zustand store for managing search history, saved searches, and analytics.
+ */
+
 import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { nowIso, secureId } from "@/lib/security/random";
 import type { SearchParams, SearchType } from "@/types/search";
 
 // Validation schemas for search history
@@ -252,9 +257,8 @@ interface SearchHistoryState {
 }
 
 // Helper functions
-const GENERATE_ID = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
+const GENERATE_ID = () => secureId(12);
+const GET_CURRENT_TIMESTAMP = () => nowIso();
 
 // Default settings
 const DEFAULT_MAX_RECENT_SEARCHES = 50;
@@ -1192,7 +1196,12 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
   )
 );
 
-// Helper function to extract search text from params
+/**
+ * Extracts meaningful search text from search parameters.
+ *
+ * @param params - Search parameters object
+ * @returns Extracted search text or empty string
+ */
 const EXTRACT_SEARCH_TEXT = (params: Record<string, unknown>): string => {
   // Extract meaningful text from search parameters
   const textFields = ["origin", "destination", "query", "location", "name"];

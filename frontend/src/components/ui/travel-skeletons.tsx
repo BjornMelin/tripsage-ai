@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Travel-specific skeleton components for flight, hotel, trip, and
+ * destination search results.
+ */
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { AvatarSkeleton, CardSkeleton, ListItemSkeleton } from "./loading-skeletons";
@@ -345,7 +350,7 @@ export const ChatMessageSkeleton = React.forwardRef<
             className={cn("rounded-lg", isUser ? "ml-auto" : "mr-auto")}
           />
           <Skeleton
-            lines={Math.floor(Math.random() * 3) + 1}
+            lines={isUser ? 2 : 3}
             height="1rem"
             className={cn("rounded-lg", isUser ? "ml-auto" : "mr-auto")}
           />

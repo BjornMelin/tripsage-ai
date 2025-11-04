@@ -1,6 +1,11 @@
+/**
+ * @fileoverview Zustand store for managing search results, pagination, and performance metrics.
+ */
+
 import { z } from "zod";
 import { create, type StateCreator } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { nowIso, secureId } from "@/lib/security/random";
 import type { SearchResults, SearchType } from "@/types/search";
 
 // Validation schemas for search results
@@ -145,9 +150,8 @@ interface SearchResultsState {
 }
 
 // Helper functions
-const GENERATE_SEARCH_ID = () =>
-  `search_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
+const GENERATE_SEARCH_ID = () => `search_${secureId(12)}`;
+const GET_CURRENT_TIMESTAMP = () => nowIso();
 
 // Helper to compute derived state
 const COMPUTE_DERIVED_STATE = (state: Partial<SearchResultsState>) => {
@@ -508,6 +512,7 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           if (!currentContext) return null;
 
           // Start a new search with the same parameters
+          await Promise.resolve();
           return get().startSearch(
             currentContext.searchType,
             currentContext.searchParams

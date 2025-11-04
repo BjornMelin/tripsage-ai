@@ -7,6 +7,7 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getBrowserClient } from "@/lib/supabase/client";
+import { nowIso, secureUUID } from "@/lib/security/random";
 import { useAuthStore } from "@/stores";
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
@@ -137,7 +138,7 @@ export function useWebSocketChat({
           ...prev,
           {
             content: data.content,
-            id: data.id ?? crypto.randomUUID(),
+            id: data.id ?? secureUUID(),
             sender: data.sender ?? { id: user?.id ?? "unknown", name: "You" },
             status: "sent",
             timestamp: new Date(data.timestamp ?? Date.now()),
@@ -214,7 +215,7 @@ export function useWebSocketChat({
         payload: {
           content,
           sender: { id: user.id, name: "You" },
-          timestamp: new Date().toISOString(),
+          timestamp: nowIso(),
         },
         type: "broadcast",
       };
