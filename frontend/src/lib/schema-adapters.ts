@@ -11,10 +11,13 @@ import type { Destination, Trip } from "@/stores/trip-store";
 
 export interface ApiTrip {
   id: string;
+  // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
   user_id: string;
   title: string;
   description?: string;
+  // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
   start_date: string;
+  // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
   end_date: string;
   destinations: ApiDestination[];
   budget?: number;
@@ -22,7 +25,9 @@ export interface ApiTrip {
   tags: string[];
   preferences: Record<string, unknown>;
   status: string;
+  // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
   created_at: string;
+  // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
   updated_at: string;
 }
 
@@ -34,214 +39,258 @@ export interface ApiDestination {
     latitude: number;
     longitude: number;
   };
+  // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
   arrival_date?: string;
+  // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
   departure_date?: string;
+  // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
   duration_days?: number;
 }
 
-export class FrontendSchemaAdapter {
-  /**
-   * Convert API response to frontend Trip format
-   */
-  static apiTripToFrontend(apiTrip: ApiTrip): Trip {
-    return {
-      budget: apiTrip.budget,
-      created_at: apiTrip.created_at,
-      createdAt: apiTrip.created_at, // Camel case version
-      description: apiTrip.description,
-      destinations: apiTrip.destinations.map(
-        FrontendSchemaAdapter.apiDestinationToFrontend
-      ),
-      end_date: apiTrip.end_date,
-      endDate: apiTrip.end_date, // Camel case version
-      id: apiTrip.id,
-      isPublic: apiTrip.visibility === "public", // Legacy field
-      name: apiTrip.title, // API uses 'title', frontend uses 'name'
-      preferences: apiTrip.preferences,
-      start_date: apiTrip.start_date,
-      startDate: apiTrip.start_date, // Camel case version
-      status: apiTrip.status,
-      tags: apiTrip.tags,
-      title: apiTrip.title, // Keep both for compatibility
-      updated_at: apiTrip.updated_at,
-      updatedAt: apiTrip.updated_at, // Camel case version
-      user_id: apiTrip.user_id,
-      visibility: apiTrip.visibility,
-    };
+/**
+ * Convert API response to frontend Trip format
+ */
+export function apiTripToFrontend(apiTrip: ApiTrip): Trip {
+  return {
+    budget: apiTrip.budget,
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    created_at: apiTrip.created_at,
+    createdAt: apiTrip.created_at, // Camel case version
+    description: apiTrip.description,
+    destinations: apiTrip.destinations.map(apiDestinationToFrontend),
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    end_date: apiTrip.end_date,
+    endDate: apiTrip.end_date, // Camel case version
+    id: apiTrip.id,
+    isPublic: apiTrip.visibility === "public", // Legacy field
+    name: apiTrip.title, // API uses 'title', frontend uses 'name'
+    preferences: apiTrip.preferences,
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    start_date: apiTrip.start_date,
+    startDate: apiTrip.start_date, // Camel case version
+    status: apiTrip.status,
+    tags: apiTrip.tags,
+    title: apiTrip.title, // Keep both for compatibility
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    updated_at: apiTrip.updated_at,
+    updatedAt: apiTrip.updated_at, // Camel case version
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    user_id: apiTrip.user_id,
+    visibility: apiTrip.visibility,
+  };
+}
+
+/**
+ * Convert frontend Trip to API request format
+ */
+export function frontendTripToApi(trip: Trip): Partial<ApiTrip> {
+  return {
+    budget: trip.budget,
+    description: trip.description,
+    destinations: trip.destinations.map(frontendDestinationToApi),
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    end_date: trip.end_date || trip.endDate || "",
+    id: trip.id,
+    preferences: trip.preferences || {},
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    start_date: trip.start_date || trip.startDate || "",
+    status: trip.status || "planning",
+    tags: trip.tags || [],
+    title: trip.title || trip.name, // Use title if available, fallback to name
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    user_id: trip.user_id,
+    visibility: trip.visibility || (trip.isPublic ? "public" : "private"),
+  };
+}
+
+/**
+ * Convert API destination to frontend format
+ */
+export function apiDestinationToFrontend(apiDest: ApiDestination): Destination {
+  return {
+    activities: [], // Default empty array
+    coordinates: apiDest.coordinates,
+    country: apiDest.country || "",
+    endDate: apiDest.departure_date,
+    estimatedCost: 0, // Default value
+    id: `${apiDest.name}-${Date.now()}`, // Generate ID if not provided
+    name: apiDest.name,
+    startDate: apiDest.arrival_date,
+  };
+}
+
+/**
+ * Convert frontend destination to API format
+ */
+export function frontendDestinationToApi(dest: Destination): ApiDestination {
+  return {
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    arrival_date: dest.startDate,
+    city: dest.country, // Use country as city fallback
+    coordinates: dest.coordinates,
+    country: dest.country,
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    departure_date: dest.endDate,
+    name: dest.name,
+  };
+}
+
+/**
+ * Normalize trip data for consistent frontend usage
+ */
+export function normalizeTrip(trip: Partial<Trip>): Trip {
+  return {
+    budget: trip.budget || 0,
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    created_at: trip.created_at || trip.createdAt || new Date().toISOString(),
+    createdAt: trip.createdAt || trip.created_at || new Date().toISOString(),
+    currency: trip.currency || "USD",
+    description: trip.description || "",
+    destinations: trip.destinations || [],
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    end_date: trip.end_date || trip.endDate || "",
+    endDate: trip.endDate || trip.end_date || "",
+    id: trip.id || "",
+    isPublic: trip.isPublic || trip.visibility === "public",
+    name: trip.name || trip.title || "Untitled Trip",
+    preferences: trip.preferences || {},
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    start_date: trip.start_date || trip.startDate || "",
+    startDate: trip.startDate || trip.start_date || "",
+    status: trip.status || "planning",
+    tags: trip.tags || [],
+    title: trip.title || trip.name || "Untitled Trip",
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    updated_at: trip.updated_at || trip.updatedAt || new Date().toISOString(),
+    updatedAt: trip.updatedAt || trip.updated_at || new Date().toISOString(),
+    visibility: trip.visibility || "private",
+  };
+}
+
+/**
+ * Create a new trip with proper defaults
+ */
+export function createEmptyTrip(overrides: Partial<Trip> = {}): Trip {
+  const now = new Date().toISOString();
+
+  return normalizeTrip({
+    budget: 0,
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    created_at: now,
+    createdAt: now,
+    currency: "USD",
+    description: "",
+    destinations: [],
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    end_date: "",
+    endDate: "",
+    id: "",
+    isPublic: false,
+    name: "New Trip",
+    preferences: {},
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    start_date: "",
+    startDate: "",
+    status: "planning",
+    tags: [],
+    title: "New Trip",
+    // biome-ignore lint/style/useNamingConvention: Matches backend API snake_case format
+    updated_at: now,
+    updatedAt: now,
+    visibility: "private",
+    ...overrides,
+  });
+}
+
+/**
+ * Validate trip data for API submission
+ */
+export function validateTripForApi(trip: Trip): {
+  errors: string[];
+  valid: boolean;
+} {
+  const errors: string[] = [];
+
+  if (!trip.name && !trip.title) {
+    errors.push("Trip must have a name or title");
   }
 
-  /**
-   * Convert frontend Trip to API request format
-   */
-  static frontendTripToApi(trip: Trip): Partial<ApiTrip> {
-    return {
-      budget: trip.budget,
-      description: trip.description,
-      destinations: trip.destinations.map(
-        FrontendSchemaAdapter.frontendDestinationToApi
-      ),
-      end_date: trip.end_date || trip.endDate || "",
-      id: trip.id,
-      preferences: trip.preferences || {},
-      start_date: trip.start_date || trip.startDate || "",
-      status: trip.status || "planning",
-      tags: trip.tags || [],
-      title: trip.title || trip.name, // Use title if available, fallback to name
-      user_id: trip.user_id,
-      visibility: trip.visibility || (trip.isPublic ? "public" : "private"),
-    };
+  if (!trip.start_date && !trip.startDate) {
+    errors.push("Trip must have a start date");
   }
 
-  /**
-   * Convert API destination to frontend format
-   */
-  static apiDestinationToFrontend(apiDest: ApiDestination): Destination {
-    return {
-      activities: [], // Default empty array
-      coordinates: apiDest.coordinates,
-      country: apiDest.country || "",
-      endDate: apiDest.departure_date,
-      estimatedCost: 0, // Default value
-      id: `${apiDest.name}-${Date.now()}`, // Generate ID if not provided
-      name: apiDest.name,
-      startDate: apiDest.arrival_date,
-    };
+  if (!trip.end_date && !trip.endDate) {
+    errors.push("Trip must have an end date");
   }
 
-  /**
-   * Convert frontend destination to API format
-   */
-  static frontendDestinationToApi(dest: Destination): ApiDestination {
-    return {
-      arrival_date: dest.startDate,
-      city: dest.country, // Use country as city fallback
-      coordinates: dest.coordinates,
-      country: dest.country,
-      departure_date: dest.endDate,
-      name: dest.name,
-    };
+  // Validate dates
+  const startDate = new Date(trip.start_date || trip.startDate || "");
+  const endDate = new Date(trip.end_date || trip.endDate || "");
+
+  if (startDate && endDate && endDate <= startDate) {
+    errors.push("End date must be after start date");
   }
 
-  /**
-   * Normalize trip data for consistent frontend usage
-   */
-  static normalizeTrip(trip: Partial<Trip>): Trip {
-    return {
-      budget: trip.budget || 0,
-      created_at: trip.created_at || trip.createdAt || new Date().toISOString(),
-      createdAt: trip.createdAt || trip.created_at || new Date().toISOString(),
-      currency: trip.currency || "USD",
-      description: trip.description || "",
-      destinations: trip.destinations || [],
-      end_date: trip.end_date || trip.endDate || "",
-      endDate: trip.endDate || trip.end_date || "",
-      id: trip.id || "",
-      isPublic: trip.isPublic || trip.visibility === "public",
-      name: trip.name || trip.title || "Untitled Trip",
-      preferences: trip.preferences || {},
-      start_date: trip.start_date || trip.startDate || "",
-      startDate: trip.startDate || trip.start_date || "",
-      status: trip.status || "planning",
-      tags: trip.tags || [],
-      title: trip.title || trip.name || "Untitled Trip",
-      updated_at: trip.updated_at || trip.updatedAt || new Date().toISOString(),
-      updatedAt: trip.updatedAt || trip.updated_at || new Date().toISOString(),
-      visibility: trip.visibility || "private",
-    };
+  if (trip.destinations.length === 0) {
+    errors.push("Trip must have at least one destination");
   }
 
-  /**
-   * Create a new trip with proper defaults
-   */
-  static createEmptyTrip(overrides: Partial<Trip> = {}): Trip {
-    const now = new Date().toISOString();
+  return {
+    errors,
+    valid: errors.length === 0,
+  };
+}
 
-    return FrontendSchemaAdapter.normalizeTrip({
-      budget: 0,
-      created_at: now,
-      createdAt: now,
-      currency: "USD",
-      description: "",
-      destinations: [],
-      end_date: "",
-      endDate: "",
-      id: "",
-      isPublic: false,
-      name: "New Trip",
-      preferences: {},
-      start_date: "",
-      startDate: "",
-      status: "planning",
-      tags: [],
-      title: "New Trip",
-      updated_at: now,
-      updatedAt: now,
-      visibility: "private",
-      ...overrides,
-    });
-  }
+/**
+ * Handle API error responses with schema context
+ */
+export function handleApiError(error: unknown): string {
+  if (
+    error &&
+    typeof error === "object" &&
+    "response" in error &&
+    error.response &&
+    typeof error.response === "object" &&
+    "data" in error.response &&
+    error.response.data &&
+    typeof error.response.data === "object" &&
+    "detail" in error.response.data
+  ) {
+    const detail = error.response.data.detail;
 
-  /**
-   * Validate trip data for API submission
-   */
-  static validateTripForApi(trip: Trip): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    if (!trip.name && !trip.title) {
-      errors.push("Trip must have a name or title");
+    // Handle field validation errors
+    if (
+      typeof detail === "object" &&
+      detail !== null &&
+      "type" in detail &&
+      detail.type === "value_error"
+    ) {
+      const msg =
+        "msg" in detail && typeof detail.msg === "string"
+          ? detail.msg
+          : "Invalid data format";
+      return `Validation error: ${msg}`;
     }
 
-    if (!trip.start_date && !trip.startDate) {
-      errors.push("Trip must have a start date");
+    if (Array.isArray(detail)) {
+      return detail
+        .map((err) => {
+          if (typeof err === "object" && err !== null && "msg" in err) {
+            return String(err.msg);
+          }
+          return String(err);
+        })
+        .join(", ");
     }
 
-    if (!trip.end_date && !trip.endDate) {
-      errors.push("Trip must have an end date");
-    }
-
-    // Validate dates
-    const startDate = new Date(trip.start_date || trip.startDate || "");
-    const endDate = new Date(trip.end_date || trip.endDate || "");
-
-    if (startDate && endDate && endDate <= startDate) {
-      errors.push("End date must be after start date");
-    }
-
-    if (trip.destinations.length === 0) {
-      errors.push("Trip must have at least one destination");
-    }
-
-    return {
-      errors,
-      valid: errors.length === 0,
-    };
+    return String(detail);
   }
 
-  /**
-   * Handle API error responses with schema context
-   */
-  static handleApiError(error: any): string {
-    if (error?.response?.data?.detail) {
-      const detail = error.response.data.detail;
-
-      // Handle field validation errors
-      if (typeof detail === "object" && detail.type === "value_error") {
-        return `Validation error: ${detail.msg || "Invalid data format"}`;
-      }
-
-      if (Array.isArray(detail)) {
-        return detail.map((err: any) => err.msg || err).join(", ");
-      }
-
-      return detail;
-    }
-
-    if (error?.message) {
-      return error.message;
-    }
-
-    return "An unexpected error occurred";
+  if (error && typeof error === "object" && "message" in error) {
+    return String(error.message);
   }
+
+  return "An unexpected error occurred";
 }
 
 /**

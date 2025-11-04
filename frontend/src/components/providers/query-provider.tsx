@@ -12,7 +12,7 @@ function CreateQueryClient() {
         retry: (failureCount, error) => {
           // Don't retry mutations for 4xx errors
           if (error instanceof Error && "status" in error) {
-            const status = (error as any).status;
+            const status = (error as Error & { status: number }).status;
             if (status >= 400 && status < 500) return false;
           }
           // Retry once for 5xx errors or network issues
@@ -30,7 +30,7 @@ function CreateQueryClient() {
         retry: (failureCount, error) => {
           // Don't retry for 4xx errors (client errors)
           if (error instanceof Error && "status" in error) {
-            const status = (error as any).status;
+            const status = (error as Error & { status: number }).status;
             if (status >= 400 && status < 500) return false;
           }
           // Retry up to 2 times for other errors

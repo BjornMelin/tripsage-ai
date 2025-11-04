@@ -9,16 +9,16 @@ import { vi } from "vitest";
  */
 export function stubRateLimitDisabled(): void {
   // Empty strings prevent ratelimiter construction in route modules
-  (vi as any).stubEnv?.("UPSTASH_REDIS_REST_URL", "");
-  (vi as any).stubEnv?.("UPSTASH_REDIS_REST_TOKEN", "");
+  vi.stubEnv?.("UPSTASH_REDIS_REST_URL", "");
+  vi.stubEnv?.("UPSTASH_REDIS_REST_TOKEN", "");
 }
 
 /**
  * Enables Upstash rate limiting by stubbing placeholder environment values.
  */
 export function stubRateLimitEnabled(): void {
-  (vi as any).stubEnv?.("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
-  (vi as any).stubEnv?.("UPSTASH_REDIS_REST_TOKEN", "test-token");
+  vi.stubEnv?.("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+  vi.stubEnv?.("UPSTASH_REDIS_REST_TOKEN", "test-token");
 }
 
 /**
@@ -37,7 +37,7 @@ export async function resetAndImport<T = unknown>(path: string): Promise<T> {
  */
 export function unstubAllEnvs(): void {
   try {
-    (vi as any).unstubAllEnvs?.();
+    vi.unstubAllEnvs?.();
   } catch {
     // no-op on older versions
   }

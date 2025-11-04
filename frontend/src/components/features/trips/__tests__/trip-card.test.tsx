@@ -4,6 +4,7 @@
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Trip } from "@/stores/trip-store";
 import { TripCard } from "../trip-card";
@@ -31,7 +32,7 @@ vi.mock("date-fns", () => ({
 
 // Mock Next.js Link
 vi.mock("next/link", () => ({
-  default: ({ children, href, ...props }: any) => (
+  default: ({ children, href, ...props }: ComponentProps<"a">) => (
     <a href={href} {...props}>
       {children}
     </a>

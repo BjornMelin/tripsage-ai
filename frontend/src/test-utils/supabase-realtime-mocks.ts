@@ -8,7 +8,7 @@ import type {
 } from "@supabase/supabase-js";
 
 // Define channel states as we use them in tests
-export type REALTIME_CHANNEL_STATES =
+export type RealtimeChannelStates =
   | "SUBSCRIBED"
   | "CHANNEL_ERROR"
   | "TIMED_OUT"
@@ -21,18 +21,20 @@ export type MockRealtimeChannel = {
   subscribe: ReturnType<typeof vi.fn>;
   unsubscribe: ReturnType<typeof vi.fn>;
   _callbacks: {
-    postgres_changes?: Array<{
+    postgresChanges?: Array<{
       event: string;
       schema: string;
       table: string;
       filter?: string;
-      callback: (payload: any) => void;
+      callback: (
+        payload: RealtimePostgresChangesPayload<Record<string, unknown>>
+      ) => void;
     }>;
     system?: Array<{
-      callback: (payload: any) => void;
+      callback: (payload: { status: RealtimeChannelStates }) => void;
     }>;
   };
-  _subscribeCallback?: (status: REALTIME_CHANNEL_STATES) => void;
+  _subscribeCallback?: (status: RealtimeChannelStates) => void;
   _isSubscribed?: boolean;
 };
 
@@ -52,7 +54,7 @@ export type MockSupabaseClient = {
 export function createMockRealtimeChannel(): MockRealtimeChannel {
   const mockChannel: MockRealtimeChannel = {
     _callbacks: {
-      postgres_changes: [],
+      postgresChanges: [],
       system: [],
     },
     _subscribeCallback: undefined,
@@ -63,11 +65,18 @@ export function createMockRealtimeChannel(): MockRealtimeChannel {
 
   // Setup method chaining
   mockChannel.on.mockImplementation(
-    (event: string, configOrCallback: any, callbackOrUndefined?: any) => {
+    (event: string, configOrCallback: unknown, callbackOrUndefined?: unknown) => {
       if (event === "postgres_changes") {
-        const config = configOrCallback;
-        const callback = callbackOrUndefined;
-        mockChannel._callbacks.postgres_changes?.push({
+        const config = configOrCallback as {
+          event?: string;
+          filter?: string;
+          schema?: string;
+          table: string;
+        };
+        const callback = callbackOrUndefined as (
+          payload: RealtimePostgresChangesPayload<Record<string, unknown>>
+        ) => void;
+        mockChannel._callbacks.postgresChanges?.push({
           callback,
           event: config.event || "*",
           filter: config.filter,
@@ -75,7 +84,9 @@ export function createMockRealtimeChannel(): MockRealtimeChannel {
           table: config.table,
         });
       } else if (event === "system") {
-        const callback = callbackOrUndefined;
+        const callback = callbackOrUndefined as (payload: {
+          status: RealtimeChannelStates;
+        }) => void;
         mockChannel._callbacks.system?.push({ callback });
       }
       return mockChannel;
@@ -83,7 +94,7 @@ export function createMockRealtimeChannel(): MockRealtimeChannel {
   );
 
   mockChannel.subscribe.mockImplementation(
-    (callback?: (status: REALTIME_CHANNEL_STATES) => void) => {
+    (callback?: (status: RealtimeChannelStates) => void) => {
       if (callback) {
         mockChannel._subscribeCallback = callback;
       }
@@ -128,7 +139,7 @@ export function createMockSupabaseClient(
  */
 export function simulateChannelSubscription(
   channel: MockRealtimeChannel,
-  status: REALTIME_CHANNEL_STATES = "SUBSCRIBED"
+  status: RealtimeChannelStates = "SUBSCRIBED"
 ) {
   if (channel._subscribeCallback) {
     channel._subscribeCallback(status);
@@ -140,7 +151,7 @@ export function simulateChannelSubscription(
  */
 export function simulateSystemEvent(
   channel: MockRealtimeChannel,
-  status: REALTIME_CHANNEL_STATES
+  status: RealtimeChannelStates
 ) {
   const systemCallbacks = channel._callbacks.system || [];
   systemCallbacks.forEach(({ callback }) => {
@@ -152,9 +163,9 @@ export function simulateSystemEvent(
  * Helper to simulate a Postgres change event
  */
 export function simulatePostgresChange<
-  T extends { [key: string]: any } = { [key: string]: any },
+  T extends Record<string, unknown> = Record<string, unknown>,
 >(channel: MockRealtimeChannel, payload: RealtimePostgresChangesPayload<T>) {
-  const postgresCallbacks = channel._callbacks.postgres_changes || [];
+  const postgresCallbacks = channel._callbacks.postgresChanges || [];
 
   postgresCallbacks.forEach(({ event, schema, table, filter: _filter, callback }) => {
     const matchesEvent = event === "*" || event === payload.eventType;
@@ -174,7 +185,7 @@ export function simulatePostgresChange<
  * Helper to find postgres change handlers
  */
 export function getPostgresHandler(channel: MockRealtimeChannel) {
-  return (payload: RealtimePostgresChangesPayload<{ [key: string]: any }>) => {
+  return (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
     simulatePostgresChange(channel, payload);
   };
 }
@@ -183,16 +194,16 @@ export function getPostgresHandler(channel: MockRealtimeChannel) {
  * Helper to find system event handlers
  */
 export function getSystemHandler(channel: MockRealtimeChannel) {
-  return (payload: { status: REALTIME_CHANNEL_STATES }) => {
+  return (payload: { status: RealtimeChannelStates }) => {
     simulateSystemEvent(channel, payload.status);
   };
 }
 
 /**
- * Type guards for REALTIME_CHANNEL_STATES
+ * Type guards for RealtimeChannelStates
  */
-export type REALTIME_SUBSCRIBED = "SUBSCRIBED";
-export type REALTIME_ERROR = "CHANNEL_ERROR" | "TIMED_OUT" | "CLOSED";
+export type RealtimeSubscribed = "SUBSCRIBED";
+export type RealtimeError = "CHANNEL_ERROR" | "TIMED_OUT" | "CLOSED";
 
 /**
  * Create a test wrapper with multiple channels support
@@ -205,7 +216,7 @@ export function createMockSupabaseWithChannels() {
       if (!channels.has(name)) {
         channels.set(name, createMockRealtimeChannel());
       }
-      return channels.get(name)!;
+      return channels.get(name) ?? createMockRealtimeChannel();
     }),
     realtime: {
       channels: [],
@@ -214,7 +225,7 @@ export function createMockSupabaseWithChannels() {
     },
     removeChannel: vi.fn((channel: MockRealtimeChannel) => {
       // Find and remove the channel from the map
-      for (const [name, ch] of channels.entries()) {
+      for (const [name, ch] of Array.from(channels.entries())) {
         if (ch === channel) {
           channels.delete(name);
           break;

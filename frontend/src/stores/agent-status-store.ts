@@ -10,7 +10,7 @@ import type {
   ResourceUsage,
 } from "@/lib/schemas/agent-status";
 
-interface AgentStatusState {
+export interface AgentStatusState {
   agents: Agent[];
   sessions: AgentSession[];
   currentSessionId: string | null;

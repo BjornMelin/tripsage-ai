@@ -123,7 +123,10 @@ export function HotelSearchForm({
     savings: "35%",
   };
 
-  const handleInputChange = (field: keyof ModernHotelSearchParams, value: any) => {
+  const handleInputChange = <K extends keyof ModernHotelSearchParams>(
+    field: K,
+    value: ModernHotelSearchParams[K]
+  ) => {
     setSearchParams((prev) => ({ ...prev, [field]: value }));
   };
 

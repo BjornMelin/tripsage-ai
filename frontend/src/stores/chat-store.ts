@@ -219,7 +219,7 @@ export interface WebSocketAgentStatusEvent {
  * real-time connection status, memory integration, and all action handlers.
  * Used internally by Zustand for type-safe state management.
  */
-interface ChatState {
+export interface ChatState {
   sessions: ChatSession[];
   currentSessionId: string | null;
   isLoading: boolean;

@@ -103,7 +103,9 @@ function QueryErrorFallback({ error, resetErrorBoundary }: QueryErrorFallbackPro
 
         {variant === "auth" && (
           <Button
-            onClick={() => (window.location.href = "/login")}
+            onClick={() => {
+              window.location.href = "/login";
+            }}
             size="sm"
             className="ml-2"
           >
@@ -129,7 +131,7 @@ function QueryErrorFallback({ error, resetErrorBoundary }: QueryErrorFallbackPro
 interface QueryErrorBoundaryProps {
   children: ReactNode;
   fallback?: React.ComponentType<QueryErrorFallbackProps>;
-  onError?: (error: Error, errorInfo: any) => void;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
 export function QueryErrorBoundary({
@@ -197,7 +199,7 @@ export function InlineQueryError({
 /**
  * Hook for handling query errors in components
  */
-export function useQueryErrorHandler() {
+export function UseQueryErrorHandler() {
   const { reset } = useQueryErrorResetBoundary();
 
   const handleError = (error: unknown) => {
