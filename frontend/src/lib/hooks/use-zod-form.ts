@@ -35,7 +35,7 @@ interface UseZodFormOptions<T extends FieldValues> extends UseFormProps<T> {
   // Wizard options
   enableWizard?: boolean;
   wizardSteps?: string[];
-  stepValidationSchemas?: z.ZodType<any>[];
+  stepValidationSchemas?: z.ZodType<unknown>[];
 }
 
 // form return type
@@ -133,9 +133,9 @@ export function useZodForm<T extends FieldValues>(
         const testData = { [fieldName]: value } as Partial<T>;
 
         // Create a partial schema for validation - handle both object and other schema types
-        let partialSchema: z.ZodType<any>;
+        let partialSchema: z.ZodType<unknown>;
         if ("partial" in schema && typeof schema.partial === "function") {
-          partialSchema = (schema as any).partial();
+          partialSchema = (schema as z.ZodObject<z.ZodRawShape>).partial();
         } else {
           // For non-object schemas, use the schema as-is for field validation
           partialSchema = schema;
@@ -247,7 +247,11 @@ export function useZodForm<T extends FieldValues>(
           }
 
           // Transform data if transformer provided
-          let submitData = validationResult.data!;
+          let submitData: T;
+          if (!validationResult.data) {
+            return;
+          }
+          submitData = validationResult.data;
           if (transformSubmitData) {
             submitData = await transformSubmitData(submitData);
           }
@@ -403,7 +407,7 @@ export function useAsyncZodValidation<T extends FieldValues>(
   });
 
   const validate = useCallback(
-    debounce(async (data: T) => {
+    debounce((data: T) => {
       setValidationState((prev) => ({ ...prev, isValidating: true }));
 
       try {
@@ -467,15 +471,15 @@ export function useZodFormWizard<T extends FieldValues>(
   const isLastStep = currentStep === steps.length - 1;
 
   const form = useZodForm({
-    defaultValues: stepData as any,
-    schema: currentStepConfig.schema,
+    defaultValues: stepData as DefaultValues<T>,
+    schema: currentStepConfig.schema as z.ZodSchema<T>,
   });
 
   const goToStep = useCallback(
     (stepIndex: number) => {
       if (stepIndex >= 0 && stepIndex < steps.length) {
         setCurrentStep(stepIndex);
-        form.reset(stepData as any);
+        form.reset(stepData as DefaultValues<T>);
       }
     },
     [steps.length, form, stepData]
@@ -500,7 +504,7 @@ export function useZodFormWizard<T extends FieldValues>(
     }
   }, [form, isFirstStep]);
 
-  const submitWizard = useCallback(async () => {
+  const submitWizard = useCallback(async (): Promise<T> => {
     const currentData = form.getValues();
     const finalData = { ...stepData, ...currentData } as T;
 
@@ -524,7 +528,7 @@ export function useZodFormWizard<T extends FieldValues>(
     setCurrentStep(0);
     setCompletedSteps([]);
     setStepData({});
-    form.reset({});
+    form.reset({} as DefaultValues<T>);
   }, [form]);
 
   return {
@@ -556,12 +560,12 @@ export function useZodFormWizard<T extends FieldValues>(
 }
 
 // Utility function for debouncing
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
+function debounce<TArgs extends unknown[]>(
+  func: (...args: TArgs) => unknown,
   wait: number
-): (...args: Parameters<T>) => void {
+): (...args: TArgs) => void {
   let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
+  return (...args: TArgs) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };

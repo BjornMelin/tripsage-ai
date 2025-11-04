@@ -69,7 +69,9 @@ describe("FlightSearchForm", () => {
     const submitBtn = screen.getByText("Search Flights");
     const formEl = submitBtn.closest("form") as HTMLFormElement;
     expect(formEl).toBeTruthy();
-    fireEvent.submit(formEl!);
+    if (formEl) {
+      fireEvent.submit(formEl);
+    }
 
     // onSearch receives schema-validated FlightSearchFormData shape (async)
     await vi.waitFor(() => expect(MockOnSearch).toHaveBeenCalledTimes(1));

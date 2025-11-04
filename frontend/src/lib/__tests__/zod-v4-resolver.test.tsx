@@ -14,8 +14,9 @@ function FormHarness() {
   const { handleSubmit, register } = useForm<{ email: string }>({
     resolver: zodResolver(schema),
   });
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  const onSubmit = () => {};
+  const onSubmit = () => {
+    // Empty submit handler for test
+  };
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <input type="email" {...register("email")} defaultValue="a@b.com" />

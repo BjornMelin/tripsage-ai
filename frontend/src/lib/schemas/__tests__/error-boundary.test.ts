@@ -70,7 +70,9 @@ describe("routeErrorPropsSchema", () => {
   it("validates valid route error props", () => {
     const validProps = {
       error: new Error("Route error"),
-      reset: () => {},
+      reset: () => {
+        // Empty reset function for test
+      },
     };
 
     expect(() => routeErrorPropsSchema.parse(validProps)).not.toThrow();
@@ -79,7 +81,9 @@ describe("routeErrorPropsSchema", () => {
   it("validates error without digest", () => {
     const propsWithoutDigest = {
       error: new Error("Route error"),
-      reset: () => {},
+      reset: () => {
+        // Empty reset function for test
+      },
     };
 
     expect(() => routeErrorPropsSchema.parse(propsWithoutDigest)).not.toThrow();
@@ -102,7 +106,9 @@ describe("globalErrorPropsSchema", () => {
   it("validates valid global error props", () => {
     const validProps = {
       error: new Error("Critical error"),
-      reset: () => {},
+      reset: () => {
+        // Empty reset function for test
+      },
     };
 
     expect(() => globalErrorPropsSchema.parse(validProps)).not.toThrow();
@@ -165,7 +171,7 @@ describe("skeletonPropsSchema", () => {
   });
 
   it("rejects invalid variant", () => {
-    const invalidProps = { variant: "invalid" } as any;
+    const invalidProps = { variant: "invalid" } as { variant: string };
     expect(() => skeletonPropsSchema.parse(invalidProps)).toThrow();
   });
 

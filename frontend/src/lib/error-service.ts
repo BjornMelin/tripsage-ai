@@ -56,8 +56,10 @@ class ErrorService {
 
     try {
       while (this.queue.length > 0) {
-        const report = this.queue.shift()!;
-        await this.sendErrorReport(report);
+        const report = this.queue.shift();
+        if (report) {
+          await this.sendErrorReport(report);
+        }
       }
     } catch (error) {
       console.error("Failed to process error queue:", error);
@@ -83,6 +85,7 @@ class ErrorService {
         headers: {
           "Content-Type": "application/json",
           ...(this.config.apiKey && {
+            // biome-ignore lint/style/useNamingConvention: HTTP header name
             Authorization: `Bearer ${this.config.apiKey}`,
           }),
         },
@@ -150,7 +153,7 @@ class ErrorService {
   ): ErrorReport {
     return {
       error: {
-        digest: (error as any).digest,
+        digest: (error as Error & { digest?: string }).digest,
         message: error.message,
         name: error.name,
         stack: error.stack,

@@ -15,7 +15,9 @@ import {
 } from "../schema-adapters";
 
 // Mock console.error to suppress error logs during testing
-const MOCK_CONSOLE_ERROR = vi.spyOn(console, "error").mockImplementation(() => {});
+const MOCK_CONSOLE_ERROR = vi.spyOn(console, "error").mockImplementation(() => {
+  // Suppress console.error during test
+});
 
 describe("FrontendSchemaAdapter", () => {
   beforeEach(() => {

@@ -21,8 +21,8 @@ describe("getProviderSettings", () => {
   });
 
   it("treats literal 'undefined' values as unset", async () => {
-    process.env.OPENROUTER_REFERER = "undefined" as any;
-    process.env.OPENROUTER_TITLE = "undefined" as any;
+    process.env.OPENROUTER_REFERER = "undefined" as string | undefined;
+    process.env.OPENROUTER_TITLE = "undefined" as string | undefined;
     const { getProviderSettings } = await import("../settings");
     const settings = getProviderSettings();
     expect(settings.openrouterAttribution?.referer).toBeUndefined();

@@ -8,6 +8,17 @@ import { createAdminSupabase } from "./admin";
 
 export type SupportedService = "openai" | "openrouter" | "anthropic" | "xai";
 
+/**
+ * Type helper for Supabase RPC calls with proper typing.
+ * Supabase RPC types are not fully generated, so we use a minimal type assertion.
+ */
+type SupabaseRpcClient = {
+  rpc: (
+    name: string,
+    params: Record<string, unknown>
+  ) => Promise<{ data?: unknown; error: unknown | null }>;
+};
+
 function normalizeService(service: string): SupportedService {
   const s = service.trim().toLowerCase();
   if (s === "openai" || s === "openrouter" || s === "anthropic" || s === "xai") {
@@ -34,11 +45,14 @@ export async function insertUserApiKey(
 ): Promise<void> {
   const svc = normalizeService(service);
   const supabase = client ?? createAdminSupabase();
-  const { error } = await (supabase as any).rpc("insert_user_api_key", {
-    p_api_key: apiKey,
-    p_service: svc,
-    p_user_id: userId,
-  });
+  const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
+    "insert_user_api_key",
+    {
+      p_api_key: apiKey,
+      p_service: svc,
+      p_user_id: userId,
+    }
+  );
   if (error) throw error;
 }
 
@@ -58,10 +72,13 @@ export async function deleteUserApiKey(
 ): Promise<void> {
   const svc = normalizeService(service);
   const supabase = client ?? createAdminSupabase();
-  const { error } = await (supabase as any).rpc("delete_user_api_key", {
-    p_service: svc,
-    p_user_id: userId,
-  });
+  const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
+    "delete_user_api_key",
+    {
+      p_service: svc,
+      p_user_id: userId,
+    }
+  );
   if (error) throw error;
 }
 
@@ -83,12 +100,15 @@ export async function getUserApiKey(
 ): Promise<string | null> {
   const svc = normalizeService(service);
   const supabase = client ?? createAdminSupabase();
-  const { data, error } = await (supabase as any).rpc("get_user_api_key", {
-    p_service: svc,
-    p_user_id: userId,
-  });
+  const { data, error } = await (supabase as unknown as SupabaseRpcClient).rpc(
+    "get_user_api_key",
+    {
+      p_service: svc,
+      p_user_id: userId,
+    }
+  );
   if (error) throw error;
-  return data ?? null;
+  return typeof data === "string" ? data : null;
 }
 
 /**
@@ -107,9 +127,12 @@ export async function touchUserApiKey(
 ): Promise<void> {
   const svc = normalizeService(service);
   const supabase = client ?? createAdminSupabase();
-  const { error } = await (supabase as any).rpc("touch_user_api_key", {
-    p_service: svc,
-    p_user_id: userId,
-  });
+  const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
+    "touch_user_api_key",
+    {
+      p_service: svc,
+      p_user_id: userId,
+    }
+  );
   if (error) throw error;
 }

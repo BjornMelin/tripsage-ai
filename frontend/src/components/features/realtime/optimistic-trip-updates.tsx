@@ -42,8 +42,12 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   // const updateTrip = useUpdateTrip(); // TODO: Implement this hook
-  const updateTrip: { mutateAsync: (data: any) => Promise<void> } = {
-    mutateAsync: async (_data: any) => {},
+  const updateTrip: {
+    mutateAsync: (data: { id: number; updates: Partial<TripUpdate> }) => Promise<void>;
+  } = {
+    mutateAsync: async (_data: { id: number; updates: Partial<TripUpdate> }) => {
+      // TODO: Implement actual mutation
+    },
   };
   const { isConnected, errors } = useTripRealtime(tripId.toString());
 
@@ -52,7 +56,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     Record<
       string,
       {
-        value: any;
+        value: TripUpdate[keyof TripUpdate];
         status: "pending" | "success" | "error";
         timestamp: Date;
       }
@@ -92,7 +96,10 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     });
   }, [trip]);
 
-  const handleOptimisticUpdate = async (field: keyof TripUpdate, value: any) => {
+  const handleOptimisticUpdate = async (
+    field: keyof TripUpdate,
+    value: TripUpdate[keyof TripUpdate]
+  ) => {
     `${field}-${Date.now()}`; // Generate update ID for future tracking
 
     // Apply optimistic update to local state
@@ -165,7 +172,10 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     }
   };
 
-  const handleInputChange = (field: keyof TripUpdate, value: any) => {
+  const handleInputChange = (
+    field: keyof TripUpdate,
+    value: TripUpdate[keyof TripUpdate]
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 

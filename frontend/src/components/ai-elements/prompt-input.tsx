@@ -131,6 +131,7 @@ const ProviderAttachmentsContext = createContext<AttachmentsContext | null>(null
  * @returns The PromptInputController context.
  * @throws An error if the context is not found.
  */
+// biome-ignore lint/style/useNamingConvention: React hooks must start with 'use'
 export const usePromptInputController = () => {
   const ctx = useContext(PromptInputController);
   if (!ctx) {
@@ -142,6 +143,7 @@ export const usePromptInputController = () => {
 };
 
 // Optional variants (do NOT throw). Useful for dual-mode components.
+// biome-ignore lint/style/useNamingConvention: React hooks must start with 'use'
 const useOptionalPromptInputController = () => useContext(PromptInputController);
 
 /**
@@ -150,6 +152,7 @@ const useOptionalPromptInputController = () => useContext(PromptInputController)
  * @returns The ProviderAttachmentsContext context.
  * @throws An error if the context is not found.
  */
+// biome-ignore lint/style/useNamingConvention: React hooks must start with 'use'
 export const useProviderAttachments = () => {
   const ctx = useContext(ProviderAttachmentsContext);
   if (!ctx) {
@@ -160,6 +163,7 @@ export const useProviderAttachments = () => {
   return ctx;
 };
 
+// biome-ignore lint/style/useNamingConvention: React hooks must start with 'use'
 const useOptionalProviderAttachments = () => useContext(ProviderAttachmentsContext);
 
 /**
@@ -281,6 +285,7 @@ const LocalAttachmentsContext = createContext<AttachmentsContext | null>(null);
  * @returns The attachments context.
  * @throws An error if the context is not found.
  */
+// biome-ignore lint/style/useNamingConvention: React hooks must start with 'use'
 export const usePromptInputAttachments = () => {
   // Dual-mode: prefer provider if present, otherwise use local
   const provider = useOptionalProviderAttachments();
@@ -1208,6 +1213,7 @@ interface SpeechRecognitionErrorEvent extends Event {
 
 declare global {
   interface Window {
+    // biome-ignore lint/style/useNamingConvention: Browser API naming convention
     SpeechRecognition: {
       new (): SpeechRecognition;
     };

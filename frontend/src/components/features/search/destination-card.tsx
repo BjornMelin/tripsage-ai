@@ -171,12 +171,8 @@ export function DestinationCard({
               Top Attractions:
             </div>
             <div className="flex flex-wrap gap-1">
-              {destination.attractions.slice(0, 3).map((attraction, index) => (
-                <Badge
-                  key={`${attraction}-${index}`}
-                  variant="outline"
-                  className="text-xs"
-                >
+              {destination.attractions.slice(0, 3).map((attraction) => (
+                <Badge key={attraction} variant="outline" className="text-xs">
                   {attraction}
                 </Badge>
               ))}

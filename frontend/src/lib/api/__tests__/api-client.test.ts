@@ -63,8 +63,11 @@ describe("API client with Zod Validation", () => {
     MOCK_FETCH.mockClear();
     // Re-bind fetch in case other suites overwrote the global
     // Ensures deterministic behavior within this file regardless of run order
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = MOCK_FETCH;
+    Object.defineProperty(global, "fetch", {
+      configurable: true,
+      value: MOCK_FETCH,
+      writable: true,
+    });
   });
 
   describe("Request Validation", () => {
@@ -143,8 +146,8 @@ describe("API client with Zod Validation", () => {
         email: "test@example.com",
         name: "John Doe",
         preferences: {
-          notifications: "yes" as any, // Should be boolean
-          theme: "invalid-theme" as any, // Invalid enum value
+          notifications: "yes" as unknown as boolean, // Should be boolean
+          theme: "invalid-theme" as unknown as "dark" | "light", // Invalid enum value
         },
       } as UserCreateRequest;
 
@@ -264,7 +267,7 @@ describe("API client with Zod Validation", () => {
   describe("Error Handling with Validation", () => {
     it("provides detailed validation error messages", async () => {
       const invalidData = {
-        age: "twenty-five" as any, // Should be number
+        age: "twenty-five" as unknown as number, // Should be number
         email: "not-an-email",
         name: "",
       } as UserCreateRequest;

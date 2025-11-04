@@ -18,7 +18,7 @@ const VALUE_OBJECT_SCHEMA = z.record(z.string(), z.string());
  * Zod schema for ThemeProvider props
  * Provides runtime validation for theme configuration
  */
-export const ThemeProviderPropsSchema = z.object({
+export const themeProviderPropsSchema = z.object({
   /** HTML attribute modified based on the active theme */
   attribute: z.union([ATTRIBUTE_SCHEMA, z.array(ATTRIBUTE_SCHEMA)]).optional(),
 
@@ -52,7 +52,7 @@ export const ThemeProviderPropsSchema = z.object({
 /**
  * Type inference from the Zod schema
  */
-export type ValidatedThemeProviderProps = z.infer<typeof ThemeProviderPropsSchema>;
+export type ValidatedThemeProviderProps = z.infer<typeof themeProviderPropsSchema>;
 
 /**
  * Safe parser for theme provider props
@@ -60,7 +60,7 @@ export type ValidatedThemeProviderProps = z.infer<typeof ThemeProviderPropsSchem
  * @returns Validated props or error details
  */
 export const validateThemeProviderProps = (props: unknown) => {
-  return ThemeProviderPropsSchema.safeParse(props);
+  return themeProviderPropsSchema.safeParse(props);
 };
 
 /**

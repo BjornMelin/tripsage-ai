@@ -134,7 +134,11 @@ export const validateStrict = <T>(
     throw new TripSageValidationError(context, result.errors || []);
   }
 
-  return result.data!;
+  if (!result.data) {
+    throw new TripSageValidationError(context, result.errors || []);
+  }
+
+  return result.data;
 };
 
 // API response validation
@@ -237,8 +241,8 @@ export const validateBatch = <T>(
   items.forEach((item, index) => {
     const result = validate(schema, item, context);
 
-    if (result.success) {
-      results.push(result.data!);
+    if (result.success && result.data) {
+      results.push(result.data);
     } else {
       // Add index to error paths
       const indexedErrors =

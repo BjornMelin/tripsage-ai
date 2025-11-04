@@ -101,6 +101,7 @@ export class ApiClientError extends Error {
 /**
  * Configuration options for individual API requests.
  */
+// biome-ignore lint/style/useNamingConvention: Type name follows API convention
 interface RequestConfig<TRequest = unknown, TResponse = unknown> {
   /** API endpoint path (relative to base URL). */
   endpoint: string;
@@ -237,6 +238,7 @@ export class ApiClient {
    * @param config Request configuration including endpoint, method, data, and options.
    * @returns Promise that resolves with the validated response data.
    */
+  // biome-ignore lint/style/useNamingConvention: Method name follows API convention
   private async request<TRequest, TResponse>(
     config: RequestConfig<TRequest, TResponse>
   ): Promise<TResponse> {
@@ -456,6 +458,7 @@ export class ApiClient {
    * @param options Additional request options.
    * @returns Promise that resolves with the response data.
    */
+  // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
   public async get<TResponse = unknown>(
     endpoint: string,
     options: Omit<RequestConfig<never, TResponse>, "endpoint" | "method"> = {}
@@ -475,6 +478,7 @@ export class ApiClient {
    * @param options Additional request options.
    * @returns Promise that resolves with the response data.
    */
+  // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
   public async post<TRequest = unknown, TResponse = unknown>(
     endpoint: string,
     data?: TRequest,
@@ -499,6 +503,7 @@ export class ApiClient {
    * @param options Additional request options.
    * @returns Promise that resolves with the response data.
    */
+  // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
   public async put<TRequest = unknown, TResponse = unknown>(
     endpoint: string,
     data?: TRequest,
@@ -523,6 +528,7 @@ export class ApiClient {
    * @param options Additional request options.
    * @returns Promise that resolves with the response data.
    */
+  // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
   public async patch<TRequest = unknown, TResponse = unknown>(
     endpoint: string,
     data?: TRequest,
@@ -546,6 +552,7 @@ export class ApiClient {
    * @param options Additional request options.
    * @returns Promise that resolves with the response data.
    */
+  // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
   public async delete<TResponse = unknown>(
     endpoint: string,
     options: Omit<RequestConfig<never, TResponse>, "endpoint" | "method"> = {}
@@ -565,6 +572,8 @@ export class ApiClient {
    * @param options Additional request options.
    * @returns Promise that resolves with validated response data.
    */
+  // biome-ignore lint/style/useNamingConvention: Method name follows API convention
+  // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
   public async getValidated<TResponse>(
     endpoint: string,
     responseSchema: z.ZodType<TResponse>,
@@ -586,6 +595,7 @@ export class ApiClient {
    * @param options Additional request options.
    * @returns Promise that resolves with validated response data.
    */
+  // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
   public async postValidated<TRequest, TResponse>(
     endpoint: string,
     data: TRequest,
@@ -609,6 +619,7 @@ export class ApiClient {
    * @param options Additional request options.
    * @returns Promise that resolves with validated response data.
    */
+  // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
   public async putValidated<TRequest, TResponse>(
     endpoint: string,
     data: TRequest,
@@ -632,6 +643,7 @@ export class ApiClient {
    * @param options Additional request options.
    * @returns Promise that resolves with validated response data.
    */
+  // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
   public async patchValidated<TRequest, TResponse>(
     endpoint: string,
     data: TRequest,
@@ -653,6 +665,7 @@ export class ApiClient {
    * @param options Additional request options.
    * @returns Promise that resolves with validated response data.
    */
+  // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
   public async deleteValidated<TResponse>(
     endpoint: string,
     responseSchema: z.ZodType<TResponse>,
@@ -714,6 +727,7 @@ export class ApiClient {
    *
    * @returns Promise that resolves with health check response containing status and timestamp.
    */
+  // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
   public async healthCheck(): Promise<{ status: string; timestamp: string }> {
     return this.get("/health");
   }
@@ -732,11 +746,11 @@ defaultClient.addRequestInterceptor(async (config) => {
 });
 
 // Add common response interceptor for logging
-defaultClient.addResponseInterceptor(async (response, config) => {
+defaultClient.addResponseInterceptor((response, config) => {
   if (process.env.NODE_ENV === "development") {
     console.log(`API Response [${config.method}] ${config.endpoint}:`, response);
   }
-  return response;
+  return Promise.resolve(response);
 });
 
 /**
