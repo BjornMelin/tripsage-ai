@@ -55,6 +55,9 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 | [ADR-0032](adr-0032-centralized-rate-limiting.md) | Centralized Rate Limiting | Accepted | 2025-11-02 |
 | [ADR-0033](adr-0033-rag-advanced-v6.md) | RAG Advanced v6 | Proposed | 2025-11-02 |
 | [ADR-0034](adr-0034-structured-outputs-object-generation.md) | Structured Outputs Object Generation | Accepted | 2025-11-02 |
+| [ADR-0035](adr-0035-react-compiler-and-component-declarations.md) | React Compiler and Component Declarations | Accepted | 2025-11-04 |
+| [ADR-0036](adr-0036-ai-elements-response-and-sources.md) | AI Elements Response and Sources | Accepted | 2025-11-04 |
+| [ADR-0037](adr-0037-reasoning-tool-codeblock-phased-adoption.md) | Reasoning/Tool/CodeBlock Phased Adoption | Accepted | 2025-11-04 |
 
 ## By Category
 
@@ -73,6 +76,9 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 - ADR-0029: DI Route Handlers and Testing
 - ADR-0031: Next.js Chat API AI SDK v6
 - ADR-0034: Structured Outputs Object Generation
+- ADR-0035: React Compiler and Component Declarations
+- ADR-0036: AI Elements Response and Sources
+- ADR-0037: Reasoning/Tool/CodeBlock Phased Adoption
 
 ### Backend
 
