@@ -23,17 +23,17 @@ let initializationError: Error | null = null;
  * Initialize and validate environment variables
  * Should be called at application startup
  */
-export async function initializeEnvironment(): Promise<{
+export function initializeEnvironment(): Promise<{
   success: boolean;
   error?: Error;
   environment?: EnvironmentInfo;
 }> {
   if (isInitialized) {
-    return {
+    return Promise.resolve({
       environment: environmentInfo || undefined,
       error: initializationError || undefined,
       success: !initializationError,
-    };
+    });
   }
 
   try {
@@ -67,10 +67,10 @@ export async function initializeEnvironment(): Promise<{
     }
 
     isInitialized = true;
-    return {
+    return Promise.resolve({
       environment: environmentInfo,
       success: true,
-    };
+    });
   } catch (error) {
     initializationError =
       error instanceof Error ? error : new Error("Environment validation failed");
@@ -83,10 +83,10 @@ export async function initializeEnvironment(): Promise<{
     }
 
     isInitialized = true;
-    return {
+    return Promise.resolve({
       error: initializationError,
       success: false,
-    };
+    });
   }
 }
 

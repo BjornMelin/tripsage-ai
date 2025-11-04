@@ -12,8 +12,16 @@ import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
  * @param _table Unused table name for parity with production signatures.
  * @returns A fluent mock with insert/update/select/single/eq methods.
  */
-function makeMockFrom(_table: string) {
-  const chain: any = {
+type MockChain = {
+  eq: (column: string, value: unknown) => MockChain;
+  insert: (values: unknown) => MockChain;
+  select: () => MockChain;
+  single: ReturnType<typeof vi.fn>;
+  update: (values: unknown) => MockChain;
+};
+
+function makeMockFrom(_table: string): MockChain {
+  const chain: MockChain = {
     eq: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
@@ -70,7 +78,9 @@ describe("typed-helpers", () => {
       user_id: payload.user_id,
     };
 
-    const chain = (client as any).from("trips");
+    const chain = (client as unknown as { from: (table: string) => MockChain }).from(
+      "trips"
+    );
     chain.single.mockResolvedValue({ data: row, error: null });
 
     const { data, error } = await insertSingle(client, "trips", payload);
@@ -99,13 +109,17 @@ describe("typed-helpers", () => {
       updated_at: "2025-02-02T00:00:00Z",
       user_id: "u2",
     };
-    const chain = (client as any).from("trips");
+    const chain = (client as unknown as { from: (table: string) => MockChain }).from(
+      "trips"
+    );
     chain.single.mockResolvedValue({ data: row, error: null });
 
-    const result = await updateSingle(client, "trips", updates, (qb) =>
+    const result = await updateSingle(client, "trips", updates, (qb) => {
       // emulate qb.eq(...) chaining in test
-      (qb as any).eq("id", 2)
-    );
+      const chain = qb as unknown as MockChain;
+      const eqResult = chain.eq("id", 2);
+      return eqResult as unknown;
+    });
     expect(result.error).toBeNull();
     expect(result.data?.id).toBe(2);
     expect(result.data?.name).toBe("Updated");

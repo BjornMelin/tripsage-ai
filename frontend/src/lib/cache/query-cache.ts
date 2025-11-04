@@ -34,9 +34,10 @@ export const createOptimizedQueryClient = () => {
         refetchOnWindowFocus: false, // Reduce unnecessary requests
 
         // Retry configuration
-        retry: (failureCount, error: any) => {
+        retry: (failureCount, error: unknown) => {
           // Don't retry for client errors (4xx)
-          if (error?.status >= 400 && error?.status < 500) {
+          const httpError = error as { status?: number };
+          if (httpError?.status && httpError.status >= 400 && httpError.status < 500) {
             return false;
           }
           // Retry up to 3 times for server errors

@@ -81,7 +81,7 @@ export function ActivitySearchForm({
     resolver: zodResolver(ActivitySearchFormSchema),
   });
 
-  function onSubmit(data: ActivitySearchFormValues) {
+  const onSubmit = (data: ActivitySearchFormValues) => {
     // Convert form data to search params
     const searchParams: ActivitySearchParams = {
       adults: data.adults,
@@ -103,7 +103,7 @@ export function ActivitySearchForm({
     if (onSearch) {
       onSearch(searchParams);
     }
-  }
+  };
 
   return (
     <Card>

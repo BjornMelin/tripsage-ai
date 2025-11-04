@@ -82,6 +82,7 @@ export async function resolveProvider(
 
       const client = createOpenAI({
         apiKey,
+        // biome-ignore lint/style/useNamingConvention: API parameter name
         baseURL: "https://openrouter.ai/api/v1",
         headers: Object.keys(headers).length > 0 ? headers : undefined,
       });
@@ -102,7 +103,11 @@ export async function resolveProvider(
     if (provider === "xai") {
       // Use OpenAI-compatible provider for xAI to pass BYOK and base URL.
       // Avoid @ai-sdk/xai here to ensure user-specific keys are respected.
-      const xai = createOpenAI({ apiKey, baseURL: "https://api.x.ai/v1" });
+      const xai = createOpenAI({
+        apiKey,
+        // biome-ignore lint/style/useNamingConvention: API parameter name
+        baseURL: "https://api.x.ai/v1",
+      });
       return { model: xai(modelId), modelId, provider };
     }
   }

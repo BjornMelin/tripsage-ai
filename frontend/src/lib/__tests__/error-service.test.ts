@@ -165,7 +165,9 @@ describe("ErrorService", () => {
         ...mockConfig,
         enabled: false,
       });
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // Suppress console.error during test
+      });
 
       const errorReport: ErrorReport = {
         error: {
@@ -214,7 +216,9 @@ describe("ErrorService", () => {
     });
 
     it("should validate error report with Zod", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // Suppress console.error during test
+      });
 
       const invalidErrorReport = {
         error: {
@@ -224,7 +228,7 @@ describe("ErrorService", () => {
         timestamp: new Date().toISOString(),
         url: "https://example.com",
         userAgent: "Test User Agent",
-      } as any;
+      } as ErrorReport;
 
       await errorService.reportError(invalidErrorReport);
 
@@ -277,7 +281,9 @@ describe("ErrorService", () => {
     });
 
     it("should give up after max retries", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // Suppress console.error during test
+      });
 
       // All calls fail
       MOCK_FETCH.mockRejectedValue(new Error("Network error"));
