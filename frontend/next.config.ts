@@ -11,8 +11,6 @@ const nextConfig: NextConfig = {
   bundlePagesRouterDependencies: true,
   // Enable Cache Components (replaces experimental PPR flags in v16)
   cacheComponents: true,
-  // Enable React Compiler for automatic memoization and performance
-  reactCompiler: true,
 
   // Turbopack configuration for browser fallbacks and aliases
   // Use top-level turbopack per Next.js 16 docs
@@ -30,7 +28,6 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   compress: true,
   experimental: {
-
     // Optimize package imports for better tree shaking
     optimizePackageImports: [
       "lucide-react",
@@ -115,6 +112,8 @@ const nextConfig: NextConfig = {
   // Output configuration
   output: "standalone",
   poweredByHeader: false, // Remove X-Powered-By header
+  // Enable React Compiler for automatic memoization and performance
+  reactCompiler: true,
 
   // Strict mode for better development experience
   reactStrictMode: true,
