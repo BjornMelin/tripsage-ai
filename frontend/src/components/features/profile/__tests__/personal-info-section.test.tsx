@@ -37,7 +37,7 @@ describe.skip("PersonalInfoSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     MockToast.mockClear();
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       updateUser: MockUpdateUser,
       user: MockUser,
     });
@@ -55,7 +55,7 @@ describe.skip("PersonalInfoSection", () => {
   });
 
   it("renders avatar with user initials when no avatar URL", () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       updateUser: MockUpdateUser,
       user: { ...MockUser, avatarUrl: undefined },
     });
@@ -189,7 +189,7 @@ describe.skip("PersonalInfoSection", () => {
     });
   });
 
-  it("shows loading state during avatar upload", async () => {
+  it("shows loading state during avatar upload", () => {
     render(<PersonalInfoSection />);
 
     const cameraButton = screen.getByRole("button");
@@ -213,7 +213,7 @@ describe.skip("PersonalInfoSection", () => {
     ];
 
     testCases.forEach(({ user, expected }) => {
-      (useUserProfileStore as any).mockReturnValue({
+      vi.mocked(useUserProfileStore).mockReturnValue({
         updateUser: MockUpdateUser,
         user: { ...MockUser, ...user },
       });

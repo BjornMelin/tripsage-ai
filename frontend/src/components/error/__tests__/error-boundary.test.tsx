@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for ErrorBoundary component and withErrorBoundary HOC,
+ * @fileoverview Unit tests for ErrorBoundary component and WithErrorBoundary HOC,
  * covering error catching, fallback rendering, error reporting, recovery mechanisms,
  * and session/user tracking functionality.
  */
@@ -7,7 +7,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { errorService } from "@/lib/error-service";
 import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils";
-import { ErrorBoundary, withErrorBoundary } from "../error-boundary";
+import { ErrorBoundary, WithErrorBoundary } from "../error-boundary";
 
 // Mock the error service
 vi.mock("@/lib/error-service", () => ({
@@ -19,9 +19,15 @@ vi.mock("@/lib/error-service", () => ({
 
 // Mock console methods
 const ConsoleSpy = {
-  error: vi.spyOn(console, "error").mockImplementation(() => {}),
-  group: vi.spyOn(console, "group").mockImplementation(() => {}),
-  groupEnd: vi.spyOn(console, "groupEnd").mockImplementation(() => {}),
+  error: vi.spyOn(console, "error").mockImplementation(() => {
+    // Intentionally empty - suppress console errors during test
+  }),
+  group: vi.spyOn(console, "group").mockImplementation(() => {
+    // Intentionally empty - suppress console groups during test
+  }),
+  groupEnd: vi.spyOn(console, "groupEnd").mockImplementation(() => {
+    // Intentionally empty - suppress console group ends during test
+  }),
 };
 
 /**
@@ -250,7 +256,15 @@ describe("ErrorBoundary", () => {
       <div>
         <h1>Custom Error UI</h1>
         <p>{error.message}</p>
-        <button type="button" onClick={reset || (() => {})}>
+        <button
+          type="button"
+          onClick={
+            reset ||
+            (() => {
+              // Intentionally empty - no-op fallback
+            })
+          }
+        >
           Custom Reset
         </button>
       </div>
@@ -269,9 +283,9 @@ describe("ErrorBoundary", () => {
     });
   });
 
-  describe("withErrorBoundary HOC", () => {
+  describe("WithErrorBoundary HOC", () => {
     it("should wrap component with error boundary", () => {
-      const WrappedComponent = withErrorBoundary(NormalComponent);
+      const WrappedComponent = WithErrorBoundary(NormalComponent);
 
       renderWithProviders(<WrappedComponent />);
 
@@ -279,7 +293,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should catch errors in wrapped component", () => {
-      const WrappedComponent = withErrorBoundary(ThrowError);
+      const WrappedComponent = WithErrorBoundary(ThrowError);
 
       renderWithProviders(<WrappedComponent shouldThrow={true} />);
 
@@ -293,7 +307,7 @@ describe("ErrorBoundary", () => {
        * @returns Simple custom error UI.
        */
       const CustomFallback = () => <div>HOC Custom Fallback</div>;
-      const WrappedComponent = withErrorBoundary(ThrowError, {
+      const WrappedComponent = WithErrorBoundary(ThrowError, {
         fallback: CustomFallback,
       });
 
@@ -311,15 +325,15 @@ describe("ErrorBoundary", () => {
       const TestComponent = () => <div>Test</div>;
       TestComponent.displayName = "TestComponent";
 
-      const WrappedComponent = withErrorBoundary(TestComponent);
+      const WrappedComponent = WithErrorBoundary(TestComponent);
 
-      expect(WrappedComponent.displayName).toBe("withErrorBoundary(TestComponent)");
+      expect(WrappedComponent.displayName).toBe("WithErrorBoundary(TestComponent)");
     });
 
     it("should handle components without display name", () => {
-      const WrappedComponent = withErrorBoundary(NormalComponent);
+      const WrappedComponent = WithErrorBoundary(NormalComponent);
 
-      expect(WrappedComponent.displayName).toBe("withErrorBoundary(NormalComponent)");
+      expect(WrappedComponent.displayName).toBe("WithErrorBoundary(NormalComponent)");
     });
   });
 

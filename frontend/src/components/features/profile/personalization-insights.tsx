@@ -124,8 +124,8 @@ export function PersonalizationInsights({
                 <div className="space-y-2">
                   <div className="text-sm font-medium">Key Traits:</div>
                   <div className="flex flex-wrap gap-2">
-                    {travelPersonality.keyTraits?.map((trait, idx) => (
-                      <Badge key={idx} variant="secondary">
+                    {travelPersonality.keyTraits?.map((trait) => (
+                      <Badge key={trait} variant="secondary">
                         {trait}
                       </Badge>
                     ))}
@@ -179,8 +179,8 @@ export function PersonalizationInsights({
               Favorite Destinations
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {destinationPreferences.topDestinations.slice(0, 4).map((dest, idx) => (
-                <Card key={idx}>
+              {destinationPreferences.topDestinations.slice(0, 4).map((dest) => (
+                <Card key={dest.destination}>
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-medium">{dest.destination}</h4>
@@ -253,9 +253,9 @@ export function PersonalizationInsights({
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {budgetPatterns.spendingTrends.map((trend, idx) => (
+                {budgetPatterns.spendingTrends.map((trend) => (
                   <div
-                    key={idx}
+                    key={`${trend.category}-${trend.trend}`}
                     className="flex items-center justify-between p-3 rounded-lg bg-muted"
                   >
                     <div className="flex items-center gap-3">
@@ -305,8 +305,11 @@ export function PersonalizationInsights({
         </h3>
 
         <div className="grid gap-4">
-          {recommendations.map((rec, idx) => (
-            <Card key={idx} className="hover:shadow-md transition-shadow">
+          {recommendations.map((rec) => (
+            <Card
+              key={`${rec.type}-${rec.recommendation}`}
+              className="hover:shadow-md transition-shadow"
+            >
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -342,8 +345,8 @@ export function PersonalizationInsights({
       <div className={cn("space-y-6", className)}>
         <div className="h-8 bg-muted rounded animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
+          {["skeleton-0", "skeleton-1", "skeleton-2", "skeleton-3"].map((id) => (
+            <Card key={id}>
               <CardContent className="pt-6">
                 <div className="space-y-2">
                   <div className="h-4 bg-muted rounded animate-pulse" />

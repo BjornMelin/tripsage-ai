@@ -40,19 +40,33 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useZodForm } from "@/lib/hooks/use-zod-form";
-import { budgetFormSchema, type ExpenseCategory } from "@/lib/schemas/budget";
+import {
+  budgetFormSchema,
+  type ExpenseCategory,
+  expenseCategorySchema,
+} from "@/lib/schemas/budget";
 import { cn } from "@/lib/utils";
 
 // Augmented form data with additional UI state
-const BudgetFormUiSchema = budgetFormSchema.and(
-  z.object({
-    alertThreshold: z.number().min(50).max(95).optional(),
-    // UI-specific fields
-    autoAllocate: z.boolean().optional(),
-    enableAlerts: z.boolean().optional(),
-    notes: z.string().max(500).optional(),
+const BudgetFormUiSchema = budgetFormSchema
+  .extend({
+    categories: z.array(
+      z.object({
+        amount: z.number().positive("Amount must be positive"),
+        category: expenseCategorySchema,
+        id: z.string().uuid().optional(),
+      })
+    ),
   })
-);
+  .and(
+    z.object({
+      alertThreshold: z.number().min(50).max(95).optional(),
+      // UI-specific fields
+      autoAllocate: z.boolean().optional(),
+      enableAlerts: z.boolean().optional(),
+      notes: z.string().max(500).optional(),
+    })
+  );
 
 type BudgetFormViewData = z.infer<typeof BudgetFormUiSchema>;
 
@@ -133,11 +147,16 @@ export const BudgetForm = ({
     defaultValues: {
       alertThreshold: 80,
       autoAllocate: false,
-      categories: [
-        { amount: 0, category: "flights" as ExpenseCategory },
-        { amount: 0, category: "accommodations" as ExpenseCategory },
-        { amount: 0, category: "food" as ExpenseCategory },
-      ],
+      categories: (
+        initialData?.categories ?? [
+          { amount: 0, category: "flights" as ExpenseCategory },
+          { amount: 0, category: "accommodations" as ExpenseCategory },
+          { amount: 0, category: "food" as ExpenseCategory },
+        ]
+      ).map((cat) => ({
+        ...cat,
+        id: cat.id ?? crypto.randomUUID(),
+      })),
       currency: "USD",
       enableAlerts: true,
       endDate: "",
@@ -215,6 +234,7 @@ export const BudgetForm = ({
       const newCategory = {
         amount: 0,
         category: availableCategories[0].value as ExpenseCategory,
+        id: crypto.randomUUID(),
       };
       form.setValue("categories", [...categories, newCategory]);
     }
@@ -402,16 +422,19 @@ export const BudgetForm = ({
               </div>
 
               <div className="space-y-3">
-                {categories.map((category, index) => {
+                {categories.map((category) => {
                   const categoryInfo = ExpenseCategories.find(
                     (c) => c.value === category.category
                   );
                   const percentage =
                     totalAmount > 0 ? (category.amount / totalAmount) * 100 : 0;
+                  const categoryIndex = categories.findIndex(
+                    (c) => c.id === category.id
+                  );
 
                   return (
                     <div
-                      key={index}
+                      key={category.id ?? category.category}
                       className="flex items-center gap-4 p-4 border rounded-lg"
                     >
                       <div className="shrink-0">
@@ -421,7 +444,7 @@ export const BudgetForm = ({
                       <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
                         <FormField
                           control={form.control}
-                          name={`categories.${index}.category`}
+                          name={`categories.${categoryIndex}.category`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="sr-only">Category</FormLabel>
@@ -442,7 +465,7 @@ export const BudgetForm = ({
                                       disabled={categories.some(
                                         (existing, existingIndex) =>
                                           existing.category === cat.value &&
-                                          existingIndex !== index
+                                          existingIndex !== categoryIndex
                                       )}
                                     >
                                       {cat.icon} {cat.label}
@@ -457,7 +480,7 @@ export const BudgetForm = ({
 
                         <FormField
                           control={form.control}
-                          name={`categories.${index}.amount`}
+                          name={`categories.${categoryIndex}.amount`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="sr-only">Amount</FormLabel>
@@ -495,7 +518,7 @@ export const BudgetForm = ({
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeCategory(index)}
+                            onClick={() => removeCategory(categoryIndex)}
                             disabled={categories.length <= 1}
                           >
                             <X className="h-4 w-4" />
@@ -642,8 +665,8 @@ export const BudgetForm = ({
                   Please complete all required fields before submitting.
                   {form.validationState.validationErrors.length > 0 && (
                     <ul className="mt-2 list-disc list-inside text-sm">
-                      {form.validationState.validationErrors.map((error, index) => (
-                        <li key={index}>{error}</li>
+                      {form.validationState.validationErrors.map((error) => (
+                        <li key={error}>{error}</li>
                       ))}
                     </ul>
                   )}
