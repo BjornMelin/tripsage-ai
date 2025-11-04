@@ -62,14 +62,22 @@ export function RegisterForm({
       } = await supabase.auth.getSession();
       if (session) router.push(redirectTo);
     };
-    checkSession().catch(() => {
-      // Ignore errors in session check
+    checkSession().catch((err) => {
+      // Log session check errors for debugging/monitoring
+      // eslint-disable-next-line no-console
+      console.error("Session check failed in RegisterForm:", err);
     });
   }, [router, redirectTo, supabase]);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const nextSuffix = nextParam ? `&next=${encodeURIComponent(nextParam)}` : "";
 
+  /**
+   * Handle sign up.
+   *
+   * @param e - The form event.
+   * @returns A promise that resolves to the sign up result.
+   */
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -99,6 +107,12 @@ export function RegisterForm({
     }
   };
 
+  /**
+   * Handle social login.
+   *
+   * @param provider - The provider to login with.
+   * @returns A promise that resolves to the social login result.
+   */
   const handleSocialLogin = async (provider: "github" | "google") => {
     setError(null);
     const { error: oAuthError } = await supabase.auth.signInWithOAuth({
@@ -198,7 +212,6 @@ export function RegisterForm({
 
 /**
  * Skeleton loading state for the registration form.
- *
  * Displays placeholder content while the registration form is loading.
  *
  * @returns The registration form skeleton JSX element

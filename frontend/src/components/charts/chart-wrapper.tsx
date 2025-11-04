@@ -6,6 +6,13 @@
 
 import dynamic from "next/dynamic";
 import type { ComponentProps, ComponentType } from "react";
+import type {
+  AreaProps as RechartsAreaProps,
+  LineProps as RechartsLineProps,
+  TooltipProps as RechartsTooltipProps,
+  XAxisProps as RechartsXAxisProps,
+  YAxisProps as RechartsYAxisProps,
+} from "recharts";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 /** Type-safe dynamic import wrapper for Recharts components */
@@ -35,49 +42,89 @@ export const ResponsiveContainer = dynamic(
   }
 );
 
+/**
+ * Dynamically import the AreaChart component.
+ *
+ * @returns The AreaChart component.
+ */
 export const AreaChart = dynamic(
   () => import("recharts").then((mod) => mod.AreaChart),
   { ssr: false }
 );
 
+/**
+ * Dynamically import the LineChart component.
+ *
+ * @returns The LineChart component.
+ */
 export const LineChart = dynamic(
   () => import("recharts").then((mod) => mod.LineChart),
   { ssr: false }
 );
 
-/** Use the safe dynamic wrapper for problematic components */
+/**
+ * Dynamically import the Area component.
+ *
+ * @returns The Area component.
+ */
 export const Area = CreateDynamicComponent(() =>
   import("recharts").then(
-    (mod) => mod.Area as unknown as React.ComponentType<Record<string, unknown>>
+    (mod) => mod.Area as unknown as React.ComponentType<RechartsAreaProps>
   )
 );
 
+/**
+ * Dynamically import the Line component.
+ *
+ * @returns The Line component.
+ */
 export const Line = CreateDynamicComponent(() =>
   import("recharts").then(
-    (mod) => mod.Line as unknown as React.ComponentType<Record<string, unknown>>
+    (mod) => mod.Line as unknown as React.ComponentType<RechartsLineProps>
   )
 );
 
+/**
+ * Dynamically import the CartesianGrid component.
+ *
+ * @returns The CartesianGrid component.
+ */
 export const CartesianGrid = dynamic(
   () => import("recharts").then((mod) => mod.CartesianGrid),
   { ssr: false }
 );
 
+/**
+ * Dynamically import the XAxis component.
+ *
+ * @returns The XAxis component.
+ */
 export const XAxis = CreateDynamicComponent(() =>
   import("recharts").then(
-    (mod) => mod.XAxis as unknown as React.ComponentType<Record<string, unknown>>
+    (mod) => mod.XAxis as unknown as React.ComponentType<RechartsXAxisProps>
   )
 );
 
+/**
+ * Dynamically import the YAxis component.
+ *
+ * @returns The YAxis component.
+ */
 export const YAxis = CreateDynamicComponent(() =>
   import("recharts").then(
-    (mod) => mod.YAxis as unknown as React.ComponentType<Record<string, unknown>>
+    (mod) => mod.YAxis as unknown as React.ComponentType<RechartsYAxisProps>
   )
 );
 
+/**
+ * Dynamically import the Tooltip component.
+ *
+ * @returns The Tooltip component.
+ */
 export const Tooltip = CreateDynamicComponent(() =>
   import("recharts").then(
-    (mod) => mod.Tooltip as unknown as React.ComponentType<Record<string, unknown>>
+    (mod) =>
+      mod.Tooltip as unknown as React.ComponentType<RechartsTooltipProps<any, any>>
   )
 );
 

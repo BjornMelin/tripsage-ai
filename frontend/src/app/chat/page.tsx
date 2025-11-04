@@ -203,7 +203,7 @@ function ChatMessageItem({ message }: { message: UIMessage }) {
  *
  * @returns Chat interface with message history and input controls.
  */
-export default function chatPage(): ReactElement {
+export default function ChatPage(): ReactElement {
   // Get the current authenticated user ID for personalization
   const userId = useCurrentUserId();
 

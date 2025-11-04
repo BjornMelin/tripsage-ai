@@ -1,8 +1,15 @@
+/**
+ * @fileoverview Zustand store for authentication state and actions.
+ */
+
 import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { nowIso, secureId } from "@/lib/security/random";
 
-// Validation schemas
+/**
+ * Zod schema for validating user preferences.
+ */
 const USER_PREFERENCES_SCHEMA = z.object({
   analytics: z.boolean().optional(),
   autoSaveSearches: z.boolean().optional(),
@@ -24,6 +31,9 @@ const USER_PREFERENCES_SCHEMA = z.object({
   units: z.enum(["metric", "imperial"]).optional(),
 });
 
+/**
+ * Zod schema for validating user security.
+ */
 const USER_SECURITY_SCHEMA = z.object({
   lastPasswordChange: z.string().optional(),
   securityQuestions: z
@@ -37,6 +47,9 @@ const USER_SECURITY_SCHEMA = z.object({
   twoFactorEnabled: z.boolean().optional(),
 });
 
+/**
+ * Zod schema for validating user profile.
+ */
 const USER_SCHEMA = z.object({
   avatarUrl: z.string().url().optional(),
   bio: z.string().optional(),
@@ -54,6 +67,9 @@ const USER_SCHEMA = z.object({
   website: z.string().url().optional(),
 });
 
+/**
+ * Zod schema for validating token information.
+ */
 const TOKEN_INFO_SCHEMA = z.object({
   accessToken: z.string(),
   expiresAt: z.string(),
@@ -61,6 +77,9 @@ const TOKEN_INFO_SCHEMA = z.object({
   tokenType: z.string().default("Bearer"),
 });
 
+/**
+ * Zod schema for validating session information.
+ */
 const SESSION_SCHEMA = z.object({
   createdAt: z.string(),
   deviceInfo: z
@@ -76,19 +95,27 @@ const SESSION_SCHEMA = z.object({
   userId: z.string(),
 });
 
-// Types derived from schemas
+/**
+ * Types derived from schemas.
+ */
 export type User = z.infer<typeof USER_SCHEMA>;
 export type UserPreferences = z.infer<typeof USER_PREFERENCES_SCHEMA>;
 export type UserSecurity = z.infer<typeof USER_SECURITY_SCHEMA>;
 export type TokenInfo = z.infer<typeof TOKEN_INFO_SCHEMA>;
 export type Session = z.infer<typeof SESSION_SCHEMA>;
 
+/**
+ * Interface for login credentials.
+ */
 export interface LoginCredentials {
   email: string;
   password: string;
   rememberMe?: boolean;
 }
 
+/**
+ * Interface for register credentials.
+ */
 export interface RegisterCredentials {
   email: string;
   password: string;
@@ -98,17 +125,25 @@ export interface RegisterCredentials {
   acceptTerms: boolean;
 }
 
+/**
+ * Interface for password reset request.
+ */
 export interface PasswordResetRequest {
   email: string;
 }
 
+/**
+ * Interface for password reset.
+ */
 export interface PasswordReset {
   token: string;
   newPassword: string;
   confirmPassword: string;
 }
 
-// Authentication store interface
+/**
+ * Authentication store interface.
+ */
 interface AuthState {
   // Authentication state
   isAuthenticated: boolean;
@@ -169,17 +204,26 @@ interface AuthState {
 }
 
 // Helper functions
-const GENERATE_ID = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
+const GENERATE_ID = () => secureId(12);
+const GET_CURRENT_TIMESTAMP = () => nowIso();
 
-// Token validation helper
+/**
+ * Token validation helper.
+ *
+ * @param tokenInfo - The token information.
+ * @returns True if the token is expired, false otherwise.
+ */
 const IS_TOKEN_EXPIRED = (tokenInfo: TokenInfo | null): boolean => {
   if (!tokenInfo) return true;
   return new Date() >= new Date(tokenInfo.expiresAt);
 };
 
-// Session time remaining helper
+/**
+ * Session time remaining helper.
+ *
+ * @param session - The session information.
+ * @returns The time remaining in the session.
+ */
 const GET_SESSION_TIME_REMAINING = (session: Session | null): number => {
   if (!session) return 0;
   const now = Date.now();
@@ -187,7 +231,12 @@ const GET_SESSION_TIME_REMAINING = (session: Session | null): number => {
   return Math.max(0, expiresAt - now);
 };
 
-// User display name helper
+/**
+ * User display name helper.
+ *
+ * @param user - The user information.
+ * @returns The display name of the user.
+ */
 const GET_USER_DISPLAY_NAME = (user: User | null): string => {
   if (!user) return "";
 
@@ -197,6 +246,11 @@ const GET_USER_DISPLAY_NAME = (user: User | null): string => {
   return user.email.split("@")[0];
 };
 
+/**
+ * Zustand store for authentication state and actions.
+ *
+ * @returns The authentication store.
+ */
 export const useAuthStore = create<AuthState>()(
   devtools(
     persist(
@@ -222,6 +276,7 @@ export const useAuthStore = create<AuthState>()(
           }
         },
 
+        // Clear an error.
         clearError: (errorType) => {
           switch (errorType) {
             case "login":
@@ -279,6 +334,7 @@ export const useAuthStore = create<AuthState>()(
           }
         },
 
+        // Get active sessions.
         getActiveSessions: async () => {
           try {
             // Mock API call
@@ -291,6 +347,7 @@ export const useAuthStore = create<AuthState>()(
           }
         },
 
+        // Initialize the authentication store.
         initialize: async () => {
           const { tokenInfo, validateToken } = get();
 
@@ -465,6 +522,7 @@ export const useAuthStore = create<AuthState>()(
           }
         },
 
+        // Register a new user.
         register: async (credentials) => {
           set({ isRegistering: true, registerError: null });
 

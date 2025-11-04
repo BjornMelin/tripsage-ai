@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Client page for searching flights.
+ */
+
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
@@ -17,7 +21,13 @@ import type { FlightSearchParams } from "@/types/search";
 
 // URL search parameters are handled inline
 
-export default function flightSearchPage() {
+/**
+ * Client page for searching flights.
+ * This page displays a flight search form and popular routes.
+ *
+ * @returns A React component that displays a flight search form and popular routes.
+ */
+export default function FlightSearchPage() {
   const { initializeSearch, executeSearch } = useSearchStore();
   const router = useRouter();
   const { toast } = useToast();
@@ -155,6 +165,15 @@ export default function flightSearchPage() {
   );
 }
 
+/**
+ * Card component for displaying a popular route.
+ *
+ * @param origin - The origin of the route.
+ * @param destination - The destination of the route.
+ * @param price - The price of the route.
+ * @param date - The date of the route.
+ * @returns A React component that displays a popular route.
+ */
 function PopularRouteCard({
   origin,
   destination,
@@ -191,6 +210,13 @@ function PopularRouteCard({
   );
 }
 
+/**
+ * Component for displaying a travel tip.
+ *
+ * @param title - The title of the travel tip.
+ * @param description - The description of the travel tip.
+ * @returns A React component that displays a travel tip.
+ */
 function TravelTip({ title, description }: { title: string; description: string }) {
   return (
     <div className="p-4 border rounded-lg">

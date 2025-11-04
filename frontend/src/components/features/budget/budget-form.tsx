@@ -45,6 +45,7 @@ import {
   type ExpenseCategory,
   expenseCategorySchema,
 } from "@/lib/schemas/budget";
+import { secureUUID } from "@/lib/security/random";
 import { cn } from "@/lib/utils";
 
 // Augmented form data with additional UI state
@@ -68,6 +69,7 @@ const BudgetFormUiSchema = budgetFormSchema
     })
   );
 
+/** Type for the budget form view data */
 type BudgetFormViewData = z.infer<typeof BudgetFormUiSchema>;
 
 /** Interface for the BudgetForm component props */
@@ -155,7 +157,7 @@ export const BudgetForm = ({
         ]
       ).map((cat) => ({
         ...cat,
-        id: cat.id ?? crypto.randomUUID(),
+        id: cat.id ?? secureUUID(),
       })),
       currency: "USD",
       enableAlerts: true,
@@ -234,7 +236,7 @@ export const BudgetForm = ({
       const newCategory = {
         amount: 0,
         category: availableCategories[0].value as ExpenseCategory,
-        id: crypto.randomUUID(),
+        id: secureUUID(),
       };
       form.setValue("categories", [...categories, newCategory]);
     }

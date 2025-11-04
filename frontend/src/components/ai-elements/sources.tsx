@@ -2,6 +2,7 @@
  * @fileoverview AI Elements Sources components.
  * Minimal implementation using shadcn/ui Popover primitives.
  */
+
 "use client";
 
 import type * as React from "react";
@@ -62,7 +63,7 @@ export function SourcesContent({ className, ...props }: SourcesContentProps) {
       className={cn("w-96 p-3 text-sm", className)}
       align="end"
       sideOffset={8}
-      {...(props as React.ComponentPropsWithoutRef<typeof PopoverContent>)}
+      {...props}
     />
   );
 }

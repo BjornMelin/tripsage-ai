@@ -31,7 +31,7 @@ type SupportedAuthMethod =
  * Mock type that combines Vitest MockInstance with the original function type.
  * This allows mocks to be used as both spies and the original function signature.
  */
-type AuthMethodMock<T extends (...args: never[]) => unknown> = MockInstance<T> & T;
+type AuthMethodMock<T extends (...args: any[]) => any> = MockInstance<T> & T;
 
 /**
  * Type definition for a complete Supabase auth client mock.
@@ -48,7 +48,7 @@ export type SupabaseAuthMock = {
  * @param implementation The function implementation to mock
  * @returns A mocked function that can be used as both MockInstance and the original type
  */
-const CREATE_MOCK_FN = <T extends (...args: never[]) => unknown>(
+const CREATE_MOCK_FN = <T extends (...args: any[]) => any>(
   implementation: T
 ): AuthMethodMock<T> => vi.fn(implementation) as unknown as AuthMethodMock<T>;
 

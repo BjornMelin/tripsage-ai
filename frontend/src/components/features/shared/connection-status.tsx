@@ -196,16 +196,16 @@ const ConnectionQualityIndicator: React.FC<{ metrics: NetworkMetrics }> = ({
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1">
         {[
-          { height: 8, key: "bar-0", threshold: 25 },
-          { height: 10, key: "bar-1", threshold: 50 },
-          { height: 12, key: "bar-2", threshold: 75 },
-          { height: 14, key: "bar-3", threshold: 100 },
+          { height: 8, key: "bar-0", threshold: 0 },
+          { height: 10, key: "bar-1", threshold: 25 },
+          { height: 12, key: "bar-2", threshold: 50 },
+          { height: 14, key: "bar-3", threshold: 75 },
         ].map(({ key, height, threshold }) => (
           <motion.div
             key={key}
             className={cn(
               "w-1 rounded-full",
-              qualityScore > threshold ? "bg-green-500" : "bg-gray-300"
+              qualityScore >= threshold ? "bg-green-500" : "bg-gray-300"
             )}
             style={{ height: `${height}px` }}
             initial={{ opacity: 0, scaleY: 0 }}
