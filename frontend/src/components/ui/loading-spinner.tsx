@@ -120,7 +120,6 @@ const DotsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
       <div
         ref={ref}
         className={cn("flex space-x-1", className)}
-        // biome-ignore lint/a11y/useSemanticElements: Design system component maintains div with role
         role="status"
         aria-label="Loading"
         {...props}
@@ -168,7 +167,6 @@ const BarsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
       <div
         ref={ref}
         className={cn("flex items-center space-x-0.5", className)}
-        // biome-ignore lint/a11y/useSemanticElements: Design system component maintains div with role
         role="status"
         aria-label="Loading"
         {...props}
@@ -221,7 +219,6 @@ const PulseSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
           SpinnerVariants({ color }),
           className
         )}
-        // biome-ignore lint/a11y/useSemanticElements: Design system component maintains div with role
         role="status"
         aria-label="Loading"
         {...props}

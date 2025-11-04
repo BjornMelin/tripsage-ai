@@ -268,7 +268,7 @@ function DestinationDialog({
               </Button>
             </div>
             {formData.activities.map((activity, index) => (
-              <div key={index} className="flex gap-2">
+              <div key={activity} className="flex gap-2">
                 <Input
                   value={activity}
                   onChange={(event) => updateActivity(index, event.target.value)}
@@ -606,9 +606,9 @@ export function ItineraryBuilder({
                                       </p>
                                       <div className="flex flex-wrap gap-1">
                                         {destination.activities.map(
-                                          (activity, actIndex) => (
+                                          (activity, _actIndex) => (
                                             <Badge
-                                              key={actIndex}
+                                              key={activity}
                                               variant="secondary"
                                               className="text-xs"
                                             >

@@ -100,7 +100,7 @@ describe("handleChatStream", () => {
 
   it("emits usage metadata on finish and persists assistant message (stream stub)", async () => {
     type MessageRow = {
-      session_id: string;
+      sessionId: string;
       role: string;
       [key: string]: unknown;
     };
@@ -187,7 +187,7 @@ describe("handleChatStream", () => {
     expect(res.status).toBe(200);
     // assistant message persisted
     expect(memLog.length).toBe(1);
-    expect(memLog[0].session_id).toBe("s1");
+    expect(memLog[0].sessionId).toBe("s1");
     expect(memLog[0].role).toBe("assistant");
     // provider metadata present in start/finish
     expect(await startMeta).toMatchObject({ provider: "openai" });

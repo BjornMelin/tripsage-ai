@@ -11,7 +11,7 @@ type UseChatOptions = {
 type UseChatReturn = {
   clearError: () => void;
   error: Error | null;
-  experimental_resume: () => Promise<unknown>;
+  experimentalResume: () => Promise<unknown>;
   messages: UIMessage[];
   regenerate: () => void;
   sendMessage: (message: {
@@ -51,7 +51,7 @@ const USE_CHAT_SPY = vi.fn(
   (_opts: UseChatOptions): UseChatReturn => ({
     clearError: vi.fn(),
     error: null,
-    experimental_resume: vi.fn(async () => Promise.resolve()),
+    experimentalResume: vi.fn(async () => Promise.resolve()),
     messages: INITIAL_MESSAGES,
     regenerate: vi.fn(),
     sendMessage: vi.fn(),
@@ -74,7 +74,7 @@ describe("mid-stream resume continuity", () => {
 
     // Invoke the mocked resume to simulate reattach
     const ret = USE_CHAT_SPY.mock.results[0].value;
-    await ret.experimental_resume();
+    await ret.experimentalResume();
 
     // Ensure the same number of messages are rendered
     const rendered = await screen.findAllByTestId(/msg-/);
