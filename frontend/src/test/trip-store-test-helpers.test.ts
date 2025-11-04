@@ -64,30 +64,22 @@ const TO_TRIP_ROW = (input: TripInsert): TripRow => {
 
   return {
     budget: input.budget ?? null,
-    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     budget_breakdown: null,
-    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     created_at: now,
     currency: input.currency ?? "USD",
     description: input.description ?? "",
     destination: typeof input.destinations === "string" ? input.destinations : null,
-    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     end_date: input.endDate ?? null,
     id: Number(Date.now() + randomInt(0, 1000)),
     name: input.name ?? input.title ?? "Untitled Trip",
     preferences: {},
-    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     spent_amount: 0,
-    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     start_date: input.startDate ?? null,
     status: "planning",
     tags: [],
     title: input.title ?? input.name ?? "Untitled Trip",
-    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     updated_at: now,
-    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     user_id: "test-user-id",
-    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
     uuid_id: randomUUID(),
     visibility: input.isPublic ? "public" : "private",
   };
@@ -157,7 +149,6 @@ class TripQueryBuilder {
       const updated: TripRow = {
         ...filtered[0],
         ...this.updatePatch,
-        // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
         updated_at: new Date().toISOString(),
       };
       const index = tableData.findIndex((row) => row.id === filtered[0].id);
@@ -190,7 +181,6 @@ export const createTripStoreMockClient = (): Partial<SupabaseClient<unknown>> =>
     getSession: vi.fn(async () => ({
       data: {
         session: {
-          // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
           access_token: "test-token",
           user: { id: "test-user-id" },
         },

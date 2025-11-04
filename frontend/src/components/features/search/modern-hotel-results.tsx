@@ -12,7 +12,7 @@ import {
   Heart,
   Image as ImageIcon,
   List,
-  Map,
+  Map as MapIcon,
   MapPin,
   RefreshCw,
   Shield,
@@ -270,7 +270,7 @@ export function ModernHotelResults({
                 size="sm"
                 onClick={() => setViewMode("map")}
               >
-                <Map className="h-4 w-4" />
+                <MapIcon className="h-4 w-4" />
               </Button>
             )}
           </div>
@@ -386,7 +386,7 @@ export function ModernHotelResults({
                         <div className="flex items-center">
                           {[...Array(hotel.starRating)].map((_, i) => (
                             <Star
-                              key={`star-${i}`}
+                              key={`star-${i}-${hotel.name}`}
                               className="h-3 w-3 fill-yellow-400 text-yellow-400"
                             />
                           ))}

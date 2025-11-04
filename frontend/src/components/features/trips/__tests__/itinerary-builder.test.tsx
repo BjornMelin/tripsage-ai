@@ -4,32 +4,76 @@
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Trip } from "@/stores/trip-store";
 import { ItineraryBuilder } from "../itinerary-builder";
 
 // Mock the drag and drop library
+interface DragDropContextProps {
+  children: React.ReactNode;
+  onDragEnd: (result: unknown) => void;
+}
+
+// Interface for the Draggable component
+interface DraggableProvided {
+  draggableProps: Record<string, unknown>;
+  dragHandleProps: Record<string, unknown> | null;
+  innerRef: React.RefObject<HTMLElement | null>;
+}
+
+// Interface for the DraggableSnapshot component
+interface DraggableSnapshot {
+  isDragging: boolean;
+}
+
+// Interface for the Droppable component
+interface DroppableProvided {
+  droppableProps: Record<string, unknown>;
+  innerRef: React.RefObject<HTMLElement | null>;
+  placeholder: React.ReactElement;
+}
+
+// Interface for the Draggable component
+interface DraggableProps {
+  children: (
+    provided: DraggableProvided,
+    snapshot: DraggableSnapshot
+  ) => React.ReactNode;
+  draggableId: string;
+  index: number;
+}
+
+// Interface for the Droppable component
+interface DroppableProps {
+  children: (provided: DroppableProvided) => React.ReactNode;
+  droppableId: string;
+}
+
+// Mock the DragDropContext component
 vi.mock("@hello-pangea/dnd", () => ({
-  DragDropContext: ({ children, onDragEnd }: any) => {
+  DragDropContext: ({ children, onDragEnd }: DragDropContextProps) => {
     return (
       <div data-testid="drag-drop-context" data-on-drag-end={onDragEnd}>
         {children}
       </div>
     );
   },
-  Draggable: ({ children, draggableId, index: _index }: any) => {
-    const provided = {
+  // Mock the Draggable component
+  Draggable: ({ children, draggableId, index: _index }: DraggableProps) => {
+    const provided: DraggableProvided = {
       draggableProps: { "data-draggable-id": draggableId },
       dragHandleProps: { "data-drag-handle": true },
-      innerRef: vi.fn(),
+      innerRef: { current: null },
     };
-    const snapshot = { isDragging: false };
+    const snapshot: DraggableSnapshot = { isDragging: false };
     return children(provided, snapshot);
   },
-  Droppable: ({ children, droppableId }: any) => {
-    const provided = {
+  // Mock the Droppable component
+  Droppable: ({ children, droppableId }: DroppableProps) => {
+    const provided: DroppableProvided = {
       droppableProps: { "data-droppable-id": droppableId },
-      innerRef: vi.fn(),
+      innerRef: { current: null },
       placeholder: <div data-testid="droppable-placeholder" />,
     };
     return children(provided);
@@ -333,7 +377,7 @@ describe("ItineraryBuilder", () => {
   });
 
   describe("Custom Update Handler", () => {
-    it("should call onUpdateTrip when provided", async () => {
+    it("should call onUpdateTrip when provided", () => {
       const mockOnUpdateTrip = vi.fn();
       render(<ItineraryBuilder trip={mockTrip} onUpdateTrip={mockOnUpdateTrip} />);
 

@@ -38,6 +38,7 @@ const FormField = <
   );
 };
 
+// biome-ignore lint/style/useNamingConvention: This is a React hook
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext);
   const itemContext = React.useContext(FormItemContext);

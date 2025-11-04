@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  *
  * @returns A string of classes for the badge.
  */
-const badgeVariants = cva(
+const BadgeVariants = cva(
   "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     defaultVariants: {
@@ -41,7 +41,7 @@ const badgeVariants = cva(
  */
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
+    VariantProps<typeof BadgeVariants> {}
 
 /**
  * Badge component for displaying content in a badge-like format.
@@ -51,7 +51,7 @@ export interface BadgeProps
  * @returns A div with badge styling and ARIA role.
  */
 function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+  return <div className={cn(BadgeVariants({ variant }), className)} {...props} />;
 }
 
 /**
@@ -59,4 +59,4 @@ function Badge({ className, variant, ...props }: BadgeProps) {
  *
  * @returns An object containing the Badge component and variants.
  */
-export { Badge, badgeVariants };
+export { Badge, BadgeVariants };

@@ -9,7 +9,7 @@ import type {
 } from "@tanstack/react-query";
 import { QueryClient as TanStackQueryClient } from "@tanstack/react-query";
 import { vi } from "vitest";
-import { createMockUseQueryResult } from "@/test/mock-helpers";
+import { createMockUseQueryResult } from "@/test/mock-helpers.test";
 
 type MutationState<T, E, V> = {
   data: T | undefined;
@@ -70,12 +70,7 @@ export const createMockQueryClient = (): QueryClient =>
  * Build a controlled mutation result along with its controller helpers.
  * @returns A tuple containing the mutation result and controller.
  */
-export function createControlledMutation<
-  T,
-  E = Error,
-  V = void,
-  C = unknown,
->() {
+export function createControlledMutation<T, E = Error, V = void, C = unknown>() {
   const state: MutationState<T, E, V> = {
     data: undefined,
     error: null,
@@ -83,26 +78,16 @@ export function createControlledMutation<
     variables: undefined,
   };
 
-  const mutate = vi.fn(
-    (
-      variables: V,
-      _options?: MutateOptions<T, E, V, C>
-    ) => {
-      state.variables = variables;
-      state.status = "pending";
-      state.error = null;
-    }
-  );
+  const mutate = vi.fn((variables: V, _options?: MutateOptions<T, E, V, C>) => {
+    state.variables = variables;
+    state.status = "pending";
+    state.error = null;
+  });
 
-  const mutateAsync = vi.fn(
-    (
-      variables: V,
-      options?: MutateOptions<T, E, V, C>
-    ) => {
-      mutate(variables, options);
-      return state.data as T;
-    }
-  );
+  const mutateAsync = vi.fn((variables: V, options?: MutateOptions<T, E, V, C>) => {
+    mutate(variables, options);
+    return state.data as T;
+  });
 
   const reset = vi.fn(() => {
     state.data = undefined;
@@ -302,10 +287,7 @@ export function createControlledQuery<T, E = Error>() {
  * @param initialError Optional error to seed the query with.
  * @returns The mocked query result and controller.
  */
-export function mockUseQuery<T, E>(
-  initialData?: T,
-  initialError?: E
-) {
+export function mockUseQuery<T, E>(initialData?: T, initialError?: E) {
   const { query, controller } = createControlledQuery<T, E>();
 
   if (initialData !== undefined) {

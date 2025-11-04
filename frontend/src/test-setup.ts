@@ -7,7 +7,7 @@
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 import "@testing-library/jest-dom";
-import { createMockSupabaseClient } from "./test/mock-helpers";
+import { createMockSupabaseClient } from "./test/mock-helpers.test";
 
 type UnknownRecord = Record<string, unknown>;
 

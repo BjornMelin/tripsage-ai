@@ -2,7 +2,7 @@
 
 import type { RenderResult } from "@testing-library/react";
 import type { ReactElement } from "react";
-import type { RenderWithProvidersOptions } from "../test/test-utils";
+import type { RenderWithProvidersOptions } from "../test/test-utils.test";
 
 // Extend Vitest types to include environment stubbing methods
 declare module "vitest" {

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 /**
  * Loading spinner variants for different styles and sizes using class-variance-authority.
  */
-const spinnerVariants = cva("animate-spin", {
+const SpinnerVariants = cva("animate-spin", {
   defaultVariants: {
     color: "default",
     size: "md",
@@ -40,7 +40,7 @@ const spinnerVariants = cva("animate-spin", {
  */
 export interface LoadingSpinnerProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, "color">,
-    VariantProps<typeof spinnerVariants> {
+    VariantProps<typeof SpinnerVariants> {
   /** Visual variant of the spinner. */
   variant?: "default" | "dots" | "bars" | "pulse";
 }
@@ -50,7 +50,7 @@ export interface LoadingSpinnerProps
  */
 export interface SVGSpinnerProps
   extends Omit<React.SVGAttributes<SVGSVGElement>, "color">,
-    VariantProps<typeof spinnerVariants> {
+    VariantProps<typeof SpinnerVariants> {
   /** Visual variant of the spinner. */
   variant?: "default" | "dots" | "bars" | "pulse";
 }
@@ -66,7 +66,7 @@ const DefaultSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(spinnerVariants({ color, size }), className)}
+      className={cn(SpinnerVariants({ color, size }), className)}
       role="status"
       aria-label="Loading"
       {...props}
@@ -120,6 +120,7 @@ const DotsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
       <div
         ref={ref}
         className={cn("flex space-x-1", className)}
+        // biome-ignore lint/a11y/useSemanticElements: Design system component maintains div with role
         role="status"
         aria-label="Loading"
         {...props}
@@ -130,7 +131,7 @@ const DotsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
             className={cn(
               "animate-pulse rounded-full bg-current dots-spinner",
               dotSize,
-              spinnerVariants({ color })
+              SpinnerVariants({ color })
             )}
             style={{
               animationDelay: `${index * 0.15}s`,
@@ -167,6 +168,7 @@ const BarsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
       <div
         ref={ref}
         className={cn("flex items-center space-x-0.5", className)}
+        // biome-ignore lint/a11y/useSemanticElements: Design system component maintains div with role
         role="status"
         aria-label="Loading"
         {...props}
@@ -177,7 +179,7 @@ const BarsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
             className={cn(
               "animate-pulse rounded-full bg-current bars-spinner",
               barSize,
-              spinnerVariants({ color })
+              SpinnerVariants({ color })
             )}
             style={{
               animationDelay: `${index * 0.1}s`,
@@ -216,9 +218,10 @@ const PulseSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
         className={cn(
           "animate-ping rounded-full bg-current opacity-75",
           pulseSize,
-          spinnerVariants({ color }),
+          SpinnerVariants({ color }),
           className
         )}
+        // biome-ignore lint/a11y/useSemanticElements: Design system component maintains div with role
         role="status"
         aria-label="Loading"
         {...props}
@@ -257,4 +260,4 @@ const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
 
 LoadingSpinner.displayName = "LoadingSpinner";
 
-export { LoadingSpinner, spinnerVariants };
+export { LoadingSpinner, SpinnerVariants };

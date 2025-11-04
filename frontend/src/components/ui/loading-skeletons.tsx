@@ -34,7 +34,7 @@ export const AvatarSkeleton = React.forwardRef<HTMLDivElement, AvatarSkeletonPro
 AvatarSkeleton.displayName = "AvatarSkeleton";
 
 /**
- * Card skeleton component
+ * Card skeleton component interface
  */
 export interface CardSkeletonProps {
   hasImage?: boolean;
@@ -44,6 +44,9 @@ export interface CardSkeletonProps {
   className?: string;
 }
 
+/**
+ * Card skeleton component
+ */
 export const CardSkeleton = React.forwardRef<HTMLDivElement, CardSkeletonProps>(
   (
     {
@@ -89,7 +92,7 @@ export const CardSkeleton = React.forwardRef<HTMLDivElement, CardSkeletonProps>(
 CardSkeleton.displayName = "CardSkeleton";
 
 /**
- * List item skeleton component
+ * List item skeleton component interface
  */
 export interface ListItemSkeletonProps {
   hasAvatar?: boolean;
@@ -99,6 +102,9 @@ export interface ListItemSkeletonProps {
   className?: string;
 }
 
+/**
+ * List item skeleton component
+ */
 export const ListItemSkeleton = React.forwardRef<HTMLDivElement, ListItemSkeletonProps>(
   (
     {
@@ -138,7 +144,7 @@ export const ListItemSkeleton = React.forwardRef<HTMLDivElement, ListItemSkeleto
 ListItemSkeleton.displayName = "ListItemSkeleton";
 
 /**
- * Table skeleton component
+ * Table skeleton component interface
  */
 export interface TableSkeletonProps {
   rows?: number;
@@ -147,6 +153,9 @@ export interface TableSkeletonProps {
   className?: string;
 }
 
+/**
+ * Table skeleton component
+ */
 export const TableSkeleton = React.forwardRef<HTMLTableElement, TableSkeletonProps>(
   ({ rows = 5, columns = 4, hasHeader = true, className, ...props }, ref) => {
     return (
@@ -189,7 +198,7 @@ export const TableSkeleton = React.forwardRef<HTMLTableElement, TableSkeletonPro
 TableSkeleton.displayName = "TableSkeleton";
 
 /**
- * Form skeleton component
+ * Form skeleton component interface
  */
 export interface FormSkeletonProps {
   fields?: number;
@@ -197,6 +206,9 @@ export interface FormSkeletonProps {
   className?: string;
 }
 
+/**
+ * Form skeleton component
+ */
 export const FormSkeleton = React.forwardRef<HTMLDivElement, FormSkeletonProps>(
   ({ fields = 3, hasSubmitButton = true, className, ...props }, ref) => {
     return (
@@ -227,13 +239,16 @@ export const FormSkeleton = React.forwardRef<HTMLDivElement, FormSkeletonProps>(
 FormSkeleton.displayName = "FormSkeleton";
 
 /**
- * Chart/Graph skeleton component
+ * Chart/Graph skeleton component interface
  */
 export interface ChartSkeletonProps {
   type?: "bar" | "line" | "pie" | "area";
   className?: string;
 }
 
+/**
+ * Chart/Graph skeleton component
+ */
 export const ChartSkeleton = React.forwardRef<HTMLDivElement, ChartSkeletonProps>(
   ({ type = "bar", className, ...props }, ref) => {
     return (

@@ -14,7 +14,6 @@ import { vi } from "vitest";
 
 type UnknownRecord = Record<string, unknown>;
 
-
 type AuthClient = SupabaseClient<UnknownRecord>["auth"];
 
 type SupportedAuthMethod =
@@ -41,22 +40,24 @@ const CREATE_MOCK_FN = <T extends (...args: any[]) => any>(
   implementation: T
 ): AuthMethodMock<T> => vi.fn(implementation) as unknown as AuthMethodMock<T>;
 
-const CREATE_MOCK_USER = (): User => ({
-  app_metadata: {},
-  aud: "authenticated",
-  created_at: new Date(0).toISOString(),
-  email: "mock-user@example.com",
-  id: "mock-user-id",
-  user_metadata: {},
-} as User);
+const CREATE_MOCK_USER = (): User =>
+  ({
+    app_metadata: {},
+    aud: "authenticated",
+    created_at: new Date(0).toISOString(),
+    email: "mock-user@example.com",
+    id: "mock-user-id",
+    user_metadata: {},
+  }) as User;
 
-const CREATE_MOCK_SESSION = (user: User): Session => ({
-  access_token: "mock-access-token",
-  expires_in: 3_600,
-  refresh_token: "mock-refresh-token",
-  token_type: "bearer",
-  user,
-} as Session);
+const CREATE_MOCK_SESSION = (user: User): Session =>
+  ({
+    access_token: "mock-access-token",
+    expires_in: 3_600,
+    refresh_token: "mock-refresh-token",
+    token_type: "bearer",
+    user,
+  }) as Session;
 
 const CREATE_MOCK_SUBSCRIPTION = (
   callback: Subscription["callback"]
@@ -142,6 +143,9 @@ export const createMockSupabaseAuthClient = (): SupabaseAuthMock => {
   return result as SupabaseAuthMock;
 };
 
+/**
+ * Mock query builder class
+ */
 class MockQueryBuilder<T, S = T> {
   private singleData: S;
   private error: unknown;

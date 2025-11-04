@@ -6,7 +6,7 @@
 
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { render } from "@/test/test-utils";
+import { render } from "@/test/test-utils.test";
 import {
   ChatMessageSkeleton,
   DestinationSkeleton,

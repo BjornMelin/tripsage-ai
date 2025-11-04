@@ -6,7 +6,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resetTripStoreMockData } from "@/test/trip-store-test-helpers";
+import { resetTripStoreMockData } from "@/test/trip-store-test-helpers.test";
 import { type Destination, type Trip, useTripStore } from "../trip-store";
 
 // Mock setTimeout to make tests run faster

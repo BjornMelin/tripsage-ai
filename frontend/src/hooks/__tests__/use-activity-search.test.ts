@@ -5,7 +5,7 @@
 import { renderHook } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AllTheProviders } from "@/test/test-utils";
+import { AllTheProviders } from "@/test/test-utils.test";
 import type { ActivitySearchParams } from "@/types/search";
 import { useActivitySearch } from "../use-activity-search";
 
