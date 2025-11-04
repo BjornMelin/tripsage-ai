@@ -1,6 +1,6 @@
 /**
- * @fileoverview Trip Budget Form with Zod validation
- * Demonstrates latest validation patterns and error handling
+ * @fileoverview Trip budget form component with Zod validation and dynamic
+ * category allocation.
  */
 
 "use client";
@@ -48,7 +48,7 @@ import {
 import { secureUUID } from "@/lib/security/random";
 import { cn } from "@/lib/utils";
 
-// Augmented form data with additional UI state
+// Augmented form schema with UI-specific state fields
 const BudgetFormUiSchema = budgetFormSchema
   .extend({
     categories: z.array(
@@ -62,17 +62,14 @@ const BudgetFormUiSchema = budgetFormSchema
   .and(
     z.object({
       alertThreshold: z.number().min(50).max(95).optional(),
-      // UI-specific fields
       autoAllocate: z.boolean().optional(),
       enableAlerts: z.boolean().optional(),
       notes: z.string().max(500).optional(),
     })
   );
 
-/** Type for the budget form view data */
 type BudgetFormViewData = z.infer<typeof BudgetFormUiSchema>;
 
-/** Interface for the BudgetForm component props */
 interface BudgetFormProps {
   onSubmit: (data: BudgetFormViewData) => Promise<void>;
   onCancel?: () => void;
@@ -82,7 +79,7 @@ interface BudgetFormProps {
   className?: string;
 }
 
-/** Default currencies (would typically come from API) */
+// Default currency list (would typically come from API)
 const DefaultCurrencies = [
   { code: "USD", name: "US Dollar", symbol: "$" },
   { code: "EUR", name: "Euro", symbol: "€" },
@@ -92,7 +89,6 @@ const DefaultCurrencies = [
   { code: "AUD", name: "Australian Dollar", symbol: "A$" },
 ];
 
-/** Expense category options with descriptions */
 const ExpenseCategories = [
   {
     description: "Airfare and airline fees",
@@ -133,7 +129,6 @@ const ExpenseCategories = [
   { description: "Miscellaneous expenses", icon: "📝", label: "Other", value: "other" },
 ] as const;
 
-/** Component for the BudgetForm */
 export const BudgetForm = ({
   onSubmit,
   onCancel,
@@ -144,7 +139,6 @@ export const BudgetForm = ({
 }: BudgetFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  /** Form with custom validation and error handling */
   const form = useZodForm({
     defaultValues: {
       alertThreshold: 80,
@@ -177,7 +171,7 @@ export const BudgetForm = ({
     reValidateMode: "onChange",
     schema: BudgetFormUiSchema,
     transformSubmitData: (data) => {
-      /** Transform data before submission - remove UI-specific fields */
+      // Remove UI-specific fields before submission
       const {
         autoAllocate: _autoAllocate,
         enableAlerts: _enableAlerts,
@@ -190,28 +184,19 @@ export const BudgetForm = ({
     validateMode: "onChange",
   });
 
-  /** Watch form values for dynamic calculations */
   const totalAmount = form.watch("totalAmount");
-  /** Categories */
   const categories = form.watch("categories");
-  /** Auto allocate */
   const autoAllocate = form.watch("autoAllocate");
-  /** Currency */
   const currency = form.watch("currency");
 
-  /** Calculate allocations */
   const totalAllocated = categories.reduce((sum, category) => sum + category.amount, 0);
-  /** Remaining amount */
   const remainingAmount = totalAmount - totalAllocated;
-  /** Allocation percentage */
   const allocationPercentage =
     totalAmount > 0 ? (totalAllocated / totalAmount) * 100 : 0;
 
-  /** Get currency symbol */
   const currencySymbol =
     currencies.find((c) => c.code === currency)?.symbol || currency;
 
-  /** Auto-allocate funds when enabled */
   const handleAutoAllocate = useCallback(() => {
     if (!autoAllocate || totalAmount <= 0 || categories.length === 0) return;
 
@@ -226,7 +211,6 @@ export const BudgetForm = ({
     form.setValue("categories", newCategories);
   }, [autoAllocate, totalAmount, categories, form]);
 
-  /** Add category */
   const addCategory = () => {
     const availableCategories = ExpenseCategories.filter(
       (cat) => !categories.some((existing) => existing.category === cat.value)
@@ -242,13 +226,11 @@ export const BudgetForm = ({
     }
   };
 
-  /** Remove category */
   const removeCategory = (index: number) => {
     const newCategories = categories.filter((_, i) => i !== index);
     form.setValue("categories", newCategories);
   };
 
-  /** Handle form submission with enhanced error handling */
   const handleSubmit = form.handleSubmitSafe(
     async (data) => {
       setIsSubmitting(true);
@@ -263,14 +245,12 @@ export const BudgetForm = ({
     }
   );
 
-  /** React to auto-allocate changes */
   React.useEffect(() => {
     if (autoAllocate) {
       handleAutoAllocate();
     }
   }, [autoAllocate, handleAutoAllocate]);
 
-  /** Render the BudgetForm */
   return (
     <Card className={cn("w-full max-w-4xl mx-auto", className)}>
       <CardHeader>

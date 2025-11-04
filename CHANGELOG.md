@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Secure random ID utility with fallbacks: `frontend/src/lib/security/random.ts` exporting `secureUUID()`, `secureId()`, and `nowIso()`; Vitest coverage in `frontend/src/lib/security/random.test.ts`.
+
 - Dependency-injected handlers for App Router APIs:
   - Chat stream: `frontend/src/app/api/chat/stream/_handler.ts`
   - Chat (non-stream): `frontend/src/app/api/chat/_handler.ts`
@@ -49,6 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `docs/specs/0016-spec-react-compiler-enable.md`
 
 ### Changed
+
+- Replaced insecure/random ID generation across frontend stores and error pages with `secureId/secureUUID` and normalized timestamps via `nowIso`.
+- Removed server-side `Math.random` fallback for chat stream request IDs; use `secureUUID()` in `frontend/src/app/api/chat/stream/_handler.ts:1`.
+- Stabilized skeleton components: removed `Math.random` usage in `travel-skeletons.tsx` and `loading-skeletons.tsx` to ensure deterministic rendering.
+- Adopted PascalCase names for page components in App Router to align with ADR-0035.
 
 - Chat page now consumes AI SDK v6 `useChat` + `DefaultChatTransport`, removing the bespoke SSE parser and wiring Supabase user IDs into the payload (`frontend/src/app/chat/page.tsx`).
 - Chat page renders message `text` via AI Elements `Response` and shows `Sources` when `source-url` parts are present (`frontend/src/app/chat/page.tsx`).

@@ -16,6 +16,7 @@ import {
   countTokens,
 } from "@/lib/tokens/budget";
 import { getModelContextLimit } from "@/lib/tokens/limits";
+import { secureUUID } from "@/lib/security/random";
 
 /**
  * Type representing a resolved AI provider configuration.
@@ -200,10 +201,7 @@ export async function handleChatStream(
     system: systemPrompt,
   });
 
-  const reqId =
-    typeof globalThis.crypto?.randomUUID === "function"
-      ? globalThis.crypto.randomUUID()
-      : Math.random().toString(36).slice(2);
+  const reqId = secureUUID();
   deps.logger?.info?.("chat_stream:start", {
     model: provider.modelId,
     requestId: reqId,
