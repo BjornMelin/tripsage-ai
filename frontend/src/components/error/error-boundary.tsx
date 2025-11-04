@@ -140,7 +140,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 /**
  * Higher-order component to wrap components with error boundary
  */
-export function withErrorBoundary<P extends object>(
+export function WithErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
   errorBoundaryProps?: Omit<ErrorBoundaryProps, "children">
 ) {
@@ -150,7 +150,7 @@ export function withErrorBoundary<P extends object>(
     </ErrorBoundary>
   );
 
-  WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
+  WrappedComponent.displayName = `WithErrorBoundary(${Component.displayName || Component.name})`;
 
   return WrappedComponent;
 }

@@ -5,18 +5,58 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { UserProfile } from "@/stores/user-store";
 
 import { SecuritySection } from "../security-section";
 
 // Mock the stores and hooks
 const MockUpdateUser = vi.fn();
 
-const DefaultUser = {
+const DefaultUser: UserProfile = {
+  avatarUrl: undefined,
+  createdAt: "2024-01-01T00:00:00Z",
   email: "test@example.com",
+  favoriteDestinations: [],
   id: "1",
-  security: {
-    twoFactorEnabled: false,
+  personalInfo: {
+    bio: undefined,
+    dateOfBirth: undefined,
+    displayName: undefined,
+    emergencyContact: undefined,
+    firstName: undefined,
+    gender: undefined,
+    lastName: undefined,
+    location: undefined,
+    phoneNumber: undefined,
+    website: undefined,
   },
+  privacySettings: {
+    allowDataSharing: false,
+    enableAnalytics: true,
+    enableLocationTracking: false,
+    profileVisibility: "private",
+    showTravelHistory: false,
+  },
+  travelDocuments: [],
+  travelPreferences: {
+    accessibilityRequirements: [],
+    dietaryRestrictions: [],
+    excludedAirlines: [],
+    maxBudgetPerNight: undefined,
+    maxLayovers: 2,
+    preferredAccommodationType: "hotel",
+    preferredAirlines: [],
+    preferredArrivalTime: undefined,
+    preferredCabinClass: "economy",
+    preferredDepartureTime: undefined,
+    preferredHotelChains: [],
+    requireBreakfast: false,
+    requireGym: false,
+    requireParking: false,
+    requirePool: false,
+    requireWifi: true,
+  },
+  updatedAt: "2024-01-01T00:00:00Z",
 };
 
 const MockUserStore = {
@@ -33,7 +73,7 @@ vi.mock("@/stores/user-store", () => ({
 describe("SecuritySection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    MockUserStore.user = { ...DefaultUser } as any;
+    MockUserStore.user = { ...DefaultUser };
     MockUpdateUser.mockResolvedValue({});
   });
 
@@ -190,10 +230,12 @@ describe("SecuritySection", () => {
 
   describe("Error Handling", () => {
     it("should handle missing security settings gracefully", () => {
-      MockUserStore.user = {
-        ...MockUserStore.user!,
-        security: undefined as any,
-      };
+      if (MockUserStore.user) {
+        MockUserStore.user = {
+          ...MockUserStore.user,
+          personalInfo: undefined,
+        };
+      }
 
       render(<SecuritySection />);
 
@@ -202,7 +244,7 @@ describe("SecuritySection", () => {
     });
 
     it("should render with missing user data", () => {
-      MockUserStore.user = null as any;
+      MockUserStore.user = null as unknown as UserProfile;
 
       render(<SecuritySection />);
 

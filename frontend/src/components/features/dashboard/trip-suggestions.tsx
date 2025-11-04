@@ -189,12 +189,8 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
       </div>
 
       <div className="flex flex-wrap gap-1 mb-3">
-        {suggestion.highlights.slice(0, 3).map((highlight, index) => (
-          <Badge
-            key={`highlight-${highlight}-${index}`}
-            variant="outline"
-            className="text-xs"
-          >
+        {suggestion.highlights.slice(0, 3).map((highlight) => (
+          <Badge key={highlight} variant="outline" className="text-xs">
             {highlight}
           </Badge>
         ))}
@@ -355,8 +351,8 @@ export function TripSuggestions({
           <CardDescription>AI-powered travel recommendations</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <SuggestionCardSkeleton key={`skeleton-${i}`} />
+          {["skeleton-0", "skeleton-1"].map((id) => (
+            <SuggestionCardSkeleton key={id} />
           ))}
         </CardContent>
         <CardFooter>

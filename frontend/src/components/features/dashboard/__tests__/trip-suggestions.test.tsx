@@ -8,12 +8,13 @@
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type TripSuggestion, useTripSuggestions } from "@/hooks/use-trips";
+import type { Budget } from "@/lib/schemas/budget";
 import { render } from "@/test/test-utils";
 import { TripSuggestions } from "../trip-suggestions";
 
 /** Mock the stores with essential methods */
 const MockBudgetStore = {
-  activeBudget: null as any, // Allow both null and budget object
+  activeBudget: null as Budget | null,
   activeBudgetId: null,
 };
 

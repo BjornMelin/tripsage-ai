@@ -262,7 +262,7 @@ describe("Agent Workflow Integration Tests", () => {
       }
     });
 
-    it("updates metrics with real-time data using useOptimistic pattern", async () => {
+    it("updates metrics with real-time data using useOptimistic pattern", () => {
       const onAgentSelect = vi.fn();
 
       const { rerender } = renderWithProviders(
@@ -557,7 +557,7 @@ describe("Agent Workflow Integration Tests", () => {
       }
     });
 
-    it("handles real-time updates across all components", async () => {
+    it("handles real-time updates across all components", () => {
       const onAgentSelect = vi.fn();
       const onReconnect = vi.fn();
       const onOptimize = vi.fn();
