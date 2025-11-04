@@ -102,9 +102,15 @@ const CREATE_MOCK_STORAGE = (): Storage => {
 };
 
 class MockResizeObserver implements ResizeObserver {
-  observe(): void {}
-  unobserve(): void {}
-  disconnect(): void {}
+  observe(): void {
+    // Mock implementation - no-op
+  }
+  unobserve(): void {
+    // Mock implementation - no-op
+  }
+  disconnect(): void {
+    // Mock implementation - no-op
+  }
 }
 
 class MockIntersectionObserver implements IntersectionObserver {
@@ -112,9 +118,15 @@ class MockIntersectionObserver implements IntersectionObserver {
   readonly rootMargin = "";
   readonly thresholds: number[] = [];
 
-  observe(): void {}
-  unobserve(): void {}
-  disconnect(): void {}
+  observe(): void {
+    // Mock implementation - no-op
+  }
+  unobserve(): void {
+    // Mock implementation - no-op
+  }
+  disconnect(): void {
+    // Mock implementation - no-op
+  }
   takeRecords(): IntersectionObserverEntry[] {
     return [];
   }

@@ -89,7 +89,6 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
       <div
         ref={ref}
         className={cn("space-y-2", className)}
-        // biome-ignore lint/a11y/useSemanticElements: Design system component maintains div with role
         role="status"
         aria-label="Loading content..."
         {...props}

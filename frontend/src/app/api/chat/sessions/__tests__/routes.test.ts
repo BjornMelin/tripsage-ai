@@ -72,7 +72,7 @@ function buildReq(
 vi.mock("@/lib/supabase/server", () => {
   type StoreRow = Record<string, unknown>;
   type MockQueryBuilder = {
-    _rows: StoreRow[];
+    rows: StoreRow[];
     delete: ReturnType<typeof vi.fn>;
     eq: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
@@ -94,7 +94,6 @@ vi.mock("@/lib/supabase/server", () => {
         }
         const rows = store[table];
         const api: MockQueryBuilder = {
-          _rows: rows,
           delete: vi.fn(() => ({
             eq: vi.fn(() => ({
               eq: vi.fn(() => {
@@ -113,8 +112,9 @@ vi.mock("@/lib/supabase/server", () => {
             return Promise.resolve({ error: null });
           }),
           limit: vi.fn(() => api),
-          maybeSingle: vi.fn(async () => ({ data: api._rows[0] ?? null, error: null })),
-          order: vi.fn(async () => ({ data: api._rows, error: null })),
+          maybeSingle: vi.fn(async () => ({ data: api.rows[0] ?? null, error: null })),
+          order: vi.fn(async () => ({ data: api.rows, error: null })),
+          rows,
           select: vi.fn(() => api),
         };
         return api;
