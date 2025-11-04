@@ -2,10 +2,6 @@
  * @fileoverview Loading state components for full-screen, container, and button loading states.
  * Provides overlay, state wrapper, button loading, and container loading components with
  * customizable visual styles, progress indicators, and fallback content.
- *
- * Note: This file has biome semantic elements linting disabled because it correctly
- * uses ARIA role="status" for loading states, which is the proper accessibility pattern
- * per WAI-ARIA guidelines (biome incorrectly suggests <output> elements).
  */
 
 import * as React from "react";

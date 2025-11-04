@@ -2,10 +2,6 @@
  * @fileoverview Vitest global setup for the TripSage frontend.
  * Configures environment-wide mocks, testing-library cleanup, and helper wiring
  * to keep unit and integration tests deterministic and isolated.
- *
- * Note: This file has biome naming convention linting disabled because it mocks
- * browser APIs that must use their standardized names (ResizeObserver,
- * IntersectionObserver, CSS) as defined by web specifications.
  */
 
 import { cleanup } from "@testing-library/react";
