@@ -133,7 +133,7 @@ export function DestinationSearchForm({
     }
 
     if (query && query.length >= 2) {
-      suggestionsTimeoutRef.current = setTimeout(async () => {
+      suggestionsTimeoutRef.current = setTimeout(() => {
         setIsLoadingSuggestions(true);
         try {
           // Mock API call - replace with actual Google Places Autocomplete API
@@ -186,7 +186,7 @@ export function DestinationSearchForm({
     inputRef.current?.focus();
   };
 
-  function onSubmit(data: DestinationSearchFormValues) {
+  const handleSubmit = (data: DestinationSearchFormValues) => {
     const searchParams: DestinationSearchParams = {
       language: data.language,
       limit: data.limit,
@@ -200,7 +200,7 @@ export function DestinationSearchForm({
     if (onSearch) {
       onSearch(searchParams);
     }
-  }
+  };
 
   return (
     <Card>
@@ -212,7 +212,7 @@ export function DestinationSearchForm({
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -288,9 +288,9 @@ export function DestinationSearchForm({
                   <div className="flex flex-wrap gap-2">
                     {memoryContext.context.userPreferences.destinations
                       ?.slice(0, 6)
-                      .map((destination, idx) => (
+                      .map((destination) => (
                         <Badge
-                          key={idx}
+                          key={destination}
                           variant="outline"
                           className="cursor-pointer hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-700"
                           onClick={() => handlePopularDestinationClick(destination)}
@@ -314,9 +314,9 @@ export function DestinationSearchForm({
                     <div className="flex flex-wrap gap-2">
                       {memoryContext.context.travelPatterns.frequentDestinations
                         .slice(0, 4)
-                        .map((destination, idx) => (
+                        .map((destination) => (
                           <Badge
-                            key={idx}
+                            key={destination}
                             variant="outline"
                             className="cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors border-blue-200 text-blue-700"
                             onClick={() => handlePopularDestinationClick(destination)}
@@ -344,7 +344,7 @@ export function DestinationSearchForm({
                           memory.content.toLowerCase().includes("visit")
                       )
                       .slice(0, 3)
-                      .map((memory, idx) => {
+                      .map((memory) => {
                         // Extract destination names from memory content
                         const matches = memory.content.match(
                           /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g
@@ -352,7 +352,7 @@ export function DestinationSearchForm({
                         const destination = matches?.[0] || memory.content.slice(0, 20);
                         return (
                           <Badge
-                            key={idx}
+                            key={memory.content}
                             variant="outline"
                             className="cursor-pointer hover:bg-green-50 hover:border-green-300 transition-colors border-green-200 text-green-700"
                             onClick={() => handlePopularDestinationClick(destination)}

@@ -1,6 +1,7 @@
 /**
  * @fileoverview Unit tests for provider registry resolution.
  */
+
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 vi.mock("@/lib/supabase/rpc", () => ({
@@ -68,8 +69,12 @@ describe("resolveProvider", () => {
   });
 
   it("falls back to OpenRouter and does not attach headers when envs unset", async () => {
-    const env2 = { ...process.env } as typeof process.env & {
+    const env2 = {
+      ...process.env,
+    } as typeof process.env & {
+      // biome-ignore lint/style/useNamingConvention: Environment variable names must match actual env vars
       OPENROUTER_REFERER?: string;
+      // biome-ignore lint/style/useNamingConvention: Environment variable names must match actual env vars
       OPENROUTER_TITLE?: string;
     };
     env2.OPENROUTER_REFERER = undefined;

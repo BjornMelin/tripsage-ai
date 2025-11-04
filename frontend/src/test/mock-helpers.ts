@@ -14,10 +14,6 @@ import { vi } from "vitest";
 
 type UnknownRecord = Record<string, unknown>;
 
-interface QueryResponse<TData> {
-  data: TData;
-  error: unknown;
-}
 
 type AuthClient = SupabaseClient<UnknownRecord>["auth"];
 
@@ -33,7 +29,7 @@ type SupportedAuthMethod =
   | "signInWithOAuth"
   | "refreshSession";
 
-type AuthMethodMock<T extends (...args: any[]) => unknown> = MockInstance<T> & T;
+type AuthMethodMock<T extends (...args: any[]) => any> = MockInstance<T> & T;
 
 export type SupabaseAuthMock = {
   [K in SupportedAuthMethod]: AuthClient[K] extends (...args: any[]) => any
@@ -41,7 +37,7 @@ export type SupabaseAuthMock = {
     : never;
 };
 
-const CREATE_MOCK_FN = <T extends (...args: any[]) => unknown>(
+const CREATE_MOCK_FN = <T extends (...args: any[]) => any>(
   implementation: T
 ): AuthMethodMock<T> => vi.fn(implementation) as unknown as AuthMethodMock<T>;
 
@@ -52,7 +48,7 @@ const CREATE_MOCK_USER = (): User => ({
   email: "mock-user@example.com",
   id: "mock-user-id",
   user_metadata: {},
-});
+} as User);
 
 const CREATE_MOCK_SESSION = (user: User): Session => ({
   access_token: "mock-access-token",
@@ -60,7 +56,7 @@ const CREATE_MOCK_SESSION = (user: User): Session => ({
   refresh_token: "mock-refresh-token",
   token_type: "bearer",
   user,
-});
+} as Session);
 
 const CREATE_MOCK_SUBSCRIPTION = (
   callback: Subscription["callback"]
@@ -121,7 +117,7 @@ export const createMockSupabaseAuthClient = (): SupabaseAuthMock => {
     error: null,
   }));
 
-  const signInWithOAuth = CREATE_MOCK_FN<AuthClient["signInWithOAuth"]>(async () => ({
+  const signInWithOauth = CREATE_MOCK_FN<AuthClient["signInWithOAuth"]>(async () => ({
     data: { provider: "github", url: "" },
     error: null,
   }));
@@ -131,30 +127,27 @@ export const createMockSupabaseAuthClient = (): SupabaseAuthMock => {
     error: null,
   }));
 
-  return {
+  const result = {
     getSession,
     getUser,
     onAuthStateChange,
     refreshSession,
     resetPasswordForEmail,
-    signInWithOAuth,
     signInWithPassword,
     signOut,
     signUp,
     updateUser,
   };
+  (result as any).signInWithOAuth = signInWithOauth;
+  return result as SupabaseAuthMock;
 };
 
-class MockQueryBuilder<TAll, TSingle = TAll>
-  implements PromiseLike<QueryResponse<TAll>>
-{
-  private data: TAll;
-  private singleData: TSingle;
+class MockQueryBuilder<T, S = T> {
+  private singleData: S;
   private error: unknown;
 
   readonly select = vi.fn(() => this);
-  readonly insert = vi.fn((rows: TAll) => {
-    this.data = rows;
+  readonly insert = vi.fn((rows: T) => {
     this.singleData = this.toSingle(rows);
     return this;
   });
@@ -173,29 +166,12 @@ class MockQueryBuilder<TAll, TSingle = TAll>
   }));
 
   constructor(
-    initialData: TAll,
-    private readonly toSingle: (data: TAll) => TSingle,
+    initialData: T,
+    private readonly toSingle: (data: T) => S,
     error: unknown = null
   ) {
-    this.data = initialData;
     this.singleData = toSingle(initialData);
     this.error = error;
-  }
-
-  then<TResult1 = QueryResponse<TAll>, TResult2 = never>(
-    onFulfilled?:
-      | ((value: QueryResponse<TAll>) => TResult1 | PromiseLike<TResult1>)
-      | null
-      | undefined,
-    onRejected?:
-      | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-      | null
-      | undefined
-  ): Promise<TResult1 | TResult2> {
-    return Promise.resolve({ data: this.data, error: this.error }).then(
-      onFulfilled,
-      onRejected
-    );
   }
 }
 
@@ -208,7 +184,7 @@ export const createMockSupabaseClient = (): SupabaseClient<UnknownRecord> => {
   const from = vi.fn((_table: string) => {
     return new MockQueryBuilder<UnknownRecord[], UnknownRecord | null>(
       [],
-      (rows) => rows[0] ?? null
+      (rows: UnknownRecord[]) => rows[0] ?? null
     );
   });
 
@@ -242,16 +218,17 @@ export const createMockSupabaseClient = (): SupabaseClient<UnknownRecord> => {
 /**
  * Build a TanStack Query result mock for unit tests.
  */
-export const createMockUseQueryResult = <TData, TError = Error>(
-  data: TData | null = null,
-  error: TError | null = null,
+export const createMockUseQueryResult = <T, E = Error>(
+  data: T | null = null,
+  error: E | null = null,
   isLoading = false,
   isError = false
-): UseQueryResult<TData, TError> => {
-  const result: any = {
-    data: (data ?? undefined) as TData | undefined,
+): UseQueryResult<T, E> => {
+  const refetch = vi.fn();
+  const result = {
+    data: (data ?? undefined) as T | undefined,
     dataUpdatedAt: Date.now(),
-    error: (error ?? null) as TError | null,
+    error: (error ?? null) as E | null,
     errorUpdateCount: error ? 1 : 0,
     errorUpdatedAt: error ? Date.now() : 0,
     failureCount: error ? 1 : 0,
@@ -272,22 +249,23 @@ export const createMockUseQueryResult = <TData, TError = Error>(
     isRefetching: false,
     isStale: false,
     isSuccess: !isLoading && !isError && data !== null,
-    promise: Promise.resolve(data as TData),
+    promise: Promise.resolve(data as T),
+    refetch,
     status: isLoading ? "pending" : isError ? "error" : "success",
-  };
+  } as UseQueryResult<T, E>;
 
-  result.refetch = vi.fn(async () => result);
+  refetch.mockImplementation(async () => result);
 
-  return result as UseQueryResult<TData, TError>;
+  return result;
 };
 
 /**
  * Build a placeholder UseInfiniteQueryResult mock.
  */
-export const createMockInfiniteQueryResult = <TData, TError = Error>(
-  overrides: Partial<UseInfiniteQueryResult<TData, TError>> = {}
-): UseInfiniteQueryResult<TData, TError> => {
-  const result: any = {
+export const createMockInfiniteQueryResult = <T, E = Error>(
+  overrides: Partial<UseInfiniteQueryResult<T, E>> = {}
+): UseInfiniteQueryResult<T, E> => {
+  const result = {
     data: undefined,
     error: null,
     fetchNextPage: vi.fn(),
@@ -300,11 +278,12 @@ export const createMockInfiniteQueryResult = <TData, TError = Error>(
     isFetchingNextPage: false,
     isFetchingPreviousPage: false,
     isLoading: false,
+    isPending: false,
     isSuccess: true,
     refetch: vi.fn(),
     status: "success",
     ...overrides,
-  };
+  } as UseInfiniteQueryResult<T, E>;
 
-  return result as UseInfiniteQueryResult<TData, TError>;
+  return result;
 };

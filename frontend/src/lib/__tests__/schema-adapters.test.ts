@@ -9,9 +9,16 @@ import type { Destination, Trip } from "@/stores/trip-store";
 import {
   type ApiDestination,
   type ApiTrip,
+  apiDestinationToFrontend,
+  apiTripToFrontend,
   calculateTripDuration,
-  FrontendSchemaAdapter,
+  createEmptyTrip,
   formatTripDate,
+  frontendDestinationToApi,
+  frontendTripToApi,
+  handleApiError,
+  normalizeTrip,
+  validateTripForApi,
 } from "../schema-adapters";
 
 // Mock console.error to suppress error logs during testing
@@ -19,7 +26,7 @@ const MOCK_CONSOLE_ERROR = vi.spyOn(console, "error").mockImplementation(() => {
   // Suppress console.error during test
 });
 
-describe("FrontendSchemaAdapter", () => {
+describe("schema-adapters", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     MOCK_CONSOLE_ERROR.mockClear();
@@ -54,7 +61,7 @@ describe("FrontendSchemaAdapter", () => {
     };
 
     it("should convert API trip to frontend format with all fields", () => {
-      const result = FrontendSchemaAdapter.apiTripToFrontend(baseApiTrip);
+      const result = apiTripToFrontend(baseApiTrip);
 
       expect(result).toEqual({
         budget: 3000,
@@ -93,7 +100,7 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should set isPublic to true when visibility is public", () => {
       const publicTrip = { ...baseApiTrip, visibility: "public" as const };
-      const result = FrontendSchemaAdapter.apiTripToFrontend(publicTrip);
+      const result = apiTripToFrontend(publicTrip);
 
       expect(result.visibility).toBe("public");
       expect(result.isPublic).toBe(true);
@@ -115,7 +122,7 @@ describe("FrontendSchemaAdapter", () => {
         visibility: "private",
       };
 
-      const result = FrontendSchemaAdapter.apiTripToFrontend(minimalTrip);
+      const result = apiTripToFrontend(minimalTrip);
 
       expect(result.description).toBeUndefined();
       expect(result.budget).toBeUndefined();
@@ -126,14 +133,14 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle empty destinations array", () => {
       const tripWithNoDestinations = { ...baseApiTrip, destinations: [] };
-      const result = FrontendSchemaAdapter.apiTripToFrontend(tripWithNoDestinations);
+      const result = apiTripToFrontend(tripWithNoDestinations);
 
       expect(result.destinations).toEqual([]);
     });
 
     it("should handle shared visibility correctly", () => {
       const sharedTrip = { ...baseApiTrip, visibility: "shared" as const };
-      const result = FrontendSchemaAdapter.apiTripToFrontend(sharedTrip);
+      const result = apiTripToFrontend(sharedTrip);
 
       expect(result.visibility).toBe("shared");
       expect(result.isPublic).toBe(false);
@@ -176,7 +183,7 @@ describe("FrontendSchemaAdapter", () => {
     };
 
     it("should convert frontend trip to API format", () => {
-      const result = FrontendSchemaAdapter.frontendTripToApi(baseFrontendTrip);
+      const result = frontendTripToApi(baseFrontendTrip);
 
       expect(result).toEqual({
         budget: 3000,
@@ -205,7 +212,7 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should use title if available, fallback to name", () => {
       const tripWithoutTitle = { ...baseFrontendTrip, title: undefined };
-      const result = FrontendSchemaAdapter.frontendTripToApi(tripWithoutTitle);
+      const result = frontendTripToApi(tripWithoutTitle);
 
       expect(result.title).toBe("European Adventure"); // Falls back to name
     });
@@ -219,7 +226,7 @@ describe("FrontendSchemaAdapter", () => {
         startDate: "2025-06-01",
       };
 
-      const result = FrontendSchemaAdapter.frontendTripToApi(tripWithDifferentDates);
+      const result = frontendTripToApi(tripWithDifferentDates);
 
       expect(result.start_date).toBe("2025-07-01"); // Prefers snake_case
       expect(result.end_date).toBe("2025-07-15");
@@ -232,7 +239,7 @@ describe("FrontendSchemaAdapter", () => {
         start_date: undefined,
       };
 
-      const result = FrontendSchemaAdapter.frontendTripToApi(tripWithCamelCaseDates);
+      const result = frontendTripToApi(tripWithCamelCaseDates);
 
       expect(result.start_date).toBe("2025-06-01"); // Falls back to camelCase
       expect(result.end_date).toBe("2025-06-15");
@@ -245,7 +252,7 @@ describe("FrontendSchemaAdapter", () => {
         visibility: undefined,
       };
 
-      const result = FrontendSchemaAdapter.frontendTripToApi(publicTrip);
+      const result = frontendTripToApi(publicTrip);
 
       expect(result.visibility).toBe("public");
     });
@@ -258,7 +265,7 @@ describe("FrontendSchemaAdapter", () => {
         title: "Minimal Trip",
       };
 
-      const result = FrontendSchemaAdapter.frontendTripToApi(minimalTrip);
+      const result = frontendTripToApi(minimalTrip);
 
       expect(result.start_date).toBe("");
       expect(result.end_date).toBe("");
@@ -269,7 +276,7 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle empty destinations", () => {
       const tripWithEmptyDestinations = { ...baseFrontendTrip, destinations: [] };
-      const result = FrontendSchemaAdapter.frontendTripToApi(tripWithEmptyDestinations);
+      const result = frontendTripToApi(tripWithEmptyDestinations);
 
       expect(result.destinations).toEqual([]);
     });
@@ -287,7 +294,7 @@ describe("FrontendSchemaAdapter", () => {
     };
 
     it("should convert API destination to frontend format", () => {
-      const result = FrontendSchemaAdapter.apiDestinationToFrontend(baseApiDestination);
+      const result = apiDestinationToFrontend(baseApiDestination);
 
       expect(result).toEqual({
         activities: [],
@@ -302,9 +309,9 @@ describe("FrontendSchemaAdapter", () => {
     });
 
     it("should generate unique IDs for destinations", () => {
-      const dest1 = FrontendSchemaAdapter.apiDestinationToFrontend(baseApiDestination);
+      const dest1 = apiDestinationToFrontend(baseApiDestination);
       // Wait a small amount to ensure different timestamp
-      const dest2 = FrontendSchemaAdapter.apiDestinationToFrontend({
+      const dest2 = apiDestinationToFrontend({
         ...baseApiDestination,
         name: "Rome", // Different name to potentially get different ID
       });
@@ -320,7 +327,7 @@ describe("FrontendSchemaAdapter", () => {
         name: "Rome",
       };
 
-      const result = FrontendSchemaAdapter.apiDestinationToFrontend(minimalDestination);
+      const result = apiDestinationToFrontend(minimalDestination);
 
       expect(result).toEqual({
         activities: [],
@@ -335,7 +342,7 @@ describe("FrontendSchemaAdapter", () => {
     });
 
     it("should preserve coordinates when provided", () => {
-      const result = FrontendSchemaAdapter.apiDestinationToFrontend(baseApiDestination);
+      const result = apiDestinationToFrontend(baseApiDestination);
 
       expect(result.coordinates).toEqual({ latitude: 48.8566, longitude: 2.3522 });
     });
@@ -354,9 +361,7 @@ describe("FrontendSchemaAdapter", () => {
     };
 
     it("should convert frontend destination to API format", () => {
-      const result = FrontendSchemaAdapter.frontendDestinationToApi(
-        baseFrontendDestination
-      );
+      const result = frontendDestinationToApi(baseFrontendDestination);
 
       expect(result).toEqual({
         arrival_date: "2025-06-01",
@@ -375,7 +380,7 @@ describe("FrontendSchemaAdapter", () => {
         name: "Rome",
       };
 
-      const result = FrontendSchemaAdapter.frontendDestinationToApi(minimalDestination);
+      const result = frontendDestinationToApi(minimalDestination);
 
       expect(result).toEqual({
         arrival_date: undefined,
@@ -388,9 +393,7 @@ describe("FrontendSchemaAdapter", () => {
     });
 
     it("should preserve coordinates", () => {
-      const result = FrontendSchemaAdapter.frontendDestinationToApi(
-        baseFrontendDestination
-      );
+      const result = frontendDestinationToApi(baseFrontendDestination);
 
       expect(result.coordinates).toEqual({ latitude: 48.8566, longitude: 2.3522 });
     });
@@ -421,7 +424,7 @@ describe("FrontendSchemaAdapter", () => {
         visibility: "public",
       };
 
-      const result = FrontendSchemaAdapter.normalizeTrip(partialTrip);
+      const result = normalizeTrip(partialTrip);
 
       expect(result).toEqual({
         budget: 2000,
@@ -450,7 +453,7 @@ describe("FrontendSchemaAdapter", () => {
     it("should provide defaults for missing fields", () => {
       const emptyTrip: Partial<Trip> = {};
 
-      const result = FrontendSchemaAdapter.normalizeTrip(emptyTrip);
+      const result = normalizeTrip(emptyTrip);
 
       expect(result.id).toBe("");
       expect(result.name).toBe("Untitled Trip");
@@ -486,7 +489,7 @@ describe("FrontendSchemaAdapter", () => {
         startDate: "2025-06-01",
       };
 
-      const result = FrontendSchemaAdapter.normalizeTrip(tripWithBothFormats);
+      const result = normalizeTrip(tripWithBothFormats);
 
       // According to implementation: start_date || startDate
       expect(result.start_date).toBe("2025-07-01");
@@ -498,11 +501,11 @@ describe("FrontendSchemaAdapter", () => {
     });
 
     it("should set isPublic based on visibility", () => {
-      const publicTrip = FrontendSchemaAdapter.normalizeTrip({ visibility: "public" });
-      const privateTrip = FrontendSchemaAdapter.normalizeTrip({
+      const publicTrip = normalizeTrip({ visibility: "public" });
+      const privateTrip = normalizeTrip({
         visibility: "private",
       });
-      const sharedTrip = FrontendSchemaAdapter.normalizeTrip({ visibility: "shared" });
+      const sharedTrip = normalizeTrip({ visibility: "shared" });
 
       expect(publicTrip.isPublic).toBe(true);
       expect(privateTrip.isPublic).toBe(false);
@@ -510,7 +513,7 @@ describe("FrontendSchemaAdapter", () => {
     });
 
     it("should handle legacy isPublic field", () => {
-      const tripWithIsPublic = FrontendSchemaAdapter.normalizeTrip({ isPublic: true });
+      const tripWithIsPublic = normalizeTrip({ isPublic: true });
 
       expect(tripWithIsPublic.isPublic).toBe(true);
       expect(tripWithIsPublic.visibility).toBe("private"); // Default visibility
@@ -519,7 +522,7 @@ describe("FrontendSchemaAdapter", () => {
 
   describe("createEmptyTrip", () => {
     it("should create empty trip with defaults", () => {
-      const result = FrontendSchemaAdapter.createEmptyTrip();
+      const result = createEmptyTrip();
 
       expect(result.id).toBe("");
       expect(result.name).toBe("New Trip");
@@ -556,7 +559,7 @@ describe("FrontendSchemaAdapter", () => {
         visibility: "public",
       };
 
-      const result = FrontendSchemaAdapter.createEmptyTrip(overrides);
+      const result = createEmptyTrip(overrides);
 
       expect(result.name).toBe("Custom Trip");
       expect(result.title).toBe("New Trip"); // Still "New Trip" because title wasn't overridden
@@ -568,8 +571,8 @@ describe("FrontendSchemaAdapter", () => {
     });
 
     it("should generate consistent timestamps", () => {
-      const trip1 = FrontendSchemaAdapter.createEmptyTrip();
-      const trip2 = FrontendSchemaAdapter.createEmptyTrip();
+      const trip1 = createEmptyTrip();
+      const trip2 = createEmptyTrip();
 
       // Timestamps should be close but not necessarily identical
       const createdAt1 = trip1.created_at ?? "";
@@ -597,7 +600,7 @@ describe("FrontendSchemaAdapter", () => {
     };
 
     it("should validate a complete valid trip", () => {
-      const result = FrontendSchemaAdapter.validateTripForApi(validTrip);
+      const result = validateTripForApi(validTrip);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toEqual([]);
@@ -605,7 +608,7 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should require name or title", () => {
       const tripWithoutName = { ...validTrip, name: "", title: undefined };
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithoutName);
+      const result = validateTripForApi(tripWithoutName);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Trip must have a name or title");
@@ -617,7 +620,7 @@ describe("FrontendSchemaAdapter", () => {
         start_date: undefined,
         startDate: undefined,
       };
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithoutStartDate);
+      const result = validateTripForApi(tripWithoutStartDate);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Trip must have a start date");
@@ -629,7 +632,7 @@ describe("FrontendSchemaAdapter", () => {
         end_date: undefined,
         endDate: undefined,
       };
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithoutEndDate);
+      const result = validateTripForApi(tripWithoutEndDate);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Trip must have an end date");
@@ -641,7 +644,7 @@ describe("FrontendSchemaAdapter", () => {
         end_date: "2025-06-01", // End before start
         start_date: "2025-06-15",
       };
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithInvalidDates);
+      const result = validateTripForApi(tripWithInvalidDates);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("End date must be after start date");
@@ -653,7 +656,7 @@ describe("FrontendSchemaAdapter", () => {
         end_date: "2025-06-01", // Same dates
         start_date: "2025-06-01",
       };
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithSameDates);
+      const result = validateTripForApi(tripWithSameDates);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("End date must be after start date");
@@ -661,7 +664,7 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should require at least one destination", () => {
       const tripWithoutDestinations = { ...validTrip, destinations: [] };
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithoutDestinations);
+      const result = validateTripForApi(tripWithoutDestinations);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Trip must have at least one destination");
@@ -676,7 +679,7 @@ describe("FrontendSchemaAdapter", () => {
         start_date: "2025-06-15",
       };
 
-      const result = FrontendSchemaAdapter.validateTripForApi(invalidTrip);
+      const result = validateTripForApi(invalidTrip);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toHaveLength(3);
@@ -694,7 +697,7 @@ describe("FrontendSchemaAdapter", () => {
         startDate: "2025-06-01",
       };
 
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithCamelCaseDates);
+      const result = validateTripForApi(tripWithCamelCaseDates);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toEqual([]);
@@ -707,7 +710,7 @@ describe("FrontendSchemaAdapter", () => {
         start_date: "invalid-date",
       };
 
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithInvalidDates);
+      const result = validateTripForApi(tripWithInvalidDates);
 
       // Should not crash, but might have validation issues
       expect(result).toBeDefined();
@@ -726,7 +729,7 @@ describe("FrontendSchemaAdapter", () => {
         },
       };
 
-      const result = FrontendSchemaAdapter.handleApiError(error);
+      const result = handleApiError(error);
 
       expect(result).toBe("Invalid trip data provided");
     });
@@ -743,7 +746,7 @@ describe("FrontendSchemaAdapter", () => {
         },
       };
 
-      const result = FrontendSchemaAdapter.handleApiError(error);
+      const result = handleApiError(error);
 
       expect(result).toBe("Validation error: Start date must be in the future");
     });
@@ -759,7 +762,7 @@ describe("FrontendSchemaAdapter", () => {
         },
       };
 
-      const result = FrontendSchemaAdapter.handleApiError(error);
+      const result = handleApiError(error);
 
       expect(result).toBe("Validation error: Invalid data format");
     });
@@ -777,7 +780,7 @@ describe("FrontendSchemaAdapter", () => {
         },
       };
 
-      const result = FrontendSchemaAdapter.handleApiError(error);
+      const result = handleApiError(error);
 
       expect(result).toBe(
         "Title is required, Start date is invalid, End date must be after start date"
@@ -789,7 +792,7 @@ describe("FrontendSchemaAdapter", () => {
         message: "Network error occurred",
       };
 
-      const result = FrontendSchemaAdapter.handleApiError(error);
+      const result = handleApiError(error);
 
       expect(result).toBe("Network error occurred");
     });
@@ -799,22 +802,18 @@ describe("FrontendSchemaAdapter", () => {
         someUnknownProperty: "some value",
       };
 
-      const result = FrontendSchemaAdapter.handleApiError(error);
+      const result = handleApiError(error);
 
       expect(result).toBe("An unexpected error occurred");
     });
 
     it("should handle null/undefined errors", () => {
-      expect(FrontendSchemaAdapter.handleApiError(null)).toBe(
-        "An unexpected error occurred"
-      );
-      expect(FrontendSchemaAdapter.handleApiError(undefined)).toBe(
-        "An unexpected error occurred"
-      );
+      expect(handleApiError(null)).toBe("An unexpected error occurred");
+      expect(handleApiError(undefined)).toBe("An unexpected error occurred");
     });
 
     it("should handle string errors", () => {
-      const result = FrontendSchemaAdapter.handleApiError("Simple string error");
+      const result = handleApiError("Simple string error");
 
       expect(result).toBe("An unexpected error occurred");
     });
@@ -843,8 +842,8 @@ describe("FrontendSchemaAdapter", () => {
     it("should maintain data integrity through conversion cycles", () => {
       for (let i = 0; i < 10; i++) {
         const originalTrip = generateRandomTrip();
-        const normalized = FrontendSchemaAdapter.normalizeTrip(originalTrip);
-        const apiFormat = FrontendSchemaAdapter.frontendTripToApi(normalized);
+        const normalized = normalizeTrip(originalTrip);
+        const apiFormat = frontendTripToApi(normalized);
 
         // Core fields should be preserved
         expect(apiFormat.title).toBe(normalized.title);
@@ -872,10 +871,8 @@ describe("FrontendSchemaAdapter", () => {
 
       for (let i = 0; i < 10; i++) {
         const apiDestination = generateDestination();
-        const frontendDestination =
-          FrontendSchemaAdapter.apiDestinationToFrontend(apiDestination);
-        const backToApi =
-          FrontendSchemaAdapter.frontendDestinationToApi(frontendDestination);
+        const frontendDestination = apiDestinationToFrontend(apiDestination);
+        const backToApi = frontendDestinationToApi(frontendDestination);
 
         // Core data should be preserved
         expect(backToApi.name).toBe(apiDestination.name);
@@ -904,7 +901,7 @@ describe("FrontendSchemaAdapter", () => {
         visibility: "private",
       };
 
-      const result = FrontendSchemaAdapter.apiTripToFrontend(largeTrip);
+      const result = apiTripToFrontend(largeTrip);
 
       expect(result.destinations).toHaveLength(1000);
       expect(result.tags).toHaveLength(100);
@@ -921,9 +918,7 @@ describe("FrontendSchemaAdapter", () => {
         name: "Bad Coords City",
       };
 
-      const result = FrontendSchemaAdapter.apiDestinationToFrontend(
-        destinationWithBadCoords
-      );
+      const result = apiDestinationToFrontend(destinationWithBadCoords);
 
       expect(result.coordinates).toEqual({
         latitude: Number.NaN,
@@ -955,7 +950,7 @@ describe("FrontendSchemaAdapter", () => {
 
       // Should not crash even with circular references
       expect(() => {
-        FrontendSchemaAdapter.apiTripToFrontend(tripWithCircularRef);
+        apiTripToFrontend(tripWithCircularRef);
       }).not.toThrow();
     });
 
@@ -968,7 +963,7 @@ describe("FrontendSchemaAdapter", () => {
         title: undefined,
       };
 
-      const result = FrontendSchemaAdapter.normalizeTrip(tripWithNulls);
+      const result = normalizeTrip(tripWithNulls);
 
       expect(result.id).toBe("");
       expect(result.title).toBe("Untitled Trip");
@@ -998,7 +993,7 @@ describe("FrontendSchemaAdapter", () => {
         visibility: "private",
       };
 
-      const result = FrontendSchemaAdapter.apiTripToFrontend(specialCharsTrip);
+      const result = apiTripToFrontend(specialCharsTrip);
 
       expect(result.title).toBe("🌍 Trip with émojis & spëcial chârs! 中文");
       expect(result.description).toBe(
@@ -1031,7 +1026,7 @@ describe("FrontendSchemaAdapter", () => {
         visibility: "private",
       };
 
-      const result = FrontendSchemaAdapter.apiTripToFrontend(tripWithLongStrings);
+      const result = apiTripToFrontend(tripWithLongStrings);
 
       expect(result.title).toBe(longString);
       expect(result.description).toBe(longString);
@@ -1063,7 +1058,7 @@ describe("FrontendSchemaAdapter", () => {
           visibility: "private",
         };
 
-        FrontendSchemaAdapter.apiTripToFrontend(trip);
+        apiTripToFrontend(trip);
       }
 
       const endTime = performance.now();
@@ -1075,7 +1070,7 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle validation efficiently", () => {
       const trips = Array.from({ length: 1000 }, (_, i) =>
-        FrontendSchemaAdapter.createEmptyTrip({
+        createEmptyTrip({
           destinations: [{ country: "Test", id: "dest-1", name: "Test" }],
           end_date: "2025-06-15",
           id: `trip-${i}`,
@@ -1087,7 +1082,7 @@ describe("FrontendSchemaAdapter", () => {
       const startTime = performance.now();
 
       for (const trip of trips) {
-        FrontendSchemaAdapter.validateTripForApi(trip);
+        validateTripForApi(trip);
       }
 
       const endTime = performance.now();
@@ -1124,7 +1119,7 @@ describe("FrontendSchemaAdapter", () => {
         startDate: "2025-06-01", // Old format used camelCase
       };
 
-      const normalized = FrontendSchemaAdapter.normalizeTrip(legacyTrip);
+      const normalized = normalizeTrip(legacyTrip);
 
       expect(normalized.title).toBe("Legacy Trip");
       expect(normalized.name).toBe("Legacy Trip");
@@ -1142,7 +1137,7 @@ describe("FrontendSchemaAdapter", () => {
         updatedAt: "2025-01-01T12:00:00Z", // Mixed formats
       };
 
-      const normalized = FrontendSchemaAdapter.normalizeTrip(mixedTrip);
+      const normalized = normalizeTrip(mixedTrip);
 
       expect(normalized.start_date).toBe("2025-06-01");
       expect(normalized.startDate).toBe("2025-06-01");

@@ -6,7 +6,9 @@
 
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AgentStatusState } from "@/stores/agent-status-store";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
+import type { ChatState } from "@/stores/chat-store";
 import { useChatStore } from "@/stores/chat-store";
 import { render } from "@/test/test-utils";
 import { AgentStatusPanel, ChatLayout, ChatSidebar } from "../chat-layout";
@@ -28,16 +30,82 @@ vi.mock("next/navigation", () => ({
 describe("ChatLayout", () => {
   beforeEach(() => {
     // Mock store implementations
-    (useChatStore as any).mockReturnValue({
+    (useChatStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      addMessage: vi.fn(),
+      addPendingMessage: vi.fn(),
+      addToolResult: vi.fn(),
+      addTypingUser: vi.fn(),
+      autoSyncMemory: false,
+      clearError: vi.fn(),
+      clearMessages: vi.fn(),
+      clearPendingMessages: vi.fn(),
+      clearTypingUsers: vi.fn(),
+      connectionStatus: "disconnected" as const,
+      connectRealtime: vi.fn(),
       createSession: vi.fn(),
+      currentSession: null,
       currentSessionId: null,
+      deleteSession: vi.fn(),
+      disconnectRealtime: vi.fn(),
+      error: null,
+      exportSessionData: vi.fn(),
+      handleAgentStatusUpdate: vi.fn(),
+      handleRealtimeMessage: vi.fn(),
+      importSessionData: vi.fn(),
+      isLoading: false,
+      isRealtimeEnabled: false,
+      isStreaming: false,
+      memoryEnabled: false,
+      pendingMessages: [],
+      realtimeChannel: null,
+      removePendingMessage: vi.fn(),
+      removeTypingUser: vi.fn(),
+      removeUserTyping: vi.fn(),
+      renameSession: vi.fn(),
+      sendMessage: vi.fn(),
       sessions: [],
-    });
+      setAutoSyncMemory: vi.fn(),
+      setCurrentSession: vi.fn(),
+      setMemoryEnabled: vi.fn(),
+      setRealtimeEnabled: vi.fn(),
+      setUserTyping: vi.fn(),
+      stopStreaming: vi.fn(),
+      storeConversationMemory: vi.fn(),
+      streamMessage: vi.fn(),
+      syncMemoryToSession: vi.fn(),
+      toggleAutoSyncMemory: vi.fn(),
+      toggleMemory: vi.fn(),
+      typingUsers: {},
+      updateAgentStatus: vi.fn(),
+      updateMessage: vi.fn(),
+      updateSessionMemoryContext: vi.fn(),
+      updateTypingUser: vi.fn(),
+    } as ChatState);
 
-    (useAgentStatusStore as any).mockReturnValue({
+    (useAgentStatusStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       activeAgents: [],
+      addAgent: vi.fn(),
+      addAgentActivity: vi.fn(),
+      addAgentTask: vi.fn(),
+      agents: [],
+      completeAgentTask: vi.fn(),
+      currentSession: null,
+      currentSessionId: null,
+      endSession: vi.fn(),
+      error: null,
+      getActiveAgents: vi.fn(),
+      getCurrentSession: vi.fn(),
       isMonitoring: false,
-    });
+      lastUpdated: null,
+      resetAgentStatus: vi.fn(),
+      sessions: [],
+      setError: vi.fn(),
+      startSession: vi.fn(),
+      updateAgentProgress: vi.fn(),
+      updateAgentStatus: vi.fn(),
+      updateAgentTask: vi.fn(),
+      updateResourceUsage: vi.fn(),
+    } as AgentStatusState);
   });
 
   it("renders with children content", () => {
@@ -148,10 +216,30 @@ describe("AgentStatusPanel", () => {
   });
 
   it("shows no active agents message when no agents are active", () => {
-    (useAgentStatusStore as any).mockReturnValue({
+    (useAgentStatusStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       activeAgents: [],
+      addAgent: vi.fn(),
+      addAgentActivity: vi.fn(),
+      addAgentTask: vi.fn(),
+      agents: [],
+      completeAgentTask: vi.fn(),
+      currentSession: null,
+      currentSessionId: null,
+      endSession: vi.fn(),
+      error: null,
+      getActiveAgents: vi.fn(),
+      getCurrentSession: vi.fn(),
       isMonitoring: false,
-    });
+      lastUpdated: null,
+      resetAgentStatus: vi.fn(),
+      sessions: [],
+      setError: vi.fn(),
+      startSession: vi.fn(),
+      updateAgentProgress: vi.fn(),
+      updateAgentStatus: vi.fn(),
+      updateAgentTask: vi.fn(),
+      updateResourceUsage: vi.fn(),
+    } as AgentStatusState);
 
     render(<AgentStatusPanel />);
 
@@ -159,19 +247,53 @@ describe("AgentStatusPanel", () => {
   });
 
   it("shows active agents when available", () => {
-    (useAgentStatusStore as any).mockReturnValue({
-      activeAgents: [
+    const mockAgent = {
+      createdAt: new Date().toISOString(),
+      currentTaskId: "t1",
+      id: "1",
+      name: "Flight Agent",
+      progress: 75,
+      status: "active" as const,
+      tasks: [
         {
-          currentTaskId: "t1",
-          id: "1",
-          name: "Flight Agent",
+          completedAt: null,
+          createdAt: new Date().toISOString(),
+          description: "Searching for flights",
+          id: "t1",
           progress: 75,
-          status: "active",
-          tasks: [{ description: "Searching for flights", id: "t1" }],
+          status: "in_progress" as const,
+          title: "Search Flights",
+          updatedAt: new Date().toISOString(),
         },
       ],
+      type: "flight-search",
+      updatedAt: new Date().toISOString(),
+    };
+
+    (useAgentStatusStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      activeAgents: [mockAgent],
+      addAgent: vi.fn(),
+      addAgentActivity: vi.fn(),
+      addAgentTask: vi.fn(),
+      agents: [mockAgent],
+      completeAgentTask: vi.fn(),
+      currentSession: null,
+      currentSessionId: null,
+      endSession: vi.fn(),
+      error: null,
+      getActiveAgents: vi.fn(),
+      getCurrentSession: vi.fn(),
       isMonitoring: false,
-    });
+      lastUpdated: null,
+      resetAgentStatus: vi.fn(),
+      sessions: [],
+      setError: vi.fn(),
+      startSession: vi.fn(),
+      updateAgentProgress: vi.fn(),
+      updateAgentStatus: vi.fn(),
+      updateAgentTask: vi.fn(),
+      updateResourceUsage: vi.fn(),
+    } as unknown as AgentStatusState);
 
     render(<AgentStatusPanel />);
 
@@ -187,10 +309,30 @@ describe("AgentStatusPanel", () => {
   });
 
   it("displays loading state indicator", () => {
-    (useAgentStatusStore as any).mockReturnValue({
+    (useAgentStatusStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       activeAgents: [],
+      addAgent: vi.fn(),
+      addAgentActivity: vi.fn(),
+      addAgentTask: vi.fn(),
+      agents: [],
+      completeAgentTask: vi.fn(),
+      currentSession: null,
+      currentSessionId: null,
+      endSession: vi.fn(),
+      error: null,
+      getActiveAgents: vi.fn(),
+      getCurrentSession: vi.fn(),
       isMonitoring: true,
-    });
+      lastUpdated: null,
+      resetAgentStatus: vi.fn(),
+      sessions: [],
+      setError: vi.fn(),
+      startSession: vi.fn(),
+      updateAgentProgress: vi.fn(),
+      updateAgentStatus: vi.fn(),
+      updateAgentTask: vi.fn(),
+      updateResourceUsage: vi.fn(),
+    } as AgentStatusState);
 
     render(<AgentStatusPanel />);
 

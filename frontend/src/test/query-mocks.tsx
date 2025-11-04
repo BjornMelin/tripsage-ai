@@ -11,29 +11,29 @@ import { QueryClient as TanStackQueryClient } from "@tanstack/react-query";
 import { vi } from "vitest";
 import { createMockUseQueryResult } from "@/test/mock-helpers";
 
-type MutationState<TData, TError, TVariables> = {
-  data: TData | undefined;
-  error: TError | null;
+type MutationState<T, E, V> = {
+  data: T | undefined;
+  error: E | null;
   status: "idle" | "pending" | "success" | "error";
-  variables: TVariables | undefined;
+  variables: V | undefined;
 };
 
-type QueryState<TData, TError> = {
-  data: TData | undefined;
-  error: TError | null;
+type QueryState<T, E> = {
+  data: T | undefined;
+  error: E | null;
   status: "pending" | "success" | "error";
 };
 
 /**
  * Controller that allows tests to drive mutation state transitions manually.
  */
-export interface MutationController<TData, TError, TVariables> {
+export interface MutationController<T, E, V> {
   /** Set the mutation into a pending/loading state. */
-  triggerMutate: (variables: TVariables) => void;
+  triggerMutate: (variables: V) => void;
   /** Resolve the mutation with data. */
-  triggerSuccess: (data: TData) => void;
+  triggerSuccess: (data: T) => void;
   /** Reject the mutation with an error. */
-  triggerError: (error: TError) => void;
+  triggerError: (error: E) => void;
   /** Reset the mutation back to the idle state. */
   reset: () => void;
 }
@@ -41,13 +41,13 @@ export interface MutationController<TData, TError, TVariables> {
 /**
  * Controller that allows tests to drive query state transitions manually.
  */
-export interface QueryController<TData, TError> {
+export interface QueryController<T, E> {
   /** Set the query to loading/pending. */
   triggerLoading: () => void;
   /** Resolve the query with data. */
-  triggerSuccess: (data: TData) => void;
+  triggerSuccess: (data: T) => void;
   /** Reject the query with an error. */
-  triggerError: (error: TError) => void;
+  triggerError: (error: E) => void;
   /** Invoke the mock refetch handler. */
   triggerRefetch: () => void;
   /** Reset the query back to pending with no data. */
@@ -71,12 +71,12 @@ export const createMockQueryClient = (): QueryClient =>
  * @returns A tuple containing the mutation result and controller.
  */
 export function createControlledMutation<
-  TData,
-  TError = Error,
-  TVariables = void,
-  TContext = unknown,
+  T,
+  E = Error,
+  V = void,
+  C = unknown,
 >() {
-  const state: MutationState<TData, TError, TVariables> = {
+  const state: MutationState<T, E, V> = {
     data: undefined,
     error: null,
     status: "idle",
@@ -85,8 +85,8 @@ export function createControlledMutation<
 
   const mutate = vi.fn(
     (
-      variables: TVariables,
-      _options?: MutateOptions<TData, TError, TVariables, TContext>
+      variables: V,
+      _options?: MutateOptions<T, E, V, C>
     ) => {
       state.variables = variables;
       state.status = "pending";
@@ -95,12 +95,12 @@ export function createControlledMutation<
   );
 
   const mutateAsync = vi.fn(
-    async (
-      variables: TVariables,
-      options?: MutateOptions<TData, TError, TVariables, TContext>
+    (
+      variables: V,
+      options?: MutateOptions<T, E, V, C>
     ) => {
       mutate(variables, options);
-      return state.data as TData;
+      return state.data as T;
     }
   );
 
@@ -111,8 +111,8 @@ export function createControlledMutation<
     state.variables = undefined;
   });
 
-  const mutation: UseMutationResult<TData, TError, TVariables, TContext> = {
-    context: undefined as TContext,
+  const mutation: UseMutationResult<T, E, V, C> = {
+    context: undefined as C,
     data: state.data,
     error: state.error,
     failureCount: 0,
@@ -131,9 +131,9 @@ export function createControlledMutation<
     status: "idle",
     submittedAt: Date.now(),
     variables: state.variables,
-  } as UseMutationResult<TData, TError, TVariables, TContext>;
+  } as UseMutationResult<T, E, V, C>;
 
-  const controller: MutationController<TData, TError, TVariables> = {
+  const controller: MutationController<T, E, V> = {
     reset: () => {
       reset();
       Object.assign(mutation, {
@@ -147,7 +147,7 @@ export function createControlledMutation<
         variables: undefined,
       });
     },
-    triggerError: (error: TError) => {
+    triggerError: (error: E) => {
       state.data = undefined;
       state.error = error;
       state.status = "error";
@@ -163,7 +163,7 @@ export function createControlledMutation<
         status: "error" as const,
       });
     },
-    triggerMutate: (variables: TVariables) => {
+    triggerMutate: (variables: V) => {
       mutate(variables);
       Object.assign(mutation, {
         error: null,
@@ -175,7 +175,7 @@ export function createControlledMutation<
         variables,
       });
     },
-    triggerSuccess: (data: TData) => {
+    triggerSuccess: (data: T) => {
       state.data = data;
       state.error = null;
       state.status = "success";
@@ -198,22 +198,22 @@ export function createControlledMutation<
  * Convenience helper returning only the mutation result for simple tests.
  * @returns A mocked mutation result along with its controller.
  */
-export function mockUseMutation<TData, TError, TVariables, TContext = unknown>() {
-  return createControlledMutation<TData, TError, TVariables, TContext>();
+export function mockUseMutation<T, E, V, C = unknown>() {
+  return createControlledMutation<T, E, V, C>();
 }
 
 /**
  * Build a controlled query result together with a controller.
  * @returns A tuple containing the query result and controller.
  */
-export function createControlledQuery<TData, TError = Error>() {
-  const state: QueryState<TData, TError> = {
+export function createControlledQuery<T, E = Error>() {
+  const state: QueryState<T, E> = {
     data: undefined,
     error: null,
     status: "pending",
   };
 
-  const query = createMockUseQueryResult<TData, TError>(null, null, true, false);
+  const query = createMockUseQueryResult<T, E>(null, null, true, false);
   query.status = "pending";
   query.fetchStatus = "idle";
   query.isPending = true;
@@ -225,7 +225,7 @@ export function createControlledQuery<TData, TError = Error>() {
   query.data = undefined;
   query.error = null;
 
-  const controller: QueryController<TData, TError> = {
+  const controller: QueryController<T, E> = {
     reset: () => {
       state.data = undefined;
       state.error = null;
@@ -244,7 +244,7 @@ export function createControlledQuery<TData, TError = Error>() {
         status: "pending" as const,
       });
     },
-    triggerError: (error: TError) => {
+    triggerError: (error: E) => {
       state.data = undefined;
       state.error = error;
       state.status = "error";
@@ -272,9 +272,9 @@ export function createControlledQuery<TData, TError = Error>() {
       });
     },
     triggerRefetch: () => {
-      void query.refetch();
+      query.refetch();
     },
-    triggerSuccess: (data: TData) => {
+    triggerSuccess: (data: T) => {
       state.data = data;
       state.error = null;
       state.status = "success";
@@ -302,11 +302,11 @@ export function createControlledQuery<TData, TError = Error>() {
  * @param initialError Optional error to seed the query with.
  * @returns The mocked query result and controller.
  */
-export function mockUseQuery<TData, TError>(
-  initialData?: TData,
-  initialError?: TError
+export function mockUseQuery<T, E>(
+  initialData?: T,
+  initialError?: E
 ) {
-  const { query, controller } = createControlledQuery<TData, TError>();
+  const { query, controller } = createControlledQuery<T, E>();
 
   if (initialData !== undefined) {
     controller.triggerSuccess(initialData);

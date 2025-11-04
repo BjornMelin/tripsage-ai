@@ -85,6 +85,7 @@ export class ApiClientError extends Error {
    *
    * @returns JSON representation of the error with all properties.
    */
+  // biome-ignore lint/style/useNamingConvention: Standard method name
   public toJSON() {
     return {
       code: this.code,
@@ -459,6 +460,7 @@ export class ApiClient {
    * @returns Promise that resolves with the response data.
    */
   // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
+  // biome-ignore lint/style/useNamingConvention: TypeScript generic type parameter convention
   public async get<TResponse = unknown>(
     endpoint: string,
     options: Omit<RequestConfig<never, TResponse>, "endpoint" | "method"> = {}
@@ -479,6 +481,7 @@ export class ApiClient {
    * @returns Promise that resolves with the response data.
    */
   // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
+  // biome-ignore lint/style/useNamingConvention: TypeScript generic type parameter convention
   public async post<TRequest = unknown, TResponse = unknown>(
     endpoint: string,
     data?: TRequest,
@@ -504,6 +507,7 @@ export class ApiClient {
    * @returns Promise that resolves with the response data.
    */
   // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
+  // biome-ignore lint/style/useNamingConvention: TypeScript generic type parameter convention
   public async put<TRequest = unknown, TResponse = unknown>(
     endpoint: string,
     data?: TRequest,
@@ -529,6 +533,7 @@ export class ApiClient {
    * @returns Promise that resolves with the response data.
    */
   // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
+  // biome-ignore lint/style/useNamingConvention: TypeScript generic type parameter convention
   public async patch<TRequest = unknown, TResponse = unknown>(
     endpoint: string,
     data?: TRequest,
@@ -553,6 +558,7 @@ export class ApiClient {
    * @returns Promise that resolves with the response data.
    */
   // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
+  // biome-ignore lint/style/useNamingConvention: TypeScript generic type parameter convention
   public async delete<TResponse = unknown>(
     endpoint: string,
     options: Omit<RequestConfig<never, TResponse>, "endpoint" | "method"> = {}
@@ -596,6 +602,7 @@ export class ApiClient {
    * @returns Promise that resolves with validated response data.
    */
   // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
+  // biome-ignore lint/style/useNamingConvention: TypeScript generic type parameter convention
   public async postValidated<TRequest, TResponse>(
     endpoint: string,
     data: TRequest,
@@ -620,6 +627,7 @@ export class ApiClient {
    * @returns Promise that resolves with validated response data.
    */
   // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
+  // biome-ignore lint/style/useNamingConvention: TypeScript generic type parameter convention
   public async putValidated<TRequest, TResponse>(
     endpoint: string,
     data: TRequest,
@@ -644,6 +652,7 @@ export class ApiClient {
    * @returns Promise that resolves with validated response data.
    */
   // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
+  // biome-ignore lint/style/useNamingConvention: TypeScript generic type parameter convention
   public async patchValidated<TRequest, TResponse>(
     endpoint: string,
     data: TRequest,
@@ -666,6 +675,7 @@ export class ApiClient {
    * @returns Promise that resolves with validated response data.
    */
   // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
+  // biome-ignore lint/style/useNamingConvention: TypeScript generic type parameter convention
   public async deleteValidated<TResponse>(
     endpoint: string,
     responseSchema: z.ZodType<TResponse>,
@@ -740,7 +750,7 @@ export class ApiClient {
 const defaultClient = new ApiClient();
 
 // Add common request interceptor for authentication
-defaultClient.addRequestInterceptor(async (config) => {
+defaultClient.addRequestInterceptor((config) => {
   // Add any common request modifications here
   return config;
 });

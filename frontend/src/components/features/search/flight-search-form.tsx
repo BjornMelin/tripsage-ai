@@ -135,7 +135,9 @@ export function FlightSearchForm({
           return;
         }
 
-        await onSearch(validationResult.data!);
+        // Type assertion is safe here since success=true guarantees data is present
+        const validatedData = validationResult.data as FlightSearchFormData;
+        await onSearch(validatedData);
       } catch (error) {
         console.error("Search failed:", error);
         setFormError(
