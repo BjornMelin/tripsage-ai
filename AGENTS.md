@@ -13,7 +13,7 @@ For detailed project structure information, see [docs/architecture/project-struc
 - `tripsage/api/` hosts the FastAPI application entry point and core API logic.
 - `tripsage_core/` holds domain services, models, and shared exceptions—extend
   logic here, not in API layers. Services are split into `business/` and `infrastructure/` subdirectories.
-- `frontend/src/` is the Next.js 15 workspace with `app/`, `components/`, `lib/`, `hooks/`, `contexts/`, `stores/`, `types/`, and `schemas/` directories.
+- `frontend/src/` is the Next.js 16 workspace with `app/`, `components/`, `lib/`, `hooks/`, `contexts/`, `stores/`, `types/`, and `schemas/` directories.
 - `tests/` splits into `unit/`, `integration/`, `e2e/`, `performance/`, and `security/`; fixtures live in `tests/fixtures/` and `tests/factories/`.
 - Supporting automation sits in `scripts/` and `docker/`; configuration samples ship with `.env.example`.
 
@@ -30,6 +30,14 @@ For detailed project structure information, see [docs/architecture/project-struc
   Playwright.
 - Containers: `docker-compose up --build` spins the stack with Supabase
   services.
+
+## Frontend Agent Instructions (MANDATORY)
+
+- When working on any files under `frontend/` (including `@frontend/*` paths or imports aliased to `@/` inside the frontend workspace), you MUST read and follow `frontend/AGENTS.md`.
+- The instructions in `frontend/AGENTS.md` are the single source of truth for the frontend stack (Next.js 16, React 19, AI SDK v6, Supabase SSR, Upstash, Tailwind v4, Biome, Vitest). They supersede and take precedence over root‑level guidance wherever there is overlap within the `frontend/` directory tree.
+- Always load and reference `frontend/AGENTS.md` before making changes in `frontend/`. Start here:
+  - Frontend Guide: `frontend/AGENTS.md`
+  - Entry points and examples referenced inside the guide include: `frontend/src/app/chat/page.tsx`, `frontend/src/app/api/**/route.ts`, `frontend/src/lib/providers/registry.ts`, `frontend/middleware.ts`.
 
 ## Coding Style & Naming Conventions
 
