@@ -20,17 +20,17 @@ import {
   validate,
 } from "../validation";
 
-// Form options
-interface UseZodFormOptions<T extends FieldValues> extends UseFormProps<T> {
-  // biome-ignore-next-line lint/suspicious/noExplicitAny
-  schema: z.ZodObject<any> | z.ZodType<T>;
+// Form options - using a data type parameter to avoid complex generic constraints
+interface UseZodFormOptions<Data extends FieldValues>
+  extends Omit<UseFormProps<Data>, "resolver"> {
+  schema: z.ZodType<Data>;
   validateMode?: "onSubmit" | "onBlur" | "onChange" | "onTouched" | "all";
   reValidateMode?: "onSubmit" | "onBlur" | "onChange";
   enableAsyncValidation?: boolean;
   debounceValidation?: number;
-  transformSubmitData?: (data: T) => T | Promise<T>;
-  onValidationError?: (errors: ValidationResult<T>) => void;
-  onSubmitSuccess?: (data: T) => void | Promise<void>;
+  transformSubmitData?: (data: Data) => Data | Promise<Data>;
+  onValidationError?: (errors: ValidationResult<Data>) => void;
+  onSubmitSuccess?: (data: Data) => void | Promise<void>;
   onSubmitError?: (error: Error) => void;
 
   // Wizard options
@@ -89,9 +89,9 @@ interface UseZodFormReturn<T extends FieldValues> extends UseFormReturn<T> {
 }
 
 // Custom hook for enhanced Zod form handling
-export function useZodForm<T extends FieldValues>(
-  options: UseZodFormOptions<T>
-): UseZodFormReturn<T> {
+export function useZodForm<Data extends FieldValues>(
+  options: UseZodFormOptions<Data>
+): UseZodFormReturn<Data> {
   const {
     schema,
     transformSubmitData,
@@ -103,9 +103,9 @@ export function useZodForm<T extends FieldValues>(
   } = options;
 
   // Initialize React Hook Form with Zod resolver
-  // biome-ignore-next-line lint/suspicious/noExplicitAny
-  const form = useForm<T>({
+  const form = useForm<Data>({
     mode: options.validateMode || "onChange",
+    // biome-ignore lint/suspicious/noExplicitAny: zodResolver requires flexible schema typing
     resolver: zodResolver(schema as any),
     reValidateMode: options.reValidateMode || "onChange",
     ...formOptions,
@@ -125,11 +125,14 @@ export function useZodForm<T extends FieldValues>(
 
   // Validate individual field
   const validateField = useCallback(
-    (fieldName: FieldPath<T>, value: unknown): Promise<ValidationResult<unknown>> => {
+    (
+      fieldName: FieldPath<Data>,
+      value: unknown
+    ): Promise<ValidationResult<unknown>> => {
       try {
         // In Zod v4, we can't access .shape directly. Instead, validate the whole object
         // and extract field-specific errors if validation fails
-        const testData = { [fieldName]: value } as Partial<T>;
+        const testData = { [fieldName]: value } as Partial<Data>;
 
         // Create a partial schema for validation - handle both object and other schema types
         let partialSchema: z.ZodType<unknown>;
@@ -176,12 +179,16 @@ export function useZodForm<T extends FieldValues>(
   );
 
   // Validate all fields
-  const validateAllFields = useCallback((): Promise<ValidationResult<T>> => {
+  const validateAllFields = useCallback((): Promise<ValidationResult<Data>> => {
     setValidationState((prev) => ({ ...prev, isValidating: true }));
 
     try {
       const formData = form.getValues();
-      const result = validate(schema as z.ZodType<T>, formData, ValidationContext.Form);
+      const result = validate(
+        schema as z.ZodType<Data>,
+        formData,
+        ValidationContext.Form
+      );
 
       setValidationState((prev) => ({
         ...prev,
@@ -193,10 +200,10 @@ export function useZodForm<T extends FieldValues>(
       }));
 
       if (!result.success && onValidationError) {
-        onValidationError(result as ValidationResult<T>);
+        onValidationError(result as ValidationResult<Data>);
       }
 
-      return Promise.resolve(result as ValidationResult<T>);
+      return Promise.resolve(result as ValidationResult<Data>);
     } catch (error) {
       const validationResult = {
         errors: [
@@ -228,8 +235,8 @@ export function useZodForm<T extends FieldValues>(
   // Safe submit handler with enhanced error handling
   const handleSubmitSafe = useCallback(
     (
-      onValid: (data: T) => void | Promise<void>,
-      onInvalid?: (errors: ValidationResult<T>) => void
+      onValid: (data: Data) => void | Promise<void>,
+      onInvalid?: (errors: ValidationResult<Data>) => void
     ) =>
       async (e?: React.BaseSyntheticEvent) => {
         e?.preventDefault();
@@ -246,7 +253,7 @@ export function useZodForm<T extends FieldValues>(
           }
 
           // Transform data if transformer provided
-          let submitData: T;
+          let submitData: Data;
           if (!validationResult.data) {
             return;
           }
@@ -275,7 +282,7 @@ export function useZodForm<T extends FieldValues>(
           if (error instanceof TripSageValidationError) {
             const formErrors = error.getFieldErrors();
             Object.entries(formErrors).forEach(([field, message]) => {
-              form.setError(field as FieldPath<T>, { message, type: "manual" });
+              form.setError(field as FieldPath<Data>, { message, type: "manual" });
             });
           }
         }
@@ -285,7 +292,7 @@ export function useZodForm<T extends FieldValues>(
 
   // Helper methods
   const isFieldValid = useCallback(
-    (fieldName: FieldPath<T>): boolean => {
+    (fieldName: FieldPath<Data>): boolean => {
       const fieldState = form.getFieldState(fieldName);
       return !fieldState.error;
     },
@@ -293,7 +300,7 @@ export function useZodForm<T extends FieldValues>(
   );
 
   const getFieldError = useCallback(
-    (fieldName: FieldPath<T>): string | undefined => {
+    (fieldName: FieldPath<Data>): string | undefined => {
       const fieldState = form.getFieldState(fieldName);
       return fieldState.error?.message;
     },
@@ -310,16 +317,16 @@ export function useZodForm<T extends FieldValues>(
     return result.success;
   }, [form, schema]);
 
-  const getCleanData = useCallback((): T => {
+  const getCleanData = useCallback((): Data => {
     const data = form.getValues();
-    const result = (schema as z.ZodType<T>).parse(data);
+    const result = (schema as z.ZodType<Data>).parse(data);
     return result;
   }, [form, schema]);
 
   const resetToDefaults = useCallback(() => {
-    // React Hook Form v7+ expects DefaultValues<T> or undefined
+    // React Hook Form v7+ expects DefaultValues<Data> or undefined
     if (options.defaultValues) {
-      form.reset(options.defaultValues as DefaultValues<T>);
+      form.reset(options.defaultValues as DefaultValues<Data>);
     } else {
       form.reset();
     }

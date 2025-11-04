@@ -424,6 +424,16 @@
         }
       },
       "includes": ["src/app/globals.css"]
+    },
+    {
+      "includes": ["**/currency-store.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "warn"
+          }
+        }
+      }
     }
   ],
 
