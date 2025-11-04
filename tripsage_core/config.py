@@ -159,7 +159,6 @@ class Settings(BaseSettings):
         description="OTEL instrumentation as comma-separated values",
     )
 
-
     # LangGraph features configuration
     langgraph_features: str = Field(
         default="conversation_memory,advanced_routing,memory_updates,error_recovery",
