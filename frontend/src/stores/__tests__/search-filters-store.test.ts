@@ -899,7 +899,7 @@ describe("Search Filters Store", () => {
       }
       let success = false;
       act(() => {
-        success = result.current.loadFilterPreset(presetId!);
+        success = result.current.loadFilterPreset(presetId as string);
       });
       expect(success).toBe(true);
       expect(result.current.activeFilterCount).toBe(1);
