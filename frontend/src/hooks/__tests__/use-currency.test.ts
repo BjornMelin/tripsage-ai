@@ -11,7 +11,7 @@ import {
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({
-  persist: (fn: any) => fn,
+  persist: (fn: unknown) => fn,
 }));
 
 // Mock API query hooks

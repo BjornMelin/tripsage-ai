@@ -365,6 +365,29 @@
       }
     },
     {
+      "includes": ["**/loading-skeletons.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          },
+          "suspicious": {
+            "noArrayIndexKey": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/query-states.tsx"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noArrayIndexKey": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/input-group.tsx"],
       "linter": {
         "rules": {

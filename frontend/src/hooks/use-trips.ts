@@ -1,47 +1,90 @@
+/**
+ * @fileoverview React hooks for trip-related API operations including suggestions,
+ * trip management, and flight data fetching with proper error handling and caching.
+ */
+
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
-import { type AppError, handleApiError } from "@/lib/api/error-types";
+import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
 import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
+import type { Trip } from "@/stores/trip-store";
 
+/** Represents a trip suggestion from the API. */
 export interface TripSuggestion {
-  id: string;
-  title: string;
-  destination: string;
-  description: string;
-  image_url?: string | null;
-  estimated_price: number;
-  currency: string;
-  duration: number;
-  rating: number;
-  category: "adventure" | "relaxation" | "culture" | "nature" | "city" | "beach";
-  best_time_to_visit: string;
-  highlights: string[];
-  difficulty?: "easy" | "moderate" | "challenging";
-  trending?: boolean;
-  seasonal?: boolean;
-  relevance_score?: number;
-  metadata?: Record<string, unknown>;
+  /** Unique identifier for the trip suggestion. */
+  readonly id: string;
+  /** Title of the trip suggestion. */
+  readonly title: string;
+  /** Destination location. */
+  readonly destination: string;
+  /** Detailed description of the trip. */
+  readonly description: string;
+  /** URL to an image representing the trip destination. */
+  readonly imageUrl?: string | null;
+  /** Estimated cost of the trip. */
+  readonly estimatedPrice: number;
+  /** Currency code for the estimated price (e.g., "USD", "EUR"). */
+  readonly currency: string;
+  /** Duration of the trip in days. */
+  readonly duration: number;
+  /** Average rating out of 5 stars. */
+  readonly rating: number;
+  /** Category of the trip. */
+  readonly category:
+    | "adventure"
+    | "relaxation"
+    | "culture"
+    | "nature"
+    | "city"
+    | "beach";
+  /** Best time of year to visit this destination. */
+  readonly bestTimeToVisit: string;
+  /** Array of key highlights or attractions. */
+  readonly highlights: readonly string[];
+  /** Difficulty level of the trip. */
+  readonly difficulty?: "easy" | "moderate" | "challenging";
+  /** Whether this trip is currently trending. */
+  readonly trending?: boolean;
+  /** Whether this trip is seasonal. */
+  readonly seasonal?: boolean;
+  /** Relevance score for search ranking. */
+  readonly relevanceScore?: number;
+  /** Additional metadata as key-value pairs. */
+  readonly metadata?: Record<string, unknown>;
 }
 
+/** Parameters for fetching trip suggestions. */
 interface TripSuggestionsParams {
-  limit?: number;
-  budget_max?: number;
-  category?: string;
+  /** Maximum number of suggestions to return. */
+  readonly limit?: number;
+  /** Maximum budget constraint. */
+  readonly budgetMax?: number;
+  /** Category filter for suggestions. */
+  readonly category?: string;
 }
 
 /**
- * Hook to fetch trip suggestions from the API with enhanced caching
+ * Hook to fetch trip suggestions from the API with enhanced caching.
+ *
+ * @param params Optional parameters for filtering and limiting suggestions.
+ * @returns Query object containing trip suggestions data, loading state, and error state.
  */
 export function useTripSuggestions(params?: TripSuggestionsParams) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  const normalizedParams = {
+  const normalizedParams: Record<string, string | number | boolean> = {
     limit: params?.limit ?? 4,
-    ...(params?.budget_max && { budget_max: params.budget_max }),
-    ...(params?.category && { category: params.category }),
   };
+
+  if (params?.budgetMax) {
+    normalizedParams.budget_max = params.budgetMax;
+  }
+
+  if (params?.category) {
+    normalizedParams.category = params.category;
+  }
 
   return useQuery<TripSuggestion[], AppError>({
     gcTime: cacheTimes.medium,
@@ -57,9 +100,8 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
     },
     queryKey: queryKeys.trips.suggestions(normalizedParams),
     retry: (failureCount, error) => {
-      if (error instanceof Error && "status" in error) {
-        const status = (error as any).status;
-        if (status === 401 || status === 403) return false;
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
       }
       return failureCount < 2;
     },
@@ -68,17 +110,53 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
   });
 }
 
+/** Data structure for creating a new trip. */
+interface CreateTripData {
+  /** Title of the trip. */
+  readonly title: string;
+  /** Destination location. */
+  readonly destination: string;
+  /** Detailed description. */
+  readonly description: string;
+  /** Start date of the trip. */
+  readonly startDate: string;
+  /** End date of the trip. */
+  readonly endDate: string;
+  /** Budget for the trip. */
+  readonly budget?: number;
+  /** Currency code for the budget. */
+  readonly currency?: string;
+  /** Additional metadata. */
+  readonly metadata?: Record<string, unknown>;
+}
+
+/** Response from creating a new trip. */
+interface TripResponse {
+  /** Unique identifier of the created trip. */
+  readonly id: string;
+  /** Title of the trip. */
+  readonly title: string;
+  /** Destination location. */
+  readonly destination: string;
+  /** Creation timestamp. */
+  readonly createdAt: string;
+  /** Last update timestamp. */
+  readonly updatedAt: string;
+}
+
 /**
- * Hook to create a new trip with optimistic updates
+ * Hook to create a new trip with optimistic updates.
+ *
+ * @returns Mutation object for creating trips with loading state and error handling.
  */
 export function useCreateTrip() {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
 
-  return useMutation<any, AppError, any>({
-    mutationFn: async (tripData: any) => {
+  return useMutation<TripResponse, AppError, CreateTripData>({
+    mutationFn: async (tripData: CreateTripData) => {
       try {
-        return await makeAuthenticatedRequest("/api/trips", {
+        return await makeAuthenticatedRequest<TripResponse>("/api/trips", {
           body: JSON.stringify(tripData),
           headers: { "Content-Type": "application/json" },
           method: "POST",
@@ -95,9 +173,8 @@ export function useCreateTrip() {
       queryClient.invalidateQueries({ queryKey: queryKeys.trips.suggestions() });
     },
     retry: (failureCount, error) => {
-      if (error instanceof Error && "status" in error) {
-        const status = (error as any).status;
-        if (status >= 400 && status < 500) return false; // Don't retry client errors
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false; // Don't retry client errors
       }
       return failureCount < 1;
     },
@@ -105,8 +182,29 @@ export function useCreateTrip() {
   });
 }
 
-// Helper function to convert unknown values to API params
-const CONVERT_TO_API_PARAMS = (
+/** Parameters for filtering trips. */
+interface TripFilters extends Record<string, unknown> {
+  /** Filter by trip status. */
+  readonly status?: string;
+  /** Filter by destination. */
+  readonly destination?: string;
+  /** Filter by date range start. */
+  readonly startDate?: string;
+  /** Filter by date range end. */
+  readonly endDate?: string;
+  /** Maximum number of results. */
+  readonly limit?: number;
+  /** Offset for pagination. */
+  readonly offset?: number;
+}
+
+/**
+ * Converts filter values to API-compatible parameters.
+ *
+ * @param filters Optional filter object to convert.
+ * @returns API parameters object or undefined if no filters provided.
+ */
+const convertToApiParams = (
   filters?: Record<string, unknown>
 ): Record<string, string | number | boolean> | undefined => {
   if (!filters) return undefined;
@@ -132,17 +230,20 @@ const CONVERT_TO_API_PARAMS = (
 };
 
 /**
- * Hook to get user's trips with enhanced error handling
+ * Hook to get user's trips with enhanced error handling.
+ *
+ * @param filters Optional filters to apply to the trip query.
+ * @returns Query object containing trips data, loading state, and error state.
  */
-export function useTrips(filters?: Record<string, unknown>) {
+export function useTrips(filters?: TripFilters) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  return useQuery<any[], AppError>({
+  return useQuery<Trip[], AppError>({
     gcTime: cacheTimes.medium,
     queryFn: async () => {
       try {
-        return await makeAuthenticatedRequest("/api/trips", {
-          params: CONVERT_TO_API_PARAMS(filters),
+        return await makeAuthenticatedRequest<Trip[]>("/api/trips", {
+          params: convertToApiParams(filters),
         });
       } catch (error) {
         throw handleApiError(error);
@@ -150,9 +251,8 @@ export function useTrips(filters?: Record<string, unknown>) {
     },
     queryKey: queryKeys.trips.list(filters),
     retry: (failureCount, error) => {
-      if (error instanceof Error && "status" in error) {
-        const status = (error as any).status;
-        if (status === 401 || status === 403) return false;
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
       }
       return failureCount < 2;
     },
@@ -161,34 +261,59 @@ export function useTrips(filters?: Record<string, unknown>) {
   });
 }
 
+/** Represents an upcoming flight with detailed information. */
 export interface UpcomingFlight {
-  id: string;
-  trip_id?: string;
-  trip_name?: string;
-  airline: string;
-  airline_name: string;
-  flight_number: string;
-  origin: string;
-  destination: string;
-  departure_time: string;
-  arrival_time: string;
-  duration: number;
-  stops: number;
-  price: number;
-  currency: string;
-  cabin_class: string;
-  seats_available?: number;
-  status: "upcoming" | "boarding" | "delayed" | "cancelled";
-  terminal?: string;
-  gate?: string;
+  /** Unique identifier for the flight. */
+  readonly id: string;
+  /** Associated trip identifier if this flight is part of a trip. */
+  readonly tripId?: string;
+  /** Name of the associated trip. */
+  readonly tripName?: string;
+  /** Airline code (e.g., "AA", "DL"). */
+  readonly airline: string;
+  /** Full airline name. */
+  readonly airlineName: string;
+  /** Flight number (e.g., "AA123"). */
+  readonly flightNumber: string;
+  /** Departure airport code. */
+  readonly origin: string;
+  /** Arrival airport code. */
+  readonly destination: string;
+  /** Scheduled departure time in ISO format. */
+  readonly departureTime: string;
+  /** Scheduled arrival time in ISO format. */
+  readonly arrivalTime: string;
+  /** Flight duration in minutes. */
+  readonly duration: number;
+  /** Number of stops during the flight. */
+  readonly stops: number;
+  /** Ticket price. */
+  readonly price: number;
+  /** Currency code for the price. */
+  readonly currency: string;
+  /** Cabin class (e.g., "economy", "business", "first"). */
+  readonly cabinClass: string;
+  /** Number of seats still available. */
+  readonly seatsAvailable?: number;
+  /** Current flight status. */
+  readonly status: "upcoming" | "boarding" | "delayed" | "cancelled";
+  /** Departure terminal. */
+  readonly terminal?: string;
+  /** Departure gate. */
+  readonly gate?: string;
 }
 
+/** Parameters for fetching upcoming flights. */
 interface UpcomingFlightsParams {
-  limit?: number;
+  /** Maximum number of flights to return. */
+  readonly limit?: number;
 }
 
 /**
- * Hook to fetch upcoming flights from the API with enhanced real-time handling
+ * Hook to fetch upcoming flights from the API with enhanced real-time handling.
+ *
+ * @param params Optional parameters for limiting flight results.
+ * @returns Query object containing upcoming flights data with real-time updates.
  */
 export function useUpcomingFlights(params?: UpcomingFlightsParams) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
@@ -213,9 +338,8 @@ export function useUpcomingFlights(params?: UpcomingFlightsParams) {
     refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes for fresh flight data
     refetchIntervalInBackground: false, // Only when page is visible
     retry: (failureCount, error) => {
-      if (error instanceof Error && "status" in error) {
-        const status = (error as any).status;
-        if (status === 401 || status === 403) return false;
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
       }
       return failureCount < 3; // More retries for external flight API
     },

@@ -10,39 +10,58 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Loading state interface
+ * Represents the current state of a loading operation.
  */
 export interface UseLoadingState {
+  /** Whether a loading operation is currently in progress. */
   isLoading: boolean;
+  /** Optional message describing the current loading operation. */
   message?: string;
+  /** Optional progress percentage (0-100) for the loading operation. */
   progress?: number;
+  /** Optional error message if the loading operation failed. */
   error?: string;
 }
 
 /**
- * Loading hook options
+ * Configuration options for the useLoading hook.
  */
 export interface UseLoadingOptions {
+  /** Whether loading should start immediately when the hook initializes. */
   initialLoading?: boolean;
+  /** Initial message to display when loading starts. */
   initialMessage?: string;
-  timeout?: number; // Auto-stop loading after timeout
+  /** Timeout in milliseconds after which loading automatically stops. */
+  timeout?: number;
+  /** Callback function called when the timeout expires. */
   onTimeout?: () => void;
 }
 
 /**
- * Loading hook return type
+ * Return type of the useLoading hook containing state and control functions.
  */
 export interface UseLoadingReturn {
+  /** Whether a loading operation is currently in progress. */
   isLoading: boolean;
+  /** Current loading message. */
   message?: string;
+  /** Current progress percentage (0-100). */
   progress?: number;
+  /** Current error message, if any. */
   error?: string;
+  /** Starts a loading operation with an optional message. */
   startLoading: (message?: string) => void;
+  /** Stops the current loading operation. */
   stopLoading: () => void;
+  /** Sets the progress percentage (clamped between 0-100). */
   setProgress: (progress: number) => void;
+  /** Sets the loading message. */
   setMessage: (message: string) => void;
+  /** Sets an error message and stops loading. */
   setError: (error: string) => void;
+  /** Clears the current error message. */
   clearError: () => void;
+  /** Resets all loading state to initial values. */
   reset: () => void;
 }
 
@@ -161,29 +180,36 @@ export function useLoading(options: UseLoadingOptions = {}): UseLoadingReturn {
 }
 
 /**
- * Hook for managing async operations with loading states.
+ * Return type of the useAsyncLoading hook for managing async operations.
  *
- * @template T - Return type of the async function
- * @param asyncFn - Async function to execute
- * @returns Loading state and execution function
+ * @template T - The return type of the async function
+ * @template P - The parameters tuple type of the async function
  */
-export interface UseAsyncLoadingReturn<T> {
+export interface UseAsyncLoadingReturn<
+  T,
+  P extends readonly unknown[] = readonly unknown[],
+> {
+  /** The result data from the last successful async operation. */
   data?: T;
+  /** Whether an async operation is currently in progress. */
   isLoading: boolean;
+  /** Error message from the last failed async operation. */
   error?: string;
-  execute: (...args: any[]) => Promise<T>;
+  /** Executes the async function with the provided arguments. */
+  execute: (...args: P) => Promise<T>;
+  /** Resets the hook state to initial values. */
   reset: () => void;
 }
 
-export function useAsyncLoading<T>(
-  asyncFn: (...args: any[]) => Promise<T>
-): UseAsyncLoadingReturn<T> {
+export function useAsyncLoading<T, P extends readonly unknown[]>(
+  asyncFn: (...args: P) => Promise<T>
+): UseAsyncLoadingReturn<T, P> {
   const [data, setData] = useState<T>();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
 
   const execute = useCallback(
-    async (...args: any[]): Promise<T> => {
+    async (...args: P): Promise<T> => {
       setIsLoading(true);
       setError(undefined);
 
@@ -218,7 +244,11 @@ export function useAsyncLoading<T>(
 }
 
 /**
- * Hook for managing loading state with debounced updates.
+ * Hook for managing loading state with debounced start/stop operations.
+ *
+ * Useful for preventing rapid loading state changes in response to frequent
+ * user interactions. Both start and stop operations are debounced by the
+ * specified delay.
  *
  * @param delay - Debounce delay in milliseconds (default: 300)
  * @returns Loading state with debounced start/stop functions

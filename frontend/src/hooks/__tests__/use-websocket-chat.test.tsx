@@ -5,7 +5,7 @@ import { useWebSocketChat } from "@/hooks/use-websocket-chat";
 const MOCK_CHANNEL = {
   on: vi.fn().mockReturnThis(),
   send: vi.fn(),
-  subscribe: vi.fn((cb?: any) => cb?.("SUBSCRIBED")),
+  subscribe: vi.fn((cb?: (status: string) => void) => cb?.("SUBSCRIBED")),
   unsubscribe: vi.fn(),
 };
 

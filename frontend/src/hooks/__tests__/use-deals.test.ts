@@ -100,10 +100,13 @@ const SAMPLE_ALERTS = [
 
 // Create mock store state
 const CREATE_MOCK_STORE = () => {
-  const deals = SAMPLE_DEALS.reduce((acc, deal) => {
-    acc[deal.id] = deal;
-    return acc;
-  }, {} as any);
+  const deals = SAMPLE_DEALS.reduce(
+    (acc, deal) => {
+      acc[deal.id] = deal;
+      return acc;
+    },
+    {} as Record<string, unknown>
+  );
 
   return {
     addAlert: vi.fn(),

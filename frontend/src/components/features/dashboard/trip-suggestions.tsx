@@ -161,7 +161,7 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
             <span>{suggestion.rating}</span>
           </div>
           <div className="text-lg font-semibold text-primary">
-            {formatPrice(suggestion.estimated_price, suggestion.currency)}
+            {formatPrice(suggestion.estimatedPrice, suggestion.currency)}
           </div>
         </div>
       </div>
@@ -203,7 +203,7 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <span className="text-xs text-muted-foreground">
-          Best time: {suggestion.best_time_to_visit}
+          Best time: {suggestion.bestTimeToVisit}
         </span>
         <Button size="sm" variant="outline" asChild>
           <Link href={`/dashboard/trips/create?suggestion=${suggestion.id}`}>
@@ -258,7 +258,7 @@ export function TripSuggestions({
 
   // Use React Query hook to fetch trip suggestions
   const { data: apiSuggestions, isLoading } = useTripSuggestions({
-    budget_max: activeBudget?.totalAmount,
+    budgetMax: activeBudget?.totalAmount,
     limit: limit + 2, // Get extra in case we filter some out
   });
 
@@ -294,13 +294,13 @@ export function TripSuggestions({
     if (userPreferences.destinations) {
       userPreferences.destinations.slice(0, 2).forEach((dest, idx) => {
         memoryBasedSuggestions.push({
-          best_time_to_visit: "Year-round",
+          bestTimeToVisit: "Year-round",
           category: userPreferences.travelStyle === "luxury" ? "relaxation" : "culture",
           currency: "USD",
           description: `Based on your previous love for ${dest}, here's a personalized return trip.`,
           destination: dest,
           duration: 7,
-          estimated_price: budgetPatterns?.averageSpending?.accommodation || 2000,
+          estimatedPrice: budgetPatterns?.averageSpending?.accommodation || 2000,
           highlights: userPreferences.activities?.slice(0, 3) || ["Sightseeing"],
           id: `memory-dest-${idx}`,
           rating: 4.7,
@@ -315,13 +315,13 @@ export function TripSuggestions({
       recommendations.slice(0, 2).forEach((rec, idx) => {
         if (rec.type === "destination") {
           memoryBasedSuggestions.push({
-            best_time_to_visit: "Spring/Fall",
+            bestTimeToVisit: "Spring/Fall",
             category: "adventure",
             currency: "USD",
             description: rec.reasoning,
             destination: rec.recommendation.split(" ")[0] || "Somewhere Amazing",
             duration: 5,
-            estimated_price: budgetPatterns?.averageSpending?.total || 2500,
+            estimatedPrice: budgetPatterns?.averageSpending?.total || 2500,
             highlights: ["AI Recommended", "Personalized"],
             id: `memory-ai-${idx}`,
             rating: 4.6,

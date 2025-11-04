@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TypedAdminSupabase } from "../admin";
 
-type MockSupabaseClient = {
-  rpc: ReturnType<typeof vi.fn>;
-};
-
 describe("rpc helpers", () => {
   beforeEach(() => {
     vi.resetModules();

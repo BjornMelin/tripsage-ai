@@ -1,15 +1,31 @@
+/**
+ * @fileoverview Loading skeleton components for various UI elements.
+ * Provides placeholder components that mimic the layout of actual content
+ * during loading states.
+ */
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "./skeleton";
 
 /**
- * Avatar skeleton component
+ * Props for the AvatarSkeleton component.
  */
 export interface AvatarSkeletonProps {
+  /** Size variant for the avatar skeleton. */
   size?: "sm" | "md" | "lg" | "xl";
+  /** Optional additional CSS classes. */
   className?: string;
 }
 
+/**
+ * Avatar skeleton component that displays a circular placeholder for profile images.
+ *
+ * @param size - Size variant for the avatar skeleton. Defaults to "md".
+ * @param className - Optional additional CSS classes.
+ * @param props - Additional HTML div element props.
+ * @returns A skeleton component styled as a circular avatar placeholder.
+ */
 export const AvatarSkeleton = React.forwardRef<HTMLDivElement, AvatarSkeletonProps>(
   ({ size = "md", className, ...props }, ref) => {
     const sizeClasses = {
@@ -34,18 +50,31 @@ export const AvatarSkeleton = React.forwardRef<HTMLDivElement, AvatarSkeletonPro
 AvatarSkeleton.displayName = "AvatarSkeleton";
 
 /**
- * Card skeleton component interface
+ * Props for the CardSkeleton component.
  */
 export interface CardSkeletonProps {
+  /** Whether to include an image placeholder at the top of the card. */
   hasImage?: boolean;
+  /** Whether to include an avatar in the header section. */
   hasAvatar?: boolean;
+  /** Number of title lines to display. Defaults to 1. */
   titleLines?: number;
+  /** Number of body content lines to display. Defaults to 3. */
   bodyLines?: number;
+  /** Optional additional CSS classes. */
   className?: string;
 }
 
 /**
- * Card skeleton component
+ * Card skeleton component that displays a placeholder for card-based content.
+ *
+ * @param hasImage - Whether to include an image placeholder. Defaults to false.
+ * @param hasAvatar - Whether to include an avatar. Defaults to false.
+ * @param titleLines - Number of title lines. Defaults to 1.
+ * @param bodyLines - Number of body lines. Defaults to 3.
+ * @param className - Optional additional CSS classes.
+ * @param props - Additional HTML div element props.
+ * @returns A skeleton component mimicking a content card layout.
  */
 export const CardSkeleton = React.forwardRef<HTMLDivElement, CardSkeletonProps>(
   (
@@ -92,18 +121,31 @@ export const CardSkeleton = React.forwardRef<HTMLDivElement, CardSkeletonProps>(
 CardSkeleton.displayName = "CardSkeleton";
 
 /**
- * List item skeleton component interface
+ * Props for the ListItemSkeleton component.
  */
 export interface ListItemSkeletonProps {
+  /** Whether to include an avatar at the start of the list item. */
   hasAvatar?: boolean;
+  /** Whether to include an action button at the end of the list item. */
   hasAction?: boolean;
+  /** Number of title lines to display. Defaults to 1. */
   titleLines?: number;
+  /** Number of subtitle lines to display. Defaults to 1. */
   subtitleLines?: number;
+  /** Optional additional CSS classes. */
   className?: string;
 }
 
 /**
- * List item skeleton component
+ * List item skeleton component that displays a placeholder for list item content.
+ *
+ * @param hasAvatar - Whether to include an avatar. Defaults to false.
+ * @param hasAction - Whether to include an action button. Defaults to false.
+ * @param titleLines - Number of title lines. Defaults to 1.
+ * @param subtitleLines - Number of subtitle lines. Defaults to 1.
+ * @param className - Optional additional CSS classes.
+ * @param props - Additional HTML div element props.
+ * @returns A skeleton component mimicking a list item layout.
  */
 export const ListItemSkeleton = React.forwardRef<HTMLDivElement, ListItemSkeletonProps>(
   (
@@ -144,17 +186,28 @@ export const ListItemSkeleton = React.forwardRef<HTMLDivElement, ListItemSkeleto
 ListItemSkeleton.displayName = "ListItemSkeleton";
 
 /**
- * Table skeleton component interface
+ * Props for the TableSkeleton component.
  */
 export interface TableSkeletonProps {
+  /** Number of data rows to display. Defaults to 5. */
   rows?: number;
+  /** Number of columns to display. Defaults to 4. */
   columns?: number;
+  /** Whether to include a header row. Defaults to true. */
   hasHeader?: boolean;
+  /** Optional additional CSS classes. */
   className?: string;
 }
 
 /**
- * Table skeleton component
+ * Table skeleton component that displays a placeholder for tabular data.
+ *
+ * @param rows - Number of data rows. Defaults to 5.
+ * @param columns - Number of columns. Defaults to 4.
+ * @param hasHeader - Whether to show header row. Defaults to true.
+ * @param className - Optional additional CSS classes.
+ * @param props - Additional HTML table element props.
+ * @returns A skeleton component mimicking a table layout.
  */
 export const TableSkeleton = React.forwardRef<HTMLTableElement, TableSkeletonProps>(
   ({ rows = 5, columns = 4, hasHeader = true, className, ...props }, ref) => {
@@ -171,7 +224,7 @@ export const TableSkeleton = React.forwardRef<HTMLTableElement, TableSkeletonPro
             <thead className="border-b bg-muted/50">
               <tr>
                 {Array.from({ length: columns }).map((_, index) => (
-                  <th key={`table-header-${index}`} className="p-3">
+                  <th key={`table-header-col-${index}`} className="p-3">
                     <Skeleton height="1rem" width="80%" />
                   </th>
                 ))}
@@ -180,9 +233,9 @@ export const TableSkeleton = React.forwardRef<HTMLTableElement, TableSkeletonPro
           )}
           <tbody>
             {Array.from({ length: rows }).map((_, rowIndex) => (
-              <tr key={rowIndex} className="border-b last:border-0">
+              <tr key={`table-row-${rowIndex}`} className="border-b last:border-0">
                 {Array.from({ length: columns }).map((_, colIndex) => (
-                  <td key={colIndex} className="p-3">
+                  <td key={`table-cell-${rowIndex}-${colIndex}`} className="p-3">
                     <Skeleton height="1rem" width={colIndex === 0 ? "90%" : "70%"} />
                   </td>
                 ))}
@@ -198,16 +251,25 @@ export const TableSkeleton = React.forwardRef<HTMLTableElement, TableSkeletonPro
 TableSkeleton.displayName = "TableSkeleton";
 
 /**
- * Form skeleton component interface
+ * Props for the FormSkeleton component.
  */
 export interface FormSkeletonProps {
+  /** Number of form fields to display. Defaults to 3. */
   fields?: number;
+  /** Whether to include a submit button at the end. Defaults to true. */
   hasSubmitButton?: boolean;
+  /** Optional additional CSS classes. */
   className?: string;
 }
 
 /**
- * Form skeleton component
+ * Form skeleton component that displays a placeholder for form layouts.
+ *
+ * @param fields - Number of form fields. Defaults to 3.
+ * @param hasSubmitButton - Whether to show submit button. Defaults to true.
+ * @param className - Optional additional CSS classes.
+ * @param props - Additional HTML div element props.
+ * @returns A skeleton component mimicking a form layout.
  */
 export const FormSkeleton = React.forwardRef<HTMLDivElement, FormSkeletonProps>(
   ({ fields = 3, hasSubmitButton = true, className, ...props }, ref) => {
@@ -220,7 +282,7 @@ export const FormSkeleton = React.forwardRef<HTMLDivElement, FormSkeletonProps>(
         {...props}
       >
         {Array.from({ length: fields }).map((_, index) => (
-          <div key={`form-field-${index}`} className="space-y-2">
+          <div key={`form-skeleton-field-${index}`} className="space-y-2">
             <Skeleton height="1rem" width="25%" />
             <Skeleton height="2.5rem" width="100%" className="rounded-md" />
           </div>
@@ -239,15 +301,22 @@ export const FormSkeleton = React.forwardRef<HTMLDivElement, FormSkeletonProps>(
 FormSkeleton.displayName = "FormSkeleton";
 
 /**
- * Chart/Graph skeleton component interface
+ * Props for the ChartSkeleton component.
  */
 export interface ChartSkeletonProps {
+  /** Type of chart to display skeleton for. Defaults to "bar". */
   type?: "bar" | "line" | "pie" | "area";
+  /** Optional additional CSS classes. */
   className?: string;
 }
 
 /**
- * Chart/Graph skeleton component
+ * Chart skeleton component that displays a placeholder for chart/graph visualizations.
+ *
+ * @param type - Chart type variant. Defaults to "bar".
+ * @param className - Optional additional CSS classes.
+ * @param props - Additional HTML div element props.
+ * @returns A skeleton component mimicking a chart layout.
  */
 export const ChartSkeleton = React.forwardRef<HTMLDivElement, ChartSkeletonProps>(
   ({ type = "bar", className, ...props }, ref) => {
@@ -268,7 +337,7 @@ export const ChartSkeleton = React.forwardRef<HTMLDivElement, ChartSkeletonProps
             <div className="flex items-end justify-around h-full space-x-2">
               {Array.from({ length: 8 }).map((_, index) => (
                 <Skeleton
-                  key={`form-input-${index}`}
+                  key={`chart-bar-${index}`}
                   width="12%"
                   height={`${Math.random() * 60 + 40}%`}
                   className="rounded-t-sm"
@@ -303,7 +372,7 @@ export const ChartSkeleton = React.forwardRef<HTMLDivElement, ChartSkeletonProps
         {/* Chart legend */}
         <div className="flex flex-wrap gap-4">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={`list-item-${index}`} className="flex items-center space-x-2">
+            <div key={`chart-legend-${index}`} className="flex items-center space-x-2">
               <Skeleton className="h-3 w-3 rounded-sm" />
               <Skeleton height="0.875rem" width="60px" />
             </div>

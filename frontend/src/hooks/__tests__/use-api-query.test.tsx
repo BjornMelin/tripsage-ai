@@ -237,7 +237,7 @@ describe("useApiQuery with Zod validation", () => {
 });
 
 describe("API client integration", () => {
-  it("should validate request and response data with the API client", async () => {
+  it("should validate request and response data with the API client", () => {
     const validTrip = {
       destination: "Paris, France",
       endDate: "2025-06-07",
