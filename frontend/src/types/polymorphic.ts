@@ -28,7 +28,10 @@ export type PropsOf<E extends React.ElementType> = React.ComponentPropsWithoutRe
  * @param P The props type.
  * @returns The props type.
  */
-export type PolymorphicProps<E extends React.ElementType, P = Record<string, never>> = P & {
+export type PolymorphicProps<
+  E extends React.ElementType,
+  P = Record<string, never>,
+> = P & {
   as?: E;
   ref?: React.Ref<ElementRef<E>>;
 } & Omit<PropsOf<E>, "as" | "ref">;

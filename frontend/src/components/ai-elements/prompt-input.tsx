@@ -17,6 +17,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { nanoid } from "nanoid";
+import Image from "next/image";
 import {
   type ChangeEvent,
   type ChangeEventHandler,
@@ -115,7 +116,7 @@ export type PromptInputControllerProps = {
   /** Attachments context for managing file attachments. */
   attachments: AttachmentsContext;
   /** INTERNAL: Allows PromptInput to register its file input ref and open callback. */
-  __registerFileInput: (
+  registerFileInput: (
     ref: RefObject<HTMLInputElement | null>,
     open: () => void
   ) => void;
@@ -189,7 +190,7 @@ export function PromptInputProvider({
   const [attachements, setAttachements] = useState<(FileUIPart & { id: string })[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const openRef = useRef<() => void>(() => {
-    // Initial empty function, will be replaced by __registerFileInput
+    // Initial empty function, will be replaced by registerFileInput
   });
 
   const add = useCallback((files: File[] | FileList) => {
@@ -240,7 +241,7 @@ export function PromptInputProvider({
     [attachements, add, remove, clear, openFileDialog]
   );
 
-  const __registerFileInput = useCallback(
+  const registerFileInput = useCallback(
     (ref: RefObject<HTMLInputElement | null>, open: () => void) => {
       fileInputRef.current = ref.current;
       openRef.current = open;
@@ -250,15 +251,15 @@ export function PromptInputProvider({
 
   const controller = useMemo<PromptInputControllerProps>(
     () => ({
-      __registerFileInput,
       attachments,
+      registerFileInput,
       textInput: {
         clear: clearInput,
         setInput: setTextInput,
         value: textInput,
       },
     }),
-    [textInput, clearInput, attachments, __registerFileInput]
+    [textInput, clearInput, attachments, registerFileInput]
   );
 
   return (
@@ -339,7 +340,7 @@ export function PromptInputAttachment({
           <div className="relative size-5 shrink-0">
             <div className="absolute inset-0 flex size-5 items-center justify-center overflow-hidden rounded bg-background transition-opacity group-hover:opacity-0">
               {isImage ? (
-                <img
+                <Image
                   alt={filename || "attachment"}
                   className="size-5 object-cover"
                   height={20}
@@ -374,7 +375,7 @@ export function PromptInputAttachment({
         <div className="w-auto space-y-3">
           {isImage && (
             <div className="flex max-h-96 w-96 items-center justify-center overflow-hidden rounded-md border">
-              <img
+              <Image
                 alt={filename || "attachment preview"}
                 className="max-h-full max-w-full object-contain"
                 height={384}
@@ -663,7 +664,7 @@ export const PromptInput = ({
   // Let provider know about our hidden file input so external menus can call openFileDialog()
   useEffect(() => {
     if (!usingProvider) return;
-    controller.__registerFileInput(inputRef, () => inputRef.current?.click());
+    controller.registerFileInput(inputRef, () => inputRef.current?.click());
   }, [usingProvider, controller]);
 
   // Note: File input cannot be programmatically set for security reasons
@@ -786,7 +787,7 @@ export const PromptInput = ({
     Promise.all(
       files.map(async (file) => {
         const { id, ...item } = file;
-        if (item.url && item.url.startsWith("blob:")) {
+        if (item.url?.startsWith("blob:")) {
           return {
             id,
             ...item,
@@ -818,7 +819,7 @@ export const PromptInput = ({
             controller.textInput.clear();
           }
         }
-      } catch (error) {
+      } catch (_error) {
         // Don't clear on error - user may want to retry
       }
     });
@@ -1173,10 +1174,10 @@ interface SpeechRecognition extends EventTarget {
   lang: string;
   start(): void;
   stop(): void;
-  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
-  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any) | null;
+  onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => void) | null;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void) | null;
 }
 
 interface SpeechRecognitionEvent extends Event {

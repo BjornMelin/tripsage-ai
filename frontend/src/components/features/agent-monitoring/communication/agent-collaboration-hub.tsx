@@ -552,8 +552,8 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
 
       {/* Metrics Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {CollaborationMetrics.map((metric, index) => (
-          <Card key={index}>
+        {CollaborationMetrics.map((metric) => (
+          <Card key={metric.metric}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm text-muted-foreground">{metric.metric}</div>

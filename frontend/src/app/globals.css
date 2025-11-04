@@ -81,6 +81,10 @@
   }
 }
 
-.invert-on-dark {
-  @apply dark:invert;
+@layer utilities {
+  .invert-on-dark {
+    @media (prefers-color-scheme: dark) {
+      filter: invert(1);
+    }
+  }
 }
