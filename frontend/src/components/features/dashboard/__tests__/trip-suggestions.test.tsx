@@ -1,10 +1,3 @@
-/**
- * @fileoverview Modern trip suggestions tests.
- *
- * Focused tests for trip suggestion functionality using proper mocking
- * patterns and behavioral validation. Following ULTRATHINK methodology.
- */
-
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type TripSuggestion, useTripSuggestions } from "@/hooks/use-trips";

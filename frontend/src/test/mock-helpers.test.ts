@@ -1,7 +1,3 @@
-/**
- * @fileoverview Typed factory helpers for mocking Supabase and TanStack Query.
- */
-
 import type {
   Session,
   Subscription,

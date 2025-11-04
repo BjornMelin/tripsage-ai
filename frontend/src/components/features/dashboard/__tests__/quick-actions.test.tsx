@@ -1,8 +1,3 @@
-/**
- * @fileoverview Tests for QuickActions components covering grid/list/compact
- * layouts, link targets, and basic accessibility semantics.
- */
-
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils.test";

@@ -1,7 +1,3 @@
-/**
- * @fileoverview Unit tests for the deals store functionality.
- * Tests deal and alert management, statistics calculation, and store state operations.
- */
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DealType } from "@/types/deals";

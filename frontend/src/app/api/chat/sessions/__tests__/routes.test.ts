@@ -1,9 +1,3 @@
-/**
- * @fileoverview Integration tests for chat sessions and messages API routes,
- * covering session CRUD operations, message management, and route interactions
- * with mocked Supabase database operations.
- */
-
 import type { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import { GET as MSG_GET, POST as MSG_POST } from "../[id]/messages/route";

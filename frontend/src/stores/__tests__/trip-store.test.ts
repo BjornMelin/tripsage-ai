@@ -1,9 +1,3 @@
-/**
- * @fileoverview Comprehensive tests for the trip store, covering trip CRUD operations,
- * destination management, store state management, error handling, and edge cases
- * with mocked repositories for isolated testing.
- */
-
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetTripStoreMockData } from "@/test/trip-store-test-helpers.test";

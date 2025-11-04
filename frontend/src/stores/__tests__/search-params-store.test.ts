@@ -1,8 +1,3 @@
-/**
- * @fileoverview Unit tests for the search parameters store.
- * Tests search type management, parameter updates for different search types,
- * validation functionality, and parameter reset operations.
- */
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { useSearchParamsStore } from "../search-params-store";

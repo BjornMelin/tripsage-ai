@@ -1,9 +1,9 @@
-"use client";
-
 /**
  * @fileoverview React hook that connects to the agent status Supabase channel and
  * synchronizes realtime events with the agent status store.
  */
+
+"use client";
 
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -75,7 +75,7 @@ interface AgentStatusWebSocketControls {
  * Connects to the authenticated user's private Supabase channel and exposes helpers
  * for managing realtime agent status updates.
  *
- * @returns {AgentStatusWebSocketControls} Realtime connection state and control handlers.
+ * @returns Realtime connection state and control handlers.
  */
 export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
   const supabase = useMemo(() => getBrowserClient(), []);

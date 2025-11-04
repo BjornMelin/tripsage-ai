@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for ErrorBoundary components, covering error catching,
- * fallback rendering, recovery mechanisms, and different error UI variants
- * including minimal, page-level, and standard error boundaries.
- */
-
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

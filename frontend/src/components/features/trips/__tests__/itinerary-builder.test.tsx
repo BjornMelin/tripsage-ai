@@ -1,7 +1,3 @@
-/**
- * @fileoverview Itinerary builder tests: destination add/edit/remove and DnD.
- */
-
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type React from "react";
@@ -530,9 +526,3 @@ describe("ItineraryBuilder", () => {
     });
   });
 });
-/**
- * @fileoverview Tests for ItineraryBuilder component focusing on stable,
- * behavior-centric assertions: rendering, add dialog, activities, deletion,
- * DnD scaffolding, and basic add/submit flows. Avoids brittle combobox portal
- * interactions.
- */

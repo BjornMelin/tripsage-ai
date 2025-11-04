@@ -342,7 +342,7 @@ let abortController: AbortController | null = null;
  * Features optimistic UI updates, automatic reconnection, typing indicators,
  * and comprehensive error handling for robust chat experiences.
  *
- * @returns {ChatState} The chat store state and actions
+ * @returns The chat store state and actions
  *
  * @example
  * ```typescript

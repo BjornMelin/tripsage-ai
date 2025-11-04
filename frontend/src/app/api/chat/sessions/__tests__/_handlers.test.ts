@@ -1,8 +1,3 @@
-/**
- * @fileoverview Unit tests for chat sessions handler functions, testing session and
- * message CRUD operations with mocked Supabase client and authentication.
- */
-
 import { describe, expect, it, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import {

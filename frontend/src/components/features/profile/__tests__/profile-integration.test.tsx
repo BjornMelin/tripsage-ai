@@ -1,9 +1,3 @@
-/**
- * @fileoverview Integration tests for profile components, verifying user profile
- * sections render correctly with mocked stores and handle form interactions
- * across account settings, personal info, preferences, and security sections.
- */
-
 import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils.test";

@@ -1,6 +1,3 @@
-/**
- * @fileoverview Tests for PromptInput component, verifying text input handling and submission.
- */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {

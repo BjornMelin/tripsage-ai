@@ -1,8 +1,3 @@
-/**
- * @fileoverview Integration tests for agent monitoring: status dashboard,
- * collaboration hub, and connection status metrics/optimizations.
- */
-
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "@/test/test-utils.test";

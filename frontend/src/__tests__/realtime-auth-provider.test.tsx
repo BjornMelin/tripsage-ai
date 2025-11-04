@@ -1,8 +1,3 @@
-/**
- * @fileoverview Tests for RealtimeAuthProvider token lifecycle.
- * Verifies that setAuth is called with token on login and cleared on logout/unmount.
- */
-
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

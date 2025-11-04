@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for memory Zod schemas, validating memory structures,
- * search request validation, filter schemas, and data transformation with
- * edge case coverage and backward compatibility testing.
- */
-
 import { describe, expect, it } from "vitest";
 import {
   MemorySchema,

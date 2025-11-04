@@ -1,7 +1,3 @@
-/**
- * @fileoverview Vitest: token counting and clamping edge cases.
- */
-
 import { Tiktoken } from "js-tiktoken/lite";
 import o200kBase from "js-tiktoken/ranks/o200k_base";
 import { describe, expect, it } from "vitest";

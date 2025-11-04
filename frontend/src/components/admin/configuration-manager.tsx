@@ -133,7 +133,7 @@ const ModelOptions = ["gpt-4", "gpt-4-turbo", "gpt-5", "gpt-5-mini", "gpt-3.5-tu
  * - Tabbed interface for configuration, performance, and history views
  * - Form validation with cross-field constraints and model compatibility checks
  *
- * @returns {JSX.Element} The rendered configuration management interface.
+ * @returns The rendered configuration management interface.
  */
 export default function ConfigurationManager() {
   useRouter(); // For potential navigation

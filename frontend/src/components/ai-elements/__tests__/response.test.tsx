@@ -1,8 +1,3 @@
-/**
- * @fileoverview Tests for the Response component.
- * Verifies markdown rendering through Streamdown with mocked dependencies.
- */
-
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 

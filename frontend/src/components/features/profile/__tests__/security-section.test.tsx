@@ -1,7 +1,3 @@
-/**
- * @fileoverview Security section tests: password, 2FA, devices, and notices.
- */
-
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -261,8 +257,3 @@ describe("SecuritySection", () => {
     });
   });
 });
-/**
- * @fileoverview Tests for SecuritySection component: password form validation,
- * basic 2FA toggle presence, active sessions UI, and recommendations. Timer-
- * heavy toasts are exercised only where deterministic.
- */

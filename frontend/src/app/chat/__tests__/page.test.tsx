@@ -1,8 +1,3 @@
-/**
- * @fileoverview Unit tests for the ChatPage component, verifying chat functionality,
- * message rendering, and SSE streaming behavior.
- */
-
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ChatPage from "../../chat/page";

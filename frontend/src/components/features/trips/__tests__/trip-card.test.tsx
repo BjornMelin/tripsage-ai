@@ -1,8 +1,3 @@
-/**
- * @fileoverview Unit tests for TripCard: date/duration formatting, destination
- * rendering, budget display, actions, and accessibility.
- */
-
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

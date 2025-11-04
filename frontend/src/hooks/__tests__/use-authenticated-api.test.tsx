@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for the useAuthenticatedApi hook with Supabase session handling.
- */
-
 import type { Session, User } from "@supabase/supabase-js";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";

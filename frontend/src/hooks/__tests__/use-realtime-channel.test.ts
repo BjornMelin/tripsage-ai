@@ -1,8 +1,3 @@
-/**
- * @fileoverview Tests for use-realtime-channel hook.
- * Ensures subscription, unsubscription, onBroadcast handler registration, and sendBroadcast.
- */
-
 import { renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useRealtimeChannel } from "@/hooks/use-realtime-channel";

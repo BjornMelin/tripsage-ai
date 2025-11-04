@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for schema adapters that transform between API and frontend data models.
- * Tests cover trip and destination transformations, date formatting, duration calculations,
- * and error handling for malformed or missing data.
- */
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Destination, Trip } from "@/stores/trip-store";
 import {

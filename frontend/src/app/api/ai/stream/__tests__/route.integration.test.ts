@@ -1,7 +1,3 @@
-/**
- * @fileoverview Integration tests for the AI stream route ensuring SSE flow and error handling.
- */
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the `ai` package to avoid network/model dependencies

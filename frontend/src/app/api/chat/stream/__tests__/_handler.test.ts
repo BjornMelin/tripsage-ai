@@ -1,9 +1,4 @@
-/* @vitest-environment node */
-/**
- * @fileoverview Unit tests for handleChatStream function, testing authentication,
- * rate limiting, attachment validation, memory integration, and AI SDK streaming
- * with mocked dependencies and various edge cases.
- */
+/** @vitest-environment node */
 
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";

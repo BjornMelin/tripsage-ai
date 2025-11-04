@@ -1,9 +1,3 @@
-/**
- * @fileoverview Comprehensive tests for BudgetTracker component, covering budget display,
- * category breakdowns, expense tracking, budget creation, editing, and edge cases
- * including empty states, error handling, and accessibility features.
- */
-
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Budget } from "@/lib/schemas/budget";

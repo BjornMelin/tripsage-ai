@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for the useAccommodationSearch hook.
- */
-
 import { renderHook, waitFor } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";

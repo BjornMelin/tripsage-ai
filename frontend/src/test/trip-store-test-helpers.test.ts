@@ -1,7 +1,3 @@
-/**
- * @fileoverview Helpers for mocking Supabase trip CRUD flows in store tests.
- */
-
 import { randomInt, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { vi } from "vitest";

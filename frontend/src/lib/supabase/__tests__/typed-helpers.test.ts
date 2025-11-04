@@ -1,6 +1,3 @@
-/**
- * @fileoverview Unit smoke tests for typed Supabase helpers.
- */
 import { describe, expect, it, vi } from "vitest";
 import type { InsertTables, Tables, UpdateTables } from "@/lib/supabase/database.types";
 import type { TypedClient } from "@/lib/supabase/typed-helpers";

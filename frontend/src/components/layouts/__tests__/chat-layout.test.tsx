@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for ChatLayout components including ChatLayout,
- * ChatSidebar, and AgentStatusPanel, covering layout rendering, sidebar
- * collapse/expand functionality, agent status display, and chat navigation.
- */
-
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentStatusState } from "@/stores/agent-status-store";

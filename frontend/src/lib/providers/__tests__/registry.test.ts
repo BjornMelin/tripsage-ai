@@ -1,7 +1,3 @@
-/**
- * @fileoverview Unit tests for provider registry resolution.
- */
-
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 vi.mock("@/lib/supabase/rpc", () => ({

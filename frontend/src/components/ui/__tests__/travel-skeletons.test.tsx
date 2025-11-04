@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for travel-specific skeleton components, verifying
- * rendering and accessibility for flight, hotel, destination, trip, itinerary,
- * chat message, and search filter loading states tailored to travel UI patterns.
- */
-
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { render } from "@/test/test-utils.test";

@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for LoadingSpinner component, verifying rendering of
- * different spinner variants, size and color customization, accessibility
- * features, and animation behavior across all supported spinner styles.
- */
-
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { render } from "@/test/test-utils.test";

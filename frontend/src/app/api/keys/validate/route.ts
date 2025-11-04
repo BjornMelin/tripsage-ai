@@ -3,7 +3,9 @@
  * Route: POST /api/keys/validate
  * Never persists the key.
  */
+
 "use cache";
+
 export const dynamic = "force-dynamic";
 
 import { Ratelimit } from "@upstash/ratelimit";

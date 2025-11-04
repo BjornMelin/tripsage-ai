@@ -1,8 +1,3 @@
-/**
- * @fileoverview Smoke tests for /api/chat/stream route, verifying basic functionality
- * and error handling with minimal mocking for fast execution and reliability.
- */
-
 import type { LanguageModel } from "ai";
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";

@@ -1,7 +1,3 @@
-/**
- * @fileoverview Unit tests for Supabase Vault RPC helpers.
- * Ensures normalized service handling and correct RPC invocation shapes.
- */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TypedAdminSupabase } from "../admin";
 

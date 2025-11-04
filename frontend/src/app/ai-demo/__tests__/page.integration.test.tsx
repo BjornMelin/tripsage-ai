@@ -1,7 +1,3 @@
-/**
- * @fileoverview Test for the AI SDK v6 demo page. Ensures the page renders
- * core controls, handles user input, processes streaming responses, and manages error states.
- */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Page from "@/app/ai-demo/page";

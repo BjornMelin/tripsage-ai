@@ -1,12 +1,11 @@
-/**
- * @fileoverview Unit tests for ErrorBoundary component and WithErrorBoundary HOC,
- * covering error catching, fallback rendering, error reporting, recovery mechanisms,
- * and session/user tracking functionality.
- */
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { errorService } from "@/lib/error-service";
-import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils.test";
+import {
+  fireEvent,
+  renderWithProviders,
+  screen,
+  waitFor,
+} from "@/test/test-utils.test";
 import { ErrorBoundary, WithErrorBoundary } from "../error-boundary";
 
 // Mock the error service

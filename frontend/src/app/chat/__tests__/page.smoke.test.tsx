@@ -1,9 +1,3 @@
-/**
- * @fileoverview Smoke tests for ChatPage component, verifying basic rendering
- * and presence of essential UI controls for chat functionality without full
- * interaction testing.
- */
-
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import ChatPage from "../page";

@@ -103,9 +103,9 @@ const DefaultAnalytics: ConnectionAnalytics = {
 
 /**
  * Get the quality color for the connection status
- * 
+ *
  * @param quality - The quality of the connection
- * @returns {string} The quality color
+ * @returns The quality color
  */
 const GetQualityColor = (quality: NetworkMetrics["quality"]) => {
   switch (quality) {
@@ -123,9 +123,9 @@ const GetQualityColor = (quality: NetworkMetrics["quality"]) => {
 };
 /**
  * Get the signal icon for the connection status
- * 
+ *
  * @param strength - The signal strength
- * @returns {React.ReactNode} The signal icon
+ * @returns The signal icon
  */
 const GetSignalIcon = (strength: number) => {
   if (strength >= 80) return <SignalHigh className="h-4 w-4" />;
@@ -136,9 +136,9 @@ const GetSignalIcon = (strength: number) => {
 
 /**
  * Format the latency for the connection status
- * 
+ *
  * @param ms - The latency in milliseconds
- * @returns {string} The formatted latency
+ * @returns The formatted latency
  */
 const FormatLatency = (ms: number) => {
   if (ms < 1000) return `${ms.toFixed(0)}ms`;
@@ -147,9 +147,9 @@ const FormatLatency = (ms: number) => {
 
 /**
  * Format the bandwidth for the connection status
- * 
+ *
  * @param bps - The bandwidth in bits per second
- * @returns {string} The formatted bandwidth
+ * @returns The formatted bandwidth
  */
 const FormatBandwidth = (bps: number) => {
   if (bps < 1024) return `${bps.toFixed(0)} B/s`;
@@ -159,9 +159,9 @@ const FormatBandwidth = (bps: number) => {
 
 /**
  * Format the uptime for the connection status
- * 
+ *
  * @param seconds - The uptime in seconds
- * @returns {string} The formatted uptime
+ * @returns The formatted uptime
  */
 const FormatUptime = (seconds: number) => {
   const hours = Math.floor(seconds / 3600);
@@ -175,9 +175,9 @@ const FormatUptime = (seconds: number) => {
 
 /**
  * Connection quality indicator component
- * 
+ *
  * @param metrics - The network metrics
- * @returns {React.ReactNode} The connection quality indicator
+ * @returns The connection quality indicator
  */
 const ConnectionQualityIndicator: React.FC<{ metrics: NetworkMetrics }> = ({
   metrics,
@@ -218,10 +218,10 @@ const ConnectionQualityIndicator: React.FC<{ metrics: NetworkMetrics }> = ({
 
 /**
  * Network optimization suggestions component
- * 
+ *
  * @param metrics - The network metrics
  * @param onOptimize - The function to optimize the network
- * @returns {React.ReactNode} The network optimization suggestions
+ * @returns The network optimization suggestions
  */
 const NetworkOptimizationSuggestions: React.FC<{
   metrics: NetworkMetrics;

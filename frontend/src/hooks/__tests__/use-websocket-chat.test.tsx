@@ -1,8 +1,3 @@
-/**
- * @fileoverview Tests for use-websocket-chat hook (Supabase Realtime variant).
- * Validates topic selection, message send, typing events, and reconnect triggering.
- */
-
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useWebSocketChat } from "@/hooks/use-websocket-chat";
