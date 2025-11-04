@@ -1,5 +1,10 @@
+/**
+ * @fileoverview Zustand store for managing travel deals, alerts, and filters.
+ */
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { nowIso, secureId } from "@/lib/security/random";
 import {
   DEAL_ALERT_SCHEMA,
   DEAL_SCHEMA,
@@ -57,9 +62,8 @@ interface DealsStore extends DealState {
 }
 
 // Helper functions
-const GENERATE_ID = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
+const GENERATE_ID = () => secureId(12);
+const GET_CURRENT_TIMESTAMP = () => nowIso();
 
 // Utility for validating deal objects
 const _validateDeal = (deal: unknown): deal is Deal => {

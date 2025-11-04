@@ -34,7 +34,6 @@ describe("security/random", () => {
   it("falls back when crypto is unavailable", () => {
     const g = globalThis as unknown as { crypto?: unknown };
     const original = g.crypto;
-    // @ts-expect-error override for test fallback
     g.crypto = undefined;
     try {
       const id = secureUUID();

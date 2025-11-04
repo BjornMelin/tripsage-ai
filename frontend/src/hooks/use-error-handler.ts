@@ -9,6 +9,7 @@
 
 import { useCallback } from "react";
 import { errorService } from "@/lib/error-service";
+import { secureUUID } from "@/lib/security/random";
 
 // Extend Window interface for custom properties
 declare global {
@@ -95,7 +96,7 @@ function getSessionId(): string | undefined {
   try {
     let sessionId = sessionStorage.getItem("session_id");
     if (!sessionId) {
-      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      sessionId = `session_${secureUUID()}`;
       sessionStorage.setItem("session_id", sessionId);
     }
     return sessionId;

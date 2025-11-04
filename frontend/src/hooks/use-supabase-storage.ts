@@ -8,6 +8,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { nowIso, secureUUID } from "@/lib/security/random";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSupabase } from "@/lib/supabase/client";
 import type {
@@ -36,6 +37,11 @@ interface UploadOptions {
   allowedTypes?: string[];
 }
 
+/**
+ * Internal hook to get the current user ID from Supabase auth.
+ *
+ * @returns User ID or null if not authenticated
+ */
 function useUserId(): string | null {
   const supabase = useSupabase();
   const [userId, setUserId] = useState<string | null>(null);
@@ -206,7 +212,7 @@ export function useSupabaseStorage() {
         throw new Error(`File type ${file.type} is not allowed`);
       }
 
-      const fileId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const fileId = secureUUID();
       const fileExt = file.name.split(".").pop();
       const fileName = `${fileId}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
@@ -248,7 +254,7 @@ export function useSupabaseStorage() {
             // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
             file_extension: fileExt,
             // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
-            upload_timestamp: new Date().toISOString(),
+            upload_timestamp: nowIso(),
           },
           // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           mime_type: file.type,

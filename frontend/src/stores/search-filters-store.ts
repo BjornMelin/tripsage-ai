@@ -1,6 +1,11 @@
+/**
+ * @fileoverview Zustand store for managing search filters, sort options, and presets.
+ */
+
 import { z } from "zod";
 import { create, type StateCreator } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { nowIso, secureId } from "@/lib/security/random";
 import type { SearchType } from "@/types/search";
 
 // Validation schemas for filters and sorting
@@ -204,9 +209,8 @@ interface SearchFiltersState {
 }
 
 // Helper functions
-const GENERATE_ID = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const GET_CURRENT_TIMESTAMP = () => new Date().toISOString();
+const GENERATE_ID = () => secureId(12);
+const GET_CURRENT_TIMESTAMP = () => nowIso();
 
 // Default filter configurations by search type
 const GET_DEFAULT_FILTERS = (searchType: SearchType): ValidatedFilterOption[] => {

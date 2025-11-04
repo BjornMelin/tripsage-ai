@@ -1,11 +1,18 @@
+/**
+ * @fileoverview Global error boundary for the app.
+ * This catches errors in the root layout or template.
+ */
+
 "use client";
 
 import { useEffect } from "react";
 import { MinimalErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
+import { secureUUID } from "@/lib/security/random";
 
 /**
- * Global error boundary - catches errors in the root layout or template
+ * Global error boundary for the app.
+ * Catches errors in the root layout or template.
  * This is a last resort fallback that replaces the entire root layout
  */
 export default function GlobalError({
@@ -37,6 +44,11 @@ export default function GlobalError({
   );
 }
 
+/**
+ * Gets the current user ID from the user store.
+ *
+ * @returns User ID or undefined if not available
+ */
 function getUserId(): string | undefined {
   try {
     const userStore = (
@@ -48,11 +60,16 @@ function getUserId(): string | undefined {
   }
 }
 
+/**
+ * Gets or creates a session ID from sessionStorage for error tracking.
+ *
+ * @returns Session ID or undefined if sessionStorage is unavailable
+ */
 function getSessionId(): string | undefined {
   try {
     let sessionId = sessionStorage.getItem("session_id");
     if (!sessionId) {
-      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      sessionId = `session_${secureUUID()}`;
       sessionStorage.setItem("session_id", sessionId);
     }
     return sessionId;

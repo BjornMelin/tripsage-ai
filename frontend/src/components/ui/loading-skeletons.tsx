@@ -335,14 +335,17 @@ export const ChartSkeleton = React.forwardRef<HTMLDivElement, ChartSkeletonProps
         <div className="relative h-48 w-full">
           {type === "bar" && (
             <div className="flex items-end justify-around h-full space-x-2">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <Skeleton
-                  key={`chart-bar-${index}`}
-                  width="12%"
-                  height={`${Math.random() * 60 + 40}%`}
-                  className="rounded-t-sm"
-                />
-              ))}
+              {(() => {
+                const heights = [40, 55, 65, 50, 70, 45, 60, 52];
+                return heights.map((h, index) => (
+                  <Skeleton
+                    key={`chart-bar-${index}`}
+                    width="12%"
+                    height={`${h}%`}
+                    className="rounded-t-sm"
+                  />
+                ));
+              })()}
             </div>
           )}
 
