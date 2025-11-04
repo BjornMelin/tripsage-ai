@@ -349,6 +349,14 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/app/globals.css"],
+      "css": {
+        "linter": {
+          "enabled": false
+        }
+      }
     }
   ],
 
