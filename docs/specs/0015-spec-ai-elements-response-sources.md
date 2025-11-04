@@ -16,7 +16,6 @@ Integrate AI Elements `Response` to render markdown text parts and `Sources` to 
 
 - Response (`@/components/ai-elements/response`)
   - Renders markdown via Streamdown; streaming-friendly; supports GFM + KaTeX.
-  - Add `@source "../node_modules/streamdown/dist/index.js";` in `globals.css`.
 - Sources (`@/components/ai-elements/sources`)
   - Minimal popover with trigger and content areas; list of `Source` links.
   - Only render when `source-url` parts exist.

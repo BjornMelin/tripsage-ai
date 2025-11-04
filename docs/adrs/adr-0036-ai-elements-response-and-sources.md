@@ -15,7 +15,6 @@ The chat UI previously rendered text parts with ad hoc JSX. AI Elements provides
 ## Decision
 
 - Use `Response` to render `text` parts in chat; import directly with no wrappers.
-- Add `@source "../node_modules/streamdown/dist/index.js";` to `globals.css` for Streamdown styles.
 - Render `Sources` only when `source-url` parts are present; map URL and optional title.
 - Remove/avoid custom markdown renderers and one-off citation UIs.
 
