@@ -2,6 +2,10 @@
  * @fileoverview Input group primitives used by AI Elements prompt inputs.
  * Provides grouped controls, add-ons, and text/textarea fields with consistent
  * styling and focus/invalid states.
+ *
+ * Note: This file has biome semantic elements linting disabled because it uses
+ * ARIA role="button" on interactive elements that focus input fields. Using a
+ * semantic <button> would interfere with input focus behavior.
  */
 
 "use client";
