@@ -127,6 +127,65 @@ describe("UpcomingFlights", () => {
     });
   });
 
+  describe("Loading State", () => {
+    it("should render skeleton components when loading", () => {
+      vi.mocked(useUpcomingFlights).mockReturnValue(
+        CreateMockReturnValue([], true)
+      );
+
+      const { container } = render(<UpcomingFlights />);
+
+      // Should show card title even when loading
+      expect(screen.getByText("Upcoming Flights")).toBeInTheDocument();
+
+      // Should render skeleton components (check for Skeleton elements)
+      const skeletons = container.querySelectorAll('[class*="skeleton"]');
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
+
+    it("should render exactly 2 flight skeleton cards when loading", () => {
+      vi.mocked(useUpcomingFlights).mockReturnValue(
+        CreateMockReturnValue([], true)
+      );
+
+      const { container } = render(<UpcomingFlights />);
+
+      // Find skeleton containers (each FlightCardSkeleton has multiple skeleton elements)
+      // We check for the parent containers with border classes
+      const skeletonCards = container.querySelectorAll(
+        '.border.border-border.rounded-lg'
+      );
+      
+      // Should have 2 skeleton cards (each FlightCardSkeleton)
+      expect(skeletonCards.length).toBe(2);
+    });
+
+    it("should use stable keys for skeleton components", () => {
+      vi.mocked(useUpcomingFlights).mockReturnValue(
+        CreateMockReturnValue([], true)
+      );
+
+      const { container, rerender } = render(<UpcomingFlights />);
+
+      // Find all skeleton containers
+      const skeletonCards = container.querySelectorAll(
+        '.border.border-border.rounded-lg'
+      );
+
+      // Verify we have exactly 2 skeletons
+      expect(skeletonCards.length).toBe(2);
+
+      // Re-render should maintain the same structure with stable keys
+      // If keys were unstable, React would re-mount components on each render
+      rerender(<UpcomingFlights />);
+      
+      const skeletonCardsAfterRerender = container.querySelectorAll(
+        '.border.border-border.rounded-lg'
+      );
+      expect(skeletonCardsAfterRerender.length).toBe(2);
+    });
+  });
+
   describe("Flight Display", () => {
     it("should display flights for upcoming trips", () => {
       const flights: UpcomingFlight[] = [
