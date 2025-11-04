@@ -95,7 +95,9 @@ const CALCULATE_DEALS_STATS = (deals: Deal[]): DealStats => {
       byType: {
         accommodation: 0,
         activity: 0,
+        // biome-ignore lint/style/useNamingConvention: External API field names
         error_fare: 0,
+        // biome-ignore lint/style/useNamingConvention: External API field names
         flash_sale: 0,
         flight: 0,
         package: 0,
@@ -110,7 +112,9 @@ const CALCULATE_DEALS_STATS = (deals: Deal[]): DealStats => {
   const byType: Record<DealType, number> = {
     accommodation: 0,
     activity: 0,
+    // biome-ignore lint/style/useNamingConvention: External API field names
     error_fare: 0,
+    // biome-ignore lint/style/useNamingConvention: External API field names
     flash_sale: 0,
     flight: 0,
     package: 0,

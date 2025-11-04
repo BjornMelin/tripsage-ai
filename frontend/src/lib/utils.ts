@@ -83,7 +83,7 @@ export function formatCurrency(amount: number, currency = "USD"): string {
  * @param delay Delay in milliseconds.
  * @returns Debounced function.
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {
@@ -103,7 +103,7 @@ export function debounce<T extends (...args: any[]) => any>(
  * @param delay Minimum interval in milliseconds between calls.
  * @returns Throttled function.
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {

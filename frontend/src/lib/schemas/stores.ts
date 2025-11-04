@@ -497,9 +497,12 @@ export const safeValidateStoreState = <T>(
 // Middleware for Zustand store validation
 export const storeValidationMiddleware =
   <T>(schema: z.ZodSchema<T>, storeName?: string) =>
+  // biome-ignore lint/suspicious/noExplicitAny: Zustand store API requires flexible typing
   (config: (set: any, get: any, api: any) => T) =>
+  // biome-ignore lint/suspicious/noExplicitAny: Zustand store API requires flexible typing
   (set: any, get: any, api: any) => {
     const store = config(
+      // biome-ignore lint/suspicious/noExplicitAny: Zustand partial state can be any shape
       (partial: any, replace: any) => {
         const newState = typeof partial === "function" ? partial(get()) : partial;
 
@@ -545,8 +548,8 @@ export type TripStoreState = z.infer<typeof tripStoreStateSchema>;
 export type TripStoreActions = z.infer<typeof tripStoreActionsSchema>;
 export type ChatStoreState = z.infer<typeof chatStoreStateSchema>;
 export type ChatStoreActions = z.infer<typeof chatStoreActionsSchema>;
-export type UIStoreState = z.infer<typeof uiStoreStateSchema>;
-export type UIStoreActions = z.infer<typeof uiStoreActionsSchema>;
+export type UiStoreState = z.infer<typeof uiStoreStateSchema>;
+export type UiStoreActions = z.infer<typeof uiStoreActionsSchema>;
 export type BudgetStoreState = z.infer<typeof budgetStoreStateSchema>;
 export type BudgetStoreActions = z.infer<typeof budgetStoreActionsSchema>;
 export type ApiKeyStoreState = z.infer<typeof apiKeyStoreStateSchema>;

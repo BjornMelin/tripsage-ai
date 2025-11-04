@@ -8,7 +8,9 @@ import {
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: Test mock doesn't need type safety
   devtools: (fn: any) => fn,
+  // biome-ignore lint/suspicious/noExplicitAny: Test mock doesn't need type safety
   persist: (fn: any) => fn,
 }));
 
@@ -120,6 +122,7 @@ describe("User Profile Store - Fixed", () => {
         updateResult = await result.current.updatePersonalInfo(updates);
       });
 
+      // biome-ignore lint/style/noNonNullAssertion: Test assertion after assignment
       expect(updateResult!).toBe(true);
       expect(result.current.profile?.personalInfo?.firstName).toBe("Jane");
       expect(result.current.profile?.personalInfo?.lastName).toBe("Smith");
@@ -139,6 +142,7 @@ describe("User Profile Store - Fixed", () => {
         });
       });
 
+      // biome-ignore lint/style/noNonNullAssertion: Test assertion after assignment
       expect(updateResult!).toBe(false);
     });
   });

@@ -414,7 +414,7 @@ export const safeValidateComponentProps = <T>(
 };
 
 // Higher-order component for runtime props validation
-export const withPropsValidation = <T extends Record<string, any>>(
+export const withPropsValidation = <T extends Record<string, unknown>>(
   schema: z.ZodSchema<T>,
   componentName?: string
 ) => {

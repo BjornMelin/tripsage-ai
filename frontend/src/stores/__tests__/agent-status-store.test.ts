@@ -13,6 +13,7 @@ const ORIGINAL_DATE = Date;
 vi.stubGlobal(
   "Date",
   class extends ORIGINAL_DATE {
+    // biome-ignore lint/suspicious/noExplicitAny: Date constructor mock needs flexible args
     constructor(...args: any[]) {
       if (args.length === 0) {
         super(MOCK_DATE.getTime());
@@ -90,6 +91,7 @@ describe("useAgentStatusStore", () => {
         result.current.startSession();
       });
 
+      // biome-ignore lint/style/noNonNullAssertion: Test assertion after session creation
       const sessionId = result.current.currentSessionId!;
 
       // End the session
@@ -114,6 +116,7 @@ describe("useAgentStatusStore", () => {
         result.current.startSession();
       });
 
+      // biome-ignore lint/style/noNonNullAssertion: Test assertion after session creation
       const sessionId = result.current.currentSessionId!;
 
       act(() => {

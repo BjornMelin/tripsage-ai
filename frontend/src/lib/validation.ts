@@ -7,14 +7,14 @@ import { z } from "zod";
 
 // Error types for different validation contexts
 export enum ValidationContext {
-  API = "api",
-  FORM = "form",
-  COMPONENT = "component",
-  STORE = "store",
-  SEARCH = "search",
-  CHAT = "chat",
-  TRIP = "trip",
-  BUDGET = "budget",
+  Api = "api",
+  Form = "form",
+  Component = "component",
+  Store = "store",
+  Search = "search",
+  Chat = "chat",
+  Trip = "trip",
+  Budget = "budget",
 }
 
 // Validation error interface
@@ -83,6 +83,7 @@ export const convertZodError = (
     message: issue.message,
     path: issue.path.map(String),
     timestamp: new Date(),
+    // biome-ignore lint/suspicious/noExplicitAny: Zod issue type lacks received property in type definitions
     value: (issue as any).received,
   }));
 };
@@ -147,7 +148,7 @@ export const validateApiResponse = <T>(
   response: unknown,
   endpoint?: string
 ): ValidationResult<T> => {
-  const result = validate(schema, response, ValidationContext.API);
+  const result = validate(schema, response, ValidationContext.Api);
 
   if (!result.success && endpoint) {
     // Add endpoint context to errors
@@ -165,7 +166,7 @@ export const validateFormData = <T>(
   schema: z.ZodSchema<T>,
   formData: Record<string, unknown>
 ): ValidationResult<T> => {
-  const result = validate(schema, formData, ValidationContext.FORM);
+  const result = validate(schema, formData, ValidationContext.Form);
 
   // Add form-specific error formatting
   if (!result.success) {
@@ -184,7 +185,7 @@ export const validateComponentProps = <T>(
   props: unknown,
   componentName?: string
 ): ValidationResult<T> => {
-  const result = validate(schema, props, ValidationContext.COMPONENT);
+  const result = validate(schema, props, ValidationContext.Component);
 
   if (!result.success && componentName) {
     console.warn(
@@ -202,7 +203,7 @@ export const validateStoreState = <T>(
   state: unknown,
   storeName?: string
 ): ValidationResult<T> => {
-  const result = validate(schema, state, ValidationContext.STORE);
+  const result = validate(schema, state, ValidationContext.Store);
 
   if (!result.success && storeName) {
     console.error(`Store state validation failed for ${storeName}:`, result.errors);
@@ -217,7 +218,7 @@ export const validateSearchParams = <T>(
   params: unknown,
   searchType?: string
 ): ValidationResult<T> => {
-  const result = validate(schema, params, ValidationContext.SEARCH);
+  const result = validate(schema, params, ValidationContext.Search);
 
   if (!result.success && searchType) {
     result.errors = result.errors?.map((error) => ({
@@ -275,7 +276,7 @@ export const createQueryValidationMiddleware = <T>(schema: z.ZodSchema<T>) => {
     onSuccess: (data: unknown) => {
       const result = validateApiResponse(schema, data);
       if (!result.success) {
-        throw new TripSageValidationError(ValidationContext.API, result.errors || []);
+        throw new TripSageValidationError(ValidationContext.Api, result.errors || []);
       }
       return result.data;
     },
@@ -402,7 +403,7 @@ export const isValidEmail = (value: unknown): value is string => {
   return typeof value === "string" && z.string().email().safeParse(value).success;
 };
 
-export const isValidUUID = (value: unknown): value is string => {
+export const isValidUuid = (value: unknown): value is string => {
   return typeof value === "string" && z.string().uuid().safeParse(value).success;
 };
 
@@ -428,15 +429,15 @@ export const useValidation = <T>(
 
 // Export commonly used validators
 export const validators = {
-  date: (value: unknown) => validate(z.string().date(), value, ValidationContext.FORM),
+  date: (value: unknown) => validate(z.string().date(), value, ValidationContext.Form),
   email: (value: unknown) =>
-    validate(z.string().email(), value, ValidationContext.FORM),
+    validate(z.string().email(), value, ValidationContext.Form),
   nonEmptyString: (value: unknown) =>
-    validate(z.string().min(1), value, ValidationContext.FORM),
+    validate(z.string().min(1), value, ValidationContext.Form),
   positiveNumber: (value: unknown) =>
-    validate(z.number().positive(), value, ValidationContext.FORM),
-  url: (value: unknown) => validate(z.string().url(), value, ValidationContext.FORM),
-  uuid: (value: unknown) => validate(z.string().uuid(), value, ValidationContext.FORM),
+    validate(z.number().positive(), value, ValidationContext.Form),
+  url: (value: unknown) => validate(z.string().url(), value, ValidationContext.Form),
+  uuid: (value: unknown) => validate(z.string().uuid(), value, ValidationContext.Form),
 };
 
 // Note: ValidationError interface already exported above
