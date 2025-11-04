@@ -2,7 +2,7 @@
  * @fileoverview Tests for Conversation component, verifying empty state rendering and message display.
  */
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   Conversation,
   ConversationContent,
@@ -11,7 +11,7 @@ import {
 
 /** Test suite for Conversation component */
 describe("ai-elements/conversation", () => {
-  /** Test that the empty state is rendered when no messages exist */  
+  /** Test that the empty state is rendered when no messages exist */
   it("renders empty state when no messages", () => {
     render(
       <Conversation>
@@ -35,4 +35,3 @@ describe("ai-elements/conversation", () => {
     expect(screen.getByText("Message A")).toBeInTheDocument();
   });
 });
-
