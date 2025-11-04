@@ -891,6 +891,7 @@ describe("Search Filters Store", () => {
       expect(result.current.activeFilterCount).toBe(0);
 
       // Load the preset
+      // biome-ignore lint/style/noNonNullAssertion: Test assertion after preset creation
       const success = await result.current.loadFilterPreset(presetId!);
       expect(success).toBe(true);
       expect(result.current.activeFilterCount).toBe(1);
@@ -901,8 +902,9 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const presetId = await result.current.saveFilterPreset("Budget Flights");
+      expect(presetId).toBeDefined();
 
-      const success = await result.current.updateFilterPreset(presetId!, {
+      const success = await result.current.updateFilterPreset(presetId as string, {
         description: "Updated description",
         name: "Cheap Flights",
       });
@@ -918,10 +920,11 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const presetId = await result.current.saveFilterPreset("Budget Flights");
+      expect(presetId).toBeDefined();
       expect(result.current.filterPresets).toHaveLength(1);
 
       act(() => {
-        result.current.deleteFilterPreset(presetId!);
+        result.current.deleteFilterPreset(presetId as string);
       });
 
       expect(result.current.filterPresets).toHaveLength(0);
@@ -931,9 +934,10 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const originalPresetId = await result.current.saveFilterPreset("Budget Flights");
+      expect(originalPresetId).toBeDefined();
 
       const duplicatedPresetId = await result.current.duplicateFilterPreset(
-        originalPresetId!,
+        originalPresetId as string,
         "Budget Flights Copy"
       );
 
@@ -951,6 +955,7 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const presetId = await result.current.saveFilterPreset("Budget Flights");
+      expect(presetId).toBeDefined();
 
       const originalPreset = result.current.filterPresets.find(
         (p) => p.id === presetId
@@ -958,7 +963,7 @@ describe("Search Filters Store", () => {
       expect(originalPreset?.usageCount).toBe(0);
 
       act(() => {
-        result.current.incrementPresetUsage(presetId!);
+        result.current.incrementPresetUsage(presetId as string);
       });
 
       const updatedPreset = result.current.filterPresets.find((p) => p.id === presetId);

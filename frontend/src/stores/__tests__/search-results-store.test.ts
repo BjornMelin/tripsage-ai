@@ -129,10 +129,12 @@ describe("Search Results Store", () => {
     it("sets search results successfully", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      let searchId: string;
+      let searchId: string = "";
       act(() => {
         searchId = result.current.startSearch("flight", {});
       });
+      expect(searchId).toBeDefined();
+      expect(typeof searchId).toBe("string");
 
       const mockResults: SearchResults = {
         flights: [
@@ -164,7 +166,7 @@ describe("Search Results Store", () => {
       };
 
       act(() => {
-        result.current.setSearchResults(searchId!, mockResults, mockMetrics);
+        result.current.setSearchResults(searchId, mockResults, mockMetrics);
       });
 
       expect(result.current.status).toBe("success");
@@ -190,7 +192,7 @@ describe("Search Results Store", () => {
       });
 
       // Check that results are stored by search ID
-      expect(result.current.resultsBySearch[searchId!]).toEqual(mockResults);
+      expect(result.current.resultsBySearch[searchId]).toEqual(mockResults);
     });
 
     it("handles search errors", () => {
@@ -560,13 +562,15 @@ describe("Search Results Store", () => {
       });
 
       // Second search
-      let id2: string;
+      let id2: string = "";
       act(() => {
         id2 = result.current.startSearch("flight", {});
       });
+      expect(id2).toBeDefined();
+      expect(typeof id2).toBe("string");
 
       act(() => {
-        result.current.setSearchResults(id2!, { flights: [] }, {
+        result.current.setSearchResults(id2, { flights: [] }, {
           currentPage: 1,
           hasMoreResults: false,
           resultsPerPage: 20,
