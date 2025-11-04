@@ -206,12 +206,12 @@ import { ValidationContext, type ValidationResult, validate } from "../validatio
 // Quick validation helpers
 export const quickValidate = {
   date: (value: unknown): ValidationResult<string> =>
-    validate(z.string().date(), value, ValidationContext.FORM),
+    validate(z.string().date(), value, ValidationContext.Form),
   email: (value: unknown): ValidationResult<string> =>
-    validate(z.string().email(), value, ValidationContext.FORM),
+    validate(z.string().email(), value, ValidationContext.Form),
 
   nonEmptyString: (value: unknown): ValidationResult<string> =>
-    validate(z.string().min(1), value, ValidationContext.FORM),
+    validate(z.string().min(1), value, ValidationContext.Form),
 
   password: (value: unknown): ValidationResult<string> =>
     validate(
@@ -223,17 +223,17 @@ export const quickValidate = {
         .regex(/^(?=.*\d)/, "Must contain number")
         .regex(/^(?=.*[@$!%*?&])/, "Must contain special character"),
       value,
-      ValidationContext.FORM
+      ValidationContext.Form
     ),
 
   positiveNumber: (value: unknown): ValidationResult<number> =>
-    validate(z.number().positive(), value, ValidationContext.FORM),
+    validate(z.number().positive(), value, ValidationContext.Form),
 
   url: (value: unknown): ValidationResult<string> =>
-    validate(z.string().url(), value, ValidationContext.FORM),
+    validate(z.string().url(), value, ValidationContext.Form),
 
   uuid: (value: unknown): ValidationResult<string> =>
-    validate(z.string().uuid(), value, ValidationContext.FORM),
+    validate(z.string().uuid(), value, ValidationContext.Form),
 };
 
 // Schema metadata for documentation

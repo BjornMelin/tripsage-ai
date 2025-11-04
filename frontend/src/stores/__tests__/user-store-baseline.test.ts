@@ -4,7 +4,9 @@ import { type UserProfile, useUserProfileStore } from "../user-store";
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: Test mock doesn't need type safety
   devtools: (fn: any) => fn,
+  // biome-ignore lint/suspicious/noExplicitAny: Test mock doesn't need type safety
   persist: (fn: any) => fn,
 }));
 

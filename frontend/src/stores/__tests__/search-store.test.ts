@@ -136,6 +136,7 @@ describe("Search Store Orchestrator", () => {
           departureDate: "2025-07-15",
           destination: "LAX",
           origin: "NYC",
+          // biome-ignore lint/suspicious/noExplicitAny: Test data casting
         } as any);
         await filtersStore.current.setActiveFilter("price_range", {
           max: 500,
@@ -166,6 +167,7 @@ describe("Search Store Orchestrator", () => {
           departureDate: "2025-07-15",
           destination: "LAX",
           origin: "NYC",
+          // biome-ignore lint/suspicious/noExplicitAny: Test data casting
         } as any);
         await filtersStore.current.setActiveFilter("price_range", { min: 100 });
       });
@@ -226,6 +228,7 @@ describe("Search Store Orchestrator", () => {
           departureDate: "2025-07-15",
           destination: "LAX",
           origin: "NYC",
+          // biome-ignore lint/suspicious/noExplicitAny: Test data casting
         } as any);
         await filtersStore.current.setActiveFilter("price_range", {
           max: 500,
@@ -293,12 +296,13 @@ describe("Search Store Orchestrator", () => {
       const { result: historyStore } = renderHook(() => useSearchHistoryStore());
 
       // Setup current search and params directly
-      await act(async () => {
+      act(() => {
         result.current.initializeSearch("flight");
         useSearchParamsStore.getState().setFlightParams({
           departureDate: "2025-07-15",
           destination: "LAX",
           origin: "NYC",
+          // biome-ignore lint/suspicious/noExplicitAny: Test data casting
         } as any);
       });
 
@@ -316,6 +320,7 @@ describe("Search Store Orchestrator", () => {
 
       expect(savedId).toBe("new-saved-123");
       expect(historyStore.current.saveSearch).toHaveBeenCalled();
+      // biome-ignore lint/suspicious/noExplicitAny: Test mock access
       const call = (historyStore.current.saveSearch as any).mock.calls.at(-1);
       expect(call[0]).toBe("My NYC Flight");
       expect(call[1]).toBe("flight");

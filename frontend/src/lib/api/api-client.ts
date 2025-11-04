@@ -259,7 +259,7 @@ export class ApiClient {
           validateStrict(
             finalConfig.requestSchema,
             finalConfig.data,
-            ValidationContext.API
+            ValidationContext.Api
           );
         } catch (error) {
           if (error instanceof TripSageValidationError) {

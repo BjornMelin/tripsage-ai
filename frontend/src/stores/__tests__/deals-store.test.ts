@@ -65,6 +65,7 @@ describe("Deals Store", () => {
         addResult = result.current.addDeal(SAMPLE_DEAL);
       });
 
+      // biome-ignore lint/style/noNonNullAssertion: Test assertion after assignment
       expect(addResult!).toBe(true);
       expect(result.current.deals[SAMPLE_DEAL.id]).toEqual({
         ...SAMPLE_DEAL,

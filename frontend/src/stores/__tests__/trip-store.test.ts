@@ -13,7 +13,8 @@ vi.mock("@/lib/repositories/trips-repo", () => {
   const now = () => new Date().toISOString();
   let seq = 0;
   return {
-    createTrip: vi.fn(async (payload: any) => {
+    // biome-ignore lint/suspicious/noExplicitAny: Test mock needs flexible payload
+    createTrip: vi.fn((payload: any) => {
       return {
         budget: payload.budget ?? 0,
         createdAt: now(),
@@ -30,9 +31,12 @@ vi.mock("@/lib/repositories/trips-repo", () => {
         updatedAt: now(),
       };
     }),
-    deleteTrip: vi.fn(async () => {}),
+    deleteTrip: vi.fn(async () => {
+      // Empty implementation for test mock
+    }),
     listTrips: vi.fn(async () => []),
-    updateTrip: vi.fn(async (id: number, _userId: string, patch: any) => {
+    // biome-ignore lint/suspicious/noExplicitAny: Test mock needs flexible patch
+    updateTrip: vi.fn((id: number, _userId: string, patch: any) => {
       return {
         budget: patch.budget ?? 0,
         description: patch.description ?? "",

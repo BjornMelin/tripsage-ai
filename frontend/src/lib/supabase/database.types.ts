@@ -3,7 +3,6 @@
  * Generated from database schema for type-safe database operations
  */
 
-/* biome-ignore lint/style/useNamingConvention: Database types use snake_case */
 export type Json =
   | string
   | number

@@ -526,7 +526,9 @@ export function useSupabaseChat() {
       deleteChatSession,
       // biome-ignore lint/correctness/useExhaustiveDependencies: Query hook functions are stable and don't need to be in dependencies
       useChatMessages,
+      // biome-ignore lint/correctness/useExhaustiveDependencies: Query hook functions are stable and don't need to be in dependencies
       useChatSession,
+      // biome-ignore lint/correctness/useExhaustiveDependencies: Query hook functions are stable and don't need to be in dependencies
       useChatSessions,
     ]
   );

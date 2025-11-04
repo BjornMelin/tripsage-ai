@@ -102,7 +102,7 @@ describe("Search Params Store", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
       act(() => {
-        void result.current.updateFlightParams({
+        result.current.updateFlightParams({
           adults: 2,
           cabinClass: "business",
           departureDate: "2025-07-15",
@@ -125,7 +125,7 @@ describe("Search Params Store", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
       act(() => {
-        void result.current.updateFlightParams({
+        result.current.updateFlightParams({
           adults: 3,
           destination: "LAX",
           origin: "NYC",
@@ -164,7 +164,7 @@ describe("Search Params Store", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
       act(() => {
-        void result.current.updateAccommodationParams({
+        result.current.updateAccommodationParams({
           adults: 2,
           amenities: ["wifi", "pool"],
           checkIn: "2025-08-01",
@@ -189,7 +189,7 @@ describe("Search Params Store", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
       act(() => {
-        void result.current.updateAccommodationParams({
+        result.current.updateAccommodationParams({
           adults: 3,
           destination: "Paris",
         });
@@ -225,7 +225,7 @@ describe("Search Params Store", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
       act(() => {
-        void result.current.updateActivityParams({
+        result.current.updateActivityParams({
           category: "cultural",
           date: "2025-09-15",
           destination: "Tokyo",
@@ -246,7 +246,7 @@ describe("Search Params Store", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
       act(() => {
-        void result.current.updateActivityParams({
+        result.current.updateActivityParams({
           category: "cultural",
           destination: "Tokyo",
         });
@@ -280,7 +280,7 @@ describe("Search Params Store", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
       act(() => {
-        void result.current.updateDestinationParams({
+        result.current.updateDestinationParams({
           countryCode: "FR",
           limit: 20,
           query: "Europe",
@@ -299,7 +299,7 @@ describe("Search Params Store", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
       act(() => {
-        void result.current.updateDestinationParams({
+        result.current.updateDestinationParams({
           limit: 30,
           query: "Asia",
         });

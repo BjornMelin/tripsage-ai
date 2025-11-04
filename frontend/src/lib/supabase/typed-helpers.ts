@@ -29,6 +29,7 @@ export async function insertSingle<T extends keyof Database["public"]["Tables"]>
   values: InsertTables<T> | InsertTables<T>[]
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
   // Keep any-cast localized while ensuring compile-time payload types.
+  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
   const anyClient = client as unknown as { from: (t: string) => any };
   const { data, error } = await anyClient
     .from(table as string)
@@ -56,10 +57,12 @@ export async function updateSingle<T extends keyof Database["public"]["Tables"]>
   updates: Partial<UpdateTables<T>>,
   where: (qb: unknown) => unknown
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
+  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
   const anyClient = client as unknown as { from: (t: string) => any };
   let qb: unknown = anyClient.from(table as string).update(updates as unknown);
   qb = where(qb);
   // `.single()` ensures a single row is returned; adjust if multiple rows are expected
+  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
   const anyQb = qb as { select: () => { single: () => Promise<any> } };
   const { data, error } = await anyQb.select().single();
   return { data: (data ?? null) as Tables<T> | null, error };
