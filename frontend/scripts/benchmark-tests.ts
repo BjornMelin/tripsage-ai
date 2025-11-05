@@ -79,9 +79,7 @@ function parseVitestJson(jsonPath: string): BenchmarkResults {
     throw new Error(`Vitest JSON report not found: ${jsonPath}`);
   }
 
-  const report: VitestJsonReport = JSON.parse(
-    readFileSync(jsonPath, "utf-8")
-  );
+  const report: VitestJsonReport = JSON.parse(readFileSync(jsonPath, "utf-8"));
 
   const files: TestFileMetrics[] = report.testResults.map((result) => {
     const duration = result.endTime - result.startTime;
@@ -101,9 +99,10 @@ function parseVitestJson(jsonPath: string): BenchmarkResults {
 
   // Suite duration is the max of all file durations (since tests run in parallel)
   // For more accurate wall-clock time, use the overall startTime to endTime
-  const suiteDuration = report.testResults.length > 0
-    ? Math.max(...report.testResults.map((r) => r.endTime)) - report.startTime
-    : files.reduce((sum, f) => sum + f.duration, 0);
+  const suiteDuration =
+    report.testResults.length > 0
+      ? Math.max(...report.testResults.map((r) => r.endTime)) - report.startTime
+      : files.reduce((sum, f) => sum + f.duration, 0);
 
   const percentiles = {
     p50: calculatePercentile(durations, 50),
@@ -215,8 +214,8 @@ function main(): void {
     // Run Vitest with JSON reporter
     execSync("pnpm test:run --reporter=json --outputFile=test-results.json", {
       cwd: outputDir,
-      stdio: "inherit",
       encoding: "utf-8",
+      stdio: "inherit",
     });
 
     if (!existsSync(jsonPath)) {
@@ -244,4 +243,3 @@ function main(): void {
 if (require.main === module) {
   main();
 }
-

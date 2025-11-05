@@ -273,9 +273,7 @@ describe("Deals Store", () => {
       const store = useDealsStore.getState();
       store.addDeal(SAMPLE_DEAL);
       store.addToRecentlyViewed(SAMPLE_DEAL.id);
-      expect(useDealsStore.getState().recentlyViewedDeals).toContain(
-        SAMPLE_DEAL.id
-      );
+      expect(useDealsStore.getState().recentlyViewedDeals).toContain(SAMPLE_DEAL.id);
     });
 
     it("should not add a non-existent deal to recently viewed deals", () => {
