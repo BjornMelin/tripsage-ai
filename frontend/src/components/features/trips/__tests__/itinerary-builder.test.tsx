@@ -48,13 +48,9 @@ interface DroppableProps {
 
 // Mock the DragDropContext component
 vi.mock("@hello-pangea/dnd", () => ({
-  DragDropContext: ({ children, onDragEnd }: DragDropContextProps) => {
-    return (
-      <div data-testid="drag-drop-context" data-on-drag-end={onDragEnd}>
-        {children}
-      </div>
-    );
-  },
+  DragDropContext: ({ children }: DragDropContextProps) => (
+    <div data-testid="drag-drop-context">{children}</div>
+  ),
   // Mock the Draggable component
   Draggable: ({ children, draggableId, index: _index }: DraggableProps) => {
     const provided: DraggableProvided = {

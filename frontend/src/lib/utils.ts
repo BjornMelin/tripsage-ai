@@ -120,3 +120,27 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
     return fn(...args);
   };
 }
+
+/**
+ * Execute a promise without awaiting while observing rejections.
+ *
+ * @param promise Promise to execute in fire-and-forget mode.
+ * @param onError Optional handler when the promise rejects.
+ */
+export function fireAndForget<T>(
+  promise: Promise<T>,
+  onError?: (error: unknown) => void
+): void {
+  const handleRejection = (error: unknown) => {
+    if (onError) {
+      onError(error);
+      return;
+    }
+
+    if (process.env.NODE_ENV !== "test") {
+      console.warn("[fireAndForget] swallowed rejection", error);
+    }
+  };
+
+  Promise.resolve(promise).catch(handleRejection);
+}

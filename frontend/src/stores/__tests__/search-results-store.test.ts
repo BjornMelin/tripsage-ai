@@ -227,7 +227,10 @@ describe("Search Results Store", () => {
     it("cancels search", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      const searchId = result.current.startSearch("flight", {});
+      let searchId = "";
+      act(() => {
+        searchId = result.current.startSearch("flight", {});
+      });
 
       act(() => {
         result.current.cancelSearch(searchId);
@@ -241,7 +244,10 @@ describe("Search Results Store", () => {
     it("completes search", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      const searchId = result.current.startSearch("flight", {});
+      let searchId = "";
+      act(() => {
+        searchId = result.current.startSearch("flight", {});
+      });
 
       act(() => {
         result.current.completeSearch(searchId);

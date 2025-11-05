@@ -10,6 +10,7 @@
 import { useCallback } from "react";
 import { errorService } from "@/lib/error-service";
 import { secureUuid } from "@/lib/security/random";
+import { fireAndForget } from "@/lib/utils";
 
 // Extend Window interface for custom properties
 declare global {
@@ -42,7 +43,7 @@ export function useErrorHandler() {
       });
 
       // Report error
-      errorService.reportError(errorReport);
+      fireAndForget(errorService.reportError(errorReport));
 
       // Log in development
       if (process.env.NODE_ENV === "development") {
