@@ -13,11 +13,8 @@ import {
 
 describe("FlightSkeleton", () => {
   it("renders flight search result skeleton", () => {
-    render(<FlightSkeleton data-testid="flight" />);
-
-    const flight = screen.getByTestId("flight");
-    expect(flight).toBeInTheDocument();
-    expect(flight).toHaveAttribute("aria-label", "Loading flight results");
+    render(<FlightSkeleton />);
+    expect(screen.getByText("Loading flight results")).toBeInTheDocument();
   });
 
   it("has appropriate structure", () => {
@@ -38,11 +35,8 @@ describe("FlightSkeleton", () => {
 
 describe("HotelSkeleton", () => {
   it("renders hotel search result skeleton", () => {
-    render(<HotelSkeleton data-testid="hotel" />);
-
-    const hotel = screen.getByTestId("hotel");
-    expect(hotel).toBeInTheDocument();
-    expect(hotel).toHaveAttribute("aria-label", "Loading hotel results");
+    render(<HotelSkeleton />);
+    expect(screen.getByText("Loading hotel results")).toBeInTheDocument();
   });
 
   it("includes image skeleton", () => {
@@ -66,11 +60,8 @@ describe("HotelSkeleton", () => {
 
 describe("TripSkeleton", () => {
   it("renders trip card skeleton", () => {
-    render(<TripSkeleton data-testid="trip" />);
-
-    const trip = screen.getByTestId("trip");
-    expect(trip).toBeInTheDocument();
-    expect(trip).toHaveAttribute("aria-label", "Loading trip information");
+    render(<TripSkeleton />);
+    expect(screen.getByText("Loading trip information")).toBeInTheDocument();
   });
 
   it("includes image and trip details", () => {
@@ -88,14 +79,8 @@ describe("TripSkeleton", () => {
 
 describe("DestinationSkeleton", () => {
   it("renders destination card skeleton", () => {
-    render(<DestinationSkeleton data-testid="destination" />);
-
-    const destination = screen.getByTestId("destination");
-    expect(destination).toBeInTheDocument();
-    expect(destination).toHaveAttribute(
-      "aria-label",
-      "Loading destination information"
-    );
+    render(<DestinationSkeleton />);
+    expect(screen.getByText("Loading destination information")).toBeInTheDocument();
   });
 
   it("includes image and destination details", () => {
@@ -113,11 +98,8 @@ describe("DestinationSkeleton", () => {
 
 describe("ItineraryItemSkeleton", () => {
   it("renders itinerary item skeleton", () => {
-    render(<ItineraryItemSkeleton data-testid="itinerary-item" />);
-
-    const item = screen.getByTestId("itinerary-item");
-    expect(item).toBeInTheDocument();
-    expect(item).toHaveAttribute("aria-label", "Loading itinerary item");
+    render(<ItineraryItemSkeleton />);
+    expect(screen.getByText("Loading itinerary item")).toBeInTheDocument();
   });
 
   it("has timeline structure", () => {
@@ -135,11 +117,8 @@ describe("ItineraryItemSkeleton", () => {
 
 describe("ChatMessageSkeleton", () => {
   it("renders chat message skeleton", () => {
-    render(<ChatMessageSkeleton data-testid="chat-message" />);
-
-    const message = screen.getByTestId("chat-message");
-    expect(message).toBeInTheDocument();
-    expect(message).toHaveAttribute("aria-label", "Loading chat message");
+    render(<ChatMessageSkeleton />);
+    expect(screen.getByText("Loading chat message")).toBeInTheDocument();
   });
 
   it("renders user message layout", () => {
@@ -167,11 +146,8 @@ describe("ChatMessageSkeleton", () => {
 
 describe("SearchFilterSkeleton", () => {
   it("renders search filter skeleton", () => {
-    render(<SearchFilterSkeleton data-testid="search-filter" />);
-
-    const filter = screen.getByTestId("search-filter");
-    expect(filter).toBeInTheDocument();
-    expect(filter).toHaveAttribute("aria-label", "Loading search filters");
+    render(<SearchFilterSkeleton />);
+    expect(screen.getByText("Loading search filters")).toBeInTheDocument();
   });
 
   it("has filter section structure", () => {

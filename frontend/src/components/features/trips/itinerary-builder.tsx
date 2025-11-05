@@ -268,6 +268,7 @@ function DestinationDialog({
               </Button>
             </div>
             {formData.activities.map((activity, index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: Activities are simple strings without stable IDs; index key avoids remount on input change
               <div key={`activity-${index}`} className="flex gap-2">
                 <Input
                   value={activity}

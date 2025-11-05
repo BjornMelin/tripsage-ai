@@ -17,6 +17,7 @@
     "test:short": "vitest run --test-timeout=3000 --hook-timeout=3000 --teardown-timeout=3000",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
+    "test:ci": "vitest run --coverage",
     "test:e2e": "playwright test",
     "codemod:ai-route:dry": "npx jscodeshift -t ../scripts/codemods/ai-route-v6-upgrade.js \"src/app/**/route.ts\" --parser=ts -d -p",
     "codemod:ai-route": "npx jscodeshift -t ../scripts/codemods/ai-route-v6-upgrade.js \"src/app/**/route.ts\" --parser=ts",

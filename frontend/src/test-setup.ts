@@ -219,3 +219,5 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
+
+// Timers are configured per-suite in store tests when needed.

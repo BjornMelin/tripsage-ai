@@ -2,6 +2,14 @@ import { render, screen } from "@testing-library/react";
 import type { ChatStatus, FileUIPart, UIMessage } from "ai";
 import { describe, expect, it, vi } from "vitest";
 
+// Stub CSS and Streamdown imports used by downstream components
+vi.mock("katex/dist/katex.min.css", () => ({}));
+vi.mock("streamdown", () => ({
+  Streamdown: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="mock-streamdown">{children}</div>
+  ),
+}));
+
 type UseChatOptions = {
   id?: string;
   resume?: boolean;

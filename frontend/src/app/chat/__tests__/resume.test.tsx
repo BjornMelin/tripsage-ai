@@ -1,6 +1,14 @@
 import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+// Stub CSS and Streamdown imports used by downstream components
+vi.mock("katex/dist/katex.min.css", () => ({}));
+vi.mock("streamdown", () => ({
+  Streamdown: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="mock-streamdown">{children}</div>
+  ),
+}));
+
 vi.mock("@/lib/supabase/client", () => {
   return {
     useSupabase: () => ({

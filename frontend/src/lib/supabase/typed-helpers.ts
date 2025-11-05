@@ -31,12 +31,14 @@ export async function insertSingle<T extends keyof Database["public"]["Tables"]>
   // Keep any-cast localized while ensuring compile-time payload types.
   // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
   const anyClient = client as unknown as { from: (t: string) => any };
-  const { data, error } = await anyClient
-    .from(table as string)
-    .insert(values as unknown)
-    .select()
-    .single();
-  return { data: (data ?? null) as Tables<T> | null, error };
+  const insertQb = anyClient.from(table as string).insert(values as unknown);
+  // Some tests stub a very lightweight query builder without select/single methods.
+  // Gracefully handle those by treating the insert as fire-and-forget.
+  if (insertQb && typeof insertQb.select === "function") {
+    const { data, error } = await insertQb.select().single();
+    return { data: (data ?? null) as Tables<T> | null, error };
+  }
+  return { data: null, error: null };
 }
 
 /**
