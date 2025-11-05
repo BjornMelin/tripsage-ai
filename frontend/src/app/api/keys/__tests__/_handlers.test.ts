@@ -67,6 +67,6 @@ describe("keys _handlers", () => {
     const res = await getKeys({ supabase });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body[0]).toMatchObject({ has_key: true, service: "openai" });
+    expect(body[0]).toMatchObject({ hasKey: true, service: "openai" });
   });
 });

@@ -34,7 +34,7 @@ describe("GET /api/keys route", () => {
     const res = await GET();
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body[0]).toMatchObject({ has_key: true, is_valid: true, service: "openai" });
+    expect(body[0]).toMatchObject({ hasKey: true, isValid: true, service: "openai" });
   });
 
   it("returns 401 when not authenticated", async () => {

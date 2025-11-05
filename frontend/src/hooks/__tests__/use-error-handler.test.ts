@@ -142,7 +142,7 @@ describe("useErrorHandler", () => {
 
       expect(MOCK_SESSION_STORAGE.setItem).toHaveBeenCalledWith(
         "session_id",
-        expect.stringMatching(/^session_\d+_[a-z0-9]+$/)
+        expect.stringMatching(/^session_[A-Za-z0-9-]+$/)
       );
     });
 

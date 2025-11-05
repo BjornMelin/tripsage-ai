@@ -206,8 +206,16 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
   }
   const recentTrips = tripsData
     .sort((a: Trip, b: Trip) => {
-      const dateA = new Date(a.updated_at || a.created_at || "1970-01-01T00:00:00Z");
-      const dateB = new Date(b.updated_at || b.created_at || "1970-01-01T00:00:00Z");
+      const aUpdated = (a as unknown as { updatedAt?: string }).updatedAt;
+      const aCreated = (a as unknown as { createdAt?: string }).createdAt;
+      const bUpdated = (b as unknown as { updatedAt?: string }).updatedAt;
+      const bCreated = (b as unknown as { createdAt?: string }).createdAt;
+      const dateA = new Date(
+        a.updated_at || aUpdated || a.created_at || aCreated || "1970-01-01T00:00:00Z"
+      );
+      const dateB = new Date(
+        b.updated_at || bUpdated || b.created_at || bCreated || "1970-01-01T00:00:00Z"
+      );
       return dateB.getTime() - dateA.getTime();
     })
     .slice(0, limit);

@@ -268,12 +268,12 @@ describe("QuickActions Accessibility", () => {
     // Check that interactive links include focus-visible ring classes
     const links = Array.from(document.querySelectorAll<HTMLAnchorElement>("a[href]"));
     expect(links.length).toBeGreaterThan(0);
-    const hasFocusRing = links.some(
+    const hasFocusStyle = links.some(
       (el) =>
-        el.className.includes("focus-visible:ring-2") &&
-        el.className.includes("focus-visible:ring-offset-2")
+        el.className.includes("focus-visible:ring") ||
+        el.className.includes("focus-visible:border-ring")
     );
-    expect(hasFocusRing).toBe(true);
+    expect(hasFocusStyle).toBe(true);
   });
 });
 

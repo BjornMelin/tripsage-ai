@@ -187,7 +187,9 @@ describe("handleChatStream", () => {
     expect(res.status).toBe(200);
     // assistant message persisted
     expect(memLog.length).toBe(1);
-    expect(memLog[0].sessionId).toBe("s1");
+    // Database column uses snake_case
+    // biome-ignore lint/style/useNamingConvention: test mirrors DB column name
+    expect((memLog[0] as unknown as { session_id: string }).session_id).toBe("s1");
     expect(memLog[0].role).toBe("assistant");
     // provider metadata present in start/finish
     expect(await startMeta).toMatchObject({ provider: "openai" });
