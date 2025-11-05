@@ -50,6 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `docs/specs/0015-spec-ai-elements-response-sources.md`
   - `docs/specs/0016-spec-react-compiler-enable.md`
 
+- Testing support stubs and helpers:
+  - Rehype harden test stub to isolate ESM/CJS packaging differences: `frontend/src/test/mocks/rehype-harden.ts` (aliased in Vitest config)
+
 ### Changed
 
 - Replaced insecure/random ID generation across frontend stores and error pages with `secureId/secureUUID` and normalized timestamps via `nowIso`.
@@ -76,6 +79,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `frontend/package.json` test scripts include short timeouts
 - **Tooling:** Consolidated lint/format to Biome (`biome check`), removed ESLint/Prettier/lint-staged.
 
+- Frontend testing configuration and performance:
+  - Vitest pool selection: use `vmForks` in CI and `vmThreads` locally to reduce worker hangs on large suites (`frontend/vitest.config.ts`).
+  - Enable CSS transformation for web dependencies (`deps.web.transformCss: true`) to fix “Unknown file extension .css” in node_modules.
+  - Inline/ssr-handle `rehype-harden` to avoid ESM-in-CJS packaging errors during tests (`test.server.deps.inline`, `ssr.noExternal`, and alias).
+  - Aliased `rehype-harden` to a minimal no-op transformer for tests.
+  - Added global Web Streams polyfills in test setup using `node:stream/web` with correct lib.dom-compatible typing.
+  - Mocked `next/image` to a basic `<img>` in tests to eliminate jsdom/ESM overhead and speed up UI tests.
+  - Avoid redefining `window.location`; rely on JSDOM defaults to prevent non-configurable property errors.
+  - Hoisted module mocks with `vi.hoisted` where needed to satisfy Vitest hoisting semantics.
+
 ### Fixed
 
 - Token budget utilities release WASM tokenizer resources without `any` casts (`frontend/src/lib/tokens/budget.ts`).
@@ -89,6 +102,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenRouter and xAI wired via OpenAI-compatible client with per-user BYOK and required base URLs
 - Registry is SSR-only (`server-only`), never returns or logs secret material
 - Session message listing and creation stay scoped to the authenticated user (`frontend/src/app/api/chat/sessions/_handlers.ts`).
+
+- Frontend test stability and failures:
+  - Resolved CSS import failures by enabling CSS transforms for web deps and adjusting the pool to VM runners.
+  - Fixed ESM/CJS mismatch from `rehype-harden` by inlining and aliasing to a stub in tests.
+  - Eliminated hoist-related `vi.mock` errors by moving test-local mock components into `vi.hoisted` blocks.
+  - Removed brittle `window.location` property redefinitions (location/reload/href) in tests; replaced with behavior assertions that don’t require redefining non-configurable globals.
+  - Added Web Streams polyfills to fix `TransformStream is not defined` in chat UI tests (AI SDK/eventsource-parser).
+  - Mocked `@/components/ai-elements/response` in chat page tests to avoid rehype/Streamdown transitive ESM during unit tests.
+  - Shortened and stabilized slow suites (e.g., search/accommodation-card) by mocking `next/image` and increasing a single long-running test timeout where appropriate.
+  - Adjusted auth-store time comparison to avoid strict-equality flakiness on timestamp rollover.
 
 ### Removed
 

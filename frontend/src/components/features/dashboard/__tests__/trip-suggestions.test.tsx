@@ -226,7 +226,7 @@ describe("TripSuggestions", () => {
     });
 
     /** Test that the component handles the showEmpty prop correctly */
-    it("should handle showEmpty prop correctly", () => {
+    it("should handle showEmpty prop correctly", { timeout: 15000 }, () => {
       MockBudgetStore.activeBudget = {
         categories: [],
         createdAt: "2024-01-01T00:00:00Z",

@@ -11,12 +11,24 @@ import { defineConfig } from "vitest/config";
 const isCi = process.env.CI === "true" || process.env.CI === "1";
 
 export default defineConfig({
+  ssr: {
+    noExternal: ["rehype-harden"],
+  },
   plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
       // Shim Next.js server-only import for tests
       "server-only": path.resolve(__dirname, "./src/test/mocks/server-only.ts"),
+      // Shim problematic ESM/CJS package in test runners
+      "rehype-harden": path.resolve(
+        __dirname,
+        "./src/test/mocks/rehype-harden.ts"
+      ),
+      "rehype-harden/dist/index.js": path.resolve(
+        __dirname,
+        "./src/test/mocks/rehype-harden.ts"
+      ),
     },
   },
   test: {
@@ -45,8 +57,21 @@ export default defineConfig({
     isolate: true,
     maxWorkers: isCi ? 2 : 1,
     passWithNoTests: true,
-    // Pools/workers: default to forks; prefer threads in CI for big suites
-    pool: "threads",
+    // Use VM pool runners so CSS from node_modules is transformed in tests
+    // (fixes "Unknown file extension .css" for packages like katex via Streamdown)
+    // Prefer vmForks in CI for stability on large suites; vmThreads locally for speed.
+    pool: isCi ? "vmForks" : "vmThreads",
+    // Ensure Vite transforms CSS imports under vmThreads
+    deps: {
+      web: {
+        transformCss: true,
+      },
+    },
+    server: {
+      deps: {
+        inline: ["rehype-harden"],
+      },
+    },
     restoreMocks: true,
     setupFiles: ["./src/test-setup.ts"],
     teardownTimeout: 10000,
