@@ -261,6 +261,7 @@ docs/**/*-backup.*
 *.development.*
 *.staging.*
 development-*
+!docs/developers/development-guide.md
 staging-*
 
 # Performance and profiling outputs

@@ -50,25 +50,33 @@ const MOCK_USER: Partial<User> = {
 vi.mock("@/stores/user-store");
 vi.mock("@/stores/auth-store");
 
-/** Mock component for PersonalInfoSection */
-const PERSONAL_INFO_SECTION = () => (
-  <div data-testid="personal-info-section">Personal Info Section</div>
-);
-
-/** Mock component for AccountSettingsSection */
-const ACCOUNT_SETTINGS_SECTION = () => (
-  <div data-testid="account-settings-section">Account Settings Section</div>
-);
-
-/** Mock component for PreferencesSection */
-const PREFERENCES_SECTION = () => (
-  <div data-testid="preferences-section">Preferences Section</div>
-);
-
-/** Mock component for SecuritySection */
-const SECURITY_SECTION = () => (
-  <div data-testid="security-section">Security Section</div>
-);
+// Define mock components in a hoisted block so they are available to vi.mock
+// factories, which are hoisted by Vitest.
+const {
+  PERSONAL_INFO_SECTION,
+  ACCOUNT_SETTINGS_SECTION,
+  PREFERENCES_SECTION,
+  SECURITY_SECTION,
+} = vi.hoisted(() => {
+  const PersonalInfoSection = () => (
+    <div data-testid="personal-info-section">Personal Info Section</div>
+  );
+  const AccountSettingsSection = () => (
+    <div data-testid="account-settings-section">Account Settings Section</div>
+  );
+  const PreferencesSection = () => (
+    <div data-testid="preferences-section">Preferences Section</div>
+  );
+  const SecuritySection = () => (
+    <div data-testid="security-section">Security Section</div>
+  );
+  return {
+    ACCOUNT_SETTINGS_SECTION: AccountSettingsSection,
+    PERSONAL_INFO_SECTION: PersonalInfoSection,
+    PREFERENCES_SECTION: PreferencesSection,
+    SECURITY_SECTION: SecuritySection,
+  } as const;
+});
 
 vi.mock("@/components/features/profile/personal-info-section", () => ({
   PersonalInfoSection: PERSONAL_INFO_SECTION,

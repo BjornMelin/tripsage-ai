@@ -5,8 +5,14 @@
  */
 
 import { cleanup } from "@testing-library/react";
+import React from "react";
 import { afterEach, vi } from "vitest";
 import "@testing-library/jest-dom";
+import {
+  ReadableStream as NodeReadableStream,
+  TransformStream as NodeTransformStream,
+  WritableStream as NodeWritableStream,
+} from "node:stream/web";
 import { createMockSupabaseClient } from "./test/mock-helpers.test";
 
 type UnknownRecord = Record<string, unknown>;
@@ -57,6 +63,20 @@ vi.mock("next/navigation", () => {
     usePathname: () => "/",
     useRouter: () => ({ back, forward, prefetch, push, refresh, replace }),
     useSearchParams: () => new URLSearchParams(),
+  };
+});
+
+// Simplify Next/Image for tests to avoid overhead and ESM/DOM quirks
+vi.mock("next/image", () => {
+  return {
+    default: (props: Record<string, unknown> & { src?: string; alt?: string }) => {
+      const { src, alt, ...rest } = props ?? {};
+      return React.createElement("img", {
+        alt: alt ?? "",
+        src: typeof src === "string" ? src : "",
+        ...rest,
+      } as Record<string, unknown>);
+    },
   };
 });
 
@@ -141,13 +161,7 @@ const IS_JSDOM_ENVIRONMENT = typeof window !== "undefined";
 if (IS_JSDOM_ENVIRONMENT) {
   const WINDOW_REF = globalThis.window as Window & typeof globalThis;
 
-  Object.defineProperty(WINDOW_REF, "location", {
-    value: {
-      href: "https://example.com",
-      reload: vi.fn(),
-    },
-    writable: true,
-  });
+  // Use JSDOM default location; avoid redefining to prevent errors in vmThreads
 
   Object.defineProperty(WINDOW_REF, "navigator", {
     value: {
@@ -186,6 +200,29 @@ if (IS_JSDOM_ENVIRONMENT) {
 // Only provide a global fetch mock in JSDOM, where window is available.
 if (IS_JSDOM_ENVIRONMENT) {
   globalThis.fetch = vi.fn() as unknown as typeof fetch;
+}
+
+// Provide Web Streams polyfills for environments missing them (used by
+// eventsource-parser / AI SDK transport in tests)
+type RS = typeof ReadableStream;
+type WS = typeof WritableStream;
+type TS = typeof TransformStream;
+const GLOBAL_STREAMS = globalThis as typeof globalThis & {
+  ReadableStream?: RS;
+  WritableStream?: WS;
+  TransformStream?: TS;
+};
+if (!GLOBAL_STREAMS.ReadableStream) {
+  (GLOBAL_STREAMS as { ReadableStream?: RS }).ReadableStream =
+    NodeReadableStream as unknown as RS;
+}
+if (!GLOBAL_STREAMS.WritableStream) {
+  (GLOBAL_STREAMS as { WritableStream?: WS }).WritableStream =
+    NodeWritableStream as unknown as WS;
+}
+if (!GLOBAL_STREAMS.TransformStream) {
+  (GLOBAL_STREAMS as { TransformStream?: TS }).TransformStream =
+    NodeTransformStream as unknown as TS;
 }
 
 const CONSOLE_SPIES: Console = {

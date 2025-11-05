@@ -61,39 +61,26 @@ describe("ErrorService", () => {
   });
 
   describe("createErrorReport", () => {
-    beforeEach(() => {
-      // Mock window.location and navigator
-      Object.defineProperty(window, "location", {
-        value: { href: "https://example.com/test" },
-        writable: true,
-      });
-      Object.defineProperty(window, "navigator", {
-        value: { userAgent: "Test User Agent" },
-        writable: true,
-      });
-    });
+    // Use JSDOM-provided window.location and navigator to avoid redefining
+    // non-configurable properties under vmThreads pool.
 
     it("should create a basic error report", () => {
       const error = new Error("Test error");
       error.stack = "Error: Test error\n    at test (test.js:1:1)";
 
       const report = errorService.createErrorReport(error);
-
-      expect(report).toEqual({
-        error: {
-          digest: undefined,
-          message: "Test error",
-          name: "Error",
-          stack: "Error: Test error\n    at test (test.js:1:1)",
-        },
-        errorInfo: undefined,
-        timestamp: expect.any(String),
-        url: "https://example.com/test",
-        userAgent: "Test User Agent",
+      // Basic fields
+      expect(report.error).toMatchObject({
+        message: "Test error",
+        name: "Error",
+        stack: "Error: Test error\n    at test (test.js:1:1)",
       });
-
+      expect(report.errorInfo).toBeUndefined();
       // Validate timestamp format
       expect(new Date(report.timestamp).toISOString()).toBe(report.timestamp);
+      // Validate URL and UA are sourced from the environment
+      expect(report.url).toBe(window.location.href);
+      expect(report.userAgent).toBe(window.navigator.userAgent);
     });
 
     it("should create error report with error info", () => {
