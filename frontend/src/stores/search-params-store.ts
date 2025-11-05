@@ -297,7 +297,6 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           const { currentSearchType, currentParams } = get();
           if (!currentSearchType || !currentParams) return false;
 
-          // Check if required fields are present based on search type
           switch (currentSearchType) {
             case "flight":
               return (
@@ -725,3 +724,27 @@ export const useSearchParamsValidation = () =>
     isValidating: state.isValidating,
     validationErrors: state.validationErrors,
   }));
+
+/**
+ * Compute the current parameters based on the store state snapshot.
+ *
+ * @param state - The search params store state snapshot.
+ * @returns The params object for the current search type, or null.
+ */
+export const selectCurrentParamsFrom = (
+  state: SearchParamsState
+): SearchParams | null => {
+  if (!state.currentSearchType) return null;
+  switch (state.currentSearchType) {
+    case "flight":
+      return state.flightParams as FlightSearchParams;
+    case "accommodation":
+      return state.accommodationParams as AccommodationSearchParams;
+    case "activity":
+      return state.activityParams as ActivitySearchParams;
+    case "destination":
+      return state.destinationParams as DestinationSearchParams;
+    default:
+      return null;
+  }
+};

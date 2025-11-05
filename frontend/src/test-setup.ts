@@ -13,7 +13,7 @@ import {
   TransformStream as NodeTransformStream,
   WritableStream as NodeWritableStream,
 } from "node:stream/web";
-import { createMockSupabaseClient } from "./test/mock-helpers.test";
+import { createMockSupabaseClient } from "./test/mock-helpers";
 import { resetTestQueryClient } from "./test/test-utils.test";
 
 type UnknownRecord = Record<string, unknown>;

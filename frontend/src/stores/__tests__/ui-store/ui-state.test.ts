@@ -17,27 +17,12 @@ Object.defineProperty(window, "matchMedia", {
   writable: true,
 });
 
-import { type Theme, useUiStore } from "../ui-store";
+import { type Theme, useUiStore } from "@/stores/ui-store";
+import { resetUiStore } from "./_shared";
 
-describe("UI Store", () => {
+describe("UI Store - UI State Management", () => {
   beforeEach(() => {
-    // Clear all state before each test
-    act(() => {
-      useUiStore.getState().reset();
-      // Ensure non-reset parts of the store are restored as well
-      // Theme and feature flags are persisted and not included in reset()
-      // Reset them explicitly to avoid cross-test leakage.
-      useUiStore.setState({
-        features: {
-          enableAnalytics: true,
-          enableAnimations: true,
-          enableBetaFeatures: false,
-          enableHaptics: true,
-          enableSounds: false,
-        },
-        theme: "system",
-      });
-    });
+    resetUiStore();
   });
 
   describe("Initial State", () => {
@@ -115,7 +100,6 @@ describe("UI Store", () => {
       });
 
       expect(consoleSpy).toHaveBeenCalled();
-      // Should remain unchanged regardless of prior tests
       expect(result.current.theme).toBe(previousTheme);
 
       consoleSpy.mockRestore();
@@ -124,7 +108,6 @@ describe("UI Store", () => {
     it("computes isDarkMode correctly for system theme", () => {
       const { result } = renderHook(() => useUiStore());
 
-      // Mock dark mode preference - update the existing mock
       const matchMediaMock = vi.fn().mockImplementation((query: string) => ({
         addEventListener: vi.fn(),
         addListener: vi.fn(),
@@ -145,8 +128,6 @@ describe("UI Store", () => {
         result.current.setTheme("system");
       });
 
-      // Current store semantics in tests: system does not reflect matchMedia reliably
-      // Assert the store reports false for system, and theme overrides still work elsewhere
       expect(result.current.isDarkMode).toBe(false);
     });
   });
@@ -216,60 +197,6 @@ describe("UI Store", () => {
       });
 
       expect(result.current.sidebar.isPinned).toBe(true);
-    });
-  });
-
-  describe("Navigation Management", () => {
-    it("sets active route", () => {
-      const { result } = renderHook(() => useUiStore());
-
-      act(() => {
-        result.current.setActiveRoute("/dashboard");
-      });
-
-      expect(result.current.navigation.activeRoute).toBe("/dashboard");
-
-      act(() => {
-        result.current.setActiveRoute("/profile");
-      });
-
-      expect(result.current.navigation.activeRoute).toBe("/profile");
-    });
-
-    it("sets breadcrumbs", () => {
-      const { result } = renderHook(() => useUiStore());
-
-      const breadcrumbs = [
-        { href: "/", label: "Home" },
-        { href: "/dashboard", label: "Dashboard" },
-        { label: "Profile" },
-      ];
-
-      act(() => {
-        result.current.setBreadcrumbs(breadcrumbs);
-      });
-
-      expect(result.current.navigation.breadcrumbs).toEqual(breadcrumbs);
-    });
-
-    it("adds breadcrumb to existing list", () => {
-      const { result } = renderHook(() => useUiStore());
-
-      const initialBreadcrumbs = [
-        { href: "/", label: "Home" },
-        { href: "/dashboard", label: "Dashboard" },
-      ];
-
-      act(() => {
-        result.current.setBreadcrumbs(initialBreadcrumbs);
-      });
-
-      act(() => {
-        result.current.addBreadcrumb({ label: "Profile" });
-      });
-
-      expect(result.current.navigation.breadcrumbs).toHaveLength(3);
-      expect(result.current.navigation.breadcrumbs[2].label).toBe("Profile");
     });
   });
 
@@ -503,7 +430,6 @@ describe("UI Store", () => {
     it("limits notifications to maximum of 50", () => {
       const { result } = renderHook(() => useUiStore());
 
-      // Add 55 notifications
       act(() => {
         for (let i = 0; i < 55; i++) {
           result.current.addNotification({
@@ -514,7 +440,6 @@ describe("UI Store", () => {
         }
       });
 
-      // Should keep only the latest 50
       expect(result.current.notifications).toHaveLength(50);
       expect(result.current.notifications[0].title).toBe("Notification 54");
     });
@@ -588,159 +513,6 @@ describe("UI Store", () => {
     });
   });
 
-  describe("Modal Management", () => {
-    it("opens modal with component and props", () => {
-      const { result } = renderHook(() => useUiStore());
-
-      const modalProps = { mode: "edit", userId: "123" };
-
-      act(() => {
-        result.current.openModal("UserEditModal", modalProps, {
-          closeOnOverlayClick: false,
-          size: "lg",
-        });
-      });
-
-      expect(result.current.modal.isOpen).toBe(true);
-      expect(result.current.modal.component).toBe("UserEditModal");
-      expect(result.current.modal.props).toEqual(modalProps);
-      expect(result.current.modal.size).toBe("lg");
-      expect(result.current.modal.closeOnOverlayClick).toBe(false);
-    });
-
-    it("opens modal with default options", () => {
-      const { result } = renderHook(() => useUiStore());
-
-      act(() => {
-        result.current.openModal("BasicModal");
-      });
-
-      expect(result.current.modal.isOpen).toBe(true);
-      expect(result.current.modal.component).toBe("BasicModal");
-      expect(result.current.modal.props).toEqual({});
-      expect(result.current.modal.size).toBe("md");
-      expect(result.current.modal.closeOnOverlayClick).toBe(true);
-    });
-
-    it("closes modal and resets state", () => {
-      const { result } = renderHook(() => useUiStore());
-
-      act(() => {
-        result.current.openModal("TestModal", { test: true });
-      });
-
-      expect(result.current.modal.isOpen).toBe(true);
-
-      act(() => {
-        result.current.closeModal();
-      });
-
-      expect(result.current.modal.isOpen).toBe(false);
-      expect(result.current.modal.component).toBeNull();
-      expect(result.current.modal.props).toEqual({});
-    });
-
-    it("updates modal props without closing", () => {
-      const { result } = renderHook(() => useUiStore());
-
-      act(() => {
-        result.current.openModal("TestModal", { initial: true });
-      });
-
-      act(() => {
-        result.current.updateModalProps({ additional: "data", updated: true });
-      });
-
-      expect(result.current.modal.isOpen).toBe(true);
-      expect(result.current.modal.props).toEqual({
-        additional: "data",
-        initial: true,
-        updated: true,
-      });
-    });
-  });
-
-  describe("Command Palette Management", () => {
-    it("opens command palette", () => {
-      const { result } = renderHook(() => useUiStore());
-
-      act(() => {
-        result.current.openCommandPalette();
-      });
-
-      expect(result.current.commandPalette.isOpen).toBe(true);
-    });
-
-    it("closes command palette and resets state", () => {
-      const { result } = renderHook(() => useUiStore());
-
-      act(() => {
-        result.current.openCommandPalette();
-        result.current.setCommandPaletteQuery("test query");
-        result.current.setCommandPaletteResults([
-          {
-            action: () => {
-              /* empty callback for test */
-            },
-            id: "1",
-            title: "Test Result",
-          },
-        ]);
-      });
-
-      expect(result.current.commandPalette.isOpen).toBe(true);
-      expect(result.current.commandPalette.query).toBe("test query");
-      expect(result.current.commandPalette.results).toHaveLength(1);
-
-      act(() => {
-        result.current.closeCommandPalette();
-      });
-
-      expect(result.current.commandPalette.isOpen).toBe(false);
-      expect(result.current.commandPalette.query).toBe("");
-      expect(result.current.commandPalette.results).toHaveLength(0);
-    });
-
-    it("sets command palette query", () => {
-      const { result } = renderHook(() => useUiStore());
-
-      act(() => {
-        result.current.setCommandPaletteQuery("search term");
-      });
-
-      expect(result.current.commandPalette.query).toBe("search term");
-    });
-
-    it("sets command palette results", () => {
-      const { result } = renderHook(() => useUiStore());
-
-      const results = [
-        {
-          action: () => {
-            /* empty callback for test */
-          },
-          category: "commands",
-          description: "First result",
-          id: "1",
-          title: "Result 1",
-        },
-        {
-          action: () => {
-            /* empty callback for test */
-          },
-          id: "2",
-          title: "Result 2",
-        },
-      ];
-
-      act(() => {
-        result.current.setCommandPaletteResults(results);
-      });
-
-      expect(result.current.commandPalette.results).toEqual(results);
-    });
-  });
-
   describe("Feature Flag Management", () => {
     it("toggles feature flags", () => {
       const { result } = renderHook(() => useUiStore());
@@ -792,7 +564,7 @@ describe("UI Store", () => {
 
       expect(result.current.features.enableAnimations).toBe(false);
       expect(result.current.features.enableSounds).toBe(true);
-      expect(result.current.features.enableHaptics).toBe(true); // Should remain unchanged
+      expect(result.current.features.enableHaptics).toBe(true);
     });
   });
 
@@ -800,7 +572,6 @@ describe("UI Store", () => {
     it("resets UI state to defaults", () => {
       const { result } = renderHook(() => useUiStore());
 
-      // Modify state
       act(() => {
         result.current.setSidebarOpen(false);
         result.current.setActiveRoute("/custom");
@@ -810,7 +581,6 @@ describe("UI Store", () => {
         result.current.setLoadingState("test", "loading");
       });
 
-      // Verify state was modified
       expect(result.current.sidebar.isOpen).toBe(false);
       expect(result.current.navigation.activeRoute).toBe("/custom");
       expect(result.current.notifications).toHaveLength(1);
@@ -818,12 +588,10 @@ describe("UI Store", () => {
       expect(result.current.commandPalette.isOpen).toBe(true);
       expect(Object.keys(result.current.loadingStates)).toHaveLength(1);
 
-      // Reset
       act(() => {
         result.current.reset();
       });
 
-      // Verify reset
       expect(result.current.sidebar.isOpen).toBe(true);
       expect(result.current.navigation.activeRoute).toBe("/");
       expect(result.current.notifications).toHaveLength(0);
@@ -837,7 +605,6 @@ describe("UI Store", () => {
     it("handles complete UI workflow", () => {
       const { result } = renderHook(() => useUiStore());
 
-      // Set up navigation
       act(() => {
         result.current.setActiveRoute("/dashboard");
         result.current.setBreadcrumbs([
@@ -846,21 +613,17 @@ describe("UI Store", () => {
         ]);
       });
 
-      // Configure sidebar
       act(() => {
         result.current.setSidebarCollapsed(true);
         result.current.setSidebarPinned(false);
       });
 
-      // Set loading states
       act(() => {
         result.current.setLoadingState("data", "loading");
         result.current.setLoadingState("user", "success");
       });
 
-      // Add notifications
       let infoId: string;
-      // let warningId: string; // Future use
       act(() => {
         infoId = result.current.addNotification({
           isRead: false,
@@ -874,15 +637,12 @@ describe("UI Store", () => {
         });
       });
 
-      // Open modal
       act(() => {
         result.current.openModal("DataModal", { dataId: "123" });
       });
 
-      // Verify all state
       expect(result.current.navigation.activeRoute).toBe("/dashboard");
       expect(result.current.sidebar.isCollapsed).toBe(true);
-      // Assert loading via state values to avoid computed getter nuances
       expect(
         Object.values(result.current.loadingStates).some((s) => s === "loading")
       ).toBe(true);
@@ -892,7 +652,6 @@ describe("UI Store", () => {
         2
       );
 
-      // Mark notification as read
       act(() => {
         if (infoId) result.current.markNotificationAsRead(infoId);
       });
@@ -901,14 +660,12 @@ describe("UI Store", () => {
         1
       );
 
-      // Complete loading
       act(() => {
         result.current.setLoadingState("data", "success");
       });
 
       expect(useUiStore.getState().isLoading).toBe(false);
 
-      // Close modal
       act(() => {
         result.current.closeModal();
       });
@@ -916,66 +673,9 @@ describe("UI Store", () => {
       expect(result.current.modal.isOpen).toBe(false);
     });
 
-    it("handles command palette workflow", () => {
-      const { result } = renderHook(() => useUiStore());
-
-      // Open command palette
-      act(() => {
-        result.current.openCommandPalette();
-      });
-
-      expect(result.current.commandPalette.isOpen).toBe(true);
-
-      // Set query
-      act(() => {
-        result.current.setCommandPaletteQuery("user");
-      });
-
-      // Simulate search results
-      const mockResults = [
-        {
-          action: () => {
-            /* empty callback for test */
-          },
-          category: "user",
-          description: "Modify user account settings",
-          icon: "user",
-          id: "user-1",
-          title: "Edit User Profile",
-        },
-        {
-          action: () => {
-            /* empty callback for test */
-          },
-          category: "admin",
-          description: "Manage all users",
-          icon: "users",
-          id: "user-2",
-          title: "User Management",
-        },
-      ];
-
-      act(() => {
-        result.current.setCommandPaletteResults(mockResults);
-      });
-
-      expect(result.current.commandPalette.results).toHaveLength(2);
-      expect(result.current.commandPalette.query).toBe("user");
-
-      // Close command palette
-      act(() => {
-        result.current.closeCommandPalette();
-      });
-
-      expect(result.current.commandPalette.isOpen).toBe(false);
-      expect(result.current.commandPalette.query).toBe("");
-      expect(result.current.commandPalette.results).toHaveLength(0);
-    });
-
     it("handles notification lifecycle with persistence", () => {
       const { result } = renderHook(() => useUiStore());
 
-      // Add different types of notifications
       let successId: string;
       let errorId: string;
       let warningId: string;
@@ -1014,7 +714,6 @@ describe("UI Store", () => {
         3
       );
 
-      // Mark some as read
       act(() => {
         if (successId) result.current.markNotificationAsRead(successId);
         if (errorId) result.current.markNotificationAsRead(errorId);
@@ -1024,7 +723,6 @@ describe("UI Store", () => {
         1
       );
 
-      // Remove one notification
       act(() => {
         if (errorId) result.current.removeNotification(errorId);
       });
@@ -1034,7 +732,6 @@ describe("UI Store", () => {
         1
       );
 
-      // Verify remaining notifications
       const remainingNotifications = result.current.notifications;
       expect(remainingNotifications.some((n) => n.id === successId)).toBe(true);
       expect(remainingNotifications.some((n) => n.id === warningId)).toBe(true);
@@ -1044,7 +741,6 @@ describe("UI Store", () => {
     it("handles theme switching with persistence", () => {
       const { result } = renderHook(() => useUiStore());
 
-      // Test theme switching sequence
       const themes: Theme[] = ["light", "dark", "system"];
 
       themes.forEach((theme) => {
@@ -1055,7 +751,6 @@ describe("UI Store", () => {
         expect(result.current.theme).toBe(theme);
       });
 
-      // Test toggle behavior starting from each theme
       act(() => {
         result.current.setTheme("light");
         result.current.toggleTheme();
@@ -1074,7 +769,6 @@ describe("UI Store", () => {
     it("utility selectors return correct values", () => {
       const { result } = renderHook(() => useUiStore());
 
-      // Test individual selectors
       const { result: themeResult } = renderHook(() =>
         useUiStore((state) => state.theme)
       );
@@ -1089,7 +783,6 @@ describe("UI Store", () => {
       expect(sidebarResult.current.isOpen).toBe(true);
       expect(notificationsResult.current).toEqual([]);
 
-      // Modify state and test again
       act(() => {
         result.current.setTheme("dark");
         result.current.setSidebarOpen(false);

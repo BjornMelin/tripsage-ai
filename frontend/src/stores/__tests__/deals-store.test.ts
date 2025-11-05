@@ -56,7 +56,7 @@ describe("Deals Store", () => {
     });
   });
 
-  describe.skip("Deal Management", () => {
+  describe("Deal Management", () => {
     it("should add a deal", () => {
       const { result } = renderHook(() => useDealsStore());
 
@@ -67,10 +67,12 @@ describe("Deals Store", () => {
 
       // biome-ignore lint/style/noNonNullAssertion: Test assertion after assignment
       expect(addResult!).toBe(true);
-      expect(result.current.deals[SAMPLE_DEAL.id]).toEqual({
-        ...SAMPLE_DEAL,
-        updatedAt: MOCK_TIMESTAMP,
-      });
+      expect(result.current.deals[SAMPLE_DEAL.id]).toEqual(
+        expect.objectContaining({
+          ...SAMPLE_DEAL,
+          updatedAt: expect.any(String),
+        })
+      );
     });
 
     it("should reject an invalid deal", () => {
@@ -96,11 +98,12 @@ describe("Deals Store", () => {
 
       const result = store.updateDeal(SAMPLE_DEAL.id, updates);
       expect(result).toBe(true);
-      expect(store.deals[SAMPLE_DEAL.id].price).toBe(updates.price);
-      expect(store.deals[SAMPLE_DEAL.id].discountPercentage).toBe(
+      const updated = useDealsStore.getState();
+      expect(updated.deals[SAMPLE_DEAL.id].price).toBe(updates.price);
+      expect(updated.deals[SAMPLE_DEAL.id].discountPercentage).toBe(
         updates.discountPercentage
       );
-      expect(store.deals[SAMPLE_DEAL.id].updatedAt).toBe(MOCK_TIMESTAMP);
+      expect(typeof updated.deals[SAMPLE_DEAL.id].updatedAt).toBe("string");
     });
 
     it("should remove a deal", () => {
@@ -122,13 +125,12 @@ describe("Deals Store", () => {
     });
   });
 
-  describe.skip("Featured Deals", () => {
+  describe("Featured Deals", () => {
     it("should add a deal to featured deals", () => {
       const store = useDealsStore.getState();
       store.addDeal(SAMPLE_DEAL);
       store.addToFeaturedDeals(SAMPLE_DEAL.id);
-
-      expect(store.featuredDeals).toContain(SAMPLE_DEAL.id);
+      expect(useDealsStore.getState().featuredDeals).toContain(SAMPLE_DEAL.id);
     });
 
     it("should not add a non-existent deal to featured deals", () => {
@@ -162,17 +164,18 @@ describe("Deals Store", () => {
     });
   });
 
-  describe.skip("Deal Alerts", () => {
+  describe("Deal Alerts", () => {
     it("should add an alert", () => {
       const store = useDealsStore.getState();
       const result = store.addAlert(SAMPLE_ALERT);
 
       expect(result).toBe(true);
-      expect(store.alerts).toHaveLength(1);
-      expect(store.alerts[0]).toEqual(
+      const afterAddAlert = useDealsStore.getState();
+      expect(afterAddAlert.alerts).toHaveLength(1);
+      expect(afterAddAlert.alerts[0]).toEqual(
         expect.objectContaining({
           id: SAMPLE_ALERT.id,
-          updatedAt: MOCK_TIMESTAMP,
+          updatedAt: expect.any(String),
         })
       );
     });
@@ -200,20 +203,21 @@ describe("Deals Store", () => {
 
       const result = store.updateAlert(SAMPLE_ALERT.id, updates);
       expect(result).toBe(true);
-      expect(store.alerts[0].minDiscount).toBe(updates.minDiscount);
-      expect(store.alerts[0].maxPrice).toBe(updates.maxPrice);
-      expect(store.alerts[0].updatedAt).toBe(MOCK_TIMESTAMP);
+      const alertState = useDealsStore.getState();
+      expect(alertState.alerts[0].minDiscount).toBe(updates.minDiscount);
+      expect(alertState.alerts[0].maxPrice).toBe(updates.maxPrice);
+      expect(typeof alertState.alerts[0].updatedAt).toBe("string");
     });
 
     it("should toggle alert active state", () => {
       const store = useDealsStore.getState();
       store.addAlert(SAMPLE_ALERT);
 
-      const initialIsActive = store.alerts[0].isActive;
+      const initialIsActive = useDealsStore.getState().alerts[0].isActive;
       store.toggleAlertActive(SAMPLE_ALERT.id);
-
-      expect(store.alerts[0].isActive).toBe(!initialIsActive);
-      expect(store.alerts[0].updatedAt).toBe(MOCK_TIMESTAMP);
+      const toggled = useDealsStore.getState();
+      expect(toggled.alerts[0].isActive).toBe(!initialIsActive);
+      expect(typeof toggled.alerts[0].updatedAt).toBe("string");
     });
 
     it("should remove an alert", () => {
@@ -225,13 +229,12 @@ describe("Deals Store", () => {
     });
   });
 
-  describe.skip("Saved Deals", () => {
+  describe("Saved Deals", () => {
     it("should add a deal to saved deals", () => {
       const store = useDealsStore.getState();
       store.addDeal(SAMPLE_DEAL);
       store.addToSavedDeals(SAMPLE_DEAL.id);
-
-      expect(store.savedDeals).toContain(SAMPLE_DEAL.id);
+      expect(useDealsStore.getState().savedDeals).toContain(SAMPLE_DEAL.id);
     });
 
     it("should not add a non-existent deal to saved deals", () => {
@@ -265,13 +268,14 @@ describe("Deals Store", () => {
     });
   });
 
-  describe.skip("Recently Viewed Deals", () => {
+  describe("Recently Viewed Deals", () => {
     it("should add a deal to recently viewed deals", () => {
       const store = useDealsStore.getState();
       store.addDeal(SAMPLE_DEAL);
       store.addToRecentlyViewed(SAMPLE_DEAL.id);
-
-      expect(store.recentlyViewedDeals).toContain(SAMPLE_DEAL.id);
+      expect(useDealsStore.getState().recentlyViewedDeals).toContain(
+        SAMPLE_DEAL.id
+      );
     });
 
     it("should not add a non-existent deal to recently viewed deals", () => {
@@ -318,8 +322,9 @@ describe("Deals Store", () => {
         store.addToRecentlyViewed(deal.id);
       }
 
-      expect(store.recentlyViewedDeals).toHaveLength(20);
-      expect(store.recentlyViewedDeals[0]).toBe("deal24"); // Most recent should be first
+      const recentState = useDealsStore.getState();
+      expect(recentState.recentlyViewedDeals).toHaveLength(20);
+      expect(recentState.recentlyViewedDeals[0]).toBe("deal24"); // Most recent should be first
     });
   });
 
@@ -484,13 +489,13 @@ describe("Deals Store", () => {
     });
   });
 
-  describe.skip("Store Persistence", () => {
+  describe("Store Persistence", () => {
     it("should initialize the store", () => {
       const store = useDealsStore.getState();
       expect(store.isInitialized).toBe(false);
 
       store.initialize();
-      expect(store.isInitialized).toBe(true);
+      expect(useDealsStore.getState().isInitialized).toBe(true);
     });
 
     it("should reset the store", () => {

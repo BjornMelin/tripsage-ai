@@ -1260,3 +1260,43 @@ export const useSearchHistoryLoading = () =>
     isSyncing: state.isSyncing,
     syncError: state.syncError,
   }));
+
+/**
+ * Compute recent searches grouped by type from a state snapshot.
+ *
+ * @param state - The search history store state snapshot.
+ * @returns A map of search type to its recent searches.
+ */
+export const selectRecentSearchesByTypeFrom = (
+  state: SearchHistoryState
+): Record<SearchType, SearchHistoryItem[]> => {
+  const grouped: Record<SearchType, SearchHistoryItem[]> = {
+    accommodation: [],
+    activity: [],
+    destination: [],
+    flight: [],
+  };
+  state.recentSearches.forEach((search) => {
+    grouped[search.searchType].push(search);
+  });
+  return grouped;
+};
+
+/**
+ * Compute favorite saved searches from a state snapshot.
+ *
+ * @param state - The search history store state snapshot.
+ * @returns Saved searches marked as favorite.
+ */
+export const selectFavoriteSearchesFrom = (
+  state: SearchHistoryState
+): ValidatedSavedSearch[] => state.savedSearches.filter((s) => s.isFavorite);
+
+/**
+ * Compute the total number of saved searches from a state snapshot.
+ *
+ * @param state - The search history store state snapshot.
+ * @returns The total saved search count.
+ */
+export const selectTotalSavedSearchesFrom = (state: SearchHistoryState): number =>
+  state.savedSearches.length;

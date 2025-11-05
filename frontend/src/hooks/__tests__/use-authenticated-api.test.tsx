@@ -6,7 +6,7 @@ import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { fetchApi } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/error-types";
 import { createClient } from "@/lib/supabase/client";
-import type { SupabaseAuthMock } from "@/test/mock-helpers.test";
+import type { SupabaseAuthMock } from "@/test/mock-helpers";
 import { render, screen } from "@/test/test-utils.test";
 
 vi.mock("@/lib/api/client", () => ({

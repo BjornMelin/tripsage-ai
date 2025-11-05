@@ -59,11 +59,14 @@ const CREATE_MOCK_FN = <T extends (...args: never[]) => unknown>(
  */
 const CREATE_MOCK_USER = (): User =>
   ({
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
     app_metadata: {},
     aud: "authenticated",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
     created_at: new Date(0).toISOString(),
     email: "mock-user@example.com",
     id: "mock-user-id",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
     user_metadata: {},
   }) as User;
 
@@ -75,9 +78,13 @@ const CREATE_MOCK_USER = (): User =>
  */
 const CREATE_MOCK_SESSION = (user: User): Session =>
   ({
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
     access_token: "mock-access-token",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
     expires_in: 3_600,
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
     refresh_token: "mock-refresh-token",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
     token_type: "bearer",
     user,
   }) as Session;

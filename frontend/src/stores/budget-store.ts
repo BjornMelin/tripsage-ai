@@ -157,11 +157,14 @@ const CALCULATE_BUDGET_SUMMARY = (
  */
 export const useBudgetStore = create<BudgetState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       // Computed properties
+      /**
+       * The currently active budget, or null if none is active.
+       */
       get activeBudget(): Budget | null {
-        const { activeBudgetId, budgets } = get();
-        return activeBudgetId ? budgets[activeBudgetId] || null : null;
+        const { activeBudgetId, budgets } = this as unknown as BudgetState;
+        return activeBudgetId ? budgets[activeBudgetId] ?? null : null;
       },
       activeBudgetId: null,
 
@@ -275,36 +278,27 @@ export const useBudgetStore = create<BudgetState>()(
       baseCurrency: "USD",
 
       /**
-       * Get the budget summary.
-       *
-       * @returns The budget summary.
+       * Summary metrics for the active budget (totals, percentages, categories).
+       * Returns null when there is no active budget.
        */
       get budgetSummary(): BudgetSummary | null {
-        const { activeBudget } = get();
-        const { expenses } = get();
-
+        const { activeBudget, expenses } = this as unknown as BudgetState;
         if (!activeBudget) return null;
-
-        const budgetExpenses = expenses[activeBudget.id] || [];
+        const budgetExpenses = expenses[activeBudget.id] ?? [];
         return CALCULATE_BUDGET_SUMMARY(activeBudget, budgetExpenses);
       },
       // Initial state
       budgets: {},
 
       /**
-       * Get the budgets by trip.
-       *
-       * @returns The budgets by trip.
+       * Map of tripId to a list of budget IDs belonging to that trip.
        */
       get budgetsByTrip(): Record<string, string[]> {
-        const { budgets } = get();
-
+        const { budgets } = this as unknown as BudgetState;
         return Object.values(budgets).reduce(
           (acc, budget) => {
             if (budget.tripId) {
-              if (!acc[budget.tripId]) {
-                acc[budget.tripId] = [];
-              }
+              if (!acc[budget.tripId]) acc[budget.tripId] = [];
               acc[budget.tripId].push(budget.id);
             }
             return acc;
@@ -360,18 +354,14 @@ export const useBudgetStore = create<BudgetState>()(
         }),
 
       /**
-       * Get the recent expenses.
-       *
-       * @returns The recent expenses.
+       * The 10 most recent expenses across all budgets, newest first.
        */
       get recentExpenses(): Expense[] {
-        const { expenses } = get();
-
-        // Flatten all expenses and sort by date (newest first)
+        const { expenses } = this as unknown as BudgetState;
         return Object.values(expenses)
           .flat()
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-          .slice(0, 10); // Return the 10 most recent expenses
+          .slice(0, 10);
       },
 
       /**
@@ -631,3 +621,56 @@ export const useActiveBudget = () => useBudgetStore((state) => state.activeBudge
 export const useBudgetSummary = () => useBudgetStore((state) => state.budgetSummary);
 export const useBudgetsByTrip = () => useBudgetStore((state) => state.budgetsByTrip);
 export const useRecentExpenses = () => useBudgetStore((state) => state.recentExpenses);
+
+/**
+ * Compute the active budget from a given budget state.
+ *
+ * @param state - The budget store state snapshot.
+ * @returns The active budget or null.
+ */
+export const selectActiveBudgetFrom = (state: BudgetState): Budget | null => {
+  const { activeBudgetId, budgets } = state;
+  return activeBudgetId ? budgets[activeBudgetId] ?? null : null;
+};
+
+/**
+ * Compute the budget summary for the current active budget.
+ *
+ * @param state - The budget store state snapshot.
+ * @returns The summary or null when no active budget exists.
+ */
+export const selectBudgetSummaryFrom = (state: BudgetState): BudgetSummary | null => {
+  const active = selectActiveBudgetFrom(state);
+  if (!active) return null;
+  const budgetExpenses = state.expenses[active.id] ?? [];
+  return CALCULATE_BUDGET_SUMMARY(active, budgetExpenses);
+};
+
+/**
+ * Compute a map of tripId to the list of budget IDs belonging to that trip.
+ *
+ * @param state - The budget store state snapshot.
+ * @returns A map of trip IDs to budget ID arrays.
+ */
+export const selectBudgetsByTripFrom = (state: BudgetState): Record<string, string[]> => {
+  return Object.values(state.budgets).reduce((acc, budget) => {
+    if (budget.tripId) {
+      if (!acc[budget.tripId]) acc[budget.tripId] = [];
+      acc[budget.tripId].push(budget.id);
+    }
+    return acc;
+  }, {} as Record<string, string[]>);
+};
+
+/**
+ * Compute the 10 most recent expenses across all budgets.
+ *
+ * @param state - The budget store state snapshot.
+ * @returns A list of recent expenses sorted by date descending.
+ */
+export const selectRecentExpensesFrom = (state: BudgetState): Expense[] => {
+  return Object.values(state.expenses)
+    .flat()
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 10);
+};
