@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { useSearchParamsStore } from "../search-params-store";
+import { useSearchParamsStore, selectCurrentParamsFrom } from "../search-params-store";
 
 describe("Search Params Store", () => {
   beforeEach(() => {
@@ -321,22 +321,24 @@ describe("Search Params Store", () => {
     });
   });
 
-  describe.skip("Current Parameters Getter", () => {
+  describe("Current Parameters Getter", () => {
     it("returns null when no search type is set", () => {
       const { result } = renderHook(() => useSearchParamsStore());
       expect(result.current.currentParams).toBeNull();
     });
 
-    it("returns flight params when search type is flight", () => {
+    it("returns flight params when search type is flight", async () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.setSearchType("flight");
-      result.current.updateFlightParams({
-        destination: "LAX",
-        origin: "NYC",
+      await act(async () => {
+        result.current.setSearchType("flight");
+        await result.current.updateFlightParams({
+          destination: "LAX",
+          origin: "NYC",
+        });
       });
 
-      const params = result.current.currentParams;
+      const params = selectCurrentParamsFrom(useSearchParamsStore.getState());
       expect(params).toMatchObject({
         adults: 1,
         cabinClass: "economy",
@@ -350,16 +352,21 @@ describe("Search Params Store", () => {
       });
     });
 
-    it("returns accommodation params when search type is accommodation", () => {
+    it("returns accommodation params when search type is accommodation", async () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
-      result.current.setSearchType("accommodation");
-      result.current.updateAccommodationParams({
-        adults: 2,
-        destination: "Paris",
+      await act(async () => {
+        result.current.setSearchType("accommodation");
+        const success = await result.current.updateAccommodationParams({
+          adults: 2,
+          checkIn: "2025-07-01",
+          checkOut: "2025-07-07",
+          destination: "Paris",
+        });
+        expect(success).toBe(true);
       });
 
-      const params = result.current.currentParams;
+      const params = selectCurrentParamsFrom(useSearchParamsStore.getState());
       expect(params).toMatchObject({
         adults: 2,
         amenities: [],

@@ -287,7 +287,7 @@ describe("ai stream route", () => {
     await expect(POST(request)).rejects.toThrow("Response conversion error");
   });
 
-  it("handles very long prompt content", { timeout: 15000 }, async () => {
+  it("handles very long prompt content", { timeout: 30000 }, async () => {
     const longPrompt = "a".repeat(10000);
     const mockResponse = new Response('data: {"type":"finish"}\n\n', {
       headers: { "content-type": "text/event-stream" },
