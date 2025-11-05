@@ -35,15 +35,17 @@
       "**/*.cts",
       "**/*.json",
       "**/*.css",
-      "!**/node_modules",
-      "!**/.next",
-      "!**/dist",
-      "!**/build",
-      "!**/coverage",
-      "!**/.turbo",
-      "!**/.vercel",
-      "!**/storybook-static",
       "!**/out"
+    ],
+    "experimentalScannerIgnores": [
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/coverage/**",
+      "**/.turbo/**",
+      "**/.vercel/**",
+      "**/storybook-static/**"
     ],
     "maxSize": 1048576
   },

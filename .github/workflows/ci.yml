@@ -103,9 +103,9 @@ jobs:
           npm install -g pnpm@9
           pnpm install --frozen-lockfile
 
-      - name: Biome lint
+      - name: Biome check (src + e2e + scripts)
         working-directory: frontend
-        run: npx biome lint . --reporter=github
+        run: npx biome check ./src ./e2e ./scripts --reporter=github
 
       - name: TypeScript type check
         working-directory: frontend
