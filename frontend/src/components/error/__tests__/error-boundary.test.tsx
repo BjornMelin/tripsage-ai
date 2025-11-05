@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MockInstance } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { errorService } from "@/lib/error-service";
 import {
   fireEvent,
@@ -16,17 +17,11 @@ vi.mock("@/lib/error-service", () => ({
   },
 }));
 
-// Mock console methods
-const ConsoleSpy = {
-  error: vi.spyOn(console, "error").mockImplementation(() => {
-    // Intentionally empty - suppress console errors during test
-  }),
-  group: vi.spyOn(console, "group").mockImplementation(() => {
-    // Intentionally empty - suppress console groups during test
-  }),
-  groupEnd: vi.spyOn(console, "groupEnd").mockImplementation(() => {
-    // Intentionally empty - suppress console group ends during test
-  }),
+// Console spy refs (setup in beforeEach to ensure fresh spies per test)
+let ConsoleSpy: {
+  error: MockInstance;
+  group: MockInstance;
+  groupEnd: MockInstance;
 };
 
 /**
@@ -52,9 +47,19 @@ const NormalComponent = () => <div>Normal component</div>;
 describe("ErrorBoundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    ConsoleSpy.error.mockClear();
-    ConsoleSpy.group.mockClear();
-    ConsoleSpy.groupEnd.mockClear();
+
+    // Setup fresh console spies for each test
+    ConsoleSpy = {
+      error: vi.spyOn(console, "error").mockImplementation(() => {
+        // Intentionally empty - suppress console errors during test
+      }),
+      group: vi.spyOn(console, "group").mockImplementation(() => {
+        // Intentionally empty - suppress console groups during test
+      }),
+      groupEnd: vi.spyOn(console, "groupEnd").mockImplementation(() => {
+        // Intentionally empty - suppress console group ends during test
+      }),
+    };
 
     // Mock createErrorReport to return a valid report
     vi.mocked(errorService.createErrorReport).mockReturnValue({
@@ -69,6 +74,13 @@ describe("ErrorBoundary", () => {
 
     // Mock reportError to return a resolved promise
     vi.mocked(errorService.reportError).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    // Restore console spies
+    ConsoleSpy.error.mockRestore();
+    ConsoleSpy.group.mockRestore();
+    ConsoleSpy.groupEnd.mockRestore();
   });
 
   describe("normal rendering", () => {

@@ -11,8 +11,39 @@ import {
 // Type for next-themes provider props.
 type NextThemesProviderProps = ComponentProps<typeof ThemeProvider>;
 
+// Shared QueryClient instance for all tests (reset between tests)
+let sharedQueryClient: QueryClient | null = null;
+
+/**
+ * Gets or creates the shared test QueryClient with disabled retries and caching.
+ * This client is reused across tests for better performance and is cleared after
+ * each test via resetTestQueryClient().
+ *
+ * @returns A configured QueryClient for testing.
+ */
+export const getTestQueryClient = (): QueryClient => {
+  if (!sharedQueryClient) {
+    sharedQueryClient = new QueryClient({
+      defaultOptions: {
+        mutations: { retry: false },
+        queries: { gcTime: 0, retry: false, staleTime: 0 },
+      },
+    });
+  }
+  return sharedQueryClient;
+};
+
+/**
+ * Clears the shared QueryClient cache without recreating the instance.
+ * Called automatically after each test to ensure test isolation.
+ */
+export const resetTestQueryClient = (): void => {
+  sharedQueryClient?.clear();
+};
+
 /**
  * Creates a test QueryClient with disabled retries and caching.
+ * @deprecated Use getTestQueryClient() instead for better performance.
  * @returns A configured QueryClient for testing.
  */
 export const createTestQueryClient = () =>
@@ -57,8 +88,9 @@ export const AllTheProviders = ({
   },
   queryClient,
 }: ProvidersProps): ReactElement => {
-  const client = queryClient || createTestQueryClient();
+  const client = queryClient || getTestQueryClient();
 
+  // Skip validation if using default theme for better performance
   const validatedTheme = theme
     ? (() => {
         const result = validateThemeProviderProps(theme);

@@ -1,14 +1,18 @@
 /**
  * @fileoverview Vitest configuration tuned for stability and CI performance.
- * - Uses forks by default for process isolation; switches to threads in CI.
+ * - Uses vmForks for consistent process isolation across all environments.
+ * - Optimized worker count for multi-core CPUs (local: cpus/2, CI: 2).
  * - JSDOM environment for UI tests, type/lint gates run separately.
  */
 
+import os from "node:os";
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 const isCi = process.env.CI === "true" || process.env.CI === "1";
+const cpuCount = os.cpus().length;
+const optimalWorkers = isCi ? 2 : Math.max(1, Math.floor(cpuCount / 2));
 
 export default defineConfig({
   ssr: {
@@ -51,16 +55,16 @@ export default defineConfig({
     environment: "jsdom",
     exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*"],
     globals: true,
-    hookTimeout: 12000,
+    hookTimeout: 8000,
     include: ["**/*.{test,spec}.ts?(x)"],
     // Runtime stability
     isolate: true,
-    maxWorkers: isCi ? 2 : 1,
+    maxWorkers: optimalWorkers,
     passWithNoTests: true,
     // Use VM pool runners so CSS from node_modules is transformed in tests
     // (fixes "Unknown file extension .css" for packages like katex via Streamdown)
-    // Prefer vmForks in CI for stability on large suites; vmThreads locally for speed.
-    pool: isCi ? "vmForks" : "vmThreads",
+    // Use vmForks consistently for stability and predictable behavior
+    pool: "vmForks",
     // Ensure Vite transforms CSS imports under vmThreads
     deps: {
       web: {
@@ -74,9 +78,9 @@ export default defineConfig({
     },
     restoreMocks: true,
     setupFiles: ["./src/test-setup.ts"],
-    teardownTimeout: 10000,
+    teardownTimeout: 6000,
     // Timeouts
-    testTimeout: 7500,
+    testTimeout: 5000,
     unstubEnvs: true,
   },
 });

@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MockInstance } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { errorService } from "@/lib/error-service";
 import { useErrorHandler } from "../use-error-handler";
 
@@ -11,10 +12,8 @@ vi.mock("@/lib/error-service", () => ({
   },
 }));
 
-// Mock console.error
-const CONSOLE_ERROR_SPY = vi.spyOn(console, "error").mockImplementation(() => {
-  // Empty implementation for mocking
-});
+// Console spy setup moved to beforeEach to avoid global suppression issues
+let consoleSpy: MockInstance;
 
 // Mock sessionStorage
 const MOCK_SESSION_STORAGE = {
@@ -28,7 +27,10 @@ Object.defineProperty(window, "sessionStorage", {
 describe("useErrorHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    CONSOLE_ERROR_SPY.mockClear();
+    // Create fresh spy for each test
+    consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      // Empty implementation for mocking
+    });
     MOCK_SESSION_STORAGE.getItem.mockClear();
     MOCK_SESSION_STORAGE.setItem.mockClear();
 
@@ -45,6 +47,11 @@ describe("useErrorHandler", () => {
 
     // Mock reportError to return a resolved promise
     vi.mocked(errorService.reportError).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    // Restore console after each test
+    consoleSpy.mockRestore();
   });
 
   describe("handleError", () => {
@@ -102,7 +109,7 @@ describe("useErrorHandler", () => {
         result.current.handleError(testError, additionalInfo);
       });
 
-      expect(CONSOLE_ERROR_SPY).toHaveBeenCalledWith(
+      expect(consoleSpy).toHaveBeenCalledWith(
         "Error handled by useErrorHandler:",
         testError,
         additionalInfo
@@ -124,7 +131,7 @@ describe("useErrorHandler", () => {
         result.current.handleError(testError);
       });
 
-      expect(CONSOLE_ERROR_SPY).not.toHaveBeenCalled();
+      expect(consoleSpy).not.toHaveBeenCalled();
 
       // Restore original env
       vi.stubEnv("NODE_ENV", originalEnv);

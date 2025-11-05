@@ -299,14 +299,54 @@ export function handleApiError(error: unknown): string {
 export function formatTripDate(dateString: string): string {
   if (!dateString) return "";
 
+  // Fast path for canonical date-only strings to avoid timezone ambiguity.
+  // Example: "2025-06-01" → "Jun 1, 2025" regardless of local TZ.
+  const DateOnlyRe = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const match = DateOnlyRe.exec(dateString);
+  if (match) {
+    const year = Number.parseInt(match[1] ?? "", 10);
+    const month = Number.parseInt(match[2] ?? "", 10); // 1-12
+    const day = Number.parseInt(match[3] ?? "", 10); // 1-31
+
+    // Treat year 0000 as invalid for consistency across environments.
+    if (!Number.isFinite(year) || year <= 0) return "Invalid Date";
+
+    // Validate month/day minimally (including leap-year for February)
+    const monthLengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    const maxDay = month === 2 ? (isLeap ? 29 : 28) : (monthLengths[month - 1] ?? 31);
+    if (month < 1 || month > 12 || day < 1 || day > maxDay) return "Invalid Date";
+
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ] as const;
+    const mon = months[month - 1] ?? "Jan";
+    return `${mon} ${day}, ${year}`;
+  }
+
+  // For full ISO strings with time/offset, format deterministically in UTC.
   try {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    const d = new Date(dateString);
+    if (Number.isNaN(d.getTime())) return "Invalid Date";
+    return new Intl.DateTimeFormat("en-US", {
       day: "numeric",
       month: "short",
+      timeZone: "UTC",
       year: "numeric",
-    });
+    }).format(d);
   } catch {
-    return dateString; // Return original if parsing fails
+    return "Invalid Date";
   }
 }
 

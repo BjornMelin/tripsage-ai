@@ -14,6 +14,7 @@ import {
   WritableStream as NodeWritableStream,
 } from "node:stream/web";
 import { createMockSupabaseClient } from "./test/mock-helpers.test";
+import { resetTestQueryClient } from "./test/test-utils.test";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -225,17 +226,9 @@ if (!GLOBAL_STREAMS.TransformStream) {
     NodeTransformStream as unknown as TS;
 }
 
-const CONSOLE_SPIES: Console = {
-  ...console,
-  debug: vi.fn(),
-  error: vi.fn(),
-  info: vi.fn(),
-  log: vi.fn(),
-  trace: vi.fn(),
-  warn: vi.fn(),
-};
-
-globalThis.console = CONSOLE_SPIES;
+// Console is NOT mocked globally to allow real errors to surface during testing.
+// Tests that expect specific console output should use vi.spyOn(console, "error")
+// locally and restore it after the test.
 
 if (typeof process !== "undefined" && process.env) {
   const ORIGINAL_ENV = process.env;
@@ -254,6 +247,7 @@ if (typeof process !== "undefined" && process.env) {
 
 afterEach(() => {
   cleanup();
+  resetTestQueryClient();
   vi.restoreAllMocks();
 });
 
