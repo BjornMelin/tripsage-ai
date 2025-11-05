@@ -223,6 +223,26 @@
       }
     },
     {
+      "includes": ["**/test/factories/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/test/mocks/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/schemas/env.ts"],
       "linter": {
         "rules": {
@@ -260,7 +280,7 @@
                     "selector": { "kind": "class", "scope": "global" }
                   },
                   {
-                    "formats": ["PascalCase"],
+                    "formats": ["PascalCase", "snake_case"],
                     "selector": { "kind": "interface", "scope": "global" }
                   },
                   {
