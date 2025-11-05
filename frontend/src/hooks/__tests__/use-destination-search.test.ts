@@ -305,20 +305,19 @@ describe("useDestinationSearch", () => {
   });
 
   describe("Mock Implementation Behavior", () => {
-    it("should simulate async behavior with timeout", async () => {
+    it("should simulate async behavior without adding noticeable delay", async () => {
       const { result } = renderHook(() => useDestinationSearch());
 
-      const startTime = Date.now();
+      const startTime = performance.now();
 
       await act(async () => {
         await result.current.searchDestinations({ query: "Test" });
       });
 
-      const endTime = Date.now();
-      const duration = endTime - startTime;
+      const duration = performance.now() - startTime;
 
-      // Should take at least 100ms due to the setTimeout in the mock
-      expect(duration).toBeGreaterThanOrEqual(95); // Allow some tolerance for timing
+      // Microtask scheduling should resolve well under a visible delay.
+      expect(duration).toBeLessThan(20);
     });
 
     it("should complete search operation", async () => {

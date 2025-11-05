@@ -341,7 +341,9 @@ describe("UI Store - UI State Management", () => {
 
       expect(result.current.notifications).toHaveLength(1);
 
-      await vi.advanceTimersByTimeAsync(100);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
       expect(result.current.notifications).toHaveLength(0);
       vi.useRealTimers();
     });

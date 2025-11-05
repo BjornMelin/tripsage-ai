@@ -27,6 +27,20 @@ vi.mock("@/stores/deals-store", () => ({
   useDealsStore: vi.fn(() => MockDealsStore),
 }));
 
+/** Mock memory hooks to avoid real React Query work */
+vi.mock("@/hooks/use-memory", () => ({
+  useMemoryContext: vi.fn(() => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  })),
+  useMemoryInsights: vi.fn(() => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  })),
+}));
+
 /** Mock the trips suggestions hook */
 vi.mock("@/hooks/use-trips", () => ({
   useTripSuggestions: vi.fn(),

@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { ErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
 import { secureUuid } from "@/lib/security/random";
+import { fireAndForget } from "@/lib/utils";
 
 /**
  * Authentication-level error boundary
@@ -27,7 +28,7 @@ export default function AuthError({
       sessionId: getSessionId(),
     });
 
-    errorService.reportError(errorReport);
+    fireAndForget(errorService.reportError(errorReport));
 
     // Log error in development
     if (process.env.NODE_ENV === "development") {

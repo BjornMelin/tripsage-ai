@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { MinimalErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
 import { secureUuid } from "@/lib/security/random";
+import { fireAndForget } from "@/lib/utils";
 
 /**
  * Global error boundary for the app.
@@ -29,7 +30,7 @@ export default function GlobalError({
       userId: getUserId(),
     });
 
-    errorService.reportError(errorReport);
+    fireAndForget(errorService.reportError(errorReport));
 
     // Log critical error
     console.error("CRITICAL: Global error boundary caught error:", error);

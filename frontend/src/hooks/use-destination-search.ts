@@ -33,8 +33,8 @@ export function useDestinationSearch(): UseDestinationSearchResult {
     setIsSearching(true);
     setSearchError(null);
     try {
-      // Mock implementation
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Mock implementation: yield to the microtask queue without slowing tests.
+      await Promise.resolve();
     } catch (error) {
       setSearchError(error as Error);
     } finally {
