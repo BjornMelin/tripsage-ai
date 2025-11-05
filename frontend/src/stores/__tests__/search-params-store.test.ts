@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { useSearchParamsStore, selectCurrentParamsFrom } from "../search-params-store";
+import { selectCurrentParamsFrom, useSearchParamsStore } from "../search-params-store";
 
 describe("Search Params Store", () => {
   beforeEach(() => {

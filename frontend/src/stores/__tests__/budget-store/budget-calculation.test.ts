@@ -1,7 +1,13 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Budget } from "@/lib/schemas/budget";
-import { useBudgetStore, selectActiveBudgetFrom, selectBudgetSummaryFrom, selectBudgetsByTripFrom, selectRecentExpensesFrom } from "@/stores/budget-store";
+import {
+  selectActiveBudgetFrom,
+  selectBudgetSummaryFrom,
+  selectBudgetsByTripFrom,
+  selectRecentExpensesFrom,
+  useBudgetStore,
+} from "@/stores/budget-store";
 import { resetBudgetStore } from "./_shared";
 
 // Note: persist middleware is already mocked globally in test-setup.ts
@@ -154,14 +160,12 @@ describe("Budget Store - Budget Calculation", () => {
       const byTrip = selectBudgetsByTripFrom(useBudgetStore.getState());
       expect(byTrip).toBeDefined();
       expect(byTrip["trip-1"]).toBeDefined();
-      expect(Array.isArray(byTrip["trip-1"]))
-        .toBe(true);
+      expect(Array.isArray(byTrip["trip-1"])).toBe(true);
       expect(byTrip["trip-1"]).toContain("budget-1");
       expect(byTrip["trip-1"]).toContain("budget-3");
       expect(byTrip["trip-1"].length).toBe(2);
       expect(byTrip["trip-2"]).toBeDefined();
-      expect(Array.isArray(byTrip["trip-2"]))
-        .toBe(true);
+      expect(Array.isArray(byTrip["trip-2"])).toBe(true);
       expect(byTrip["trip-2"]).toContain("budget-2");
       expect(byTrip["trip-2"].length).toBe(1);
     });

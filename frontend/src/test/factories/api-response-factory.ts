@@ -54,12 +54,7 @@ export interface ApiResponseOptions<T> {
 export function createMockApiResponse<T = unknown>(
   options: ApiResponseOptions<T> = {}
 ): ApiResponse<T> {
-  const {
-    data = {} as T,
-    message = "Success",
-    status = 200,
-    success = true,
-  } = options;
+  const { data = {} as T, message = "Success", status = 200, success = true } = options;
 
   return {
     data,
@@ -138,4 +133,3 @@ export function createMockPaginatedResponse<T = unknown>(
     totalPages,
   };
 }
-

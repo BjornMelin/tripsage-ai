@@ -4,7 +4,12 @@ import type {
   SearchHistoryItem,
   ValidatedSavedSearch,
 } from "@/stores/search-history-store";
-import { useSearchHistoryStore, selectRecentSearchesByTypeFrom, selectFavoriteSearchesFrom, selectTotalSavedSearchesFrom } from "@/stores/search-history-store";
+import {
+  selectFavoriteSearchesFrom,
+  selectRecentSearchesByTypeFrom,
+  selectTotalSavedSearchesFrom,
+  useSearchHistoryStore,
+} from "@/stores/search-history-store";
 import { resetSearchHistoryStore } from "./_shared";
 
 describe("Search History Store - Initial State and Recent Searches", () => {

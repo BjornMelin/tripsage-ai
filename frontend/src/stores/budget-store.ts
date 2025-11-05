@@ -164,7 +164,7 @@ export const useBudgetStore = create<BudgetState>()(
        */
       get activeBudget(): Budget | null {
         const { activeBudgetId, budgets } = this as unknown as BudgetState;
-        return activeBudgetId ? budgets[activeBudgetId] ?? null : null;
+        return activeBudgetId ? (budgets[activeBudgetId] ?? null) : null;
       },
       activeBudgetId: null,
 
@@ -630,7 +630,7 @@ export const useRecentExpenses = () => useBudgetStore((state) => state.recentExp
  */
 export const selectActiveBudgetFrom = (state: BudgetState): Budget | null => {
   const { activeBudgetId, budgets } = state;
-  return activeBudgetId ? budgets[activeBudgetId] ?? null : null;
+  return activeBudgetId ? (budgets[activeBudgetId] ?? null) : null;
 };
 
 /**
@@ -652,14 +652,19 @@ export const selectBudgetSummaryFrom = (state: BudgetState): BudgetSummary | nul
  * @param state - The budget store state snapshot.
  * @returns A map of trip IDs to budget ID arrays.
  */
-export const selectBudgetsByTripFrom = (state: BudgetState): Record<string, string[]> => {
-  return Object.values(state.budgets).reduce((acc, budget) => {
-    if (budget.tripId) {
-      if (!acc[budget.tripId]) acc[budget.tripId] = [];
-      acc[budget.tripId].push(budget.id);
-    }
-    return acc;
-  }, {} as Record<string, string[]>);
+export const selectBudgetsByTripFrom = (
+  state: BudgetState
+): Record<string, string[]> => {
+  return Object.values(state.budgets).reduce(
+    (acc, budget) => {
+      if (budget.tripId) {
+        if (!acc[budget.tripId]) acc[budget.tripId] = [];
+        acc[budget.tripId].push(budget.id);
+      }
+      return acc;
+    },
+    {} as Record<string, string[]>
+  );
 };
 
 /**

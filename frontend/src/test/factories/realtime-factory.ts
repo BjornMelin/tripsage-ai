@@ -30,7 +30,9 @@ export interface MockRealtimeChannel {
   untrack?: ReturnType<typeof vi.fn>;
   _callbacks?: {
     postgresChanges?: Array<{
-      callback: (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => void;
+      callback: (
+        payload: RealtimePostgresChangesPayload<Record<string, unknown>>
+      ) => void;
       event: string;
       filter?: string;
       schema: string;
@@ -185,7 +187,7 @@ export function createMockRealtimeSubscription(
   const { channelName = "test-channel", initialState = "SUBSCRIBED" } = options;
 
   const channel = createMockRealtimeChannel({ initialState });
-  
+
   return {
     channel,
     subscription: {
@@ -198,4 +200,3 @@ export function createMockRealtimeSubscription(
     },
   };
 }
-
