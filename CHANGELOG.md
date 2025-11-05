@@ -92,6 +92,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Token budget utilities release WASM tokenizer resources without `any` casts (`frontend/src/lib/tokens/budget.ts`).
+- Date formatting is now timezone-agnostic for `YYYY-MM-DD` inputs to avoid CI/system TZ drift; ISO datetimes format in UTC (`frontend/src/lib/schema-adapters.ts`, tests updated in `frontend/src/lib/__tests__/schema-adapters.test.ts`).
+- Stabilized long‑prompt AI stream test by bounding tokenizer work and retaining accuracy:
+  - Introduced a safe character threshold for WASM tokenization with heuristic fallback; small/normal inputs still use `js-tiktoken` and tests validate encodings (`frontend/src/lib/tokens/budget.ts`, `frontend/src/lib/tokens/__tests__/budget.test.ts`).
+  - Ensures `handles very long prompt content` completes within per‑suite timeout.
+- CI non‑terminating runs addressed via Vitest config hardening:
+  - Use `vmForks` in CI, low worker count, explicit bail, and deterministic setup to prevent lingering handles (`frontend/vitest.config.ts`).
+  - Web Streams and Next/Image mocks consolidated in `frontend/src/test-setup.ts` to avoid environment leaks; console/env proxies reset after each test.
 - Resolved hanging API tests by:
   - Injecting a finite AI stream stub in handler tests (no open handles)
   - Building Upstash rate limiters lazily (no module‑scope side effects)

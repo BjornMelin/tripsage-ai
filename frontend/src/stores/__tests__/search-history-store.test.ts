@@ -1,10 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { SearchHistoryItem, ValidatedSavedSearch } from "../search-history-store";
 import { useSearchHistoryStore } from "../search-history-store";
-
-// Mock console.error to avoid noise in tests
-global.console.error = vi.fn();
 
 describe("Search History Store", () => {
   beforeEach(() => {

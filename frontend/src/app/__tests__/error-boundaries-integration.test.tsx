@@ -1,5 +1,6 @@
 import { screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MockInstance } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils.test";
 
 // Mock React hooks for testing environment
@@ -37,10 +38,8 @@ Object.defineProperty(window, "sessionStorage", {
   value: MOCK_SESSION_STORAGE,
 });
 
-// Mock console.error to avoid noise in tests
-const CONSOLE_ERROR_SPY = vi.spyOn(console, "error").mockImplementation(() => {
-  // Intentional no-op to avoid noise in tests
-});
+// Console spy setup moved to beforeEach to avoid global suppression issues
+let consoleSpy: MockInstance;
 
 describe("Next.js Error Boundaries Integration", () => {
   const mockError = new Error("Test integration error") as Error & {
@@ -50,8 +49,16 @@ describe("Next.js Error Boundaries Integration", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    CONSOLE_ERROR_SPY.mockClear();
+    // Create fresh spy for each test
+    consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      // Intentional no-op to avoid noise in tests
+    });
     MOCK_SESSION_STORAGE.getItem.mockReturnValue("test_session_id");
+  });
+
+  afterEach(() => {
+    // Restore console after each test
+    consoleSpy.mockRestore();
   });
 
   describe("Root Error Boundary (error.tsx)", () => {
@@ -118,7 +125,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
     it("should always log critical errors", () => {
       render(<GlobalError error={mockError} reset={mockReset} />);
-      expect(CONSOLE_ERROR_SPY).toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalled();
     });
   });
 

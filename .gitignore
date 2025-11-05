@@ -338,6 +338,7 @@ scan-results/
 # Project specific files
 .agent/
 supabase/.temp/
+docs/prompts/database-provider-research
  
 # Frontend workspace (consolidated from frontend/.gitignore)
 next-env.d.ts

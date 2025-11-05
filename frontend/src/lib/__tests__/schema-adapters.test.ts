@@ -1147,10 +1147,10 @@ describe("schema-adapters", () => {
 
 describe("formatTripDate", () => {
   it("should format valid date strings", () => {
-    // Note: Date parsing can be timezone dependent, so we test the actual behavior
-    expect(formatTripDate("2025-06-01")).toBe("May 31, 2025"); // Actual behavior due to timezone
-    expect(formatTripDate("2025-12-25")).toBe("Dec 24, 2025"); // Actual behavior due to timezone
-    expect(formatTripDate("2025-01-01")).toBe("Dec 31, 2024"); // Actual behavior due to timezone
+    // Date-only strings are formatted deterministically (no TZ shift)
+    expect(formatTripDate("2025-06-01")).toBe("Jun 1, 2025");
+    expect(formatTripDate("2025-12-25")).toBe("Dec 25, 2025");
+    expect(formatTripDate("2025-01-01")).toBe("Jan 1, 2025");
   });
 
   it("should handle ISO datetime strings", () => {
@@ -1162,17 +1162,16 @@ describe("formatTripDate", () => {
     expect(formatTripDate("")).toBe("");
   });
 
-  it("should return original string for invalid dates", () => {
-    // Invalid Date objects result in "Invalid Date" string
+  it("should return 'Invalid Date' for invalid dates", () => {
     expect(formatTripDate("invalid-date")).toBe("Invalid Date");
     expect(formatTripDate("2025-13-45")).toBe("Invalid Date");
     expect(formatTripDate("not-a-date")).toBe("Invalid Date");
   });
 
   it("should handle edge cases", () => {
-    // Year 0000 results in different behavior due to JavaScript Date handling
-    expect(formatTripDate("0000-01-01")).toBe("Dec 31, 2");
-    expect(formatTripDate("9999-12-31")).toBe("Dec 30, 9999"); // Actual behavior
+    // Year 0000 is treated as invalid for determinism
+    expect(formatTripDate("0000-01-01")).toBe("Invalid Date");
+    expect(formatTripDate("9999-12-31")).toBe("Dec 31, 9999");
   });
 });
 
