@@ -152,13 +152,54 @@ pnpm type-check   # TypeScript type checking
 ### Testing
 
 ```bash
-pnpm test         # Run tests (watch mode)
-pnpm test:run     # Run tests once
-pnpm test:short   # Run tests with short timeouts
-pnpm test:ui      # Run tests with UI
-pnpm test:coverage # Run tests with coverage
-pnpm test:e2e     # Run E2E tests
+pnpm test           # Run tests (watch mode)
+pnpm test:run       # Run tests once
+pnpm test:short     # Run tests with short timeouts
+pnpm test:ui        # Run tests with UI
+pnpm test:coverage  # Run tests with coverage
+pnpm test:benchmark # Run performance benchmarks
+pnpm test:e2e       # Run E2E tests
 ```
+
+#### Performance Benchmarks
+
+The test suite includes performance benchmarking to ensure tests remain fast and maintainable:
+
+```bash
+pnpm test:benchmark
+```
+
+This command:
+
+- Runs the full test suite with JSON output
+- Calculates per-file durations and percentiles (P50, P90, P95)
+- Validates performance thresholds:
+  - Suite duration: <10s (hard gate)
+  - Individual files: <500ms (soft warning), <2s (hard fail)
+- Outputs `benchmark-summary.json` with detailed metrics
+
+**Performance Targets:**
+
+- Full suite: <10 seconds
+- Store tests: <3 seconds
+- Component tests: <4 seconds
+- Individual test files: <500ms (warning), <2s (fail)
+
+**Interpreting Results:**
+
+- **Suite duration**: Total wall-clock time for all tests (parallel execution)
+- **Percentiles**: Distribution of test file durations (P90 = 90% of files run faster)
+- **Slow files**: Files exceeding 500ms threshold (investigate for optimization)
+- **Threshold violations**: Files exceeding 2s or suite exceeding 10s (must fix)
+
+**Investigating Performance Issues:**
+
+1. Check `benchmark-summary.json` for slow files
+2. Review test setup/teardown for unnecessary work
+3. Look for unoptimized mocks or heavy imports
+4. Consider splitting large test files
+
+Benchmarks are automatically run in CI and failures block merges.
 
 ### Maintenance
 
