@@ -215,6 +215,7 @@ test_results.log
 full_test_results.log
 backend_test_results_*.md
 analysis_results.md
+test-results.json
 
 # Frontend temporary files
 frontend/lint-*.txt
