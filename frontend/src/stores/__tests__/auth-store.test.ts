@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type LoginCredentials,
   type PasswordReset,
@@ -15,10 +15,25 @@ import {
   useUser,
 } from "../auth-store";
 
-// Mock setTimeout to make tests run faster
-vi.mock("global", () => ({
-  setTimeout: vi.fn((fn) => fn()),
-}));
+// Accelerate store async flows in this suite only
+let timeoutSpy: { mockRestore: () => void } | null = null;
+beforeEach(() => {
+  timeoutSpy = vi.spyOn(globalThis, "setTimeout").mockImplementation(((
+    cb: TimerHandler,
+    _ms?: number,
+    ...args: unknown[]
+  ) => {
+    if (typeof cb === "function") {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      cb(...(args as never[]));
+    }
+    return 0 as unknown as ReturnType<typeof setTimeout>;
+  }) as unknown as typeof setTimeout);
+});
+
+afterEach(() => {
+  timeoutSpy?.mockRestore();
+});
 
 // Helper function to create mock users with Zod validation
 const CREATE_MOCK_USER = (overrides: Partial<User> = {}): User => {
