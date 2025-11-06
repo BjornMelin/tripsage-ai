@@ -30,8 +30,8 @@
     "codemod:check-idempotency": "pnpm codemod:ai-route:dry && pnpm codemod:ai-messages:dry && pnpm codemod:tests-env:dry && git diff --quiet"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "3.0.0-beta.47",
-    "@ai-sdk/openai": "3.0.0-beta.47",
+    "@ai-sdk/anthropic": "3.0.0-beta.50",
+    "@ai-sdk/openai": "3.0.0-beta.54",
     "@ai-sdk/react": "3.0.0-beta.92",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
@@ -65,7 +65,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@upstash/ratelimit": "2.0.6",
     "@upstash/redis": "^1.35.6",
-    "ai": "6.0.0-beta.92",
+    "ai": "6.0.0-beta.93",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -105,7 +105,6 @@
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/coverage-v8": "^4.0.1",
     "@vitest/ui": "^4.0.1",
-    "lint-staged": "^16.2.6",
     "jose": "^6.1.0",
     "jscodeshift": "^17.3.0",
     "jsdom": "^27.0.1",
@@ -114,11 +113,6 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.9.3",
     "vitest": "^4.0.1"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx,json,css,mjs,cjs,mts,cts}": [
-      "biome check --write --no-errors-on-unmatched"
-    ]
   },
   "engines": {
     "node": "^24 || >=24",
