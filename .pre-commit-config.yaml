@@ -3,6 +3,7 @@
 # Install with: pre-commit install
 
 repos:
+  # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -16,6 +17,7 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
 
+  # Python formatting and linting
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.3
     hooks:
@@ -23,6 +25,7 @@ repos:
         args: [--fix]
       - id: ruff-format
 
+  # Python security scanning
   - repo: https://github.com/PyCQA/bandit
     rev: 1.8.6
     hooks:
@@ -30,11 +33,7 @@ repos:
         args: [-r, ., -x, tests/]
         exclude: ^tests/
 
-  
-  # Type checking: prefer Pyright per repo guidelines
-  # Executed via uv-managed environment if pyright is available as a Python wrapper
-  # Otherwise, ensure pyright is available in CI PATH
-
+  # Python type checking
   - repo: local
     hooks:
       - id: pyright-check
@@ -42,13 +41,48 @@ repos:
         entry: uv run pyright
         language: system
         pass_filenames: false
-        always_run: false
-      - id: pytest-check
-        name: pytest-check
-        entry: bash -c 'cd frontend && pnpm test:coverage || true'
+        stages: [commit]
+
+  # Python detailed linting
+  - repo: local
+    hooks:
+      - id: pylint-check
+        name: pylint-check
+        entry: uv run pylint tripsage tripsage_core
         language: system
         pass_filenames: false
-        always_run: false
+        stages: [commit]
+
+  # Frontend formatting
+  - repo: local
+    hooks:
+      - id: biome-format
+        name: biome-format
+        entry: bash -c 'cd frontend && pnpm format:biome'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx|json)$
+        stages: [commit]
+
+  # Frontend linting
+  - repo: local
+    hooks:
+      - id: biome-check
+        name: biome-check
+        entry: bash -c 'cd frontend && pnpm biome:check'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx|json)$
+        stages: [commit]
+
+  # Frontend type checking
+  - repo: local
+    hooks:
+      - id: typescript-check
+        name: typescript-check
+        entry: bash -c 'cd frontend && pnpm type-check'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        stages: [commit]
 
 ci:
   autofix_commit_msg: |
