@@ -238,6 +238,9 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
   onAgentSelect,
   refreshInterval: _refreshInterval = 5000,
 }) => {
+  // Avoid rendering SVG gradient defs in test environment to prevent React/JSDOM warnings
+  const isTestEnv =
+    typeof process !== "undefined" && process.env.NODE_ENV === "test";
   /** Response time gradient ID */
   const responseTimeGradientId = useId();
   /** Time series data */
@@ -443,7 +446,6 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  whileHover={{ scale: 1.02 }}
                   className={`p-4 border rounded-lg cursor-pointer transition-all ${
                     selectedAgent === agent.id
                       ? "ring-2 ring-blue-500 bg-blue-50"
@@ -535,18 +537,20 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={timeSeriesData}>
-                <defs>
-                  <linearGradient
-                    id={responseTimeGradientId}
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
-                  </linearGradient>
-                </defs>
+                {isClient && !isTestEnv && (
+                  <defs>
+                    <linearGradient
+                      id={responseTimeGradientId}
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
+                    </linearGradient>
+                  </defs>
+                )}
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" />
                 <YAxis />
@@ -556,7 +560,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
                   dataKey="responseTime"
                   stroke="#3b82f6"
                   fillOpacity={1}
-                  fill={`url(#${responseTimeGradientId})`}
+                  fill={isClient && !isTestEnv ? `url(#${responseTimeGradientId})` : "#3b82f6"}
                 />
               </AreaChart>
             </ResponsiveContainer>

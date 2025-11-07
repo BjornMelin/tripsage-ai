@@ -228,10 +228,8 @@ const AgentCard: React.FC<{
 
   return (
     <motion.div
-      layout
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ scale: 1.02 }}
       className={cn(
         "p-4 border rounded-lg cursor-pointer transition-all duration-200",
         isSelected ? "ring-2 ring-blue-500 bg-blue-50" : "hover:shadow-md"
