@@ -1,7 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render } from "@/test/test-utils.test";
+import { render } from "@/test/test-utils";
 
 import AuthError from "../(auth)/error";
 import DashboardError from "../(dashboard)/error";
