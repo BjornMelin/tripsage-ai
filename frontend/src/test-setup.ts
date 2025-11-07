@@ -14,7 +14,7 @@ import {
   WritableStream as NodeWritableStream,
 } from "node:stream/web";
 import { createMockSupabaseClient } from "./test/mock-helpers";
-import { resetTestQueryClient } from "./test/test-utils.test";
+import { resetTestQueryClient } from "./test/test-utils";
 
 type UnknownRecord = Record<string, unknown>;
 

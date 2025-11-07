@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders, screen } from "@/test/test-utils.test";
+import { renderWithProviders, screen } from "@/test/test-utils";
 import { ConnectionStatus } from "../../shared/connection-status";
 import { AgentCollaborationHub } from "../communication/agent-collaboration-hub";
 import { AgentStatusDashboard } from "../dashboard/agent-status-dashboard";

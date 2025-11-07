@@ -7,7 +7,7 @@ import { fetchApi } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/error-types";
 import { createClient } from "@/lib/supabase/client";
 import type { SupabaseAuthMock } from "@/test/mock-helpers";
-import { render, screen } from "@/test/test-utils.test";
+import { render, screen } from "@/test/test-utils";
 
 vi.mock("@/lib/api/client", () => ({
   fetchApi: vi.fn(),

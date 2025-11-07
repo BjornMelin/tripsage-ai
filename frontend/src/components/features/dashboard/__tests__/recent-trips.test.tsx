@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders } from "@/test/test-utils.test";
+import { renderWithProviders } from "@/test/test-utils";
 
 vi.mock("next/link", () => ({
   default: ({
