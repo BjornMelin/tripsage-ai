@@ -17,29 +17,16 @@ import { useAgentStatusStore } from "@/stores/agent-status-store";
 interface ChatSidebarProps extends React.HTMLAttributes<HTMLElement> {
   /** Callback function called when new chat button is clicked. */
   onNewChat?: () => void;
+  /** Optional recent sessions to display (injected by caller/tests). */
+  sessions?: Array<{
+    id: string;
+    title: string;
+    lastMessage: string;
+    updatedAt: string;
+  }>;
 }
 
-// Sample chat sessions for placeholder functionality
-const SampleSessions = [
-  {
-    id: "1",
-    lastMessage: "Find me flights to Paris",
-    title: "Flight Search Help",
-    updatedAt: "2025-05-21T10:00:00Z",
-  },
-  {
-    id: "2",
-    lastMessage: "How can I save money on travel?",
-    title: "Budget Planning",
-    updatedAt: "2025-05-21T09:30:00Z",
-  },
-  {
-    id: "3",
-    lastMessage: "Best hotels in Tokyo",
-    title: "Hotel Recommendations",
-    updatedAt: "2025-05-21T08:45:00Z",
-  },
-];
+// Note: No hard-coded sessions. Tests or callers may inject lightweight fixtures.
 
 /**
  * Sidebar component for chat navigation with recent conversations and new chat button.
@@ -49,7 +36,12 @@ const SampleSessions = [
  * @param props - Additional HTML attributes.
  * @returns The ChatSidebar component.
  */
-function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
+function ChatSidebar({
+  className,
+  onNewChat,
+  sessions = [],
+  ...props
+}: ChatSidebarProps) {
   const pathname = usePathname();
   const currentChatId = pathname.split("/").pop();
 
@@ -91,7 +83,7 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
             Recent Chats
           </h3>
           <div className="space-y-1">
-            {SampleSessions.map((session) => (
+            {sessions.map((session) => (
               <Link
                 key={session.id}
                 href={"/chat"}
@@ -305,6 +297,8 @@ export function ChatLayout({
           "shrink-0 transition-all duration-300",
           sidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
         )}
+        data-testid="chat-sidebar"
+        data-collapsed={sidebarCollapsed ? "true" : "false"}
       >
         <ChatSidebar onNewChat={onNewChat} />
       </div>
