@@ -239,8 +239,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
   refreshInterval: _refreshInterval = 5000,
 }) => {
   // Avoid rendering SVG gradient defs in test environment to prevent React/JSDOM warnings
-  const isTestEnv =
-    typeof process !== "undefined" && process.env.NODE_ENV === "test";
+  const isTestEnv = typeof process !== "undefined" && process.env.NODE_ENV === "test";
   /** Response time gradient ID */
   const responseTimeGradientId = useId();
   /** Time series data */
@@ -560,7 +559,11 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
                   dataKey="responseTime"
                   stroke="#3b82f6"
                   fillOpacity={1}
-                  fill={isClient && !isTestEnv ? `url(#${responseTimeGradientId})` : "#3b82f6"}
+                  fill={
+                    isClient && !isTestEnv
+                      ? `url(#${responseTimeGradientId})`
+                      : "#3b82f6"
+                  }
                 />
               </AreaChart>
             </ResponsiveContainer>
