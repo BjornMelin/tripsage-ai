@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SearchFilters } from "@/components/features/search/search-filters";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { render } from "@/test/test-utils.test";
+import { render } from "@/test/test-utils";
 import type { FilterOption } from "@/types/search";
 
 // Mock console.warn to capture React key warnings

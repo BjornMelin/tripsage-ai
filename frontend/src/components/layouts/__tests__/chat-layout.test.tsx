@@ -1,13 +1,16 @@
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, fireEvent } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentStatusState } from "@/stores/agent-status-store";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
-import type { ChatState } from "@/stores/chat-store";
-import { ConnectionStatus, useChatStore } from "@/stores/chat-store";
-import { render } from "@/test/test-utils.test";
+import { useChatStore } from "@/stores/chat-store";
+import {
+  createMockAgentStatusState,
+  createMockChatState,
+} from "@/test/factories/stores";
+import { render } from "@/test/test-utils";
 import { AgentStatusPanel, ChatLayout, ChatSidebar } from "../chat-layout";
 
-// Store mocks
+// Store mocks (partial to preserve non-mocked exports)
 vi.mock("@/stores/chat-store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/stores/chat-store")>();
   return {
@@ -15,10 +18,13 @@ vi.mock("@/stores/chat-store", async (importOriginal) => {
     useChatStore: vi.fn(),
   };
 });
-
-vi.mock("@/stores/agent-status-store", () => ({
-  useAgentStatusStore: vi.fn(),
-}));
+vi.mock("@/stores/agent-status-store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/stores/agent-status-store")>();
+  return {
+    ...actual,
+    useAgentStatusStore: vi.fn(),
+  };
+});
 
 // Next.js router mock
 vi.mock("next/navigation", () => ({
@@ -28,85 +34,6 @@ vi.mock("next/navigation", () => ({
 const MOCK_USE_CHAT_STORE = vi.mocked(useChatStore);
 const MOCK_USE_AGENT_STATUS_STORE = vi.mocked(useAgentStatusStore);
 
-function CreateMockChatState(): ChatState {
-  return {
-    addMessage: vi.fn(),
-    addPendingMessage: vi.fn(),
-    addToolResult: vi.fn(),
-    autoSyncMemory: false,
-    clearError: vi.fn(),
-    clearMessages: vi.fn(),
-    clearTypingUsers: vi.fn(),
-    connectionStatus: ConnectionStatus.Disconnected,
-    connectRealtime: vi.fn(),
-    createSession: vi.fn(() => "session-1"),
-    currentSession: null,
-    currentSessionId: null,
-    deleteSession: vi.fn(),
-    disconnectRealtime: vi.fn(),
-    error: null,
-    exportSessionData: vi.fn(() => "{}"),
-    handleAgentStatusUpdate: vi.fn(),
-    handleRealtimeMessage: vi.fn(),
-    importSessionData: vi.fn(() => "session-1"),
-    isLoading: false,
-    isRealtimeEnabled: false,
-    isStreaming: false,
-    memoryEnabled: false,
-    pendingMessages: [],
-    realtimeChannel: null,
-    removePendingMessage: vi.fn(),
-    removeUserTyping: vi.fn(),
-    renameSession: vi.fn(),
-    sendMessage: vi.fn(() => Promise.resolve()),
-    sessions: [],
-    setAutoSyncMemory: vi.fn(),
-    setCurrentSession: vi.fn(),
-    setMemoryEnabled: vi.fn(),
-    setRealtimeEnabled: vi.fn(),
-    setUserTyping: vi.fn(),
-    stopStreaming: vi.fn(),
-    storeConversationMemory: vi.fn(() => Promise.resolve()),
-    streamMessage: vi.fn(() => Promise.resolve()),
-    syncMemoryToSession: vi.fn(() => Promise.resolve()),
-    typingUsers: {},
-    updateAgentStatus: vi.fn(),
-    updateMessage: vi.fn(),
-    updateSessionMemoryContext: vi.fn(),
-  } satisfies ChatState;
-}
-
-function CreateMockAgentStatusState(
-  overrides: Partial<AgentStatusState> = {}
-): AgentStatusState {
-  const activeAgents = overrides.activeAgents ?? [];
-  const sessions = overrides.sessions ?? [];
-  return {
-    activeAgents,
-    addAgent: vi.fn(),
-    addAgentActivity: vi.fn(),
-    addAgentTask: vi.fn(),
-    agents: overrides.agents ?? activeAgents,
-    completeAgentTask: vi.fn(),
-    currentSession: overrides.currentSession ?? null,
-    currentSessionId: overrides.currentSessionId ?? null,
-    endSession: vi.fn(),
-    error: overrides.error ?? null,
-    getActiveAgents: vi.fn(() => activeAgents),
-    getCurrentSession: vi.fn(() => overrides.currentSession ?? null),
-    isMonitoring: overrides.isMonitoring ?? false,
-    lastUpdated: overrides.lastUpdated ?? null,
-    resetAgentStatus: vi.fn(),
-    sessions,
-    setError: vi.fn(),
-    startSession: vi.fn(),
-    updateAgentProgress: vi.fn(),
-    updateAgentStatus: vi.fn(),
-    updateAgentTask: vi.fn(),
-    updateResourceUsage: vi.fn(),
-  };
-}
-
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -114,14 +41,12 @@ afterEach(() => {
 
 describe("ChatLayout", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
-    MOCK_USE_CHAT_STORE.mockReturnValue(CreateMockChatState());
-    MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(CreateMockAgentStatusState());
+    MOCK_USE_CHAT_STORE.mockReturnValue(createMockChatState());
+    MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(createMockAgentStatusState());
   });
 
   afterEach(() => {
-    vi.runOnlyPendingTimers();
-    vi.useRealTimers();
+    // No fake timers required for these tests
   });
 
   it("renders with children content", () => {
@@ -152,8 +77,9 @@ describe("ChatLayout", () => {
       </ChatLayout>
     );
 
-    const sidebar = screen.getByText("New Chat").closest('[class*="w-0"]');
+    const sidebar = screen.getByTestId("chat-sidebar");
     expect(sidebar).toBeInTheDocument();
+    expect(sidebar.getAttribute("data-collapsed")).toBe("true");
   });
 
   it("shows agent panel by default", () => {
@@ -185,14 +111,15 @@ describe("ChatLayout", () => {
       </ChatLayout>
     );
 
-    screen.getByText("New Chat").click();
-    expect(onNewChat).toHaveBeenCalled();
+    const button = screen.getByRole("button", { name: /new chat/i });
+    fireEvent.click(button);
+    expect(onNewChat).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("ChatSidebar", () => {
   beforeEach(() => {
-    MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(CreateMockAgentStatusState());
+    MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(createMockAgentStatusState());
   });
 
   it("renders recent chats section", () => {
@@ -218,14 +145,15 @@ describe("ChatSidebar", () => {
 
     render(<ChatSidebar onNewChat={onNewChat} />);
 
-    screen.getByText("New Chat").click();
-    expect(onNewChat).toHaveBeenCalled();
+    const button = screen.getByRole("button", { name: /new chat/i });
+    fireEvent.click(button);
+    expect(onNewChat).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("AgentStatusPanel", () => {
   beforeEach(() => {
-    MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(CreateMockAgentStatusState());
+    MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(createMockAgentStatusState());
   });
 
   it("renders agent status header", () => {
@@ -236,7 +164,7 @@ describe("AgentStatusPanel", () => {
 
   it("shows no active agents message when no agents are active", () => {
     MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(
-      CreateMockAgentStatusState({
+      createMockAgentStatusState({
         activeAgents: [],
         agents: [],
       })
@@ -271,7 +199,7 @@ describe("AgentStatusPanel", () => {
     } satisfies AgentStatusState["agents"][number];
 
     MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(
-      CreateMockAgentStatusState({
+      createMockAgentStatusState({
         activeAgents: [mockAgent],
         agents: [mockAgent],
       })
@@ -292,7 +220,7 @@ describe("AgentStatusPanel", () => {
 
   it("displays loading state indicator", () => {
     MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(
-      CreateMockAgentStatusState({
+      createMockAgentStatusState({
         isMonitoring: true,
       })
     );
