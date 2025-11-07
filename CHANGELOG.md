@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Shared test store factories for Zustand mocks:
+  - `frontend/src/test/factories/stores.ts` (`createMockChatState`, `createMockAgentStatusState`).
+- Timer test helper for deterministic, immediate execution:
+  - `frontend/src/test/timers.ts` (`shortCircuitSetTimeout`).
+
 - Secure random ID utility with fallbacks: `frontend/src/lib/security/random.ts` exporting `secureUUID()`, `secureId()`, and `nowIso()`; Vitest coverage in `frontend/src/lib/security/random.test.ts`.
 
 - Dependency-injected handlers for App Router APIs:
@@ -55,6 +60,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Frontend test utilities moved out of `*.test.*` globs to avoid accidental collection; imports updated:
+  - `frontend/src/test/test-utils.test.tsx` → `frontend/src/test/test-utils.tsx` and all references switched to `@/test/test-utils`.
+- AI stream route integration tests optimized:
+  - Stubbed expensive token utilities (`clampMaxTokens`, `countPromptTokens`) in `frontend/src/app/api/ai/stream/__tests__/route.integration.test.ts`.
+  - Reduced long prompt payload from 10k chars to a compact representative sample.
+- Chat layout component made injectible and test-friendly:
+  - Removed hard-coded sessions; added optional `sessions` prop and semantic attributes (`data-testid="chat-sidebar"`, `data-collapsed`) in `frontend/src/components/layouts/chat-layout.tsx`.
+  - Tests use partial module mocks and `userEvent`; standardized timer teardown (`runOnlyPendingTimers` → `clearAllTimers` → `useRealTimers`).
+- Account settings tests stabilized without fake timers:
+  - Replaced suite-level fake timers with local `setTimeout` short-circuit stubs where needed and simplified assertions in `frontend/src/components/features/profile/__tests__/account-settings-section.test.tsx`.
+- Itinerary builder suite condensed to essential scenarios and de-timed:
+  - Pruned heavy/duplicated cases; retained empty state, minimal destination info, add-destination happy path, numeric input, and labels in `frontend/src/components/features/trips/__tests__/itinerary-builder.test.tsx`.
+- Test performance documentation updated with reproducible commands and “After” metrics:
+  - `frontend/docs/testing/vitest-performance.md` (AI stream ≈12.6ms; Account settings ≈1.6s; Itinerary builder ≈1.5s).
+
 - Replaced insecure/random ID generation across frontend stores and error pages with `secureId/secureUUID` and normalized timestamps via `nowIso`.
 - Removed server-side `Math.random` fallback for chat stream request IDs; use `secureUUID()` in `frontend/src/app/api/chat/stream/_handler.ts:1`.
 - Stabilized skeleton components: removed `Math.random` usage in `travel-skeletons.tsx` and `loading-skeletons.tsx` to ensure deterministic rendering.
@@ -92,6 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Token budget utilities release WASM tokenizer resources without `any` casts (`frontend/src/lib/tokens/budget.ts`).
+- Token budget utilities release WASM tokenizer resources without `any` casts (`frontend/src/lib/tokens/budget.ts`).
 - Date formatting is now timezone-agnostic for `YYYY-MM-DD` inputs to avoid CI/system TZ drift; ISO datetimes format in UTC (`frontend/src/lib/schema-adapters.ts`, tests updated in `frontend/src/lib/__tests__/schema-adapters.test.ts`).
 - Stabilized long‑prompt AI stream test by bounding tokenizer work and retaining accuracy:
   - Introduced a safe character threshold for WASM tokenization with heuristic fallback; small/normal inputs still use `js-tiktoken` and tests validate encodings (`frontend/src/lib/tokens/budget.ts`, `frontend/src/lib/tokens/__tests__/budget.test.ts`).
@@ -121,6 +142,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Adjusted auth-store time comparison to avoid strict-equality flakiness on timestamp rollover.
 
 ### Removed
+
+- Hard-coded sample sessions from chat layout; callers/tests inject sessions as needed (`frontend/src/components/layouts/chat-layout.tsx`).
+- Redundant/high-cost UI cases from Itinerary builder tests (drag & drop visuals, delete flow, extra icon and cancel cases) to reduce runtime (`frontend/src/components/features/trips/__tests__/itinerary-builder.test.tsx`).
+- Obsolete test wrapper file `frontend/src/test/test-utils.test.tsx` (replaced by `frontend/src/test/test-utils.tsx`).
 
 - Python provider wrappers and tests removed (see Breaking Changes)
 - FastAPI chat router and schemas removed; chat moved to Next.js AI SDK v6
