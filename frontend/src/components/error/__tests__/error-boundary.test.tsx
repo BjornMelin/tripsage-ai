@@ -1,12 +1,7 @@
 import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { errorService } from "@/lib/error-service";
-import {
-  fireEvent,
-  renderWithProviders,
-  screen,
-  waitFor,
-} from "@/test/test-utils.test";
+import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils";
 import { ErrorBoundary, WithErrorBoundary } from "../error-boundary";
 
 // Mock the error service

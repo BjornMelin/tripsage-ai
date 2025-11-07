@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api/client";
 import { useSearchParamsStore } from "@/stores/search-params-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
-import { AllTheProviders } from "@/test/test-utils.test";
+import { AllTheProviders } from "@/test/test-utils";
 import { useAccommodationSearch } from "../use-accommodation-search";
 
 // Mock the API
