@@ -24,7 +24,7 @@ dependencies = [
     "typing-extensions>=4.15.0",
     # Database and caching
     "sqlalchemy[asyncio]>=2.0.44,<2.1.0",
-    "redis>=6.4.0,<7.0.0",
+    "redis>=6.4.0,<8.0.0",
     "aiofiles>=25.1.0,<26.0.0",
     "asyncpg>=0.30.0",
     "watchdog>=6.0.0",
