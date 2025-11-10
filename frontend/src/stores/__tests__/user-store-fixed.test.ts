@@ -1,8 +1,3 @@
-/**
- * @fileoverview Deterministic tests for user profile store: derived fields
- * (displayName, hasCompleteProfile, expirations) and core actions.
- */
-
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -13,8 +8,10 @@ import {
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({
-  persist: (fn: any) => fn,
+  // biome-ignore lint/suspicious/noExplicitAny: Test mock doesn't need type safety
   devtools: (fn: any) => fn,
+  // biome-ignore lint/suspicious/noExplicitAny: Test mock doesn't need type safety
+  persist: (fn: any) => fn,
 }));
 
 describe("User Profile Store - Fixed", () => {
@@ -28,41 +25,41 @@ describe("User Profile Store - Fixed", () => {
     });
 
     mockProfile = {
-      id: "user-1",
+      createdAt: "2025-01-01T00:00:00Z",
       email: "test@example.com",
+      favoriteDestinations: [],
+      id: "user-1",
       personalInfo: {
+        bio: "Travel enthusiast",
+        displayName: "John Doe",
         firstName: "John",
         lastName: "Doe",
-        displayName: "John Doe",
-        bio: "Travel enthusiast",
         location: "New York, NY",
         phoneNumber: "+1234567890",
       },
-      travelPreferences: {
-        preferredCabinClass: "business",
-        preferredAirlines: ["Delta", "United"],
-        excludedAirlines: [],
-        maxLayovers: 1,
-        preferredAccommodationType: "hotel",
-        preferredHotelChains: [],
-        requireWifi: true,
-        requireBreakfast: true,
-        requireParking: false,
-        requireGym: false,
-        requirePool: false,
-        accessibilityRequirements: [],
-        dietaryRestrictions: [],
-      },
       privacySettings: {
-        profileVisibility: "friends",
-        showTravelHistory: true,
         allowDataSharing: false,
         enableAnalytics: true,
         enableLocationTracking: false,
+        profileVisibility: "friends",
+        showTravelHistory: true,
       },
-      favoriteDestinations: [],
       travelDocuments: [],
-      createdAt: "2025-01-01T00:00:00Z",
+      travelPreferences: {
+        accessibilityRequirements: [],
+        dietaryRestrictions: [],
+        excludedAirlines: [],
+        maxLayovers: 1,
+        preferredAccommodationType: "hotel",
+        preferredAirlines: ["Delta", "United"],
+        preferredCabinClass: "business",
+        preferredHotelChains: [],
+        requireBreakfast: true,
+        requireGym: false,
+        requireParking: false,
+        requirePool: false,
+        requireWifi: true,
+      },
       updatedAt: "2025-01-01T00:00:00Z",
     };
   });
@@ -114,9 +111,9 @@ describe("User Profile Store - Fixed", () => {
       });
 
       const updates: Partial<PersonalInfo> = {
+        bio: "Updated bio",
         firstName: "Jane",
         lastName: "Smith",
-        bio: "Updated bio",
         location: "San Francisco, CA",
       };
 
@@ -125,6 +122,7 @@ describe("User Profile Store - Fixed", () => {
         updateResult = await result.current.updatePersonalInfo(updates);
       });
 
+      // biome-ignore lint/style/noNonNullAssertion: Test assertion after assignment
       expect(updateResult!).toBe(true);
       expect(result.current.profile?.personalInfo?.firstName).toBe("Jane");
       expect(result.current.profile?.personalInfo?.lastName).toBe("Smith");
@@ -144,6 +142,7 @@ describe("User Profile Store - Fixed", () => {
         });
       });
 
+      // biome-ignore lint/style/noNonNullAssertion: Test assertion after assignment
       expect(updateResult!).toBe(false);
     });
   });
@@ -234,19 +233,19 @@ describe("User Profile Store - Fixed", () => {
             lastName: "Doe",
           },
           travelPreferences: {
-            preferredCabinClass: "economy",
-            preferredAirlines: [],
+            accessibilityRequirements: [],
+            dietaryRestrictions: [],
             excludedAirlines: [],
             maxLayovers: 2,
             preferredAccommodationType: "hotel",
+            preferredAirlines: [],
+            preferredCabinClass: "economy",
             preferredHotelChains: [],
-            requireWifi: true,
             requireBreakfast: false,
-            requireParking: false,
             requireGym: false,
+            requireParking: false,
             requirePool: false,
-            accessibilityRequirements: [],
-            dietaryRestrictions: [],
+            requireWifi: true,
           },
         });
       });
@@ -270,8 +269,8 @@ describe("User Profile Store - Fixed", () => {
       const { result } = renderHook(() => useUserProfileStore());
 
       const destination = {
-        name: "Paris",
         country: "France",
+        name: "Paris",
         notes: "Beautiful city",
       };
 

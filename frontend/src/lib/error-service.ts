@@ -1,6 +1,6 @@
 import {
+  ERROR_REPORT_SCHEMA,
   type ErrorReport,
-  ErrorReportSchema,
   type ErrorServiceConfig,
 } from "@/types/errors";
 
@@ -22,7 +22,7 @@ class ErrorService {
   async reportError(report: ErrorReport): Promise<void> {
     try {
       // Validate the error report using Zod
-      const validatedReport = ErrorReportSchema.parse(report);
+      const validatedReport = ERROR_REPORT_SCHEMA.parse(report);
 
       if (!this.config.enabled) {
         console.error("Error reported:", validatedReport);
@@ -56,8 +56,10 @@ class ErrorService {
 
     try {
       while (this.queue.length > 0) {
-        const report = this.queue.shift()!;
-        await this.sendErrorReport(report);
+        const report = this.queue.shift();
+        if (report) {
+          await this.sendErrorReport(report);
+        }
       }
     } catch (error) {
       console.error("Failed to process error queue:", error);
@@ -79,14 +81,15 @@ class ErrorService {
       }
 
       const response = await fetch(this.config.endpoint, {
-        method: "POST",
+        body: JSON.stringify(report),
         headers: {
           "Content-Type": "application/json",
           ...(this.config.apiKey && {
+            // biome-ignore lint/style/useNamingConvention: HTTP header name
             Authorization: `Bearer ${this.config.apiKey}`,
           }),
         },
-        body: JSON.stringify(report),
+        method: "POST",
       });
 
       if (!response.ok) {
@@ -150,19 +153,19 @@ class ErrorService {
   ): ErrorReport {
     return {
       error: {
-        name: error.name,
+        digest: (error as Error & { digest?: string }).digest,
         message: error.message,
+        name: error.name,
         stack: error.stack,
-        digest: (error as any).digest,
       },
       errorInfo: errorInfo
         ? {
             componentStack: errorInfo.componentStack || "",
           }
         : undefined,
+      timestamp: new Date().toISOString(),
       url: window.location.href,
       userAgent: navigator.userAgent,
-      timestamp: new Date().toISOString(),
       ...additionalInfo,
     };
   }
@@ -170,11 +173,11 @@ class ErrorService {
 
 // Default error service instance
 export const errorService = new ErrorService({
-  enabled: process.env.NODE_ENV === "production",
-  endpoint: undefined,
   apiKey: undefined,
-  maxRetries: 3,
+  enabled: process.env.NODE_ENV === "production",
   enableLocalStorage: true,
+  endpoint: undefined,
+  maxRetries: 3,
 });
 
 export { ErrorService };

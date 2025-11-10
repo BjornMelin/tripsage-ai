@@ -22,8 +22,8 @@ function QueryErrorFallback({ error, resetErrorBoundary }: QueryErrorFallbackPro
     if (isNetwork) {
       return {
         icon: <WifiOff className="h-8 w-8 text-orange-500" />,
-        title: "Connection Error",
         message: "Please check your internet connection and try again.",
+        title: "Connection Error",
         variant: "network" as const,
       };
     }
@@ -31,8 +31,8 @@ function QueryErrorFallback({ error, resetErrorBoundary }: QueryErrorFallbackPro
     if (isApi && error.status >= 500) {
       return {
         icon: <AlertTriangle className="h-8 w-8 text-red-500" />,
-        title: "Server Error",
         message: "Our servers are experiencing issues. Please try again later.",
+        title: "Server Error",
         variant: "server" as const,
       };
     }
@@ -40,8 +40,8 @@ function QueryErrorFallback({ error, resetErrorBoundary }: QueryErrorFallbackPro
     if (isApi && error.status === 401) {
       return {
         icon: <AlertTriangle className="h-8 w-8 text-yellow-500" />,
-        title: "Authentication Required",
         message: "Please log in to continue.",
+        title: "Authentication Required",
         variant: "auth" as const,
       };
     }
@@ -49,8 +49,8 @@ function QueryErrorFallback({ error, resetErrorBoundary }: QueryErrorFallbackPro
     if (isApi && error.status === 403) {
       return {
         icon: <AlertTriangle className="h-8 w-8 text-red-500" />,
-        title: "Access Denied",
         message: "You don't have permission to access this resource.",
+        title: "Access Denied",
         variant: "permission" as const,
       };
     }
@@ -58,8 +58,8 @@ function QueryErrorFallback({ error, resetErrorBoundary }: QueryErrorFallbackPro
     // Default error display
     return {
       icon: <AlertTriangle className="h-8 w-8 text-red-500" />,
-      title: "Something went wrong",
       message: errorMessage,
+      title: "Something went wrong",
       variant: "default" as const,
     };
   };
@@ -103,7 +103,9 @@ function QueryErrorFallback({ error, resetErrorBoundary }: QueryErrorFallbackPro
 
         {variant === "auth" && (
           <Button
-            onClick={() => (window.location.href = "/login")}
+            onClick={() => {
+              window.location.href = "/login";
+            }}
             size="sm"
             className="ml-2"
           >
@@ -129,7 +131,7 @@ function QueryErrorFallback({ error, resetErrorBoundary }: QueryErrorFallbackPro
 interface QueryErrorBoundaryProps {
   children: ReactNode;
   fallback?: React.ComponentType<QueryErrorFallbackProps>;
-  onError?: (error: Error, errorInfo: any) => void;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
 export function QueryErrorBoundary({
@@ -197,7 +199,7 @@ export function InlineQueryError({
 /**
  * Hook for handling query errors in components
  */
-export function useQueryErrorHandler() {
+export function UseQueryErrorHandler() {
   const { reset } = useQueryErrorResetBoundary();
 
   const handleError = (error: unknown) => {
@@ -214,13 +216,13 @@ export function useQueryErrorHandler() {
   };
 
   return {
-    handleError,
-    retryQuery,
     getErrorMessage: (error: unknown) => getErrorMessage(error),
+    handleError,
     isRetryableError: (error: unknown) => {
       if (isNetworkError(error)) return true;
       if (isApiError(error)) return error.shouldRetry;
       return false;
     },
+    retryQuery,
   };
 }

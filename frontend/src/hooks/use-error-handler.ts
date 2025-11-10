@@ -9,11 +9,13 @@
 
 import { useCallback } from "react";
 import { errorService } from "@/lib/error-service";
+import { secureUuid } from "@/lib/security/random";
+import { fireAndForget } from "@/lib/utils";
 
 // Extend Window interface for custom properties
 declare global {
   interface Window {
-    __USER_STORE__?: {
+    userStore?: {
       user?: {
         id?: string;
       };
@@ -22,20 +24,26 @@ declare global {
 }
 
 /**
- * Hook for handling errors in components.
+ * Hook for handling errors in React components with automatic reporting.
+ *
+ * Provides utilities for consistent error handling across the application,
+ * including automatic error reporting, user context tracking, and session
+ * information collection.
+ *
+ * @returns Object containing error handling functions
  */
 export function useErrorHandler() {
   const handleError = useCallback(
     (error: Error, additionalInfo?: Record<string, unknown>) => {
       // Create error report
       const errorReport = errorService.createErrorReport(error, undefined, {
-        userId: getUserId(),
         sessionId: getSessionId(),
+        userId: getUserId(),
         ...additionalInfo,
       });
 
       // Report error
-      errorService.reportError(errorReport);
+      fireAndForget(errorService.reportError(errorReport));
 
       // Log in development
       if (process.env.NODE_ENV === "development") {
@@ -46,7 +54,7 @@ export function useErrorHandler() {
   );
 
   const handleAsyncError = useCallback(
-    async (asyncOperation: () => Promise<any>, fallback?: () => void) => {
+    async <T>(asyncOperation: () => Promise<T>, fallback?: () => void): Promise<T> => {
       try {
         return await asyncOperation();
       } catch (error) {
@@ -61,8 +69,8 @@ export function useErrorHandler() {
   );
 
   return {
-    handleError,
     handleAsyncError,
+    handleError,
   };
 }
 
@@ -73,7 +81,7 @@ export function useErrorHandler() {
  */
 function getUserId(): string | undefined {
   try {
-    const userStore = window.__USER_STORE__;
+    const userStore = window.userStore;
     return userStore?.user?.id;
   } catch {
     return undefined;
@@ -89,7 +97,7 @@ function getSessionId(): string | undefined {
   try {
     let sessionId = sessionStorage.getItem("session_id");
     if (!sessionId) {
-      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      sessionId = `session_${secureUuid()}`;
       sessionStorage.setItem("session_id", sessionId);
     }
     return sessionId;

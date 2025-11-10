@@ -15,7 +15,6 @@ on:
       - 'ruff.toml'
       - 'pyrightconfig.json'
       - 'setup.cfg'
-      - 'pytest.ini'
       - '.github/workflows/**'
   pull_request:
     branches: [main, develop]
@@ -31,7 +30,6 @@ on:
       - 'ruff.toml'
       - 'pyrightconfig.json'
       - 'setup.cfg'
-      - 'pytest.ini'
       - '.github/workflows/**'
   workflow_dispatch: {}
 
@@ -97,7 +95,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
 
       - name: Install deps
         working-directory: frontend
@@ -105,9 +103,9 @@ jobs:
           npm install -g pnpm@9
           pnpm install --frozen-lockfile
 
-      - name: Biome lint
+      - name: Biome check (src + e2e + scripts)
         working-directory: frontend
-        run: npx biome lint . --reporter=github
+        run: npx biome check ./src ./e2e ./scripts --reporter=github
 
       - name: TypeScript type check
         working-directory: frontend
@@ -117,7 +115,43 @@ jobs:
         working-directory: frontend
         run: pnpm test:ci
 
+      - name: Performance benchmarks
+        working-directory: frontend
+        continue-on-error: true
+        run: pnpm test:benchmark || true
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: frontend/benchmark-summary.json
+          if-no-files-found: ignore
+
+      - name: Check performance thresholds
+        working-directory: frontend
+        run: |
+          if [ -f benchmark-summary.json ]; then
+            SUITE_DURATION=$(jq -r '.suite.duration' benchmark-summary.json)
+            SUITE_PASSED=$(jq -r '.thresholds.suitePassed' benchmark-summary.json)
+            EXCEEDED_COUNT=$(jq -r '.thresholds.exceeded | length' benchmark-summary.json)
+            
+            if [ "$SUITE_PASSED" = "false" ] || [ "$EXCEEDED_COUNT" -gt 0 ]; then
+              echo "❌ Performance thresholds exceeded"
+              echo "Suite duration: ${SUITE_DURATION}ms (threshold: 10000ms)"
+              jq -r '.thresholds.exceeded[]' benchmark-summary.json
+              exit 1
+            else
+              echo "✅ Performance thresholds met"
+            fi
+          else
+            echo "⚠️  Benchmark summary not found, skipping threshold check"
+          fi
+
       - name: Summary
         run: |
           echo "## Frontend CI Summary" >> $GITHUB_STEP_SUMMARY
           echo "Biome lint, TS check, and unit tests completed." >> $GITHUB_STEP_SUMMARY
+          if [ -f frontend/benchmark-summary.json ]; then
+            echo "Performance benchmarks: completed" >> $GITHUB_STEP_SUMMARY
+          fi

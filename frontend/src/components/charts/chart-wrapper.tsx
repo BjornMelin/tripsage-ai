@@ -1,11 +1,22 @@
+/**
+ * @fileoverview Chart wrapper component for dynamically importing Recharts components to reduce initial bundle size.
+ */
+
 "use client";
 
 import dynamic from "next/dynamic";
 import type { ComponentProps, ComponentType } from "react";
+import type {
+  AreaProps as RechartsAreaProps,
+  LineProps as RechartsLineProps,
+  TooltipProps as RechartsTooltipProps,
+  XAxisProps as RechartsXAxisProps,
+  YAxisProps as RechartsYAxisProps,
+} from "recharts";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
-// Type-safe dynamic import wrapper for Recharts components
-const createDynamicComponent = <P extends object>(
+/** Type-safe dynamic import wrapper for Recharts components */
+const CreateDynamicComponent = <P extends object>(
   importFunc: () => Promise<{ default: ComponentType<P> } | ComponentType<P>>
 ) => {
   return dynamic(
@@ -18,7 +29,7 @@ const createDynamicComponent = <P extends object>(
   );
 };
 
-// Dynamically import chart components to reduce initial bundle size
+/** Dynamically import chart components to reduce initial bundle size */
 export const ResponsiveContainer = dynamic(
   () => import("recharts").then((mod) => mod.ResponsiveContainer),
   {
@@ -31,43 +42,95 @@ export const ResponsiveContainer = dynamic(
   }
 );
 
+/**
+ * Dynamically import the AreaChart component.
+ *
+ * @returns The AreaChart component.
+ */
 export const AreaChart = dynamic(
   () => import("recharts").then((mod) => mod.AreaChart),
   { ssr: false }
 );
 
+/**
+ * Dynamically import the LineChart component.
+ *
+ * @returns The LineChart component.
+ */
 export const LineChart = dynamic(
   () => import("recharts").then((mod) => mod.LineChart),
   { ssr: false }
 );
 
-// Use the safe dynamic wrapper for problematic components
-export const Area = createDynamicComponent(() =>
-  import("recharts").then((mod) => mod.Area as any)
+/**
+ * Dynamically import the Area component.
+ *
+ * @returns The Area component.
+ */
+export const Area = CreateDynamicComponent(() =>
+  import("recharts").then(
+    (mod) => mod.Area as unknown as React.ComponentType<RechartsAreaProps>
+  )
 );
 
-export const Line = createDynamicComponent(() =>
-  import("recharts").then((mod) => mod.Line as any)
+/**
+ * Dynamically import the Line component.
+ *
+ * @returns The Line component.
+ */
+export const Line = CreateDynamicComponent(() =>
+  import("recharts").then(
+    (mod) => mod.Line as unknown as React.ComponentType<RechartsLineProps>
+  )
 );
 
+/**
+ * Dynamically import the CartesianGrid component.
+ *
+ * @returns The CartesianGrid component.
+ */
 export const CartesianGrid = dynamic(
   () => import("recharts").then((mod) => mod.CartesianGrid),
   { ssr: false }
 );
 
-export const XAxis = createDynamicComponent(() =>
-  import("recharts").then((mod) => mod.XAxis as any)
+/**
+ * Dynamically import the XAxis component.
+ *
+ * @returns The XAxis component.
+ */
+export const XAxis = CreateDynamicComponent(() =>
+  import("recharts").then(
+    (mod) => mod.XAxis as unknown as React.ComponentType<RechartsXAxisProps>
+  )
 );
 
-export const YAxis = createDynamicComponent(() =>
-  import("recharts").then((mod) => mod.YAxis as any)
+/**
+ * Dynamically import the YAxis component.
+ *
+ * @returns The YAxis component.
+ */
+export const YAxis = CreateDynamicComponent(() =>
+  import("recharts").then(
+    (mod) => mod.YAxis as unknown as React.ComponentType<RechartsYAxisProps>
+  )
 );
 
-export const Tooltip = createDynamicComponent(() =>
-  import("recharts").then((mod) => mod.Tooltip as any)
+/**
+ * Dynamically import the Tooltip component.
+ *
+ * @returns The Tooltip component.
+ */
+export const Tooltip = CreateDynamicComponent(() =>
+  import("recharts").then(
+    (mod) =>
+      mod.Tooltip as unknown as React.ComponentType<
+        RechartsTooltipProps<string | number, string | number>
+      >
+  )
 );
 
-// Export types for better TypeScript support
+/** Export types for better TypeScript support */
 export type ResponsiveContainerProps = ComponentProps<typeof ResponsiveContainer>;
 export type AreaChartProps = ComponentProps<typeof AreaChart>;
 export type LineChartProps = ComponentProps<typeof LineChart>;

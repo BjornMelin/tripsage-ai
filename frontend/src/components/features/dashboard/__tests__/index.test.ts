@@ -1,9 +1,3 @@
-/**
- * Dashboard Components Integration Tests
- *
- * This file tests the integration and exports of dashboard components.
- */
-
 import { describe, expect, it } from "vitest";
 
 describe("Dashboard Components Exports", () => {

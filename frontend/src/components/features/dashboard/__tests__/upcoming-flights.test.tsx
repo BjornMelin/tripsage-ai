@@ -1,12 +1,8 @@
-/**
- * Modern upcoming flights tests.
- *
- * Focused tests for upcoming flights functionality using proper mocking
- * patterns and behavioral validation. Following ULTRATHINK methodology.
- */
-
+import type { UseQueryResult } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UpcomingFlight } from "@/hooks/use-trips";
+import type { AppError } from "@/lib/api/error-types";
 import { render, screen } from "@/test/test-utils";
 import { UpcomingFlights } from "../upcoming-flights";
 
@@ -16,9 +12,50 @@ vi.mock("@/hooks/use-trips", () => ({
 
 import { useUpcomingFlights } from "@/hooks/use-trips";
 
+// Type for Next.js Link component props
+interface LinkProps {
+  children: ReactNode;
+  href: string;
+  [key: string]: unknown;
+}
+
+// Use proper React Query return type
+type UseUpcomingFlightsReturn = UseQueryResult<UpcomingFlight[], AppError>;
+
+// Helper function to create complete mock return value
+function CreateMockReturnValue(
+  data: UpcomingFlight[],
+  isLoading = false
+): UseUpcomingFlightsReturn {
+  return {
+    data,
+    dataUpdatedAt: Date.now(),
+    error: null,
+    errorUpdateCount: 0,
+    errorUpdatedAt: 0,
+    failureCount: 0,
+    failureReason: null,
+    fetchStatus: "idle",
+    isError: false,
+    isFetched: true,
+    isFetchedAfterMount: true,
+    isFetching: false,
+    isLoading,
+    isLoadingError: false,
+    isPaused: false,
+    isPending: isLoading,
+    isPlaceholderData: false,
+    isRefetchError: false,
+    isRefetching: false,
+    isStale: false,
+    isSuccess: !isLoading,
+    status: isLoading ? "pending" : "success",
+  } as UseUpcomingFlightsReturn;
+}
+
 // Mock Next.js Link
 vi.mock("next/link", () => ({
-  default: ({ children, href, ...props }: any) => (
+  default: ({ children, href, ...props }: LinkProps) => (
     <a href={href} {...props}>
       {children}
     </a>
@@ -51,13 +88,7 @@ describe("UpcomingFlights", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     // Default: no flights, not loading
-    vi.mocked(useUpcomingFlights).mockImplementation(
-      () =>
-        ({
-          data: [],
-          isLoading: false,
-        }) as any
-    );
+    vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue([]));
   });
 
   describe("Basic Rendering", () => {
@@ -76,27 +107,7 @@ describe("UpcomingFlights", () => {
 
   describe("Empty States", () => {
     it("should show empty state when no flights exist", () => {
-      vi.mocked(useUpcomingFlights).mockImplementation(
-        () =>
-          ({
-            data: [],
-            isLoading: false,
-          }) as any
-      );
-
-      render(<UpcomingFlights />);
-
-      expect(screen.getByText("No upcoming flights.")).toBeInTheDocument();
-    });
-
-    it("should show empty state when hook returns no flights", () => {
-      vi.mocked(useUpcomingFlights).mockImplementation(
-        () =>
-          ({
-            data: [],
-            isLoading: false,
-          }) as any
-      );
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue([]));
 
       render(<UpcomingFlights />);
 
@@ -104,13 +115,7 @@ describe("UpcomingFlights", () => {
     });
 
     it("should handle showEmpty prop correctly", () => {
-      vi.mocked(useUpcomingFlights).mockImplementation(
-        () =>
-          ({
-            data: [],
-            isLoading: false,
-          }) as any
-      );
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue([]));
 
       const { rerender } = render(<UpcomingFlights showEmpty={false} />);
 
@@ -122,36 +127,83 @@ describe("UpcomingFlights", () => {
     });
   });
 
+  describe("Loading State", () => {
+    it("should render skeleton components when loading", () => {
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue([], true));
+
+      const { container } = render(<UpcomingFlights />);
+
+      // Should show card title even when loading
+      expect(screen.getByText("Upcoming Flights")).toBeInTheDocument();
+
+      // Should render skeleton components (check for Skeleton elements)
+      const skeletons = container.querySelectorAll('[class*="skeleton"]');
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
+
+    it("should render exactly 2 flight skeleton cards when loading", () => {
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue([], true));
+
+      const { container } = render(<UpcomingFlights />);
+
+      // Find skeleton containers (each FlightCardSkeleton has multiple skeleton elements)
+      // We check for the parent containers with border classes
+      const skeletonCards = container.querySelectorAll(
+        ".border.border-border.rounded-lg"
+      );
+
+      // Should have 2 skeleton cards (each FlightCardSkeleton)
+      expect(skeletonCards.length).toBe(2);
+    });
+
+    it("should use stable keys for skeleton components", () => {
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue([], true));
+
+      const { container, rerender } = render(<UpcomingFlights />);
+
+      // Find all skeleton containers
+      const skeletonCards = container.querySelectorAll(
+        ".border.border-border.rounded-lg"
+      );
+
+      // Verify we have exactly 2 skeletons
+      expect(skeletonCards.length).toBe(2);
+
+      // Re-render should maintain the same structure with stable keys
+      // If keys were unstable, React would re-mount components on each render
+      rerender(<UpcomingFlights />);
+
+      const skeletonCardsAfterRerender = container.querySelectorAll(
+        ".border.border-border.rounded-lg"
+      );
+      expect(skeletonCardsAfterRerender.length).toBe(2);
+    });
+  });
+
   describe("Flight Display", () => {
     it("should display flights for upcoming trips", () => {
       const flights: UpcomingFlight[] = [
         {
-          id: "f1",
-          trip_id: "trip-1",
-          trip_name: "Tokyo Adventure",
           airline: "NH",
-          airline_name: "ANA",
-          flight_number: "NH203",
-          origin: "NRT",
-          destination: "HND",
-          departure_time: getFutureDate(10),
-          arrival_time: getFutureDate(10),
-          duration: 420,
-          stops: 0,
-          price: 999,
+          airlineName: "ANA",
+          arrivalTime: getFutureDate(10),
+          cabinClass: "economy",
           currency: "USD",
-          cabin_class: "economy",
+          departureTime: getFutureDate(10),
+          destination: "HND",
+          duration: 420,
+          flightNumber: "NH203",
+          id: "f1",
+          origin: "NRT",
+          price: 999,
           status: "upcoming",
+          stops: 0,
+          tripId: "trip-1",
+          tripName: "Tokyo Adventure",
         },
       ];
 
-      vi.mocked(useUpcomingFlights).mockImplementation(
-        () =>
-          ({
-            data: flights,
-            isLoading: false,
-          }) as any
-      );
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -162,50 +214,44 @@ describe("UpcomingFlights", () => {
     it("should show multiple flights", () => {
       const flights: UpcomingFlight[] = [
         {
-          id: "f1",
-          trip_id: "trip-1",
-          trip_name: "Tokyo Trip",
           airline: "NH",
-          airline_name: "ANA",
-          flight_number: "NH200",
-          origin: "NRT",
-          destination: "HND",
-          departure_time: getFutureDate(5),
-          arrival_time: getFutureDate(5),
-          duration: 300,
-          stops: 0,
-          price: 400,
+          airlineName: "ANA",
+          arrivalTime: getFutureDate(5),
+          cabinClass: "economy",
           currency: "USD",
-          cabin_class: "economy",
+          departureTime: getFutureDate(5),
+          destination: "HND",
+          duration: 300,
+          flightNumber: "NH200",
+          id: "f1",
+          origin: "NRT",
+          price: 400,
           status: "upcoming",
+          stops: 0,
+          tripId: "trip-1",
+          tripName: "Tokyo Trip",
         },
         {
-          id: "f2",
-          trip_id: "trip-2",
-          trip_name: "Paris Trip",
           airline: "AF",
-          airline_name: "Air France",
-          flight_number: "AF100",
-          origin: "CDG",
-          destination: "ORY",
-          departure_time: getFutureDate(20),
-          arrival_time: getFutureDate(20),
-          duration: 120,
-          stops: 0,
-          price: 300,
+          airlineName: "Air France",
+          arrivalTime: getFutureDate(20),
+          cabinClass: "economy",
           currency: "EUR",
-          cabin_class: "economy",
+          departureTime: getFutureDate(20),
+          destination: "ORY",
+          duration: 120,
+          flightNumber: "AF100",
+          id: "f2",
+          origin: "CDG",
+          price: 300,
           status: "upcoming",
+          stops: 0,
+          tripId: "trip-2",
+          tripName: "Paris Trip",
         },
       ];
 
-      vi.mocked(useUpcomingFlights).mockImplementation(
-        () =>
-          ({
-            data: flights,
-            isLoading: false,
-          }) as any
-      );
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -216,53 +262,54 @@ describe("UpcomingFlights", () => {
     it("should respect limit prop", () => {
       const flights: UpcomingFlight[] = [
         {
-          id: "f1",
           airline: "AA",
-          airline_name: "American",
-          flight_number: "AA1",
-          origin: "JFK",
-          destination: "LAX",
-          departure_time: getFutureDate(5),
-          arrival_time: getFutureDate(5),
-          duration: 360,
-          stops: 0,
-          price: 200,
+          airlineName: "American Airlines",
+          arrivalTime: getFutureDate(5),
+          cabinClass: "economy",
           currency: "USD",
-          cabin_class: "economy",
+          departureTime: getFutureDate(5),
+          destination: "LAX",
+          duration: 360,
+          flightNumber: "AA100",
+          id: "f1",
+          origin: "JFK",
+          price: 200,
           status: "upcoming",
+          stops: 0,
+          tripId: "trip-1",
+          tripName: "Business Trip",
         },
         {
-          id: "f2",
           airline: "DL",
-          airline_name: "Delta",
-          flight_number: "DL2",
-          origin: "SFO",
-          destination: "SEA",
-          departure_time: getFutureDate(6),
-          arrival_time: getFutureDate(6),
-          duration: 120,
-          stops: 0,
-          price: 150,
+          airlineName: "Delta Airlines",
+          arrivalTime: getFutureDate(6),
+          cabinClass: "economy",
           currency: "USD",
-          cabin_class: "economy",
+          departureTime: getFutureDate(6),
+          destination: "SEA",
+          duration: 120,
+          flightNumber: "DL200",
+          id: "f2",
+          origin: "SFO",
+          price: 150,
           status: "upcoming",
+          stops: 0,
+          tripId: "trip-2",
+          tripName: "Vacation",
         },
       ];
 
+      // Mock the hook to return limited results based on the limit parameter
       vi.mocked(useUpcomingFlights).mockImplementation(
-        ({ limit }: any) =>
-          ({
-            data: flights.slice(0, limit ?? flights.length),
-            isLoading: false,
-          }) as any
+        ({ limit }: { limit?: number } = {}) =>
+          CreateMockReturnValue(flights.slice(0, limit ?? flights.length))
       );
 
       render(<UpcomingFlights limit={1} />);
 
-      const aa = screen.queryAllByText(/AA1/);
-      const dl = screen.queryAllByText(/DL2/);
-      expect(aa.length).toBeGreaterThan(0);
-      expect(dl.length).toBe(0);
+      // Should only show the first flight (limited to 1)
+      expect(screen.getByText("Business Trip")).toBeInTheDocument();
+      expect(screen.queryByText("Vacation")).not.toBeInTheDocument();
     });
   });
 
@@ -270,65 +317,58 @@ describe("UpcomingFlights", () => {
     beforeEach(() => {
       const flights: UpcomingFlight[] = [
         {
-          id: "f1",
-          trip_id: "trip-1",
-          trip_name: "Test Trip",
           airline: "UA",
-          airline_name: "United",
-          flight_number: "UA100",
-          origin: "EWR",
-          destination: "LAX",
-          departure_time: getFutureDate(10),
-          arrival_time: getFutureDate(10),
-          duration: 300,
-          stops: 0,
-          price: 350,
+          airlineName: "United",
+          arrivalTime: getFutureDate(10),
+          cabinClass: "economy",
           currency: "USD",
-          cabin_class: "economy",
+          departureTime: getFutureDate(10),
+          destination: "LAX",
+          duration: 300,
+          flightNumber: "UA100",
+          id: "f1",
+          origin: "EWR",
+          price: 350,
           status: "upcoming",
+          stops: 0,
+          tripId: "trip-1",
+          tripName: "Test Trip",
         },
       ];
-      vi.mocked(useUpcomingFlights).mockImplementation(
-        () =>
-          ({
-            data: flights,
-            isLoading: false,
-          }) as any
-      );
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
     });
 
     it("should display flight times", () => {
       render(<UpcomingFlights />);
 
-      // Should show time information in some format
-      const timeElements = screen.queryAllByText(/\d{1,2}:\d{2}/);
-      expect(timeElements.length).toBeGreaterThanOrEqual(0);
+      // Should show departure and arrival time labels
+      expect(screen.getByText("Departure")).toBeInTheDocument();
+      expect(screen.getByText("Arrival")).toBeInTheDocument();
+
+      // Should show formatted times with date (check that at least one time element exists)
+      const timeElements = screen.getAllByText(/\d{1,2}:\d{2} • \w{3} \d{1,2}/);
+      expect(timeElements.length).toBeGreaterThan(0);
     });
 
     it("should show flight status information", () => {
       render(<UpcomingFlights />);
 
-      // Should show some form of status
-      const statusElements = screen.queryAllByText(
-        /upcoming|scheduled|boarding|delayed/i
-      );
-      expect(statusElements.length).toBeGreaterThanOrEqual(0);
+      // Should show the status badge with "upcoming"
+      expect(screen.getByText("upcoming")).toBeInTheDocument();
     });
 
     it("should display price information when available", () => {
       render(<UpcomingFlights />);
 
-      // Should show price in some format
-      const priceElements = screen.queryAllByText(/\$\d+/);
-      expect(priceElements.length).toBeGreaterThanOrEqual(0);
+      // Should show price with dollar sign
+      expect(screen.getByText("$350")).toBeInTheDocument();
     });
 
     it("should show duration information", () => {
       render(<UpcomingFlights />);
 
-      // Should show duration in some format
-      const durationElements = screen.queryAllByText(/\d+h|\d+m/);
-      expect(durationElements.length).toBeGreaterThanOrEqual(0);
+      // Should show duration in "Xh Ym" format (5h 50m for 300 minutes)
+      expect(screen.getByText("5h 0m")).toBeInTheDocument();
     });
   });
 
@@ -336,27 +376,25 @@ describe("UpcomingFlights", () => {
     it("should link to trip details correctly", () => {
       const flights: UpcomingFlight[] = [
         {
-          id: "f1",
-          trip_id: "trip-123",
-          trip_name: "Test Trip",
           airline: "UA",
-          airline_name: "United",
-          flight_number: "UA100",
-          origin: "EWR",
-          destination: "LAX",
-          departure_time: getFutureDate(10),
-          arrival_time: getFutureDate(10),
-          duration: 300,
-          stops: 0,
-          price: 350,
+          airlineName: "United",
+          arrivalTime: getFutureDate(10),
+          cabinClass: "economy",
           currency: "USD",
-          cabin_class: "economy",
+          departureTime: getFutureDate(10),
+          destination: "LAX",
+          duration: 300,
+          flightNumber: "UA100",
+          id: "f1",
+          origin: "EWR",
+          price: 350,
           status: "upcoming",
+          stops: 0,
+          tripId: "trip-123",
+          tripName: "Test Trip",
         },
       ];
-      vi.mocked(useUpcomingFlights).mockImplementation(
-        () => ({ data: flights, isLoading: false }) as any
-      );
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -369,25 +407,23 @@ describe("UpcomingFlights", () => {
     it("should show search more flights link when flights exist", () => {
       const flights: UpcomingFlight[] = [
         {
-          id: "f1",
           airline: "UA",
-          airline_name: "United",
-          flight_number: "UA100",
-          origin: "EWR",
-          destination: "LAX",
-          departure_time: getFutureDate(10),
-          arrival_time: getFutureDate(10),
-          duration: 300,
-          stops: 0,
-          price: 350,
+          airlineName: "United",
+          arrivalTime: getFutureDate(10),
+          cabinClass: "economy",
           currency: "USD",
-          cabin_class: "economy",
+          departureTime: getFutureDate(10),
+          destination: "LAX",
+          duration: 300,
+          flightNumber: "UA100",
+          id: "f1",
+          origin: "EWR",
+          price: 350,
           status: "upcoming",
+          stops: 0,
         },
       ];
-      vi.mocked(useUpcomingFlights).mockImplementation(
-        () => ({ data: flights, isLoading: false }) as any
-      );
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -402,27 +438,25 @@ describe("UpcomingFlights", () => {
     it("should display flights returned by hook", () => {
       const flights: UpcomingFlight[] = [
         {
-          id: "f2",
-          trip_id: "future-trip",
-          trip_name: "Future Trip",
           airline: "BA",
-          airline_name: "British Airways",
-          flight_number: "BA100",
-          origin: "LHR",
-          destination: "JFK",
-          departure_time: getFutureDate(10),
-          arrival_time: getFutureDate(10),
-          duration: 420,
-          stops: 0,
-          price: 800,
+          airlineName: "British Airways",
+          arrivalTime: getFutureDate(10),
+          cabinClass: "economy",
           currency: "GBP",
-          cabin_class: "economy",
+          departureTime: getFutureDate(10),
+          destination: "JFK",
+          duration: 420,
+          flightNumber: "BA100",
+          id: "f2",
+          origin: "LHR",
+          price: 800,
           status: "upcoming",
+          stops: 0,
+          tripId: "future-trip",
+          tripName: "Future Trip",
         },
       ];
-      vi.mocked(useUpcomingFlights).mockImplementation(
-        () => ({ data: flights, isLoading: false }) as any
-      );
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -434,27 +468,25 @@ describe("UpcomingFlights", () => {
 
       const flights: UpcomingFlight[] = [
         {
-          id: "f3",
-          trip_id: "today-trip",
-          trip_name: "Today Trip",
           airline: "LH",
-          airline_name: "Lufthansa",
-          flight_number: "LH100",
-          origin: "FRA",
-          destination: "TXL",
-          departure_time: today,
-          arrival_time: getFutureDate(5),
-          duration: 300,
-          stops: 0,
-          price: 200,
+          airlineName: "Lufthansa",
+          arrivalTime: getFutureDate(5),
+          cabinClass: "economy",
           currency: "EUR",
-          cabin_class: "economy",
+          departureTime: today,
+          destination: "TXL",
+          duration: 300,
+          flightNumber: "LH100",
+          id: "f3",
+          origin: "FRA",
+          price: 200,
           status: "upcoming",
+          stops: 0,
+          tripId: "today-trip",
+          tripName: "Today Trip",
         },
       ];
-      vi.mocked(useUpcomingFlights).mockImplementation(
-        () => ({ data: flights, isLoading: false }) as any
-      );
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
 
       render(<UpcomingFlights />);
 
@@ -462,33 +494,96 @@ describe("UpcomingFlights", () => {
     });
   });
 
+  describe("Accessibility", () => {
+    it("should have proper heading structure", () => {
+      render(<UpcomingFlights />);
+
+      const heading = screen.getByRole("heading", { level: 3 });
+      expect(heading).toHaveTextContent("Upcoming Flights");
+    });
+
+    it("should have accessible links with proper attributes", () => {
+      const flights: UpcomingFlight[] = [
+        {
+          airline: "UA",
+          airlineName: "United",
+          arrivalTime: getFutureDate(10),
+          cabinClass: "economy",
+          currency: "USD",
+          departureTime: getFutureDate(10),
+          destination: "LAX",
+          duration: 300,
+          flightNumber: "UA100",
+          id: "f1",
+          origin: "EWR",
+          price: 350,
+          status: "upcoming",
+          stops: 0,
+          tripId: "trip-123",
+          tripName: "Test Trip",
+        },
+      ];
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
+
+      render(<UpcomingFlights />);
+
+      const tripLink = screen.getByRole("link", { name: /test trip/i });
+      expect(tripLink).toHaveAttribute("href", "/dashboard/trips/trip-123");
+    });
+
+    it("should have semantic list structure for flights", () => {
+      const flights: UpcomingFlight[] = [
+        {
+          airline: "UA",
+          airlineName: "United",
+          arrivalTime: getFutureDate(10),
+          cabinClass: "economy",
+          currency: "USD",
+          departureTime: getFutureDate(10),
+          destination: "LAX",
+          duration: 300,
+          flightNumber: "UA100",
+          id: "f1",
+          origin: "EWR",
+          price: 350,
+          status: "upcoming",
+          stops: 0,
+        },
+      ];
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
+
+      render(<UpcomingFlights />);
+
+      // Should have a container that acts as a list
+      const flightContainer = screen.getByText("United UA100").closest("div");
+      expect(flightContainer).toBeInTheDocument();
+    });
+  });
+
   describe("Error Handling", () => {
     it("should handle missing trip data gracefully", () => {
       // Provide flight with minimal fields and ensure component renders
-      vi.mocked(useUpcomingFlights).mockImplementation(
-        () =>
-          ({
-            data: [
-              {
-                id: "f-incomplete",
-                airline: "XX",
-                airline_name: "Unknown",
-                flight_number: "XX0",
-                origin: "N/A",
-                destination: "N/A",
-                departure_time: getFutureDate(1),
-                arrival_time: getFutureDate(1),
-                duration: 0,
-                stops: 0,
-                price: 0,
-                currency: "USD",
-                cabin_class: "economy",
-                status: "upcoming",
-              } as UpcomingFlight,
-            ],
-            isLoading: false,
-          }) as any
-      );
+      vi.mocked(useUpcomingFlights).mockReturnValue({
+        data: [
+          {
+            airline: "XX",
+            airlineName: "Unknown",
+            arrivalTime: getFutureDate(1),
+            cabinClass: "economy",
+            currency: "USD",
+            departureTime: getFutureDate(1),
+            destination: "N/A",
+            duration: 0,
+            flightNumber: "XX0",
+            id: "f-incomplete",
+            origin: "N/A",
+            price: 0,
+            status: "upcoming",
+            stops: 0,
+          } as UpcomingFlight,
+        ],
+        isLoading: false,
+      } as UseUpcomingFlightsReturn);
 
       render(<UpcomingFlights />);
 
@@ -496,30 +591,27 @@ describe("UpcomingFlights", () => {
     });
 
     it("should handle malformed dates gracefully", () => {
-      vi.mocked(useUpcomingFlights).mockImplementation(
-        () =>
-          ({
-            data: [
-              {
-                id: "f-bad-date",
-                airline: "XX",
-                airline_name: "Unknown",
-                flight_number: "XX1",
-                origin: "N/A",
-                destination: "N/A",
-                departure_time: "invalid-date",
-                arrival_time: "also-invalid",
-                duration: 0,
-                stops: 0,
-                price: 0,
-                currency: "USD",
-                cabin_class: "economy",
-                status: "upcoming",
-              } as unknown as UpcomingFlight,
-            ],
-            isLoading: false,
-          }) as any
-      );
+      vi.mocked(useUpcomingFlights).mockReturnValue({
+        data: [
+          {
+            airline: "XX",
+            airlineName: "Unknown",
+            arrivalTime: "also-invalid",
+            cabinClass: "economy",
+            currency: "USD",
+            departureTime: "invalid-date",
+            destination: "N/A",
+            duration: 0,
+            flightNumber: "XX1",
+            id: "f-bad-date",
+            origin: "N/A",
+            price: 0,
+            status: "upcoming",
+            stops: 0,
+          } as unknown as UpcomingFlight,
+        ],
+        isLoading: false,
+      } as UseUpcomingFlightsReturn);
 
       render(<UpcomingFlights />);
 

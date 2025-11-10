@@ -3,8 +3,9 @@
 # Install with: pre-commit install
 
 repos:
+  # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -16,40 +17,72 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
 
+  # Python formatting and linting
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.9
+    rev: v0.14.3
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-all]
-        args: [--ignore-missing-imports]
-
+  # Python security scanning
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.11
+    rev: 1.8.6
     hooks:
       - id: bandit
         args: [-r, ., -x, tests/]
         exclude: ^tests/
 
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.10.0
-    hooks:
-      - id: black-jupyter
-
+  # Python type checking
   - repo: local
     hooks:
-      - id: pytest-check
-        name: pytest-check
-        entry: bash -c 'cd frontend && pnpm test:coverage || true'
+      - id: pyright-check
+        name: pyright-check
+        entry: uv run pyright
         language: system
         pass_filenames: false
-        always_run: false
+        stages: [commit]
+
+  # Python detailed linting
+  - repo: local
+    hooks:
+      - id: pylint-check
+        name: pylint-check
+        entry: uv run pylint tripsage tripsage_core
+        language: system
+        pass_filenames: false
+        stages: [commit]
+
+  # Frontend formatting
+  - repo: local
+    hooks:
+      - id: biome-format
+        name: biome-format
+        entry: bash -c 'cd frontend && pnpm format:biome'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx|json)$
+        stages: [commit]
+
+  # Frontend linting
+  - repo: local
+    hooks:
+      - id: biome-check
+        name: biome-check
+        entry: bash -c 'cd frontend && pnpm biome:check'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx|json)$
+        stages: [commit]
+
+  # Frontend type checking
+  - repo: local
+    hooks:
+      - id: typescript-check
+        name: typescript-check
+        entry: bash -c 'cd frontend && pnpm type-check'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        stages: [commit]
 
 ci:
   autofix_commit_msg: |

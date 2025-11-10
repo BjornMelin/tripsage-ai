@@ -49,7 +49,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   // Build message list if not provided
-  const finalMessages: ChatMessage[] = messages ?? [{ role: "user", content: prompt }];
+  const finalMessages: ChatMessage[] = messages ?? [{ content: prompt, role: "user" }];
 
   const { maxTokens, reasons } = clampMaxTokens(finalMessages, desiredMaxTokens, model);
 
@@ -61,11 +61,11 @@ export async function POST(req: Request): Promise<Response> {
       JSON.stringify({
         error: "No output tokens available for the given prompt and model.",
         model,
-        prompt_tokens: promptTokens,
-        model_context_limit: modelLimit,
+        modelContextLimit: modelLimit,
+        promptTokens: promptTokens,
         reasons,
       }),
-      { status: 400, headers: { "content-type": "application/json" } }
+      { headers: { "content-type": "application/json" }, status: 400 }
     );
   }
 

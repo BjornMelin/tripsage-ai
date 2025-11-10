@@ -21,10 +21,13 @@ export const dynamic = "force-dynamic";
  * @param ctx - Route context containing the session ID parameter.
  * @returns Promise resolving to a Response with session data or error.
  */
-export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function GET(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const supabase = await createServerSupabase();
-    const { id } = ctx.params;
+    const { id } = await context.params;
     return getSession({ supabase }, id);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -40,10 +43,13 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
  * @param ctx - Route context containing the session ID parameter.
  * @returns Promise resolving to a Response with no content or error.
  */
-export async function DELETE(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function DELETE(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const supabase = await createServerSupabase();
-    const { id } = ctx.params;
+    const { id } = await context.params;
     return deleteSession({ supabase }, id);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

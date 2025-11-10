@@ -5,9 +5,9 @@
 import { z } from "zod";
 
 // Common validation patterns
-const uuidSchema = z.string().uuid();
-const dateStringSchema = z.string().datetime();
-const progressSchema = z.number().int().min(0).max(100);
+const UUID_SCHEMA = z.string().uuid();
+const DATE_STRING_SCHEMA = z.string().datetime();
+const PROGRESS_SCHEMA = z.number().int().min(0).max(100);
 
 // Agent status type enum
 export const agentStatusTypeSchema = z.enum([
@@ -35,202 +35,202 @@ export const sessionStatusSchema = z.enum(["active", "completed", "error"]);
 
 // Agent task schema
 export const agentTaskSchema = z.object({
-  id: uuidSchema,
-  title: z.string().min(1, "Task title is required").max(200, "Title too long"),
+  completedAt: DATE_STRING_SCHEMA.optional(),
+  createdAt: DATE_STRING_SCHEMA,
   description: z.string().max(1000, "Description too long"),
-  status: taskStatusSchema,
-  progress: progressSchema.optional(),
-  createdAt: dateStringSchema,
-  updatedAt: dateStringSchema,
-  completedAt: dateStringSchema.optional(),
   error: z.string().max(500).optional(),
+  id: UUID_SCHEMA,
+  progress: PROGRESS_SCHEMA.optional(),
+  status: taskStatusSchema,
+  title: z.string().min(1, "Task title is required").max(200, "Title too long"),
+  updatedAt: DATE_STRING_SCHEMA,
 });
 
 // Agent schema
 export const agentSchema = z.object({
-  id: uuidSchema,
-  name: z.string().min(1, "Agent name is required").max(100, "Name too long"),
-  type: z.string().min(1, "Agent type is required").max(50, "Type too long"),
+  createdAt: DATE_STRING_SCHEMA,
+  currentTaskId: UUID_SCHEMA.optional(),
   description: z.string().max(500).optional(),
-  status: agentStatusTypeSchema,
-  currentTaskId: uuidSchema.optional(),
-  progress: progressSchema,
-  tasks: z.array(agentTaskSchema),
-  createdAt: dateStringSchema,
-  updatedAt: dateStringSchema,
+  id: UUID_SCHEMA,
   metadata: z.record(z.string(), z.unknown()).optional(),
+  name: z.string().min(1, "Agent name is required").max(100, "Name too long"),
+  progress: PROGRESS_SCHEMA,
+  status: agentStatusTypeSchema,
+  tasks: z.array(agentTaskSchema),
+  type: z.string().min(1, "Agent type is required").max(50, "Type too long"),
+  updatedAt: DATE_STRING_SCHEMA,
 });
 
 // Agent activity schema
 export const agentActivitySchema = z.object({
-  id: uuidSchema,
-  agentId: uuidSchema,
-  type: z.string().min(1, "Activity type is required").max(50, "Type too long"),
+  agentId: UUID_SCHEMA,
+  id: UUID_SCHEMA,
   message: z
     .string()
     .min(1, "Activity message is required")
     .max(1000, "Message too long"),
   metadata: z.record(z.string(), z.unknown()).optional(),
-  timestamp: dateStringSchema,
+  timestamp: DATE_STRING_SCHEMA,
+  type: z.string().min(1, "Activity type is required").max(50, "Type too long"),
 });
 
 // Resource usage schema
 export const resourceUsageSchema = z.object({
+  activeAgents: z.number().int().nonnegative(),
   cpuUsage: z.number().min(0).max(100),
   memoryUsage: z.number().min(0).max(100),
   networkRequests: z.number().int().nonnegative(),
-  activeAgents: z.number().int().nonnegative(),
-  timestamp: dateStringSchema,
+  timestamp: DATE_STRING_SCHEMA,
 });
 
 // Agent session schema
 export const agentSessionSchema = z.object({
-  id: uuidSchema,
-  agents: z.array(agentSchema),
   activities: z.array(agentActivitySchema),
+  agents: z.array(agentSchema),
+  endedAt: DATE_STRING_SCHEMA.optional(),
+  id: UUID_SCHEMA,
   resourceUsage: z.array(resourceUsageSchema),
-  startedAt: dateStringSchema,
-  endedAt: dateStringSchema.optional(),
+  startedAt: DATE_STRING_SCHEMA,
   status: sessionStatusSchema,
 });
 
 // Workflow connection schema
 export const workflowConnectionSchema = z.object({
-  from: uuidSchema,
-  to: uuidSchema,
   condition: z.string().max(500).optional(),
+  from: UUID_SCHEMA,
+  to: UUID_SCHEMA,
 });
 
 // Agent workflow schema
 export const agentWorkflowSchema = z.object({
-  id: uuidSchema,
-  name: z.string().min(1, "Workflow name is required").max(100, "Name too long"),
-  description: z.string().max(500).optional(),
-  agents: z.array(uuidSchema).min(1, "At least one agent is required"),
+  agents: z.array(UUID_SCHEMA).min(1, "At least one agent is required"),
   connections: z.array(workflowConnectionSchema),
-  createdAt: dateStringSchema,
-  updatedAt: dateStringSchema,
+  createdAt: DATE_STRING_SCHEMA,
+  description: z.string().max(500).optional(),
+  id: UUID_SCHEMA,
+  name: z.string().min(1, "Workflow name is required").max(100, "Name too long"),
+  updatedAt: DATE_STRING_SCHEMA,
 });
 
 // Agent configuration schema
 export const agentConfigSchema = z.object({
-  id: uuidSchema,
-  agentId: uuidSchema,
-  maxConcurrentTasks: z.number().int().positive().max(10),
-  timeoutMs: z.number().int().positive().max(300000), // 5 minutes max
-  retryAttempts: z.number().int().nonnegative().max(5),
-  priority: z.enum(["low", "normal", "high", "critical"]),
+  agentId: UUID_SCHEMA,
+  createdAt: DATE_STRING_SCHEMA,
+  customSettings: z.record(z.string(), z.unknown()).optional(),
   enableLogging: z.boolean(),
   enableMetrics: z.boolean(),
-  customSettings: z.record(z.string(), z.unknown()).optional(),
-  createdAt: dateStringSchema,
-  updatedAt: dateStringSchema,
+  id: UUID_SCHEMA,
+  maxConcurrentTasks: z.number().int().positive().max(10),
+  priority: z.enum(["low", "normal", "high", "critical"]),
+  retryAttempts: z.number().int().nonnegative().max(5),
+  timeoutMs: z.number().int().positive().max(300000), // 5 minutes max
+  updatedAt: DATE_STRING_SCHEMA,
 });
 
 // Agent metrics schema
 export const agentMetricsSchema = z.object({
-  agentId: uuidSchema,
+  agentId: UUID_SCHEMA,
+  averageExecutionTime: z.number().nonnegative(),
+  createdAt: DATE_STRING_SCHEMA,
+  lastActive: DATE_STRING_SCHEMA.optional(),
+  successRate: z.number().min(0).max(1),
   tasksCompleted: z.number().int().nonnegative(),
   tasksFailed: z.number().int().nonnegative(),
-  averageExecutionTime: z.number().nonnegative(),
   totalExecutionTime: z.number().nonnegative(),
-  successRate: z.number().min(0).max(1),
-  lastActive: dateStringSchema.optional(),
-  createdAt: dateStringSchema,
-  updatedAt: dateStringSchema,
+  updatedAt: DATE_STRING_SCHEMA,
 });
 
 // Agent state schema for Zustand stores
 export const agentStateSchema = z.object({
-  agents: z.record(uuidSchema, agentSchema),
-  sessions: z.record(uuidSchema, agentSessionSchema),
-  workflows: z.record(uuidSchema, agentWorkflowSchema),
+  activeAgentIds: z.array(UUID_SCHEMA),
   activities: z.array(agentActivitySchema),
-  currentSessionId: uuidSchema.nullable(),
-  activeAgentIds: z.array(uuidSchema),
-  resourceUsage: resourceUsageSchema.nullable(),
-  metrics: z.record(uuidSchema, agentMetricsSchema),
-  isLoading: z.boolean(),
+  agents: z.record(UUID_SCHEMA, agentSchema),
+  currentSessionId: UUID_SCHEMA.nullable(),
   error: z.string().nullable(),
-  lastUpdated: dateStringSchema.nullable(),
+  isLoading: z.boolean(),
+  lastUpdated: DATE_STRING_SCHEMA.nullable(),
+  metrics: z.record(UUID_SCHEMA, agentMetricsSchema),
+  resourceUsage: resourceUsageSchema.nullable(),
+  sessions: z.record(UUID_SCHEMA, agentSessionSchema),
+  workflows: z.record(UUID_SCHEMA, agentWorkflowSchema),
 });
 
 // API Request schemas
 export const createAgentTaskRequestSchema = z.object({
-  agentId: uuidSchema,
-  title: z.string().min(1, "Task title is required").max(200, "Title too long"),
+  agentId: UUID_SCHEMA,
   description: z.string().max(1000, "Description too long"),
-  priority: z.enum(["low", "normal", "high", "critical"]).default("normal"),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  priority: z.enum(["low", "normal", "high", "critical"]).default("normal"),
+  title: z.string().min(1, "Task title is required").max(200, "Title too long"),
 });
 
 export const updateAgentTaskRequestSchema = z.object({
-  id: uuidSchema,
-  title: z.string().min(1).max(200).optional(),
   description: z.string().max(1000).optional(),
-  status: taskStatusSchema.optional(),
-  progress: progressSchema.optional(),
   error: z.string().max(500).optional(),
+  id: UUID_SCHEMA,
+  progress: PROGRESS_SCHEMA.optional(),
+  status: taskStatusSchema.optional(),
+  title: z.string().min(1).max(200).optional(),
 });
 
 export const createAgentRequestSchema = z.object({
-  name: z.string().min(1, "Agent name is required").max(100, "Name too long"),
-  type: z.string().min(1, "Agent type is required").max(50, "Type too long"),
-  description: z.string().max(500).optional(),
   config: z
     .object({
-      maxConcurrentTasks: z.number().int().positive().max(10).default(3),
-      timeoutMs: z.number().int().positive().max(300000).default(30000),
-      retryAttempts: z.number().int().nonnegative().max(5).default(3),
-      priority: z.enum(["low", "normal", "high", "critical"]).default("normal"),
       enableLogging: z.boolean().default(true),
       enableMetrics: z.boolean().default(true),
+      maxConcurrentTasks: z.number().int().positive().max(10).default(3),
+      priority: z.enum(["low", "normal", "high", "critical"]).default("normal"),
+      retryAttempts: z.number().int().nonnegative().max(5).default(3),
+      timeoutMs: z.number().int().positive().max(300000).default(30000),
     })
     .optional(),
+  description: z.string().max(500).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  name: z.string().min(1, "Agent name is required").max(100, "Name too long"),
+  type: z.string().min(1, "Agent type is required").max(50, "Type too long"),
 });
 
 export const updateAgentRequestSchema = z.object({
-  id: uuidSchema,
-  name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional(),
-  status: agentStatusTypeSchema.optional(),
+  id: UUID_SCHEMA,
   metadata: z.record(z.string(), z.unknown()).optional(),
+  name: z.string().min(1).max(100).optional(),
+  status: agentStatusTypeSchema.optional(),
 });
 
 export const createWorkflowRequestSchema = z.object({
-  name: z.string().min(1, "Workflow name is required").max(100, "Name too long"),
-  description: z.string().max(500).optional(),
-  agents: z.array(uuidSchema).min(1, "At least one agent is required"),
+  agents: z.array(UUID_SCHEMA).min(1, "At least one agent is required"),
   connections: z.array(workflowConnectionSchema),
+  description: z.string().max(500).optional(),
+  name: z.string().min(1, "Workflow name is required").max(100, "Name too long"),
 });
 
 export const updateWorkflowRequestSchema = z.object({
-  id: uuidSchema,
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().max(500).optional(),
-  agents: z.array(uuidSchema).min(1).optional(),
+  agents: z.array(UUID_SCHEMA).min(1).optional(),
   connections: z.array(workflowConnectionSchema).optional(),
+  description: z.string().max(500).optional(),
+  id: UUID_SCHEMA,
+  name: z.string().min(1).max(100).optional(),
 });
 
 // WebSocket message schemas for real-time updates
 export const agentStatusUpdateSchema = z.object({
-  type: z.literal("agent_status_update"),
-  agentId: uuidSchema,
+  agentId: UUID_SCHEMA,
+  currentTaskId: UUID_SCHEMA.optional(),
+  progress: PROGRESS_SCHEMA.optional(),
   status: agentStatusTypeSchema,
-  progress: progressSchema.optional(),
-  currentTaskId: uuidSchema.optional(),
-  timestamp: dateStringSchema,
+  timestamp: DATE_STRING_SCHEMA,
+  type: z.literal("agent_status_update"),
 });
 
 export const taskStatusUpdateSchema = z.object({
-  type: z.literal("task_status_update"),
-  taskId: uuidSchema,
-  agentId: uuidSchema,
-  status: taskStatusSchema,
-  progress: progressSchema.optional(),
+  agentId: UUID_SCHEMA,
   error: z.string().optional(),
-  timestamp: dateStringSchema,
+  progress: PROGRESS_SCHEMA.optional(),
+  status: taskStatusSchema,
+  taskId: UUID_SCHEMA,
+  timestamp: DATE_STRING_SCHEMA,
+  type: z.literal("task_status_update"),
 });
 
 export const resourceUsageUpdateSchema = z.object({
@@ -246,35 +246,35 @@ export const agentWebSocketMessageSchema = z.union([
 
 // Form schemas for React Hook Form
 export const agentFormSchema = z.object({
-  name: z.string().min(1, "Agent name is required").max(100, "Name too long"),
-  type: z.string().min(1, "Agent type is required").max(50, "Type too long"),
   description: z.string().max(500).optional(),
-  maxConcurrentTasks: z.number().int().positive().max(10).default(3),
-  timeoutMs: z.number().int().positive().max(300000).default(30000),
-  retryAttempts: z.number().int().nonnegative().max(5).default(3),
-  priority: z.enum(["low", "normal", "high", "critical"]).default("normal"),
   enableLogging: z.boolean().default(true),
   enableMetrics: z.boolean().default(true),
+  maxConcurrentTasks: z.number().int().positive().max(10).default(3),
+  name: z.string().min(1, "Agent name is required").max(100, "Name too long"),
+  priority: z.enum(["low", "normal", "high", "critical"]).default("normal"),
+  retryAttempts: z.number().int().nonnegative().max(5).default(3),
+  timeoutMs: z.number().int().positive().max(300000).default(30000),
+  type: z.string().min(1, "Agent type is required").max(50, "Type too long"),
 });
 
 export const taskFormSchema = z.object({
-  agentId: uuidSchema,
-  title: z.string().min(1, "Task title is required").max(200, "Title too long"),
+  agentId: UUID_SCHEMA,
   description: z.string().max(1000, "Description too long"),
   priority: z.enum(["low", "normal", "high", "critical"]).default("normal"),
+  title: z.string().min(1, "Task title is required").max(200, "Title too long"),
 });
 
 export const workflowFormSchema = z.object({
-  name: z.string().min(1, "Workflow name is required").max(100, "Name too long"),
-  description: z.string().max(500).optional(),
-  agents: z.array(uuidSchema).min(1, "At least one agent is required"),
+  agents: z.array(UUID_SCHEMA).min(1, "At least one agent is required"),
   connections: z.array(
     z.object({
-      from: uuidSchema,
-      to: uuidSchema,
       condition: z.string().max(500).optional(),
+      from: UUID_SCHEMA,
+      to: UUID_SCHEMA,
     })
   ),
+  description: z.string().max(500).optional(),
+  name: z.string().min(1, "Workflow name is required").max(100, "Name too long"),
 });
 
 // Validation utilities

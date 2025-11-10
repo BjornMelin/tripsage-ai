@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,10 +25,10 @@ type AllowedService = "openai" | "openrouter" | "anthropic" | "xai";
 
 type ApiKeySummary = {
   service: AllowedService;
-  created_at: string;
-  last_used?: string | null;
-  has_key: boolean;
-  is_valid: boolean;
+  createdAt: string;
+  lastUsed?: string | null;
+  hasKey: boolean;
+  isValid: boolean;
 };
 
 const SUPPORTED: AllowedService[] = ["openai", "openrouter", "anthropic", "xai"];
@@ -47,7 +47,7 @@ export default function ApiKeysPage() {
 
   const hasMap = useMemo(() => new Map(items.map((k) => [k.service, true])), [items]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await authenticatedApi.get<ApiKeySummary[]>("/api/keys");
@@ -55,18 +55,18 @@ export default function ApiKeysPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authenticatedApi]);
 
   useEffect(() => {
-    void load();
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
 
   const onSave = async () => {
     if (!apiKey.trim()) return;
     setLoading(true);
     try {
-      await authenticatedApi.post("/api/keys", { service, api_key: apiKey.trim() });
+      await authenticatedApi.post("/api/keys", { apiKey: apiKey.trim(), service });
       setApiKey("");
       await load();
     } finally {
@@ -146,8 +146,8 @@ export default function ApiKeysPage() {
                 <div className="space-y-1">
                   <div className="font-medium">{s.toUpperCase()}</div>
                   <div className="text-sm text-muted-foreground">
-                    {present
-                      ? `Added: ${new Date(row!.created_at).toLocaleString()}`
+                    {present && row?.createdAt
+                      ? `Added: ${new Date(row.createdAt).toLocaleString()}`
                       : "Not set"}
                   </div>
                 </div>

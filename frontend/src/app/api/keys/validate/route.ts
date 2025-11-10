@@ -3,7 +3,9 @@
  * Route: POST /api/keys/validate
  * Never persists the key.
  */
+
 "use cache";
+
 export const dynamic = "force-dynamic";
 
 import { Ratelimit } from "@upstash/ratelimit";
@@ -19,16 +21,16 @@ const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const RATELIMIT_PREFIX = "ratelimit:keys-validate";
 
 // Create rate limit instance lazily to make testing easier
-const getRatelimitInstance = () => {
+const GET_RATELIMIT_INSTANCE = () => {
   if (!UPSTASH_URL || !UPSTASH_TOKEN) {
     return undefined;
   }
 
   return new Ratelimit({
-    redis: Redis.fromEnv(),
-    limiter: Ratelimit.slidingWindow(20, "1 m"),
     analytics: true,
+    limiter: Ratelimit.slidingWindow(20, "1 m"),
     prefix: RATELIMIT_PREFIX,
+    redis: Redis.fromEnv(),
   });
 };
 
@@ -38,28 +40,34 @@ type ProviderConfig = {
 };
 
 const PROVIDERS: Record<string, ProviderConfig> = {
+  anthropic: {
+    buildHeaders: (key) => ({
+      "anthropic-version": "2023-06-01",
+      "x-api-key": key,
+    }),
+    url: "https://api.anthropic.com/v1/models",
+  },
   openai: {
+    buildHeaders: (key) => ({
+      Authorization: `Bearer ${key}`,
+    }),
     url: "https://api.openai.com/v1/models",
-    buildHeaders: (key) => ({ Authorization: `Bearer ${key}` }),
   },
   openrouter: {
-    url: "https://openrouter.ai/api/v1/models",
-    buildHeaders: (key) => ({ Authorization: `Bearer ${key}` }),
-  },
-  anthropic: {
-    url: "https://api.anthropic.com/v1/models",
     buildHeaders: (key) => ({
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
+      Authorization: `Bearer ${key}`,
     }),
+    url: "https://openrouter.ai/api/v1/models",
   },
   xai: {
+    buildHeaders: (key) => ({
+      Authorization: `Bearer ${key}`,
+    }),
     url: "https://api.x.ai/v1/models",
-    buildHeaders: (key) => ({ Authorization: `Bearer ${key}` }),
   },
 };
 
-type ValidateResult = { is_valid: boolean; reason?: string };
+type ValidateResult = { isValid: boolean; reason?: string };
 
 /**
  * Generic validator using provider configuration map.
@@ -73,19 +81,19 @@ async function validateProviderKey(
   apiKey: string
 ): Promise<ValidateResult> {
   const cfg = PROVIDERS[service.trim().toLowerCase()];
-  if (!cfg) return { is_valid: false, reason: `Invalid service: ${service}` };
+  if (!cfg) return { isValid: false, reason: `Invalid service: ${service}` };
 
   try {
     const res = await fetch(cfg.url, {
-      method: "GET",
       headers: cfg.buildHeaders(apiKey),
+      method: "GET",
     });
-    if (res.status === 200) return { is_valid: true };
+    if (res.status === 200) return { isValid: true };
     if ([401, 403].includes(res.status))
-      return { is_valid: false, reason: "Unauthorized" };
-    return { is_valid: false, reason: `HTTP_${res.status}` };
+      return { isValid: false, reason: "Unauthorized" };
+    return { isValid: false, reason: `HTTP_${res.status}` };
   } catch {
-    return { is_valid: false, reason: "NETWORK_ERROR" };
+    return { isValid: false, reason: "NETWORK_ERROR" };
   }
 }
 
@@ -96,21 +104,21 @@ async function validateProviderKey(
  * @returns NextResponse with 429 status if rate limit exceeded, otherwise null.
  */
 async function requireRateLimit(req: NextRequest): Promise<NextResponse | null> {
-  const ratelimitInstance = getRatelimitInstance();
+  const ratelimitInstance = GET_RATELIMIT_INSTANCE();
   if (!ratelimitInstance) return null;
   const { success, limit, remaining, reset } = await ratelimitInstance.limit(
     buildRateLimitKey(req)
   );
   if (!success) {
     return NextResponse.json(
-      { error: "Rate limit exceeded", code: "RATE_LIMIT" },
+      { code: "RATE_LIMIT", error: "Rate limit exceeded" },
       {
-        status: 429,
         headers: {
           "X-RateLimit-Limit": String(limit),
           "X-RateLimit-Remaining": String(remaining),
           "X-RateLimit-Reset": String(reset),
         },
+        status: 429,
       }
     );
   }
@@ -139,7 +147,7 @@ async function requireUser(): Promise<NextResponse | string> {
  *
  * Orchestrates rate limiting, authentication, and provider validation.
  *
- * @param req Next.js request containing JSON body with { service, api_key }.
+ * @param req Next.js request containing JSON body with { service, apiKey }.
  * @returns 200 with validation result; 400/401/429/500 on error.
  */
 export async function POST(req: NextRequest) {
@@ -150,29 +158,29 @@ export async function POST(req: NextRequest) {
     }
 
     let service: string | undefined;
-    let api_key: string | undefined;
+    let apiKey: string | undefined;
     try {
       const body = await req.json();
       service = body.service;
-      api_key = body.api_key;
+      apiKey = body.apiKey;
     } catch (parseError) {
       const message =
         parseError instanceof Error ? parseError.message : "Unknown JSON parse error";
       console.error("/api/keys/validate POST JSON parse error:", { message });
       return NextResponse.json(
-        { error: "Malformed JSON in request body", code: "BAD_REQUEST" },
+        { code: "BAD_REQUEST", error: "Malformed JSON in request body" },
         { status: 400 }
       );
     }
 
     if (
       !service ||
-      !api_key ||
+      !apiKey ||
       typeof service !== "string" ||
-      typeof api_key !== "string"
+      typeof apiKey !== "string"
     ) {
       return NextResponse.json(
-        { error: "Invalid request body", code: "BAD_REQUEST" },
+        { code: "BAD_REQUEST", error: "Invalid request body" },
         { status: 400 }
       );
     }
@@ -182,13 +190,13 @@ export async function POST(req: NextRequest) {
       return userResponse;
     }
 
-    const result = await validateProviderKey(service, api_key);
+    const result = await validateProviderKey(service, apiKey);
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("/api/keys/validate POST error:", { message });
     return NextResponse.json(
-      { error: "Internal server error", code: "INTERNAL_ERROR" },
+      { code: "INTERNAL_ERROR", error: "Internal server error" },
       { status: 500 }
     );
   }

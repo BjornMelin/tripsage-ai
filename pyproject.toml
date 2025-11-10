@@ -47,8 +47,8 @@ dependencies = [
     "playwright>=1.55.0,<1.56.0",
     # External API integrations
     "google-api-python-client>=2.185.0,<3.0.0",
-    "google-auth>=2.41.1,<3.0.0",
-    "google-auth-oauthlib>=1.2.2",
+    "google-auth>=2.15.0,<2.42.0",
+    "google-auth-oauthlib>=1.2.3",
     "googlemaps>=4.10.0",
     "duffel-api>=0.6.2",
     "email-validator>=2.3.0,<3.0.0",
@@ -84,13 +84,13 @@ test = [
     "pytest-mock>=3.15.1",
     "pytest-timeout>=2.4.0",
     # Testing utilities and mocking
-    "pytest-benchmark>=5.1.0",
+    "pytest-benchmark>=5.2.0",
     "pytest-httpx>=0.35.0",
     "fakeredis>=2.32.0",
     "polyfactory>=2.16.0",
     "nest-asyncio>=1.6.0",
-    "hypothesis>=6.142.3",
-    "python-dotenv>=1.1.1",
+    "hypothesis>=6.145.0",
+    "python-dotenv>=1.2.0",
     # Performance and load testing
     "locust>=2.42.0",
     # Coverage reporting
@@ -99,8 +99,9 @@ test = [
 
 lint = [
     # Code formatting and linting
-    "ruff>=0.14.2",
+    "ruff>=0.14.3",
     "mypy>=1.18.2",
+    "pyright>=1.1.0",
 ]
 
 dev = [
@@ -151,7 +152,27 @@ addopts = [
     "-ra"
 ]
 
+minversion = "6.0"
+
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore:.*httpx.*:DeprecationWarning",
+    "ignore:.*pydantic.*:DeprecationWarning",
+]
+
 markers = [
+    "unit: Unit tests for individual components",
+    "integration: Service and API integration tests",
+    "e2e: End-to-end API flows",
+    "performance: Performance and load smoke tests",
+    "security: Security-critical validation tests",
+    "docker: Docker configuration tests",
+    "perf: Performance guard tests",
+    "timeout: Tests asserting execution time thresholds",
+    "slow: Tests exceeding default runtime expectations",
     "benchmark: performance benchmarks",
 ]
 

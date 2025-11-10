@@ -8,14 +8,15 @@ import type {
 import { useAgentStatusStore } from "../agent-status-store";
 
 // Mock Date.now for consistent timestamps
-const mockDate = new Date("2024-01-01T00:00:00Z");
-const originalDate = Date;
+const MOCK_DATE = new Date("2024-01-01T00:00:00Z");
+const ORIGINAL_DATE = Date;
 vi.stubGlobal(
   "Date",
-  class extends originalDate {
+  class extends ORIGINAL_DATE {
+    // biome-ignore lint/suspicious/noExplicitAny: Date constructor mock needs flexible args
     constructor(...args: any[]) {
       if (args.length === 0) {
-        super(mockDate.getTime());
+        super(MOCK_DATE.getTime());
       } else {
         // Handle the spread operator properly for Date constructor
         if (args.length === 1 && typeof args[0] === "number") {
@@ -27,11 +28,11 @@ vi.stubGlobal(
     }
 
     static now() {
-      return mockDate.getTime();
+      return MOCK_DATE.getTime();
     }
 
     toISOString() {
-      return mockDate.toISOString();
+      return MOCK_DATE.toISOString();
     }
   }
 );
@@ -73,11 +74,11 @@ describe("useAgentStatusStore", () => {
       expect(result.current.isMonitoring).toBe(true);
       expect(result.current.getCurrentSession()).toEqual(
         expect.objectContaining({
-          agents: [],
           activities: [],
+          agents: [],
           resourceUsage: [],
-          status: "active",
           startedAt: "2024-01-01T00:00:00.000Z",
+          status: "active",
         })
       );
     });
@@ -90,6 +91,7 @@ describe("useAgentStatusStore", () => {
         result.current.startSession();
       });
 
+      // biome-ignore lint/style/noNonNullAssertion: Test assertion after session creation
       const sessionId = result.current.currentSessionId!;
 
       // End the session
@@ -100,8 +102,8 @@ describe("useAgentStatusStore", () => {
       const endedSession = result.current.sessions.find((s) => s.id === sessionId);
       expect(endedSession).toEqual(
         expect.objectContaining({
-          status: "completed",
           endedAt: "2024-01-01T00:00:00.000Z",
+          status: "completed",
         })
       );
       expect(result.current.isMonitoring).toBe(false);
@@ -114,6 +116,7 @@ describe("useAgentStatusStore", () => {
         result.current.startSession();
       });
 
+      // biome-ignore lint/style/noNonNullAssertion: Test assertion after session creation
       const sessionId = result.current.currentSessionId!;
 
       act(() => {
@@ -149,9 +152,9 @@ describe("useAgentStatusStore", () => {
       const { result } = renderHook(() => useAgentStatusStore());
 
       const agentData = {
+        description: "A test agent",
         name: "Test Agent",
         type: "search" as const,
-        description: "A test agent",
       };
 
       act(() => {
@@ -162,10 +165,10 @@ describe("useAgentStatusStore", () => {
       expect(result.current.agents[0]).toEqual(
         expect.objectContaining({
           ...agentData,
-          status: "initializing",
-          progress: 0,
-          tasks: [],
           createdAt: "2024-01-01T00:00:00.000Z",
+          progress: 0,
+          status: "initializing",
+          tasks: [],
           updatedAt: "2024-01-01T00:00:00.000Z",
         })
       );
@@ -182,9 +185,9 @@ describe("useAgentStatusStore", () => {
       });
 
       const agentData = {
+        description: "A test agent",
         name: "Test Agent",
         type: "search" as const,
-        description: "A test agent",
       };
 
       act(() => {
@@ -198,9 +201,9 @@ describe("useAgentStatusStore", () => {
       const { result } = renderHook(() => useAgentStatusStore());
 
       const agentData = {
+        description: "A test agent",
         name: "Test Agent",
         type: "search" as const,
-        description: "A test agent",
       };
 
       act(() => {
@@ -222,9 +225,9 @@ describe("useAgentStatusStore", () => {
       const { result } = renderHook(() => useAgentStatusStore());
 
       const agentData = {
+        description: "A test agent",
         name: "Test Agent",
         type: "search" as const,
-        description: "A test agent",
       };
 
       act(() => {
@@ -245,9 +248,9 @@ describe("useAgentStatusStore", () => {
       const { result } = renderHook(() => useAgentStatusStore());
 
       const agentData = {
+        description: "A test agent",
         name: "Test Agent",
         type: "search" as const,
-        description: "A test agent",
       };
 
       act(() => {
@@ -276,9 +279,9 @@ describe("useAgentStatusStore", () => {
 
       // Add multiple agents with different statuses
       const agents = [
-        { name: "Agent 1", type: "search" as const, description: "Agent 1" },
-        { name: "Agent 2", type: "planning" as const, description: "Agent 2" },
-        { name: "Agent 3", type: "search" as const, description: "Agent 3" },
+        { description: "Agent 1", name: "Agent 1", type: "search" as const },
+        { description: "Agent 2", name: "Agent 2", type: "planning" as const },
+        { description: "Agent 3", name: "Agent 3", type: "search" as const },
       ];
 
       agents.forEach((agent) => {
@@ -310,9 +313,9 @@ describe("useAgentStatusStore", () => {
         result.current.resetAgentStatus();
         result.current.startSession();
         result.current.addAgent({
+          description: "A test agent",
           name: "Test Agent",
           type: "search",
-          description: "A test agent",
         });
       });
       agentId = result.current.agents[0].id;
@@ -322,9 +325,9 @@ describe("useAgentStatusStore", () => {
       const { result } = renderHook(() => useAgentStatusStore());
 
       const taskData = {
-        title: "Test Task",
         description: "A test task",
         status: "pending" as const,
+        title: "Test Task",
       };
 
       act(() => {
@@ -345,9 +348,9 @@ describe("useAgentStatusStore", () => {
       const { result } = renderHook(() => useAgentStatusStore());
 
       const taskData = {
-        title: "In Progress Task",
         description: "A task in progress",
         status: "in_progress" as const,
+        title: "In Progress Task",
       };
 
       act(() => {
@@ -364,9 +367,9 @@ describe("useAgentStatusStore", () => {
       // Add first task in progress
       act(() => {
         result.current.addAgentTask(agentId, {
-          title: "First Task",
           description: "First task",
           status: "in_progress",
+          title: "First Task",
         });
       });
 
@@ -375,9 +378,9 @@ describe("useAgentStatusStore", () => {
       // Add second task in progress
       act(() => {
         result.current.addAgentTask(agentId, {
-          title: "Second Task",
           description: "Second task",
           status: "in_progress",
+          title: "Second Task",
         });
       });
 
@@ -390,9 +393,9 @@ describe("useAgentStatusStore", () => {
 
       act(() => {
         result.current.addAgentTask(agentId, {
-          title: "Test Task",
           description: "A test task",
           status: "pending",
+          title: "Test Task",
         });
       });
 
@@ -400,8 +403,8 @@ describe("useAgentStatusStore", () => {
 
       act(() => {
         result.current.updateAgentTask(agentId, taskId, {
-          status: "in_progress",
           progress: 50,
+          status: "in_progress",
         });
       });
 
@@ -416,9 +419,9 @@ describe("useAgentStatusStore", () => {
 
       act(() => {
         result.current.addAgentTask(agentId, {
-          title: "Test Task",
           description: "A test task",
           status: "in_progress",
+          title: "Test Task",
         });
       });
 
@@ -439,9 +442,9 @@ describe("useAgentStatusStore", () => {
 
       act(() => {
         result.current.addAgentTask(agentId, {
-          title: "Test Task",
           description: "A test task",
           status: "in_progress",
+          title: "Test Task",
         });
       });
 
@@ -464,14 +467,14 @@ describe("useAgentStatusStore", () => {
       // Add multiple tasks
       act(() => {
         result.current.addAgentTask(agentId, {
-          title: "First Task",
           description: "First task",
           status: "in_progress",
+          title: "First Task",
         });
         result.current.addAgentTask(agentId, {
-          title: "Second Task",
           description: "Second task",
           status: "pending",
+          title: "Second Task",
         });
       });
 
@@ -495,9 +498,9 @@ describe("useAgentStatusStore", () => {
 
       act(() => {
         result.current.addAgentTask(agentId, {
-          title: "Only Task",
           description: "The only task",
           status: "in_progress",
+          title: "Only Task",
         });
       });
 
@@ -525,9 +528,9 @@ describe("useAgentStatusStore", () => {
 
       const activityData: Omit<AgentActivity, "id" | "timestamp"> = {
         agentId: "agent-1",
-        type: "task_start",
         message: "Started new task",
         metadata: { taskId: "task-1" },
+        type: "task_start",
       };
 
       act(() => {
@@ -552,8 +555,8 @@ describe("useAgentStatusStore", () => {
 
       const activityData: Omit<AgentActivity, "id" | "timestamp"> = {
         agentId: "agent-1",
-        type: "task_start",
         message: "Started new task",
+        type: "task_start",
       };
 
       act(() => {
@@ -577,10 +580,10 @@ describe("useAgentStatusStore", () => {
       const { result } = renderHook(() => useAgentStatusStore());
 
       const usageData: Omit<ResourceUsage, "timestamp"> = {
+        activeAgents: 2,
         cpuUsage: 45.5,
         memoryUsage: 1024,
         networkRequests: 10,
-        activeAgents: 2,
       };
 
       act(() => {
@@ -604,10 +607,10 @@ describe("useAgentStatusStore", () => {
       });
 
       const usageData: Omit<ResourceUsage, "timestamp"> = {
+        activeAgents: 2,
         cpuUsage: 45.5,
         memoryUsage: 1024,
         networkRequests: 10,
-        activeAgents: 2,
       };
 
       act(() => {
@@ -646,9 +649,9 @@ describe("useAgentStatusStore", () => {
       act(() => {
         result.current.startSession();
         result.current.addAgent({
+          description: "Test agent",
           name: "Test Agent",
           type: "search",
-          description: "Test agent",
         });
         result.current.setError("Test error");
       });
@@ -709,9 +712,9 @@ describe("useAgentStatusStore", () => {
       statuses.forEach((status, index) => {
         act(() => {
           result.current.addAgent({
+            description: `Agent with status ${status}`,
             name: `Agent ${index}`,
             type: "search",
-            description: `Agent with status ${status}`,
           });
         });
 

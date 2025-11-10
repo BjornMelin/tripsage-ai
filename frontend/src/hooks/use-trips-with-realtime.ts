@@ -25,13 +25,13 @@ export function useTripsWithRealtime() {
   const realtimeStatus = useTripRealtime(null); // Listen to all trip changes for this user
 
   return {
-    trips,
-    isLoading,
-    error,
-    refetch,
-    isConnected: realtimeStatus.isConnected,
     connectionErrors: realtimeStatus.errors,
+    error,
+    isConnected: realtimeStatus.isConnected,
+    isLoading,
     realtimeStatus,
+    refetch,
+    trips,
   };
 }
 
@@ -46,13 +46,13 @@ export function useTripWithRealtime(tripId: number | null) {
   const realtimeStatus = useTripRealtime(tripId);
 
   return {
-    trip,
-    isLoading,
-    error,
-    refetch,
-    isConnected: realtimeStatus.isConnected,
     connectionErrors: realtimeStatus.errors,
+    error,
+    isConnected: realtimeStatus.isConnected,
+    isLoading,
     realtimeStatus,
+    refetch,
+    trip,
   };
 }
 
@@ -65,9 +65,9 @@ export function useTripsConnectionStatus() {
 
   const connectionStatus = useMemo(() => {
     return {
-      isConnected: realtimeStatus.isConnected,
-      hasErrors: realtimeStatus.errors.length > 0,
       errorCount: realtimeStatus.errors.length,
+      hasErrors: realtimeStatus.errors.length > 0,
+      isConnected: realtimeStatus.isConnected,
       lastError: realtimeStatus.errors[realtimeStatus.errors.length - 1] || null,
     };
   }, [realtimeStatus]);
@@ -96,14 +96,14 @@ export function useTripCollaboration(tripId: string | number) {
   const realtimeStatus = useTripRealtime(numericTripId);
 
   return {
-    collaborators,
-    isLoading,
-    error,
-    refetch,
     addCollaborator,
-    removeCollaborator,
-    isConnected: realtimeStatus.isConnected,
+    collaborators,
     connectionErrors: realtimeStatus.errors,
+    error,
+    isConnected: realtimeStatus.isConnected,
+    isLoading,
     realtimeStatus,
+    refetch,
+    removeCollaborator,
   };
 }

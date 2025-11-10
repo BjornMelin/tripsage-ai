@@ -9,6 +9,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { nowIso, secureUuid } from "@/lib/security/random";
 import { useSupabase } from "@/lib/supabase/client";
 import type {
   FileAttachment,
@@ -36,6 +37,11 @@ interface UploadOptions {
   allowedTypes?: string[];
 }
 
+/**
+ * Internal hook to get the current user ID from Supabase auth.
+ *
+ * @returns User ID or null if not authenticated
+ */
 function useUserId(): string | null {
   const supabase = useSupabase();
   const [userId, setUserId] = useState<string | null>(null);
@@ -71,7 +77,7 @@ export function useSupabaseStorage() {
     virusScanStatus?: VirusScanStatus;
   }) => {
     return useQuery({
-      queryKey: ["file-attachments", userId, filters],
+      enabled: !!userId,
       queryFn: async () => {
         if (!userId) throw new Error("User not authenticated");
 
@@ -98,7 +104,7 @@ export function useSupabaseStorage() {
         if (error) throw error;
         return data as FileAttachment[];
       },
-      enabled: !!userId,
+      queryKey: ["file-attachments", userId, filters],
       staleTime: 1000 * 60 * 5, // 5 minutes
     });
   };
@@ -106,7 +112,7 @@ export function useSupabaseStorage() {
   // Get file attachment by ID
   const useFileAttachment = (attachmentId: string | null) => {
     return useQuery({
-      queryKey: ["file-attachment", attachmentId],
+      enabled: !!attachmentId,
       queryFn: async () => {
         if (!attachmentId) throw new Error("Attachment ID is required");
 
@@ -119,7 +125,7 @@ export function useSupabaseStorage() {
         if (error) throw error;
         return data as FileAttachment;
       },
-      enabled: !!attachmentId,
+      queryKey: ["file-attachment", attachmentId],
       staleTime: 1000 * 60 * 10, // 10 minutes
     });
   };
@@ -127,7 +133,7 @@ export function useSupabaseStorage() {
   // Get storage usage statistics
   const useStorageStats = () => {
     return useQuery({
-      queryKey: ["storage-stats", userId],
+      enabled: !!userId,
       queryFn: async () => {
         if (!userId) throw new Error("User not authenticated");
 
@@ -162,14 +168,14 @@ export function useSupabaseStorage() {
         );
 
         return {
+          filesByStatus,
+          filesByType,
           totalFiles: files.length,
           totalSize,
-          totalSizeMB: Math.round((totalSize / (1024 * 1024)) * 100) / 100,
-          filesByType,
-          filesByStatus,
+          totalSizeMb: Math.round((totalSize / (1024 * 1024)) * 100) / 100,
         };
       },
-      enabled: !!userId,
+      queryKey: ["storage-stats", userId],
       staleTime: 1000 * 60 * 15, // 15 minutes
     });
   };
@@ -206,7 +212,7 @@ export function useSupabaseStorage() {
         throw new Error(`File type ${file.type} is not allowed`);
       }
 
-      const fileId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const fileId = secureUuid();
       const fileExt = file.name.split(".").pop();
       const fileName = `${fileId}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
@@ -235,21 +241,33 @@ export function useSupabaseStorage() {
 
         // Create file attachment record
         const attachmentData: FileAttachmentInsert = {
-          user_id: userId,
-          trip_id: tripId || null,
-          chat_message_id: chatMessageId || null,
-          filename: fileName,
-          original_filename: file.name,
-          file_size: file.size,
-          mime_type: file.type,
-          file_path: filePath,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           bucket_name: bucket,
-          upload_status: "completed",
-          virus_scan_status: "pending",
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          chat_message_id: chatMessageId || null,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          file_path: filePath,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          file_size: file.size,
+          filename: fileName,
           metadata: {
-            upload_timestamp: new Date().toISOString(),
+            // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
             file_extension: fileExt,
+            // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+            upload_timestamp: nowIso(),
           },
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          mime_type: file.type,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          original_filename: file.name,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          trip_id: tripId || null,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          upload_status: "completed",
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          user_id: userId,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          virus_scan_status: "pending",
         };
 
         const { data: attachmentRecord, error: attachmentError } = await insertSingle(
@@ -283,8 +301,8 @@ export function useSupabaseStorage() {
           ...prev,
           [fileId]: {
             ...prev[fileId],
-            status: "error",
             error: error instanceof Error ? error.message : "Upload failed",
+            status: "error",
           },
         }));
 
@@ -312,8 +330,12 @@ export function useSupabaseStorage() {
 
       const successful = results
         .filter(
-          (result): result is PromiseFulfilledResult<any> =>
-            result.status === "fulfilled"
+          (
+            result
+          ): result is PromiseFulfilledResult<{
+            attachment: FileAttachment;
+            storagePath: string;
+          }> => result.status === "fulfilled"
         )
         .map((result) => result.value);
 
@@ -324,11 +346,11 @@ export function useSupabaseStorage() {
         .map((result) => result.reason);
 
       return {
-        successful,
         failed,
-        totalCount: files.length,
-        successCount: successful.length,
         failureCount: failed.length,
+        successCount: successful.length,
+        successful,
+        totalCount: files.length,
       };
     },
   });
@@ -382,6 +404,7 @@ export function useSupabaseStorage() {
         supabase,
         "file_attachments",
         updates,
+        // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
         (qb) => (qb as any).eq("id", id)
       );
 
@@ -434,29 +457,33 @@ export function useSupabaseStorage() {
 
   return useMemo(
     () => ({
-      // Query hooks
-      useFileAttachments,
-      useFileAttachment,
-      useStorageStats,
-
-      // Mutations
-      uploadFile,
-      uploadMultipleFiles,
+      clearAllUploadProgress,
+      clearUploadProgress,
       deleteFile,
-      updateFileAttachment,
 
       // Utilities
       getDownloadUrl,
       getPublicUrl,
+      updateFileAttachment,
+
+      // Mutations
+      uploadFile,
+      uploadMultipleFiles,
 
       // Upload progress
       uploadProgress,
-      clearUploadProgress,
-      clearAllUploadProgress,
+      useFileAttachment,
+      // Query hooks
+      useFileAttachments,
+      useStorageStats,
     }),
     [
+      // Hook factories are stable functions that don't depend on changing state
+      // biome-ignore lint/correctness/useExhaustiveDependencies: Hook factories are stable
       useFileAttachments,
+      // biome-ignore lint/correctness/useExhaustiveDependencies: Hook factories are stable
       useFileAttachment,
+      // biome-ignore lint/correctness/useExhaustiveDependencies: Hook factories are stable
       useStorageStats,
       uploadFile,
       uploadMultipleFiles,
@@ -530,11 +557,11 @@ export function useFileTypeUtils() {
   }, []);
 
   return {
-    getFileIcon,
     formatFileSize,
-    isImageFile,
-    isVideoFile,
+    getFileIcon,
     isAudioFile,
     isDocumentFile,
+    isImageFile,
+    isVideoFile,
   };
 }

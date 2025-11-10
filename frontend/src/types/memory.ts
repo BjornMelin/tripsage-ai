@@ -17,21 +17,21 @@ export interface Memory {
 export interface UserPreferences {
   destinations?: string[];
   activities?: string[];
-  budget_range?: {
+  budgetRange?: {
     min: number;
     max: number;
     currency: string;
   };
-  travel_style?: string;
-  accommodation_type?: string[];
-  transportation_preferences?: string[];
-  dietary_restrictions?: string[];
-  accessibility_needs?: string[];
-  language_preferences?: string[];
-  time_preferences?: {
-    preferred_departure_times?: string[];
-    trip_duration_preferences?: string[];
-    seasonality_preferences?: string[];
+  travelStyle?: string;
+  accommodationType?: string[];
+  transportationPreferences?: string[];
+  dietaryRestrictions?: string[];
+  accessibilityNeeds?: string[];
+  languagePreferences?: string[];
+  timePreferences?: {
+    preferredDepartureTimes?: string[];
+    tripDurationPreferences?: string[];
+    seasonalityPreferences?: string[];
   };
 }
 
@@ -83,35 +83,35 @@ export interface SearchMemoriesRequest {
     metadata?: Record<string, unknown>;
   };
   limit?: number;
-  similarity_threshold?: number;
+  similarityThreshold?: number;
 }
 
 export interface SearchMemoriesResponse {
   success: boolean;
   memories: Array<{
     memory: Memory;
-    similarity_score: number;
-    relevance_reason: string;
+    similarityScore: number;
+    relevanceReason: string;
   }>;
-  total_found: number;
-  search_metadata: {
-    query_processed: string;
-    search_time_ms: number;
-    similarity_threshold_used: number;
+  totalFound: number;
+  searchMetadata: {
+    queryProcessed: string;
+    searchTimeMs: number;
+    similarityThresholdUsed: number;
   };
 }
 
 export interface UpdatePreferencesRequest {
   preferences: Partial<UserPreferences>;
-  merge_strategy?: "replace" | "merge" | "append";
+  mergeStrategy?: "replace" | "merge" | "append";
 }
 
 export interface UpdatePreferencesResponse {
   success: boolean;
-  updated_preferences: UserPreferences;
-  changes_made: string[];
+  updatedPreferences: UserPreferences;
+  changesMade: string[];
   metadata: {
-    updated_at: string;
+    updatedAt: string;
     version: number;
   };
 }
@@ -130,7 +130,7 @@ export interface MemoryInsightsResponse {
       spendingTrends: Array<{
         category: string;
         trend: "increasing" | "decreasing" | "stable";
-        percentage_change: number;
+        percentageChange: number;
       }>;
     };
     destinationPreferences: {
@@ -138,7 +138,7 @@ export interface MemoryInsightsResponse {
         destination: string;
         visits: number;
         lastVisit: string;
-        satisfaction_score?: number;
+        satisfactionScore?: number;
       }>;
       discoveryPatterns: string[];
     };
@@ -150,9 +150,9 @@ export interface MemoryInsightsResponse {
     }>;
   };
   metadata: {
-    analysis_date: string;
-    data_coverage_months: number;
-    confidence_level: number;
+    analysisDate: string;
+    dataCoverageMonths: number;
+    confidenceLevel: number;
   };
 }
 
@@ -160,29 +160,29 @@ export interface AddConversationMemoryRequest {
   messages: ConversationMessage[];
   userId: string;
   sessionId?: string;
-  context_type?: string;
+  contextType?: string;
   metadata?: Record<string, unknown>;
 }
 
 export interface AddConversationMemoryResponse {
   success: boolean;
-  memories_created: string[];
-  insights_generated: MemoryInsight[];
-  updated_preferences: Partial<UserPreferences>;
+  memoriesCreated: string[];
+  insightsGenerated: MemoryInsight[];
+  updatedPreferences: Partial<UserPreferences>;
   metadata: {
-    processing_time_ms: number;
-    extraction_method: string;
+    processingTimeMs: number;
+    extractionMethod: string;
   };
 }
 
 export interface DeleteUserMemoriesResponse {
   success: boolean;
-  deleted_count: number;
-  backup_created: boolean;
-  backup_location?: string;
+  deletedCount: number;
+  backupCreated: boolean;
+  backupLocation?: string;
   metadata: {
-    deletion_time: string;
-    user_id: string;
+    deletionTime: string;
+    userId: string;
   };
 }
 

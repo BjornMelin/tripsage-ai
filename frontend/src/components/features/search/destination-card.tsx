@@ -51,12 +51,12 @@ export function DestinationCard({
    */
   const formatDestinationType = (types: string[]) => {
     const typeMap: Record<string, string> = {
-      locality: "City",
-      country: "Country",
       administrative_area: "Region",
+      country: "Country",
       establishment: "Landmark",
-      political: "Administrative",
+      locality: "City",
       natural_feature: "Natural Feature",
+      political: "Administrative",
       tourist_attraction: "Attraction",
     };
 
@@ -171,12 +171,8 @@ export function DestinationCard({
               Top Attractions:
             </div>
             <div className="flex flex-wrap gap-1">
-              {destination.attractions.slice(0, 3).map((attraction, index) => (
-                <Badge
-                  key={`${attraction}-${index}`}
-                  variant="outline"
-                  className="text-xs"
-                >
+              {destination.attractions.slice(0, 3).map((attraction) => (
+                <Badge key={attraction} variant="outline" className="text-xs">
                   {attraction}
                 </Badge>
               ))}

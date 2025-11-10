@@ -1,10 +1,13 @@
-/**
- * @fileoverview Tests for ChatPage resume wiring. Ensures useChat is called with
- * resume enabled and a transport that defines prepareReconnectToStreamRequest.
- */
-
 import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// Stub CSS and Streamdown imports used by downstream components
+vi.mock("katex/dist/katex.min.css", () => ({}));
+vi.mock("streamdown", () => ({
+  Streamdown: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="mock-streamdown">{children}</div>
+  ),
+}));
 
 vi.mock("@/lib/supabase/client", () => {
   return {
@@ -12,45 +15,58 @@ vi.mock("@/lib/supabase/client", () => {
       auth: {
         getUser: async () => ({ data: { user: { id: "u1" } } }),
         onAuthStateChange: () => ({
-          data: { subscription: { unsubscribe: () => {} } },
+          data: {
+            subscription: {
+              unsubscribe: () => {
+                // Intentionally empty for mock
+              },
+            },
+          },
         }),
       },
     }),
   };
 });
 
-const useChatSpy: any = vi.fn((_opts: any) => ({
+interface UseChatOptions {
+  id?: string;
+  resume?: boolean;
+  transport?: unknown;
+}
+
+const USE_CHAT_SPY = vi.fn((_opts: UseChatOptions) => ({
+  clearError: vi.fn(),
+  error: null,
   messages: [],
+  regenerate: vi.fn(),
   sendMessage: vi.fn(),
   status: "idle",
   stop: vi.fn(),
-  regenerate: vi.fn(),
-  clearError: vi.fn(),
-  error: null,
 }));
 
-vi.mock("@ai-sdk/react", async () => {
+vi.mock("@ai-sdk/react", () => {
   return {
-    useChat: (opts: any) => useChatSpy(opts),
-  } as any;
+    useChat: (opts: UseChatOptions) => USE_CHAT_SPY(opts),
+  };
 });
 
 describe("ChatPage resume wiring", () => {
   afterEach(() => {
-    useChatSpy.mockClear();
+    USE_CHAT_SPY.mockClear();
   });
 
   it("passes resume:true and transport with prepareReconnectToStreamRequest", async () => {
     const mod = await import("../../chat/page");
-    const Page = mod.default as any;
+    const Page = mod.default;
     render(<Page />);
-    expect(useChatSpy).toHaveBeenCalledTimes(1);
-    const opts = (useChatSpy.mock.calls[0] as any[])[0] as any;
+    expect(USE_CHAT_SPY).toHaveBeenCalledTimes(1);
+    const opts = USE_CHAT_SPY.mock.calls[0][0] as UseChatOptions;
     expect(opts.resume).toBe(true);
     expect(opts.transport).toBeDefined();
     // The DefaultChatTransport instance exposes the prepareReconnectToStreamRequest callback
-    expect(typeof (opts.transport as any).prepareReconnectToStreamRequest).toBe(
-      "function"
-    );
+    expect(
+      typeof (opts.transport as { prepareReconnectToStreamRequest?: unknown })
+        .prepareReconnectToStreamRequest
+    ).toBe("function");
   });
 });

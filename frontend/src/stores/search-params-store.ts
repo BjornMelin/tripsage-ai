@@ -11,80 +11,87 @@ import type {
 } from "@/types/search";
 
 // Validation schemas for search parameters
-const SearchTypeSchema = z.enum(["flight", "accommodation", "activity", "destination"]);
+const SEARCH_TYPE_SCHEMA = z.enum([
+  "flight",
+  "accommodation",
+  "activity",
+  "destination",
+]);
 
-const BaseSearchParamsSchema = z.object({
+const BASE_SEARCH_PARAMS_SCHEMA = z.object({
   adults: z.number().min(1).max(20).default(1),
   children: z.number().min(0).max(10).default(0),
   infants: z.number().min(0).max(5).default(0),
 });
 
-const FlightSearchParamsSchema = BaseSearchParamsSchema.extend({
-  origin: z.string().optional(),
-  destination: z.string().optional(),
-  departureDate: z.string().optional(),
-  returnDate: z.string().optional(),
+const FLIGHT_SEARCH_PARAMS_SCHEMA = BASE_SEARCH_PARAMS_SCHEMA.extend({
   cabinClass: z
     .enum(["economy", "premium_economy", "business", "first"])
     .default("economy"),
+  departureDate: z.string().optional(),
+  destination: z.string().optional(),
   directOnly: z.boolean().default(false),
-  maxStops: z.number().min(0).max(3).optional(),
-  preferredAirlines: z.array(z.string()).default([]),
   excludedAirlines: z.array(z.string()).default([]),
+  maxStops: z.number().min(0).max(3).optional(),
+  origin: z.string().optional(),
+  preferredAirlines: z.array(z.string()).default([]),
+  returnDate: z.string().optional(),
 });
 
-const AccommodationSearchParamsSchema = BaseSearchParamsSchema.extend({
-  destination: z.string().optional(),
+const ACCOMMODATION_SEARCH_PARAMS_SCHEMA = BASE_SEARCH_PARAMS_SCHEMA.extend({
+  amenities: z.array(z.string()).default([]),
   checkIn: z.string().optional(),
   checkOut: z.string().optional(),
-  rooms: z.number().min(1).max(10).default(1),
-  propertyType: z.enum(["hotel", "apartment", "villa", "hostel", "resort"]).optional(),
+  destination: z.string().optional(),
   minRating: z.number().min(1).max(5).optional(),
-  amenities: z.array(z.string()).default([]),
   priceRange: z
     .object({
-      min: z.number().min(0).optional(),
       max: z.number().min(0).optional(),
+      min: z.number().min(0).optional(),
     })
     .optional(),
+  propertyType: z.enum(["hotel", "apartment", "villa", "hostel", "resort"]).optional(),
+  rooms: z.number().min(1).max(10).default(1),
 });
 
-const ActivitySearchParamsSchema = BaseSearchParamsSchema.extend({
-  destination: z.string().optional(),
-  date: z.string().optional(),
+const ACTIVITY_SEARCH_PARAMS_SCHEMA = BASE_SEARCH_PARAMS_SCHEMA.extend({
   category: z.string().optional(),
+  date: z.string().optional(),
+  destination: z.string().optional(),
+  difficulty: z.enum(["easy", "moderate", "challenging", "extreme"]).optional(),
   duration: z
     .object({
-      min: z.number().min(0).optional(),
       max: z.number().min(0).optional(),
+      min: z.number().min(0).optional(),
     })
     .optional(),
-  difficulty: z.enum(["easy", "moderate", "challenging", "extreme"]).optional(),
   indoor: z.boolean().optional(),
 });
 
-const DestinationSearchParamsSchema = z.object({
-  query: z.string().default(""),
-  limit: z.number().min(1).max(50).default(10),
-  types: z.array(z.string()).default(["locality", "country"]),
+const DESTINATION_SEARCH_PARAMS_SCHEMA = z.object({
   bounds: z
     .object({
+      east: z.number(),
       north: z.number(),
       south: z.number(),
-      east: z.number(),
       west: z.number(),
     })
     .optional(),
   countryCode: z.string().optional(),
+  limit: z.number().min(1).max(50).default(10),
+  query: z.string().default(""),
+  types: z.array(z.string()).default(["locality", "country"]),
 });
 
 // Types derived from schemas
-export type ValidatedFlightParams = z.infer<typeof FlightSearchParamsSchema>;
+export type ValidatedFlightParams = z.infer<typeof FLIGHT_SEARCH_PARAMS_SCHEMA>;
 export type ValidatedAccommodationParams = z.infer<
-  typeof AccommodationSearchParamsSchema
+  typeof ACCOMMODATION_SEARCH_PARAMS_SCHEMA
 >;
-export type ValidatedActivityParams = z.infer<typeof ActivitySearchParamsSchema>;
-export type ValidatedDestinationParams = z.infer<typeof DestinationSearchParamsSchema>;
+export type ValidatedActivityParams = z.infer<typeof ACTIVITY_SEARCH_PARAMS_SCHEMA>;
+export type ValidatedDestinationParams = z.infer<
+  typeof DESTINATION_SEARCH_PARAMS_SCHEMA
+>;
 
 // Search parameters store interface
 interface SearchParamsState {
@@ -149,69 +156,69 @@ interface SearchParamsState {
 // const getCurrentTimestamp = () => new Date().toISOString(); // Future use
 
 // Default parameter generators
-const getDefaultFlightParams = (): Partial<ValidatedFlightParams> => ({
+const GET_DEFAULT_FLIGHT_PARAMS = (): Partial<ValidatedFlightParams> => ({
   adults: 1,
-  children: 0,
-  infants: 0,
   cabinClass: "economy",
+  children: 0,
   directOnly: false,
-  preferredAirlines: [],
   excludedAirlines: [],
+  infants: 0,
+  preferredAirlines: [],
 });
 
-const getDefaultAccommodationParams = (): Partial<ValidatedAccommodationParams> => ({
+const GET_DEFAULT_ACCOMMODATION_PARAMS = (): Partial<ValidatedAccommodationParams> => ({
   adults: 1,
+  amenities: [],
   children: 0,
   infants: 0,
   rooms: 1,
-  amenities: [],
 });
 
-const getDefaultActivityParams = (): Partial<ValidatedActivityParams> => ({
+const GET_DEFAULT_ACTIVITY_PARAMS = (): Partial<ValidatedActivityParams> => ({
   adults: 1,
   children: 0,
   infants: 0,
 });
 
-const getDefaultDestinationParams = (): Partial<ValidatedDestinationParams> => ({
-  query: "",
+const GET_DEFAULT_DESTINATION_PARAMS = (): Partial<ValidatedDestinationParams> => ({
   limit: 10,
+  query: "",
   types: ["locality", "country"],
 });
 
-const getDefaultParams = (type: SearchType): Partial<SearchParams> => {
+const GET_DEFAULT_PARAMS = (type: SearchType): Partial<SearchParams> => {
   switch (type) {
     case "flight":
-      return getDefaultFlightParams() as Partial<SearchParams>;
+      return GET_DEFAULT_FLIGHT_PARAMS() as Partial<SearchParams>;
     case "accommodation":
-      return getDefaultAccommodationParams() as Partial<SearchParams>;
+      return GET_DEFAULT_ACCOMMODATION_PARAMS() as Partial<SearchParams>;
     case "activity":
-      return getDefaultActivityParams() as Partial<SearchParams>;
+      return GET_DEFAULT_ACTIVITY_PARAMS() as Partial<SearchParams>;
     case "destination":
-      return getDefaultDestinationParams() as Partial<SearchParams>;
+      return GET_DEFAULT_DESTINATION_PARAMS() as Partial<SearchParams>;
     default:
       return {};
   }
 };
 
 // Validation helpers
-const validateSearchParams = async (
+const VALIDATE_SEARCH_PARAMS = (
   params: Partial<SearchParams>,
   type: SearchType
-): Promise<boolean> => {
+): boolean => {
   try {
     switch (type) {
       case "flight":
-        FlightSearchParamsSchema.parse(params);
+        FLIGHT_SEARCH_PARAMS_SCHEMA.parse(params);
         break;
       case "accommodation":
-        AccommodationSearchParamsSchema.parse(params);
+        ACCOMMODATION_SEARCH_PARAMS_SCHEMA.parse(params);
         break;
       case "activity":
-        ActivitySearchParamsSchema.parse(params);
+        ACTIVITY_SEARCH_PARAMS_SCHEMA.parse(params);
         break;
       case "destination":
-        DestinationSearchParamsSchema.parse(params);
+        DESTINATION_SEARCH_PARAMS_SCHEMA.parse(params);
         break;
       default:
         throw new Error(`Unknown search type: ${type}`);
@@ -227,25 +234,33 @@ export const useSearchParamsStore = create<SearchParamsState>()(
   devtools(
     persist(
       (set, get) => ({
-        // Initial state
-        currentSearchType: null,
-        flightParams: {},
         accommodationParams: {},
         activityParams: {},
-        destinationParams: {},
 
-        // Validation states
-        isValidating: {
-          flight: false,
-          accommodation: false,
-          activity: false,
-          destination: false,
+        clearValidationError: (type) => {
+          set((state) => ({
+            validationErrors: {
+              ...state.validationErrors,
+              [type]: null,
+            },
+          }));
         },
-        validationErrors: {
-          flight: null,
-          accommodation: null,
-          activity: null,
-          destination: null,
+
+        // Utility actions
+        clearValidationErrors: () => {
+          set({
+            validationErrors: {
+              accommodation: null,
+              activity: null,
+              destination: null,
+              flight: null,
+            },
+          });
+        },
+
+        createParamsTemplate: () => {
+          const { currentParams } = get();
+          return currentParams ? { ...currentParams } : null;
         },
 
         // Computed properties
@@ -273,12 +288,15 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               return null;
           }
         },
+        // Initial state
+        currentSearchType: null,
+        destinationParams: {},
+        flightParams: {},
 
         get hasValidParams() {
           const { currentSearchType, currentParams } = get();
           if (!currentSearchType || !currentParams) return false;
 
-          // Check if required fields are present based on search type
           switch (currentSearchType) {
             case "flight":
               return (
@@ -312,7 +330,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
 
           if (!currentSearchType) return false;
 
-          const defaultParams = getDefaultParams(currentSearchType);
+          const defaultParams = GET_DEFAULT_PARAMS(currentSearchType);
           let currentParams: Partial<SearchParams>;
 
           switch (currentSearchType) {
@@ -335,268 +353,12 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           return JSON.stringify(currentParams) !== JSON.stringify(defaultParams);
         },
 
-        // Parameter management actions
-        setSearchType: (type) => {
-          const result = SearchTypeSchema.safeParse(type);
-          if (result.success) {
-            set((state) => {
-              const updatedState: Partial<SearchParamsState> = {
-                currentSearchType: result.data,
-              };
-
-              // Initialize default parameters if not set yet
-              switch (result.data) {
-                case "flight":
-                  if (Object.keys(state.flightParams).length === 0) {
-                    updatedState.flightParams = getDefaultFlightParams();
-                  }
-                  break;
-                case "accommodation":
-                  if (Object.keys(state.accommodationParams).length === 0) {
-                    updatedState.accommodationParams = getDefaultAccommodationParams();
-                  }
-                  break;
-                case "activity":
-                  if (Object.keys(state.activityParams).length === 0) {
-                    updatedState.activityParams = getDefaultActivityParams();
-                  }
-                  break;
-                case "destination":
-                  if (Object.keys(state.destinationParams).length === 0) {
-                    updatedState.destinationParams = getDefaultDestinationParams();
-                  }
-                  break;
-              }
-
-              return updatedState;
-            });
-          } else {
-            console.error("Invalid search type:", result.error);
-          }
-        },
-
-        updateFlightParams: async (params) => {
-          set((state) => ({
-            isValidating: { ...state.isValidating, flight: true },
-            validationErrors: { ...state.validationErrors, flight: null },
-          }));
-
-          try {
-            const updatedParams = { ...get().flightParams, ...params };
-            const result = FlightSearchParamsSchema.safeParse(updatedParams);
-
-            if (result.success) {
-              set((state) => ({
-                flightParams: result.data,
-                isValidating: { ...state.isValidating, flight: false },
-              }));
-              return true;
-            }
-            throw new Error("Invalid flight parameters");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Validation failed";
-            set((state) => ({
-              isValidating: { ...state.isValidating, flight: false },
-              validationErrors: { ...state.validationErrors, flight: message },
-            }));
-            return false;
-          }
-        },
-
-        updateAccommodationParams: async (params) => {
-          set((state) => ({
-            isValidating: { ...state.isValidating, accommodation: true },
-            validationErrors: { ...state.validationErrors, accommodation: null },
-          }));
-
-          try {
-            const updatedParams = { ...get().accommodationParams, ...params };
-            const result = AccommodationSearchParamsSchema.safeParse(updatedParams);
-
-            if (result.success) {
-              set((state) => ({
-                accommodationParams: result.data,
-                isValidating: { ...state.isValidating, accommodation: false },
-              }));
-              return true;
-            }
-            throw new Error("Invalid accommodation parameters");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Validation failed";
-            set((state) => ({
-              isValidating: { ...state.isValidating, accommodation: false },
-              validationErrors: { ...state.validationErrors, accommodation: message },
-            }));
-            return false;
-          }
-        },
-
-        updateActivityParams: async (params) => {
-          set((state) => ({
-            isValidating: { ...state.isValidating, activity: true },
-            validationErrors: { ...state.validationErrors, activity: null },
-          }));
-
-          try {
-            const updatedParams = { ...get().activityParams, ...params };
-            const result = ActivitySearchParamsSchema.safeParse(updatedParams);
-
-            if (result.success) {
-              set((state) => ({
-                activityParams: result.data,
-                isValidating: { ...state.isValidating, activity: false },
-              }));
-              return true;
-            }
-            throw new Error("Invalid activity parameters");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Validation failed";
-            set((state) => ({
-              isValidating: { ...state.isValidating, activity: false },
-              validationErrors: { ...state.validationErrors, activity: message },
-            }));
-            return false;
-          }
-        },
-
-        updateDestinationParams: async (params) => {
-          set((state) => ({
-            isValidating: { ...state.isValidating, destination: true },
-            validationErrors: { ...state.validationErrors, destination: null },
-          }));
-
-          try {
-            const updatedParams = { ...get().destinationParams, ...params };
-            const result = DestinationSearchParamsSchema.safeParse(updatedParams);
-
-            if (result.success) {
-              set((state) => ({
-                destinationParams: result.data,
-                isValidating: { ...state.isValidating, destination: false },
-              }));
-              return true;
-            }
-            throw new Error("Invalid destination parameters");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Validation failed";
-            set((state) => ({
-              isValidating: { ...state.isValidating, destination: false },
-              validationErrors: { ...state.validationErrors, destination: message },
-            }));
-            return false;
-          }
-        },
-
-        // Bulk operations
-        setFlightParams: (params) => {
-          const result = FlightSearchParamsSchema.safeParse(params);
-          if (result.success) {
-            set({ flightParams: result.data });
-          } else {
-            console.error("Invalid flight parameters:", result.error);
-          }
-        },
-
-        setAccommodationParams: (params) => {
-          const result = AccommodationSearchParamsSchema.safeParse(params);
-          if (result.success) {
-            set({ accommodationParams: result.data });
-          } else {
-            console.error("Invalid accommodation parameters:", result.error);
-          }
-        },
-
-        setActivityParams: (params) => {
-          const result = ActivitySearchParamsSchema.safeParse(params);
-          if (result.success) {
-            set({ activityParams: result.data });
-          } else {
-            console.error("Invalid activity parameters:", result.error);
-          }
-        },
-
-        setDestinationParams: (params) => {
-          const result = DestinationSearchParamsSchema.safeParse(params);
-          if (result.success) {
-            set({ destinationParams: result.data });
-          } else {
-            console.error("Invalid destination parameters:", result.error);
-          }
-        },
-
-        // Reset and validation
-        resetParams: (type) => {
-          if (!type) {
-            set({
-              flightParams: {},
-              accommodationParams: {},
-              activityParams: {},
-              destinationParams: {},
-            });
-            return;
-          }
-
-          switch (type) {
-            case "flight":
-              set({ flightParams: getDefaultFlightParams() });
-              break;
-            case "accommodation":
-              set({ accommodationParams: getDefaultAccommodationParams() });
-              break;
-            case "activity":
-              set({ activityParams: getDefaultActivityParams() });
-              break;
-            case "destination":
-              set({ destinationParams: getDefaultDestinationParams() });
-              break;
-          }
-        },
-
-        resetCurrentParams: () => {
-          const { currentSearchType } = get();
-          if (currentSearchType) {
-            get().resetParams(currentSearchType);
-          }
-        },
-
-        validateParams: async (type) => {
-          const {
-            flightParams,
-            accommodationParams,
-            activityParams,
-            destinationParams,
-          } = get();
-
-          let params: Partial<SearchParams>;
-          switch (type) {
-            case "flight":
-              params = flightParams;
-              break;
-            case "accommodation":
-              params = accommodationParams;
-              break;
-            case "activity":
-              params = activityParams;
-              break;
-            case "destination":
-              params = destinationParams as Partial<SearchParams>;
-              break;
-            default:
-              return false;
-          }
-
-          return await validateSearchParams(params, type);
-        },
-
-        validateCurrentParams: async () => {
-          const { currentSearchType } = get();
-          if (!currentSearchType) return false;
-
-          return await get().validateParams(currentSearchType);
+        // Validation states
+        isValidating: {
+          accommodation: false,
+          activity: false,
+          destination: false,
+          flight: false,
         },
 
         // Template and presets
@@ -628,32 +390,6 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           }
         },
 
-        createParamsTemplate: () => {
-          const { currentParams } = get();
-          return currentParams ? { ...currentParams } : null;
-        },
-
-        // Utility actions
-        clearValidationErrors: () => {
-          set({
-            validationErrors: {
-              flight: null,
-              accommodation: null,
-              activity: null,
-              destination: null,
-            },
-          });
-        },
-
-        clearValidationError: (type) => {
-          set((state) => ({
-            validationErrors: {
-              ...state.validationErrors,
-              [type]: null,
-            },
-          }));
-        },
-
         markClean: () => {
           // This getter will automatically update the isDirty computed property
           get().isDirty;
@@ -661,35 +397,306 @@ export const useSearchParamsStore = create<SearchParamsState>()(
 
         reset: () => {
           set({
-            currentSearchType: null,
-            flightParams: {},
             accommodationParams: {},
             activityParams: {},
+            currentSearchType: null,
             destinationParams: {},
+            flightParams: {},
             isValidating: {
-              flight: false,
               accommodation: false,
               activity: false,
               destination: false,
+              flight: false,
             },
             validationErrors: {
-              flight: null,
               accommodation: null,
               activity: null,
               destination: null,
+              flight: null,
             },
           });
+        },
+
+        resetCurrentParams: () => {
+          const { currentSearchType } = get();
+          if (currentSearchType) {
+            get().resetParams(currentSearchType);
+          }
+        },
+
+        // Reset and validation
+        resetParams: (type) => {
+          if (!type) {
+            set({
+              accommodationParams: {},
+              activityParams: {},
+              destinationParams: {},
+              flightParams: {},
+            });
+            return;
+          }
+
+          switch (type) {
+            case "flight":
+              set({ flightParams: GET_DEFAULT_FLIGHT_PARAMS() });
+              break;
+            case "accommodation":
+              set({ accommodationParams: GET_DEFAULT_ACCOMMODATION_PARAMS() });
+              break;
+            case "activity":
+              set({ activityParams: GET_DEFAULT_ACTIVITY_PARAMS() });
+              break;
+            case "destination":
+              set({ destinationParams: GET_DEFAULT_DESTINATION_PARAMS() });
+              break;
+          }
+        },
+
+        setAccommodationParams: (params) => {
+          const result = ACCOMMODATION_SEARCH_PARAMS_SCHEMA.safeParse(params);
+          if (result.success) {
+            set({ accommodationParams: result.data });
+          } else {
+            console.error("Invalid accommodation parameters:", result.error);
+          }
+        },
+
+        setActivityParams: (params) => {
+          const result = ACTIVITY_SEARCH_PARAMS_SCHEMA.safeParse(params);
+          if (result.success) {
+            set({ activityParams: result.data });
+          } else {
+            console.error("Invalid activity parameters:", result.error);
+          }
+        },
+
+        setDestinationParams: (params) => {
+          const result = DESTINATION_SEARCH_PARAMS_SCHEMA.safeParse(params);
+          if (result.success) {
+            set({ destinationParams: result.data });
+          } else {
+            console.error("Invalid destination parameters:", result.error);
+          }
+        },
+
+        // Bulk operations
+        setFlightParams: (params) => {
+          const result = FLIGHT_SEARCH_PARAMS_SCHEMA.safeParse(params);
+          if (result.success) {
+            set({ flightParams: result.data });
+          } else {
+            console.error("Invalid flight parameters:", result.error);
+          }
+        },
+
+        // Parameter management actions
+        setSearchType: (type) => {
+          const result = SEARCH_TYPE_SCHEMA.safeParse(type);
+          if (result.success) {
+            set((state) => {
+              const updatedState: Partial<SearchParamsState> = {
+                currentSearchType: result.data,
+              };
+
+              // Initialize default parameters if not set yet
+              switch (result.data) {
+                case "flight":
+                  if (Object.keys(state.flightParams).length === 0) {
+                    updatedState.flightParams = GET_DEFAULT_FLIGHT_PARAMS();
+                  }
+                  break;
+                case "accommodation":
+                  if (Object.keys(state.accommodationParams).length === 0) {
+                    updatedState.accommodationParams =
+                      GET_DEFAULT_ACCOMMODATION_PARAMS();
+                  }
+                  break;
+                case "activity":
+                  if (Object.keys(state.activityParams).length === 0) {
+                    updatedState.activityParams = GET_DEFAULT_ACTIVITY_PARAMS();
+                  }
+                  break;
+                case "destination":
+                  if (Object.keys(state.destinationParams).length === 0) {
+                    updatedState.destinationParams = GET_DEFAULT_DESTINATION_PARAMS();
+                  }
+                  break;
+              }
+
+              return updatedState;
+            });
+          } else {
+            console.error("Invalid search type:", result.error);
+          }
+        },
+
+        updateAccommodationParams: (params) => {
+          set((state) => ({
+            isValidating: { ...state.isValidating, accommodation: true },
+            validationErrors: { ...state.validationErrors, accommodation: null },
+          }));
+
+          try {
+            const updatedParams = { ...get().accommodationParams, ...params };
+            const result = ACCOMMODATION_SEARCH_PARAMS_SCHEMA.safeParse(updatedParams);
+
+            if (result.success) {
+              set((state) => ({
+                accommodationParams: result.data,
+                isValidating: { ...state.isValidating, accommodation: false },
+              }));
+              return Promise.resolve(true);
+            }
+            throw new Error("Invalid accommodation parameters");
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Validation failed";
+            set((state) => ({
+              isValidating: { ...state.isValidating, accommodation: false },
+              validationErrors: { ...state.validationErrors, accommodation: message },
+            }));
+            return Promise.resolve(false);
+          }
+        },
+
+        updateActivityParams: (params) => {
+          set((state) => ({
+            isValidating: { ...state.isValidating, activity: true },
+            validationErrors: { ...state.validationErrors, activity: null },
+          }));
+
+          try {
+            const updatedParams = { ...get().activityParams, ...params };
+            const result = ACTIVITY_SEARCH_PARAMS_SCHEMA.safeParse(updatedParams);
+
+            if (result.success) {
+              set((state) => ({
+                activityParams: result.data,
+                isValidating: { ...state.isValidating, activity: false },
+              }));
+              return Promise.resolve(true);
+            }
+            throw new Error("Invalid activity parameters");
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Validation failed";
+            set((state) => ({
+              isValidating: { ...state.isValidating, activity: false },
+              validationErrors: { ...state.validationErrors, activity: message },
+            }));
+            return Promise.resolve(false);
+          }
+        },
+
+        updateDestinationParams: (params) => {
+          set((state) => ({
+            isValidating: { ...state.isValidating, destination: true },
+            validationErrors: { ...state.validationErrors, destination: null },
+          }));
+
+          try {
+            const updatedParams = { ...get().destinationParams, ...params };
+            const result = DESTINATION_SEARCH_PARAMS_SCHEMA.safeParse(updatedParams);
+
+            if (result.success) {
+              set((state) => ({
+                destinationParams: result.data,
+                isValidating: { ...state.isValidating, destination: false },
+              }));
+              return Promise.resolve(true);
+            }
+            throw new Error("Invalid destination parameters");
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Validation failed";
+            set((state) => ({
+              isValidating: { ...state.isValidating, destination: false },
+              validationErrors: { ...state.validationErrors, destination: message },
+            }));
+            return Promise.resolve(false);
+          }
+        },
+
+        updateFlightParams: (params) => {
+          set((state) => ({
+            isValidating: { ...state.isValidating, flight: true },
+            validationErrors: { ...state.validationErrors, flight: null },
+          }));
+
+          try {
+            const updatedParams = { ...get().flightParams, ...params };
+            const result = FLIGHT_SEARCH_PARAMS_SCHEMA.safeParse(updatedParams);
+
+            if (result.success) {
+              set((state) => ({
+                flightParams: result.data,
+                isValidating: { ...state.isValidating, flight: false },
+              }));
+              return Promise.resolve(true);
+            }
+            throw new Error("Invalid flight parameters");
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Validation failed";
+            set((state) => ({
+              isValidating: { ...state.isValidating, flight: false },
+              validationErrors: { ...state.validationErrors, flight: message },
+            }));
+            return Promise.resolve(false);
+          }
+        },
+
+        validateCurrentParams: async () => {
+          const { currentSearchType } = get();
+          if (!currentSearchType) return false;
+
+          return await get().validateParams(currentSearchType);
+        },
+
+        validateParams: (type) => {
+          const {
+            flightParams,
+            accommodationParams,
+            activityParams,
+            destinationParams,
+          } = get();
+
+          let params: Partial<SearchParams>;
+          switch (type) {
+            case "flight":
+              params = flightParams;
+              break;
+            case "accommodation":
+              params = accommodationParams;
+              break;
+            case "activity":
+              params = activityParams;
+              break;
+            case "destination":
+              params = destinationParams as Partial<SearchParams>;
+              break;
+            default:
+              return Promise.resolve(false);
+          }
+
+          return Promise.resolve(VALIDATE_SEARCH_PARAMS(params, type));
+        },
+        validationErrors: {
+          accommodation: null,
+          activity: null,
+          destination: null,
+          flight: null,
         },
       }),
       {
         name: "search-params-storage",
         partialize: (state) => ({
-          // Only persist parameters, not validation states
-          currentSearchType: state.currentSearchType,
-          flightParams: state.flightParams,
           accommodationParams: state.accommodationParams,
           activityParams: state.activityParams,
+          // Only persist parameters, not validation states
+          currentSearchType: state.currentSearchType,
           destinationParams: state.destinationParams,
+          flightParams: state.flightParams,
         }),
       }
     ),
@@ -712,8 +719,32 @@ export const useDestinationParams = () =>
   useSearchParamsStore((state) => state.destinationParams);
 export const useSearchParamsValidation = () =>
   useSearchParamsStore((state) => ({
-    isValidating: state.isValidating,
-    validationErrors: state.validationErrors,
     hasValidParams: state.hasValidParams,
     isDirty: state.isDirty,
+    isValidating: state.isValidating,
+    validationErrors: state.validationErrors,
   }));
+
+/**
+ * Compute the current parameters based on the store state snapshot.
+ *
+ * @param state - The search params store state snapshot.
+ * @returns The params object for the current search type, or null.
+ */
+export const selectCurrentParamsFrom = (
+  state: SearchParamsState
+): SearchParams | null => {
+  if (!state.currentSearchType) return null;
+  switch (state.currentSearchType) {
+    case "flight":
+      return state.flightParams as FlightSearchParams;
+    case "accommodation":
+      return state.accommodationParams as AccommodationSearchParams;
+    case "activity":
+      return state.activityParams as ActivitySearchParams;
+    case "destination":
+      return state.destinationParams as DestinationSearchParams;
+    default:
+      return null;
+  }
+};

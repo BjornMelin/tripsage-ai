@@ -1,9 +1,12 @@
-"use client";
-
 /**
  * @fileoverview React hook that connects to the agent status Supabase channel and
  * synchronizes realtime events with the agent status store.
+ *
+ * This hook manages WebSocket connections to Supabase realtime channels for
+ * monitoring agent status updates, task progress, and resource usage in real-time.
  */
+
+"use client";
 
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -16,58 +19,107 @@ import { getBrowserClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 
+/**
+ * Generic envelope structure for broadcast messages.
+ */
 type BroadcastEnvelope<T> = {
+  /** The event type identifier. */
   event: string;
+  /** Optional payload data for the event. */
   payload?: T;
 };
 
+/**
+ * Payload structure for agent status update events.
+ */
 type AgentStatusUpdatePayload = {
+  /** The unique identifier of the agent. */
   agentId: string;
+  /** Optional new status for the agent. */
   status?: AgentStatusType;
+  /** Optional progress percentage (0-100). */
   progress?: number;
 };
 
+/**
+ * Payload structure for agent task start events.
+ */
 type AgentTaskStartPayload = {
+  /** The unique identifier of the agent. */
   agentId: string;
+  /** Optional task information. */
   task?: {
+    /** Optional unique identifier for the task. */
     id?: string;
+    /** Optional title of the task. */
     title?: string;
+    /** Optional description of the task. */
     description?: string;
   };
 };
 
+/**
+ * Payload structure for agent task progress events.
+ */
 type AgentTaskProgressPayload = {
+  /** The unique identifier of the agent. */
   agentId: string;
+  /** The unique identifier of the task. */
   taskId: string;
+  /** Optional progress percentage (0-100). */
   progress?: number;
+  /** Optional new status for the task. */
   status?: AgentTask["status"];
 };
 
+/**
+ * Payload structure for agent task completion events.
+ */
 type AgentTaskCompletePayload = {
+  /** The unique identifier of the agent. */
   agentId: string;
+  /** The unique identifier of the task. */
   taskId: string;
+  /** Optional error message if the task failed. */
   error?: string;
 };
 
+/**
+ * Payload structure for agent error events.
+ */
 type AgentErrorPayload = {
+  /** The unique identifier of the agent. */
   agentId: string;
+  /** Optional error information. */
   error?: unknown;
 };
 
+/**
+ * Interface defining the controls and state exposed by the WebSocket hook.
+ */
 interface AgentStatusWebSocketControls {
+  /** Indicates whether the WebSocket connection is currently active. */
   isConnected: boolean;
+  /** Error message from the last connection attempt, if any. */
   connectionError: string | null;
+  /** Number of reconnection attempts made. */
   reconnectAttempts: number;
+  /** Function to establish the WebSocket connection. */
   connect: () => Promise<void>;
+  /** Function to disconnect the WebSocket connection. */
   disconnect: () => void;
+  /** Function to start monitoring agent activity. */
   startAgentMonitoring: () => void;
+  /** Function to stop monitoring agent activity. */
   stopAgentMonitoring: () => void;
+  /** Function to report resource usage for an agent. */
   reportResourceUsage: (
     agentId: string,
     cpu: number,
     memory: number,
     tokens: number
   ) => Promise<void>;
+  /** Reference to the underlying Supabase realtime channel. */
   wsClient: RealtimeChannel | null;
 }
 
@@ -75,7 +127,13 @@ interface AgentStatusWebSocketControls {
  * Connects to the authenticated user's private Supabase channel and exposes helpers
  * for managing realtime agent status updates.
  *
- * @returns {AgentStatusWebSocketControls} Realtime connection state and control handlers.
+ * This hook establishes a WebSocket connection to Supabase realtime channels to
+ * receive live updates about agent status, task progress, and resource usage.
+ * It automatically handles reconnection logic with exponential backoff and
+ * integrates with the agent status store for state management.
+ *
+ * @return Object containing connection state, error information, and control
+ * functions for managing the WebSocket connection and agent monitoring.
  */
 export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
   const supabase = useMemo(() => getBrowserClient(), []);
@@ -122,9 +180,9 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
         return;
       }
       addAgentTask(agentId, {
-        title: task.title ?? task.description ?? "Untitled Task",
         description: task.description ?? "",
         status: "in_progress",
+        title: task.title ?? task.description ?? "Untitled Task",
       });
     },
     [addAgentTask]
@@ -170,9 +228,9 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
       updateAgentStatus(agentId, "error");
       addAgentActivity({
         agentId,
-        type: "error",
         message: typeof error === "string" ? error : "Agent reported an error",
         metadata: { error },
+        type: "error",
       });
     },
     [addAgentActivity, updateAgentStatus]
@@ -191,10 +249,10 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
     }
   }, []);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(() => {
     if (!user?.id) {
       setConnectionError("Cannot connect without an authenticated user.");
-      return;
+      return Promise.resolve();
     }
 
     disconnect();
@@ -237,12 +295,13 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
         const delay = Math.min(30000, 1000 * 2 ** Math.min(5, attempt));
         if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = setTimeout(() => {
-          void connect();
+          connect();
         }, delay);
       }
     });
 
     channelRef.current = channel;
+    return Promise.resolve();
   }, [
     disconnect,
     handleAgentError,
@@ -253,10 +312,11 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
     startSession,
     supabase,
     user?.id,
+    reconnectAttempts,
   ]);
 
   const startAgentMonitoring = useCallback(() => {
-    void connect();
+    connect();
   }, [connect]);
 
   const stopAgentMonitoring = useCallback(() => {
@@ -273,22 +333,22 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
       }
 
       const usageUpdate: Omit<ResourceUsage, "timestamp"> = {
+        activeAgents: 1,
         cpuUsage: cpu,
         memoryUsage: memory,
         networkRequests: tokens,
-        activeAgents: 1,
       };
       updateResourceUsage(usageUpdate);
 
       await channelRef.current.send({
-        type: "broadcast",
         event: "resource_usage",
         payload: {
-          agent_id: agentId,
+          agentId,
           cpu,
           memory,
           tokens,
         },
+        type: "broadcast",
       });
     },
     [isConnected, updateResourceUsage]
@@ -303,7 +363,7 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
       return;
     }
 
-    void connect();
+    connect();
 
     return () => {
       if (reconnectTimerRef.current) {
@@ -315,14 +375,14 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
   }, [connect, currentSession, disconnect, endSession, user?.id]);
 
   return {
-    isConnected,
-    connectionError,
-    reconnectAttempts,
     connect,
+    connectionError,
     disconnect,
+    isConnected,
+    reconnectAttempts,
+    reportResourceUsage,
     startAgentMonitoring,
     stopAgentMonitoring,
-    reportResourceUsage,
     wsClient: channelRef.current,
   };
 }

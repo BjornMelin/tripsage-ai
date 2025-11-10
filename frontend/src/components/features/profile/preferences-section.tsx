@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Preferences section: update currency, language, timezone, and units.
+ * UI only; server actions are stubbed.
+ */
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,17 +38,17 @@ import { useCurrencyStore } from "@/stores/currency-store";
 import { useUserProfileStore } from "@/stores/user-store";
 import type { CurrencyCode } from "@/types/currency";
 
-const preferencesSchema = z.object({
-  language: z.string().min(1, "Please select a language"),
+const PreferencesSchema = z.object({
   currency: z.string().min(1, "Please select a currency"),
-  timezone: z.string().min(1, "Please select a timezone"),
-  theme: z.enum(["light", "dark", "system"]),
-  units: z.enum(["metric", "imperial"]),
   dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]),
+  language: z.string().min(1, "Please select a language"),
+  theme: z.enum(["light", "dark", "system"]),
   timeFormat: z.enum(["12h", "24h"]),
+  timezone: z.string().min(1, "Please select a timezone"),
+  units: z.enum(["metric", "imperial"]),
 });
 
-type PreferencesFormData = z.infer<typeof preferencesSchema>;
+type PreferencesFormData = z.infer<typeof PreferencesSchema>;
 
 export function PreferencesSection() {
   const { profile: _profile } = useUserProfileStore();
@@ -51,16 +56,16 @@ export function PreferencesSection() {
   const { toast } = useToast();
 
   const form = useForm<PreferencesFormData>({
-    resolver: zodResolver(preferencesSchema),
     defaultValues: {
-      language: "en",
       currency: baseCurrency || "USD",
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      theme: "system",
-      units: "metric",
       dateFormat: "MM/DD/YYYY",
+      language: "en",
+      theme: "system",
       timeFormat: "12h",
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      units: "metric",
     },
+    resolver: zodResolver(PreferencesSchema),
   });
 
   const onSubmit = async (data: PreferencesFormData) => {
@@ -74,13 +79,13 @@ export function PreferencesSection() {
       }
 
       toast({
-        title: "Preferences updated",
         description: "Your preferences have been successfully saved.",
+        title: "Preferences updated",
       });
     } catch (_error) {
       toast({
-        title: "Error",
         description: "Failed to update preferences. Please try again.",
+        title: "Error",
         variant: "destructive",
       });
     }
@@ -92,13 +97,13 @@ export function PreferencesSection() {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       toast({
-        title: "Setting updated",
         description: `${setting} ${enabled ? "enabled" : "disabled"}.`,
+        title: "Setting updated",
       });
     } catch (_error) {
       toast({
-        title: "Error",
         description: "Failed to update setting.",
+        title: "Error",
         variant: "destructive",
       });
     }

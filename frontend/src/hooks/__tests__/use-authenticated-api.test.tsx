@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for the useAuthenticatedApi hook with Supabase session handling.
- */
-
 import type { Session, User } from "@supabase/supabase-js";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -17,33 +13,33 @@ vi.mock("@/lib/api/client", () => ({
   fetchApi: vi.fn(),
 }));
 
-const mockedFetchApi = vi.mocked(fetchApi);
+const MOCKED_FETCH_API = vi.mocked(fetchApi);
 let auth: SupabaseAuthMock;
 let testUser: User;
 
-const createTestUser = (): User => ({
-  id: "test-user-id",
+const CREATE_TEST_USER = (): User => ({
   app_metadata: {},
-  user_metadata: {},
   aud: "authenticated",
-  email: "test@example.com",
   created_at: new Date(0).toISOString(),
+  email: "test@example.com",
+  id: "test-user-id",
+  user_metadata: {},
 });
 
-const createTestSession = (accessToken: string, user: User): Session => ({
+const CREATE_TEST_SESSION = (accessToken: string, user: User): Session => ({
   access_token: accessToken,
-  refresh_token: `${accessToken}-refresh`,
   expires_in: 3_600,
+  refresh_token: `${accessToken}-refresh`,
   token_type: "bearer",
   user,
 });
 
-const buildGetSessionResponse = (session: Session | null) =>
+const BUILD_GET_SESSION_RESPONSE = (session: Session | null) =>
   session
     ? { data: { session }, error: null }
     : { data: { session: null }, error: null };
 
-const buildRefreshResponse = (session: Session | null, user: User | null) => ({
+const BUILD_REFRESH_RESPONSE = (session: Session | null, user: User | null) => ({
   data: { session, user },
   error: null,
 });
@@ -65,7 +61,11 @@ function TestCaller({ endpoint = "/api/ping" }: { endpoint?: string }) {
     }
   };
 
-  return <button onClick={call}>{result}</button>;
+  return (
+    <button type="button" onClick={call}>
+      {result}
+    </button>
+  );
 }
 
 describe("useAuthenticatedApi", () => {
@@ -73,15 +73,15 @@ describe("useAuthenticatedApi", () => {
     vi.clearAllMocks();
     const supabase = createClient();
     auth = supabase.auth as unknown as SupabaseAuthMock;
-    testUser = createTestUser();
+    testUser = CREATE_TEST_USER();
     Object.values(auth).forEach((fn) => {
       if (typeof fn === "function" && "mockReset" in fn) {
         (fn as ReturnType<typeof vi.fn>).mockReset();
       }
     });
-    mockedFetchApi.mockResolvedValue({ ok: true } as unknown as Response);
-    auth.getSession.mockResolvedValue(buildGetSessionResponse(null));
-    auth.refreshSession.mockResolvedValue(buildRefreshResponse(null, null));
+    MOCKED_FETCH_API.mockResolvedValue({ ok: true } as unknown as Response);
+    auth.getSession.mockResolvedValue(BUILD_GET_SESSION_RESPONSE(null));
+    auth.refreshSession.mockResolvedValue(BUILD_REFRESH_RESPONSE(null, null));
     auth.signOut.mockResolvedValue({ error: null });
   });
 
@@ -94,40 +94,38 @@ describe("useAuthenticatedApi", () => {
   });
 
   it("attaches Authorization header when a session exists", async () => {
-    const session = createTestSession("tok", testUser);
-    auth.getSession.mockResolvedValue(buildGetSessionResponse(session));
+    const session = CREATE_TEST_SESSION("tok", testUser);
+    auth.getSession.mockResolvedValue(BUILD_GET_SESSION_RESPONSE(session));
 
     render(<TestCaller />);
 
     await userEvent.click(screen.getByRole("button", { name: "ready" }));
 
-    expect(mockedFetchApi).toHaveBeenCalledTimes(1);
-    const [, options] = mockedFetchApi.mock.calls[0];
+    expect(MOCKED_FETCH_API).toHaveBeenCalledTimes(1);
+    const [, options] = MOCKED_FETCH_API.mock.calls[0];
     expect(options?.auth).toBe("Bearer tok");
   });
 
   it("refreshes on 401 and retries once", async () => {
-    mockedFetchApi
-      .mockRejectedValueOnce(
-        new ApiError({ message: "401", status: 401, code: "UNAUTHORIZED" })
-      )
-      .mockResolvedValueOnce({ ok: true });
+    MOCKED_FETCH_API.mockRejectedValueOnce(
+      new ApiError({ code: "UNAUTHORIZED", message: "401", status: 401 })
+    ).mockResolvedValueOnce({ ok: true });
 
-    const staleSession = createTestSession("stale", testUser);
-    const freshUser = createTestUser();
-    const refreshedSession = createTestSession("fresh", freshUser);
+    const staleSession = CREATE_TEST_SESSION("stale", testUser);
+    const freshUser = CREATE_TEST_USER();
+    const refreshedSession = CREATE_TEST_SESSION("fresh", freshUser);
 
-    auth.getSession.mockResolvedValue(buildGetSessionResponse(staleSession));
+    auth.getSession.mockResolvedValue(BUILD_GET_SESSION_RESPONSE(staleSession));
     auth.refreshSession.mockResolvedValue(
-      buildRefreshResponse(refreshedSession, refreshedSession.user)
+      BUILD_REFRESH_RESPONSE(refreshedSession, refreshedSession.user)
     );
 
     render(<TestCaller />);
 
     await userEvent.click(screen.getByRole("button", { name: "ready" }));
 
-    expect(mockedFetchApi).toHaveBeenCalledTimes(2);
-    const [, retryOptions] = mockedFetchApi.mock.calls[1];
+    expect(MOCKED_FETCH_API).toHaveBeenCalledTimes(2);
+    const [, retryOptions] = MOCKED_FETCH_API.mock.calls[1];
     expect(retryOptions?.auth).toBe("Bearer fresh");
   });
 });

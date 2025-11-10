@@ -3,6 +3,7 @@
  * Renders recent trip cards using data from useTrips with resilient parsing
  * for items/data.items shapes. Includes accessible links and stable date text.
  */
+
 "use client";
 
 import { Calendar, Clock, MapPin } from "lucide-react";
@@ -60,10 +61,10 @@ function TripCard({ trip }: { trip: Trip }) {
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
     return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
       day: "numeric",
-      year: "numeric",
+      month: "short",
       timeZone: "UTC",
+      year: "numeric",
     });
   };
 
@@ -188,11 +189,14 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
   const { data: tripsResponse, isLoading } = useTrips();
 
   // Extract trips from the response and sort by updatedAt/createdAt, take the most recent ones
-  let tripsData: any[] = [];
+  let tripsData: Trip[] = [];
   if (Array.isArray(tripsResponse)) {
     tripsData = tripsResponse;
   } else if (tripsResponse && typeof tripsResponse === "object") {
-    const anyResp = tripsResponse as any;
+    const anyResp = tripsResponse as {
+      items?: Trip[];
+      data?: Trip[] | { items?: Trip[] };
+    };
     if (Array.isArray(anyResp.items)) {
       tripsData = anyResp.items;
     } else if (anyResp.data) {
@@ -201,9 +205,17 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
     }
   }
   const recentTrips = tripsData
-    .sort((a: any, b: any) => {
-      const dateA = new Date(a.updated_at || a.created_at);
-      const dateB = new Date(b.updated_at || b.created_at);
+    .sort((a: Trip, b: Trip) => {
+      const aUpdated = (a as unknown as { updatedAt?: string }).updatedAt;
+      const aCreated = (a as unknown as { createdAt?: string }).createdAt;
+      const bUpdated = (b as unknown as { updatedAt?: string }).updatedAt;
+      const bCreated = (b as unknown as { createdAt?: string }).createdAt;
+      const dateA = new Date(
+        a.updated_at || aUpdated || a.created_at || aCreated || "1970-01-01T00:00:00Z"
+      );
+      const dateB = new Date(
+        b.updated_at || bUpdated || b.created_at || bCreated || "1970-01-01T00:00:00Z"
+      );
       return dateB.getTime() - dateA.getTime();
     })
     .slice(0, limit);
@@ -216,8 +228,8 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
           <CardDescription>Your latest travel plans</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <TripCardSkeleton key={`trip-skeleton-${i}`} />
+          {["a", "b", "c"].map((k) => (
+            <TripCardSkeleton key={`trip-skeleton-${k}`} />
           ))}
         </CardContent>
         <CardFooter>

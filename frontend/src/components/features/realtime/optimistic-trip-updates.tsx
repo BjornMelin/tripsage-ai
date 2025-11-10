@@ -1,3 +1,8 @@
+/*
+ * @fileoverview Optimistic trip updates component.
+ * Shows real-time collaboration with instant UI feedback.
+ */
+
 "use client";
 
 import { Badge } from "@/components/ui/badge";
@@ -28,9 +33,13 @@ import {
   MapPin,
   Users,
 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
+/**
+ * Interface for the optimistic trip updates props.
+ */
 interface OptimisticTripUpdatesProps {
+  /** The ID of the trip to update. */
   tripId: number;
 }
 
@@ -42,17 +51,25 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   // const updateTrip = useUpdateTrip(); // TODO: Implement this hook
-  const updateTrip: { mutateAsync: (data: any) => Promise<void> } = {
-    mutateAsync: async (_data: any) => {},
+  const updateTrip: {
+    mutateAsync: (data: { id: number; updates: Partial<TripUpdate> }) => Promise<void>;
+  } = {
+    mutateAsync: (_data: { id: number; updates: Partial<TripUpdate> }) => {
+      // TODO: Implement actual mutation
+      return Promise.reject(new Error("Not implemented"));
+    },
   };
   const { isConnected, errors } = useTripRealtime(tripId.toString());
 
   const [formData, setFormData] = useState<Partial<TripUpdate>>({});
+  // Snapshots to support rollback when mutation fails and cache is missing
+  const prevTripRef = useRef<Trip | null>(null);
+  const prevFormRef = useRef<Partial<TripUpdate> | null>(null);
   const [optimisticUpdates, setOptimisticUpdates] = useState<
     Record<
       string,
       {
-        value: any;
+        value: TripUpdate[keyof TripUpdate];
         status: "pending" | "success" | "error";
         timestamp: Date;
       }
@@ -65,43 +82,60 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
   // Mock trip data - in real implementation, this would come from useTrip(tripId)
   const [trip, setTrip] = useState<Trip>({
-    id: tripId,
-    user_id: "user-123",
-    name: "Summer Europe Trip",
-    destination: "Paris, France",
-    start_date: "2024-07-01",
-    end_date: "2024-07-15",
     budget: 5000,
-    travelers: 2,
-    status: "planning",
-    trip_type: "leisure",
+    created_at: new Date().toISOString(),
+    destination: "Paris, France",
+    end_date: "2024-07-15",
     flexibility: {},
+    id: tripId,
+    name: "Summer Europe Trip",
     notes: ["Visit Eiffel Tower", "Try local cuisine"],
     search_metadata: {},
-    created_at: new Date().toISOString(),
+    start_date: "2024-07-01",
+    status: "planning",
+    travelers: 2,
+    trip_type: "leisure",
     updated_at: new Date().toISOString(),
+    user_id: "user-123",
   });
 
+  /**
+   * Initialize form data with current trip values.
+   */
   useEffect(() => {
     // Initialize form data with current trip values
     setFormData({
-      name: trip.name,
-      destination: trip.destination,
       budget: trip.budget,
+      destination: trip.destination,
+      name: trip.name,
       travelers: trip.travelers,
     });
   }, [trip]);
 
-  const handleOptimisticUpdate = async (field: keyof TripUpdate, value: any) => {
+  /**
+   * Handle optimistic update.
+   *
+   * @param field - The field to update.
+   * @param value - The value to update the field to.
+   * @returns A promise that resolves to the optimistic update.
+   */
+  const handleOptimisticUpdate = async (
+    field: keyof TripUpdate,
+    value: TripUpdate[keyof TripUpdate]
+  ) => {
     `${field}-${Date.now()}`; // Generate update ID for future tracking
+
+    // Snapshot current state for rollback
+    prevTripRef.current = trip;
+    prevFormRef.current = formData;
 
     // Apply optimistic update to local state
     setOptimisticUpdates((prev) => ({
       ...prev,
       [field]: {
-        value,
         status: "pending",
         timestamp: new Date(),
+        value,
       },
     }));
 
@@ -119,7 +153,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         updates: { [field]: value },
       });
 
-      // Mark as successful
+      // Mark as successful and clear snapshots
       setOptimisticUpdates((prev) => ({
         ...prev,
         [field]: {
@@ -127,6 +161,8 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
           status: "success",
         },
       }));
+      prevTripRef.current = null;
+      prevFormRef.current = null;
 
       // Clear the optimistic update after a delay
       setTimeout(() => {
@@ -136,19 +172,34 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         });
       }, 2000);
 
+      /**
+       * Show a success toast.
+       */
       toast({
-        title: "Updated",
         description: `Trip ${field} has been updated successfully.`,
+        title: "Updated",
       });
     } catch (_error) {
-      // Revert optimistic update on error
+      // Revert optimistic update on error using cache or snapshots
       const currentTrip = queryClient.getQueryData(["trip", tripId]) as
         | Trip
         | undefined;
       if (currentTrip) {
         setTrip(currentTrip);
+        setFormData({
+          budget: currentTrip.budget,
+          destination: currentTrip.destination,
+          name: currentTrip.name,
+          travelers: currentTrip.travelers,
+        });
+      } else {
+        if (prevTripRef.current) setTrip(prevTripRef.current);
+        if (prevFormRef.current) setFormData(prevFormRef.current);
       }
 
+      /**
+       * Set the optimistic update to error.
+       */
       setOptimisticUpdates((prev) => ({
         ...prev,
         [field]: {
@@ -157,18 +208,37 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         },
       }));
 
+      /**
+       * Show a failure toast.
+       */
       toast({
-        title: "Update Failed",
         description: `Failed to update trip ${field}. Please try again.`,
+        title: "Update Failed",
         variant: "destructive",
       });
     }
   };
 
-  const handleInputChange = (field: keyof TripUpdate, value: any) => {
+  /**
+   * Handle input change.
+   *
+   * @param field - The field to update.
+   * @param value - The value to update the field to.
+   * @returns A promise that resolves to the input change.
+   */
+  const handleInputChange = (
+    field: keyof TripUpdate,
+    value: TripUpdate[keyof TripUpdate]
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  /**
+   * Handle input blur.
+   *
+   * @param field - The field to update.
+   * @returns A promise that resolves to the input blur.
+   */
   const handleInputBlur = (field: keyof TripUpdate) => {
     const value = formData[field];
     if (value !== trip[field as keyof Trip]) {
@@ -176,6 +246,12 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     }
   };
 
+  /**
+   * Get the field status.
+   *
+   * @param field - The field to get the status of.
+   * @returns The field status.
+   */
   const getFieldStatus = (field: string) => {
     const update = optimisticUpdates[field];
     if (!update) return null;
@@ -190,6 +266,11 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     }
   };
 
+  /**
+   * Get the connection status.
+   *
+   * @returns The connection status.
+   */
   const getConnectionStatus = () => {
     if (!isConnected) {
       return (
@@ -217,6 +298,11 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     );
   };
 
+  /**
+   * Render the optimistic trip updates component.
+   *
+   * @returns The optimistic trip updates component.
+   */
   return (
     <div className="space-y-6">
       {getConnectionStatus()}
@@ -380,11 +466,14 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
 /**
  * Collaboration indicator showing who else is currently editing
+ *
+ * @param tripId - The ID of the trip to show the collaborators for.
+ * @returns The collaboration indicator component.
  */
 export function CollaborationIndicator({ tripId: _tripId }: { tripId: number }) {
   const [activeCollaborators] = useState([
-    { id: "user-456", name: "Alice Johnson", editing: "budget" },
-    { id: "user-789", name: "Bob Smith", editing: null },
+    { editing: "budget", id: "user-456", name: "Alice Johnson" },
+    { editing: null, id: "user-789", name: "Bob Smith" },
   ]);
 
   return (

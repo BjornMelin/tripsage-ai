@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for loading skeleton components, verifying rendering,
- * accessibility, animation, and responsive behavior for various UI skeleton
- * patterns including avatars, cards, charts, forms, lists, and tables.
- */
-
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { render } from "@/test/test-utils";

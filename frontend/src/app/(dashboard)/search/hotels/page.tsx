@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Client page for hotel search with optimistic loading states and curated content.
+ */
 "use client";
 
 import { useState } from "react";
@@ -17,14 +20,24 @@ import { useAccommodationSearch } from "@/hooks/use-accommodation-search";
 import { useSearchStore } from "@/stores/search-store";
 import type { AccommodationSearchParams } from "@/types/search";
 
+/**
+ * Render the hotel search experience with simple loading and empty states.
+ *
+ * @returns The rendered hotel search page.
+ */
 export default function HotelSearchPage() {
-  const { search: _search, isSearching } = useAccommodationSearch();
+  const { search, isSearching } = useAccommodationSearch();
   const { hasResults } = useSearchStore();
   const [hasSearched, setHasSearched] = useState(false);
 
-  const handleSearch = async (_params: AccommodationSearchParams) => {
+  const handleSearch = async (params: AccommodationSearchParams) => {
     setHasSearched(true);
-    // search(params); // Disabled for MVP testing
+    try {
+      await search(params);
+    } catch (error) {
+      // DecisionFramework§2.1(L1): Surface errors via forthcoming UI; console preserves debugging signal.
+      console.error("Accommodation search failed", error);
+    }
   };
 
   return (
@@ -115,13 +128,13 @@ export default function HotelSearchPage() {
                   />
                   <PopularDestinationCard
                     destination="Barcelona"
-                    priceFrom={159}
+                    priceFrom={189}
                     image="/placeholder.jpg"
-                    rating={4.5}
+                    rating={4.8}
                   />
                   <PopularDestinationCard
                     destination="Rome"
-                    priceFrom={169}
+                    priceFrom={219}
                     image="/placeholder.jpg"
                     rating={4.7}
                   />
@@ -164,21 +177,36 @@ export default function HotelSearchPage() {
   );
 }
 
-function PopularDestinationCard({
-  destination,
-  priceFrom,
-  image: _image,
-  rating,
-}: {
+interface PopularDestinationProps {
   destination: string;
   priceFrom: number;
   image: string;
   rating: number;
-}) {
+}
+
+/**
+ * Present a highlighted destination card with pricing and rating metadata.
+ *
+ * @param props - Destination details to display.
+ * @returns A rendered destination card element.
+ */
+function PopularDestinationCard({
+  destination,
+  priceFrom,
+  image,
+  rating,
+}: PopularDestinationProps) {
   return (
-    <Card className="h-full overflow-hidden hover:bg-accent/50 transition-colors cursor-pointer">
-      <div className="h-40 bg-muted flex items-center justify-center">
-        <span className="text-muted-foreground">Image Placeholder</span>
+    <Card className="h-full overflow-hidden transition-colors hover:bg-accent/50 cursor-pointer">
+      <div
+        className="h-40 bg-muted flex items-center justify-center bg-cover bg-center"
+        style={{ backgroundImage: `url(${image})` }}
+        role="img"
+        aria-label={`${destination} destination preview`}
+      >
+        <span className="text-muted-foreground bg-background/80 px-2 py-1 rounded">
+          Image preview
+        </span>
       </div>
       <CardContent className="p-4">
         <div className="flex justify-between items-start">
@@ -201,13 +229,18 @@ function PopularDestinationCard({
   );
 }
 
-function AccommodationTip({
-  title,
-  description,
-}: {
+interface AccommodationTipProps {
   title: string;
   description: string;
-}) {
+}
+
+/**
+ * Display a single accommodation planning tip.
+ *
+ * @param props - The tip content to render.
+ * @returns Structured tip content.
+ */
+function AccommodationTip({ title, description }: AccommodationTipProps) {
   return (
     <div className="p-4 border rounded-lg">
       <h3 className="font-medium mb-1">{title}</h3>

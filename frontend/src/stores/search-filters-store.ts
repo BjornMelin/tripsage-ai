@@ -1,27 +1,51 @@
+/**
+ * @fileoverview Zustand store for managing search filters, sort options, and presets.
+ */
+
 import { z } from "zod";
 import { create, type StateCreator } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { nowIso, secureId } from "@/lib/security/random";
 import type { SearchType } from "@/types/search";
 
 // Validation schemas for filters and sorting
-const SearchTypeSchema = z.enum(["flight", "accommodation", "activity", "destination"]);
-const SortDirectionSchema = z.enum(["asc", "desc"]);
+const SEARCH_TYPE_SCHEMA = z.enum([
+  "flight",
+  "accommodation",
+  "activity",
+  "destination",
+]);
+const SORT_DIRECTION_SCHEMA = z.enum(["asc", "desc"]);
 
-const FilterValueSchema = z.union([
+const FILTER_VALUE_SCHEMA = z.union([
   z.string(),
   z.number(),
   z.boolean(),
   z.array(z.string()),
   z.array(z.number()),
   z.object({
-    min: z.number().optional(),
     max: z.number().optional(),
+    min: z.number().optional(),
   }),
 ]);
 
-const FilterOptionSchema = z.object({
+const FILTER_OPTION_SCHEMA = z.object({
+  category: z.string().optional(),
+  defaultValue: FILTER_VALUE_SCHEMA.optional(),
+  dependencies: z.array(z.string()).optional(), // Filter IDs this filter depends on
+  description: z.string().optional(),
   id: z.string(),
   label: z.string(),
+  options: z
+    .array(
+      z.object({
+        disabled: z.boolean().optional(),
+        label: z.string(),
+        value: z.string(),
+      })
+    )
+    .optional(),
+  required: z.boolean().default(false),
   type: z.enum([
     "text",
     "number",
@@ -32,66 +56,52 @@ const FilterOptionSchema = z.object({
     "date",
     "daterange",
   ]),
-  category: z.string().optional(),
-  description: z.string().optional(),
-  required: z.boolean().default(false),
-  defaultValue: FilterValueSchema.optional(),
-  options: z
-    .array(
-      z.object({
-        value: z.string(),
-        label: z.string(),
-        disabled: z.boolean().optional(),
-      })
-    )
-    .optional(),
   validation: z
     .object({
-      min: z.number().optional(),
       max: z.number().optional(),
+      min: z.number().optional(),
       pattern: z.string().optional(),
       required: z.boolean().optional(),
     })
     .optional(),
-  dependencies: z.array(z.string()).optional(), // Filter IDs this filter depends on
 });
 
-const SortOptionSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  field: z.string(),
-  direction: SortDirectionSchema.default("asc"),
+const SORT_OPTION_SCHEMA = z.object({
   category: z.string().optional(),
   description: z.string().optional(),
-  isDefault: z.boolean().default(false),
-});
-
-const ActiveFilterSchema = z.object({
-  filterId: z.string(),
-  value: FilterValueSchema,
-  displayValue: z.string().optional(),
-  appliedAt: z.string(),
-});
-
-const FilterPresetSchema = z.object({
+  direction: SORT_DIRECTION_SCHEMA.default("asc"),
+  field: z.string(),
   id: z.string(),
-  name: z.string(),
-  description: z.string().optional(),
-  searchType: SearchTypeSchema,
-  filters: z.array(ActiveFilterSchema),
-  sortOption: SortOptionSchema.optional(),
-  isBuiltIn: z.boolean().default(false),
+  isDefault: z.boolean().default(false),
+  label: z.string(),
+});
+
+const ACTIVE_FILTER_SCHEMA = z.object({
+  appliedAt: z.string(),
+  displayValue: z.string().optional(),
+  filterId: z.string(),
+  value: FILTER_VALUE_SCHEMA,
+});
+
+const FILTER_PRESET_SCHEMA = z.object({
   createdAt: z.string(),
+  description: z.string().optional(),
+  filters: z.array(ACTIVE_FILTER_SCHEMA),
+  id: z.string(),
+  isBuiltIn: z.boolean().default(false),
+  name: z.string(),
+  searchType: SEARCH_TYPE_SCHEMA,
+  sortOption: SORT_OPTION_SCHEMA.optional(),
   usageCount: z.number().default(0),
 });
 
 // Types derived from schemas
-export type FilterValue = z.infer<typeof FilterValueSchema>;
-export type ValidatedFilterOption = z.infer<typeof FilterOptionSchema>;
-export type ValidatedSortOption = z.infer<typeof SortOptionSchema>;
-export type ActiveFilter = z.infer<typeof ActiveFilterSchema>;
-export type FilterPreset = z.infer<typeof FilterPresetSchema>;
-export type SortDirection = z.infer<typeof SortDirectionSchema>;
+export type FilterValue = z.infer<typeof FILTER_VALUE_SCHEMA>;
+export type ValidatedFilterOption = z.infer<typeof FILTER_OPTION_SCHEMA>;
+export type ValidatedSortOption = z.infer<typeof SORT_OPTION_SCHEMA>;
+export type ActiveFilter = z.infer<typeof ACTIVE_FILTER_SCHEMA>;
+export type FilterPreset = z.infer<typeof FILTER_PRESET_SCHEMA>;
+export type SortDirection = z.infer<typeof SORT_DIRECTION_SCHEMA>;
 
 // Search filters store interface
 interface SearchFiltersState {
@@ -147,15 +157,15 @@ interface SearchFiltersState {
   removeAvailableSortOption: (searchType: SearchType, optionId: string) => void;
 
   // Active filter management
-  setActiveFilter: (filterId: string, value: FilterValue) => Promise<boolean>;
+  setActiveFilter: (filterId: string, value: FilterValue) => boolean;
   removeActiveFilter: (filterId: string) => void;
-  updateActiveFilter: (filterId: string, value: FilterValue) => Promise<boolean>;
+  updateActiveFilter: (filterId: string, value: FilterValue) => boolean;
   clearAllFilters: () => void;
   clearFiltersByCategory: (category: string) => void;
 
   // Bulk filter operations
-  setMultipleFilters: (filters: Record<string, FilterValue>) => Promise<boolean>;
-  applyFiltersFromObject: (filterObject: Record<string, unknown>) => Promise<boolean>;
+  setMultipleFilters: (filters: Record<string, FilterValue>) => boolean;
+  applyFiltersFromObject: (filterObject: Record<string, unknown>) => boolean;
   resetFiltersToDefault: (searchType?: SearchType) => void;
 
   // Sort management
@@ -165,19 +175,16 @@ interface SearchFiltersState {
   resetSortToDefault: (searchType?: SearchType) => void;
 
   // Filter presets
-  saveFilterPreset: (name: string, description?: string) => Promise<string | null>;
-  loadFilterPreset: (presetId: string) => Promise<boolean>;
-  updateFilterPreset: (
-    presetId: string,
-    updates: Partial<FilterPreset>
-  ) => Promise<boolean>;
+  saveFilterPreset: (name: string, description?: string) => string | null;
+  loadFilterPreset: (presetId: string) => boolean;
+  updateFilterPreset: (presetId: string, updates: Partial<FilterPreset>) => boolean;
   deleteFilterPreset: (presetId: string) => void;
-  duplicateFilterPreset: (presetId: string, newName: string) => Promise<string | null>;
+  duplicateFilterPreset: (presetId: string, newName: string) => string | null;
   incrementPresetUsage: (presetId: string) => void;
 
   // Filter validation
-  validateFilter: (filterId: string, value: FilterValue) => Promise<boolean>;
-  validateAllFilters: () => Promise<boolean>;
+  validateFilter: (filterId: string, value: FilterValue) => boolean;
+  validateAllFilters: () => boolean;
   getFilterValidationError: (filterId: string) => string | null;
 
   // Search type context
@@ -199,180 +206,179 @@ interface SearchFiltersState {
 }
 
 // Helper functions
-const generateId = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const getCurrentTimestamp = () => new Date().toISOString();
+const GENERATE_ID = () => secureId(12);
+const GET_CURRENT_TIMESTAMP = () => nowIso();
 
 // Default filter configurations by search type
-const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
+const GET_DEFAULT_FILTERS = (searchType: SearchType): ValidatedFilterOption[] => {
   switch (searchType) {
     case "flight":
       return [
         {
+          category: "pricing",
           id: "price_range",
           label: "Price Range",
-          type: "range",
           required: false,
-          category: "pricing",
-          validation: { min: 0, max: 10000 },
+          type: "range",
+          validation: { max: 10000, min: 0 },
         },
         {
+          category: "routing",
           id: "stops",
           label: "Number of Stops",
-          type: "select",
-          required: false,
-          category: "routing",
           options: [
-            { value: "0", label: "Direct flights only" },
-            { value: "1", label: "1 stop" },
-            { value: "2", label: "2+ stops" },
+            { label: "Direct flights only", value: "0" },
+            { label: "1 stop", value: "1" },
+            { label: "2+ stops", value: "2" },
           ],
+          required: false,
+          type: "select",
         },
         {
+          category: "airline",
           id: "airlines",
           label: "Airlines",
-          type: "multiselect",
-          required: false,
-          category: "airline",
           options: [], // Would be populated dynamically
+          required: false,
+          type: "multiselect",
         },
         {
+          category: "timing",
           id: "departure_time",
           label: "Departure Time",
-          type: "select",
-          required: false,
-          category: "timing",
           options: [
-            { value: "early_morning", label: "Early Morning (6:00-9:00)" },
-            { value: "morning", label: "Morning (9:00-12:00)" },
-            { value: "afternoon", label: "Afternoon (12:00-18:00)" },
-            { value: "evening", label: "Evening (18:00+)" },
+            { label: "Early Morning (6:00-9:00)", value: "early_morning" },
+            { label: "Morning (9:00-12:00)", value: "morning" },
+            { label: "Afternoon (12:00-18:00)", value: "afternoon" },
+            { label: "Evening (18:00+)", value: "evening" },
           ],
+          required: false,
+          type: "select",
         },
       ];
     case "accommodation":
       return [
         {
+          category: "pricing",
           id: "price_range",
           label: "Price per Night",
-          type: "range",
           required: false,
-          category: "pricing",
-          validation: { min: 0, max: 2000 },
+          type: "range",
+          validation: { max: 2000, min: 0 },
         },
         {
+          category: "quality",
           id: "rating",
           label: "Minimum Rating",
-          type: "select",
-          required: false,
-          category: "quality",
           options: [
-            { value: "3", label: "3+ stars" },
-            { value: "4", label: "4+ stars" },
-            { value: "5", label: "5 stars" },
+            { label: "3+ stars", value: "3" },
+            { label: "4+ stars", value: "4" },
+            { label: "5 stars", value: "5" },
           ],
+          required: false,
+          type: "select",
         },
         {
+          category: "type",
           id: "property_type",
           label: "Property Type",
-          type: "multiselect",
-          required: false,
-          category: "type",
           options: [
-            { value: "hotel", label: "Hotel" },
-            { value: "apartment", label: "Apartment" },
-            { value: "villa", label: "Villa" },
-            { value: "resort", label: "Resort" },
+            { label: "Hotel", value: "hotel" },
+            { label: "Apartment", value: "apartment" },
+            { label: "Villa", value: "villa" },
+            { label: "Resort", value: "resort" },
           ],
+          required: false,
+          type: "multiselect",
         },
         {
+          category: "features",
           id: "amenities",
           label: "Amenities",
-          type: "multiselect",
-          required: false,
-          category: "features",
           options: [
-            { value: "wifi", label: "Free WiFi" },
-            { value: "parking", label: "Free Parking" },
-            { value: "pool", label: "Swimming Pool" },
-            { value: "gym", label: "Fitness Center" },
-            { value: "spa", label: "Spa" },
-            { value: "restaurant", label: "Restaurant" },
+            { label: "Free WiFi", value: "wifi" },
+            { label: "Free Parking", value: "parking" },
+            { label: "Swimming Pool", value: "pool" },
+            { label: "Fitness Center", value: "gym" },
+            { label: "Spa", value: "spa" },
+            { label: "Restaurant", value: "restaurant" },
           ],
+          required: false,
+          type: "multiselect",
         },
       ];
     case "activity":
       return [
         {
+          category: "pricing",
           id: "price_range",
           label: "Price Range",
-          type: "range",
           required: false,
-          category: "pricing",
-          validation: { min: 0, max: 500 },
+          type: "range",
+          validation: { max: 500, min: 0 },
         },
         {
+          category: "timing",
           id: "duration",
           label: "Duration",
-          type: "range",
           required: false,
-          category: "timing",
-          validation: { min: 1, max: 480 }, // minutes
+          type: "range",
+          validation: { max: 480, min: 1 }, // minutes
         },
         {
+          category: "experience",
           id: "difficulty",
           label: "Difficulty Level",
-          type: "select",
-          required: false,
-          category: "experience",
           options: [
-            { value: "easy", label: "Easy" },
-            { value: "moderate", label: "Moderate" },
-            { value: "challenging", label: "Challenging" },
-            { value: "extreme", label: "Extreme" },
+            { label: "Easy", value: "easy" },
+            { label: "Moderate", value: "moderate" },
+            { label: "Challenging", value: "challenging" },
+            { label: "Extreme", value: "extreme" },
           ],
+          required: false,
+          type: "select",
         },
         {
+          category: "type",
           id: "category",
           label: "Activity Type",
-          type: "multiselect",
-          required: false,
-          category: "type",
           options: [
-            { value: "outdoor", label: "Outdoor Adventures" },
-            { value: "cultural", label: "Cultural Experiences" },
-            { value: "food", label: "Food & Drink" },
-            { value: "sightseeing", label: "Sightseeing" },
-            { value: "sports", label: "Sports & Recreation" },
+            { label: "Outdoor Adventures", value: "outdoor" },
+            { label: "Cultural Experiences", value: "cultural" },
+            { label: "Food & Drink", value: "food" },
+            { label: "Sightseeing", value: "sightseeing" },
+            { label: "Sports & Recreation", value: "sports" },
           ],
+          required: false,
+          type: "multiselect",
         },
       ];
     case "destination":
       return [
         {
+          category: "type",
           id: "destination_type",
           label: "Destination Type",
-          type: "multiselect",
-          required: false,
-          category: "type",
           options: [
-            { value: "city", label: "Cities" },
-            { value: "country", label: "Countries" },
-            { value: "region", label: "Regions" },
-            { value: "landmark", label: "Landmarks" },
+            { label: "Cities", value: "city" },
+            { label: "Countries", value: "country" },
+            { label: "Regions", value: "region" },
+            { label: "Landmarks", value: "landmark" },
           ],
+          required: false,
+          type: "multiselect",
         },
         {
+          category: "demographics",
           id: "population",
           label: "Population Size",
-          type: "select",
-          required: false,
-          category: "demographics",
           options: [
-            { value: "small", label: "Small (< 100k)" },
-            { value: "medium", label: "Medium (100k - 1M)" },
-            { value: "large", label: "Large (1M+)" },
+            { label: "Small (< 100k)", value: "small" },
+            { label: "Medium (100k - 1M)", value: "medium" },
+            { label: "Large (1M+)", value: "large" },
           ],
+          required: false,
+          type: "select",
         },
       ];
     default:
@@ -380,28 +386,28 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
   }
 };
 
-const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] => {
+const GET_DEFAULT_SORT_OPTIONS = (searchType: SearchType): ValidatedSortOption[] => {
   const commonSorts = [
     {
-      id: "relevance",
-      label: "Relevance",
+      direction: "desc" as SortDirection,
       field: "score",
-      direction: "desc" as SortDirection,
+      id: "relevance",
       isDefault: true,
+      label: "Relevance",
     },
     {
-      id: "price_low",
-      label: "Price: Low to High",
-      field: "price",
       direction: "asc" as SortDirection,
+      field: "price",
+      id: "price_low",
       isDefault: false,
+      label: "Price: Low to High",
     },
     {
-      id: "price_high",
-      label: "Price: High to Low",
-      field: "price",
       direction: "desc" as SortDirection,
+      field: "price",
+      id: "price_high",
       isDefault: false,
+      label: "Price: High to Low",
     },
   ];
 
@@ -410,113 +416,113 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
       return [
         ...commonSorts,
         {
-          id: "duration",
-          label: "Duration",
+          direction: "asc" as SortDirection,
           field: "totalDuration",
-          direction: "asc" as SortDirection,
+          id: "duration",
           isDefault: false,
+          label: "Duration",
         },
         {
-          id: "departure",
-          label: "Departure Time",
+          direction: "asc" as SortDirection,
           field: "departureTime",
-          direction: "asc" as SortDirection,
+          id: "departure",
           isDefault: false,
+          label: "Departure Time",
         },
         {
-          id: "arrival",
-          label: "Arrival Time",
+          direction: "asc" as SortDirection,
           field: "arrivalTime",
-          direction: "asc" as SortDirection,
+          id: "arrival",
           isDefault: false,
+          label: "Arrival Time",
         },
         {
-          id: "stops",
-          label: "Fewest Stops",
-          field: "stops",
           direction: "asc" as SortDirection,
+          field: "stops",
+          id: "stops",
           isDefault: false,
+          label: "Fewest Stops",
         },
       ];
     case "accommodation":
       return [
         ...commonSorts,
         {
-          id: "rating",
-          label: "Highest Rated",
+          direction: "desc" as SortDirection,
           field: "rating",
-          direction: "desc" as SortDirection,
+          id: "rating",
           isDefault: false,
+          label: "Highest Rated",
         },
         {
-          id: "distance",
-          label: "Distance",
-          field: "distance",
           direction: "asc" as SortDirection,
+          field: "distance",
+          id: "distance",
           isDefault: false,
+          label: "Distance",
         },
         {
-          id: "reviews",
-          label: "Most Reviews",
-          field: "reviewCount",
           direction: "desc" as SortDirection,
+          field: "reviewCount",
+          id: "reviews",
           isDefault: false,
+          label: "Most Reviews",
         },
       ];
     case "activity":
       return [
         ...commonSorts,
         {
-          id: "rating",
-          label: "Highest Rated",
+          direction: "desc" as SortDirection,
           field: "rating",
-          direction: "desc" as SortDirection,
+          id: "rating",
           isDefault: false,
+          label: "Highest Rated",
         },
         {
-          id: "duration",
-          label: "Duration",
-          field: "duration",
           direction: "asc" as SortDirection,
+          field: "duration",
+          id: "duration",
           isDefault: false,
+          label: "Duration",
         },
         {
-          id: "popularity",
-          label: "Most Popular",
-          field: "bookingCount",
           direction: "desc" as SortDirection,
+          field: "bookingCount",
+          id: "popularity",
           isDefault: false,
+          label: "Most Popular",
         },
       ];
     case "destination":
       return [
         {
-          id: "relevance",
-          label: "Relevance",
+          direction: "desc" as SortDirection,
           field: "score",
-          direction: "desc" as SortDirection,
+          id: "relevance",
           isDefault: true,
+          label: "Relevance",
         },
         {
-          id: "alphabetical",
-          label: "Alphabetical",
+          direction: "asc" as SortDirection,
           field: "name",
-          direction: "asc" as SortDirection,
+          id: "alphabetical",
           isDefault: false,
+          label: "Alphabetical",
         },
         {
-          id: "population",
-          label: "Population",
-          field: "population",
           direction: "desc" as SortDirection,
+          field: "population",
+          id: "population",
           isDefault: false,
+          label: "Population",
         },
         {
-          id: "distance",
-          label: "Distance",
-          field: "distance",
           direction: "asc" as SortDirection,
+          field: "distance",
+          id: "distance",
           isDefault: false,
+          label: "Distance",
         },
       ];
     default:
@@ -525,7 +531,7 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
 };
 
 // Helper to compute derived state
-const computeDerivedState = (state: Partial<SearchFiltersState>) => {
+const COMPUTE_DERIVED_STATE = (state: Partial<SearchFiltersState>) => {
   const hasActiveFilters = Object.keys(state.activeFilters || {}).length > 0;
   const activeFilterCount = Object.keys(state.activeFilters || {}).length;
   const canClearFilters = hasActiveFilters || state.activeSortOption !== null;
@@ -545,7 +551,7 @@ const computeDerivedState = (state: Partial<SearchFiltersState>) => {
       const valueStr = Array.isArray(activeFilter.value)
         ? activeFilter.value.join(", ")
         : typeof activeFilter.value === "object" && activeFilter.value !== null
-          ? `${(activeFilter.value as any).min || ""} - ${(activeFilter.value as any).max || ""}`
+          ? `${(activeFilter.value as { min?: number; max?: number }).min || ""} - ${(activeFilter.value as { min?: number; max?: number }).max || ""}`
           : String(activeFilter.value);
       summaries.push(`${filter.label}: ${valueStr}`);
     }
@@ -553,17 +559,17 @@ const computeDerivedState = (state: Partial<SearchFiltersState>) => {
   const appliedFilterSummary = summaries.join("; ");
 
   return {
-    hasActiveFilters,
     activeFilterCount,
+    appliedFilterSummary,
     canClearFilters,
     currentFilters,
     currentSortOptions,
-    appliedFilterSummary,
+    hasActiveFilters,
   };
 };
 
 // Custom middleware to compute derived state with proper TypeScript typing
-const withComputedState =
+const WITH_COMPUTED_STATE =
   <T extends SearchFiltersState>(
     config: StateCreator<T, [], [], T>
   ): StateCreator<T, [], [], T> =>
@@ -575,7 +581,7 @@ const withComputedState =
       const newState = typeof partial === "function" ? partial(get()) : partial;
       const currentState = get();
       const mergedState = replace ? newState : { ...currentState, ...newState };
-      const derived = computeDerivedState(mergedState);
+      const derived = COMPUTE_DERIVED_STATE(mergedState);
       if (replace) {
         set({ ...newState, ...derived } as T, true);
       } else {
@@ -592,7 +598,7 @@ const withComputedState =
       const newState = typeof partial === "function" ? partial(get()) : partial;
       const currentState = get();
       const mergedState = replace ? newState : { ...currentState, ...newState };
-      const derived = computeDerivedState(mergedState);
+      const derived = COMPUTE_DERIVED_STATE(mergedState);
       if (replace) {
         originalSetState({ ...newState, ...derived } as T, true);
       } else {
@@ -606,67 +612,16 @@ const withComputedState =
 export const useSearchFiltersStore = create<SearchFiltersState>()(
   devtools(
     persist(
-      withComputedState((set, get) => ({
-        // Initial state
-        availableFilters: {
-          flight: getDefaultFilters("flight"),
-          accommodation: getDefaultFilters("accommodation"),
-          activity: getDefaultFilters("activity"),
-          destination: getDefaultFilters("destination"),
-        },
-        availableSortOptions: {
-          flight: getDefaultSortOptions("flight"),
-          accommodation: getDefaultSortOptions("accommodation"),
-          activity: getDefaultSortOptions("activity"),
-          destination: getDefaultSortOptions("destination"),
-        },
+      WITH_COMPUTED_STATE((set, get) => ({
+        activeFilterCount: 0,
 
         // Active filters and sorting
         activeFilters: {},
-        activeSortOption: null,
-        currentSearchType: null,
-
-        // Filter presets
-        filterPresets: [],
         activePreset: null,
-
-        // Filter state management
-        isApplyingFilters: false,
-        filterValidationErrors: {},
-
-        // Computed properties (initialized by middleware)
-        hasActiveFilters: false,
-        activeFilterCount: 0,
-        canClearFilters: false,
-        currentFilters: [],
-        currentSortOptions: [],
-        appliedFilterSummary: "",
-
-        // Filter configuration actions
-        setAvailableFilters: (
-          searchType: SearchType,
-          filters: ValidatedFilterOption[]
-        ) => {
-          // Validate filters
-          const validatedFilters = filters.filter((filter: ValidatedFilterOption) => {
-            const result = FilterOptionSchema.safeParse(filter);
-            if (!result.success) {
-              console.error(`Invalid filter for ${searchType}:`, result.error);
-              return false;
-            }
-            return true;
-          });
-
-          set((state) => ({
-            availableFilters: {
-              ...state.availableFilters,
-              [searchType]: validatedFilters,
-            },
-          }));
-        },
+        activeSortOption: null,
 
         addAvailableFilter: (searchType: SearchType, filter: ValidatedFilterOption) => {
-          const result = FilterOptionSchema.safeParse(filter);
+          const result = FILTER_OPTION_SCHEMA.safeParse(filter);
           if (result.success) {
             set((state) => ({
               availableFilters: {
@@ -682,63 +637,8 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           }
         },
 
-        updateAvailableFilter: (
-          searchType: SearchType,
-          filterId: string,
-          updates: Partial<ValidatedFilterOption>
-        ) => {
-          set((state) => {
-            const filters = state.availableFilters[searchType] || [];
-            const updatedFilters = filters.map((filter: ValidatedFilterOption) => {
-              if (filter.id === filterId) {
-                const updatedFilter = { ...filter, ...updates };
-                const result = FilterOptionSchema.safeParse(updatedFilter);
-                return result.success ? result.data : filter;
-              }
-              return filter;
-            });
-
-            return {
-              availableFilters: {
-                ...state.availableFilters,
-                [searchType]: updatedFilters,
-              },
-            };
-          });
-        },
-
-        removeAvailableFilter: (searchType: SearchType, filterId: string) => {
-          set((state) => ({
-            availableFilters: {
-              ...state.availableFilters,
-              [searchType]: (state.availableFilters[searchType] || []).filter(
-                (f) => f.id !== filterId
-              ),
-            },
-          }));
-        },
-
-        // Sort options configuration
-        setAvailableSortOptions: (searchType, options) => {
-          const validatedOptions = options.filter((option) => {
-            const result = SortOptionSchema.safeParse(option);
-            if (!result.success) {
-              console.error(`Invalid sort option for ${searchType}:`, result.error);
-              return false;
-            }
-            return true;
-          });
-
-          set((state) => ({
-            availableSortOptions: {
-              ...state.availableSortOptions,
-              [searchType]: validatedOptions,
-            },
-          }));
-        },
-
         addAvailableSortOption: (searchType, option) => {
-          const result = SortOptionSchema.safeParse(option);
+          const result = SORT_OPTION_SCHEMA.safeParse(option);
           if (result.success) {
             set((state) => ({
               availableSortOptions: {
@@ -753,94 +653,47 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             console.error("Invalid sort option:", result.error);
           }
         },
+        appliedFilterSummary: "",
 
-        updateAvailableSortOption: (searchType, optionId, updates) => {
-          set((state) => {
-            const options = state.availableSortOptions[searchType] || [];
-            const updatedOptions = options.map((option) => {
-              if (option.id === optionId) {
-                const updatedOption = { ...option, ...updates };
-                const result = SortOptionSchema.safeParse(updatedOption);
-                return result.success ? result.data : option;
-              }
-              return option;
-            });
-
-            return {
-              availableSortOptions: {
-                ...state.availableSortOptions,
-                [searchType]: updatedOptions,
-              },
-            };
-          });
-        },
-
-        removeAvailableSortOption: (searchType, optionId) => {
-          set((state) => ({
-            availableSortOptions: {
-              ...state.availableSortOptions,
-              [searchType]: (state.availableSortOptions[searchType] || []).filter(
-                (o) => o.id !== optionId
-              ),
-            },
-          }));
-        },
-
-        // Active filter management
-        setActiveFilter: async (filterId, value) => {
-          set({ isApplyingFilters: true });
-
-          try {
-            const isValid = await get().validateFilter(filterId, value);
-            if (!isValid) {
-              set({ isApplyingFilters: false });
-              return false;
+        applyFiltersFromObject: (filterObject) => {
+          // Convert Record<string, unknown> to Record<string, FilterValue>
+          const validatedFilters: Record<string, FilterValue> = {};
+          for (const [key, value] of Object.entries(filterObject)) {
+            // Only include values that match FilterValue type
+            if (
+              typeof value === "string" ||
+              typeof value === "number" ||
+              typeof value === "boolean" ||
+              Array.isArray(value) ||
+              (typeof value === "object" &&
+                value !== null &&
+                ("min" in value || "max" in value))
+            ) {
+              validatedFilters[key] = value as FilterValue;
             }
-
-            const newActiveFilter: ActiveFilter = {
-              filterId,
-              value,
-              appliedAt: getCurrentTimestamp(),
-            };
-
-            set((state) => ({
-              activeFilters: {
-                ...state.activeFilters,
-                [filterId]: newActiveFilter,
-              },
-              isApplyingFilters: false,
-              activePreset: null, // Clear active preset when filters change manually
-            }));
-
-            return true;
-          } catch (error) {
-            console.error("Failed to set active filter:", error);
-            set({ isApplyingFilters: false });
-            return false;
           }
+          return get().setMultipleFilters(validatedFilters);
         },
-
-        removeActiveFilter: (filterId) => {
-          set((state) => {
-            const newActiveFilters = { ...state.activeFilters };
-            delete newActiveFilters[filterId];
-
-            return {
-              activeFilters: newActiveFilters,
-              activePreset: null, // Clear active preset when filters change
-            };
-          });
+        // Initial state
+        availableFilters: {
+          accommodation: GET_DEFAULT_FILTERS("accommodation"),
+          activity: GET_DEFAULT_FILTERS("activity"),
+          destination: GET_DEFAULT_FILTERS("destination"),
+          flight: GET_DEFAULT_FILTERS("flight"),
         },
-
-        updateActiveFilter: async (filterId, value) => {
-          return await get().setActiveFilter(filterId, value);
+        availableSortOptions: {
+          accommodation: GET_DEFAULT_SORT_OPTIONS("accommodation"),
+          activity: GET_DEFAULT_SORT_OPTIONS("activity"),
+          destination: GET_DEFAULT_SORT_OPTIONS("destination"),
+          flight: GET_DEFAULT_SORT_OPTIONS("flight"),
         },
+        canClearFilters: false,
 
         clearAllFilters: () => {
           set({
             activeFilters: {},
-            activeSortOption: null,
             activePreset: null,
+            activeSortOption: null,
             filterValidationErrors: {},
           });
         },
@@ -859,157 +712,128 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           set({ activeFilters: newActiveFilters });
         },
 
-        // Bulk filter operations
-        setMultipleFilters: async (filters) => {
-          set({ isApplyingFilters: true });
-
-          try {
-            const newActiveFilters: Record<string, ActiveFilter> = {};
-            const timestamp = getCurrentTimestamp();
-
-            for (const [filterId, value] of Object.entries(filters)) {
-              const isValid = await get().validateFilter(filterId, value);
-              if (isValid) {
-                newActiveFilters[filterId] = {
-                  filterId,
-                  value,
-                  appliedAt: timestamp,
-                };
-              }
-            }
-
-            set({
-              activeFilters: { ...get().activeFilters, ...newActiveFilters },
-              isApplyingFilters: false,
-              activePreset: null,
-            });
-
-            return true;
-          } catch (error) {
-            console.error("Failed to set multiple filters:", error);
-            set({ isApplyingFilters: false });
-            return false;
-          }
-        },
-
-        applyFiltersFromObject: async (filterObject) => {
-          // Convert Record<string, unknown> to Record<string, FilterValue>
-          const validatedFilters: Record<string, FilterValue> = {};
-          for (const [key, value] of Object.entries(filterObject)) {
-            // Only include values that match FilterValue type
-            if (
-              typeof value === "string" ||
-              typeof value === "number" ||
-              typeof value === "boolean" ||
-              Array.isArray(value) ||
-              (typeof value === "object" &&
-                value !== null &&
-                ("min" in value || "max" in value))
-            ) {
-              validatedFilters[key] = value as FilterValue;
-            }
-          }
-          return await get().setMultipleFilters(validatedFilters);
-        },
-
-        resetFiltersToDefault: (searchType) => {
-          const targetSearchType = searchType || get().currentSearchType;
-          if (!targetSearchType) return;
-
-          getDefaultFilters(targetSearchType); // Get default filters
-          const defaultSort = getDefaultSortOptions(targetSearchType).find(
-            (s) => s.isDefault
-          );
-
-          set({
-            activeFilters: {},
-            activeSortOption: defaultSort || null,
-            activePreset: null,
-            filterValidationErrors: {},
+        clearValidationError: (filterId) => {
+          set((state) => {
+            const newErrors = { ...state.filterValidationErrors };
+            delete newErrors[filterId];
+            return { filterValidationErrors: newErrors };
           });
         },
 
-        // Sort management
-        setActiveSortOption: (option) => {
-          if (option) {
-            const result = SortOptionSchema.safeParse(option);
-            if (result.success) {
-              set({
-                activeSortOption: result.data,
-                activePreset: null, // Clear active preset when sort changes
-              });
-            } else {
-              console.error("Invalid sort option:", result.error);
-            }
-          } else {
-            set({ activeSortOption: null });
-          }
+        // Utility actions
+        clearValidationErrors: () => {
+          set({ filterValidationErrors: {} });
+        },
+        currentFilters: [],
+        currentSearchType: null,
+        currentSortOptions: [],
+
+        deleteFilterPreset: (presetId) => {
+          set((state) => ({
+            activePreset:
+              state.activePreset?.id === presetId ? null : state.activePreset,
+            filterPresets: state.filterPresets.filter((p) => p.id !== presetId),
+          }));
         },
 
-        setSortById: (optionId) => {
-          const { currentSortOptions } = get();
-          const option = currentSortOptions.find((o) => o.id === optionId);
-          if (option) {
-            get().setActiveSortOption(option);
+        duplicateFilterPreset: (presetId, newName) => {
+          const { filterPresets } = get();
+          const originalPreset = filterPresets.find((p) => p.id === presetId);
+
+          if (!originalPreset) return null;
+
+          const duplicatedPreset: FilterPreset = {
+            ...originalPreset,
+            createdAt: GET_CURRENT_TIMESTAMP(),
+            id: GENERATE_ID(),
+            isBuiltIn: false,
+            name: newName,
+            usageCount: 0,
+          };
+
+          const result = FILTER_PRESET_SCHEMA.safeParse(duplicatedPreset);
+          if (result.success) {
+            set((state) => ({
+              filterPresets: [...state.filterPresets, result.data],
+            }));
+            return duplicatedPreset.id;
           }
-        },
 
-        toggleSortDirection: () => {
-          const { activeSortOption } = get();
-          if (activeSortOption) {
-            const newDirection = activeSortOption.direction === "asc" ? "desc" : "asc";
-            get().setActiveSortOption({
-              ...activeSortOption,
-              direction: newDirection,
-            });
-          }
-        },
-
-        resetSortToDefault: (searchType) => {
-          const targetSearchType = searchType || get().currentSearchType;
-          if (!targetSearchType) return;
-
-          const defaultSort = getDefaultSortOptions(targetSearchType).find(
-            (s) => s.isDefault
-          );
-          set({ activeSortOption: defaultSort || null });
+          return null;
         },
 
         // Filter presets
-        saveFilterPreset: async (name, description) => {
-          const { currentSearchType, activeFilters, activeSortOption } = get();
-          if (!currentSearchType) return null;
+        filterPresets: [],
+        filterValidationErrors: {},
 
-          try {
-            const presetId = generateId();
-            const newPreset: FilterPreset = {
-              id: presetId,
-              name,
-              description,
-              searchType: currentSearchType,
-              filters: Object.values(activeFilters),
-              sortOption: activeSortOption || undefined,
-              isBuiltIn: false,
-              createdAt: getCurrentTimestamp(),
-              usageCount: 0,
-            };
+        getFilterDependencies: (filterId) => {
+          const { currentFilters } = get();
+          const filter = currentFilters.find((f) => f.id === filterId);
 
-            const result = FilterPresetSchema.safeParse(newPreset);
-            if (result.success) {
-              set((state) => ({
-                filterPresets: [...state.filterPresets, result.data],
-              }));
-              return presetId;
-            }
-            console.error("Invalid filter preset:", result.error);
-            return null;
-          } catch (error) {
-            console.error("Failed to save filter preset:", error);
-            return null;
-          }
+          if (!filter || !filter.dependencies) return [];
+
+          return currentFilters.filter((f) => filter.dependencies?.includes(f.id));
         },
 
-        loadFilterPreset: async (presetId) => {
+        // Filter insights and analytics
+        getFilterUsageStats: () => {
+          const { filterPresets } = get();
+          const stats: Record<string, { count: number; lastUsed: string }> = {};
+
+          filterPresets.forEach((preset) => {
+            preset.filters.forEach((filter) => {
+              const filterId = filter.filterId;
+              if (!stats[filterId]) {
+                stats[filterId] = { count: 0, lastUsed: "" };
+              }
+              stats[filterId].count += preset.usageCount;
+              if (filter.appliedAt > stats[filterId].lastUsed) {
+                stats[filterId].lastUsed = filter.appliedAt;
+              }
+            });
+          });
+
+          return stats;
+        },
+
+        getFilterValidationError: (filterId) => {
+          return get().filterValidationErrors[filterId] || null;
+        },
+
+        getMostUsedFilters: (searchType, limit = 5) => {
+          const { currentFilters } = get();
+          const targetFilters = searchType
+            ? get().availableFilters[searchType] || []
+            : currentFilters;
+
+          const usageStats = get().getFilterUsageStats();
+
+          return targetFilters
+            .map((filter) => ({
+              ...filter,
+              usageCount: usageStats[filter.id]?.count || 0,
+            }))
+            .sort((a, b) => b.usageCount - a.usageCount)
+            .slice(0, limit);
+        },
+
+        // Computed properties (initialized by middleware)
+        hasActiveFilters: false,
+
+        incrementPresetUsage: (presetId) => {
+          set((state) => ({
+            filterPresets: state.filterPresets.map((preset) =>
+              preset.id === presetId
+                ? { ...preset, usageCount: preset.usageCount + 1 }
+                : preset
+            ),
+          }));
+        },
+
+        // Filter state management
+        isApplyingFilters: false,
+
+        loadFilterPreset: (presetId) => {
           const { filterPresets } = get();
           const preset = filterPresets.find((p) => p.id === presetId);
 
@@ -1026,8 +850,8 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
 
             set({
               activeFilters: newActiveFilters,
-              activeSortOption: preset.sortOption || null,
               activePreset: preset,
+              activeSortOption: preset.sortOption || null,
               isApplyingFilters: false,
             });
 
@@ -1042,13 +866,344 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           }
         },
 
-        updateFilterPreset: async (presetId, updates) => {
+        removeActiveFilter: (filterId) => {
+          set((state) => {
+            const newActiveFilters = { ...state.activeFilters };
+            delete newActiveFilters[filterId];
+
+            return {
+              activeFilters: newActiveFilters,
+              activePreset: null, // Clear active preset when filters change
+            };
+          });
+        },
+
+        removeAvailableFilter: (searchType: SearchType, filterId: string) => {
+          set((state) => ({
+            availableFilters: {
+              ...state.availableFilters,
+              [searchType]: (state.availableFilters[searchType] || []).filter(
+                (f) => f.id !== filterId
+              ),
+            },
+          }));
+        },
+
+        removeAvailableSortOption: (searchType, optionId) => {
+          set((state) => ({
+            availableSortOptions: {
+              ...state.availableSortOptions,
+              [searchType]: (state.availableSortOptions[searchType] || []).filter(
+                (o) => o.id !== optionId
+              ),
+            },
+          }));
+        },
+
+        reset: () => {
+          set({
+            activeFilters: {},
+            activePreset: null,
+            activeSortOption: null,
+            currentSearchType: null,
+            filterPresets: [],
+            filterValidationErrors: {},
+            isApplyingFilters: false,
+          });
+        },
+
+        resetFiltersToDefault: (searchType) => {
+          const targetSearchType = searchType || get().currentSearchType;
+          if (!targetSearchType) return;
+
+          GET_DEFAULT_FILTERS(targetSearchType); // Get default filters
+          const defaultSort = GET_DEFAULT_SORT_OPTIONS(targetSearchType).find(
+            (s) => s.isDefault
+          );
+
+          set({
+            activeFilters: {},
+            activePreset: null,
+            activeSortOption: defaultSort || null,
+            filterValidationErrors: {},
+          });
+        },
+
+        resetSortToDefault: (searchType) => {
+          const targetSearchType = searchType || get().currentSearchType;
+          if (!targetSearchType) return;
+
+          const defaultSort = GET_DEFAULT_SORT_OPTIONS(targetSearchType).find(
+            (s) => s.isDefault
+          );
+          set({ activeSortOption: defaultSort || null });
+        },
+
+        // Filter presets
+        saveFilterPreset: (name, description) => {
+          const { currentSearchType, activeFilters, activeSortOption } = get();
+          if (!currentSearchType) return null;
+
+          try {
+            const presetId = GENERATE_ID();
+            const newPreset: FilterPreset = {
+              createdAt: GET_CURRENT_TIMESTAMP(),
+              description,
+              filters: Object.values(activeFilters),
+              id: presetId,
+              isBuiltIn: false,
+              name,
+              searchType: currentSearchType,
+              sortOption: activeSortOption || undefined,
+              usageCount: 0,
+            };
+
+            const result = FILTER_PRESET_SCHEMA.safeParse(newPreset);
+            if (result.success) {
+              set((state) => ({
+                filterPresets: [...state.filterPresets, result.data],
+              }));
+              return presetId;
+            }
+            console.error("Invalid filter preset:", result.error);
+            return null;
+          } catch (error) {
+            console.error("Failed to save filter preset:", error);
+            return null;
+          }
+        },
+
+        // Active filter management
+        setActiveFilter: (filterId, value) => {
+          set({ isApplyingFilters: true });
+
+          try {
+            const isValid = get().validateFilter(filterId, value);
+            if (!isValid) {
+              set({ isApplyingFilters: false });
+              return false;
+            }
+
+            const newActiveFilter: ActiveFilter = {
+              appliedAt: GET_CURRENT_TIMESTAMP(),
+              filterId,
+              value,
+            };
+
+            set((state) => ({
+              activeFilters: {
+                ...state.activeFilters,
+                [filterId]: newActiveFilter,
+              },
+              activePreset: null, // Clear active preset when filters change manually
+              isApplyingFilters: false,
+            }));
+
+            return true;
+          } catch (error) {
+            console.error("Failed to set active filter:", error);
+            set({ isApplyingFilters: false });
+            return false;
+          }
+        },
+
+        // Sort management
+        setActiveSortOption: (option) => {
+          if (option) {
+            const result = SORT_OPTION_SCHEMA.safeParse(option);
+            if (result.success) {
+              set({
+                activePreset: null, // Clear active preset when sort changes
+                activeSortOption: result.data,
+              });
+            } else {
+              console.error("Invalid sort option:", result.error);
+            }
+          } else {
+            set({ activeSortOption: null });
+          }
+        },
+
+        // Filter configuration actions
+        setAvailableFilters: (
+          searchType: SearchType,
+          filters: ValidatedFilterOption[]
+        ) => {
+          // Validate filters
+          const validatedFilters = filters.filter((filter: ValidatedFilterOption) => {
+            const result = FILTER_OPTION_SCHEMA.safeParse(filter);
+            if (!result.success) {
+              console.error(`Invalid filter for ${searchType}:`, result.error);
+              return false;
+            }
+            return true;
+          });
+
+          set((state) => ({
+            availableFilters: {
+              ...state.availableFilters,
+              [searchType]: validatedFilters,
+            },
+          }));
+        },
+
+        // Sort options configuration
+        setAvailableSortOptions: (searchType, options) => {
+          const validatedOptions = options.filter((option) => {
+            const result = SORT_OPTION_SCHEMA.safeParse(option);
+            if (!result.success) {
+              console.error(`Invalid sort option for ${searchType}:`, result.error);
+              return false;
+            }
+            return true;
+          });
+
+          set((state) => ({
+            availableSortOptions: {
+              ...state.availableSortOptions,
+              [searchType]: validatedOptions,
+            },
+          }));
+        },
+
+        // Bulk filter operations
+        setMultipleFilters: (filters) => {
+          set({ isApplyingFilters: true });
+
+          try {
+            const newActiveFilters: Record<string, ActiveFilter> = {};
+            const timestamp = GET_CURRENT_TIMESTAMP();
+
+            for (const [filterId, value] of Object.entries(filters)) {
+              const isValid = get().validateFilter(filterId, value);
+              if (isValid) {
+                newActiveFilters[filterId] = {
+                  appliedAt: timestamp,
+                  filterId,
+                  value,
+                };
+              }
+            }
+
+            set({
+              activeFilters: { ...get().activeFilters, ...newActiveFilters },
+              activePreset: null,
+              isApplyingFilters: false,
+            });
+
+            return true;
+          } catch (error) {
+            console.error("Failed to set multiple filters:", error);
+            set({ isApplyingFilters: false });
+            return false;
+          }
+        },
+
+        // Search type context
+        setSearchType: (searchType) => {
+          const result = SEARCH_TYPE_SCHEMA.safeParse(searchType);
+          if (result.success) {
+            const { availableSortOptions } = get();
+            const defaultSort = availableSortOptions[searchType]?.find(
+              (s) => s.isDefault
+            );
+
+            set({
+              activePreset: null, // Clear preset when changing search type
+              activeSortOption: defaultSort || null,
+              currentSearchType: result.data,
+            });
+          } else {
+            console.error("Invalid search type:", result.error);
+          }
+        },
+
+        setSortById: (optionId) => {
+          const { currentSortOptions } = get();
+          const option = currentSortOptions.find((o) => o.id === optionId);
+          if (option) {
+            get().setActiveSortOption(option);
+          }
+        },
+
+        softReset: () => {
+          set({
+            activeFilters: {},
+            activePreset: null,
+            activeSortOption: null,
+            filterValidationErrors: {},
+            isApplyingFilters: false,
+          });
+        },
+
+        toggleSortDirection: () => {
+          const { activeSortOption } = get();
+          if (activeSortOption) {
+            const newDirection = activeSortOption.direction === "asc" ? "desc" : "asc";
+            get().setActiveSortOption({
+              ...activeSortOption,
+              direction: newDirection,
+            });
+          }
+        },
+
+        updateActiveFilter: (filterId, value) => {
+          return get().setActiveFilter(filterId, value);
+        },
+
+        updateAvailableFilter: (
+          searchType: SearchType,
+          filterId: string,
+          updates: Partial<ValidatedFilterOption>
+        ) => {
+          set((state) => {
+            const filters = state.availableFilters[searchType] || [];
+            const updatedFilters = filters.map((filter: ValidatedFilterOption) => {
+              if (filter.id === filterId) {
+                const updatedFilter = { ...filter, ...updates };
+                const result = FILTER_OPTION_SCHEMA.safeParse(updatedFilter);
+                return result.success ? result.data : filter;
+              }
+              return filter;
+            });
+
+            return {
+              availableFilters: {
+                ...state.availableFilters,
+                [searchType]: updatedFilters,
+              },
+            };
+          });
+        },
+
+        updateAvailableSortOption: (searchType, optionId, updates) => {
+          set((state) => {
+            const options = state.availableSortOptions[searchType] || [];
+            const updatedOptions = options.map((option) => {
+              if (option.id === optionId) {
+                const updatedOption = { ...option, ...updates };
+                const result = SORT_OPTION_SCHEMA.safeParse(updatedOption);
+                return result.success ? result.data : option;
+              }
+              return option;
+            });
+
+            return {
+              availableSortOptions: {
+                ...state.availableSortOptions,
+                [searchType]: updatedOptions,
+              },
+            };
+          });
+        },
+
+        updateFilterPreset: (presetId, updates) => {
           try {
             set((state) => {
               const updatedPresets = state.filterPresets.map((preset) => {
                 if (preset.id === presetId) {
                   const updatedPreset = { ...preset, ...updates };
-                  const result = FilterPresetSchema.safeParse(updatedPreset);
+                  const result = FILTER_PRESET_SCHEMA.safeParse(updatedPreset);
                   return result.success ? result.data : preset;
                 }
                 return preset;
@@ -1064,52 +1219,17 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           }
         },
 
-        deleteFilterPreset: (presetId) => {
-          set((state) => ({
-            filterPresets: state.filterPresets.filter((p) => p.id !== presetId),
-            activePreset:
-              state.activePreset?.id === presetId ? null : state.activePreset,
-          }));
-        },
+        validateAllFilters: () => {
+          const { activeFilters } = get();
+          const results = Object.entries(activeFilters).map(([filterId, filter]) => {
+            return get().validateFilter(filterId, filter.value);
+          });
 
-        duplicateFilterPreset: async (presetId, newName) => {
-          const { filterPresets } = get();
-          const originalPreset = filterPresets.find((p) => p.id === presetId);
-
-          if (!originalPreset) return null;
-
-          const duplicatedPreset: FilterPreset = {
-            ...originalPreset,
-            id: generateId(),
-            name: newName,
-            isBuiltIn: false,
-            createdAt: getCurrentTimestamp(),
-            usageCount: 0,
-          };
-
-          const result = FilterPresetSchema.safeParse(duplicatedPreset);
-          if (result.success) {
-            set((state) => ({
-              filterPresets: [...state.filterPresets, result.data],
-            }));
-            return duplicatedPreset.id;
-          }
-
-          return null;
-        },
-
-        incrementPresetUsage: (presetId) => {
-          set((state) => ({
-            filterPresets: state.filterPresets.map((preset) =>
-              preset.id === presetId
-                ? { ...preset, usageCount: preset.usageCount + 1 }
-                : preset
-            ),
-          }));
+          return results.every((result) => result);
         },
 
         // Filter validation
-        validateFilter: async (filterId, value) => {
+        validateFilter: (filterId, value) => {
           const { currentFilters } = get();
           const filterConfig = currentFilters.find((f) => f.id === filterId);
 
@@ -1125,7 +1245,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
 
           try {
             // Validate value against filter configuration
-            const valueResult = FilterValueSchema.safeParse(value);
+            const valueResult = FILTER_VALUE_SCHEMA.safeParse(value);
             if (!valueResult.success) {
               throw new Error("Invalid filter value format");
             }
@@ -1198,131 +1318,14 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             return false;
           }
         },
-
-        validateAllFilters: async () => {
-          const { activeFilters } = get();
-          const validationPromises = Object.entries(activeFilters).map(
-            async ([filterId, filter]) => {
-              return await get().validateFilter(filterId, filter.value);
-            }
-          );
-
-          const results = await Promise.all(validationPromises);
-          return results.every((result) => result);
-        },
-
-        getFilterValidationError: (filterId) => {
-          return get().filterValidationErrors[filterId] || null;
-        },
-
-        // Search type context
-        setSearchType: (searchType) => {
-          const result = SearchTypeSchema.safeParse(searchType);
-          if (result.success) {
-            const { availableSortOptions } = get();
-            const defaultSort = availableSortOptions[searchType]?.find(
-              (s) => s.isDefault
-            );
-
-            set({
-              currentSearchType: result.data,
-              activeSortOption: defaultSort || null,
-              activePreset: null, // Clear preset when changing search type
-            });
-          } else {
-            console.error("Invalid search type:", result.error);
-          }
-        },
-
-        // Filter insights and analytics
-        getFilterUsageStats: () => {
-          const { filterPresets } = get();
-          const stats: Record<string, { count: number; lastUsed: string }> = {};
-
-          filterPresets.forEach((preset) => {
-            preset.filters.forEach((filter) => {
-              const filterId = filter.filterId;
-              if (!stats[filterId]) {
-                stats[filterId] = { count: 0, lastUsed: "" };
-              }
-              stats[filterId].count += preset.usageCount;
-              if (filter.appliedAt > stats[filterId].lastUsed) {
-                stats[filterId].lastUsed = filter.appliedAt;
-              }
-            });
-          });
-
-          return stats;
-        },
-
-        getMostUsedFilters: (searchType, limit = 5) => {
-          const { currentFilters } = get();
-          const targetFilters = searchType
-            ? get().availableFilters[searchType] || []
-            : currentFilters;
-
-          const usageStats = get().getFilterUsageStats();
-
-          return targetFilters
-            .map((filter) => ({
-              ...filter,
-              usageCount: usageStats[filter.id]?.count || 0,
-            }))
-            .sort((a, b) => b.usageCount - a.usageCount)
-            .slice(0, limit);
-        },
-
-        getFilterDependencies: (filterId) => {
-          const { currentFilters } = get();
-          const filter = currentFilters.find((f) => f.id === filterId);
-
-          if (!filter || !filter.dependencies) return [];
-
-          return currentFilters.filter((f) => filter.dependencies?.includes(f.id));
-        },
-
-        // Utility actions
-        clearValidationErrors: () => {
-          set({ filterValidationErrors: {} });
-        },
-
-        clearValidationError: (filterId) => {
-          set((state) => {
-            const newErrors = { ...state.filterValidationErrors };
-            delete newErrors[filterId];
-            return { filterValidationErrors: newErrors };
-          });
-        },
-
-        reset: () => {
-          set({
-            activeFilters: {},
-            activeSortOption: null,
-            currentSearchType: null,
-            filterPresets: [],
-            activePreset: null,
-            isApplyingFilters: false,
-            filterValidationErrors: {},
-          });
-        },
-
-        softReset: () => {
-          set({
-            activeFilters: {},
-            activeSortOption: null,
-            activePreset: null,
-            isApplyingFilters: false,
-            filterValidationErrors: {},
-          });
-        },
       })),
       {
         name: "search-filters-storage",
         partialize: (state) => ({
-          // Persist filter presets and available configurations
-          filterPresets: state.filterPresets,
           availableFilters: state.availableFilters,
           availableSortOptions: state.availableSortOptions,
+          // Persist filter presets and available configurations
+          filterPresets: state.filterPresets,
         }),
       }
     ),

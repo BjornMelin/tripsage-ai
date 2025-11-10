@@ -1,8 +1,9 @@
 /**
  * @fileoverview React hook for authenticated API requests.
  *
- * Provides JWT token management and refresh for Supabase authentication.
- * Handles request cancellation, session refresh, and error recovery.
+ * This hook provides JWT token management and automatic refresh for Supabase
+ * authentication. It handles request cancellation, session refresh, error recovery,
+ * and provides typed HTTP method helpers for making authenticated API calls.
  */
 
 "use client";
@@ -15,10 +16,13 @@ import { createClient } from "@/lib/supabase/client";
 /**
  * Hook for authenticated API calls with JWT token management.
  *
- * Provides API client with automatic Supabase JWT tokens, token refresh,
- * request cancellation, and typed HTTP method helpers.
+ * This hook provides an API client with automatic Supabase JWT token management,
+ * including token refresh, request cancellation, and typed HTTP method helpers.
+ * It handles authentication state changes and automatically refreshes expired tokens.
  *
- * @returns Object with authenticated API methods and authentication state
+ * @return Object containing authenticated API methods and current authentication
+ * state. The API methods include get, post, put, patch, delete, and upload functions
+ * that automatically include valid JWT tokens in their requests.
  */
 export function useAuthenticatedApi() {
   const supabase = createClient();
@@ -40,15 +44,15 @@ export function useAuthenticatedApi() {
   }, [supabase]);
 
   const makeAuthenticatedRequest = useCallback(
-    async <T = any>(endpoint: string, options: FetchOptions = {}): Promise<T> => {
+    async <T = unknown>(endpoint: string, options: FetchOptions = {}): Promise<T> => {
       if (!isAuthenticated) {
         // Verify with a fresh call in case of stale state
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData.session?.access_token) {
           throw new ApiError({
+            code: "UNAUTHORIZED",
             message: "User not authenticated",
             status: 401,
-            code: "UNAUTHORIZED",
           });
         }
       }
@@ -64,9 +68,9 @@ export function useAuthenticatedApi() {
         } = await supabase.auth.getSession();
         if (sessionError) {
           throw new ApiError({
+            code: "SESSION_ERROR",
             message: `Session error: ${sessionError.message}`,
             status: 401,
-            code: "SESSION_ERROR",
           });
         }
 
@@ -78,9 +82,9 @@ export function useAuthenticatedApi() {
           if (refreshError || !refreshed?.access_token) {
             await supabase.auth.signOut();
             throw new ApiError({
+              code: "SESSION_EXPIRED",
               message: "Authentication session expired",
               status: 401,
-              code: "SESSION_EXPIRED",
             });
           }
           session = refreshed;
@@ -115,15 +119,15 @@ export function useAuthenticatedApi() {
         }
         if (error instanceof DOMException && error.name === "AbortError") {
           throw new ApiError({
+            code: "REQUEST_CANCELLED",
             message: "Request cancelled",
             status: 499,
-            code: "REQUEST_CANCELLED",
           });
         }
         throw new ApiError({
+          code: "NETWORK_ERROR",
           message: error instanceof Error ? error.message : "Request failed",
           status: 0,
-          code: "NETWORK_ERROR",
         });
       }
     },
@@ -132,49 +136,49 @@ export function useAuthenticatedApi() {
 
   const authenticatedApi = useMemo(
     () => ({
-      get: <T = any>(endpoint: string, options?: Omit<FetchOptions, "method">) =>
-        makeAuthenticatedRequest<T>(endpoint, { ...options, method: "GET" }),
-      post: <T = any>(
-        endpoint: string,
-        data?: any,
-        options?: Omit<FetchOptions, "method" | "body">
-      ) =>
-        makeAuthenticatedRequest<T>(endpoint, {
-          ...options,
-          method: "POST",
-          body: data ? JSON.stringify(data) : undefined,
-        }),
-      put: <T = any>(
-        endpoint: string,
-        data?: any,
-        options?: Omit<FetchOptions, "method" | "body">
-      ) =>
-        makeAuthenticatedRequest<T>(endpoint, {
-          ...options,
-          method: "PUT",
-          body: data ? JSON.stringify(data) : undefined,
-        }),
-      patch: <T = any>(
-        endpoint: string,
-        data?: any,
-        options?: Omit<FetchOptions, "method" | "body">
-      ) =>
-        makeAuthenticatedRequest<T>(endpoint, {
-          ...options,
-          method: "PATCH",
-          body: data ? JSON.stringify(data) : undefined,
-        }),
-      delete: <T = any>(endpoint: string, options?: Omit<FetchOptions, "method">) =>
+      delete: <T = unknown>(endpoint: string, options?: Omit<FetchOptions, "method">) =>
         makeAuthenticatedRequest<T>(endpoint, { ...options, method: "DELETE" }),
-      upload: <T = any>(
+      get: <T = unknown>(endpoint: string, options?: Omit<FetchOptions, "method">) =>
+        makeAuthenticatedRequest<T>(endpoint, { ...options, method: "GET" }),
+      patch: <T = unknown>(
+        endpoint: string,
+        data?: unknown,
+        options?: Omit<FetchOptions, "method" | "body">
+      ) =>
+        makeAuthenticatedRequest<T>(endpoint, {
+          ...options,
+          body: data ? JSON.stringify(data) : undefined,
+          method: "PATCH",
+        }),
+      post: <T = unknown>(
+        endpoint: string,
+        data?: unknown,
+        options?: Omit<FetchOptions, "method" | "body">
+      ) =>
+        makeAuthenticatedRequest<T>(endpoint, {
+          ...options,
+          body: data ? JSON.stringify(data) : undefined,
+          method: "POST",
+        }),
+      put: <T = unknown>(
+        endpoint: string,
+        data?: unknown,
+        options?: Omit<FetchOptions, "method" | "body">
+      ) =>
+        makeAuthenticatedRequest<T>(endpoint, {
+          ...options,
+          body: data ? JSON.stringify(data) : undefined,
+          method: "PUT",
+        }),
+      upload: <T = unknown>(
         endpoint: string,
         formData: FormData,
         options?: Omit<FetchOptions, "method" | "body">
       ) =>
         makeAuthenticatedRequest<T>(endpoint, {
           ...options,
-          method: "POST",
           body: formData,
+          method: "POST",
         }),
     }),
     [makeAuthenticatedRequest]
@@ -191,19 +195,25 @@ export function useAuthenticatedApi() {
   }, []);
 
   return {
-    makeAuthenticatedRequest,
     authenticatedApi,
     cancelRequests,
     isAuthenticated,
+    makeAuthenticatedRequest,
   };
 }
 
 /**
  * Return type of the useAuthenticatedApi hook.
+ *
+ * This type represents the complete return value of the useAuthenticatedApi hook,
+ * including both the authenticated API methods and authentication state.
  */
 export type AuthenticatedApiReturn = ReturnType<typeof useAuthenticatedApi>;
 
 /**
  * Type of the authenticatedApi object returned by useAuthenticatedApi.
+ *
+ * This type represents just the API methods object (get, post, put, patch, delete, upload)
+ * without the authentication state properties.
  */
 export type AuthenticatedApi = AuthenticatedApiReturn["authenticatedApi"];

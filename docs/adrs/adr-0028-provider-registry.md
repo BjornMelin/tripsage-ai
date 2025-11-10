@@ -41,3 +41,16 @@ We are migrating to AI SDK v6 providers and removing Python-based provider wrapp
 ## Security
 
 - BYOK fetched with SECURITY DEFINER RPCs; keys exist only in server memory of route handlers and registry. No client exposure.
+
+## Gateway Compatibility
+
+- If Vercel AI Gateway is enabled for upstream provider routing, attribution headers are handled at the Gateway layer where supported. For OpenRouter specifically, ensure either:
+  - App attribution is configured in the Gateway settings for the OpenRouter integration, or
+  - The registry continues to set `HTTP-Referer` and `X-Title` when targeting `https://openrouter.ai/api/v1` directly.
+
+- Headers remain server-side only and are never forwarded to clients. No behavioral differences are expected for downstream routes; attribution affects only provider leaderboard tracking.
+
+## Testing Status
+
+- Vitest unit tests cover provider precedence and OpenRouter attribution header injection in `frontend/src/lib/providers/__tests__/registry.test.ts`.
+- Chat streaming adds `provider` to message metadata for observability and debugging.

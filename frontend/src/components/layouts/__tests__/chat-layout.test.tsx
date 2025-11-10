@@ -1,43 +1,52 @@
-/**
- * @fileoverview Unit tests for ChatLayout components including ChatLayout,
- * ChatSidebar, and AgentStatusPanel, covering layout rendering, sidebar
- * collapse/expand functionality, agent status display, and chat navigation.
- */
-
-import { screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { AgentStatusState } from "@/stores/agent-status-store";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 import { useChatStore } from "@/stores/chat-store";
+import {
+  createMockAgentStatusState,
+  createMockChatState,
+} from "@/test/factories/stores";
 import { render } from "@/test/test-utils";
 import { AgentStatusPanel, ChatLayout, ChatSidebar } from "../chat-layout";
 
-// Mock the stores
-vi.mock("@/stores/chat-store", () => ({
-  useChatStore: vi.fn(),
-}));
+// Store mocks (partial to preserve non-mocked exports)
+vi.mock("@/stores/chat-store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/stores/chat-store")>();
+  return {
+    ...actual,
+    useChatStore: vi.fn(),
+  };
+});
+vi.mock("@/stores/agent-status-store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/stores/agent-status-store")>();
+  return {
+    ...actual,
+    useAgentStatusStore: vi.fn(),
+  };
+});
 
-vi.mock("@/stores/agent-status-store", () => ({
-  useAgentStatusStore: vi.fn(),
-}));
-
-// Mock Next.js router
+// Next.js router mock
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(() => "/chat"),
 }));
 
+const MOCK_USE_CHAT_STORE = vi.mocked(useChatStore);
+const MOCK_USE_AGENT_STATUS_STORE = vi.mocked(useAgentStatusStore);
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
+
 describe("ChatLayout", () => {
   beforeEach(() => {
-    // Mock store implementations
-    (useChatStore as any).mockReturnValue({
-      sessions: [],
-      currentSessionId: null,
-      createSession: vi.fn(),
-    });
+    MOCK_USE_CHAT_STORE.mockReturnValue(createMockChatState());
+    MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(createMockAgentStatusState());
+  });
 
-    (useAgentStatusStore as any).mockReturnValue({
-      activeAgents: [],
-      isMonitoring: false,
-    });
+  afterEach(() => {
+    // No fake timers required for these tests
   });
 
   it("renders with children content", () => {
@@ -63,14 +72,14 @@ describe("ChatLayout", () => {
 
   it("hides sidebar when collapsed", () => {
     render(
-      <ChatLayout sidebarCollapsed={true}>
+      <ChatLayout sidebarCollapsed>
         <div>Content</div>
       </ChatLayout>
     );
 
-    // Sidebar should have width of 0 when collapsed
-    const sidebar = screen.getByText("New Chat").closest('[class*="w-0"]');
+    const sidebar = screen.getByTestId("chat-sidebar");
     expect(sidebar).toBeInTheDocument();
+    expect(sidebar.getAttribute("data-collapsed")).toBe("true");
   });
 
   it("shows agent panel by default", () => {
@@ -102,14 +111,17 @@ describe("ChatLayout", () => {
       </ChatLayout>
     );
 
-    const newChatButton = screen.getByText("New Chat");
-    newChatButton.click();
-
-    expect(onNewChat).toHaveBeenCalled();
+    const button = screen.getByRole("button", { name: /new chat/i });
+    fireEvent.click(button);
+    expect(onNewChat).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("ChatSidebar", () => {
+  beforeEach(() => {
+    MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(createMockAgentStatusState());
+  });
+
   it("renders recent chats section", () => {
     render(<ChatSidebar />);
 
@@ -133,14 +145,17 @@ describe("ChatSidebar", () => {
 
     render(<ChatSidebar onNewChat={onNewChat} />);
 
-    const newChatButton = screen.getByText("New Chat");
-    newChatButton.click();
-
-    expect(onNewChat).toHaveBeenCalled();
+    const button = screen.getByRole("button", { name: /new chat/i });
+    fireEvent.click(button);
+    expect(onNewChat).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("AgentStatusPanel", () => {
+  beforeEach(() => {
+    MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(createMockAgentStatusState());
+  });
+
   it("renders agent status header", () => {
     render(<AgentStatusPanel />);
 
@@ -148,10 +163,12 @@ describe("AgentStatusPanel", () => {
   });
 
   it("shows no active agents message when no agents are active", () => {
-    (useAgentStatusStore as any).mockReturnValue({
-      activeAgents: [],
-      isMonitoring: false,
-    });
+    MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(
+      createMockAgentStatusState({
+        activeAgents: [],
+        agents: [],
+      })
+    );
 
     render(<AgentStatusPanel />);
 
@@ -159,19 +176,34 @@ describe("AgentStatusPanel", () => {
   });
 
   it("shows active agents when available", () => {
-    (useAgentStatusStore as any).mockReturnValue({
-      activeAgents: [
+    const mockAgent = {
+      createdAt: new Date().toISOString(),
+      currentTaskId: "00000000-0000-0000-0000-000000000012",
+      id: "00000000-0000-0000-0000-000000000011",
+      name: "Flight Agent",
+      progress: 75,
+      status: "active" as const,
+      tasks: [
         {
-          id: "1",
-          name: "Flight Agent",
-          status: "active",
-          currentTaskId: "t1",
-          tasks: [{ id: "t1", description: "Searching for flights" }],
+          createdAt: new Date().toISOString(),
+          description: "Searching for flights",
+          id: "00000000-0000-0000-0000-000000000012",
           progress: 75,
+          status: "in_progress" as const,
+          title: "Search Flights",
+          updatedAt: new Date().toISOString(),
         },
       ],
-      isMonitoring: false,
-    });
+      type: "flight-search",
+      updatedAt: new Date().toISOString(),
+    } satisfies AgentStatusState["agents"][number];
+
+    MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(
+      createMockAgentStatusState({
+        activeAgents: [mockAgent],
+        agents: [mockAgent],
+      })
+    );
 
     render(<AgentStatusPanel />);
 
@@ -187,14 +219,14 @@ describe("AgentStatusPanel", () => {
   });
 
   it("displays loading state indicator", () => {
-    (useAgentStatusStore as any).mockReturnValue({
-      activeAgents: [],
-      isMonitoring: true,
-    });
+    MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(
+      createMockAgentStatusState({
+        isMonitoring: true,
+      })
+    );
 
     render(<AgentStatusPanel />);
 
-    // The status indicator should be yellow when loading
     const statusIndicator = screen
       .getByText("Agent Status")
       .parentElement?.querySelector(".bg-yellow-500");

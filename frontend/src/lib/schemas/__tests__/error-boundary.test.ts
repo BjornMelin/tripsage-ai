@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for error boundary Zod schemas, validating component props,
- * error states, loading states, skeleton configurations, and route error handling
- * with type checking and edge case coverage.
- */
-
 import { describe, expect, it } from "vitest";
 import {
   errorBoundaryPropsSchema,
@@ -37,9 +31,9 @@ describe("errorBoundaryPropsSchema", () => {
 describe("errorStateSchema", () => {
   it("validates valid error state", () => {
     const validState = {
-      hasError: true,
       error: new Error("Test error"),
       errorInfo: { componentStack: "Component stack" },
+      hasError: true,
     };
 
     expect(() => errorStateSchema.parse(validState)).not.toThrow();
@@ -47,9 +41,9 @@ describe("errorStateSchema", () => {
 
   it("validates state with null error", () => {
     const stateWithNullError = {
-      hasError: false,
       error: null,
       errorInfo: null,
+      hasError: false,
     };
 
     expect(() => errorStateSchema.parse(stateWithNullError)).not.toThrow();
@@ -57,9 +51,9 @@ describe("errorStateSchema", () => {
 
   it("requires hasError boolean", () => {
     const invalidState = {
-      hasError: "true", // should be boolean
       error: null,
       errorInfo: null,
+      hasError: "true", // should be boolean
     };
 
     expect(() => errorStateSchema.parse(invalidState)).toThrow();
@@ -70,7 +64,9 @@ describe("routeErrorPropsSchema", () => {
   it("validates valid route error props", () => {
     const validProps = {
       error: new Error("Route error"),
-      reset: () => {},
+      reset: () => {
+        // Empty reset function for test
+      },
     };
 
     expect(() => routeErrorPropsSchema.parse(validProps)).not.toThrow();
@@ -79,7 +75,9 @@ describe("routeErrorPropsSchema", () => {
   it("validates error without digest", () => {
     const propsWithoutDigest = {
       error: new Error("Route error"),
-      reset: () => {},
+      reset: () => {
+        // Empty reset function for test
+      },
     };
 
     expect(() => routeErrorPropsSchema.parse(propsWithoutDigest)).not.toThrow();
@@ -88,8 +86,8 @@ describe("routeErrorPropsSchema", () => {
   it("requires reset function", () => {
     const invalidProps = {
       error: {
-        name: "Error",
         message: "Route error",
+        name: "Error",
       },
       // missing reset function
     };
@@ -102,7 +100,9 @@ describe("globalErrorPropsSchema", () => {
   it("validates valid global error props", () => {
     const validProps = {
       error: new Error("Critical error"),
-      reset: () => {},
+      reset: () => {
+        // Empty reset function for test
+      },
     };
 
     expect(() => globalErrorPropsSchema.parse(validProps)).not.toThrow();
@@ -140,11 +140,11 @@ describe("loadingStateSchema", () => {
 describe("skeletonPropsSchema", () => {
   it("validates valid skeleton props", () => {
     const validProps = {
+      animation: "wave" as const,
       className: "custom-class",
+      height: 50,
       variant: "circular" as const,
       width: "100px",
-      height: 50,
-      animation: "wave" as const,
     };
 
     expect(() => skeletonPropsSchema.parse(validProps)).not.toThrow();
@@ -165,13 +165,13 @@ describe("skeletonPropsSchema", () => {
   });
 
   it("rejects invalid variant", () => {
-    const invalidProps = { variant: "invalid" } as any;
+    const invalidProps = { variant: "invalid" } as { variant: string };
     expect(() => skeletonPropsSchema.parse(invalidProps)).toThrow();
   });
 
   it("accepts string and number dimensions", () => {
-    const propsWithStringDimensions = { width: "100px", height: "50px" };
-    const propsWithNumberDimensions = { width: 100, height: 50 };
+    const propsWithStringDimensions = { height: "50px", width: "100px" };
+    const propsWithNumberDimensions = { height: 50, width: 100 };
     expect(() => skeletonPropsSchema.parse(propsWithStringDimensions)).not.toThrow();
     expect(() => skeletonPropsSchema.parse(propsWithNumberDimensions)).not.toThrow();
   });

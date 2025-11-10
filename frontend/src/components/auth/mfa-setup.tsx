@@ -23,21 +23,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
-interface MFASetupProps {
+interface MfaSetupProps {
   onComplete: (backupCodes: string[]) => void;
   onCancel: () => void;
 }
 
-interface MFASetupData {
+interface MfaSetupData {
   secret: string;
   qrCodeUrl: string;
   backupCodes: string[];
   manualEntryKey: string;
 }
 
-export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
+export function MfaSetup({ onComplete, onCancel }: MfaSetupProps) {
   const [step, setStep] = useState<"setup" | "verify" | "complete">("setup");
-  const [setupData, setSetupData] = useState<MFASetupData | null>(null);
+  const [setupData, setSetupData] = useState<MfaSetupData | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,10 +52,7 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
       // Mock API call - replace with actual implementation
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const mockSetupData: MFASetupData = {
-        secret: "JBSWY3DPEHPK3PXP",
-        qrCodeUrl:
-          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+      const mockSetupData: MfaSetupData = {
         backupCodes: [
           "12345-67890",
           "23456-78901",
@@ -69,6 +66,9 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
           "01234-56789",
         ],
         manualEntryKey: "JBSWY3DPEHPK3PXP",
+        qrCodeUrl:
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+        secret: "JBSWY3DPEHPK3PXP",
       };
 
       setSetupData(mockSetupData);

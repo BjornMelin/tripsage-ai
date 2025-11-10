@@ -1,6 +1,6 @@
 /**
- * Complete TypeScript definitions for all Supabase database tables
- * Generated from database schema for type-safe operations
+ * @fileoverview Complete TypeScript definitions for all Supabase database tables
+ * Generated from database schema for type-safe database operations
  */
 
 export type Json =

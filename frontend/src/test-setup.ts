@@ -5,9 +5,16 @@
  */
 
 import { cleanup } from "@testing-library/react";
+import React from "react";
 import { afterEach, vi } from "vitest";
 import "@testing-library/jest-dom";
+import {
+  ReadableStream as NodeReadableStream,
+  TransformStream as NodeTransformStream,
+  WritableStream as NodeWritableStream,
+} from "node:stream/web";
 import { createMockSupabaseClient } from "./test/mock-helpers";
+import { resetTestQueryClient } from "./test/test-utils";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -16,33 +23,33 @@ type UnknownRecord = Record<string, unknown>;
  * @param _props Optional toast properties that are ignored by the mock.
  * @returns A toast handle containing dismiss and update spies.
  */
-const mockToast = vi.fn((_props?: UnknownRecord) => ({
-  id: `toast-${Date.now()}`,
+const MOCK_TOAST = vi.fn((_props?: UnknownRecord) => ({
   dismiss: vi.fn(),
+  id: `toast-${Date.now()}`,
   update: vi.fn(),
 }));
 
 vi.mock("@/components/ui/use-toast", () => ({
+  toast: MOCK_TOAST,
   useToast: vi.fn(() => ({
-    toast: mockToast,
     dismiss: vi.fn(),
+    toast: MOCK_TOAST,
     toasts: [],
   })),
-  toast: mockToast,
 }));
 
 vi.mock("zustand/middleware", () => ({
-  persist: <T>(fn: T) => fn,
-  devtools: <T>(fn: T) => fn,
-  subscribeWithSelector: <T>(fn: T) => fn,
   combine: <T>(fn: T) => fn,
+  devtools: <T>(fn: T) => fn,
+  persist: <T>(fn: T) => fn,
+  subscribeWithSelector: <T>(fn: T) => fn,
 }));
 
-const mockSupabase = createMockSupabaseClient();
+const MOCK_SUPABASE = createMockSupabaseClient();
 vi.mock("@/lib/supabase/client", () => ({
-  useSupabase: () => mockSupabase,
-  getBrowserClient: () => mockSupabase,
-  createClient: () => mockSupabase,
+  createClient: () => MOCK_SUPABASE,
+  getBrowserClient: () => MOCK_SUPABASE,
+  useSupabase: () => MOCK_SUPABASE,
 }));
 
 vi.mock("next/navigation", () => {
@@ -54,9 +61,23 @@ vi.mock("next/navigation", () => {
   const prefetch = vi.fn();
 
   return {
-    useRouter: () => ({ push, replace, refresh, back, forward, prefetch }),
     usePathname: () => "/",
+    useRouter: () => ({ back, forward, prefetch, push, refresh, replace }),
     useSearchParams: () => new URLSearchParams(),
+  };
+});
+
+// Simplify Next/Image for tests to avoid overhead and ESM/DOM quirks
+vi.mock("next/image", () => {
+  return {
+    default: (props: Record<string, unknown> & { src?: string; alt?: string }) => {
+      const { src, alt, ...rest } = props ?? {};
+      return React.createElement("img", {
+        alt: alt ?? "",
+        src: typeof src === "string" ? src : "",
+        ...rest,
+      } as Record<string, unknown>);
+    },
   };
 });
 
@@ -65,33 +86,33 @@ vi.mock("next/navigation", () => {
  * @param defaultMatches Whether the media query should report a match by default.
  * @returns A function producing MediaQueryList mocks.
  */
-const createMatchMediaMock =
+const CREATE_MATCH_MEDIA_MOCK =
   (defaultMatches = false) =>
   (query: string): MediaQueryList => ({
+    addEventListener: vi.fn(),
+    addListener: vi.fn(),
+    dispatchEvent: vi.fn(),
     matches: query === "(prefers-color-scheme: dark)" ? defaultMatches : false,
     media: query,
     onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
+    removeListener: vi.fn(),
   });
 
 /**
  * Build a mock Storage implementation backed by a Map.
  * @returns A Storage-compatible mock object.
  */
-const createMockStorage = (): Storage => {
+const CREATE_MOCK_STORAGE = (): Storage => {
   const store = new Map<string, string>();
 
   return {
-    get length() {
-      return store.size;
-    },
     clear: vi.fn(() => store.clear()),
     getItem: vi.fn((key: string) => store.get(key) ?? null),
     key: vi.fn((index: number) => Array.from(store.keys())[index] ?? null),
+    get length() {
+      return store.size;
+    },
     removeItem: vi.fn((key: string) => {
       store.delete(key);
     }),
@@ -102,9 +123,15 @@ const createMockStorage = (): Storage => {
 };
 
 class MockResizeObserver implements ResizeObserver {
-  observe(): void {}
-  unobserve(): void {}
-  disconnect(): void {}
+  observe(): void {
+    // Mock implementation - no-op
+  }
+  unobserve(): void {
+    // Mock implementation - no-op
+  }
+  disconnect(): void {
+    // Mock implementation - no-op
+  }
 }
 
 class MockIntersectionObserver implements IntersectionObserver {
@@ -112,9 +139,15 @@ class MockIntersectionObserver implements IntersectionObserver {
   readonly rootMargin = "";
   readonly thresholds: number[] = [];
 
-  observe(): void {}
-  unobserve(): void {}
-  disconnect(): void {}
+  observe(): void {
+    // Mock implementation - no-op
+  }
+  unobserve(): void {
+    // Mock implementation - no-op
+  }
+  disconnect(): void {
+    // Mock implementation - no-op
+  }
   takeRecords(): IntersectionObserverEntry[] {
     return [];
   }
@@ -124,38 +157,32 @@ class MockIntersectionObserver implements IntersectionObserver {
  * Helper constant to check if we're in a JSDOM environment.
  * Used to conditionally apply window-specific mocks.
  */
-const isJSDOMEnvironment = typeof window !== "undefined";
+const IS_JSDOM_ENVIRONMENT = typeof window !== "undefined";
 
-if (isJSDOMEnvironment) {
-  const windowRef = globalThis.window as Window & typeof globalThis;
+if (IS_JSDOM_ENVIRONMENT) {
+  const WINDOW_REF = globalThis.window as Window & typeof globalThis;
 
-  Object.defineProperty(windowRef, "location", {
-    value: {
-      href: "https://example.com",
-      reload: vi.fn(),
-    },
-    writable: true,
-  });
+  // Use JSDOM default location; avoid redefining to prevent errors in vmThreads
 
-  Object.defineProperty(windowRef, "navigator", {
+  Object.defineProperty(WINDOW_REF, "navigator", {
     value: {
       userAgent: "Vitest",
     },
     writable: true,
   });
 
-  Object.defineProperty(windowRef, "matchMedia", {
-    writable: true,
+  Object.defineProperty(WINDOW_REF, "matchMedia", {
     configurable: true,
-    value: createMatchMediaMock(false),
+    value: CREATE_MATCH_MEDIA_MOCK(false),
+    writable: true,
   });
 
-  Object.defineProperty(windowRef, "localStorage", {
-    value: createMockStorage(),
+  Object.defineProperty(WINDOW_REF, "localStorage", {
+    value: CREATE_MOCK_STORAGE(),
   });
 
-  Object.defineProperty(windowRef, "sessionStorage", {
-    value: createMockStorage(),
+  Object.defineProperty(WINDOW_REF, "sessionStorage", {
+    value: CREATE_MOCK_STORAGE(),
   });
 }
 
@@ -172,25 +199,40 @@ if (isJSDOMEnvironment) {
 };
 
 // Only provide a global fetch mock in JSDOM, where window is available.
-if (isJSDOMEnvironment) {
+if (IS_JSDOM_ENVIRONMENT) {
   globalThis.fetch = vi.fn() as unknown as typeof fetch;
 }
 
-const consoleSpies: Console = {
-  ...console,
-  error: vi.fn(),
-  warn: vi.fn(),
-  log: vi.fn(),
-  info: vi.fn(),
-  debug: vi.fn(),
-  trace: vi.fn(),
+// Provide Web Streams polyfills for environments missing them (used by
+// eventsource-parser / AI SDK transport in tests)
+type RS = typeof ReadableStream;
+type WS = typeof WritableStream;
+type TS = typeof TransformStream;
+const GLOBAL_STREAMS = globalThis as typeof globalThis & {
+  ReadableStream?: RS;
+  WritableStream?: WS;
+  TransformStream?: TS;
 };
+if (!GLOBAL_STREAMS.ReadableStream) {
+  (GLOBAL_STREAMS as { ReadableStream?: RS }).ReadableStream =
+    NodeReadableStream as unknown as RS;
+}
+if (!GLOBAL_STREAMS.WritableStream) {
+  (GLOBAL_STREAMS as { WritableStream?: WS }).WritableStream =
+    NodeWritableStream as unknown as WS;
+}
+if (!GLOBAL_STREAMS.TransformStream) {
+  (GLOBAL_STREAMS as { TransformStream?: TS }).TransformStream =
+    NodeTransformStream as unknown as TS;
+}
 
-globalThis.console = consoleSpies;
+// Console is NOT mocked globally to allow real errors to surface during testing.
+// Tests that expect specific console output should use vi.spyOn(console, "error")
+// locally and restore it after the test.
 
 if (typeof process !== "undefined" && process.env) {
-  const originalEnv = process.env;
-  process.env = new Proxy(originalEnv, {
+  const ORIGINAL_ENV = process.env;
+  process.env = new Proxy(ORIGINAL_ENV, {
     get(target, prop: string) {
       if (prop === "NODE_ENV" && !target.NODE_ENV) {
         return "test";
@@ -205,5 +247,8 @@ if (typeof process !== "undefined" && process.env) {
 
 afterEach(() => {
   cleanup();
+  resetTestQueryClient();
   vi.restoreAllMocks();
 });
+
+// Timers are configured per-suite in store tests when needed.

@@ -2,6 +2,7 @@
  * @fileoverview Chat page integrating AI Elements primitives with AI SDK v6.
  * Uses the official `useChat` hook to manage UI message streams and state.
  */
+
 "use client";
 
 import { useChat } from "@ai-sdk/react";
@@ -37,6 +38,13 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
+import { Response } from "@/components/ai-elements/response";
+import {
+  Source,
+  Sources,
+  SourcesContent,
+  SourcesTrigger,
+} from "@/components/ai-elements/sources";
 import { useSupabase } from "@/lib/supabase/client";
 
 /**
@@ -84,6 +92,8 @@ function useCurrentUserId(): string | null {
  * @param message UI message streamed by the AI SDK transport.
  * @returns Rendered message content.
  */
+// Type intentionally inferred from parts; explicit alias not required.
+
 function ChatMessageItem({ message }: { message: UIMessage }) {
   const parts = message.parts ?? [];
   return (
@@ -97,11 +107,7 @@ function ChatMessageItem({ message }: { message: UIMessage }) {
           parts.map((part, idx) => {
             switch (part?.type) {
               case "text":
-                return (
-                  <p key={`${message.id}-t-${idx}`} className="whitespace-pre-wrap">
-                    {part.text}
-                  </p>
-                );
+                return <Response key={`${message.id}-t-${idx}`}>{part.text}</Response>;
               case "tool-call":
               case "tool-call-result":
                 return (
@@ -138,6 +144,52 @@ function ChatMessageItem({ message }: { message: UIMessage }) {
         ) : (
           <span className="opacity-70">(no content)</span>
         )}
+        {/* Assistant citations (if provided) */}
+        {message.role === "assistant" &&
+        parts.some((p) => {
+          if (typeof p !== "object" || p === null) return false;
+          const r = p as Record<string, unknown>;
+          return r.type === "source-url" && typeof r.url === "string";
+        }) ? (
+          <div className="mt-2">
+            <Sources>
+              <SourcesTrigger
+                count={
+                  parts.filter(
+                    (p) =>
+                      typeof p === "object" &&
+                      p !== null &&
+                      (p as Record<string, unknown>).type === "source-url"
+                  ).length
+                }
+              />
+              <SourcesContent>
+                <div className="space-y-1">
+                  {parts
+                    .map((p, i) => ({ i, p }))
+                    .filter(
+                      ({ p }) =>
+                        typeof p === "object" &&
+                        p !== null &&
+                        (p as Record<string, unknown>).type === "source-url" &&
+                        typeof (p as Record<string, unknown>).url === "string"
+                    )
+                    .map(({ p, i }) => {
+                      const rec = p as Record<string, unknown>;
+                      const href = String(rec.url);
+                      const title =
+                        typeof rec.title === "string" ? rec.title : undefined;
+                      return (
+                        <Source key={`${message.id}-src-${i}`} href={href}>
+                          {title ?? href}
+                        </Source>
+                      );
+                    })}
+                </div>
+              </SourcesContent>
+            </Sources>
+          </div>
+        ) : null}
       </MessageContent>
     </Message>
   );
@@ -160,8 +212,9 @@ export default function ChatPage(): ReactElement {
     () =>
       new DefaultChatTransport({
         api: "/api/chat/stream",
-        credentials: "include",
+        // biome-ignore lint/style/useNamingConvention: API request body matches backend snake_case
         body: () => (userId ? { user_id: userId } : {}),
+        credentials: "include",
         // Enable resumable streams by preparing a reconnect request when needed.
         prepareReconnectToStreamRequest: () => ({
           api: "/api/chat/stream",
@@ -182,33 +235,32 @@ export default function ChatPage(): ReactElement {
   const { messages, sendMessage, status, stop, regenerate, clearError, error } =
     chatHelpers;
   // Experimental resume helper; not part of stable types in all builds.
-  const experimental_resume = (
-    chatHelpers as unknown as { experimental_resume?: () => Promise<unknown> }
-  ).experimental_resume;
+  const experimentalResume =
+    // biome-ignore lint/style/useNamingConvention: External library API uses snake_case
+    (chatHelpers as unknown as { experimental_resume?: () => Promise<unknown> })
+      .experimental_resume;
 
   // Surface a brief toast when a resume attempt completes.
   const [showReconnected, setShowReconnected] = useState(false);
   useEffect(() => {
-    let mounted = true;
+    let _mounted = true;
     let timeoutId: NodeJS.Timeout | undefined;
-    const fn = experimental_resume as undefined | (() => Promise<unknown>);
+    const fn = experimentalResume as undefined | (() => Promise<unknown>);
     if (typeof fn === "function") {
-      void fn()
+      fn()
         .then(() => {
-          if (!mounted) return;
           setShowReconnected(true);
           timeoutId = setTimeout(() => setShowReconnected(false), 3000);
         })
-        .catch((err) => {
-          // Log for developer diagnostics; avoid user-facing noise
-          console.error("Chat stream resume failed:", err);
+        .catch((_err) => {
+          /* Intentionally ignored to avoid UX disruption on reconnect */
         });
     }
     return () => {
-      mounted = false;
+      _mounted = false;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [experimental_resume]);
+  }, [experimentalResume]);
 
   // Filter out system messages from display (e.g., tool instructions)
   const visibleMessages = useMemo(
@@ -239,9 +291,9 @@ export default function ChatPage(): ReactElement {
       }
 
       await sendMessage({
-        text: normalizedText,
         files: preparedFiles,
         metadata: userId ? { userId } : undefined,
+        text: normalizedText,
       });
     },
     [clearError, sendMessage, status, userId]
@@ -254,13 +306,12 @@ export default function ChatPage(): ReactElement {
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       {showReconnected ? (
-        <div
-          role="status"
+        <output
           data-testid="reconnected-toast"
           className="fixed right-4 top-4 z-50 rounded-md border bg-green-600/90 px-3 py-2 text-sm text-white shadow"
         >
           Reconnected
-        </div>
+        </output>
       ) : null}
       {/* Main conversation area with message history */}
       <Conversation className="flex-1">
@@ -311,7 +362,7 @@ export default function ChatPage(): ReactElement {
                   aria-label="Stop streaming"
                   className="rounded border px-3 py-1 text-sm disabled:opacity-50"
                   onClick={() => {
-                    void stop();
+                    stop();
                   }}
                   disabled={!canStop}
                 >
@@ -322,7 +373,7 @@ export default function ChatPage(): ReactElement {
                   aria-label="Retry last request"
                   className="rounded border px-3 py-1 text-sm disabled:opacity-50"
                   onClick={() => {
-                    void regenerate();
+                    regenerate();
                   }}
                   disabled={!canRetry || status === "streaming"}
                 >

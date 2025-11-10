@@ -1,8 +1,3 @@
-/**
- * Tests for PersonalizationInsights component
- * Test suite with 80-90% coverage
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -23,20 +18,20 @@ import {
   useUpdatePreferences,
 } from "../../../../hooks/use-memory";
 
-const mockUseMemoryInsights = useMemoryInsights as any;
-const mockUseMemoryStats = useMemoryStats as any;
-const mockUseUpdatePreferences = useUpdatePreferences as any;
+const MockUseMemoryInsights = vi.mocked(useMemoryInsights);
+const MockUseMemoryStats = vi.mocked(useMemoryStats);
+const MockUseUpdatePreferences = vi.mocked(useUpdatePreferences);
 
 // Test wrapper with QueryClient
-function createWrapper() {
+function CreateWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
       mutations: { retry: false },
+      queries: { retry: false },
     },
   });
 
-  return function TestWrapper({ children }: { children: ReactNode }) {
+  return function useTestWrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
@@ -49,29 +44,23 @@ describe("PersonalizationInsights", () => {
   const mockInsightsData = {
     data: {
       insights: {
-        travelPersonality: {
-          type: "luxury_adventurer",
-          description: "You enjoy luxury accommodations with adventurous activities",
-          confidence: 0.89,
-          keyTraits: ["luxury", "adventure", "cultural", "premium"],
-        },
         budgetPatterns: {
           averageSpending: {
             accommodation: 350,
-            flights: 950,
-            dining: 120,
             activities: 85,
+            dining: 120,
+            flights: 950,
           },
           spendingTrends: [
             {
               category: "accommodation",
+              percentageChange: 15,
               trend: "increasing" as const,
-              percentage_change: 15,
             },
             {
               category: "flights",
+              percentageChange: 2,
               trend: "stable" as const,
-              percentage_change: 2,
             },
           ],
         },
@@ -79,71 +68,83 @@ describe("PersonalizationInsights", () => {
           topDestinations: [
             {
               destination: "Tokyo",
-              visits: 3,
               lastVisit: "2024-03-15T10:00:00Z",
-              satisfaction_score: 4.8,
+              satisfactionScore: 4.8,
+              visits: 3,
             },
             {
               destination: "Paris",
-              visits: 2,
               lastVisit: "2024-01-20T10:00:00Z",
-              satisfaction_score: 4.5,
+              satisfactionScore: 4.5,
+              visits: 2,
             },
           ],
         },
         recommendations: [
           {
-            type: "destination",
-            recommendation: "Consider luxury eco-lodges in Costa Rica",
-            reasoning: "Based on your preference for luxury and adventure",
             confidence: 0.92,
+            reasoning: "Based on your preference for luxury and adventure",
+            recommendation: "Consider luxury eco-lodges in Costa Rica",
+            type: "destination",
           },
           {
-            type: "booking",
-            recommendation: "Book European trips 6-8 weeks in advance",
-            reasoning: "Optimal timing for luxury accommodation availability",
             confidence: 0.85,
+            reasoning: "Optimal timing for luxury accommodation availability",
+            recommendation: "Book European trips 6-8 weeks in advance",
+            type: "booking",
           },
         ],
+        travelPersonality: {
+          confidence: 0.89,
+          description: "You enjoy luxury accommodations with adventurous activities",
+          keyTraits: ["luxury", "adventure", "cultural", "premium"],
+          type: "luxury_adventurer",
+        },
       },
       metadata: {
-        data_coverage_months: 12,
-        confidence_level: 0.87,
-        analysis_date: "2024-01-01T10:00:00Z",
+        analysisDate: "2024-01-01T10:00:00Z",
+        confidenceLevel: 0.87,
+        dataCoverageMonths: 12,
       },
     },
-    isLoading: false,
-    isError: false,
     error: null,
+    isError: false,
+    isLoading: false,
     refetch: vi.fn(),
   };
 
   const mockStatsData = {
     data: {
-      totalMemories: 245,
       memoryTypes: {
         accommodation: 68,
-        flights: 52,
-        destinations: 41,
         activities: 35,
+        destinations: 41,
         dining: 28,
+        flights: 52,
       },
+      totalMemories: 245,
     },
-    isLoading: false,
     isError: false,
+    isLoading: false,
   };
 
   const mockUpdatePreferences = {
     mutateAsync: vi.fn(),
   };
 
-  it("renders personalization insights dashboard with correct title", async () => {
-    mockUseMemoryInsights.mockReturnValue(mockInsightsData);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+  it("renders personalization insights dashboard with correct title", () => {
+    MockUseMemoryInsights.mockReturnValue(
+      mockInsightsData as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Should show correct main title
@@ -153,13 +154,19 @@ describe("PersonalizationInsights", () => {
     ).toBeInTheDocument();
   });
 
-  it("displays travel personality information correctly", async () => {
-    mockUseMemoryInsights.mockReturnValue(mockInsightsData);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+  it("displays travel personality information correctly", () => {
+    MockUseMemoryInsights.mockReturnValue(
+      mockInsightsData as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Should show travel personality
@@ -176,31 +183,43 @@ describe("PersonalizationInsights", () => {
     expect(screen.getByText("premium")).toBeInTheDocument();
   });
 
-  it("shows memory statistics correctly", async () => {
-    mockUseMemoryInsights.mockReturnValue(mockInsightsData);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+  it("shows memory statistics correctly", () => {
+    MockUseMemoryInsights.mockReturnValue(
+      mockInsightsData as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Should show total memories
     expect(screen.getByText("245")).toBeInTheDocument();
 
-    // Should show memory types
+    // Should show first three memory type counts (rendered slice)
     expect(screen.getByText("68")).toBeInTheDocument(); // accommodation count
-    expect(screen.getByText("52")).toBeInTheDocument(); // flights count
+    expect(screen.getByText("35")).toBeInTheDocument(); // activities count
     expect(screen.getByText("41")).toBeInTheDocument(); // destinations count
   });
 
   it("displays budget patterns when budget view is selected", async () => {
-    mockUseMemoryInsights.mockReturnValue(mockInsightsData);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+    MockUseMemoryInsights.mockReturnValue(
+      mockInsightsData as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Click budget view tab
@@ -216,12 +235,18 @@ describe("PersonalizationInsights", () => {
   });
 
   it("shows spending trends with correct trend indicators", async () => {
-    mockUseMemoryInsights.mockReturnValue(mockInsightsData);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+    MockUseMemoryInsights.mockReturnValue(
+      mockInsightsData as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Click budget view tab
@@ -236,13 +261,19 @@ describe("PersonalizationInsights", () => {
     });
   });
 
-  it("displays top destinations with details", async () => {
-    mockUseMemoryInsights.mockReturnValue(mockInsightsData);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+  it("displays top destinations with details", () => {
+    MockUseMemoryInsights.mockReturnValue(
+      mockInsightsData as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Should show favorite destinations
@@ -256,12 +287,18 @@ describe("PersonalizationInsights", () => {
   });
 
   it("shows AI recommendations when recommendations view is selected", async () => {
-    mockUseMemoryInsights.mockReturnValue(mockInsightsData);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+    MockUseMemoryInsights.mockReturnValue(
+      mockInsightsData as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" showRecommendations={true} />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Click recommendations view tab
@@ -281,12 +318,18 @@ describe("PersonalizationInsights", () => {
   });
 
   it("hides recommendations when showRecommendations is false", async () => {
-    mockUseMemoryInsights.mockReturnValue(mockInsightsData);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+    MockUseMemoryInsights.mockReturnValue(
+      mockInsightsData as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" showRecommendations={false} />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Click recommendations view tab
@@ -300,15 +343,20 @@ describe("PersonalizationInsights", () => {
   });
 
   it("shows loading state when data is loading", () => {
-    mockUseMemoryInsights.mockReturnValue({
+    MockUseMemoryInsights.mockReturnValue({
       ...mockInsightsData,
       isLoading: true,
-    });
-    mockUseMemoryStats.mockReturnValue({ ...mockStatsData, isLoading: true });
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+    } as unknown as ReturnType<typeof useMemoryInsights>);
+    MockUseMemoryStats.mockReturnValue({
+      ...mockStatsData,
+      isLoading: true,
+    } as unknown as ReturnType<typeof useMemoryStats>);
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     const { container } = render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Should show loading skeleton (pulsing placeholders)
@@ -317,16 +365,24 @@ describe("PersonalizationInsights", () => {
   });
 
   it("shows error state when insights fail to load", () => {
-    mockUseMemoryInsights.mockReturnValue({
+    MockUseMemoryInsights.mockReturnValue({
       ...mockInsightsData,
+      error: new Error("Failed to load insights") as unknown as ReturnType<
+        typeof useMemoryInsights
+      > extends { error: infer E }
+        ? E
+        : never,
       isError: true,
-      error: new Error("Failed to load insights"),
-    });
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+    } as unknown as ReturnType<typeof useMemoryInsights>);
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     expect(
@@ -337,12 +393,18 @@ describe("PersonalizationInsights", () => {
   });
 
   it("handles tab navigation correctly", async () => {
-    mockUseMemoryInsights.mockReturnValue(mockInsightsData);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+    MockUseMemoryInsights.mockReturnValue(
+      mockInsightsData as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Default should show overview (travel personality)
@@ -368,12 +430,18 @@ describe("PersonalizationInsights", () => {
   });
 
   it("displays metadata information correctly", () => {
-    mockUseMemoryInsights.mockReturnValue(mockInsightsData);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+    MockUseMemoryInsights.mockReturnValue(
+      mockInsightsData as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     expect(screen.getByText("Analysis based on 12 months of data")).toBeInTheDocument();
@@ -381,17 +449,21 @@ describe("PersonalizationInsights", () => {
     expect(screen.getByText("Updated: 1/1/2024")).toBeInTheDocument();
   });
 
-  it("calls refetch when refresh button is clicked", async () => {
+  it("calls refetch when refresh button is clicked", () => {
     const refetchSpy = vi.fn();
-    mockUseMemoryInsights.mockReturnValue({
+    MockUseMemoryInsights.mockReturnValue({
       ...mockInsightsData,
       refetch: refetchSpy,
-    });
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+    } as unknown as ReturnType<typeof useMemoryInsights>);
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     const refreshButton = screen.getByText("Refresh");
@@ -406,18 +478,24 @@ describe("PersonalizationInsights", () => {
         insights: {},
         metadata: null,
       },
-      isLoading: false,
-      isError: false,
       error: null,
+      isError: false,
+      isLoading: false,
       refetch: vi.fn(),
     };
 
-    mockUseMemoryInsights.mockReturnValue(emptyInsights);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+    MockUseMemoryInsights.mockReturnValue(
+      emptyInsights as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Should still render the header
@@ -426,25 +504,27 @@ describe("PersonalizationInsights", () => {
     expect(screen.getByText("245")).toBeInTheDocument();
   });
 
-  it("calls onPreferenceUpdate when preferences are updated", async () => {
+  it("calls onPreferenceUpdate when preferences are updated", () => {
     const onPreferenceUpdate = vi.fn();
     const mutateAsyncSpy = vi.fn().mockResolvedValue({});
 
-    mockUseMemoryInsights.mockReturnValue({
+    MockUseMemoryInsights.mockReturnValue({
       ...mockInsightsData,
       refetch: vi.fn().mockResolvedValue({}),
-    });
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue({
+    } as unknown as ReturnType<typeof useMemoryInsights>);
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue({
       mutateAsync: mutateAsyncSpy,
-    });
+    } as unknown as ReturnType<typeof useUpdatePreferences>);
 
     render(
       <PersonalizationInsights
         userId="user-123"
         onPreferenceUpdate={onPreferenceUpdate}
       />,
-      { wrapper: createWrapper() }
+      { wrapper: CreateWrapper() }
     );
 
     // Note: This test covers the handlePreferenceUpdate function
@@ -454,13 +534,19 @@ describe("PersonalizationInsights", () => {
   });
 
   it("applies custom className when provided", () => {
-    mockUseMemoryInsights.mockReturnValue(mockInsightsData);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+    MockUseMemoryInsights.mockReturnValue(
+      mockInsightsData as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     const { container } = render(
       <PersonalizationInsights userId="user-123" className="custom-class" />,
-      { wrapper: createWrapper() }
+      { wrapper: CreateWrapper() }
     );
 
     expect(container.firstChild).toHaveClass("custom-class");
@@ -478,12 +564,18 @@ describe("PersonalizationInsights", () => {
       },
     };
 
-    mockUseMemoryInsights.mockReturnValue(insightsWithoutPersonality);
-    mockUseMemoryStats.mockReturnValue(mockStatsData);
-    mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
+    MockUseMemoryInsights.mockReturnValue(
+      insightsWithoutPersonality as unknown as ReturnType<typeof useMemoryInsights>
+    );
+    MockUseMemoryStats.mockReturnValue(
+      mockStatsData as unknown as ReturnType<typeof useMemoryStats>
+    );
+    MockUseUpdatePreferences.mockReturnValue(
+      mockUpdatePreferences as unknown as ReturnType<typeof useUpdatePreferences>
+    );
 
     render(<PersonalizationInsights userId="user-123" />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Should still render other sections

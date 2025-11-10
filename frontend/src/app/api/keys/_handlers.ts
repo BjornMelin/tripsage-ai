@@ -5,7 +5,7 @@
  * retrieval. The Next.js route adapters handle SSR-only concerns and pass in
  * typed dependencies.
  */
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 /** Set of allowed API service providers for key storage. */
 const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai"]);
@@ -14,7 +14,7 @@ const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai"]);
  * Dependencies interface for keys handlers.
  */
 export interface KeysDeps {
-  supabase: SupabaseClient<any>;
+  supabase: TypedServerSupabase;
   insertUserApiKey: (userId: string, service: string, apiKey: string) => Promise<void>;
 }
 
@@ -23,19 +23,19 @@ export interface KeysDeps {
  */
 export interface PostKeyBody {
   service?: string;
-  api_key?: string;
+  apiKey?: string;
 }
 
 /**
  * Insert or replace a user's provider API key.
  *
  * @param deps Collaborators with a typed Supabase client and RPC inserter.
- * @param body Payload containing service and api_key.
+ * @param body Payload containing service and apiKey.
  * @returns 204 on success; otherwise a JSON error Response.
  */
 export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Response> {
   const service = body?.service;
-  const apiKey = body?.api_key;
+  const apiKey = body?.apiKey;
   if (
     !service ||
     !apiKey ||
@@ -43,20 +43,20 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
     typeof apiKey !== "string"
   ) {
     return new Response(
-      JSON.stringify({ error: "Invalid request body", code: "BAD_REQUEST" }),
+      JSON.stringify({ code: "BAD_REQUEST", error: "Invalid request body" }),
       {
-        status: 400,
         headers: { "content-type": "application/json" },
+        status: 400,
       }
     );
   }
   const normalized = service.trim().toLowerCase();
   if (!ALLOWED.has(normalized)) {
     return new Response(
-      JSON.stringify({ error: "Unsupported service", code: "BAD_REQUEST" }),
+      JSON.stringify({ code: "BAD_REQUEST", error: "Unsupported service" }),
       {
-        status: 400,
         headers: { "content-type": "application/json" },
+        status: 400,
       }
     );
   }
@@ -65,8 +65,8 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
   const user = auth?.user ?? null;
   if (!user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
       headers: { "content-type": "application/json" },
+      status: 401,
     });
   }
 
@@ -81,14 +81,14 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
  * @returns List of key summaries or an error Response.
  */
 export async function getKeys(deps: {
-  supabase: SupabaseClient<any>;
+  supabase: TypedServerSupabase;
 }): Promise<Response> {
   const { data: auth } = await deps.supabase.auth.getUser();
   const user = auth?.user ?? null;
   if (!user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
       headers: { "content-type": "application/json" },
+      status: 401,
     });
   }
   const { data, error } = await deps.supabase
@@ -98,23 +98,32 @@ export async function getKeys(deps: {
     .order("service_name", { ascending: true });
   if (error) {
     return new Response(
-      JSON.stringify({ error: "Failed to fetch keys", code: "DB_ERROR" }),
+      JSON.stringify({ code: "DB_ERROR", error: "Failed to fetch keys" }),
       {
-        status: 500,
         headers: { "content-type": "application/json" },
+        status: 500,
       }
     );
   }
   const rows = data ?? [];
-  const payload = rows.map((r: any) => ({
-    service: String(r.service_name),
-    created_at: String(r.created_at),
-    last_used: r.last_used_at ?? null,
-    has_key: true,
-    is_valid: true,
-  }));
+  const payload = rows.map(
+    (r: {
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      service_name: string;
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      created_at: string;
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      last_used_at: string | null;
+    }) => ({
+      createdAt: String(r.created_at),
+      hasKey: true,
+      isValid: true,
+      lastUsed: r.last_used_at ?? null,
+      service: String(r.service_name),
+    })
+  );
   return new Response(JSON.stringify(payload), {
-    status: 200,
     headers: { "content-type": "application/json" },
+    status: 200,
   });
 }

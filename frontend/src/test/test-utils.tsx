@@ -1,7 +1,3 @@
-/**
- * @fileoverview Test utilities and providers for React component testing.
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { RenderOptions } from "@testing-library/react";
 import { render } from "@testing-library/react";
@@ -12,32 +8,63 @@ import {
   validateThemeProviderProps,
 } from "@/schemas/theme-provider";
 
-/** Type for next-themes provider props. */
+// Type for next-themes provider props.
 type NextThemesProviderProps = ComponentProps<typeof ThemeProvider>;
+
+// Shared QueryClient instance for all tests (reset between tests)
+let sharedQueryClient: QueryClient | null = null;
+
+/**
+ * Gets or creates the shared test QueryClient with disabled retries and caching.
+ * This client is reused across tests for better performance and is cleared after
+ * each test via resetTestQueryClient().
+ *
+ * @returns A configured QueryClient for testing.
+ */
+export const getTestQueryClient = (): QueryClient => {
+  if (!sharedQueryClient) {
+    sharedQueryClient = new QueryClient({
+      defaultOptions: {
+        mutations: { retry: false },
+        queries: { gcTime: 0, retry: false, staleTime: 0 },
+      },
+    });
+  }
+  return sharedQueryClient;
+};
+
+/**
+ * Clears the shared QueryClient cache without recreating the instance.
+ * Called automatically after each test to ensure test isolation.
+ */
+export const resetTestQueryClient = (): void => {
+  sharedQueryClient?.clear();
+};
 
 /**
  * Creates a test QueryClient with disabled retries and caching.
+ * @deprecated Use getTestQueryClient() instead for better performance.
  * @returns A configured QueryClient for testing.
  */
 export const createTestQueryClient = () =>
   new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
       mutations: { retry: false },
+      queries: { gcTime: 0, retry: false, staleTime: 0 },
     },
   });
 
-/** Props for the AllTheProviders component. */
+// Props for the AllTheProviders component.
 export interface ProvidersProps {
-  /** The child components to render. */
+  // The child components to render.
   children: ReactNode;
-  /** Optional theme configuration. */
+  // Optional theme configuration.
   theme?: ValidatedThemeProviderProps;
-  /** Optional QueryClient instance. */
+  // Optional QueryClient instance.
   queryClient?: QueryClient;
 }
 
-/** Options for renderWithProviders function. */
+// Options for renderWithProviders function.
 export interface RenderWithProvidersOptions extends Omit<RenderOptions, "wrapper"> {
   /** Optional theme configuration. */
   theme?: ProvidersProps["theme"];
@@ -50,18 +77,20 @@ export interface RenderWithProvidersOptions extends Omit<RenderOptions, "wrapper
  * @param props The props for the providers.
  * @returns JSX element with providers wrapped around children.
  */
+// biome-ignore lint/style/useNamingConvention: React components should be PascalCase
 export const AllTheProviders = ({
   children,
   theme = {
     attribute: "class" as const,
     defaultTheme: "system",
-    enableSystem: true,
     disableTransitionOnChange: true,
+    enableSystem: true,
   },
   queryClient,
 }: ProvidersProps): ReactElement => {
-  const client = queryClient || createTestQueryClient();
+  const client = queryClient || getTestQueryClient();
 
+  // Skip validation if using default theme for better performance
   const validatedTheme = theme
     ? (() => {
         const result = validateThemeProviderProps(theme);
@@ -70,8 +99,8 @@ export const AllTheProviders = ({
           return {
             attribute: "class" as const,
             defaultTheme: "system",
-            enableSystem: true,
             disableTransitionOnChange: true,
+            enableSystem: true,
           };
         }
         return result.data;
@@ -84,8 +113,8 @@ export const AllTheProviders = ({
         {...((validatedTheme ?? {
           attribute: "class" as const,
           defaultTheme: "system",
-          enableSystem: true,
           disableTransitionOnChange: true,
+          enableSystem: true,
         }) as NextThemesProviderProps)}
       >
         {children}

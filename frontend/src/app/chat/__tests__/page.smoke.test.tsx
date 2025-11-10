@@ -1,12 +1,13 @@
-/**
- * @fileoverview Smoke tests for ChatPage component, verifying basic rendering
- * and presence of essential UI controls for chat functionality without full
- * interaction testing.
- */
-
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import ChatPage from "../page";
+
+// Mock Streamdown-backed Response to avoid rehype/ESM issues in node test runner
+vi.mock("@/components/ai-elements/response", () => ({
+  Response: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="response">{children}</div>
+  ),
+}));
 
 describe("ChatPage UI smoke", () => {
   it("renders Stop and Retry controls", () => {

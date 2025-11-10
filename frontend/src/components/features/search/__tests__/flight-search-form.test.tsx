@@ -1,24 +1,18 @@
-/**
- * @fileoverview Unit tests for FlightSearchForm component, covering form rendering,
- * user input handling, validation, trip type switching, passenger selection,
- * and search submission with various scenarios and edge cases.
- */
-
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FlightSearchForm } from "../flight-search-form";
 
 // Mock the onSearch function
-const mockOnSearch = vi.fn();
+const MockOnSearch = vi.fn();
 
 describe("FlightSearchForm", () => {
   beforeEach(() => {
     // Clear mock calls between tests
-    mockOnSearch.mockClear();
+    MockOnSearch.mockClear();
   });
 
   it("renders the form correctly (aligned with current UI)", () => {
-    render(<FlightSearchForm onSearch={mockOnSearch} />);
+    render(<FlightSearchForm onSearch={MockOnSearch} />);
 
     // Title and trip type buttons
     expect(screen.getByText("Find Flights")).toBeInTheDocument();
@@ -44,7 +38,7 @@ describe("FlightSearchForm", () => {
   });
 
   it("handles form submission with valid data", async () => {
-    render(<FlightSearchForm onSearch={mockOnSearch} />);
+    render(<FlightSearchForm onSearch={MockOnSearch} />);
 
     // Fill in required fields matching current placeholders/labels
     fireEvent.change(screen.getByPlaceholderText("Departure city or airport"), {
@@ -69,22 +63,24 @@ describe("FlightSearchForm", () => {
     const submitBtn = screen.getByText("Search Flights");
     const formEl = submitBtn.closest("form") as HTMLFormElement;
     expect(formEl).toBeTruthy();
-    fireEvent.submit(formEl!);
+    if (formEl) {
+      fireEvent.submit(formEl);
+    }
 
     // onSearch receives schema-validated FlightSearchFormData shape (async)
-    await vi.waitFor(() => expect(mockOnSearch).toHaveBeenCalledTimes(1));
-    expect(mockOnSearch).toHaveBeenCalledWith({
-      tripType: "round-trip",
-      origin: "New York",
-      destination: "London",
-      departureDate: "2099-08-15",
-      returnDate: "2099-08-25",
-      passengers: { adults: 1, children: 0, infants: 0 },
+    await vi.waitFor(() => expect(MockOnSearch).toHaveBeenCalledTimes(1));
+    expect(MockOnSearch).toHaveBeenCalledWith({
       cabinClass: "economy",
+      departureDate: "2099-08-15",
+      destination: "London",
       directOnly: false,
-      maxStops: undefined,
-      preferredAirlines: [],
       excludedAirlines: [],
+      maxStops: undefined,
+      origin: "New York",
+      passengers: { adults: 1, children: 0, infants: 0 },
+      preferredAirlines: [],
+      returnDate: "2099-08-25",
+      tripType: "round-trip",
     });
   });
 });

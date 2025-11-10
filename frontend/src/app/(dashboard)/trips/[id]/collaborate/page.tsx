@@ -52,9 +52,9 @@ interface Collaborator {
   /** Unique identifier for the collaborator record. */
   id: string;
   /** User ID of the collaborator. */
-  user_id: string;
+  userId: string;
   /** ID of the trip being collaborated on. */
-  trip_id: string;
+  tripId: string;
   /** Email address of the collaborator. */
   email: string;
   /** Optional display name of the collaborator. */
@@ -66,16 +66,16 @@ interface Collaborator {
   /** Detailed permission flags. */
   permissions: {
     /** Whether the collaborator can edit trip content. */
-    can_edit: boolean;
+    canEdit: boolean;
     /** Whether the collaborator can invite others. */
-    can_invite: boolean;
+    canInvite: boolean;
     /** Whether the collaborator can delete the trip. */
-    can_delete: boolean;
+    canDelete: boolean;
   };
   /** Timestamp when the invitation was sent. */
-  invited_at: string;
+  invitedAt: string;
   /** Timestamp when the invitation was accepted. */
-  accepted_at?: string;
+  acceptedAt?: string;
 }
 
 /**
@@ -118,38 +118,38 @@ export default function TripCollaborationPage() {
   // Mock collaborators data - in real implementation, this would come from a hook
   const [collaborators] = useState<Collaborator[]>([
     {
-      id: "1",
-      user_id: "user-123",
-      trip_id: tripId,
+      acceptedAt: new Date().toISOString(),
       email: "alice@example.com",
+      id: "1",
+      invitedAt: new Date().toISOString(),
       name: "Alice Johnson",
+      permissions: { canDelete: true, canEdit: true, canInvite: true },
       role: "owner",
       status: "accepted",
-      permissions: { can_edit: true, can_invite: true, can_delete: true },
-      invited_at: new Date().toISOString(),
-      accepted_at: new Date().toISOString(),
+      tripId: tripId,
+      userId: "user-123",
     },
     {
-      id: "2",
-      user_id: "user-456",
-      trip_id: tripId,
+      acceptedAt: new Date(Date.now() - 86400000).toISOString(),
       email: "bob@example.com",
+      id: "2",
+      invitedAt: new Date(Date.now() - 86400000).toISOString(),
       name: "Bob Smith",
+      permissions: { canDelete: false, canEdit: true, canInvite: false },
       role: "editor",
       status: "accepted",
-      permissions: { can_edit: true, can_invite: false, can_delete: false },
-      invited_at: new Date(Date.now() - 86400000).toISOString(),
-      accepted_at: new Date(Date.now() - 86400000).toISOString(),
+      tripId: tripId,
+      userId: "user-456",
     },
     {
-      id: "3",
-      user_id: "user-789",
-      trip_id: tripId,
       email: "charlie@example.com",
+      id: "3",
+      invitedAt: new Date(Date.now() - 3600000).toISOString(),
+      permissions: { canDelete: false, canEdit: false, canInvite: false },
       role: "viewer",
       status: "pending",
-      permissions: { can_edit: false, can_invite: false, can_delete: false },
-      invited_at: new Date(Date.now() - 3600000).toISOString(),
+      tripId: tripId,
+      userId: "user-789",
     },
   ]);
 
@@ -159,8 +159,8 @@ export default function TripCollaborationPage() {
   const handleInviteCollaborator = async () => {
     if (!inviteEmail.trim()) {
       toast({
-        title: "Email Required",
         description: "Please enter an email address to invite.",
+        title: "Email Required",
         variant: "destructive",
       });
       return;
@@ -170,14 +170,14 @@ export default function TripCollaborationPage() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       toast({
-        title: "Invitation Sent",
         description: `Invitation sent to ${inviteEmail}`,
+        title: "Invitation Sent",
       });
       setInviteEmail("");
     } catch (_error) {
       toast({
-        title: "Invitation Failed",
         description: "Failed to send invitation. Please try again.",
+        title: "Invitation Failed",
         variant: "destructive",
       });
     } finally {
@@ -191,7 +191,7 @@ export default function TripCollaborationPage() {
   const handleCopyShareLink = () => {
     const shareUrl = `${window.location.origin}/trips/${tripId}/share`;
     navigator.clipboard.writeText(shareUrl);
-    toast({ title: "Link Copied", description: "Share link copied to clipboard" });
+    toast({ description: "Share link copied to clipboard", title: "Link Copied" });
   };
 
   /**
@@ -358,7 +358,7 @@ export default function TripCollaborationPage() {
                             <span className="font-medium">
                               {collaborator.name || collaborator.email}
                             </span>
-                            {collaborator.user_id === currentUserId && (
+                            {collaborator.userId === currentUserId && (
                               <Badge variant="outline" className="text-xs">
                                 You
                               </Badge>

@@ -3,89 +3,98 @@ import type { Destination, Trip } from "@/stores/trip-store";
 import {
   type ApiDestination,
   type ApiTrip,
+  apiDestinationToFrontend,
+  apiTripToFrontend,
   calculateTripDuration,
-  FrontendSchemaAdapter,
+  createEmptyTrip,
   formatTripDate,
+  frontendDestinationToApi,
+  frontendTripToApi,
+  handleApiError,
+  normalizeTrip,
+  validateTripForApi,
 } from "../schema-adapters";
 
 // Mock console.error to suppress error logs during testing
-const mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+const MOCK_CONSOLE_ERROR = vi.spyOn(console, "error").mockImplementation(() => {
+  // Suppress console.error during test
+});
 
-describe("FrontendSchemaAdapter", () => {
+describe("schema-adapters", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockConsoleError.mockClear();
+    MOCK_CONSOLE_ERROR.mockClear();
   });
 
   describe("apiTripToFrontend", () => {
     const baseApiTrip: ApiTrip = {
-      id: "trip-123",
-      user_id: "user-456",
-      title: "European Adventure",
+      budget: 3000,
+      created_at: "2025-01-01T00:00:00Z",
       description: "Amazing trip through Europe",
-      start_date: "2025-06-01",
-      end_date: "2025-06-15",
       destinations: [
         {
-          name: "Paris",
-          country: "France",
+          arrival_date: "2025-06-01",
           city: "Paris",
           coordinates: { latitude: 48.8566, longitude: 2.3522 },
-          arrival_date: "2025-06-01",
+          country: "France",
           departure_date: "2025-06-05",
           duration_days: 4,
+          name: "Paris",
         },
       ],
-      budget: 3000,
-      visibility: "private",
-      tags: ["culture", "history"],
+      end_date: "2025-06-15",
+      id: "trip-123",
       preferences: { accommodation: { type: "hotel" } },
+      start_date: "2025-06-01",
       status: "planning",
-      created_at: "2025-01-01T00:00:00Z",
+      tags: ["culture", "history"],
+      title: "European Adventure",
       updated_at: "2025-01-01T12:00:00Z",
+      user_id: "user-456",
+      visibility: "private",
     };
 
     it("should convert API trip to frontend format with all fields", () => {
-      const result = FrontendSchemaAdapter.apiTripToFrontend(baseApiTrip);
+      const result = apiTripToFrontend(baseApiTrip);
 
       expect(result).toEqual({
-        id: "trip-123",
-        user_id: "user-456",
-        name: "European Adventure", // API title -> frontend name
-        title: "European Adventure", // Keep both for compatibility
+        budget: 3000,
+        created_at: "2025-01-01T00:00:00Z",
+        createdAt: "2025-01-01T00:00:00Z", // Camel case version
         description: "Amazing trip through Europe",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
-        startDate: "2025-06-01", // Camel case version
-        endDate: "2025-06-15", // Camel case version
         destinations: [
           {
+            activities: [],
+            coordinates: { latitude: 48.8566, longitude: 2.3522 },
+            country: "France",
+            endDate: "2025-06-05",
+            estimatedCost: 0,
             id: expect.stringMatching(/^Paris-\d+$/), // Generated ID
             name: "Paris",
-            country: "France",
-            coordinates: { latitude: 48.8566, longitude: 2.3522 },
             startDate: "2025-06-01",
-            endDate: "2025-06-05",
-            activities: [],
-            estimatedCost: 0,
           },
         ],
-        budget: 3000,
-        visibility: "private",
+        end_date: "2025-06-15",
+        endDate: "2025-06-15", // Camel case version
+        id: "trip-123",
         isPublic: false, // Legacy field derived from visibility
-        tags: ["culture", "history"],
+        name: "European Adventure", // API title -> frontend name
         preferences: { accommodation: { type: "hotel" } },
+        start_date: "2025-06-01",
+        startDate: "2025-06-01", // Camel case version
         status: "planning",
-        created_at: "2025-01-01T00:00:00Z",
+        tags: ["culture", "history"],
+        title: "European Adventure", // Keep both for compatibility
         updated_at: "2025-01-01T12:00:00Z",
-        createdAt: "2025-01-01T00:00:00Z", // Camel case version
         updatedAt: "2025-01-01T12:00:00Z", // Camel case version
+        user_id: "user-456",
+        visibility: "private",
       });
     });
 
     it("should set isPublic to true when visibility is public", () => {
       const publicTrip = { ...baseApiTrip, visibility: "public" as const };
-      const result = FrontendSchemaAdapter.apiTripToFrontend(publicTrip);
+      const result = apiTripToFrontend(publicTrip);
 
       expect(result.visibility).toBe("public");
       expect(result.isPublic).toBe(true);
@@ -93,21 +102,21 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle optional fields gracefully", () => {
       const minimalTrip: ApiTrip = {
-        id: "trip-minimal",
-        user_id: "user-123",
-        title: "Minimal Trip",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
-        destinations: [],
-        visibility: "private",
-        tags: [],
-        preferences: {},
-        status: "planning",
         created_at: "2025-01-01T00:00:00Z",
+        destinations: [],
+        end_date: "2025-06-15",
+        id: "trip-minimal",
+        preferences: {},
+        start_date: "2025-06-01",
+        status: "planning",
+        tags: [],
+        title: "Minimal Trip",
         updated_at: "2025-01-01T00:00:00Z",
+        user_id: "user-123",
+        visibility: "private",
       };
 
-      const result = FrontendSchemaAdapter.apiTripToFrontend(minimalTrip);
+      const result = apiTripToFrontend(minimalTrip);
 
       expect(result.description).toBeUndefined();
       expect(result.budget).toBeUndefined();
@@ -118,14 +127,14 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle empty destinations array", () => {
       const tripWithNoDestinations = { ...baseApiTrip, destinations: [] };
-      const result = FrontendSchemaAdapter.apiTripToFrontend(tripWithNoDestinations);
+      const result = apiTripToFrontend(tripWithNoDestinations);
 
       expect(result.destinations).toEqual([]);
     });
 
     it("should handle shared visibility correctly", () => {
       const sharedTrip = { ...baseApiTrip, visibility: "shared" as const };
-      const result = FrontendSchemaAdapter.apiTripToFrontend(sharedTrip);
+      const result = apiTripToFrontend(sharedTrip);
 
       expect(result.visibility).toBe("shared");
       expect(result.isPublic).toBe(false);
@@ -134,70 +143,70 @@ describe("FrontendSchemaAdapter", () => {
 
   describe("frontendTripToApi", () => {
     const baseFrontendTrip: Trip = {
-      id: "trip-123",
-      user_id: "user-456",
-      title: "European Adventure",
-      name: "European Adventure",
+      budget: 3000,
+      created_at: "2025-01-01T00:00:00Z",
+      createdAt: "2025-01-01T00:00:00Z",
       description: "Amazing trip through Europe",
-      start_date: "2025-06-01",
-      end_date: "2025-06-15",
-      startDate: "2025-06-01",
-      endDate: "2025-06-15",
       destinations: [
         {
+          activities: ["sightseeing"],
+          coordinates: { latitude: 48.8566, longitude: 2.3522 },
+          country: "France",
+          endDate: "2025-06-05",
+          estimatedCost: 1000,
           id: "dest-1",
           name: "Paris",
-          country: "France",
-          coordinates: { latitude: 48.8566, longitude: 2.3522 },
           startDate: "2025-06-01",
-          endDate: "2025-06-05",
-          activities: ["sightseeing"],
-          estimatedCost: 1000,
         },
       ],
-      budget: 3000,
-      visibility: "private",
+      end_date: "2025-06-15",
+      endDate: "2025-06-15",
+      id: "trip-123",
       isPublic: false,
-      tags: ["culture", "history"],
+      name: "European Adventure",
       preferences: { accommodation: { type: "hotel" } },
+      start_date: "2025-06-01",
+      startDate: "2025-06-01",
       status: "planning",
-      created_at: "2025-01-01T00:00:00Z",
+      tags: ["culture", "history"],
+      title: "European Adventure",
       updated_at: "2025-01-01T12:00:00Z",
-      createdAt: "2025-01-01T00:00:00Z",
       updatedAt: "2025-01-01T12:00:00Z",
+      user_id: "user-456",
+      visibility: "private",
     };
 
     it("should convert frontend trip to API format", () => {
-      const result = FrontendSchemaAdapter.frontendTripToApi(baseFrontendTrip);
+      const result = frontendTripToApi(baseFrontendTrip);
 
       expect(result).toEqual({
-        id: "trip-123",
-        user_id: "user-456",
-        title: "European Adventure",
+        budget: 3000,
         description: "Amazing trip through Europe",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
         destinations: [
           {
-            name: "Paris",
-            country: "France",
+            arrival_date: "2025-06-01",
             city: "France", // Uses country as city fallback
             coordinates: { latitude: 48.8566, longitude: 2.3522 },
-            arrival_date: "2025-06-01",
+            country: "France",
             departure_date: "2025-06-05",
+            name: "Paris",
           },
         ],
-        budget: 3000,
-        visibility: "private",
-        tags: ["culture", "history"],
+        end_date: "2025-06-15",
+        id: "trip-123",
         preferences: { accommodation: { type: "hotel" } },
+        start_date: "2025-06-01",
         status: "planning",
+        tags: ["culture", "history"],
+        title: "European Adventure",
+        user_id: "user-456",
+        visibility: "private",
       });
     });
 
     it("should use title if available, fallback to name", () => {
       const tripWithoutTitle = { ...baseFrontendTrip, title: undefined };
-      const result = FrontendSchemaAdapter.frontendTripToApi(tripWithoutTitle);
+      const result = frontendTripToApi(tripWithoutTitle);
 
       expect(result.title).toBe("European Adventure"); // Falls back to name
     });
@@ -205,13 +214,13 @@ describe("FrontendSchemaAdapter", () => {
     it("should prefer snake_case dates over camelCase", () => {
       const tripWithDifferentDates = {
         ...baseFrontendTrip,
-        start_date: "2025-07-01",
-        startDate: "2025-06-01",
         end_date: "2025-07-15",
         endDate: "2025-06-15",
+        start_date: "2025-07-01",
+        startDate: "2025-06-01",
       };
 
-      const result = FrontendSchemaAdapter.frontendTripToApi(tripWithDifferentDates);
+      const result = frontendTripToApi(tripWithDifferentDates);
 
       expect(result.start_date).toBe("2025-07-01"); // Prefers snake_case
       expect(result.end_date).toBe("2025-07-15");
@@ -220,11 +229,11 @@ describe("FrontendSchemaAdapter", () => {
     it("should fallback to camelCase dates when snake_case not available", () => {
       const tripWithCamelCaseDates = {
         ...baseFrontendTrip,
-        start_date: undefined,
         end_date: undefined,
+        start_date: undefined,
       };
 
-      const result = FrontendSchemaAdapter.frontendTripToApi(tripWithCamelCaseDates);
+      const result = frontendTripToApi(tripWithCamelCaseDates);
 
       expect(result.start_date).toBe("2025-06-01"); // Falls back to camelCase
       expect(result.end_date).toBe("2025-06-15");
@@ -233,24 +242,24 @@ describe("FrontendSchemaAdapter", () => {
     it("should handle legacy isPublic field", () => {
       const publicTrip = {
         ...baseFrontendTrip,
-        visibility: undefined,
         isPublic: true,
+        visibility: undefined,
       };
 
-      const result = FrontendSchemaAdapter.frontendTripToApi(publicTrip);
+      const result = frontendTripToApi(publicTrip);
 
       expect(result.visibility).toBe("public");
     });
 
     it("should provide default values for missing fields", () => {
       const minimalTrip: Trip = {
+        destinations: [],
         id: "trip-minimal",
         name: "Minimal Trip",
         title: "Minimal Trip",
-        destinations: [],
       };
 
-      const result = FrontendSchemaAdapter.frontendTripToApi(minimalTrip);
+      const result = frontendTripToApi(minimalTrip);
 
       expect(result.start_date).toBe("");
       expect(result.end_date).toBe("");
@@ -261,7 +270,7 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle empty destinations", () => {
       const tripWithEmptyDestinations = { ...baseFrontendTrip, destinations: [] };
-      const result = FrontendSchemaAdapter.frontendTripToApi(tripWithEmptyDestinations);
+      const result = frontendTripToApi(tripWithEmptyDestinations);
 
       expect(result.destinations).toEqual([]);
     });
@@ -269,34 +278,34 @@ describe("FrontendSchemaAdapter", () => {
 
   describe("apiDestinationToFrontend", () => {
     const baseApiDestination: ApiDestination = {
-      name: "Paris",
-      country: "France",
+      arrival_date: "2025-06-01",
       city: "Paris",
       coordinates: { latitude: 48.8566, longitude: 2.3522 },
-      arrival_date: "2025-06-01",
+      country: "France",
       departure_date: "2025-06-05",
       duration_days: 4,
+      name: "Paris",
     };
 
     it("should convert API destination to frontend format", () => {
-      const result = FrontendSchemaAdapter.apiDestinationToFrontend(baseApiDestination);
+      const result = apiDestinationToFrontend(baseApiDestination);
 
       expect(result).toEqual({
+        activities: [],
+        coordinates: { latitude: 48.8566, longitude: 2.3522 },
+        country: "France",
+        endDate: "2025-06-05",
+        estimatedCost: 0,
         id: expect.stringMatching(/^Paris-\d+$/), // Generated ID with timestamp
         name: "Paris",
-        country: "France",
-        coordinates: { latitude: 48.8566, longitude: 2.3522 },
         startDate: "2025-06-01",
-        endDate: "2025-06-05",
-        activities: [],
-        estimatedCost: 0,
       });
     });
 
     it("should generate unique IDs for destinations", () => {
-      const dest1 = FrontendSchemaAdapter.apiDestinationToFrontend(baseApiDestination);
+      const dest1 = apiDestinationToFrontend(baseApiDestination);
       // Wait a small amount to ensure different timestamp
-      const dest2 = FrontendSchemaAdapter.apiDestinationToFrontend({
+      const dest2 = apiDestinationToFrontend({
         ...baseApiDestination,
         name: "Rome", // Different name to potentially get different ID
       });
@@ -312,22 +321,22 @@ describe("FrontendSchemaAdapter", () => {
         name: "Rome",
       };
 
-      const result = FrontendSchemaAdapter.apiDestinationToFrontend(minimalDestination);
+      const result = apiDestinationToFrontend(minimalDestination);
 
       expect(result).toEqual({
+        activities: [],
+        coordinates: undefined,
+        country: "",
+        endDate: undefined,
+        estimatedCost: 0,
         id: expect.stringMatching(/^Rome-\d+$/),
         name: "Rome",
-        country: "",
-        coordinates: undefined,
         startDate: undefined,
-        endDate: undefined,
-        activities: [],
-        estimatedCost: 0,
       });
     });
 
     it("should preserve coordinates when provided", () => {
-      const result = FrontendSchemaAdapter.apiDestinationToFrontend(baseApiDestination);
+      const result = apiDestinationToFrontend(baseApiDestination);
 
       expect(result.coordinates).toEqual({ latitude: 48.8566, longitude: 2.3522 });
     });
@@ -335,54 +344,50 @@ describe("FrontendSchemaAdapter", () => {
 
   describe("frontendDestinationToApi", () => {
     const baseFrontendDestination: Destination = {
+      activities: ["sightseeing", "museums"],
+      coordinates: { latitude: 48.8566, longitude: 2.3522 },
+      country: "France",
+      endDate: "2025-06-05",
+      estimatedCost: 1000,
       id: "dest-123",
       name: "Paris",
-      country: "France",
-      coordinates: { latitude: 48.8566, longitude: 2.3522 },
       startDate: "2025-06-01",
-      endDate: "2025-06-05",
-      activities: ["sightseeing", "museums"],
-      estimatedCost: 1000,
     };
 
     it("should convert frontend destination to API format", () => {
-      const result = FrontendSchemaAdapter.frontendDestinationToApi(
-        baseFrontendDestination
-      );
+      const result = frontendDestinationToApi(baseFrontendDestination);
 
       expect(result).toEqual({
-        name: "Paris",
-        country: "France",
+        arrival_date: "2025-06-01",
         city: "France", // Uses country as city fallback
         coordinates: { latitude: 48.8566, longitude: 2.3522 },
-        arrival_date: "2025-06-01",
+        country: "France",
         departure_date: "2025-06-05",
+        name: "Paris",
       });
     });
 
     it("should handle missing optional fields", () => {
       const minimalDestination: Destination = {
+        country: "Italy",
         id: "dest-minimal",
         name: "Rome",
-        country: "Italy",
       };
 
-      const result = FrontendSchemaAdapter.frontendDestinationToApi(minimalDestination);
+      const result = frontendDestinationToApi(minimalDestination);
 
       expect(result).toEqual({
-        name: "Rome",
-        country: "Italy",
+        arrival_date: undefined,
         city: "Italy", // Uses country as city fallback
         coordinates: undefined,
-        arrival_date: undefined,
+        country: "Italy",
         departure_date: undefined,
+        name: "Rome",
       });
     });
 
     it("should preserve coordinates", () => {
-      const result = FrontendSchemaAdapter.frontendDestinationToApi(
-        baseFrontendDestination
-      );
+      const result = frontendDestinationToApi(baseFrontendDestination);
 
       expect(result.coordinates).toEqual({ latitude: 48.8566, longitude: 2.3522 });
     });
@@ -391,58 +396,58 @@ describe("FrontendSchemaAdapter", () => {
   describe("normalizeTrip", () => {
     it("should normalize trip with complete data", () => {
       const partialTrip: Partial<Trip> = {
-        id: "trip-123",
-        title: "Test Trip",
+        budget: 2000,
+        created_at: "2025-01-01T00:00:00Z",
+        currency: "EUR",
         description: "Test description",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
         destinations: [
           {
+            country: "France",
             id: "dest-1",
             name: "Paris",
-            country: "France",
           },
         ],
-        budget: 2000,
-        currency: "EUR",
-        visibility: "public",
-        tags: ["fun"],
+        end_date: "2025-06-15",
+        id: "trip-123",
         preferences: { test: "value" },
+        start_date: "2025-06-01",
         status: "confirmed",
-        created_at: "2025-01-01T00:00:00Z",
+        tags: ["fun"],
+        title: "Test Trip",
         updated_at: "2025-01-01T12:00:00Z",
+        visibility: "public",
       };
 
-      const result = FrontendSchemaAdapter.normalizeTrip(partialTrip);
+      const result = normalizeTrip(partialTrip);
 
       expect(result).toEqual({
-        id: "trip-123",
-        name: "Test Trip",
-        title: "Test Trip",
-        description: "Test description",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
-        startDate: "2025-06-01",
-        endDate: "2025-06-15",
-        destinations: partialTrip.destinations,
         budget: 2000,
-        currency: "EUR",
-        visibility: "public",
-        isPublic: true,
-        tags: ["fun"],
-        preferences: { test: "value" },
-        status: "confirmed",
         created_at: "2025-01-01T00:00:00Z",
-        updated_at: "2025-01-01T12:00:00Z",
         createdAt: "2025-01-01T00:00:00Z",
+        currency: "EUR",
+        description: "Test description",
+        destinations: partialTrip.destinations,
+        end_date: "2025-06-15",
+        endDate: "2025-06-15",
+        id: "trip-123",
+        isPublic: true,
+        name: "Test Trip",
+        preferences: { test: "value" },
+        start_date: "2025-06-01",
+        startDate: "2025-06-01",
+        status: "confirmed",
+        tags: ["fun"],
+        title: "Test Trip",
+        updated_at: "2025-01-01T12:00:00Z",
         updatedAt: "2025-01-01T12:00:00Z",
+        visibility: "public",
       });
     });
 
     it("should provide defaults for missing fields", () => {
       const emptyTrip: Partial<Trip> = {};
 
-      const result = FrontendSchemaAdapter.normalizeTrip(emptyTrip);
+      const result = normalizeTrip(emptyTrip);
 
       expect(result.id).toBe("");
       expect(result.name).toBe("Untitled Trip");
@@ -472,13 +477,13 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should prefer snake_case fields over camelCase", () => {
       const tripWithBothFormats: Partial<Trip> = {
-        start_date: "2025-07-01",
-        startDate: "2025-06-01",
         created_at: "2025-01-01T00:00:00Z",
         createdAt: "2025-02-01T00:00:00Z",
+        start_date: "2025-07-01",
+        startDate: "2025-06-01",
       };
 
-      const result = FrontendSchemaAdapter.normalizeTrip(tripWithBothFormats);
+      const result = normalizeTrip(tripWithBothFormats);
 
       // According to implementation: start_date || startDate
       expect(result.start_date).toBe("2025-07-01");
@@ -490,11 +495,11 @@ describe("FrontendSchemaAdapter", () => {
     });
 
     it("should set isPublic based on visibility", () => {
-      const publicTrip = FrontendSchemaAdapter.normalizeTrip({ visibility: "public" });
-      const privateTrip = FrontendSchemaAdapter.normalizeTrip({
+      const publicTrip = normalizeTrip({ visibility: "public" });
+      const privateTrip = normalizeTrip({
         visibility: "private",
       });
-      const sharedTrip = FrontendSchemaAdapter.normalizeTrip({ visibility: "shared" });
+      const sharedTrip = normalizeTrip({ visibility: "shared" });
 
       expect(publicTrip.isPublic).toBe(true);
       expect(privateTrip.isPublic).toBe(false);
@@ -502,7 +507,7 @@ describe("FrontendSchemaAdapter", () => {
     });
 
     it("should handle legacy isPublic field", () => {
-      const tripWithIsPublic = FrontendSchemaAdapter.normalizeTrip({ isPublic: true });
+      const tripWithIsPublic = normalizeTrip({ isPublic: true });
 
       expect(tripWithIsPublic.isPublic).toBe(true);
       expect(tripWithIsPublic.visibility).toBe("private"); // Default visibility
@@ -511,7 +516,7 @@ describe("FrontendSchemaAdapter", () => {
 
   describe("createEmptyTrip", () => {
     it("should create empty trip with defaults", () => {
-      const result = FrontendSchemaAdapter.createEmptyTrip();
+      const result = createEmptyTrip();
 
       expect(result.id).toBe("");
       expect(result.name).toBe("New Trip");
@@ -541,14 +546,14 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should apply overrides to default trip", () => {
       const overrides: Partial<Trip> = {
-        name: "Custom Trip",
         budget: 5000,
         currency: "EUR",
-        visibility: "public",
+        name: "Custom Trip",
         tags: ["adventure"],
+        visibility: "public",
       };
 
-      const result = FrontendSchemaAdapter.createEmptyTrip(overrides);
+      const result = createEmptyTrip(overrides);
 
       expect(result.name).toBe("Custom Trip");
       expect(result.title).toBe("New Trip"); // Still "New Trip" because title wasn't overridden
@@ -560,34 +565,36 @@ describe("FrontendSchemaAdapter", () => {
     });
 
     it("should generate consistent timestamps", () => {
-      const trip1 = FrontendSchemaAdapter.createEmptyTrip();
-      const trip2 = FrontendSchemaAdapter.createEmptyTrip();
+      const trip1 = createEmptyTrip();
+      const trip2 = createEmptyTrip();
 
       // Timestamps should be close but not necessarily identical
-      const time1 = new Date(trip1.created_at!).getTime();
-      const time2 = new Date(trip2.created_at!).getTime();
+      const createdAt1 = trip1.created_at ?? "";
+      const createdAt2 = trip2.created_at ?? "";
+      const time1 = new Date(createdAt1).getTime();
+      const time2 = new Date(createdAt2).getTime();
       expect(Math.abs(time1 - time2)).toBeLessThan(1000); // Within 1 second
     });
   });
 
   describe("validateTripForApi", () => {
     const validTrip: Trip = {
-      id: "trip-123",
-      title: "Valid Trip",
-      name: "Valid Trip",
-      start_date: "2025-06-01",
-      end_date: "2025-06-15",
       destinations: [
         {
+          country: "France",
           id: "dest-1",
           name: "Paris",
-          country: "France",
         },
       ],
+      end_date: "2025-06-15",
+      id: "trip-123",
+      name: "Valid Trip",
+      start_date: "2025-06-01",
+      title: "Valid Trip",
     };
 
     it("should validate a complete valid trip", () => {
-      const result = FrontendSchemaAdapter.validateTripForApi(validTrip);
+      const result = validateTripForApi(validTrip);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toEqual([]);
@@ -595,7 +602,7 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should require name or title", () => {
       const tripWithoutName = { ...validTrip, name: "", title: undefined };
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithoutName);
+      const result = validateTripForApi(tripWithoutName);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Trip must have a name or title");
@@ -607,7 +614,7 @@ describe("FrontendSchemaAdapter", () => {
         start_date: undefined,
         startDate: undefined,
       };
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithoutStartDate);
+      const result = validateTripForApi(tripWithoutStartDate);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Trip must have a start date");
@@ -619,7 +626,7 @@ describe("FrontendSchemaAdapter", () => {
         end_date: undefined,
         endDate: undefined,
       };
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithoutEndDate);
+      const result = validateTripForApi(tripWithoutEndDate);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Trip must have an end date");
@@ -628,10 +635,10 @@ describe("FrontendSchemaAdapter", () => {
     it("should validate end date is after start date", () => {
       const tripWithInvalidDates = {
         ...validTrip,
-        start_date: "2025-06-15",
         end_date: "2025-06-01", // End before start
+        start_date: "2025-06-15",
       };
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithInvalidDates);
+      const result = validateTripForApi(tripWithInvalidDates);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("End date must be after start date");
@@ -640,10 +647,10 @@ describe("FrontendSchemaAdapter", () => {
     it("should validate end date equal to start date", () => {
       const tripWithSameDates = {
         ...validTrip,
-        start_date: "2025-06-01",
         end_date: "2025-06-01", // Same dates
+        start_date: "2025-06-01",
       };
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithSameDates);
+      const result = validateTripForApi(tripWithSameDates);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("End date must be after start date");
@@ -651,7 +658,7 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should require at least one destination", () => {
       const tripWithoutDestinations = { ...validTrip, destinations: [] };
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithoutDestinations);
+      const result = validateTripForApi(tripWithoutDestinations);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Trip must have at least one destination");
@@ -659,14 +666,14 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should accumulate multiple validation errors", () => {
       const invalidTrip: Trip = {
+        destinations: [], // No destinations
+        end_date: "2025-06-01", // End before start
         id: "trip-invalid",
         name: "", // Empty name
-        destinations: [], // No destinations
         start_date: "2025-06-15",
-        end_date: "2025-06-01", // End before start
       };
 
-      const result = FrontendSchemaAdapter.validateTripForApi(invalidTrip);
+      const result = validateTripForApi(invalidTrip);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toHaveLength(3);
@@ -678,13 +685,13 @@ describe("FrontendSchemaAdapter", () => {
     it("should work with camelCase date fields", () => {
       const tripWithCamelCaseDates = {
         ...validTrip,
-        start_date: undefined,
         end_date: undefined,
-        startDate: "2025-06-01",
         endDate: "2025-06-15",
+        start_date: undefined,
+        startDate: "2025-06-01",
       };
 
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithCamelCaseDates);
+      const result = validateTripForApi(tripWithCamelCaseDates);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toEqual([]);
@@ -693,11 +700,11 @@ describe("FrontendSchemaAdapter", () => {
     it("should handle invalid date strings gracefully", () => {
       const tripWithInvalidDates = {
         ...validTrip,
-        start_date: "invalid-date",
         end_date: "another-invalid-date",
+        start_date: "invalid-date",
       };
 
-      const result = FrontendSchemaAdapter.validateTripForApi(tripWithInvalidDates);
+      const result = validateTripForApi(tripWithInvalidDates);
 
       // Should not crash, but might have validation issues
       expect(result).toBeDefined();
@@ -716,7 +723,7 @@ describe("FrontendSchemaAdapter", () => {
         },
       };
 
-      const result = FrontendSchemaAdapter.handleApiError(error);
+      const result = handleApiError(error);
 
       expect(result).toBe("Invalid trip data provided");
     });
@@ -726,14 +733,14 @@ describe("FrontendSchemaAdapter", () => {
         response: {
           data: {
             detail: {
-              type: "value_error",
               msg: "Start date must be in the future",
+              type: "value_error",
             },
           },
         },
       };
 
-      const result = FrontendSchemaAdapter.handleApiError(error);
+      const result = handleApiError(error);
 
       expect(result).toBe("Validation error: Start date must be in the future");
     });
@@ -749,7 +756,7 @@ describe("FrontendSchemaAdapter", () => {
         },
       };
 
-      const result = FrontendSchemaAdapter.handleApiError(error);
+      const result = handleApiError(error);
 
       expect(result).toBe("Validation error: Invalid data format");
     });
@@ -767,7 +774,7 @@ describe("FrontendSchemaAdapter", () => {
         },
       };
 
-      const result = FrontendSchemaAdapter.handleApiError(error);
+      const result = handleApiError(error);
 
       expect(result).toBe(
         "Title is required, Start date is invalid, End date must be after start date"
@@ -779,7 +786,7 @@ describe("FrontendSchemaAdapter", () => {
         message: "Network error occurred",
       };
 
-      const result = FrontendSchemaAdapter.handleApiError(error);
+      const result = handleApiError(error);
 
       expect(result).toBe("Network error occurred");
     });
@@ -789,22 +796,18 @@ describe("FrontendSchemaAdapter", () => {
         someUnknownProperty: "some value",
       };
 
-      const result = FrontendSchemaAdapter.handleApiError(error);
+      const result = handleApiError(error);
 
       expect(result).toBe("An unexpected error occurred");
     });
 
     it("should handle null/undefined errors", () => {
-      expect(FrontendSchemaAdapter.handleApiError(null)).toBe(
-        "An unexpected error occurred"
-      );
-      expect(FrontendSchemaAdapter.handleApiError(undefined)).toBe(
-        "An unexpected error occurred"
-      );
+      expect(handleApiError(null)).toBe("An unexpected error occurred");
+      expect(handleApiError(undefined)).toBe("An unexpected error occurred");
     });
 
     it("should handle string errors", () => {
-      const result = FrontendSchemaAdapter.handleApiError("Simple string error");
+      const result = handleApiError("Simple string error");
 
       expect(result).toBe("An unexpected error occurred");
     });
@@ -812,29 +815,29 @@ describe("FrontendSchemaAdapter", () => {
 
   describe("Property-based testing", () => {
     const generateRandomTrip = (): Partial<Trip> => ({
-      id: `trip-${Math.random().toString(36).substr(2, 9)}`,
-      title: `Trip ${Math.random().toString(36).substr(2, 9)}`,
-      start_date: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0],
+      budget: Math.floor(Math.random() * 10000),
       end_date: new Date(
         Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000
       )
         .toISOString()
         .split("T")[0],
-      budget: Math.floor(Math.random() * 10000),
-      visibility: Math.random() > 0.5 ? "public" : ("private" as const),
+      id: `trip-${Math.random().toString(36).substr(2, 9)}`,
+      start_date: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
       tags: Array.from(
         { length: Math.floor(Math.random() * 5) },
         () => `tag-${Math.random().toString(36).substr(2, 5)}`
       ),
+      title: `Trip ${Math.random().toString(36).substr(2, 9)}`,
+      visibility: Math.random() > 0.5 ? "public" : ("private" as const),
     });
 
     it("should maintain data integrity through conversion cycles", () => {
       for (let i = 0; i < 10; i++) {
         const originalTrip = generateRandomTrip();
-        const normalized = FrontendSchemaAdapter.normalizeTrip(originalTrip);
-        const apiFormat = FrontendSchemaAdapter.frontendTripToApi(normalized);
+        const normalized = normalizeTrip(originalTrip);
+        const apiFormat = frontendTripToApi(normalized);
 
         // Core fields should be preserved
         expect(apiFormat.title).toBe(normalized.title);
@@ -846,11 +849,6 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle various destination configurations", () => {
       const generateDestination = (): ApiDestination => ({
-        name: `City-${Math.random().toString(36).substr(2, 5)}`,
-        country:
-          Math.random() > 0.5
-            ? `Country-${Math.random().toString(36).substr(2, 5)}`
-            : undefined,
         coordinates:
           Math.random() > 0.5
             ? {
@@ -858,14 +856,17 @@ describe("FrontendSchemaAdapter", () => {
                 longitude: (Math.random() - 0.5) * 360,
               }
             : undefined,
+        country:
+          Math.random() > 0.5
+            ? `Country-${Math.random().toString(36).substr(2, 5)}`
+            : undefined,
+        name: `City-${Math.random().toString(36).substr(2, 5)}`,
       });
 
       for (let i = 0; i < 10; i++) {
         const apiDestination = generateDestination();
-        const frontendDestination =
-          FrontendSchemaAdapter.apiDestinationToFrontend(apiDestination);
-        const backToApi =
-          FrontendSchemaAdapter.frontendDestinationToApi(frontendDestination);
+        const frontendDestination = apiDestinationToFrontend(apiDestination);
+        const backToApi = frontendDestinationToApi(frontendDestination);
 
         // Core data should be preserved
         expect(backToApi.name).toBe(apiDestination.name);
@@ -877,24 +878,24 @@ describe("FrontendSchemaAdapter", () => {
   describe("Edge Cases and Error Handling", () => {
     it("should handle extremely large datasets", () => {
       const largeTrip: ApiTrip = {
-        id: "large-trip",
-        user_id: "user-123",
-        title: "Large Trip",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
-        destinations: Array.from({ length: 1000 }, (_, i) => ({
-          name: `Destination ${i}`,
-          country: `Country ${i}`,
-        })),
-        visibility: "private",
-        tags: Array.from({ length: 100 }, (_, i) => `tag-${i}`),
-        preferences: {},
-        status: "planning",
         created_at: "2025-01-01T00:00:00Z",
+        destinations: Array.from({ length: 1000 }, (_, i) => ({
+          country: `Country ${i}`,
+          name: `Destination ${i}`,
+        })),
+        end_date: "2025-06-15",
+        id: "large-trip",
+        preferences: {},
+        start_date: "2025-06-01",
+        status: "planning",
+        tags: Array.from({ length: 100 }, (_, i) => `tag-${i}`),
+        title: "Large Trip",
         updated_at: "2025-01-01T00:00:00Z",
+        user_id: "user-123",
+        visibility: "private",
       };
 
-      const result = FrontendSchemaAdapter.apiTripToFrontend(largeTrip);
+      const result = apiTripToFrontend(largeTrip);
 
       expect(result.destinations).toHaveLength(1000);
       expect(result.tags).toHaveLength(100);
@@ -904,16 +905,14 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle malformed coordinate data", () => {
       const destinationWithBadCoords: ApiDestination = {
-        name: "Bad Coords City",
         coordinates: {
           latitude: Number.NaN,
           longitude: Number.POSITIVE_INFINITY,
         },
+        name: "Bad Coords City",
       };
 
-      const result = FrontendSchemaAdapter.apiDestinationToFrontend(
-        destinationWithBadCoords
-      );
+      const result = apiDestinationToFrontend(destinationWithBadCoords);
 
       expect(result.coordinates).toEqual({
         latitude: Number.NaN,
@@ -924,40 +923,41 @@ describe("FrontendSchemaAdapter", () => {
     });
 
     it("should handle circular reference in preferences", () => {
-      const circularRef: any = { a: 1 };
+      type CircularType = { a: number; self?: CircularType };
+      const circularRef: CircularType = { a: 1 };
       circularRef.self = circularRef;
 
       const tripWithCircularRef: ApiTrip = {
-        id: "circular-trip",
-        user_id: "user-123",
-        title: "Circular Trip",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
-        destinations: [],
-        visibility: "private",
-        tags: [],
-        preferences: circularRef,
-        status: "planning",
         created_at: "2025-01-01T00:00:00Z",
+        destinations: [],
+        end_date: "2025-06-15",
+        id: "circular-trip",
+        preferences: circularRef,
+        start_date: "2025-06-01",
+        status: "planning",
+        tags: [],
+        title: "Circular Trip",
         updated_at: "2025-01-01T00:00:00Z",
+        user_id: "user-123",
+        visibility: "private",
       };
 
       // Should not crash even with circular references
       expect(() => {
-        FrontendSchemaAdapter.apiTripToFrontend(tripWithCircularRef);
+        apiTripToFrontend(tripWithCircularRef);
       }).not.toThrow();
     });
 
     it("should handle null and undefined values in nested objects", () => {
       const tripWithNulls: Partial<Trip> = {
-        id: null as any,
-        title: undefined,
-        destinations: null as any,
+        destinations: null as unknown as Trip["destinations"],
+        id: null as unknown as Trip["id"],
+        preferences: null as unknown as Trip["preferences"],
         tags: undefined,
-        preferences: null as any,
+        title: undefined,
       };
 
-      const result = FrontendSchemaAdapter.normalizeTrip(tripWithNulls);
+      const result = normalizeTrip(tripWithNulls);
 
       expect(result.id).toBe("");
       expect(result.title).toBe("Untitled Trip");
@@ -968,26 +968,26 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle special characters in trip names and descriptions", () => {
       const specialCharsTrip: ApiTrip = {
-        id: "special-trip",
-        user_id: "user-123",
-        title: "🌍 Trip with émojis & spëcial chârs! 中文",
+        created_at: "2025-01-01T00:00:00Z",
         description: "Description with\nnewlines\tand\ttabs\r\nand more 特殊字符",
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
         destinations: [
           {
             name: "Pàris with àccents 巴黎",
           },
         ],
-        visibility: "private",
-        tags: ["🏖️", "spécial", "中文标签"],
+        end_date: "2025-06-15",
+        id: "special-trip",
         preferences: {},
+        start_date: "2025-06-01",
         status: "planning",
-        created_at: "2025-01-01T00:00:00Z",
+        tags: ["🏖️", "spécial", "中文标签"],
+        title: "🌍 Trip with émojis & spëcial chârs! 中文",
         updated_at: "2025-01-01T00:00:00Z",
+        user_id: "user-123",
+        visibility: "private",
       };
 
-      const result = FrontendSchemaAdapter.apiTripToFrontend(specialCharsTrip);
+      const result = apiTripToFrontend(specialCharsTrip);
 
       expect(result.title).toBe("🌍 Trip with émojis & spëcial chârs! 中文");
       expect(result.description).toBe(
@@ -1000,27 +1000,27 @@ describe("FrontendSchemaAdapter", () => {
     it("should handle extremely long strings", () => {
       const longString = "a".repeat(10000);
       const tripWithLongStrings: ApiTrip = {
-        id: "long-trip",
-        user_id: "user-123",
-        title: longString,
+        created_at: "2025-01-01T00:00:00Z",
         description: longString,
-        start_date: "2025-06-01",
-        end_date: "2025-06-15",
         destinations: [
           {
-            name: longString,
             country: longString,
+            name: longString,
           },
         ],
-        visibility: "private",
-        tags: [longString],
+        end_date: "2025-06-15",
+        id: "long-trip",
         preferences: { longKey: longString },
+        start_date: "2025-06-01",
         status: "planning",
-        created_at: "2025-01-01T00:00:00Z",
+        tags: [longString],
+        title: longString,
         updated_at: "2025-01-01T00:00:00Z",
+        user_id: "user-123",
+        visibility: "private",
       };
 
-      const result = FrontendSchemaAdapter.apiTripToFrontend(tripWithLongStrings);
+      const result = apiTripToFrontend(tripWithLongStrings);
 
       expect(result.title).toBe(longString);
       expect(result.description).toBe(longString);
@@ -1035,24 +1035,24 @@ describe("FrontendSchemaAdapter", () => {
 
       for (let i = 0; i < 1000; i++) {
         const trip: ApiTrip = {
-          id: `trip-${i}`,
-          user_id: "user-123",
-          title: `Trip ${i}`,
-          start_date: "2025-06-01",
-          end_date: "2025-06-15",
-          destinations: Array.from({ length: 10 }, (_, j) => ({
-            name: `Destination ${j}`,
-            country: `Country ${j}`,
-          })),
-          visibility: "private",
-          tags: [`tag-${i}`],
-          preferences: { key: `value-${i}` },
-          status: "planning",
           created_at: "2025-01-01T00:00:00Z",
+          destinations: Array.from({ length: 10 }, (_, j) => ({
+            country: `Country ${j}`,
+            name: `Destination ${j}`,
+          })),
+          end_date: "2025-06-15",
+          id: `trip-${i}`,
+          preferences: { key: `value-${i}` },
+          start_date: "2025-06-01",
+          status: "planning",
+          tags: [`tag-${i}`],
+          title: `Trip ${i}`,
           updated_at: "2025-01-01T00:00:00Z",
+          user_id: "user-123",
+          visibility: "private",
         };
 
-        FrontendSchemaAdapter.apiTripToFrontend(trip);
+        apiTripToFrontend(trip);
       }
 
       const endTime = performance.now();
@@ -1064,19 +1064,19 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle validation efficiently", () => {
       const trips = Array.from({ length: 1000 }, (_, i) =>
-        FrontendSchemaAdapter.createEmptyTrip({
-          id: `trip-${i}`,
-          title: `Trip ${i}`,
-          start_date: "2025-06-01",
+        createEmptyTrip({
+          destinations: [{ country: "Test", id: "dest-1", name: "Test" }],
           end_date: "2025-06-15",
-          destinations: [{ id: "dest-1", name: "Test", country: "Test" }],
+          id: `trip-${i}`,
+          start_date: "2025-06-01",
+          title: `Trip ${i}`,
         })
       );
 
       const startTime = performance.now();
 
       for (const trip of trips) {
-        FrontendSchemaAdapter.validateTripForApi(trip);
+        validateTripForApi(trip);
       }
 
       const endTime = performance.now();
@@ -1090,22 +1090,30 @@ describe("FrontendSchemaAdapter", () => {
   describe("Backward Compatibility", () => {
     it("should handle legacy trip format", () => {
       // Simulate old trip format that might exist in storage
-      const legacyTrip: any = {
-        id: "legacy-trip",
-        name: "Legacy Trip", // Old format used 'name' instead of 'title'
-        startDate: "2025-06-01", // Old format used camelCase
-        endDate: "2025-06-15",
-        isPublic: true, // Old format used boolean instead of visibility enum
+      type LegacyTrip = {
+        destinations: Partial<Trip>["destinations"];
+        endDate: string;
+        id: string;
+        isPublic: boolean;
+        name: string;
+        startDate: string;
+      };
+      const legacyTrip: LegacyTrip = {
         destinations: [
           {
+            country: "France",
             id: "dest-1",
             name: "Paris",
-            country: "France",
           },
         ],
+        endDate: "2025-06-15",
+        id: "legacy-trip",
+        isPublic: true, // Old format used boolean instead of visibility enum
+        name: "Legacy Trip", // Old format used 'name' instead of 'title'
+        startDate: "2025-06-01", // Old format used camelCase
       };
 
-      const normalized = FrontendSchemaAdapter.normalizeTrip(legacyTrip);
+      const normalized = normalizeTrip(legacyTrip);
 
       expect(normalized.title).toBe("Legacy Trip");
       expect(normalized.name).toBe("Legacy Trip");
@@ -1117,13 +1125,13 @@ describe("FrontendSchemaAdapter", () => {
 
     it("should handle mixed date formats", () => {
       const mixedTrip: Partial<Trip> = {
-        start_date: "2025-06-01",
-        endDate: "2025-06-15", // Mixed formats
         created_at: "2025-01-01T00:00:00Z",
+        endDate: "2025-06-15", // Mixed formats
+        start_date: "2025-06-01",
         updatedAt: "2025-01-01T12:00:00Z", // Mixed formats
       };
 
-      const normalized = FrontendSchemaAdapter.normalizeTrip(mixedTrip);
+      const normalized = normalizeTrip(mixedTrip);
 
       expect(normalized.start_date).toBe("2025-06-01");
       expect(normalized.startDate).toBe("2025-06-01");
@@ -1139,10 +1147,10 @@ describe("FrontendSchemaAdapter", () => {
 
 describe("formatTripDate", () => {
   it("should format valid date strings", () => {
-    // Note: Date parsing can be timezone dependent, so we test the actual behavior
-    expect(formatTripDate("2025-06-01")).toBe("May 31, 2025"); // Actual behavior due to timezone
-    expect(formatTripDate("2025-12-25")).toBe("Dec 24, 2025"); // Actual behavior due to timezone
-    expect(formatTripDate("2025-01-01")).toBe("Dec 31, 2024"); // Actual behavior due to timezone
+    // Date-only strings are formatted deterministically (no TZ shift)
+    expect(formatTripDate("2025-06-01")).toBe("Jun 1, 2025");
+    expect(formatTripDate("2025-12-25")).toBe("Dec 25, 2025");
+    expect(formatTripDate("2025-01-01")).toBe("Jan 1, 2025");
   });
 
   it("should handle ISO datetime strings", () => {
@@ -1154,17 +1162,16 @@ describe("formatTripDate", () => {
     expect(formatTripDate("")).toBe("");
   });
 
-  it("should return original string for invalid dates", () => {
-    // Invalid Date objects result in "Invalid Date" string
+  it("should return 'Invalid Date' for invalid dates", () => {
     expect(formatTripDate("invalid-date")).toBe("Invalid Date");
     expect(formatTripDate("2025-13-45")).toBe("Invalid Date");
     expect(formatTripDate("not-a-date")).toBe("Invalid Date");
   });
 
   it("should handle edge cases", () => {
-    // Year 0000 results in different behavior due to JavaScript Date handling
-    expect(formatTripDate("0000-01-01")).toBe("Dec 31, 2");
-    expect(formatTripDate("9999-12-31")).toBe("Dec 30, 9999"); // Actual behavior
+    // Year 0000 is treated as invalid for determinism
+    expect(formatTripDate("0000-01-01")).toBe("Invalid Date");
+    expect(formatTripDate("9999-12-31")).toBe("Dec 31, 9999");
   });
 });
 

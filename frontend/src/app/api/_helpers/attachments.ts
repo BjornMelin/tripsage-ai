@@ -2,7 +2,7 @@
  * @fileoverview Helpers for UI attachments mapping and validation.
  */
 
-import type { UIMessage } from "ai";
+import type { FileUIPart, UIMessage } from "ai";
 
 /**
  * Type representing the result of attachment validation.
@@ -17,14 +17,14 @@ export type Validation = { valid: true } | { valid: false; reason: string };
  */
 export function validateImageAttachments(messages: UIMessage[]): Validation {
   for (const m of messages) {
-    const parts = (m as any).parts as Array<any> | undefined;
+    const parts = m.parts;
     if (!Array.isArray(parts)) continue;
     for (const p of parts) {
       if (p?.type === "file") {
-        const mediaType: string | undefined = p.media_type || p.mediaType;
-        if (!mediaType) return { valid: false, reason: "missing_media_type" };
+        const mediaType: string | undefined = p.mediaType;
+        if (!mediaType) return { reason: "missing_media_type", valid: false };
         if (!mediaType.startsWith("image/"))
-          return { valid: false, reason: "unsupported_media_type" };
+          return { reason: "unsupported_media_type", valid: false };
       }
     }
   }
@@ -37,14 +37,14 @@ export function validateImageAttachments(messages: UIMessage[]): Validation {
  * @param part - UI message part to convert.
  * @returns FilePart object for AI SDK or undefined if not convertible.
  */
-export function convertUiFilePartToImage(part: any) {
+export function convertUiFilePartToImage(part: FileUIPart) {
   if (part?.type === "file") {
-    const mediaType: string | undefined = part.media_type || part.mediaType;
+    const mediaType: string | undefined = part.mediaType;
     if (mediaType?.startsWith("image/")) {
       return {
-        type: "image" as const,
         image: part.url,
         mimeType: mediaType,
+        type: "image" as const,
       };
     }
   }
@@ -60,7 +60,7 @@ export function convertUiFilePartToImage(part: any) {
 export function extractTexts(messages: UIMessage[]): string[] {
   const texts: string[] = [];
   for (const m of messages) {
-    const parts = (m as any).parts as Array<any> | undefined;
+    const parts = m.parts;
     if (!Array.isArray(parts)) continue;
     for (const p of parts) {
       if (p?.type === "text" && typeof p.text === "string") texts.push(p.text);

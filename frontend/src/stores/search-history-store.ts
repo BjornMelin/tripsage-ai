@@ -1,22 +1,25 @@
+/**
+ * @fileoverview Zustand store for managing search history, saved searches, and analytics.
+ */
+
 import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { nowIso, secureId } from "@/lib/security/random";
 import type { SearchParams, SearchType } from "@/types/search";
 
 // Validation schemas for search history
-const SearchTypeSchema = z.enum(["flight", "accommodation", "activity", "destination"]);
+const SEARCH_TYPE_SCHEMA = z.enum([
+  "flight",
+  "accommodation",
+  "activity",
+  "destination",
+]);
 
-const SearchHistoryItemSchema = z.object({
+const SEARCH_HISTORY_ITEM_SCHEMA = z.object({
   id: z.string(),
-  searchType: SearchTypeSchema,
-  params: z.record(z.string(), z.unknown()),
-  timestamp: z.string(),
-  resultsCount: z.number().min(0).optional(),
-  searchDuration: z.number().min(0).optional(),
-  userAgent: z.string().optional(),
   location: z
     .object({
-      country: z.string().optional(),
       city: z.string().optional(),
       coordinates: z
         .object({
@@ -24,61 +27,68 @@ const SearchHistoryItemSchema = z.object({
           lng: z.number(),
         })
         .optional(),
+      country: z.string().optional(),
     })
     .optional(),
+  params: z.record(z.string(), z.unknown()),
+  resultsCount: z.number().min(0).optional(),
+  searchDuration: z.number().min(0).optional(),
+  searchType: SEARCH_TYPE_SCHEMA,
+  timestamp: z.string(),
+  userAgent: z.string().optional(),
 });
 
-const SavedSearchSchema = z.object({
-  id: z.string(),
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  searchType: SearchTypeSchema,
-  params: z.record(z.string(), z.unknown()),
-  tags: z.array(z.string()).default([]),
-  isPublic: z.boolean().default(false),
-  isFavorite: z.boolean().default(false),
+const SAVED_SEARCH_SCHEMA = z.object({
   createdAt: z.string(),
-  updatedAt: z.string(),
+  description: z.string().max(500).optional(),
+  id: z.string(),
+  isFavorite: z.boolean().default(false),
+  isPublic: z.boolean().default(false),
   lastUsed: z.string().optional(),
-  usageCount: z.number().min(0).default(0),
   metadata: z
     .object({
-      version: z.string().default("1.0"),
-      source: z.string().optional(), // e.g., "manual", "auto-save", "import"
       originalSearchId: z.string().optional(),
+      source: z.string().optional(), // e.g., "manual", "auto-save", "import"
+      version: z.string().default("1.0"),
     })
     .optional(),
+  name: z.string().min(1).max(100),
+  params: z.record(z.string(), z.unknown()),
+  searchType: SEARCH_TYPE_SCHEMA,
+  tags: z.array(z.string()).default([]),
+  updatedAt: z.string(),
+  usageCount: z.number().min(0).default(0),
 });
 
-const SearchCollectionSchema = z.object({
-  id: z.string(),
-  name: z.string().min(1).max(100),
+const SEARCH_COLLECTION_SCHEMA = z.object({
+  createdAt: z.string(),
+  createdBy: z.string().optional(),
   description: z.string().max(500).optional(),
+  id: z.string(),
+  isPublic: z.boolean().default(false),
+  name: z.string().min(1).max(100),
   searchIds: z.array(z.string()),
   tags: z.array(z.string()).default([]),
-  isPublic: z.boolean().default(false),
-  createdAt: z.string(),
   updatedAt: z.string(),
-  createdBy: z.string().optional(),
 });
 
-const QuickSearchSchema = z.object({
-  id: z.string(),
-  label: z.string().min(1).max(50),
-  searchType: SearchTypeSchema,
-  params: z.record(z.string(), z.unknown()),
-  icon: z.string().optional(),
+const QUICK_SEARCH_SCHEMA = z.object({
   color: z.string().optional(),
-  sortOrder: z.number().default(0),
-  isVisible: z.boolean().default(true),
   createdAt: z.string(),
+  icon: z.string().optional(),
+  id: z.string(),
+  isVisible: z.boolean().default(true),
+  label: z.string().min(1).max(50),
+  params: z.record(z.string(), z.unknown()),
+  searchType: SEARCH_TYPE_SCHEMA,
+  sortOrder: z.number().default(0),
 });
 
 // Types derived from schemas
-export type SearchHistoryItem = z.infer<typeof SearchHistoryItemSchema>;
-export type ValidatedSavedSearch = z.infer<typeof SavedSearchSchema>;
-export type SearchCollection = z.infer<typeof SearchCollectionSchema>;
-export type QuickSearch = z.infer<typeof QuickSearchSchema>;
+export type SearchHistoryItem = z.infer<typeof SEARCH_HISTORY_ITEM_SCHEMA>;
+export type ValidatedSavedSearch = z.infer<typeof SAVED_SEARCH_SCHEMA>;
+export type SearchCollection = z.infer<typeof SEARCH_COLLECTION_SCHEMA>;
+export type QuickSearch = z.infer<typeof QUICK_SEARCH_SCHEMA>;
 
 export interface SearchSuggestion {
   id: string;
@@ -247,9 +257,8 @@ interface SearchHistoryState {
 }
 
 // Helper functions
-const generateId = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const getCurrentTimestamp = () => new Date().toISOString();
+const GENERATE_ID = () => secureId(12);
+const GET_CURRENT_TIMESTAMP = () => nowIso();
 
 // Default settings
 const DEFAULT_MAX_RECENT_SEARCHES = 50;
@@ -259,63 +268,10 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
   devtools(
     persist(
       (set, get) => ({
-        // Initial state
-        recentSearches: [],
-        savedSearches: [],
-        searchCollections: [],
-        quickSearches: [],
-
-        // Search suggestions
-        searchSuggestions: [],
-        popularSearchTerms: [],
-
-        // Settings
-        maxRecentSearches: DEFAULT_MAX_RECENT_SEARCHES,
-        autoSaveEnabled: true,
-        autoCleanupDays: DEFAULT_AUTO_CLEANUP_DAYS,
-
-        // Loading and sync states
-        isLoading: false,
-        isSyncing: false,
-        lastSyncAt: null,
-
-        // Error states
-        error: null,
-        syncError: null,
-
-        // Computed properties
-        get totalSavedSearches() {
-          return get().savedSearches.length;
-        },
-
-        get recentSearchesByType() {
-          const { recentSearches } = get();
-          const grouped: Record<SearchType, SearchHistoryItem[]> = {
-            flight: [],
-            accommodation: [],
-            activity: [],
-            destination: [],
-          };
-
-          recentSearches.forEach((search) => {
-            grouped[search.searchType].push(search);
-          });
-
-          return grouped;
-        },
-
-        get favoriteSearches() {
-          return get().savedSearches.filter((search) => search.isFavorite);
-        },
-
-        get searchAnalytics() {
-          return get().getSearchAnalytics();
-        },
-
         // Recent search management
         addRecentSearch: (searchType, params, metadata = {}) => {
           const { maxRecentSearches, recentSearches } = get();
-          const timestamp = getCurrentTimestamp();
+          const timestamp = GET_CURRENT_TIMESTAMP();
 
           // Check if similar search already exists (avoid duplicates)
           const paramsString = JSON.stringify(params);
@@ -341,14 +297,14 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
           // Add new search
           const newSearch: SearchHistoryItem = {
-            id: generateId(),
-            searchType,
+            id: GENERATE_ID(),
             params: params as Record<string, unknown>,
+            searchType,
             timestamp,
             ...metadata,
           };
 
-          const result = SearchHistoryItemSchema.safeParse(newSearch);
+          const result = SEARCH_HISTORY_ITEM_SCHEMA.safeParse(newSearch);
           if (result.success) {
             set((state) => ({
               recentSearches: [
@@ -364,25 +320,41 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
           }
         },
 
-        clearRecentSearches: (searchType) => {
-          if (searchType) {
-            set((state) => ({
-              recentSearches: state.recentSearches.filter(
-                (search) => search.searchType !== searchType
-              ),
-            }));
-          } else {
-            set({ recentSearches: [] });
-          }
+        addSearchTerm: (term, searchType) => {
+          set((state) => {
+            const existingIndex = state.popularSearchTerms.findIndex(
+              (t) => t.term === term && t.searchType === searchType
+            );
+
+            if (existingIndex >= 0) {
+              const updatedTerms = [...state.popularSearchTerms];
+              updatedTerms[existingIndex].count += 1;
+              return { popularSearchTerms: updatedTerms };
+            }
+            return {
+              popularSearchTerms: [
+                ...state.popularSearchTerms,
+                { count: 1, searchType, term },
+              ].slice(0, 200), // Keep top 200 terms
+            };
+          });
         },
 
-        removeRecentSearch: (searchId) => {
+        addSearchToCollection: (collectionId, searchId) => {
           set((state) => ({
-            recentSearches: state.recentSearches.filter(
-              (search) => search.id !== searchId
+            searchCollections: state.searchCollections.map((collection) =>
+              collection.id === collectionId
+                ? {
+                    ...collection,
+                    searchIds: [...new Set([...collection.searchIds, searchId])],
+                    updatedAt: GET_CURRENT_TIMESTAMP(),
+                  }
+                : collection
             ),
           }));
         },
+        autoCleanupDays: DEFAULT_AUTO_CLEANUP_DAYS,
+        autoSaveEnabled: true,
 
         cleanupOldSearches: () => {
           const { autoCleanupDays } = get();
@@ -396,89 +368,140 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
           }));
         },
 
-        // Saved search management
-        saveSearch: async (name, searchType, params, options = {}) => {
+        // Utility actions
+        clearAllData: () => {
+          set({
+            popularSearchTerms: [],
+            quickSearches: [],
+            recentSearches: [],
+            savedSearches: [],
+            searchCollections: [],
+            searchSuggestions: [],
+          });
+        },
+
+        clearError: () => {
+          set({ error: null, syncError: null });
+        },
+
+        clearRecentSearches: (searchType) => {
+          if (searchType) {
+            set((state) => ({
+              recentSearches: state.recentSearches.filter(
+                (search) => search.searchType !== searchType
+              ),
+            }));
+          } else {
+            set({ recentSearches: [] });
+          }
+        },
+
+        // Search collections
+        createCollection: (name, description, searchIds = []) => {
           set({ isLoading: true });
 
           try {
-            const searchId = generateId();
-            const timestamp = getCurrentTimestamp();
+            const collectionId = GENERATE_ID();
+            const timestamp = GET_CURRENT_TIMESTAMP();
 
-            const newSavedSearch: ValidatedSavedSearch = {
-              id: searchId,
-              name,
-              description: options.description,
-              searchType,
-              params: params as Record<string, unknown>,
-              tags: options.tags || [],
-              isPublic: options.isPublic || false,
-              isFavorite: options.isFavorite || false,
+            const newCollection: SearchCollection = {
               createdAt: timestamp,
+              description,
+              id: collectionId,
+              isPublic: false,
+              name,
+              searchIds,
+              tags: [],
               updatedAt: timestamp,
-              usageCount: 0,
-              metadata: {
-                version: "1.0",
-                source: "manual",
-              },
             };
 
-            const result = SavedSearchSchema.safeParse(newSavedSearch);
+            const result = SEARCH_COLLECTION_SCHEMA.safeParse(newCollection);
             if (result.success) {
               set((state) => ({
-                savedSearches: [...state.savedSearches, result.data],
                 isLoading: false,
+                searchCollections: [...state.searchCollections, result.data],
               }));
 
-              return searchId;
+              return Promise.resolve(collectionId);
             }
-            throw new Error("Invalid saved search data");
+            throw new Error("Invalid collection data");
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : "Failed to save search";
+              error instanceof Error ? error.message : "Failed to create collection";
             set({ error: message, isLoading: false });
-            return null;
+            return Promise.resolve(null);
           }
         },
 
-        updateSavedSearch: async (searchId, updates) => {
-          set({ isLoading: true });
-
+        // Quick searches
+        createQuickSearch: (label, searchType, params, options = {}) => {
           try {
-            set((state) => {
-              const updatedSearches = state.savedSearches.map((search) => {
-                if (search.id === searchId) {
-                  const updatedSearch = {
-                    ...search,
-                    ...updates,
-                    updatedAt: getCurrentTimestamp(),
-                  };
+            const quickSearchId = GENERATE_ID();
+            const timestamp = GET_CURRENT_TIMESTAMP();
 
-                  const result = SavedSearchSchema.safeParse(updatedSearch);
-                  return result.success ? result.data : search;
-                }
-                return search;
-              });
+            const newQuickSearch: QuickSearch = {
+              color: options.color,
+              createdAt: timestamp,
+              icon: options.icon,
+              id: quickSearchId,
+              isVisible: true,
+              label,
+              params: params as Record<string, unknown>,
+              searchType,
+              sortOrder: options.sortOrder || get().quickSearches.length,
+            };
 
-              return {
-                savedSearches: updatedSearches,
-                isLoading: false,
-              };
-            });
+            const result = QUICK_SEARCH_SCHEMA.safeParse(newQuickSearch);
+            if (result.success) {
+              set((state) => ({
+                quickSearches: [...state.quickSearches, result.data],
+              }));
 
-            return true;
+              return Promise.resolve(quickSearchId);
+            }
+            throw new Error("Invalid quick search data");
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : "Failed to update search";
-            set({ error: message, isLoading: false });
-            return false;
+              error instanceof Error ? error.message : "Failed to create quick search";
+            set({ error: message });
+            return Promise.resolve(null);
           }
         },
 
-        deleteSavedSearch: async (searchId) => {
+        deleteCollection: (collectionId) => {
           set({ isLoading: true });
 
           try {
             set((state) => ({
+              isLoading: false,
+              searchCollections: state.searchCollections.filter(
+                (collection) => collection.id !== collectionId
+              ),
+            }));
+
+            return Promise.resolve(true);
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Failed to delete collection";
+            set({ error: message, isLoading: false });
+            return Promise.resolve(false);
+          }
+        },
+
+        deleteQuickSearch: (quickSearchId) => {
+          set((state) => ({
+            quickSearches: state.quickSearches.filter(
+              (quickSearch) => quickSearch.id !== quickSearchId
+            ),
+          }));
+        },
+
+        deleteSavedSearch: (searchId) => {
+          set({ isLoading: true });
+
+          try {
+            set((state) => ({
+              isLoading: false,
               savedSearches: state.savedSearches.filter(
                 (search) => search.id !== searchId
               ),
@@ -486,15 +509,14 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
                 ...collection,
                 searchIds: collection.searchIds.filter((id) => id !== searchId),
               })),
-              isLoading: false,
             }));
 
-            return true;
+            return Promise.resolve(true);
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to delete search";
             set({ error: message, isLoading: false });
-            return false;
+            return Promise.resolve(false);
           }
         },
 
@@ -510,232 +532,145 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             originalSearch.params as SearchParams,
             {
               description: originalSearch.description,
-              tags: [...originalSearch.tags],
               isFavorite: false,
               isPublic: originalSearch.isPublic,
+              tags: [...originalSearch.tags],
             }
           );
         },
 
-        markSearchAsUsed: (searchId) => {
-          set((state) => ({
-            savedSearches: state.savedSearches.map((search) =>
-              search.id === searchId
-                ? {
-                    ...search,
-                    usageCount: search.usageCount + 1,
-                    lastUsed: getCurrentTimestamp(),
-                  }
-                : search
-            ),
-          }));
+        // Error states
+        error: null,
+
+        // Data management and sync
+        exportSearchHistory: () => {
+          const {
+            savedSearches,
+            searchCollections,
+            quickSearches,
+            popularSearchTerms,
+          } = get();
+          const exportData = {
+            exportedAt: GET_CURRENT_TIMESTAMP(),
+            popularSearchTerms,
+            quickSearches,
+            savedSearches,
+            searchCollections,
+            version: "1.0",
+          };
+
+          return JSON.stringify(exportData, null, 2);
         },
 
-        toggleSearchFavorite: (searchId) => {
-          set((state) => ({
-            savedSearches: state.savedSearches.map((search) =>
-              search.id === searchId
-                ? { ...search, isFavorite: !search.isFavorite }
-                : search
-            ),
-          }));
+        get favoriteSearches() {
+          return get().savedSearches.filter((search) => search.isFavorite);
         },
 
-        // Search collections
-        createCollection: async (name, description, searchIds = []) => {
-          set({ isLoading: true });
-
-          try {
-            const collectionId = generateId();
-            const timestamp = getCurrentTimestamp();
-
-            const newCollection: SearchCollection = {
-              id: collectionId,
-              name,
-              description,
-              searchIds,
-              tags: [],
-              isPublic: false,
-              createdAt: timestamp,
-              updatedAt: timestamp,
-            };
-
-            const result = SearchCollectionSchema.safeParse(newCollection);
-            if (result.success) {
-              set((state) => ({
-                searchCollections: [...state.searchCollections, result.data],
-                isLoading: false,
-              }));
-
-              return collectionId;
-            }
-            throw new Error("Invalid collection data");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Failed to create collection";
-            set({ error: message, isLoading: false });
-            return null;
-          }
+        getMostUsedSearches: (limit = 10) => {
+          return get()
+            .savedSearches.filter((search) => search.usageCount > 0)
+            .sort((a, b) => b.usageCount - a.usageCount)
+            .slice(0, limit);
         },
 
-        updateCollection: async (collectionId, updates) => {
-          set({ isLoading: true });
+        getRecentSearchesByType: (searchType, limit = 10) => {
+          return get()
+            .recentSearches.filter((search) => search.searchType === searchType)
+            .slice(0, limit);
+        },
 
-          try {
-            set((state) => {
-              const updatedCollections = state.searchCollections.map((collection) => {
-                if (collection.id === collectionId) {
-                  const updatedCollection = {
-                    ...collection,
-                    ...updates,
-                    updatedAt: getCurrentTimestamp(),
-                  };
+        getSavedSearchesByTag: (tag) => {
+          return get().savedSearches.filter((search) => search.tags.includes(tag));
+        },
 
-                  const result = SearchCollectionSchema.safeParse(updatedCollection);
-                  return result.success ? result.data : collection;
-                }
-                return collection;
-              });
+        getSavedSearchesByType: (searchType) => {
+          return get().savedSearches.filter(
+            (search) => search.searchType === searchType
+          );
+        },
 
-              return {
-                searchCollections: updatedCollections,
-                isLoading: false,
-              };
+        // Analytics and insights
+        getSearchAnalytics: (dateRange) => {
+          const { recentSearches, savedSearches } = get();
+          let filteredSearches = recentSearches;
+
+          if (dateRange) {
+            const startDate = new Date(dateRange.start);
+            const endDate = new Date(dateRange.end);
+            filteredSearches = recentSearches.filter((search) => {
+              const searchDate = new Date(search.timestamp);
+              return searchDate >= startDate && searchDate <= endDate;
             });
-
-            return true;
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Failed to update collection";
-            set({ error: message, isLoading: false });
-            return false;
           }
-        },
 
-        deleteCollection: async (collectionId) => {
-          set({ isLoading: true });
+          const totalSearches = filteredSearches.length;
+          const searchesByType: Record<SearchType, number> = {
+            accommodation: 0,
+            activity: 0,
+            destination: 0,
+            flight: 0,
+          };
 
-          try {
-            set((state) => ({
-              searchCollections: state.searchCollections.filter(
-                (collection) => collection.id !== collectionId
-              ),
-              isLoading: false,
-            }));
-
-            return true;
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Failed to delete collection";
-            set({ error: message, isLoading: false });
-            return false;
-          }
-        },
-
-        addSearchToCollection: (collectionId, searchId) => {
-          set((state) => ({
-            searchCollections: state.searchCollections.map((collection) =>
-              collection.id === collectionId
-                ? {
-                    ...collection,
-                    searchIds: [...new Set([...collection.searchIds, searchId])],
-                    updatedAt: getCurrentTimestamp(),
-                  }
-                : collection
-            ),
-          }));
-        },
-
-        removeSearchFromCollection: (collectionId, searchId) => {
-          set((state) => ({
-            searchCollections: state.searchCollections.map((collection) =>
-              collection.id === collectionId
-                ? {
-                    ...collection,
-                    searchIds: collection.searchIds.filter((id) => id !== searchId),
-                    updatedAt: getCurrentTimestamp(),
-                  }
-                : collection
-            ),
-          }));
-        },
-
-        // Quick searches
-        createQuickSearch: async (label, searchType, params, options = {}) => {
-          try {
-            const quickSearchId = generateId();
-            const timestamp = getCurrentTimestamp();
-
-            const newQuickSearch: QuickSearch = {
-              id: quickSearchId,
-              label,
-              searchType,
-              params: params as Record<string, unknown>,
-              icon: options.icon,
-              color: options.color,
-              sortOrder: options.sortOrder || get().quickSearches.length,
-              isVisible: true,
-              createdAt: timestamp,
-            };
-
-            const result = QuickSearchSchema.safeParse(newQuickSearch);
-            if (result.success) {
-              set((state) => ({
-                quickSearches: [...state.quickSearches, result.data],
-              }));
-
-              return quickSearchId;
-            }
-            throw new Error("Invalid quick search data");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Failed to create quick search";
-            set({ error: message });
-            return null;
-          }
-        },
-
-        updateQuickSearch: async (quickSearchId, updates) => {
-          try {
-            set((state) => ({
-              quickSearches: state.quickSearches.map((quickSearch) => {
-                if (quickSearch.id === quickSearchId) {
-                  const updatedQuickSearch = { ...quickSearch, ...updates };
-                  const result = QuickSearchSchema.safeParse(updatedQuickSearch);
-                  return result.success ? result.data : quickSearch;
-                }
-                return quickSearch;
-              }),
-            }));
-
-            return true;
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Failed to update quick search";
-            set({ error: message });
-            return false;
-          }
-        },
-
-        deleteQuickSearch: (quickSearchId) => {
-          set((state) => ({
-            quickSearches: state.quickSearches.filter(
-              (quickSearch) => quickSearch.id !== quickSearchId
-            ),
-          }));
-        },
-
-        reorderQuickSearches: (quickSearchIds) => {
-          set((state) => {
-            const reorderedQuickSearches = quickSearchIds
-              .map((id, index) => {
-                const quickSearch = state.quickSearches.find((qs) => qs.id === id);
-                return quickSearch ? { ...quickSearch, sortOrder: index } : null;
-              })
-              .filter(Boolean) as QuickSearch[];
-
-            return { quickSearches: reorderedQuickSearches };
+          filteredSearches.forEach((search) => {
+            searchesByType[search.searchType]++;
           });
+
+          const averageSearchDuration =
+            filteredSearches.reduce((sum, search) => {
+              return sum + (search.searchDuration || 0);
+            }, 0) / totalSearches || 0;
+
+          const mostUsedSearchTypes = Object.entries(searchesByType)
+            .map(([type, count]) => ({
+              count,
+              percentage: totalSearches > 0 ? (count / totalSearches) * 100 : 0,
+              type: type as SearchType,
+            }))
+            .sort((a, b) => b.count - a.count);
+
+          // Generate search trends (last 30 days)
+          const searchTrends: Array<{ date: string; count: number }> = [];
+          for (let i = 29; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split("T")[0];
+
+            const count = filteredSearches.filter((search) =>
+              search.timestamp.startsWith(dateStr)
+            ).length;
+
+            searchTrends.push({ count, date: dateStr });
+          }
+
+          // Popular search times (by hour)
+          const popularSearchTimes: Array<{ hour: number; count: number }> = [];
+          for (let hour = 0; hour < 24; hour++) {
+            const count = filteredSearches.filter((search) => {
+              const searchHour = new Date(search.timestamp).getHours();
+              return searchHour === hour;
+            }).length;
+
+            popularSearchTimes.push({ count, hour });
+          }
+
+          return {
+            averageSearchDuration,
+            mostUsedSearchTypes,
+            popularSearchTimes,
+            savedSearchUsage: savedSearches
+              .filter((search) => search.usageCount > 0)
+              .sort((a, b) => b.usageCount - a.usageCount)
+              .slice(0, 10)
+              .map((search) => ({
+                name: search.name,
+                searchId: search.id,
+                usageCount: search.usageCount,
+              })),
+            searchesByType,
+            searchTrends,
+            topDestinations: [], // Would be populated from actual search data
+            totalSearches,
+          };
         },
 
         // Search suggestions and auto-complete
@@ -766,110 +701,28 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             .slice(0, limit);
         },
 
-        updateSearchSuggestions: () => {
-          const { recentSearches, savedSearches, popularSearchTerms } = get();
-          const suggestions: SearchSuggestion[] = [];
+        getSearchTrends: (searchType, days = 30) => {
+          const { recentSearches } = get();
+          const trends: Array<{ date: string; count: number }> = [];
 
-          // Generate suggestions from recent searches
-          recentSearches.forEach((search) => {
-            const text = extractSearchText(search.params);
-            if (text) {
-              suggestions.push({
-                id: `recent_${search.id}`,
-                text,
-                searchType: search.searchType,
-                frequency: 1,
-                lastUsed: search.timestamp,
-                source: "history",
-              });
-            }
-          });
+          for (let i = days - 1; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split("T")[0];
 
-          // Generate suggestions from saved searches
-          savedSearches.forEach((search) => {
-            const text = extractSearchText(search.params);
-            if (text) {
-              suggestions.push({
-                id: `saved_${search.id}`,
-                text,
-                searchType: search.searchType,
-                frequency: search.usageCount,
-                lastUsed: search.lastUsed || search.createdAt,
-                source: "saved",
-              });
-            }
-          });
+            const count = recentSearches.filter((search) => {
+              const matchesDate = search.timestamp.startsWith(dateStr);
+              const matchesType = !searchType || search.searchType === searchType;
+              return matchesDate && matchesType;
+            }).length;
 
-          // Add popular search terms
-          popularSearchTerms.forEach((term) => {
-            suggestions.push({
-              id: `popular_${term.term}`,
-              text: term.term,
-              searchType: term.searchType,
-              frequency: term.count,
-              lastUsed: getCurrentTimestamp(),
-              source: "popular",
-            });
-          });
+            trends.push({ count, date: dateStr });
+          }
 
-          // Deduplicate and limit
-          const uniqueSuggestions = suggestions.reduce(
-            (acc, suggestion) => {
-              const key = `${suggestion.text}_${suggestion.searchType}`;
-              if (!acc[key] || acc[key].frequency < suggestion.frequency) {
-                acc[key] = suggestion;
-              }
-              return acc;
-            },
-            {} as Record<string, SearchSuggestion>
-          );
-
-          set({
-            searchSuggestions: Object.values(uniqueSuggestions).slice(0, 100),
-          });
+          return trends;
         },
 
-        addSearchTerm: (term, searchType) => {
-          set((state) => {
-            const existingIndex = state.popularSearchTerms.findIndex(
-              (t) => t.term === term && t.searchType === searchType
-            );
-
-            if (existingIndex >= 0) {
-              const updatedTerms = [...state.popularSearchTerms];
-              updatedTerms[existingIndex].count += 1;
-              return { popularSearchTerms: updatedTerms };
-            }
-            return {
-              popularSearchTerms: [
-                ...state.popularSearchTerms,
-                { term, count: 1, searchType },
-              ].slice(0, 200), // Keep top 200 terms
-            };
-          });
-        },
-
-        // Data management and sync
-        exportSearchHistory: () => {
-          const {
-            savedSearches,
-            searchCollections,
-            quickSearches,
-            popularSearchTerms,
-          } = get();
-          const exportData = {
-            savedSearches,
-            searchCollections,
-            quickSearches,
-            popularSearchTerms,
-            exportedAt: getCurrentTimestamp(),
-            version: "1.0",
-          };
-
-          return JSON.stringify(exportData, null, 2);
-        },
-
-        importSearchHistory: async (data) => {
+        importSearchHistory: (data) => {
           set({ isLoading: true });
 
           try {
@@ -878,7 +731,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             if (importData.savedSearches) {
               const validatedSearches = importData.savedSearches.filter(
                 (search: unknown) => {
-                  const result = SavedSearchSchema.safeParse(search);
+                  const result = SAVED_SEARCH_SCHEMA.safeParse(search);
                   return result.success;
                 }
               );
@@ -891,7 +744,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             if (importData.searchCollections) {
               const validatedCollections = importData.searchCollections.filter(
                 (collection: unknown) => {
-                  const result = SearchCollectionSchema.safeParse(collection);
+                  const result = SEARCH_COLLECTION_SCHEMA.safeParse(collection);
                   return result.success;
                 }
               );
@@ -907,7 +760,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             if (importData.quickSearches) {
               const validatedQuickSearches = importData.quickSearches.filter(
                 (quickSearch: unknown) => {
-                  const result = QuickSearchSchema.safeParse(quickSearch);
+                  const result = QUICK_SEARCH_SCHEMA.safeParse(quickSearch);
                   return result.success;
                 }
               );
@@ -918,39 +771,162 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             }
 
             set({ isLoading: false });
-            return true;
+            return Promise.resolve(true);
           } catch (error) {
             const message =
               error instanceof Error
                 ? error.message
                 : "Failed to import search history";
             set({ error: message, isLoading: false });
-            return false;
+            return Promise.resolve(false);
           }
         },
 
-        syncWithServer: async () => {
-          set({ isSyncing: true, syncError: null });
+        // Loading and sync states
+        isLoading: false,
+        isSyncing: false,
+        lastSyncAt: null,
+
+        markSearchAsUsed: (searchId) => {
+          set((state) => ({
+            savedSearches: state.savedSearches.map((search) =>
+              search.id === searchId
+                ? {
+                    ...search,
+                    lastUsed: GET_CURRENT_TIMESTAMP(),
+                    usageCount: search.usageCount + 1,
+                  }
+                : search
+            ),
+          }));
+        },
+
+        // Settings
+        maxRecentSearches: DEFAULT_MAX_RECENT_SEARCHES,
+        popularSearchTerms: [],
+        quickSearches: [],
+        // Initial state
+        recentSearches: [],
+
+        get recentSearchesByType() {
+          const { recentSearches } = get();
+          const grouped: Record<SearchType, SearchHistoryItem[]> = {
+            accommodation: [],
+            activity: [],
+            destination: [],
+            flight: [],
+          };
+
+          recentSearches.forEach((search) => {
+            grouped[search.searchType].push(search);
+          });
+
+          return grouped;
+        },
+
+        removeRecentSearch: (searchId) => {
+          set((state) => ({
+            recentSearches: state.recentSearches.filter(
+              (search) => search.id !== searchId
+            ),
+          }));
+        },
+
+        removeSearchFromCollection: (collectionId, searchId) => {
+          set((state) => ({
+            searchCollections: state.searchCollections.map((collection) =>
+              collection.id === collectionId
+                ? {
+                    ...collection,
+                    searchIds: collection.searchIds.filter((id) => id !== searchId),
+                    updatedAt: GET_CURRENT_TIMESTAMP(),
+                  }
+                : collection
+            ),
+          }));
+        },
+
+        reorderQuickSearches: (quickSearchIds) => {
+          set((state) => {
+            const reorderedQuickSearches = quickSearchIds
+              .map((id, index) => {
+                const quickSearch = state.quickSearches.find((qs) => qs.id === id);
+                return quickSearch ? { ...quickSearch, sortOrder: index } : null;
+              })
+              .filter(Boolean) as QuickSearch[];
+
+            return { quickSearches: reorderedQuickSearches };
+          });
+        },
+
+        reset: () => {
+          set({
+            autoCleanupDays: DEFAULT_AUTO_CLEANUP_DAYS,
+            autoSaveEnabled: true,
+            error: null,
+            isLoading: false,
+            isSyncing: false,
+            lastSyncAt: null,
+            maxRecentSearches: DEFAULT_MAX_RECENT_SEARCHES,
+            popularSearchTerms: [],
+            quickSearches: [],
+            recentSearches: [],
+            savedSearches: [],
+            searchCollections: [],
+            searchSuggestions: [],
+            syncError: null,
+          });
+        },
+        savedSearches: [],
+
+        // Saved search management
+        saveSearch: (name, searchType, params, options = {}) => {
+          set({ isLoading: true });
 
           try {
-            // Mock sync operation - replace with actual implementation
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            const searchId = GENERATE_ID();
+            const timestamp = GET_CURRENT_TIMESTAMP();
 
-            set({
-              isSyncing: false,
-              lastSyncAt: getCurrentTimestamp(),
-            });
+            const newSavedSearch: ValidatedSavedSearch = {
+              createdAt: timestamp,
+              description: options.description,
+              id: searchId,
+              isFavorite: options.isFavorite || false,
+              isPublic: options.isPublic || false,
+              metadata: {
+                source: "manual",
+                version: "1.0",
+              },
+              name,
+              params: params as Record<string, unknown>,
+              searchType,
+              tags: options.tags || [],
+              updatedAt: timestamp,
+              usageCount: 0,
+            };
 
-            return true;
+            const result = SAVED_SEARCH_SCHEMA.safeParse(newSavedSearch);
+            if (result.success) {
+              set((state) => ({
+                isLoading: false,
+                savedSearches: [...state.savedSearches, result.data],
+              }));
+
+              return Promise.resolve(searchId);
+            }
+            throw new Error("Invalid saved search data");
           } catch (error) {
-            const message = error instanceof Error ? error.message : "Sync failed";
-            set({
-              isSyncing: false,
-              syncError: message,
-            });
-            return false;
+            const message =
+              error instanceof Error ? error.message : "Failed to save search";
+            set({ error: message, isLoading: false });
+            return Promise.resolve(null);
           }
         },
+
+        get searchAnalytics() {
+          return get().getSearchAnalytics();
+        },
+        searchCollections: [],
 
         // Search and filtering
         searchSavedSearches: (query, filters = {}) => {
@@ -990,140 +966,207 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
           );
         },
 
-        getSavedSearchesByType: (searchType) => {
-          return get().savedSearches.filter(
-            (search) => search.searchType === searchType
-          );
-        },
+        // Search suggestions
+        searchSuggestions: [],
+        syncError: null,
 
-        getSavedSearchesByTag: (tag) => {
-          return get().savedSearches.filter((search) => search.tags.includes(tag));
-        },
+        syncWithServer: async () => {
+          set({ isSyncing: true, syncError: null });
 
-        getRecentSearchesByType: (searchType, limit = 10) => {
-          return get()
-            .recentSearches.filter((search) => search.searchType === searchType)
-            .slice(0, limit);
-        },
+          try {
+            // Mock sync operation - replace with actual implementation
+            await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        // Analytics and insights
-        getSearchAnalytics: (dateRange) => {
-          const { recentSearches, savedSearches } = get();
-          let filteredSearches = recentSearches;
-
-          if (dateRange) {
-            const startDate = new Date(dateRange.start);
-            const endDate = new Date(dateRange.end);
-            filteredSearches = recentSearches.filter((search) => {
-              const searchDate = new Date(search.timestamp);
-              return searchDate >= startDate && searchDate <= endDate;
+            set({
+              isSyncing: false,
+              lastSyncAt: GET_CURRENT_TIMESTAMP(),
             });
+
+            return true;
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Sync failed";
+            set({
+              isSyncing: false,
+              syncError: message,
+            });
+            return false;
           }
+        },
 
-          const totalSearches = filteredSearches.length;
-          const searchesByType: Record<SearchType, number> = {
-            flight: 0,
-            accommodation: 0,
-            activity: 0,
-            destination: 0,
-          };
+        toggleSearchFavorite: (searchId) => {
+          set((state) => ({
+            savedSearches: state.savedSearches.map((search) =>
+              search.id === searchId
+                ? { ...search, isFavorite: !search.isFavorite }
+                : search
+            ),
+          }));
+        },
 
-          filteredSearches.forEach((search) => {
-            searchesByType[search.searchType]++;
+        // Computed properties
+        get totalSavedSearches() {
+          return get().savedSearches.length;
+        },
+
+        updateCollection: (collectionId, updates) => {
+          set({ isLoading: true });
+
+          try {
+            set((state) => {
+              const updatedCollections = state.searchCollections.map((collection) => {
+                if (collection.id === collectionId) {
+                  const updatedCollection = {
+                    ...collection,
+                    ...updates,
+                    updatedAt: GET_CURRENT_TIMESTAMP(),
+                  };
+
+                  const result = SEARCH_COLLECTION_SCHEMA.safeParse(updatedCollection);
+                  return result.success ? result.data : collection;
+                }
+                return collection;
+              });
+
+              return {
+                isLoading: false,
+                searchCollections: updatedCollections,
+              };
+            });
+
+            return Promise.resolve(true);
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Failed to update collection";
+            set({ error: message, isLoading: false });
+            return Promise.resolve(false);
+          }
+        },
+
+        updateQuickSearch: (quickSearchId, updates) => {
+          try {
+            set((state) => ({
+              quickSearches: state.quickSearches.map((quickSearch) => {
+                if (quickSearch.id === quickSearchId) {
+                  const updatedQuickSearch = { ...quickSearch, ...updates };
+                  const result = QUICK_SEARCH_SCHEMA.safeParse(updatedQuickSearch);
+                  return result.success ? result.data : quickSearch;
+                }
+                return quickSearch;
+              }),
+            }));
+
+            return Promise.resolve(true);
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Failed to update quick search";
+            set({ error: message });
+            return Promise.resolve(false);
+          }
+        },
+
+        updateSavedSearch: (searchId, updates) => {
+          set({ isLoading: true });
+
+          try {
+            set((state) => {
+              const updatedSearches = state.savedSearches.map((search) => {
+                if (search.id === searchId) {
+                  const updatedSearch = {
+                    ...search,
+                    ...updates,
+                    updatedAt: GET_CURRENT_TIMESTAMP(),
+                  };
+
+                  const result = SAVED_SEARCH_SCHEMA.safeParse(updatedSearch);
+                  return result.success ? result.data : search;
+                }
+                return search;
+              });
+
+              return {
+                isLoading: false,
+                savedSearches: updatedSearches,
+              };
+            });
+
+            return Promise.resolve(true);
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Failed to update search";
+            set({ error: message, isLoading: false });
+            return Promise.resolve(false);
+          }
+        },
+
+        updateSearchSuggestions: () => {
+          const { recentSearches, savedSearches, popularSearchTerms } = get();
+          const suggestions: SearchSuggestion[] = [];
+
+          // Generate suggestions from recent searches
+          recentSearches.forEach((search) => {
+            const text = EXTRACT_SEARCH_TEXT(search.params);
+            if (text) {
+              suggestions.push({
+                frequency: 1,
+                id: `recent_${search.id}`,
+                lastUsed: search.timestamp,
+                searchType: search.searchType,
+                source: "history",
+                text,
+              });
+            }
           });
 
-          const averageSearchDuration =
-            filteredSearches.reduce((sum, search) => {
-              return sum + (search.searchDuration || 0);
-            }, 0) / totalSearches || 0;
+          // Generate suggestions from saved searches
+          savedSearches.forEach((search) => {
+            const text = EXTRACT_SEARCH_TEXT(search.params);
+            if (text) {
+              suggestions.push({
+                frequency: search.usageCount,
+                id: `saved_${search.id}`,
+                lastUsed: search.lastUsed || search.createdAt,
+                searchType: search.searchType,
+                source: "saved",
+                text,
+              });
+            }
+          });
 
-          const mostUsedSearchTypes = Object.entries(searchesByType)
-            .map(([type, count]) => ({
-              type: type as SearchType,
-              count,
-              percentage: totalSearches > 0 ? (count / totalSearches) * 100 : 0,
-            }))
-            .sort((a, b) => b.count - a.count);
+          // Add popular search terms
+          popularSearchTerms.forEach((term) => {
+            suggestions.push({
+              frequency: term.count,
+              id: `popular_${term.term}`,
+              lastUsed: GET_CURRENT_TIMESTAMP(),
+              searchType: term.searchType,
+              source: "popular",
+              text: term.term,
+            });
+          });
 
-          // Generate search trends (last 30 days)
-          const searchTrends: Array<{ date: string; count: number }> = [];
-          for (let i = 29; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split("T")[0];
+          // Deduplicate and limit
+          const uniqueSuggestions = suggestions.reduce(
+            (acc, suggestion) => {
+              const key = `${suggestion.text}_${suggestion.searchType}`;
+              if (!acc[key] || acc[key].frequency < suggestion.frequency) {
+                acc[key] = suggestion;
+              }
+              return acc;
+            },
+            {} as Record<string, SearchSuggestion>
+          );
 
-            const count = filteredSearches.filter((search) =>
-              search.timestamp.startsWith(dateStr)
-            ).length;
-
-            searchTrends.push({ date: dateStr, count });
-          }
-
-          // Popular search times (by hour)
-          const popularSearchTimes: Array<{ hour: number; count: number }> = [];
-          for (let hour = 0; hour < 24; hour++) {
-            const count = filteredSearches.filter((search) => {
-              const searchHour = new Date(search.timestamp).getHours();
-              return searchHour === hour;
-            }).length;
-
-            popularSearchTimes.push({ hour, count });
-          }
-
-          return {
-            totalSearches,
-            searchesByType,
-            averageSearchDuration,
-            mostUsedSearchTypes,
-            searchTrends,
-            popularSearchTimes,
-            topDestinations: [], // Would be populated from actual search data
-            savedSearchUsage: savedSearches
-              .filter((search) => search.usageCount > 0)
-              .sort((a, b) => b.usageCount - a.usageCount)
-              .slice(0, 10)
-              .map((search) => ({
-                searchId: search.id,
-                name: search.name,
-                usageCount: search.usageCount,
-              })),
-          };
-        },
-
-        getMostUsedSearches: (limit = 10) => {
-          return get()
-            .savedSearches.filter((search) => search.usageCount > 0)
-            .sort((a, b) => b.usageCount - a.usageCount)
-            .slice(0, limit);
-        },
-
-        getSearchTrends: (searchType, days = 30) => {
-          const { recentSearches } = get();
-          const trends: Array<{ date: string; count: number }> = [];
-
-          for (let i = days - 1; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split("T")[0];
-
-            const count = recentSearches.filter((search) => {
-              const matchesDate = search.timestamp.startsWith(dateStr);
-              const matchesType = !searchType || search.searchType === searchType;
-              return matchesDate && matchesType;
-            }).length;
-
-            trends.push({ date: dateStr, count });
-          }
-
-          return trends;
+          set({
+            searchSuggestions: Object.values(uniqueSuggestions).slice(0, 100),
+          });
         },
 
         // Settings management
         updateSettings: (settings) => {
           set((state) => ({
-            maxRecentSearches: settings.maxRecentSearches ?? state.maxRecentSearches,
-            autoSaveEnabled: settings.autoSaveEnabled ?? state.autoSaveEnabled,
             autoCleanupDays: settings.autoCleanupDays ?? state.autoCleanupDays,
+            autoSaveEnabled: settings.autoSaveEnabled ?? state.autoSaveEnabled,
+            maxRecentSearches: settings.maxRecentSearches ?? state.maxRecentSearches,
           }));
 
           // Apply cleanup if enabled
@@ -1131,56 +1174,21 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             get().cleanupOldSearches();
           }
         },
-
-        // Utility actions
-        clearAllData: () => {
-          set({
-            recentSearches: [],
-            savedSearches: [],
-            searchCollections: [],
-            quickSearches: [],
-            searchSuggestions: [],
-            popularSearchTerms: [],
-          });
-        },
-
-        clearError: () => {
-          set({ error: null, syncError: null });
-        },
-
-        reset: () => {
-          set({
-            recentSearches: [],
-            savedSearches: [],
-            searchCollections: [],
-            quickSearches: [],
-            searchSuggestions: [],
-            popularSearchTerms: [],
-            maxRecentSearches: DEFAULT_MAX_RECENT_SEARCHES,
-            autoSaveEnabled: true,
-            autoCleanupDays: DEFAULT_AUTO_CLEANUP_DAYS,
-            isLoading: false,
-            isSyncing: false,
-            lastSyncAt: null,
-            error: null,
-            syncError: null,
-          });
-        },
       }),
       {
         name: "search-history-storage",
         partialize: (state) => ({
+          autoCleanupDays: state.autoCleanupDays,
+          autoSaveEnabled: state.autoSaveEnabled,
+          lastSyncAt: state.lastSyncAt,
+          maxRecentSearches: state.maxRecentSearches,
+          popularSearchTerms: state.popularSearchTerms,
+          quickSearches: state.quickSearches,
           // Persist all data except loading states
           recentSearches: state.recentSearches,
           savedSearches: state.savedSearches,
           searchCollections: state.searchCollections,
-          quickSearches: state.quickSearches,
           searchSuggestions: state.searchSuggestions,
-          popularSearchTerms: state.popularSearchTerms,
-          maxRecentSearches: state.maxRecentSearches,
-          autoSaveEnabled: state.autoSaveEnabled,
-          autoCleanupDays: state.autoCleanupDays,
-          lastSyncAt: state.lastSyncAt,
         }),
       }
     ),
@@ -1188,8 +1196,13 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
   )
 );
 
-// Helper function to extract search text from params
-const extractSearchText = (params: Record<string, unknown>): string => {
+/**
+ * Extracts meaningful search text from search parameters.
+ *
+ * @param params - Search parameters object
+ * @returns Extracted search text or empty string
+ */
+const EXTRACT_SEARCH_TEXT = (params: Record<string, unknown>): string => {
   // Extract meaningful text from search parameters
   const textFields = ["origin", "destination", "query", "location", "name"];
 
@@ -1242,8 +1255,48 @@ export const useSearchAnalytics = (dateRange?: { start: string; end: string }) =
 
 export const useSearchHistoryLoading = () =>
   useSearchHistoryStore((state) => ({
+    error: state.error,
     isLoading: state.isLoading,
     isSyncing: state.isSyncing,
-    error: state.error,
     syncError: state.syncError,
   }));
+
+/**
+ * Compute recent searches grouped by type from a state snapshot.
+ *
+ * @param state - The search history store state snapshot.
+ * @returns A map of search type to its recent searches.
+ */
+export const selectRecentSearchesByTypeFrom = (
+  state: SearchHistoryState
+): Record<SearchType, SearchHistoryItem[]> => {
+  const grouped: Record<SearchType, SearchHistoryItem[]> = {
+    accommodation: [],
+    activity: [],
+    destination: [],
+    flight: [],
+  };
+  state.recentSearches.forEach((search) => {
+    grouped[search.searchType].push(search);
+  });
+  return grouped;
+};
+
+/**
+ * Compute favorite saved searches from a state snapshot.
+ *
+ * @param state - The search history store state snapshot.
+ * @returns Saved searches marked as favorite.
+ */
+export const selectFavoriteSearchesFrom = (
+  state: SearchHistoryState
+): ValidatedSavedSearch[] => state.savedSearches.filter((s) => s.isFavorite);
+
+/**
+ * Compute the total number of saved searches from a state snapshot.
+ *
+ * @param state - The search history store state snapshot.
+ * @returns The total saved search count.
+ */
+export const selectTotalSavedSearchesFrom = (state: SearchHistoryState): number =>
+  state.savedSearches.length;

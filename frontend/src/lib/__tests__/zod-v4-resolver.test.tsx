@@ -1,7 +1,3 @@
-/**
- * @fileoverview Sanity test to ensure zod v4 + @hookform/resolvers interop.
- */
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import { render } from "@testing-library/react";
 import React from "react";
@@ -14,8 +10,9 @@ function FormHarness() {
   const { handleSubmit, register } = useForm<{ email: string }>({
     resolver: zodResolver(schema),
   });
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  const onSubmit = () => {};
+  const onSubmit = () => {
+    // Empty submit handler for test
+  };
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <input type="email" {...register("email")} defaultValue="a@b.com" />

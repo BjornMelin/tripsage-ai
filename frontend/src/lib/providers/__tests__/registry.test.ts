@@ -1,6 +1,3 @@
-/**
- * @fileoverview Unit tests for provider registry resolution.
- */
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 vi.mock("@/lib/supabase/rpc", () => ({
@@ -65,6 +62,31 @@ describe("resolveProvider", () => {
       "X-Title": "TripSage",
     });
     expect(result.modelId).toBe("anthropic/claude-3.7-sonnet:thinking");
+  });
+
+  it("falls back to OpenRouter and does not attach headers when envs unset", async () => {
+    const env2 = {
+      ...process.env,
+    } as typeof process.env & {
+      // biome-ignore lint/style/useNamingConvention: Environment variable names must match actual env vars
+      OPENROUTER_REFERER?: string;
+      // biome-ignore lint/style/useNamingConvention: Environment variable names must match actual env vars
+      OPENROUTER_TITLE?: string;
+    };
+    env2.OPENROUTER_REFERER = undefined;
+    env2.OPENROUTER_TITLE = undefined;
+    process.env = env2;
+    const { getUserApiKey } = await import("@/lib/supabase/rpc");
+    (getUserApiKey as unknown as Mock).mockImplementation(
+      async (_uid: string, svc: string) => (svc === "openrouter" ? "sk-or" : null)
+    );
+    const { resolveProvider } = await import("../registry");
+    const result = await resolveProvider("user-6", "openai/gpt-4o-mini");
+    expect(result.provider).toBe("openrouter");
+    expect(result.model).toContain("openai(https://openrouter.ai/api/v1)");
+    expect(result.headers).toBeUndefined();
+    // restore env for other tests
+    process.env = env;
   });
 
   it("uses Anthropic when only anthropic key exists", async () => {

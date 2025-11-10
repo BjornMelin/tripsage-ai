@@ -6,49 +6,49 @@ import { z } from "zod";
 /**
  * Loading state schemas for validation
  */
-export const LoadingStateSchema = z.object({
+export const LOADING_STATE_SCHEMA = z.object({
   isLoading: z.boolean(),
   message: z.string().optional(),
   progress: z.number().min(0).max(100).optional(),
 });
 
-export const SkeletonConfigSchema = z.object({
-  width: z.union([z.string(), z.number()]).optional(),
+export const SKELETON_CONFIG_SCHEMA = z.object({
+  animate: z.boolean().default(true),
+  avatar: z.boolean().optional(),
+  className: z.string().optional(),
   height: z.union([z.string(), z.number()]).optional(),
   lines: z.number().min(1).max(20).optional(),
-  avatar: z.boolean().optional(),
-  animate: z.boolean().default(true),
-  className: z.string().optional(),
+  width: z.union([z.string(), z.number()]).optional(),
 });
 
-export const LoadingSpinnerConfigSchema = z.object({
+export const LOADING_SPINNER_CONFIG_SCHEMA = z.object({
+  className: z.string().optional(),
+  color: z.string().optional(),
   size: z.enum(["sm", "md", "lg", "xl"]).default("md"),
   variant: z.enum(["default", "dots", "bars", "pulse"]).default("default"),
-  color: z.string().optional(),
-  className: z.string().optional(),
 });
 
 /**
  * TypeScript types derived from schemas
  */
-export type LoadingState = z.infer<typeof LoadingStateSchema>;
-export type SkeletonConfig = z.infer<typeof SkeletonConfigSchema>;
-export type LoadingSpinnerConfig = z.infer<typeof LoadingSpinnerConfigSchema>;
+export type LoadingState = z.infer<typeof LOADING_STATE_SCHEMA>;
+export type SkeletonConfig = z.infer<typeof SKELETON_CONFIG_SCHEMA>;
+export type LoadingSpinnerConfig = z.infer<typeof LOADING_SPINNER_CONFIG_SCHEMA>;
 
 /**
  * Content type enums for skeleton variations
  */
 export enum SkeletonType {
-  TEXT = "text",
-  PARAGRAPH = "paragraph",
-  CARD = "card",
-  LIST = "list",
-  AVATAR = "avatar",
-  IMAGE = "image",
-  BUTTON = "button",
-  FORM = "form",
-  TABLE = "table",
-  CHART = "chart",
+  Text = "text",
+  Paragraph = "paragraph",
+  Card = "card",
+  List = "list",
+  Avatar = "avatar",
+  Image = "image",
+  Button = "button",
+  Form = "form",
+  Table = "table",
+  Chart = "chart",
 }
 
 /**

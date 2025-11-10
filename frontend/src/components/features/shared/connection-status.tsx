@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Connection status component with real-time network metrics and analytics.
+ */
+
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -35,6 +39,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+// Type for the connection status
 export type ConnectionStatus =
   | "connecting"
   | "connected"
@@ -42,6 +47,7 @@ export type ConnectionStatus =
   | "reconnecting"
   | "error";
 
+// Type for the network metrics interface
 export interface NetworkMetrics {
   latency: number;
   bandwidth: number;
@@ -51,6 +57,7 @@ export interface NetworkMetrics {
   signalStrength: number; // 0-100
 }
 
+// Type for the connection analytics interface
 export interface ConnectionAnalytics {
   connectionTime: number;
   reconnectCount: number;
@@ -61,6 +68,7 @@ export interface ConnectionAnalytics {
   uptime: number; // in seconds
 }
 
+// Type for the connection status props
 interface ConnectionStatusProps {
   status: ConnectionStatus;
   metrics?: NetworkMetrics;
@@ -73,25 +81,33 @@ interface ConnectionStatusProps {
   showOptimizations?: boolean;
 }
 
-const defaultMetrics: NetworkMetrics = {
-  latency: 0,
+// Default metrics for the connection status
+const DefaultMetrics: NetworkMetrics = {
   bandwidth: 0,
-  packetLoss: 0,
   jitter: 0,
+  latency: 0,
+  packetLoss: 0,
   quality: "poor",
   signalStrength: 0,
 };
 
-const defaultAnalytics: ConnectionAnalytics = {
+// Default analytics for the connection status
+const DefaultAnalytics: ConnectionAnalytics = {
+  avgResponseTime: 0,
   connectionTime: 0,
+  failedMessages: 0,
   reconnectCount: 0,
   totalMessages: 0,
-  failedMessages: 0,
-  avgResponseTime: 0,
   uptime: 0,
 };
 
-const getQualityColor = (quality: NetworkMetrics["quality"]) => {
+/**
+ * Get the quality color for the connection status
+ *
+ * @param quality - The quality of the connection
+ * @returns The quality color
+ */
+const GetQualityColor = (quality: NetworkMetrics["quality"]) => {
   switch (quality) {
     case "excellent":
       return "text-green-500";
@@ -105,26 +121,49 @@ const getQualityColor = (quality: NetworkMetrics["quality"]) => {
       return "text-gray-500";
   }
 };
-
-const getSignalIcon = (strength: number) => {
+/**
+ * Get the signal icon for the connection status
+ *
+ * @param strength - The signal strength
+ * @returns The signal icon
+ */
+const GetSignalIcon = (strength: number) => {
   if (strength >= 80) return <SignalHigh className="h-4 w-4" />;
   if (strength >= 60) return <SignalMedium className="h-4 w-4" />;
   if (strength >= 40) return <SignalLow className="h-4 w-4" />;
   return <Signal className="h-4 w-4" />;
 };
 
-const formatLatency = (ms: number) => {
+/**
+ * Format the latency for the connection status
+ *
+ * @param ms - The latency in milliseconds
+ * @returns The formatted latency
+ */
+const FormatLatency = (ms: number) => {
   if (ms < 1000) return `${ms.toFixed(0)}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
 };
 
-const formatBandwidth = (bps: number) => {
+/**
+ * Format the bandwidth for the connection status
+ *
+ * @param bps - The bandwidth in bits per second
+ * @returns The formatted bandwidth
+ */
+const FormatBandwidth = (bps: number) => {
   if (bps < 1024) return `${bps.toFixed(0)} B/s`;
   if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} KB/s`;
   return `${(bps / (1024 * 1024)).toFixed(1)} MB/s`;
 };
 
-const formatUptime = (seconds: number) => {
+/**
+ * Format the uptime for the connection status
+ *
+ * @param seconds - The uptime in seconds
+ * @returns The formatted uptime
+ */
+const FormatUptime = (seconds: number) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
@@ -134,6 +173,12 @@ const formatUptime = (seconds: number) => {
   return `${secs}s`;
 };
 
+/**
+ * Connection quality indicator component
+ *
+ * @param metrics - The network metrics
+ * @returns The connection quality indicator
+ */
 const ConnectionQualityIndicator: React.FC<{ metrics: NetworkMetrics }> = ({
   metrics,
 }) => {
@@ -150,27 +195,39 @@ const ConnectionQualityIndicator: React.FC<{ metrics: NetworkMetrics }> = ({
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1">
-        {Array.from({ length: 4 }, (_, i) => (
+        {[
+          { height: 8, key: "bar-0", threshold: 0 },
+          { height: 10, key: "bar-1", threshold: 25 },
+          { height: 12, key: "bar-2", threshold: 50 },
+          { height: 14, key: "bar-3", threshold: 75 },
+        ].map(({ key, height, threshold }) => (
           <motion.div
-            key={i}
+            key={key}
             className={cn(
               "w-1 rounded-full",
-              qualityScore > (i + 1) * 25 ? "bg-green-500" : "bg-gray-300"
+              qualityScore >= threshold ? "bg-green-500" : "bg-gray-300"
             )}
-            style={{ height: `${8 + i * 2}px` }}
+            style={{ height: `${height}px` }}
             initial={{ opacity: 0, scaleY: 0 }}
             animate={{ opacity: 1, scaleY: 1 }}
-            transition={{ delay: i * 0.1 }}
+            transition={{ delay: parseInt(key.split("-")[1], 10) * 0.1 }}
           />
         ))}
       </div>
-      <span className={cn("text-sm font-medium", getQualityColor(metrics.quality))}>
+      <span className={cn("text-sm font-medium", GetQualityColor(metrics.quality))}>
         {metrics.quality}
       </span>
     </div>
   );
 };
 
+/**
+ * Network optimization suggestions component
+ *
+ * @param metrics - The network metrics
+ * @param onOptimize - The function to optimize the network
+ * @returns The network optimization suggestions
+ */
 const NetworkOptimizationSuggestions: React.FC<{
   metrics: NetworkMetrics;
   onOptimize?: () => void;
@@ -180,28 +237,28 @@ const NetworkOptimizationSuggestions: React.FC<{
 
     if (metrics.latency > 200) {
       items.push({
+        action: "Optimize Route",
+        description: "Consider switching to a closer server location",
         icon: <TrendingDown className="h-4 w-4 text-red-500" />,
         title: "High Latency Detected",
-        description: "Consider switching to a closer server location",
-        action: "Optimize Route",
       });
     }
 
     if (metrics.packetLoss > 2) {
       items.push({
+        action: "Check Network",
+        description: "Network connection may be unstable",
         icon: <AlertTriangle className="h-4 w-4 text-yellow-500" />,
         title: "Packet Loss Detected",
-        description: "Network connection may be unstable",
-        action: "Check Network",
       });
     }
 
     if (metrics.bandwidth < 1000000) {
       items.push({
+        action: "Optimize Data",
+        description: "Consider reducing data frequency",
         icon: <TrendingUp className="h-4 w-4 text-blue-500" />,
         title: "Low Bandwidth",
-        description: "Consider reducing data frequency",
-        action: "Optimize Data",
       });
     }
 
@@ -215,8 +272,8 @@ const NetworkOptimizationSuggestions: React.FC<{
       <Info className="h-4 w-4" />
       <AlertDescription>
         <div className="space-y-2">
-          {suggestions.map((suggestion, index) => (
-            <div key={index} className="flex items-center justify-between">
+          {suggestions.map((suggestion) => (
+            <div key={suggestion.title} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {suggestion.icon}
                 <div>
@@ -239,10 +296,16 @@ const NetworkOptimizationSuggestions: React.FC<{
   );
 };
 
+/**
+ * Connection status component
+ *
+ * @param props - The connection status props
+ * @returns The connection status component
+ */
 export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   status,
-  metrics = defaultMetrics,
-  analytics = defaultAnalytics,
+  metrics = DefaultMetrics,
+  analytics = DefaultAnalytics,
   onReconnect,
   onOptimize,
   className,
@@ -270,62 +333,62 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
     switch (status) {
       case "connected":
         return {
-          icon: <CheckCircle2 className="h-4 w-4" />,
-          label: "Connected",
-          description: "Real-time connection active",
-          color: "text-green-500",
           bgColor: "bg-green-500/10",
           borderColor: "border-green-500/20",
+          color: "text-green-500",
+          description: "Real-time connection active",
+          icon: <CheckCircle2 className="h-4 w-4" />,
+          label: "Connected",
           variant: "default" as const,
         };
       case "connecting":
         return {
-          icon: <Loader2 className="h-4 w-4 animate-spin" />,
-          label: "Connecting",
-          description: "Establishing connection...",
-          color: "text-blue-500",
           bgColor: "bg-blue-500/10",
           borderColor: "border-blue-500/20",
+          color: "text-blue-500",
+          description: "Establishing connection...",
+          icon: <Loader2 className="h-4 w-4 animate-spin" />,
+          label: "Connecting",
           variant: "default" as const,
         };
       case "reconnecting":
         return {
-          icon: <RefreshCw className="h-4 w-4 animate-spin" />,
-          label: "Reconnecting",
-          description: `Attempt ${analytics.reconnectCount + 1}`,
-          color: "text-orange-500",
           bgColor: "bg-orange-500/10",
           borderColor: "border-orange-500/20",
+          color: "text-orange-500",
+          description: `Attempt ${analytics.reconnectCount + 1}`,
+          icon: <RefreshCw className="h-4 w-4 animate-spin" />,
+          label: "Reconnecting",
           variant: "default" as const,
         };
       case "disconnected":
         return {
-          icon: <WifiOff className="h-4 w-4" />,
-          label: "Disconnected",
-          description: "No real-time connection",
-          color: "text-gray-500",
           bgColor: "bg-gray-500/10",
           borderColor: "border-gray-500/20",
+          color: "text-gray-500",
+          description: "No real-time connection",
+          icon: <WifiOff className="h-4 w-4" />,
+          label: "Disconnected",
           variant: "default" as const,
         };
       case "error":
         return {
-          icon: <AlertTriangle className="h-4 w-4" />,
-          label: "Connection Error",
-          description: "Failed to establish connection",
-          color: "text-red-500",
           bgColor: "bg-red-500/10",
           borderColor: "border-red-500/20",
+          color: "text-red-500",
+          description: "Failed to establish connection",
+          icon: <AlertTriangle className="h-4 w-4" />,
+          label: "Connection Error",
           variant: "destructive" as const,
         };
       default:
         return {
-          icon: <Wifi className="h-4 w-4" />,
-          label: "Unknown",
-          description: "Status unknown",
-          color: "text-gray-500",
           bgColor: "bg-gray-500/10",
           borderColor: "border-gray-500/20",
+          color: "text-gray-500",
+          description: "Status unknown",
+          icon: <Wifi className="h-4 w-4" />,
+          label: "Unknown",
           variant: "default" as const,
         };
     }
@@ -377,7 +440,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
               {config.label}
               {status === "connected" && (
                 <div className="flex items-center gap-1">
-                  {getSignalIcon(metrics.signalStrength)}
+                  {GetSignalIcon(metrics.signalStrength)}
                   <span className="text-xs">{metrics.signalStrength}%</span>
                 </div>
               )}
@@ -388,9 +451,9 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
               <div>{config.description}</div>
               {status === "connected" && showMetrics && (
                 <div className="text-xs space-y-1">
-                  <div>Latency: {formatLatency(metrics.latency)}</div>
+                  <div>Latency: {FormatLatency(metrics.latency)}</div>
                   <div>Quality: {metrics.quality}</div>
-                  <div>Uptime: {formatUptime(analytics.uptime)}</div>
+                  <div>Uptime: {FormatUptime(analytics.uptime)}</div>
                 </div>
               )}
             </div>
@@ -470,9 +533,9 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
       <AnimatePresence>
         {status === "connected" && showMetrics && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
             <CardContent className="pt-0">
@@ -483,7 +546,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                       <div className="text-center p-2 rounded-lg bg-gray-50">
                         <Activity className="h-4 w-4 mx-auto mb-1 text-blue-500" />
                         <div className="text-sm font-medium">
-                          {formatLatency(metrics.latency)}
+                          {FormatLatency(metrics.latency)}
                         </div>
                         <div className="text-xs text-muted-foreground">Latency</div>
                       </div>
@@ -498,7 +561,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                       <div className="text-center p-2 rounded-lg bg-gray-50">
                         <Zap className="h-4 w-4 mx-auto mb-1 text-green-500" />
                         <div className="text-sm font-medium">
-                          {formatBandwidth(metrics.bandwidth)}
+                          {FormatBandwidth(metrics.bandwidth)}
                         </div>
                         <div className="text-xs text-muted-foreground">Bandwidth</div>
                       </div>
@@ -528,7 +591,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                       <div className="text-center p-2 rounded-lg bg-gray-50">
                         <Monitor className="h-4 w-4 mx-auto mb-1 text-purple-500" />
                         <div className="text-sm font-medium">
-                          {formatUptime(analytics.uptime)}
+                          {FormatUptime(analytics.uptime)}
                         </div>
                         <div className="text-xs text-muted-foreground">Uptime</div>
                       </div>
@@ -564,7 +627,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 <div>
                   <span className="text-muted-foreground">Avg Response:</span>
                   <span className="ml-2 font-medium">
-                    {formatLatency(analytics.avgResponseTime)}
+                    {FormatLatency(analytics.avgResponseTime)}
                   </span>
                 </div>
               </div>

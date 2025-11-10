@@ -6,9 +6,9 @@ import { z } from "zod";
  */
 export const errorBoundaryPropsSchema = z.object({
   children: z.any(),
+  className: z.string().optional(),
   fallback: z.function().optional(),
   onError: z.function().optional(),
-  className: z.string().optional(),
 });
 
 /**
@@ -16,9 +16,9 @@ export const errorBoundaryPropsSchema = z.object({
  * Validates error state structure
  */
 export const errorStateSchema = z.object({
-  hasError: z.boolean(),
   error: z.instanceof(Error).nullable(),
   errorInfo: z.any().nullable(),
+  hasError: z.boolean(),
   retryCount: z.number().default(0),
 });
 
@@ -27,9 +27,9 @@ export const errorStateSchema = z.object({
  * Validates props for global error components
  */
 export const globalErrorPropsSchema = z.object({
+  className: z.string().optional(),
   error: z.instanceof(Error),
   reset: z.function(),
-  className: z.string().optional(),
 });
 
 /**
@@ -38,8 +38,8 @@ export const globalErrorPropsSchema = z.object({
  */
 export const routeErrorPropsSchema = z.object({
   error: z.instanceof(Error),
-  reset: z.function(),
   pathname: z.string().optional(),
+  reset: z.function(),
   searchParams: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -58,11 +58,11 @@ export const loadingStateSchema = z.object({
  * Validates props for skeleton loading components
  */
 export const skeletonPropsSchema = z.object({
+  animation: z.enum(["pulse", "wave", "none"]).default("pulse"),
   className: z.string().optional(),
-  width: z.union([z.string(), z.number()]).optional(),
   height: z.union([z.string(), z.number()]).optional(),
   variant: z.enum(["rectangular", "circular", "text"]).default("rectangular"),
-  animation: z.enum(["pulse", "wave", "none"]).default("pulse"),
+  width: z.union([z.string(), z.number()]).optional(),
 });
 
 export type ErrorBoundaryProps = z.infer<typeof errorBoundaryPropsSchema>;

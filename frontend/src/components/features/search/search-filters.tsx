@@ -21,7 +21,7 @@ export function SearchFilters({
   const [activeFilters, setActiveFilters] = useState<Record<string, unknown>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const handleFilterChange = (filterId: string, value: any) => {
+  const handleFilterChange = (filterId: string, value: unknown) => {
     setActiveFilters((prev) => ({
       ...prev,
       [filterId]: value,
@@ -105,27 +105,27 @@ export function SearchFilters({
                                   type="checkbox"
                                   checked={
                                     Array.isArray(activeFilters[filter.id]) &&
-                                    (activeFilters[filter.id] as any[])?.includes(
-                                      option.value
+                                    (activeFilters[filter.id] as string[])?.includes(
+                                      String(option.value)
                                     )
                                   }
                                   onChange={(e) => {
                                     const currentValues = Array.isArray(
                                       activeFilters[filter.id]
                                     )
-                                      ? (activeFilters[filter.id] as any[])
+                                      ? (activeFilters[filter.id] as string[])
                                       : [];
 
                                     if (e.target.checked) {
                                       handleFilterChange(filter.id, [
                                         ...currentValues,
-                                        option.value,
+                                        String(option.value),
                                       ]);
                                     } else {
                                       handleFilterChange(
                                         filter.id,
-                                        (currentValues as any[]).filter(
-                                          (v: string) => v !== option.value
+                                        currentValues.filter(
+                                          (v: string) => v !== String(option.value)
                                         )
                                       );
                                     }
@@ -176,26 +176,46 @@ export function SearchFilters({
                               <input
                                 type="number"
                                 placeholder="Min"
-                                value={(activeFilters[filter.id] as any)?.min || ""}
+                                value={
+                                  (
+                                    activeFilters[filter.id] as {
+                                      min?: number;
+                                      max?: number;
+                                    }
+                                  )?.min || ""
+                                }
                                 onChange={(e) => {
+                                  const currentFilter = activeFilters[filter.id] as
+                                    | { min?: number; max?: number }
+                                    | undefined;
                                   const min = e.target.value
                                     ? Number(e.target.value)
                                     : undefined;
-                                  const max = (activeFilters[filter.id] as any)?.max;
-                                  handleFilterChange(filter.id, { min, max });
+                                  const max = currentFilter?.max;
+                                  handleFilterChange(filter.id, { max, min });
                                 }}
                                 className="flex-1 h-8 rounded-md border px-3 py-1 text-sm"
                               />
                               <input
                                 type="number"
                                 placeholder="Max"
-                                value={(activeFilters[filter.id] as any)?.max || ""}
+                                value={
+                                  (
+                                    activeFilters[filter.id] as {
+                                      min?: number;
+                                      max?: number;
+                                    }
+                                  )?.max || ""
+                                }
                                 onChange={(e) => {
-                                  const min = (activeFilters[filter.id] as any)?.min;
+                                  const currentFilter = activeFilters[filter.id] as
+                                    | { min?: number; max?: number }
+                                    | undefined;
+                                  const min = currentFilter?.min;
                                   const max = e.target.value
                                     ? Number(e.target.value)
                                     : undefined;
-                                  handleFilterChange(filter.id, { min, max });
+                                  handleFilterChange(filter.id, { max, min });
                                 }}
                                 className="flex-1 h-8 rounded-md border px-3 py-1 text-sm"
                               />

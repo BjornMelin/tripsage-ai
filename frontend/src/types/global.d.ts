@@ -2,7 +2,15 @@
 
 import type { RenderResult } from "@testing-library/react";
 import type { ReactElement } from "react";
-import type { RenderWithProvidersOptions } from "../test/test-utils";
+import type { RenderWithProvidersOptions } from "../test/test-utils.test";
+
+// Extend Vitest types to include environment stubbing methods
+declare module "vitest" {
+  interface VitestUtils {
+    stubEnv(key: string, value: string): void;
+    unstubAllEnvs(): void;
+  }
+}
 
 declare global {
   /**
@@ -14,7 +22,7 @@ declare global {
   ) => RenderResult;
 
   // Extend NodeJS global if needed
-  namespace NodeJS {
+  namespace NodeJs {
     interface Global {
       renderWithProviders: typeof renderWithProviders;
     }

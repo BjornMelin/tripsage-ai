@@ -129,9 +129,9 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
    */
   const formatPrice = (price: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
-      style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
+      style: "currency",
     }).format(price);
   };
 
@@ -161,7 +161,7 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
             <span>{suggestion.rating}</span>
           </div>
           <div className="text-lg font-semibold text-primary">
-            {formatPrice(suggestion.estimated_price, suggestion.currency)}
+            {formatPrice(suggestion.estimatedPrice, suggestion.currency)}
           </div>
         </div>
       </div>
@@ -189,12 +189,8 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
       </div>
 
       <div className="flex flex-wrap gap-1 mb-3">
-        {suggestion.highlights.slice(0, 3).map((highlight, index) => (
-          <Badge
-            key={`highlight-${highlight}-${index}`}
-            variant="outline"
-            className="text-xs"
-          >
+        {suggestion.highlights.slice(0, 3).map((highlight) => (
+          <Badge key={highlight} variant="outline" className="text-xs">
             {highlight}
           </Badge>
         ))}
@@ -207,7 +203,7 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <span className="text-xs text-muted-foreground">
-          Best time: {suggestion.best_time_to_visit}
+          Best time: {suggestion.bestTimeToVisit}
         </span>
         <Button size="sm" variant="outline" asChild>
           <Link href={`/dashboard/trips/create?suggestion=${suggestion.id}`}>
@@ -262,8 +258,8 @@ export function TripSuggestions({
 
   // Use React Query hook to fetch trip suggestions
   const { data: apiSuggestions, isLoading } = useTripSuggestions({
+    budgetMax: activeBudget?.totalAmount,
     limit: limit + 2, // Get extra in case we filter some out
-    budget_max: activeBudget?.totalAmount,
   });
 
   // Memory-based recommendations
@@ -298,18 +294,17 @@ export function TripSuggestions({
     if (userPreferences.destinations) {
       userPreferences.destinations.slice(0, 2).forEach((dest, idx) => {
         memoryBasedSuggestions.push({
-          id: `memory-dest-${idx}`,
-          title: `Return to ${dest}`,
-          destination: dest,
-          description: `Based on your previous love for ${dest}, here's a personalized return trip.`,
-          estimated_price: budgetPatterns?.averageSpending?.accommodation || 2000,
+          bestTimeToVisit: "Year-round",
+          category: userPreferences.travelStyle === "luxury" ? "relaxation" : "culture",
           currency: "USD",
+          description: `Based on your previous love for ${dest}, here's a personalized return trip.`,
+          destination: dest,
           duration: 7,
-          rating: 4.7,
-          category:
-            userPreferences.travel_style === "luxury" ? "relaxation" : "culture",
-          best_time_to_visit: "Year-round",
+          estimatedPrice: budgetPatterns?.averageSpending?.accommodation || 2000,
           highlights: userPreferences.activities?.slice(0, 3) || ["Sightseeing"],
+          id: `memory-dest-${idx}`,
+          rating: 4.7,
+          title: `Return to ${dest}`,
           trending: true,
         });
       });
@@ -320,17 +315,17 @@ export function TripSuggestions({
       recommendations.slice(0, 2).forEach((rec, idx) => {
         if (rec.type === "destination") {
           memoryBasedSuggestions.push({
-            id: `memory-ai-${idx}`,
-            title: rec.recommendation,
-            destination: rec.recommendation.split(" ")[0] || "Somewhere Amazing",
-            description: rec.reasoning,
-            estimated_price: budgetPatterns?.averageSpending?.total || 2500,
-            currency: "USD",
-            duration: 5,
-            rating: 4.6,
+            bestTimeToVisit: "Spring/Fall",
             category: "adventure",
-            best_time_to_visit: "Spring/Fall",
+            currency: "USD",
+            description: rec.reasoning,
+            destination: rec.recommendation.split(" ")[0] || "Somewhere Amazing",
+            duration: 5,
+            estimatedPrice: budgetPatterns?.averageSpending?.total || 2500,
             highlights: ["AI Recommended", "Personalized"],
+            id: `memory-ai-${idx}`,
+            rating: 4.6,
+            title: rec.recommendation,
             trending: true,
           });
         }
@@ -356,8 +351,8 @@ export function TripSuggestions({
           <CardDescription>AI-powered travel recommendations</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <SuggestionCardSkeleton key={`skeleton-${i}`} />
+          {["skeleton-0", "skeleton-1"].map((id) => (
+            <SuggestionCardSkeleton key={id} />
           ))}
         </CardContent>
         <CardFooter>

@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MockInstance } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { errorService } from "@/lib/error-service";
 import { useErrorHandler } from "../use-error-handler";
 
@@ -11,46 +12,54 @@ vi.mock("@/lib/error-service", () => ({
   },
 }));
 
-// Mock console.error
-const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+// Console spy setup moved to beforeEach to avoid global suppression issues
+let consoleSpy: MockInstance;
 
 // Mock sessionStorage
-const mockSessionStorage = {
+const MOCK_SESSION_STORAGE = {
   getItem: vi.fn(),
   setItem: vi.fn(),
 };
 Object.defineProperty(window, "sessionStorage", {
-  value: mockSessionStorage,
+  value: MOCK_SESSION_STORAGE,
 });
 
 describe("useErrorHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    consoleErrorSpy.mockClear();
-    mockSessionStorage.getItem.mockClear();
-    mockSessionStorage.setItem.mockClear();
+    // Create fresh spy for each test
+    consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      // Empty implementation for mocking
+    });
+    MOCK_SESSION_STORAGE.getItem.mockClear();
+    MOCK_SESSION_STORAGE.setItem.mockClear();
 
     // Mock createErrorReport to return a valid report
-    (errorService.createErrorReport as any).mockReturnValue({
+    vi.mocked(errorService.createErrorReport).mockReturnValue({
       error: {
-        name: "Error",
         message: "Test error",
+        name: "Error",
       },
+      timestamp: new Date().toISOString(),
       url: "https://example.com",
       userAgent: "Test User Agent",
-      timestamp: new Date().toISOString(),
     });
 
     // Mock reportError to return a resolved promise
-    (errorService.reportError as any).mockResolvedValue(undefined);
+    vi.mocked(errorService.reportError).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    // Restore console after each test
+    consoleSpy.mockRestore();
   });
 
   describe("handleError", () => {
-    it("should handle basic error", async () => {
+    it("should handle basic error", () => {
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
 
-      await act(async () => {
+      act(() => {
         result.current.handleError(testError);
       });
 
@@ -64,15 +73,15 @@ describe("useErrorHandler", () => {
       expect(errorService.reportError).toHaveBeenCalled();
     });
 
-    it("should handle error with additional info", async () => {
+    it("should handle error with additional info", () => {
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
       const additionalInfo = {
-        component: "TestComponent",
         action: "buttonClick",
+        component: "TestComponent",
       };
 
-      await act(async () => {
+      act(() => {
         result.current.handleError(testError, additionalInfo);
       });
 
@@ -80,77 +89,77 @@ describe("useErrorHandler", () => {
         testError,
         undefined,
         expect.objectContaining({
-          component: "TestComponent",
           action: "buttonClick",
+          component: "TestComponent",
           sessionId: expect.any(String),
         })
       );
     });
 
-    it("should log error in development mode", async () => {
+    it("should log error in development mode", () => {
       // Mock the environment check
       const originalEnv = process.env.NODE_ENV;
-      (process.env as any).NODE_ENV = "development";
+      vi.stubEnv("NODE_ENV", "development");
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
       const additionalInfo = { test: "info" };
 
-      await act(async () => {
+      act(() => {
         result.current.handleError(testError, additionalInfo);
       });
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleSpy).toHaveBeenCalledWith(
         "Error handled by useErrorHandler:",
         testError,
         additionalInfo
       );
 
       // Restore original env
-      (process.env as any).NODE_ENV = originalEnv;
+      vi.stubEnv("NODE_ENV", originalEnv);
     });
 
-    it("should not log error in production mode", async () => {
+    it("should not log error in production mode", () => {
       // Mock the environment check
       const originalEnv = process.env.NODE_ENV;
-      (process.env as any).NODE_ENV = "production";
+      vi.stubEnv("NODE_ENV", "production");
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
 
-      await act(async () => {
+      act(() => {
         result.current.handleError(testError);
       });
 
-      expect(consoleErrorSpy).not.toHaveBeenCalled();
+      expect(consoleSpy).not.toHaveBeenCalled();
 
       // Restore original env
-      (process.env as any).NODE_ENV = originalEnv;
+      vi.stubEnv("NODE_ENV", originalEnv);
     });
 
-    it("should generate session ID when not present", async () => {
-      mockSessionStorage.getItem.mockReturnValue(null);
+    it("should generate session ID when not present", () => {
+      MOCK_SESSION_STORAGE.getItem.mockReturnValue(null);
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
 
-      await act(async () => {
+      act(() => {
         result.current.handleError(testError);
       });
 
-      expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
+      expect(MOCK_SESSION_STORAGE.setItem).toHaveBeenCalledWith(
         "session_id",
-        expect.stringMatching(/^session_\d+_[a-z0-9]+$/)
+        expect.stringMatching(/^session_[A-Za-z0-9-]+$/)
       );
     });
 
-    it("should use existing session ID", async () => {
-      mockSessionStorage.getItem.mockReturnValue("existing_session_123");
+    it("should use existing session ID", () => {
+      MOCK_SESSION_STORAGE.getItem.mockReturnValue("existing_session_123");
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
 
-      await act(async () => {
+      act(() => {
         result.current.handleError(testError);
       });
 
@@ -163,15 +172,15 @@ describe("useErrorHandler", () => {
       );
     });
 
-    it("should handle user store when available", async () => {
-      (window as any).__USER_STORE__ = {
+    it("should handle user store when available", () => {
+      (window as Window & { userStore?: { user: { id: string } } }).userStore = {
         user: { id: "test_user_456" },
       };
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
 
-      await act(async () => {
+      act(() => {
         result.current.handleError(testError);
       });
 
@@ -184,16 +193,18 @@ describe("useErrorHandler", () => {
       );
 
       // Cleanup
-      (window as any).__USER_STORE__ = undefined;
+      (window as Window & { userStore?: { user: { id: string } } }).userStore =
+        undefined;
     });
 
-    it("should handle missing user store gracefully", async () => {
-      (window as any).__USER_STORE__ = undefined;
+    it("should handle missing user store gracefully", () => {
+      (window as Window & { userStore?: { user: { id: string } } }).userStore =
+        undefined;
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
 
-      await act(async () => {
+      act(() => {
         result.current.handleError(testError);
       });
 
@@ -212,7 +223,7 @@ describe("useErrorHandler", () => {
       const { result } = renderHook(() => useErrorHandler());
       const asyncOperation = vi.fn().mockResolvedValue("success");
 
-      let returnValue;
+      let returnValue: unknown;
       await act(async () => {
         returnValue = await result.current.handleAsyncError(asyncOperation);
       });
@@ -304,15 +315,15 @@ describe("useErrorHandler", () => {
   });
 
   describe("error handling edge cases", () => {
-    it("should handle sessionStorage errors gracefully", async () => {
-      mockSessionStorage.getItem.mockImplementation(() => {
+    it("should handle sessionStorage errors gracefully", () => {
+      MOCK_SESSION_STORAGE.getItem.mockImplementation(() => {
         throw new Error("SessionStorage error");
       });
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
 
-      await act(async () => {
+      act(() => {
         result.current.handleError(testError);
       });
 
@@ -325,20 +336,20 @@ describe("useErrorHandler", () => {
       );
     });
 
-    it("should handle window access errors gracefully", async () => {
-      // Mock window.__USER_STORE__ to throw error
-      const originalUserStore = window.__USER_STORE__;
-      Object.defineProperty(window, "__USER_STORE__", {
+    it("should handle window access errors gracefully", () => {
+      // Mock window.userStore to throw error
+      const originalUserStore = window.userStore;
+      Object.defineProperty(window, "userStore", {
+        configurable: true,
         get: () => {
           throw new Error("Window access error");
         },
-        configurable: true,
       });
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
 
-      await act(async () => {
+      act(() => {
         result.current.handleError(testError);
       });
 
@@ -352,9 +363,9 @@ describe("useErrorHandler", () => {
       );
 
       // Restore original
-      Object.defineProperty(window, "__USER_STORE__", {
-        value: originalUserStore,
+      Object.defineProperty(window, "userStore", {
         configurable: true,
+        value: originalUserStore,
       });
     });
   });

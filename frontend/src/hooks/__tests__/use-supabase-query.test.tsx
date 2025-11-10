@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for the useSupabaseQuery hook.
- */
-
 import { waitFor } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,69 +8,75 @@ import { render } from "@/test/test-utils";
 
 type TripsTable = Database["public"]["Tables"]["trips"]["Row"];
 
-const supabase = createMockSupabaseClient();
-const fromMock = supabase.from as unknown as Mock;
+const SUPABASE = createMockSupabaseClient();
+const FROM_MOCK = SUPABASE.from as unknown as Mock;
 
 vi.mock("@/lib/supabase/client", () => ({
-  useSupabase: () => supabase,
-  getBrowserClient: () => supabase,
-  createClient: () => supabase,
+  createClient: () => SUPABASE,
+  getBrowserClient: () => SUPABASE,
+  useSupabase: () => SUPABASE,
 }));
 
-const createSelectBuilder = (rows: TripsTable[]) => {
+const CREATE_SELECT_BUILDER = (rows: TripsTable[]) => {
   const result = { data: rows, error: null };
-  return {
-    select: vi.fn().mockReturnThis(),
+
+  // Create a mock builder that behaves like a Promise
+  const builder = {
     eq: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     range: vi.fn().mockReturnThis(),
-    then: (
-      onFulfilled?: (value: typeof result) => unknown,
-      onRejected?: (reason: unknown) => unknown
-    ) => Promise.resolve(result).then(onFulfilled, onRejected),
+    select: vi.fn().mockReturnThis(),
+    // biome-ignore lint/suspicious/noThenProperty: Mock needs Promise-like then method
+    then: vi
+      .fn()
+      .mockImplementation((onFulfilled: (value: typeof result) => unknown) =>
+        Promise.resolve(result).then(onFulfilled)
+      ),
   };
+
+  return builder;
 };
 
-const createTripRow = (overrides: Partial<TripsTable> = {}): TripsTable => ({
-  id: overrides.id ?? 1,
-  user_id: overrides.user_id ?? "test-user-id",
-  name: overrides.name ?? "Test Trip",
-  start_date: overrides.start_date ?? "2025-01-01",
-  end_date: overrides.end_date ?? "2025-01-05",
-  destination: overrides.destination ?? "Paris",
+const CREATE_TRIP_ROW = (overrides: Partial<TripsTable> = {}): TripsTable => ({
   budget: overrides.budget ?? 1200,
-  travelers: overrides.travelers ?? 2,
-  status: overrides.status ?? "planning",
-  trip_type: overrides.trip_type ?? "leisure",
+  created_at: overrides.created_at ?? new Date(0).toISOString(),
+  destination: overrides.destination ?? "Paris",
+  end_date: overrides.end_date ?? "2025-01-05",
   flexibility: overrides.flexibility ?? {},
+  id: overrides.id ?? 1,
+  name: overrides.name ?? "Test Trip",
   notes: overrides.notes ?? null,
   search_metadata: overrides.search_metadata ?? {},
-  created_at: overrides.created_at ?? new Date(0).toISOString(),
+  start_date: overrides.start_date ?? "2025-01-01",
+  status: overrides.status ?? "planning",
+  travelers: overrides.travelers ?? 2,
+  trip_type: overrides.trip_type ?? "leisure",
   updated_at: overrides.updated_at ?? new Date(0).toISOString(),
+  user_id: overrides.user_id ?? "test-user-id",
 });
 
 function UsersList() {
   const { data, isSuccess } = useSupabaseQuery({
-    table: "trips",
     columns: "id",
+    table: "trips",
   });
   return <div data-testid="count">{isSuccess ? (data?.length ?? 0) : "-"}</div>;
 }
 
 describe("useSupabaseQuery", () => {
   beforeEach(() => {
-    fromMock.mockReset();
+    FROM_MOCK.mockReset();
   });
 
   it("fetches when user exists and returns data", async () => {
     const trips: TripsTable[] = [
-      createTripRow({ id: 1, name: "Trip 1" }),
-      createTripRow({ id: 2, name: "Trip 2" }),
+      CREATE_TRIP_ROW({ id: 1, name: "Trip 1" }),
+      CREATE_TRIP_ROW({ id: 2, name: "Trip 2" }),
     ];
 
-    fromMock.mockImplementationOnce((table: string) => {
+    FROM_MOCK.mockImplementationOnce((table: string) => {
       expect(table).toBe("trips");
-      return createSelectBuilder(trips);
+      return CREATE_SELECT_BUILDER(trips);
     });
 
     const { getByTestId } = render(<UsersList />);

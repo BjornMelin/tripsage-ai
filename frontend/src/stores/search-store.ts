@@ -71,36 +71,55 @@ interface SearchOrchestratorState {
 export const useSearchStore = create<SearchOrchestratorState>()(
   devtools(
     (_set, get) => ({
-      // Computed properties
-      get currentSearchType() {
-        return useSearchParamsStore.getState().currentSearchType;
+      applyFiltersAndSearch: async () => {
+        const filtersStore = useSearchFiltersStore.getState();
+
+        // Validate filters
+        const filtersValid = await filtersStore.validateAllFilters();
+        if (!filtersValid) {
+          throw new Error("Some filters are invalid");
+        }
+
+        return await get().validateAndExecuteSearch();
       },
 
       get currentParams() {
         return useSearchParamsStore.getState().currentParams;
       },
-
-      get hasActiveFilters() {
-        return useSearchFiltersStore.getState().hasActiveFilters;
+      // Computed properties
+      get currentSearchType() {
+        return useSearchParamsStore.getState().currentSearchType;
       },
 
-      get hasResults() {
-        return useSearchResultsStore.getState().hasResults;
-      },
+      duplicateCurrentSearch: async (name) => {
+        const paramsStore = useSearchParamsStore.getState();
+        const historyStore = useSearchHistoryStore.getState();
 
-      get isSearching() {
-        return useSearchResultsStore.getState().isSearching;
-      },
+        let { currentSearchType, currentParams } = paramsStore;
 
-      // High-level search operations
-      initializeSearch: (searchType) => {
-        // Initialize all stores for the search type
-        useSearchParamsStore.getState().setSearchType(searchType);
-        useSearchFiltersStore.getState().setSearchType(searchType);
-        useSearchResultsStore.getState().clearResults(searchType);
+        // If computed currentParams is not yet available, derive from slice state
+        if (currentSearchType && !currentParams) {
+          switch (currentSearchType) {
+            case "flight":
+              currentParams = paramsStore.flightParams as SearchParams;
+              break;
+            case "accommodation":
+              currentParams = paramsStore.accommodationParams as SearchParams;
+              break;
+            case "activity":
+              currentParams = paramsStore.activityParams as SearchParams;
+              break;
+            case "destination":
+              currentParams = paramsStore.destinationParams as SearchParams;
+              break;
+            default:
+              break;
+          }
+        }
 
-        // Sync the stores
-        get().syncStores();
+        if (!currentSearchType || !currentParams) return null;
+
+        return await historyStore.saveSearch(name, currentSearchType, currentParams);
       },
 
       executeSearch: async (params) => {
@@ -156,138 +175,138 @@ export const useSearchStore = create<SearchOrchestratorState>()(
             case "flight":
               mockResults.flights = [
                 {
-                  id: "1",
                   airline: "Example Airlines",
-                  flightNumber: "EX123",
-                  price: 450,
-                  departureTime: "2025-07-15T08:00:00Z",
                   arrivalTime: "2025-07-15T13:30:00Z",
-                  origin: "NYC",
+                  cabinClass: "economy",
+                  departureTime: "2025-07-15T08:00:00Z",
                   destination: "LAX",
                   duration: 330,
-                  stops: 0,
-                  cabinClass: "economy",
+                  flightNumber: "EX123",
+                  id: "1",
+                  origin: "NYC",
+                  price: 450,
                   seatsAvailable: 10,
+                  stops: 0,
                 },
                 {
-                  id: "2",
                   airline: "Demo Air",
-                  flightNumber: "DA456",
-                  price: 520,
-                  departureTime: "2025-07-15T09:00:00Z",
                   arrivalTime: "2025-07-15T15:15:00Z",
-                  origin: "NYC",
+                  cabinClass: "economy",
+                  departureTime: "2025-07-15T09:00:00Z",
                   destination: "LAX",
                   duration: 375,
-                  stops: 1,
-                  cabinClass: "economy",
+                  flightNumber: "DA456",
+                  id: "2",
+                  origin: "NYC",
+                  price: 520,
                   seatsAvailable: 5,
+                  stops: 1,
                 },
               ] as Flight[];
               break;
             case "accommodation":
               mockResults.accommodations = [
                 {
-                  id: "1",
-                  name: "Example Hotel",
-                  type: "hotel",
-                  location: "123 Main St, Los Angeles, USA",
+                  amenities: ["wifi", "pool"],
                   checkIn: "2025-07-15",
                   checkOut: "2025-07-18",
-                  pricePerNight: 120,
-                  totalPrice: 360,
-                  rating: 4.5,
-                  amenities: ["wifi", "pool"],
-                  images: [],
                   coordinates: { lat: 34.0522, lng: -118.2437 },
+                  id: "1",
+                  images: [],
+                  location: "123 Main St, Los Angeles, USA",
+                  name: "Example Hotel",
+                  pricePerNight: 120,
+                  rating: 4.5,
+                  totalPrice: 360,
+                  type: "hotel",
                 },
                 {
-                  id: "2",
-                  name: "Demo Resort",
-                  type: "resort",
-                  location: "456 Beach Blvd, Los Angeles, USA",
+                  amenities: ["wifi", "pool", "spa"],
                   checkIn: "2025-07-15",
                   checkOut: "2025-07-18",
-                  pricePerNight: 180,
-                  totalPrice: 540,
-                  rating: 4.8,
-                  amenities: ["wifi", "pool", "spa"],
-                  images: [],
                   coordinates: { lat: 34.0522, lng: -118.2437 },
+                  id: "2",
+                  images: [],
+                  location: "456 Beach Blvd, Los Angeles, USA",
+                  name: "Demo Resort",
+                  pricePerNight: 180,
+                  rating: 4.8,
+                  totalPrice: 540,
+                  type: "resort",
                 },
               ] as Accommodation[];
               break;
             case "activity":
               mockResults.activities = [
                 {
-                  id: "1",
-                  name: "City Tour",
-                  type: "tours",
-                  location: "Downtown, Los Angeles, USA",
+                  coordinates: { lat: 34.0522, lng: -118.2437 },
                   date: "2025-07-15",
+                  description: "Explore the city",
                   duration: 180,
+                  id: "1",
+                  images: [],
+                  location: "Downtown, Los Angeles, USA",
+                  name: "City Tour",
                   price: 45,
                   rating: 4.2,
-                  description: "Explore the city",
-                  images: [],
-                  coordinates: { lat: 34.0522, lng: -118.2437 },
+                  type: "tours",
                 },
                 {
-                  id: "2",
-                  name: "Museum Visit",
-                  type: "cultural",
-                  location: "Museum District, Los Angeles, USA",
+                  coordinates: { lat: 34.0522, lng: -118.2437 },
                   date: "2025-07-15",
+                  description: "Visit the local museum",
                   duration: 120,
+                  id: "2",
+                  images: [],
+                  location: "Museum District, Los Angeles, USA",
+                  name: "Museum Visit",
                   price: 25,
                   rating: 4.0,
-                  description: "Visit the local museum",
-                  images: [],
-                  coordinates: { lat: 34.0522, lng: -118.2437 },
+                  type: "cultural",
                 },
               ] as Activity[];
               break;
             case "destination":
               mockResults.destinations = [
                 {
-                  id: "1",
-                  name: "Paris",
-                  description: "The City of Light",
-                  formattedAddress: "Paris, France",
-                  types: ["city"],
-                  coordinates: { lat: 48.8566, lng: 2.3522 },
-                  country: "France",
-                  region: "Europe",
-                  photos: [],
-                  popularityScore: 9.5,
-                  bestTimeToVisit: ["spring", "fall"],
                   attractions: [],
-                  rating: 4.5,
+                  bestTimeToVisit: ["spring", "fall"],
                   climate: {
-                    season: "temperate",
                     averageTemp: 15,
                     rainfall: 50,
+                    season: "temperate",
                   },
+                  coordinates: { lat: 48.8566, lng: 2.3522 },
+                  country: "France",
+                  description: "The City of Light",
+                  formattedAddress: "Paris, France",
+                  id: "1",
+                  name: "Paris",
+                  photos: [],
+                  popularityScore: 9.5,
+                  rating: 4.5,
+                  region: "Europe",
+                  types: ["city"],
                 },
                 {
-                  id: "2",
-                  name: "Tokyo",
-                  description: "A vibrant metropolis",
-                  formattedAddress: "Tokyo, Japan",
-                  types: ["city"],
-                  coordinates: { lat: 35.6762, lng: 139.6503 },
-                  country: "Japan",
-                  region: "Asia",
-                  photos: [],
-                  popularityScore: 9.3,
-                  bestTimeToVisit: ["spring", "fall"],
                   attractions: [],
-                  rating: 4.7,
+                  bestTimeToVisit: ["spring", "fall"],
                   climate: {
-                    season: "humid_subtropical",
                     averageTemp: 20,
                     rainfall: 80,
+                    season: "humid_subtropical",
                   },
+                  coordinates: { lat: 35.6762, lng: 139.6503 },
+                  country: "Japan",
+                  description: "A vibrant metropolis",
+                  formattedAddress: "Tokyo, Japan",
+                  id: "2",
+                  name: "Tokyo",
+                  photos: [],
+                  popularityScore: 9.3,
+                  rating: 4.7,
+                  region: "Asia",
+                  types: ["city"],
                 },
               ] as Destination[];
               break;
@@ -295,13 +314,13 @@ export const useSearchStore = create<SearchOrchestratorState>()(
 
           // Set the results
           resultsStore.setSearchResults(searchId, mockResults, {
-            totalResults: Object.values(mockResults).flat().length,
-            resultsPerPage: 20,
             currentPage: 1,
             hasMoreResults: false,
-            searchDuration: 1500,
             provider: "MockProvider",
             requestId: searchId,
+            resultsPerPage: 20,
+            searchDuration: 1500,
+            totalResults: Object.values(mockResults).flat().length,
           });
 
           return searchId;
@@ -309,8 +328,8 @@ export const useSearchStore = create<SearchOrchestratorState>()(
           const errorDetails = {
             code: "SEARCH_FAILED",
             message: error instanceof Error ? error.message : "Search failed",
-            retryable: true,
             occurredAt: new Date().toISOString(),
+            retryable: true,
           };
 
           resultsStore.setSearchError(searchId, errorDetails);
@@ -318,10 +337,52 @@ export const useSearchStore = create<SearchOrchestratorState>()(
         }
       },
 
-      resetSearch: () => {
-        useSearchParamsStore.getState().reset();
-        useSearchResultsStore.getState().clearAllResults();
-        useSearchFiltersStore.getState().softReset();
+      // Quick access helpers
+      getSearchSummary: () => {
+        const paramsStore = useSearchParamsStore.getState();
+        const resultsStore = useSearchResultsStore.getState();
+        const filtersStore = useSearchFiltersStore.getState();
+
+        const results = resultsStore.results;
+        const resultCount = Object.values(results).reduce((total, typeResults) => {
+          if (Array.isArray(typeResults)) {
+            return total + typeResults.length;
+          }
+          return total;
+        }, 0);
+
+        return {
+          filterCount: filtersStore.activeFilterCount,
+          hasFilters: filtersStore.hasActiveFilters,
+          hasResults: resultsStore.hasResults,
+          isValid: paramsStore.hasValidParams,
+          params: paramsStore.currentParams,
+          resultCount,
+          searchType: paramsStore.currentSearchType,
+        };
+      },
+
+      get hasActiveFilters() {
+        return useSearchFiltersStore.getState().hasActiveFilters;
+      },
+
+      get hasResults() {
+        return useSearchResultsStore.getState().hasResults;
+      },
+
+      // High-level search operations
+      initializeSearch: (searchType) => {
+        // Initialize all stores for the search type
+        useSearchParamsStore.getState().setSearchType(searchType);
+        useSearchFiltersStore.getState().setSearchType(searchType);
+        useSearchResultsStore.getState().clearResults(searchType);
+
+        // Sync the stores
+        get().syncStores();
+      },
+
+      get isSearching() {
+        return useSearchResultsStore.getState().isSearching;
       },
 
       // Cross-store operations
@@ -353,60 +414,10 @@ export const useSearchStore = create<SearchOrchestratorState>()(
         }
       },
 
-      duplicateCurrentSearch: async (name) => {
-        const paramsStore = useSearchParamsStore.getState();
-        const historyStore = useSearchHistoryStore.getState();
-
-        let { currentSearchType, currentParams } = paramsStore;
-
-        // If computed currentParams is not yet available, derive from slice state
-        if (currentSearchType && !currentParams) {
-          switch (currentSearchType) {
-            case "flight":
-              currentParams = paramsStore.flightParams as SearchParams;
-              break;
-            case "accommodation":
-              currentParams = paramsStore.accommodationParams as SearchParams;
-              break;
-            case "activity":
-              currentParams = paramsStore.activityParams as SearchParams;
-              break;
-            case "destination":
-              currentParams = paramsStore.destinationParams as SearchParams;
-              break;
-            default:
-              break;
-          }
-        }
-
-        if (!currentSearchType || !currentParams) return null;
-
-        return await historyStore.saveSearch(name, currentSearchType, currentParams);
-      },
-
-      // Search workflow helpers
-      validateAndExecuteSearch: async () => {
-        const paramsStore = useSearchParamsStore.getState();
-
-        // Validate parameters first
-        const isValid = await paramsStore.validateCurrentParams();
-        if (!isValid) {
-          throw new Error("Search parameters are invalid");
-        }
-
-        return await get().executeSearch();
-      },
-
-      applyFiltersAndSearch: async () => {
-        const filtersStore = useSearchFiltersStore.getState();
-
-        // Validate filters
-        const filtersValid = await filtersStore.validateAllFilters();
-        if (!filtersValid) {
-          throw new Error("Some filters are invalid");
-        }
-
-        return await get().validateAndExecuteSearch();
+      resetSearch: () => {
+        useSearchParamsStore.getState().reset();
+        useSearchResultsStore.getState().clearAllResults();
+        useSearchFiltersStore.getState().softReset();
       },
 
       retryLastSearch: async () => {
@@ -433,29 +444,17 @@ export const useSearchStore = create<SearchOrchestratorState>()(
         }
       },
 
-      // Quick access helpers
-      getSearchSummary: () => {
+      // Search workflow helpers
+      validateAndExecuteSearch: async () => {
         const paramsStore = useSearchParamsStore.getState();
-        const resultsStore = useSearchResultsStore.getState();
-        const filtersStore = useSearchFiltersStore.getState();
 
-        const results = resultsStore.results;
-        const resultCount = Object.values(results).reduce((total, typeResults) => {
-          if (Array.isArray(typeResults)) {
-            return total + typeResults.length;
-          }
-          return total;
-        }, 0);
+        // Validate parameters first
+        const isValid = await paramsStore.validateCurrentParams();
+        if (!isValid) {
+          throw new Error("Search parameters are invalid");
+        }
 
-        return {
-          searchType: paramsStore.currentSearchType,
-          params: paramsStore.currentParams,
-          hasResults: resultsStore.hasResults,
-          resultCount,
-          hasFilters: filtersStore.hasActiveFilters,
-          filterCount: filtersStore.activeFilterCount,
-          isValid: paramsStore.hasValidParams,
-        };
+        return await get().executeSearch();
       },
     }),
     { name: "SearchOrchestratorStore" }

@@ -1,8 +1,8 @@
-"use client";
-
 /**
  * @fileoverview Shared hook for joining Supabase Realtime channels with minimal wiring.
  */
+
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getBrowserClient } from "@/lib/supabase/client";
@@ -21,9 +21,6 @@ type BroadcastPayload<T> = {
 
 /**
  * Options for configuring a Supabase Realtime channel subscription.
- *
- * @interface UseRealtimeChannelOptions
- * @property {boolean=} private Whether the topic should be joined as a private channel.
  */
 export interface UseRealtimeChannelOptions {
   private?: boolean;
@@ -31,16 +28,7 @@ export interface UseRealtimeChannelOptions {
 
 /**
  * Result returned from {@link useRealtimeChannel}, containing connection state and helpers.
- *
- * @interface UseRealtimeChannelResult
- * @template T - Expected payload shape for broadcast events.
- * @property {boolean} isConnected Indicates whether the channel is actively subscribed.
- * @property {string | null} error Optional error message emitted during subscription.
- * @property {ChannelInstance | null} channel The underlying Supabase channel, when available.
- * @property {(filter: BroadcastFilter, handler: (payload: BroadcastPayload<T>) => void) => void} onBroadcast
- * Register a broadcast handler for the provided event filter.
- * @property {(event: string, payload: T) => Promise<void>} sendBroadcast Dispatches a broadcast event to the channel.
- */
+ * * @template T - Expected payload shape for broadcast events. * Register a broadcast handler for the provided event filter. */
 export interface UseRealtimeChannelResult<T = unknown> {
   isConnected: boolean;
   error: string | null;
@@ -57,9 +45,9 @@ export interface UseRealtimeChannelResult<T = unknown> {
  * consuming and emitting broadcast events.
  *
  * @template T - Expected payload shape for broadcast events.
- * @param {string} topic Supabase topic to join (for example `user:uuid`).
- * @param {UseRealtimeChannelOptions=} opts Optional channel configuration.
- * @returns {UseRealtimeChannelResult<T>} Connection state and broadcast helpers.
+ * @param topic Supabase topic to join (for example `user:uuid`).
+ * @param opts Optional channel configuration.
+ * @returns Connection state and broadcast helpers.
  */
 export function useRealtimeChannel<T = unknown>(
   topic: string,
@@ -117,17 +105,17 @@ export function useRealtimeChannel<T = unknown>(
       throw new Error("Supabase channel is not connected.");
     }
     const request: ChannelSendRequest = {
-      type: "broadcast",
       event,
       payload,
+      type: "broadcast",
     };
     await channel.send(request);
   };
 
   return {
-    isConnected,
-    error,
     channel: channelRef.current,
+    error,
+    isConnected,
     onBroadcast,
     sendBroadcast,
   };

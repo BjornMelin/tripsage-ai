@@ -1,8 +1,15 @@
+/**
+ * @fileoverview Root-level error boundary for the app directory.
+ * This catches errors in the root layout and pages.
+ */
+
 "use client";
 
 import { useEffect } from "react";
 import { PageErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
+import { secureUuid } from "@/lib/security/random";
+import { fireAndForget } from "@/lib/utils";
 
 /**
  * Root-level error boundary for the app directory
@@ -18,11 +25,11 @@ export default function RootErrorBoundary({
   useEffect(() => {
     // Report the error
     const errorReport = errorService.createErrorReport(error, undefined, {
-      userId: getUserId(),
       sessionId: getSessionId(),
+      userId: getUserId(),
     });
 
-    errorService.reportError(errorReport);
+    fireAndForget(errorService.reportError(errorReport));
 
     // Log error in development
     if (process.env.NODE_ENV === "development") {
@@ -33,6 +40,11 @@ export default function RootErrorBoundary({
   return <PageErrorFallback error={error} reset={reset} />;
 }
 
+/**
+ * Gets the current user ID from the user store.
+ *
+ * @returns User ID or undefined if not available
+ */
 function getUserId(): string | undefined {
   try {
     interface UserStore {
@@ -40,19 +52,23 @@ function getUserId(): string | undefined {
         id?: string;
       };
     }
-    const userStore = (window as unknown as { __USER_STORE__?: UserStore })
-      .__USER_STORE__;
+    const userStore = (window as unknown as { userStore?: UserStore }).userStore;
     return userStore?.user?.id;
   } catch {
     return undefined;
   }
 }
 
+/**
+ * Gets or creates a session ID from sessionStorage for error tracking.
+ *
+ * @returns Session ID or undefined if sessionStorage is unavailable
+ */
 function getSessionId(): string | undefined {
   try {
     let sessionId = sessionStorage.getItem("session_id");
     if (!sessionId) {
-      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      sessionId = `session_${secureUuid()}`;
       sessionStorage.setItem("session_id", sessionId);
     }
     return sessionId;

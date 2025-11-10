@@ -2,6 +2,7 @@
  * @fileoverview BYOK upsert route. Stores user-provided API keys in Supabase Vault via RPC.
  * Route: POST /api/keys
  */
+
 "use cache";
 
 import { Ratelimit } from "@upstash/ratelimit";
@@ -33,17 +34,17 @@ function buildRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return undefined;
   return new Ratelimit({
-    redis: Redis.fromEnv(),
-    limiter: Ratelimit.slidingWindow(10, "1 m"),
     analytics: true,
+    limiter: Ratelimit.slidingWindow(10, "1 m"),
     prefix: RATELIMIT_PREFIX,
+    redis: Redis.fromEnv(),
   });
 }
 
 /**
  * Handle POST /api/keys to insert or replace a user's provider API key.
  *
- * @param req Next.js request containing JSON body with { service, api_key }.
+ * @param req Next.js request containing JSON body with { service, apiKey }.
  * @returns 204 No Content on success; 400/401/429/500 on error.
  */
 export async function POST(req: NextRequest) {
@@ -55,58 +56,58 @@ export async function POST(req: NextRequest) {
         await ratelimitInstance.limit(identifier);
       if (!success) {
         return NextResponse.json(
-          { error: "Rate limit exceeded", code: "RATE_LIMIT" },
+          { code: "RATE_LIMIT", error: "Rate limit exceeded" },
           {
-            status: 429,
             headers: {
               "X-RateLimit-Limit": String(limit),
               "X-RateLimit-Remaining": String(remaining),
               "X-RateLimit-Reset": String(reset),
             },
+            status: 429,
           }
         );
       }
     }
 
     let service: string | undefined;
-    let api_key: string | undefined;
+    let apiKey: string | undefined;
     try {
       const body = await req.json();
       service = body.service;
-      api_key = body.api_key;
+      apiKey = body.apiKey;
     } catch (parseError) {
       const message =
         parseError instanceof Error ? parseError.message : "Unknown JSON parse error";
       console.error("/api/keys POST JSON parse error:", { message });
       return NextResponse.json(
-        { error: "Malformed JSON in request body", code: "BAD_REQUEST" },
+        { code: "BAD_REQUEST", error: "Malformed JSON in request body" },
         { status: 400 }
       );
     }
 
     if (
       !service ||
-      !api_key ||
+      !apiKey ||
       typeof service !== "string" ||
-      typeof api_key !== "string"
+      typeof apiKey !== "string"
     ) {
       return NextResponse.json(
-        { error: "Invalid request body", code: "BAD_REQUEST" },
+        { code: "BAD_REQUEST", error: "Invalid request body" },
         { status: 400 }
       );
     }
 
     const supabase = await createServerSupabase();
     return postKey(
-      { supabase, insertUserApiKey: (u, s, k) => insertUserApiKey(u, s, k) },
-      { service, api_key }
+      { insertUserApiKey: (u, s, k) => insertUserApiKey(u, s, k), supabase },
+      { apiKey, service }
     );
   } catch (err) {
     // Redact potential secrets from logs
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("/api/keys POST error:", { message });
     return NextResponse.json(
-      { error: "Internal server error", code: "INTERNAL_ERROR" },
+      { code: "INTERNAL_ERROR", error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -127,7 +128,7 @@ export async function GET() {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("/api/keys GET error:", { message });
     return NextResponse.json(
-      { error: "Internal server error", code: "INTERNAL_ERROR" },
+      { code: "INTERNAL_ERROR", error: "Internal server error" },
       { status: 500 }
     );
   }

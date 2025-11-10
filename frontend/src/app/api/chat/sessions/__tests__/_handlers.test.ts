@@ -1,9 +1,5 @@
-/**
- * @fileoverview Unit tests for chat sessions handler functions, testing session and
- * message CRUD operations with mocked Supabase client and authentication.
- */
-
 import { describe, expect, it, vi } from "vitest";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import {
   createMessage,
   createSession,
@@ -20,7 +16,20 @@ import {
  * @param store - In-memory data store for sessions and messages.
  * @returns Mock Supabase client with basic CRUD operations.
  */
-function supabase(userId: string | null, store: { sessions: any[]; messages: any[] }) {
+type SessionRow = { id: string; [key: string]: unknown };
+type MessageRow = { sessionId: string; [key: string]: unknown };
+
+type MockSupabaseClient = {
+  auth: {
+    getUser: ReturnType<typeof vi.fn>;
+  };
+  from: ReturnType<typeof vi.fn>;
+};
+
+function supabase(
+  userId: string | null,
+  store: { sessions: SessionRow[]; messages: MessageRow[] }
+): MockSupabaseClient {
   return {
     auth: {
       getUser: vi.fn(async () => ({ data: { user: userId ? { id: userId } : null } })),
@@ -28,46 +37,60 @@ function supabase(userId: string | null, store: { sessions: any[]; messages: any
     from: vi.fn((table: string) => {
       if (table === "chat_sessions") {
         return {
-          insert: vi.fn(async (row: any) => {
-            store.sessions.push(row);
-            return { error: null };
-          }),
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({
-            data: store.sessions.filter((s) => s.user_id === userId),
-            error: null,
-          }),
           delete: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          insert: vi.fn((row: SessionRow) => {
+            store.sessions.push(row);
+            return {
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: row,
+                  error: null,
+                }),
+              }),
+            };
+          }),
           maybeSingle: vi.fn(async () => ({
             data: store.sessions.find((s) => s.id) ?? null,
             error: null,
           })),
-        } as any;
+          order: vi.fn().mockResolvedValue({
+            data: store.sessions.filter((s) => s.userId === userId),
+            error: null,
+          }),
+          select: vi.fn().mockReturnThis(),
+        };
       }
       if (table === "chat_messages") {
         return {
-          insert: vi.fn(async (row: any) => {
-            store.messages.push(row);
-            return { error: null };
-          }),
-          select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
+          insert: vi.fn((row: MessageRow) => {
+            store.messages.push(row);
+            return {
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: row,
+                  error: null,
+                }),
+              }),
+            };
+          }),
           order: vi.fn().mockResolvedValue({
             data: store.messages.filter((m) => m.session_id),
             error: null,
           }),
-        } as any;
+          select: vi.fn().mockReturnThis(),
+        };
       }
-      return {} as any;
+      return {};
     }),
-  } as any;
+  };
 }
 
 describe("sessions _handlers", () => {
   it("create/list session happy path", async () => {
-    const store = { sessions: [] as any[], messages: [] as any[] };
-    const s = supabase("u1", store);
+    const store = { messages: [] as MessageRow[], sessions: [] as SessionRow[] };
+    const s = supabase("u1", store) as unknown as TypedServerSupabase;
     const res1 = await createSession({ supabase: s }, "Trip");
     expect(res1.status).toBe(201);
     const res2 = await listSessions({ supabase: s });
@@ -76,12 +99,12 @@ describe("sessions _handlers", () => {
 
   it("get/delete session auth gating", async () => {
     const store = {
-      sessions: [
-        { id: "s1", user_id: "u2", metadata: {}, created_at: "", updated_at: "" },
-      ],
       messages: [],
+      sessions: [
+        { createdAt: "", id: "s1", metadata: {}, updatedAt: "", userId: "u2" },
+      ],
     };
-    const s = supabase("u2", store);
+    const s = supabase("u2", store) as unknown as TypedServerSupabase;
     const g = await getSession({ supabase: s }, "s1");
     expect(g.status).toBe(200);
     const d = await deleteSession({ supabase: s }, "s1");
@@ -89,11 +112,14 @@ describe("sessions _handlers", () => {
   });
 
   it("list/create messages happy path", async () => {
-    const store = { sessions: [{ id: "s1", user_id: "u3" }], messages: [] as any[] };
-    const s = supabase("u3", store);
+    const store = {
+      messages: [] as MessageRow[],
+      sessions: [{ id: "s1", userId: "u3" }],
+    };
+    const s = supabase("u3", store) as unknown as TypedServerSupabase;
     const r1 = await createMessage({ supabase: s }, "s1", {
+      parts: [{ text: "hi", type: "text" }],
       role: "user",
-      parts: [{ type: "text", text: "hi" }],
     });
     expect(r1.status).toBe(201);
     const r2 = await listMessages({ supabase: s }, "s1");

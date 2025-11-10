@@ -1,3 +1,12 @@
+/**
+ * @fileoverview React hook for Supabase realtime connections.
+ *
+ * Provides realtime connection status and error handling for Supabase realtime
+ * connections to the trips, destinations, and chat channels.
+ */
+
+"use client";
+
 export interface RealtimeConnectionStatus {
   trips?: "connected" | "disconnected" | "error";
   destinations?: "connected" | "disconnected" | "error";
@@ -21,11 +30,15 @@ export interface RealtimeHookResult {
 export function useSupabaseRealtime(): RealtimeHookResult {
   return {
     connectionStatus: "connected",
-    isConnected: true,
+    disconnect: () => {
+      // Mock implementation - no-op for placeholder
+    },
     error: null,
     errors: [],
-    disconnect: () => {},
-    reconnect: () => {},
+    isConnected: true,
+    reconnect: () => {
+      // Mock implementation - no-op for placeholder
+    },
   };
 }
 
@@ -34,10 +47,10 @@ export function useSupabaseRealtime(): RealtimeHookResult {
  */
 export function useTripRealtime(_tripId: string | number | null): RealtimeHookResult {
   return {
-    connectionStatus: { trips: "connected", destinations: "connected" },
-    isConnected: true,
+    connectionStatus: { destinations: "connected", trips: "connected" },
     error: null,
     errors: [],
+    isConnected: true,
   };
 }
 
@@ -46,12 +59,14 @@ export function useTripRealtime(_tripId: string | number | null): RealtimeHookRe
  */
 export function useChatRealtime(_sessionId: string | null): RealtimeHookResult {
   return {
+    clearMessageCount: () => {
+      // Mock implementation - no-op for placeholder
+    },
     connectionStatus: "connected",
-    isConnected: true,
     error: null,
     errors: [],
+    isConnected: true,
     newMessageCount: 0,
-    clearMessageCount: () => {},
   };
 }
 
@@ -60,8 +75,8 @@ export function useChatRealtime(_sessionId: string | null): RealtimeHookResult {
  */
 export function useRealtimeStatus() {
   return {
-    trips: { status: "connected", error: null },
-    destinations: { status: "connected", error: null },
-    chat: { status: "connected", error: null },
+    chat: { error: null, status: "connected" },
+    destinations: { error: null, status: "connected" },
+    trips: { error: null, status: "connected" },
   };
 }

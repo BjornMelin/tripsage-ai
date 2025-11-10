@@ -1,17 +1,13 @@
-/**
- * @fileoverview Activity search form tests: rendering, validation, and submit.
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ActivitySearchForm } from "../activity-search-form";
 
-const createWrapper = () => {
+const CreateWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
       mutations: { retry: false },
+      queries: { retry: false },
     },
   });
 
@@ -22,7 +18,7 @@ const createWrapper = () => {
 
 describe("ActivitySearchForm", () => {
   it("renders form with all required fields", () => {
-    render(<ActivitySearchForm />, { wrapper: createWrapper() });
+    render(<ActivitySearchForm />, { wrapper: CreateWrapper() });
 
     expect(screen.getByLabelText(/location/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/start date/i)).toBeInTheDocument();
@@ -37,7 +33,7 @@ describe("ActivitySearchForm", () => {
   });
 
   it("displays activity category options", () => {
-    render(<ActivitySearchForm />, { wrapper: createWrapper() });
+    render(<ActivitySearchForm />, { wrapper: CreateWrapper() });
 
     expect(screen.getByText("Outdoor & Adventure")).toBeInTheDocument();
     expect(screen.getByText("Cultural & Historical")).toBeInTheDocument();
@@ -54,7 +50,7 @@ describe("ActivitySearchForm", () => {
   });
 
   it("validates required fields", async () => {
-    render(<ActivitySearchForm />, { wrapper: createWrapper() });
+    render(<ActivitySearchForm />, { wrapper: CreateWrapper() });
 
     const submitButton = screen.getByRole("button", {
       name: /search activities/i,
@@ -72,7 +68,7 @@ describe("ActivitySearchForm", () => {
   it.skip("handles form submission with valid data", async () => {
     const mockOnSearch = vi.fn();
     render(<ActivitySearchForm onSearch={mockOnSearch} />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Fill in required fields
@@ -111,19 +107,19 @@ describe("ActivitySearchForm", () => {
 
     await waitFor(() => {
       expect(mockOnSearch).toHaveBeenCalledWith({
-        destination: "New York",
-        startDate: "2024-07-01",
-        endDate: "2024-07-03",
         adults: 1,
-        children: 0,
-        infants: 0,
         categories: ["outdoor", "cultural"],
+        children: 0,
+        destination: "New York",
         duration: 4,
-        rating: 4,
+        endDate: "2024-07-03",
+        infants: 0,
         priceRange: {
-          min: 50,
           max: 200,
+          min: 50,
         },
+        rating: 4,
+        startDate: "2024-07-01",
       });
     });
   });
@@ -131,7 +127,7 @@ describe("ActivitySearchForm", () => {
   it("handles participant count changes", async () => {
     const mockOnSearch = vi.fn();
     render(<ActivitySearchForm onSearch={mockOnSearch} />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     // Change participant counts
@@ -173,7 +169,7 @@ describe("ActivitySearchForm", () => {
   });
 
   it("handles category selection and deselection", () => {
-    render(<ActivitySearchForm />, { wrapper: createWrapper() });
+    render(<ActivitySearchForm />, { wrapper: CreateWrapper() });
 
     const outdoorCheckbox = screen.getByLabelText(/outdoor & adventure/i);
     const culturalCheckbox = screen.getByLabelText(/cultural & historical/i);
@@ -198,15 +194,15 @@ describe("ActivitySearchForm", () => {
 
   it("applies initial values correctly", () => {
     const initialValues = {
-      location: "Tokyo",
       adults: 3,
-      children: 2,
       categories: ["food", "cultural"],
+      children: 2,
       duration: 6,
+      location: "Tokyo",
     };
 
     render(<ActivitySearchForm initialValues={initialValues} />, {
-      wrapper: createWrapper(),
+      wrapper: CreateWrapper(),
     });
 
     expect(screen.getByDisplayValue("Tokyo")).toBeInTheDocument();
@@ -218,7 +214,7 @@ describe("ActivitySearchForm", () => {
   });
 
   it("validates number input ranges", async () => {
-    render(<ActivitySearchForm />, { wrapper: createWrapper() });
+    render(<ActivitySearchForm />, { wrapper: CreateWrapper() });
 
     // Test adults min/max
     const adultsInput = screen.getByLabelText(/adults/i);

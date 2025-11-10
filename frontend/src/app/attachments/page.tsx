@@ -2,8 +2,8 @@ type AttachmentItem = {
   id: string;
   filename?: string;
   name?: string;
-  file_size?: number;
-  mime_type?: string;
+  fileSize?: number;
+  mimeType?: string;
 };
 
 async function fetchAttachments() {
@@ -48,8 +48,8 @@ export default async function AttachmentsPage() {
               <tr key={f.id}>
                 <td>{f.id}</td>
                 <td>{f.filename ?? f.name ?? "(unnamed)"}</td>
-                <td>{f.mime_type ?? ""}</td>
-                <td align="right">{f.file_size ?? 0}</td>
+                <td>{f.mimeType ?? ""}</td>
+                <td align="right">{f.fileSize ?? 0}</td>
               </tr>
             ))}
           </tbody>

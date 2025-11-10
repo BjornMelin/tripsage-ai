@@ -32,8 +32,8 @@ export function useMemoryContext(userId: string, enabled = true) {
     {},
     {
       enabled: enabled && !!userId,
-      staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
+      staleTime: 5 * 60 * 1000, // 5 minutes
     }
   );
 }
@@ -70,8 +70,8 @@ export function useMemoryInsights(userId: string, enabled = true) {
     {},
     {
       enabled: enabled && !!userId,
-      staleTime: 10 * 60 * 1000, // 10 minutes
       gcTime: 30 * 60 * 1000, // 30 minutes
+      staleTime: 10 * 60 * 1000, // 10 minutes
     }
   );
 }
@@ -111,8 +111,8 @@ export function useMemoryStats(userId: string, enabled = true) {
     {},
     {
       enabled: enabled && !!userId,
-      staleTime: 15 * 60 * 1000, // 15 minutes
       gcTime: 30 * 60 * 1000, // 30 minutes
+      staleTime: 15 * 60 * 1000, // 15 minutes
     }
   );
 }

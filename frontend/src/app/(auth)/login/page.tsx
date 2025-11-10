@@ -3,8 +3,8 @@ import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = {
-  title: "Sign In - TripSage",
   description: "Sign in to your TripSage account to start planning your perfect trips",
+  title: "Sign In - TripSage",
 };
 
 export default async function LoginPage({

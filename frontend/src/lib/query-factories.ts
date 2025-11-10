@@ -15,18 +15,18 @@ import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
 /**
  * Base query factory interface
  */
-interface BaseQueryFactory<TData, TError = AppError> {
+interface BaseQueryFactory<Data, Error = AppError> {
   queryKey: readonly unknown[];
-  queryFn: () => Promise<TData>;
-  options?: Omit<UseQueryOptions<TData, TError>, "queryKey" | "queryFn">;
+  queryFn: () => Promise<Data>;
+  options?: Omit<UseQueryOptions<Data, Error>, "queryKey" | "queryFn">;
 }
 
 /**
  * Base mutation factory interface
  */
-interface BaseMutationFactory<TData, TVariables, TError = AppError> {
-  mutationFn: (variables: TVariables) => Promise<TData>;
-  options?: Omit<UseMutationOptions<TData, TError, TVariables>, "mutationFn">;
+interface BaseMutationFactory<Data, Variables, Error = AppError> {
+  mutationFn: (variables: Variables) => Promise<Data>;
+  options?: Omit<UseMutationOptions<Data, Error, Variables>, "mutationFn">;
 }
 
 /**
@@ -37,61 +37,61 @@ export const tripQueries = {
    * Factory for fetching all trips
    */
   all: (
-    apiCall: (filters?: Record<string, unknown>) => Promise<any[]>,
+    apiCall: (filters?: Record<string, unknown>) => Promise<unknown[]>,
     filters?: Record<string, unknown>
-  ): BaseQueryFactory<any[]> => ({
-    queryKey: queryKeys.trips.list(filters),
-    queryFn: () => apiCall(filters),
+  ): BaseQueryFactory<unknown[]> => ({
     options: {
-      staleTime: staleTimes.trips,
       gcTime: cacheTimes.medium,
       retry: (failureCount, error) => {
         if (error instanceof Error && "status" in error) {
-          const status = (error as any).status;
+          const status = (error as Error & { status?: number }).status;
           if (status === 401 || status === 403) return false;
         }
         return failureCount < 2;
       },
+      staleTime: staleTimes.trips,
     },
+    queryFn: () => apiCall(filters),
+    queryKey: queryKeys.trips.list(filters),
   }),
 
   /**
    * Factory for fetching a single trip
    */
   detail: (
-    apiCall: (id: number) => Promise<any>,
+    apiCall: (id: number) => Promise<unknown>,
     tripId: number
-  ): BaseQueryFactory<any> => ({
-    queryKey: queryKeys.trips.detail(tripId),
-    queryFn: () => apiCall(tripId),
+  ): BaseQueryFactory<unknown> => ({
     options: {
-      staleTime: staleTimes.trips,
-      gcTime: cacheTimes.medium,
       enabled: !!tripId,
+      gcTime: cacheTimes.medium,
       retry: (failureCount, error) => {
         if (error instanceof Error && "status" in error) {
-          const status = (error as any).status;
+          const status = (error as Error & { status?: number }).status;
           if (status === 404 || status === 401 || status === 403) return false;
         }
         return failureCount < 2;
       },
+      staleTime: staleTimes.trips,
     },
+    queryFn: () => apiCall(tripId),
+    queryKey: queryKeys.trips.detail(tripId),
   }),
 
   /**
    * Factory for trip suggestions
    */
   suggestions: (
-    apiCall: (params?: Record<string, unknown>) => Promise<any[]>,
+    apiCall: (params?: Record<string, unknown>) => Promise<unknown[]>,
     params?: Record<string, unknown>
-  ): BaseQueryFactory<any[]> => ({
-    queryKey: queryKeys.trips.suggestions(params),
-    queryFn: () => apiCall(params),
+  ): BaseQueryFactory<unknown[]> => ({
     options: {
-      staleTime: staleTimes.suggestions,
       gcTime: cacheTimes.medium,
       retry: 2,
+      staleTime: staleTimes.suggestions,
     },
+    queryFn: () => apiCall(params),
+    queryKey: queryKeys.trips.suggestions(params),
   }),
 };
 
@@ -100,53 +100,53 @@ export const tripQueries = {
  */
 export const chatQueries = {
   /**
-   * Factory for chat sessions
-   */
-  sessions: (
-    apiCall: (tripId?: number) => Promise<any[]>,
-    tripId?: number
-  ): BaseQueryFactory<any[]> => ({
-    queryKey: queryKeys.chat.sessionList(tripId),
-    queryFn: () => apiCall(tripId),
-    options: {
-      staleTime: staleTimes.chat,
-      gcTime: cacheTimes.short,
-    },
-  }),
-
-  /**
    * Factory for chat messages (infinite query)
    */
   messages: (
-    apiCall: (sessionId: string, pageParam?: number) => Promise<any>,
+    apiCall: (sessionId: string, pageParam?: number) => Promise<unknown>,
     sessionId: string
-  ): Omit<UseInfiniteQueryOptions<any, AppError>, "queryKey" | "queryFn"> & {
+  ): Omit<UseInfiniteQueryOptions<unknown, AppError>, "queryKey" | "queryFn"> & {
     queryKey: readonly unknown[];
-    queryFn: any;
+    queryFn: ({ pageParam }: { pageParam: number }) => Promise<unknown>;
   } => ({
-    queryKey: queryKeys.chat.messages(sessionId),
-    queryFn: ({ pageParam = 0 }) => apiCall(sessionId, pageParam),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage: any) => lastPage.nextCursor,
-    staleTime: staleTimes.chat,
-    gcTime: cacheTimes.short,
     enabled: !!sessionId,
+    gcTime: cacheTimes.short,
+    getNextPageParam: (lastPage: unknown) =>
+      (lastPage as { nextCursor?: number }).nextCursor,
+    initialPageParam: 0,
+    queryFn: ({ pageParam = 0 }) => apiCall(sessionId, pageParam),
+    queryKey: queryKeys.chat.messages(sessionId),
+    staleTime: staleTimes.chat,
+  }),
+  /**
+   * Factory for chat sessions
+   */
+  sessions: (
+    apiCall: (tripId?: number) => Promise<unknown[]>,
+    tripId?: number
+  ): BaseQueryFactory<unknown[]> => ({
+    options: {
+      gcTime: cacheTimes.short,
+      staleTime: staleTimes.chat,
+    },
+    queryFn: () => apiCall(tripId),
+    queryKey: queryKeys.chat.sessionList(tripId),
   }),
 
   /**
    * Factory for chat statistics
    */
   stats: (
-    apiCall: (userId: string) => Promise<any>,
+    apiCall: (userId: string) => Promise<unknown>,
     userId: string
-  ): BaseQueryFactory<any> => ({
-    queryKey: queryKeys.chat.stats(userId),
-    queryFn: () => apiCall(userId),
+  ): BaseQueryFactory<unknown> => ({
     options: {
-      staleTime: staleTimes.stats,
-      gcTime: cacheTimes.long,
       enabled: !!userId,
+      gcTime: cacheTimes.long,
+      staleTime: staleTimes.stats,
     },
+    queryFn: () => apiCall(userId),
+    queryKey: queryKeys.chat.stats(userId),
   }),
 };
 
@@ -155,50 +155,49 @@ export const chatQueries = {
  */
 export const searchQueries = {
   /**
-   * Factory for flight searches
-   */
-  flights: (
-    apiCall: (params: Record<string, unknown>) => Promise<any>,
-    params: Record<string, unknown>
-  ): BaseQueryFactory<any> => ({
-    queryKey: queryKeys.search.flights(params),
-    queryFn: () => apiCall(params),
-    options: {
-      staleTime: staleTimes.search,
-      gcTime: cacheTimes.short,
-      enabled: Object.keys(params).length > 0,
-    },
-  }),
-
-  /**
    * Factory for accommodation searches
    */
   accommodations: (
-    apiCall: (params: Record<string, unknown>) => Promise<any>,
+    apiCall: (params: Record<string, unknown>) => Promise<unknown>,
     params: Record<string, unknown>
-  ): BaseQueryFactory<any> => ({
-    queryKey: queryKeys.search.accommodations(params),
-    queryFn: () => apiCall(params),
+  ): BaseQueryFactory<unknown> => ({
     options: {
-      staleTime: staleTimes.search,
-      gcTime: cacheTimes.short,
       enabled: Object.keys(params).length > 0,
+      gcTime: cacheTimes.short,
+      staleTime: staleTimes.search,
     },
+    queryFn: () => apiCall(params),
+    queryKey: queryKeys.search.accommodations(params),
+  }),
+  /**
+   * Factory for flight searches
+   */
+  flights: (
+    apiCall: (params: Record<string, unknown>) => Promise<unknown>,
+    params: Record<string, unknown>
+  ): BaseQueryFactory<unknown> => ({
+    options: {
+      enabled: Object.keys(params).length > 0,
+      gcTime: cacheTimes.short,
+      staleTime: staleTimes.search,
+    },
+    queryFn: () => apiCall(params),
+    queryKey: queryKeys.search.flights(params),
   }),
 
   /**
    * Factory for search suggestions
    */
   suggestions: (
-    apiCall: () => Promise<any[]>,
+    apiCall: () => Promise<unknown[]>,
     type: "flights" | "accommodations" | "activities" | "destinations"
-  ): BaseQueryFactory<any[]> => ({
-    queryKey: queryKeys.search.suggestions(type),
-    queryFn: apiCall,
+  ): BaseQueryFactory<unknown[]> => ({
     options: {
-      staleTime: staleTimes.suggestions,
       gcTime: cacheTimes.long,
+      staleTime: staleTimes.suggestions,
     },
+    queryFn: apiCall,
+    queryKey: queryKeys.search.suggestions(type),
   }),
 };
 
@@ -210,31 +209,31 @@ export const fileQueries = {
    * Factory for file attachments
    */
   attachments: (
-    apiCall: (filters?: Record<string, unknown>) => Promise<any[]>,
+    apiCall: (filters?: Record<string, unknown>) => Promise<unknown[]>,
     filters?: Record<string, unknown>
-  ): BaseQueryFactory<any[]> => ({
-    queryKey: queryKeys.files.attachments(filters),
-    queryFn: () => apiCall(filters),
+  ): BaseQueryFactory<unknown[]> => ({
     options: {
-      staleTime: staleTimes.files,
       gcTime: cacheTimes.medium,
+      staleTime: staleTimes.files,
     },
+    queryFn: () => apiCall(filters),
+    queryKey: queryKeys.files.attachments(filters),
   }),
 
   /**
    * Factory for storage statistics
    */
   stats: (
-    apiCall: (userId: string) => Promise<any>,
+    apiCall: (userId: string) => Promise<unknown>,
     userId: string
-  ): BaseQueryFactory<any> => ({
-    queryKey: queryKeys.files.stats(userId),
-    queryFn: () => apiCall(userId),
+  ): BaseQueryFactory<unknown> => ({
     options: {
-      staleTime: staleTimes.stats,
-      gcTime: cacheTimes.long,
       enabled: !!userId,
+      gcTime: cacheTimes.long,
+      staleTime: staleTimes.stats,
     },
+    queryFn: () => apiCall(userId),
+    queryKey: queryKeys.files.stats(userId),
   }),
 };
 
@@ -243,32 +242,114 @@ export const fileQueries = {
  */
 export const mutationFactories = {
   /**
+   * Chat mutations
+   */
+  chat: {
+    createSession: (
+      apiCall: (data: unknown) => Promise<unknown>
+    ): BaseMutationFactory<unknown, unknown> => ({
+      mutationFn: apiCall,
+      options: {
+        onSuccess: (_data, _variables, context) => {
+          const queryClient = context as QueryClient;
+          queryClient.invalidateQueries({ queryKey: queryKeys.chat.sessions() });
+        },
+        retry: 1,
+      },
+    }),
+
+    sendMessage: (
+      apiCall: (data: { sessionId: string; content: string }) => Promise<unknown>
+    ): BaseMutationFactory<unknown, { sessionId: string; content: string }> => ({
+      mutationFn: apiCall,
+      options: {
+        onError: (_err, variables, context) => {
+          if (
+            context &&
+            typeof context === "object" &&
+            context !== null &&
+            "previousMessages" in context &&
+            context.previousMessages
+          ) {
+            const queryClient = {} as QueryClient; // Would be injected
+            queryClient.setQueryData(
+              queryKeys.chat.messages(variables.sessionId),
+              context.previousMessages
+            );
+          }
+        },
+        onMutate: async (variables) => {
+          const queryClient = {} as QueryClient; // Would be injected
+          await queryClient.cancelQueries({
+            queryKey: queryKeys.chat.messages(variables.sessionId),
+          });
+
+          const previousMessages = queryClient.getQueryData(
+            queryKeys.chat.messages(variables.sessionId)
+          );
+
+          // Optimistic update would go here
+
+          return { previousMessages };
+        },
+        onSettled: (_data, _error, variables) => {
+          const queryClient = {} as QueryClient; // Would be injected
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.chat.messages(variables.sessionId),
+          });
+        },
+        retry: 1,
+      },
+    }),
+  },
+
+  /**
+   * File mutations
+   */
+  files: {
+    delete: (
+      apiCall: (id: string) => Promise<void>
+    ): BaseMutationFactory<void, string> => ({
+      mutationFn: apiCall,
+      options: {
+        onSuccess: (_data, variables, context) => {
+          const queryClient = context as QueryClient;
+          queryClient.invalidateQueries({ queryKey: queryKeys.files.all() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.files.stats("") });
+          queryClient.removeQueries({
+            queryKey: queryKeys.files.attachment(variables),
+          });
+        },
+        retry: 1,
+      },
+    }),
+    upload: (
+      apiCall: (file: File) => Promise<unknown>
+    ): BaseMutationFactory<unknown, File> => ({
+      mutationFn: apiCall,
+      options: {
+        onSuccess: (_data, _variables, context) => {
+          const queryClient = context as QueryClient;
+          queryClient.invalidateQueries({ queryKey: queryKeys.files.all() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.files.stats("") });
+        },
+        retry: 1,
+      },
+    }),
+  },
+  /**
    * Trip mutations
    */
   trips: {
-    create: (apiCall: (data: any) => Promise<any>): BaseMutationFactory<any, any> => ({
+    create: (
+      apiCall: (data: unknown) => Promise<unknown>
+    ): BaseMutationFactory<unknown, unknown> => ({
       mutationFn: apiCall,
       options: {
         onSuccess: (_data, _variables, context) => {
           const queryClient = context as QueryClient;
           queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
           queryClient.invalidateQueries({ queryKey: queryKeys.trips.suggestions() });
-        },
-        retry: 1,
-      },
-    }),
-
-    update: (
-      apiCall: (data: { id: number; updates: any }) => Promise<any>
-    ): BaseMutationFactory<any, { id: number; updates: any }> => ({
-      mutationFn: apiCall,
-      options: {
-        onSuccess: (_data, variables, context) => {
-          const queryClient = context as QueryClient;
-          queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.trips.detail(variables.id),
-          });
         },
         retry: 1,
       },
@@ -287,99 +368,17 @@ export const mutationFactories = {
         retry: 1,
       },
     }),
-  },
 
-  /**
-   * Chat mutations
-   */
-  chat: {
-    createSession: (
-      apiCall: (data: any) => Promise<any>
-    ): BaseMutationFactory<any, any> => ({
-      mutationFn: apiCall,
-      options: {
-        onSuccess: (_data, _variables, context) => {
-          const queryClient = context as QueryClient;
-          queryClient.invalidateQueries({ queryKey: queryKeys.chat.sessions() });
-        },
-        retry: 1,
-      },
-    }),
-
-    sendMessage: (
-      apiCall: (data: { sessionId: string; content: string }) => Promise<any>
-    ): BaseMutationFactory<any, { sessionId: string; content: string }> => ({
-      mutationFn: apiCall,
-      options: {
-        onMutate: async (variables) => {
-          const queryClient = {} as QueryClient; // Would be injected
-          await queryClient.cancelQueries({
-            queryKey: queryKeys.chat.messages(variables.sessionId),
-          });
-
-          const previousMessages = queryClient.getQueryData(
-            queryKeys.chat.messages(variables.sessionId)
-          );
-
-          // Optimistic update would go here
-
-          return { previousMessages };
-        },
-        onError: (_err, variables, context) => {
-          if (
-            context &&
-            typeof context === "object" &&
-            context !== null &&
-            "previousMessages" in context &&
-            context.previousMessages
-          ) {
-            const queryClient = {} as QueryClient; // Would be injected
-            queryClient.setQueryData(
-              queryKeys.chat.messages(variables.sessionId),
-              context.previousMessages
-            );
-          }
-        },
-        onSettled: (_data, _error, variables) => {
-          const queryClient = {} as QueryClient; // Would be injected
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.chat.messages(variables.sessionId),
-          });
-        },
-        retry: 1,
-      },
-    }),
-  },
-
-  /**
-   * File mutations
-   */
-  files: {
-    upload: (
-      apiCall: (file: File) => Promise<any>
-    ): BaseMutationFactory<any, File> => ({
-      mutationFn: apiCall,
-      options: {
-        onSuccess: (_data, _variables, context) => {
-          const queryClient = context as QueryClient;
-          queryClient.invalidateQueries({ queryKey: queryKeys.files.all() });
-          queryClient.invalidateQueries({ queryKey: queryKeys.files.stats("") });
-        },
-        retry: 1,
-      },
-    }),
-
-    delete: (
-      apiCall: (id: string) => Promise<void>
-    ): BaseMutationFactory<void, string> => ({
+    update: (
+      apiCall: (data: { id: number; updates: unknown }) => Promise<unknown>
+    ): BaseMutationFactory<unknown, { id: number; updates: unknown }> => ({
       mutationFn: apiCall,
       options: {
         onSuccess: (_data, variables, context) => {
           const queryClient = context as QueryClient;
-          queryClient.invalidateQueries({ queryKey: queryKeys.files.all() });
-          queryClient.invalidateQueries({ queryKey: queryKeys.files.stats("") });
-          queryClient.removeQueries({
-            queryKey: queryKeys.files.attachment(variables),
+          queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.trips.detail(variables.id),
           });
         },
         retry: 1,
@@ -393,11 +392,11 @@ export const mutationFactories = {
  */
 export const createPrefetchQuery = (
   queryClient: QueryClient,
-  factory: BaseQueryFactory<any>
+  factory: BaseQueryFactory<unknown>
 ) => {
   return queryClient.prefetchQuery({
-    queryKey: factory.queryKey,
     queryFn: factory.queryFn,
+    queryKey: factory.queryKey,
     ...factory.options,
   });
 };
@@ -407,17 +406,16 @@ export const createPrefetchQuery = (
  */
 export const queryInvalidation = {
   /**
+   * Invalidate all search queries
+   */
+  allSearch: (queryClient: QueryClient) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.search.all() });
+  },
+  /**
    * Invalidate all trip-related queries
    */
   allTrips: (queryClient: QueryClient) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
-  },
-
-  /**
-   * Invalidate specific trip
-   */
-  trip: (queryClient: QueryClient, tripId: number) => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(tripId) });
   },
 
   /**
@@ -429,15 +427,15 @@ export const queryInvalidation = {
   },
 
   /**
-   * Invalidate all search queries
+   * Invalidate specific trip
    */
-  allSearch: (queryClient: QueryClient) => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.search.all() });
+  trip: (queryClient: QueryClient, tripId: number) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(tripId) });
   },
 };
 
 /**
  * Type helpers for factory usage
  */
-export type QueryFactory<TData> = BaseQueryFactory<TData>;
-export type MutationFactory<TData, TVariables> = BaseMutationFactory<TData, TVariables>;
+export type QueryFactory<Data> = BaseQueryFactory<Data>;
+export type MutationFactory<Data, Variables> = BaseMutationFactory<Data, Variables>;

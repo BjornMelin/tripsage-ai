@@ -5,6 +5,7 @@ import { useCurrencyStore } from "../currency-store";
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: Test mock doesn't need type safety
   persist: (fn: any) => fn,
 }));
 
@@ -13,30 +14,30 @@ describe("useCurrencyStore", () => {
   beforeEach(() => {
     act(() => {
       useCurrencyStore.setState({
+        baseCurrency: "USD",
         currencies: {
-          USD: {
-            code: "USD",
-            symbol: "$",
-            name: "US Dollar",
-            decimals: 2,
-            flag: "🇺🇸",
-          },
           EUR: {
             code: "EUR",
-            symbol: "€",
-            name: "Euro",
             decimals: 2,
             flag: "🇪🇺",
+            name: "Euro",
+            symbol: "€",
           },
           GBP: {
             code: "GBP",
-            symbol: "£",
-            name: "British Pound",
             decimals: 2,
             flag: "🇬🇧",
+            name: "British Pound",
+            symbol: "£",
+          },
+          USD: {
+            code: "USD",
+            decimals: 2,
+            flag: "🇺🇸",
+            name: "US Dollar",
+            symbol: "$",
           },
         },
-        baseCurrency: "USD",
         exchangeRates: {},
         favoriteCurrencies: ["USD", "EUR"],
         lastUpdated: null,
@@ -62,10 +63,10 @@ describe("useCurrencyStore", () => {
 
       const newCurrency: Currency = {
         code: "JPY",
-        symbol: "¥",
-        name: "Japanese Yen",
         decimals: 0,
         flag: "🇯🇵",
+        name: "Japanese Yen",
+        symbol: "¥",
       };
 
       act(() => {
@@ -213,54 +214,54 @@ describe("useCurrencyStore", () => {
     beforeEach(() => {
       act(() => {
         useCurrencyStore.setState({
+          baseCurrency: "USD",
           currencies: {
-            USD: {
-              code: "USD",
-              symbol: "$",
-              name: "US Dollar",
-              decimals: 2,
-              flag: "🇺🇸",
-            },
             EUR: {
               code: "EUR",
-              symbol: "€",
-              name: "Euro",
               decimals: 2,
               flag: "🇪🇺",
+              name: "Euro",
+              symbol: "€",
             },
             GBP: {
               code: "GBP",
-              symbol: "£",
-              name: "British Pound",
               decimals: 2,
               flag: "🇬🇧",
+              name: "British Pound",
+              symbol: "£",
             },
             JPY: {
               code: "JPY",
-              symbol: "¥",
-              name: "Japanese Yen",
               decimals: 0,
               flag: "🇯🇵",
+              name: "Japanese Yen",
+              symbol: "¥",
+            },
+            USD: {
+              code: "USD",
+              decimals: 2,
+              flag: "🇺🇸",
+              name: "US Dollar",
+              symbol: "$",
             },
           },
-          baseCurrency: "USD",
           exchangeRates: {
             EUR: {
               baseCurrency: "USD",
-              targetCurrency: "EUR",
               rate: 0.85,
+              targetCurrency: "EUR",
               timestamp: "2025-05-20T12:00:00Z",
             },
             GBP: {
               baseCurrency: "USD",
-              targetCurrency: "GBP",
               rate: 0.75,
+              targetCurrency: "GBP",
               timestamp: "2025-05-20T12:00:00Z",
             },
             JPY: {
               baseCurrency: "USD",
-              targetCurrency: "JPY",
               rate: 110.0,
+              targetCurrency: "JPY",
               timestamp: "2025-05-20T12:00:00Z",
             },
           },
@@ -347,10 +348,10 @@ describe("useCurrencyStore", () => {
       act(() => {
         result.current.addCurrency({
           code: "JPY",
-          symbol: "¥",
-          name: "Japanese Yen",
           decimals: 0,
           flag: "🇯🇵",
+          name: "Japanese Yen",
+          symbol: "¥",
         });
       });
 

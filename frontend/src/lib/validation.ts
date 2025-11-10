@@ -7,14 +7,14 @@ import { z } from "zod";
 
 // Error types for different validation contexts
 export enum ValidationContext {
-  API = "api",
-  FORM = "form",
-  COMPONENT = "component",
-  STORE = "store",
-  SEARCH = "search",
-  CHAT = "chat",
-  TRIP = "trip",
-  BUDGET = "budget",
+  Api = "api",
+  Form = "form",
+  Component = "component",
+  Store = "store",
+  Search = "search",
+  Chat = "chat",
+  Trip = "trip",
+  Budget = "budget",
 }
 
 // Validation error interface
@@ -77,13 +77,14 @@ export const convertZodError = (
   context: ValidationContext
 ): ValidationError[] => {
   return zodError.issues.map((issue) => ({
+    code: issue.code,
     context,
     field: issue.path.join(".") || undefined,
-    path: issue.path.map(String),
     message: issue.message,
-    code: issue.code,
-    value: (issue as any).received,
+    path: issue.path.map(String),
     timestamp: new Date(),
+    // biome-ignore lint/suspicious/noExplicitAny: Zod issue type lacks received property in type definitions
+    value: (issue as any).received,
   }));
 };
 
@@ -98,26 +99,26 @@ export const validate = <T>(
 
     if (result.success) {
       return {
-        success: true,
         data: result.data,
+        success: true,
       };
     }
     const errors = convertZodError(result.error, context);
     return {
-      success: false,
       errors,
+      success: false,
     };
   } catch (error) {
     return {
-      success: false,
       errors: [
         {
+          code: "UNKNOWN_ERROR",
           context,
           message: error instanceof Error ? error.message : "Unknown validation error",
-          code: "UNKNOWN_ERROR",
           timestamp: new Date(),
         },
       ],
+      success: false,
     };
   }
 };
@@ -134,7 +135,11 @@ export const validateStrict = <T>(
     throw new TripSageValidationError(context, result.errors || []);
   }
 
-  return result.data!;
+  if (!result.data) {
+    throw new TripSageValidationError(context, result.errors || []);
+  }
+
+  return result.data;
 };
 
 // API response validation
@@ -143,7 +148,7 @@ export const validateApiResponse = <T>(
   response: unknown,
   endpoint?: string
 ): ValidationResult<T> => {
-  const result = validate(schema, response, ValidationContext.API);
+  const result = validate(schema, response, ValidationContext.Api);
 
   if (!result.success && endpoint) {
     // Add endpoint context to errors
@@ -161,7 +166,7 @@ export const validateFormData = <T>(
   schema: z.ZodSchema<T>,
   formData: Record<string, unknown>
 ): ValidationResult<T> => {
-  const result = validate(schema, formData, ValidationContext.FORM);
+  const result = validate(schema, formData, ValidationContext.Form);
 
   // Add form-specific error formatting
   if (!result.success) {
@@ -180,7 +185,7 @@ export const validateComponentProps = <T>(
   props: unknown,
   componentName?: string
 ): ValidationResult<T> => {
-  const result = validate(schema, props, ValidationContext.COMPONENT);
+  const result = validate(schema, props, ValidationContext.Component);
 
   if (!result.success && componentName) {
     console.warn(
@@ -198,7 +203,7 @@ export const validateStoreState = <T>(
   state: unknown,
   storeName?: string
 ): ValidationResult<T> => {
-  const result = validate(schema, state, ValidationContext.STORE);
+  const result = validate(schema, state, ValidationContext.Store);
 
   if (!result.success && storeName) {
     console.error(`Store state validation failed for ${storeName}:`, result.errors);
@@ -213,7 +218,7 @@ export const validateSearchParams = <T>(
   params: unknown,
   searchType?: string
 ): ValidationResult<T> => {
-  const result = validate(schema, params, ValidationContext.SEARCH);
+  const result = validate(schema, params, ValidationContext.Search);
 
   if (!result.success && searchType) {
     result.errors = result.errors?.map((error) => ({
@@ -237,8 +242,8 @@ export const validateBatch = <T>(
   items.forEach((item, index) => {
     const result = validate(schema, item, context);
 
-    if (result.success) {
-      results.push(result.data!);
+    if (result.success && result.data) {
+      results.push(result.data);
     } else {
       // Add index to error paths
       const indexedErrors =
@@ -253,27 +258,27 @@ export const validateBatch = <T>(
   });
 
   if (errors.length > 0) {
-    return { success: false, errors };
+    return { errors, success: false };
   }
 
-  return { success: true, data: results };
+  return { data: results, success: true };
 };
 
 // Validation middleware for React Query
 export const createQueryValidationMiddleware = <T>(schema: z.ZodSchema<T>) => {
   return {
-    onSuccess: (data: unknown) => {
-      const result = validateApiResponse(schema, data);
-      if (!result.success) {
-        throw new TripSageValidationError(ValidationContext.API, result.errors || []);
-      }
-      return result.data;
-    },
     onError: (error: unknown) => {
       if (error instanceof TripSageValidationError) {
         console.error("Query validation failed:", error.errors);
       }
       throw error;
+    },
+    onSuccess: (data: unknown) => {
+      const result = validateApiResponse(schema, data);
+      if (!result.success) {
+        throw new TripSageValidationError(ValidationContext.Api, result.errors || []);
+      }
+      return result.data;
     },
   };
 };
@@ -285,7 +290,6 @@ export const createFormValidationMiddleware = <T>(schema: z.ZodSchema<T>) => {
       const result = validateFormData(schema, data);
       if (!result.success) {
         return {
-          values: {},
           errors: result.errors?.reduce(
             (acc, error) => {
               if (error.field) {
@@ -295,9 +299,10 @@ export const createFormValidationMiddleware = <T>(schema: z.ZodSchema<T>) => {
             },
             {} as Record<string, string>
           ),
+          values: {},
         };
       }
-      return { values: result.data, errors: {} };
+      return { errors: {}, values: result.data };
     },
   };
 };
@@ -373,7 +378,6 @@ export const getValidationSummary = (
   byField: Record<string, number>;
 } => {
   return {
-    total: errors.length,
     byContext: errors.reduce(
       (acc, error) => {
         acc[error.context] = (acc[error.context] || 0) + 1;
@@ -390,6 +394,7 @@ export const getValidationSummary = (
       },
       {} as Record<string, number>
     ),
+    total: errors.length,
   };
 };
 
@@ -398,7 +403,7 @@ export const isValidEmail = (value: unknown): value is string => {
   return typeof value === "string" && z.string().email().safeParse(value).success;
 };
 
-export const isValidUUID = (value: unknown): value is string => {
+export const isValidUuid = (value: unknown): value is string => {
   return typeof value === "string" && z.string().uuid().safeParse(value).success;
 };
 
@@ -416,23 +421,23 @@ export const useValidation = <T>(
   context: ValidationContext
 ) => {
   return {
+    isValid: (data: unknown) => validate(schema, data, context).success,
     validate: (data: unknown) => validate(schema, data, context),
     validateStrict: (data: unknown) => validateStrict(schema, data, context),
-    isValid: (data: unknown) => validate(schema, data, context).success,
   };
 };
 
 // Export commonly used validators
 export const validators = {
+  date: (value: unknown) => validate(z.string().date(), value, ValidationContext.Form),
   email: (value: unknown) =>
-    validate(z.string().email(), value, ValidationContext.FORM),
-  uuid: (value: unknown) => validate(z.string().uuid(), value, ValidationContext.FORM),
-  date: (value: unknown) => validate(z.string().date(), value, ValidationContext.FORM),
-  url: (value: unknown) => validate(z.string().url(), value, ValidationContext.FORM),
-  positiveNumber: (value: unknown) =>
-    validate(z.number().positive(), value, ValidationContext.FORM),
+    validate(z.string().email(), value, ValidationContext.Form),
   nonEmptyString: (value: unknown) =>
-    validate(z.string().min(1), value, ValidationContext.FORM),
+    validate(z.string().min(1), value, ValidationContext.Form),
+  positiveNumber: (value: unknown) =>
+    validate(z.number().positive(), value, ValidationContext.Form),
+  url: (value: unknown) => validate(z.string().url(), value, ValidationContext.Form),
+  uuid: (value: unknown) => validate(z.string().uuid(), value, ValidationContext.Form),
 };
 
 // Note: ValidationError interface already exported above

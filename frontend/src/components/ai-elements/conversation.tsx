@@ -1,7 +1,6 @@
 /**
- * @fileoverview Conversation primitives used to render a scrollable chat area
- * that sticks to the bottom as new messages stream in. Built on
- * `use-stick-to-bottom` and compatible with AI Elements message components.
+ * @fileoverview Conversation component for displaying a conversation in a chat-like format.
+ * Provides a styled conversation with various sizes and variants.
  */
 "use client";
 

@@ -13,8 +13,6 @@ updates:
     open-pull-requests-limit: 10
     assignees:
       - "BjornMelin"
-    reviewers:
-      - "BjornMelin"
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
@@ -42,6 +40,22 @@ updates:
           - "@playwright/*"
           - "vitest*"
           - "@biomejs/*"
+          - "@testing-library/*"
+          - "@vitest/*"
+
+      # Frontend development tools
+      frontend-dev-tools:
+        patterns:
+          - "@vitejs/*"
+          - "jscodeshift"
+          - "lint-staged"
+          - "jose"
+          - "jsdom"
+          - "jsondiffpatch"
+          - "tailwindcss*"
+          - "@tailwindcss/*"
+          - "typescript"
+        applies-to: version-updates
 
       # Frontend framework core
       frontend-framework:
@@ -75,6 +89,53 @@ updates:
           - "tailwind-merge"
         applies-to: version-updates
 
+      # Frontend AI/ML dependencies
+      frontend-ai:
+        patterns:
+          - "@ai-sdk/*"
+          - "ai"
+          - "js-tiktoken"
+        applies-to: version-updates
+
+      # Frontend database/cache dependencies
+      frontend-database:
+        patterns:
+          - "@supabase/*"
+          - "@upstash/*"
+        applies-to: version-updates
+
+      # Frontend state management
+      frontend-state-management:
+        patterns:
+          - "@tanstack/*"
+          - "zustand"
+        applies-to: version-updates
+
+      # Frontend form handling
+      frontend-form:
+        patterns:
+          - "@hookform/*"
+          - "react-hook-form"
+        applies-to: version-updates
+
+      # Frontend utility libraries
+      frontend-utility:
+        patterns:
+          - "date-fns"
+          - "nanoid"
+          - "uuid"
+          - "zod"
+          - "cmdk"
+          - "vaul"
+          - "use-stick-to-bottom"
+          - "streamdown"
+          - "web-vitals"
+          - "react-syntax-highlighter"
+          - "recharts"
+          - "react-error-boundary"
+          - "next-themes"
+        applies-to: version-updates
+
       # Frontend security updates
       frontend-security:
         applies-to: security-updates
@@ -100,8 +161,6 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 10
     assignees:
-      - "BjornMelin"
-    reviewers:
       - "BjornMelin"
     commit-message:
       prefix: "deps"
@@ -198,8 +257,6 @@ updates:
     open-pull-requests-limit: 5
     assignees:
       - "BjornMelin"
-    reviewers:
-      - "BjornMelin"
     commit-message:
       prefix: "ci"
       include: "scope"
@@ -231,8 +288,6 @@ updates:
       time: "10:00"
     open-pull-requests-limit: 5
     assignees:
-      - "BjornMelin"
-    reviewers:
       - "BjornMelin"
     commit-message:
       prefix: "docker"

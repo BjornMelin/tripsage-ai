@@ -200,60 +200,59 @@ export function useDeals() {
   }, [allDeals]);
 
   return {
-    // State
-    deals: dealsStore.deals,
-    allDeals,
-    filteredDeals,
-    featuredDeals,
-    savedDeals,
-    recentlyViewedDeals,
-    alerts: dealsStore.alerts,
-    filters: dealsStore.filters,
-    lastUpdated: dealsStore.lastUpdated,
-
-    // Computed
-    dealStats,
-    dealsByDestination,
-    dealsByType,
-    uniqueDestinations,
-    uniqueProviders,
-
-    // Checks
-    isDealSaved,
-    isDealFeatured,
+    addAlert: dealsStore.addAlert,
 
     // Actions
     addDeal: dealsStore.addDeal,
-    updateDeal: dealsStore.updateDeal,
-    removeDeal: dealsStore.removeDeal,
-
-    addToSavedDeals: dealsStore.addToSavedDeals,
-    removeFromSavedDeals: dealsStore.removeFromSavedDeals,
 
     addToFeaturedDeals: dealsStore.addToFeaturedDeals,
-    removeFromFeaturedDeals: dealsStore.removeFromFeaturedDeals,
 
     addToRecentlyViewed: dealsStore.addToRecentlyViewed,
+
+    addToSavedDeals: dealsStore.addToSavedDeals,
+    alerts: dealsStore.alerts,
+    allDeals,
+    clearFilters: dealsStore.clearFilters,
     clearRecentlyViewed: dealsStore.clearRecentlyViewed,
 
-    addAlert: dealsStore.addAlert,
-    updateAlert: dealsStore.updateAlert,
-    removeAlert: dealsStore.removeAlert,
-    toggleAlertActive: dealsStore.toggleAlertActive,
+    // Computed
+    dealStats,
+    // State
+    deals: dealsStore.deals,
+    dealsByDestination,
+    dealsByType,
+    featuredDeals,
+    filterByDestination,
 
     // Filtering & Sorting
     filterByType,
-    filterByDestination,
-    setFilters,
-    clearFilters: dealsStore.clearFilters,
-    sortDeals,
+    filteredDeals,
+    filters: dealsStore.filters,
+    getAlertById: dealsStore.getAlertById,
 
     // Utilities
     getDealById: dealsStore.getDealById,
-    getAlertById: dealsStore.getAlertById,
+    isDealFeatured,
+
+    // Checks
+    isDealSaved,
+    lastUpdated: dealsStore.lastUpdated,
+    recentlyViewedDeals,
+    removeAlert: dealsStore.removeAlert,
+    removeDeal: dealsStore.removeDeal,
+    removeFromFeaturedDeals: dealsStore.removeFromFeaturedDeals,
+    removeFromSavedDeals: dealsStore.removeFromSavedDeals,
 
     // Reset
     reset: dealsStore.reset,
+    savedDeals,
+    setFilters,
+    sortDeals,
+    toggleAlertActive: dealsStore.toggleAlertActive,
+    uniqueDestinations,
+    uniqueProviders,
+    updateAlert: dealsStore.updateAlert,
+    updateDeal: dealsStore.updateDeal,
   };
 }
 
@@ -282,18 +281,18 @@ export function useDealAlerts() {
         }
         return acc;
       },
-      {} as Record<DealType, DealAlert[]>
+      {} as Record<string, DealAlert[]>
     );
   }, [alerts]);
 
   return {
-    alerts,
     activeAlerts,
-    alertsByType,
     addAlert,
-    updateAlert,
+    alerts,
+    alertsByType,
     removeAlert,
     toggleAlertActive,
+    updateAlert,
   };
 }
 
@@ -331,13 +330,13 @@ export function useFeaturedDeals() {
   );
 
   return {
-    featuredDeals,
-    sortedByDiscount,
-    topDeals,
     addToFeaturedDeals,
-    removeFromFeaturedDeals,
-    toggleFeatured,
+    featuredDeals,
     isDealFeatured,
+    removeFromFeaturedDeals,
+    sortedByDiscount,
+    toggleFeatured,
+    topDeals,
   };
 }
 
@@ -378,12 +377,12 @@ export function useSavedDeals() {
   }, [savedDeals]);
 
   return {
+    addToSavedDeals,
+    expiringSoon,
+    isDealSaved,
+    removeFromSavedDeals,
     savedDeals,
     sortedByExpiry,
-    expiringSoon,
-    addToSavedDeals,
-    removeFromSavedDeals,
     toggleSaved,
-    isDealSaved,
   };
 }
