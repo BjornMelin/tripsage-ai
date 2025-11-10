@@ -47,7 +47,7 @@ dependencies = [
     "playwright>=1.55.0,<1.56.0",
     # External API integrations
     "google-api-python-client>=2.185.0,<3.0.0",
-    "google-auth>=2.15.0,<2.42.0",
+    "google-auth>=2.15.0,<2.44.0",
     "google-auth-oauthlib>=1.2.3",
     "googlemaps>=4.10.0",
     "duffel-api>=0.6.2",
