@@ -38,4 +38,6 @@ python scripts/testing/test_runner.py
 
 - All scripts should be run from the project root directory
 - Test configuration is defined in `/pytest.ini`
-- Test environment variables are loaded from `/.env.test`
+- Test environment variables are loaded from `/.env.test`. Copy `.env.test.example`
+  from the repository root when you need a local testing profile, and use
+  `tests/.env.test.example` for pytest-specific overrides.
