@@ -11,7 +11,7 @@ dependencies = [
     "uvicorn>=0.38.0,<0.39.0",
     "httpx>=0.28.1",
     "python-multipart>=0.0.20",
-    "starlette>=0.48.0,<0.49.0",
+    "starlette>=0.48.0,<0.51.0",
     # Authentication and security (Supabase SDK handles token validation)
     "passlib[bcrypt]>=1.7.4", # For password hashing
     "cryptography>=46.0.3",
