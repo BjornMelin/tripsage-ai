@@ -20,22 +20,23 @@ import {
   validate,
 } from "../validation";
 
-// Form options
-interface UseZodFormOptions<T extends FieldValues> extends UseFormProps<T> {
-  schema: z.ZodSchema<T>;
+// Form options - using a data type parameter to avoid complex generic constraints
+interface UseZodFormOptions<Data extends FieldValues>
+  extends Omit<UseFormProps<Data>, "resolver"> {
+  schema: z.ZodType<Data>;
   validateMode?: "onSubmit" | "onBlur" | "onChange" | "onTouched" | "all";
   reValidateMode?: "onSubmit" | "onBlur" | "onChange";
   enableAsyncValidation?: boolean;
   debounceValidation?: number;
-  transformSubmitData?: (data: T) => T | Promise<T>;
-  onValidationError?: (errors: ValidationResult<T>) => void;
-  onSubmitSuccess?: (data: T) => void | Promise<void>;
+  transformSubmitData?: (data: Data) => Data | Promise<Data>;
+  onValidationError?: (errors: ValidationResult<Data>) => void;
+  onSubmitSuccess?: (data: Data) => void | Promise<void>;
   onSubmitError?: (error: Error) => void;
 
   // Wizard options
   enableWizard?: boolean;
   wizardSteps?: string[];
-  stepValidationSchemas?: z.ZodType<any>[];
+  stepValidationSchemas?: z.ZodType<unknown>[];
 }
 
 // form return type
@@ -88,9 +89,9 @@ interface UseZodFormReturn<T extends FieldValues> extends UseFormReturn<T> {
 }
 
 // Custom hook for enhanced Zod form handling
-export function useZodForm<T extends FieldValues>(
-  options: UseZodFormOptions<T>
-): UseZodFormReturn<T> {
+export function useZodForm<Data extends FieldValues>(
+  options: UseZodFormOptions<Data>
+): UseZodFormReturn<Data> {
   const {
     schema,
     transformSubmitData,
@@ -102,9 +103,10 @@ export function useZodForm<T extends FieldValues>(
   } = options;
 
   // Initialize React Hook Form with Zod resolver
-  const form = useForm<T>({
-    resolver: zodResolver(schema as any),
+  const form = useForm<Data>({
     mode: options.validateMode || "onChange",
+    // biome-ignore lint/suspicious/noExplicitAny: zodResolver requires flexible schema typing
+    resolver: zodResolver(schema as any),
     reValidateMode: options.reValidateMode || "onChange",
     ...formOptions,
   });
@@ -123,66 +125,70 @@ export function useZodForm<T extends FieldValues>(
 
   // Validate individual field
   const validateField = useCallback(
-    async (
-      fieldName: FieldPath<T>,
+    (
+      fieldName: FieldPath<Data>,
       value: unknown
     ): Promise<ValidationResult<unknown>> => {
       try {
         // In Zod v4, we can't access .shape directly. Instead, validate the whole object
         // and extract field-specific errors if validation fails
-        const testData = { [fieldName]: value } as Partial<T>;
+        const testData = { [fieldName]: value } as Partial<Data>;
 
         // Create a partial schema for validation - handle both object and other schema types
-        let partialSchema: z.ZodType<any>;
+        let partialSchema: z.ZodType<unknown>;
         if ("partial" in schema && typeof schema.partial === "function") {
-          partialSchema = (schema as any).partial();
+          partialSchema = (schema as z.ZodObject<z.ZodRawShape>).partial();
         } else {
           // For non-object schemas, use the schema as-is for field validation
           partialSchema = schema;
         }
 
-        const result = validate(partialSchema, testData, ValidationContext.FORM);
+        const result = validate(partialSchema, testData, ValidationContext.Form);
 
         if (result.success) {
-          return { success: true, data: value };
+          return Promise.resolve({ data: value, success: true });
         }
 
         // Find field-specific errors
         const fieldErrors =
           result.errors?.filter((err) => err.field === fieldName) || [];
         if (fieldErrors.length === 0) {
-          return { success: true, data: value };
+          return Promise.resolve({ data: value, success: true });
         }
 
-        return {
-          success: false,
+        return Promise.resolve({
           errors: fieldErrors,
-        };
-      } catch (error) {
-        return {
           success: false,
+        });
+      } catch (error) {
+        return Promise.resolve({
           errors: [
             {
-              context: ValidationContext.FORM,
+              code: "FIELD_VALIDATION_ERROR",
+              context: ValidationContext.Form,
               field: fieldName as string,
               message: error instanceof Error ? error.message : "Validation failed",
-              code: "FIELD_VALIDATION_ERROR",
               timestamp: new Date(),
             },
           ],
-        };
+          success: false,
+        });
       }
     },
     [schema]
   );
 
   // Validate all fields
-  const validateAllFields = useCallback(async (): Promise<ValidationResult<T>> => {
+  const validateAllFields = useCallback((): Promise<ValidationResult<Data>> => {
     setValidationState((prev) => ({ ...prev, isValidating: true }));
 
     try {
       const formData = form.getValues();
-      const result = validate(schema, formData, ValidationContext.FORM);
+      const result = validate(
+        schema as z.ZodType<Data>,
+        formData,
+        ValidationContext.Form
+      );
 
       setValidationState((prev) => ({
         ...prev,
@@ -194,21 +200,21 @@ export function useZodForm<T extends FieldValues>(
       }));
 
       if (!result.success && onValidationError) {
-        onValidationError(result);
+        onValidationError(result as ValidationResult<Data>);
       }
 
-      return result;
+      return Promise.resolve(result as ValidationResult<Data>);
     } catch (error) {
       const validationResult = {
-        success: false as const,
         errors: [
           {
-            context: ValidationContext.FORM,
-            message: error instanceof Error ? error.message : "Validation failed",
             code: "FORM_VALIDATION_ERROR",
+            context: ValidationContext.Form,
+            message: error instanceof Error ? error.message : "Validation failed",
             timestamp: new Date(),
           },
         ],
+        success: false as const,
       };
 
       setValidationState((prev) => ({
@@ -222,15 +228,15 @@ export function useZodForm<T extends FieldValues>(
         onValidationError(validationResult);
       }
 
-      return validationResult;
+      return Promise.resolve(validationResult);
     }
   }, [form, schema, onValidationError]);
 
   // Safe submit handler with enhanced error handling
   const handleSubmitSafe = useCallback(
     (
-      onValid: (data: T) => void | Promise<void>,
-      onInvalid?: (errors: ValidationResult<T>) => void
+      onValid: (data: Data) => void | Promise<void>,
+      onInvalid?: (errors: ValidationResult<Data>) => void
     ) =>
       async (e?: React.BaseSyntheticEvent) => {
         e?.preventDefault();
@@ -247,7 +253,11 @@ export function useZodForm<T extends FieldValues>(
           }
 
           // Transform data if transformer provided
-          let submitData = validationResult.data!;
+          let submitData: Data;
+          if (!validationResult.data) {
+            return;
+          }
+          submitData = validationResult.data;
           if (transformSubmitData) {
             submitData = await transformSubmitData(submitData);
           }
@@ -272,7 +282,7 @@ export function useZodForm<T extends FieldValues>(
           if (error instanceof TripSageValidationError) {
             const formErrors = error.getFieldErrors();
             Object.entries(formErrors).forEach(([field, message]) => {
-              form.setError(field as FieldPath<T>, { type: "manual", message });
+              form.setError(field as FieldPath<Data>, { message, type: "manual" });
             });
           }
         }
@@ -282,7 +292,7 @@ export function useZodForm<T extends FieldValues>(
 
   // Helper methods
   const isFieldValid = useCallback(
-    (fieldName: FieldPath<T>): boolean => {
+    (fieldName: FieldPath<Data>): boolean => {
       const fieldState = form.getFieldState(fieldName);
       return !fieldState.error;
     },
@@ -290,7 +300,7 @@ export function useZodForm<T extends FieldValues>(
   );
 
   const getFieldError = useCallback(
-    (fieldName: FieldPath<T>): string | undefined => {
+    (fieldName: FieldPath<Data>): string | undefined => {
       const fieldState = form.getFieldState(fieldName);
       return fieldState.error?.message;
     },
@@ -307,16 +317,16 @@ export function useZodForm<T extends FieldValues>(
     return result.success;
   }, [form, schema]);
 
-  const getCleanData = useCallback((): T => {
+  const getCleanData = useCallback((): Data => {
     const data = form.getValues();
-    const result = schema.parse(data);
+    const result = (schema as z.ZodType<Data>).parse(data);
     return result;
   }, [form, schema]);
 
   const resetToDefaults = useCallback(() => {
-    // React Hook Form v7+ expects DefaultValues<T> or undefined
+    // React Hook Form v7+ expects DefaultValues<Data> or undefined
     if (options.defaultValues) {
-      form.reset(options.defaultValues as DefaultValues<T>);
+      form.reset(options.defaultValues as DefaultValues<Data>);
     } else {
       form.reset();
     }
@@ -364,26 +374,26 @@ export function useZodForm<T extends FieldValues>(
 
     return {
       currentStep,
-      totalSteps: wizardSteps.length,
       isFirstStep: currentStep === 0,
       isLastStep: currentStep === wizardSteps.length - 1,
+      totalSteps: wizardSteps.length,
     };
   }, [enableWizard, currentStep, wizardSteps.length]);
 
   return {
     ...form,
-    validateField,
-    validateAllFields,
-    handleSubmitSafe,
-    isFieldValid,
-    getFieldError,
-    hasAnyErrors,
-    isFormComplete,
     getCleanData,
+    getFieldError,
+    handleSubmitSafe,
+    hasAnyErrors,
+    isFieldValid,
+    isFormComplete,
     resetToDefaults,
+    validateAllFields,
+    validateField,
     validationState,
-    wizardState,
     wizardActions,
+    wizardState,
   };
 }
 
@@ -397,13 +407,13 @@ export function useAsyncZodValidation<T extends FieldValues>(
     errors: Record<string, string>;
     lastValidated: Date | null;
   }>({
-    isValidating: false,
     errors: {},
+    isValidating: false,
     lastValidated: null,
   });
 
   const validate = useCallback(
-    debounce(async (data: T) => {
+    debounce((data: T) => {
       setValidationState((prev) => ({ ...prev, isValidating: true }));
 
       try {
@@ -411,8 +421,8 @@ export function useAsyncZodValidation<T extends FieldValues>(
 
         if (result.success) {
           setValidationState({
-            isValidating: false,
             errors: {},
+            isValidating: false,
             lastValidated: new Date(),
           });
         } else {
@@ -426,20 +436,20 @@ export function useAsyncZodValidation<T extends FieldValues>(
           );
 
           setValidationState({
-            isValidating: false,
             errors,
+            isValidating: false,
             lastValidated: new Date(),
           });
         }
       } catch (_error) {
         setValidationState({
-          isValidating: false,
           errors: { _global: "Validation error occurred" },
+          isValidating: false,
           lastValidated: new Date(),
         });
       }
     }, debounceMs),
-    [schema, debounceMs]
+    []
   );
 
   return {
@@ -467,15 +477,15 @@ export function useZodFormWizard<T extends FieldValues>(
   const isLastStep = currentStep === steps.length - 1;
 
   const form = useZodForm({
-    schema: currentStepConfig.schema,
-    defaultValues: stepData as any,
+    defaultValues: stepData as DefaultValues<T>,
+    schema: currentStepConfig.schema as z.ZodSchema<T>,
   });
 
   const goToStep = useCallback(
     (stepIndex: number) => {
       if (stepIndex >= 0 && stepIndex < steps.length) {
         setCurrentStep(stepIndex);
-        form.reset(stepData as any);
+        form.reset(stepData as DefaultValues<T>);
       }
     },
     [steps.length, form, stepData]
@@ -500,7 +510,7 @@ export function useZodFormWizard<T extends FieldValues>(
     }
   }, [form, isFirstStep]);
 
-  const submitWizard = useCallback(async () => {
+  const submitWizard = useCallback((): T => {
     const currentData = form.getValues();
     const finalData = { ...stepData, ...currentData } as T;
 
@@ -509,12 +519,12 @@ export function useZodFormWizard<T extends FieldValues>(
       return result.data;
     }
     throw new TripSageValidationError(
-      ValidationContext.FORM,
+      ValidationContext.Form,
       result.error.issues.map((issue) => ({
-        context: ValidationContext.FORM,
+        code: issue.code,
+        context: ValidationContext.Form,
         field: issue.path.join("."),
         message: issue.message,
-        code: issue.code,
         timestamp: new Date(),
       }))
     );
@@ -524,45 +534,44 @@ export function useZodFormWizard<T extends FieldValues>(
     setCurrentStep(0);
     setCompletedSteps([]);
     setStepData({});
-    form.reset({});
+    form.reset({} as DefaultValues<T>);
   }, [form]);
 
   return {
+    // Step data
+    completedSteps,
     // Current step info
     currentStep,
     currentStepConfig,
-    isFirstStep,
-    isLastStep,
-
-    // Step data
-    completedSteps,
-    stepData,
-
-    // Navigation
-    goToStep,
-    nextStep,
-    previousStep,
 
     // Form
     form,
 
-    // Wizard actions
-    submitWizard,
-    resetWizard,
+    // Navigation
+    goToStep,
+    isFirstStep,
+    isLastStep,
+    isStepCompleted: (stepIndex: number) => completedSteps.includes(stepIndex),
+    nextStep,
+    previousStep,
 
     // Progress
     progress: ((currentStep + 1) / steps.length) * 100,
-    isStepCompleted: (stepIndex: number) => completedSteps.includes(stepIndex),
+    resetWizard,
+    stepData,
+
+    // Wizard actions
+    submitWizard,
   };
 }
 
 // Utility function for debouncing
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
+function debounce<T extends unknown[]>(
+  func: (...args: T) => unknown,
   wait: number
-): (...args: Parameters<T>) => void {
+): (...args: T) => void {
   let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
+  return (...args: T) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };

@@ -11,27 +11,27 @@ import { cn } from "@/lib/utils";
 /**
  * Loading spinner variants for different styles and sizes using class-variance-authority.
  */
-const spinnerVariants = cva("animate-spin", {
+const SpinnerVariants = cva("animate-spin", {
+  defaultVariants: {
+    color: "default",
+    size: "md",
+  },
   variants: {
-    size: {
-      sm: "h-4 w-4",
-      md: "h-6 w-6",
-      lg: "h-8 w-8",
-      xl: "h-12 w-12",
-    },
     color: {
       default: "text-primary",
-      white: "text-white",
-      muted: "text-muted-foreground",
       destructive: "text-destructive",
+      info: "text-blue-600",
+      muted: "text-muted-foreground",
       success: "text-green-600",
       warning: "text-yellow-600",
-      info: "text-blue-600",
+      white: "text-white",
     },
-  },
-  defaultVariants: {
-    size: "md",
-    color: "default",
+    size: {
+      lg: "h-8 w-8",
+      md: "h-6 w-6",
+      sm: "h-4 w-4",
+      xl: "h-12 w-12",
+    },
   },
 });
 
@@ -40,7 +40,7 @@ const spinnerVariants = cva("animate-spin", {
  */
 export interface LoadingSpinnerProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, "color">,
-    VariantProps<typeof spinnerVariants> {
+    VariantProps<typeof SpinnerVariants> {
   /** Visual variant of the spinner. */
   variant?: "default" | "dots" | "bars" | "pulse";
 }
@@ -50,7 +50,7 @@ export interface LoadingSpinnerProps
  */
 export interface SVGSpinnerProps
   extends Omit<React.SVGAttributes<SVGSVGElement>, "color">,
-    VariantProps<typeof spinnerVariants> {
+    VariantProps<typeof SpinnerVariants> {
   /** Visual variant of the spinner. */
   variant?: "default" | "dots" | "bars" | "pulse";
 }
@@ -66,7 +66,7 @@ const DefaultSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(spinnerVariants({ size, color }), className)}
+      className={cn(SpinnerVariants({ color, size }), className)}
       role="status"
       aria-label="Loading"
       {...props}
@@ -108,9 +108,9 @@ DefaultSpinner.displayName = "DefaultSpinner";
 const DotsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => {
     const dotSizes = {
-      sm: "h-1 w-1",
-      md: "h-1.5 w-1.5",
       lg: "h-2 w-2",
+      md: "h-1.5 w-1.5",
+      sm: "h-1 w-1",
       xl: "h-3 w-3",
     };
 
@@ -130,7 +130,7 @@ const DotsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
             className={cn(
               "animate-pulse rounded-full bg-current dots-spinner",
               dotSize,
-              spinnerVariants({ color })
+              SpinnerVariants({ color })
             )}
             style={{
               animationDelay: `${index * 0.15}s`,
@@ -155,9 +155,9 @@ DotsSpinner.displayName = "DotsSpinner";
 const BarsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => {
     const barSizes = {
-      sm: "h-3 w-0.5",
-      md: "h-4 w-0.5",
       lg: "h-6 w-1",
+      md: "h-4 w-0.5",
+      sm: "h-3 w-0.5",
       xl: "h-8 w-1",
     };
 
@@ -177,7 +177,7 @@ const BarsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
             className={cn(
               "animate-pulse rounded-full bg-current bars-spinner",
               barSize,
-              spinnerVariants({ color })
+              SpinnerVariants({ color })
             )}
             style={{
               animationDelay: `${index * 0.1}s`,
@@ -202,9 +202,9 @@ BarsSpinner.displayName = "BarsSpinner";
 const PulseSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => {
     const pulseSizes = {
-      sm: "h-4 w-4",
-      md: "h-6 w-6",
       lg: "h-8 w-8",
+      md: "h-6 w-6",
+      sm: "h-4 w-4",
       xl: "h-12 w-12",
     };
 
@@ -216,7 +216,7 @@ const PulseSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
         className={cn(
           "animate-ping rounded-full bg-current opacity-75",
           pulseSize,
-          spinnerVariants({ color }),
+          SpinnerVariants({ color }),
           className
         )}
         role="status"
@@ -257,4 +257,4 @@ const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
 
 LoadingSpinner.displayName = "LoadingSpinner";
 
-export { LoadingSpinner, spinnerVariants };
+export { LoadingSpinner, SpinnerVariants };

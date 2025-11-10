@@ -66,6 +66,7 @@ yarn-error.log*
 
 # OS-specific files
 .DS_Store
+*.pem
 Thumbs.db
 
 # IDE / Editor specific files
@@ -214,6 +215,7 @@ test_results.log
 full_test_results.log
 backend_test_results_*.md
 analysis_results.md
+test-results.json
 
 # Frontend temporary files
 frontend/lint-*.txt
@@ -260,6 +262,7 @@ docs/**/*-backup.*
 *.development.*
 *.staging.*
 development-*
+!docs/developers/development-guide.md
 staging-*
 
 # Performance and profiling outputs
@@ -336,3 +339,9 @@ scan-results/
 # Project specific files
 .agent/
 supabase/.temp/
+docs/prompts/database-provider-research
+ 
+# Frontend workspace (consolidated from frontend/.gitignore)
+next-env.d.ts
+.vercel/
+.pnpm-debug.log*

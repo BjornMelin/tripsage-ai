@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for Supabase browser client creation, verifying environment
- * variable handling, client initialization, and graceful error handling for missing
- * or invalid configuration scenarios.
- */
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "../client";
 

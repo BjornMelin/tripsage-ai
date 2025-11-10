@@ -155,6 +155,11 @@ See [Testing Guide](docs/developers/testing-guide.md) and [Code Standards](docs/
 
 ---
 
+## Repository Conventions
+
+- Pre-commit: Ruff (lint/format), Bandit, and Pyright (`uv run pyright`). No MyPy or Black hooks.
+- Frontend gates: Biome (`pnpm biome:check`), strict TS (`pnpm type-check`), Vitest (`pnpm test:run`).
+
 ## Dependency Injection
 
 TripSage standardises dependency injection on FastAPI `app.state` singletons managed by

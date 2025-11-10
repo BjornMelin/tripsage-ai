@@ -5,16 +5,16 @@
 import { z } from "zod";
 
 // Common validation patterns
-const currencyCodeSchema = z
+const CURRENCY_CODE_SCHEMA = z
   .string()
   .length(3, "Currency code must be 3 characters")
   .regex(/^[A-Z]{3}$/, "Currency code must be uppercase letters");
 
-const uuidSchema = z.string().uuid();
-const dateStringSchema = z.string().datetime();
-const positiveNumberSchema = z.number().positive();
-const nonNegativeNumberSchema = z.number().nonnegative();
-const percentageSchema = z.number().min(0).max(100);
+const UUID_SCHEMA = z.string().uuid();
+const DATE_STRING_SCHEMA = z.string().datetime();
+const POSITIVE_NUMBER_SCHEMA = z.number().positive();
+const NON_NEGATIVE_NUMBER_SCHEMA = z.number().nonnegative();
+const PERCENTAGE_SCHEMA = z.number().min(0).max(100);
 
 // Expense category enum
 export const expenseCategorySchema = z.enum([
@@ -29,37 +29,37 @@ export const expenseCategorySchema = z.enum([
 
 // Budget category schema
 export const budgetCategorySchema = z.object({
-  id: uuidSchema,
+  amount: POSITIVE_NUMBER_SCHEMA,
   category: expenseCategorySchema,
-  amount: positiveNumberSchema,
-  spent: nonNegativeNumberSchema,
+  id: UUID_SCHEMA,
+  percentage: PERCENTAGE_SCHEMA,
   remaining: z.number(), // Can be negative if overspent
-  percentage: percentageSchema,
+  spent: NON_NEGATIVE_NUMBER_SCHEMA,
 });
 
 // Share details schema
 export const shareDetailsSchema = z.object({
-  userId: uuidSchema,
-  userName: z.string().min(1).max(100),
-  percentage: percentageSchema,
-  amount: nonNegativeNumberSchema,
+  amount: NON_NEGATIVE_NUMBER_SCHEMA,
   isPaid: z.boolean(),
+  percentage: PERCENTAGE_SCHEMA,
+  userId: UUID_SCHEMA,
+  userName: z.string().min(1).max(100),
 });
 
 // Budget schema
 export const budgetSchema = z
   .object({
-    id: uuidSchema,
-    tripId: uuidSchema.optional(),
-    name: z.string().min(1, "Budget name is required").max(100, "Name too long"),
-    totalAmount: positiveNumberSchema,
-    currency: currencyCodeSchema,
-    startDate: z.string().date().optional(),
-    endDate: z.string().date().optional(),
     categories: z.array(budgetCategorySchema),
+    createdAt: DATE_STRING_SCHEMA,
+    currency: CURRENCY_CODE_SCHEMA,
+    endDate: z.string().date().optional(),
+    id: UUID_SCHEMA,
     isActive: z.boolean(),
-    createdAt: dateStringSchema,
-    updatedAt: dateStringSchema,
+    name: z.string().min(1, "Budget name is required").max(100, "Name too long"),
+    startDate: z.string().date().optional(),
+    totalAmount: POSITIVE_NUMBER_SCHEMA,
+    tripId: UUID_SCHEMA.optional(),
+    updatedAt: DATE_STRING_SCHEMA,
   })
   .refine(
     (data) => {
@@ -90,75 +90,75 @@ export const budgetSchema = z
 
 // Expense schema
 export const expenseSchema = z.object({
-  id: uuidSchema,
-  budgetId: uuidSchema,
-  tripId: uuidSchema.optional(),
+  amount: POSITIVE_NUMBER_SCHEMA,
+  attachmentUrl: z.string().url().optional(),
+  budgetId: UUID_SCHEMA,
   category: expenseCategorySchema,
+  createdAt: DATE_STRING_SCHEMA,
+  currency: CURRENCY_CODE_SCHEMA,
+  date: z.string().date(),
   description: z
     .string()
     .min(1, "Description is required")
     .max(200, "Description too long"),
-  amount: positiveNumberSchema,
-  currency: currencyCodeSchema,
-  date: z.string().date(),
+  id: UUID_SCHEMA,
+  isShared: z.boolean(),
   location: z.string().max(100).optional(),
   paymentMethod: z.string().max(50).optional(),
-  attachmentUrl: z.string().url().optional(),
-  isShared: z.boolean(),
   shareDetails: z.array(shareDetailsSchema).optional(),
-  createdAt: dateStringSchema,
-  updatedAt: dateStringSchema,
+  tripId: UUID_SCHEMA.optional(),
+  updatedAt: DATE_STRING_SCHEMA,
 });
 
 // Currency rate schema
 export const currencyRateSchema = z.object({
-  code: currencyCodeSchema,
-  rate: positiveNumberSchema,
-  lastUpdated: dateStringSchema,
+  code: CURRENCY_CODE_SCHEMA,
+  lastUpdated: DATE_STRING_SCHEMA,
+  rate: POSITIVE_NUMBER_SCHEMA,
 });
 
 // Budget summary schema
 export const budgetSummarySchema = z.object({
-  totalBudget: positiveNumberSchema,
-  totalSpent: nonNegativeNumberSchema,
-  totalRemaining: z.number(), // Can be negative
-  percentageSpent: z.number().min(0), // Can be over 100%
-  spentByCategory: z.record(expenseCategorySchema, nonNegativeNumberSchema),
-  dailyAverage: nonNegativeNumberSchema,
-  dailyLimit: positiveNumberSchema,
-  projectedTotal: nonNegativeNumberSchema,
-  isOverBudget: z.boolean(),
+  dailyAverage: NON_NEGATIVE_NUMBER_SCHEMA,
+  dailyLimit: POSITIVE_NUMBER_SCHEMA,
   daysRemaining: z.number().int().nonnegative().optional(),
+  isOverBudget: z.boolean(),
+  percentageSpent: z.number().min(0), // Can be over 100%
+  projectedTotal: NON_NEGATIVE_NUMBER_SCHEMA,
+  spentByCategory: z.record(expenseCategorySchema, NON_NEGATIVE_NUMBER_SCHEMA),
+  totalBudget: POSITIVE_NUMBER_SCHEMA,
+  totalRemaining: z.number(), // Can be negative
+  totalSpent: NON_NEGATIVE_NUMBER_SCHEMA,
 });
 
 // Budget alert schema
 export const budgetAlertSchema = z.object({
-  id: uuidSchema,
-  budgetId: uuidSchema,
-  type: z.enum(["threshold", "category", "daily"]),
-  threshold: percentageSchema,
-  message: z.string().max(500),
+  budgetId: UUID_SCHEMA,
+  createdAt: DATE_STRING_SCHEMA,
+  id: UUID_SCHEMA,
   isRead: z.boolean(),
-  createdAt: dateStringSchema,
+  message: z.string().max(500),
+  threshold: PERCENTAGE_SCHEMA,
+  type: z.enum(["threshold", "category", "daily"]),
 });
 
 // API Request schemas
 export const createBudgetRequestSchema = z
   .object({
-    name: z.string().min(1, "Budget name is required").max(100, "Name too long"),
-    totalAmount: positiveNumberSchema,
-    currency: currencyCodeSchema,
-    tripId: uuidSchema.optional(),
-    startDate: z.string().date().optional(),
-    endDate: z.string().date().optional(),
     categories: z
       .array(
         z.object({
+          amount: POSITIVE_NUMBER_SCHEMA,
           category: expenseCategorySchema,
-          amount: positiveNumberSchema,
         })
       )
       .optional(),
+    currency: CURRENCY_CODE_SCHEMA,
+    endDate: z.string().date().optional(),
+    name: z.string().min(1, "Budget name is required").max(100, "Name too long"),
+    startDate: z.string().date().optional(),
+    totalAmount: POSITIVE_NUMBER_SCHEMA,
+    tripId: UUID_SCHEMA.optional(),
   })
   .refine(
     (data) => {
@@ -191,21 +191,21 @@ export const createBudgetRequestSchema = z
 
 export const updateBudgetRequestSchema = z
   .object({
-    id: uuidSchema,
-    name: z.string().min(1).max(100).optional(),
-    totalAmount: positiveNumberSchema.optional(),
-    currency: currencyCodeSchema.optional(),
-    startDate: z.string().date().optional(),
-    endDate: z.string().date().optional(),
     categories: z
       .array(
         z.object({
+          amount: POSITIVE_NUMBER_SCHEMA,
           category: expenseCategorySchema,
-          amount: positiveNumberSchema,
         })
       )
       .optional(),
+    currency: CURRENCY_CODE_SCHEMA.optional(),
+    endDate: z.string().date().optional(),
+    id: UUID_SCHEMA,
     isActive: z.boolean().optional(),
+    name: z.string().min(1).max(100).optional(),
+    startDate: z.string().date().optional(),
+    totalAmount: POSITIVE_NUMBER_SCHEMA.optional(),
   })
   .refine(
     (data) => {
@@ -221,90 +221,90 @@ export const updateBudgetRequestSchema = z
   );
 
 export const addExpenseRequestSchema = z.object({
-  budgetId: uuidSchema,
-  tripId: uuidSchema.optional(),
+  amount: POSITIVE_NUMBER_SCHEMA,
+  attachmentUrl: z.string().url().optional(),
+  budgetId: UUID_SCHEMA,
   category: expenseCategorySchema,
+  currency: CURRENCY_CODE_SCHEMA,
+  date: z.string().date(),
   description: z
     .string()
     .min(1, "Description is required")
     .max(200, "Description too long"),
-  amount: positiveNumberSchema,
-  currency: currencyCodeSchema,
-  date: z.string().date(),
+  isShared: z.boolean(),
   location: z.string().max(100).optional(),
   paymentMethod: z.string().max(50).optional(),
-  attachmentUrl: z.string().url().optional(),
-  isShared: z.boolean(),
   shareDetails: z
     .array(
       z.object({
-        userId: uuidSchema,
+        percentage: PERCENTAGE_SCHEMA,
+        userId: UUID_SCHEMA,
         userName: z.string().min(1).max(100),
-        percentage: percentageSchema,
       })
     )
     .optional(),
+  tripId: UUID_SCHEMA.optional(),
 });
 
 export const updateExpenseRequestSchema = z.object({
-  id: uuidSchema,
-  budgetId: uuidSchema.optional(),
+  amount: POSITIVE_NUMBER_SCHEMA.optional(),
+  attachmentUrl: z.string().url().optional(),
+  budgetId: UUID_SCHEMA.optional(),
   category: expenseCategorySchema.optional(),
-  description: z.string().min(1).max(200).optional(),
-  amount: positiveNumberSchema.optional(),
-  currency: currencyCodeSchema.optional(),
+  currency: CURRENCY_CODE_SCHEMA.optional(),
   date: z.string().date().optional(),
+  description: z.string().min(1).max(200).optional(),
+  id: UUID_SCHEMA,
+  isShared: z.boolean().optional(),
   location: z.string().max(100).optional(),
   paymentMethod: z.string().max(50).optional(),
-  attachmentUrl: z.string().url().optional(),
-  isShared: z.boolean().optional(),
   shareDetails: z
     .array(
       z.object({
-        userId: uuidSchema,
+        percentage: PERCENTAGE_SCHEMA,
+        userId: UUID_SCHEMA,
         userName: z.string().min(1).max(100),
-        percentage: percentageSchema,
       })
     )
     .optional(),
 });
 
 export const createBudgetAlertRequestSchema = z.object({
-  budgetId: uuidSchema,
-  type: z.enum(["threshold", "category", "daily"]),
-  threshold: percentageSchema,
+  budgetId: UUID_SCHEMA,
   message: z.string().max(500).optional(),
+  threshold: PERCENTAGE_SCHEMA,
+  type: z.enum(["threshold", "category", "daily"]),
 });
 
 // Budget state schema for Zustand stores
 export const budgetStateSchema = z.object({
-  budgets: z.record(uuidSchema, budgetSchema),
-  currentBudgetId: uuidSchema.nullable(),
-  expenses: z.record(uuidSchema, expenseSchema),
   alerts: z.array(budgetAlertSchema),
-  summary: budgetSummarySchema.nullable(),
-  currencyRates: z.record(currencyCodeSchema, currencyRateSchema),
-  isLoading: z.boolean(),
+  budgets: z.record(UUID_SCHEMA, budgetSchema),
+  currencyRates: z.record(CURRENCY_CODE_SCHEMA, currencyRateSchema),
+  currentBudgetId: UUID_SCHEMA.nullable(),
   error: z.string().nullable(),
-  lastUpdated: dateStringSchema.nullable(),
+  expenses: z.record(UUID_SCHEMA, expenseSchema),
+  isLoading: z.boolean(),
+  lastUpdated: DATE_STRING_SCHEMA.nullable(),
+  summary: budgetSummarySchema.nullable(),
 });
 
 // Budget form schemas (for React Hook Form)
 export const budgetFormSchema = z
   .object({
-    name: z.string().min(1, "Budget name is required").max(100, "Name too long"),
-    totalAmount: z.number().positive("Amount must be positive"),
-    currency: currencyCodeSchema,
-    startDate: z.string().date().optional(),
-    endDate: z.string().date().optional(),
     categories: z
       .array(
         z.object({
-          category: expenseCategorySchema,
           amount: z.number().positive("Amount must be positive"),
+          category: expenseCategorySchema,
         })
       )
       .min(1, "At least one category is required"),
+    currency: CURRENCY_CODE_SCHEMA,
+    endDate: z.string().date().optional(),
+    name: z.string().min(1, "Budget name is required").max(100, "Name too long"),
+    startDate: z.string().date().optional(),
+    totalAmount: z.number().positive("Amount must be positive"),
   })
   .refine(
     (data) => {
@@ -333,24 +333,24 @@ export const budgetFormSchema = z
   );
 
 export const expenseFormSchema = z.object({
-  budgetId: uuidSchema,
+  amount: z.number().positive("Amount must be positive"),
+  budgetId: UUID_SCHEMA,
   category: expenseCategorySchema,
+  currency: CURRENCY_CODE_SCHEMA,
+  date: z.string().date(),
   description: z
     .string()
     .min(1, "Description is required")
     .max(200, "Description too long"),
-  amount: z.number().positive("Amount must be positive"),
-  currency: currencyCodeSchema,
-  date: z.string().date(),
+  isShared: z.boolean(),
   location: z.string().max(100).optional(),
   paymentMethod: z.string().max(50).optional(),
-  isShared: z.boolean(),
   shareDetails: z
     .array(
       z.object({
-        userId: uuidSchema,
-        userName: z.string().min(1).max(100),
         percentage: z.number().min(0.01).max(100),
+        userId: UUID_SCHEMA,
+        userName: z.string().min(1).max(100),
       })
     )
     .optional(),
@@ -430,16 +430,16 @@ export const calculateBudgetSummary = (
       : totalSpent;
 
   return {
-    totalBudget: budget.totalAmount,
-    totalSpent,
-    totalRemaining,
-    percentageSpent,
-    spentByCategory,
     dailyAverage,
     dailyLimit: Math.max(0, dailyLimit),
-    projectedTotal,
-    isOverBudget: totalSpent > budget.totalAmount,
     daysRemaining,
+    isOverBudget: totalSpent > budget.totalAmount,
+    percentageSpent,
+    projectedTotal,
+    spentByCategory,
+    totalBudget: budget.totalAmount,
+    totalRemaining,
+    totalSpent,
   };
 };
 

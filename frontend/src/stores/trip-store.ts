@@ -5,7 +5,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Trip as DatabaseTrip } from "@/lib/supabase/database.types";
+import type { Json, UpdateTables } from "@/lib/supabase/database.types";
 
 /**
  * Interface representing a destination within a trip.
@@ -52,30 +52,30 @@ export interface TripPreferences {
   budget?: {
     total?: number;
     currency?: string;
-    accommodation_budget?: number;
-    transportation_budget?: number;
-    food_budget?: number;
-    activities_budget?: number;
+    accommodationBudget?: number;
+    transportationBudget?: number;
+    foodBudget?: number;
+    activitiesBudget?: number;
   };
   accommodation?: {
     type?: string;
-    min_rating?: number;
+    minRating?: number;
     amenities?: string[];
-    location_preference?: string;
+    locationPreference?: string;
   };
   transportation?: {
-    flight_preferences?: {
-      seat_class?: string;
-      max_stops?: number;
-      preferred_airlines?: string[];
-      time_window?: string;
+    flightPreferences?: {
+      seatClass?: string;
+      maxStops?: number;
+      preferredAirlines?: string[];
+      timeWindow?: string;
     };
-    local_transportation?: string[];
+    localTransportation?: string[];
   };
   activities?: string[];
-  dietary_restrictions?: string[];
-  accessibility_needs?: string[];
-  [key: string]: any; // Allow additional preferences
+  dietaryRestrictions?: string[];
+  accessibilityNeeds?: string[];
+  [key: string]: unknown; // Allow additional preferences
 }
 
 /**
@@ -84,7 +84,9 @@ export interface TripPreferences {
 export interface Trip {
   // ID fields - supporting both legacy and new systems
   id: string;
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   uuid_id?: string;
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   user_id?: string;
 
   // Core trip information (aligned with backend)
@@ -93,7 +95,9 @@ export interface Trip {
   description?: string;
 
   // Date fields - supporting both formats
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   start_date?: string; // Snake case for API compatibility
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   end_date?: string; // Snake case for API compatibility
   startDate?: string; // Camel case for frontend compatibility
   endDate?: string; // Camel case for frontend compatibility
@@ -103,8 +107,10 @@ export interface Trip {
 
   // Budget - supporting both legacy and enhanced
   budget?: number; // Legacy simple budget
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   budget_breakdown?: Budget; // New enhanced budget
   currency?: string;
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   spent_amount?: number;
 
   // fields
@@ -115,7 +121,9 @@ export interface Trip {
   status?: string;
 
   // Timestamp fields - supporting both formats
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   created_at?: string; // Snake case for API compatibility
+  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   updated_at?: string; // Snake case for API compatibility
   createdAt?: string; // Camel case for frontend compatibility
   updatedAt?: string; // Camel case for frontend compatibility
@@ -155,176 +163,8 @@ interface TripState {
 export const useTripStore = create<TripState>()(
   persist(
     (set, _get) => ({
-      trips: [],
-      currentTrip: null,
-      isLoading: false,
-      error: null,
-
-      setTrips: (trips) => set({ trips }),
-
-      setCurrentTrip: (trip) => set({ currentTrip: trip }),
-
-      loadTrips: async () => {
-        set({ isLoading: true, error: null });
-
-        try {
-          const { listTrips } = await import("@/lib/repositories/trips-repo");
-          const frontendTrips = await listTrips();
-          set({ trips: frontendTrips, isLoading: false });
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : "Failed to load trips",
-            isLoading: false,
-          });
-        }
-      },
-
-      createTrip: async (data) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // Import hook will need to be used in component that calls this
-          // For now, we'll use the supabase client directly
-          const { createTrip: repoCreateTrip } = await import(
-            "@/lib/repositories/trips-repo"
-          );
-
-          const tripData = {
-            title: data.title || data.name || "Untitled Trip",
-            description: data.description || "",
-            start_date: data.startDate || data.start_date,
-            end_date: data.endDate || data.end_date,
-            budget: data.budget,
-            currency: data.currency || "USD",
-            spent_amount: 0,
-            visibility: data.visibility || (data.isPublic ? "public" : "private"),
-            tags: data.tags || [],
-            preferences: data.preferences || {},
-            status: data.status || "planning",
-            // budget structure
-            budget_breakdown: data.budget_breakdown
-              ? {
-                  total: data.budget_breakdown.total,
-                  spent: data.budget_breakdown.spent,
-                  breakdown: data.budget_breakdown.breakdown,
-                }
-              : data.budget
-                ? {
-                    total: data.budget,
-                    spent: 0,
-                    breakdown: {},
-                  }
-                : null,
-          };
-
-          const created = await repoCreateTrip({
-            user_id: (data.user_id as string) || "",
-            name: tripData.title,
-            start_date: tripData.start_date || new Date().toISOString(),
-            end_date: tripData.end_date || new Date().toISOString(),
-            destination: (data as { destination?: string })?.destination || "",
-            budget: tripData.budget || 0,
-            currency: tripData.currency,
-            description: tripData.description,
-            visibility: tripData.visibility,
-            travelers: 1,
-            search_metadata: {},
-            flexibility: {},
-          } as any);
-
-          // Convert to frontend format
-          const frontendTrip: Trip = created as any;
-
-          set((state) => ({
-            trips: [...state.trips, frontendTrip],
-            currentTrip: frontendTrip,
-            isLoading: false,
-          }));
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : "Failed to create trip",
-            isLoading: false,
-          });
-        }
-      },
-
-      updateTrip: async (id, data) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          const { updateTrip: repoUpdateTrip } = await import(
-            "@/lib/repositories/trips-repo"
-          );
-
-          // Map to DB update shape
-          const updateData: Partial<DatabaseTrip> = {} as Partial<DatabaseTrip>;
-          if (data.name || data.title) updateData.name = data.name || data.title!;
-          if (data.startDate || data.start_date)
-            updateData.start_date = (data.startDate || data.start_date)!;
-          if (data.endDate || data.end_date)
-            updateData.end_date = (data.endDate || data.end_date)!;
-          if (typeof data.budget === "number") updateData.budget = data.budget;
-          if (data.status) updateData.status = data.status as DatabaseTrip["status"];
-          if (data.preferences) updateData.flexibility = data.preferences as any;
-          if (data.tags) updateData.notes = data.tags as string[];
-          if (data.description !== undefined)
-            (updateData as any).description = data.description as string;
-
-          const updated = await repoUpdateTrip(
-            Number.parseInt(id, 10),
-            _get().currentTrip?.user_id || "",
-            updateData as any
-          );
-          const frontendTrip: Partial<Trip> = updated;
-
-          set((state) => {
-            const trips = state.trips.map((trip) =>
-              trip.id === id ? { ...trip, ...frontendTrip } : trip
-            );
-
-            const currentTrip =
-              state.currentTrip?.id === id
-                ? { ...state.currentTrip, ...frontendTrip }
-                : state.currentTrip;
-
-            return { trips, currentTrip, isLoading: false };
-          });
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : "Failed to update trip",
-            isLoading: false,
-          });
-        }
-      },
-
-      deleteTrip: async (id) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          const { deleteTrip: repoDeleteTrip } = await import(
-            "@/lib/repositories/trips-repo"
-          );
-          await repoDeleteTrip(
-            Number.parseInt(id, 10),
-            _get().currentTrip?.user_id || undefined
-          );
-
-          set((state) => {
-            const trips = state.trips.filter((trip) => trip.id !== id);
-            const currentTrip = state.currentTrip?.id === id ? null : state.currentTrip;
-
-            return { trips, currentTrip, isLoading: false };
-          });
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : "Failed to delete trip",
-            isLoading: false,
-          });
-        }
-      },
-
       addDestination: async (tripId, destination) => {
-        set({ isLoading: true, error: null });
+        set({ error: null, isLoading: true });
 
         try {
           // This will be replaced with actual API call
@@ -356,7 +196,7 @@ export const useTripStore = create<TripState>()(
                   }
                 : state.currentTrip;
 
-            return { trips, currentTrip, isLoading: false };
+            return { currentTrip, isLoading: false, trips };
           });
         } catch (error) {
           set({
@@ -366,51 +206,124 @@ export const useTripStore = create<TripState>()(
         }
       },
 
-      updateDestination: async (tripId, destinationId, data) => {
-        set({ isLoading: true, error: null });
+      clearError: () => set({ error: null }),
+
+      createTrip: async (data) => {
+        set({ error: null, isLoading: true });
 
         try {
-          // This will be replaced with actual API call
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // Import hook will need to be used in component that calls this
+          // For now, we'll use the supabase client directly
+          const { createTrip: repoCreateTrip } = await import(
+            "@/lib/repositories/trips-repo"
+          );
+
+          const tripData = {
+            budget: data.budget,
+            budgetBreakdown: data.budget_breakdown
+              ? {
+                  breakdown: data.budget_breakdown.breakdown,
+                  spent: data.budget_breakdown.spent,
+                  total: data.budget_breakdown.total,
+                }
+              : data.budget
+                ? {
+                    breakdown: {},
+                    spent: 0,
+                    total: data.budget,
+                  }
+                : null,
+            currency: data.currency ?? "USD",
+            description: data.description ?? "",
+            endDate: data.endDate ?? data.end_date,
+            preferences: data.preferences ?? {},
+            spentAmount: 0,
+            startDate: data.startDate ?? data.start_date,
+            status: data.status ?? "planning",
+            tags: data.tags ?? [],
+            title: data.title ?? data.name ?? "Untitled Trip",
+            visibility: data.visibility ?? (data.isPublic ? "public" : "private"),
+          };
+
+          const created = await repoCreateTrip({
+            budget: tripData.budget ?? 0,
+            destination: (data as { destination?: string })?.destination ?? "",
+            // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
+            end_date: tripData.endDate ?? new Date().toISOString(),
+            flexibility: (tripData.preferences ?? {}) as Json,
+            name: tripData.title,
+            notes: tripData.tags ?? [],
+            // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
+            search_metadata: {},
+            // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
+            start_date: tripData.startDate ?? new Date().toISOString(),
+            travelers: 1,
+            // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
+            user_id: (data.user_id as string | undefined) ?? "",
+          });
+
+          // Convert to frontend format
+          const frontendTrip: Trip = created;
+
+          set((state) => ({
+            currentTrip: frontendTrip,
+            isLoading: false,
+            trips: [...state.trips, frontendTrip],
+          }));
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : "Failed to create trip",
+            isLoading: false,
+          });
+        }
+      },
+      currentTrip: null,
+
+      deleteTrip: async (id) => {
+        set({ error: null, isLoading: true });
+
+        try {
+          const { deleteTrip: repoDeleteTrip } = await import(
+            "@/lib/repositories/trips-repo"
+          );
+          await repoDeleteTrip(
+            Number.parseInt(id, 10),
+            _get().currentTrip?.user_id || undefined
+          );
 
           set((state) => {
-            const trips = state.trips.map((trip) => {
-              if (trip.id === tripId) {
-                return {
-                  ...trip,
-                  destinations: trip.destinations.map((dest) =>
-                    dest.id === destinationId ? { ...dest, ...data } : dest
-                  ),
-                  updatedAt: new Date().toISOString(),
-                };
-              }
-              return trip;
-            });
+            const trips = state.trips.filter((trip) => trip.id !== id);
+            const currentTrip = state.currentTrip?.id === id ? null : state.currentTrip;
 
-            const currentTrip =
-              state.currentTrip?.id === tripId
-                ? {
-                    ...state.currentTrip,
-                    destinations: state.currentTrip.destinations.map((dest) =>
-                      dest.id === destinationId ? { ...dest, ...data } : dest
-                    ),
-                    updatedAt: new Date().toISOString(),
-                  }
-                : state.currentTrip;
-
-            return { trips, currentTrip, isLoading: false };
+            return { currentTrip, isLoading: false, trips };
           });
         } catch (error) {
           set({
-            error:
-              error instanceof Error ? error.message : "Failed to update destination",
+            error: error instanceof Error ? error.message : "Failed to delete trip",
+            isLoading: false,
+          });
+        }
+      },
+      error: null,
+      isLoading: false,
+
+      loadTrips: async () => {
+        set({ error: null, isLoading: true });
+
+        try {
+          const { listTrips } = await import("@/lib/repositories/trips-repo");
+          const frontendTrips = await listTrips();
+          set({ isLoading: false, trips: frontendTrips });
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : "Failed to load trips",
             isLoading: false,
           });
         }
       },
 
       removeDestination: async (tripId, destinationId) => {
-        set({ isLoading: true, error: null });
+        set({ error: null, isLoading: true });
 
         try {
           // This will be replaced with actual API call
@@ -441,7 +354,7 @@ export const useTripStore = create<TripState>()(
                   }
                 : state.currentTrip;
 
-            return { trips, currentTrip, isLoading: false };
+            return { currentTrip, isLoading: false, trips };
           });
         } catch (error) {
           set({
@@ -452,13 +365,118 @@ export const useTripStore = create<TripState>()(
         }
       },
 
-      clearError: () => set({ error: null }),
+      setCurrentTrip: (trip) => set({ currentTrip: trip }),
+
+      setTrips: (trips) => set({ trips }),
+      trips: [],
+
+      updateDestination: async (tripId, destinationId, data) => {
+        set({ error: null, isLoading: true });
+
+        try {
+          // This will be replaced with actual API call
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          set((state) => {
+            const trips = state.trips.map((trip) => {
+              if (trip.id === tripId) {
+                return {
+                  ...trip,
+                  destinations: trip.destinations.map((dest) =>
+                    dest.id === destinationId ? { ...dest, ...data } : dest
+                  ),
+                  updatedAt: new Date().toISOString(),
+                };
+              }
+              return trip;
+            });
+
+            const currentTrip =
+              state.currentTrip?.id === tripId
+                ? {
+                    ...state.currentTrip,
+                    destinations: state.currentTrip.destinations.map((dest) =>
+                      dest.id === destinationId ? { ...dest, ...data } : dest
+                    ),
+                    updatedAt: new Date().toISOString(),
+                  }
+                : state.currentTrip;
+
+            return { currentTrip, isLoading: false, trips };
+          });
+        } catch (error) {
+          set({
+            error:
+              error instanceof Error ? error.message : "Failed to update destination",
+            isLoading: false,
+          });
+        }
+      },
+
+      updateTrip: async (id, data) => {
+        set({ error: null, isLoading: true });
+
+        try {
+          const { updateTrip: repoUpdateTrip } = await import(
+            "@/lib/repositories/trips-repo"
+          );
+
+          // Map to DB update shape
+          const updateData: UpdateTables<"trips"> = {};
+          if (data.name ?? data.title) {
+            updateData.name = data.name ?? data.title ?? "";
+          }
+          if (data.startDate ?? data.start_date) {
+            updateData.start_date = data.startDate ?? data.start_date ?? "";
+          }
+          if (data.endDate ?? data.end_date) {
+            updateData.end_date = data.endDate ?? data.end_date ?? "";
+          }
+          if (typeof data.budget === "number") {
+            updateData.budget = data.budget;
+          }
+          if (data.status) {
+            updateData.status = data.status as UpdateTables<"trips">["status"];
+          }
+          if (data.preferences) {
+            updateData.flexibility = data.preferences as Json;
+          }
+          if (data.tags) {
+            updateData.notes = data.tags;
+          }
+
+          const updated = await repoUpdateTrip(
+            Number.parseInt(id, 10),
+            _get().currentTrip?.user_id ?? "",
+            updateData
+          );
+          const frontendTrip: Partial<Trip> = updated;
+
+          set((state) => {
+            const trips = state.trips.map((trip) =>
+              trip.id === id ? { ...trip, ...frontendTrip } : trip
+            );
+
+            const currentTrip =
+              state.currentTrip?.id === id
+                ? { ...state.currentTrip, ...frontendTrip }
+                : state.currentTrip;
+
+            return { currentTrip, isLoading: false, trips };
+          });
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : "Failed to update trip",
+            isLoading: false,
+          });
+        }
+      },
     }),
     {
       name: "trip-storage",
       partialize: (state) => ({
-        trips: state.trips,
         currentTrip: state.currentTrip,
+        trips: state.trips,
       }),
     }
   )

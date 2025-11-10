@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for the search store orchestrator, covering search
- * initialization, execution, filtering, history management, and state synchronization
- * across multiple search-related stores.
- */
-
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SearchParams, SearchType } from "@/types/search";
@@ -100,9 +94,9 @@ describe("Search Store Orchestrator", () => {
       let searchId: string | null = null;
       await act(async () => {
         searchId = await result.current.executeSearch({
-          origin: "NYC",
-          destination: "LAX",
           departureDate: "2025-07-15",
+          destination: "LAX",
+          origin: "NYC",
         } as SearchParams);
       });
 
@@ -139,13 +133,14 @@ describe("Search Store Orchestrator", () => {
       await act(async () => {
         result.current.initializeSearch("flight");
         await paramsStore.current.updateFlightParams({
-          origin: "NYC",
-          destination: "LAX",
           departureDate: "2025-07-15",
+          destination: "LAX",
+          origin: "NYC",
+          // biome-ignore lint/suspicious/noExplicitAny: Test data casting
         } as any);
-        await filtersStore.current.setActiveFilter("price_range", {
-          min: 100,
+        filtersStore.current.setActiveFilter("price_range", {
           max: 500,
+          min: 100,
         });
       });
 
@@ -169,11 +164,12 @@ describe("Search Store Orchestrator", () => {
       await act(async () => {
         result.current.initializeSearch("flight");
         await paramsStore.current.updateFlightParams({
-          origin: "NYC",
-          destination: "LAX",
           departureDate: "2025-07-15",
+          destination: "LAX",
+          origin: "NYC",
+          // biome-ignore lint/suspicious/noExplicitAny: Test data casting
         } as any);
-        await filtersStore.current.setActiveFilter("price_range", { min: 100 });
+        filtersStore.current.setActiveFilter("price_range", { min: 100 });
       });
 
       expect(paramsStore.current.currentSearchType).toBe("flight");
@@ -199,8 +195,8 @@ describe("Search Store Orchestrator", () => {
         const searchId = resultsStore.current.startSearch("flight", { origin: "NYC" });
         resultsStore.current.setSearchError(searchId, {
           message: "Network error",
-          retryable: true,
           occurredAt: new Date().toISOString(),
+          retryable: true,
         });
       });
 
@@ -229,15 +225,16 @@ describe("Search Store Orchestrator", () => {
       await act(async () => {
         result.current.initializeSearch("flight");
         await useSearchParamsStore.getState().updateFlightParams({
-          origin: "NYC",
-          destination: "LAX",
           departureDate: "2025-07-15",
+          destination: "LAX",
+          origin: "NYC",
+          // biome-ignore lint/suspicious/noExplicitAny: Test data casting
         } as any);
-        await filtersStore.current.setActiveFilter("price_range", {
-          min: 100,
+        filtersStore.current.setActiveFilter("price_range", {
           max: 500,
+          min: 100,
         });
-        await filtersStore.current.setActiveFilter("airlines", ["AA", "UA"]);
+        filtersStore.current.setActiveFilter("airlines", ["AA", "UA"]);
       });
 
       // Mock search
@@ -248,9 +245,9 @@ describe("Search Store Orchestrator", () => {
       let searchId: string | null = null;
       await act(async () => {
         searchId = await result.current.executeSearch({
-          origin: "NYC",
-          destination: "LAX",
           departureDate: "2025-07-15",
+          destination: "LAX",
+          origin: "NYC",
         } as SearchParams);
       });
 
@@ -266,18 +263,18 @@ describe("Search Store Orchestrator", () => {
 
       // Mock saved search
       const mockSavedSearch = {
-        id: "saved-123",
-        name: "NYC to LAX Flight",
-        searchType: "flight" as SearchType,
-        params: {
-          origin: "NYC",
-          destination: "LAX",
-          departureDate: "2025-07-15",
-        },
-        tags: [],
-        isPublic: false,
-        isFavorite: false,
         createdAt: new Date().toISOString(),
+        id: "saved-123",
+        isFavorite: false,
+        isPublic: false,
+        name: "NYC to LAX Flight",
+        params: {
+          departureDate: "2025-07-15",
+          destination: "LAX",
+          origin: "NYC",
+        },
+        searchType: "flight" as SearchType,
+        tags: [],
         updatedAt: new Date().toISOString(),
         usageCount: 0,
       };
@@ -299,12 +296,13 @@ describe("Search Store Orchestrator", () => {
       const { result: historyStore } = renderHook(() => useSearchHistoryStore());
 
       // Setup current search and params directly
-      await act(async () => {
+      act(() => {
         result.current.initializeSearch("flight");
         useSearchParamsStore.getState().setFlightParams({
-          origin: "NYC",
-          destination: "LAX",
           departureDate: "2025-07-15",
+          destination: "LAX",
+          origin: "NYC",
+          // biome-ignore lint/suspicious/noExplicitAny: Test data casting
         } as any);
       });
 
@@ -322,6 +320,7 @@ describe("Search Store Orchestrator", () => {
 
       expect(savedId).toBe("new-saved-123");
       expect(historyStore.current.saveSearch).toHaveBeenCalled();
+      // biome-ignore lint/suspicious/noExplicitAny: Test mock access
       const call = (historyStore.current.saveSearch as any).mock.calls.at(-1);
       expect(call[0]).toBe("My NYC Flight");
       expect(call[1]).toBe("flight");
@@ -363,18 +362,18 @@ describe("Search Store Orchestrator", () => {
         resultsStore.current.setSearchResults(searchId, {
           flights: [
             {
-              id: "f1",
               airline: "Test Air",
-              flightNumber: "TA123",
-              origin: "NYC",
-              destination: "LAX",
-              departureTime: new Date().toISOString(),
               arrivalTime: new Date().toISOString(),
-              duration: 300,
-              stops: 0,
-              price: 299,
               cabinClass: "economy",
+              departureTime: new Date().toISOString(),
+              destination: "LAX",
+              duration: 300,
+              flightNumber: "TA123",
+              id: "f1",
+              origin: "NYC",
+              price: 299,
               seatsAvailable: 10,
+              stops: 0,
             },
           ],
         });
@@ -402,9 +401,9 @@ describe("Search Store Orchestrator", () => {
 
       expect(result.current.hasActiveFilters).toBe(false);
 
-      await act(async () => {
+      act(() => {
         result.current.initializeSearch("flight");
-        await filtersStore.current.setActiveFilter("price_range", { min: 100 });
+        filtersStore.current.setActiveFilter("price_range", { min: 100 });
       });
       await act(async () => {
         // allow derived state to compute

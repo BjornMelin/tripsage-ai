@@ -18,8 +18,8 @@ describe("Skeleton", () => {
 
     const skeleton = screen.getByTestId("skeleton");
     expect(skeleton).toHaveStyle({
-      width: "200px",
       height: "100px",
+      width: "200px",
     });
   });
 
@@ -28,8 +28,8 @@ describe("Skeleton", () => {
 
     const skeleton = screen.getByTestId("skeleton");
     expect(skeleton).toHaveStyle({
-      width: "300px",
       height: "150px",
+      width: "300px",
     });
   });
 

@@ -62,12 +62,22 @@ export function RegisterForm({
       } = await supabase.auth.getSession();
       if (session) router.push(redirectTo);
     };
-    void checkSession();
+    checkSession().catch((err) => {
+      // Log session check errors for debugging/monitoring
+      // eslint-disable-next-line no-console
+      console.error("Session check failed in RegisterForm:", err);
+    });
   }, [router, redirectTo, supabase]);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const nextSuffix = nextParam ? `&next=${encodeURIComponent(nextParam)}` : "";
 
+  /**
+   * Handle sign up.
+   *
+   * @param e - The form event.
+   * @returns A promise that resolves to the sign up result.
+   */
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -83,10 +93,10 @@ export function RegisterForm({
     try {
       const { error: signUpError } = await supabase.auth.signUp({
         email,
-        password,
         options: {
           emailRedirectTo: `${origin}/auth/confirm?type=email${nextSuffix}`,
         },
+        password,
       });
       if (signUpError) throw signUpError;
       setMessage("Check your email for a confirmation link to complete registration.");
@@ -97,13 +107,19 @@ export function RegisterForm({
     }
   };
 
+  /**
+   * Handle social login.
+   *
+   * @param provider - The provider to login with.
+   * @returns A promise that resolves to the social login result.
+   */
   const handleSocialLogin = async (provider: "github" | "google") => {
     setError(null);
     const { error: oAuthError } = await supabase.auth.signInWithOAuth({
-      provider,
       options: {
         redirectTo: `${origin}/auth/callback${nextParam ? `?next=${encodeURIComponent(nextParam)}` : ""}`,
       },
+      provider,
     });
     if (oAuthError) setError(oAuthError.message);
   };
@@ -196,7 +212,6 @@ export function RegisterForm({
 
 /**
  * Skeleton loading state for the registration form.
- *
  * Displays placeholder content while the registration form is loading.
  *
  * @returns The registration form skeleton JSX element

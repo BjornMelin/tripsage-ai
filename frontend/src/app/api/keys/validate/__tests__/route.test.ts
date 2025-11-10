@@ -1,7 +1,5 @@
-/* @vitest-environment node */
-/**
- * @fileoverview Unit tests for BYOK key validation route handler.
- */
+/** @vitest-environment node */
+
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { stubRateLimitDisabled, unstubAllEnvs } from "@/test/env-helpers";
@@ -20,10 +18,10 @@ vi.mock("@upstash/redis", () => ({
 vi.mock("@upstash/ratelimit", () => {
   const mockInstance = {
     limit: vi.fn().mockResolvedValue({
-      success: true,
       limit: 10,
       remaining: 9,
       reset: Date.now() + 60000,
+      success: true,
     }),
   };
 
@@ -52,8 +50,8 @@ describe("/api/keys/validate route", () => {
     unstubAllEnvs();
     stubRateLimitDisabled();
     // Ensure Supabase SSR client does not throw when real module is imported
-    (vi as any).stubEnv?.("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
-    (vi as any).stubEnv?.("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
   });
 
   describe("successful validation", () => {
@@ -66,17 +64,17 @@ describe("/api/keys/validate route", () => {
       // Import after setting up mocks (do not reset after mocking)
       const { POST } = await import("../route");
       const req = {
-        json: async () => ({ service: "openai", api_key: "sk-test" }),
         headers: new Headers(),
+        json: async () => ({ apiKey: "sk-test", service: "openai" }),
       } as unknown as NextRequest;
 
       try {
         const res = await POST(req);
         const body = await res.json();
         // Assert both status and body together to surface diff when failing
-        expect({ status: res.status, body }).toEqual({
+        expect({ body, status: res.status }).toEqual({
+          body: { isValid: true },
           status: 200,
-          body: { is_valid: true },
         });
       } catch (error) {
         console.error("Test threw an error:", error);

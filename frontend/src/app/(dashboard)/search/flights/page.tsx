@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Client page for searching flights.
+ */
+
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
@@ -17,6 +21,12 @@ import type { FlightSearchParams } from "@/types/search";
 
 // URL search parameters are handled inline
 
+/**
+ * Client page for searching flights.
+ * This page displays a flight search form and popular routes.
+ *
+ * @returns A React component that displays a flight search form and popular routes.
+ */
 export default function FlightSearchPage() {
   const { initializeSearch, executeSearch } = useSearchStore();
   const router = useRouter();
@@ -37,12 +47,12 @@ export default function FlightSearchPage() {
 
     if (origin || destination || departDate) {
       const initialParams: FlightSearchParams = {
-        origin: origin || undefined,
-        destination: destination || undefined,
-        departureDate: departDate || undefined,
-        returnDate: returnDate || undefined,
         adults: passengers ? Number(passengers) : 1,
         cabinClass: (flightClass as FlightSearchParams["cabinClass"]) || "economy",
+        departureDate: departDate || undefined,
+        destination: destination || undefined,
+        origin: origin || undefined,
+        returnDate: returnDate || undefined,
       };
       executeSearch(initialParams);
     }
@@ -53,16 +63,16 @@ export default function FlightSearchPage() {
       const searchId = await executeSearch(params);
       if (searchId) {
         toast({
-          title: "Search Started",
           description: "Searching for flights...",
+          title: "Search Started",
         });
         // Navigate to results page or show results
         router.push(`/search/flights/results?searchId=${searchId}`);
       }
     } catch (error) {
       toast({
-        title: "Search Failed",
         description: error instanceof Error ? error.message : "An error occurred",
+        title: "Search Failed",
         variant: "destructive",
       });
     }
@@ -83,38 +93,38 @@ export default function FlightSearchPage() {
               <PopularRouteCard
                 origin="New York"
                 destination="London"
-                price={499}
-                date="Dec 2025"
+                price={456}
+                date="May 28, 2025"
               />
               <PopularRouteCard
                 origin="Los Angeles"
                 destination="Tokyo"
-                price={799}
-                date="Nov 2025"
+                price={789}
+                date="Jun 15, 2025"
               />
               <PopularRouteCard
                 origin="Chicago"
                 destination="Paris"
-                price={649}
-                date="Aug 2025"
+                price={567}
+                date="Jun 8, 2025"
               />
               <PopularRouteCard
                 origin="Miami"
-                destination="Cancun"
-                price={299}
-                date="Sep 2025"
+                destination="Barcelona"
+                price={623}
+                date="Jun 22, 2025"
               />
               <PopularRouteCard
                 origin="Seattle"
                 destination="Amsterdam"
                 price={749}
-                date="Oct 2025"
+                date="Jul 10, 2025"
               />
               <PopularRouteCard
                 origin="Dallas"
                 destination="Sydney"
                 price={999}
-                date="Nov 2025"
+                date="Jul 18, 2025"
               />
             </div>
           </CardContent>
@@ -130,6 +140,10 @@ export default function FlightSearchPage() {
               <TravelTip
                 title="Book 1-3 months in advance for the best prices"
                 description="Studies show that booking domestic flights about 1-3 months in advance and international flights 2-8 months in advance typically yields the best prices."
+              />
+              <TravelTip
+                title="Book in Advance"
+                description="Save up to 30% by booking flights 6-8 weeks ahead."
               />
               <TravelTip
                 title="Consider nearby airports"
@@ -151,6 +165,15 @@ export default function FlightSearchPage() {
   );
 }
 
+/**
+ * Card component for displaying a popular route.
+ *
+ * @param origin - The origin of the route.
+ * @param destination - The destination of the route.
+ * @param price - The price of the route.
+ * @param date - The date of the route.
+ * @returns A React component that displays a popular route.
+ */
 function PopularRouteCard({
   origin,
   destination,
@@ -187,6 +210,13 @@ function PopularRouteCard({
   );
 }
 
+/**
+ * Component for displaying a travel tip.
+ *
+ * @param title - The title of the travel tip.
+ * @param description - The description of the travel tip.
+ * @returns A React component that displays a travel tip.
+ */
 function TravelTip({ title, description }: { title: string; description: string }) {
   return (
     <div className="p-4 border rounded-lg">

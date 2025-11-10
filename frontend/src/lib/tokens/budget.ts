@@ -28,6 +28,16 @@ export type ChatMessage = {
 /** Heuristic fallback ratio: ~4 characters per token (UNVERIFIED for non-OpenAI). */
 export const CHARS_PER_TOKEN_HEURISTIC = 4;
 
+/** Cache for tokenizer instances to avoid repeated WASM instantiation. */
+let cachedKey: "o200k" | "cl100k" | null = null;
+let cachedTokenizer: Tiktoken | null = null;
+
+/**
+ * Upper bound of total characters to pass through WASM tokenizer.
+ * If aggregated input exceeds this, fallback to heuristic for performance.
+ */
+const TOKENIZE_MAX_CHARS = 50_000;
+
 /**
  * Select a tokenizer encoding based on model hint.
  *
@@ -37,15 +47,24 @@ export const CHARS_PER_TOKEN_HEURISTIC = 4;
 function selectTokenizer(modelHint?: string): Tiktoken | null {
   const hint = (modelHint || "").toLowerCase();
   try {
-    if (hint.includes("gpt-4o") || hint.includes("gpt-5")) {
-      return new Tiktoken(o200kBase);
+    const key: typeof cachedKey =
+      hint.includes("gpt-4o") || hint.includes("gpt-5")
+        ? "o200k"
+        : hint.includes("gpt-3.5") || hint.includes("gpt-4")
+          ? "cl100k"
+          : null;
+    if (!key) return null;
+
+    if (cachedTokenizer && cachedKey === key) return cachedTokenizer;
+
+    // Dispose previous tokenizer if the WASM exposes free().
+    if (cachedTokenizer && (cachedTokenizer as Tiktoken & { free?: () => void }).free) {
+      (cachedTokenizer as Tiktoken & { free?: () => void }).free?.();
     }
-    if (hint.includes("gpt-3.5") || hint.includes("gpt-4")) {
-      return new Tiktoken(cl100kBase);
-    }
-    // Unknown providers (Anthropic, xAI) -> prefer provider-reported usage.
-    // Fall back to heuristic when no usage metadata is present.
-    return null;
+
+    cachedTokenizer = new Tiktoken(key === "o200k" ? o200kBase : cl100kBase);
+    cachedKey = key;
+    return cachedTokenizer;
   } catch {
     return null;
   }
@@ -61,24 +80,27 @@ function selectTokenizer(modelHint?: string): Tiktoken | null {
  */
 export function countTokens(texts: string[], modelHint?: string): number {
   if (!texts.length) return 0;
-  const enc = selectTokenizer(modelHint);
+  // Heuristic fast-path when text size is very large to avoid heavy WASM work.
+  let charSum = 0;
+  for (const t of texts) charSum += (t || "").length;
+  const oversized = charSum > TOKENIZE_MAX_CHARS;
+
+  const enc = oversized ? null : selectTokenizer(modelHint);
   if (enc) {
     let total = 0;
     try {
       for (const t of texts) total += enc.encode(t || "").length;
     } finally {
-      // Release WASM resources if available.
+      // Release WASM resources if available and not using the shared cache.
       const tokenizer = enc as TiktokenWithFree;
-      if (typeof tokenizer.free === "function") {
+      if (enc !== cachedTokenizer && typeof tokenizer.free === "function") {
         tokenizer.free();
       }
     }
     return total;
   }
   // Heuristic fallback
-  let chars = 0;
-  for (const t of texts) chars += (t || "").length;
-  return Math.max(0, Math.ceil(chars / CHARS_PER_TOKEN_HEURISTIC));
+  return Math.max(0, Math.ceil(charSum / CHARS_PER_TOKEN_HEURISTIC));
 }
 
 /** Result of clamping calculation. */

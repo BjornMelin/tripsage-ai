@@ -1,11 +1,19 @@
+/**
+ * @fileoverview Global error boundary for the app.
+ * This catches errors in the root layout or template.
+ */
+
 "use client";
 
 import { useEffect } from "react";
 import { MinimalErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
+import { secureUuid } from "@/lib/security/random";
+import { fireAndForget } from "@/lib/utils";
 
 /**
- * Global error boundary - catches errors in the root layout or template
+ * Global error boundary for the app.
+ * Catches errors in the root layout or template.
  * This is a last resort fallback that replaces the entire root layout
  */
 export default function GlobalError({
@@ -18,11 +26,11 @@ export default function GlobalError({
   useEffect(() => {
     // Report the critical error
     const errorReport = errorService.createErrorReport(error, undefined, {
-      userId: getUserId(),
       sessionId: getSessionId(),
+      userId: getUserId(),
     });
 
-    errorService.reportError(errorReport);
+    fireAndForget(errorService.reportError(errorReport));
 
     // Log critical error
     console.error("CRITICAL: Global error boundary caught error:", error);
@@ -37,22 +45,32 @@ export default function GlobalError({
   );
 }
 
+/**
+ * Gets the current user ID from the user store.
+ *
+ * @returns User ID or undefined if not available
+ */
 function getUserId(): string | undefined {
   try {
     const userStore = (
-      window as typeof window & { __USER_STORE__?: { user?: { id?: string } } }
-    ).__USER_STORE__;
+      window as typeof window & { userStore?: { user?: { id?: string } } }
+    ).userStore;
     return userStore?.user?.id;
   } catch {
     return undefined;
   }
 }
 
+/**
+ * Gets or creates a session ID from sessionStorage for error tracking.
+ *
+ * @returns Session ID or undefined if sessionStorage is unavailable
+ */
 function getSessionId(): string | undefined {
   try {
     let sessionId = sessionStorage.getItem("session_id");
     if (!sessionId) {
-      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      sessionId = `session_${secureUuid()}`;
       sessionStorage.setItem("session_id", sessionId);
     }
     return sessionId;

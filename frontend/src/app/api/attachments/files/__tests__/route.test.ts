@@ -1,24 +1,18 @@
-/**
- * @fileoverview Unit tests for the attachment files API route.
- * Tests the GET endpoint for fetching attachment files with proper authentication
- * and pagination parameter forwarding.
- */
-
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "../route";
 
 // Mock global fetch
-const mockFetch = vi.fn();
-(globalThis as any).fetch = mockFetch;
+const MOCK_FETCH = vi.fn();
+(globalThis as { fetch: typeof fetch }).fetch = MOCK_FETCH;
 
 describe("/api/attachments/files route (SSR, tagged)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFetch.mockResolvedValue(
+    MOCK_FETCH.mockResolvedValue(
       new Response(
         JSON.stringify({
-          files: [{ id: "1", filename: "test.pdf" }],
+          files: [{ filename: "test.pdf", id: "1" }],
           limit: 50,
           offset: 0,
           total: 1,
@@ -40,14 +34,14 @@ describe("/api/attachments/files route (SSR, tagged)", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(200);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const [calledUrl, options] = mockFetch.mock.calls[0] as [
+    expect(MOCK_FETCH).toHaveBeenCalledTimes(1);
+    const [calledUrl, options] = MOCK_FETCH.mock.calls[0] as [
       string,
-      RequestInit & { next?: any },
+      RequestInit & { next?: { tags: string[] } },
     ];
     expect(calledUrl).toContain("/api/attachments/files?limit=10&offset=0");
     expect(options?.method).toBe("GET");
-    expect(options?.headers).toMatchObject({ Authorization: "Bearer token" });
+    expect(options?.headers).toMatchObject({ authorization: "Bearer token" });
     expect(options?.next?.tags).toContain("attachments");
   });
 });

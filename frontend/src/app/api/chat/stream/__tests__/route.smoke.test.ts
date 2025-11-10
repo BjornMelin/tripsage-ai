@@ -1,8 +1,4 @@
-/**
- * @fileoverview Smoke tests for /api/chat/stream route, verifying basic functionality
- * and error handling with minimal mocking for fast execution and reliability.
- */
-
+import type { LanguageModel } from "ai";
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -20,9 +16,9 @@ import {
  */
 function buildReq(body: unknown, headers: Record<string, string> = {}): NextRequest {
   return new Request("http://localhost/api/chat/stream", {
-    method: "POST",
-    headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(body),
+    headers: { "content-type": "application/json", ...headers },
+    method: "POST",
   }) as unknown as NextRequest;
 }
 
@@ -58,10 +54,10 @@ describe("/api/chat/stream route smoke", () => {
           return {};
         }
         limit = vi.fn(async () => ({
-          success: false,
           limit: 40,
           remaining: 0,
           reset: Date.now() + 60_000,
+          success: false,
         }));
       },
     }));
@@ -71,5 +67,37 @@ describe("/api/chat/stream route smoke", () => {
     );
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toBe("60");
+  });
+
+  it("returns 200 on success with mocked provider and stream", async () => {
+    stubRateLimitDisabled();
+    // Authenticated user
+    vi.doMock("@/lib/supabase/server", () => ({
+      createServerSupabase: vi.fn(async () => ({
+        auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u2" } } })) },
+      })),
+    }));
+    // Provider resolution mock
+    vi.doMock("@/lib/providers/registry", () => ({
+      resolveProvider: vi.fn(async () => ({
+        model: {} as LanguageModel,
+        modelId: "gpt-4o-mini",
+        provider: "openai",
+      })),
+    }));
+    // Stream stub
+    vi.doMock("ai", () => ({
+      convertToModelMessages: (x: unknown) => x,
+      streamText: () => ({
+        toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
+      }),
+    }));
+    const mod = await import("../route");
+    const res = await mod.POST(
+      buildReq({
+        messages: [{ id: "1", parts: [{ text: "hi", type: "text" }], role: "user" }],
+      })
+    );
+    expect(res.status).toBe(200);
   });
 });

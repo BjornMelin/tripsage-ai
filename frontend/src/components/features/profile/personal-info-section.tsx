@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Personal info section: update profile picture and personal details.
+ * UI only; server actions are stubbed.
+ */
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,7 +33,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
 
-const personalInfoSchema = z.object({
+const PersonalInfoSchema = z.object({
+  bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
+  displayName: z
+    .string()
+    .min(1, "Display name is required")
+    .max(50, "Display name must be less than 50 characters"),
   firstName: z
     .string()
     .min(1, "First name is required")
@@ -37,16 +47,11 @@ const personalInfoSchema = z.object({
     .string()
     .min(1, "Last name is required")
     .max(50, "Last name must be less than 50 characters"),
-  displayName: z
-    .string()
-    .min(1, "Display name is required")
-    .max(50, "Display name must be less than 50 characters"),
-  bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
   location: z.string().max(100, "Location must be less than 100 characters").optional(),
   website: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
 });
 
-type PersonalInfoFormData = z.infer<typeof personalInfoSchema>;
+type PersonalInfoFormData = z.infer<typeof PersonalInfoSchema>;
 
 export function PersonalInfoSection() {
   const avatarInputId = useId();
@@ -55,15 +60,15 @@ export function PersonalInfoSection() {
   const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<PersonalInfoFormData>({
-    resolver: zodResolver(personalInfoSchema),
     defaultValues: {
+      bio: profile?.personalInfo?.bio || "",
+      displayName: profile?.personalInfo?.displayName || "",
       firstName: profile?.personalInfo?.firstName || "",
       lastName: profile?.personalInfo?.lastName || "",
-      displayName: profile?.personalInfo?.displayName || "",
-      bio: profile?.personalInfo?.bio || "",
       location: profile?.personalInfo?.location || "",
       website: profile?.personalInfo?.website || "",
     },
+    resolver: zodResolver(PersonalInfoSchema),
   });
 
   const onSubmit = async (data: PersonalInfoFormData) => {
@@ -73,13 +78,13 @@ export function PersonalInfoSection() {
 
       await updatePersonalInfo(data);
       toast({
-        title: "Profile updated",
         description: "Your personal information has been successfully updated.",
+        title: "Profile updated",
       });
     } catch (_error) {
       toast({
-        title: "Error",
         description: "Failed to update profile. Please try again.",
+        title: "Error",
         variant: "destructive",
       });
     }
@@ -92,8 +97,8 @@ export function PersonalInfoSection() {
     // Validate file type
     if (!file.type.startsWith("image/")) {
       toast({
-        title: "Invalid file type",
         description: "Please select an image file.",
+        title: "Invalid file type",
         variant: "destructive",
       });
       return;
@@ -102,8 +107,8 @@ export function PersonalInfoSection() {
     // Validate file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
       toast({
-        title: "File too large",
         description: "Please select an image smaller than 5MB.",
+        title: "File too large",
         variant: "destructive",
       });
       return;
@@ -115,16 +120,16 @@ export function PersonalInfoSection() {
 
       if (avatarUrl) {
         toast({
-          title: "Avatar updated",
           description: "Your profile picture has been successfully updated.",
+          title: "Avatar updated",
         });
       } else {
         throw new Error("Upload failed");
       }
     } catch (_error) {
       toast({
-        title: "Upload failed",
         description: "Failed to upload avatar. Please try again.",
+        title: "Upload failed",
         variant: "destructive",
       });
     } finally {

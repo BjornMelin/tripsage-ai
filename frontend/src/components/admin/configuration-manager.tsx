@@ -22,7 +22,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,55 +68,55 @@ import { useToast } from "@/components/ui/use-toast";
 
 // Types
 interface AgentConfig {
-  agent_type: string;
+  agentType: string;
   temperature: number;
-  max_tokens: number;
-  top_p: number;
-  timeout_seconds: number;
+  maxTokens: number;
+  topP: number;
+  timeoutSeconds: number;
   model: string;
-  updated_at: string;
-  updated_by?: string;
+  updatedAt: string;
+  updatedBy?: string;
   description?: string;
 }
 
 interface ConfigVersion {
-  version_id: string;
-  configuration: Record<string, any>;
+  versionId: string;
+  configuration: Record<string, unknown>;
   description?: string;
-  created_at: string;
-  created_by: string;
-  is_current: boolean;
+  createdAt: string;
+  createdBy: string;
+  isCurrent: boolean;
 }
 
 interface PerformanceMetrics {
-  agent_type: string;
-  average_response_time: number;
-  success_rate: number;
-  error_rate: number;
-  token_usage: Record<string, number>;
-  cost_estimate: number;
-  sample_size: number;
+  agentType: string;
+  averageResponseTime: number;
+  successRate: number;
+  errorRate: number;
+  tokenUsage: Record<string, number>;
+  costEstimate: number;
+  sampleSize: number;
 }
 
-const AGENT_TYPES = [
+const AgentTypes = [
   {
-    value: "budget_agent",
-    label: "Budget Agent",
     description: "Handles budget optimization and expense tracking",
+    label: "Budget Agent",
+    value: "budget_agent",
   },
   {
-    value: "destination_research_agent",
-    label: "Research Agent",
     description: "Researches destinations and attractions",
+    label: "Research Agent",
+    value: "destination_research_agent",
   },
   {
-    value: "itinerary_agent",
-    label: "Itinerary Agent",
     description: "Plans and optimizes travel itineraries",
+    label: "Itinerary Agent",
+    value: "itinerary_agent",
   },
 ];
 
-const MODEL_OPTIONS = ["gpt-4", "gpt-4-turbo", "gpt-5", "gpt-5-mini", "gpt-3.5-turbo"];
+const ModelOptions = ["gpt-4", "gpt-4-turbo", "gpt-5", "gpt-5-mini", "gpt-3.5-turbo"];
 
 /**
  * Agent configuration management component.
@@ -133,7 +133,7 @@ const MODEL_OPTIONS = ["gpt-4", "gpt-4-turbo", "gpt-5", "gpt-5-mini", "gpt-3.5-t
  * - Tabbed interface for configuration, performance, and history views
  * - Form validation with cross-field constraints and model compatibility checks
  *
- * @returns {JSX.Element} The rendered configuration management interface.
+ * @returns The rendered configuration management interface.
  */
 export default function ConfigurationManager() {
   useRouter(); // For potential navigation
@@ -157,53 +157,28 @@ export default function ConfigurationManager() {
 
   // Live WS updates removed; consider Supabase Realtime in a future iteration.
 
-  // Load initial data
-  useEffect(() => {
-    loadAllConfigs();
-  }, []);
+  const loadAgentConfig = useCallback(
+    async (agentType: string) => {
+      try {
+        const response = await fetch(`/api/config/agents/${agentType}`);
+        if (!response.ok) throw new Error("Failed to load config");
 
-  const loadAllConfigs = async () => {
-    setLoading(true);
-    try {
-      // Load configurations for all agent types
-      for (const agentType of AGENT_TYPES) {
-        await Promise.all([
-          loadAgentConfig(agentType.value),
-          loadVersionHistory(agentType.value),
-          loadPerformanceMetrics(agentType.value),
-        ]);
+        const config = await response.json();
+        setConfigs((prev) => ({ ...prev, [agentType]: config }));
+
+        // Initialize edited config if this is the selected agent
+        if (agentType === selectedAgent) {
+          setEditedConfig(config);
+          setHasUnsavedChanges(false);
+        }
+      } catch (error) {
+        console.error(`Error loading config for ${agentType}:`, error);
       }
-    } catch (error) {
-      console.error("Error loading configurations:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load configurations",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [selectedAgent]
+  );
 
-  const loadAgentConfig = async (agentType: string) => {
-    try {
-      const response = await fetch(`/api/config/agents/${agentType}`);
-      if (!response.ok) throw new Error("Failed to load config");
-
-      const config = await response.json();
-      setConfigs((prev) => ({ ...prev, [agentType]: config }));
-
-      // Initialize edited config if this is the selected agent
-      if (agentType === selectedAgent) {
-        setEditedConfig(config);
-        setHasUnsavedChanges(false);
-      }
-    } catch (error) {
-      console.error(`Error loading config for ${agentType}:`, error);
-    }
-  };
-
-  const loadVersionHistory = async (agentType: string) => {
+  const loadVersionHistory = useCallback(async (agentType: string) => {
     try {
       const response = await fetch(`/api/config/agents/${agentType}/versions?limit=10`);
       if (!response.ok) throw new Error("Failed to load versions");
@@ -213,30 +188,58 @@ export default function ConfigurationManager() {
     } catch (error) {
       console.error(`Error loading versions for ${agentType}:`, error);
     }
-  };
+  }, []);
 
-  const loadPerformanceMetrics = async (agentType: string) => {
+  const loadPerformanceMetrics = useCallback((agentType: string) => {
     try {
       // This would be implemented with actual metrics endpoint
       // For now, using placeholder data
       const mockMetrics: PerformanceMetrics = {
-        agent_type: agentType,
-        average_response_time: Math.random() * 2000 + 500,
-        success_rate: 0.95 + Math.random() * 0.04,
-        error_rate: Math.random() * 0.05,
-        token_usage: {
-          input_tokens: Math.floor(Math.random() * 10000),
-          output_tokens: Math.floor(Math.random() * 5000),
+        agentType: agentType,
+        averageResponseTime: Math.random() * 2000 + 500,
+        costEstimate: Math.random() * 10,
+        errorRate: Math.random() * 0.05,
+        sampleSize: Math.floor(Math.random() * 1000) + 100,
+        successRate: 0.95 + Math.random() * 0.04,
+        tokenUsage: {
+          inputTokens: Math.floor(Math.random() * 10000),
+          outputTokens: Math.floor(Math.random() * 5000),
         },
-        cost_estimate: Math.random() * 10,
-        sample_size: Math.floor(Math.random() * 1000) + 100,
       };
 
       setMetrics((prev) => ({ ...prev, [agentType]: mockMetrics }));
     } catch (error) {
       console.error(`Error loading metrics for ${agentType}:`, error);
     }
-  };
+  }, []);
+
+  const loadAllConfigs = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Load configurations for all agent types
+      for (const agentType of AgentTypes) {
+        await Promise.all([
+          loadAgentConfig(agentType.value),
+          loadVersionHistory(agentType.value),
+          loadPerformanceMetrics(agentType.value),
+        ]);
+      }
+    } catch (error) {
+      console.error("Error loading configurations:", error);
+      toast({
+        description: "Failed to load configurations",
+        title: "Error",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [loadAgentConfig, loadVersionHistory, loadPerformanceMetrics, toast]);
+
+  // Load initial data
+  useEffect(() => {
+    loadAllConfigs();
+  }, [loadAllConfigs]);
 
   // Handle agent selection change
   const handleAgentChange = (agentType: string) => {
@@ -257,7 +260,7 @@ export default function ConfigurationManager() {
   };
 
   // Handle configuration field changes
-  const handleConfigChange = (field: keyof AgentConfig, value: any) => {
+  const handleConfigChange = (field: keyof AgentConfig, value: unknown) => {
     setEditedConfig((prev) => ({ ...prev, [field]: value }));
     setHasUnsavedChanges(true);
   };
@@ -269,18 +272,18 @@ export default function ConfigurationManager() {
     setSaving(selectedAgent);
     try {
       const response = await fetch(`/api/config/agents/${selectedAgent}`, {
-        method: "PUT",
+        body: JSON.stringify({
+          description: editedConfig.description,
+          maxTokens: editedConfig.maxTokens,
+          model: editedConfig.model,
+          temperature: editedConfig.temperature,
+          timeoutSeconds: editedConfig.timeoutSeconds,
+          topP: editedConfig.topP,
+        }),
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          temperature: editedConfig.temperature,
-          max_tokens: editedConfig.max_tokens,
-          top_p: editedConfig.top_p,
-          timeout_seconds: editedConfig.timeout_seconds,
-          model: editedConfig.model,
-          description: editedConfig.description,
-        }),
+        method: "PUT",
       });
 
       if (!response.ok) {
@@ -294,8 +297,8 @@ export default function ConfigurationManager() {
       setHasUnsavedChanges(false);
 
       toast({
-        title: "Configuration Saved",
         description: `${selectedAgent} configuration has been updated successfully`,
+        title: "Configuration Saved",
         variant: "default",
       });
 
@@ -304,9 +307,9 @@ export default function ConfigurationManager() {
     } catch (error) {
       console.error("Error saving configuration:", error);
       toast({
-        title: "Save Failed",
         description:
           error instanceof Error ? error.message : "Failed to save configuration",
+        title: "Save Failed",
         variant: "destructive",
       });
     } finally {
@@ -335,16 +338,16 @@ export default function ConfigurationManager() {
       await loadVersionHistory(selectedAgent);
 
       toast({
-        title: "Rollback Successful",
         description: `Configuration rolled back to version ${versionId}`,
+        title: "Rollback Successful",
         variant: "default",
       });
     } catch (error) {
       console.error("Error rolling back:", error);
       toast({
-        title: "Rollback Failed",
         description:
           error instanceof Error ? error.message : "Failed to rollback configuration",
+        title: "Rollback Failed",
         variant: "destructive",
       });
     }
@@ -399,7 +402,7 @@ export default function ConfigurationManager() {
               <SelectValue placeholder="Select an agent to configure" />
             </SelectTrigger>
             <SelectContent>
-              {AGENT_TYPES.map((agent) => (
+              {AgentTypes.map((agent) => (
                 <SelectItem key={agent.value} value={agent.value}>
                   <div>
                     <div className="font-medium">{agent.label}</div>
@@ -471,7 +474,7 @@ export default function ConfigurationManager() {
                       <SelectValue placeholder="Select a model" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MODEL_OPTIONS.map((model) => (
+                      {ModelOptions.map((model) => (
                         <SelectItem key={model} value={model}>
                           {model}
                         </SelectItem>
@@ -510,10 +513,10 @@ export default function ConfigurationManager() {
                   <Input
                     id={maxTokensId}
                     type="number"
-                    value={editedConfig.max_tokens || ""}
+                    value={editedConfig.maxTokens || ""}
                     onChange={(e) =>
                       handleConfigChange(
-                        "max_tokens",
+                        "maxTokens",
                         Number.parseInt(e.target.value, 10)
                       )
                     }
@@ -530,13 +533,13 @@ export default function ConfigurationManager() {
                   <div className="flex items-center justify-between">
                     <Label>Top P</Label>
                     <span className="text-sm text-muted-foreground">
-                      {editedConfig.top_p?.toFixed(2) || "0.00"}
+                      {editedConfig.topP?.toFixed(2) || "0.00"}
                     </span>
                   </div>
                   <Slider
-                    value={[editedConfig.top_p || 0]}
+                    value={[editedConfig.topP || 0]}
                     onValueChange={([value]: number[]) =>
-                      handleConfigChange("top_p", value)
+                      handleConfigChange("topP", value)
                     }
                     min={0}
                     max={1}
@@ -554,10 +557,10 @@ export default function ConfigurationManager() {
                   <Input
                     id={timeoutId}
                     type="number"
-                    value={editedConfig.timeout_seconds || ""}
+                    value={editedConfig.timeoutSeconds || ""}
                     onChange={(e) =>
                       handleConfigChange(
-                        "timeout_seconds",
+                        "timeoutSeconds",
                         Number.parseInt(e.target.value, 10)
                       )
                     }
@@ -606,7 +609,7 @@ export default function ConfigurationManager() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {currentMetrics.average_response_time.toFixed(0)}ms
+                      {currentMetrics.averageResponseTime.toFixed(0)}ms
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Average response time
@@ -621,7 +624,7 @@ export default function ConfigurationManager() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {(currentMetrics.success_rate * 100).toFixed(1)}%
+                      {(currentMetrics.successRate * 100).toFixed(1)}%
                     </div>
                     <p className="text-xs text-muted-foreground">Successful requests</p>
                   </CardContent>
@@ -634,7 +637,7 @@ export default function ConfigurationManager() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      ${currentMetrics.cost_estimate.toFixed(2)}
+                      ${currentMetrics.costEstimate.toFixed(2)}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Estimated daily cost
@@ -649,7 +652,7 @@ export default function ConfigurationManager() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {currentMetrics.sample_size.toLocaleString()}
+                      {currentMetrics.sampleSize.toLocaleString()}
                     </div>
                     <p className="text-xs text-muted-foreground">Requests analyzed</p>
                   </CardContent>
@@ -685,17 +688,17 @@ export default function ConfigurationManager() {
                     </TableHeader>
                     <TableBody>
                       {currentVersions.map((version) => (
-                        <TableRow key={version.version_id}>
+                        <TableRow key={version.versionId}>
                           <TableCell className="font-mono text-sm">
-                            {version.version_id}
+                            {version.versionId}
                           </TableCell>
                           <TableCell>
-                            {new Date(version.created_at).toLocaleString()}
+                            {new Date(version.createdAt).toLocaleString()}
                           </TableCell>
-                          <TableCell>{version.created_by}</TableCell>
+                          <TableCell>{version.createdBy}</TableCell>
                           <TableCell>{version.description || "-"}</TableCell>
                           <TableCell>
-                            {version.is_current && (
+                            {version.isCurrent && (
                               <Badge variant="default">Current</Badge>
                             )}
                           </TableCell>
@@ -712,7 +715,7 @@ export default function ConfigurationManager() {
                                 <Eye className="h-4 w-4" />
                               </Button>
 
-                              {!version.is_current && (
+                              {!version.isCurrent && (
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="sm">
@@ -726,7 +729,7 @@ export default function ConfigurationManager() {
                                       </AlertDialogTitle>
                                       <AlertDialogDescription>
                                         Are you sure you want to rollback to version{" "}
-                                        {version.version_id}? This will replace the
+                                        {version.versionId}? This will replace the
                                         current configuration and create a new version.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
@@ -734,7 +737,7 @@ export default function ConfigurationManager() {
                                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                                       <AlertDialogAction
                                         onClick={() =>
-                                          rollbackToVersion(version.version_id)
+                                          rollbackToVersion(version.versionId)
                                         }
                                       >
                                         Rollback

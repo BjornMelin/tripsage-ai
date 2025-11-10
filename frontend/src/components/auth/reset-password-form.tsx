@@ -99,7 +99,51 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {!isSuccess ? (
+        {isSuccess ? (
+          <div className="space-y-4">
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                {message || "Password reset instructions have been sent to your email"}
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-3 text-center">
+              <p className="text-sm text-muted-foreground">
+                Check your email inbox for instructions on how to reset your password.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                If you don&apos;t see the email, check your spam folder.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Redirecting to login in 5 seconds...
+              </p>
+            </div>
+
+            <Button
+              onClick={() => router.push("/login")}
+              className="w-full"
+              variant="outline"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Return to Sign In
+            </Button>
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSuccess(false);
+                  setMessage(null);
+                  setError(null);
+                }}
+                className="text-sm text-primary hover:underline"
+              >
+                Didn&apos;t receive the email? Try again
+              </button>
+            </div>
+          </div>
+        ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
@@ -151,50 +195,6 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
               </Link>
             </div>
           </form>
-        ) : (
-          <div className="space-y-4">
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                {message || "Password reset instructions have been sent to your email"}
-              </AlertDescription>
-            </Alert>
-
-            <div className="space-y-3 text-center">
-              <p className="text-sm text-muted-foreground">
-                Check your email inbox for instructions on how to reset your password.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                If you don&apos;t see the email, check your spam folder.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Redirecting to login in 5 seconds...
-              </p>
-            </div>
-
-            <Button
-              onClick={() => router.push("/login")}
-              className="w-full"
-              variant="outline"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Return to Sign In
-            </Button>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSuccess(false);
-                  setMessage(null);
-                  setError(null);
-                }}
-                className="text-sm text-primary hover:underline"
-              >
-                Didn&apos;t receive the email? Try again
-              </button>
-            </div>
-          </div>
         )}
 
         <div className="mt-6 text-center text-xs text-muted-foreground">

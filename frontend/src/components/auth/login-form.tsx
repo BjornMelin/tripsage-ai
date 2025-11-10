@@ -55,7 +55,9 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
       } = await supabase.auth.getSession();
       if (session) router.push(redirectTo);
     };
-    void checkSession();
+    checkSession().catch(() => {
+      // Ignore errors in session check
+    });
   }, [router, redirectTo, supabase]);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -82,10 +84,10 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
   const handleSocialLogin = async (provider: "github" | "google") => {
     setError(null);
     const { error: oAuthError } = await supabase.auth.signInWithOAuth({
-      provider,
       options: {
         redirectTo: `${origin}/auth/callback${nextSuffix}`,
       },
+      provider,
     });
     if (oAuthError) setError(oAuthError.message);
   };

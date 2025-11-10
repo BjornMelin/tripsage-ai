@@ -40,8 +40,8 @@ test.describe("Dashboard Functionality", () => {
 
     // Take screenshot for verification
     await page.screenshot({
-      path: "dashboard-authenticated.png",
       fullPage: true,
+      path: "dashboard-authenticated.png",
     });
   });
 
@@ -189,7 +189,7 @@ test.describe("Dashboard Functionality", () => {
 
   test("dashboard is responsive on mobile", async ({ page }) => {
     // Set mobile viewport
-    await page.setViewportSize({ width: 375, height: 667 });
+    await page.setViewportSize({ height: 667, width: 375 });
 
     // Authenticate
     await page.goto("/login");
@@ -206,8 +206,8 @@ test.describe("Dashboard Functionality", () => {
 
     // Take mobile screenshot
     await page.screenshot({
-      path: "dashboard-mobile.png",
       fullPage: true,
+      path: "dashboard-mobile.png",
     });
   });
 

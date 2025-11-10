@@ -30,9 +30,12 @@ export const Message = ({ className, from, ...props }: MessageProps) => (
   />
 );
 
-const messageContentVariants = cva(
+const MessageContentVariants = cva(
   "is-user:dark flex flex-col gap-2 overflow-hidden rounded-lg text-sm",
   {
+    defaultVariants: {
+      variant: "contained",
+    },
     variants: {
       variant: {
         contained: [
@@ -46,15 +49,12 @@ const messageContentVariants = cva(
         ],
       },
     },
-    defaultVariants: {
-      variant: "contained",
-    },
   }
 );
 
 /** Props for message content region. */
 export type MessageContentProps = HTMLAttributes<HTMLDivElement> &
-  VariantProps<typeof messageContentVariants>;
+  VariantProps<typeof MessageContentVariants>;
 
 /**
  * Content wrapper for message text and elements.
@@ -68,7 +68,7 @@ export const MessageContent = ({
   variant,
   ...props
 }: MessageContentProps) => (
-  <div className={cn(messageContentVariants({ variant, className }))} {...props}>
+  <div className={cn(MessageContentVariants({ className, variant }))} {...props}>
     {children}
   </div>
 );

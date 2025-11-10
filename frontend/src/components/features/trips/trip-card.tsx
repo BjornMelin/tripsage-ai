@@ -47,10 +47,10 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
 
   const status = getTripStatus();
   const statusColors = {
-    draft: "bg-gray-100 text-gray-700",
-    upcoming: "bg-blue-100 text-blue-700",
     active: "bg-green-100 text-green-700",
     completed: "bg-gray-100 text-gray-500",
+    draft: "bg-gray-100 text-gray-700",
+    upcoming: "bg-blue-100 text-blue-700",
   };
 
   return (
@@ -96,8 +96,8 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
             <span>
               Budget:{" "}
               {new Intl.NumberFormat("en-US", {
-                style: "currency",
                 currency: trip.currency || "USD",
+                style: "currency",
               }).format(trip.budget)}
             </span>
           </div>

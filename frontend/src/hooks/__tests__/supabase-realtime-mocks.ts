@@ -36,22 +36,22 @@ export interface MockSupabaseClient {
 }
 
 // Connection status constants
-export const CONNECTION_STATUS = {
-  CONNECTING: "CONNECTING",
-  OPEN: "OPEN",
-  CLOSING: "CLOSING",
-  CLOSED: "CLOSED",
-  SUBSCRIBED: "SUBSCRIBED",
-  CHANNEL_ERROR: "CHANNEL_ERROR",
-  TIMED_OUT: "TIMED_OUT",
+export const connectionStatus = {
+  channelError: "channelError",
+  closed: "closed",
+  closing: "closing",
+  connecting: "connecting",
+  open: "open",
+  subscribed: "subscribed",
+  timedOut: "timedOut",
 } as const;
 
 // Event types for postgres changes
 export const POSTGRES_EVENTS = {
-  INSERT: "INSERT",
-  UPDATE: "UPDATE",
-  DELETE: "DELETE",
-  ALL: "*",
+  all: "*",
+  delete: "DELETE",
+  insert: "INSERT",
+  update: "UPDATE",
 } as const;
 
 /**
@@ -60,11 +60,11 @@ export const POSTGRES_EVENTS = {
 export function createMockRealtimeChannel(): MockRealtimeChannel {
   return {
     on: vi.fn().mockReturnThis(),
-    subscribe: vi.fn().mockReturnThis(),
-    unsubscribe: vi.fn().mockReturnThis(),
-    send: vi.fn().mockReturnThis(),
     presenceState: vi.fn().mockReturnValue({}),
+    send: vi.fn().mockReturnThis(),
+    subscribe: vi.fn().mockReturnThis(),
     track: vi.fn().mockReturnThis(),
+    unsubscribe: vi.fn().mockReturnThis(),
     untrack: vi.fn().mockReturnThis(),
   };
 }
@@ -76,29 +76,29 @@ export function createMockSupabaseClient(): MockSupabaseClient {
   const mockChannel = createMockRealtimeChannel();
 
   return {
-    channel: vi.fn(() => mockChannel),
-    removeChannel: vi.fn(),
-    realtime: {
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-      channels: [mockChannel],
-      isConnected: vi.fn().mockReturnValue(true),
-    },
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      range: vi.fn().mockReturnThis(),
-      single: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockReturnThis(),
-    })),
     auth: {
       getUser: vi.fn(),
       onAuthStateChange: vi.fn(),
     },
+    channel: vi.fn(() => mockChannel),
+    from: vi.fn(() => ({
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+    })),
+    realtime: {
+      channels: [mockChannel],
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      isConnected: vi.fn().mockReturnValue(true),
+    },
+    removeChannel: vi.fn(),
   };
 }
 
@@ -106,19 +106,19 @@ export function createMockSupabaseClient(): MockSupabaseClient {
  * Mock payload factory for postgres changes events.
  */
 export function createMockPostgresPayload(
-  eventType: keyof typeof POSTGRES_EVENTS,
+  eventType: (typeof POSTGRES_EVENTS)[keyof typeof POSTGRES_EVENTS],
   table: string,
   newRecord?: Record<string, unknown>,
   oldRecord?: Record<string, unknown>
 ) {
   return {
+    commitTimestamp: new Date().toISOString(),
+    errors: null,
     eventType,
-    schema: "public",
-    table,
     new: newRecord || {},
     old: oldRecord || {},
-    commit_timestamp: new Date().toISOString(),
-    errors: null,
+    schema: "public",
+    table,
   };
 }
 
@@ -126,12 +126,12 @@ export function createMockPostgresPayload(
  * Mock system event payload for connection status changes.
  */
 export function createMockSystemPayload(
-  status: keyof typeof CONNECTION_STATUS,
+  status: keyof typeof connectionStatus,
   extension?: string
 ) {
   return {
-    status,
     extension: extension || "postgres_changes",
+    status,
   };
 }
 
@@ -140,7 +140,7 @@ export function createMockSystemPayload(
  */
 export class MockRealtimeConnection {
   private channel: MockRealtimeChannel;
-  private eventHandlers = new Map<string, Function[]>();
+  private eventHandlers = new Map<string, ((...args: unknown[]) => void)[]>();
 
   constructor(channel: MockRealtimeChannel) {
     this.channel = channel;
@@ -150,7 +150,7 @@ export class MockRealtimeConnection {
   private setupChannelBehavior() {
     // Mock the 'on' method to store event handlers
     this.channel.on.mockImplementation(
-      (event: string, config: any, handler: Function) => {
+      (event: string, config: unknown, handler: (...args: unknown[]) => void) => {
         const key = `${event}:${JSON.stringify(config)}`;
         const handlers = this.eventHandlers.get(key) || [];
         handlers.push(handler);
@@ -160,14 +160,16 @@ export class MockRealtimeConnection {
     );
 
     // Mock the 'subscribe' method to trigger connection events
-    this.channel.subscribe.mockImplementation((callback?: Function) => {
-      // Simulate connection success
-      setTimeout(() => {
-        callback?.(CONNECTION_STATUS.SUBSCRIBED);
-        this.triggerSystemEvent(CONNECTION_STATUS.SUBSCRIBED);
-      }, 0);
-      return this.channel;
-    });
+    this.channel.subscribe.mockImplementation(
+      (callback?: (...args: unknown[]) => void) => {
+        // Simulate connection success
+        setTimeout(() => {
+          callback?.(connectionStatus.subscribed);
+          this.triggerSystemEvent(connectionStatus.subscribed);
+        }, 0);
+        return this.channel;
+      }
+    );
   }
 
   /**
@@ -187,7 +189,7 @@ export class MockRealtimeConnection {
   /**
    * Simulates a system event (connection status changes)
    */
-  triggerSystemEvent(status: keyof typeof CONNECTION_STATUS, extension?: string) {
+  triggerSystemEvent(status: keyof typeof connectionStatus, extension?: string) {
     const key = "system:{}";
     const handlers = this.eventHandlers.get(key) || [];
     const payload = createMockSystemPayload(status, extension);
@@ -200,10 +202,10 @@ export class MockRealtimeConnection {
    * Simulates a connection error
    */
   triggerConnectionError(_error: Error) {
-    this.triggerSystemEvent(CONNECTION_STATUS.CHANNEL_ERROR);
+    this.triggerSystemEvent(connectionStatus.channelError);
     const subscribeCallback = this.channel.subscribe.mock.calls[0]?.[0];
     if (subscribeCallback) {
-      subscribeCallback(CONNECTION_STATUS.CHANNEL_ERROR);
+      subscribeCallback(connectionStatus.channelError);
     }
   }
 
@@ -211,12 +213,12 @@ export class MockRealtimeConnection {
    * Simulates a successful reconnection
    */
   triggerReconnection() {
-    this.triggerSystemEvent(CONNECTION_STATUS.CONNECTING);
+    this.triggerSystemEvent(connectionStatus.connecting);
     setTimeout(() => {
-      this.triggerSystemEvent(CONNECTION_STATUS.SUBSCRIBED);
+      this.triggerSystemEvent(connectionStatus.subscribed);
       const subscribeCallback = this.channel.subscribe.mock.calls[0]?.[0];
       if (subscribeCallback) {
-        subscribeCallback(CONNECTION_STATUS.SUBSCRIBED);
+        subscribeCallback(connectionStatus.subscribed);
       }
     }, 100);
   }
@@ -248,34 +250,8 @@ export function createRealtimeTestEnvironment() {
   supabaseClient.channel.mockReturnValue(channel);
 
   return {
-    supabaseClient,
     channel,
     connection,
-    // Convenience methods for common scenarios
-    simulateUserTripsUpdate: (tripId: number, updatedTrip: Record<string, unknown>) => {
-      connection.triggerPostgresEvent(
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "trips",
-          filter: `id=eq.${tripId}`,
-        },
-        createMockPostgresPayload(POSTGRES_EVENTS.UPDATE, "trips", updatedTrip, {
-          id: tripId,
-        })
-      );
-    },
-    simulateNewChatMessage: (sessionId: string, message: Record<string, unknown>) => {
-      connection.triggerPostgresEvent(
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "chat_messages",
-          filter: `session_id=eq.${sessionId}`,
-        },
-        createMockPostgresPayload(POSTGRES_EVENTS.INSERT, "chat_messages", message)
-      );
-    },
     simulateCollaboratorAdded: (
       tripId: number,
       collaborator: Record<string, unknown>
@@ -283,12 +259,12 @@ export function createRealtimeTestEnvironment() {
       connection.triggerPostgresEvent(
         {
           event: "INSERT",
+          filter: `trip_id=eq.${tripId}`,
           schema: "public",
           table: "trip_collaborators",
-          filter: `trip_id=eq.${tripId}`,
         },
         createMockPostgresPayload(
-          POSTGRES_EVENTS.INSERT,
+          POSTGRES_EVENTS.insert,
           "trip_collaborators",
           collaborator
         )
@@ -297,9 +273,35 @@ export function createRealtimeTestEnvironment() {
     simulateConnectionFailure: (error: Error) => {
       connection.triggerConnectionError(error);
     },
+    simulateNewChatMessage: (sessionId: string, message: Record<string, unknown>) => {
+      connection.triggerPostgresEvent(
+        {
+          event: "INSERT",
+          filter: `session_id=eq.${sessionId}`,
+          schema: "public",
+          table: "chat_messages",
+        },
+        createMockPostgresPayload(POSTGRES_EVENTS.insert, "chat_messages", message)
+      );
+    },
     simulateReconnection: () => {
       connection.triggerReconnection();
     },
+    // Convenience methods for common scenarios
+    simulateUserTripsUpdate: (tripId: number, updatedTrip: Record<string, unknown>) => {
+      connection.triggerPostgresEvent(
+        {
+          event: "UPDATE",
+          filter: `id=eq.${tripId}`,
+          schema: "public",
+          table: "trips",
+        },
+        createMockPostgresPayload(POSTGRES_EVENTS.update, "trips", updatedTrip, {
+          id: tripId,
+        })
+      );
+    },
+    supabaseClient,
   };
 }
 
@@ -329,11 +331,11 @@ export class RealtimeHookTester {
    */
   async simulateConnectionLifecycle() {
     // Start connecting
-    this.testEnv.connection.triggerSystemEvent(CONNECTION_STATUS.CONNECTING);
+    this.testEnv.connection.triggerSystemEvent(connectionStatus.connecting);
 
     // Connection established
     await new Promise((resolve) => setTimeout(resolve, 10));
-    this.testEnv.connection.triggerSystemEvent(CONNECTION_STATUS.SUBSCRIBED);
+    this.testEnv.connection.triggerSystemEvent(connectionStatus.subscribed);
 
     // Simulate some data changes
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -351,15 +353,15 @@ export class RealtimeHookTester {
   /**
    * Creates a test scenario with multiple concurrent real-time events
    */
-  async simulateConcurrentEvents() {
+  simulateConcurrentEvents() {
     const events = [
       () => this.testEnv.simulateUserTripsUpdate(1, { name: "Trip 1 Updated" }),
       () => this.testEnv.simulateUserTripsUpdate(2, { name: "Trip 2 Updated" }),
       () => this.testEnv.simulateNewChatMessage("session-1", { content: "Hello!" }),
       () =>
         this.testEnv.simulateCollaboratorAdded(1, {
-          user_id: "user-456",
           role: "editor",
+          userId: "user-456",
         }),
     ];
 
@@ -405,9 +407,9 @@ export class RealtimePerformanceTester {
 
     return {
       duration,
-      totalEvents,
-      eventsPerSecond: totalEvents / (duration / 1000),
       eventBreakdown: Object.fromEntries(this.eventCounts),
+      eventsPerSecond: totalEvents / (duration / 1000),
+      totalEvents,
     };
   }
 }
@@ -416,14 +418,18 @@ export class RealtimePerformanceTester {
  * Export all utilities as a default collection
  */
 export default {
+  connectionStatus,
+  createMockPostgresPayload,
   createMockRealtimeChannel,
   createMockSupabaseClient,
-  createMockPostgresPayload,
   createMockSystemPayload,
-  MockRealtimeConnection,
   createRealtimeTestEnvironment,
-  RealtimeHookTester,
-  RealtimePerformanceTester,
-  CONNECTION_STATUS,
+  // biome-ignore lint/style/useNamingConvention: Class names follow PascalCase
+  MockRealtimeConnection,
+  // biome-ignore lint/style/useNamingConvention: Constant names follow SCREAMING_SNAKE_CASE
   POSTGRES_EVENTS,
+  // biome-ignore lint/style/useNamingConvention: Class names follow PascalCase
+  RealtimeHookTester,
+  // biome-ignore lint/style/useNamingConvention: Class names follow PascalCase
+  RealtimePerformanceTester,
 };

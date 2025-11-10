@@ -19,18 +19,18 @@ type TripUpdate = Database["public"]["Tables"]["trips"]["Update"];
 // Trip collaborator types
 interface TripCollaborator {
   id: number;
-  trip_id: number;
-  user_id: string;
+  tripId: number;
+  userId: string;
   role: "owner" | "editor" | "viewer";
   email?: string;
   name?: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface TripCollaboratorInsert {
-  trip_id: number;
-  user_id: string;
+  tripId: number;
+  userId: string;
   role: "owner" | "editor" | "viewer";
   email?: string;
 }
@@ -59,7 +59,7 @@ export function useTrips() {
   const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ["trips", userId],
+    enabled: !!userId,
     queryFn: async () => {
       if (!userId) {
         throw new Error("User not authenticated");
@@ -77,7 +77,7 @@ export function useTrips() {
 
       return data;
     },
-    enabled: !!userId,
+    queryKey: ["trips", userId],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -92,7 +92,7 @@ export function useTripData(tripId: number | null) {
   const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ["trip", tripId, userId],
+    enabled: !!userId && !!tripId,
     queryFn: async () => {
       if (!userId || !tripId) {
         return null;
@@ -111,7 +111,7 @@ export function useTripData(tripId: number | null) {
 
       return data;
     },
-    enabled: !!userId && !!tripId,
+    queryKey: ["trip", tripId, userId],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -132,6 +132,7 @@ export function useCreateTrip() {
 
       const { data, error } = await insertSingle(supabase, "trips", {
         ...tripData,
+        // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
         user_id: userId,
       });
 
@@ -168,8 +169,12 @@ export function useUpdateTrip() {
         throw new Error("User not authenticated");
       }
 
-      const { data, error } = await updateSingle(supabase, "trips", updates, (qb) =>
-        (qb as any).eq("id", tripId).eq("user_id", userId)
+      const { data, error } = await updateSingle(
+        supabase,
+        "trips",
+        updates,
+        // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
+        (qb) => (qb as any).eq("id", tripId).eq("user_id", userId)
       );
 
       if (error) {
@@ -184,7 +189,7 @@ export function useUpdateTrip() {
       if (data) {
         // data can be null if update didn't return a row due to RLS
         queryClient.invalidateQueries({
-          queryKey: ["trip", (data as any).id, userId],
+          queryKey: ["trip", data.id, userId],
         });
       }
     },
@@ -234,7 +239,7 @@ export function useTripCollaborators(tripId: number) {
   const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ["trip-collaborators", tripId, userId],
+    enabled: !!userId && !!tripId,
     queryFn: async () => {
       if (!userId || !tripId) {
         return [];
@@ -256,7 +261,7 @@ export function useTripCollaborators(tripId: number) {
       // For now, return empty array
       return [] as TripCollaborator[];
     },
-    enabled: !!userId && !!tripId,
+    queryKey: ["trip-collaborators", tripId, userId],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -270,7 +275,7 @@ export function useAddTripCollaborator() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (_collaboratorData: TripCollaboratorInsert) => {
+    mutationFn: (_collaboratorData: TripCollaboratorInsert) => {
       if (!userId) {
         throw new Error("User not authenticated");
       }
@@ -282,7 +287,7 @@ export function useAddTripCollaborator() {
     onSuccess: (_data, variables) => {
       // Invalidate collaborators list
       queryClient.invalidateQueries({
-        queryKey: ["trip-collaborators", variables.trip_id, userId],
+        queryKey: ["trip-collaborators", variables.tripId, userId],
       });
     },
   });
@@ -297,7 +302,7 @@ export function useRemoveTripCollaborator() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
+    mutationFn: ({
       tripId: _tripId,
       collaboratorId: _collaboratorId,
     }: {

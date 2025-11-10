@@ -108,10 +108,10 @@ export default function TripsPage() {
 
   const handleCreateTrip = async () => {
     await createTrip({
-      title: "New Trip",
       description: "",
       destinations: [],
       isPublic: false,
+      title: "New Trip",
     });
   };
 
@@ -122,7 +122,7 @@ export default function TripsPage() {
   };
 
   const getStatusCounts = () => {
-    if (!trips) return { draft: 0, upcoming: 0, active: 0, completed: 0 };
+    if (!trips) return { active: 0, completed: 0, draft: 0, upcoming: 0 };
 
     const now = new Date();
     return trips.reduce(
@@ -148,7 +148,7 @@ export default function TripsPage() {
 
         return counts;
       },
-      { draft: 0, upcoming: 0, active: 0, completed: 0 }
+      { active: 0, completed: 0, draft: 0, upcoming: 0 }
     );
   };
 

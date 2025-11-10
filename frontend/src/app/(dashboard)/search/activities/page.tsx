@@ -29,8 +29,8 @@ export default function ActivitiesSearchPage() {
 
     if (destination) {
       const initialParams: ActivitySearchParams = {
-        destination,
         category: category || undefined,
+        destination,
       };
       searchActivities(initialParams);
     }
@@ -40,8 +40,8 @@ export default function ActivitiesSearchPage() {
     // Convert the params to the hook's expected format
     if (params.destination) {
       const hookParams: ActivitySearchParams = {
-        destination: params.destination,
         category: params.category,
+        destination: params.destination,
       };
       searchActivities(hookParams);
     }

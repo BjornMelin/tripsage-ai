@@ -1,22 +1,17 @@
-/**
- * @fileoverview Tests for use-websocket-chat hook (Supabase Realtime variant).
- * Validates topic selection, message send, typing events, and reconnect triggering.
- */
-
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useWebSocketChat } from "@/hooks/use-websocket-chat";
 
-const mockChannel = {
-  subscribe: vi.fn((cb?: any) => cb?.("SUBSCRIBED")),
-  unsubscribe: vi.fn(),
+const MOCK_CHANNEL = {
   on: vi.fn().mockReturnThis(),
   send: vi.fn(),
+  subscribe: vi.fn((cb?: (status: string) => void) => cb?.("SUBSCRIBED")),
+  unsubscribe: vi.fn(),
 };
 
 vi.mock("@/lib/supabase/client", () => ({
   getBrowserClient: () => ({
-    channel: vi.fn(() => mockChannel),
+    channel: vi.fn(() => MOCK_CHANNEL),
   }),
 }));
 
@@ -36,33 +31,33 @@ describe("useWebSocketChat", () => {
 
   it("uses session topic when requested and sends message", async () => {
     const { result } = renderHook(() =>
-      useWebSocketChat({ autoConnect: true, topicType: "session", sessionId: "s1" })
+      useWebSocketChat({ autoConnect: true, sessionId: "s1", topicType: "session" })
     );
     expect(result.current.isConnected).toBe(true);
     await act(async () => {
       await result.current.sendMessage("hello");
     });
-    expect(mockChannel.send).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "broadcast", event: "chat:message" })
+    expect(MOCK_CHANNEL.send).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "chat:message", type: "broadcast" })
     );
   });
 
-  it("emits typing events", async () => {
+  it("emits typing events", () => {
     const { result } = renderHook(() => useWebSocketChat({ autoConnect: true }));
     act(() => result.current.startTyping());
-    expect(mockChannel.send).toHaveBeenCalledWith(
+    expect(MOCK_CHANNEL.send).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "broadcast",
         event: "chat:typing",
         payload: expect.objectContaining({ isTyping: true }),
+        type: "broadcast",
       })
     );
     act(() => result.current.stopTyping());
-    expect(mockChannel.send).toHaveBeenCalledWith(
+    expect(MOCK_CHANNEL.send).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "broadcast",
         event: "chat:typing",
         payload: expect.objectContaining({ isTyping: false }),
+        type: "broadcast",
       })
     );
   });

@@ -1,16 +1,14 @@
-/* @vitest-environment node */
-/**
- * @fileoverview Unit tests for BYOK CRUD route handlers (POST/DELETE).
- */
+/** @vitest-environment node */
+
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { stubRateLimitDisabled } from "@/test/env-helpers";
 
-const mockInsert = vi.hoisted(() => vi.fn());
-const mockDelete = vi.hoisted(() => vi.fn());
+const MOCK_INSERT = vi.hoisted(() => vi.fn());
+const MOCK_DELETE = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/rpc", () => ({
-  insertUserApiKey: mockInsert,
-  deleteUserApiKey: mockDelete,
+  deleteUserApiKey: MOCK_DELETE,
+  insertUserApiKey: MOCK_INSERT,
 }));
 
 describe("/api/keys routes", () => {
@@ -24,8 +22,8 @@ describe("/api/keys routes", () => {
     vi.resetModules();
     const { POST } = await import("../route");
     const req = {
-      json: async () => ({}),
       headers: new Headers(),
+      json: async () => ({}),
     } as unknown as NextRequest;
     const res = await POST(req);
     expect(res.status).toBe(400);
@@ -38,13 +36,15 @@ describe("/api/keys routes", () => {
         auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })) },
       })),
     }));
-    mockDelete.mockResolvedValue(undefined);
-    vi.mock("@/lib/supabase/rpc", () => ({ deleteUserApiKey: mockDelete }));
+    MOCK_DELETE.mockResolvedValue(undefined);
+    vi.mock("@/lib/supabase/rpc", () => ({ deleteUserApiKey: MOCK_DELETE }));
     vi.resetModules();
     const route = await import("../[service]/route");
     const req = { headers: new Headers() } as unknown as NextRequest;
-    const res = await route.DELETE(req, { params: { service: "openai" } });
+    const res = await route.DELETE(req, {
+      params: Promise.resolve({ service: "openai" }),
+    });
     expect(res.status).toBe(204);
-    expect(mockDelete).toHaveBeenCalledWith("u1", "openai");
+    expect(MOCK_DELETE).toHaveBeenCalledWith("u1", "openai");
   });
 });

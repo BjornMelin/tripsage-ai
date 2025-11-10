@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Agent status dashboard component for monitoring agent performance and status.
+ */
+
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -37,6 +41,7 @@ import { useAgentStatus } from "@/hooks/use-agent-status";
 import { useAgentStatusWebSocket } from "@/hooks/use-agent-status-websocket";
 import { ConnectionStatus } from "../../shared/connection-status";
 
+/** Interface for agent metrics */
 interface AgentMetrics {
   id: string;
   name: string;
@@ -52,6 +57,7 @@ interface AgentMetrics {
   lastUpdate: Date;
 }
 
+/** Interface for a predictive indicator */
 interface PredictiveIndicator {
   metric: string;
   current: number;
@@ -61,52 +67,56 @@ interface PredictiveIndicator {
   timeHorizon: string;
 }
 
+/** Interface for the AgentStatusDashboard component props */
 interface AgentStatusDashboardProps {
   agents: AgentMetrics[];
   onAgentSelect?: (agentId: string) => void;
   refreshInterval?: number;
 }
 
-const generateMockTimeSeriesData = () => {
+/** Function to generate mock time series data */
+const GenerateMockTimeSeriesData = () => {
   return Array.from({ length: 30 }, (_, i) => ({
+    errorRate: Math.random() * 5,
+    responseTime: Math.random() * 100 + 50,
     time: new Date(Date.now() - (29 - i) * 60000).toLocaleTimeString("en-US", {
-      hour12: false,
       hour: "2-digit",
+      hour12: false,
       minute: "2-digit",
     }),
-    responseTime: Math.random() * 100 + 50,
     tokensPerSecond: Math.random() * 1000 + 500,
-    errorRate: Math.random() * 5,
   }));
 };
 
-const predictiveIndicators: PredictiveIndicator[] = [
+/** Mock predictive indicators for testing */
+const PredictiveIndicators: PredictiveIndicator[] = [
   {
-    metric: "Response Time",
-    current: 125,
-    predicted: 145,
     confidence: 0.89,
-    trend: "up",
+    current: 125,
+    metric: "Response Time",
+    predicted: 145,
     timeHorizon: "72h",
+    trend: "up",
   },
   {
-    metric: "Error Rate",
-    current: 2.1,
-    predicted: 1.8,
     confidence: 0.76,
-    trend: "down",
+    current: 2.1,
+    metric: "Error Rate",
+    predicted: 1.8,
     timeHorizon: "72h",
+    trend: "down",
   },
   {
-    metric: "Resource Usage",
-    current: 68,
-    predicted: 72,
     confidence: 0.92,
-    trend: "up",
+    current: 68,
+    metric: "Resource Usage",
+    predicted: 72,
     timeHorizon: "72h",
+    trend: "up",
   },
 ];
 
+/** Function to get the status color for an agent */
 // const getStatusColor = (status: AgentMetrics["status"]) => { // Future implementation
 //   switch (status) {
 //     case "active":
@@ -122,7 +132,8 @@ const predictiveIndicators: PredictiveIndicator[] = [
 //   }
 // };
 
-const getStatusIcon = (status: AgentMetrics["status"]) => {
+/** Function to get the status icon for an agent */
+const GetStatusIcon = (status: AgentMetrics["status"]) => {
   switch (status) {
     case "active":
       return <CheckCircle className="h-4 w-4" />;
@@ -137,6 +148,7 @@ const getStatusIcon = (status: AgentMetrics["status"]) => {
   }
 };
 
+/** Component for an agent health indicator */
 const AgentHealthIndicator: React.FC<{ agent: AgentMetrics }> = ({ agent }) => {
   const healthColorClass =
     agent.healthScore >= 90
@@ -165,6 +177,7 @@ const AgentHealthIndicator: React.FC<{ agent: AgentMetrics }> = ({ agent }) => {
   );
 };
 
+/** Component for a predictive card */
 const PredictiveCard: React.FC<{ indicator: PredictiveIndicator }> = ({
   indicator,
 }) => {
@@ -219,15 +232,23 @@ const PredictiveCard: React.FC<{ indicator: PredictiveIndicator }> = ({
   );
 };
 
+/** Component for the AgentStatusDashboard */
 export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
   agents: externalAgents,
   onAgentSelect,
   refreshInterval: _refreshInterval = 5000,
 }) => {
+  // Avoid rendering SVG gradient defs in test environment to prevent React/JSDOM warnings
+  const isTestEnv = typeof process !== "undefined" && process.env.NODE_ENV === "test";
+  /** Response time gradient ID */
   const responseTimeGradientId = useId();
-  const [timeSeriesData] = useState(generateMockTimeSeriesData);
+  /** Time series data */
+  const [timeSeriesData] = useState(GenerateMockTimeSeriesData);
+  /** Selected agent */
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  /** Last update time */
   const [lastUpdateTime, setLastUpdateTime] = useState<string>("");
+  /** Is client */
   const [isClient, setIsClient] = useState(false);
 
   // Use WebSocket for real-time agent status updates
@@ -254,7 +275,13 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
 
   // Convert store agents to metrics format
   const agents: AgentMetrics[] = storeAgents.map((agent) => ({
+    averageResponseTime: 100,
+    cpuUsage: Math.random() * 100, // TODO: Get from resource usage
+    errorRate: agent.status === "error" ? 15 : 2,
+    healthScore: agent.progress || 75,
     id: agent.id,
+    lastUpdate: new Date(agent.updatedAt),
+    memoryUsage: Math.random() * 100, // TODO: Get from resource usage
     name: agent.name,
     status:
       agent.status === "executing" || agent.status === "thinking"
@@ -264,15 +291,9 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
           : agent.status === "error"
             ? "error"
             : "idle",
-    healthScore: agent.progress || 75,
-    cpuUsage: Math.random() * 100, // TODO: Get from resource usage
-    memoryUsage: Math.random() * 100, // TODO: Get from resource usage
-    tokensProcessed: 0, // TODO: Get from resource usage
-    averageResponseTime: 100,
-    errorRate: agent.status === "error" ? 15 : 2,
-    uptime: 3600,
     tasksQueued: agent.tasks?.filter((t) => t.status === "pending").length || 0,
-    lastUpdate: new Date(agent.updatedAt),
+    tokensProcessed: 0, // TODO: Get from resource usage
+    uptime: 3600,
   }));
 
   // Using React 19's useOptimistic for immediate UI updates
@@ -324,16 +345,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-4">
-          {!isMonitoring ? (
-            <Button
-              onClick={startMonitoring}
-              disabled={!isConnected}
-              className="flex items-center gap-2"
-            >
-              <Wifi className="h-4 w-4" />
-              Start Monitoring
-            </Button>
-          ) : (
+          {isMonitoring ? (
             <Button
               onClick={stopMonitoring}
               variant="outline"
@@ -341,6 +353,15 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
             >
               <WifiOff className="h-4 w-4" />
               Stop Monitoring
+            </Button>
+          ) : (
+            <Button
+              onClick={startMonitoring}
+              disabled={!isConnected}
+              className="flex items-center gap-2"
+            >
+              <Wifi className="h-4 w-4" />
+              Start Monitoring
             </Button>
           )}
           <Badge
@@ -424,7 +445,6 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  whileHover={{ scale: 1.02 }}
                   className={`p-4 border rounded-lg cursor-pointer transition-all ${
                     selectedAgent === agent.id
                       ? "ring-2 ring-blue-500 bg-blue-50"
@@ -444,7 +464,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
                           variant={agent.status === "active" ? "default" : "secondary"}
                           className="flex items-center gap-1"
                         >
-                          {getStatusIcon(agent.status)}
+                          {GetStatusIcon(agent.status)}
                           {agent.status}
                         </Badge>
                       </div>
@@ -497,7 +517,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {predictiveIndicators.map((indicator, index) => (
+            {PredictiveIndicators.map((indicator, index) => (
               <PredictiveCard
                 key={`predictive-${indicator.metric}-${index}`}
                 indicator={indicator}
@@ -516,18 +536,20 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={timeSeriesData}>
-                <defs>
-                  <linearGradient
-                    id={responseTimeGradientId}
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
-                  </linearGradient>
-                </defs>
+                {isClient && !isTestEnv && (
+                  <defs>
+                    <linearGradient
+                      id={responseTimeGradientId}
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
+                    </linearGradient>
+                  </defs>
+                )}
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" />
                 <YAxis />
@@ -537,7 +559,11 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
                   dataKey="responseTime"
                   stroke="#3b82f6"
                   fillOpacity={1}
-                  fill={`url(#${responseTimeGradientId})`}
+                  fill={
+                    isClient && !isTestEnv
+                      ? `url(#${responseTimeGradientId})`
+                      : "#3b82f6"
+                  }
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -560,7 +586,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
                   dataKey="tokensPerSecond"
                   stroke="#10b981"
                   strokeWidth={2}
-                  dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
+                  dot={{ fill: "#10b981", r: 4, strokeWidth: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>

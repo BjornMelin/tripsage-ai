@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Destination search form component for searching destinations.
+ */
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,17 +31,17 @@ import { Separator } from "@/components/ui/separator";
 import { useMemoryContext } from "@/hooks/use-memory";
 import type { DestinationSearchParams } from "@/types/search";
 
-const destinationSearchFormSchema = z.object({
+const DestinationSearchFormSchema = z.object({
+  language: z.string().optional(),
+  limit: z.number().min(1).max(20),
   query: z.string().min(1, { message: "Destination is required" }),
+  region: z.string().optional(),
   types: z.array(
     z.enum(["locality", "country", "administrative_area", "establishment"])
   ),
-  language: z.string().optional(),
-  region: z.string().optional(),
-  limit: z.number().min(1).max(20),
 });
 
-type DestinationSearchFormValues = z.infer<typeof destinationSearchFormSchema>;
+type DestinationSearchFormValues = z.infer<typeof DestinationSearchFormSchema>;
 
 interface DestinationSuggestion {
   placeId: string;
@@ -55,30 +58,30 @@ interface DestinationSearchFormProps {
   showMemoryRecommendations?: boolean;
 }
 
-const DESTINATION_TYPES = [
+const DestinationTypes = [
   {
+    description: "Local municipalities and urban areas",
     id: "locality",
     label: "Cities & Towns",
-    description: "Local municipalities and urban areas",
   },
   {
+    description: "National territories and regions",
     id: "country",
     label: "Countries",
-    description: "National territories and regions",
   },
   {
+    description: "Administrative divisions within countries",
     id: "administrative_area",
     label: "States & Regions",
-    description: "Administrative divisions within countries",
   },
   {
+    description: "Notable buildings, monuments, and attractions",
     id: "establishment",
     label: "Landmarks & Places",
-    description: "Notable buildings, monuments, and attractions",
   },
 ];
 
-const POPULAR_DESTINATIONS = [
+const PopularDestinations = [
   "Paris, France",
   "Tokyo, Japan",
   "New York, USA",
@@ -92,8 +95,8 @@ const POPULAR_DESTINATIONS = [
 export function DestinationSearchForm({
   onSearch,
   initialValues = {
-    types: ["locality", "country"],
     limit: 10,
+    types: ["locality", "country"],
   },
   userId,
   showMemoryRecommendations = true,
@@ -111,14 +114,14 @@ export function DestinationSearchForm({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<DestinationSearchFormValues>({
-    resolver: zodResolver(destinationSearchFormSchema),
     defaultValues: {
+      limit: 10,
       query: "",
       types: ["locality", "country"],
-      limit: 10,
       ...initialValues,
     },
     mode: "onChange",
+    resolver: zodResolver(DestinationSearchFormSchema),
   });
 
   const query = form.watch("query");
@@ -130,22 +133,22 @@ export function DestinationSearchForm({
     }
 
     if (query && query.length >= 2) {
-      suggestionsTimeoutRef.current = setTimeout(async () => {
+      suggestionsTimeoutRef.current = setTimeout(() => {
         setIsLoadingSuggestions(true);
         try {
           // Mock API call - replace with actual Google Places Autocomplete API
           const mockSuggestions: DestinationSuggestion[] = [
             {
-              placeId: "ChIJD7fiBh9u5kcRYJSMaMOCCwQ",
               description: `${query} - Popular Destination`,
               mainText: query,
+              placeId: "ChIJD7fiBh9u5kcRYJSMaMOCCwQ",
               secondaryText: "Tourist Destination",
               types: ["locality", "political"],
             },
             {
-              placeId: "ChIJmysnFgZYSoYRSfPTL2YJuck",
               description: `${query} City Center`,
               mainText: `${query} City Center`,
+              placeId: "ChIJmysnFgZYSoYRSfPTL2YJuck",
               secondaryText: "Urban Area",
               types: ["establishment"],
             },
@@ -183,13 +186,13 @@ export function DestinationSearchForm({
     inputRef.current?.focus();
   };
 
-  function onSubmit(data: DestinationSearchFormValues) {
+  const handleSubmit = (data: DestinationSearchFormValues) => {
     const searchParams: DestinationSearchParams = {
-      query: data.query,
-      types: data.types,
       language: data.language,
-      region: data.region,
       limit: data.limit,
+      query: data.query,
+      region: data.region,
+      types: data.types,
     };
 
     console.log("Destination search params:", searchParams);
@@ -197,7 +200,7 @@ export function DestinationSearchForm({
     if (onSearch) {
       onSearch(searchParams);
     }
-  }
+  };
 
   return (
     <Card>
@@ -209,7 +212,7 @@ export function DestinationSearchForm({
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -285,9 +288,9 @@ export function DestinationSearchForm({
                   <div className="flex flex-wrap gap-2">
                     {memoryContext.context.userPreferences.destinations
                       ?.slice(0, 6)
-                      .map((destination, idx) => (
+                      .map((destination) => (
                         <Badge
-                          key={idx}
+                          key={destination}
                           variant="outline"
                           className="cursor-pointer hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-700"
                           onClick={() => handlePopularDestinationClick(destination)}
@@ -311,9 +314,9 @@ export function DestinationSearchForm({
                     <div className="flex flex-wrap gap-2">
                       {memoryContext.context.travelPatterns.frequentDestinations
                         .slice(0, 4)
-                        .map((destination, idx) => (
+                        .map((destination) => (
                           <Badge
-                            key={idx}
+                            key={destination}
                             variant="outline"
                             className="cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors border-blue-200 text-blue-700"
                             onClick={() => handlePopularDestinationClick(destination)}
@@ -341,7 +344,7 @@ export function DestinationSearchForm({
                           memory.content.toLowerCase().includes("visit")
                       )
                       .slice(0, 3)
-                      .map((memory, idx) => {
+                      .map((memory) => {
                         // Extract destination names from memory content
                         const matches = memory.content.match(
                           /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g
@@ -349,7 +352,7 @@ export function DestinationSearchForm({
                         const destination = matches?.[0] || memory.content.slice(0, 20);
                         return (
                           <Badge
-                            key={idx}
+                            key={memory.content}
                             variant="outline"
                             className="cursor-pointer hover:bg-green-50 hover:border-green-300 transition-colors border-green-200 text-green-700"
                             onClick={() => handlePopularDestinationClick(destination)}
@@ -372,7 +375,7 @@ export function DestinationSearchForm({
                   Popular Destinations
                 </FormLabel>
                 <div className="flex flex-wrap gap-2">
-                  {POPULAR_DESTINATIONS.map((destination) => (
+                  {PopularDestinations.map((destination) => (
                     <Badge
                       key={destination}
                       variant="secondary"
@@ -396,7 +399,7 @@ export function DestinationSearchForm({
                       Select the types of destinations you're interested in
                     </FormDescription>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {DESTINATION_TYPES.map((type) => (
+                      {DestinationTypes.map((type) => (
                         <label
                           key={type.id}
                           className="flex items-start space-x-3 border rounded-md p-3 cursor-pointer hover:bg-accent transition-colors"

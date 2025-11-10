@@ -1,9 +1,9 @@
-"use client";
-
 /**
  * @fileoverview React provider that synchronizes Supabase Realtime authentication
  * with the current Supabase session token.
  */
+
+"use client";
 
 import { useEffect } from "react";
 import { getBrowserClient } from "@/lib/supabase/client";
@@ -13,7 +13,7 @@ import { getAccessToken } from "@/lib/supabase/token";
  * Keeps Supabase Realtime authorized with the latest access token, reacting to
  * authentication lifecycle events and cleaning up on unmount.
  *
- * @returns {null} This component renders nothing; it purely manages side effects.
+ * @returns This component renders nothing; it purely manages side effects.
  */
 export function RealtimeAuthProvider(): null {
   useEffect(() => {
@@ -21,7 +21,8 @@ export function RealtimeAuthProvider(): null {
 
     let isMounted = true;
 
-    async function initializeRealtimeAuth(): Promise<void> {
+    // biome-ignore lint/style/useNamingConvention: Not a React hook
+    async function initializeRealtimeAuthHandler(): Promise<void> {
       try {
         const token = await getAccessToken(supabase);
         if (!isMounted) {
@@ -34,13 +35,13 @@ export function RealtimeAuthProvider(): null {
     }
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         const token = session?.access_token ?? null;
         supabase.realtime.setAuth(token ?? "");
       }
     );
 
-    void initializeRealtimeAuth();
+    initializeRealtimeAuthHandler();
 
     return () => {
       isMounted = false;

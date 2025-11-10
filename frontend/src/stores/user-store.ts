@@ -7,103 +7,104 @@
 import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { nowIso, secureId } from "@/lib/security/random";
 
 // Validation schemas for user profile
-const TravelPreferencesSchema = z.object({
-  preferredCabinClass: z
-    .enum(["economy", "premium_economy", "business", "first"])
-    .default("economy"),
-  preferredAirlines: z.array(z.string()).default([]),
+const TRAVEL_PREFERENCES_SCHEMA = z.object({
+  accessibilityRequirements: z.array(z.string()).default([]),
+  dietaryRestrictions: z.array(z.string()).default([]),
   excludedAirlines: z.array(z.string()).default([]),
+  maxBudgetPerNight: z.number().min(0).optional(),
   maxLayovers: z.number().min(0).max(5).default(2),
-  preferredDepartureTime: z
-    .enum(["early_morning", "morning", "afternoon", "evening", "late_night"])
-    .optional(),
-  preferredArrivalTime: z
-    .enum(["early_morning", "morning", "afternoon", "evening", "late_night"])
-    .optional(),
   preferredAccommodationType: z
     .enum(["hotel", "apartment", "villa", "hostel", "resort"])
     .default("hotel"),
-  maxBudgetPerNight: z.number().min(0).optional(),
+  preferredAirlines: z.array(z.string()).default([]),
+  preferredArrivalTime: z
+    .enum(["early_morning", "morning", "afternoon", "evening", "late_night"])
+    .optional(),
+  preferredCabinClass: z
+    .enum(["economy", "premium_economy", "business", "first"])
+    .default("economy"),
+  preferredDepartureTime: z
+    .enum(["early_morning", "morning", "afternoon", "evening", "late_night"])
+    .optional(),
   preferredHotelChains: z.array(z.string()).default([]),
-  requireWifi: z.boolean().default(true),
   requireBreakfast: z.boolean().default(false),
-  requireParking: z.boolean().default(false),
   requireGym: z.boolean().default(false),
+  requireParking: z.boolean().default(false),
   requirePool: z.boolean().default(false),
-  accessibilityRequirements: z.array(z.string()).default([]),
-  dietaryRestrictions: z.array(z.string()).default([]),
+  requireWifi: z.boolean().default(true),
 });
 
-const PersonalInfoSchema = z.object({
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  displayName: z.string().optional(),
+const PERSONAL_INFO_SCHEMA = z.object({
   bio: z.string().max(500).optional(),
-  location: z.string().optional(),
-  website: z.string().url().optional(),
-  phoneNumber: z.string().optional(),
   dateOfBirth: z.string().optional(),
-  gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
+  displayName: z.string().optional(),
   emergencyContact: z
     .object({
+      email: z.string().email(),
       name: z.string(),
       phone: z.string(),
-      email: z.string().email(),
       relationship: z.string(),
     })
     .optional(),
+  firstName: z.string().optional(),
+  gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
+  lastName: z.string().optional(),
+  location: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  website: z.string().url().optional(),
 });
 
-const PrivacySettingsSchema = z.object({
-  profileVisibility: z.enum(["public", "friends", "private"]).default("private"),
-  showTravelHistory: z.boolean().default(false),
+const PRIVACY_SETTINGS_SCHEMA = z.object({
   allowDataSharing: z.boolean().default(false),
   enableAnalytics: z.boolean().default(true),
   enableLocationTracking: z.boolean().default(false),
+  profileVisibility: z.enum(["public", "friends", "private"]).default("private"),
+  showTravelHistory: z.boolean().default(false),
 });
 
-export const UserProfileSchema = z.object({
-  id: z.string(),
-  email: z.string().email(),
+export const userProfileSchema = z.object({
   avatarUrl: z.string().url().optional(),
-  personalInfo: PersonalInfoSchema.optional(),
-  travelPreferences: TravelPreferencesSchema.optional(),
-  privacySettings: PrivacySettingsSchema.optional(),
+  createdAt: z.string(),
+  email: z.string().email(),
   favoriteDestinations: z
     .array(
       z.object({
-        id: z.string(),
-        name: z.string(),
         country: z.string(),
+        id: z.string(),
+        lastVisited: z.string().optional(),
+        name: z.string(),
         notes: z.string().optional(),
         visitCount: z.number().default(0),
-        lastVisited: z.string().optional(),
       })
     )
     .default([]),
+  id: z.string(),
+  personalInfo: PERSONAL_INFO_SCHEMA.optional(),
+  privacySettings: PRIVACY_SETTINGS_SCHEMA.optional(),
   travelDocuments: z
     .array(
       z.object({
-        id: z.string(),
-        type: z.enum(["passport", "visa", "license", "insurance", "vaccination"]),
-        number: z.string(),
         expiryDate: z.string(),
+        id: z.string(),
         issuingCountry: z.string(),
         notes: z.string().optional(),
+        number: z.string(),
+        type: z.enum(["passport", "visa", "license", "insurance", "vaccination"]),
       })
     )
     .default([]),
-  createdAt: z.string(),
+  travelPreferences: TRAVEL_PREFERENCES_SCHEMA.optional(),
   updatedAt: z.string(),
 });
 
 // Types derived from schemas
-export type TravelPreferences = z.infer<typeof TravelPreferencesSchema>;
-export type PersonalInfo = z.infer<typeof PersonalInfoSchema>;
-export type PrivacySettings = z.infer<typeof PrivacySettingsSchema>;
-export type UserProfile = z.infer<typeof UserProfileSchema>;
+export type TravelPreferences = z.infer<typeof TRAVEL_PREFERENCES_SCHEMA>;
+export type PersonalInfo = z.infer<typeof PERSONAL_INFO_SCHEMA>;
+export type PrivacySettings = z.infer<typeof PRIVACY_SETTINGS_SCHEMA>;
+export type UserProfile = z.infer<typeof userProfileSchema>;
 export type FavoriteDestination = UserProfile["favoriteDestinations"][0];
 export type TravelDocument = UserProfile["travelDocuments"][0];
 
@@ -163,7 +164,7 @@ interface UserProfileState {
 
 // Validation schema for the user profile store state
 // const userProfileStoreSchema = z.object({ // Future validation
-//   profile: UserProfileSchema.nullable(),
+//   profile: userProfileSchema.nullable(),
 //   isLoading: z.boolean(),
 //   isUpdatingProfile: z.boolean(),
 //   isUploadingAvatar: z.boolean(),
@@ -175,12 +176,11 @@ interface UserProfileState {
 // });
 
 // Helper functions
-const generateId = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const getCurrentTimestamp = () => new Date().toISOString();
+const GENERATE_ID = () => secureId(12);
+const GET_CURRENT_TIMESTAMP = () => nowIso();
 
 // Get display name helper
-const getDisplayName = (profile: UserProfile | null): string => {
+const GET_DISPLAY_NAME = (profile: UserProfile | null): string => {
   if (!profile) return "";
 
   const personalInfo = profile.personalInfo;
@@ -193,7 +193,7 @@ const getDisplayName = (profile: UserProfile | null): string => {
 };
 
 // Check if profile is complete
-const hasCompleteProfile = (profile: UserProfile | null): boolean => {
+const HAS_COMPLETE_PROFILE = (profile: UserProfile | null): boolean => {
   if (!profile) return false;
 
   const personalInfo = profile.personalInfo;
@@ -206,7 +206,7 @@ const hasCompleteProfile = (profile: UserProfile | null): boolean => {
 };
 
 // Get upcoming document expirations (within 60 days)
-const getUpcomingDocumentExpirations = (
+const GET_UPCOMING_DOCUMENT_EXPIRATIONS = (
   profile: UserProfile | null
 ): TravelDocument[] => {
   if (!profile) return [];
@@ -221,46 +221,233 @@ const getUpcomingDocumentExpirations = (
 };
 
 // Compute derived fields for a given profile
-const computeDerived = (profile: UserProfile | null) => ({
-  displayName: getDisplayName(profile),
-  hasCompleteProfile: hasCompleteProfile(profile),
-  upcomingDocumentExpirations: getUpcomingDocumentExpirations(profile),
+const COMPUTE_DERIVED = (profile: UserProfile | null) => ({
+  displayName: GET_DISPLAY_NAME(profile),
+  hasCompleteProfile: HAS_COMPLETE_PROFILE(profile),
+  upcomingDocumentExpirations: GET_UPCOMING_DOCUMENT_EXPIRATIONS(profile),
 });
 
 export const useUserProfileStore = create<UserProfileState>()(
   devtools(
     persist(
       (set, get) => ({
-        // Initial state
-        profile: null,
+        // Favorite destinations
+        addFavoriteDestination: (
+          destination: Omit<FavoriteDestination, "id" | "visitCount">
+        ) => {
+          const { profile } = get();
+          if (!profile) return;
+
+          const newDestination: FavoriteDestination = {
+            ...destination,
+            id: GENERATE_ID(),
+            visitCount: 0,
+          };
+
+          const nextProfile = {
+            ...profile,
+            favoriteDestinations: [...profile.favoriteDestinations, newDestination],
+            updatedAt: GET_CURRENT_TIMESTAMP(),
+          } as UserProfile;
+          set({ profile: nextProfile, ...COMPUTE_DERIVED(nextProfile) });
+        },
+
+        // Travel documents
+        addTravelDocument: (document: Omit<TravelDocument, "id">) => {
+          const { profile } = get();
+          if (!profile) return;
+
+          const newDocument: TravelDocument = {
+            ...document,
+            id: GENERATE_ID(),
+          };
+
+          const nextProfile = {
+            ...profile,
+            travelDocuments: [...profile.travelDocuments, newDocument],
+            updatedAt: GET_CURRENT_TIMESTAMP(),
+          } as UserProfile;
+          set({ profile: nextProfile, ...COMPUTE_DERIVED(nextProfile) });
+        },
+
+        clearError: () => {
+          set({ error: null, uploadError: null });
+        },
+
+        // Derived fields (stored for deterministic reads/testing)
+        displayName: "",
+
+        // Error states
+        error: null,
+
+        // Utility actions
+        exportProfile: () => {
+          const { profile } = get();
+          if (!profile) return "";
+
+          const exportData = {
+            exportedAt: GET_CURRENT_TIMESTAMP(),
+            profile,
+            version: "1.0",
+          };
+
+          return JSON.stringify(exportData, null, 2);
+        },
+        hasCompleteProfile: false,
+
+        importProfile: async (data: string) => {
+          try {
+            const importData = JSON.parse(data);
+
+            if (importData.profile) {
+              const result = userProfileSchema.safeParse(importData.profile);
+              if (result.success) {
+                set({ profile: result.data, ...COMPUTE_DERIVED(result.data) });
+                await Promise.resolve();
+                return true;
+              }
+              throw new Error("Invalid profile data");
+            }
+
+            await Promise.resolve();
+            return false;
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Failed to import profile";
+            set({ error: message });
+            await Promise.resolve();
+            return false;
+          }
+        },
+
+        incrementDestinationVisit: (destinationId: string) => {
+          const { profile } = get();
+          if (!profile) return;
+
+          const now = GET_CURRENT_TIMESTAMP();
+
+          const nextProfile = {
+            ...profile,
+            favoriteDestinations: profile.favoriteDestinations.map(
+              (d: FavoriteDestination) =>
+                d.id === destinationId
+                  ? { ...d, lastVisited: now, visitCount: d.visitCount + 1 }
+                  : d
+            ),
+            updatedAt: now,
+          } as UserProfile;
+          set({ profile: nextProfile, ...COMPUTE_DERIVED(nextProfile) });
+        },
 
         // Loading states
         isLoading: false,
         isUpdatingProfile: false,
         isUploadingAvatar: false,
+        // Initial state
+        profile: null,
 
-        // Error states
-        error: null,
-        uploadError: null,
+        removeAvatar: async () => {
+          const { profile } = get();
+          if (!profile) return false;
 
-        // Derived fields (stored for deterministic reads/testing)
-        displayName: "",
-        hasCompleteProfile: false,
-        upcomingDocumentExpirations: [],
+          set({ isUpdatingProfile: true });
+
+          try {
+            // Mock API call
+            await new Promise((resolve) => setTimeout(resolve, 500));
+
+            const nextProfile = {
+              ...profile,
+              avatarUrl: undefined,
+              updatedAt: GET_CURRENT_TIMESTAMP(),
+            } as UserProfile;
+            set({
+              isUpdatingProfile: false,
+              profile: nextProfile,
+              ...COMPUTE_DERIVED(nextProfile),
+            });
+
+            return true;
+          } catch (_error) {
+            set({ isUpdatingProfile: false });
+            return false;
+          }
+        },
+
+        removeFavoriteDestination: (destinationId: string) => {
+          const { profile } = get();
+          if (!profile) return;
+
+          const nextProfile = {
+            ...profile,
+            favoriteDestinations: profile.favoriteDestinations.filter(
+              (d: FavoriteDestination) => d.id !== destinationId
+            ),
+            updatedAt: GET_CURRENT_TIMESTAMP(),
+          } as UserProfile;
+          set({ profile: nextProfile, ...COMPUTE_DERIVED(nextProfile) });
+        },
+
+        removeTravelDocument: (documentId: string) => {
+          const { profile } = get();
+          if (!profile) return;
+
+          const nextProfile = {
+            ...profile,
+            travelDocuments: profile.travelDocuments.filter(
+              (d: TravelDocument) => d.id !== documentId
+            ),
+            updatedAt: GET_CURRENT_TIMESTAMP(),
+          } as UserProfile;
+          set({ profile: nextProfile, ...COMPUTE_DERIVED(nextProfile) });
+        },
+
+        reset: () => {
+          set({
+            displayName: "",
+            error: null,
+            hasCompleteProfile: false,
+            isLoading: false,
+            isUpdatingProfile: false,
+            isUploadingAvatar: false,
+            profile: null,
+            upcomingDocumentExpirations: [],
+            uploadError: null,
+          });
+        },
 
         // Profile management actions
         setProfile: (profile: UserProfile | null) => {
-          set({ profile, ...computeDerived(profile) });
+          set({ profile, ...COMPUTE_DERIVED(profile) });
+        },
+        upcomingDocumentExpirations: [],
+
+        updateFavoriteDestination: (
+          destinationId: string,
+          updates: Partial<FavoriteDestination>
+        ) => {
+          const { profile } = get();
+          if (!profile) return;
+
+          const nextProfile = {
+            ...profile,
+            favoriteDestinations: profile.favoriteDestinations.map(
+              (d: FavoriteDestination) =>
+                d.id === destinationId ? { ...d, ...updates } : d
+            ),
+            updatedAt: GET_CURRENT_TIMESTAMP(),
+          } as UserProfile;
+          set({ profile: nextProfile, ...COMPUTE_DERIVED(nextProfile) });
         },
 
         updatePersonalInfo: async (info: Partial<PersonalInfo>) => {
           const { profile } = get();
           if (!profile) return false;
 
-          set({ isUpdatingProfile: true, error: null });
+          set({ error: null, isUpdatingProfile: true });
 
           try {
-            const result = PersonalInfoSchema.safeParse(info);
+            const result = PERSONAL_INFO_SCHEMA.safeParse(info);
             if (!result.success) {
               throw new Error("Invalid personal information");
             }
@@ -271,16 +458,16 @@ export const useUserProfileStore = create<UserProfileState>()(
                 ...profile.personalInfo,
                 ...result.data,
               },
-              updatedAt: getCurrentTimestamp(),
+              updatedAt: GET_CURRENT_TIMESTAMP(),
             };
 
             // Mock API call
             await new Promise((resolve) => setTimeout(resolve, 500));
 
             set({
-              profile: updatedProfile,
               isUpdatingProfile: false,
-              ...computeDerived(updatedProfile),
+              profile: updatedProfile,
+              ...COMPUTE_DERIVED(updatedProfile),
             });
 
             return true;
@@ -295,59 +482,14 @@ export const useUserProfileStore = create<UserProfileState>()(
           }
         },
 
-        updateTravelPreferences: async (preferences: Partial<TravelPreferences>) => {
-          const { profile } = get();
-          if (!profile) return false;
-
-          set({ isUpdatingProfile: true, error: null });
-
-          try {
-            const result = TravelPreferencesSchema.safeParse({
-              ...profile.travelPreferences,
-              ...preferences,
-            });
-
-            if (!result.success) {
-              throw new Error("Invalid travel preferences");
-            }
-
-            const updatedProfile = {
-              ...profile,
-              travelPreferences: result.data,
-              updatedAt: getCurrentTimestamp(),
-            };
-
-            // Mock API call
-            await new Promise((resolve) => setTimeout(resolve, 500));
-
-            set({
-              profile: updatedProfile,
-              isUpdatingProfile: false,
-              ...computeDerived(updatedProfile),
-            });
-
-            return true;
-          } catch (error) {
-            const message =
-              error instanceof Error
-                ? error.message
-                : "Failed to update travel preferences";
-            set({
-              error: message,
-              isUpdatingProfile: false,
-            });
-            return false;
-          }
-        },
-
         updatePrivacySettings: async (settings: Partial<PrivacySettings>) => {
           const { profile } = get();
           if (!profile) return false;
 
-          set({ isUpdatingProfile: true, error: null });
+          set({ error: null, isUpdatingProfile: true });
 
           try {
-            const result = PrivacySettingsSchema.safeParse({
+            const result = PRIVACY_SETTINGS_SCHEMA.safeParse({
               ...profile.privacySettings,
               ...settings,
             });
@@ -359,16 +501,16 @@ export const useUserProfileStore = create<UserProfileState>()(
             const updatedProfile = {
               ...profile,
               privacySettings: result.data,
-              updatedAt: getCurrentTimestamp(),
+              updatedAt: GET_CURRENT_TIMESTAMP(),
             };
 
             // Mock API call
             await new Promise((resolve) => setTimeout(resolve, 500));
 
             set({
-              profile: updatedProfile,
               isUpdatingProfile: false,
-              ...computeDerived(updatedProfile),
+              profile: updatedProfile,
+              ...COMPUTE_DERIVED(updatedProfile),
             });
 
             return true;
@@ -377,6 +519,68 @@ export const useUserProfileStore = create<UserProfileState>()(
               error instanceof Error
                 ? error.message
                 : "Failed to update privacy settings";
+            set({
+              error: message,
+              isUpdatingProfile: false,
+            });
+            return false;
+          }
+        },
+
+        updateTravelDocument: (
+          documentId: string,
+          updates: Partial<TravelDocument>
+        ) => {
+          const { profile } = get();
+          if (!profile) return;
+
+          const nextProfile = {
+            ...profile,
+            travelDocuments: profile.travelDocuments.map((d: TravelDocument) =>
+              d.id === documentId ? { ...d, ...updates } : d
+            ),
+            updatedAt: GET_CURRENT_TIMESTAMP(),
+          } as UserProfile;
+          set({ profile: nextProfile, ...COMPUTE_DERIVED(nextProfile) });
+        },
+
+        updateTravelPreferences: async (preferences: Partial<TravelPreferences>) => {
+          const { profile } = get();
+          if (!profile) return false;
+
+          set({ error: null, isUpdatingProfile: true });
+
+          try {
+            const result = TRAVEL_PREFERENCES_SCHEMA.safeParse({
+              ...profile.travelPreferences,
+              ...preferences,
+            });
+
+            if (!result.success) {
+              throw new Error("Invalid travel preferences");
+            }
+
+            const updatedProfile = {
+              ...profile,
+              travelPreferences: result.data,
+              updatedAt: GET_CURRENT_TIMESTAMP(),
+            };
+
+            // Mock API call
+            await new Promise((resolve) => setTimeout(resolve, 500));
+
+            set({
+              isUpdatingProfile: false,
+              profile: updatedProfile,
+              ...COMPUTE_DERIVED(updatedProfile),
+            });
+
+            return true;
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Failed to update travel preferences";
             set({
               error: message,
               isUpdatingProfile: false,
@@ -402,19 +606,19 @@ export const useUserProfileStore = create<UserProfileState>()(
             // Mock upload
             await new Promise((resolve) => setTimeout(resolve, 2000));
 
-            const avatarUrl = `https://example.com/avatars/${generateId()}.${file.type.split("/")[1]}`;
+            const avatarUrl = `https://example.com/avatars/${GENERATE_ID()}.${file.type.split("/")[1]}`;
 
             const { profile } = get();
             if (profile) {
               const nextProfile = {
                 ...profile,
                 avatarUrl,
-                updatedAt: getCurrentTimestamp(),
+                updatedAt: GET_CURRENT_TIMESTAMP(),
               } as UserProfile;
               set({
-                profile: nextProfile,
                 isUploadingAvatar: false,
-                ...computeDerived(nextProfile),
+                profile: nextProfile,
+                ...COMPUTE_DERIVED(nextProfile),
               });
             }
 
@@ -423,215 +627,13 @@ export const useUserProfileStore = create<UserProfileState>()(
             const message =
               error instanceof Error ? error.message : "Failed to upload avatar";
             set({
-              uploadError: message,
               isUploadingAvatar: false,
+              uploadError: message,
             });
             return null;
           }
         },
-
-        removeAvatar: async () => {
-          const { profile } = get();
-          if (!profile) return false;
-
-          set({ isUpdatingProfile: true });
-
-          try {
-            // Mock API call
-            await new Promise((resolve) => setTimeout(resolve, 500));
-
-            const nextProfile = {
-              ...profile,
-              avatarUrl: undefined,
-              updatedAt: getCurrentTimestamp(),
-            } as UserProfile;
-            set({
-              profile: nextProfile,
-              isUpdatingProfile: false,
-              ...computeDerived(nextProfile),
-            });
-
-            return true;
-          } catch (_error) {
-            set({ isUpdatingProfile: false });
-            return false;
-          }
-        },
-
-        // Favorite destinations
-        addFavoriteDestination: (
-          destination: Omit<FavoriteDestination, "id" | "visitCount">
-        ) => {
-          const { profile } = get();
-          if (!profile) return;
-
-          const newDestination: FavoriteDestination = {
-            ...destination,
-            id: generateId(),
-            visitCount: 0,
-          };
-
-          const nextProfile = {
-            ...profile,
-            favoriteDestinations: [...profile.favoriteDestinations, newDestination],
-            updatedAt: getCurrentTimestamp(),
-          } as UserProfile;
-          set({ profile: nextProfile, ...computeDerived(nextProfile) });
-        },
-
-        removeFavoriteDestination: (destinationId: string) => {
-          const { profile } = get();
-          if (!profile) return;
-
-          const nextProfile = {
-            ...profile,
-            favoriteDestinations: profile.favoriteDestinations.filter(
-              (d: FavoriteDestination) => d.id !== destinationId
-            ),
-            updatedAt: getCurrentTimestamp(),
-          } as UserProfile;
-          set({ profile: nextProfile, ...computeDerived(nextProfile) });
-        },
-
-        updateFavoriteDestination: (
-          destinationId: string,
-          updates: Partial<FavoriteDestination>
-        ) => {
-          const { profile } = get();
-          if (!profile) return;
-
-          const nextProfile = {
-            ...profile,
-            favoriteDestinations: profile.favoriteDestinations.map(
-              (d: FavoriteDestination) =>
-                d.id === destinationId ? { ...d, ...updates } : d
-            ),
-            updatedAt: getCurrentTimestamp(),
-          } as UserProfile;
-          set({ profile: nextProfile, ...computeDerived(nextProfile) });
-        },
-
-        incrementDestinationVisit: (destinationId: string) => {
-          const { profile } = get();
-          if (!profile) return;
-
-          const now = getCurrentTimestamp();
-
-          const nextProfile = {
-            ...profile,
-            favoriteDestinations: profile.favoriteDestinations.map(
-              (d: FavoriteDestination) =>
-                d.id === destinationId
-                  ? { ...d, visitCount: d.visitCount + 1, lastVisited: now }
-                  : d
-            ),
-            updatedAt: now,
-          } as UserProfile;
-          set({ profile: nextProfile, ...computeDerived(nextProfile) });
-        },
-
-        // Travel documents
-        addTravelDocument: (document: Omit<TravelDocument, "id">) => {
-          const { profile } = get();
-          if (!profile) return;
-
-          const newDocument: TravelDocument = {
-            ...document,
-            id: generateId(),
-          };
-
-          const nextProfile = {
-            ...profile,
-            travelDocuments: [...profile.travelDocuments, newDocument],
-            updatedAt: getCurrentTimestamp(),
-          } as UserProfile;
-          set({ profile: nextProfile, ...computeDerived(nextProfile) });
-        },
-
-        removeTravelDocument: (documentId: string) => {
-          const { profile } = get();
-          if (!profile) return;
-
-          const nextProfile = {
-            ...profile,
-            travelDocuments: profile.travelDocuments.filter(
-              (d: TravelDocument) => d.id !== documentId
-            ),
-            updatedAt: getCurrentTimestamp(),
-          } as UserProfile;
-          set({ profile: nextProfile, ...computeDerived(nextProfile) });
-        },
-
-        updateTravelDocument: (
-          documentId: string,
-          updates: Partial<TravelDocument>
-        ) => {
-          const { profile } = get();
-          if (!profile) return;
-
-          const nextProfile = {
-            ...profile,
-            travelDocuments: profile.travelDocuments.map((d: TravelDocument) =>
-              d.id === documentId ? { ...d, ...updates } : d
-            ),
-            updatedAt: getCurrentTimestamp(),
-          } as UserProfile;
-          set({ profile: nextProfile, ...computeDerived(nextProfile) });
-        },
-
-        // Utility actions
-        exportProfile: () => {
-          const { profile } = get();
-          if (!profile) return "";
-
-          const exportData = {
-            profile,
-            exportedAt: getCurrentTimestamp(),
-            version: "1.0",
-          };
-
-          return JSON.stringify(exportData, null, 2);
-        },
-
-        importProfile: async (data: string) => {
-          try {
-            const importData = JSON.parse(data);
-
-            if (importData.profile) {
-              const result = UserProfileSchema.safeParse(importData.profile);
-              if (result.success) {
-                set({ profile: result.data, ...computeDerived(result.data) });
-                return true;
-              }
-              throw new Error("Invalid profile data");
-            }
-
-            return false;
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Failed to import profile";
-            set({ error: message });
-            return false;
-          }
-        },
-
-        clearError: () => {
-          set({ error: null, uploadError: null });
-        },
-
-        reset: () => {
-          set({
-            profile: null,
-            isLoading: false,
-            isUpdatingProfile: false,
-            isUploadingAvatar: false,
-            error: null,
-            uploadError: null,
-            displayName: "",
-            hasCompleteProfile: false,
-            upcomingDocumentExpirations: [],
-          });
-        },
+        uploadError: null,
       }),
       {
         name: "user-profile-storage",

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Loading state components for full-screen, container, and button loading states.
+ * Provides overlay, state wrapper, button loading, and container loading components with
+ * customizable visual styles, progress indicators, and fallback content.
+ */
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "./loading-spinner";
@@ -15,6 +21,9 @@ export interface LoadingOverlayProps {
   variant?: "overlay" | "page" | "fullscreen";
 }
 
+/**
+ * Loading overlay component for full-screen or container loading
+ */
 export const LoadingOverlay = React.forwardRef<HTMLDivElement, LoadingOverlayProps>(
   (
     {
@@ -112,6 +121,9 @@ export interface LoadingStateProps {
   fallback?: React.ReactNode;
 }
 
+/**
+ * Loading state wrapper that shows skeleton or spinner while loading
+ */
 export const LoadingState = React.forwardRef<HTMLDivElement, LoadingStateProps>(
   ({ isLoading, skeleton, spinner, children, className, fallback, ...props }, ref) => {
     if (isLoading) {
@@ -163,6 +175,9 @@ export interface LoadingButtonProps
   children: React.ReactNode;
 }
 
+/**
+ * Button loading state component
+ */
 export const LoadingButton = React.forwardRef<HTMLButtonElement, LoadingButtonProps>(
   (
     {
@@ -269,6 +284,9 @@ export interface PageLoadingProps {
   className?: string;
 }
 
+/**
+ * Page loading component - convenience wrapper for full page loading
+ */
 export const PageLoading = React.forwardRef<HTMLDivElement, PageLoadingProps>(
   ({ message = "Loading page...", progress, className, ...props }, ref) => {
     return (

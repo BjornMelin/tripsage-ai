@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Zustand store for budget state and actions.
+ */
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
@@ -9,13 +13,16 @@ import type {
   Expense,
   ExpenseCategory,
 } from "@/lib/schemas/budget";
+import { nowIso, secureId } from "@/lib/security/random";
 import type { CurrencyCode } from "@/types/currency";
 
 // Helper functions
-const generateId = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const getCurrentTimestamp = () => new Date().toISOString();
+const GENERATE_ID = () => secureId(12);
+const GET_CURRENT_TIMESTAMP = () => nowIso();
 
+/**
+ * Interface for the budget state.
+ */
 interface BudgetState {
   // Budgets
   budgets: Record<string, Budget>;
@@ -71,7 +78,17 @@ interface BudgetState {
   clearAlerts: (budgetId: string) => void;
 }
 
-const calculateBudgetSummary = (budget: Budget, expenses: Expense[]): BudgetSummary => {
+/**
+ * Calculate the budget summary.
+ *
+ * @param budget - The budget to calculate the summary for.
+ * @param expenses - The expenses to calculate the summary for.
+ * @returns The budget summary.
+ */
+const CALCULATE_BUDGET_SUMMARY = (
+  budget: Budget,
+  expenses: Expense[]
+): BudgetSummary => {
   const totalBudget = budget.totalAmount;
   const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalRemaining = totalBudget - totalSpent;
@@ -122,55 +139,166 @@ const calculateBudgetSummary = (budget: Budget, expenses: Expense[]): BudgetSumm
   }
 
   return {
-    totalBudget,
-    totalSpent,
-    totalRemaining,
-    percentageSpent,
-    spentByCategory,
     dailyAverage,
     dailyLimit,
-    projectedTotal,
-    isOverBudget: totalRemaining < 0,
     daysRemaining,
+    isOverBudget: totalRemaining < 0,
+    percentageSpent,
+    projectedTotal,
+    spentByCategory,
+    totalBudget,
+    totalRemaining,
+    totalSpent,
   };
 };
 
+/**
+ * The budget store.
+ */
 export const useBudgetStore = create<BudgetState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
+      // Computed properties
+      /**
+       * The currently active budget, or null if none is active.
+       */
+      get activeBudget(): Budget | null {
+        const { activeBudgetId, budgets } = this as unknown as BudgetState;
+        return activeBudgetId ? (budgets[activeBudgetId] ?? null) : null;
+      },
+      activeBudgetId: null,
+
+      /**
+       * Add an alert to the budget.
+       *
+       * @param alert - The alert to add.
+       * @returns The updated state.
+       */
+      addAlert: (alert) =>
+        set((state) => {
+          const budgetId = alert.budgetId;
+          const currentAlerts = state.alerts[budgetId] || [];
+
+          const newAlert = {
+            ...alert,
+            createdAt: alert.createdAt || GET_CURRENT_TIMESTAMP(),
+            id: alert.id || GENERATE_ID(),
+            isRead: false,
+          };
+
+          return {
+            alerts: {
+              ...state.alerts,
+              [budgetId]: [...currentAlerts, newAlert],
+            },
+          };
+        }),
+
+      /**
+       * Add a budget to the budget.
+       *
+       * @param budget - The budget to add.
+       * @returns The updated state.
+       */
+      addBudget: (budget) =>
+        set((state) => {
+          const newBudget = {
+            ...budget,
+            createdAt: budget.createdAt || GET_CURRENT_TIMESTAMP(),
+            id: budget.id || GENERATE_ID(),
+            updatedAt: GET_CURRENT_TIMESTAMP(),
+          };
+
+          return {
+            // If this is the first budget, set it as active
+            activeBudgetId:
+              state.activeBudgetId === null ? newBudget.id : state.activeBudgetId,
+            budgets: {
+              ...state.budgets,
+              [newBudget.id]: newBudget,
+            },
+          };
+        }),
+
+      /**
+       * Add a budget category to the budget.
+       *
+       * @param budgetId - The ID of the budget to add the category to.
+       * @param category - The category to add.
+       * @returns The updated state.
+       */
+      addBudgetCategory: (budgetId, category) =>
+        set((state) => {
+          const budget = state.budgets[budgetId];
+          if (!budget) return state;
+
+          const newCategory = {
+            ...category,
+            id: category.id || GENERATE_ID(),
+          };
+
+          return {
+            budgets: {
+              ...state.budgets,
+              [budgetId]: {
+                ...budget,
+                categories: [...budget.categories, newCategory],
+                updatedAt: GET_CURRENT_TIMESTAMP(),
+              },
+            },
+          };
+        }),
+
+      /**
+       * Add an expense to the budget.
+       *
+       * @param expense - The expense to add.
+       * @returns The updated state.
+       */
+      addExpense: (expense) =>
+        set((state) => {
+          const budgetId = expense.budgetId;
+          const currentExpenses = state.expenses[budgetId] || [];
+
+          const newExpense = {
+            ...expense,
+            createdAt: expense.createdAt || GET_CURRENT_TIMESTAMP(),
+            id: expense.id || GENERATE_ID(),
+            updatedAt: GET_CURRENT_TIMESTAMP(),
+          };
+
+          return {
+            expenses: {
+              ...state.expenses,
+              [budgetId]: [...currentExpenses, newExpense],
+            },
+          };
+        }),
+      alerts: {},
+      baseCurrency: "USD",
+
+      /**
+       * Summary metrics for the active budget (totals, percentages, categories).
+       * Returns null when there is no active budget.
+       */
+      get budgetSummary(): BudgetSummary | null {
+        const { activeBudget, expenses } = this as unknown as BudgetState;
+        if (!activeBudget) return null;
+        const budgetExpenses = expenses[activeBudget.id] ?? [];
+        return CALCULATE_BUDGET_SUMMARY(activeBudget, budgetExpenses);
+      },
       // Initial state
       budgets: {},
-      activeBudgetId: null,
-      expenses: {},
-      baseCurrency: "USD",
-      currencies: {},
-      alerts: {},
 
-      // Computed properties
-      get activeBudget(): Budget | null {
-        const { activeBudgetId, budgets } = get();
-        return activeBudgetId ? budgets[activeBudgetId] || null : null;
-      },
-
-      get budgetSummary(): BudgetSummary | null {
-        const { activeBudget } = get();
-        const { expenses } = get();
-
-        if (!activeBudget) return null;
-
-        const budgetExpenses = expenses[activeBudget.id] || [];
-        return calculateBudgetSummary(activeBudget, budgetExpenses);
-      },
-
+      /**
+       * Map of tripId to a list of budget IDs belonging to that trip.
+       */
       get budgetsByTrip(): Record<string, string[]> {
-        const { budgets } = get();
-
+        const { budgets } = this as unknown as BudgetState;
         return Object.values(budgets).reduce(
           (acc, budget) => {
             if (budget.tripId) {
-              if (!acc[budget.tripId]) {
-                acc[budget.tripId] = [];
-              }
+              if (!acc[budget.tripId]) acc[budget.tripId] = [];
               acc[budget.tripId].push(budget.id);
             }
             return acc;
@@ -179,58 +307,69 @@ export const useBudgetStore = create<BudgetState>()(
         );
       },
 
-      get recentExpenses(): Expense[] {
-        const { expenses } = get();
+      /**
+       * Clear the alerts for a budget.
+       *
+       * @param budgetId - The ID of the budget to clear the alerts for.
+       * @returns The updated state.
+       */
+      clearAlerts: (budgetId) =>
+        set((state) => {
+          const newAlerts = { ...state.alerts };
+          delete newAlerts[budgetId];
 
-        // Flatten all expenses and sort by date (newest first)
+          return {
+            alerts: newAlerts,
+          };
+        }),
+      currencies: {},
+      expenses: {},
+
+      /**
+       * Mark an alert as read.
+       *
+       * @param id - The ID of the alert to mark as read.
+       * @param budgetId - The ID of the budget to mark the alert for.
+       * @returns The updated state.
+       */
+      markAlertAsRead: (id, budgetId) =>
+        set((state) => {
+          const alerts = state.alerts[budgetId] || [];
+          const alertIndex = alerts.findIndex((alert) => alert.id === id);
+
+          if (alertIndex === -1) return state;
+
+          const updatedAlerts = [...alerts];
+          updatedAlerts[alertIndex] = {
+            ...updatedAlerts[alertIndex],
+            isRead: true,
+          };
+
+          return {
+            alerts: {
+              ...state.alerts,
+              [budgetId]: updatedAlerts,
+            },
+          };
+        }),
+
+      /**
+       * The 10 most recent expenses across all budgets, newest first.
+       */
+      get recentExpenses(): Expense[] {
+        const { expenses } = this as unknown as BudgetState;
         return Object.values(expenses)
           .flat()
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-          .slice(0, 10); // Return the 10 most recent expenses
+          .slice(0, 10);
       },
 
-      // Budget actions
-      setBudgets: (budgets) => set({ budgets }),
-
-      addBudget: (budget) =>
-        set((state) => {
-          const newBudget = {
-            ...budget,
-            id: budget.id || generateId(),
-            createdAt: budget.createdAt || getCurrentTimestamp(),
-            updatedAt: getCurrentTimestamp(),
-          };
-
-          return {
-            budgets: {
-              ...state.budgets,
-              [newBudget.id]: newBudget,
-            },
-            // If this is the first budget, set it as active
-            activeBudgetId:
-              state.activeBudgetId === null ? newBudget.id : state.activeBudgetId,
-          };
-        }),
-
-      updateBudget: (id, updates) =>
-        set((state) => {
-          const budget = state.budgets[id];
-          if (!budget) return state;
-
-          const updatedBudget = {
-            ...budget,
-            ...updates,
-            updatedAt: getCurrentTimestamp(),
-          };
-
-          return {
-            budgets: {
-              ...state.budgets,
-              [id]: updatedBudget,
-            },
-          };
-        }),
-
+      /**
+       * Remove a budget.
+       *
+       * @param id - The ID of the budget to remove.
+       * @returns The updated state.
+       */
       removeBudget: (id) =>
         set((state) => {
           const newBudgets = { ...state.budgets };
@@ -247,16 +386,145 @@ export const useBudgetStore = create<BudgetState>()(
             state.activeBudgetId === id ? null : state.activeBudgetId;
 
           return {
+            activeBudgetId: newActiveBudgetId,
+            alerts: newAlerts,
             budgets: newBudgets,
             expenses: newExpenses,
-            alerts: newAlerts,
-            activeBudgetId: newActiveBudgetId,
           };
         }),
 
+      /**
+       * Remove a budget category.
+       *
+       * @param budgetId - The ID of the budget to remove the category from.
+       * @param categoryId - The ID of the category to remove.
+       * @returns The updated state.
+       */
+      removeBudgetCategory: (budgetId, categoryId) =>
+        set((state) => {
+          const budget = state.budgets[budgetId];
+          if (!budget) return state;
+
+          return {
+            budgets: {
+              ...state.budgets,
+              [budgetId]: {
+                ...budget,
+                categories: budget.categories.filter((cat) => cat.id !== categoryId),
+                updatedAt: GET_CURRENT_TIMESTAMP(),
+              },
+            },
+          };
+        }),
+
+      /**
+       * Remove an expense.
+       *
+       * @param id - The ID of the expense to remove.
+       * @param budgetId - The ID of the budget to remove the expense from.
+       * @returns The updated state.
+       */
+      removeExpense: (id, budgetId) =>
+        set((state) => {
+          const expenses = state.expenses[budgetId] || [];
+
+          return {
+            expenses: {
+              ...state.expenses,
+              [budgetId]: expenses.filter((exp) => exp.id !== id),
+            },
+          };
+        }),
+
+      /**
+       * Set the active budget.
+       *
+       * @param id - The ID of the budget to set as active.
+       * @returns The updated state.
+       */
       setActiveBudget: (id) => set({ activeBudgetId: id }),
 
+      // Alert actions
+      /**
+       * Set the alerts for a budget.
+       *
+       * @param budgetId - The ID of the budget to set the alerts for.
+       * @param alerts - The alerts to set.
+       * @returns The updated state.
+       */
+      setAlerts: (budgetId, alerts) =>
+        set((state) => ({
+          alerts: {
+            ...state.alerts,
+            [budgetId]: alerts,
+          },
+        })),
+
+      // Currency actions
+      setBaseCurrency: (currency) => set({ baseCurrency: currency }),
+
+      // Budget actions
+      setBudgets: (budgets) => set({ budgets }),
+
+      /**
+       * Set the currencies.
+       *
+       * @param currencies - The currencies to set.
+       * @returns The updated state.
+       */
+      setCurrencies: (currencies) => set({ currencies }),
+
+      // Expense actions
+      /**
+       * Set the expenses for a budget.
+       *
+       * @param budgetId - The ID of the budget to set the expenses for.
+       * @param expenses - The expenses to set.
+       * @returns The updated state.
+       */
+      setExpenses: (budgetId, expenses) =>
+        set((state) => ({
+          expenses: {
+            ...state.expenses,
+            [budgetId]: expenses,
+          },
+        })),
+
+      /**
+       * Update a budget.
+       *
+       * @param id - The ID of the budget to update.
+       * @param updates - The updates to apply to the budget.
+       * @returns The updated state.
+       */
+      updateBudget: (id, updates) =>
+        set((state) => {
+          const budget = state.budgets[id];
+          if (!budget) return state;
+
+          const updatedBudget = {
+            ...budget,
+            ...updates,
+            updatedAt: GET_CURRENT_TIMESTAMP(),
+          };
+
+          return {
+            budgets: {
+              ...state.budgets,
+              [id]: updatedBudget,
+            },
+          };
+        }),
+
       // Budget category actions
+      /**
+       * Update a budget category.
+       *
+       * @param budgetId - The ID of the budget to update the category for.
+       * @param categoryId - The ID of the category to update.
+       * @param updates - The updates to apply to the category.
+       * @returns The updated state.
+       */
       updateBudgetCategory: (budgetId, categoryId, updates) =>
         set((state) => {
           const budget = state.budgets[budgetId];
@@ -279,80 +547,39 @@ export const useBudgetStore = create<BudgetState>()(
               [budgetId]: {
                 ...budget,
                 categories: updatedCategories,
-                updatedAt: getCurrentTimestamp(),
+                updatedAt: GET_CURRENT_TIMESTAMP(),
               },
             },
           };
         }),
 
-      addBudgetCategory: (budgetId, category) =>
-        set((state) => {
-          const budget = state.budgets[budgetId];
-          if (!budget) return state;
-
-          const newCategory = {
-            ...category,
-            id: category.id || generateId(),
-          };
-
-          return {
-            budgets: {
-              ...state.budgets,
-              [budgetId]: {
-                ...budget,
-                categories: [...budget.categories, newCategory],
-                updatedAt: getCurrentTimestamp(),
-              },
-            },
-          };
-        }),
-
-      removeBudgetCategory: (budgetId, categoryId) =>
-        set((state) => {
-          const budget = state.budgets[budgetId];
-          if (!budget) return state;
-
-          return {
-            budgets: {
-              ...state.budgets,
-              [budgetId]: {
-                ...budget,
-                categories: budget.categories.filter((cat) => cat.id !== categoryId),
-                updatedAt: getCurrentTimestamp(),
-              },
-            },
-          };
-        }),
-
-      // Expense actions
-      setExpenses: (budgetId, expenses) =>
+      /**
+       * Update a currency rate.
+       *
+       * @param code - The code of the currency to update.
+       * @param rate - The rate to set for the currency.
+       * @returns The updated state.
+       */
+      updateCurrencyRate: (code, rate) =>
         set((state) => ({
-          expenses: {
-            ...state.expenses,
-            [budgetId]: expenses,
+          currencies: {
+            ...state.currencies,
+            [code]: {
+              code,
+              lastUpdated: GET_CURRENT_TIMESTAMP(),
+              rate,
+            },
           },
         })),
 
-      addExpense: (expense) =>
-        set((state) => {
-          const budgetId = expense.budgetId;
-          const currentExpenses = state.expenses[budgetId] || [];
-
-          const newExpense = {
-            ...expense,
-            id: expense.id || generateId(),
-            createdAt: expense.createdAt || getCurrentTimestamp(),
-            updatedAt: getCurrentTimestamp(),
-          };
-
-          return {
-            expenses: {
-              ...state.expenses,
-              [budgetId]: [...currentExpenses, newExpense],
-            },
-          };
-        }),
-
+      /**
+       * Update an expense.
+       *
+       * @param id - The ID of the expense to update.
+       * @param budgetId - The ID of the budget to update the expense for.
+       * @param updates - The updates to apply to the expense.
+       * @returns The updated state.
+       */
       updateExpense: (id, budgetId, updates) =>
         set((state) => {
           const expenses = state.expenses[budgetId] || [];
@@ -364,7 +591,7 @@ export const useBudgetStore = create<BudgetState>()(
           updatedExpenses[expenseIndex] = {
             ...updatedExpenses[expenseIndex],
             ...updates,
-            updatedAt: getCurrentTimestamp(),
+            updatedAt: GET_CURRENT_TIMESTAMP(),
           };
 
           return {
@@ -374,104 +601,15 @@ export const useBudgetStore = create<BudgetState>()(
             },
           };
         }),
-
-      removeExpense: (id, budgetId) =>
-        set((state) => {
-          const expenses = state.expenses[budgetId] || [];
-
-          return {
-            expenses: {
-              ...state.expenses,
-              [budgetId]: expenses.filter((exp) => exp.id !== id),
-            },
-          };
-        }),
-
-      // Currency actions
-      setBaseCurrency: (currency) => set({ baseCurrency: currency }),
-
-      setCurrencies: (currencies) => set({ currencies }),
-
-      updateCurrencyRate: (code, rate) =>
-        set((state) => ({
-          currencies: {
-            ...state.currencies,
-            [code]: {
-              code,
-              rate,
-              lastUpdated: getCurrentTimestamp(),
-            },
-          },
-        })),
-
-      // Alert actions
-      setAlerts: (budgetId, alerts) =>
-        set((state) => ({
-          alerts: {
-            ...state.alerts,
-            [budgetId]: alerts,
-          },
-        })),
-
-      addAlert: (alert) =>
-        set((state) => {
-          const budgetId = alert.budgetId;
-          const currentAlerts = state.alerts[budgetId] || [];
-
-          const newAlert = {
-            ...alert,
-            id: alert.id || generateId(),
-            isRead: false,
-            createdAt: alert.createdAt || getCurrentTimestamp(),
-          };
-
-          return {
-            alerts: {
-              ...state.alerts,
-              [budgetId]: [...currentAlerts, newAlert],
-            },
-          };
-        }),
-
-      markAlertAsRead: (id, budgetId) =>
-        set((state) => {
-          const alerts = state.alerts[budgetId] || [];
-          const alertIndex = alerts.findIndex((alert) => alert.id === id);
-
-          if (alertIndex === -1) return state;
-
-          const updatedAlerts = [...alerts];
-          updatedAlerts[alertIndex] = {
-            ...updatedAlerts[alertIndex],
-            isRead: true,
-          };
-
-          return {
-            alerts: {
-              ...state.alerts,
-              [budgetId]: updatedAlerts,
-            },
-          };
-        }),
-
-      clearAlerts: (budgetId) =>
-        set((state) => {
-          const newAlerts = { ...state.alerts };
-          delete newAlerts[budgetId];
-
-          return {
-            alerts: newAlerts,
-          };
-        }),
     }),
     {
       name: "budget-storage",
       partialize: (state) => ({
+        activeBudgetId: state.activeBudgetId,
+        baseCurrency: state.baseCurrency,
         // Only persist certain parts of the state
         budgets: state.budgets,
         expenses: state.expenses,
-        baseCurrency: state.baseCurrency,
-        activeBudgetId: state.activeBudgetId,
         // Do not persist computed properties
       }),
     }
@@ -483,3 +621,61 @@ export const useActiveBudget = () => useBudgetStore((state) => state.activeBudge
 export const useBudgetSummary = () => useBudgetStore((state) => state.budgetSummary);
 export const useBudgetsByTrip = () => useBudgetStore((state) => state.budgetsByTrip);
 export const useRecentExpenses = () => useBudgetStore((state) => state.recentExpenses);
+
+/**
+ * Compute the active budget from a given budget state.
+ *
+ * @param state - The budget store state snapshot.
+ * @returns The active budget or null.
+ */
+export const selectActiveBudgetFrom = (state: BudgetState): Budget | null => {
+  const { activeBudgetId, budgets } = state;
+  return activeBudgetId ? (budgets[activeBudgetId] ?? null) : null;
+};
+
+/**
+ * Compute the budget summary for the current active budget.
+ *
+ * @param state - The budget store state snapshot.
+ * @returns The summary or null when no active budget exists.
+ */
+export const selectBudgetSummaryFrom = (state: BudgetState): BudgetSummary | null => {
+  const active = selectActiveBudgetFrom(state);
+  if (!active) return null;
+  const budgetExpenses = state.expenses[active.id] ?? [];
+  return CALCULATE_BUDGET_SUMMARY(active, budgetExpenses);
+};
+
+/**
+ * Compute a map of tripId to the list of budget IDs belonging to that trip.
+ *
+ * @param state - The budget store state snapshot.
+ * @returns A map of trip IDs to budget ID arrays.
+ */
+export const selectBudgetsByTripFrom = (
+  state: BudgetState
+): Record<string, string[]> => {
+  return Object.values(state.budgets).reduce(
+    (acc, budget) => {
+      if (budget.tripId) {
+        if (!acc[budget.tripId]) acc[budget.tripId] = [];
+        acc[budget.tripId].push(budget.id);
+      }
+      return acc;
+    },
+    {} as Record<string, string[]>
+  );
+};
+
+/**
+ * Compute the 10 most recent expenses across all budgets.
+ *
+ * @param state - The budget store state snapshot.
+ * @returns A list of recent expenses sorted by date descending.
+ */
+export const selectRecentExpensesFrom = (state: BudgetState): Expense[] => {
+  return Object.values(state.expenses)
+    .flat()
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 10);
+};

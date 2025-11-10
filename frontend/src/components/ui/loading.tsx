@@ -1,5 +1,5 @@
 /**
- * Loading components index
+ * @fileoverview Loading components index
  * Exports all loading-related components for easy importing
  */
 
@@ -34,7 +34,7 @@ export {
   ListItemSkeleton,
   TableSkeleton,
 } from "./loading-skeletons";
-export { LoadingSpinner, spinnerVariants } from "./loading-spinner";
+export { LoadingSpinner, SpinnerVariants } from "./loading-spinner";
 // Loading states
 export {
   LoadingButton,
@@ -43,7 +43,7 @@ export {
   PageLoading,
 } from "./loading-states";
 // Base components
-export { Skeleton, skeletonVariants } from "./skeleton";
+export { Skeleton, SkeletonVariants } from "./skeleton";
 // Travel-specific skeletons
 export {
   ChatMessageSkeleton,

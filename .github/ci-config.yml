@@ -6,21 +6,23 @@
 versions:
   # Language versions
   python: "3.13"
-  python-minor: "3.13.0"
-  node: "20"
-  node-full: "20.x"
+  python-minor: "3.13.9"
+  node: "24"
+  node-full: "24.x"
   
   # Tool versions
-  uv: "0.5.20"
-  ruff: "0.8.5"
-  mypy: "1.14.1"
-  pnpm: "9"
-  biome: "1.9.4"
-  playwright: "1.49.1"
+  uv: "0.9.7"
+  ruff: "0.14.3"
+  mypy: "1.18.2"
+  pnpm: "10.20.0"
+  biome: "2.3.2"
+  playwright: "1.56.1"
+  vitest: "4.0.6"
+  typescript: "5.9.3"
   
   # Docker versions
-  docker-buildx: "0.19.4"
-  docker-compose: "2.31.0"
+  docker-buildx: "0.29.1"
+  docker-compose: "2.40.3"
 
 # Coverage thresholds
 coverage:
@@ -146,8 +148,8 @@ matrix:
     
   # Node versions for compatibility testing
   node_versions:
-    default: ["20"]
-    full: ["18", "20", "22"]
+    default: ["24"]
+    full: ["20", "22", "24"]
 
 # Workflow concurrency settings
 concurrency:
@@ -233,18 +235,22 @@ release:
   changelog:
     enabled: true
     categories:
-      - title: "🚀 Features"
-        labels: ["feature", "enhancement"]
-      - title: "🐛 Bug Fixes"
+      - title: "Added"
+        labels: ["feat", "enhancement"]
+      - title: "Changed"
+        labels: ["refactor", "perf", "style", "test", "revert"]
+      - title: "Fixed"
         labels: ["bug", "fix"]
-      - title: "📦 Dependencies"
-        labels: ["dependencies"]
-      - title: "🔒 Security"
+      - title: "Removed"
+        labels: []
+      - title: "Security"
         labels: ["security"]
-      - title: "📝 Documentation"
-        labels: ["documentation"]
-      - title: "🧹 Maintenance"
-        labels: ["chore", "maintenance"]
+      - title: "Breaking Changes"
+        labels: []
+      - title: "Documentation"
+        labels: ["docs"]
+      - title: "Maintenance"
+        labels: ["chore", "build", "ci"]
 
 # Timeout settings (minutes)
 timeouts:

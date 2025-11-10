@@ -15,14 +15,14 @@ import { z } from "zod";
  * Defines the supported AI agent types in the TripSage platform, matching
  * backend agent classifications for consistent configuration management.
  */
-export const AgentTypeEnum = z.enum([
-  "budget_agent",
-  "destination_research_agent",
-  "itinerary_agent",
+export const AGENT_TYPE_ENUM = z.enum([
+  "budgetAgent",
+  "destinationResearchAgent",
+  "itineraryAgent",
 ] as const);
 
-/** TypeScript type for agent types inferred from AgentTypeEnum schema. */
-export type AgentType = z.infer<typeof AgentTypeEnum>;
+/** TypeScript type for agent types inferred from AGENT_TYPE_ENUM schema. */
+export type AgentType = z.infer<typeof AGENT_TYPE_ENUM>;
 
 /**
  * Zod schema for configuration scope enumeration.
@@ -31,15 +31,15 @@ export type AgentType = z.infer<typeof AgentTypeEnum>;
  * global defaults, environment overrides, agent-specific settings, and
  * user-level customizations.
  */
-export const ConfigurationScopeEnum = z.enum([
+export const CONFIGURATION_SCOPE_ENUM = z.enum([
   "global",
   "environment",
-  "agent_specific",
-  "user_override",
+  "agentSpecific",
+  "userOverride",
 ] as const);
 
-/** TypeScript type for configuration scopes inferred from ConfigurationScopeEnum schema. */
-export type ConfigurationScope = z.infer<typeof ConfigurationScopeEnum>;
+/** TypeScript type for configuration scopes inferred from CONFIGURATION_SCOPE_ENUM schema. */
+export type ConfigurationScope = z.infer<typeof CONFIGURATION_SCOPE_ENUM>;
 
 /**
  * Zod schema for supported AI model names.
@@ -47,7 +47,7 @@ export type ConfigurationScope = z.infer<typeof ConfigurationScopeEnum>;
  * Validates model names against the list of supported AI models including
  * OpenAI GPT series and Anthropic Claude models for configuration validation.
  */
-export const ModelNameSchema = z.enum([
+export const MODEL_NAME_SCHEMA = z.enum([
   "gpt-4",
   "gpt-4-turbo",
   "gpt-4o",
@@ -59,8 +59,8 @@ export const ModelNameSchema = z.enum([
   "claude-4.5-haiku",
 ] as const);
 
-/** TypeScript type for model names inferred from ModelNameSchema. */
-export type ModelName = z.infer<typeof ModelNameSchema>;
+/** TypeScript type for model names inferred from MODEL_NAME_SCHEMA. */
+export type ModelName = z.infer<typeof MODEL_NAME_SCHEMA>;
 
 /**
  * Zod schema for version ID validation.
@@ -68,12 +68,12 @@ export type ModelName = z.infer<typeof ModelNameSchema>;
  * Validates version identifiers following the format v{timestamp}_{hash}
  * for consistent versioning across configuration changes and rollbacks.
  */
-export const VersionIdSchema = z
+export const VERSION_ID_SCHEMA = z
   .string()
   .regex(/^v\d+_[a-f0-9]{8}$/, "Version ID must match format: v{timestamp}_{hash}");
 
-/** TypeScript type for version IDs inferred from VersionIdSchema. */
-export type VersionId = z.infer<typeof VersionIdSchema>;
+/** TypeScript type for version IDs inferred from VERSION_ID_SCHEMA. */
+export type VersionId = z.infer<typeof VERSION_ID_SCHEMA>;
 
 /**
  * Zod schema for agent configuration request validation.
@@ -83,8 +83,23 @@ export type VersionId = z.infer<typeof VersionIdSchema>;
  * temperature, token limits, model selection, and timeout settings with
  * intelligent validation based on selected AI models.
  */
-export const AgentConfigRequestSchema = z
+export const AGENT_CONFIG_REQUEST_SCHEMA = z
   .object({
+    description: z
+      .string()
+      .max(500, "Description must be at most 500 characters")
+      .trim()
+      .optional()
+      .nullable(),
+
+    maxTokens: z
+      .number()
+      .int("Max tokens must be an integer")
+      .min(1, "Max tokens must be at least 1")
+      .max(8000, "Max tokens must be at most 8000")
+      .optional(),
+
+    model: MODEL_NAME_SCHEMA.optional(),
     temperature: z
       .number()
       .min(0.0, "Temperature must be at least 0.0")
@@ -92,35 +107,19 @@ export const AgentConfigRequestSchema = z
       .multipleOf(0.01, "Temperature must have at most 2 decimal places")
       .optional(),
 
-    max_tokens: z
-      .number()
-      .int("Max tokens must be an integer")
-      .min(1, "Max tokens must be at least 1")
-      .max(8000, "Max tokens must be at most 8000")
-      .optional(),
-
-    top_p: z
-      .number()
-      .min(0.0, "Top-p must be at least 0.0")
-      .max(1.0, "Top-p must be at most 1.0")
-      .multipleOf(0.01, "Top-p must have at most 2 decimal places")
-      .optional(),
-
-    timeout_seconds: z
+    timeoutSeconds: z
       .number()
       .int("Timeout must be an integer")
       .min(5, "Timeout must be at least 5 seconds")
       .max(300, "Timeout must be at most 300 seconds")
       .optional(),
 
-    model: ModelNameSchema.optional(),
-
-    description: z
-      .string()
-      .max(500, "Description must be at most 500 characters")
-      .trim()
-      .optional()
-      .nullable(),
+    topP: z
+      .number()
+      .min(0.0, "Top-p must be at least 0.0")
+      .max(1.0, "Top-p must be at most 1.0")
+      .multipleOf(0.01, "Top-p must have at most 2 decimal places")
+      .optional(),
   })
   .refine(
     (data) => {
@@ -137,19 +136,19 @@ export const AgentConfigRequestSchema = z
         }
       }
 
-      if (data.model && data.max_tokens !== undefined) {
+      if (data.model && data.maxTokens !== undefined) {
         // Model-specific token limits
         const modelLimits: Record<string, number> = {
+          "claude-3-haiku": 4096,
+          "claude-3-sonnet": 8192,
           "gpt-3.5-turbo": 4096,
           "gpt-4": 8192,
           "gpt-4-turbo": 8192,
           "gpt-4o": 8192,
-          "claude-3-haiku": 4096,
-          "claude-3-sonnet": 8192,
         };
 
         const maxLimit = modelLimits[data.model] || 8000;
-        if (data.max_tokens > maxLimit) {
+        if (data.maxTokens > maxLimit) {
           return false;
         }
       }
@@ -162,8 +161,8 @@ export const AgentConfigRequestSchema = z
     }
   );
 
-/** TypeScript type for agent configuration requests inferred from AgentConfigRequestSchema. */
-export type AgentConfigRequest = z.infer<typeof AgentConfigRequestSchema>;
+/** TypeScript type for agent configuration requests inferred from AGENT_CONFIG_REQUEST_SCHEMA. */
+export type AgentConfigRequest = z.infer<typeof AGENT_CONFIG_REQUEST_SCHEMA>;
 
 /**
  * Zod schema for agent configuration response validation.
@@ -172,29 +171,29 @@ export type AgentConfigRequest = z.infer<typeof AgentConfigRequestSchema>;
  * computed fields like cost estimates, performance metrics, and metadata.
  * Ensures all required fields are present and properly typed.
  */
-export const AgentConfigResponseSchema = z.object({
-  agent_type: AgentTypeEnum,
-  temperature: z.number().min(0.0).max(2.0),
-  max_tokens: z.number().int().min(1).max(8000),
-  top_p: z.number().min(0.0).max(1.0),
-  timeout_seconds: z.number().int().min(5).max(300),
-  model: ModelNameSchema,
-  scope: ConfigurationScopeEnum,
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
-  updated_by: z.string().nullable().optional(),
+export const AGENT_CONFIG_RESPONSE_SCHEMA = z.object({
+  agentType: AGENT_TYPE_ENUM,
+  createdAt: z.string().datetime(),
+  creativityLevel: z.string().optional(),
   description: z.string().max(500).nullable().optional(),
-  is_active: z.boolean().default(true),
 
   // Computed fields from backend
-  estimated_cost_per_1k_tokens: z.string().optional(), // Decimal as string
-  creativity_level: z.string().optional(),
-  response_size_category: z.string().optional(),
-  performance_tier: z.string().optional(),
+  estimatedCostPer1kTokens: z.string().optional(), // Decimal as string
+  isActive: z.boolean().default(true),
+  maxTokens: z.number().int().min(1).max(8000),
+  model: MODEL_NAME_SCHEMA,
+  performanceTier: z.string().optional(),
+  responseSizeCategory: z.string().optional(),
+  scope: CONFIGURATION_SCOPE_ENUM,
+  temperature: z.number().min(0.0).max(2.0),
+  timeoutSeconds: z.number().int().min(5).max(300),
+  topP: z.number().min(0.0).max(1.0),
+  updatedAt: z.string().datetime(),
+  updatedBy: z.string().nullable().optional(),
 });
 
-/** TypeScript type for agent configuration responses inferred from AgentConfigResponseSchema. */
-export type AgentConfigResponse = z.infer<typeof AgentConfigResponseSchema>;
+/** TypeScript type for agent configuration responses inferred from AGENT_CONFIG_RESPONSE_SCHEMA. */
+export type AgentConfigResponse = z.infer<typeof AGENT_CONFIG_RESPONSE_SCHEMA>;
 
 /**
  * Zod schema for configuration version validation.
@@ -203,23 +202,22 @@ export type AgentConfigResponse = z.infer<typeof AgentConfigResponseSchema>;
  * functionality. Tracks changes over time with metadata about who created
  * versions and when they were created.
  */
-export const ConfigurationVersionSchema = z.object({
-  version_id: VersionIdSchema,
-  agent_type: AgentTypeEnum,
-  configuration: z.record(z.string(), z.any()),
-  scope: ConfigurationScopeEnum,
-  created_at: z.string().datetime(),
-  created_by: z.string(),
-  description: z.string().max(500).nullable().optional(),
-  is_current: z.boolean().default(false),
-
+export const CONFIGURATION_VERSION_SCHEMA = z.object({
   // Computed fields
-  age_in_days: z.number().int().min(0).optional(),
-  is_recent: z.boolean().optional(),
+  ageInDays: z.number().int().min(0).optional(),
+  agentType: AGENT_TYPE_ENUM,
+  configuration: z.record(z.string(), z.any()),
+  createdAt: z.string().datetime(),
+  createdBy: z.string(),
+  description: z.string().max(500).nullable().optional(),
+  isCurrent: z.boolean().default(false),
+  isRecent: z.boolean().optional(),
+  scope: CONFIGURATION_SCOPE_ENUM,
+  versionId: VERSION_ID_SCHEMA,
 });
 
-/** TypeScript type for configuration versions inferred from ConfigurationVersionSchema. */
-export type ConfigurationVersion = z.infer<typeof ConfigurationVersionSchema>;
+/** TypeScript type for configuration versions inferred from CONFIGURATION_VERSION_SCHEMA. */
+export type ConfigurationVersion = z.infer<typeof CONFIGURATION_VERSION_SCHEMA>;
 
 /**
  * Zod schema for performance metrics validation.
@@ -228,23 +226,23 @@ export type ConfigurationVersion = z.infer<typeof ConfigurationVersionSchema>;
  * success rates, token usage, and cost estimates. Used for monitoring agent
  * performance and optimizing configurations.
  */
-export const PerformanceMetricsSchema = z.object({
-  agent_type: AgentTypeEnum,
-  average_response_time: z.number().min(0),
-  success_rate: z.number().min(0).max(1),
-  error_rate: z.number().min(0).max(1),
-  token_usage: z.record(z.string(), z.number().int()),
-  cost_estimate: z.string(), // Decimal as string
-  measured_at: z.string().datetime(),
-  sample_size: z.number().int().min(1),
+export const PERFORMANCE_METRICS_SCHEMA = z.object({
+  agentType: AGENT_TYPE_ENUM,
+  averageResponseTime: z.number().min(0),
+  costEstimate: z.string(), // Decimal as string
+  errorRate: z.number().min(0).max(1),
+  measuredAt: z.string().datetime(),
 
   // Computed fields
-  performance_grade: z.string().optional(),
-  tokens_per_second: z.number().min(0).optional(),
+  performanceGrade: z.string().optional(),
+  sampleSize: z.number().int().min(1),
+  successRate: z.number().min(0).max(1),
+  tokensPerSecond: z.number().min(0).optional(),
+  tokenUsage: z.record(z.string(), z.number().int()),
 });
 
-/** TypeScript type for performance metrics inferred from PerformanceMetricsSchema. */
-export type PerformanceMetrics = z.infer<typeof PerformanceMetricsSchema>;
+/** TypeScript type for performance metrics inferred from PERFORMANCE_METRICS_SCHEMA. */
+export type PerformanceMetrics = z.infer<typeof PERFORMANCE_METRICS_SCHEMA>;
 
 /**
  * Zod schema for configuration validation error details.
@@ -252,18 +250,18 @@ export type PerformanceMetrics = z.infer<typeof PerformanceMetricsSchema>;
  * Defines the structure for individual validation errors including field names,
  * error messages, current and suggested values, and severity levels.
  */
-export const ConfigurationValidationErrorSchema = z.object({
-  field: z.string(),
+export const CONFIGURATION_VALIDATION_ERROR_SCHEMA = z.object({
+  currentValue: z.union([z.string(), z.number(), z.boolean(), z.null()]),
   error: z.string(),
-  current_value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
-  suggested_value: z.union([z.string(), z.number(), z.boolean(), z.null()]).optional(),
+  errorCode: z.string().optional(),
+  field: z.string(),
   severity: z.enum(["error", "warning", "info"]).default("error"),
-  error_code: z.string().optional(),
+  suggestedValue: z.union([z.string(), z.number(), z.boolean(), z.null()]).optional(),
 });
 
 /** TypeScript type for configuration validation errors. */
 export type ConfigurationValidationError = z.infer<
-  typeof ConfigurationValidationErrorSchema
+  typeof CONFIGURATION_VALIDATION_ERROR_SCHEMA
 >;
 
 /**
@@ -272,17 +270,17 @@ export type ConfigurationValidationError = z.infer<
  * Validates complete validation responses including validity status, error lists,
  * warnings, suggestions, and summary information for comprehensive validation feedback.
  */
-export const ConfigurationValidationResponseSchema = z.object({
-  is_valid: z.boolean(),
-  errors: z.array(ConfigurationValidationErrorSchema).default([]),
-  warnings: z.array(ConfigurationValidationErrorSchema).default([]),
+export const CONFIGURATION_VALIDATION_RESPONSE_SCHEMA = z.object({
+  errors: z.array(CONFIGURATION_VALIDATION_ERROR_SCHEMA).default([]),
+  isValid: z.boolean(),
   suggestions: z.array(z.string()).default([]),
-  validation_summary: z.string().optional(),
+  validationSummary: z.string().optional(),
+  warnings: z.array(CONFIGURATION_VALIDATION_ERROR_SCHEMA).default([]),
 });
 
 /** TypeScript type for configuration validation responses. */
 export type ConfigurationValidationResponse = z.infer<
-  typeof ConfigurationValidationResponseSchema
+  typeof CONFIGURATION_VALIDATION_RESPONSE_SCHEMA
 >;
 
 // Deprecated: legacy WebSocket config messages removed with Realtime migration
@@ -293,32 +291,32 @@ export type ConfigurationValidationResponse = z.infer<
  * Validates form data from configuration management UI with agent-specific
  * recommendations and warnings for optimal parameter settings.
  */
-export const ConfigurationFormSchema = z
+export const CONFIGURATION_FORM_SCHEMA = z
   .object({
-    agent_type: AgentTypeEnum,
-    temperature: z.number().optional(),
-    max_tokens: z.number().optional(),
-    top_p: z.number().optional(),
-    timeout_seconds: z.number().optional(),
-    model: z.string().optional(),
+    agentType: AGENT_TYPE_ENUM,
     description: z.string().optional().nullable(),
+    maxTokens: z.number().optional(),
+    model: z.string().optional(),
+    temperature: z.number().optional(),
+    timeoutSeconds: z.number().optional(),
+    topP: z.number().optional(),
   })
-  .refine((data: any) => {
+  .refine((data: z.infer<typeof CONFIGURATION_FORM_SCHEMA>) => {
     // Agent-specific validation rules
     const recommendedTemperatures: Record<AgentType, number> = {
-      budget_agent: 0.2,
-      destination_research_agent: 0.5,
-      itinerary_agent: 0.4,
+      budgetAgent: 0.2,
+      destinationResearchAgent: 0.5,
+      itineraryAgent: 0.4,
     };
 
-    if (data.temperature !== undefined && data.agent_type) {
-      const recommended = recommendedTemperatures[data.agent_type as AgentType];
+    if (data.temperature !== undefined && data.agentType) {
+      const recommended = recommendedTemperatures[data.agentType];
       const diff = Math.abs(data.temperature - recommended);
 
       // Warning for temperatures too far from recommended
       if (diff > 0.3) {
         return {
-          warning: `Temperature ${data.temperature} may not be optimal for ${data.agent_type}. Recommended: ${recommended}`,
+          warning: `Temperature ${data.temperature} may not be optimal for ${data.agentType}. Recommended: ${recommended}`,
         };
       }
     }
@@ -326,8 +324,8 @@ export const ConfigurationFormSchema = z
     return true;
   });
 
-/** TypeScript type for configuration forms inferred from ConfigurationFormSchema. */
-export type ConfigurationForm = z.infer<typeof ConfigurationFormSchema>;
+/** TypeScript type for configuration forms inferred from CONFIGURATION_FORM_SCHEMA. */
+export type ConfigurationForm = z.infer<typeof CONFIGURATION_FORM_SCHEMA>;
 
 /**
  * Generic Zod schema factory for API response validation.
@@ -339,27 +337,27 @@ export type ConfigurationForm = z.infer<typeof ConfigurationFormSchema>;
  * @param dataSchema - The schema to validate the response data against
  * @returns A Zod schema for validating API responses
  */
-export const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
+export const API_RESPONSE_SCHEMA = <T extends z.ZodType>(dataSchema: T) =>
   z.object({
     data: dataSchema,
-    success: z.boolean(),
-    message: z.string().optional(),
     errors: z.array(z.string()).optional(),
+    message: z.string().optional(),
+    success: z.boolean(),
   });
 
 /** Zod schema for agent configuration API responses. */
-export const AgentConfigApiResponseSchema = ApiResponseSchema(
-  AgentConfigResponseSchema
+export const AGENT_CONFIG_API_RESPONSE_SCHEMA = API_RESPONSE_SCHEMA(
+  AGENT_CONFIG_RESPONSE_SCHEMA
 );
 
 /** Zod schema for configuration list API responses. */
-export const ConfigurationListApiResponseSchema = ApiResponseSchema(
-  z.record(AgentTypeEnum, AgentConfigResponseSchema)
+export const CONFIGURATION_LIST_API_RESPONSE_SCHEMA = API_RESPONSE_SCHEMA(
+  z.record(AGENT_TYPE_ENUM, AGENT_CONFIG_RESPONSE_SCHEMA)
 );
 
 /** Zod schema for version history API responses. */
-export const VersionHistoryApiResponseSchema = ApiResponseSchema(
-  z.array(ConfigurationVersionSchema)
+export const VERSION_HISTORY_API_RESPONSE_SCHEMA = API_RESPONSE_SCHEMA(
+  z.array(CONFIGURATION_VERSION_SCHEMA)
 );
 
 /**
@@ -367,8 +365,8 @@ export const VersionHistoryApiResponseSchema = ApiResponseSchema(
  *
  * Simple schema for validating agent type selection in UI forms and dropdowns.
  */
-export const AgentSelectSchema = z.object({
-  agent_type: AgentTypeEnum,
+export const AGENT_SELECT_SCHEMA = z.object({
+  agentType: AGENT_TYPE_ENUM,
 });
 
 /**
@@ -376,7 +374,7 @@ export const AgentSelectSchema = z.object({
  *
  * Validates environment selection for configuration scoping and deployment targeting.
  */
-export const EnvironmentSelectSchema = z.object({
+export const ENVIRONMENT_SELECT_SCHEMA = z.object({
   environment: z.enum(["development", "production", "staging", "test"]),
 });
 
@@ -386,28 +384,28 @@ export const EnvironmentSelectSchema = z.object({
  * Validates complete configuration exports including agent configurations,
  * feature flags, global defaults, and export metadata for backup and migration purposes.
  */
-export const ConfigurationExportSchema = z.object({
-  export_id: z.string(),
+export const CONFIGURATION_EXPORT_SCHEMA = z.object({
+  agentConfigurations: z.record(AGENT_TYPE_ENUM, AGENT_CONFIG_RESPONSE_SCHEMA),
   environment: z.string(),
-  agent_configurations: z.record(AgentTypeEnum, AgentConfigResponseSchema),
-  feature_flags: z.record(z.string(), z.boolean()),
-  global_defaults: z.record(z.string(), z.any()),
-  exported_at: z.string().datetime(),
-  exported_by: z.string(),
+  exportedAt: z.string().datetime(),
+  exportedBy: z.string(),
+  exportId: z.string(),
+  exportSizeEstimateKb: z.number().min(0).optional(),
+  featureFlags: z.record(z.string(), z.boolean()),
   format: z.enum(["json", "yaml"]).default("json"),
+  globalDefaults: z.record(z.string(), z.any()),
 
   // Computed fields
-  total_configurations: z.number().int().min(0).optional(),
-  export_size_estimate_kb: z.number().min(0).optional(),
+  totalConfigurations: z.number().int().min(0).optional(),
 });
 
-/** TypeScript type for configuration exports inferred from ConfigurationExportSchema. */
-export type ConfigurationExport = z.infer<typeof ConfigurationExportSchema>;
+/** TypeScript type for configuration exports inferred from CONFIGURATION_EXPORT_SCHEMA. */
+export type ConfigurationExport = z.infer<typeof CONFIGURATION_EXPORT_SCHEMA>;
 
 /**
  * Validates agent configuration request data.
  *
- * Parses and validates unknown data against the AgentConfigRequestSchema,
+ * Parses and validates unknown data against the AGENT_CONFIG_REQUEST_SCHEMA,
  * throwing an error if validation fails.
  *
  * @param data - The data to validate
@@ -415,13 +413,13 @@ export type ConfigurationExport = z.infer<typeof ConfigurationExportSchema>;
  * @throws {z.ZodError} If validation fails
  */
 export const validateAgentConfig = (data: unknown): AgentConfigRequest => {
-  return AgentConfigRequestSchema.parse(data);
+  return AGENT_CONFIG_REQUEST_SCHEMA.parse(data);
 };
 
 /**
  * Validates agent configuration response data.
  *
- * Parses and validates unknown data against the AgentConfigResponseSchema,
+ * Parses and validates unknown data against the AGENT_CONFIG_RESPONSE_SCHEMA,
  * throwing an error if validation fails.
  *
  * @param data - The data to validate
@@ -429,7 +427,7 @@ export const validateAgentConfig = (data: unknown): AgentConfigRequest => {
  * @throws {z.ZodError} If validation fails
  */
 export const validateConfigurationResponse = (data: unknown): AgentConfigResponse => {
-  return AgentConfigResponseSchema.parse(data);
+  return AGENT_CONFIG_RESPONSE_SCHEMA.parse(data);
 };
 
 /**
@@ -495,30 +493,30 @@ export const getFormErrors = (error: z.ZodError): Record<string, string> => {
  */
 export const getDefaultConfigForAgent = (agentType: AgentType): AgentConfigRequest => {
   const defaults: Record<AgentType, AgentConfigRequest> = {
-    budget_agent: {
-      temperature: 0.2,
-      max_tokens: 1000,
-      top_p: 0.9,
-      timeout_seconds: 30,
-      model: "gpt-4",
+    budgetAgent: {
       description: "Budget optimization agent - low creativity, high accuracy",
-    },
-    destination_research_agent: {
-      temperature: 0.5,
-      max_tokens: 1000,
-      top_p: 0.9,
-      timeout_seconds: 30,
+      maxTokens: 1000,
       model: "gpt-4",
+      temperature: 0.2,
+      timeoutSeconds: 30,
+      topP: 0.9,
+    },
+    destinationResearchAgent: {
       description: "Destination research agent - moderate creativity for research",
-    },
-    itinerary_agent: {
-      temperature: 0.4,
-      max_tokens: 1000,
-      top_p: 0.9,
-      timeout_seconds: 30,
+      maxTokens: 1000,
       model: "gpt-4",
+      temperature: 0.5,
+      timeoutSeconds: 30,
+      topP: 0.9,
+    },
+    itineraryAgent: {
       description:
         "Itinerary planning agent - structured creativity for logical planning",
+      maxTokens: 1000,
+      model: "gpt-4",
+      temperature: 0.4,
+      timeoutSeconds: 30,
+      topP: 0.9,
     },
   };
 

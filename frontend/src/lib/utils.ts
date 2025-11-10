@@ -25,8 +25,8 @@ export function cn(...inputs: ClassValue[]) {
 export function formatDate(input: string | number | Date): string {
   const date = new Date(input);
   return date.toLocaleDateString("en-US", {
-    month: "long",
     day: "numeric",
+    month: "long",
     year: "numeric",
   });
 }
@@ -70,8 +70,8 @@ export function truncate(str: string, length: number): string {
  */
 export function formatCurrency(amount: number, currency = "USD"): string {
   return new Intl.NumberFormat("en-US", {
-    style: "currency",
     currency,
+    style: "currency",
   }).format(amount);
 }
 
@@ -83,7 +83,7 @@ export function formatCurrency(amount: number, currency = "USD"): string {
  * @param delay Delay in milliseconds.
  * @returns Debounced function.
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {
@@ -103,7 +103,7 @@ export function debounce<T extends (...args: any[]) => any>(
  * @param delay Minimum interval in milliseconds between calls.
  * @returns Throttled function.
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {
@@ -119,4 +119,28 @@ export function throttle<T extends (...args: any[]) => any>(
     lastCall = now;
     return fn(...args);
   };
+}
+
+/**
+ * Execute a promise without awaiting while observing rejections.
+ *
+ * @param promise Promise to execute in fire-and-forget mode.
+ * @param onError Optional handler when the promise rejects.
+ */
+export function fireAndForget<T>(
+  promise: Promise<T>,
+  onError?: (error: unknown) => void
+): void {
+  const handleRejection = (error: unknown) => {
+    if (onError) {
+      onError(error);
+      return;
+    }
+
+    if (process.env.NODE_ENV !== "test") {
+      console.warn("[fireAndForget] swallowed rejection", error);
+    }
+  };
+
+  Promise.resolve(promise).catch(handleRejection);
 }

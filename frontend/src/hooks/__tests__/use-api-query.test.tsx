@@ -1,7 +1,3 @@
-/**
- * @fileoverview API query/mutation hook tests with Zod validation and react-query.
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,31 +9,31 @@ import { createControlledQuery } from "@/test/query-mocks";
 import { useApiMutation, useApiQuery } from "../use-api-query";
 
 // Mock the authenticated API hook
-const mockMakeAuthenticatedRequest = vi.fn();
+const MOCK_MAKE_AUTHENTICATED_REQUEST = vi.fn();
 vi.mock("../use-authenticated-api", () => ({
   useAuthenticatedApi: () => ({
-    makeAuthenticatedRequest: mockMakeAuthenticatedRequest,
+    makeAuthenticatedRequest: MOCK_MAKE_AUTHENTICATED_REQUEST,
   }),
 }));
 
 // Zod schemas for testing API responses
-const TestUserSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  email: z.string().email(),
+const TEST_USER_SCHEMA = z.object({
   createdAt: z.string(),
-});
-
-const TestTripSchema = z.object({
+  email: z.string().email(),
   id: z.string(),
   name: z.string(),
-  destination: z.string(),
-  startDate: z.string(),
-  endDate: z.string(),
 });
 
-type TestUser = z.infer<typeof TestUserSchema>;
-type TestTrip = z.infer<typeof TestTripSchema>;
+const TEST_TRIP_SCHEMA = z.object({
+  destination: z.string(),
+  endDate: z.string(),
+  id: z.string(),
+  name: z.string(),
+  startDate: z.string(),
+});
+
+type TestUser = z.infer<typeof TEST_USER_SCHEMA>;
+type TestTrip = z.infer<typeof TEST_TRIP_SCHEMA>;
 
 describe("useApiQuery with Zod validation", () => {
   let queryClient: QueryClient;
@@ -45,8 +41,8 @@ describe("useApiQuery with Zod validation", () => {
   beforeEach(() => {
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false },
         mutations: { retry: false },
+        queries: { retry: false },
       },
     });
     vi.clearAllMocks();
@@ -59,16 +55,16 @@ describe("useApiQuery with Zod validation", () => {
   describe("Query States with Zod Validation", () => {
     it("should handle loading state correctly with validated response", async () => {
       const mockUser: TestUser = {
+        createdAt: "2025-01-01T00:00:00Z",
+        email: "john@example.com",
         id: "user-1",
         name: "John Doe",
-        email: "john@example.com",
-        createdAt: "2025-01-01T00:00:00Z",
       };
 
       // Validate mock data with Zod before returning
-      const validatedUser = TestUserSchema.parse(mockUser);
+      const validatedUser = TEST_USER_SCHEMA.parse(mockUser);
 
-      mockMakeAuthenticatedRequest.mockImplementation(
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve(validatedUser), 100))
       );
 
@@ -94,17 +90,17 @@ describe("useApiQuery with Zod validation", () => {
       expect(result.current.isPending).toBe(false);
 
       // Validate the returned data matches our schema
-      expect(() => TestUserSchema.parse(result.current.data)).not.toThrow();
+      expect(() => TEST_USER_SCHEMA.parse(result.current.data)).not.toThrow();
     });
 
     it("should handle error state with proper error types and validation", async () => {
       const apiError = new ApiError({
+        code: "NOT_FOUND",
         message: "Not found",
         status: 404,
-        code: "NOT_FOUND",
       });
 
-      mockMakeAuthenticatedRequest.mockRejectedValue(apiError);
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValue(apiError);
 
       const { result } = renderHook(() => useApiQuery<TestUser>("/api/nonexistent"), {
         wrapper,
@@ -122,13 +118,13 @@ describe("useApiQuery with Zod validation", () => {
     it("should handle invalid response data with Zod validation", async () => {
       // Mock invalid response data that fails Zod validation
       const invalidUserData = {
+        email: "invalid-email", // Invalid email format
         id: "", // Invalid - empty ID
         name: "John",
-        email: "invalid-email", // Invalid email format
         // Missing createdAt field
       };
 
-      mockMakeAuthenticatedRequest.mockResolvedValue(invalidUserData);
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValue(invalidUserData);
 
       const { result } = renderHook(() => useApiQuery<TestUser>("/api/user/invalid"), {
         wrapper,
@@ -139,7 +135,7 @@ describe("useApiQuery with Zod validation", () => {
       });
 
       // The query succeeds but we should validate the data separately
-      expect(() => TestUserSchema.parse(result.current.data)).toThrow();
+      expect(() => TEST_USER_SCHEMA.parse(result.current.data)).toThrow();
     });
 
     it("should use custom query key when provided", () => {
@@ -160,7 +156,7 @@ describe("useApiQuery with Zod validation", () => {
 
     it("should support retry configuration", async () => {
       let callCount = 0;
-      mockMakeAuthenticatedRequest.mockImplementation(() => {
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockImplementation(() => {
         callCount++;
         if (callCount < 3) {
           throw new Error("Server error");
@@ -188,7 +184,7 @@ describe("useApiQuery with Zod validation", () => {
 
   describe("Cache Management", () => {
     it("should use stale time configuration", async () => {
-      mockMakeAuthenticatedRequest.mockResolvedValue({ data: "cached" });
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValue({ data: "cached" });
 
       const { result, rerender } = renderHook(
         () =>
@@ -203,17 +199,17 @@ describe("useApiQuery with Zod validation", () => {
       });
 
       // Reset mock to track subsequent calls
-      mockMakeAuthenticatedRequest.mockClear();
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockClear();
 
       // Rerender within stale time - should not make new request
       rerender();
 
-      expect(mockMakeAuthenticatedRequest).not.toHaveBeenCalled();
+      expect(MOCK_MAKE_AUTHENTICATED_REQUEST).not.toHaveBeenCalled();
       expect(result.current.data).toEqual({ data: "cached" });
     });
 
     it("should invalidate queries correctly", async () => {
-      mockMakeAuthenticatedRequest.mockResolvedValue({ data: "initial" });
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValue({ data: "initial" });
 
       const queryKey = queryKeys.trips.all();
 
@@ -227,7 +223,7 @@ describe("useApiQuery with Zod validation", () => {
       });
 
       // Update mock for subsequent refetches
-      mockMakeAuthenticatedRequest.mockResolvedValue({ data: "updated" });
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValue({ data: "updated" });
 
       // Invalidate then force a refetch for determinism
       await queryClient.invalidateQueries({ queryKey });
@@ -241,12 +237,12 @@ describe("useApiQuery with Zod validation", () => {
 });
 
 describe("API client integration", () => {
-  it("should validate request and response data with the API client", async () => {
+  it("should validate request and response data with the API client", () => {
     const validTrip = {
-      name: "Paris Vacation",
       destination: "Paris, France",
-      startDate: "2025-06-01",
       endDate: "2025-06-07",
+      name: "Paris Vacation",
+      startDate: "2025-06-01",
     };
 
     const expectedResponse: TestTrip = {
@@ -259,22 +255,22 @@ describe("API client integration", () => {
 
     // Mock the underlying fetch
     global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(expectedResponse),
       ok: true,
       status: 200,
-      json: () => Promise.resolve(expectedResponse),
     });
 
     // The API client should validate both request and response
     const TripCreateSchema = z.object({
-      name: z.string().min(1),
       destination: z.string().min(1),
-      startDate: z.string(),
       endDate: z.string(),
+      name: z.string().min(1),
+      startDate: z.string(),
     });
 
     // This should pass validation
     expect(() => TripCreateSchema.parse(validTrip)).not.toThrow();
-    expect(() => TestTripSchema.parse(expectedResponse)).not.toThrow();
+    expect(() => TEST_TRIP_SCHEMA.parse(expectedResponse)).not.toThrow();
   });
 });
 
@@ -284,8 +280,8 @@ describe("useApiMutation with Zod", () => {
   beforeEach(() => {
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false },
         mutations: { retry: false },
+        queries: { retry: false },
       },
     });
     vi.clearAllMocks();
@@ -298,12 +294,12 @@ describe("useApiMutation with Zod", () => {
   describe("Optimistic Updates with Zod Validation", () => {
     it("should perform optimistic updates with validated data and rollback on error", async () => {
       const queryKey = queryKeys.trips.all();
-      const initialTrip: TestTrip = TestTripSchema.parse({
+      const initialTrip: TestTrip = TEST_TRIP_SCHEMA.parse({
+        destination: "Paris",
+        endDate: "2025-06-07",
         id: "trip-1",
         name: "Trip 1",
-        destination: "Paris",
         startDate: "2025-06-01",
-        endDate: "2025-06-07",
       });
       const initialData = [initialTrip];
 
@@ -318,12 +314,12 @@ describe("useApiMutation with Zod", () => {
               updater: (old: unknown, variables: Partial<TestTrip>) => {
                 const trips = old as TestTrip[] | undefined;
                 if (!trips) return [];
-                const newTrip: TestTrip = TestTripSchema.parse({
+                const newTrip: TestTrip = TEST_TRIP_SCHEMA.parse({
+                  destination: variables.destination || "Unknown",
+                  endDate: variables.endDate || "2025-01-02",
                   id: "temp-id",
                   name: variables.name || "New Trip",
-                  destination: variables.destination || "Unknown",
                   startDate: variables.startDate || "2025-01-01",
-                  endDate: variables.endDate || "2025-01-02",
                 });
                 return [...trips, newTrip];
               },
@@ -333,14 +329,14 @@ describe("useApiMutation with Zod", () => {
       );
 
       // Mock API to fail
-      mockMakeAuthenticatedRequest.mockRejectedValue(new Error("Server error"));
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValue(new Error("Server error"));
 
       // Trigger mutation with validated data
       const newTripData = {
-        name: "New Trip",
         destination: "Rome",
-        startDate: "2025-07-01",
         endDate: "2025-07-07",
+        name: "New Trip",
+        startDate: "2025-07-01",
       };
 
       result.current.mutate(newTripData);
@@ -370,7 +366,7 @@ describe("useApiMutation with Zod", () => {
         { wrapper }
       );
 
-      mockMakeAuthenticatedRequest.mockResolvedValue({ id: 2, name: "New Trip" });
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValue({ id: 2, name: "New Trip" });
 
       result.current.mutate({ name: "New Trip" });
 
@@ -393,7 +389,7 @@ describe("useApiMutation with Zod", () => {
         status: 400,
       });
 
-      mockMakeAuthenticatedRequest.mockRejectedValue(clientError);
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValue(clientError);
 
       result.current.mutate({ name: "Test" });
 
@@ -402,7 +398,7 @@ describe("useApiMutation with Zod", () => {
       });
 
       expect(result.current.error).toBeInstanceOf(Error);
-      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledTimes(1); // No retry
+      expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledTimes(1); // No retry
     });
 
     it("should retry server errors", async () => {
@@ -417,7 +413,7 @@ describe("useApiMutation with Zod", () => {
         { wrapper }
       );
 
-      mockMakeAuthenticatedRequest.mockImplementation(() => {
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockImplementation(() => {
         callCount++;
         if (callCount < 3) {
           throw new ApiError({
@@ -446,8 +442,8 @@ describe("Integration Tests", () => {
   beforeEach(() => {
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false },
         mutations: { retry: false },
+        queries: { retry: false },
       },
     });
     vi.clearAllMocks();
@@ -461,7 +457,7 @@ describe("Integration Tests", () => {
     const queryKey = queryKeys.trips.all();
 
     // Initial data
-    mockMakeAuthenticatedRequest.mockResolvedValue([{ id: 1, name: "Trip 1" }]);
+    MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValue([{ id: 1, name: "Trip 1" }]);
 
     const { result: queryResult } = renderHook(
       () => useApiQuery("/api/trips", undefined, { queryKey }),
@@ -484,8 +480,8 @@ describe("Integration Tests", () => {
     expect(queryResult.current.data).toHaveLength(1);
 
     // Update mock for mutation and refetch
-    mockMakeAuthenticatedRequest.mockResolvedValueOnce({ id: 2, name: "Trip 2" });
-    mockMakeAuthenticatedRequest.mockResolvedValueOnce([
+    MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce({ id: 2, name: "Trip 2" });
+    MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce([
       { id: 1, name: "Trip 1" },
       { id: 2, name: "Trip 2" },
     ]);
@@ -520,17 +516,17 @@ describe("Controlled Mock Examples with Zod", () => {
 
     // Create validated test data
     const testUsers: TestUser[] = [
-      TestUserSchema.parse({
+      TEST_USER_SCHEMA.parse({
+        createdAt: "2025-01-01T00:00:00Z",
+        email: "john@example.com",
         id: "user-1",
         name: "John Doe",
-        email: "john@example.com",
-        createdAt: "2025-01-01T00:00:00Z",
       }),
-      TestUserSchema.parse({
+      TEST_USER_SCHEMA.parse({
+        createdAt: "2025-01-02T00:00:00Z",
+        email: "jane@example.com",
         id: "user-2",
         name: "Jane Smith",
-        email: "jane@example.com",
-        createdAt: "2025-01-02T00:00:00Z",
       }),
     ];
 
@@ -542,7 +538,7 @@ describe("Controlled Mock Examples with Zod", () => {
 
     // Validate each user in the response
     query.data?.forEach((user) => {
-      expect(() => TestUserSchema.parse(user)).not.toThrow();
+      expect(() => TEST_USER_SCHEMA.parse(user)).not.toThrow();
     });
 
     // Trigger error
@@ -562,24 +558,24 @@ describe("Controlled Mock Examples with Zod", () => {
   it("should validate response data transformation", () => {
     // Test data transformation with Zod
     const rawApiResponse = {
-      user_id: "123",
-      full_name: "John Doe",
-      email_address: "john@example.com",
       created_timestamp: "2025-01-01T00:00:00Z",
+      email_address: "john@example.com",
+      full_name: "John Doe",
+      user_id: "123",
     };
 
     // Transform API response to match our schema
     const transformedUser: TestUser = {
+      createdAt: rawApiResponse.created_timestamp,
+      email: rawApiResponse.email_address,
       id: rawApiResponse.user_id,
       name: rawApiResponse.full_name,
-      email: rawApiResponse.email_address,
-      createdAt: rawApiResponse.created_timestamp,
     };
 
     // Validate the transformation
-    expect(() => TestUserSchema.parse(transformedUser)).not.toThrow();
+    expect(() => TEST_USER_SCHEMA.parse(transformedUser)).not.toThrow();
 
-    const validatedUser = TestUserSchema.parse(transformedUser);
+    const validatedUser = TEST_USER_SCHEMA.parse(transformedUser);
     expect(validatedUser.id).toBe("123");
     expect(validatedUser.email).toBe("john@example.com");
   });

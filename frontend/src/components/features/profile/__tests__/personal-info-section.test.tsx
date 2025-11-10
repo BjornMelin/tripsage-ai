@@ -1,7 +1,3 @@
-/**
- * @fileoverview Personal info section tests: rendering and validations.
- */
-
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useUserProfileStore } from "@/stores/user-store";
@@ -10,36 +6,36 @@ import { PersonalInfoSection } from "../personal-info-section";
 // Mock the stores and hooks
 vi.mock("@/stores/user-store");
 
-const mockToast = vi.fn();
+const MockToast = vi.fn();
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({
-    toast: mockToast,
+    toast: MockToast,
   }),
 }));
 
-const mockUser = {
-  id: "1",
+const MockUser = {
+  avatarUrl: "https://example.com/avatar.jpg",
+  bio: "Travel enthusiast",
+  displayName: "John Doe",
   email: "test@example.com",
   firstName: "John",
+  id: "1",
+  isEmailVerified: true,
   lastName: "Doe",
-  displayName: "John Doe",
-  bio: "Travel enthusiast",
   location: "New York, USA",
   website: "https://johndoe.com",
-  avatarUrl: "https://example.com/avatar.jpg",
-  isEmailVerified: true,
 };
 
-const mockUpdateUser = vi.fn();
+const MockUpdateUser = vi.fn();
 
 // TODO: Personal info validations, avatar upload, and update flows need final UI and store.
 describe.skip("PersonalInfoSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockToast.mockClear();
-    (useUserProfileStore as any).mockReturnValue({
-      user: mockUser,
-      updateUser: mockUpdateUser,
+    MockToast.mockClear();
+    vi.mocked(useUserProfileStore).mockReturnValue({
+      updateUser: MockUpdateUser,
+      user: MockUser,
     });
   });
 
@@ -55,9 +51,9 @@ describe.skip("PersonalInfoSection", () => {
   });
 
   it("renders avatar with user initials when no avatar URL", () => {
-    (useUserProfileStore as any).mockReturnValue({
-      user: { ...mockUser, avatarUrl: undefined },
-      updateUser: mockUpdateUser,
+    vi.mocked(useUserProfileStore).mockReturnValue({
+      updateUser: MockUpdateUser,
+      user: { ...MockUser, avatarUrl: undefined },
     });
 
     render(<PersonalInfoSection />);
@@ -109,11 +105,11 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockUpdateUser).toHaveBeenCalledWith({
+      expect(MockUpdateUser).toHaveBeenCalledWith({
+        bio: "Travel enthusiast",
+        displayName: "John Doe",
         firstName: "John",
         lastName: "Doe",
-        displayName: "John Doe",
-        bio: "Travel enthusiast",
         location: "New York, USA",
         website: "https://johndoe.com",
       });
@@ -133,9 +129,9 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.change(fileInput, { target: { files: [invalidFile] } });
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: "Invalid file type",
+      expect(MockToast).toHaveBeenCalledWith({
         description: "Please select an image file.",
+        title: "Invalid file type",
         variant: "destructive",
       });
     });
@@ -154,9 +150,9 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.change(fileInput, { target: { files: [largeFile] } });
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: "File too large",
+      expect(MockToast).toHaveBeenCalledWith({
         description: "Please select an image smaller than 5MB.",
+        title: "File too large",
         variant: "destructive",
       });
     });
@@ -176,20 +172,20 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.change(fileInput, { target: { files: [validFile] } });
 
     await waitFor(() => {
-      expect(mockUpdateUser).toHaveBeenCalledWith({
+      expect(MockUpdateUser).toHaveBeenCalledWith({
         avatarUrl: "mocked-url",
       });
     });
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: "Avatar updated",
+      expect(MockToast).toHaveBeenCalledWith({
         description: "Your profile picture has been successfully updated.",
+        title: "Avatar updated",
       });
     });
   });
 
-  it("shows loading state during avatar upload", async () => {
+  it("shows loading state during avatar upload", () => {
     render(<PersonalInfoSection />);
 
     const cameraButton = screen.getByRole("button");
@@ -206,16 +202,16 @@ describe.skip("PersonalInfoSection", () => {
 
   it("generates correct initials for avatar fallback", () => {
     const testCases = [
-      { user: { firstName: "John", lastName: "Doe" }, expected: "JD" },
-      { user: { displayName: "Jane Smith" }, expected: "JS" },
-      { user: { displayName: "Alice" }, expected: "AL" },
-      { user: { email: "test@example.com" }, expected: "TE" },
+      { expected: "JD", user: { firstName: "John", lastName: "Doe" } },
+      { expected: "JS", user: { displayName: "Jane Smith" } },
+      { expected: "AL", user: { displayName: "Alice" } },
+      { expected: "TE", user: { email: "test@example.com" } },
     ];
 
     testCases.forEach(({ user, expected }) => {
-      (useUserProfileStore as any).mockReturnValue({
-        user: { ...mockUser, ...user },
-        updateUser: mockUpdateUser,
+      vi.mocked(useUserProfileStore).mockReturnValue({
+        updateUser: MockUpdateUser,
+        user: { ...MockUser, ...user },
       });
 
       render(<PersonalInfoSection />);
@@ -241,7 +237,7 @@ describe.skip("PersonalInfoSection", () => {
 
   it("handles form submission error", async () => {
     // Mock a rejected promise to simulate error
-    mockUpdateUser.mockRejectedValueOnce(new Error("Network error"));
+    MockUpdateUser.mockRejectedValueOnce(new Error("Network error"));
 
     render(<PersonalInfoSection />);
 
@@ -249,9 +245,9 @@ describe.skip("PersonalInfoSection", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: "Error",
+      expect(MockToast).toHaveBeenCalledWith({
         description: "Failed to update profile. Please try again.",
+        title: "Error",
         variant: "destructive",
       });
     });

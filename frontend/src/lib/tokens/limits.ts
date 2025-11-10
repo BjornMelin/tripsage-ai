@@ -10,15 +10,15 @@ export type ModelLimitsTable = Record<string, number>;
  * Keys are normalized lowercase substrings matched against model names.
  */
 export const MODEL_LIMITS: ModelLimitsTable = {
-  // OpenAI
-  "gpt-5": 200_000,
-  "gpt-5-mini": 200_000,
-  "gpt-4o": 128_000,
-  "gpt-4o-mini": 128_000,
+  "claude-3.5-haiku": 200_000,
 
   // Anthropic
   "claude-3.5-sonnet": 200_000,
-  "claude-3.5-haiku": 200_000,
+  "gpt-4o": 128_000,
+  "gpt-4o-mini": 128_000,
+  // OpenAI
+  "gpt-5": 200_000,
+  "gpt-5-mini": 200_000,
 
   // xAI (conservative default unless provider docs specify higher)
   grok: 128_000,

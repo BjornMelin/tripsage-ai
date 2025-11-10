@@ -1,11 +1,13 @@
-/**
- * @fileoverview Unit tests for the ChatPage component, verifying chat functionality,
- * message rendering, and SSE streaming behavior.
- */
-
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ChatPage from "../../chat/page";
+
+// Mock Streamdown-backed Response to avoid rehype/ESM issues in node test runner
+vi.mock("@/components/ai-elements/response", () => ({
+  Response: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="response">{children}</div>
+  ),
+}));
 
 /**
  * Creates a mock ReadableStream for simulating SSE responses in tests.
@@ -28,11 +30,11 @@ describe("ChatPage", () => {
   const originalFetch = global.fetch;
 
   afterEach(() => {
-    global.fetch = originalFetch as any;
+    global.fetch = originalFetch;
     vi.resetAllMocks();
   });
 
-  it("renders empty state and input controls", async () => {
+  it("renders empty state and input controls", () => {
     render(<ChatPage />);
     expect(
       screen.getByText(/Start a conversation to see messages here/i)

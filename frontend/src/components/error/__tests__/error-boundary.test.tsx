@@ -1,13 +1,8 @@
-/**
- * @fileoverview Unit tests for ErrorBoundary component and withErrorBoundary HOC,
- * covering error catching, fallback rendering, error reporting, recovery mechanisms,
- * and session/user tracking functionality.
- */
-
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MockInstance } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { errorService } from "@/lib/error-service";
 import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils";
-import { ErrorBoundary, withErrorBoundary } from "../error-boundary";
+import { ErrorBoundary, WithErrorBoundary } from "../error-boundary";
 
 // Mock the error service
 vi.mock("@/lib/error-service", () => ({
@@ -17,11 +12,11 @@ vi.mock("@/lib/error-service", () => ({
   },
 }));
 
-// Mock console methods
-const consoleSpy = {
-  error: vi.spyOn(console, "error").mockImplementation(() => {}),
-  group: vi.spyOn(console, "group").mockImplementation(() => {}),
-  groupEnd: vi.spyOn(console, "groupEnd").mockImplementation(() => {}),
+// Console spy refs (setup in beforeEach to ensure fresh spies per test)
+let ConsoleSpy: {
+  error: MockInstance;
+  group: MockInstance;
+  groupEnd: MockInstance;
 };
 
 /**
@@ -47,23 +42,40 @@ const NormalComponent = () => <div>Normal component</div>;
 describe("ErrorBoundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    consoleSpy.error.mockClear();
-    consoleSpy.group.mockClear();
-    consoleSpy.groupEnd.mockClear();
+
+    // Setup fresh console spies for each test
+    ConsoleSpy = {
+      error: vi.spyOn(console, "error").mockImplementation(() => {
+        // Intentionally empty - suppress console errors during test
+      }),
+      group: vi.spyOn(console, "group").mockImplementation(() => {
+        // Intentionally empty - suppress console groups during test
+      }),
+      groupEnd: vi.spyOn(console, "groupEnd").mockImplementation(() => {
+        // Intentionally empty - suppress console group ends during test
+      }),
+    };
 
     // Mock createErrorReport to return a valid report
-    (errorService.createErrorReport as any).mockReturnValue({
+    vi.mocked(errorService.createErrorReport).mockReturnValue({
       error: {
-        name: "Error",
         message: "Test error",
+        name: "Error",
       },
+      timestamp: new Date().toISOString(),
       url: "https://example.com",
       userAgent: "Test User Agent",
-      timestamp: new Date().toISOString(),
     });
 
     // Mock reportError to return a resolved promise
-    (errorService.reportError as any).mockResolvedValue(undefined);
+    vi.mocked(errorService.reportError).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    // Restore console spies
+    ConsoleSpy.error.mockRestore();
+    ConsoleSpy.group.mockRestore();
+    ConsoleSpy.groupEnd.mockRestore();
   });
 
   describe("normal rendering", () => {
@@ -145,7 +157,7 @@ describe("ErrorBoundary", () => {
         </ErrorBoundary>
       );
 
-      expect(consoleSpy.error).toHaveBeenCalled();
+      expect(ConsoleSpy.error).toHaveBeenCalled();
       // Group logging may be suppressed in some environments; ensure at least one dev log occurred.
 
       vi.stubEnv("NODE_ENV", originalEnv ?? "test");
@@ -153,16 +165,24 @@ describe("ErrorBoundary", () => {
   });
 
   describe("error recovery", () => {
-    const CaptureFallback = ({ error, reset, retry }: any) => (
+    const CaptureFallback = ({
+      error,
+      reset,
+      retry,
+    }: {
+      error?: Error;
+      reset?: () => void;
+      retry?: () => void;
+    }) => (
       <div>
         <div data-testid="err">{error?.message}</div>
         {retry && (
-          <button onClick={retry} aria-label="try-again">
+          <button type="button" onClick={retry} aria-label="try-again">
             Try Again
           </button>
         )}
         {reset && (
-          <button onClick={reset} aria-label="reset">
+          <button type="button" onClick={reset} aria-label="reset">
             Reset
           </button>
         )}
@@ -238,11 +258,21 @@ describe("ErrorBoundary", () => {
      * @param reset - Function to reset the error boundary state.
      * @returns Custom error UI component.
      */
-    const CustomFallback = ({ error, reset }: any) => (
+    const CustomFallback = ({ error, reset }: { error: Error; reset?: () => void }) => (
       <div>
         <h1>Custom Error UI</h1>
         <p>{error.message}</p>
-        <button onClick={reset}>Custom Reset</button>
+        <button
+          type="button"
+          onClick={
+            reset ||
+            (() => {
+              // Intentionally empty - no-op fallback
+            })
+          }
+        >
+          Custom Reset
+        </button>
       </div>
     );
 
@@ -259,9 +289,9 @@ describe("ErrorBoundary", () => {
     });
   });
 
-  describe("withErrorBoundary HOC", () => {
+  describe("WithErrorBoundary HOC", () => {
     it("should wrap component with error boundary", () => {
-      const WrappedComponent = withErrorBoundary(NormalComponent);
+      const WrappedComponent = WithErrorBoundary(NormalComponent);
 
       renderWithProviders(<WrappedComponent />);
 
@@ -269,7 +299,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should catch errors in wrapped component", () => {
-      const WrappedComponent = withErrorBoundary(ThrowError);
+      const WrappedComponent = WithErrorBoundary(ThrowError);
 
       renderWithProviders(<WrappedComponent shouldThrow={true} />);
 
@@ -283,7 +313,7 @@ describe("ErrorBoundary", () => {
        * @returns Simple custom error UI.
        */
       const CustomFallback = () => <div>HOC Custom Fallback</div>;
-      const WrappedComponent = withErrorBoundary(ThrowError, {
+      const WrappedComponent = WithErrorBoundary(ThrowError, {
         fallback: CustomFallback,
       });
 
@@ -301,15 +331,15 @@ describe("ErrorBoundary", () => {
       const TestComponent = () => <div>Test</div>;
       TestComponent.displayName = "TestComponent";
 
-      const WrappedComponent = withErrorBoundary(TestComponent);
+      const WrappedComponent = WithErrorBoundary(TestComponent);
 
-      expect(WrappedComponent.displayName).toBe("withErrorBoundary(TestComponent)");
+      expect(WrappedComponent.displayName).toBe("WithErrorBoundary(TestComponent)");
     });
 
     it("should handle components without display name", () => {
-      const WrappedComponent = withErrorBoundary(NormalComponent);
+      const WrappedComponent = WithErrorBoundary(NormalComponent);
 
-      expect(WrappedComponent.displayName).toBe("withErrorBoundary(NormalComponent)");
+      expect(WrappedComponent.displayName).toBe("WithErrorBoundary(NormalComponent)");
     });
   });
 
@@ -326,7 +356,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should generate session ID", () => {
-      (window.sessionStorage.getItem as any).mockReturnValue(null);
+      vi.mocked(window.sessionStorage.getItem).mockReturnValue(null);
 
       renderWithProviders(
         <ErrorBoundary>
@@ -341,7 +371,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should use existing session ID", () => {
-      (window.sessionStorage.getItem as any).mockReturnValue("existing_session_id");
+      vi.mocked(window.sessionStorage.getItem).mockReturnValue("existing_session_id");
 
       renderWithProviders(
         <ErrorBoundary>
@@ -359,7 +389,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should handle user store when available", () => {
-      (window as any).__USER_STORE__ = {
+      (window as Window & { userStore?: { user: { id: string } } }).userStore = {
         user: { id: "test_user_123" },
       };
 
@@ -378,7 +408,8 @@ describe("ErrorBoundary", () => {
       );
 
       // Cleanup
-      (window as any).__USER_STORE__ = undefined;
+      (window as Window & { userStore?: { user: { id: string } } }).userStore =
+        undefined;
     });
   });
 });

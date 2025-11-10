@@ -23,6 +23,6 @@ export { useTripStore } from "./trip-store";
 // Export commonly used utility selectors from foundation stores
 export * from "./ui-store";
 // Core foundation stores
-export { useUIStore } from "./ui-store";
+export { useUiStore } from "./ui-store";
 export * from "./user-store";
 export { useUserProfileStore } from "./user-store";

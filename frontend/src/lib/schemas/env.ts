@@ -1,5 +1,5 @@
 /**
- * Environment variable validation with Zod
+ * @fileoverview Environment variable validation with Zod
  * Provides runtime type safety for all environment variables
  */
 
@@ -7,92 +7,92 @@ import { z } from "zod";
 
 // Base environment schema for common variables
 const baseEnvSchema = z.object({
+  HOSTNAME: z.string().optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3000),
-  HOSTNAME: z.string().optional(),
 });
 
 // Next.js specific environment variables
 const nextEnvSchema = z.object({
-  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
   NEXT_PUBLIC_API_URL: z.string().url().optional(),
+  NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
+  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
 });
 
 // Supabase configuration
 const supabaseEnvSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url("Invalid Supabase URL"),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z
     .string()
     .min(1, "Supabase anonymous key is required"),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url("Invalid Supabase URL"),
   SUPABASE_JWT_SECRET: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 });
 
 // Database configuration
 const databaseEnvSchema = z.object({
   DATABASE_URL: z.string().url().optional(),
-  POSTGRES_HOST: z.string().optional(),
-  POSTGRES_PORT: z.coerce.number().int().positive().optional(),
   POSTGRES_DB: z.string().optional(),
-  POSTGRES_USER: z.string().optional(),
+  POSTGRES_HOST: z.string().optional(),
   POSTGRES_PASSWORD: z.string().optional(),
+  POSTGRES_PORT: z.coerce.number().int().positive().optional(),
+  POSTGRES_USER: z.string().optional(),
 });
 
 // Cache configuration (Redis)
 const cacheEnvSchema = z.object({
-  REDIS_URL: z.string().url().optional(),
   // Deprecated: DRAGONFLY_URL removed; use REDIS_URL
   CACHE_HOST: z.string().optional(),
-  CACHE_PORT: z.coerce.number().int().positive().optional(),
   CACHE_PASSWORD: z.string().optional(),
+  CACHE_PORT: z.coerce.number().int().positive().optional(),
+  REDIS_URL: z.string().url().optional(),
 });
 
 // Authentication providers
 const authEnvSchema = z.object({
-  NEXTAUTH_SECRET: z.string().optional(),
-  NEXTAUTH_URL: z.string().url().optional(),
-  GOOGLE_CLIENT_ID: z.string().optional(),
-  GOOGLE_CLIENT_SECRET: z.string().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  NEXTAUTH_SECRET: z.string().optional(),
+  NEXTAUTH_URL: z.string().url().optional(),
 });
 
 // AI Service API Keys
 const aiServiceEnvSchema = z.object({
-  OPENAI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
-  GOOGLE_AI_API_KEY: z.string().optional(),
-  AZURE_OPENAI_ENDPOINT: z.string().url().optional(),
   AZURE_OPENAI_API_KEY: z.string().optional(),
+  AZURE_OPENAI_ENDPOINT: z.string().url().optional(),
+  GOOGLE_AI_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
 });
 
 // Travel API Keys
 const travelApiEnvSchema = z.object({
   AMADEUS_API_KEY: z.string().optional(),
   AMADEUS_API_SECRET: z.string().optional(),
-  SKYSCANNER_API_KEY: z.string().optional(),
   BOOKING_API_KEY: z.string().optional(),
-  GOOGLE_PLACES_API_KEY: z.string().optional(),
   GOOGLE_MAPS_API_KEY: z.string().optional(),
+  GOOGLE_PLACES_API_KEY: z.string().optional(),
+  SKYSCANNER_API_KEY: z.string().optional(),
 });
 
 // Monitoring and Analytics
 const monitoringEnvSchema = z.object({
-  SENTRY_DSN: z.string().url().optional(),
-  VERCEL_ANALYTICS_ID: z.string().optional(),
   GOOGLE_ANALYTICS_ID: z.string().optional(),
   MIXPANEL_TOKEN: z.string().optional(),
-  POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: z.string().url().optional(),
+  POSTHOG_KEY: z.string().optional(),
+  SENTRY_DSN: z.string().url().optional(),
+  VERCEL_ANALYTICS_ID: z.string().optional(),
 });
 
 // Feature flags and configuration
 const featureEnvSchema = z.object({
-  ENABLE_ANALYTICS: z.coerce.boolean().default(false),
-  ENABLE_MONITORING: z.coerce.boolean().default(false),
   ENABLE_AI_FEATURES: z.coerce.boolean().default(true),
+  ENABLE_ANALYTICS: z.coerce.boolean().default(false),
   ENABLE_CACHING: z.coerce.boolean().default(true),
+  ENABLE_MONITORING: z.coerce.boolean().default(false),
   MAX_FILE_SIZE_MB: z.coerce.number().positive().default(50),
   MAX_TRIPS_PER_USER: z.coerce.number().positive().default(100),
   RATE_LIMIT_REQUESTS_PER_MINUTE: z.coerce.number().positive().default(100),
@@ -100,22 +100,22 @@ const featureEnvSchema = z.object({
 
 // Security configuration
 const securityEnvSchema = z.object({
+  ALLOWED_ORIGINS: z.string().optional(),
+  CORS_ORIGIN: z.string().optional(),
+  CSRF_SECRET: z.string().optional(),
   ENCRYPTION_KEY: z.string().optional(),
   JWT_SECRET: z.string().optional(),
-  CORS_ORIGIN: z.string().optional(),
-  ALLOWED_ORIGINS: z.string().optional(),
   SESSION_SECRET: z.string().optional(),
-  CSRF_SECRET: z.string().optional(),
 });
 
 // Development and debugging
 const developmentEnvSchema = z.object({
-  DEBUG: z.coerce.boolean().default(false),
-  VERBOSE_LOGGING: z.coerce.boolean().default(false),
   ANALYZE: z.coerce.boolean().default(false),
+  DEBUG: z.coerce.boolean().default(false),
   DISABLE_VALIDATION: z.coerce.boolean().default(false),
   MOCK_APIS: z.coerce.boolean().default(false),
   SEED_DATABASE: z.coerce.boolean().default(false),
+  VERBOSE_LOGGING: z.coerce.boolean().default(false),
 });
 
 // Complete environment schema
@@ -208,11 +208,11 @@ const envSchema = baseEnvSchema
 
 // Client-side environment schema (only NEXT_PUBLIC_ variables)
 const clientEnvSchema = z.object({
-  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
   NEXT_PUBLIC_API_URL: z.string().url().optional(),
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+  NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
+  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
 });
 
 // Environment validation functions
@@ -320,30 +320,30 @@ export const getEnvironmentInfo = () => {
 
   if (!env.success) {
     return {
-      isValid: false,
-      errors: env.error.issues,
       environment: process.env.NODE_ENV || "unknown",
+      errors: env.error.issues,
+      isValid: false,
     };
   }
 
   return {
-    isValid: true,
     environment: env.data.NODE_ENV,
     features: {
-      analytics: env.data.ENABLE_ANALYTICS,
-      monitoring: env.data.ENABLE_MONITORING,
       aiFeatures: env.data.ENABLE_AI_FEATURES,
+      analytics: env.data.ENABLE_ANALYTICS,
       caching: env.data.ENABLE_CACHING,
+      monitoring: env.data.ENABLE_MONITORING,
     },
+    isValid: true,
     services: {
-      hasDatabase: Boolean(env.data.DATABASE_URL || env.data.POSTGRES_HOST),
-      hasCache: Boolean(env.data.REDIS_URL || env.data.CACHE_HOST),
-      hasSupabase: Boolean(env.data.NEXT_PUBLIC_SUPABASE_URL),
       hasAiServices: Boolean(
         env.data.OPENAI_API_KEY ||
           env.data.ANTHROPIC_API_KEY ||
           env.data.GOOGLE_AI_API_KEY
       ),
+      hasCache: Boolean(env.data.REDIS_URL || env.data.CACHE_HOST),
+      hasDatabase: Boolean(env.data.DATABASE_URL || env.data.POSTGRES_HOST),
+      hasSupabase: Boolean(env.data.NEXT_PUBLIC_SUPABASE_URL),
     },
   };
 };

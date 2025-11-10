@@ -8,19 +8,19 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { name: "Home", href: "/" },
-  { name: "Trips", href: "/trips", icon: <MapPin className="h-4 w-4 mr-2" /> },
-  { name: "Attachments", href: "/attachments" },
+const NavItems = [
+  { href: "/", name: "Home" },
+  { href: "/trips", icon: <MapPin className="h-4 w-4 mr-2" />, name: "Trips" },
+  { href: "/attachments", name: "Attachments" },
   {
-    name: "Itinerary",
     href: "/itinerary",
     icon: <Calendar className="h-4 w-4 mr-2" />,
+    name: "Itinerary",
   },
   {
-    name: "Settings",
     href: "/settings",
     icon: <Settings className="h-4 w-4 mr-2" />,
+    name: "Settings",
   },
 ];
 
@@ -29,7 +29,7 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="font-bold text-xl flex items-center">
@@ -38,7 +38,7 @@ export function Navbar() {
 
           {/* Desktop navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            {navItems.map((item) => (
+            {NavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -80,7 +80,7 @@ export function Navbar() {
       {mobileMenuOpen && (
         <nav className="md:hidden py-4 border-t">
           <div className="container flex flex-col space-y-3">
-            {navItems.map((item) => (
+            {NavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

@@ -38,6 +38,7 @@ const FormField = <
   );
 };
 
+// biome-ignore lint/style/useNamingConvention: This is a React hook
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext);
   const itemContext = React.useContext(FormItemContext);
@@ -52,11 +53,11 @@ const useFormField = () => {
   const { id } = itemContext;
 
   return {
+    formDescriptionId: `${id}-form-item-description`,
+    formItemId: `${id}-form-item`,
+    formMessageId: `${id}-form-item-message`,
     id,
     name: fieldContext.name,
-    formItemId: `${id}-form-item`,
-    formDescriptionId: `${id}-form-item-description`,
-    formMessageId: `${id}-form-item-message`,
     ...fieldState,
   };
 };
@@ -83,7 +84,7 @@ const FormItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
 FormItem.displayName = "FormItem";
 
 const FormLabel = React.forwardRef<
-  React.ElementRef<typeof Label>,
+  React.ComponentRef<typeof Label>,
   React.ComponentPropsWithoutRef<typeof Label>
 >(({ className, ...props }, ref) => {
   const { error, formItemId } = useFormField();
@@ -100,7 +101,7 @@ const FormLabel = React.forwardRef<
 FormLabel.displayName = "FormLabel";
 
 const FormControl = React.forwardRef<
-  React.ElementRef<typeof Slot>,
+  React.ComponentRef<typeof Slot>,
   React.ComponentPropsWithoutRef<typeof Slot>
 >(({ ...props }, ref) => {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
@@ -110,7 +111,7 @@ const FormControl = React.forwardRef<
       ref={ref}
       id={formItemId}
       aria-describedby={
-        !error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`
+        error ? `${formDescriptionId} ${formMessageId}` : `${formDescriptionId}`
       }
       aria-invalid={!!error}
       {...props}

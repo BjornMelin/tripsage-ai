@@ -184,8 +184,8 @@ export default function TripDetailsPage() {
             <div className="font-semibold">
               {currentTrip.budget
                 ? new Intl.NumberFormat("en-US", {
-                    style: "currency",
                     currency: currentTrip.currency || "USD",
+                    style: "currency",
                   }).format(currentTrip.budget)
                 : "Not set"}
             </div>

@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Connection status monitor component for real-time connections.
+ */
 "use client";
 
 import {
@@ -46,11 +49,11 @@ interface RealtimeConnection {
 export function ConnectionStatusMonitor() {
   const { toast } = useToast();
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
+    connectionCount: 0,
     isConnected: false,
     lastError: null,
-    connectionCount: 0,
-    reconnectAttempts: 0,
     lastReconnectAt: null,
+    reconnectAttempts: 0,
   });
 
   const [connections, setConnections] = useState<RealtimeConnection[]>([]);
@@ -62,31 +65,31 @@ export function ConnectionStatusMonitor() {
     const mockConnections: RealtimeConnection[] = [
       {
         id: "trips-realtime",
-        table: "trips",
-        status: "connected",
         lastActivity: new Date(),
+        status: "connected",
+        table: "trips",
       },
       {
         id: "chat-messages-realtime",
-        table: "chat_messages",
-        status: "connected",
         lastActivity: new Date(Date.now() - 30000),
+        status: "connected",
+        table: "chat_messages",
       },
       {
-        id: "trip-collaborators-realtime",
-        table: "trip_collaborators",
-        status: "disconnected",
         error: new Error("Connection timeout"),
+        id: "trip-collaborators-realtime",
+        status: "disconnected",
+        table: "trip_collaborators",
       },
     ];
 
     setConnections(mockConnections);
     setConnectionStatus({
+      connectionCount: mockConnections.filter((c) => c.status === "connected").length,
       isConnected: mockConnections.some((c) => c.status === "connected"),
       lastError: mockConnections.find((c) => c.error)?.error || null,
-      connectionCount: mockConnections.filter((c) => c.status === "connected").length,
-      reconnectAttempts: 0,
       lastReconnectAt: null,
+      reconnectAttempts: 0,
     });
   }, []);
 
@@ -99,29 +102,29 @@ export function ConnectionStatusMonitor() {
       setConnections((prev) =>
         prev.map((conn) => ({
           ...conn,
-          status: "connected" as const,
           error: undefined,
           lastActivity: new Date(),
+          status: "connected" as const,
         }))
       );
 
       setConnectionStatus((prev) => ({
         ...prev,
+        connectionCount: connections.length,
         isConnected: true,
         lastError: null,
-        connectionCount: connections.length,
-        reconnectAttempts: prev.reconnectAttempts + 1,
         lastReconnectAt: new Date(),
+        reconnectAttempts: prev.reconnectAttempts + 1,
       }));
 
       toast({
-        title: "Reconnected",
         description: "All real-time connections have been restored.",
+        title: "Reconnected",
       });
     } catch (_error) {
       toast({
-        title: "Reconnection Failed",
         description: "Failed to restore some connections. Please try again.",
+        title: "Reconnection Failed",
         variant: "destructive",
       });
     } finally {
@@ -279,7 +282,7 @@ export function ConnectionStatusIndicator() {
 
   return (
     <div className="flex items-center space-x-2">
-      {getStatusIcon(isConnected, hasError)}
+      {GetStatusIcon(isConnected, hasError)}
       <span className="text-xs text-muted-foreground">
         {isConnected ? "Live" : "Offline"}
       </span>
@@ -287,7 +290,7 @@ export function ConnectionStatusIndicator() {
   );
 }
 
-function getStatusIcon(isConnected: boolean, hasError: boolean) {
+function GetStatusIcon(isConnected: boolean, hasError: boolean) {
   if (hasError) return <AlertTriangle className="h-3 w-3 text-yellow-500" />;
   if (isConnected) return <Activity className="h-3 w-3 text-green-500 animate-pulse" />;
   return <WifiOff className="h-3 w-3 text-red-500" />;

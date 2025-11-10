@@ -74,26 +74,26 @@ export function FlightSearchForm({
 
   // React Hook Form with Zod validation
   const form = useForm<ModernFlightSearchParams>({
-    resolver: zodResolver(flightSearchFormSchema),
     defaultValues: {
-      tripType: "round-trip",
-      origin: "",
-      destination: "",
+      cabinClass: "economy",
       departureDate: "",
-      returnDate: "",
+      destination: "",
+      directOnly: false,
+      excludedAirlines: [],
+      maxStops: undefined,
+      origin: "",
       passengers: {
         adults: 1,
         children: 0,
         infants: 0,
       },
-      cabinClass: "economy",
-      directOnly: false,
-      maxStops: undefined,
       preferredAirlines: [],
-      excludedAirlines: [],
+      returnDate: "",
+      tripType: "round-trip",
       ...initialParams,
     },
     mode: "onChange",
+    resolver: zodResolver(flightSearchFormSchema),
   });
 
   // Watch form values for dynamic behavior
@@ -115,8 +115,8 @@ export function FlightSearchForm({
   ];
 
   const smartBundles = {
-    hotel: "$156",
     car: "$89",
+    hotel: "$156",
     total: "$245",
   };
 
@@ -135,7 +135,9 @@ export function FlightSearchForm({
           return;
         }
 
-        await onSearch(validationResult.data!);
+        // Type assertion is safe here since success=true guarantees data is present
+        const validatedData = validationResult.data as FlightSearchFormData;
+        await onSearch(validatedData);
       } catch (error) {
         console.error("Search failed:", error);
         setFormError(

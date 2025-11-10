@@ -16,7 +16,7 @@ export type {
   ErrorReport,
   ErrorServiceConfig,
 } from "@/types/errors";
-export { ErrorBoundary, withErrorBoundary } from "./error-boundary";
+export { ErrorBoundary, WithErrorBoundary } from "./error-boundary";
 export {
   ErrorFallback,
   MinimalErrorFallback,

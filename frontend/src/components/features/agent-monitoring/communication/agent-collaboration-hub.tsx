@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Agent collaboration hub component for monitoring multi-agent coordination and handoffs.
+ */
+
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -30,6 +34,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+/** Interface for an agent */
 interface Agent {
   id: string;
   name: string;
@@ -46,6 +51,7 @@ interface Agent {
   lastActive: Date;
 }
 
+/** Interface for an agent handoff */
 interface AgentHandoff {
   id: string;
   fromAgent: string;
@@ -57,6 +63,7 @@ interface AgentHandoff {
   confidence: number;
 }
 
+/** Interface for a collaboration metric */
 interface CollaborationMetric {
   metric: string;
   value: number;
@@ -64,6 +71,7 @@ interface CollaborationMetric {
   description: string;
 }
 
+/** Interface for the AgentCollaborationHub component props */
 interface AgentCollaborationHubProps {
   agents: Agent[];
   handoffs: AgentHandoff[];
@@ -73,103 +81,107 @@ interface AgentCollaborationHubProps {
   className?: string;
 }
 
-const mockAgents: Agent[] = [
+/** Mock agents for testing */
+const MockAgents: Agent[] = [
   {
-    id: "agent-1",
-    name: "Research Agent",
     avatar: "/agents/research.jpg",
-    status: "active",
-    specialization: "Data Analysis",
     currentTask: "Market trend analysis",
-    performance: { accuracy: 94, speed: 87, efficiency: 91 },
-    workload: 75,
+    id: "agent-1",
     lastActive: new Date(),
-  },
-  {
-    id: "agent-2",
-    name: "Planning Agent",
-    avatar: "/agents/planning.jpg",
-    status: "busy",
-    specialization: "Trip Planning",
-    currentTask: "Itinerary optimization",
-    performance: { accuracy: 89, speed: 92, efficiency: 88 },
-    workload: 90,
-    lastActive: new Date(Date.now() - 300000),
-  },
-  {
-    id: "agent-3",
-    name: "Booking Agent",
-    avatar: "/agents/booking.jpg",
-    status: "idle",
-    specialization: "Reservations",
-    performance: { accuracy: 96, speed: 85, efficiency: 93 },
-    workload: 25,
-    lastActive: new Date(Date.now() - 600000),
-  },
-  {
-    id: "agent-4",
-    name: "Support Agent",
-    avatar: "/agents/support.jpg",
+    name: "Research Agent",
+    performance: { accuracy: 94, efficiency: 91, speed: 87 },
+    specialization: "Data Analysis",
     status: "active",
-    specialization: "Customer Service",
+    workload: 75,
+  },
+  {
+    avatar: "/agents/planning.jpg",
+    currentTask: "Itinerary optimization",
+    id: "agent-2",
+    lastActive: new Date(Date.now() - 300000),
+    name: "Planning Agent",
+    performance: { accuracy: 89, efficiency: 88, speed: 92 },
+    specialization: "Trip Planning",
+    status: "busy",
+    workload: 90,
+  },
+  {
+    avatar: "/agents/booking.jpg",
+    id: "agent-3",
+    lastActive: new Date(Date.now() - 600000),
+    name: "Booking Agent",
+    performance: { accuracy: 96, efficiency: 93, speed: 85 },
+    specialization: "Reservations",
+    status: "idle",
+    workload: 25,
+  },
+  {
+    avatar: "/agents/support.jpg",
     currentTask: "Query resolution",
-    performance: { accuracy: 92, speed: 88, efficiency: 90 },
-    workload: 60,
+    id: "agent-4",
     lastActive: new Date(Date.now() - 120000),
+    name: "Support Agent",
+    performance: { accuracy: 92, efficiency: 90, speed: 88 },
+    specialization: "Customer Service",
+    status: "active",
+    workload: 60,
   },
 ];
 
-const mockHandoffs: AgentHandoff[] = [
+/** Mock handoffs for testing */
+const MockHandoffs: AgentHandoff[] = [
   {
-    id: "handoff-1",
-    fromAgent: "agent-1",
-    toAgent: "agent-2",
-    task: "Create itinerary from research data",
-    reason: "Research completed, planning phase needed",
-    timestamp: new Date(),
-    status: "pending",
     confidence: 0.89,
+    fromAgent: "agent-1",
+    id: "handoff-1",
+    reason: "Research completed, planning phase needed",
+    status: "pending",
+    task: "Create itinerary from research data",
+    timestamp: new Date(),
+    toAgent: "agent-2",
   },
   {
-    id: "handoff-2",
-    fromAgent: "agent-2",
-    toAgent: "agent-3",
-    task: "Book selected accommodations",
-    reason: "Itinerary approved, booking required",
-    timestamp: new Date(Date.now() - 180000),
-    status: "completed",
     confidence: 0.92,
+    fromAgent: "agent-2",
+    id: "handoff-2",
+    reason: "Itinerary approved, booking required",
+    status: "completed",
+    task: "Book selected accommodations",
+    timestamp: new Date(Date.now() - 180000),
+    toAgent: "agent-3",
   },
 ];
 
-const collaborationMetrics: CollaborationMetric[] = [
+/** Mock collaboration metrics for testing */
+const CollaborationMetrics: CollaborationMetric[] = [
   {
-    metric: "Handoff Success Rate",
-    value: 94,
-    trend: "up",
     description: "Percentage of successful agent handoffs",
+    metric: "Handoff Success Rate",
+    trend: "up",
+    value: 94,
   },
   {
-    metric: "Task Completion Time",
-    value: 87,
-    trend: "up",
     description: "Average time to complete collaborative tasks",
-  },
-  {
-    metric: "Agent Utilization",
-    value: 73,
-    trend: "stable",
-    description: "Overall agent workload distribution",
-  },
-  {
-    metric: "Coordination Efficiency",
-    value: 91,
+    metric: "Task Completion Time",
     trend: "up",
+    value: 87,
+  },
+  {
+    description: "Overall agent workload distribution",
+    metric: "Agent Utilization",
+    trend: "stable",
+    value: 73,
+  },
+  {
     description: "How well agents work together",
+    metric: "Coordination Efficiency",
+    trend: "up",
+    value: 91,
   },
 ];
 
-const getStatusColor = (status: Agent["status"]) => {
+/** Function to get the status color for an agent */
+const GetStatusColor = (status: Agent["status"]) => {
   switch (status) {
     case "active":
       return "bg-green-500";
@@ -184,7 +196,8 @@ const getStatusColor = (status: Agent["status"]) => {
   }
 };
 
-const getStatusIcon = (status: Agent["status"]) => {
+/** Function to get the status icon for an agent */
+const GetStatusIcon = (status: Agent["status"]) => {
   switch (status) {
     case "active":
       return <CheckCircle2 className="h-3 w-3" />;
@@ -199,6 +212,7 @@ const getStatusIcon = (status: Agent["status"]) => {
   }
 };
 
+/** Component for an agent card */
 const AgentCard: React.FC<{
   agent: Agent;
   onSelect?: (agentId: string) => void;
@@ -214,10 +228,8 @@ const AgentCard: React.FC<{
 
   return (
     <motion.div
-      layout
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ scale: 1.02 }}
       className={cn(
         "p-4 border rounded-lg cursor-pointer transition-all duration-200",
         isSelected ? "ring-2 ring-blue-500 bg-blue-50" : "hover:shadow-md"
@@ -235,10 +247,10 @@ const AgentCard: React.FC<{
           <div
             className={cn(
               "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center",
-              getStatusColor(agent.status)
+              GetStatusColor(agent.status)
             )}
           >
-            <div className="text-white">{getStatusIcon(agent.status)}</div>
+            <div className="text-white">{GetStatusIcon(agent.status)}</div>
           </div>
         </div>
 
@@ -308,6 +320,7 @@ const AgentCard: React.FC<{
   );
 };
 
+/** Component for a handoff card */
 const HandoffCard: React.FC<{
   handoff: AgentHandoff;
   agents: Agent[];
@@ -321,23 +334,24 @@ const HandoffCard: React.FC<{
     switch (handoff.status) {
       case "pending":
         return {
-          color: "text-yellow-600",
           bg: "bg-yellow-50",
           border: "border-yellow-200",
+          color: "text-yellow-600",
         };
       case "completed":
         return {
-          color: "text-green-600",
           bg: "bg-green-50",
           border: "border-green-200",
+          color: "text-green-600",
         };
       case "failed":
-        return { color: "text-red-600", bg: "bg-red-50", border: "border-red-200" };
+        return { bg: "bg-red-50", border: "border-red-200", color: "text-red-600" };
       default:
-        return { color: "text-gray-600", bg: "bg-gray-50", border: "border-gray-200" };
+        return { bg: "bg-gray-50", border: "border-gray-200", color: "text-gray-600" };
     }
   };
 
+  /** Get the status configuration for a handoff */
   const statusConfig = getStatusConfig();
 
   return (
@@ -418,9 +432,10 @@ const HandoffCard: React.FC<{
   );
 };
 
+/** Component for the AgentCollaborationHub */
 export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
-  agents: initialAgents = mockAgents,
-  handoffs: initialHandoffs = mockHandoffs,
+  agents: initialAgents = MockAgents,
+  handoffs: initialHandoffs = MockHandoffs,
   onAgentSelect,
   onHandoffApprove,
   onHandoffReject,
@@ -446,26 +461,26 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
         // Update agent workloads and performance
         const updatedAgents = optimisticAgents.map((agent) => ({
           ...agent,
-          workload: Math.max(
-            0,
-            Math.min(100, agent.workload + (Math.random() - 0.5) * 10)
-          ),
+          lastActive: agent.status === "active" ? new Date() : agent.lastActive,
           performance: {
             ...agent.performance,
             accuracy: Math.max(
               0,
               Math.min(100, agent.performance.accuracy + (Math.random() - 0.5) * 2)
             ),
-            speed: Math.max(
-              0,
-              Math.min(100, agent.performance.speed + (Math.random() - 0.5) * 3)
-            ),
             efficiency: Math.max(
               0,
               Math.min(100, agent.performance.efficiency + (Math.random() - 0.5) * 2)
             ),
+            speed: Math.max(
+              0,
+              Math.min(100, agent.performance.speed + (Math.random() - 0.5) * 3)
+            ),
           },
-          lastActive: agent.status === "active" ? new Date() : agent.lastActive,
+          workload: Math.max(
+            0,
+            Math.min(100, agent.workload + (Math.random() - 0.5) * 10)
+          ),
         }));
         updateOptimisticAgents(updatedAgents);
       });
@@ -535,8 +550,8 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
 
       {/* Metrics Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {collaborationMetrics.map((metric, index) => (
-          <Card key={index}>
+        {CollaborationMetrics.map((metric) => (
+          <Card key={metric.metric}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm text-muted-foreground">{metric.metric}</div>

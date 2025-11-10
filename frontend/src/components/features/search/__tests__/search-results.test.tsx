@@ -1,71 +1,65 @@
-/**
- * @fileoverview Unit tests for SearchResults component, verifying flight display,
- * sorting functionality, filtering capabilities, loading states, and user
- * interactions with flight cards, price display, and booking actions.
- */
-
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Flight } from "@/types/search";
 import { SearchResults } from "../search-results";
 
 /** Mock function for testing sort functionality. */
-const mockOnSort = vi.fn();
+const MockOnSort = vi.fn();
 /** Mock function for testing filter functionality. */
-const mockOnFilter = vi.fn();
+const MockOnFilter = vi.fn();
 
 /** Mock flight data for testing search results display. */
-const mockFlights: Flight[] = [
+const MockFlights: Flight[] = [
   {
-    id: "1",
     airline: "Test Airline",
-    flightNumber: "TA123",
-    origin: "JFK",
-    destination: "LHR",
-    departureTime: "10:00 AM",
     arrivalTime: "10:00 PM",
-    duration: 600, // 10 hours in minutes
-    stops: 0,
-    price: 499,
     cabinClass: "economy",
+    departureTime: "10:00 AM",
+    destination: "LHR",
+    duration: 600, // 10 hours in minutes
+    flightNumber: "TA123",
+    id: "1",
+    origin: "JFK",
+    price: 499,
     seatsAvailable: 10,
+    stops: 0,
   },
   {
-    id: "2",
     airline: "Another Airline",
-    flightNumber: "AA456",
-    origin: "JFK",
-    destination: "LHR",
-    departureTime: "12:00 PM",
     arrivalTime: "12:30 AM",
-    duration: 630, // 10.5 hours in minutes
-    stops: 1,
-    price: 399,
     cabinClass: "economy",
-    seatsAvailable: 5,
+    departureTime: "12:00 PM",
+    destination: "LHR",
+    duration: 630, // 10.5 hours in minutes
+    flightNumber: "AA456",
+    id: "2",
     layovers: [
       {
         airport: "BOS",
         duration: 90,
       },
     ],
+    origin: "JFK",
+    price: 399,
+    seatsAvailable: 5,
+    stops: 1,
   },
 ];
 
 describe("SearchResults", () => {
   beforeEach(() => {
     // Clear mock calls between tests
-    mockOnSort.mockClear();
-    mockOnFilter.mockClear();
+    MockOnSort.mockClear();
+    MockOnFilter.mockClear();
   });
 
   it("renders the results correctly", () => {
     render(
       <SearchResults
         type="flight"
-        results={mockFlights}
-        onSort={mockOnSort}
-        onFilter={mockOnFilter}
+        results={MockFlights}
+        onSort={MockOnSort}
+        onFilter={MockOnFilter}
       />
     );
 
@@ -95,9 +89,9 @@ describe("SearchResults", () => {
     render(
       <SearchResults
         type="flight"
-        results={mockFlights}
-        onSort={mockOnSort}
-        onFilter={mockOnFilter}
+        results={MockFlights}
+        onSort={MockOnSort}
+        onFilter={MockOnFilter}
       />
     );
 
@@ -105,24 +99,24 @@ describe("SearchResults", () => {
     fireEvent.click(screen.getByText("Price"));
 
     // Check if onSort was called with the correct parameters
-    expect(mockOnSort).toHaveBeenCalledTimes(1);
-    expect(mockOnSort).toHaveBeenCalledWith("price", "desc");
+    expect(MockOnSort).toHaveBeenCalledTimes(1);
+    expect(MockOnSort).toHaveBeenCalledWith("price", "desc");
 
     // Click again to toggle sort direction
     fireEvent.click(screen.getByText("Price"));
 
     // Check if onSort was called again with the opposite direction
-    expect(mockOnSort).toHaveBeenCalledTimes(2);
-    expect(mockOnSort).toHaveBeenCalledWith("price", "asc");
+    expect(MockOnSort).toHaveBeenCalledTimes(2);
+    expect(MockOnSort).toHaveBeenCalledWith("price", "asc");
   });
 
   it("handles view toggle correctly", () => {
     render(
       <SearchResults
         type="flight"
-        results={mockFlights}
-        onSort={mockOnSort}
-        onFilter={mockOnFilter}
+        results={MockFlights}
+        onSort={MockOnSort}
+        onFilter={MockOnFilter}
       />
     );
 
@@ -150,8 +144,8 @@ describe("SearchResults", () => {
         type="flight"
         results={[]}
         loading={true}
-        onSort={mockOnSort}
-        onFilter={mockOnFilter}
+        onSort={MockOnSort}
+        onFilter={MockOnFilter}
       />
     );
 
@@ -170,8 +164,8 @@ describe("SearchResults", () => {
       <SearchResults
         type="flight"
         results={[]}
-        onSort={mockOnSort}
-        onFilter={mockOnFilter}
+        onSort={MockOnSort}
+        onFilter={MockOnFilter}
       />
     );
 

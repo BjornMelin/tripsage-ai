@@ -118,7 +118,7 @@ function UserNav() {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = () => {
-    startTransition(async () => {
+    startTransition(() => {
       setIsOpen(false);
       // TODO: Replace with Supabase Auth logout
       // await logoutAction();

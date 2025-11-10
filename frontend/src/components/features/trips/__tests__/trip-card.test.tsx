@@ -1,9 +1,5 @@
-/**
- * @fileoverview Unit tests for TripCard: date/duration formatting, destination
- * rendering, budget display, actions, and accessibility.
- */
-
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Trip } from "@/stores/trip-store";
 import { TripCard } from "../trip-card";
@@ -19,10 +15,10 @@ vi.mock("date-fns", () => ({
     const d = new Date(date);
     if (formatStr === "MMM dd, yyyy") {
       return d.toLocaleDateString("en-US", {
-        month: "short",
         day: "2-digit",
-        year: "numeric",
+        month: "short",
         timeZone: "UTC",
+        year: "numeric",
       });
     }
     return d.toLocaleDateString("en-US", { timeZone: "UTC" });
@@ -31,7 +27,7 @@ vi.mock("date-fns", () => ({
 
 // Mock Next.js Link
 vi.mock("next/link", () => ({
-  default: ({ children, href, ...props }: any) => (
+  default: ({ children, href, ...props }: ComponentProps<"a">) => (
     <a href={href} {...props}>
       {children}
     </a>
@@ -40,21 +36,21 @@ vi.mock("next/link", () => ({
 
 describe("TripCard", () => {
   const mockTrip: Trip = {
-    id: "trip-1",
-    name: "European Adventure",
-    description: "A wonderful journey through Europe",
-    startDate: "2024-06-15",
-    endDate: "2024-06-25",
-    destinations: [
-      { id: "dest-1", name: "Paris", country: "France" },
-      { id: "dest-2", name: "Rome", country: "Italy" },
-    ],
     budget: 3000,
-    currency: "USD",
-    isPublic: false,
-    tags: ["adventure", "culture"],
-    status: "planning",
     createdAt: "2024-01-01",
+    currency: "USD",
+    description: "A wonderful journey through Europe",
+    destinations: [
+      { country: "France", id: "dest-1", name: "Paris" },
+      { country: "Italy", id: "dest-2", name: "Rome" },
+    ],
+    endDate: "2024-06-25",
+    id: "trip-1",
+    isPublic: false,
+    name: "European Adventure",
+    startDate: "2024-06-15",
+    status: "planning",
+    tags: ["adventure", "culture"],
     updatedAt: "2024-01-01",
   };
 
@@ -80,8 +76,8 @@ describe("TripCard", () => {
       const duration = screen.getByText("(11 days)");
       const row = duration.closest("div");
       expect(row).toBeTruthy();
-      expect(row!.textContent).toContain("Jun 15, 2024");
-      expect(row!.textContent).toContain("Jun 25, 2024");
+      expect(row?.textContent).toContain("Jun 15, 2024");
+      expect(row?.textContent).toContain("Jun 25, 2024");
     });
 
     it("should display destinations correctly", () => {
@@ -93,7 +89,7 @@ describe("TripCard", () => {
     it("should display single destination without 'more' text", () => {
       const singleDestTrip = {
         ...mockTrip,
-        destinations: [{ id: "dest-1", name: "Paris", country: "France" }],
+        destinations: [{ country: "France", id: "dest-1", name: "Paris" }],
       };
 
       render(<TripCard trip={singleDestTrip} />);
@@ -130,8 +126,8 @@ describe("TripCard", () => {
     it("should show 'upcoming' status for future trips", () => {
       const futureTrip = {
         ...mockTrip,
-        startDate: "2024-06-15",
         endDate: "2024-06-25",
+        startDate: "2024-06-15",
       };
 
       render(<TripCard trip={futureTrip} />);
@@ -158,8 +154,8 @@ describe("TripCard", () => {
     it("should show 'draft' status when dates are missing", () => {
       const draftTrip = {
         ...mockTrip,
-        startDate: undefined,
         endDate: undefined,
+        startDate: undefined,
       };
 
       render(<TripCard trip={draftTrip} />);
@@ -274,8 +270,8 @@ describe("TripCard", () => {
     it("should handle partial date information", () => {
       const partialDateTrip = {
         ...mockTrip,
-        startDate: "2024-06-15",
         endDate: undefined,
+        startDate: "2024-06-15",
       };
 
       render(<TripCard trip={partialDateTrip} />);

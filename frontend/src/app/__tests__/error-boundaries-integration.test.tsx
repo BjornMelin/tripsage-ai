@@ -1,15 +1,7 @@
-import { screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { screen, waitFor } from "@testing-library/react";
+import type { MockInstance } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils";
-
-// Mock React hooks for testing environment
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    useEffect: vi.fn((fn) => fn()),
-  };
-});
 
 import AuthError from "../(auth)/error";
 import DashboardError from "../(dashboard)/error";
@@ -29,16 +21,16 @@ vi.mock("@/lib/error-service", () => ({
 import { errorService as mockErrorService } from "@/lib/error-service";
 
 // Mock sessionStorage
-const mockSessionStorage = {
+const MOCK_SESSION_STORAGE = {
   getItem: vi.fn(),
   setItem: vi.fn(),
 };
 Object.defineProperty(window, "sessionStorage", {
-  value: mockSessionStorage,
+  value: MOCK_SESSION_STORAGE,
 });
 
-// Mock console.error to avoid noise in tests
-const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+// Console spy setup moved to beforeEach to avoid global suppression issues
+let consoleSpy: MockInstance;
 
 describe("Next.js Error Boundaries Integration", () => {
   const mockError = new Error("Test integration error") as Error & {
@@ -48,8 +40,16 @@ describe("Next.js Error Boundaries Integration", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    consoleErrorSpy.mockClear();
-    mockSessionStorage.getItem.mockReturnValue("test_session_id");
+    // Create fresh spy for each test
+    consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      // Intentional no-op to avoid noise in tests
+    });
+    MOCK_SESSION_STORAGE.getItem.mockReturnValue("test_session_id");
+  });
+
+  afterEach(() => {
+    // Restore console after each test
+    consoleSpy.mockRestore();
   });
 
   describe("Root Error Boundary (error.tsx)", () => {
@@ -64,17 +64,19 @@ describe("Next.js Error Boundaries Integration", () => {
       ).toBeInTheDocument();
     });
 
-    it("should report error on mount", () => {
+    it("should report error on mount", async () => {
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
-        mockError,
-        undefined,
-        expect.objectContaining({
-          sessionId: "test_session_id",
-        })
-      );
-      expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
+          mockError,
+          undefined,
+          expect.objectContaining({
+            sessionId: "test_session_id",
+          })
+        );
+        expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
+      });
     });
 
     // Removed brittle NODE_ENV mutation; rely on behavior assertions only.
@@ -107,16 +109,20 @@ describe("Next.js Error Boundaries Integration", () => {
       expect(screen.getByText("Application Error")).toBeInTheDocument();
     });
 
-    it("should report critical error", () => {
+    it("should report critical error", async () => {
       render(<GlobalError error={mockError} reset={mockReset} />);
 
-      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalled();
-      expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalled();
+        expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
+      });
     });
 
-    it("should always log critical errors", () => {
+    it("should always log critical errors", async () => {
       render(<GlobalError error={mockError} reset={mockReset} />);
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalled();
+      });
     });
   });
 
@@ -132,11 +138,13 @@ describe("Next.js Error Boundaries Integration", () => {
       ).toBeInTheDocument();
     });
 
-    it("should report dashboard error", () => {
+    it("should report dashboard error", async () => {
       render(<DashboardError error={mockError} reset={mockReset} />);
 
-      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalled();
-      expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalled();
+        expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
+      });
     });
 
     // Removed brittle NODE_ENV mutation; implicit assertions elsewhere cover logging.
@@ -149,58 +157,64 @@ describe("Next.js Error Boundaries Integration", () => {
       expect(screen.getByText("Something went wrong")).toBeInTheDocument();
     });
 
-    it("should report auth error without user ID", () => {
+    it("should report auth error without user ID", async () => {
       render(<AuthError error={mockError} reset={mockReset} />);
 
-      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
-        mockError,
-        undefined,
-        expect.objectContaining({
-          sessionId: "test_session_id",
-        })
-      );
+      await waitFor(() => {
+        expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
+          mockError,
+          undefined,
+          expect.objectContaining({
+            sessionId: "test_session_id",
+          })
+        );
 
-      // Should not include userId since user is not authenticated in auth flow
-      expect(vi.mocked(mockErrorService).createErrorReport).not.toHaveBeenCalledWith(
-        expect.anything(),
-        expect.anything(),
-        expect.objectContaining({
-          userId: expect.anything(),
-        })
-      );
+        // Should not include userId since user is not authenticated in auth flow
+        expect(vi.mocked(mockErrorService).createErrorReport).not.toHaveBeenCalledWith(
+          expect.anything(),
+          expect.anything(),
+          expect.objectContaining({
+            userId: expect.anything(),
+          })
+        );
+      });
     });
 
     // Logging behavior is environment dependent; skip direct console assertions here.
   });
 
   describe("Session Management", () => {
-    it("should generate session ID when not present", () => {
-      mockSessionStorage.getItem.mockReturnValue(null);
+    it("should generate session ID when not present", async () => {
+      MOCK_SESSION_STORAGE.getItem.mockReturnValue(null);
 
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
-        "session_id",
-        expect.stringMatching(/^session_\d+_[a-z0-9]+$/)
-      );
+      await waitFor(() => {
+        expect(MOCK_SESSION_STORAGE.setItem).toHaveBeenCalledWith(
+          "session_id",
+          expect.stringMatching(/^session_[A-Za-z0-9-]+$/)
+        );
+      });
     });
 
-    it("should use existing session ID", () => {
-      mockSessionStorage.getItem.mockReturnValue("existing_session_id");
+    it("should use existing session ID", async () => {
+      MOCK_SESSION_STORAGE.getItem.mockReturnValue("existing_session_id");
 
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
-        mockError,
-        undefined,
-        expect.objectContaining({
-          sessionId: "existing_session_id",
-        })
-      );
+      await waitFor(() => {
+        expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
+          mockError,
+          undefined,
+          expect.objectContaining({
+            sessionId: "existing_session_id",
+          })
+        );
+      });
     });
 
     it("should handle sessionStorage errors gracefully", () => {
-      mockSessionStorage.getItem.mockImplementation(() => {
+      MOCK_SESSION_STORAGE.getItem.mockImplementation(() => {
         throw new Error("SessionStorage error");
       });
 
@@ -213,7 +227,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
   describe("User Store Integration", () => {
     it("should include user ID when user store is available", () => {
-      window.__USER_STORE__ = {
+      window.userStore = {
         user: { id: "integration_test_user" },
       };
 
@@ -228,11 +242,11 @@ describe("Next.js Error Boundaries Integration", () => {
       );
 
       // Cleanup
-      window.__USER_STORE__ = undefined;
+      window.userStore = undefined;
     });
 
     it("should handle missing user store gracefully", () => {
-      window.__USER_STORE__ = undefined;
+      window.userStore = undefined;
 
       render(<DashboardError error={mockError} reset={mockReset} />);
 
@@ -242,19 +256,21 @@ describe("Next.js Error Boundaries Integration", () => {
   });
 
   describe("Error Reporting Integration", () => {
-    it("should create error reports with consistent format", () => {
+    it("should create error reports with consistent format", async () => {
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
-        mockError,
-        undefined,
-        expect.objectContaining({
-          sessionId: expect.any(String),
-        })
-      );
+      await waitFor(() => {
+        expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
+          mockError,
+          undefined,
+          expect.objectContaining({
+            sessionId: expect.any(String),
+          })
+        );
+      });
     });
 
-    it("should handle error service failures gracefully", () => {
+    it("should handle error service failures gracefully", async () => {
       vi.mocked(mockErrorService).reportError.mockRejectedValue(
         new Error("Reporting failed")
       );
@@ -263,6 +279,10 @@ describe("Next.js Error Boundaries Integration", () => {
       expect(() => {
         render(<ErrorComponent error={mockError} reset={mockReset} />);
       }).not.toThrow();
+
+      await waitFor(() => {
+        expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
+      });
     });
   });
 

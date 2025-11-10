@@ -8,6 +8,7 @@
 "use client";
 
 import { useCallback, useOptimistic, useState } from "react";
+import { secureUuid } from "@/lib/security/random";
 import type { ChatMessage } from "./use-websocket-chat";
 
 export interface OptimisticChatMessage extends ChatMessage {
@@ -65,12 +66,12 @@ export function useOptimisticChat({
       }
 
       const optimisticMessage: OptimisticChatMessage = {
-        id: crypto.randomUUID(),
         content: content.trim(),
-        timestamp: new Date(),
+        id: secureUuid(),
+        isOptimistic: true,
         sender: currentUser,
         status: "sending",
-        isOptimistic: true,
+        timestamp: new Date(),
       };
 
       setIsPending(true);
@@ -98,9 +99,9 @@ export function useOptimisticChat({
   );
 
   return {
+    error,
+    isPending,
     optimisticMessages,
     sendOptimisticMessage,
-    isPending,
-    error,
   };
 }

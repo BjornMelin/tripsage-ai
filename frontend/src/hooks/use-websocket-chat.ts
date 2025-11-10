@@ -1,11 +1,12 @@
-"use client";
-
 /**
  * @fileoverview Chat-centric Supabase Realtime hook with Google-style documentation.
  */
 
+"use client";
+
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { nowIso, secureUuid } from "@/lib/security/random";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores";
 
@@ -13,6 +14,9 @@ type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
 type ChannelSendRequest = Parameters<RealtimeChannel["send"]>[0];
 
+/**
+ * Payload for chat message broadcast events.
+ */
 type ChatMessageBroadcastPayload = {
   id?: string;
   content: string;
@@ -20,6 +24,9 @@ type ChatMessageBroadcastPayload = {
   sender?: { id: string; name: string; avatar?: string };
 };
 
+/**
+ * Payload for chat typing broadcast events.
+ */
 type ChatTypingBroadcastPayload = {
   userId: string;
   isTyping: boolean;
@@ -27,67 +34,63 @@ type ChatTypingBroadcastPayload = {
 
 /**
  * Represents a chat message exchanged through the realtime channel.
- *
- * @interface ChatMessage
- * @property {string} id Stable message identifier.
- * @property {string} content Message body (Markdown/plain text).
- * @property {Date} timestamp Client-side timestamp when the message was processed.
- * @property {{id: string, name: string, avatar?: string}} sender Basic sender information.
- * @property {"sending" | "sent" | "failed"=} status Delivery state used for optimistic updates.
- * @property {"text" | "system" | "typing"=} type Optional message category, defaults to `text`.
  */
 export interface ChatMessage {
+  /** Stable message identifier. */
   id: string;
+  /** Message body (Markdown/plain text). */
   content: string;
+  /** Client-side timestamp when the message was processed. */
   timestamp: Date;
+  /** Basic sender information. */
   sender: { id: string; name: string; avatar?: string };
+  /** Delivery state used for optimistic updates. */
   status?: "sending" | "sent" | "failed";
+  /** Optional message category, defaults to `text`. */
   type?: "text" | "system" | "typing";
 }
 
 /**
  * Configuration flags for the websocket chat hook.
- *
- * @interface WebSocketChatOptions
- * @property {boolean=} autoConnect Whether the hook should auto-connect on mount (default `true`).
- * @property {"user" | "session"=} topicType Determines topic prefix: `user:{id}` or `session:{id}`.
- * @property {string=} sessionId Session identifier when `topicType` equals `"session"`.
  */
 export interface WebSocketChatOptions {
+  /** Whether to automatically connect to the websocket. */
   autoConnect?: boolean;
+  /** The type of topic to subscribe to, either `user` or `session`. */
   topicType?: "user" | "session";
+  /** The session ID to subscribe to. */
   sessionId?: string;
 }
 
 /**
  * Shape of the realtime chat hook return value.
- *
- * @interface UseWebSocketChatReturn
- * @property {ChatMessage[]} messages Ordered list of chat messages.
- * @property {ConnectionStatus} connectionStatus Derived realtime connection state.
- * @property {(content: string) => Promise<void>} sendMessage Broadcasts a chat message.
- * @property {boolean} isConnected Convenience boolean for `connectionStatus === "connected"`.
- * @property {() => void} reconnect Forces a disconnect/reconnect cycle.
- * @property {string[]} typingUsers Identifiers for users currently typing.
- * @property {() => void} startTyping Notifies the channel that the current user is typing.
- * @property {() => void} stopTyping Signals that the current user stopped typing.
  */
 export interface UseWebSocketChatReturn {
+  /** The list of chat messages. */
   messages: ChatMessage[];
+  /** The connection status. */
   connectionStatus: ConnectionStatus;
+  /** The function to send a message. */
   sendMessage: (content: string) => Promise<void>;
+  /** Whether the connection is established. */
   isConnected: boolean;
+  /** The function to reconnect to the websocket. */
   reconnect: () => void;
+  /** The list of typing users. */
   typingUsers: string[];
+  /** The function to start typing. */
   startTyping: () => void;
+  /** The function to stop typing. */
   stopTyping: () => void;
 }
 
 /**
  * Provides realtime chat capabilities backed by Supabase broadcast channels.
  *
- * @param {WebSocketChatOptions} options Hook configuration overrides.
- * @returns {UseWebSocketChatReturn} Realtime connection state and chat helpers.
+ * @param autoConnect - Whether to automatically connect to the websocket.
+ * @param topicType - The type of topic to subscribe to, either `user` or `session`.
+ * @param sessionId - The session ID to subscribe to.
+ * @returns Realtime connection state and chat helpers.
  */
 export function useWebSocketChat({
   autoConnect = true,
@@ -99,7 +102,7 @@ export function useWebSocketChat({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
-  const [reconnectVersion, setReconnectVersion] = useState(0);
+  const [_reconnectVersion, setReconnectVersion] = useState(0);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -134,11 +137,11 @@ export function useWebSocketChat({
         setMessages((prev) => [
           ...prev,
           {
-            id: data.id ?? crypto.randomUUID(),
             content: data.content,
-            timestamp: new Date(data.timestamp ?? Date.now()),
+            id: data.id ?? secureUuid(),
             sender: data.sender ?? { id: user?.id ?? "unknown", name: "You" },
             status: "sent",
+            timestamp: new Date(data.timestamp ?? Date.now()),
           },
         ]);
       })
@@ -192,8 +195,14 @@ export function useWebSocketChat({
       }
       setStatus("disconnected");
     };
-  }, [autoConnect, supabase, user?.id, topicType, sessionId, reconnectVersion]);
+  }, [autoConnect, supabase, user?.id, topicType, sessionId]);
 
+  /**
+   * Sends a chat message through the websocket channel.
+   *
+   * @param content - The message content to send.
+   * @returns Promise that resolves when the message is sent.
+   */
   const sendMessage = useCallback(
     async (content: string) => {
       const channel = channelRef.current;
@@ -202,58 +211,73 @@ export function useWebSocketChat({
       }
 
       const request: ChannelSendRequest = {
-        type: "broadcast",
         event: "chat:message",
         payload: {
           content,
-          timestamp: new Date().toISOString(),
           sender: { id: user.id, name: "You" },
+          timestamp: nowIso(),
         },
+        type: "broadcast",
       };
       await channel.send(request);
     },
     [user?.id]
   );
 
+  /**
+   * Starts typing indicator for the current user.
+   *
+   * @returns {void}
+   */
   const startTyping = useCallback(() => {
     const channel = channelRef.current;
     if (!user?.id || !channel) {
       return;
     }
     const request: ChannelSendRequest = {
-      type: "broadcast",
       event: "chat:typing",
-      payload: { userId: user.id, isTyping: true },
+      payload: { isTyping: true, userId: user.id },
+      type: "broadcast",
     };
-    void channel.send(request);
+    channel.send(request);
   }, [user?.id]);
 
+  /**
+   * Stops typing indicator for the current user.
+   *
+   * @returns {void}
+   */
   const stopTyping = useCallback(() => {
     const channel = channelRef.current;
     if (!user?.id || !channel) {
       return;
     }
     const request: ChannelSendRequest = {
-      type: "broadcast",
       event: "chat:typing",
-      payload: { userId: user.id, isTyping: false },
+      payload: { isTyping: false, userId: user.id },
+      type: "broadcast",
     };
-    void channel.send(request);
+    channel.send(request);
   }, [user?.id]);
 
+  /**
+   * Reconnects to the websocket.
+   *
+   * @returns {void}
+   */
   const reconnect = useCallback(() => {
     setStatus("connecting");
     setReconnectVersion((version) => version + 1);
   }, []);
 
   return {
-    messages,
     connectionStatus: status,
-    sendMessage,
     isConnected: status === "connected",
+    messages,
     reconnect,
-    typingUsers,
+    sendMessage,
     startTyping,
     stopTyping,
+    typingUsers,
   };
 }

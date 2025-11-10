@@ -1,18 +1,21 @@
+/**
+ * @fileoverview Client page showcasing the modern search experience for flights and hotels.
+ */
 "use client";
 
 import {
   Building2,
-  Calendar,
   Clock,
   MapPin,
   Plane,
+  Shield,
   Sparkles,
   Star,
   TrendingUp,
   Users,
   Zap,
 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { type ReactNode, useState, useTransition } from "react";
 import type { ModernFlightSearchParams } from "@/components/features/search/flight-search-form";
 import { FlightSearchForm } from "@/components/features/search/flight-search-form";
 import type { ModernHotelSearchParams } from "@/components/features/search/hotel-search-form";
@@ -31,77 +34,103 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // Mock data uses the Modern types directly
 
 // Mock data for demo purposes
-const mockFlightResults = [
+const MOCK_FLIGHT_RESULTS: ModernFlightResult[] = [
   {
-    id: "flight-1",
-    airline: "Delta Airlines",
-    flightNumber: "DL 128",
     aircraft: "Boeing 787",
-    origin: { code: "JFK", city: "New York", terminal: "4" },
-    destination: { code: "LHR", city: "London", terminal: "3" },
-    departure: { time: "10:30 AM", date: "2025-06-15" },
-    arrival: { time: "10:45 PM", date: "2025-06-15" },
-    duration: 420,
-    stops: { count: 0, cities: [] },
-    price: {
-      base: 599,
-      total: 699,
-      currency: "USD",
-      priceChange: "down" as const,
-      dealScore: 9,
-    },
+    airline: "Delta Airlines",
     amenities: ["wifi", "meals", "entertainment"],
-    emissions: { kg: 850, compared: "low" as const },
-    flexibility: { changeable: true, refundable: false, cost: 50 },
+    arrival: { date: "2025-06-15", time: "10:45 PM" },
+    departure: { date: "2025-06-15", time: "10:30 AM" },
+    destination: { city: "London", code: "LHR", terminal: "3" },
+    duration: 420,
+    emissions: { compared: "low" as const, kg: 850 },
+    flexibility: { changeable: true, cost: 50, refundable: false },
+    flightNumber: "DL 128",
+    id: "flight-1",
+    origin: { city: "New York", code: "JFK", terminal: "4" },
     prediction: {
-      priceAlert: "buy_now" as const,
       confidence: 89,
+      priceAlert: "buy_now" as const,
       reason: "Prices trending up for this route",
     },
+    price: {
+      base: 599,
+      currency: "USD",
+      dealScore: 9,
+      priceChange: "down" as const,
+      total: 699,
+    },
     promotions: {
-      type: "flash_deal" as const,
       description: "Flash Deal - 24hrs only",
       savings: 150,
+      type: "flash_deal" as const,
     },
+    stops: { cities: [], count: 0 },
   },
   {
-    id: "flight-2",
-    airline: "United Airlines",
-    flightNumber: "UA 901",
     aircraft: "Airbus A350",
-    origin: { code: "JFK", city: "New York", terminal: "7" },
-    destination: { code: "LHR", city: "London", terminal: "2" },
-    departure: { time: "1:15 PM", date: "2025-06-15" },
-    arrival: { time: "1:35 AM", date: "2025-06-16" },
-    duration: 440,
-    stops: { count: 0, cities: [] },
-    price: {
-      base: 649,
-      total: 749,
-      currency: "USD",
-      priceChange: "stable" as const,
-      dealScore: 7,
-    },
+    airline: "United Airlines",
     amenities: ["wifi", "entertainment"],
-    emissions: { kg: 920, compared: "average" as const },
-    flexibility: { changeable: true, refundable: true, cost: 0 },
+    arrival: { date: "2025-06-16", time: "1:35 AM" },
+    departure: { date: "2025-06-15", time: "1:15 PM" },
+    destination: { city: "London", code: "LHR", terminal: "2" },
+    duration: 440,
+    emissions: { compared: "average" as const, kg: 920 },
+    flexibility: { changeable: true, cost: 0, refundable: true },
+    flightNumber: "UA 901",
+    id: "flight-2",
+    origin: { city: "New York", code: "JFK", terminal: "7" },
     prediction: {
-      priceAlert: "neutral" as const,
       confidence: 72,
+      priceAlert: "neutral" as const,
       reason: "Stable pricing expected",
     },
+    price: {
+      base: 649,
+      currency: "USD",
+      dealScore: 7,
+      priceChange: "stable" as const,
+      total: 749,
+    },
+    stops: { cities: [], count: 0 },
   },
-] as ModernFlightResult[];
+];
 
-const mockHotelResults = [
+const MOCK_HOTEL_RESULTS: ModernHotelResult[] = [
   {
-    id: "hotel-1",
-    name: "The Ritz-Carlton New York",
+    ai: {
+      personalizedTags: ["luxury", "city-center", "business"],
+      reason: "Perfect for luxury seekers with prime location",
+      recommendation: 9,
+    },
+    allInclusive: {
+      available: false,
+      inclusions: [],
+      tier: "basic" as const,
+    },
+    amenities: {
+      essential: ["wifi", "breakfast", "gym", "spa"],
+      premium: ["concierge", "butler"],
+      unique: ["central-park-view"],
+    },
+    availability: {
+      flexible: true,
+      roomsLeft: 3,
+      urgency: "high" as const,
+    },
     brand: "Ritz-Carlton",
     category: "hotel" as const,
-    starRating: 5,
-    userRating: 4.8,
-    reviewCount: 2847,
+    guestExperience: {
+      highlights: ["Exceptional service with Central Park views"],
+      recentMentions: ["Outstanding breakfast", "Perfect location"],
+      vibe: "luxury" as const,
+    },
+    id: "hotel-1",
+    images: {
+      count: 24,
+      gallery: [],
+      main: "/hotel-1.jpg",
+    },
     location: {
       address: "50 Central Park South",
       city: "New York",
@@ -109,64 +138,64 @@ const mockHotelResults = [
       landmarks: ["Central Park", "Times Square"],
       walkScore: 95,
     },
-    images: {
-      main: "/hotel-1.jpg",
-      gallery: [],
-      count: 24,
-    },
+    name: "The Ritz-Carlton New York",
     pricing: {
       basePrice: 450,
-      totalPrice: 1350,
-      pricePerNight: 450,
       currency: "USD",
-      taxes: 85,
       deals: {
-        type: "early_bird" as const,
         description: "Early Bird - Book 30 days ahead",
-        savings: 75,
         originalPrice: 525,
+        savings: 75,
+        type: "early_bird" as const,
       },
       priceHistory: "falling" as const,
+      pricePerNight: 450,
+      taxes: 85,
+      totalPrice: 1350,
     },
-    amenities: {
-      essential: ["wifi", "breakfast", "gym", "spa"],
-      premium: ["concierge", "butler"],
-      unique: ["central-park-view"],
-    },
+    reviewCount: 2847,
+    starRating: 5,
     sustainability: {
       certified: true,
-      score: 8,
       practices: ["solar-power", "recycling", "local-sourcing"],
+      score: 8,
+    },
+    userRating: 4.8,
+  },
+  {
+    ai: {
+      personalizedTags: ["budget", "city-center", "modern"],
+      reason: "Great value in prime location for business travelers",
+      recommendation: 7,
     },
     allInclusive: {
       available: false,
       inclusions: [],
       tier: "basic" as const,
     },
+    amenities: {
+      essential: ["wifi", "gym"],
+      premium: [],
+      unique: ["pod-design", "rooftop-bar"],
+    },
     availability: {
-      roomsLeft: 3,
-      urgency: "high" as const,
       flexible: true,
+      roomsLeft: 12,
+      urgency: "low" as const,
     },
-    guestExperience: {
-      highlights: ["Exceptional service with Central Park views"],
-      recentMentions: ["Outstanding breakfast", "Perfect location"],
-      vibe: "luxury" as const,
-    },
-    ai: {
-      recommendation: 9,
-      reason: "Perfect for luxury seekers with prime location",
-      personalizedTags: ["luxury", "city-center", "business"],
-    },
-  },
-  {
-    id: "hotel-2",
-    name: "Pod Hotels Times Square",
     brand: "Pod Hotels",
     category: "hotel" as const,
-    starRating: 3,
-    userRating: 4.2,
-    reviewCount: 1893,
+    guestExperience: {
+      highlights: ["Modern pod-style rooms in heart of Times Square"],
+      recentMentions: ["Great location", "Clean and efficient"],
+      vibe: "business" as const,
+    },
+    id: "hotel-2",
+    images: {
+      count: 18,
+      gallery: [],
+      main: "/hotel-2.jpg",
+    },
     location: {
       address: "400 W 42nd St",
       city: "New York",
@@ -174,52 +203,31 @@ const mockHotelResults = [
       landmarks: ["Times Square", "Broadway"],
       walkScore: 100,
     },
-    images: {
-      main: "/hotel-2.jpg",
-      gallery: [],
-      count: 18,
-    },
+    name: "Pod Hotels Times Square",
     pricing: {
       basePrice: 189,
-      totalPrice: 567,
-      pricePerNight: 189,
       currency: "USD",
-      taxes: 35,
       priceHistory: "rising" as const,
+      pricePerNight: 189,
+      taxes: 35,
+      totalPrice: 567,
     },
-    amenities: {
-      essential: ["wifi", "gym"],
-      premium: [],
-      unique: ["pod-design", "rooftop-bar"],
-    },
+    reviewCount: 1893,
+    starRating: 3,
     sustainability: {
       certified: false,
-      score: 6,
       practices: ["energy-efficient"],
+      score: 6,
     },
-    allInclusive: {
-      available: false,
-      inclusions: [],
-      tier: "basic" as const,
-    },
-    availability: {
-      roomsLeft: 12,
-      urgency: "low" as const,
-      flexible: true,
-    },
-    guestExperience: {
-      highlights: ["Modern pod-style rooms in heart of Times Square"],
-      recentMentions: ["Great location", "Clean and efficient"],
-      vibe: "business" as const,
-    },
-    ai: {
-      recommendation: 7,
-      reason: "Great value in prime location for business travelers",
-      personalizedTags: ["budget", "city-center", "modern"],
-    },
+    userRating: 4.2,
   },
-] as ModernHotelResult[];
+];
 
+/**
+ * Render the modern search experience with tabbed flight and hotel flows.
+ *
+ * @returns Fully composed search layout with showcase sections.
+ */
 export default function ModernSearchPage() {
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<"flights" | "hotels">("flights");
@@ -227,44 +235,48 @@ export default function ModernSearchPage() {
   const [_searchData, setSearchData] = useState<Record<string, unknown> | null>(null);
 
   const handleFlightSearch = async (params: ModernFlightSearchParams) => {
-    startTransition(() => {
-      setSearchData(params as unknown as Record<string, unknown>);
-      setShowResults(true);
-      // Simulate API call
-      setTimeout(() => {
+    await new Promise<void>((resolve) => {
+      startTransition(() => {
+        setSearchData(params as unknown as Record<string, unknown>);
         setShowResults(true);
-      }, 1500);
+        // Simulate API call
+        setTimeout(() => {
+          setShowResults(true);
+          resolve();
+        }, 1500);
+      });
     });
   };
 
   const handleHotelSearch = async (params: ModernHotelSearchParams) => {
-    startTransition(() => {
-      setSearchData(params as unknown as Record<string, unknown>);
-      setShowResults(true);
-      // Simulate API call
-      setTimeout(() => {
+    await new Promise<void>((resolve) => {
+      startTransition(() => {
+        setSearchData(params as unknown as Record<string, unknown>);
         setShowResults(true);
-      }, 1500);
+        // Simulate API call
+        setTimeout(() => {
+          setShowResults(true);
+          resolve();
+        }, 1500);
+      });
     });
   };
 
-  const handleFlightSelect = async (flight: ModernFlightResult) => {
-    console.log("Selected flight:", flight);
+  const handleFlightSelect = async (_flight: ModernFlightResult) => {
     // Handle flight selection
+    await Promise.resolve(); // No-op async operation to satisfy linter
   };
 
-  const handleHotelSelect = async (hotel: ModernHotelResult) => {
-    console.log("Selected hotel:", hotel);
+  const handleHotelSelect = async (_hotel: ModernHotelResult) => {
     // Handle hotel selection
+    await Promise.resolve(); // No-op async operation to satisfy linter
   };
 
-  const handleCompareFlights = (flights: ModernFlightResult[]) => {
-    console.log("Comparing flights:", flights);
+  const handleCompareFlights = (_flights: ModernFlightResult[]) => {
     // Handle flight comparison
   };
 
-  const handleSaveToWishlist = (hotelId: string) => {
-    console.log("Saved to wishlist:", hotelId);
+  const handleSaveToWishlist = (_hotelId: string) => {
     // Handle wishlist save
   };
 
@@ -329,7 +341,7 @@ export default function ModernSearchPage() {
                     </Badge>
                   </div>
                   <ModernFlightResults
-                    results={mockFlightResults}
+                    results={MOCK_FLIGHT_RESULTS}
                     loading={isPending}
                     onSelect={handleFlightSelect}
                     onCompare={handleCompareFlights}
@@ -355,11 +367,11 @@ export default function ModernSearchPage() {
                     </Badge>
                   </div>
                   <ModernHotelResults
-                    results={mockHotelResults}
+                    results={MOCK_HOTEL_RESULTS}
                     loading={isPending}
                     onSelect={handleHotelSelect}
                     onSaveToWishlist={handleSaveToWishlist}
-                    showMap={true}
+                    showMap
                   />
                 </div>
               )}
@@ -403,9 +415,9 @@ export default function ModernSearchPage() {
                 description="Walk scores, landmark distances, and neighborhood insights"
               />
               <FeatureCard
-                icon={<Calendar className="h-6 w-6 text-orange-500" />}
-                title="Flexible Booking"
-                description="Real-time availability with cancellation policies"
+                icon={<Shield className="h-6 w-6 text-orange-500" />}
+                title="Price Protection"
+                description="Free cancellation and price matching guarantees"
               />
             </div>
           </CardContent>
@@ -444,15 +456,19 @@ export default function ModernSearchPage() {
   );
 }
 
-function FeatureCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
+interface FeatureCardProps {
+  icon: ReactNode;
   title: string;
   description: string;
-}) {
+}
+
+/**
+ * Feature card highlighting modern experience capabilities.
+ *
+ * @param props - Icon, title, and description data to display.
+ * @returns Structured feature card element.
+ */
+function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
     <div className="p-4 border rounded-lg space-y-3">
       <div className="flex items-center gap-3">

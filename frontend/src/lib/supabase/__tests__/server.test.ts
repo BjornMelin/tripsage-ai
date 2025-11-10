@@ -1,9 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
+import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { cookies } from "next/headers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { TypedServerSupabase } from "../server";
 
 // Import after mocking dependencies
-let createServerSupabase: () => Promise<any>;
+let createServerSupabase: () => Promise<TypedServerSupabase>;
+
+type MockCookieStore = {
+  getAll: ReturnType<typeof vi.fn>;
+  set: ReturnType<typeof vi.fn>;
+};
 
 // Mock modules
 vi.mock("@supabase/ssr", () => ({
@@ -37,15 +44,19 @@ describe("Supabase Server Client", () => {
       { name: "cookie2", value: "value2" },
     ];
 
-    const mockCookieStore = {
+    const mockCookieStore: MockCookieStore = {
       getAll: vi.fn().mockReturnValue(mockCookies),
       set: vi.fn(),
     };
 
-    vi.mocked(cookies).mockResolvedValue(mockCookieStore as any);
+    vi.mocked(cookies).mockResolvedValue(
+      mockCookieStore as unknown as ReadonlyRequestCookies
+    );
 
     const mockClient = { auth: {}, from: vi.fn() };
-    vi.mocked(createServerClient).mockReturnValue(mockClient as any);
+    vi.mocked(createServerClient).mockReturnValue(
+      mockClient as unknown as TypedServerSupabase
+    );
 
     const client = await createServerSupabase();
 
@@ -65,32 +76,49 @@ describe("Supabase Server Client", () => {
 
   it("should properly handle cookie operations", async () => {
     const mockCookies = [{ name: "test", value: "value" }];
-    const mockCookieStore = {
+    type CookieHandlers = {
+      getAll: () => typeof mockCookies;
+      setAll: (
+        cookies: Array<{
+          name: string;
+          value: string;
+          options?: Record<string, unknown>;
+        }>
+      ) => void;
+    };
+    const mockCookieStore: MockCookieStore = {
       getAll: vi.fn().mockReturnValue(mockCookies),
       set: vi.fn(),
     };
 
-    vi.mocked(cookies).mockResolvedValue(mockCookieStore as any);
+    vi.mocked(cookies).mockResolvedValue(
+      mockCookieStore as unknown as ReadonlyRequestCookies
+    );
 
-    let capturedCookieHandlers: any = null;
+    let capturedCookieHandlers: CookieHandlers | null = null;
     vi.mocked(createServerClient).mockImplementation((_url, _key, options) => {
-      capturedCookieHandlers = options.cookies;
-      return { auth: {} } as any;
+      const handlers = options.cookies as CookieHandlers;
+      capturedCookieHandlers = handlers;
+      return { auth: {} } as unknown as TypedServerSupabase;
     });
 
     await createServerSupabase();
 
-    // Test getAll
-    const getAllResult = capturedCookieHandlers.getAll();
+    // Test getAll - TypeScript guard ensures capturedCookieHandlers is CookieHandlers here
+    if (!capturedCookieHandlers) {
+      throw new Error("Cookie handlers not captured");
+    }
+    const handlersForTest: CookieHandlers = capturedCookieHandlers;
+    const getAllResult = handlersForTest.getAll();
     expect(mockCookieStore.getAll).toHaveBeenCalled();
     expect(getAllResult).toEqual(mockCookies);
 
     // Test setAll
     const cookiesToSet = [
-      { name: "new1", value: "val1", options: { httpOnly: true } },
-      { name: "new2", value: "val2", options: { secure: true } },
+      { name: "new1", options: { httpOnly: true }, value: "val1" },
+      { name: "new2", options: { secure: true }, value: "val2" },
     ];
-    capturedCookieHandlers.setAll(cookiesToSet);
+    handlersForTest.setAll(cookiesToSet);
 
     expect(mockCookieStore.set).toHaveBeenCalledTimes(2);
     expect(mockCookieStore.set).toHaveBeenCalledWith("new1", "val1", {
@@ -109,11 +137,13 @@ describe("Supabase Server Client", () => {
     const serverModule = await import("../server");
     createServerSupabase = serverModule.createServerSupabase;
 
-    const mockCookieStore = {
+    const mockCookieStore: MockCookieStore = {
       getAll: vi.fn().mockReturnValue([]),
       set: vi.fn(),
     };
-    vi.mocked(cookies).mockResolvedValue(mockCookieStore as any);
+    vi.mocked(cookies).mockResolvedValue(
+      mockCookieStore as unknown as ReadonlyRequestCookies
+    );
 
     await expect(createServerSupabase()).rejects.toThrow(
       "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
@@ -121,15 +151,18 @@ describe("Supabase Server Client", () => {
   });
 
   it("should handle empty cookie store", async () => {
-    const mockCookieStore = {
+    const mockCookieStore: MockCookieStore = {
       getAll: vi.fn().mockReturnValue([]),
       set: vi.fn(),
     };
-
-    vi.mocked(cookies).mockResolvedValue(mockCookieStore as any);
+    vi.mocked(cookies).mockResolvedValue(
+      mockCookieStore as unknown as ReadonlyRequestCookies
+    );
 
     const mockClient = { auth: {}, from: vi.fn() };
-    vi.mocked(createServerClient).mockReturnValue(mockClient as any);
+    vi.mocked(createServerClient).mockReturnValue(
+      mockClient as unknown as TypedServerSupabase
+    );
 
     const client = await createServerSupabase();
 

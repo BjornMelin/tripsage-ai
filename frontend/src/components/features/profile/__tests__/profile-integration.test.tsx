@@ -1,9 +1,3 @@
-/**
- * @fileoverview Integration tests for profile components, verifying user profile
- * sections render correctly with mocked stores and handle form interactions
- * across account settings, personal info, preferences, and security sections.
- */
-
 import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils";
@@ -15,26 +9,26 @@ import { SecuritySection } from "../security-section";
 // Mock all dependencies to focus on component rendering
 vi.mock("@/stores/user-store", () => ({
   useUserProfileStore: () => ({
+    updateUser: vi.fn(),
     user: {
-      id: "1",
+      displayName: "John Doe",
       email: "test@example.com",
       firstName: "John",
-      lastName: "Doe",
-      displayName: "John Doe",
+      id: "1",
       isEmailVerified: true,
+      lastName: "Doe",
       preferences: {
         notifications: {
           email: true,
-          tripReminders: true,
-          priceAlerts: false,
           marketing: false,
+          priceAlerts: false,
+          tripReminders: true,
         },
       },
       security: {
         twoFactorEnabled: false,
       },
     },
-    updateUser: vi.fn(),
   }),
 }));
 

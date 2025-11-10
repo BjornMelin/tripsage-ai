@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Activity search form component for searching activities.
+ */
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,28 +26,28 @@ import {
 import { Input } from "@/components/ui/input";
 import type { ActivitySearchParams } from "@/types/search";
 
-const activitySearchFormSchema = z.object({
-  location: z.string().min(1, { message: "Location is required" }),
-  startDate: z.string().min(1, { message: "Start date is required" }),
-  endDate: z.string().min(1, { message: "End date is required" }),
+const ActivitySearchFormSchema = z.object({
   adults: z.number().min(1).max(20),
-  children: z.number().min(0).max(10),
-  infants: z.number().min(0).max(5),
   categories: z.array(z.string()),
+  children: z.number().min(0).max(10),
   duration: z.number().min(1).max(48).optional(),
-  priceMin: z.number().min(0).optional(),
+  endDate: z.string().min(1, { message: "End date is required" }),
+  infants: z.number().min(0).max(5),
+  location: z.string().min(1, { message: "Location is required" }),
   priceMax: z.number().min(0).optional(),
+  priceMin: z.number().min(0).optional(),
   rating: z.number().min(1).max(5).optional(),
+  startDate: z.string().min(1, { message: "Start date is required" }),
 });
 
-type ActivitySearchFormValues = z.infer<typeof activitySearchFormSchema>;
+type ActivitySearchFormValues = z.infer<typeof ActivitySearchFormSchema>;
 
 interface ActivitySearchFormProps {
   onSearch?: (data: ActivitySearchParams) => void;
   initialValues?: Partial<ActivitySearchFormValues>;
 }
 
-const ACTIVITY_CATEGORIES = [
+const ActivityCategories = [
   { id: "outdoor", label: "Outdoor & Adventure" },
   { id: "cultural", label: "Cultural & Historical" },
   { id: "food", label: "Food & Drink" },
@@ -64,35 +67,35 @@ export function ActivitySearchForm({
   initialValues,
 }: ActivitySearchFormProps) {
   const form = useForm<ActivitySearchFormValues>({
-    resolver: zodResolver(activitySearchFormSchema),
     defaultValues: {
+      adults: 1,
+      categories: [],
+      children: 0,
+      endDate: "",
+      infants: 0,
       location: "",
       startDate: "",
-      endDate: "",
-      adults: 1,
-      children: 0,
-      infants: 0,
-      categories: [],
       ...initialValues,
     },
     mode: "onChange",
+    resolver: zodResolver(ActivitySearchFormSchema),
   });
 
-  function onSubmit(data: ActivitySearchFormValues) {
+  const onSubmit = (data: ActivitySearchFormValues) => {
     // Convert form data to search params
     const searchParams: ActivitySearchParams = {
-      destination: data.location,
-      date: data.startDate,
       adults: data.adults,
-      children: data.children,
-      infants: data.infants,
       category: data.categories?.[0], // Use first category as main category
+      children: data.children,
+      date: data.startDate,
+      destination: data.location,
       duration: data.duration
         ? {
-            min: 0,
             max: data.duration,
+            min: 0,
           }
         : undefined,
+      infants: data.infants,
     };
 
     console.log("Activity search params:", searchParams);
@@ -100,7 +103,7 @@ export function ActivitySearchForm({
     if (onSearch) {
       onSearch(searchParams);
     }
-  }
+  };
 
   return (
     <Card>
@@ -239,7 +242,7 @@ export function ActivitySearchForm({
                       Select the types of activities you're interested in
                     </FormDescription>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {ACTIVITY_CATEGORIES.map((category) => (
+                      {ActivityCategories.map((category) => (
                         <label
                           key={category.id}
                           className="flex items-center space-x-2 border rounded-md p-2 cursor-pointer hover:bg-accent"

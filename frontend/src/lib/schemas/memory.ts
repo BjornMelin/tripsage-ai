@@ -1,5 +1,5 @@
 /**
- * Zod schemas for memory-related types and API validation
+ * @fileoverview Zod schemas for memory-related types and API validation
  */
 
 import { z } from "zod";
@@ -7,262 +7,266 @@ import { z } from "zod";
 /**
  * Base memory schema
  */
-export const MemorySchema = z.object({
-  id: z.string(),
+export const MEMORY_SCHEMA = z.object({
   content: z.string(),
-  type: z.string(),
-  userId: z.string(),
-  sessionId: z.string().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
   createdAt: z.string(),
+  id: z.string(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  sessionId: z.string().optional(),
+  type: z.string(),
   updatedAt: z.string(),
+  userId: z.string(),
 });
 
 /**
  * User preferences schema
  */
-export const UserPreferencesSchema = z.object({
-  destinations: z.array(z.string()).optional(),
+export const USER_PREFERENCES_SCHEMA = z.object({
+  accessibilityNeeds: z.array(z.string()).optional(),
+  accommodationType: z.array(z.string()).optional(),
   activities: z.array(z.string()).optional(),
-  budget_range: z
+  budgetRange: z
     .object({
-      min: z.number(),
-      max: z.number(),
       currency: z.string(),
+      max: z.number(),
+      min: z.number(),
     })
     .optional(),
-  travel_style: z.string().optional(),
-  accommodation_type: z.array(z.string()).optional(),
-  transportation_preferences: z.array(z.string()).optional(),
-  dietary_restrictions: z.array(z.string()).optional(),
-  accessibility_needs: z.array(z.string()).optional(),
-  language_preferences: z.array(z.string()).optional(),
-  time_preferences: z
+  destinations: z.array(z.string()).optional(),
+  dietaryRestrictions: z.array(z.string()).optional(),
+  languagePreferences: z.array(z.string()).optional(),
+  timePreferences: z
     .object({
-      preferred_departure_times: z.array(z.string()).optional(),
-      trip_duration_preferences: z.array(z.string()).optional(),
-      seasonality_preferences: z.array(z.string()).optional(),
+      preferredDepartureTimes: z.array(z.string()).optional(),
+      seasonalityPreferences: z.array(z.string()).optional(),
+      tripDurationPreferences: z.array(z.string()).optional(),
     })
     .optional(),
+  transportationPreferences: z.array(z.string()).optional(),
+  travelStyle: z.string().optional(),
 });
 
 /**
  * Memory insight schema
  */
-export const MemoryInsightSchema = z.object({
-  category: z.string(),
-  insight: z.string(),
-  confidence: z.number(),
-  relatedMemories: z.array(z.string()),
+export const MEMORY_INSIGHT_SCHEMA = z.object({
   actionable: z.boolean(),
+  category: z.string(),
+  confidence: z.number(),
+  insight: z.string(),
+  relatedMemories: z.array(z.string()),
 });
 
 /**
  * Conversation message schema
  */
-export const ConversationMessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]),
+export const CONVERSATION_MESSAGE_SCHEMA = z.object({
   content: z.string(),
-  timestamp: z.string().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  role: z.enum(["user", "assistant", "system"]),
+  timestamp: z.string().optional(),
 });
 
 /**
  * Search memories request filters schema
  */
-export const SearchMemoriesFiltersSchema = z
+export const SEARCH_MEMORIES_FILTERS_SCHEMA = z
   .object({
-    type: z.array(z.string()).optional(),
     dateRange: z
       .object({
-        start: z.string(),
         end: z.string(),
+        start: z.string(),
       })
       .optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
+    type: z.array(z.string()).optional(),
   })
   .optional();
 
 /**
  * Search memories request schema
  */
-export const SearchMemoriesRequestSchema = z.object({
-  query: z.string(),
-  userId: z.string(),
-  filters: SearchMemoriesFiltersSchema,
+export const SEARCH_MEMORIES_REQUEST_SCHEMA = z.object({
+  filters: SEARCH_MEMORIES_FILTERS_SCHEMA,
   limit: z.number().optional(),
-  similarity_threshold: z.number().optional(),
+  query: z.string(),
+  similarityThreshold: z.number().optional(),
+  userId: z.string(),
 });
 
 /**
  * Search memories response schema
  */
-export const SearchMemoriesResponseSchema = z.object({
-  success: z.boolean(),
+export const SEARCH_MEMORIES_RESPONSE_SCHEMA = z.object({
   memories: z.array(
     z.object({
-      memory: MemorySchema,
-      similarity_score: z.number(),
-      relevance_reason: z.string(),
+      memory: MEMORY_SCHEMA,
+      relevanceReason: z.string(),
+      similarityScore: z.number(),
     })
   ),
-  total_found: z.number(),
-  search_metadata: z.object({
-    query_processed: z.string(),
-    search_time_ms: z.number(),
-    similarity_threshold_used: z.number(),
+  searchMetadata: z.object({
+    queryProcessed: z.string(),
+    searchTimeMs: z.number(),
+    similarityThresholdUsed: z.number(),
   }),
+  success: z.boolean(),
+  totalFound: z.number(),
 });
 
 /**
  * Memory context response schema
  */
-export const MemoryContextResponseSchema = z.object({
-  success: z.boolean(),
+export const MEMORY_CONTEXT_RESPONSE_SCHEMA = z.object({
   context: z.object({
-    userPreferences: UserPreferencesSchema,
-    recentMemories: z.array(MemorySchema),
-    insights: z.array(MemoryInsightSchema),
+    insights: z.array(MEMORY_INSIGHT_SCHEMA),
+    recentMemories: z.array(MEMORY_SCHEMA),
     travelPatterns: z.object({
-      frequentDestinations: z.array(z.string()),
       averageBudget: z.number(),
+      frequentDestinations: z.array(z.string()),
       preferredTravelStyle: z.string(),
       seasonalPatterns: z.record(z.string(), z.array(z.string())),
     }),
+    userPreferences: USER_PREFERENCES_SCHEMA,
   }),
   metadata: z.object({
-    totalMemories: z.number(),
     lastUpdated: z.string(),
+    totalMemories: z.number(),
   }),
+  success: z.boolean(),
 });
 
 /**
  * Update preferences request schema
  */
-export const UpdatePreferencesRequestSchema = z.object({
-  preferences: UserPreferencesSchema.partial(),
-  merge_strategy: z.enum(["replace", "merge", "append"]).optional(),
+export const UPDATE_PREFERENCES_REQUEST_SCHEMA = z.object({
+  mergeStrategy: z.enum(["replace", "merge", "append"]).optional(),
+  preferences: USER_PREFERENCES_SCHEMA.partial(),
 });
 
 /**
  * Update preferences response schema
  */
-export const UpdatePreferencesResponseSchema = z.object({
-  success: z.boolean(),
-  updated_preferences: UserPreferencesSchema,
-  changes_made: z.array(z.string()),
+export const UPDATE_PREFERENCES_RESPONSE_SCHEMA = z.object({
+  changesMade: z.array(z.string()),
   metadata: z.object({
-    updated_at: z.string(),
+    updatedAt: z.string(),
     version: z.number(),
   }),
+  success: z.boolean(),
+  updatedPreferences: USER_PREFERENCES_SCHEMA,
 });
 
 /**
  * Add conversation memory request schema
  */
-export const AddConversationMemoryRequestSchema = z.object({
-  messages: z.array(ConversationMessageSchema),
-  userId: z.string(),
-  sessionId: z.string().optional(),
-  context_type: z.string().optional(),
+export const ADD_CONVERSATION_MEMORY_REQUEST_SCHEMA = z.object({
+  contextType: z.string().optional(),
+  messages: z.array(CONVERSATION_MESSAGE_SCHEMA),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  sessionId: z.string().optional(),
+  userId: z.string(),
 });
 
 /**
  * Add conversation memory response schema
  */
-export const AddConversationMemoryResponseSchema = z.object({
-  success: z.boolean(),
-  memories_created: z.array(z.string()),
-  insights_generated: z.array(MemoryInsightSchema),
-  updated_preferences: UserPreferencesSchema.partial(),
+export const ADD_CONVERSATION_MEMORY_RESPONSE_SCHEMA = z.object({
+  insightsGenerated: z.array(MEMORY_INSIGHT_SCHEMA),
+  memoriesCreated: z.array(z.string()),
   metadata: z.object({
-    processing_time_ms: z.number(),
-    extraction_method: z.string(),
+    extractionMethod: z.string(),
+    processingTimeMs: z.number(),
   }),
+  success: z.boolean(),
+  updatedPreferences: USER_PREFERENCES_SCHEMA.partial(),
 });
 
 /**
  * Memory insights response schema
  */
-export const MemoryInsightsResponseSchema = z.object({
-  success: z.boolean(),
+export const MEMORY_INSIGHTS_RESPONSE_SCHEMA = z.object({
   insights: z.object({
-    travelPersonality: z.object({
-      type: z.string(),
-      confidence: z.number(),
-      description: z.string(),
-      keyTraits: z.array(z.string()),
-    }),
     budgetPatterns: z.object({
       averageSpending: z.record(z.string(), z.number()),
       spendingTrends: z.array(
         z.object({
           category: z.string(),
+          percentageChange: z.number(),
           trend: z.enum(["increasing", "decreasing", "stable"]),
-          percentage_change: z.number(),
         })
       ),
     }),
     destinationPreferences: z.object({
+      discoveryPatterns: z.array(z.string()),
       topDestinations: z.array(
         z.object({
           destination: z.string(),
-          visits: z.number(),
           lastVisit: z.string(),
-          satisfaction_score: z.number().optional(),
+          satisfactionScore: z.number().optional(),
+          visits: z.number(),
         })
       ),
-      discoveryPatterns: z.array(z.string()),
     }),
     recommendations: z.array(
       z.object({
-        type: z.enum(["destination", "activity", "budget", "timing"]),
-        recommendation: z.string(),
-        reasoning: z.string(),
         confidence: z.number(),
+        reasoning: z.string(),
+        recommendation: z.string(),
+        type: z.enum(["destination", "activity", "budget", "timing"]),
       })
     ),
+    travelPersonality: z.object({
+      confidence: z.number(),
+      description: z.string(),
+      keyTraits: z.array(z.string()),
+      type: z.string(),
+    }),
   }),
   metadata: z.object({
-    analysis_date: z.string(),
-    data_coverage_months: z.number(),
-    confidence_level: z.number(),
+    analysisDate: z.string(),
+    confidenceLevel: z.number(),
+    dataCoverageMonths: z.number(),
   }),
+  success: z.boolean(),
 });
 
 /**
  * Delete user memories response schema
  */
-export const DeleteUserMemoriesResponseSchema = z.object({
-  success: z.boolean(),
-  deleted_count: z.number(),
-  backup_created: z.boolean(),
-  backup_location: z.string().optional(),
+export const DELETE_USER_MEMORIES_RESPONSE_SCHEMA = z.object({
+  backupCreated: z.boolean(),
+  backupLocation: z.string().optional(),
+  deletedCount: z.number(),
   metadata: z.object({
-    deletion_time: z.string(),
-    user_id: z.string(),
+    deletionTime: z.string(),
+    userId: z.string(),
   }),
+  success: z.boolean(),
 });
 
 // Type exports
-export type Memory = z.infer<typeof MemorySchema>;
-export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
-export type MemoryInsight = z.infer<typeof MemoryInsightSchema>;
-export type ConversationMessage = z.infer<typeof ConversationMessageSchema>;
-export type SearchMemoriesRequest = z.infer<typeof SearchMemoriesRequestSchema>;
-export type SearchMemoriesResponse = z.infer<typeof SearchMemoriesResponseSchema>;
-export type SearchMemoriesFilters = z.infer<typeof SearchMemoriesFiltersSchema>;
-export type MemoryContextResponse = z.infer<typeof MemoryContextResponseSchema>;
-export type UpdatePreferencesRequest = z.infer<typeof UpdatePreferencesRequestSchema>;
-export type UpdatePreferencesResponse = z.infer<typeof UpdatePreferencesResponseSchema>;
+export type Memory = z.infer<typeof MEMORY_SCHEMA>;
+export type UserPreferences = z.infer<typeof USER_PREFERENCES_SCHEMA>;
+export type MemoryInsight = z.infer<typeof MEMORY_INSIGHT_SCHEMA>;
+export type ConversationMessage = z.infer<typeof CONVERSATION_MESSAGE_SCHEMA>;
+export type SearchMemoriesRequest = z.infer<typeof SEARCH_MEMORIES_REQUEST_SCHEMA>;
+export type SearchMemoriesResponse = z.infer<typeof SEARCH_MEMORIES_RESPONSE_SCHEMA>;
+export type SearchMemoriesFilters = z.infer<typeof SEARCH_MEMORIES_FILTERS_SCHEMA>;
+export type MemoryContextResponse = z.infer<typeof MEMORY_CONTEXT_RESPONSE_SCHEMA>;
+export type UpdatePreferencesRequest = z.infer<
+  typeof UPDATE_PREFERENCES_REQUEST_SCHEMA
+>;
+export type UpdatePreferencesResponse = z.infer<
+  typeof UPDATE_PREFERENCES_RESPONSE_SCHEMA
+>;
 export type AddConversationMemoryRequest = z.infer<
-  typeof AddConversationMemoryRequestSchema
+  typeof ADD_CONVERSATION_MEMORY_REQUEST_SCHEMA
 >;
 export type AddConversationMemoryResponse = z.infer<
-  typeof AddConversationMemoryResponseSchema
+  typeof ADD_CONVERSATION_MEMORY_RESPONSE_SCHEMA
 >;
-export type MemoryInsightsResponse = z.infer<typeof MemoryInsightsResponseSchema>;
+export type MemoryInsightsResponse = z.infer<typeof MEMORY_INSIGHTS_RESPONSE_SCHEMA>;
 export type DeleteUserMemoriesResponse = z.infer<
-  typeof DeleteUserMemoriesResponseSchema
+  typeof DELETE_USER_MEMORIES_RESPONSE_SCHEMA
 >;

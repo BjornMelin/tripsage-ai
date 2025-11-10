@@ -23,7 +23,6 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="input-group"
-      role="group"
       className={cn(
         "group/input-group border-input dark:bg-input/30 relative flex w-full items-center rounded-md border shadow-xs transition-[color,box-shadow] outline-none",
         "h-9 min-w-0 has-[>textarea]:h-auto",
@@ -47,23 +46,29 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-const inputGroupAddonVariants = cva(
+/**
+ * Variants for input group addons.
+ *
+ * @param align Alignment of the addon within the group.
+ * @returns A string of classes for the addon.
+ */
+const InputGroupAddonVariants = cva(
   "text-muted-foreground flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-sm font-medium select-none [&>svg:not([class*='size-'])]:size-4 [&>kbd]:rounded-[calc(var(--radius)-5px)] group-data-[disabled=true]/input-group:opacity-50",
   {
-    variants: {
-      align: {
-        "inline-start":
-          "order-first pl-3 has-[>button]:ml-[-0.45rem] has-[>kbd]:ml-[-0.35rem]",
-        "inline-end":
-          "order-last pr-3 has-[>button]:mr-[-0.45rem] has-[>kbd]:mr-[-0.35rem]",
-        "block-start":
-          "order-first w-full justify-start px-3 pt-3 [.border-b]:pb-3 group-has-[>input]/input-group:pt-2.5",
-        "block-end":
-          "order-last w-full justify-start px-3 pb-3 [.border-t]:pt-3 group-has-[>input]/input-group:pb-2.5",
-      },
-    },
     defaultVariants: {
       align: "inline-start",
+    },
+    variants: {
+      align: {
+        "block-end":
+          "order-last w-full justify-start px-3 pb-3 [.border-t]:pt-3 group-has-[>input]/input-group:pb-2.5",
+        "block-start":
+          "order-first w-full justify-start px-3 pt-3 [.border-b]:pb-3 group-has-[>input]/input-group:pt-2.5",
+        "inline-end":
+          "order-last pr-3 has-[>button]:mr-[-0.45rem] has-[>kbd]:mr-[-0.35rem]",
+        "inline-start":
+          "order-first pl-3 has-[>button]:ml-[-0.45rem] has-[>kbd]:ml-[-0.35rem]",
+      },
     },
   }
 );
@@ -71,6 +76,7 @@ const inputGroupAddonVariants = cva(
 /**
  * Addon region placed inline or in block areas of the input group.
  *
+ * @param className Optional extra classes.
  * @param align Alignment of the addon within the group.
  * @returns A div that forwards clicks to focus the input.
  */
@@ -78,45 +84,56 @@ function InputGroupAddon({
   className,
   align = "inline-start",
   ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
+}: React.ComponentProps<"div"> & VariantProps<typeof InputGroupAddonVariants>) {
   return (
     <div
-      role="group"
       data-slot="input-group-addon"
       data-align={align}
-      className={cn(inputGroupAddonVariants({ align }), className)}
+      className={cn(InputGroupAddonVariants({ align }), className)}
+      role="button"
+      tabIndex={0}
       onClick={(e) => {
         if ((e.target as HTMLElement).closest("button")) {
           return;
         }
         e.currentTarget.parentElement?.querySelector("input")?.focus();
       }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if ((e.target as HTMLElement).closest("button")) {
+            return;
+          }
+          e.currentTarget.parentElement?.querySelector("input")?.focus();
+        }
+      }}
       {...props}
     />
   );
 }
 
-const inputGroupButtonVariants = cva("text-sm shadow-none flex gap-2 items-center", {
-  variants: {
-    size: {
-      xs: "h-6 gap-1 px-2 rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-3.5 has-[>svg]:px-2",
-      sm: "h-8 px-2.5 gap-1.5 rounded-md has-[>svg]:px-2.5",
-      "icon-xs": "size-6 rounded-[calc(var(--radius)-5px)] p-0 has-[>svg]:p-0",
-      "icon-sm": "size-8 p-0 has-[>svg]:p-0",
-    },
-  },
+const InputGroupButtonVariants = cva("text-sm shadow-none flex gap-2 items-center", {
   defaultVariants: {
     size: "xs",
+  },
+  variants: {
+    size: {
+      "icon-sm": "size-8 p-0 has-[>svg]:p-0",
+      "icon-xs": "size-6 rounded-[calc(var(--radius)-5px)] p-0 has-[>svg]:p-0",
+      sm: "h-8 px-2.5 gap-1.5 rounded-md has-[>svg]:px-2.5",
+      xs: "h-6 gap-1 px-2 rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-3.5 has-[>svg]:px-2",
+    },
   },
 });
 
 /**
- * Button styled for use inside an input group.
+ * Button component for input group.
  *
- * @param type Button type, defaults to "button".
- * @param variant Visual variant.
- * @param size Size variant.
- * @returns A Button with input-group specific sizing.
+ * @param className Optional extra classes.
+ * @param type Type of the button.
+ * @param variant Variant of the button.
+ * @param size Size of the button.
+ * @returns A button with input group styling.
  */
 function InputGroupButton({
   className,
@@ -125,22 +142,23 @@ function InputGroupButton({
   size = "xs",
   ...props
 }: Omit<React.ComponentProps<typeof Button>, "size"> &
-  VariantProps<typeof inputGroupButtonVariants>) {
+  VariantProps<typeof InputGroupButtonVariants>) {
   return (
     <Button
       type={type}
       data-size={size}
       variant={variant}
-      className={cn(inputGroupButtonVariants({ size }), className)}
+      className={cn(InputGroupButtonVariants({ size }), className)}
       {...props}
     />
   );
 }
 
 /**
- * Inline text helper for input groups.
+ * Text component for input group.
  *
- * @returns A span with muted text style.
+ * @param className Optional extra classes.
+ * @returns A span with input group styling.
  */
 function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
   return (
@@ -155,9 +173,10 @@ function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
 }
 
 /**
- * Text input styled to integrate within an input group.
+ * Input component for input group.
  *
- * @returns A shadcn `Input` adjusted for group layout.
+ * @param className Optional extra classes.
+ * @returns An input with input group styling.
  */
 function InputGroupInput({ className, ...props }: React.ComponentProps<"input">) {
   return (
@@ -173,9 +192,10 @@ function InputGroupInput({ className, ...props }: React.ComponentProps<"input">)
 }
 
 /**
- * Textarea styled to integrate within an input group.
+ * Textarea component for input group.
  *
- * @returns A shadcn `Textarea` adjusted for group layout.
+ * @param className Optional extra classes.
+ * @returns A textarea with input group styling.
  */
 function InputGroupTextarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
@@ -190,6 +210,11 @@ function InputGroupTextarea({ className, ...props }: React.ComponentProps<"texta
   );
 }
 
+/**
+ * Export the input group components.
+ *
+ * @returns An object containing the input group components.
+ */
 export {
   InputGroup,
   InputGroupAddon,

@@ -268,7 +268,8 @@ function DestinationDialog({
               </Button>
             </div>
             {formData.activities.map((activity, index) => (
-              <div key={index} className="flex gap-2">
+              // biome-ignore lint/suspicious/noArrayIndexKey: Activities are simple strings without stable IDs; index key avoids remount on input change
+              <div key={`activity-${index}`} className="flex gap-2">
                 <Input
                   value={activity}
                   onChange={(event) => updateActivity(index, event.target.value)}
@@ -341,15 +342,15 @@ export function ItineraryBuilder({
     null
   );
   const [formData, setFormData] = useState<DestinationFormData>({
-    name: "",
-    country: "",
-    startDate: "",
-    endDate: "",
+    accommodation: { name: "", type: "" },
     activities: [],
-    accommodation: { type: "", name: "" },
-    transportation: { type: "", details: "" },
+    country: "",
+    endDate: "",
     estimatedCost: undefined,
+    name: "",
     notes: "",
+    startDate: "",
+    transportation: { details: "", type: "" },
   });
 
   const handleDragEnd = useCallback(
@@ -373,15 +374,15 @@ export function ItineraryBuilder({
 
   const resetForm = () => {
     setFormData({
-      name: "",
-      country: "",
-      startDate: "",
-      endDate: "",
+      accommodation: { name: "", type: "" },
       activities: [],
-      accommodation: { type: "", name: "" },
-      transportation: { type: "", details: "" },
+      country: "",
+      endDate: "",
       estimatedCost: undefined,
+      name: "",
       notes: "",
+      startDate: "",
+      transportation: { details: "", type: "" },
     });
   };
 
@@ -392,32 +393,32 @@ export function ItineraryBuilder({
 
   const openEditDialog = (destination: Destination) => {
     setFormData({
-      name: destination.name,
-      country: destination.country,
-      startDate: destination.startDate || "",
-      endDate: destination.endDate || "",
+      accommodation: destination.accommodation || { name: "", type: "" },
       activities: destination.activities || [],
-      accommodation: destination.accommodation || { type: "", name: "" },
-      transportation: destination.transportation || { type: "", details: "" },
+      country: destination.country,
+      endDate: destination.endDate || "",
       estimatedCost: destination.estimatedCost,
+      name: destination.name,
       notes: destination.notes || "",
+      startDate: destination.startDate || "",
+      transportation: destination.transportation || { details: "", type: "" },
     });
     setEditingDestination(destination);
   };
 
   const handleSaveDestination = async () => {
     const destinationData: Partial<Destination> = {
-      name: formData.name,
-      country: formData.country,
-      startDate: formData.startDate || undefined,
-      endDate: formData.endDate || undefined,
-      activities: formData.activities.length > 0 ? formData.activities : undefined,
       accommodation: formData.accommodation.name ? formData.accommodation : undefined,
+      activities: formData.activities.length > 0 ? formData.activities : undefined,
+      country: formData.country,
+      endDate: formData.endDate || undefined,
+      estimatedCost: formData.estimatedCost,
+      name: formData.name,
+      notes: formData.notes || undefined,
+      startDate: formData.startDate || undefined,
       transportation: formData.transportation.details
         ? formData.transportation
         : undefined,
-      estimatedCost: formData.estimatedCost,
-      notes: formData.notes || undefined,
     };
 
     if (editingDestination) {
@@ -606,9 +607,9 @@ export function ItineraryBuilder({
                                       </p>
                                       <div className="flex flex-wrap gap-1">
                                         {destination.activities.map(
-                                          (activity, actIndex) => (
+                                          (activity, _actIndex) => (
                                             <Badge
-                                              key={actIndex}
+                                              key={activity}
                                               variant="secondary"
                                               className="text-xs"
                                             >

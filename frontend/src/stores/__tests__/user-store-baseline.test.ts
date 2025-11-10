@@ -4,19 +4,21 @@ import { type UserProfile, useUserProfileStore } from "../user-store";
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({
-  persist: (fn: any) => fn,
+  // biome-ignore lint/suspicious/noExplicitAny: Test mock doesn't need type safety
   devtools: (fn: any) => fn,
+  // biome-ignore lint/suspicious/noExplicitAny: Test mock doesn't need type safety
+  persist: (fn: any) => fn,
 }));
 
 describe("User Profile Store - Simple Test", () => {
   beforeEach(() => {
     act(() => {
       useUserProfileStore.setState({
-        profile: null,
+        error: null,
         isLoading: false,
         isUpdatingProfile: false,
         isUploadingAvatar: false,
-        error: null,
+        profile: null,
         uploadError: null,
       });
     });
@@ -45,11 +47,11 @@ describe("User Profile Store - Simple Test", () => {
     const { result } = renderHook(() => useUserProfileStore());
 
     const mockProfile: UserProfile = {
-      id: "user-1",
+      createdAt: "2025-01-01T00:00:00Z",
       email: "test@example.com",
       favoriteDestinations: [],
+      id: "user-1",
       travelDocuments: [],
-      createdAt: "2025-01-01T00:00:00Z",
       updatedAt: "2025-01-01T00:00:00Z",
     };
 

@@ -1,31 +1,67 @@
-/**
- * @fileoverview Security section tests: password, 2FA, devices, and notices.
- */
-
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { UserProfile } from "@/stores/user-store";
 
 import { SecuritySection } from "../security-section";
 
 // Mock the stores and hooks
-const mockUpdateUser = vi.fn();
+const MockUpdateUser = vi.fn();
 
-const defaultUser = {
-  id: "1",
+const DefaultUser: UserProfile = {
+  avatarUrl: undefined,
+  createdAt: "2024-01-01T00:00:00Z",
   email: "test@example.com",
-  security: {
-    twoFactorEnabled: false,
+  favoriteDestinations: [],
+  id: "1",
+  personalInfo: {
+    bio: undefined,
+    dateOfBirth: undefined,
+    displayName: undefined,
+    emergencyContact: undefined,
+    firstName: undefined,
+    gender: undefined,
+    lastName: undefined,
+    location: undefined,
+    phoneNumber: undefined,
+    website: undefined,
   },
+  privacySettings: {
+    allowDataSharing: false,
+    enableAnalytics: true,
+    enableLocationTracking: false,
+    profileVisibility: "private",
+    showTravelHistory: false,
+  },
+  travelDocuments: [],
+  travelPreferences: {
+    accessibilityRequirements: [],
+    dietaryRestrictions: [],
+    excludedAirlines: [],
+    maxBudgetPerNight: undefined,
+    maxLayovers: 2,
+    preferredAccommodationType: "hotel",
+    preferredAirlines: [],
+    preferredArrivalTime: undefined,
+    preferredCabinClass: "economy",
+    preferredDepartureTime: undefined,
+    preferredHotelChains: [],
+    requireBreakfast: false,
+    requireGym: false,
+    requireParking: false,
+    requirePool: false,
+    requireWifi: true,
+  },
+  updatedAt: "2024-01-01T00:00:00Z",
 };
 
-const mockUserStore = {
-  user: { ...defaultUser },
-  updateUser: mockUpdateUser,
+const MockUserStore = {
+  updateUser: MockUpdateUser,
+  user: { ...DefaultUser },
 };
 
 vi.mock("@/stores/user-store", () => ({
-  useUserProfileStore: vi.fn(() => mockUserStore),
+  useUserProfileStore: vi.fn(() => MockUserStore),
 }));
 
 // use-toast is globally mocked in test-setup.ts; avoid overriding here.
@@ -33,8 +69,8 @@ vi.mock("@/stores/user-store", () => ({
 describe("SecuritySection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUserStore.user = { ...defaultUser } as any;
-    mockUpdateUser.mockResolvedValue({});
+    MockUserStore.user = { ...DefaultUser };
+    MockUpdateUser.mockResolvedValue({});
   });
 
   describe("Password Management", () => {
@@ -146,8 +182,8 @@ describe("SecuritySection", () => {
       render(<SecuritySection />);
 
       expect(screen.getByText("Disabled")).toBeInTheDocument();
-      const switch2FA = screen.getByRole("switch");
-      expect(switch2FA).not.toBeChecked();
+      const switch2fa = screen.getByRole("switch");
+      expect(switch2fa).not.toBeChecked();
     });
 
     it("has a 2FA toggle switch", () => {
@@ -190,10 +226,12 @@ describe("SecuritySection", () => {
 
   describe("Error Handling", () => {
     it("should handle missing security settings gracefully", () => {
-      mockUserStore.user = {
-        ...mockUserStore.user!,
-        security: undefined as any,
-      };
+      if (MockUserStore.user) {
+        MockUserStore.user = {
+          ...MockUserStore.user,
+          personalInfo: undefined,
+        };
+      }
 
       render(<SecuritySection />);
 
@@ -202,7 +240,7 @@ describe("SecuritySection", () => {
     });
 
     it("should render with missing user data", () => {
-      mockUserStore.user = null as any;
+      MockUserStore.user = null as unknown as UserProfile;
 
       render(<SecuritySection />);
 
@@ -219,8 +257,3 @@ describe("SecuritySection", () => {
     });
   });
 });
-/**
- * @fileoverview Tests for SecuritySection component: password form validation,
- * basic 2FA toggle presence, active sessions UI, and recommendations. Timer-
- * heavy toasts are exercised only where deterministic.
- */

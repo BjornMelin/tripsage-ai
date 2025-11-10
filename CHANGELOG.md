@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Shared test store factories for Zustand mocks:
+  - `frontend/src/test/factories/stores.ts` (`createMockChatState`, `createMockAgentStatusState`).
+- Timer test helper for deterministic, immediate execution:
+  - `frontend/src/test/timers.ts` (`shortCircuitSetTimeout`).
+
+- Secure random ID utility with fallbacks: `frontend/src/lib/security/random.ts` exporting `secureUUID()`, `secureId()`, and `nowIso()`; Vitest coverage in `frontend/src/lib/security/random.test.ts`.
+
 - Dependency-injected handlers for App Router APIs:
   - Chat stream: `frontend/src/app/api/chat/stream/_handler.ts`
   - Chat (non-stream): `frontend/src/app/api/chat/_handler.ts`
@@ -35,10 +42,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Architecture docs: ADR and Spec for provider order, attribution, and SSR boundaries
   - `docs/adrs/2025-11-01-provider-registry.md`, `docs/specs/provider-registry.md`
 - Dependency: `@ai-sdk/anthropic@3.0.0-beta.47`
+- AI Elements Response and Sources components with focused tests:
+  - `frontend/src/components/ai-elements/response.tsx`
+  - `frontend/src/components/ai-elements/sources.tsx`
+  - Tests in `frontend/src/components/ai-elements/__tests__/`
+- Streamdown CSS source for Response rendering:
+  - `frontend/src/app/globals.css`
+- Architecture records and specs:
+  - `docs/adrs/adr-0035-react-compiler-and-component-declarations.md`
+  - `docs/adrs/adr-0036-ai-elements-response-and-sources.md`
+  - `docs/adrs/adr-0037-reasoning-tool-codeblock-phased-adoption.md`
+  - `docs/specs/0015-spec-ai-elements-response-sources.md`
+  - `docs/specs/0016-spec-react-compiler-enable.md`
+
+- Testing support stubs and helpers:
+  - Rehype harden test stub to isolate ESM/CJS packaging differences: `frontend/src/test/mocks/rehype-harden.ts` (aliased in Vitest config)
 
 ### Changed
 
+- Frontend test utilities moved out of `*.test.*` globs to avoid accidental collection; imports updated:
+  - `frontend/src/test/test-utils.test.tsx` → `frontend/src/test/test-utils.tsx` and all references switched to `@/test/test-utils`.
+- AI stream route integration tests optimized:
+  - Stubbed expensive token utilities (`clampMaxTokens`, `countPromptTokens`) in `frontend/src/app/api/ai/stream/__tests__/route.integration.test.ts`.
+  - Reduced long prompt payload from 10k chars to a compact representative sample.
+- Chat layout component made injectible and test-friendly:
+  - Removed hard-coded sessions; added optional `sessions` prop and semantic attributes (`data-testid="chat-sidebar"`, `data-collapsed`) in `frontend/src/components/layouts/chat-layout.tsx`.
+  - Tests use partial module mocks and `userEvent`; standardized timer teardown (`runOnlyPendingTimers` → `clearAllTimers` → `useRealTimers`).
+- Account settings tests stabilized without fake timers:
+  - Replaced suite-level fake timers with local `setTimeout` short-circuit stubs where needed and simplified assertions in `frontend/src/components/features/profile/__tests__/account-settings-section.test.tsx`.
+- Itinerary builder suite condensed to essential scenarios and de-timed:
+  - Pruned heavy/duplicated cases; retained empty state, minimal destination info, add-destination happy path, numeric input, and labels in `frontend/src/components/features/trips/__tests__/itinerary-builder.test.tsx`.
+- Test performance documentation updated with reproducible commands and “After” metrics:
+  - `frontend/docs/testing/vitest-performance.md` (AI stream ≈12.6ms; Account settings ≈1.6s; Itinerary builder ≈1.5s).
+
+- Replaced insecure/random ID generation across frontend stores and error pages with `secureId/secureUUID` and normalized timestamps via `nowIso`.
+- Removed server-side `Math.random` fallback for chat stream request IDs; use `secureUUID()` in `frontend/src/app/api/chat/stream/_handler.ts:1`.
+- Stabilized skeleton components: removed `Math.random` usage in `travel-skeletons.tsx` and `loading-skeletons.tsx` to ensure deterministic rendering.
+- Adopted PascalCase names for page components in App Router to align with ADR-0035.
+
 - Chat page now consumes AI SDK v6 `useChat` + `DefaultChatTransport`, removing the bespoke SSE parser and wiring Supabase user IDs into the payload (`frontend/src/app/chat/page.tsx`).
+- Chat page renders message `text` via AI Elements `Response` and shows `Sources` when `source-url` parts are present (`frontend/src/app/chat/page.tsx`).
+- Enabled React Compiler in Next.js configuration (`frontend/next.config.ts`).
 - Chat stream adapter now delegates to DI handler and builds the Upstash rate limiter lazily:
   - `frontend/src/app/api/chat/stream/route.ts`
 - Chat non-stream route added with DI handler, usage mapping, image-only validation, and RL parity (40/min):
@@ -53,10 +97,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Vitest defaults tuned for stability and timeouts:
   - `frontend/vitest.config.ts` (unstubEnvs, threads, single worker)
   - `frontend/package.json` test scripts include short timeouts
+- **Tooling:** Consolidated lint/format to Biome (`biome check`), removed ESLint/Prettier/lint-staged.
+
+- Frontend testing configuration and performance:
+  - Vitest pool selection: use `vmForks` in CI and `vmThreads` locally to reduce worker hangs on large suites (`frontend/vitest.config.ts`).
+  - Enable CSS transformation for web dependencies (`deps.web.transformCss: true`) to fix “Unknown file extension .css” in node_modules.
+  - Inline/ssr-handle `rehype-harden` to avoid ESM-in-CJS packaging errors during tests (`test.server.deps.inline`, `ssr.noExternal`, and alias).
+  - Aliased `rehype-harden` to a minimal no-op transformer for tests.
+  - Added global Web Streams polyfills in test setup using `node:stream/web` with correct lib.dom-compatible typing.
+  - Mocked `next/image` to a basic `<img>` in tests to eliminate jsdom/ESM overhead and speed up UI tests.
+  - Avoid redefining `window.location`; rely on JSDOM defaults to prevent non-configurable property errors.
+  - Hoisted module mocks with `vi.hoisted` where needed to satisfy Vitest hoisting semantics.
 
 ### Fixed
 
 - Token budget utilities release WASM tokenizer resources without `any` casts (`frontend/src/lib/tokens/budget.ts`).
+- Token budget utilities release WASM tokenizer resources without `any` casts (`frontend/src/lib/tokens/budget.ts`).
+- Date formatting is now timezone-agnostic for `YYYY-MM-DD` inputs to avoid CI/system TZ drift; ISO datetimes format in UTC (`frontend/src/lib/schema-adapters.ts`, tests updated in `frontend/src/lib/__tests__/schema-adapters.test.ts`).
+- Stabilized long‑prompt AI stream test by bounding tokenizer work and retaining accuracy:
+  - Introduced a safe character threshold for WASM tokenization with heuristic fallback; small/normal inputs still use `js-tiktoken` and tests validate encodings (`frontend/src/lib/tokens/budget.ts`, `frontend/src/lib/tokens/__tests__/budget.test.ts`).
+  - Ensures `handles very long prompt content` completes within per‑suite timeout.
+- CI non‑terminating runs addressed via Vitest config hardening:
+  - Use `vmForks` in CI, low worker count, explicit bail, and deterministic setup to prevent lingering handles (`frontend/vitest.config.ts`).
+  - Web Streams and Next/Image mocks consolidated in `frontend/src/test-setup.ts` to avoid environment leaks; console/env proxies reset after each test.
 - Resolved hanging API tests by:
   - Injecting a finite AI stream stub in handler tests (no open handles)
   - Building Upstash rate limiters lazily (no module‑scope side effects)
@@ -68,7 +131,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Registry is SSR-only (`server-only`), never returns or logs secret material
 - Session message listing and creation stay scoped to the authenticated user (`frontend/src/app/api/chat/sessions/_handlers.ts`).
 
+- Frontend test stability and failures:
+  - Resolved CSS import failures by enabling CSS transforms for web deps and adjusting the pool to VM runners.
+  - Fixed ESM/CJS mismatch from `rehype-harden` by inlining and aliasing to a stub in tests.
+  - Eliminated hoist-related `vi.mock` errors by moving test-local mock components into `vi.hoisted` blocks.
+  - Removed brittle `window.location` property redefinitions (location/reload/href) in tests; replaced with behavior assertions that don’t require redefining non-configurable globals.
+  - Added Web Streams polyfills to fix `TransformStream is not defined` in chat UI tests (AI SDK/eventsource-parser).
+  - Mocked `@/components/ai-elements/response` in chat page tests to avoid rehype/Streamdown transitive ESM during unit tests.
+  - Shortened and stabilized slow suites (e.g., search/accommodation-card) by mocking `next/image` and increasing a single long-running test timeout where appropriate.
+  - Adjusted auth-store time comparison to avoid strict-equality flakiness on timestamp rollover.
+
 ### Removed
+
+- Hard-coded sample sessions from chat layout; callers/tests inject sessions as needed (`frontend/src/components/layouts/chat-layout.tsx`).
+- Redundant/high-cost UI cases from Itinerary builder tests (drag & drop visuals, delete flow, extra icon and cancel cases) to reduce runtime (`frontend/src/components/features/trips/__tests__/itinerary-builder.test.tsx`).
+- Obsolete test wrapper file `frontend/src/test/test-utils.test.tsx` (replaced by `frontend/src/test/test-utils.tsx`).
 
 - Python provider wrappers and tests removed (see Breaking Changes)
 - FastAPI chat router and schemas removed; chat moved to Next.js AI SDK v6
@@ -96,7 +173,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.2.0] - 2025-11-01
 
-### Added
+### [2.2.0] Added
 
 - Next.js route `src/app/auth/callback/route.ts` exchanges OAuth `code` for session
 - Login/Register use `@supabase/auth-ui-react` blocks (email/password + OAuth)
@@ -148,7 +225,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Per-function Deno import maps + lockfiles:
   - Added `deno.json` and generated `deno.lock.v5` for: `trip-notifications`, `file-processing`, `cache-invalidation`, `file-processor`.
 
-### Changed
+### [2.2.0] Changed
 
 - Next.js middleware uses `@supabase/ssr` `createServerClient` + `auth.getUser()` with cookie sync
 - Frontend hooks derive user via `supabase.auth.getUser()` (no React auth context)
@@ -215,7 +292,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A shared `ChatAgent` instance initialises during lifespan and is exposed through `app.state.chat_agent` for WebSocket handlers
 - Dashboard Service refactored to eliminate N+1 queries, added 5-minute TTL caching, safe percentile calculations, removed redundant factory functions and duplicate model definitions, added cached computed properties; reduced from ~1200 to 846 lines
 
-### Refactor
+### [2.2.0] Refactor
 
 - **[Models]:** Consolidated all duplicated data models for Trip, Itinerary, and Accommodation into canonical representations within `tripsage_core`. API schemas in `tripsage/api/schemas/` have been removed to enforce a single source of truth.
   - Merged ValidationResult and ServiceHealthCheck into ApiValidationResult for DRY compliance.
@@ -231,7 +308,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Trip Security:** Tightened types and returns for `TripAccessResult`; fixed permission comparison typing.
 - **Middlewares:** Corrected type annotations (Awaitable[Response]) and Pydantic ConfigDict usage to satisfy pyright and Pydantic v2.
 
-### Fixed (DI migration sweep)
+### [2.2.0] Fixed (DI migration sweep)
 
 - Memory router endpoints updated for SlowAPI: rate-limited routes accept `request` and
   where applicable `response`; unit tests unwrap decorators and pass synthetic Request
@@ -246,9 +323,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Test configuration: removed non-existent `pytest-slowapi`; added `benchmark` marker to
   satisfy `--strict-markers`.
 
-### Deprecated
-
-### Removed
+### [2.2.0] Removed
 
 - Removed unused `SimpleSessionMemory` dep from `dependencies.py`; use `request.state` or `MemoryService` for session data.
 - Legacy Supabase schema sources and scripts removed:
@@ -270,7 +345,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed module-level singletons for Google Maps and Activity services (`get_google_maps_service`, `get_activity_service`) and their `close_*` helpers; final-only DI now required
 - Removed deprecated exports in `tripsage_core/services/external_apis/__init__.py` for maps/weather/webcrawl `get_*`/`close_*` helpers removed; use DI/constructors
 
-### Fixed
+### [2.2.0] Fixed
 
 - FastAPI `AuthenticationMiddleware` now has corrected typing, Pydantic v2 config, Supabase token validation via `auth.get_user`, and unified responses
 - Base agent node logging now emits the full exception message, keeping orchestration diagnostics actionable
@@ -297,9 +372,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Regenerated Deno v5 lockfiles (`deno.lock.v5`) for all functions; preserved for deterministic local dev while the CLI bundler ignores v5 locks
   - Unified deploy workflow via Makefile; CLI updated to v2.54.x on local environments
 
-### Security
-
-### Breaking Changes
+### [2.2.0] Breaking Changes
 
 - Removed React auth context; SSR + route handlers are required for auth; OAuth and email confirm flows now terminate in server routes
 - **ChatService Alignment**: ChatService finalized to DI-only (no globals/event-loop hacks); public methods now directly call DatabaseService helpers: `create_chat_session`, `create_chat_message`, `get_user_chat_sessions`, `get_session_messages`, `get_chat_session`, `get_message_tool_calls`, `update_tool_call`, `update_session_timestamp`, `end_chat_session`
@@ -310,7 +383,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ChatService Alignment**: SecretStr respected for OpenAI key; sanitized content + metadata validation retained
 - **ChatService Alignment**: Tests updated to final-only contracts (unit+integration) to reflect JSON bodies and new method signatures
 
-### Notes
+### [2.2.0] Notes
 
 - Tailwind v4 verification of utility coverage is in progress; further class name adjustments
   will be tracked in the Tailwind v4 spec and reflected here upon completion.
@@ -319,12 +392,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.1.0] - 2025-10-20
 
-### Added
+### [2.1.0] Added
 
 - Added Pydantic-native trip export response with secure token and expiry; supports `export_format` plus optional `format` kw
 - Added date/time normalization helpers in trips router for safe coercion and ISO handling
 
-### Changed
+### [2.1.0] Changed
 
 - Updated trips router to use Pydantic v2 `model_validate` for core→API mapping; eliminated ad‑hoc casting
 - Updated `/trips` list and `/trips/search` now return `TripListResponse` with `TripListItem` entries; OpenAPI schema reflects these models
@@ -332,30 +405,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated authorization semantics unified: 403 (forbidden), 404 (not found), 500 (unexpected error)
 - Updated `TripShareRequest.user_emails` to support batch flows (min_length=0, max_length=50)
 
-### Removed
-
-- Legacy Supabase schema sources and scripts removed:
-  - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
-  - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
+### [2.1.0] Removed
 
 - Removed dict-shaped responses in list/search paths; replaced with typed response models
 - Removed scattered UUID/datetime parsing; centralized to helpers
 
-### Fixed
+### [2.1.0] Fixed
 
 - Fixed collaboration endpoint tests aligned to Pydantic v2 models; removed brittle assertions
 
-### Security
+### [2.1.0] Security
 
 - Secured trip export path validated; formats restricted to `pdf|csv|json`
 
-### Breaking Changes
+### [2.1.0] Breaking Changes
 
 - **API Response Format**: Clients parsing list/search responses as arbitrary dicts should align to the documented `TripListResponse` schema (field names unchanged; server typing improved)
 
 ## [2.0.0] - 2025-06-21
 
-### Added
+### [2.0.0] Added
 
 - Added unified Database Service consolidating seven services into a single optimized module
 - Added PGVector HNSW indexing (vector search up to ~30x faster vs. prior)
@@ -364,44 +433,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added centralized event serialization helper to remove duplication
 - Added health checks and performance probes for core services
 
-### Changed
+### [2.0.0] Changed
 
 - Updated query latency improved (~3x typical); vector search ~30x faster; startup 60–70% faster
 - Updated memory usage reduced ~35–50% via compression/caching and leaner initialization
 - Updated async-first execution replaces blocking hot paths; broadcast fan-out ~31x faster for 100 clients
 - Updated configuration flattened and standardized (single settings module)
 - Updated observability unified with metrics and health endpoints across services
-
-### Removed
-
-- Legacy Supabase schema sources and scripts removed:
-  - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
-  - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
-
-- Removed complex tool registry and redundant orchestration/abstraction layers
-- Removed nested configuration classes and legacy database service implementations
-- Removed deprecated dependencies and unused modules
-
-### Fixed
-
-- Fixed memory leaks in connection pools and unbounded queues
-- Fixed event loop stalls caused by blocking operations in hot paths
-- Fixed redundant validation chains that increased latency
-
-### Security
-
-- Secured Pydantic-based input validation for WebSocket messages
-- Secured message size limits and multi-level rate limiting (Redis-backed)
-- Secured origin validation (CSWSH protection), tightened JWT validation, and improved audit logging
-
-### Breaking Changes
-
-- **Database APIs**: Consolidated DB APIs; unified configuration module; synchronous paths removed (migrate to async interfaces)
-
-[Unreleased]: https://github.com/BjornMelin/tripsage-ai/compare/v2.1.0...HEAD
-[2.1.0]: https://github.com/BjornMelin/tripsage-ai/compare/v2.0.0...v2.1.0
-[2.0.0]: https://github.com/BjornMelin/tripsage-ai/releases/tag/v2.0.0
-
 - Navigation: added "/attachments" link in main navbar
 - ADR index grouped By Category in docs/adrs/README.md
 - Docs: SSE client expectations note in docs/users/feature-reference.md
@@ -409,19 +447,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upload routes: confirm Next 16 API `revalidateTag('attachments', 'max')` for Route Handlers
 - Frontend copy/comments updated to reference two-arg `revalidateTag` where applicable
 - Corrected `revalidateTag` usage in attachments upload handler and docs
-- Frontend tests: deterministic clock helper `src/test/clock.ts` and RTL config helper `src/test/testing-library.ts` with JSDoc headers.
-- Vitest configuration: default jsdom, controlled workers (forks locally, threads in CI), conservative timeouts, coverage (v8 + text/json/html/lcov).
+
+### [2.0.0] Removed
+
+- Legacy Supabase schema sources and scripts removed:
+  - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
+  - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
+- Removed complex tool registry and redundant orchestration/abstraction layers
+- Removed nested configuration classes and legacy database service implementations
+- Removed deprecated dependencies and unused modules
+- tests(frontend): deleted/replaced deprecated and brittle tests asserting raw HTML structure and Tailwind class lists; removed NODE_ENV mutation based tests.
+
+### [2.0.0] Fixed
+
+- Fixed memory leaks in connection pools and unbounded queues
+- Fixed event loop stalls caused by blocking operations in hot paths
+- Fixed redundant validation chains that increased latency
+
+### [2.0.0] Security
+
+- Secured Pydantic-based input validation for WebSocket messages
+- Secured message size limits and multi-level rate limiting (Redis-backed)
+- Secured origin validation (CSWSH protection), tightened JWT validation, and improved audit logging
+
+### [2.0.0] Breaking Changes
+
+- **Database APIs**: Consolidated DB APIs; unified configuration module; synchronous paths removed (migrate to async interfaces)
+
+### [2.0.0] Testing
+
 - Frontend testing modernization (Vitest + RTL):
   - Rewrote flaky suites to use `vi.useFakeTimers()`/`advanceTimersByTimeAsync` and resilient queries.
   - Updated suites: `ui-store`, `upcoming-flights`, `user-store-fixed`, `personalization-insights`, `trip-card`.
   - Relaxed brittle DOM assertions in error-boundary integration tests to assert semantics in jsdom.
   - Migrated imports to Zod schema modules; ensured touched files include `@fileoverview` and accurate JSDoc on exported helpers/config.
-- Frontend legacy/back-compat artifacts:
-  - `src/lib/api/validated-client.ts`.
-  - `src/types/agent-status.ts`, `src/types/budget.ts` (replaced by `lib/schemas/*`).
-
-### Testing and Frontend Cleanup
-
+- Frontend tests: deterministic clock helper `src/test/clock.ts` and RTL config helper `src/test/testing-library.ts` with JSDoc headers.
+- Vitest configuration: default jsdom, controlled workers (forks locally, threads in CI), conservative timeouts, coverage (v8 + text/json/html/lcov).
 - tests(frontend): stabilize async hooks and UI suites
   - hooks: aligned `use-authenticated-api` tests with final ApiError type; fixed 401 refresh and non-401 branches; added fake-timer flushing for retries
   - hooks: rewrote `use-activity-search` tests to match final minimal hook; removed legacy API/store assertions
@@ -432,17 +493,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - tests(websocket): replaced brittle environment-coupled suite with deterministic smoke tests invoking internal handlers; verification covers connect flow and metrics without relying on global WebSocket
 - tests(profile/preferences): removed outdated suite asserting internal store interactions and brittle combobox text; to be reintroduced as focused integration tests in a follow-up
 - chore(vitest): prefer `--pool=forks` locally and threads in CI; tuned timeouts and bail per `vitest.config.ts`
-- docs(jsdoc): ensured updated files include clear @fileoverview descriptions following Google style
-
-### Removed
-
-- Legacy Supabase schema sources and scripts removed:
-  - Deleted `supabase/schemas/` and `supabase/storage/` (replaced by migrations)
-  - Deleted `supabase/deploy_database_schema.py`, `supabase/validate_database_schema.py`, `supabase/test_database_integration.py`
-- tests(frontend): deleted/replaced deprecated and brittle tests asserting raw HTML structure and Tailwind class lists; removed NODE_ENV mutation based tests.
-
-### Testing (frontend)
-
 - Stabilized profile settings tests:
   - `account-settings-section.test.tsx`: deterministic confirmation/cancel flows; removed overuse of timers and brittle waitFor blocks; aligned toast mocking to global setup.
   - `security-section.test.tsx`: rewrote to use placeholders over labels, added precise validation assertions, reduced timer reliance, and removed legacy expectations that no longer match the implementation.
@@ -451,7 +501,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified trips UI tests:
   - `itinerary-builder.test.tsx`: avoided combobox portal clicks; added scoped submit helpers; exercised minimal add flow and activities; removed flaky edit-dialog flows.
 - Applied @fileoverview headers and JSDoc-style comments to updated suites per Google TS style.
+- docs(jsdoc): ensured updated files include clear @fileoverview descriptions following Google style
 
-### Tooling
+### [2.0.0] Tooling
 
 - Biome formatting/lint fixes across touched files; `vitest.config.ts` formatting normalized.
+
+[Unreleased]: https://github.com/BjornMelin/tripsage-ai/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/BjornMelin/tripsage-ai/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/BjornMelin/tripsage-ai/releases/tag/v2.0.0

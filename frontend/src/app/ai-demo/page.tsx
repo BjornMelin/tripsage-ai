@@ -26,7 +26,7 @@ import {
  *
  * @returns The demo page component.
  */
-export default function AIDemoPage() {
+export default function AiDemoPage() {
   const [_input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [_isLoading, setIsLoading] = useState(false);
@@ -43,9 +43,9 @@ export default function AIDemoPage() {
     setError(null);
     try {
       const res = await fetch("/api/ai/stream", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
         body: JSON.stringify({ prompt }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
       });
 
       if (!res.ok) {
@@ -109,9 +109,9 @@ export default function AIDemoPage() {
 
       <div className="border-t p-2">
         <PromptInput
-          onSubmit={(message) => {
+          onSubmit={async (message) => {
             setInput(message.text ?? "");
-            void onSubmit(message.text ?? "");
+            await onSubmit(message.text ?? "");
           }}
         >
           <PromptInputBody>

@@ -68,16 +68,16 @@ export function BudgetTracker({
     const percentageSpent = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
     return {
-      totalBudget,
-      totalSpent,
-      totalRemaining,
-      percentageSpent,
-      spentByCategory: {},
       dailyAverage: 0,
       dailyLimit: 0,
-      projectedTotal: totalSpent,
-      isOverBudget: totalRemaining < 0,
       daysRemaining: undefined,
+      isOverBudget: totalRemaining < 0,
+      percentageSpent,
+      projectedTotal: totalSpent,
+      spentByCategory: {},
+      totalBudget,
+      totalRemaining,
+      totalSpent,
     } as BudgetSummary;
   }, [targetBudget, activeBudget, budgetSummary]);
 
@@ -105,8 +105,8 @@ export function BudgetTracker({
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
-      style: "currency",
       currency: targetBudget.currency,
+      style: "currency",
     }).format(amount);
   };
 

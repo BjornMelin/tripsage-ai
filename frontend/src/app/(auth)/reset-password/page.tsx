@@ -5,8 +5,8 @@ import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Reset Password - TripSage",
   description: "Reset your TripSage account password",
+  title: "Reset Password - TripSage",
 };
 
 export default async function ResetPasswordPage() {

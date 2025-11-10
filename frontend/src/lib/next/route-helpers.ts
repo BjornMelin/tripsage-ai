@@ -8,7 +8,7 @@ import type { NextRequest } from "next/server";
  */
 export function getClientIpFromHeaders(headers: Headers): string {
   const xff = headers.get("x-forwarded-for");
-  if (xff && xff.length > 0) return xff.split(",")[0]!.trim();
+  if (xff && xff.length > 0) return xff.split(",")[0]?.trim();
   const real = headers.get("x-real-ip");
   if (real && real.length > 0) return real.trim();
   return "unknown";
@@ -36,5 +36,6 @@ export function buildRateLimitKey(req: NextRequest): string {
  */
 export function forwardAuthHeaders(req: NextRequest): HeadersInit | undefined {
   const auth = getAuthorization(req);
+  // biome-ignore lint/style/useNamingConvention: HTTP headers conventionally use PascalCase
   return auth ? { Authorization: auth } : undefined;
 }

@@ -1,9 +1,3 @@
-/**
- * @fileoverview Unit tests for DestinationSearchForm component, verifying form rendering,
- * user interactions, validation, popular destinations display, and search submission
- * with various input scenarios and accessibility features.
- */
-
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,8 +6,8 @@ import { DestinationSearchForm } from "../destination-search-form";
 
 // Use real react-hook-form behavior; keep tests focused on visible output
 
-/** Mock function for testing search form submission. */
-const mockOnSearch = vi.fn();
+// Mock function for testing search form submission.
+const MockOnSearch = vi.fn();
 
 describe("DestinationSearchForm", () => {
   beforeEach(() => {
@@ -21,7 +15,7 @@ describe("DestinationSearchForm", () => {
   });
 
   it("renders the destination search form correctly", () => {
-    renderWithProviders(<DestinationSearchForm onSearch={mockOnSearch} />);
+    renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
     expect(screen.getByText("Destination Search")).toBeInTheDocument();
     expect(
@@ -35,7 +29,7 @@ describe("DestinationSearchForm", () => {
   });
 
   it("displays popular destinations badges", () => {
-    renderWithProviders(<DestinationSearchForm onSearch={mockOnSearch} />);
+    renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
     expect(screen.getByText("Popular Destinations")).toBeInTheDocument();
     expect(screen.getByText("Paris, France")).toBeInTheDocument();
@@ -44,7 +38,7 @@ describe("DestinationSearchForm", () => {
   });
 
   it("displays destination type checkboxes", () => {
-    renderWithProviders(<DestinationSearchForm onSearch={mockOnSearch} />);
+    renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
     expect(screen.getByText("Cities & Towns")).toBeInTheDocument();
     expect(screen.getByText("Countries")).toBeInTheDocument();
@@ -54,7 +48,7 @@ describe("DestinationSearchForm", () => {
 
   it("handles form submission", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<DestinationSearchForm onSearch={mockOnSearch} />);
+    renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
     const input = screen.getByPlaceholderText(
       "Search for cities, countries, or landmarks..."
     );
@@ -62,14 +56,14 @@ describe("DestinationSearchForm", () => {
     await user.type(input, "Paris");
     const submitButton = screen.getByRole("button", { name: "Search Destinations" });
     await user.click(submitButton);
-    expect(mockOnSearch).toHaveBeenCalledWith(
+    expect(MockOnSearch).toHaveBeenCalledWith(
       expect.objectContaining({ query: "Paris" })
     );
   });
 
   it("handles popular destination selection", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<DestinationSearchForm onSearch={mockOnSearch} />);
+    renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
     const parisButton = screen.getByText("Paris, France");
     await user.click(parisButton);
@@ -79,7 +73,7 @@ describe("DestinationSearchForm", () => {
   });
 
   it("displays advanced options", () => {
-    renderWithProviders(<DestinationSearchForm onSearch={mockOnSearch} />);
+    renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
     expect(screen.getByText("Max Results")).toBeInTheDocument();
     expect(screen.getByText("Language (optional)")).toBeInTheDocument();
@@ -87,7 +81,7 @@ describe("DestinationSearchForm", () => {
   });
 
   it("shows autocomplete suggestions when typing", async () => {
-    renderWithProviders(<DestinationSearchForm onSearch={mockOnSearch} />);
+    renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
     // Test that the suggestions container is set up
     const input = screen.getByPlaceholderText(
@@ -102,7 +96,7 @@ describe("DestinationSearchForm", () => {
 
   it("handles checkbox changes for destination types", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<DestinationSearchForm onSearch={mockOnSearch} />);
+    renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
     const checkboxes = screen.getAllByRole("checkbox");
     expect(checkboxes.length).toBeGreaterThan(0);
     await user.click(checkboxes[0]);
@@ -110,7 +104,7 @@ describe("DestinationSearchForm", () => {
   });
 
   it("renders the query input with placeholder", () => {
-    renderWithProviders(<DestinationSearchForm onSearch={mockOnSearch} />);
+    renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
     expect(
       screen.getByPlaceholderText("Search for cities, countries, or landmarks...")
     ).toBeInTheDocument();
@@ -118,6 +112,7 @@ describe("DestinationSearchForm", () => {
 
   it("uses initial values when provided", () => {
     const initialValues = {
+      limit: 5,
       query: "Tokyo",
       types: ["establishment"] as (
         | "country"
@@ -125,11 +120,10 @@ describe("DestinationSearchForm", () => {
         | "administrative_area"
         | "establishment"
       )[],
-      limit: 5,
     };
 
     renderWithProviders(
-      <DestinationSearchForm onSearch={mockOnSearch} initialValues={initialValues} />
+      <DestinationSearchForm onSearch={MockOnSearch} initialValues={initialValues} />
     );
 
     // The form should be initialized with these values
@@ -140,7 +134,7 @@ describe("DestinationSearchForm", () => {
 
   it("handles autocomplete suggestion selection", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<DestinationSearchForm onSearch={mockOnSearch} />);
+    renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
     const input = screen.getByPlaceholderText(
       "Search for cities, countries, or landmarks..."

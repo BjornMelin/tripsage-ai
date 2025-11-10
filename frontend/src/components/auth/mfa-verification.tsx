@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, ArrowLeft, Loader2, Shield, Smartphone } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,42 +14,26 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-interface MFAVerificationProps {
+interface MfaVerificationProps {
   userEmail: string;
   onVerified: () => void;
   onCancel: () => void;
   onUseBackupCode: () => void;
 }
 
-export function MFAVerification({
+export function MfaVerification({
   userEmail,
   onVerified,
   onCancel,
   onUseBackupCode,
-}: MFAVerificationProps) {
+}: MfaVerificationProps) {
   const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(30);
   const verificationInputId = useId();
 
-  // Auto-submit when 6 digits are entered
-  useEffect(() => {
-    if (verificationCode.length === 6) {
-      handleVerifyCode();
-    }
-  }, [verificationCode]);
-
-  // Countdown timer for resend
-  useEffect(() => {
-    if (timeRemaining > 0) {
-      const timer = setTimeout(() => setTimeRemaining(timeRemaining - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [timeRemaining]);
-
-  const handleVerifyCode = async () => {
+  const handleVerifyCode = useCallback(async () => {
     if (!verificationCode || verificationCode.length !== 6) {
       setError("Please enter a 6-digit verification code");
       return;
@@ -75,7 +59,23 @@ export function MFAVerification({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [verificationCode, onVerified]);
+
+  // Auto-submit when 6 digits are entered
+  useEffect(() => {
+    if (verificationCode.length === 6) {
+      handleVerifyCode();
+    }
+  }, [verificationCode, handleVerifyCode]);
+
+  // Countdown timer for resend
+  useEffect(() => {
+    if (timeRemaining > 0) {
+      const timer = setTimeout(() => setTimeRemaining(timeRemaining - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [timeRemaining]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "").slice(0, 6);
