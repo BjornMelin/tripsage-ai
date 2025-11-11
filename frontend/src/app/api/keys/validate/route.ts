@@ -55,6 +55,12 @@ type ProviderRequest = {
 
 type ProviderRequestBuilder = (apiKey: string) => ProviderRequest;
 
+type SDKCreator = (options: {
+  apiKey: string;
+  baseURL?: string;
+  headers?: Record<string, string>;
+}) => (modelId: string) => unknown;
+
 type ConfigurableModel = {
   config: {
     baseURL?: string;
@@ -63,104 +69,89 @@ type ConfigurableModel = {
   };
 };
 
+const OPENAI_BASE_URL = "https://api.openai.com/v1";
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
 const XAI_BASE_URL = "https://api.x.ai/v1";
 
-function toHeaders(
-  headers?: Record<string, string>
-): Record<string, string> | undefined {
-  if (!headers) return undefined;
-  const entries = Object.entries(headers).filter(([, value]) => value !== undefined);
-  if (entries.length === 0) return undefined;
-  return Object.fromEntries(entries);
-}
-
-function buildOpenAICompatibleRequest(options: {
+type BuildSDKRequestOptions = {
   apiKey: string;
   baseURL?: string;
+  defaultBaseURL: string;
   headers?: Record<string, string>;
   modelId: string;
-}): ProviderRequest {
-  const providerHeaders = toHeaders(options.headers);
-  const provider = createOpenAI({
+  sdkCreator: SDKCreator;
+};
+
+function buildSDKRequest(options: BuildSDKRequestOptions): ProviderRequest {
+  const trimmedBaseURL = options.baseURL?.trim();
+  const provider = options.sdkCreator({
     apiKey: options.apiKey,
-    ...(options.baseURL ? { baseURL: options.baseURL } : {}),
-    ...(providerHeaders ? { headers: providerHeaders } : {}),
+    ...(trimmedBaseURL ? { baseURL: trimmedBaseURL } : {}),
+    ...(options.headers ? { headers: options.headers } : {}),
   });
-  const model = provider(options.modelId) as unknown as ConfigurableModel;
+  const model = provider(options.modelId) as ConfigurableModel;
   const config = model.config;
-  const headers = config.headers();
-  const baseURL =
-    options.baseURL?.trim() || config.baseURL || "https://api.openai.com/v1";
-  const normalizedBase = baseURL.endsWith("/") ? baseURL : `${baseURL}/`;
-  const url = new URL("models", normalizedBase).toString();
+  const resolvedBaseURL = trimmedBaseURL || config.baseURL || options.defaultBaseURL;
+  const normalizedBase = resolvedBaseURL.endsWith("/")
+    ? resolvedBaseURL
+    : `${resolvedBaseURL}/`;
   return {
     fetchImpl: config.fetch ?? fetch,
-    headers,
-    url,
+    headers: config.headers(),
+    url: new URL("models", normalizedBase).toString(),
   };
-}
-
-function buildAnthropicRequest(apiKey: string): ProviderRequest {
-  const provider = createAnthropic({ apiKey });
-  const model = provider(DEFAULT_MODEL_IDS.anthropic) as unknown as ConfigurableModel;
-  const config = model.config;
-  const baseURL = config.baseURL ?? "https://api.anthropic.com/v1";
-  const normalizedBase = baseURL.endsWith("/") ? baseURL : `${baseURL}/`;
-  const url = new URL("models", normalizedBase).toString();
-  const headers = config.headers();
-  return {
-    fetchImpl: config.fetch ?? fetch,
-    headers,
-    url,
-  };
-}
-
-function buildOpenRouterHeaders(): Record<string, string> | undefined {
-  const settings = getProviderSettings();
-  const headers: Record<string, string> = {};
-  const referer = settings.openrouterAttribution?.referer;
-  const title = settings.openrouterAttribution?.title;
-  if (referer) headers["HTTP-Referer"] = referer;
-  if (title) headers["X-Title"] = title;
-  return Object.keys(headers).length > 0 ? headers : undefined;
 }
 
 const PROVIDER_BUILDERS: Partial<Record<ProviderId, ProviderRequestBuilder>> = {
-  anthropic: (apiKey) => buildAnthropicRequest(apiKey),
-  openai: (apiKey) =>
-    buildOpenAICompatibleRequest({
+  anthropic: (apiKey) =>
+    buildSDKRequest({
       apiKey,
-      baseURL: process.env.AI_GATEWAY_URL?.trim() || undefined,
-      modelId: DEFAULT_MODEL_IDS.openai,
+      defaultBaseURL: ANTHROPIC_BASE_URL,
+      modelId: DEFAULT_MODEL_IDS.anthropic,
+      sdkCreator: createAnthropic as SDKCreator,
     }),
-  openrouter: (apiKey) =>
-    buildOpenAICompatibleRequest({
+  openai: (apiKey) =>
+    buildSDKRequest({
+      apiKey,
+      baseURL: process.env.AI_GATEWAY_URL,
+      defaultBaseURL: OPENAI_BASE_URL,
+      modelId: DEFAULT_MODEL_IDS.openai,
+      sdkCreator: createOpenAI as SDKCreator,
+    }),
+  openrouter: (apiKey) => {
+    const attribution = getProviderSettings().openrouterAttribution;
+    const headers: Record<string, string> = {};
+    if (attribution?.referer) {
+      // OpenRouter app attribution expects the HTTP-Referer header.
+      headers["HTTP-Referer"] = attribution.referer;
+    }
+    if (attribution?.title) {
+      headers["X-Title"] = attribution.title;
+    }
+    return buildSDKRequest({
       apiKey,
       baseURL: OPENROUTER_BASE_URL,
-      headers: buildOpenRouterHeaders(),
+      defaultBaseURL: OPENROUTER_BASE_URL,
+      headers: Object.keys(headers).length ? headers : undefined,
       modelId: DEFAULT_MODEL_IDS.openrouter,
-    }),
+      sdkCreator: createOpenAI as SDKCreator,
+    });
+  },
   xai: (apiKey) =>
-    buildOpenAICompatibleRequest({
+    buildSDKRequest({
       apiKey,
       baseURL: XAI_BASE_URL,
+      defaultBaseURL: XAI_BASE_URL,
       modelId: DEFAULT_MODEL_IDS.xai,
+      sdkCreator: createOpenAI as SDKCreator,
     }),
 };
 
 function normalizeErrorReason(error: unknown): string {
   if (error instanceof TypeError) return "TRANSPORT_ERROR";
-  if (error instanceof Error) {
-    const name = error.name || "Error";
-    const withoutSuffix = name.replace(/Error$/, "");
-    const snake = withoutSuffix
-      .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
-      .replace(/[^A-Za-z0-9]+/g, "_")
-      .replace(/_+/g, "_")
-      .replace(/^_|_$/g, "")
-      .toUpperCase();
-    return snake.length > 0 ? snake : "UNKNOWN_ERROR";
+  if (error instanceof Error && error.name) {
+    return error.name.toUpperCase();
   }
   return "UNKNOWN_ERROR";
 }
