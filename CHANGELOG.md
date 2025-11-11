@@ -62,6 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Testing support stubs and helpers:
   - Rehype harden test stub to isolate ESM/CJS packaging differences: `frontend/src/test/mocks/rehype-harden.ts` (aliased in Vitest config)
 
+- Travel Planning tools (AI SDK v6, TypeScript):
+  - New server-only tools under `frontend/src/lib/tools/planning.ts`:
+    - `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`.
+  - Upstash Redis persistence (keys `travel_plan:{planId}`) with TTLs: 7d default; 30d for finalized plans.
+  - Best‑effort Supabase memory logging for plan lifecycle events.
+  - Chat stream now injects authenticated `userId` into planning tools.
+
 ### Changed
 
 - BYOK POST/DELETE adapters (`frontend/src/app/api/keys/route.ts`, `frontend/src/app/api/keys/[service]/route.ts`) now build rate limiters per request, derive identifiers per user/IP, and wrap Supabase RPC calls in telemetry spans carrying rate-limit attributes and sanitized key metadata; route tests updated to stub the new factory and span helper.
@@ -147,6 +154,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Mocked `@/components/ai-elements/response` in chat page tests to avoid rehype/Streamdown transitive ESM during unit tests.
   - Shortened and stabilized slow suites (e.g., search/accommodation-card) by mocking `next/image` and increasing a single long-running test timeout where appropriate.
   - Adjusted auth-store time comparison to avoid strict-equality flakiness on timestamp rollover.
+
+- Planning data model is now camelCase and TypeScript-first (no Python compatibility retained):
+  - Persisted fields include `planId`, `userId`, `title`, `destinations`, `startDate`, `endDate`, `travelers`, `budget`, `preferences`, `createdAt`, `updatedAt`, `status`, `finalizedAt`, `components`.
+  - `updateTravelPlan` validates updates via Zod partial schema; unknown/invalid fields are rejected.
+  - `combineSearchResults` derives nights from `startDate`/`endDate` (default 3 when absent).
 
 ### Removed
 
@@ -517,3 +529,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [Unreleased]: https://github.com/BjornMelin/tripsage-ai/compare/v2.1.0...HEAD
 [2.1.0]: https://github.com/BjornMelin/tripsage-ai/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/BjornMelin/tripsage-ai/releases/tag/v2.0.0
+
+- Legacy Python planning tools removed:
+  - Deleted `tripsage/tools/planning_tools.py` and purged references/tests.
