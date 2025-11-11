@@ -340,7 +340,7 @@ scan-results/
 .agent/
 supabase/.temp/
 docs/prompts/database-provider-research
- 
+docs/prompts/tools/
 # Frontend workspace (consolidated from frontend/.gitignore)
 next-env.d.ts
 .vercel/

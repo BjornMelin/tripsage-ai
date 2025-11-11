@@ -5,6 +5,7 @@
  * streaming. It is fully dependency-injected to ensure deterministic tests.
  */
 
+import { experimental_createMCPClient as createMcpClient } from "@ai-sdk/mcp";
 import type { LanguageModel, UIMessage } from "ai";
 import { convertToModelMessages, streamText as defaultStreamText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
@@ -17,6 +18,7 @@ import {
   countTokens,
 } from "@/lib/tokens/budget";
 import { getModelContextLimit } from "@/lib/tokens/limits";
+import { toolRegistry } from "@/lib/tools";
 
 /**
  * Type representing a resolved AI provider configuration.
@@ -192,13 +194,64 @@ export async function handleChatStream(
   ];
   const { maxTokens, reasons } = clampMaxTokens(clampInput, desired, provider.modelId);
 
+  // Optional MCP tools discovery (SSE) merged with local registry
+  let discoveredTools: Record<string, unknown> | undefined;
+  const mcpUrl = process.env.AIRBNB_MCP_URL || process.env.ACCOM_SEARCH_URL;
+  const mcpAuth = process.env.AIRBNB_MCP_API_KEY || process.env.ACCOM_SEARCH_TOKEN;
+  type BasicMcpClient = {
+    tools: () => Promise<Record<string, unknown>>;
+    close: () => Promise<void>;
+  };
+  let mcpClient: BasicMcpClient | undefined;
+  try {
+    if (mcpUrl) {
+      mcpClient = (await createMcpClient({
+        transport: {
+          headers: mcpAuth ? { authorization: `Bearer ${mcpAuth}` } : undefined,
+          type: "sse",
+          url: mcpUrl,
+        },
+      })) as unknown as BasicMcpClient;
+      discoveredTools = (await mcpClient.tools()) as Record<string, unknown>;
+    }
+  } catch {
+    discoveredTools = undefined;
+  }
+
   // Stream via AI SDK (DI allows tests to inject a finite stream stub)
   const stream = deps.stream ?? defaultStreamText;
   const result = stream({
     maxOutputTokens: maxTokens,
     messages: convertToModelMessages(messages),
     model: provider.model,
+    onFinish: async () => {
+      try {
+        await mcpClient?.close?.();
+      } catch {
+        /* ignore close errors */
+      }
+    },
     system: systemPrompt,
+    toolChoice: "auto",
+    tools: (() => {
+      const local = { ...toolRegistry };
+      const wrapWithUser = (t: any) =>
+        typeof t?.execute === "function"
+          ? {
+              ...t,
+              // do not change input schema; we enforce at tool level
+              execute: (a: any, c: any) => t.execute?.({ ...a, userId: user.id }, c),
+            }
+          : t;
+      // Inject authenticated userId for planning tools
+      if (local.createTravelPlan) local.createTravelPlan = wrapWithUser(local.createTravelPlan);
+      if (local.updateTravelPlan) local.updateTravelPlan = wrapWithUser(local.updateTravelPlan);
+      if (local.saveTravelPlan) local.saveTravelPlan = wrapWithUser(local.saveTravelPlan);
+      const merged = discoveredTools
+        ? { ...(discoveredTools as Record<string, unknown>), ...local }
+        : local;
+      return merged as any;
+    })(),
   });
 
   const reqId = secureUuid();
