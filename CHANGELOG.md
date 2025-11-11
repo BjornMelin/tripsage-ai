@@ -64,10 +64,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Travel Planning tools (AI SDK v6, TypeScript):
   - New server-only tools under `frontend/src/lib/tools/planning.ts`:
-    - `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`.
+    - `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`, `deleteTravelPlan`.
+  - Canonical Zod schema for persisted plans: `frontend/src/lib/tools/planning.schema.ts`.
   - Upstash Redis persistence (keys `travel_plan:{planId}`) with TTLs: 7d default; 30d for finalized plans.
   - Best‑effort Supabase memory logging for plan lifecycle events.
-  - Chat stream now injects authenticated `userId` into planning tools.
+  - Chat stream now injects authenticated `userId` into planning tools; non‑stream handler exposes the same tools with user injection.
+  - Unit tests extended for schema round‑trip, rate limits, delete, and Redis unavailability: `frontend/src/lib/tools/__tests__/planning.test.ts`.
 
 ### Changed
 
@@ -159,6 +161,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Persisted fields include `planId`, `userId`, `title`, `destinations`, `startDate`, `endDate`, `travelers`, `budget`, `preferences`, `createdAt`, `updatedAt`, `status`, `finalizedAt`, `components`.
   - `updateTravelPlan` validates updates via Zod partial schema; unknown/invalid fields are rejected.
   - `combineSearchResults` derives nights from `startDate`/`endDate` (default 3 when absent).
+  - Non‑stream chat handler now includes tool registry and injects `userId` like streaming handler.
+  - Added rate limits: create 20/day per user; update 60/min per plan (TTL set only when counter=1).
+  - Markdown summary uses camelCase only; legacy snake_case fallbacks removed.
 
 ### Removed
 
