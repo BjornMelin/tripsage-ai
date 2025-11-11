@@ -1,5 +1,6 @@
 /** @vitest-environment node */
 
+import { createHash } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { unstubAllEnvs } from "@/test/env-helpers";
@@ -35,11 +36,24 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/app/api/keys/_rate-limiter", () => ({
   buildRateLimiter: BUILD_RATE_LIMITER,
+  RateLimiterConfigurationError: class RateLimiterConfigurationError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "RateLimiterConfigurationError";
+    }
+  },
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: TELEMETRY_SPY,
 }));
+
+/**
+ * Helper to hash an IP address for rate limiting tests.
+ */
+function hashIp(ip: string): string {
+  return createHash("sha256").update(ip).digest("hex");
+}
 
 describe("/api/keys routes", () => {
   beforeEach(() => {
@@ -59,6 +73,27 @@ describe("/api/keys routes", () => {
     });
     MOCK_DELETE.mockReset();
     MOCK_INSERT.mockReset();
+  });
+
+  it("POST /api/keys returns 500 when rate limiter config is missing in production", async () => {
+    const { RateLimiterConfigurationError } = await import(
+      "@/app/api/keys/_rate-limiter"
+    );
+    BUILD_RATE_LIMITER.mockImplementation(() => {
+      throw new RateLimiterConfigurationError("Rate limiter config missing");
+    });
+    vi.stubEnv("NODE_ENV", "production");
+    vi.resetModules();
+    const { POST } = await import("@/app/api/keys/route");
+    const req = {
+      headers: new Headers(),
+      json: async () => ({ apiKey: "test", service: "openai" }),
+    } as unknown as NextRequest;
+    const res = await POST(req);
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.code).toBe("CONFIGURATION_ERROR");
+    vi.unstubAllEnvs();
   });
 
   it("POST /api/keys returns 400 on invalid body", async () => {
@@ -169,7 +204,8 @@ describe("/api/keys routes", () => {
     const res = await POST(req);
 
     expect(BUILD_RATE_LIMITER).toHaveBeenCalled();
-    expect(LIMIT_SPY).toHaveBeenCalledWith("123.123.123.123");
+    // IP should be hashed for rate limiting
+    expect(LIMIT_SPY).toHaveBeenCalledWith(hashIp("123.123.123.123"));
     expect(res.status).toBe(429);
     expect(res.headers.get("X-RateLimit-Limit")).toBe("10");
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("5");
@@ -207,6 +243,38 @@ describe("/api/keys routes", () => {
     expect(req.json).not.toHaveBeenCalled();
   });
 
+  it("POST /api/keys validates request body with Zod schema", async () => {
+    MOCK_INSERT.mockResolvedValue(undefined);
+    vi.resetModules();
+    const { POST } = await import("@/app/api/keys/route");
+    const req = {
+      headers: new Headers(),
+      json: async () => ({ apiKey: "", service: "openai" }),
+    } as unknown as NextRequest;
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("BAD_REQUEST");
+    expect(MOCK_INSERT).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/keys rejects oversized request bodies", async () => {
+    vi.resetModules();
+    const { POST } = await import("@/app/api/keys/route");
+    const req = {
+      headers: new Headers({
+        "content-length": "70000", // > 64KB
+      }),
+      json: vi.fn(),
+    } as unknown as NextRequest;
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("BAD_REQUEST");
+    expect(body.error).toContain("too large");
+    expect(req.json).not.toHaveBeenCalled();
+  });
+
   it("POST /api/keys normalizes service names before RPC execution", async () => {
     MOCK_INSERT.mockResolvedValue(undefined);
     vi.resetModules();
@@ -220,7 +288,7 @@ describe("/api/keys routes", () => {
     expect(MOCK_INSERT).toHaveBeenCalledWith("test-user", "openai", "abc123");
   });
 
-  it("wraps Supabase insert RPC in telemetry span", async () => {
+  it("wraps Supabase insert RPC in telemetry span without api_key attribute", async () => {
     const spanCalls: Array<Record<string, unknown>> = [];
     TELEMETRY_SPY.mockImplementationOnce((_name, options, execute) => {
       spanCalls.push(options);
@@ -241,6 +309,8 @@ describe("/api/keys routes", () => {
       "keys.user_id": "test-user",
       "ratelimit.success": true,
     });
+    // Verify api_key is NOT in attributes
+    expect(spanCalls[0]?.attributes).not.toHaveProperty("keys.api_key");
   });
 
   it("still opens telemetry span when delete RPC fails", async () => {
