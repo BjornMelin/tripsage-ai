@@ -3,7 +3,6 @@
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  resetAndImport,
   stubRateLimitDisabled,
   stubRateLimitEnabled,
   unstubAllEnvs,
@@ -78,7 +77,8 @@ describe("/api/keys/validate route", () => {
         vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }))
       );
 
-      const { POST } = await resetAndImport<typeof import("../route")>("../route");
+      vi.resetModules();
+      const { POST } = await import("@/app/api/keys/validate/route");
       const req = {
         headers: new Headers(),
         json: async () => ({ apiKey: "sk-test", service: "openai" }),
@@ -105,7 +105,8 @@ describe("/api/keys/validate route", () => {
       reset: 789,
       success: false,
     });
-    const { POST } = await resetAndImport<typeof import("../route")>("../route");
+    vi.resetModules();
+    const { POST } = await import("@/app/api/keys/validate/route");
     const req = {
       headers: new Headers(),
       json: vi.fn(),
