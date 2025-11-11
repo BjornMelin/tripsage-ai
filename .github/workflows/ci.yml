@@ -96,8 +96,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
-          cache: 'pnpm'
-          cache-dependency-path: 'frontend/pnpm-lock.yaml'
 
       - name: Install deps
         working-directory: frontend
@@ -190,8 +188,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
-          cache: 'pnpm'
-          cache-dependency-path: 'frontend/pnpm-lock.yaml'
 
       - name: Install deps
         working-directory: frontend
@@ -240,7 +236,7 @@ jobs:
   frontend-coverage-merge:
     name: Frontend Coverage (merge)
     needs: frontend-coverage
-    if: always()
+    if: ${{ needs.frontend-coverage.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
