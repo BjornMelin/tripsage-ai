@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
     const supabase = await createServerSupabase();
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser();
     const ratelimitInstance = buildRateLimiter();
     if (ratelimitInstance) {
@@ -98,6 +99,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { code: "BAD_REQUEST", error: "Invalid request body" },
         { status: 400 }
+      );
+    }
+
+    if (authError || !user) {
+      console.error("/api/keys POST auth error:", {
+        message: authError?.message ?? "User not found",
+      });
+      return NextResponse.json(
+        { code: "UNAUTHORIZED", error: "Authentication failed" },
+        { status: 401 }
       );
     }
 
