@@ -49,11 +49,19 @@ const DEFAULT_MODEL_IDS: Record<ProviderId, string> = {
 
 type ProviderRequest = {
   fetchImpl: typeof fetch;
-  headers: Record<string, string>;
+  headers: HeadersInit;
   url: string;
 };
 
 type ProviderRequestBuilder = (apiKey: string) => ProviderRequest;
+
+type ConfigurableModel = {
+  config: {
+    baseURL?: string;
+    fetch?: typeof fetch;
+    headers: () => HeadersInit;
+  };
+};
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const XAI_BASE_URL = "https://api.x.ai/v1";
@@ -79,11 +87,15 @@ function buildOpenAICompatibleRequest(options: {
     ...(options.baseURL ? { baseURL: options.baseURL } : {}),
     ...(providerHeaders ? { headers: providerHeaders } : {}),
   });
-  const model = provider(options.modelId);
-  const url = model.config.url({ path: "/models" });
-  const headers = model.config.headers();
+  const model = provider(options.modelId) as unknown as ConfigurableModel;
+  const config = model.config;
+  const headers = config.headers();
+  const baseURL =
+    options.baseURL?.trim() || config.baseURL || "https://api.openai.com/v1";
+  const normalizedBase = baseURL.endsWith("/") ? baseURL : `${baseURL}/`;
+  const url = new URL("models", normalizedBase).toString();
   return {
-    fetchImpl: model.config.fetch ?? fetch,
+    fetchImpl: config.fetch ?? fetch,
     headers,
     url,
   };
@@ -91,13 +103,14 @@ function buildOpenAICompatibleRequest(options: {
 
 function buildAnthropicRequest(apiKey: string): ProviderRequest {
   const provider = createAnthropic({ apiKey });
-  const model = provider(DEFAULT_MODEL_IDS.anthropic);
-  const baseURL = model.config.baseURL ?? "https://api.anthropic.com/v1";
+  const model = provider(DEFAULT_MODEL_IDS.anthropic) as unknown as ConfigurableModel;
+  const config = model.config;
+  const baseURL = config.baseURL ?? "https://api.anthropic.com/v1";
   const normalizedBase = baseURL.endsWith("/") ? baseURL : `${baseURL}/`;
   const url = new URL("models", normalizedBase).toString();
-  const headers = model.config.headers();
+  const headers = config.headers();
   return {
-    fetchImpl: model.config.fetch ?? fetch,
+    fetchImpl: config.fetch ?? fetch,
     headers,
     url,
   };
@@ -193,17 +206,16 @@ async function validateProviderKey(
 }
 
 /**
- * Require rate limiting for the request.
+ * Require rate limiting for the request identifier.
  *
- * @param req Next.js request object.
+ * @param identifier Unique bucket key (user id or derived token/IP).
  * @returns NextResponse with 429 status if rate limit exceeded, otherwise null.
  */
-async function requireRateLimit(req: NextRequest): Promise<NextResponse | null> {
+async function requireRateLimit(identifier: string): Promise<NextResponse | null> {
   const ratelimitInstance = GET_RATELIMIT_INSTANCE();
   if (!ratelimitInstance) return null;
-  const { success, limit, remaining, reset } = await ratelimitInstance.limit(
-    buildRateLimitKey(req)
-  );
+  const { success, limit, remaining, reset } =
+    await ratelimitInstance.limit(identifier);
   if (!success) {
     return NextResponse.json(
       { code: "RATE_LIMIT", error: "Rate limit exceeded" },
@@ -221,23 +233,6 @@ async function requireRateLimit(req: NextRequest): Promise<NextResponse | null> 
 }
 
 /**
- * Require authenticated user.
- *
- * @returns NextResponse with 401 status if user not authenticated, otherwise user ID.
- */
-async function requireUser(): Promise<NextResponse | string> {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return user.id;
-}
-
-/**
  * Handle POST /api/keys/validate to verify a user-supplied API key.
  *
  * Orchestrates rate limiting, authentication, and provider validation.
@@ -247,7 +242,14 @@ async function requireUser(): Promise<NextResponse | string> {
  */
 export async function POST(req: NextRequest) {
   try {
-    const rateLimitResponse = await requireRateLimit(req);
+    const supabase = await createServerSupabase();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    const identifier = user?.id ?? buildRateLimitKey(req);
+
+    const rateLimitResponse = await requireRateLimit(identifier);
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
@@ -280,9 +282,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userResponse = await requireUser();
-    if (userResponse instanceof NextResponse) {
-      return userResponse;
+    if (error || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const result = await validateProviderKey(service, apiKey);

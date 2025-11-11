@@ -87,7 +87,7 @@ jobs:
           echo "Pyright + unit tests are temporarily soft-fail while the codebase stabilizes." >> $GITHUB_STEP_SUMMARY
 
   frontend:
-    name: Frontend (lint, type, unit)
+    name: Frontend (lint, type, unit - quick)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -100,8 +100,19 @@ jobs:
       - name: Install deps
         working-directory: frontend
         run: |
-          npm install -g pnpm@9
+          npm install -g pnpm@10.20.0
           pnpm install --frozen-lockfile
+
+      - name: Cache Vite/Vitest/TS caches
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-vite-vitest-${{ hashFiles('frontend/pnpm-lock.yaml','frontend/vitest.config.ts','frontend/tsconfig.json','frontend/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-vite-vitest-
+          path: |
+            frontend/node_modules/.vite
+            frontend/node_modules/.vitest
+            frontend/tsconfig.tsbuildinfo
 
       - name: Biome check (src + e2e + scripts)
         working-directory: frontend
@@ -111,9 +122,11 @@ jobs:
         working-directory: frontend
         run: npx tsc --noEmit
 
-      - name: Unit tests
+      - name: Unit tests (quick, no coverage)
         working-directory: frontend
-        run: pnpm test:ci
+        env:
+          VITEST_POOL: threads
+        run: pnpm test:quick
 
       - name: Performance benchmarks
         working-directory: frontend
@@ -129,6 +142,8 @@ jobs:
           if-no-files-found: ignore
 
       - name: Check performance thresholds
+        if: >-
+          github.event_name == 'push' && startsWith(github.ref, 'refs/heads/main')
         working-directory: frontend
         run: |
           if [ -f benchmark-summary.json ]; then
@@ -155,3 +170,96 @@ jobs:
           if [ -f frontend/benchmark-summary.json ]; then
             echo "Performance benchmarks: completed" >> $GITHUB_STEP_SUMMARY
           fi
+
+  frontend-coverage:
+    name: Frontend Coverage (sharded)
+    needs: frontend
+    if: >-
+      github.event_name == 'push' && startsWith(github.ref, 'refs/heads/main')
+      || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+        total: [4]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install deps
+        working-directory: frontend
+        run: |
+          npm install -g pnpm@10.20.0
+          pnpm install --frozen-lockfile
+
+      - name: Cache Vite/Vitest/TS caches
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-vite-vitest-${{ hashFiles('frontend/pnpm-lock.yaml','frontend/vitest.config.ts','frontend/tsconfig.json','frontend/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-vite-vitest-
+          path: |
+            frontend/node_modules/.vite
+            frontend/node_modules/.vitest
+            frontend/tsconfig.tsbuildinfo
+
+      - name: Run sharded coverage (api+ui)
+        working-directory: frontend
+        env:
+          CI: '1'
+        run: >-
+          pnpm vitest run --coverage
+          --pool=threads --reporter=blob --outputFile=.vitest/shard-${{ matrix.shard }}.json
+          --shard=${{ matrix.shard }}/${{ matrix.total }}
+
+      - name: Upload shard artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-reports-${{ matrix.shard }}
+          path: |
+            frontend/.vitest
+            frontend/coverage
+          if-no-files-found: warn
+
+  frontend-coverage-merge:
+    name: Frontend Coverage (merge)
+    needs: frontend-coverage
+    if: ${{ needs.frontend-coverage.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install vitest (frontend)
+        working-directory: frontend
+        run: |
+          npm install -g pnpm@10.20.0
+          pnpm install --frozen-lockfile
+
+      - name: Download shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: frontend/.vitest-merged
+
+      - name: Merge reports
+        working-directory: frontend
+        run: |
+          mkdir -p .vitest
+          find .vitest-merged -type f -name "*.json" -exec cp {} .vitest/ \;
+          pnpm vitest run --merge-reports
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-merged
+          path: frontend/coverage
+          if-no-files-found: error
