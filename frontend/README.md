@@ -418,7 +418,10 @@ FIRECRAWL_API_KEY=fc-your_firecrawl_key  # For web search (v2.5)
 FIRECRAWL_BASE_URL=https://api.firecrawl.dev/v2  # Optional: override base URL
 
 # MCP Servers (Optional - for extended tool ecosystem)
-AIRBNB_MCP_URL=your_airbnb_mcp_endpoint
+AIRBNB_MCP_URL=your_airbnb_mcp_endpoint  # SSE endpoint for MCP tools
+AIRBNB_MCP_API_KEY=your_airbnb_mcp_api_key  # Bearer token for MCP auth
+ACCOM_SEARCH_URL=your_accommodation_search_endpoint  # HTTP fallback endpoint
+ACCOM_SEARCH_TOKEN=your_accommodation_search_token  # Bearer token for HTTP auth
 
 # Observability (Optional)
 OTEL_EXPORTER_OTLP_ENDPOINT=your_otel_collector
@@ -460,7 +463,7 @@ Full-stack instrumentation without compromising privacy:
 
 - [Frontend Development Guide](../docs/developers/frontend-development.md) - Frontend architecture & patterns
 - [Testing Guide](../docs/developers/testing-guide.md) - Testing strategies & coverage requirements
-- [Code Standards](../docs/developers/code-standards.md) - Code quality & conventions
+- [Code Standards](../docs/developers/code-standards.md) - Code quality, conventions, and Zod schema organization policy
 - [AI SDK Migration Prompts](../docs/prompts/ai-sdk/RUN-ORDER.md) - Complete migration guide
 
 ### API Integration

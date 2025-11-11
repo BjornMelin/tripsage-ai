@@ -5,10 +5,10 @@
  * streaming. It is fully dependency-injected to ensure deterministic tests.
  */
 
-import { experimental_createMCPClient as createMcpClient } from "@ai-sdk/mcp";
 import type { LanguageModel, UIMessage } from "ai";
 import { convertToModelMessages, streamText as defaultStreamText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
+import { createMcpClientHelper } from "@/lib/mcp/client";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
@@ -199,20 +199,13 @@ export async function handleChatStream(
   let discoveredTools: Record<string, unknown> | undefined;
   const mcpUrl = process.env.AIRBNB_MCP_URL || process.env.ACCOM_SEARCH_URL;
   const mcpAuth = process.env.AIRBNB_MCP_API_KEY || process.env.ACCOM_SEARCH_TOKEN;
-  type BasicMcpClient = {
-    tools: () => Promise<Record<string, unknown>>;
-    close: () => Promise<void>;
-  };
-  let mcpClient: BasicMcpClient | undefined;
+  let mcpClient: Awaited<ReturnType<typeof createMcpClientHelper>> | undefined;
   try {
     if (mcpUrl) {
-      mcpClient = (await createMcpClient({
-        transport: {
-          headers: mcpAuth ? { authorization: `Bearer ${mcpAuth}` } : undefined,
-          type: "sse",
-          url: mcpUrl,
-        },
-      })) as unknown as BasicMcpClient;
+      mcpClient = await createMcpClientHelper(
+        mcpUrl,
+        mcpAuth ? { authorization: `Bearer ${mcpAuth}` } : undefined
+      );
       discoveredTools = (await mcpClient.tools()) as Record<string, unknown>;
     }
   } catch {

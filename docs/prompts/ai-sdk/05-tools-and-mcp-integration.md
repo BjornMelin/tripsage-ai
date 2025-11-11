@@ -58,12 +58,12 @@
   - Notes (2025-11-11): Implemented `webSearch` (Firecrawl) with Redis caching `frontend/src/lib/tools/web-search.ts`.
 - [x] **Web Crawling Tools** - Migrate `crawl_website_content`, `crawl_travel_blog`, `crawl_booking_site`, `crawl_event_listing`
   - Notes (2025-11-11): Implemented `crawlUrl`, `crawlSite` via Firecrawl `frontend/src/lib/tools/web-crawl.ts`.
-- [~] **Accommodation Tools** - Migrate `search_accommodations`, `get_accommodation_details`, `book_accommodation`
-  - Notes (2025-11-11): `searchAccommodations` (MCP/HTTP) and `bookAccommodation` with approval gate.
-  - [x] `searchAccommodations` - Implemented in `frontend/src/lib/tools/accommodations.ts`
-  - [x] `bookAccommodation` - Implemented with approval gate
-  - [ ] `getAccommodationDetails` - Missing; needs implementation (MCP/HTTP details endpoint)
-  - Notes (2025-11-11): Fixed `priceMin`/`priceMax` zero value handling; fixed `bookAccommodation` to return `status: "pending_confirmation"`
+- [x] **Accommodation Tools** - Migrate `search_accommodations`, `get_accommodation_details`, `book_accommodation`
+  - Notes (2025-11-11): `searchAccommodations` (MCP SSE + HTTP POST fallback), `bookAccommodation` with approval gate and idempotency, `getAccommodationDetails` (MCP SSE + HTTP GET fallback). Full parity with Python implementation including filters, caching, retries/timeouts, and error taxonomy.
+  - [x] `searchAccommodations` - Implemented with expanded Zod schemas, MCP SSE primary + HTTP POST fallback, Redis caching (TTL 300s), retries/timeouts, error mapping
+  - [x] `bookAccommodation` - Implemented with approval gate, idempotency keys (secureUuid), contact fields, holdOnly, specialRequests, tripId, paymentMethod
+  - [x] `getAccommodationDetails` - Implemented with MCP SSE + HTTP GET fallback, optional date/guest params for pricing
+  - Notes (2025-11-11): Fixed `priceMin`/`priceMax` zero value handling; fixed `bookAccommodation` to return `status: "pending_confirmation"`; replaced Math.random with secureUuid for booking references
 - [x] **Planning Tools** - Migrate `create_travel_plan`, `update_travel_plan`, `combine_search_results`, `save_travel_plan`
   - Notes (2025-11-11): Fully migrated to `frontend/src/lib/tools/planning.ts` with Redis persistence, Supabase memory logging, and comprehensive tests. Python code removed.
   - [x] `createTravelPlan` - Implemented with Redis TTL (7d default, 30d finalized)
@@ -94,8 +94,8 @@
   - Notes (2025-11-11): `frontend/src/lib/tools/approvals.ts`; booking gated.
 - [x] Add input validation and sanitization
   - Notes (2025-11-11): All tools defined with Zod schemas.
-- [ ] Implement idempotency guards where applicable
-  - Notes: Pending explicit idempotency keys beyond caching.
+- [x] Implement idempotency guards where applicable
+  - Notes (2025-11-11): Booking tools use secureUuid for idempotency keys; approval system supports idempotency-keyed approvals; search caching provides natural idempotency via canonical payload keys.
 
 ### Testing & Quality
 
@@ -104,7 +104,7 @@
   - [x] `web-search.test.ts` - Covers validation, Firecrawl integration, error handling
   - [x] `web-crawl.test.ts` - Covers scrape/crawl, cost-safe defaults, rate limit errors, polling
   - [x] `planning.test.ts` - Covers create/update/save/combine, TTL logic, auth checks, Redis fallbacks, `_score` leakage fix
-  - [x] `accommodations.test.ts` - Covers search, booking approval, price filter edge cases (zero values), status validation
+  - [x] `accommodations.test.ts` - Covers search (filters, caching, retries/fallback), booking (approval, idempotency, extended fields), details tool, error taxonomy, cross-field validation
   - [ ] `memory.test.ts` - Missing; test add/search operations, Supabase integration
   - [x] `weather.test.ts` - Covers OpenWeatherMap integration, error handling, missing data handling
   - [ ] `flights.test.ts` - Missing; test Duffel API, camel→snake conversion, IATA validation
@@ -220,6 +220,12 @@ const weatherTool = tool({
     - Non-stream and stream handlers inject `userId` via `wrapToolsWithUserId()` (`frontend/src/lib/tools/injection.ts`), limiting injection to planning tools.
     - `combineSearchResults` derives nights from dates (default 3). Markdown summary uses camelCase only (legacy fallbacks removed).
     - Memory logging: best‑effort Supabase insert; never blocks tool results.
+    - Telemetry: All planning tool executions are wrapped with `withTelemetrySpan` from `frontend/src/lib/telemetry/span.ts`. Each tool emits a parent span with consistent attributes:
+      - `createTravelPlan`: `userId`, `destinationsCount`, `travelers`, `hasBudget`
+      - `updateTravelPlan`: `planId`, `changesCount`
+      - `saveTravelPlan`: `planId`, `finalize`
+      - `deleteTravelPlan`: `planId`, `userId`
+      - Rate-limit breaches add an OpenTelemetry event (`rate_limited`) with event type (`create` or `update`), rate-limit key, and relevant identifiers (`planId`, `userId`).
   - Registry: exported via `frontend/src/lib/tools/index.ts` and auto‑wired into both chat stream and non‑stream handlers.
   - Removed: `tripsage/tools/planning_tools.py` (and references). No backward compatibility retained.
 - Flights (Duffel)
