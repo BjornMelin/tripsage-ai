@@ -124,6 +124,43 @@ function useTrips() {
 }
 ```
 
+### Zod Schema Organization
+
+**Co-locate schemas by default**: Keep Zod schemas in the same file where they're primarily used (tool files, route handlers) to maintain context and keep validation logic close to execution.
+
+**Extract to shared schemas when**:
+
+- The same schema is consumed by ≥2 distinct modules (e.g., tool + UI form + route handler)
+- You need strong schema versioning and stable import paths across multiple layers
+- The schema exceeds ~150 LOC or has multiple discriminated unions that benefit from dedicated file organization
+
+**Type definitions**: Keep derived TypeScript types (`z.infer<typeof Schema>`) in `frontend/src/types/<domain>.ts` for ergonomic imports without pulling Zod at call sites.
+
+**Best practices**:
+
+- Use `.strict()` where inputs are external (user-provided or API responses)
+- Prefer `.transform()` for normalization over ad-hoc post-processing
+- Use cross-field `.refine`/`.superRefine` for invariants (e.g., checkout after checkin, non-negative price ranges)
+
+Example:
+
+```typescript
+// frontend/src/lib/tools/accommodations.ts - schema co-located with tool
+const searchSchema = z.object({
+  checkin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  // ...
+}).refine((data) => new Date(data.checkout) > new Date(data.checkin), 
+  "checkout must be after checkin");
+
+// frontend/src/types/accommodations.ts - types for ergonomic imports
+export type AccommodationSearchParams = {
+  checkin: string;
+  checkout: string;
+  // ...
+};
+```
+
 ## Code Formatting
 
 ### Python (Ruff)
