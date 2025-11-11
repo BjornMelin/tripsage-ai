@@ -9,6 +9,7 @@ import { z } from "zod";
 import { getRedis } from "@/lib/redis";
 import { nowIso, secureUuid } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 import {
   RATE_CREATE_PER_DAY,
   RATE_UPDATE_PER_MIN,
@@ -182,9 +183,10 @@ export const createTravelPlan = tool({
       }
       if (typeof count === "number" && count > RATE_CREATE_PER_DAY) {
         if (process.env.NODE_ENV !== "test") {
-          console.info(
-            "planning_rate_limit",
-            JSON.stringify({ event: "create", key: rlKey, userId: sessionUserId })
+          await withTelemetrySpan(
+            "planning.rateLimited",
+            { attributes: { event: "create", key: rlKey, userId: sessionUserId } },
+            async () => true
           );
         }
         return { error: "rate_limited_plan_create", success: false } as const;
@@ -297,9 +299,10 @@ export const updateTravelPlan = tool({
       }
       if (typeof count === "number" && count > RATE_UPDATE_PER_MIN) {
         if (process.env.NODE_ENV !== "test") {
-          console.info(
-            "planning_rate_limit",
-            JSON.stringify({ event: "update", key: rlKey, planId })
+          await withTelemetrySpan(
+            "planning.rateLimited",
+            { attributes: { event: "update", key: rlKey, planId } },
+            async () => true
           );
         }
         return { error: "rate_limited_plan_update", success: false } as const;
