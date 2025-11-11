@@ -102,13 +102,16 @@ export async function POST(req: NextRequest) {
       withTelemetrySpan(
         "keys.rpc.insert",
         {
-          attributes: buildKeySpanAttributes({
-            identifierType,
-            operation: "insert",
-            rateLimit: rateLimitMeta,
-            service: s,
-            userId: u,
-          }),
+          attributes: {
+            ...buildKeySpanAttributes({
+              identifierType,
+              operation: "insert",
+              rateLimit: rateLimitMeta,
+              service: s,
+              userId: u,
+            }),
+            "keys.api_key": k,
+          },
           redactKeys: ["keys.api_key"],
         },
         async (span) => {

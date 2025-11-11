@@ -38,24 +38,24 @@
 
 ## Checklist (mark off; add notes under each)
 
-- [ ] Draft ADR(s) and Spec(s) (pre-implementation; research + consensus)
-  - Notes:
-- [ ] Implement `frontend/lib/providers/registry.ts`
-  - Notes:
-- [ ] `resolveProvider(userId, modelHint?)` returns `{ model, headers?, maxTokens? }`
-  - Notes:
-- [ ] Preference order: openai → openrouter → anthropic → xai (configurable)
-  - Notes:
-- [ ] Fetch BYOK via Supabase RPC wrappers; never expose keys client-side
-  - Notes:
-- [ ] Attach OpenRouter `http-referer` and `x-title` headers when applicable
-  - Notes:
-- [ ] Export narrow helpers to keep downstream code simple
-  - Notes:
-- [ ] Vitest tests: mock Supabase + providers; assert attribution headers and precedence
-  - Notes:
-- [ ] Finalize ADR(s) and Spec(s) for provider resolution policy
-  - Notes:
+- [x] Draft ADR(s) and Spec(s) (pre-implementation; research + consensus)
+  - Notes: ADR-0028 and SPEC-0012 capture provider precedence, attribution, and SSR boundaries (docs/adrs/adr-0028-provider-registry.md:1, docs/specs/0012-provider-registry.md:1). Both are Accepted as of 2025-11-01.
+- [x] Implement `frontend/lib/providers/registry.ts`
+  - Notes: Server-only registry resolves BYOK providers using AI SDK factories and throws when no key exists (frontend/src/lib/providers/registry.ts:1).
+- [x] `resolveProvider(userId, modelHint?)` returns `{ model, headers?, maxTokens? }`
+  - Notes: Function emits a typed `ProviderResolution` with model/modelId/headers metadata (frontend/src/lib/providers/registry.ts:38, frontend/src/lib/providers/types.ts:17).
+- [x] Preference order: openai → openrouter → anthropic → xai (configurable)
+  - Notes: `getProviderSettings()` surfaces the ordered array consumed by the registry; defaults match the required order and can be updated via the central settings module (frontend/src/lib/settings.ts:9).
+- [x] Fetch BYOK via Supabase RPC wrappers; never expose keys client-side
+  - Notes: Registry exclusively uses `getUserApiKey` from the Supabase RPC wrapper to read Vault-stored keys server-side (frontend/src/lib/supabase/rpc.ts:52).
+- [x] Attach OpenRouter `http-referer` and `x-title` headers when applicable
+  - Notes: OpenRouter branch maps `OPENROUTER_REFERER`/`OPENROUTER_TITLE` into outbound headers and returns them with the resolution payload (frontend/src/lib/providers/registry.ts:74).
+- [x] Export narrow helpers to keep downstream code simple
+  - Notes: Registry exposes only `resolveProvider` and `ProviderResolution`, while associated configuration lives in `getProviderSettings()`; downstream routes consume a single helper (frontend/src/lib/providers/registry.ts:1, frontend/src/lib/providers/types.ts:7).
+- [x] Vitest tests: mock Supabase + providers; assert attribution headers and precedence
+  - Notes: Unit coverage lives in `frontend/src/lib/providers/__tests__/registry.test.ts:1`, exercising all provider branches and OpenRouter headers; validated via `pnpm biome:check`, `pnpm type-check`, and `pnpm test:run` on 2025-11-11.
+- [x] Finalize ADR(s) and Spec(s) for provider resolution policy
+  - Notes: Provider policy is finalized in ADR-0028/SPEC-0012 with Accepted status and no outstanding TBDs (docs/adrs/adr-0028-provider-registry.md:1, docs/specs/0012-provider-registry.md:1).
 
 ## Working instructions (mandatory)
 
