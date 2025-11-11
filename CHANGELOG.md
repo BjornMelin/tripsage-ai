@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Request-scoped Upstash limiter builder shared by BYOK routes: `frontend/src/app/api/keys/_rate-limiter.ts` plus span attribute helper `frontend/src/app/api/keys/_telemetry.ts`.
+- Minimal OpenTelemetry span utility with attribute redaction and unit tests: `frontend/src/lib/telemetry/span.ts` and `frontend/src/lib/telemetry/__tests__/span.test.ts`.
+- Dependency: `@opentelemetry/api@1.9.0` (frontend) powering BYOK telemetry spans.
+- Route-helper coverage proving rate-limit identifiers always fall back to `"unknown"`: `frontend/src/lib/next/__tests__/route-helpers.test.ts`.
 - Shared test store factories for Zustand mocks:
   - `frontend/src/test/factories/stores.ts` (`createMockChatState`, `createMockAgentStatusState`).
 - Timer test helper for deterministic, immediate execution:
@@ -60,6 +64,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- BYOK POST/DELETE adapters (`frontend/src/app/api/keys/route.ts`, `frontend/src/app/api/keys/[service]/route.ts`) now build rate limiters per request, derive identifiers per user/IP, and wrap Supabase RPC calls in telemetry spans carrying rate-limit attributes and sanitized key metadata; route tests updated to stub the new factory and span helper.
+- Same BYOK routes now export `dynamic = "force-dynamic"`/`revalidate = 0` and document the no-cache rationale so user-specific secrets never reuse stale responses.
+- Service normalization and rate-limit identifier behavior are documented/tested (see `frontend/src/app/api/keys/_handlers.ts`, route tests, and `frontend/src/lib/next/route-helpers.ts`), closing reviewer feedback.
 - Frontend test utilities moved out of `*.test.*` globs to avoid accidental collection; imports updated:
   - `frontend/src/test/test-utils.test.tsx` → `frontend/src/test/test-utils.tsx` and all references switched to `@/test/test-utils`.
 - AI stream route integration tests optimized:

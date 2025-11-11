@@ -15,6 +15,7 @@ We are migrating BYOK key CRUD/validation from FastAPI to Next.js route handlers
   - `POST /api/keys` → upsert via `insert_user_api_key`
   - `DELETE /api/keys/[service]` → delete via `delete_user_api_key`
   - `POST /api/keys/validate` → provider metadata check (no persist)
+- Mark each route module with `import "server-only"` plus `export const dynamic = "force-dynamic"` / `revalidate = 0` so BYOK responses are never cached or executed on the client.
 - Add server-only Supabase admin client using `SUPABASE_SERVICE_ROLE_KEY`.
 - Centralize Vault RPC helpers in `frontend/src/lib/supabase/rpc.ts`.
 - Enforce PostgREST claims guard in SQL: `request.jwt.claims->>'role'='service_role'`.

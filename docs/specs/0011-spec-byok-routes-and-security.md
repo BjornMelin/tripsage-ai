@@ -29,6 +29,8 @@ Move BYOK key CRUD and validation to Next.js route handlers using Supabase Vault
 - SQL guard: `coalesce((current_setting('request.jwt.claims', true)::json->>'role'),'') = 'service_role'` in RPCs.
 - Server-only env usage; no secrets serialized to client.
 - Logs redact `api_key`.
+- Each Next.js route imports `"server-only"` and exports `dynamic = "force-dynamic"` / `revalidate = 0` so responses are evaluated per request and never cached or served to clients.
+- Handlers normalize service identifiers (trim/lowercase) once before calling Vault RPCs to prevent mismatched deletes.
 
 ## Rate Limiting
 
@@ -44,6 +46,7 @@ Move BYOK key CRUD and validation to Next.js route handlers using Supabase Vault
 
 - Vitest unit tests for RPC wrappers with `createAdminSupabase` mocked.
 - Integration tests for route handlers with Supabase SSR and provider fetch mocked.
+- Helper tests covering `getClientIpFromHeaders`/`buildRateLimitKey` ensure rate-limit identifiers always fall back to `"unknown"` when proxy headers are absent.
 
 ## Links
 
