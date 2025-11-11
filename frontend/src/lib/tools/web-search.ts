@@ -10,9 +10,7 @@ import { getRedis } from "@/lib/redis";
 
 const scrapeOptionsSchema = z
   .object({
-    formats: z
-      .array(z.enum(["markdown", "html", "links", "screenshot"]))
-      .optional(),
+    formats: z.array(z.enum(["markdown", "html", "links", "screenshot"])).optional(),
     parsers: z.array(z.string()).optional(),
     proxy: z.enum(["basic", "stealth"]).optional(),
   })
@@ -123,22 +121,21 @@ export const webSearch = tool({
     }
     const redis = getRedis();
     const cacheParams = {
-      query,
-      limit,
-      sources,
       categories,
-      tbs,
+      limit,
       location,
-      timeoutMs,
+      query,
       scrapeOptions,
+      sources,
+      tbs,
+      timeoutMs,
     };
     const k = cacheKey(cacheParams);
     if (!fresh && redis) {
       const cached = await redis.get(k);
       if (cached) return cached;
     }
-    const baseUrl =
-      process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
+    const baseUrl = process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
     const url = `${baseUrl}/search`;
     const body = buildRequestBody(cacheParams);
     const res = await fetch(url, {
@@ -167,19 +164,17 @@ export const webSearch = tool({
     return data;
   },
   inputSchema: z.object({
+    categories: z.array(z.enum(["github", "research", "pdf"])).optional(),
     fresh: z.boolean().default(false),
     limit: z.number().int().min(1).max(10).default(5),
+    location: z.string().optional(),
     query: z.string().min(2),
+    scrapeOptions: scrapeOptionsSchema,
     sources: z
       .array(z.enum(["web", "news", "images"]))
       .default(["web"])
       .optional(),
-    categories: z
-      .array(z.enum(["github", "research", "pdf"]))
-      .optional(),
     tbs: z.string().optional(),
-    location: z.string().optional(),
     timeoutMs: z.number().int().positive().optional(),
-    scrapeOptions: scrapeOptionsSchema,
   }),
 });

@@ -14,16 +14,19 @@ afterEach(() => {
 });
 
 const mockContext = {
-  toolCallId: "test-call-id",
   messages: [],
+  toolCallId: "test-call-id",
 };
 
 test("webSearch validates inputs and calls Firecrawl", async () => {
-  const mockRes = { ok: true, json: async () => ({ results: [{ url: "https://x" }] }) } as Response;
+  const mockRes = {
+    json: async () => ({ results: [{ url: "https://x" }] }),
+    ok: true,
+  } as Response;
   (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
   const out = await webSearch.execute!(
-    { query: "test", limit: 2, fresh: true },
-    mockContext,
+    { fresh: true, limit: 2, query: "test" },
+    mockContext
   );
   expect(out.results[0].url).toBe("https://x");
 });
@@ -31,7 +34,6 @@ test("webSearch validates inputs and calls Firecrawl", async () => {
 test("webSearch throws when not configured", async () => {
   process.env.FIRECRAWL_API_KEY = "";
   await expect(
-    webSearch.execute!({ query: "t", limit: 5, fresh: false }, mockContext),
+    webSearch.execute!({ fresh: false, limit: 5, query: "t" }, mockContext)
   ).rejects.toThrow(/web_search_not_configured/);
 });
-
