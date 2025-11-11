@@ -58,10 +58,19 @@
   - Notes (2025-11-11): Implemented `webSearch` (Firecrawl) with Redis caching `frontend/src/lib/tools/web-search.ts`.
 - [x] **Web Crawling Tools** - Migrate `crawl_website_content`, `crawl_travel_blog`, `crawl_booking_site`, `crawl_event_listing`
   - Notes (2025-11-11): Implemented `crawlUrl`, `crawlSite` via Firecrawl `frontend/src/lib/tools/web-crawl.ts`.
-- [x] **Accommodation Tools** - Migrate `search_accommodations`, `get_accommodation_details`, `book_accommodation`
+- [~] **Accommodation Tools** - Migrate `search_accommodations`, `get_accommodation_details`, `book_accommodation`
   - Notes (2025-11-11): `searchAccommodations` (MCP/HTTP) and `bookAccommodation` with approval gate.
-- [ ] **Planning Tools** - Migrate `create_travel_plan`, `update_travel_plan`, `combine_search_results`, `generate_travel_summary`, `save_travel_plan`
-  - Notes: Implement with Redis caching and memory integration
+  - [x] `searchAccommodations` - Implemented in `frontend/src/lib/tools/accommodations.ts`
+  - [x] `bookAccommodation` - Implemented with approval gate
+  - [ ] `getAccommodationDetails` - Missing; needs implementation (MCP/HTTP details endpoint)
+  - Issues: `priceMin`/`priceMax` zero values ignored (line 20-21); `bookAccommodation` returns `status: "confirmed"` incorrectly (line 52)
+- [x] **Planning Tools** - Migrate `create_travel_plan`, `update_travel_plan`, `combine_search_results`, `save_travel_plan`
+  - Notes (2025-01-XX): Fully migrated to `frontend/src/lib/tools/planning.ts` with Redis persistence, Supabase memory logging, and comprehensive tests. Python code removed.
+  - [x] `createTravelPlan` - Implemented with Redis TTL (7d default, 30d finalized)
+  - [x] `updateTravelPlan` - Implemented with Zod partial validation and auth checks
+  - [x] `combineSearchResults` - Implemented with scoring and cost estimation
+  - [x] `saveTravelPlan` - Implemented with finalization support and markdown summary
+  - Issues: `combineSearchResults` leaks `_score` property in returned accommodations (line 330-341)
 - [x] **Memory Tools** - Migrate core memory ops
   - Notes (2025-11-11): Added `addConversationMemory`, `searchUserMemories` via Supabase.
 - [x] **Weather Tools** - Migrate weather service integration
@@ -91,13 +100,30 @@
 ### Testing & Quality
 
 - [~] Write Vitest unit tests for each tool
-  - Notes (2025-11-11): Added unit tests for web search; more tests to follow for remaining tools.
+  - Notes (2025-01-XX): Partial coverage - 3 test files exist. Need tests for remaining tools.
+  - [x] `web-search.test.ts` - Covers validation, Firecrawl integration, error handling
+  - [x] `web-crawl.test.ts` - Covers scrape/crawl, cost-safe defaults, rate limit errors, polling
+  - [x] `planning.test.ts` - Covers create/update/save/combine, TTL logic, auth checks, Redis fallbacks
+  - [ ] `accommodations.test.ts` - Missing; test search, booking approval, price filter edge cases
+  - [ ] `memory.test.ts` - Missing; test add/search operations, Supabase integration
+  - [ ] `weather.test.ts` - Missing; test OpenWeatherMap integration, error handling
+  - [ ] `flights.test.ts` - Missing; test Duffel API, camel→snake conversion, IATA validation
+  - [ ] `maps.test.ts` - Missing; test geocode, distanceMatrix, Google Maps integration
 - [ ] Write integration tests for tool interleaving in streams
-  - Notes: Pending; chat handler wired.
+  - Notes: Pending; chat handler wired but no integration tests exist
+  - [ ] Test multiple tool calls in single stream
+  - [ ] Test tool error recovery and continuation
+  - [ ] Test MCP tool merging with local registry
 - [ ] Write approval flow tests
   - Notes: Test pause/resume behavior with UI approval
+  - [ ] Test `requireApproval` throws when not approved
+  - [ ] Test `grantApproval` allows execution
+  - [ ] Test approval metadata propagation to UI
 - [ ] Write error handling tests
   - Notes: Test timeouts, rate limits, API failures
+  - [ ] Test AbortController timeout behavior
+  - [ ] Test rate limit error mapping
+  - [ ] Test API failure error messages (no stack traces)
 
 ### Documentation & Architecture
 
@@ -110,14 +136,31 @@
 
 ### MCP Integration (Required)
 
-- [ ] Configure Airbnb MCP server endpoint and authentication
-  - Notes: Set up OpenBnB MCP server for accommodation searches
-- [ ] Bridge MCP tools into unified registry with Zod schemas
-  - Notes: Use `createMcpTool` from AI SDK, map to consistent interface
-- [ ] Implement MCP error handling and fallback strategies
-  - Notes: Graceful degradation when MCP servers are unavailable
+- [~] Configure Airbnb MCP server endpoint and authentication
+  - Notes (2025-01-XX): Runtime discovery implemented; needs conflict detection and schema validation
+  - [x] Runtime MCP discovery via `@ai-sdk/mcp@1.0.0-beta.15` SSE transport
+  - [x] Environment variable support (`AIRBNB_MCP_URL`, `ACCOM_SEARCH_URL`)
+  - [x] Tool merging in chat handler (`frontend/src/app/api/chat/stream/_handler.ts` lines 198-254)
+  - [ ] Add conflict detection (warn when MCP tool names overlap local registry)
+  - [ ] Add schema validation for MCP tools before merging
+  - [ ] Add allowlist/denylist for MCP tool exposure
+- [~] Bridge MCP tools into unified registry with Zod schemas
+  - Notes: Currently merges raw MCP tools; needs proper Zod schema wrapping
+  - [x] Basic tool merging implemented
+  - [ ] Wrap MCP tools with Zod schemas for validation
+  - [ ] Map MCP tool responses to consistent interface
+- [~] Implement MCP error handling and fallback strategies
+  - Notes: Basic error handling exists; needs graceful degradation
+  - [x] Try/catch around MCP client creation (lines 206-219)
+  - [x] Fallback to local-only tools when MCP unavailable
+  - [ ] Add retry logic for transient MCP failures
+  - [ ] Add health check before tool discovery
 - [ ] Write MCP integration tests with mocked server responses
   - Notes: Test tool-error parts and failure scenarios
+  - [ ] Test MCP tool discovery success path
+  - [ ] Test MCP server unavailable fallback
+  - [ ] Test tool name conflict handling
+  - [ ] Test schema validation failures
 
 ## Working instructions (mandatory)
 
@@ -152,6 +195,65 @@ const weatherTool = tool({
   },
 });
 ```
+
+## Python Tools Inventory → TypeScript Migration Plan (Updated 2025-11-11)
+
+- Web search (tripsage/tools/web_tools.py)
+  - TS parity: `frontend/src/lib/tools/web-search.ts` (Firecrawl v2.5 + Redis caching); batch handled via repeated tool calls; cache key includes all inputs.
+  - Follow-ups: add query length clamp and optional domain filter presets.
+- Web crawl (tripsage/tools/webcrawl_tools.py + webcrawl/*)
+  - TS parity: `frontend/src/lib/tools/web-crawl.ts` (scrape + crawl + polling). Direct Crawl4AI/Playwright normalization replaced by Firecrawl-first plan per library-first rule.
+  - Follow-ups: add lightweight `UnifiedCrawlResult` TS schema and normalizer to preserve downstream shape.
+- Accommodations (tripsage/tools/accommodations_tools.py + models)
+  - TS parity: `frontend/src/lib/tools/accommodations.ts` search + booking (approval-gated).
+  - Gap: add `getAccommodationDetails` tool (MCP/HTTP `details` endpoint). Wire to registry.
+  - Issues: `priceMin`/`priceMax` zero values ignored (use `!== undefined` check); `bookAccommodation` returns incorrect `status: "confirmed"` (should be `"pending_confirmation"`).
+- Memory (tripsage/tools/memory_tools.py + models)
+  - TS parity: `frontend/src/lib/tools/memory.ts` add/search via Supabase SSR.
+  - Gaps: `updateUserPreferences`, `getUserContext`, `saveSessionSummary` to be implemented; prefer Supabase tables; otherwise 501 with config hint.
+- Planning (migrated 2025-11-11)
+  - Final TS implementation (no Python compatibility): `frontend/src/lib/tools/planning.ts` with
+    `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`.
+    - Persisted plan shape is camelCase (planId, userId, startDate, endDate, createdAt, updatedAt, finalizedAt, status, components).
+    - Upstash Redis keys: `travel_plan:{planId}`. TTLs: 7d default; 30d for finalized plans (preserved on subsequent updates).
+    - Updates validated with Zod partial schema; unknown/invalid fields rejected.
+    - `combineSearchResults` supports optional `startDate`/`endDate` to derive nights; defaults to 3 if absent.
+    - Best‑effort memory logging via Supabase (server‑only) with camelCase metadata.
+  - Registry: exported via `frontend/src/lib/tools/index.ts` and auto‑wired into chat stream.
+  - Removed: `tripsage/tools/planning_tools.py` (and references). No backward compatibility retained.
+- Flights (Duffel)
+  - TS parity: `frontend/src/lib/tools/flights.ts` with camel→snake conversion; add IATA regex validation and AbortController timeout.
+- Maps/Weather
+  - TS parity: `frontend/src/lib/tools/maps.ts`, `frontend/src/lib/tools/weather.ts`; add AbortController and rate-limit protection at route boundary.
+- Activity Tools (tripsage_core/services/business/activity_service.py)
+  - Status: Not migrated. Still in Python service layer.
+  - Location: `tripsage_core/services/business/activity_service.py` uses Google Maps Places API and web crawling.
+  - Migration: Create `frontend/src/lib/tools/activities.ts` with activity search tool.
+- Destination Tools (tripsage/orchestration/nodes/destination_research_agent.py)
+  - Status: Not migrated. Still in Python orchestration layer.
+  - Location: Uses Python tools from `tripsage/orchestration/tools/tools.py`.
+  - Migration: Create `frontend/src/lib/tools/destinations.ts` with destination research tools.
+
+## Research Log (2025-11-11)
+
+- AI SDK v6 MCP Tools: <https://v6.ai-sdk.dev/docs/ai-sdk-core/mcp-tools> (crawled via Exa)
+- AI SDK v6 Tool Calling: <https://v6.ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling> (crawled via Exa)
+- Cookbook: Next call-tools + streamText patterns (Exa code context)
+- Context7 docs index: AI SDK v6 (v6.ai-sdk.dev) — verified lifecycle hooks (onInputStart/onInputDelta/onInputAvailable) and error handling in streamed responses.
+
+## Consensus Decision (2025-11-11)
+
+- Options evaluated with mandated weights (Leverage 35%, Value 30%, Maintenance 25%, Adaptability 10%).
+- Scores: A=9.213/10 (TS-only, MCP externals), B=6.150/10 (hybrid), C=2.950/10 (status quo).
+- Decision: Proceed with TS-only final implementation, delete legacy Python after parity. See zen.consensus record.
+
+## Security Notes (2025-11-11)
+
+- Add per-tool rate limiting (Upstash) in server routes invoking external APIs.
+- Tighten input schemas: flights IATA codes, search query clamp; enforce timeouts via AbortController.
+- Booking flows: idempotency keys and POST for sensitive parameters.
+- MCP tool merging: Add conflict detection to prevent silent overrides of local tools.
+- Schema validation: Validate MCP tool schemas before exposing to model.
 
 ### MCP Tool Integration
 
@@ -288,27 +390,41 @@ const searchTool = tool({
 
 **After all tools are successfully migrated and tested:**
 
-- [ ] Delete all files in `tripsage/tools/` directory
-  - Notes: Remove web_tools.py, planning_tools.py, accommodations_tools.py, memory_tools.py, webcrawl_tools.py
+- [~] Delete all files in `tripsage/tools/` directory
+  - Notes (2025-01-XX): Planning tools removed; other tools still exist pending migration
+  - [x] `planning_tools.py` - Removed (migrated 2025-11-11)
+  - [ ] `web_tools.py` - Still exists; migrated but not deleted
+  - [ ] `accommodations_tools.py` - Still exists; partially migrated (missing `getAccommodationDetails`)
+  - [ ] `memory_tools.py` - Still exists; migrated but not deleted
+  - [ ] `webcrawl_tools.py` - Still exists; migrated but not deleted
+  - [ ] `__init__.py` - Still exists; update after tool deletions
 - [ ] Delete tool-related code from `tripsage_core/services/business/tool_calling/`
   - Notes: Remove core.py, models.py from tool_calling directory
+  - [ ] `core.py` - Still exists
+  - [ ] `models.py` - Still exists
+  - [ ] `__init__.py` - Still exists
 - [ ] Remove tool calling references from orchestration code
   - Notes: Clean up any LangChain-specific tool binding in orchestrator nodes
+  - [ ] `tripsage/orchestration/tools/tools.py` - Contains tool catalog and agent tool mappings
+  - [ ] `tripsage/orchestration/nodes/destination_research_agent.py` - Uses Python tools
+  - [ ] `tripsage/orchestration/nodes/itinerary_agent.py` - Uses Python tools
 - [ ] Delete corresponding test suites for removed Python tools
   - Notes: Remove test files for deleted tool modules
 - [ ] Update import statements and dependencies
   - Notes: Remove tool-related imports from remaining Python code
+  - [ ] Check `tripsage_core/services/business/activity_service.py` for tool imports
 - [ ] Verify no remaining references to deleted tool code
   - Notes: Search codebase for any lingering imports or references
 - [ ] Ensure TypeScript AI SDK v6 implementation is fully functional
   - Notes: All functionality previously in Python now available through frontend tools
 
-## Legacy mapping (completed during cleanup)
+## Legacy mapping (in progress)
 
-- [x] Remove Python tool-calling utilities from `tripsage/tools/`
-- [x] Remove any LangChain-specific tool binding in orchestrator nodes
-- [x] Delete tool-related code from `tripsage_core/services/business/tool_calling/`
-- [x] Remove all test suites for deleted Python tool modules
+- [x] Remove Python tool-calling utilities from `tripsage/tools/planning_tools.py` (removed 2025-11-11)
+- [ ] Remove remaining Python tool files: `web_tools.py`, `accommodations_tools.py`, `memory_tools.py`, `webcrawl_tools.py`
+- [ ] Remove any LangChain-specific tool binding in orchestrator nodes (`tripsage/orchestration/tools/tools.py`)
+- [ ] Delete tool-related code from `tripsage_core/services/business/tool_calling/` (core.py, models.py still exist)
+- [ ] Remove all test suites for deleted Python tool modules
 
 ## Testing requirements (Vitest)
 
@@ -320,9 +436,23 @@ const searchTool = tool({
 
 ## Final Notes & Next Steps (compile from task notes)
 
-- Summary of changes and decisions: Complete migration from Python LangChain tools to TypeScript AI SDK v6 tools with Zod schemas
-- Outstanding items / tracked tech debt: None - all tools migrated and Python code cleaned up
-- Follow-up prompts or tasks: Monitor tool performance and add new tools as needed
+- Summary of changes and decisions: Partial migration from Python LangChain tools to TypeScript AI SDK v6 tools with Zod schemas. Core tools (web-search, web-crawl, planning, memory, weather, flights, maps) migrated. Accommodations partially migrated (missing `getAccommodationDetails`). Activity and destination tools not migrated.
+- Outstanding items / tracked tech debt:
+  - Missing `getAccommodationDetails` tool in accommodations.ts
+  - Activity tools not migrated (still in `tripsage_core/services/business/activity_service.py`)
+  - Destination tools not migrated (still in orchestration nodes)
+  - Python legacy files still exist: `tripsage/tools/web_tools.py`, `accommodations_tools.py`, `memory_tools.py`, `webcrawl_tools.py`
+  - Test coverage incomplete: missing tests for accommodations, memory, weather, flights, maps
+  - Code quality issues: `priceMin`/`priceMax` zero value bug, `bookAccommodation` incorrect status, `combineSearchResults` leaks `_score`
+  - MCP integration lacks conflict detection and schema validation
+- Follow-up prompts or tasks:
+  1. Implement `getAccommodationDetails` tool
+  2. Migrate activity and destination tools
+  3. Fix code quality issues (price filters, booking status, score leak)
+  4. Add missing unit tests for all tools
+  5. Add MCP conflict detection and schema validation
+  6. Delete Python legacy files after full migration
+  7. Add integration tests for tool interleaving
 
 ---
 
@@ -352,8 +482,10 @@ const searchTool = tool({
 - [x] Tool calls interleave correctly in AI SDK streams
 - [x] Approval flows pause/resume streaming properly
 - [x] Errors are structured and non-leaky (no stack traces)
-- [x] All Python tool code deleted; TypeScript is sole implementation
-- [x] Comprehensive test coverage with Vitest
+- [~] All Python tool code deleted; TypeScript is sole implementation
+  - Notes: Planning tools fully migrated and Python code removed. Other tools migrated but Python code still exists.
+- [~] Comprehensive test coverage with Vitest
+  - Notes: 3 test files exist (web-search, web-crawl, planning). Missing tests for accommodations, memory, weather, flights, maps.
 - [x] ADR and Spec documentation completed
 
 ## Additional context & assumptions
