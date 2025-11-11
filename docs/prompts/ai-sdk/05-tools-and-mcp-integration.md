@@ -214,12 +214,12 @@ const weatherTool = tool({
 - Planning (migrated 2025-11-11, finalized 2025-11-11)
   - Final TS implementation (no Python compatibility): `frontend/src/lib/tools/planning.ts` with
     `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`, `deleteTravelPlan`.
-  - Canonical PlanSchema: `frontend/src/lib/tools/planning.schema.ts` (camelCase fields). All writes and reads validate against this schema.
-  - Persistence: Upstash Redis (`travel_plan:{planId}`) with TTLs 7d (draft) / 30d (finalized). Finalized TTL is preserved on updates.
-  - Rate limits: per-user create 20/day (`travel_plan:rate:create:{userId}:{YYYYMMDD}`); per-plan update 60/min (`travel_plan:rate:update:{planId}`). TTL set only when counter=1. Degrades gracefully if Redis unavailable.
-  - Non-stream handler now exposes tools with userId injection mirroring stream handler; auth never trusts tool-provided userId.
-  - `combineSearchResults` derives nights from dates (default 3). Markdown summary uses camelCase only (legacy fallbacks removed).
-  - Memory logging: best‑effort Supabase insert; never blocks tool results.
+    - Canonical PlanSchema: `frontend/src/lib/tools/planning.schema.ts` (camelCase fields). All writes and reads validate against this schema.
+    - Persistence: Upstash Redis (`travel_plan:{planId}`) with TTLs 7d (draft) / 30d (finalized). Finalized TTL is preserved on updates.
+    - Rate limits: per-user create 20/day (`travel_plan:rate:create:{userId}:{YYYYMMDD}`); per-plan update 60/min (`travel_plan:rate:update:{planId}`). TTL set only when counter=1. Degrades gracefully if Redis unavailable. Constants centralized in `frontend/src/lib/tools/constants.ts`.
+    - Non-stream and stream handlers inject `userId` via `wrapToolsWithUserId()` (`frontend/src/lib/tools/injection.ts`), limiting injection to planning tools.
+    - `combineSearchResults` derives nights from dates (default 3). Markdown summary uses camelCase only (legacy fallbacks removed).
+    - Memory logging: best‑effort Supabase insert; never blocks tool results.
   - Registry: exported via `frontend/src/lib/tools/index.ts` and auto‑wired into both chat stream and non‑stream handlers.
   - Removed: `tripsage/tools/planning_tools.py` (and references). No backward compatibility retained.
 - Flights (Duffel)

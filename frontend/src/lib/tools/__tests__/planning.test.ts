@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
+import {
+  RATE_CREATE_PER_DAY,
+  RATE_UPDATE_PER_MIN,
+  TTL_DRAFT_SECONDS,
+  TTL_FINAL_SECONDS,
+} from "../constants";
 import {
   combineSearchResults,
   createTravelPlan,
@@ -120,7 +125,7 @@ describe("planning tools", () => {
     };
     const redis2 = mod.getRedis();
     const key = `travel_plan:${created.planId}`;
-    expect(redis2.ttl.get(key)).toBe(86400 * 30);
+    expect(redis2.ttl.get(key)).toBe(TTL_FINAL_SECONDS);
   });
 
   afterEach(() => {
@@ -153,7 +158,7 @@ describe("planning tools", () => {
     expect(res.success).toBe(true);
     const key = `travel_plan:${res.planId}`;
     expect(redis.data.has(key)).toBe(true);
-    expect(redis.ttl.get(key)).toBe(86400 * 7);
+    expect(redis.ttl.get(key)).toBe(TTL_DRAFT_SECONDS);
     const plan = redis.data.get(key) as Record<string, unknown>;
     expect(plan.title).toBe("Paris Spring");
     expect(plan.destinations).toEqual(["Paris"]);
@@ -295,12 +300,12 @@ describe("planning tools", () => {
     };
     expect(fin.success).toBe(true);
     const key = `travel_plan:${created.planId}`;
-    expect(redis.ttl.get(key)).toBe(86400 * 30);
+    expect(redis.ttl.get(key)).toBe(TTL_FINAL_SECONDS);
   });
 
   it("rate limits: create >20/day and update >60/min", async () => {
-    // simulate 20 allowed creates
-    for (let i = 0; i < 20; i++) {
+    // simulate allowed creates up to limit
+    for (let i = 0; i < RATE_CREATE_PER_DAY; i++) {
       const r = await exec<{ success: boolean; planId: string }>(createTravelPlan, {
         destinations: ["ZRH"],
         endDate: "2025-01-02",
@@ -333,8 +338,8 @@ describe("planning tools", () => {
       userId: "u3",
     });
     expect(created.success).toBe(true);
-    // 60 successful updates
-    for (let i = 0; i < 60; i++) {
+    // successful updates up to limit
+    for (let i = 0; i < RATE_UPDATE_PER_MIN; i++) {
       const ok = await exec<{ success: boolean }>(updateTravelPlan, {
         planId: created.planId,
         updates: { title: `t${i}` },
@@ -376,7 +381,7 @@ describe("planning tools", () => {
     supabaseMod.__setUserIdForTests("u1");
 
     // owner deletes
-    const ok = await exec<{ success: boolean }>(deleteTravelPlan, {
+    const ok = await exec<{ success: boolean; error?: string }>(deleteTravelPlan, {
       planId: created.planId,
       userId: "u1",
     });

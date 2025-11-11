@@ -9,24 +9,20 @@ import { z } from "zod";
 import { getRedis } from "@/lib/redis";
 import { nowIso, secureUuid } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
+import {
+  RATE_CREATE_PER_DAY,
+  RATE_UPDATE_PER_MIN,
+  TTL_DRAFT_SECONDS,
+  TTL_FINAL_SECONDS,
+} from "./constants";
+import { type Plan, planSchema } from "./planning.schema";
 
 // Internal helpers and schemas (not exported)
 
 const UUI_DV4 = z.string().uuid();
-
 const ISO_DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, "must be YYYY-MM-DD");
-
 const PREFERENCES = z.record(z.string(), z.unknown()).default({});
-
-const COMPONENTS_SCHEMA = z.object({
-  accommodations: z.array(z.record(z.string(), z.unknown())).default([]),
-  activities: z.array(z.record(z.string(), z.unknown())).default([]),
-  flights: z.array(z.record(z.string(), z.unknown())).default([]),
-  notes: z.array(z.record(z.string(), z.unknown())).default([]),
-  transportation: z.array(z.record(z.string(), z.unknown())).default([]),
-});
-
-type PlanComponents = z.infer<typeof COMPONENTS_SCHEMA>;
+type PlanComponents = Plan["components"];
 
 function redisKeyForPlan(planId: string): string {
   return `travel_plan:${planId}`;
@@ -35,6 +31,13 @@ function redisKeyForPlan(planId: string): string {
 function coerceFloat(value: unknown): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function read<T = unknown>(obj: unknown, key: string): T | undefined {
+  if (obj && typeof obj === "object" && key in (obj as Record<string, unknown>)) {
+    return (obj as Record<string, unknown>)[key] as T;
+  }
+  return undefined;
 }
 
 async function recordPlanMemory(opts: {
@@ -74,14 +77,14 @@ async function recordPlanMemory(opts: {
   }
 }
 
-function toMarkdownSummary(plan: Record<string, unknown>): string {
+function toMarkdownSummary(plan: Plan): string {
   const title = String(plan.title ?? "Travel Plan");
-  const destinations = (plan.destinations as string[] | undefined) ?? [];
-  const start = String((plan as { startDate?: string }).startDate ?? "");
-  const end = String((plan as { endDate?: string }).endDate ?? "");
-  const travelers = Number(plan.travelers ?? 1);
-  const budget = plan.budget as number | undefined;
-  const components = (plan.components as PlanComponents | undefined) ?? {
+  const destinations = plan.destinations ?? [];
+  const start = plan.startDate ?? "";
+  const end = plan.endDate ?? "";
+  const travelers = plan.travelers ?? 1;
+  const budget = plan.budget ?? undefined;
+  const components = plan.components ?? {
     accommodations: [],
     activities: [],
     flights: [],
@@ -99,45 +102,36 @@ function toMarkdownSummary(plan: Record<string, unknown>): string {
   const flights = components.flights ?? [];
   if (flights.length) {
     md += "## Flights\n\n";
-    flights.forEach((fRaw, i) => {
-      const f = fRaw as Record<string, unknown>;
+    flights.forEach((f, i) => {
       md += `### Flight ${i + 1}\n\n`;
-      md += `* **From**: ${String(f.origin ?? "N/A")}\n`;
-      md += `* **To**: ${String(f.destination ?? "N/A")}\n`;
-      // biome-ignore lint/style/useNamingConvention: allow fallback to legacy key if present
-      md += `* **Date**: ${String((f as { departureDate?: string }).departureDate ?? (f as { departure_date?: string }).departure_date ?? "N/A")}\n`;
-      md += `* **Airline**: ${String(f.airline ?? "N/A")}\n`;
-      // biome-ignore lint/style/useNamingConvention: allow fallback to legacy key if present
-      md += `* **Price**: $${String((f as { price?: unknown }).price ?? (f as { total_amount?: unknown }).total_amount ?? "N/A")}\n\n`;
+      md += `* **From**: ${String(read(f, "origin") ?? "N/A")}\n`;
+      md += `* **To**: ${String(read(f, "destination") ?? "N/A")}\n`;
+      md += `* **Date**: ${String(read(f, "departureDate") ?? "N/A")}\n`;
+      md += `* **Airline**: ${String(read(f, "airline") ?? "N/A")}\n`;
+      md += `* **Price**: $${String(read(f, "price") ?? "N/A")}\n\n`;
     });
   }
 
   const accommodations = components.accommodations ?? [];
   if (accommodations.length) {
     md += "## Accommodations\n\n";
-    accommodations.forEach((aRaw, i) => {
-      const a = aRaw as Record<string, unknown>;
-      md += `### ${String(a.name ?? `Accommodation ${i + 1}`)}\n\n`;
-      md += `* **Location**: ${String(a.location ?? "N/A")}\n`;
-      // biome-ignore lint/style/useNamingConvention: allow fallback to legacy key if present
-      md += `* **Check-in**: ${String((a as { checkInDate?: string }).checkInDate ?? (a as { check_in_date?: string }).check_in_date ?? "N/A")}\n`;
-      // biome-ignore lint/style/useNamingConvention: allow fallback to legacy key if present
-      md += `* **Check-out**: ${String((a as { checkOutDate?: string }).checkOutDate ?? (a as { check_out_date?: string }).check_out_date ?? "N/A")}\n`;
-      // biome-ignore lint/style/useNamingConvention: allow fallback to legacy key if present
-      md += `* **Price**: $${String((a as { pricePerNight?: unknown }).pricePerNight ?? (a as { price_per_night?: unknown }).price_per_night ?? "N/A")} per night\n\n`;
+    accommodations.forEach((a, i) => {
+      md += `### ${String((read(a, "name") as string) ?? `Accommodation ${i + 1}`)}\n\n`;
+      md += `* **Location**: ${String(read(a, "location") ?? "N/A")}\n`;
+      md += `* **Check-in**: ${String(read(a, "checkInDate") ?? "N/A")}\n`;
+      md += `* **Check-out**: ${String(read(a, "checkOutDate") ?? "N/A")}\n`;
+      md += `* **Price**: $${String(read(a, "pricePerNight") ?? "N/A")} per night\n\n`;
     });
   }
 
   const activities = components.activities ?? [];
   if (activities.length) {
     md += "## Activities\n\n";
-    activities.forEach((aRaw, i) => {
-      const a = aRaw as Record<string, unknown>;
-      md += `### ${String(a.name ?? `Activity ${i + 1}`)}\n\n`;
-      md += `* **Location**: ${String(a.location ?? "N/A")}\n`;
-      md += `* **Date**: ${String((a as { date?: string }).date ?? "N/A")}\n`;
-      // biome-ignore lint/style/useNamingConvention: allow fallback to legacy key if present
-      md += `* **Price**: $${String((a as { pricePerPerson?: unknown }).pricePerPerson ?? (a as { price_per_person?: unknown }).price_per_person ?? "N/A")} per person\n\n`;
+    activities.forEach((a, i) => {
+      md += `### ${String((read(a, "name") as string) ?? `Activity ${i + 1}`)}\n\n`;
+      md += `* **Location**: ${String(read(a, "location") ?? "N/A")}\n`;
+      md += `* **Date**: ${String(read(a, "date") ?? "N/A")}\n`;
+      md += `* **Price**: $${String(read(a, "pricePerPerson") ?? "N/A")} per person\n\n`;
     });
   }
   return md;
@@ -162,7 +156,7 @@ export const createTravelPlan = tool({
       notes: [],
       transportation: [],
     };
-    const plan = {
+    const plan: Plan = {
       budget: args.budget ?? null,
       components,
       createdAt: now,
@@ -176,12 +170,39 @@ export const createTravelPlan = tool({
       travelers: args.travelers ?? 1,
       updatedAt: now,
       userId: sessionUserId,
-    } satisfies Record<string, unknown>;
+    } as Plan;
+
+    // Per-user daily create rate limit (20/day). Degrade gracefully on failure.
+    try {
+      const day = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+      const rlKey = `travel_plan:rate:create:${sessionUserId}:${day}`;
+      const count = await redis.incr(rlKey);
+      if (typeof count === "number" && count === 1) {
+        await redis.expire(rlKey, 86400);
+      }
+      if (typeof count === "number" && count > RATE_CREATE_PER_DAY) {
+        if (process.env.NODE_ENV !== "test") {
+          console.info(
+            "planning_rate_limit",
+            JSON.stringify({ event: "create", key: rlKey, userId: sessionUserId })
+          );
+        }
+        return { error: "rate_limited_plan_create", success: false } as const;
+      }
+    } catch {
+      // ignore rate limiter failures
+    }
+
+    // Validate plan before persist
+    const valid = planSchema.safeParse(plan);
+    if (!valid.success) {
+      return { error: "invalid_plan_shape", success: false } as const;
+    }
 
     const key = redisKeyForPlan(planId);
     try {
-      await redis.set(key, plan);
-      await redis.expire(key, 86400 * 7); // 7 days
+      await redis.set(key, valid.data);
+      await redis.expire(key, TTL_DRAFT_SECONDS);
     } catch {
       return { error: "redis_set_failed", success: false } as const;
     }
@@ -230,6 +251,10 @@ export const updateTravelPlan = tool({
       return { error: "redis_get_failed", success: false } as const;
     }
     if (!plan) return { error: `plan_not_found:${planId}`, success: false } as const;
+    const parsedExisting = planSchema.safeParse(plan);
+    if (!parsedExisting.success) {
+      return { error: "invalid_plan_shape", success: false } as const;
+    }
     const supabase = await createServerSupabase();
     const { data: auth } = await supabase.auth.getUser();
     const sessionUserId = auth?.user?.id;
@@ -256,18 +281,43 @@ export const updateTravelPlan = tool({
       } as const;
     }
     const applied: string[] = [];
+    const next: Plan = { ...parsedExisting.data } as Plan;
     for (const [k, v] of Object.entries(parsed.data)) {
-      (plan as Record<string, unknown>)[k] = v as unknown;
+      (next as unknown as Record<string, unknown>)[k] = v as unknown;
       applied.push(k);
     }
-    (plan as { updatedAt?: string }).updatedAt = nowIso();
+    next.updatedAt = nowIso();
+
+    // Per-plan per-minute update limiter (60/min). Degrade on failure.
+    try {
+      const rlKey = `travel_plan:rate:update:${planId}`;
+      const count = await redis.incr(rlKey);
+      if (typeof count === "number" && count === 1) {
+        await redis.expire(rlKey, 60);
+      }
+      if (typeof count === "number" && count > RATE_UPDATE_PER_MIN) {
+        if (process.env.NODE_ENV !== "test") {
+          console.info(
+            "planning_rate_limit",
+            JSON.stringify({ event: "update", key: rlKey, planId })
+          );
+        }
+        return { error: "rate_limited_plan_update", success: false } as const;
+      }
+    } catch {
+      // ignore
+    }
 
     try {
-      await redis.set(key, plan);
+      // Validate write
+      const valid = planSchema.safeParse(next);
+      if (!valid.success) {
+        return { error: "invalid_plan_shape", success: false } as const;
+      }
+      await redis.set(key, valid.data);
       const isFinalized =
-        (plan as { status?: string }).status === "finalized" ||
-        Boolean((plan as { finalizedAt?: string }).finalizedAt);
-      await redis.expire(key, isFinalized ? 86400 * 30 : 86400 * 7);
+        valid.data.status === "finalized" || Boolean(valid.data.finalizedAt);
+      await redis.expire(key, isFinalized ? TTL_FINAL_SECONDS : TTL_DRAFT_SECONDS);
     } catch {
       return { error: "redis_set_failed", success: false } as const;
     }
@@ -275,13 +325,13 @@ export const updateTravelPlan = tool({
     if (applied.length) {
       const detail = applied.map((k) => `${k} changed`).join(", ");
       await recordPlanMemory({
-        content: `Travel plan '${String(plan.title ?? "Untitled")}' updated with changes: ${detail}`,
+        content: `Travel plan '${String(next.title ?? "Untitled")}' updated with changes: ${detail}`,
         metadata: { changes: parsed.data, planId, type: "travelPlanUpdate" },
         userId: sessionUserId,
       });
     }
 
-    return { message: "updated", plan, planId, success: true } as const;
+    return { message: "updated", plan: next, planId, success: true } as const;
   },
   inputSchema: z.object({
     planId: UUI_DV4,
@@ -338,7 +388,11 @@ export const combineSearchResults = tool({
       const sorted = withScore.sort(
         (a, b) => coerceFloat(b._score) - coerceFloat(a._score)
       );
-      result.recommendations.accommodations = sorted.slice(0, 3);
+      // Strip internal _score before returning
+      result.recommendations.accommodations = sorted.slice(0, 3).map((item) => {
+        const { _score, ...rest } = item;
+        return rest;
+      });
       // nights: derive from provided dates or default to 3
       let nights = 3;
       if (args.startDate && args.endDate) {
@@ -402,6 +456,10 @@ export const saveTravelPlan = tool({
       return { error: "redis_get_failed", success: false } as const;
     }
     if (!plan) return { error: `plan_not_found:${planId}`, success: false } as const;
+    const parsedExisting = planSchema.safeParse(plan);
+    if (!parsedExisting.success) {
+      return { error: "invalid_plan_shape", success: false } as const;
+    }
     const supabase = await createServerSupabase();
     const { data: auth } = await supabase.auth.getUser();
     const sessionUserId = auth?.user?.id;
@@ -410,34 +468,39 @@ export const saveTravelPlan = tool({
       return { error: "unauthorized", success: false } as const;
 
     const now = nowIso();
-    (plan as { updatedAt?: string }).updatedAt = now;
+    const next: Plan = { ...parsedExisting.data, updatedAt: now } as Plan;
     if (finalize) {
-      (plan as { status?: string }).status = "finalized";
-      (plan as { finalizedAt?: string }).finalizedAt = now;
+      next.status = "finalized";
+      next.finalizedAt = now;
     }
 
     try {
-      await redis.set(key, plan);
-      await redis.expire(key, finalize ? 86400 * 30 : 86400 * 7);
+      const valid = planSchema.safeParse(next);
+      if (!valid.success)
+        return { error: "invalid_plan_shape", success: false } as const;
+      await redis.set(key, valid.data);
+      await redis.expire(key, finalize ? TTL_FINAL_SECONDS : TTL_DRAFT_SECONDS);
     } catch {
       return { error: "redis_set_failed", success: false } as const;
     }
 
     if (finalize) {
       await recordPlanMemory({
-        content: `Travel plan '${String(plan.title ?? "Untitled")}' finalized on ${now}`,
+        content: `Travel plan '${String(next.title ?? "Untitled")}' finalized on ${now}`,
         metadata: { finalizedAt: now, planId, type: "travelPlanFinalization" },
         userId: sessionUserId,
       });
     }
 
-    const comps = ((plan.components as PlanComponents | undefined) ?? {
-      accommodations: [],
-      activities: [],
-      flights: [],
-      notes: [],
-      transportation: [],
-    }) as PlanComponents;
+    const comps =
+      (next.components as PlanComponents | undefined) ??
+      ({
+        accommodations: [],
+        activities: [],
+        flights: [],
+        notes: [],
+        transportation: [],
+      } as PlanComponents);
     const counts = [
       ["flights", comps.flights?.length ?? 0],
       ["accommodations", comps.accommodations?.length ?? 0],
@@ -460,9 +523,9 @@ export const saveTravelPlan = tool({
     return {
       message: finalize ? "finalized_and_saved" : "saved",
       planId,
-      status: (plan as Record<string, unknown>).status ?? "draft",
+      status: next.status ?? "draft",
       success: true,
-      summaryMarkdown: toMarkdownSummary(plan),
+      summaryMarkdown: toMarkdownSummary(next),
     } as const;
   },
   inputSchema: z.object({
@@ -470,4 +533,41 @@ export const saveTravelPlan = tool({
     planId: UUI_DV4,
     userId: z.string().min(1).optional(),
   }),
+});
+
+export const deleteTravelPlan = tool({
+  description: "Delete an existing travel plan owned by the session user.",
+  execute: async ({ planId }) => {
+    const redis = getRedis();
+    if (!redis) return { error: "redis_unavailable", success: false } as const;
+    const key = redisKeyForPlan(planId);
+    let plan: Record<string, unknown> | null = null;
+    try {
+      plan = (await redis.get(key)) as Record<string, unknown> | null;
+    } catch {
+      return { error: "redis_get_failed", success: false } as const;
+    }
+    if (!plan) return { error: `plan_not_found:${planId}`, success: false } as const;
+    const parsed = planSchema.safeParse(plan);
+    if (!parsed.success)
+      return { error: "invalid_plan_shape", success: false } as const;
+    const supabase = await createServerSupabase();
+    const { data: auth } = await supabase.auth.getUser();
+    const sessionUserId = auth?.user?.id;
+    if (!sessionUserId) return { error: "unauthorized", success: false } as const;
+    if (parsed.data.userId !== sessionUserId)
+      return { error: "unauthorized", success: false } as const;
+    try {
+      await redis.del(key);
+    } catch {
+      return { error: "redis_delete_failed", success: false } as const;
+    }
+    await recordPlanMemory({
+      content: "Travel plan deleted",
+      metadata: { planId, type: "travelPlanDeleted" },
+      userId: sessionUserId,
+    });
+    return { message: "deleted", planId, success: true } as const;
+  },
+  inputSchema: z.object({ planId: UUI_DV4, userId: z.string().optional() }),
 });
