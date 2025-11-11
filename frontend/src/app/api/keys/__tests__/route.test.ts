@@ -36,8 +36,12 @@ vi.mock("@upstash/ratelimit", () => {
   const slidingWindow = vi.fn(() => ({}));
   const ctor = vi.fn(function RatelimitMock() {
     return { limit: LIMIT_SPY };
-  });
-  ctor.slidingWindow = slidingWindow;
+  }) as unknown as {
+    new (...args: unknown[]): { limit: ReturnType<typeof LIMIT_SPY> };
+    slidingWindow: (...args: unknown[]) => unknown;
+  };
+  // Provide static like API expected by implementation
+  ctor.slidingWindow = slidingWindow as unknown as (...args: unknown[]) => unknown;
   return {
     Ratelimit: ctor,
     slidingWindow,
@@ -63,7 +67,7 @@ describe("/api/keys routes", () => {
   });
 
   it("POST /api/keys returns 400 on invalid body", async () => {
-    const { POST } = await resetAndImport("../app/api/keys/route");
+    const { POST } = await resetAndImport<typeof import("../route")>("../route");
     const req = {
       headers: new Headers(),
       json: async () => ({}),
@@ -78,7 +82,8 @@ describe("/api/keys routes", () => {
       error: null,
     });
     MOCK_DELETE.mockResolvedValue(undefined);
-    const route = await resetAndImport("../app/api/keys/[service]/route");
+    const route =
+      await resetAndImport<typeof import("../[service]/route")>("../[service]/route");
     const req = { headers: new Headers() } as unknown as NextRequest;
     const res = await route.DELETE(req, {
       params: Promise.resolve({ service: "openai" }),
@@ -99,7 +104,7 @@ describe("/api/keys routes", () => {
       reset: 123,
       success: false,
     });
-    const { POST } = await resetAndImport("../app/api/keys/route");
+    const { POST } = await resetAndImport<typeof import("../route")>("../route");
     const req = {
       headers: new Headers(),
       json: vi.fn(),
@@ -127,7 +132,8 @@ describe("/api/keys routes", () => {
       reset: 456,
       success: false,
     });
-    const route = await resetAndImport("../app/api/keys/[service]/route");
+    const route =
+      await resetAndImport<typeof import("../[service]/route")>("../[service]/route");
     const req = { headers: new Headers() } as unknown as NextRequest;
 
     const res = await route.DELETE(req, {

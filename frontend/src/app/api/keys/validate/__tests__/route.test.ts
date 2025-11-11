@@ -31,8 +31,11 @@ vi.mock("@upstash/ratelimit", () => {
   const slidingWindow = vi.fn(() => ({}));
   const ctor = vi.fn(function RatelimitMock() {
     return { limit: LIMIT_SPY };
-  });
-  ctor.slidingWindow = slidingWindow;
+  }) as unknown as {
+    new (...args: unknown[]): { limit: ReturnType<typeof LIMIT_SPY> };
+    slidingWindow: (...args: unknown[]) => unknown;
+  };
+  ctor.slidingWindow = slidingWindow as unknown as (...args: unknown[]) => unknown;
   return {
     Ratelimit: ctor,
     slidingWindow,
@@ -75,7 +78,7 @@ describe("/api/keys/validate route", () => {
         vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }))
       );
 
-      const { POST } = await resetAndImport("../app/api/keys/validate/route");
+      const { POST } = await resetAndImport<typeof import("../route")>("../route");
       const req = {
         headers: new Headers(),
         json: async () => ({ apiKey: "sk-test", service: "openai" }),
@@ -102,7 +105,7 @@ describe("/api/keys/validate route", () => {
       reset: 789,
       success: false,
     });
-    const { POST } = await resetAndImport("../app/api/keys/validate/route");
+    const { POST } = await resetAndImport<typeof import("../route")>("../route");
     const req = {
       headers: new Headers(),
       json: vi.fn(),
