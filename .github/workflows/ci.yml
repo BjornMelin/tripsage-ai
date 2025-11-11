@@ -142,6 +142,8 @@ jobs:
           if-no-files-found: ignore
 
       - name: Check performance thresholds
+        if: >-
+          github.event_name == 'push' && startsWith(github.ref, 'refs/heads/main')
         working-directory: frontend
         run: |
           if [ -f benchmark-summary.json ]; then
