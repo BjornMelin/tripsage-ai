@@ -207,7 +207,7 @@ Memory operations follow this pattern:
 ### Authentication
 
 - JWT tokens: Supabase-managed authentication with refresh tokens
-- API keys: Bring Your Own Key (BYOK) system with Vault encryption
+- API keys: Bring Your Own Key (BYOK) system with Vault encryption; Next.js routes import `"server-only"` and export `dynamic = "force-dynamic"` so every key request is evaluated per user per request
 - Session management: Secure token handling with automatic refresh
 - Multi-factor support: Supabase auth with MFA capabilities
 

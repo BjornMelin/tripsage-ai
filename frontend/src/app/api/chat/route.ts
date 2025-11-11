@@ -70,7 +70,7 @@ export async function POST(req: NextRequest): Promise<Response> {
           })
         : undefined;
 
-    const ip = getClientIpFromHeaders(req.headers);
+    const ip = getClientIpFromHeaders(req);
 
     return await handleChatNonStream(
       {

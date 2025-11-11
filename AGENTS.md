@@ -22,6 +22,8 @@ For detailed project structure information, see [docs/architecture/project-struc
 - Frontend: `frontend/src/app/api/`, `frontend/src/lib/providers/registry.ts`, `frontend/src/lib/tools/`, `frontend/src/components/ai-elements/`
 - Config: `pyproject.toml`, `frontend/package.json`, `frontend/biome.json`, `.pre-commit-config.yaml`
 
+**BYOK routes must stay server-only and fully dynamic: add `import "server-only";` plus `export const dynamic = "force-dynamic"` (no `'use cache'`) whenever secrets or per-user keys are served.**
+
 ## Tech Stack & Versions
 
 See `pyproject.toml` and `frontend/package.json` for canonical versions.

@@ -29,11 +29,11 @@ function makeSupabase(
 }
 
 describe("keys _handlers", () => {
-  it("postKey returns 400 for invalid body", async () => {
+  it("postKey returns 400 for unsupported service", async () => {
     const supabase = makeSupabase("u1");
     const res = await postKey(
       { insertUserApiKey: vi.fn(), supabase },
-      { apiKey: undefined, service: undefined }
+      { apiKey: "sk-test", service: "invalid-service" }
     );
     expect(res.status).toBe(400);
   });
@@ -42,7 +42,7 @@ describe("keys _handlers", () => {
     const supabase = makeSupabase(null);
     const res = await postKey(
       { insertUserApiKey: vi.fn(), supabase },
-      { apiKey: "sk", service: "openai" }
+      { apiKey: "sk-test", service: "openai" }
     );
     expect(res.status).toBe(401);
   });
@@ -54,10 +54,10 @@ describe("keys _handlers", () => {
     });
     const res = await postKey(
       { insertUserApiKey: insert, supabase },
-      { apiKey: "sk", service: "openai" }
+      { apiKey: "sk-test", service: "openai" }
     );
     expect(res.status).toBe(204);
-    expect(insert).toHaveBeenCalledWith("u2", "openai", "sk");
+    expect(insert).toHaveBeenCalledWith("u2", "openai", "sk-test");
   });
 
   it("getKeys returns 200 for authenticated users", async () => {

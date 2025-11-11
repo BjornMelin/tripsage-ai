@@ -79,7 +79,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     } catch {
       body = { messages: [] };
     }
-    const ip = getClientIpFromHeaders(req.headers);
+    const ip = getClientIpFromHeaders(req);
     const limiter = getRateLimiter();
     return handleChatStream(
       {

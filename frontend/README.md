@@ -324,7 +324,7 @@ This frontend represents a complete migration from Python-based LangChain tools 
 
 Zero-trust architecture with defense-in-depth:
 
-1. **BYOK**: User keys never touch client; encrypted at rest in Supabase Vault
+1. **BYOK**: User keys never touch client; routes import `"server-only"` and run with `dynamic = "force-dynamic"` so secrets are always processed per request and encrypted at rest in Supabase Vault
 2. **RLS**: Row Level Security enforces data isolation per user
 3. **Claims Validation**: PostgREST JWT claims guard all RPC calls
 4. **Rate Limiting**: Upstash Redis enforces sliding-window limits per user/IP
