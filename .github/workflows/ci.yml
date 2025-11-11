@@ -206,22 +206,13 @@ jobs:
             frontend/node_modules/.vitest
             frontend/tsconfig.tsbuildinfo
 
-      - name: Run sharded coverage (api)
+      - name: Run sharded coverage (api+ui)
         working-directory: frontend
         env:
           CI: '1'
         run: >-
-          pnpm vitest run --coverage --project api
-          --pool=threads --reporter=blob --outputFile=.vitest/api-${{ matrix.shard }}.json
-          --shard=${{ matrix.shard }}/${{ matrix.total }}
-
-      - name: Run sharded coverage (ui)
-        working-directory: frontend
-        env:
-          CI: '1'
-        run: >-
-          pnpm vitest run --coverage --project ui
-          --pool=threads --reporter=blob --outputFile=.vitest/ui-${{ matrix.shard }}.json
+          pnpm vitest run --coverage
+          --pool=threads --reporter=blob --outputFile=.vitest/shard-${{ matrix.shard }}.json
           --shard=${{ matrix.shard }}/${{ matrix.total }}
 
       - name: Upload shard artifacts
