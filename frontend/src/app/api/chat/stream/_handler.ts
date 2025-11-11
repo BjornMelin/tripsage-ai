@@ -19,6 +19,7 @@ import {
 } from "@/lib/tokens/budget";
 import { getModelContextLimit } from "@/lib/tokens/limits";
 import { toolRegistry } from "@/lib/tools";
+import { wrapToolsWithUserId } from "@/lib/tools/injection";
 
 /**
  * Type representing a resolved AI provider configuration.
@@ -234,23 +235,34 @@ export async function handleChatStream(
     system: systemPrompt,
     toolChoice: "auto",
     tools: (() => {
-      const local = { ...toolRegistry };
-      const wrapWithUser = (t: any) =>
-        typeof t?.execute === "function"
-          ? {
-              ...t,
-              // do not change input schema; we enforce at tool level
-              execute: (a: any, c: any) => t.execute?.({ ...a, userId: user.id }, c),
-            }
-          : t;
-      // Inject authenticated userId for planning tools
-      if (local.createTravelPlan) local.createTravelPlan = wrapWithUser(local.createTravelPlan);
-      if (local.updateTravelPlan) local.updateTravelPlan = wrapWithUser(local.updateTravelPlan);
-      if (local.saveTravelPlan) local.saveTravelPlan = wrapWithUser(local.saveTravelPlan);
-      const merged = discoveredTools
-        ? { ...(discoveredTools as Record<string, unknown>), ...local }
-        : local;
-      return merged as any;
+      const local = wrapToolsWithUserId({ ...toolRegistry }, user.id, [
+        "createTravelPlan",
+        "updateTravelPlan",
+        "saveTravelPlan",
+        "deleteTravelPlan",
+      ]);
+      if (discoveredTools) {
+        // Detect conflicts: MCP tools that overlap with local registry
+        const conflicts: string[] = [];
+        for (const mcpToolName of Object.keys(discoveredTools)) {
+          if (mcpToolName in local) {
+            conflicts.push(mcpToolName);
+          }
+        }
+        if (conflicts.length > 0) {
+          deps.logger?.error?.("mcp_tool_conflicts", {
+            conflicts,
+            message: `MCP tools override local tools: ${conflicts.join(", ")}. Local tools take precedence.`,
+            requestId: secureUuid(),
+          });
+        }
+        // Merge: local tools take precedence over MCP tools to prevent silent overrides
+        const merged = { ...(discoveredTools as Record<string, unknown>), ...local };
+        // biome-ignore lint/suspicious/noExplicitAny: AI SDK tools type is dynamic
+        return merged as any;
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: AI SDK tools type is dynamic
+      return local as any;
     })(),
   });
 

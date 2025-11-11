@@ -9,6 +9,7 @@ import { addConversationMemory, searchUserMemories } from "./memory";
 import {
   combineSearchResults,
   createTravelPlan,
+  deleteTravelPlan,
   saveTravelPlan,
   updateTravelPlan,
 } from "./planning";
@@ -24,6 +25,7 @@ export const toolRegistry = {
   crawlSite,
   crawlUrl,
   createTravelPlan,
+  deleteTravelPlan,
   distanceMatrix,
   geocode,
   getCurrentWeather,

@@ -70,6 +70,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Best‑effort Supabase memory logging for plan lifecycle events.
   - Chat stream now injects authenticated `userId` into planning tools; non‑stream handler exposes the same tools with user injection.
   - Unit tests extended for schema round‑trip, rate limits, delete, and Redis unavailability: `frontend/src/lib/tools/__tests__/planning.test.ts`.
+  - Shared tooling utilities:
+    - `frontend/src/lib/tools/constants.ts` centralizes TTL and rate limits.
+    - `frontend/src/lib/tools/injection.ts` provides `wrapToolsWithUserId()` for safe tool input injection.
 
 ### Changed
 
@@ -164,6 +167,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Non‑stream chat handler now includes tool registry and injects `userId` like streaming handler.
   - Added rate limits: create 20/day per user; update 60/min per plan (TTL set only when counter=1).
   - Markdown summary uses camelCase only; legacy snake_case fallbacks removed.
+  - Stream and non‑stream handlers refactored to use `wrapToolsWithUserId()` and planning tool allowlist.
 
 ### Removed
 
