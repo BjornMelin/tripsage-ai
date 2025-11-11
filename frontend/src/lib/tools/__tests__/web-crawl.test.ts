@@ -31,7 +31,7 @@ test("crawlUrl validates inputs and calls Firecrawl /scrape", async () => {
     ok: true,
   } as Response;
   (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
-  const out = await crawlUrl.execute!(
+  const out = await crawlUrl.execute?.(
     { fresh: true, url: "https://example.com" },
     mockContext
   );
@@ -51,7 +51,7 @@ test("crawlUrl applies cost-safe defaults", async () => {
     ok: true,
   } as Response;
   (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
-  await crawlUrl.execute!({ fresh: true, url: "https://example.com" }, mockContext);
+  await crawlUrl.execute?.({ fresh: true, url: "https://example.com" }, mockContext);
   const call = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
   const body = JSON.parse(call[1].body as string);
   expect(body.formats).toEqual(["markdown"]);
@@ -62,7 +62,7 @@ test("crawlUrl applies cost-safe defaults", async () => {
 test("crawlUrl throws when not configured", async () => {
   process.env.FIRECRAWL_API_KEY = "";
   await expect(
-    crawlUrl.execute!({ fresh: false, url: "https://example.com" }, mockContext)
+    crawlUrl.execute?.({ fresh: false, url: "https://example.com" }, mockContext)
   ).rejects.toThrow(/web_crawl_not_configured/);
 });
 
@@ -87,7 +87,7 @@ test("crawlSite validates inputs and starts crawl", async () => {
   (fetch as unknown as ReturnType<typeof vi.fn>)
     .mockResolvedValueOnce(startMock)
     .mockResolvedValue(statusMock);
-  const out = (await crawlSite.execute!(
+  const out = (await crawlSite.execute?.(
     { fresh: true, limit: 5, url: "https://example.com" },
     mockContext
   )) as { status: string; data: unknown[] };
@@ -113,7 +113,7 @@ test("crawlSite applies cost-safe defaults in scrapeOptions", async () => {
   (fetch as unknown as ReturnType<typeof vi.fn>)
     .mockResolvedValueOnce(startMock)
     .mockResolvedValue(statusMock);
-  await crawlSite.execute!(
+  await crawlSite.execute?.(
     { fresh: true, limit: 5, url: "https://example.com" },
     mockContext
   );
@@ -127,7 +127,7 @@ test("crawlSite applies cost-safe defaults in scrapeOptions", async () => {
 test("crawlSite throws when not configured", async () => {
   process.env.FIRECRAWL_API_KEY = "";
   await expect(
-    crawlSite.execute!(
+    crawlSite.execute?.(
       { fresh: false, limit: 5, url: "https://example.com" },
       mockContext
     )
@@ -142,7 +142,7 @@ test("crawlSite handles rate limit errors", async () => {
   } as Response;
   (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(startMock);
   await expect(
-    crawlSite.execute!(
+    crawlSite.execute?.(
       { fresh: true, limit: 5, url: "https://example.com" },
       mockContext
     )
@@ -157,7 +157,7 @@ test("crawlSite handles unauthorized errors", async () => {
   } as Response;
   (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(startMock);
   await expect(
-    crawlSite.execute!(
+    crawlSite.execute?.(
       { fresh: true, limit: 5, url: "https://example.com" },
       mockContext
     )
@@ -182,7 +182,7 @@ test("crawlSite respects maxPages limit", async () => {
   (fetch as unknown as ReturnType<typeof vi.fn>)
     .mockResolvedValueOnce(startMock)
     .mockResolvedValue(statusMock);
-  const out = (await crawlSite.execute!(
+  const out = (await crawlSite.execute?.(
     { fresh: true, limit: 50, maxPages: 1, url: "https://example.com" },
     mockContext
   )) as { status: string; data: unknown[] };
@@ -196,7 +196,7 @@ test("crawlUrl supports custom scrapeOptions", async () => {
     ok: true,
   } as Response;
   (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
-  await crawlUrl.execute!(
+  await crawlUrl.execute?.(
     {
       fresh: true,
       scrapeOptions: {
@@ -226,7 +226,7 @@ test("crawlSite supports includePaths and excludePaths", async () => {
   (fetch as unknown as ReturnType<typeof vi.fn>)
     .mockResolvedValueOnce(startMock)
     .mockResolvedValue(statusMock);
-  await crawlSite.execute!(
+  await crawlSite.execute?.(
     {
       excludePaths: ["/admin/*"],
       fresh: true,

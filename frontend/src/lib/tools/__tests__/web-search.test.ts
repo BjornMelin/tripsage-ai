@@ -24,7 +24,7 @@ test("webSearch validates inputs and calls Firecrawl", async () => {
     ok: true,
   } as Response;
   (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
-  const out = await webSearch.execute!(
+  const out = await webSearch.execute?.(
     { fresh: true, limit: 2, query: "test" },
     mockContext
   );
@@ -34,6 +34,6 @@ test("webSearch validates inputs and calls Firecrawl", async () => {
 test("webSearch throws when not configured", async () => {
   process.env.FIRECRAWL_API_KEY = "";
   await expect(
-    webSearch.execute!({ fresh: false, limit: 5, query: "t" }, mockContext)
+    webSearch.execute?.({ fresh: false, limit: 5, query: "t" }, mockContext)
   ).rejects.toThrow(/web_search_not_configured/);
 });
