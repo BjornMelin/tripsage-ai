@@ -12,7 +12,7 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { buildRateLimitKey } from "@/lib/next/route-helpers";
+import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 // Environment variables
@@ -103,12 +103,11 @@ async function validateProviderKey(
  * @param req Next.js request object.
  * @returns NextResponse with 429 status if rate limit exceeded, otherwise null.
  */
-async function requireRateLimit(req: NextRequest): Promise<NextResponse | null> {
+async function requireRateLimit(identifier: string): Promise<NextResponse | null> {
   const ratelimitInstance = GET_RATELIMIT_INSTANCE();
   if (!ratelimitInstance) return null;
-  const { success, limit, remaining, reset } = await ratelimitInstance.limit(
-    buildRateLimitKey(req)
-  );
+  const { success, limit, remaining, reset } =
+    await ratelimitInstance.limit(identifier);
   if (!success) {
     return NextResponse.json(
       { code: "RATE_LIMIT", error: "Rate limit exceeded" },
@@ -130,18 +129,6 @@ async function requireRateLimit(req: NextRequest): Promise<NextResponse | null> 
  *
  * @returns NextResponse with 401 status if user not authenticated, otherwise user ID.
  */
-async function requireUser(): Promise<NextResponse | string> {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return user.id;
-}
-
 /**
  * Handle POST /api/keys/validate to verify a user-supplied API key.
  *
@@ -152,7 +139,14 @@ async function requireUser(): Promise<NextResponse | string> {
  */
 export async function POST(req: NextRequest) {
   try {
-    const rateLimitResponse = await requireRateLimit(req);
+    const supabase = await createServerSupabase();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    const identifier = user?.id ?? getClientIpFromHeaders(req.headers);
+
+    const rateLimitResponse = await requireRateLimit(identifier);
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
@@ -185,9 +179,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userResponse = await requireUser();
-    if (userResponse instanceof NextResponse) {
-      return userResponse;
+    if (error || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const result = await validateProviderKey(service, apiKey);

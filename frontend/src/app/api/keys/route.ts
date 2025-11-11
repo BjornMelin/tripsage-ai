@@ -9,7 +9,7 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { buildRateLimitKey } from "@/lib/next/route-helpers";
+import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import { insertUserApiKey } from "@/lib/supabase/rpc";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getKeys, postKey } from "./_handlers";
@@ -49,9 +49,14 @@ function buildRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
  */
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createServerSupabase();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     const ratelimitInstance = buildRateLimiter();
     if (ratelimitInstance) {
-      const identifier = buildRateLimitKey(req);
+      const identifier = user?.id ?? getClientIpFromHeaders(req.headers);
       const { success, limit, remaining, reset } =
         await ratelimitInstance.limit(identifier);
       if (!success) {
@@ -97,9 +102,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const supabase = await createServerSupabase();
+    if (authError || !user) {
+      console.error("/api/keys POST auth error:", {
+        message: authError?.message ?? "User not found",
+      });
+      return NextResponse.json(
+        { code: "UNAUTHORIZED", error: "Authentication failed" },
+        { status: 401 }
+      );
+    }
+
     return postKey(
-      { insertUserApiKey: (u, s, k) => insertUserApiKey(u, s, k), supabase },
+      {
+        insertUserApiKey: (u, s, k) => insertUserApiKey(u, s, k),
+        supabase,
+      },
       { apiKey, service }
     );
   } catch (err) {

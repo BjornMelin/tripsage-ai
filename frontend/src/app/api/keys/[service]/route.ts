@@ -8,7 +8,7 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { buildRateLimitKey } from "@/lib/next/route-helpers";
+import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import { deleteUserApiKey } from "@/lib/supabase/rpc";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -40,8 +40,13 @@ export async function DELETE(
 ) {
   let serviceForLog: string | undefined;
   try {
+    const supabase = await createServerSupabase();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (RATELIMIT_INSTANCE) {
-      const identifier = buildRateLimitKey(req);
+      const identifier = user?.id ?? getClientIpFromHeaders(req.headers);
       const { success, limit, remaining, reset } =
         await RATELIMIT_INSTANCE.limit(identifier);
       if (!success) {
@@ -75,12 +80,6 @@ export async function DELETE(
       );
     }
 
-    // Validate authenticated user from SSR cookies
-    const supabase = await createServerSupabase();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
