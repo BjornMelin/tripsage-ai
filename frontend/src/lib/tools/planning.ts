@@ -141,92 +141,103 @@ function toMarkdownSummary(plan: Plan): string {
 export const createTravelPlan = tool({
   description: "Create a new travel plan with destinations, dates, and budget.",
   execute: async (args) => {
-    const redis = getRedis();
-    if (!redis) return { error: "redis_unavailable", success: false } as const;
-    const supabase = await createServerSupabase();
-    const { data: auth } = await supabase.auth.getUser();
-    const sessionUserId = auth?.user?.id;
-    if (!sessionUserId) return { error: "unauthorized", success: false } as const;
-
-    const planId = secureUuid();
-    const now = nowIso();
-    const components: PlanComponents = {
-      accommodations: [],
-      activities: [],
-      flights: [],
-      notes: [],
-      transportation: [],
-    };
-    const plan: Plan = {
-      budget: args.budget ?? null,
-      components,
-      createdAt: now,
-      destinations: args.destinations,
-      endDate: args.endDate,
-      planId,
-      preferences: args.preferences ?? {},
-      startDate: args.startDate,
-      status: "draft",
-      title: args.title,
-      travelers: args.travelers ?? 1,
-      updatedAt: now,
-      userId: sessionUserId,
-    } as Plan;
-
-    // Per-user daily create rate limit (20/day). Degrade gracefully on failure.
-    try {
-      const day = new Date().toISOString().slice(0, 10).replaceAll("-", "");
-      const rlKey = `travel_plan:rate:create:${sessionUserId}:${day}`;
-      const count = await redis.incr(rlKey);
-      if (typeof count === "number" && count === 1) {
-        await redis.expire(rlKey, 86400);
-      }
-      if (typeof count === "number" && count > RATE_CREATE_PER_DAY) {
-        if (process.env.NODE_ENV !== "test") {
-          await withTelemetrySpan(
-            "planning.rateLimited",
-            { attributes: { event: "create", key: rlKey, userId: sessionUserId } },
-            async () => true
-          );
-        }
-        return { error: "rate_limited_plan_create", success: false } as const;
-      }
-    } catch {
-      // ignore rate limiter failures
-    }
-
-    // Validate plan before persist
-    const valid = planSchema.safeParse(plan);
-    if (!valid.success) {
-      return { error: "invalid_plan_shape", success: false } as const;
-    }
-
-    const key = redisKeyForPlan(planId);
-    try {
-      await redis.set(key, valid.data);
-      await redis.expire(key, TTL_DRAFT_SECONDS);
-    } catch {
-      return { error: "redis_set_failed", success: false } as const;
-    }
-
-    const mem =
-      `Travel plan '${args.title}' created for user ${sessionUserId} with destinations: ${args.destinations.join(", ")} from ${args.startDate} to ${args.endDate} for ${args.travelers} travelers` +
-      (typeof args.budget === "number" ? ` with budget $${args.budget}` : "");
-    await recordPlanMemory({
-      content: mem,
-      metadata: {
-        budget: args.budget ?? null,
-        destinations: args.destinations,
-        endDate: args.endDate,
-        planId,
-        startDate: args.startDate,
-        travelers: args.travelers ?? 1,
-        type: "travelPlan",
+    return await withTelemetrySpan(
+      "planning.createTravelPlan",
+      {
+        attributes: {
+          destinationsCount: args.destinations.length,
+          hasBudget: typeof args.budget === "number",
+          travelers: args.travelers ?? 1,
+        },
       },
-      userId: sessionUserId,
-    });
+      async (span) => {
+        const redis = getRedis();
+        if (!redis) return { error: "redis_unavailable", success: false } as const;
+        const supabase = await createServerSupabase();
+        const { data: auth } = await supabase.auth.getUser();
+        const sessionUserId = auth?.user?.id;
+        if (!sessionUserId) return { error: "unauthorized", success: false } as const;
 
-    return { message: "created", plan, planId, success: true } as const;
+        // Update span with userId after auth check
+        span.setAttribute("userId", sessionUserId);
+
+        const planId = secureUuid();
+        const now = nowIso();
+        const components: PlanComponents = {
+          accommodations: [],
+          activities: [],
+          flights: [],
+          notes: [],
+          transportation: [],
+        };
+        const plan: Plan = {
+          budget: args.budget ?? null,
+          components,
+          createdAt: now,
+          destinations: args.destinations,
+          endDate: args.endDate,
+          planId,
+          preferences: args.preferences ?? {},
+          startDate: args.startDate,
+          status: "draft",
+          title: args.title,
+          travelers: args.travelers ?? 1,
+          updatedAt: now,
+          userId: sessionUserId,
+        } as Plan;
+
+        // Per-user daily create rate limit (20/day). Degrade gracefully on failure.
+        try {
+          const day = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+          const rlKey = `travel_plan:rate:create:${sessionUserId}:${day}`;
+          const count = await redis.incr(rlKey);
+          if (typeof count === "number" && count === 1) {
+            await redis.expire(rlKey, 86400);
+          }
+          if (typeof count === "number" && count > RATE_CREATE_PER_DAY) {
+            if (process.env.NODE_ENV !== "test") {
+              span.addEvent("rate_limited", { event: "create", key: rlKey });
+            }
+            return { error: "rate_limited_plan_create", success: false } as const;
+          }
+        } catch {
+          // ignore rate limiter failures
+        }
+
+        // Validate plan before persist
+        const valid = planSchema.safeParse(plan);
+        if (!valid.success) {
+          return { error: "invalid_plan_shape", success: false } as const;
+        }
+
+        const key = redisKeyForPlan(planId);
+        try {
+          await redis.set(key, valid.data);
+          await redis.expire(key, TTL_DRAFT_SECONDS);
+        } catch {
+          return { error: "redis_set_failed", success: false } as const;
+        }
+
+        const mem =
+          `Travel plan '${args.title}' created for user ${sessionUserId} with destinations: ${args.destinations.join(", ")} from ${args.startDate} to ${args.endDate} for ${args.travelers} travelers` +
+          (typeof args.budget === "number" ? ` with budget $${args.budget}` : "");
+        await recordPlanMemory({
+          content: mem,
+          metadata: {
+            budget: args.budget ?? null,
+            destinations: args.destinations,
+            endDate: args.endDate,
+            planId,
+            startDate: args.startDate,
+            travelers: args.travelers ?? 1,
+            type: "travelPlan",
+          },
+          userId: sessionUserId,
+        });
+
+        return { message: "created", plan, planId, success: true } as const;
+      }
+    );
   },
   inputSchema: z.object({
     budget: z.number().min(0).optional(),
@@ -243,98 +254,108 @@ export const createTravelPlan = tool({
 export const updateTravelPlan = tool({
   description: "Update fields of an existing travel plan.",
   execute: async ({ planId, userId: _ignored, updates }) => {
-    const redis = getRedis();
-    if (!redis) return { error: "redis_unavailable", success: false } as const;
-    const key = redisKeyForPlan(planId);
-    let plan: Record<string, unknown> | null = null;
-    try {
-      plan = (await redis.get(key)) as Record<string, unknown> | null;
-    } catch {
-      return { error: "redis_get_failed", success: false } as const;
-    }
-    if (!plan) return { error: `plan_not_found:${planId}`, success: false } as const;
-    const parsedExisting = planSchema.safeParse(plan);
-    if (!parsedExisting.success) {
-      return { error: "invalid_plan_shape", success: false } as const;
-    }
-    const supabase = await createServerSupabase();
-    const { data: auth } = await supabase.auth.getUser();
-    const sessionUserId = auth?.user?.id;
-    if (!sessionUserId) return { error: "unauthorized", success: false } as const;
-    if ((plan as { userId?: string }).userId !== sessionUserId)
-      return { error: "unauthorized", success: false } as const;
-
-    const UpdateSchema = z
-      .object({
-        budget: z.number().min(0).nullable().optional(),
-        destinations: z.array(z.string().min(1)).min(1).optional(),
-        endDate: ISO_DATE.optional(),
-        preferences: PREFERENCES.optional(),
-        startDate: ISO_DATE.optional(),
-        title: z.string().min(1).optional(),
-        travelers: z.number().int().min(1).max(50).optional(),
-      })
-      .strict();
-    const parsed = UpdateSchema.safeParse(updates ?? {});
-    if (!parsed.success) {
-      return {
-        error: `invalid_updates:${parsed.error.issues.map((i) => i.path.join(".")).join(",")}`,
-        success: false,
-      } as const;
-    }
-    const applied: string[] = [];
-    const next: Plan = { ...parsedExisting.data } as Plan;
-    for (const [k, v] of Object.entries(parsed.data)) {
-      (next as unknown as Record<string, unknown>)[k] = v as unknown;
-      applied.push(k);
-    }
-    next.updatedAt = nowIso();
-
-    // Per-plan per-minute update limiter (60/min). Degrade on failure.
-    try {
-      const rlKey = `travel_plan:rate:update:${planId}`;
-      const count = await redis.incr(rlKey);
-      if (typeof count === "number" && count === 1) {
-        await redis.expire(rlKey, 60);
-      }
-      if (typeof count === "number" && count > RATE_UPDATE_PER_MIN) {
-        if (process.env.NODE_ENV !== "test") {
-          await withTelemetrySpan(
-            "planning.rateLimited",
-            { attributes: { event: "update", key: rlKey, planId } },
-            async () => true
-          );
+    return await withTelemetrySpan(
+      "planning.updateTravelPlan",
+      {
+        attributes: {
+          planId,
+        },
+      },
+      async (span) => {
+        const redis = getRedis();
+        if (!redis) return { error: "redis_unavailable", success: false } as const;
+        const key = redisKeyForPlan(planId);
+        let plan: Record<string, unknown> | null = null;
+        try {
+          plan = (await redis.get(key)) as Record<string, unknown> | null;
+        } catch {
+          return { error: "redis_get_failed", success: false } as const;
         }
-        return { error: "rate_limited_plan_update", success: false } as const;
+        if (!plan)
+          return { error: `plan_not_found:${planId}`, success: false } as const;
+        const parsedExisting = planSchema.safeParse(plan);
+        if (!parsedExisting.success) {
+          return { error: "invalid_plan_shape", success: false } as const;
+        }
+        const supabase = await createServerSupabase();
+        const { data: auth } = await supabase.auth.getUser();
+        const sessionUserId = auth?.user?.id;
+        if (!sessionUserId) return { error: "unauthorized", success: false } as const;
+        if ((plan as { userId?: string }).userId !== sessionUserId)
+          return { error: "unauthorized", success: false } as const;
+
+        const UpdateSchema = z
+          .object({
+            budget: z.number().min(0).nullable().optional(),
+            destinations: z.array(z.string().min(1)).min(1).optional(),
+            endDate: ISO_DATE.optional(),
+            preferences: PREFERENCES.optional(),
+            startDate: ISO_DATE.optional(),
+            title: z.string().min(1).optional(),
+            travelers: z.number().int().min(1).max(50).optional(),
+          })
+          .strict();
+        const parsed = UpdateSchema.safeParse(updates ?? {});
+        if (!parsed.success) {
+          return {
+            error: `invalid_updates:${parsed.error.issues.map((i) => i.path.join(".")).join(",")}`,
+            success: false,
+          } as const;
+        }
+        const applied: string[] = [];
+        const next: Plan = { ...parsedExisting.data } as Plan;
+        for (const [k, v] of Object.entries(parsed.data)) {
+          (next as unknown as Record<string, unknown>)[k] = v as unknown;
+          applied.push(k);
+        }
+        next.updatedAt = nowIso();
+
+        // Update span with changesCount
+        span.setAttribute("changesCount", applied.length);
+
+        // Per-plan per-minute update limiter (60/min). Degrade on failure.
+        try {
+          const rlKey = `travel_plan:rate:update:${planId}`;
+          const count = await redis.incr(rlKey);
+          if (typeof count === "number" && count === 1) {
+            await redis.expire(rlKey, 60);
+          }
+          if (typeof count === "number" && count > RATE_UPDATE_PER_MIN) {
+            if (process.env.NODE_ENV !== "test") {
+              span.addEvent("rate_limited", { event: "update", key: rlKey, planId });
+            }
+            return { error: "rate_limited_plan_update", success: false } as const;
+          }
+        } catch {
+          // ignore
+        }
+
+        try {
+          // Validate write
+          const valid = planSchema.safeParse(next);
+          if (!valid.success) {
+            return { error: "invalid_plan_shape", success: false } as const;
+          }
+          await redis.set(key, valid.data);
+          const isFinalized =
+            valid.data.status === "finalized" || Boolean(valid.data.finalizedAt);
+          await redis.expire(key, isFinalized ? TTL_FINAL_SECONDS : TTL_DRAFT_SECONDS);
+        } catch {
+          return { error: "redis_set_failed", success: false } as const;
+        }
+
+        if (applied.length) {
+          const detail = applied.map((k) => `${k} changed`).join(", ");
+          await recordPlanMemory({
+            content: `Travel plan '${String(next.title ?? "Untitled")}' updated with changes: ${detail}`,
+            metadata: { changes: parsed.data, planId, type: "travelPlanUpdate" },
+            userId: sessionUserId,
+          });
+        }
+
+        return { message: "updated", plan: next, planId, success: true } as const;
       }
-    } catch {
-      // ignore
-    }
-
-    try {
-      // Validate write
-      const valid = planSchema.safeParse(next);
-      if (!valid.success) {
-        return { error: "invalid_plan_shape", success: false } as const;
-      }
-      await redis.set(key, valid.data);
-      const isFinalized =
-        valid.data.status === "finalized" || Boolean(valid.data.finalizedAt);
-      await redis.expire(key, isFinalized ? TTL_FINAL_SECONDS : TTL_DRAFT_SECONDS);
-    } catch {
-      return { error: "redis_set_failed", success: false } as const;
-    }
-
-    if (applied.length) {
-      const detail = applied.map((k) => `${k} changed`).join(", ");
-      await recordPlanMemory({
-        content: `Travel plan '${String(next.title ?? "Untitled")}' updated with changes: ${detail}`,
-        metadata: { changes: parsed.data, planId, type: "travelPlanUpdate" },
-        userId: sessionUserId,
-      });
-    }
-
-    return { message: "updated", plan: next, planId, success: true } as const;
+    );
   },
   inputSchema: z.object({
     planId: UUI_DV4,
@@ -449,87 +470,99 @@ export const combineSearchResults = tool({
 export const saveTravelPlan = tool({
   description: "Persist a travel plan and optionally finalize it (extends TTL).",
   execute: async ({ planId, userId: _ignored, finalize }) => {
-    const redis = getRedis();
-    if (!redis) return { error: "redis_unavailable", success: false } as const;
-    const key = redisKeyForPlan(planId);
-    let plan: Record<string, unknown> | null = null;
-    try {
-      plan = (await redis.get(key)) as Record<string, unknown> | null;
-    } catch {
-      return { error: "redis_get_failed", success: false } as const;
-    }
-    if (!plan) return { error: `plan_not_found:${planId}`, success: false } as const;
-    const parsedExisting = planSchema.safeParse(plan);
-    if (!parsedExisting.success) {
-      return { error: "invalid_plan_shape", success: false } as const;
-    }
-    const supabase = await createServerSupabase();
-    const { data: auth } = await supabase.auth.getUser();
-    const sessionUserId = auth?.user?.id;
-    if (!sessionUserId) return { error: "unauthorized", success: false } as const;
-    if ((plan as { userId?: string }).userId !== sessionUserId)
-      return { error: "unauthorized", success: false } as const;
+    return await withTelemetrySpan(
+      "planning.saveTravelPlan",
+      {
+        attributes: {
+          finalize: Boolean(finalize),
+          planId,
+        },
+      },
+      async (_span) => {
+        const redis = getRedis();
+        if (!redis) return { error: "redis_unavailable", success: false } as const;
+        const key = redisKeyForPlan(planId);
+        let plan: Record<string, unknown> | null = null;
+        try {
+          plan = (await redis.get(key)) as Record<string, unknown> | null;
+        } catch {
+          return { error: "redis_get_failed", success: false } as const;
+        }
+        if (!plan)
+          return { error: `plan_not_found:${planId}`, success: false } as const;
+        const parsedExisting = planSchema.safeParse(plan);
+        if (!parsedExisting.success) {
+          return { error: "invalid_plan_shape", success: false } as const;
+        }
+        const supabase = await createServerSupabase();
+        const { data: auth } = await supabase.auth.getUser();
+        const sessionUserId = auth?.user?.id;
+        if (!sessionUserId) return { error: "unauthorized", success: false } as const;
+        if ((plan as { userId?: string }).userId !== sessionUserId)
+          return { error: "unauthorized", success: false } as const;
 
-    const now = nowIso();
-    const next: Plan = { ...parsedExisting.data, updatedAt: now } as Plan;
-    if (finalize) {
-      next.status = "finalized";
-      next.finalizedAt = now;
-    }
+        const now = nowIso();
+        const next: Plan = { ...parsedExisting.data, updatedAt: now } as Plan;
+        if (finalize) {
+          next.status = "finalized";
+          next.finalizedAt = now;
+        }
 
-    try {
-      const valid = planSchema.safeParse(next);
-      if (!valid.success)
-        return { error: "invalid_plan_shape", success: false } as const;
-      await redis.set(key, valid.data);
-      await redis.expire(key, finalize ? TTL_FINAL_SECONDS : TTL_DRAFT_SECONDS);
-    } catch {
-      return { error: "redis_set_failed", success: false } as const;
-    }
+        try {
+          const valid = planSchema.safeParse(next);
+          if (!valid.success)
+            return { error: "invalid_plan_shape", success: false } as const;
+          await redis.set(key, valid.data);
+          await redis.expire(key, finalize ? TTL_FINAL_SECONDS : TTL_DRAFT_SECONDS);
+        } catch {
+          return { error: "redis_set_failed", success: false } as const;
+        }
 
-    if (finalize) {
-      await recordPlanMemory({
-        content: `Travel plan '${String(next.title ?? "Untitled")}' finalized on ${now}`,
-        metadata: { finalizedAt: now, planId, type: "travelPlanFinalization" },
-        userId: sessionUserId,
-      });
-    }
+        if (finalize) {
+          await recordPlanMemory({
+            content: `Travel plan '${String(next.title ?? "Untitled")}' finalized on ${now}`,
+            metadata: { finalizedAt: now, planId, type: "travelPlanFinalization" },
+            userId: sessionUserId,
+          });
+        }
 
-    const comps =
-      (next.components as PlanComponents | undefined) ??
-      ({
-        accommodations: [],
-        activities: [],
-        flights: [],
-        notes: [],
-        transportation: [],
-      } as PlanComponents);
-    const counts = [
-      ["flights", comps.flights?.length ?? 0],
-      ["accommodations", comps.accommodations?.length ?? 0],
-      ["activities", comps.activities?.length ?? 0],
-      ["transportation", comps.transportation?.length ?? 0],
-      ["notes", comps.notes?.length ?? 0],
-    ] as const;
-    const present = counts.filter(([, n]) => (n as number) > 0);
-    if (present.length) {
-      const summary = `Travel plan includes: ${present
-        .map(([k, n]) => `${n} ${k}`)
-        .join(", ")}`;
-      await recordPlanMemory({
-        content: summary,
-        metadata: { components: comps, planId, type: "travelPlanComponents" },
-        userId: sessionUserId,
-      });
-    }
+        const comps =
+          (next.components as PlanComponents | undefined) ??
+          ({
+            accommodations: [],
+            activities: [],
+            flights: [],
+            notes: [],
+            transportation: [],
+          } as PlanComponents);
+        const counts = [
+          ["flights", comps.flights?.length ?? 0],
+          ["accommodations", comps.accommodations?.length ?? 0],
+          ["activities", comps.activities?.length ?? 0],
+          ["transportation", comps.transportation?.length ?? 0],
+          ["notes", comps.notes?.length ?? 0],
+        ] as const;
+        const present = counts.filter(([, n]) => (n as number) > 0);
+        if (present.length) {
+          const summary = `Travel plan includes: ${present
+            .map(([k, n]) => `${n} ${k}`)
+            .join(", ")}`;
+          await recordPlanMemory({
+            content: summary,
+            metadata: { components: comps, planId, type: "travelPlanComponents" },
+            userId: sessionUserId,
+          });
+        }
 
-    return {
-      message: finalize ? "finalized_and_saved" : "saved",
-      planId,
-      status: next.status ?? "draft",
-      success: true,
-      summaryMarkdown: toMarkdownSummary(next),
-    } as const;
+        return {
+          message: finalize ? "finalized_and_saved" : "saved",
+          planId,
+          status: next.status ?? "draft",
+          success: true,
+          summaryMarkdown: toMarkdownSummary(next),
+        } as const;
+      }
+    );
   },
   inputSchema: z.object({
     finalize: z.boolean().default(false).optional(),
@@ -541,36 +574,51 @@ export const saveTravelPlan = tool({
 export const deleteTravelPlan = tool({
   description: "Delete an existing travel plan owned by the session user.",
   execute: async ({ planId }) => {
-    const redis = getRedis();
-    if (!redis) return { error: "redis_unavailable", success: false } as const;
-    const key = redisKeyForPlan(planId);
-    let plan: Record<string, unknown> | null = null;
-    try {
-      plan = (await redis.get(key)) as Record<string, unknown> | null;
-    } catch {
-      return { error: "redis_get_failed", success: false } as const;
-    }
-    if (!plan) return { error: `plan_not_found:${planId}`, success: false } as const;
-    const parsed = planSchema.safeParse(plan);
-    if (!parsed.success)
-      return { error: "invalid_plan_shape", success: false } as const;
-    const supabase = await createServerSupabase();
-    const { data: auth } = await supabase.auth.getUser();
-    const sessionUserId = auth?.user?.id;
-    if (!sessionUserId) return { error: "unauthorized", success: false } as const;
-    if (parsed.data.userId !== sessionUserId)
-      return { error: "unauthorized", success: false } as const;
-    try {
-      await redis.del(key);
-    } catch {
-      return { error: "redis_delete_failed", success: false } as const;
-    }
-    await recordPlanMemory({
-      content: "Travel plan deleted",
-      metadata: { planId, type: "travelPlanDeleted" },
-      userId: sessionUserId,
-    });
-    return { message: "deleted", planId, success: true } as const;
+    return await withTelemetrySpan(
+      "planning.deleteTravelPlan",
+      {
+        attributes: {
+          planId,
+        },
+      },
+      async (span) => {
+        const redis = getRedis();
+        if (!redis) return { error: "redis_unavailable", success: false } as const;
+        const key = redisKeyForPlan(planId);
+        let plan: Record<string, unknown> | null = null;
+        try {
+          plan = (await redis.get(key)) as Record<string, unknown> | null;
+        } catch {
+          return { error: "redis_get_failed", success: false } as const;
+        }
+        if (!plan)
+          return { error: `plan_not_found:${planId}`, success: false } as const;
+        const parsed = planSchema.safeParse(plan);
+        if (!parsed.success)
+          return { error: "invalid_plan_shape", success: false } as const;
+        const supabase = await createServerSupabase();
+        const { data: auth } = await supabase.auth.getUser();
+        const sessionUserId = auth?.user?.id;
+        if (!sessionUserId) return { error: "unauthorized", success: false } as const;
+        if (parsed.data.userId !== sessionUserId)
+          return { error: "unauthorized", success: false } as const;
+
+        // Update span with userId after auth check
+        span.setAttribute("userId", sessionUserId);
+
+        try {
+          await redis.del(key);
+        } catch {
+          return { error: "redis_delete_failed", success: false } as const;
+        }
+        await recordPlanMemory({
+          content: "Travel plan deleted",
+          metadata: { planId, type: "travelPlanDeleted" },
+          userId: sessionUserId,
+        });
+        return { message: "deleted", planId, success: true } as const;
+      }
+    );
   },
   inputSchema: z.object({ planId: UUI_DV4, userId: z.string().optional() }),
 });

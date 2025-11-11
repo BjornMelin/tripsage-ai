@@ -2,7 +2,11 @@
  * @fileoverview Unified tool registry for AI SDK v6.
  */
 
-import { bookAccommodation, searchAccommodations } from "./accommodations";
+import {
+  bookAccommodation,
+  getAccommodationDetails,
+  searchAccommodations,
+} from "./accommodations";
 import { searchFlights } from "./flights";
 import { distanceMatrix, geocode } from "./maps";
 import { addConversationMemory, searchUserMemories } from "./memory";
@@ -28,6 +32,7 @@ export const toolRegistry = {
   deleteTravelPlan,
   distanceMatrix,
   geocode,
+  getAccommodationDetails,
   getCurrentWeather,
   saveTravelPlan,
   searchAccommodations,
