@@ -4,7 +4,9 @@
 import type { NextRequest } from "next/server";
 
 /**
- * Extract the client IP from common proxy headers.
+ * Extract the client IP from proxy headers with a deterministic fallback.
+ *
+ * The fallback of "unknown" avoids undefined identifiers when rate limiting.
  */
 export function getClientIpFromHeaders(headers: Headers): string {
   const xff = headers.get("x-forwarded-for");

@@ -2,11 +2,7 @@
 
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  stubRateLimitDisabled,
-  stubRateLimitEnabled,
-  unstubAllEnvs,
-} from "@/test/env-helpers";
+import { unstubAllEnvs } from "@/test/env-helpers";
 
 const MOCK_INSERT = vi.hoisted(() => vi.fn());
 const MOCK_DELETE = vi.hoisted(() => vi.fn());
@@ -17,6 +13,16 @@ const MOCK_SUPABASE = vi.hoisted(() => ({
   },
 }));
 const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
+const BUILD_RATE_LIMITER = vi.hoisted(() => vi.fn());
+const TELEMETRY_SPY = vi.hoisted(() =>
+  vi.fn(
+    (
+      _name,
+      _options,
+      execute: (span: { setAttribute: () => void }) => Promise<unknown>
+    ) => execute({ setAttribute: vi.fn() })
+  )
+);
 
 vi.mock("@/lib/supabase/rpc", () => ({
   deleteUserApiKey: MOCK_DELETE,
@@ -27,35 +33,25 @@ vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: CREATE_SUPABASE,
 }));
 
-vi.mock("@upstash/redis", () => ({
-  Redis: { fromEnv: vi.fn(() => ({})) },
+vi.mock("@/app/api/keys/_rate-limiter", () => ({
+  buildRateLimiter: BUILD_RATE_LIMITER,
 }));
 
-vi.mock("@upstash/ratelimit", () => {
-  const slidingWindow = vi.fn(() => ({}));
-  const ctor = vi.fn(function RatelimitMock() {
-    return { limit: LIMIT_SPY };
-  }) as unknown as {
-    new (...args: unknown[]): { limit: ReturnType<typeof LIMIT_SPY> };
-    slidingWindow: (...args: unknown[]) => unknown;
-  };
-  // Provide static like API expected by implementation
-  ctor.slidingWindow = slidingWindow as unknown as (...args: unknown[]) => unknown;
-  return {
-    Ratelimit: ctor,
-    slidingWindow,
-  };
-});
+vi.mock("@/lib/telemetry/span", () => ({
+  withTelemetrySpan: TELEMETRY_SPY,
+}));
 
 describe("/api/keys routes", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
     unstubAllEnvs();
-    stubRateLimitDisabled();
     CREATE_SUPABASE.mockReset();
     CREATE_SUPABASE.mockResolvedValue(MOCK_SUPABASE);
     LIMIT_SPY.mockReset();
+    BUILD_RATE_LIMITER.mockReset();
+    BUILD_RATE_LIMITER.mockReturnValue(undefined);
+    TELEMETRY_SPY.mockReset();
     MOCK_SUPABASE.auth.getUser.mockReset();
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
       data: { user: { id: "test-user" } },
@@ -93,7 +89,7 @@ describe("/api/keys routes", () => {
   });
 
   it("POST /api/keys throttles per user id and returns headers", async () => {
-    stubRateLimitEnabled();
+    BUILD_RATE_LIMITER.mockReturnValue({ limit: LIMIT_SPY });
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
       data: { user: { id: "user-123" } },
       error: null,
@@ -122,7 +118,7 @@ describe("/api/keys routes", () => {
   });
 
   it("DELETE /api/keys/[service] throttles per user id and returns headers", async () => {
-    stubRateLimitEnabled();
+    BUILD_RATE_LIMITER.mockReturnValue({ limit: LIMIT_SPY });
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
       data: { user: { id: "user-999" } },
       error: null,
@@ -147,5 +143,56 @@ describe("/api/keys routes", () => {
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("9");
     expect(res.headers.get("X-RateLimit-Reset")).toBe("456");
     expect(MOCK_DELETE).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/keys normalizes service names before RPC execution", async () => {
+    MOCK_INSERT.mockResolvedValue(undefined);
+    vi.resetModules();
+    const { POST } = await import("@/app/api/keys/route");
+    const req = {
+      headers: new Headers(),
+      json: async () => ({ apiKey: "abc123", service: "  OpenAI  " }),
+    } as unknown as NextRequest;
+    const res = await POST(req);
+    expect(res.status).toBe(204);
+    expect(MOCK_INSERT).toHaveBeenCalledWith("test-user", "openai", "abc123");
+  });
+
+  it("wraps Supabase insert RPC in telemetry span", async () => {
+    const spanCalls: Array<Record<string, unknown>> = [];
+    TELEMETRY_SPY.mockImplementationOnce((_name, options, execute) => {
+      spanCalls.push(options);
+      return execute({ setAttribute: vi.fn() });
+    });
+    vi.resetModules();
+    const { POST } = await import("@/app/api/keys/route");
+    const req = {
+      headers: new Headers(),
+      json: async () => ({ apiKey: "abc", service: "openai" }),
+    } as unknown as NextRequest;
+    const res = await POST(req);
+    expect(res.status).toBe(204);
+    expect(TELEMETRY_SPY).toHaveBeenCalledTimes(1);
+    expect(spanCalls[0]?.attributes).toMatchObject({
+      "keys.operation": "insert",
+      "keys.service": "openai",
+      "keys.user_id": "test-user",
+      "ratelimit.success": true,
+    });
+  });
+
+  it("still opens telemetry span when delete RPC fails", async () => {
+    TELEMETRY_SPY.mockImplementationOnce((_name, _options, run) =>
+      run({ setAttribute: vi.fn() })
+    );
+    MOCK_DELETE.mockRejectedValueOnce(new Error("boom"));
+    vi.resetModules();
+    const route = await import("@/app/api/keys/[service]/route");
+    const req = { headers: new Headers() } as unknown as NextRequest;
+    const res = await route.DELETE(req, {
+      params: Promise.resolve({ service: "openai" }),
+    });
+    expect(res.status).toBe(500);
+    expect(TELEMETRY_SPY).toHaveBeenCalledTimes(1);
   });
 });
