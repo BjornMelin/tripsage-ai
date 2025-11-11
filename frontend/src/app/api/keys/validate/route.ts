@@ -14,7 +14,7 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { buildRateLimitKey } from "@/lib/next/route-helpers";
+import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import type { ProviderId } from "@/lib/providers/types";
 import { getProviderSettings } from "@/lib/settings";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -238,7 +238,7 @@ export async function POST(req: NextRequest) {
       data: { user },
       error,
     } = await supabase.auth.getUser();
-    const identifier = user?.id ?? buildRateLimitKey(req);
+    const identifier = user?.id ?? `anon:${getClientIpFromHeaders(req.headers)}`;
 
     const rateLimitResponse = await requireRateLimit(identifier);
     if (rateLimitResponse) {
