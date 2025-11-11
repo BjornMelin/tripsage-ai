@@ -8,11 +8,15 @@
 
 export const dynamic = "force-dynamic";
 
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { buildRateLimitKey } from "@/lib/next/route-helpers";
+import type { ProviderId } from "@/lib/providers/types";
+import { getProviderSettings } from "@/lib/settings";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 // Environment variables
@@ -34,40 +38,119 @@ const GET_RATELIMIT_INSTANCE = () => {
   });
 };
 
-type ProviderConfig = {
-  url: string;
-  buildHeaders: (apiKey: string) => Record<string, string>;
-};
-
-const PROVIDERS: Record<string, ProviderConfig> = {
-  anthropic: {
-    buildHeaders: (key) => ({
-      "anthropic-version": "2023-06-01",
-      "x-api-key": key,
-    }),
-    url: "https://api.anthropic.com/v1/models",
-  },
-  openai: {
-    buildHeaders: (key) => ({
-      Authorization: `Bearer ${key}`,
-    }),
-    url: "https://api.openai.com/v1/models",
-  },
-  openrouter: {
-    buildHeaders: (key) => ({
-      Authorization: `Bearer ${key}`,
-    }),
-    url: "https://openrouter.ai/api/v1/models",
-  },
-  xai: {
-    buildHeaders: (key) => ({
-      Authorization: `Bearer ${key}`,
-    }),
-    url: "https://api.x.ai/v1/models",
-  },
-};
-
 type ValidateResult = { isValid: boolean; reason?: string };
+
+const DEFAULT_MODEL_IDS: Record<ProviderId, string> = {
+  anthropic: "claude-3-5-sonnet-20241022",
+  openai: "gpt-4o-mini",
+  openrouter: "openai/gpt-4o-mini",
+  xai: "grok-3",
+};
+
+type ProviderRequest = {
+  fetchImpl: typeof fetch;
+  headers: Record<string, string>;
+  url: string;
+};
+
+type ProviderRequestBuilder = (apiKey: string) => ProviderRequest;
+
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+const XAI_BASE_URL = "https://api.x.ai/v1";
+
+function toHeaders(
+  headers?: Record<string, string>
+): Record<string, string> | undefined {
+  if (!headers) return undefined;
+  const entries = Object.entries(headers).filter(([, value]) => value !== undefined);
+  if (entries.length === 0) return undefined;
+  return Object.fromEntries(entries);
+}
+
+function buildOpenAICompatibleRequest(options: {
+  apiKey: string;
+  baseURL?: string;
+  headers?: Record<string, string>;
+  modelId: string;
+}): ProviderRequest {
+  const providerHeaders = toHeaders(options.headers);
+  const provider = createOpenAI({
+    apiKey: options.apiKey,
+    ...(options.baseURL ? { baseURL: options.baseURL } : {}),
+    ...(providerHeaders ? { headers: providerHeaders } : {}),
+  });
+  const model = provider(options.modelId);
+  const url = model.config.url({ path: "/models" });
+  const headers = model.config.headers();
+  return {
+    fetchImpl: model.config.fetch ?? fetch,
+    headers,
+    url,
+  };
+}
+
+function buildAnthropicRequest(apiKey: string): ProviderRequest {
+  const provider = createAnthropic({ apiKey });
+  const model = provider(DEFAULT_MODEL_IDS.anthropic);
+  const baseURL = model.config.baseURL ?? "https://api.anthropic.com/v1";
+  const normalizedBase = baseURL.endsWith("/") ? baseURL : `${baseURL}/`;
+  const url = new URL("models", normalizedBase).toString();
+  const headers = model.config.headers();
+  return {
+    fetchImpl: model.config.fetch ?? fetch,
+    headers,
+    url,
+  };
+}
+
+function buildOpenRouterHeaders(): Record<string, string> | undefined {
+  const settings = getProviderSettings();
+  const headers: Record<string, string> = {};
+  const referer = settings.openrouterAttribution?.referer;
+  const title = settings.openrouterAttribution?.title;
+  if (referer) headers["HTTP-Referer"] = referer;
+  if (title) headers["X-Title"] = title;
+  return Object.keys(headers).length > 0 ? headers : undefined;
+}
+
+const PROVIDER_BUILDERS: Partial<Record<ProviderId, ProviderRequestBuilder>> = {
+  anthropic: (apiKey) => buildAnthropicRequest(apiKey),
+  openai: (apiKey) =>
+    buildOpenAICompatibleRequest({
+      apiKey,
+      baseURL: process.env.AI_GATEWAY_URL?.trim() || undefined,
+      modelId: DEFAULT_MODEL_IDS.openai,
+    }),
+  openrouter: (apiKey) =>
+    buildOpenAICompatibleRequest({
+      apiKey,
+      baseURL: OPENROUTER_BASE_URL,
+      headers: buildOpenRouterHeaders(),
+      modelId: DEFAULT_MODEL_IDS.openrouter,
+    }),
+  xai: (apiKey) =>
+    buildOpenAICompatibleRequest({
+      apiKey,
+      baseURL: XAI_BASE_URL,
+      modelId: DEFAULT_MODEL_IDS.xai,
+    }),
+};
+
+function normalizeErrorReason(error: unknown): string {
+  if (error instanceof TypeError) return "TRANSPORT_ERROR";
+  if (error instanceof Error) {
+    const name = error.name || "Error";
+    const withoutSuffix = name.replace(/Error$/, "");
+    const snake = withoutSuffix
+      .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+      .replace(/[^A-Za-z0-9]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_|_$/g, "")
+      .toUpperCase();
+    return snake.length > 0 ? snake : "UNKNOWN_ERROR";
+  }
+  return "UNKNOWN_ERROR";
+}
 
 /**
  * Generic validator using provider configuration map.
@@ -80,20 +163,32 @@ async function validateProviderKey(
   service: string,
   apiKey: string
 ): Promise<ValidateResult> {
-  const cfg = PROVIDERS[service.trim().toLowerCase()];
-  if (!cfg) return { isValid: false, reason: `Invalid service: ${service}` };
+  const providerId = service.trim().toLowerCase() as ProviderId;
+  const builder = PROVIDER_BUILDERS[providerId];
+  if (!builder) {
+    return { isValid: false, reason: "INVALID_SERVICE" };
+  }
 
   try {
-    const res = await fetch(cfg.url, {
-      headers: cfg.buildHeaders(apiKey),
+    const { fetchImpl, headers, url } = builder(apiKey);
+    const response = await fetchImpl(url, {
+      headers,
       method: "GET",
     });
-    if (res.status === 200) return { isValid: true };
-    if ([401, 403].includes(res.status))
-      return { isValid: false, reason: "Unauthorized" };
-    return { isValid: false, reason: `HTTP_${res.status}` };
-  } catch {
-    return { isValid: false, reason: "NETWORK_ERROR" };
+    if (response.status === 200) return { isValid: true };
+    if ([401, 403].includes(response.status)) {
+      return { isValid: false, reason: "UNAUTHORIZED" };
+    }
+    return { isValid: false, reason: `HTTP_${response.status}` };
+  } catch (error) {
+    const reason = normalizeErrorReason(error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Provider key validation error", {
+      message,
+      provider: providerId,
+      reason,
+    });
+    return { isValid: false, reason };
   }
 }
 

@@ -4,6 +4,9 @@ import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { stubRateLimitDisabled, unstubAllEnvs } from "@/test/env-helpers";
 
+const mockCreateOpenAI = vi.fn();
+const mockCreateAnthropic = vi.fn();
+
 // Mock external dependencies at the top level
 vi.mock("@/lib/next/route-helpers", () => ({
   buildRateLimitKey: vi.fn(() => "test-key"),
@@ -43,10 +46,35 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
+vi.mock("@ai-sdk/openai", () => ({
+  createOpenAI: mockCreateOpenAI,
+}));
+
+vi.mock("@ai-sdk/anthropic", () => ({
+  createAnthropic: mockCreateAnthropic,
+}));
+
+type MockFetch = ReturnType<
+  typeof vi.fn<Parameters<typeof fetch>[0], Promise<Response>>
+>;
+
+function buildProvider(fetchMock: MockFetch, url = "https://provider.test/models") {
+  const config = {
+    fetch: fetchMock,
+    headers: vi.fn(() => ({ Authorization: "Bearer test" })),
+    url: vi.fn(() => url),
+  };
+  const model = { config };
+  const providerFn = vi.fn(() => model);
+  return Object.assign(providerFn, {});
+}
+
 describe("/api/keys/validate route", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    mockCreateOpenAI.mockReset();
+    mockCreateAnthropic.mockReset();
     unstubAllEnvs();
     stubRateLimitDisabled();
     // Ensure Supabase SSR client does not throw when real module is imported
@@ -54,35 +82,68 @@ describe("/api/keys/validate route", () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
   });
 
-  describe("successful validation", () => {
-    it("returns is_valid true on provider 200", async () => {
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }))
-      );
+  it("returns isValid true on successful provider response", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+    mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
 
-      // Import after setting up mocks (do not reset after mocking)
-      const { POST } = await import("../route");
-      const req = {
-        headers: new Headers(),
-        json: async () => ({ apiKey: "sk-test", service: "openai" }),
-      } as unknown as NextRequest;
+    const { POST } = await import("../route");
+    const req = {
+      headers: new Headers(),
+      json: async () => ({ apiKey: "sk-test", service: "openai" }),
+    } as unknown as NextRequest;
 
-      try {
-        const res = await POST(req);
-        const body = await res.json();
-        // Assert both status and body together to surface diff when failing
-        expect({ body, status: res.status }).toEqual({
-          body: { isValid: true },
-          status: 200,
-        });
-      } catch (error) {
-        console.error("Test threw an error:", error);
-        if (error instanceof Error && error.stack) {
-          console.error("Error stack:", error.stack);
-        }
-        throw error;
-      }
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(fetchMock).toHaveBeenCalledWith("https://provider.test/models", {
+      headers: { Authorization: "Bearer test" },
+      method: "GET",
+    });
+    expect({ body, status: res.status }).toEqual({
+      body: { isValid: true },
+      status: 200,
+    });
+  });
+
+  it("returns UNAUTHORIZED when provider denies access", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({}), { status: 401 }));
+    mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
+
+    const { POST } = await import("../route");
+    const req = {
+      headers: new Headers(),
+      json: async () => ({ apiKey: "sk-test", service: "openai" }),
+    } as unknown as NextRequest;
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect({ body, status: res.status }).toEqual({
+      body: { isValid: false, reason: "UNAUTHORIZED" },
+      status: 200,
+    });
+  });
+
+  it("returns TRANSPORT_ERROR when request fails", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
+
+    const { POST } = await import("../route");
+    const req = {
+      headers: new Headers(),
+      json: async () => ({ apiKey: "sk-test", service: "openai" }),
+    } as unknown as NextRequest;
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect({ body, status: res.status }).toEqual({
+      body: { isValid: false, reason: "TRANSPORT_ERROR" },
+      status: 200,
     });
   });
 });
