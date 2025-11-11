@@ -85,12 +85,124 @@ The chat interface automatically invokes relevant tools based on user intent:
 - **Travel Planning**: `create_travel_plan`, `update_travel_plan`, `generate_travel_summary`
 - **Accommodations**: `search_accommodations` (via Airbnb MCP), `get_accommodation_details`, `book_accommodation` (requires approval)
 - **Flights**: `search_flights` (Duffel API), `book_flight` (requires approval)
-- **Web Research**: `web_search` (cached), `crawl_website`, `crawl_travel_blog`
+- **Web Research**: `web_search` (Firecrawl v2.5, cached), `crawlUrl` (single-page scrape), `crawlSite` (multi-page crawl)
 - **Weather**: `get_current_weather`, `get_forecast`, `get_travel_weather_summary`
 - **Maps**: `get_directions`, `calculate_distance`, `geocode_location`
 - **Memory**: `save_user_preferences`, `recall_conversation_context`, `search_memories`
 
 All tools include Zod schema validation, timeouts, rate limiting, and structured error handling.
+
+#### Web Search (Firecrawl v2.5)
+
+The `web_search` tool uses Firecrawl v2.5 API for web search with advanced filtering and optional content scraping:
+
+**Basic Usage:**
+
+```typescript
+webSearch.execute({
+  query: "best restaurants in Paris",
+  limit: 5,
+  fresh: false, // Use cache if available
+});
+```
+
+**Advanced Features:**
+
+- **Sources**: Filter by result type (`web`, `news`, `images`)
+- **Categories**: Search within specific domains (`github`, `research`, `pdf`)
+- **Time Filters**: Use `tbs` parameter (`qdr:d` for past day, `qdr:w` for week, etc.)
+- **Location**: Geographic filtering (e.g., `"Germany"`)
+- **Content Scraping**: Optional `scrapeOptions` to fetch full page content
+
+**Cost Optimization:**
+
+- Search-only (no scraping): 2 credits per 10 results
+- With scraping: Standard scraping costs apply
+- **Cost-saving tips**:
+  - Omit `scrapeOptions` unless you need full content
+  - Set `parsers: []` in `scrapeOptions` to avoid PDF parsing costs (1 credit/page)
+  - Use `proxy: "basic"` instead of `"stealth"` unless required (+4 credits per result)
+  - Limit results with `limit` parameter (max 10)
+
+**Example with all options:**
+
+```typescript
+webSearch.execute({
+  query: "travel destinations 2025",
+  limit: 8,
+  sources: ["web", "news"],
+  categories: ["research"],
+  tbs: "qdr:m", // Past month
+  location: "United States",
+  timeoutMs: 30000,
+  scrapeOptions: {
+    formats: ["markdown"],
+    parsers: [], // Avoid PDF costs
+    proxy: "basic", // Cost-effective
+  },
+  fresh: false,
+});
+```
+
+Results are cached in Redis for 1 hour (configurable via `fresh` parameter).
+
+#### Web Crawl/Scrape (Firecrawl v2.5)
+
+The `crawlUrl` and `crawlSite` tools use Firecrawl v2.5 API for web scraping and crawling:
+
+**Single URL Scraping (`crawlUrl`):**
+
+```typescript
+crawlUrl.execute({
+  url: "https://example.com",
+  fresh: false,
+  scrapeOptions: {
+    formats: ["markdown", "html"],
+    proxy: "basic",
+  },
+});
+```
+
+**Site Crawling (`crawlSite`):**
+
+```typescript
+crawlSite.execute({
+  url: "https://docs.example.com",
+  limit: 50,
+  includePaths: ["/docs/*"],
+  excludePaths: ["/admin/*"],
+  sitemap: "include",
+  scrapeOptions: {
+    formats: ["markdown"],
+    parsers: [], // Avoid PDF costs
+    proxy: "basic",
+  },
+  pollInterval: 2, // seconds
+  timeoutMs: 120000,
+  maxPages: 5, // Early stop after 5 status checks
+  fresh: false,
+});
+```
+
+**Features:**
+
+- **Formats**: `markdown`, `html`, `links`, `screenshot`, `summary`, or JSON mode with schema
+- **Path Filtering**: `includePaths` and `excludePaths` for targeted crawling
+- **Sitemap Control**: `sitemap: "include" | "skip" | "only"`
+- **Client-Side Polling**: Automatic status polling with configurable intervals and limits
+- **Cost Optimization**: Defaults avoid PDF parsing (`parsers: []`) and use basic proxy
+
+**Cost Optimization:**
+
+- Single scrape: Standard scraping costs (1 credit per page)
+- Crawl: 1 credit per page scraped
+- **Cost-saving tips**:
+  - Set `parsers: []` to avoid PDF parsing costs (1 credit/page)
+  - Use `proxy: "basic"` instead of `"stealth"` unless required (+4 credits per page)
+  - Use `maxPages` or `maxResults` to limit crawl size
+  - Set `maxWaitTime` to prevent long-running crawls
+
+Results are cached in Redis for 6 hours (configurable via `fresh` parameter).
 
 ### RAG-Enhanced Responses
 
@@ -302,6 +414,8 @@ AI_GATEWAY_URL=your_vercel_ai_gateway_url
 OPENWEATHER_API_KEY=your_openweather_key
 DUFFEL_ACCESS_TOKEN=your_duffel_token
 GOOGLE_MAPS_API_KEY=your_google_maps_key
+FIRECRAWL_API_KEY=fc-your_firecrawl_key  # For web search (v2.5)
+FIRECRAWL_BASE_URL=https://api.firecrawl.dev/v2  # Optional: override base URL
 
 # MCP Servers (Optional - for extended tool ecosystem)
 AIRBNB_MCP_URL=your_airbnb_mcp_endpoint
