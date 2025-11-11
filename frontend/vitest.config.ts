@@ -1,9 +1,9 @@
 /**
  * @fileoverview Vitest configuration tuned for stability and CI performance.
- * - Uses vmForks for consistent process isolation across all environments.
- * - Optimized worker count for multi-core CPUs (local: cpus/2, CI: 2).
- * - JSDOM environment for UI tests, type/lint gates run separately.
- */
+ * - Defaults to threads pool for speed; guardrail env can force forks.
+ * - Scales workers by available CPUs; env override supported.
+ * - Splits into projects: node env for API/server tests, jsdom for UI.
+*/
 
 import os from "node:os";
 import path from "node:path";
@@ -11,8 +11,17 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 const isCi = process.env.CI === "true" || process.env.CI === "1";
-const cpuCount = os.cpus().length;
-const optimalWorkers = isCi ? 2 : Math.max(1, Math.floor(cpuCount / 2));
+const forceForks = process.env.CI_FORCE_FORKS === "1";
+const selectedPool = (process.env.VITEST_POOL || (forceForks ? "vmForks" : "threads")) as
+  | "threads"
+  | "forks"
+  | "vmThreads"
+  | "vmForks";
+// Prefer availableParallelism when present (Node 18+), fall back to cpus
+// Keep at least 1 worker; on CI, avoid exhausting all cores
+const cores = (os as any).availableParallelism?.() ?? os.cpus().length;
+const defaultWorkers = Math.max(1, isCi ? Math.max(1, cores - 1) : Math.floor(cores / 2));
+const optimalWorkers = Number(process.env.VITEST_MAX_WORKERS || defaultWorkers);
 
 export default defineConfig({
   ssr: {
@@ -42,7 +51,7 @@ export default defineConfig({
     coverage: {
       exclude: ["**/dist/**", "**/e2e/**", "**/*.config.*"],
       provider: "v8",
-      reporter: ["text", "json", "html", "lcov"],
+      reporter: ["text", "json", "lcov"],
       thresholds: {
         global: {
           branches: 85,
@@ -52,7 +61,6 @@ export default defineConfig({
         },
       },
     },
-    environment: "jsdom",
     exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*"],
     globals: true,
     hookTimeout: 8000,
@@ -61,10 +69,8 @@ export default defineConfig({
     isolate: true,
     maxWorkers: optimalWorkers,
     passWithNoTests: true,
-    // Use VM pool runners so CSS from node_modules is transformed in tests
-    // (fixes "Unknown file extension .css" for packages like katex via Streamdown)
-    // Use vmForks consistently for stability and predictable behavior
-    pool: "vmForks",
+    // Default to threads for speed; can be overridden via env or per-project
+    pool: selectedPool,
     // Ensure Vite transforms CSS imports under vmThreads
     deps: {
       web: {
@@ -82,5 +88,6 @@ export default defineConfig({
     // Timeouts
     testTimeout: 5000,
     unstubEnvs: true,
+    environment: "jsdom",
   },
 });
