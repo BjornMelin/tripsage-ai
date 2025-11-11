@@ -3,7 +3,6 @@
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  resetAndImport,
   stubRateLimitDisabled,
   stubRateLimitEnabled,
   unstubAllEnvs,
@@ -67,7 +66,8 @@ describe("/api/keys routes", () => {
   });
 
   it("POST /api/keys returns 400 on invalid body", async () => {
-    const { POST } = await resetAndImport<typeof import("../route")>("../route");
+    vi.resetModules();
+    const { POST } = await import("@/app/api/keys/route");
     const req = {
       headers: new Headers(),
       json: async () => ({}),
@@ -82,8 +82,8 @@ describe("/api/keys routes", () => {
       error: null,
     });
     MOCK_DELETE.mockResolvedValue(undefined);
-    const route =
-      await resetAndImport<typeof import("../[service]/route")>("../[service]/route");
+    vi.resetModules();
+    const route = await import("@/app/api/keys/[service]/route");
     const req = { headers: new Headers() } as unknown as NextRequest;
     const res = await route.DELETE(req, {
       params: Promise.resolve({ service: "openai" }),
@@ -104,7 +104,8 @@ describe("/api/keys routes", () => {
       reset: 123,
       success: false,
     });
-    const { POST } = await resetAndImport<typeof import("../route")>("../route");
+    vi.resetModules();
+    const { POST } = await import("@/app/api/keys/route");
     const req = {
       headers: new Headers(),
       json: vi.fn(),
@@ -132,8 +133,8 @@ describe("/api/keys routes", () => {
       reset: 456,
       success: false,
     });
-    const route =
-      await resetAndImport<typeof import("../[service]/route")>("../[service]/route");
+    vi.resetModules();
+    const route = await import("@/app/api/keys/[service]/route");
     const req = { headers: new Headers() } as unknown as NextRequest;
 
     const res = await route.DELETE(req, {
