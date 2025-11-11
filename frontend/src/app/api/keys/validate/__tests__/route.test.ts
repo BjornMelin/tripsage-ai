@@ -10,7 +10,7 @@ import {
 
 const LIMIT_SPY = vi.hoisted(() => vi.fn());
 const MOCK_ROUTE_HELPERS = vi.hoisted(() => ({
-  buildRateLimitKey: vi.fn(() => "anon:127.0.0.1"),
+  getClientIpFromHeaders: vi.fn(() => "127.0.0.1"),
 }));
 const MOCK_SUPABASE = vi.hoisted(() => ({
   auth: {
@@ -81,7 +81,7 @@ describe("/api/keys/validate route", () => {
     vi.clearAllMocks();
     unstubAllEnvs();
     stubRateLimitDisabled();
-    MOCK_ROUTE_HELPERS.buildRateLimitKey.mockReturnValue("anon:127.0.0.1");
+    MOCK_ROUTE_HELPERS.getClientIpFromHeaders.mockReturnValue("127.0.0.1");
     mockCreateOpenAI.mockReset();
     mockCreateAnthropic.mockReset();
     CREATE_SUPABASE.mockReset();
@@ -198,7 +198,7 @@ describe("/api/keys/validate route", () => {
     expect(req.json).not.toHaveBeenCalled();
   });
 
-  it("falls back to buildRateLimitKey when user is missing", async () => {
+  it("falls back to client IP when user is missing", async () => {
     stubRateLimitEnabled();
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
       data: { user: null },
@@ -210,7 +210,7 @@ describe("/api/keys/validate route", () => {
       reset: 123,
       success: true,
     });
-    MOCK_ROUTE_HELPERS.buildRateLimitKey.mockReturnValueOnce("anon:10.0.0.1");
+    MOCK_ROUTE_HELPERS.getClientIpFromHeaders.mockReturnValueOnce("10.0.0.1");
 
     const fetchMock = vi
       .fn<FetchLike>()
