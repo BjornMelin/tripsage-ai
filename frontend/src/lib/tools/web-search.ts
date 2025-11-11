@@ -6,8 +6,15 @@
 
 import { tool } from "ai";
 import { z } from "zod";
+import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { getRedis } from "@/lib/redis";
 
+/**
+ * Zod schema for optional scraping configuration.
+ *
+ * Controls content extraction formats, parsers, and proxy type for Firecrawl
+ * search results.
+ */
 const scrapeOptionsSchema = z
   .object({
     formats: z.array(z.enum(["markdown", "html", "links", "screenshot"])).optional(),
@@ -16,46 +23,21 @@ const scrapeOptionsSchema = z
   })
   .optional();
 
+/**
+ * Type for scraping options configuration.
+ *
+ * Extracted from scrapeOptionsSchema for type-safe usage.
+ */
 type ScrapeOptions = z.infer<typeof scrapeOptionsSchema>;
 
 /**
- * Generates a cache key that includes all parameters affecting results.
- */
-function cacheKey(params: {
-  query: string;
-  limit: number;
-  sources?: string[];
-  categories?: string[];
-  tbs?: string;
-  location?: string;
-  timeoutMs?: number;
-  scrapeOptions?: ScrapeOptions;
-}): string {
-  const parts = [
-    "ws",
-    params.limit,
-    params.query.trim().toLowerCase(),
-    params.sources?.sort().join(",") ?? "web",
-    params.categories?.sort().join(",") ?? "",
-    params.tbs ?? "",
-    params.location ?? "",
-    params.timeoutMs ?? "",
-  ];
-  if (params.scrapeOptions) {
-    const so = params.scrapeOptions;
-    parts.push(
-      so.formats?.sort().join(",") ?? "",
-      so.parsers?.sort().join(",") ?? "",
-      so.proxy ?? "basic"
-    );
-  } else {
-    parts.push("", "", "");
-  }
-  return parts.join(":");
-}
-
-/**
- * Builds request body with cost-safe defaults.
+ * Builds request body for Firecrawl search API with cost-safe defaults.
+ *
+ * Applies cost-safe defaults for scrapeOptions (empty parsers array, basic proxy)
+ * to minimize API costs. Sorts array values for consistent request formatting.
+ *
+ * @param params - Search parameters including query, filters, and scrape options.
+ * @returns Request body object ready for JSON serialization.
  */
 function buildRequestBody(params: {
   query: string;
@@ -99,6 +81,22 @@ function buildRequestBody(params: {
   return body;
 }
 
+/**
+ * Web search tool using Firecrawl v2.5 API.
+ *
+ * Searches the web via Firecrawl v2.5 and returns normalized results. Supports
+ * multiple sources (web/news/images), categories (github/research/pdf), time
+ * filters (tbs), location-based searches, and optional content scraping. Results
+ * are cached in Redis for performance (1 hour TTL).
+ *
+ * @returns Search results object with normalized data from Firecrawl.
+ * @throws {Error} Error with code indicating failure reason:
+ *   - "web_search_not_configured": FIRECRAWL_API_KEY missing
+ *   - "web_search_rate_limited": Rate limit exceeded (429)
+ *   - "web_search_unauthorized": Authentication failed (401)
+ *   - "web_search_payment_required": Payment required (402)
+ *   - "web_search_failed": Generic API error with status code
+ */
 export const webSearch = tool({
   description:
     "Search the web via Firecrawl v2.5 and return normalized results. " +
@@ -120,7 +118,8 @@ export const webSearch = tool({
       throw new Error("web_search_not_configured");
     }
     const redis = getRedis();
-    const cacheParams = {
+    // Prepare params for request body (keep scrapeOptions nested)
+    const requestParams = {
       categories,
       limit,
       location,
@@ -130,14 +129,36 @@ export const webSearch = tool({
       tbs,
       timeoutMs,
     };
-    const k = cacheKey(cacheParams);
+    // Flatten scrapeOptions for cache key generation
+    const cacheParams: Record<string, unknown> = {
+      categories,
+      limit,
+      location,
+      query: query.trim(),
+      sources,
+      tbs,
+      timeoutMs,
+    };
+    // Flatten nested scrapeOptions object into cache params
+    if (scrapeOptions) {
+      if (scrapeOptions.formats && scrapeOptions.formats.length > 0) {
+        cacheParams.scrapeOptionsFormats = scrapeOptions.formats;
+      }
+      if (scrapeOptions.parsers && scrapeOptions.parsers.length > 0) {
+        cacheParams.scrapeOptionsParsers = scrapeOptions.parsers;
+      }
+      if (scrapeOptions.proxy) {
+        cacheParams.scrapeOptionsProxy = scrapeOptions.proxy;
+      }
+    }
+    const k = canonicalizeParamsForCache(cacheParams, "ws");
     if (!fresh && redis) {
       const cached = await redis.get(k);
       if (cached) return cached;
     }
     const baseUrl = process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
     const url = `${baseUrl}/search`;
-    const body = buildRequestBody(cacheParams);
+    const body = buildRequestBody(requestParams);
     const res = await fetch(url, {
       body: JSON.stringify(body),
       headers: {
