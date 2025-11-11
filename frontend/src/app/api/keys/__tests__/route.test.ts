@@ -145,6 +145,68 @@ describe("/api/keys routes", () => {
     expect(MOCK_DELETE).not.toHaveBeenCalled();
   });
 
+  it("POST /api/keys throttles per IP when user id is missing", async () => {
+    BUILD_RATE_LIMITER.mockReturnValue({ limit: LIMIT_SPY });
+    MOCK_SUPABASE.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+    LIMIT_SPY.mockResolvedValueOnce({
+      limit: 10,
+      remaining: 5,
+      reset: 789,
+      success: false,
+    });
+    vi.resetModules();
+    const { POST } = await import("@/app/api/keys/route");
+    const req = {
+      headers: new Headers({
+        "x-forwarded-for": "123.123.123.123",
+      }),
+      json: vi.fn(),
+    } as unknown as NextRequest;
+
+    const res = await POST(req);
+
+    expect(BUILD_RATE_LIMITER).toHaveBeenCalled();
+    expect(LIMIT_SPY).toHaveBeenCalledWith("123.123.123.123");
+    expect(res.status).toBe(429);
+    expect(res.headers.get("X-RateLimit-Limit")).toBe("10");
+    expect(res.headers.get("X-RateLimit-Remaining")).toBe("5");
+    expect(res.headers.get("X-RateLimit-Reset")).toBe("789");
+    expect(req.json).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/keys throttles with 'unknown' identifier when no user id or IP", async () => {
+    BUILD_RATE_LIMITER.mockReturnValue({ limit: LIMIT_SPY });
+    MOCK_SUPABASE.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+    LIMIT_SPY.mockResolvedValueOnce({
+      limit: 10,
+      remaining: 3,
+      reset: 999,
+      success: false,
+    });
+    vi.resetModules();
+    const { POST } = await import("@/app/api/keys/route");
+    const req = {
+      headers: new Headers(),
+      json: vi.fn(),
+    } as unknown as NextRequest;
+
+    const res = await POST(req);
+
+    expect(BUILD_RATE_LIMITER).toHaveBeenCalled();
+    expect(LIMIT_SPY).toHaveBeenCalledWith("unknown");
+    expect(res.status).toBe(429);
+    expect(res.headers.get("X-RateLimit-Limit")).toBe("10");
+    expect(res.headers.get("X-RateLimit-Remaining")).toBe("3");
+    expect(res.headers.get("X-RateLimit-Reset")).toBe("999");
+    expect(req.json).not.toHaveBeenCalled();
+  });
+
   it("POST /api/keys normalizes service names before RPC execution", async () => {
     MOCK_INSERT.mockResolvedValue(undefined);
     vi.resetModules();

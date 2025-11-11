@@ -74,4 +74,12 @@ describe("withTelemetrySpan", () => {
     expect(SET_STATUS).toHaveBeenCalledWith({ code: 2, message: "boom" });
     expect(END_SPAN).toHaveBeenCalledTimes(1);
   });
+
+  it("sets the span status to OK on successful completion", async () => {
+    await expect(
+      withTelemetrySpan("test", {}, () => Promise.resolve("success"))
+    ).resolves.toBe("success");
+    expect(SET_STATUS).toHaveBeenCalledWith({ code: 1 });
+    expect(END_SPAN).toHaveBeenCalledTimes(1);
+  });
 });
