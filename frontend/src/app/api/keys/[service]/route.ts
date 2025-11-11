@@ -2,30 +2,28 @@
  * @fileoverview BYOK delete route. Removes a user API key from Supabase Vault.
  * Route: DELETE /api/keys/[service]
  */
-"use cache: private";
 
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import "server-only";
+
+/**
+ * BYOK routes are per-request and must not reuse cached responses. Next.js docs:
+ * https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config#dynamic
+ */
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { buildRateLimiter, type RateLimitResult } from "@/app/api/keys/_rate-limiter";
+import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import { deleteUserApiKey } from "@/lib/supabase/rpc";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const ALLOWED_SERVICES = new Set(["openai", "openrouter", "anthropic", "xai"]);
 
-const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
-const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
-const RATELIMIT_PREFIX = "ratelimit:keys";
-const RATELIMIT_INSTANCE =
-  UPSTASH_URL && UPSTASH_TOKEN
-    ? new Ratelimit({
-        analytics: true,
-        limiter: Ratelimit.slidingWindow(10, "1 m"),
-        prefix: RATELIMIT_PREFIX,
-        redis: Redis.fromEnv(),
-      })
-    : undefined;
+type IdentifierType = "user" | "ip";
 
 /**
  * Handle DELETE /api/keys/[service] to remove a user's provider API key.
@@ -45,18 +43,20 @@ export async function DELETE(
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
-    if (RATELIMIT_INSTANCE) {
+    const identifierType: IdentifierType = user?.id ? "user" : "ip";
+    const ratelimitInstance = buildRateLimiter();
+    let rateLimitMeta: RateLimitResult | undefined;
+    if (ratelimitInstance) {
       const identifier = user?.id ?? getClientIpFromHeaders(req.headers);
-      const { success, limit, remaining, reset } =
-        await RATELIMIT_INSTANCE.limit(identifier);
-      if (!success) {
+      rateLimitMeta = await ratelimitInstance.limit(identifier);
+      if (!rateLimitMeta.success) {
         return NextResponse.json(
           { code: "RATE_LIMIT", error: "Rate limit exceeded" },
           {
             headers: {
-              "X-RateLimit-Limit": String(limit),
-              "X-RateLimit-Remaining": String(remaining),
-              "X-RateLimit-Reset": String(reset),
+              "X-RateLimit-Limit": String(rateLimitMeta.limit),
+              "X-RateLimit-Remaining": String(rateLimitMeta.remaining),
+              "X-RateLimit-Reset": String(rateLimitMeta.reset),
             },
             status: 429,
           }
@@ -84,7 +84,27 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await deleteUserApiKey(user.id, normalizedService);
+    await withTelemetrySpan(
+      "keys.rpc.delete",
+      {
+        attributes: buildKeySpanAttributes({
+          identifierType,
+          operation: "delete",
+          rateLimit: rateLimitMeta,
+          service: normalizedService,
+          userId: user.id,
+        }),
+      },
+      async (span) => {
+        try {
+          await deleteUserApiKey(user.id, normalizedService);
+          span.setAttribute("keys.rpc.error", false);
+        } catch (rpcError) {
+          span.setAttribute("keys.rpc.error", true);
+          throw rpcError;
+        }
+      }
+    );
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

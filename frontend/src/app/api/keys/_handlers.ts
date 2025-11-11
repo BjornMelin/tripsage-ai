@@ -50,6 +50,7 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
       }
     );
   }
+  // Normalize service names once so every adapter and RPC sees the canonical lowercase id.
   const normalized = service.trim().toLowerCase();
   if (!ALLOWED.has(normalized)) {
     return new Response(

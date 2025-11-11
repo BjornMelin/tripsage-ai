@@ -3,43 +3,28 @@
  * Route: POST /api/keys
  */
 
-"use cache";
+import "server-only";
 
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+
+import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
+import { buildRateLimiter } from "@/app/api/keys/_rate-limiter";
+import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import { insertUserApiKey } from "@/lib/supabase/rpc";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { getKeys, postKey } from "./_handlers";
 
 /**
- * Set of allowed API service providers for key storage.
+ * BYOK routes return tenant-specific secrets and must stay fully dynamic. Next.js docs:
+ * https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config#dynamic
  */
-const _ALLOWED_SERVICES = new Set(["openai", "openrouter", "anthropic", "xai"]);
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-/**
- * Prefix for rate limit keys in Redis.
- */
-const RATELIMIT_PREFIX = "ratelimit:keys";
-
-/**
- * Builds a rate limiter instance if Redis environment variables are configured.
- *
- * @returns Ratelimit instance or undefined if Redis is not configured.
- */
-function buildRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return undefined;
-  return new Ratelimit({
-    analytics: true,
-    limiter: Ratelimit.slidingWindow(10, "1 m"),
-    prefix: RATELIMIT_PREFIX,
-    redis: Redis.fromEnv(),
-  });
-}
+type IdentifierType = "user" | "ip";
 
 /**
  * Handle POST /api/keys to insert or replace a user's provider API key.
@@ -55,18 +40,19 @@ export async function POST(req: NextRequest) {
       error: authError,
     } = await supabase.auth.getUser();
     const ratelimitInstance = buildRateLimiter();
+    const identifierType: IdentifierType = user?.id ? "user" : "ip";
+    let rateLimitMeta: RateLimitResult | undefined;
     if (ratelimitInstance) {
       const identifier = user?.id ?? getClientIpFromHeaders(req.headers);
-      const { success, limit, remaining, reset } =
-        await ratelimitInstance.limit(identifier);
-      if (!success) {
+      rateLimitMeta = await ratelimitInstance.limit(identifier);
+      if (!rateLimitMeta.success) {
         return NextResponse.json(
           { code: "RATE_LIMIT", error: "Rate limit exceeded" },
           {
             headers: {
-              "X-RateLimit-Limit": String(limit),
-              "X-RateLimit-Remaining": String(remaining),
-              "X-RateLimit-Reset": String(reset),
+              "X-RateLimit-Limit": String(rateLimitMeta.limit),
+              "X-RateLimit-Remaining": String(rateLimitMeta.remaining),
+              "X-RateLimit-Reset": String(rateLimitMeta.reset),
             },
             status: 429,
           }
@@ -112,11 +98,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const instrumentedInsert = (u: string, s: string, k: string) =>
+      withTelemetrySpan(
+        "keys.rpc.insert",
+        {
+          attributes: buildKeySpanAttributes({
+            identifierType,
+            operation: "insert",
+            rateLimit: rateLimitMeta,
+            service: s,
+            userId: u,
+          }),
+          redactKeys: ["keys.api_key"],
+        },
+        async (span) => {
+          try {
+            await insertUserApiKey(u, s, k);
+            span.setAttribute("keys.rpc.error", false);
+          } catch (rpcError) {
+            span.setAttribute("keys.rpc.error", true);
+            throw rpcError;
+          }
+        }
+      );
+
+    // postKey lowercases and validates service identifiers before hitting Supabase RPCs.
     return postKey(
-      {
-        insertUserApiKey: (u, s, k) => insertUserApiKey(u, s, k),
-        supabase,
-      },
+      { insertUserApiKey: instrumentedInsert, supabase },
       { apiKey, service }
     );
   } catch (err) {
