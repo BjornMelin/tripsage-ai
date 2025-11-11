@@ -1,7 +1,3 @@
-/**
- * @fileoverview Unit tests for web-crawl tools (Firecrawl v2.5 API).
- */
-
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { crawlSite, crawlUrl } from "../web-crawl";
 

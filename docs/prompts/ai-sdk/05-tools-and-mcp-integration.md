@@ -63,14 +63,14 @@
   - [x] `searchAccommodations` - Implemented in `frontend/src/lib/tools/accommodations.ts`
   - [x] `bookAccommodation` - Implemented with approval gate
   - [ ] `getAccommodationDetails` - Missing; needs implementation (MCP/HTTP details endpoint)
-  - Issues: `priceMin`/`priceMax` zero values ignored (line 20-21); `bookAccommodation` returns `status: "confirmed"` incorrectly (line 52)
+  - Notes (2025-11-11): Fixed `priceMin`/`priceMax` zero value handling; fixed `bookAccommodation` to return `status: "pending_confirmation"`
 - [x] **Planning Tools** - Migrate `create_travel_plan`, `update_travel_plan`, `combine_search_results`, `save_travel_plan`
-  - Notes (2025-01-XX): Fully migrated to `frontend/src/lib/tools/planning.ts` with Redis persistence, Supabase memory logging, and comprehensive tests. Python code removed.
+  - Notes (2025-11-11): Fully migrated to `frontend/src/lib/tools/planning.ts` with Redis persistence, Supabase memory logging, and comprehensive tests. Python code removed.
   - [x] `createTravelPlan` - Implemented with Redis TTL (7d default, 30d finalized)
   - [x] `updateTravelPlan` - Implemented with Zod partial validation and auth checks
   - [x] `combineSearchResults` - Implemented with scoring and cost estimation
   - [x] `saveTravelPlan` - Implemented with finalization support and markdown summary
-  - Issues: `combineSearchResults` leaks `_score` property in returned accommodations (line 330-341)
+  - Notes (2025-11-11): Fixed `_score` property leakage in `combineSearchResults` - now strips internal `_score` before returning
 - [x] **Memory Tools** - Migrate core memory ops
   - Notes (2025-11-11): Added `addConversationMemory`, `searchUserMemories` via Supabase.
 - [x] **Weather Tools** - Migrate weather service integration
@@ -100,13 +100,13 @@
 ### Testing & Quality
 
 - [~] Write Vitest unit tests for each tool
-  - Notes (2025-01-XX): Partial coverage - 3 test files exist. Need tests for remaining tools.
+  - Notes (2025-11-11): Partial coverage - 5 test files exist. Need tests for remaining tools.
   - [x] `web-search.test.ts` - Covers validation, Firecrawl integration, error handling
   - [x] `web-crawl.test.ts` - Covers scrape/crawl, cost-safe defaults, rate limit errors, polling
-  - [x] `planning.test.ts` - Covers create/update/save/combine, TTL logic, auth checks, Redis fallbacks
-  - [ ] `accommodations.test.ts` - Missing; test search, booking approval, price filter edge cases
+  - [x] `planning.test.ts` - Covers create/update/save/combine, TTL logic, auth checks, Redis fallbacks, `_score` leakage fix
+  - [x] `accommodations.test.ts` - Covers search, booking approval, price filter edge cases (zero values), status validation
   - [ ] `memory.test.ts` - Missing; test add/search operations, Supabase integration
-  - [ ] `weather.test.ts` - Missing; test OpenWeatherMap integration, error handling
+  - [x] `weather.test.ts` - Covers OpenWeatherMap integration, error handling, missing data handling
   - [ ] `flights.test.ts` - Missing; test Duffel API, camel→snake conversion, IATA validation
   - [ ] `maps.test.ts` - Missing; test geocode, distanceMatrix, Google Maps integration
 - [ ] Write integration tests for tool interleaving in streams
@@ -137,11 +137,11 @@
 ### MCP Integration (Required)
 
 - [~] Configure Airbnb MCP server endpoint and authentication
-  - Notes (2025-01-XX): Runtime discovery implemented; needs conflict detection and schema validation
+  - Notes (2025-11-11): Runtime discovery implemented; conflict detection added; needs schema validation
   - [x] Runtime MCP discovery via `@ai-sdk/mcp@1.0.0-beta.15` SSE transport
   - [x] Environment variable support (`AIRBNB_MCP_URL`, `ACCOM_SEARCH_URL`)
   - [x] Tool merging in chat handler (`frontend/src/app/api/chat/stream/_handler.ts` lines 198-254)
-  - [ ] Add conflict detection (warn when MCP tool names overlap local registry)
+  - [x] Add conflict detection (warn when MCP tool names overlap local registry) - Notes (2025-11-11): Implemented conflict detection and logging in chat handler; local tools take precedence
   - [ ] Add schema validation for MCP tools before merging
   - [ ] Add allowlist/denylist for MCP tool exposure
 - [~] Bridge MCP tools into unified registry with Zod schemas
@@ -211,15 +211,16 @@ const weatherTool = tool({
 - Memory (tripsage/tools/memory_tools.py + models)
   - TS parity: `frontend/src/lib/tools/memory.ts` add/search via Supabase SSR.
   - Gaps: `updateUserPreferences`, `getUserContext`, `saveSessionSummary` to be implemented; prefer Supabase tables; otherwise 501 with config hint.
-- Planning (migrated 2025-11-11)
+- Planning (migrated 2025-11-11, finalized 2025-11-11)
   - Final TS implementation (no Python compatibility): `frontend/src/lib/tools/planning.ts` with
-    `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`.
-    - Persisted plan shape is camelCase (planId, userId, startDate, endDate, createdAt, updatedAt, finalizedAt, status, components).
-    - Upstash Redis keys: `travel_plan:{planId}`. TTLs: 7d default; 30d for finalized plans (preserved on subsequent updates).
-    - Updates validated with Zod partial schema; unknown/invalid fields rejected.
-    - `combineSearchResults` supports optional `startDate`/`endDate` to derive nights; defaults to 3 if absent.
-    - Best‑effort memory logging via Supabase (server‑only) with camelCase metadata.
-  - Registry: exported via `frontend/src/lib/tools/index.ts` and auto‑wired into chat stream.
+    `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`, `deleteTravelPlan`.
+  - Canonical PlanSchema: `frontend/src/lib/tools/planning.schema.ts` (camelCase fields). All writes and reads validate against this schema.
+  - Persistence: Upstash Redis (`travel_plan:{planId}`) with TTLs 7d (draft) / 30d (finalized). Finalized TTL is preserved on updates.
+  - Rate limits: per-user create 20/day (`travel_plan:rate:create:{userId}:{YYYYMMDD}`); per-plan update 60/min (`travel_plan:rate:update:{planId}`). TTL set only when counter=1. Degrades gracefully if Redis unavailable.
+  - Non-stream handler now exposes tools with userId injection mirroring stream handler; auth never trusts tool-provided userId.
+  - `combineSearchResults` derives nights from dates (default 3). Markdown summary uses camelCase only (legacy fallbacks removed).
+  - Memory logging: best‑effort Supabase insert; never blocks tool results.
+  - Registry: exported via `frontend/src/lib/tools/index.ts` and auto‑wired into both chat stream and non‑stream handlers.
   - Removed: `tripsage/tools/planning_tools.py` (and references). No backward compatibility retained.
 - Flights (Duffel)
   - TS parity: `frontend/src/lib/tools/flights.ts` with camel→snake conversion; add IATA regex validation and AbortController timeout.
@@ -391,7 +392,7 @@ const searchTool = tool({
 **After all tools are successfully migrated and tested:**
 
 - [~] Delete all files in `tripsage/tools/` directory
-  - Notes (2025-01-XX): Planning tools removed; other tools still exist pending migration
+  - Notes (2025-11-11): Planning tools removed; other tools still exist pending migration
   - [x] `planning_tools.py` - Removed (migrated 2025-11-11)
   - [ ] `web_tools.py` - Still exists; migrated but not deleted
   - [ ] `accommodations_tools.py` - Still exists; partially migrated (missing `getAccommodationDetails`)
@@ -442,17 +443,15 @@ const searchTool = tool({
   - Activity tools not migrated (still in `tripsage_core/services/business/activity_service.py`)
   - Destination tools not migrated (still in orchestration nodes)
   - Python legacy files still exist: `tripsage/tools/web_tools.py`, `accommodations_tools.py`, `memory_tools.py`, `webcrawl_tools.py`
-  - Test coverage incomplete: missing tests for accommodations, memory, weather, flights, maps
-  - Code quality issues: `priceMin`/`priceMax` zero value bug, `bookAccommodation` incorrect status, `combineSearchResults` leaks `_score`
-  - MCP integration lacks conflict detection and schema validation
+  - Test coverage incomplete: missing tests for memory, flights, maps
+  - MCP integration lacks schema validation (conflict detection completed)
 - Follow-up prompts or tasks:
   1. Implement `getAccommodationDetails` tool
   2. Migrate activity and destination tools
-  3. Fix code quality issues (price filters, booking status, score leak)
-  4. Add missing unit tests for all tools
-  5. Add MCP conflict detection and schema validation
-  6. Delete Python legacy files after full migration
-  7. Add integration tests for tool interleaving
+  3. Add missing unit tests for memory, flights, maps
+  4. Add MCP schema validation
+  5. Delete Python legacy files after full migration
+  6. Add integration tests for tool interleaving
 
 ---
 
@@ -485,7 +484,7 @@ const searchTool = tool({
 - [~] All Python tool code deleted; TypeScript is sole implementation
   - Notes: Planning tools fully migrated and Python code removed. Other tools migrated but Python code still exists.
 - [~] Comprehensive test coverage with Vitest
-  - Notes: 3 test files exist (web-search, web-crawl, planning). Missing tests for accommodations, memory, weather, flights, maps.
+  - Notes (2025-11-11): 5 test files exist (web-search, web-crawl, planning, accommodations, weather). Missing tests for memory, flights, maps.
 - [x] ADR and Spec documentation completed
 
 ## Additional context & assumptions

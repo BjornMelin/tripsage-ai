@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   combineSearchResults,
   createTravelPlan,
+  deleteTravelPlan,
   saveTravelPlan,
   updateTravelPlan,
 } from "../planning";
+import { planSchema } from "../planning.schema";
 
 type RedisMock = {
   data: Map<string, unknown>;
@@ -13,6 +15,8 @@ type RedisMock = {
   get: (key: string) => Promise<unknown | null>;
   set: (key: string, value: unknown) => Promise<void>;
   expire: (key: string, seconds: number) => Promise<void>;
+  incr: (key: string) => Promise<number>;
+  del: (key: string) => Promise<number>;
 };
 
 vi.mock("@/lib/redis", () => {
@@ -20,11 +24,22 @@ vi.mock("@/lib/redis", () => {
   const ttl = new Map<string, number>();
   const store: RedisMock = {
     data,
+    del: (key) => {
+      const existed = data.delete(key);
+      ttl.delete(key);
+      return Promise.resolve(existed ? 1 : 0);
+    },
     expire: (key, seconds) => {
       ttl.set(key, seconds);
       return Promise.resolve();
     },
     get: (key) => Promise.resolve(data.has(key) ? data.get(key) : null),
+    incr: (key) => {
+      const current = (data.get(key) as number | undefined) ?? 0;
+      const next = current + 1;
+      data.set(key, next);
+      return Promise.resolve(next);
+    },
     set: (key, value) => {
       data.set(key, value);
       return Promise.resolve();
@@ -142,6 +157,9 @@ describe("planning tools", () => {
     const plan = redis.data.get(key) as Record<string, unknown>;
     expect(plan.title).toBe("Paris Spring");
     expect(plan.destinations).toEqual(["Paris"]);
+    // Schema round-trip
+    const parsed = planSchema.safeParse(plan);
+    expect(parsed.success).toBe(true);
   });
 
   it("updateTravelPlan rejects unauthorized user and accepts authorized changes", async () => {
@@ -226,7 +244,7 @@ describe("planning tools", () => {
     )) as {
       success: boolean;
       combinedResults: {
-        recommendations: { flights: unknown[] };
+        recommendations: { flights: unknown[]; accommodations: unknown[] };
         totalEstimatedCost: number;
         destinationHighlights: string[];
       };
@@ -236,6 +254,10 @@ describe("planning tools", () => {
     expect(combinedResults.recommendations.flights.length).toBeGreaterThan(0);
     expect(combinedResults.totalEstimatedCost).toBeGreaterThan(0);
     expect(combinedResults.destinationHighlights).toEqual(["Museum", "Park"]);
+    // Assert no _score leakage in accommodations
+    for (const acc of combinedResults.recommendations.accommodations) {
+      expect(acc).not.toHaveProperty("_score");
+    }
   });
 
   it("saveTravelPlan handles missing plan and finalize extends TTL", async () => {
@@ -274,6 +296,92 @@ describe("planning tools", () => {
     expect(fin.success).toBe(true);
     const key = `travel_plan:${created.planId}`;
     expect(redis.ttl.get(key)).toBe(86400 * 30);
+  });
+
+  it("rate limits: create >20/day and update >60/min", async () => {
+    // simulate 20 allowed creates
+    for (let i = 0; i < 20; i++) {
+      const r = await exec<{ success: boolean; planId: string }>(createTravelPlan, {
+        destinations: ["ZRH"],
+        endDate: "2025-01-02",
+        startDate: "2025-01-01",
+        title: `Trip-${i}`,
+        userId: "u1",
+      });
+      expect(r.success).toBe(true);
+    }
+    const blocked = await exec<{ success: boolean; error?: string }>(createTravelPlan, {
+      destinations: ["ZRH"],
+      endDate: "2025-01-02",
+      startDate: "2025-01-01",
+      title: "Trip-Blocked",
+      userId: "u1",
+    });
+    expect(blocked.success).toBe(false);
+    expect(blocked.error).toBe("rate_limited_plan_create");
+
+    // create one plan and exhaust update limit (switch user to avoid create RL spillover)
+    const supabaseMod2 = (await import("@/lib/supabase/server")) as unknown as {
+      __setUserIdForTests: (id: string) => void;
+    };
+    supabaseMod2.__setUserIdForTests("u3");
+    const created = await exec<{ success: boolean; planId: string }>(createTravelPlan, {
+      destinations: ["AMS"],
+      endDate: "2025-03-03",
+      startDate: "2025-03-01",
+      title: "ToUpdate",
+      userId: "u3",
+    });
+    expect(created.success).toBe(true);
+    // 60 successful updates
+    for (let i = 0; i < 60; i++) {
+      const ok = await exec<{ success: boolean }>(updateTravelPlan, {
+        planId: created.planId,
+        updates: { title: `t${i}` },
+        userId: "u3",
+      });
+      expect(ok.success).toBe(true);
+    }
+    // 61st should be blocked
+    const blockedUpd = await exec<{ success: boolean; error?: string }>(
+      updateTravelPlan,
+      { planId: created.planId, updates: { title: "blocked" }, userId: "u3" }
+    );
+    expect(blockedUpd.success).toBe(false);
+    expect(blockedUpd.error).toBe("rate_limited_plan_update");
+  });
+
+  it("deleteTravelPlan works for owner and blocks others", async () => {
+    const created = await exec<{ success: boolean; planId: string }>(createTravelPlan, {
+      destinations: ["ROM"],
+      endDate: "2025-09-10",
+      startDate: "2025-09-05",
+      title: "ToDelete",
+      userId: "u1",
+    });
+    expect(created.success).toBe(true);
+    const key = `travel_plan:${created.planId}`;
+    expect(redis.data.has(key)).toBe(true);
+
+    // unauthorized delete
+    const supabaseMod = (await import("@/lib/supabase/server")) as unknown as {
+      __setUserIdForTests: (id: string) => void;
+    };
+    supabaseMod.__setUserIdForTests("u2");
+    const unauth = await exec<{ success: boolean }>(deleteTravelPlan, {
+      planId: created.planId,
+      userId: "ignored",
+    });
+    expect(unauth.success).toBe(false);
+    supabaseMod.__setUserIdForTests("u1");
+
+    // owner deletes
+    const ok = await exec<{ success: boolean }>(deleteTravelPlan, {
+      planId: created.planId,
+      userId: "u1",
+    });
+    expect(ok.success).toBe(true);
+    expect(redis.data.has(key)).toBe(false);
   });
 
   it("returns redis_unavailable when no Redis client", async () => {

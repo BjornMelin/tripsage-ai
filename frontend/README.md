@@ -82,7 +82,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the app.
 
 The chat interface automatically invokes relevant tools based on user intent:
 
-- **Travel Planning**: `create_travel_plan`, `update_travel_plan`, `generate_travel_summary`
+- **Travel Planning**: TypeScript-only tools in `frontend/src/lib/tools/planning.ts` (`createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`, `deleteTravelPlan`)
 - **Accommodations**: `search_accommodations` (via Airbnb MCP), `get_accommodation_details`, `book_accommodation` (requires approval)
 - **Flights**: `search_flights` (Duffel API), `book_flight` (requires approval)
 - **Web Research**: `web_search` (Firecrawl v2.5, cached), `crawlUrl` (single-page scrape), `crawlSite` (multi-page crawl)
