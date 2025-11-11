@@ -6,15 +6,19 @@ import { buildRateLimitKey, getClientIpFromHeaders } from "@/lib/next/route-help
 
 describe("route-helpers", () => {
   it("returns the first IP from x-forwarded-for", () => {
-    const headers = new Headers();
-    headers.set("x-forwarded-for", "203.0.113.10, 198.51.100.2");
-    expect(getClientIpFromHeaders(headers)).toBe("203.0.113.10");
+    const req = {
+      headers: new Headers({
+        "x-forwarded-for": "203.0.113.10, 198.51.100.2",
+      }),
+    } as unknown as NextRequest;
+    expect(getClientIpFromHeaders(req)).toBe("203.0.113.10");
   });
 
   it("falls back to 'unknown' when no IP headers exist", () => {
-    const headers = new Headers();
-    expect(getClientIpFromHeaders(headers)).toBe("unknown");
-    const req = { headers } as unknown as NextRequest;
+    const req = {
+      headers: new Headers(),
+    } as unknown as NextRequest;
+    expect(getClientIpFromHeaders(req)).toBe("unknown");
     expect(buildRateLimitKey(req)).toContain("unknown");
   });
 });

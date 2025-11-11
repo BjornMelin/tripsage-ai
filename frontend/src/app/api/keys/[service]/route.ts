@@ -14,9 +14,16 @@ export const revalidate = 0;
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { buildRateLimiter, type RateLimitResult } from "@/app/api/keys/_rate-limiter";
+import {
+  buildRateLimiter,
+  RateLimiterConfigurationError,
+  type RateLimitResult,
+} from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
-import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
+import {
+  getTrustedRateLimitIdentifier,
+  redactErrorForLogging,
+} from "@/lib/next/route-helpers";
 import { deleteUserApiKey } from "@/lib/supabase/rpc";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
@@ -44,10 +51,24 @@ export async function DELETE(
       error: authError,
     } = await supabase.auth.getUser();
     const identifierType: IdentifierType = user?.id ? "user" : "ip";
-    const ratelimitInstance = buildRateLimiter();
+    let ratelimitInstance: ReturnType<typeof buildRateLimiter>;
+    try {
+      ratelimitInstance = buildRateLimiter();
+    } catch (configError) {
+      if (configError instanceof RateLimiterConfigurationError) {
+        return NextResponse.json(
+          {
+            code: "CONFIGURATION_ERROR",
+            error: "Rate limiter configuration error",
+          },
+          { status: 500 }
+        );
+      }
+      throw configError;
+    }
     let rateLimitMeta: RateLimitResult | undefined;
     if (ratelimitInstance) {
-      const identifier = user?.id ?? getClientIpFromHeaders(req.headers);
+      const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
       rateLimitMeta = await ratelimitInstance.limit(identifier);
       if (!rateLimitMeta.success) {
         return NextResponse.json(
@@ -107,10 +128,13 @@ export async function DELETE(
     );
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("/api/keys/[service] DELETE error:", {
-      message,
+    const { message: safeMessage, context: safeContext } = redactErrorForLogging(err, {
+      operation: "delete_key",
       service: serviceForLog,
+    });
+    console.error("/api/keys/[service] DELETE error:", {
+      message: safeMessage,
+      ...safeContext,
     });
     return NextResponse.json(
       { code: "INTERNAL_ERROR", error: "Internal server error" },

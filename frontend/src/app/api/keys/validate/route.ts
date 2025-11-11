@@ -6,7 +6,7 @@
 
 "use cache";
 
-export const dynamic = "force-dynamic";
+import "server-only";
 
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
@@ -18,6 +18,8 @@ import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import type { ProviderId } from "@/lib/providers/types";
 import { getProviderSettings } from "@/lib/settings";
 import { createServerSupabase } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 // Environment variables
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
@@ -238,7 +240,7 @@ export async function POST(req: NextRequest) {
       data: { user },
       error,
     } = await supabase.auth.getUser();
-    const identifier = user?.id ?? `anon:${getClientIpFromHeaders(req.headers)}`;
+    const identifier = user?.id ?? `anon:${getClientIpFromHeaders(req)}`;
 
     const rateLimitResponse = await requireRateLimit(identifier);
     if (rateLimitResponse) {
